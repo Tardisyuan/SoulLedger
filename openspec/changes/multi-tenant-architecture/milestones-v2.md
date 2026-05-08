@@ -11,9 +11,9 @@
 |-----------|------|--------|----------|------------|
 | M1 | Core Infrastructure | ✅ Done | — | — |
 | M2 | JWT Authentication | ✅ Done | — | — |
-| M3 | Multi-Tenant Backend | 🔲 In Progress | 3–4 | 🔴 |
-| M4 | Tenant-Aware Frontend | 🔲 Not Started | 2–3 | 🟡 |
-| M5 | Dispatch Module | 🔲 Not Started | 2–3 | 🔴 |
+| M3 | Multi-Tenant Backend | 🔲 In Progress | 4–5 | 🔴 |
+| M4 | Tenant-Aware Frontend | 🔲 Not Started | 3–4 | 🟡 |
+| M5 | Dispatch Module | 🔲 Not Started | 3–4 | 🔴 |
 | M6 | Karma + Statistics | 🔲 Not Started | 2–3 | 🟡 |
 | M7 | Extended Civilizations | 🔲 Not Started | 1–2 | 🟢 |
 | M8 | Production Ready | 🔲 Not Started | 2 | 🟡 |
@@ -22,38 +22,50 @@
 
 ## M3: Multi-Tenant Backend Infrastructure
 
-**Objective:** Add `tenant_id` FK to all business tables, establish tenant isolation at ORM and API layers.
+**Objective:** Add `tenant_id` FK to all business tables, establish tenant isolation at ORM and API layers, add database indexes/constraints, create Notification model.
 
 **Key Deliverables:**
 - `Tenant` model with 3 seed records (CN_DIYU, EU_HEAVEN_HELL, EG_DUAT)
-- All business models have `tenant_id FK → Tenant`
-- `TenantMiddleware` injects tenant context per request
-- `TenantManager` auto-filters all ORM queries by tenant
-- Non-SYS_ADMIN users see only their tenant's data
-- SYS_ADMIN can query across all tenants
-- Tenant isolation integration tests pass
-- Seed data rewritten for multi-tenant (3 × realms + actors)
+- All 8 business models have `tenant FK → Tenant` (NOT NULL after backfill)
+- `TenantMiddleware` injects tenant context per request via JWT
+- `TenantManager` auto-filters all 8 model ORM queries by tenant
+- All 7 ViewSets filter by `request.tenant` (SYS_ADMIN bypasses)
+- Non-SYS_ADMIN users see only their tenant's data; cross-tenant access returns 403
+- Tenant management API (SYS_ADMIN only): list, detail, update
+- Login response includes tenant info + JWT contains `tenant_code` claim
+- Data migration script with `--dry-run` + `--rollback` support
+- All `civilization` field references removed (per-file cleanup plan)
+- Tenant isolation integration tests (10+ cases)
+- DRF Permission Classes: TenantPermission + RolePermission
+- Field-level serializer permissions matching SPEC §6.X.2 role matrix
+- **Database composite indexes** on all tenant_id columns (SPEC §8.1)
+- **Database CHECK constraints** (SPEC §8.2): soul state not empty, dispatch different tenants, dispatch requires endpoint
+- **Notification model** (SPEC §7.7): 7 notification types, per-user tracking
+- Permission integration tests: full role×operation matrix (20+ cases)
 
 **Estimated Complexity:** 🔴 Complex
 
 **Dependencies:** M2 (JWT) — satisfied
 
-**Sessions:** 3–4
+**Sessions:** 4–5
 
 ---
 
 ## M4: Tenant-Aware Frontend + Landing Page
 
-**Objective:** Make the frontend tenant-aware: URL routing includes tenant, login redirects to tenant dashboard, NavBar shows tenant context.
+**Objective:** Make the frontend tenant-aware: URL routing includes tenant, login redirects to tenant dashboard, NavBar shows tenant context. Includes useAuth hook and route guards (relocated from M3.7).
 
 **Key Deliverables:**
-- `TenantContext` React context (from JWT decode)
-- API client auto-injects tenant header/query
-- URL routing: `/{tenant}/souls/`, `/{tenant}/realms/`, `/{tenant}/actors/`
-- Login page → redirect to `/{tenant_code}/souls/`
-- NavBar shows tenant `display_name` + user role + logout
-- Landing page (`/`) with tenant selection
-- Language switcher per-tenant
+- API client interceptor: decodes JWT, auto-injects `X-Tenant-Code` header on all requests
+- `TenantContext` React context at `frontend/src/contexts/TenantContext.tsx` (from JWT decode)
+- URL routing: `frontend/app/[tenant]/layout.tsx` → move souls/realms/actors under `/[tenant]/`
+- Login page → uses `jwt-decode` library, redirects to `/{tenant_code}/souls/`, handles missing tenant_code
+- NavBar shows tenant `display_name` + user role badge + logout + SYS_ADMIN dashboard link
+- Landing page (`/`): rewritten with 3 tenant selection cards, preserves i18n
+- Language switcher: embedded in `[tenant]/layout.tsx`, respects locale on all pages
+- `useAuth()` hook at `frontend/src/hooks/useAuth.ts`: permission checks per role (relocated from M3.7)
+- `RouteGuard` component at `frontend/src/components/RouteGuard.tsx`: hides pages per role (relocated from M3.7)
+- UI Framework tasks (ThemeProvider, color picker, settings drawer, personal center, nav modes) — all marked **(Optional)**
 
 **Estimated Complexity:** 🟡 Moderate
 
@@ -182,10 +194,10 @@ M1 ──→ M2 ──→ M3 ──→ M4 ──┬──→ M5 ──→ M6
 
 | Phase | Tasks | Sessions |
 |-------|-------|----------|
-| M3 Backend multi-tenancy | 13 | 3–4 |
-| M4 Frontend tenant-awareness | 7 | 2–3 |
+| M3 Backend multi-tenancy | 38 | 4–5 |
+| M4 Frontend tenant-awareness | 12 | 2–3 |
 | M5 Dispatch module | 9 | 2–3 |
 | M6 Karma + Statistics | 9 | 2–3 |
 | M7 Extended civilizations | 4 | 1–2 |
 | M8 Production | 7 | 2 |
-| **Total remaining** | **49** | **12–17** |
+| **Total remaining** | **81** | **12–17** |
