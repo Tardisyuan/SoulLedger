@@ -15,12 +15,20 @@ interface ToastItem {
 
 // ── Store ───────────────────────────────────────────
 
+declare global {
+  interface Window {
+    __toastSetter?: ((fn: (prev: ToastItem[]) => ToastItem[]) => void) | undefined;
+  }
+}
+
 let toasts: ToastItem[] = [];
 let nextId = 0;
-let setToasts: ((fn: (prev: ToastItem[]) => ToastItem[]) => void) | null = null;
 
 function notify() {
-  if (setToasts) setToasts((prev) => [...prev]);
+  // Set by ToastPortal on first client render — available immediately (not in useEffect)
+  if (typeof window !== "undefined") {
+    window.__toastSetter?.(prev => [...prev]);
+  }
 }
 
 // ── Show / Dismiss ─────────────────────────────────
@@ -40,17 +48,19 @@ export function showToast(
 }
 
 export function dismissToast(id: string) {
-  toasts = toasts.filter((t) => t.id !== id);
+  toasts = toasts.filter(t => t.id !== id);
   notify();
 }
 
-// ── ToastCard ───────────────────────────────────────
+// ── Color Map ──────────────────────────────────────
 
 const COLOR_MAP = {
   success: { bg: "rgba(16,64,40,0.98)", border: "#10b981", text: "#d1fae5", icon: "✓" },
   error:   { bg: "rgba(64,16,16,0.98)", border: "#ef4444", text: "#fecaca",  icon: "✕" },
   info:    { bg: "rgba(20,50,120,0.98)", border: "#3b82f6", text: "#dbeafe",  icon: "ℹ" },
 };
+
+// ── ToastCard ──────────────────────────────────────
 
 function ToastCard({ toast }: { toast: ToastItem }) {
   const [visible, setVisible] = useState(false);
@@ -79,11 +89,9 @@ function ToastCard({ toast }: { toast: ToastItem }) {
         boxShadow: "0 4px 20px rgba(0,0,0,0.35)",
         animation: visible ? "toastIn 0.25s cubic-bezier(0.22,1,0.36,1)" : "toastOut 0.2s ease-in forwards",
         fontFamily: "ui-sans-serif,system-ui,-apple-system,sans-serif",
-        transition: "opacity 0.2s",
         opacity: visible ? 1 : 0,
       }}
     >
-      {/* Icon */}
       <span style={{
         flexShrink: 0, width: 18, height: 18,
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -95,9 +103,7 @@ function ToastCard({ toast }: { toast: ToastItem }) {
       }}>
         {c.icon}
       </span>
-      {/* Message */}
       <span style={{ flex: 1, fontSize: 14, lineHeight: 1.4 }}>{toast.message}</span>
-      {/* Dismiss */}
       <button
         onClick={() => dismissToast(toast.id)}
         style={{
@@ -119,14 +125,27 @@ function ToastCard({ toast }: { toast: ToastItem }) {
 // ── Portal Container ────────────────────────────────
 
 function ToastPortal() {
-  const [, setter] = useState<ToastItem[]>([]);
-
+  const [toastList, setToasts] = useState<ToastItem[]>([]);
+  // Expose setter globally — available on FIRST render, not after useEffect
+  if (typeof window !== "undefined") {
+    window.__toastSetter = setToasts;
+  }
   useEffect(() => {
-    setToasts = setter;
-    return () => { setToasts = null; };
+    if (typeof window !== "undefined") {
+      window.__toastSetter = setToasts;
+    }
+    return () => { if (typeof window !== "undefined") window.__toastSetter = undefined; };
   }, []);
 
-  if (toasts.length === 0) return null;
+  if (toastList.length === 0 && toasts.length === 0) return null;
+
+  // Sync module store to React state on mount
+  useEffect(() => {
+    if (toasts.length > 0) setToasts(toasts);
+  }, []);
+
+  const displayList = toastList.length > 0 ? toastList : toasts;
+  if (displayList.length === 0) return null;
 
   return createPortal(
     <div
@@ -144,7 +163,7 @@ function ToastPortal() {
         pointerEvents: "none",
       }}
     >
-      {toasts.map((toast) => (
+      {displayList.map(toast => (
         <ToastCard key={toast.id} toast={toast} />
       ))}
     </div>,
