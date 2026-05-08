@@ -1753,7 +1753,7 @@ ALTER TABLE souls_soul ADD CONSTRAINT fk_soul_tenant
 | 联合审判前端 | 🔲 | /{tenant}/cross-judgments/ |
 | dispatch 集成测试 | 🔲 | 跨租户 workflow + 隔离测试 |
 
-**Session 估算:** 2–3 sessions | **依赖:** M3, M4
+**Session 估算:** 3–4 sessions | **依赖:** M3, M4
 
 ### Milestone 6 🔲 待开始
 
