@@ -67,7 +67,7 @@ class Soul(models.Model):
         """
         valid_transitions = {
             SoulState.ALIVE: [SoulState.JUDGING],
-            SoulState.JUDGING: [SoulState.DISPOSED, SoulState.JUDGING],
+            SoulState.JUDGING: [SoulState.DISPOSED],
             SoulState.DISPOSED: [SoulState.REINCARNATING, SoulState.LOST],
             SoulState.REINCARNATING: [SoulState.ALIVE],
             SoulState.LOST: [],
@@ -76,21 +76,32 @@ class Soul(models.Model):
 
     def transition_to(self, new_state: str, reason: str = "") -> bool:
         """
-        Attempt state transition. Returns True if successful.
-        Logs the transition via the events app.
+        Attempt state transition with pessimistic locking to prevent race conditions.
+        Returns True if successful.
         """
-        if not self.can_transition_to(new_state):
-            return False
-
+        from django.db import transaction
         from apps.events.services import log_soul_state_change
-        old_state = self.current_state
-        self.current_state = new_state
 
-        if new_state == SoulState.JUDGING and not self.death_date:
-            self.death_date = timezone.now().date()
+        with transaction.atomic():
+            # Lock the row to prevent concurrent state mutations
+            locked_soul = Soul.objects.select_for_update().get(pk=self.pk)
+            if not locked_soul.can_transition_to(new_state):
+                return False
 
-        self.save()
-        log_soul_state_change(self, old_state, new_state, reason)
+            old_state = locked_soul.current_state
+            locked_soul.current_state = new_state
+
+            if new_state == SoulState.JUDGING and not locked_soul.death_date:
+                from django.utils import timezone as tz
+                locked_soul.death_date = tz.now().date()
+
+            locked_soul.save()
+
+        # Log outside the transaction to avoid holding locks during external calls
+        log_soul_state_change(locked_soul, old_state, new_state, reason)
+        # Sync back to self instance
+        self.current_state = locked_soul.current_state
+        self.death_date = locked_soul.death_date
         return True
 
     def die(self, death_date=None, location: str = "") -> bool:

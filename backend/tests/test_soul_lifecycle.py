@@ -97,8 +97,13 @@ class TestSoulLifecycle:
         assert reincarnation.rebirth_form == "HUMAN"
 
     def test_full_lifecycle_failed(self, chinese_realms):
-        """Test: Soul fails judgment and goes to hell"""
-        soul = Soul.objects.create(name="Criminal Wang", civilization="CHINESE")
+        """Test: Soul with negative karma fails judgment and goes to hell tier 10"""
+        soul = Soul.objects.create(
+            name="Criminal Wang",
+            civilization="CHINESE",
+            merit_score=0,
+            demerit_score=100,  # karma = -100 → hell tier 10
+        )
         soul.die()
         soul.refresh_from_db()
         assert soul.current_state == SoulState.JUDGING
@@ -111,6 +116,7 @@ class TestSoulLifecycle:
         disposition = Disposition.objects.filter(soul=soul).first()
         assert disposition is not None
         assert disposition.destination_realm is not None
+        # karma=-100: tier = min(10, max(3, abs(-100)/10+1)) = min(10, max(3, 11)) = 10
         assert disposition.destination_realm.realm_code == "DY_10_YAMA"
 
     def test_invalid_transitions(self):
