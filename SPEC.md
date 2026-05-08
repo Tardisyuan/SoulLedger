@@ -1083,84 +1083,90 @@ ALTER TABLE souls_soul ADD CONSTRAINT fk_soul_tenant
 
 ### Milestone 3 🔲 进行中
 
-**多租户基础设施**
+**多租户后端基础设施**
 
 | 任务 | 状态 | 验收标准 |
 |------|------|---------|
 | Tenant 模型 | 🔲 | code/display_name/settings/dispatch_enabled/api_endpoint |
-| 租户中间件 | 🔲 | TenantMiddleware + thread_local.tenant |
-| 所有表加 tenant_id | 🔲 | FK → Tenant，NOT NULL |
-| TenantManager | 🔲 | 自动过滤 QuerySet |
+| 三租户种子数据 | 🔲 | CN_DIYU / EU_HEAVEN_HELL / EG_DUAT 各一条 |
+| 所有表加 tenant_id | 🔲 | Soul/Realm/Actor/Judgment/Disposition/Reincarnation/Event |
 | User → Tenant 关联 | 🔲 | user.tenant_id FK，用户只能访问同租户数据 |
+| TenantMiddleware | 🔲 | TenantMiddleware + thread_local.tenant |
+| TenantManager | 🔲 | 自动过滤 QuerySet，所有业务模型使用 |
+| ViewSet 租户过滤 | 🔲 | 非 ADMIN 强制 tenant 过滤，ADMIN 可跨租户 |
 | 租户隔离测试 | 🔲 | pytest 测试跨租户数据不可见 |
-| 全局统计 API（ADMIN） | 🔲 | /api/v1/stats/global/ |
-| 种子数据重写 | 🔲 | seed_all_tenants.py 支持三租户 |
+| 登录响应加 tenant | 🔲 | /auth/login/ 返回 user.tenant.code 和 display_name |
+
+**Session 估算:** 3–4 sessions
 
 ### Milestone 4 🔲 待开始
 
-**租户感知前端**
+**租户感知前端 + 落地页**
 
 | 任务 | 状态 | 验收标准 |
 |------|------|---------|
-| URL 路由重构 | 🔲 | /{tenant}/souls/、/{tenant}/realms/、/{tenant}/actors/ |
-| TenantContext.tsx | 🔲 | 前端全局租户上下文 |
+| TenantContext | 🔲 | React context，存储 tenant_code/display_name |
+| API client 租户注入 | 🔲 | 请求自动带 tenant 上下文 |
+| 前端租户路由 | 🔲 | /{tenant}/souls/、/{tenant}/realms/、/{tenant}/actors/ |
 | 登录跳转逻辑 | 🔲 | JWT 解码 → redirect 到 /{tenant_code}/souls/ |
-| 租户导航栏 | 🔲 | 显示当前租户名称 + 登出 |
+| NavBar 租户信息 | 🔲 | 显示当前租户名称 + 用户角色 + 登出 |
+| 落地页租户选择 | 🔲 | 三个租户卡片，点击进入该租户登录 |
 | 语言切换 | 🔲 | dispatch 内容按用户语言显示 |
+
+**Session 估算:** 2–3 sessions | **依赖:** M3
 
 ### Milestone 5 🔲 待开始
 
-**外派模块**
+**外派模块**（独立复杂模块）
 
 | 任务 | 状态 | 验收标准 |
 |------|------|---------|
 | DispatchRecord 模型 | 🔲 | source_tenant/target_tenant/soul/dispatched_by/status |
-| CrossTenantJudgment 模型 | 🔲 | 跨租户联合审判 |
+| CrossTenantJudgment 模型 | 🔲 | 跨租户联合审判会话 |
 | CrossTenantJudgmentParticipant | 🔲 | 参与者角色（ADVISOR/CO_JUDGE/CHAIRMAN） |
-| dispatch workflow | 🔲 | propose → approve/reject → execute |
-| 跨租户审判 workflow | 🔲 | propose → participate → conclude |
-| dispatch API endpoints | 🔲 | /dispatch/propose/、/dispatch/{id}/approve/ 等 |
+| DispatchService | 🔲 | propose/approve/reject/execute 完整 workflow |
+| CrossTenantJudgmentService | 🔲 | 创建会话/参与/结束 workflow |
+| dispatch API | 🔲 | /dispatch/propose/、/dispatch/{id}/approve/ 等 |
+| 联合审判 API | 🔲 | /cross-tenant-judgments/、/cross-tenant-judgments/{id}/participate/ |
 | dispatch 前端页面 | 🔲 | /{tenant}/dispatch/propose/、pending/、history/ |
 | 联合审判前端 | 🔲 | /{tenant}/cross-judgments/ |
+| dispatch 集成测试 | 🔲 | 跨租户 workflow + 隔离测试 |
+
+**Session 估算:** 2–3 sessions | **依赖:** M3, M4
 
 ### Milestone 6 🔲 待开始
 
-**多文明数据**
+**业力系统 + 统计大屏**
+
+| 任务 | 状态 | 验收标准 |
+|------|------|---------|
+| 业力时间衰减 | 🔲 | effective_score = original × e^(-0.01×years) |
+| KarmaService Redis 缓存 | 🔲 | TTL=5min，自动失效 |
+| Celery 定时任务 | 🔲 | 每日重算、逾期检查（>30天 JUDGING 提醒） |
+| 业力计算 API | 🔲 | /api/v1/souls/{id}/karma/ |
+| 前端业力可视化 | 🔲 | Recharts 时间线图 |
+| 全局统计 API | 🔲 | /stats/global/、/stats/by-tenant/（ADMIN 专用） |
+| ADMIN 统计大屏 | 🔲 | 状态分布饼图、租户对比柱图、业力分布直方图 |
+| ADMIN 外派审计页 | 🔲 | /admin/dispatch/audit/（只读） |
+
+**Session 估算:** 2–3 sessions | **依赖:** M3, M4
+
+### Milestone 7 🔲 待开始
+
+**扩展文明数据**
 
 | 任务 | 状态 | 验收标准 |
 |------|------|---------|
 | European realms 数据 | 🔲 | Heaven(3) + Purgatory(7) + Hell(9) = 17个 |
+| European actors 数据 | 🔲 | St. Peter, Hades, Satan, Michael, Lucifer (5) |
 | Egyptian realms 数据 | 🔲 | Aaru + Duat regions = 5个 |
-| European actors 数据 | 🔲 | St. Peter, Hades, Satan, Lucifer 等 |
-| Egyptian actors 数据 | 🔲 | Osiris, Anubis, Thoth, Horus, Ma'at |
-| 前端地域展示 | 🔲 | 三文明数据完整，locale 切换正常 |
+| Egyptian actors 数据 | 🔲 | Osiris, Anubis, Thoth, Ma'at (4) |
+| 路由验证 | 🔲 | 三文明 dispatch 路由正确 |
+| i18n 验证 | 🔲 | 三语言 locale 切换正常 |
 
-### Milestone 7 🔲 待开始
-
-**业力系统**
-
-| 任务 | 状态 | 验收标准 |
-|------|------|---------|
-| SoulRecord 时间衰减 | 🔲 | effective_score = original × e^(-0.01×years) |
-| KarmaService Redis 缓存 | 🔲 | TTL=5min，自动失效 |
-| Celery 定时任务 | 🔲 | 每日重算、逾期检查 |
-| 业力计算 API | 🔲 | /api/v1/souls/{id}/karma/ |
-| 前端业力可视化 | 🔲 | Recharts 时间线图 |
+**Session 估算:** 1–2 sessions | **依赖:** M3
 
 ### Milestone 8 🔲 待开始
-
-**统计大屏**
-
-| 任务 | 状态 | 验收标准 |
-|------|------|---------|
-| Dashboard API | 🔲 | 全局统计端点（ADMIN 专用） |
-| 状态分布图 | 🔲 | 饼图：ALIVE/JUDGING/DISPOSED/REINCARNATING |
-| 租户对比图 | 🔲 | 柱状图：三租户灵魂数量对比 |
-| 业力分布图 | 🔲 | 直方图：merit/demerit 分布 |
-| /admin/dashboard/ | 🔲 | Next.js 统计大屏页面 |
-| /admin/dispatch/audit/ | 🔲 | 外派记录只读审计 |
-
-### Milestone 9 🔲 待开始
 
 **生产就绪**
 
@@ -1173,6 +1179,8 @@ ALTER TABLE souls_soul ADD CONSTRAINT fk_soul_tenant
 | 结构化日志 | 🔲 | structlog + JSON 格式 |
 | Sentry 集成 | 🔲 | 错误追踪 + source maps |
 | 环境变量管理 | 🔲 | .env.example，最小 secrets |
+
+**Session 估算:** 2 sessions | **依赖:** 所有里程碑
 
 ---
 
