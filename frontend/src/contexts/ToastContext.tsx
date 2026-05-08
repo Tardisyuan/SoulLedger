@@ -4,6 +4,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import {
   showToast as _show,
   dismissToast as _dismiss,
+  ToastContainer as _container,
   type ToastType,
 } from "@/src/components/ui/Toast";
 
@@ -20,6 +21,7 @@ const ToastContext = createContext<ToastContextValue>({
 export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast: _show, dismissToast: _dismiss }}>
+      <_container />
       {children}
     </ToastContext.Provider>
   );
