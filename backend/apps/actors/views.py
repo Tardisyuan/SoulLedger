@@ -15,6 +15,15 @@ class ActorViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_fields = ["civilization", "role"]
     ordering_fields = ["civilization", "role", "name"]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'ADMIN':
+            return qs
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            return qs.filter(tenant=tenant)
+        return qs.none()
+
     def get_serializer_class(self):
         if self.request.query_params.get("localized"):
             return ActorLocalizedSerializer

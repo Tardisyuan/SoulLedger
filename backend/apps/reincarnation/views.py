@@ -14,6 +14,15 @@ class ReincarnationViewSet(viewsets.ModelViewSet):
     filterset_fields = ["soul", "rebirth_form", "cycle_count"]
     ordering_fields = ["reincarnated_at", "cycle_count"]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'ADMIN':
+            return qs
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            return qs.filter(tenant=tenant)
+        return qs.none()
+
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
         """
