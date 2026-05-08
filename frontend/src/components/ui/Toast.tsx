@@ -1,7 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useToast, Toast as ToastType } from "@/src/contexts/ToastContext";
+import { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
+
+// ── Types ───────────────────────────────────────────
+
+export type ToastType = "success" | "error" | "info";
+
+export interface ToastItem {
+  id: string;
+  message: string;
+  type: ToastType;
+  duration: number;
+}
 
 // ── Color Map ───────────────────────────────────────
 
@@ -17,28 +28,59 @@ const TOAST_ICONS: Record<string, string> = {
   info: "ℹ",
 };
 
-// ── Single Toast Item (ElementUI Message style) ─────
+// ── Store (module-level, shared across re-renders) ──
 
-function ToastItem({ toast }: { toast: ToastType }) {
-  const { dismissToast } = useToast();
+let toasts: ToastItem[] = [];
+let listeners: Array<() => void> = [];
+
+function notify() {
+  listeners.forEach((fn) => fn());
+}
+
+export function showToast(
+  message: string,
+  type: ToastType = "info",
+  duration: number = 5000
+): string {
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  toasts = [...toasts, { id, message, type, duration }];
+  notify();
+  return id;
+}
+
+export function dismissToast(id: string) {
+  toasts = toasts.filter((t) => t.id !== id);
+  notify();
+}
+
+export function useToasts(): ToastItem[] {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const listener = () => setTick((n) => n + 1);
+    listeners.push(listener);
+    return () => {
+      listeners = listeners.filter((l) => l !== listener);
+    };
+  }, []);
+  return toasts;
+}
+
+// ── Portal component ───────────────────────────────
+
+function ToastCard({ toast }: { toast: ToastItem }) {
   const [visible, setVisible] = useState(false);
 
-  // Enter animation on mount
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
-  }, []);
-
-  // Auto-dismiss
-  useEffect(() => {
     if (toast.duration <= 0) return;
     const timer = setTimeout(() => {
       setVisible(false);
       setTimeout(() => dismissToast(toast.id), 300);
     }, toast.duration);
     return () => clearTimeout(timer);
-  }, [toast.duration, toast.id, dismissToast]);
+  }, [toast.id, toast.duration]);
 
-  const colorClasses = TOAST_COLORS[toast.type] || TOAST_COLORS.info;
+  const color = TOAST_COLORS[toast.type] || TOAST_COLORS.info;
   const icon = TOAST_ICONS[toast.type] || TOAST_ICONS.info;
 
   return (
@@ -49,7 +91,7 @@ function ToastItem({ toast }: { toast: ToastType }) {
         min-w-[300px] max-w-lg
         px-4 py-3 rounded-lg border shadow-2xl
         transition-all duration-300 ease-out
-        ${colorClasses}
+        ${color}
         ${visible
           ? "opacity-100 translate-y-0"
           : "opacity-0 -translate-y-4"
@@ -74,22 +116,25 @@ function ToastItem({ toast }: { toast: ToastType }) {
   );
 }
 
-// ── Toast Container ─────────────────────────────────
-
 export function ToastContainer() {
-  const { toasts } = useToast();
+  const items = useToasts();
+  const [mounted, setMounted] = useState(false);
 
-  if (toasts.length === 0) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  return (
+  if (!mounted || items.length === 0) return null;
+
+  return createPortal(
     <div
       aria-live="polite"
-      aria-label="Notifications"
-      className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-2"
+      className="fixed top-5 left-1/2 -translate-x-1/2 z-[99999] flex flex-col items-center gap-2"
     >
-      {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} />
+      {items.map((toast) => (
+        <ToastCard key={toast.id} toast={toast} />
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }

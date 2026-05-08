@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ToastProvider } from "@/src/contexts/ToastContext";
-import { ToastContainer } from "@/src/components/ui/Toast";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { NavBar } from "@/components/NavBar";
@@ -34,7 +33,6 @@ export default function RootLayout({
       <body className="antialiased">
         <I18nProvider>
           <ToastProvider>
-            <ToastContainer />
             <NavBar />
             {children}
           </ToastProvider>
