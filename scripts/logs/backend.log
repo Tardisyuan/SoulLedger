@@ -21,3 +21,560 @@ INFO 2026-05-08 09:38:13,744 basehttp "GET /api/v1/auth/profile/ HTTP/1.1" 200 1
 WARNING 2026-05-08 09:38:13,747 log Unauthorized: /api/v1/souls/
 WARNING 2026-05-08 09:38:13,747 basehttp "GET /api/v1/souls/ HTTP/1.1" 401 58
 INFO 2026-05-08 09:38:13,769 basehttp "GET /api/v1/souls/ HTTP/1.1" 200 52
+INFO 2026-05-08 12:11:00,062 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/config/settings.py changed, reloading.
+INFO 2026-05-08 12:11:00,869 autoreload Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/apps/registry.py", line 158, in get_app_config
+    return self.app_configs[app_label]
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^
+KeyError: 'authentication'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/contrib/auth/__init__.py", line 283, in get_user_model
+    return django_apps.get_model(settings.AUTH_USER_MODEL, require_ready=False)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/apps/registry.py", line 208, in get_model
+    app_config = self.get_app_config(app_label)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/apps/registry.py", line 165, in get_app_config
+    raise LookupError(message)
+LookupError: No installed app with label 'authentication'.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/utils/autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/core/management/commands/runserver.py", line 124, in inner_run
+    autoreload.raise_last_exception()
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/utils/autoreload.py", line 86, in raise_last_exception
+    raise _exception[1]
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/core/management/__init__.py", line 394, in execute
+    autoreload.check_errors(django.setup)()
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/utils/autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/apps/registry.py", line 124, in populate
+    app_config.ready()
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/contrib/admin/apps.py", line 27, in ready
+    self.module.autodiscover()
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/contrib/admin/__init__.py", line 52, in autodiscover
+    autodiscover_modules("admin", register_to=site)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/utils/module_loading.py", line 58, in autodiscover_modules
+    import_module("%s.%s" % (app_config.name, module_to_search))
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/contrib/auth/admin.py", line 6, in <module>
+    from django.contrib.auth.forms import (
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/contrib/auth/forms.py", line 20, in <module>
+    UserModel = get_user_model()
+                ^^^^^^^^^^^^^^^^
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/contrib/auth/__init__.py", line 289, in get_user_model
+    raise ImproperlyConfigured(
+django.core.exceptions.ImproperlyConfigured: AUTH_USER_MODEL refers to model 'authentication.User' that has not been installed
+INFO 2026-05-08 12:11:08,137 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/config/settings.py changed, reloading.
+INFO 2026-05-08 12:11:08,983 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:11:09
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:19:54,124 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/realms/models.py changed, reloading.
+INFO 2026-05-08 12:19:54,936 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:19:55
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:20:58,475 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/actors/models.py changed, reloading.
+INFO 2026-05-08 12:20:59,268 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:20:59
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:22:04,885 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/models.py changed, reloading.
+INFO 2026-05-08 12:22:05,671 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:22:05
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:22:51,914 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/judgment/models.py changed, reloading.
+INFO 2026-05-08 12:22:52,741 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:22:52
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:23:39,980 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/disposition/models.py changed, reloading.
+INFO 2026-05-08 12:23:40,783 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:23:41
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:24:28,059 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/reincarnation/models.py changed, reloading.
+INFO 2026-05-08 12:24:28,872 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:24:29
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:25:49,886 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/events/models.py changed, reloading.
+INFO 2026-05-08 12:25:50,755 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:25:51
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:26:05,437 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/authentication/models.py changed, reloading.
+INFO 2026-05-08 12:26:06,287 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:26:06
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:26:17,853 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/authentication/models.py changed, reloading.
+INFO 2026-05-08 12:26:18,715 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:26:18
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:31:51,616 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/config/settings.py changed, reloading.
+INFO 2026-05-08 12:31:52,462 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:31:52
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:33:02,240 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/models.py changed, reloading.
+INFO 2026-05-08 12:33:03,187 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:33:03
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:33:12,717 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/models.py changed, reloading.
+INFO 2026-05-08 12:33:13,538 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:33:13
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:33:35,303 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/realms/models.py changed, reloading.
+INFO 2026-05-08 12:33:36,138 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:33:36
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:33:45,665 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/realms/models.py changed, reloading.
+INFO 2026-05-08 12:33:46,490 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:33:46
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:34:07,236 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/actors/models.py changed, reloading.
+INFO 2026-05-08 12:34:08,032 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:34:08
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:34:14,488 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/actors/models.py changed, reloading.
+INFO 2026-05-08 12:34:15,311 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:34:15
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:34:50,337 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/authentication/models.py changed, reloading.
+INFO 2026-05-08 12:34:51,175 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:34:51
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:35:20,049 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/authentication/models.py changed, reloading.
+INFO 2026-05-08 12:35:20,957 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:35:21
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:36:53,113 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/disposition/views.py changed, reloading.
+INFO 2026-05-08 12:36:53,999 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:36:54
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:38:54,722 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/authentication/models.py changed, reloading.
+INFO 2026-05-08 12:38:55,540 autoreload Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/utils/autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/core/management/commands/runserver.py", line 124, in inner_run
+    autoreload.raise_last_exception()
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/utils/autoreload.py", line 86, in raise_last_exception
+    raise _exception[1]
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/core/management/__init__.py", line 394, in execute
+    autoreload.check_errors(django.setup)()
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/utils/autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/apps/registry.py", line 116, in populate
+    app_config.import_models()
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/apps/config.py", line 269, in import_models
+    self.models_module = import_module(models_module_name)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/tardis/Documents/跨文明灵魂管理系统/backend/apps/authentication/models.py", line 15, in <module>
+    class User(AbstractUser):
+  File "/home/tardis/Documents/跨文明灵魂管理系统/backend/apps/authentication/models.py", line 45, in User
+    objects = TenantManager()
+              ^^^^^^^^^^^^^
+NameError: name 'TenantManager' is not defined
+INFO 2026-05-08 12:39:04,771 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/authentication/models.py changed, reloading.
+INFO 2026-05-08 12:39:05,563 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:39:05
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:40:10,186 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/config/urls.py changed, reloading.
+INFO 2026-05-08 12:40:11,013 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:40:11
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:41:52,328 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/tenants/urls.py changed, reloading.
+INFO 2026-05-08 12:41:53,129 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:41:53
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:42:52,642 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/authentication/serializers.py changed, reloading.
+INFO 2026-05-08 12:42:53,498 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:42:53
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:43:12,219 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/authentication/views.py changed, reloading.
+INFO 2026-05-08 12:43:13,059 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:43:13
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:49:08,426 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/models.py changed, reloading.
+INFO 2026-05-08 12:49:09,247 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/utils/autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/core/management/commands/runserver.py", line 134, in inner_run
+    self.check(**check_kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/core/management/base.py", line 573, in check
+    raise SystemCheckError(msg)
+django.core.management.base.SystemCheckError: SystemCheckError: System check identified some issues:
+
+ERRORS:
+<class 'apps.souls.admin.SoulAdmin'>: (admin.E108) The value of 'list_display[1]' refers to 'civilization', which is not a callable or attribute of 'SoulAdmin', or an attribute, method, or field on 'souls.Soul'.
+<class 'apps.souls.admin.SoulAdmin'>: (admin.E116) The value of 'list_filter[0]' refers to 'civilization', which does not refer to a Field.
+
+System check identified 2 issues (0 silenced).
+INFO 2026-05-08 12:49:21,773 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/models.py changed, reloading.
+INFO 2026-05-08 12:49:22,582 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/utils/autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/core/management/commands/runserver.py", line 134, in inner_run
+    self.check(**check_kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/core/management/base.py", line 573, in check
+    raise SystemCheckError(msg)
+django.core.management.base.SystemCheckError: SystemCheckError: System check identified some issues:
+
+ERRORS:
+<class 'apps.souls.admin.SoulAdmin'>: (admin.E116) The value of 'list_filter[0]' refers to 'civilization', which does not refer to a Field.
+
+System check identified 1 issue (0 silenced).
+INFO 2026-05-08 12:49:36,071 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/models.py changed, reloading.
+INFO 2026-05-08 12:49:36,885 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/threading.py", line 1045, in _bootstrap_inner
+    self.run()
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/threading.py", line 982, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/utils/autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/core/management/commands/runserver.py", line 134, in inner_run
+    self.check(**check_kwargs)
+  File "/home/tardis/.pyenv/versions/3.11.15/lib/python3.11/site-packages/django/core/management/base.py", line 573, in check
+    raise SystemCheckError(msg)
+django.core.management.base.SystemCheckError: SystemCheckError: System check identified some issues:
+
+ERRORS:
+<class 'apps.souls.admin.SoulAdmin'>: (admin.E116) The value of 'list_filter[0]' refers to 'civilization', which does not refer to a Field.
+
+System check identified 1 issue (0 silenced).
+INFO 2026-05-08 12:49:56,517 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/admin.py changed, reloading.
+INFO 2026-05-08 12:49:57,315 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:49:57
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:50:06,844 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/admin.py changed, reloading.
+INFO 2026-05-08 12:50:07,666 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 12:50:07
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:50:41,678 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/serializers.py changed, reloading.
+INFO 2026-05-08 12:50:42,524 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 1 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): souls.
+Run 'python manage.py migrate' to apply them.
+May 08, 2026 - 12:50:42
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:50:51,056 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/views.py changed, reloading.
+INFO 2026-05-08 12:50:51,866 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 1 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): souls.
+Run 'python manage.py migrate' to apply them.
+May 08, 2026 - 12:50:52
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:55:52,148 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/record_models.py changed, reloading.
+INFO 2026-05-08 12:55:53,018 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 1 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): souls.
+Run 'python manage.py migrate' to apply them.
+May 08, 2026 - 12:55:53
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 12:57:44,580 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/tenants/models.py changed, reloading.
+INFO 2026-05-08 12:57:45,465 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 2 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): souls.
+Run 'python manage.py migrate' to apply them.
+May 08, 2026 - 12:57:45
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/

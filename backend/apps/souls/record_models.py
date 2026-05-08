@@ -53,6 +53,13 @@ class SoulRecord(models.Model):
         max_length=20,
         choices=Civilization.choices,
         default=Civilization.CHINESE,
+        help_text="Derived from soul's tenant (kept for query convenience)",
+    )
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="soul_records",
+        null=True,
     )
     description = models.TextField()
     weight = models.IntegerField(

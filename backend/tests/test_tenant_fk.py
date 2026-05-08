@@ -47,7 +47,6 @@ class TestTenantForeignKey:
         tenant = Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
         soul = Soul.objects.create(
             name="Test Soul",
-            civilization=Civilization.CHINESE,
             tenant=tenant,
         )
         assert soul.tenant == tenant
@@ -58,7 +57,6 @@ class TestTenantForeignKey:
         tenant = Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
         soul = Soul.objects.create(
             name="Judged Soul",
-            civilization=Civilization.CHINESE,
             tenant=tenant,
         )
         judgment = Judgment.objects.create(
@@ -75,7 +73,6 @@ class TestTenantForeignKey:
         tenant = Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
         soul = Soul.objects.create(
             name="Disposed Soul",
-            civilization=Civilization.CHINESE,
             tenant=tenant,
         )
         disposition = Disposition.objects.create(
@@ -90,7 +87,6 @@ class TestTenantForeignKey:
         tenant = Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
         soul = Soul.objects.create(
             name="Reborn Soul",
-            civilization=Civilization.CHINESE,
             tenant=tenant,
         )
         reincarnation = Reincarnation.objects.create(
@@ -107,7 +103,6 @@ class TestTenantForeignKey:
         tenant = Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
         soul = Soul.objects.create(
             name="Event Soul",
-            civilization=Civilization.CHINESE,
             tenant=tenant,
         )
         event = SoulEvent.objects.create(

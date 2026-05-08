@@ -12,6 +12,33 @@ django.setup()
 
 from apps.realms.models import Realm, RealmType, Civilization
 from apps.actors.models import Actor, ActorRole
+from apps.tenants.models import Tenant
+
+
+def _get_or_create_tenants():
+    """Ensure the three tenant records exist and return them keyed by code."""
+    tenants = {}
+    for code, display_name in [
+        ("CN_DIYU", "Chinese Afterlife"),
+        ("EU_HEAVEN_HELL", "European Afterlife"),
+        ("EG_DUAT", "Egyptian Afterlife"),
+    ]:
+        tenant, _ = Tenant.objects.get_or_create(
+            code=code,
+            defaults={"display_name": display_name, "dispatch_enabled": True},
+        )
+        tenants[code] = tenant
+    return tenants
+
+
+def _infer_tenant(civ_code):
+    """Map civilization code to tenant code."""
+    mapping = {
+        "CHINESE": "CN_DIYU",
+        "EUROPEAN": "EU_HEAVEN_HELL",
+        "EGYPTIAN": "EG_DUAT",
+    }
+    return mapping.get(civ_code, "CN_DIYU")
 
 
 # =============================================================================

@@ -39,8 +39,8 @@ class TestTenantManager:
 
         # These souls use default manager (standard Django manager)
         # We'll test with the TenantManager directly
-        Soul.objects.create(name="CN Soul", civilization=Civilization.CHINESE, tenant=cn_tenant)
-        Soul.objects.create(name="EU Soul", civilization=Civilization.EUROPEAN, tenant=eu_tenant)
+        Soul.objects.create(name="CN Soul", tenant=cn_tenant)
+        Soul.objects.create(name="EU Soul", tenant=eu_tenant)
 
         # Use TenantManager directly
         mgr = TenantManager()
@@ -65,13 +65,11 @@ class TestTenantManager:
 
     def test_tenant_manager_soul_objects_uses_tenant_manager(self):
         """Soul.objects should use TenantManager after it's set on the model."""
-        # This test is designed to work AFTER Soul.objects = TenantManager() is applied.
-        # For now, test the raw TenantManager behavior.
         cn_tenant = Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
         eu_tenant = Tenant.objects.create(code="EU_HEAVEN_HELL", display_name="European")
 
-        Soul.objects.create(name="CN Soul", civilization=Civilization.CHINESE, tenant=cn_tenant)
-        Soul.objects.create(name="EU Soul", civilization=Civilization.EUROPEAN, tenant=eu_tenant)
+        Soul.objects.create(name="CN Soul", tenant=cn_tenant)
+        Soul.objects.create(name="EU Soul", tenant=eu_tenant)
 
         # Verify both exist via default manager
         assert Soul.objects.count() == 2

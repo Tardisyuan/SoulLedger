@@ -24,14 +24,10 @@ class SoulState(models.TextChoices):
 class Soul(models.Model):
     """
     Core soul entity. All other records link back to a Soul.
+    Civilization is now derived from tenant FK.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
-    civilization = models.CharField(
-        max_length=20,
-        choices=Civilization.choices,
-        default=Civilization.CHINESE,
-    )
     current_state = models.CharField(
         max_length=20,
         choices=SoulState.choices,
@@ -66,6 +62,18 @@ class Soul(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.civilization}) [{self.current_state}]"
+
+    @property
+    def civilization(self) -> str:
+        """Derive civilization from tenant code."""
+        if self.tenant_id is None:
+            return Civilization.CHINESE
+        mapping = {
+            "CN_DIYU": Civilization.CHINESE,
+            "EU_HEAVEN_HELL": Civilization.EUROPEAN,
+            "EG_DUAT": Civilization.EGYPTIAN,
+        }
+        return mapping.get(self.tenant.code, Civilization.CHINESE)
 
     @property
     def karmic_balance(self) -> int:
