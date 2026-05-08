@@ -30,4 +30,4 @@ docker ps --filter "name=soulledger" --format "  {{.Names}} : {{.Status}}" 2>/de
 echo ""
 echo "=== URLs ==="
 echo "  Backend API : http://localhost:8000/api/v1/"
-echo "  Frontend   : http://localhost:3000"
+echo "  Frontend   : http://localhost:3333"
