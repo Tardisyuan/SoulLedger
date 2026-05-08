@@ -60,6 +60,13 @@ class Realm(models.Model):
     )
     cycle_limit = models.IntegerField(null=True, blank=True)
 
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='realms',
+        null=True,
+    )
+
     class Meta:
         ordering = ["civilization", "realm_type", "tier"]
         verbose_name = "Realm"
