@@ -6,7 +6,9 @@
     "souls": "Souls",
     "realms": "Realms",
     "actors": "Actors",
-    "about": "About"
+    "about": "About",
+    "dashboard": "Dashboard",
+    "journal": "Journal"
   },
   "home": {
     "hero_title": "SoulLedger",

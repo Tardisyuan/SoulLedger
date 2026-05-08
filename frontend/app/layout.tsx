@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { NavBar } from "@/components/NavBar";
 
 export const metadata: Metadata = {
   title: "SoulLedger — Cross-Civilization Soul Management",
@@ -33,6 +34,7 @@ export default function RootLayout({
           <div className="fixed top-3 right-4 z-50">
             <LanguageSwitcher />
           </div>
+          <NavBar />
           {children}
         </I18nProvider>
       </body>
