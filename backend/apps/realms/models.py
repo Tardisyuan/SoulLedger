@@ -4,6 +4,7 @@ Realm reference data — cross-civilization afterlife realms.
 import uuid
 from django.db import models
 from apps.souls.models import Civilization
+from apps.tenants.managers import TenantManager
 
 
 class RealmType(models.TextChoices):
@@ -71,6 +72,8 @@ class Realm(models.Model):
         ordering = ["civilization", "realm_type", "tier"]
         verbose_name = "Realm"
         verbose_name_plural = "Realms"
+
+    objects = TenantManager()
 
     def __str__(self):
         return f"{self.realm_code} ({self.name_en})"
