@@ -29,8 +29,8 @@
 - All business models have `tenant_id FK → Tenant`
 - `TenantMiddleware` injects tenant context per request
 - `TenantManager` auto-filters all ORM queries by tenant
-- Non-ADMIN users see only their tenant's data
-- ADMIN can query across all tenants
+- Non-SYS_ADMIN users see only their tenant's data
+- SYS_ADMIN can query across all tenants
 - Tenant isolation integration tests pass
 - Seed data rewritten for multi-tenant (3 × realms + actors)
 
@@ -89,7 +89,7 @@
 
 ## M6: Karma System + Statistics Dashboard
 
-**Objective:** Implement karma time-decay calculation, Redis caching, Celery background tasks, and the ADMIN statistics dashboard.
+**Objective:** Implement karma time-decay calculation, Redis caching, Celery background tasks, and the SYS_ADMIN statistics dashboard.
 
 **Key Deliverables:**
 - Karma time-decay: `effective_score = original × e^(-0.01 × years_since_event)`
@@ -97,9 +97,9 @@
 - Celery tasks: daily karma recalculation, overdue judgment alerts (>30 days in JUDGING)
 - Karma API: `GET /api/v1/souls/{id}/karma/`
 - Frontend karma visualization (Recharts timeline)
-- Global stats API (ADMIN only): `GET /stats/global/`, `GET /stats/by-tenant/`, `GET /stats/realm-occupancy/`
+- Global stats API (SYS_ADMIN only): `GET /stats/global/`, `GET /stats/by-tenant/`, `GET /stats/realm-occupancy/`
 - Frontend admin dashboard: state distribution pie chart, tenant comparison bar chart, karma distribution histogram
-- ADMIN dispatch audit page (read-only)
+- SYS_ADMIN dispatch audit page (read-only)
 
 **Estimated Complexity:** 🟡 Moderate
 

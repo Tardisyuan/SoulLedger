@@ -236,24 +236,39 @@ null ─────────────────────────
   │   ┌─────────────────────────────────────────────────────────────┐    │
   │   │                                                             │    │
   │   ▼                                                             │    │
-[PENDING_DISPATCH] ──dispatch_confirm()──► [DISPATCHED] ──punishment_complete()──► [COMPLETED]
-  │                                                               │
-  │                                                               │
-  │   (目标租户拒绝)                                               │
-  └─────────────────────────────────────────────────────────────────┘
-         (拒绝时 revert dispatch_status = null)
+[PENDING_DISPATCH] ──approve()──► [DISPATCHED] ──execute_dispatch()──► [REINCARNATING]
+  │                                                               │          │
+  │                                                               │          │
+  │   (reject/cancel)                                             │          ▼
+  └───────────────────────────────────────────────────────────────┘    [ALIVE]
+         (返回 DISPOSED，本地处置)                                          │
+                                                                            ▲
+                                                              (目标租户地域轮回)
 ```
+
+**关键说明：**
+- 灵魂在目标租户（EG_DUAT）的地域完成轮回，不是返回源租户
+- REINCARNATING 状态在目标租户内完成
+- ALIVE 意味着灵魂在目标租户地域重生
+- 源租户保留灵魂记录用于历史和审计追踪
 
 ### 3.3 状态转换规则
 
-| 当前状态 | 事件 | 下一状态 | 触发条件 |
+|| 当前状态 | 事件 | 下一状态 | 触发条件 |
 |---------|------|---------|---------|
 | null | initiate_cross_judgment() | null | 发起跨租户审判（不改变 dispatch_status） |
-| null | dispatch() | PENDING_DISPATCH | 发起外派 |
-| PENDING_DISPATCH | dispatch_confirm() | DISPATCHED | 目标租户确认接收 |
-| PENDING_DISPATCH | dispatch_reject() | null | 目标租户拒绝（取消外派） |
-| DISPATCHED | punishment_complete() | COMPLETED | 目标租户完成惩罚执行 |
-| COMPLETED | return_to_source() | null | 灵魂返回源租户，等待轮回 |
+| null | propose_dispatch() | PENDING_DISPATCH | 发起外派（soul.state=DISPATCHED） |
+| PENDING_DISPATCH | approve() | DISPATCHED | 目标租户确认接收 |
+| PENDING_DISPATCH | reject() | DISPOSED | 目标租户拒绝（灵魂返回 DISPOSED，本地处置） |
+| PENDING_DISPATCH | cancel() | DISPOSED | 发起方取消（灵魂返回 DISPOSED，本地处置） |
+| DISPATCHED | execute_dispatch() | REINCARNATING | 目标租户执行惩罚，灵魂迁移 |
+| REINCARNATING | complete() | ALIVE | 轮回完成（在目标租户地域重生） |
+
+**取消/拒绝后的处理：**
+当 dispatch 被 reject 或 cancel 后：
+- Soul.state 从 PENDING_DISPATCH 返回 DISPOSED
+- 源租户法官需要决定下一步：重新提议外派或本地执行处置
+- 跨租户审判记录保留用于审计
 
 ---
 
@@ -261,26 +276,27 @@ null ─────────────────────────
 
 ### 4.1 跨租户审判 API
 
-| 方法 | 端点 | 描述 |
+|| 方法 | 端点 | 描述 |
 |------|------|------|
-| POST | /api/v1/dispatch/judgments/ | 创建跨租户审判 |
-| GET | /api/v1/dispatch/judgments/ | 列表（按 tenant 过滤） |
-| GET | /api/v1/dispatch/judgments/{id}/ | 详情 |
-| POST | /api/v1/dispatch/judgments/{id}/add_participant/ | 添加参与者 |
-| POST | /api/v1/dispatch/judgments/{id}/vote/ | 投票 |
-| POST | /api/v1/dispatch/judgments/{id}/conclude/ | 结束审判 |
+| POST | /api/v1/cross-tenant-judgments/ | 创建跨租户审判 |
+| GET | /api/v1/cross-tenant-judgments/ | 列表（按 tenant 过滤，支持分页） |
+| GET | /api/v1/cross-tenant-judgments/{id}/ | 详情 |
+| POST | /api/v1/cross-tenant-judgments/{id}/participate/ | 加入联合审判（DISPATCH_JUDGE） |
+| POST | /api/v1/cross-tenant-judgments/{id}/conclude/ | 结束审判并判决（源租户 JUDGE） |
+| GET | /api/v1/cross-tenant-judgments/{id}/participants/ | 参与者列表 |
 
 ### 4.2 外派 API
 
-| 方法 | 端点 | 描述 |
+|| 方法 | 端点 | 描述 |
 |------|------|------|
-| POST | /api/v1/dispatch/records/ | 创建外派记录 |
-| GET | /api/v1/dispatch/records/ | 列表（按 tenant 过滤） |
-| GET | /api/v1/dispatch/records/{id}/ | 详情 |
-| POST | /api/v1/dispatch/records/{id}/confirm/ | 目标租户确认接收 |
-| POST | /api/v1/dispatch/records/{id}/reject/ | 目标租户拒绝 |
-| POST | /api/v1/dispatch/records/{id}/complete/ | 惩罚完成 |
-| POST | /api/v1/dispatch/records/{id}/return/ | 返回源租户 |
+| GET | /api/v1/dispatch/ | 列表（按 tenant 过滤，支持分页） |
+| POST | /api/v1/dispatch/propose/ | 提议外派到另一个租户 |
+| GET | /api/v1/dispatch/{id}/ | 外派记录详情 |
+| POST | /api/v1/dispatch/{id}/approve/ | 目标租户法官批准 |
+| POST | /api/v1/dispatch/{id}/reject/ | 目标租户法官拒绝 |
+| POST | /api/v1/dispatch/{id}/cancel/ | 发起方取消外派 |
+| POST | /api/v1/dispatch/{id}/execute/ | 执行外派（移动灵魂到目标租户） |
+| GET | /api/v1/dispatch/{id}/status/ | 外派状态详情 |
 
 ---
 
@@ -365,17 +381,63 @@ class DispatchService:
 
 ### 7.1 跨租户事件
 
-| 事件 | 说明 | 触发时机 |
+|| 事件 | 说明 | 触发时机 |
 |------|------|---------|
 | CROSS_JUDGMENT_CREATED | 跨租户审判创建 | 发起跨租户审判时 |
-| CROSS_JUDGMENT_STATUS_CHANGED | 审判状态变更 | 状态变为 IN_REVIEW / APPROVED / REJECTED |
-| PARTICIPANT_ADDED | 参与者加入 | DISPATCH_JUDGE 接受邀请 |
-| PARTICIPANT_VOTED | 参与者投票 | 投票提交时 |
-| DISPATCH_INITIATED | 外派发起 | 创建 DispatchRecord |
-| DISPATCH_CONFIRMED | 外派确认 | 目标租户确认接收 |
-| DISPATCH_REJECTED | 外派拒绝 | 目标租户拒绝 |
-| PUNISHMENT_COMPLETED | 惩罚完成 | 目标租户执行完毕 |
-| SOUL_RETURNED | 灵魂返回 | 返回源租户 |
+| CROSS_JUDGMENT_JOINED | 参与者加入 | DISPATCH_JUDGE 接受邀请并 join |
+| CROSS_JUDGMENT_CONCLUDED | 审判结束 | 审判达成 verdict |
+| DISPATCH_PROPOSED | 外派提议 | 创建 DispatchRecord |
+| DISPATCH_APPROVED | 外派批准 | 目标租户 approve() |
+| DISPATCH_REJECTED | 外派拒绝 | 目标租户 reject() |
+| DISPATCH_EXECUTED | 外派执行 | 灵魂迁移至目标租户 execute_dispatch() |
+| PERMISSION_DENIED | 权限拒绝 | 跨租户访问无权限时 |
+
+### 7.2 SoulEvent 事件类型
+
+所有事件记录到 SoulEvent 表，用于审计追踪：
+
+```python
+class SoulEvent(models.Model):
+    class EventType(models.TextChoices):
+        # 基础事件
+        SOUL_CREATED = 'SOUL_CREATED', '灵魂创建'
+        STATE_CHANGED = 'STATE_CHANGED', '状态变更'
+        
+        # 审判事件
+        JUDGMENT_CREATED = 'JUDGMENT_CREATED', '审判创建'
+        JUDGMENT_CONCLUDED = 'JUDGMENT_CONCLUDED', '审判结束'
+        
+        # 处置事件
+        DISPOSITION_CREATED = 'DISPOSITION_CREATED', '处置创建'
+        DISPOSITION_EXECUTED = 'DISPOSITION_EXECUTED', '处置执行'
+        
+        # 跨租户事件
+        DISPATCH_PROPOSED = 'DISPATCH_PROPOSED', '外派提议'
+        DISPATCH_APPROVED = 'DISPATCH_APPROVED', '外派批准'
+        DISPATCH_REJECTED = 'DISPATCH_REJECTED', '外派拒绝'
+        DISPATCH_EXECUTED = 'DISPATCH_EXECUTED', '外派执行'
+        CROSS_JUDGMENT_CREATED = 'CROSS_JUDGMENT_CREATED', '跨租户审判创建'
+        CROSS_JUDGMENT_JOINED = 'CROSS_JUDGMENT_JOINED', '跨租户审判参与'
+        CROSS_JUDGMENT_CONCLUDED = 'CROSS_JUDGMENT_CONCLUDED', '跨租户审判结束'
+        
+        # 安全事件
+        PERMISSION_DENIED = 'PERMISSION_DENIED', '权限拒绝'
+        
+        # 业力事件
+        KARMA_RECORD_ADDED = 'KARMA_RECORD_ADDED', '业力记录添加'
+```
+
+### 7.3 审计日志要求
+
+所有跨租户操作必须记录 SoulEvent：
+
+1. **DISPATCH_PROPOSED**：记录 source_tenant, target_tenant, soul_id, proposed_by
+2. **DISPATCH_APPROVED/REJECTED**：记录 approving_judge, notes
+3. **DISPATCH_EXECUTED**：记录实际迁移时间、source_tenant、target_tenant
+4. **CROSS_JUDGMENT_CREATED**：记录参与租户列表
+5. **CROSS_JUDGMENT_JOINED**：记录 participant_tenant、participant_user
+6. **CROSS_JUDGMENT_CONCLUDED**：记录最终 verdict、各参与者投票
+7. **PERMISSION_DENIED**：记录尝试访问的用户、目标租户、操作类型
 
 ---
 
@@ -393,9 +455,11 @@ class DispatchService:
 1. CN_DIYU 法官对灵魂 S2 发起跨租户审判
 2. 审判状态变为 APPROVED，verdict = FAILED
 3. 创建 DispatchRecord，S2.dispatched_to_tenant = EG_DUAT
-4. EG_DUAT 的 Anubis 确认接收
-5. Anubis 在 Duat 执行惩罚
-6. 惩罚完成后，S2 返回 CN_DIYU 进行轮回
+4. EG_DUAT 的 Anubis 确认接收（approve）
+5. Anubis 在 Duat 执行惩罚（execute_dispatch）
+6. S2 进入 REINCARNATING 状态（在 EG_DUAT 地域）
+7. 轮回完成，S2 在 EG_DUAT 地域重生为 ALIVE
+8. CN_DIYU 保留 S2 的历史记录用于审计
 
 ### 8.3 隔离性测试
 

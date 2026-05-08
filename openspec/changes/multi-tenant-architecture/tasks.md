@@ -77,14 +77,14 @@
 
 - [ ] **update_viewsets_tenant_filter** 🟡
   - Title: Update all ViewSets for tenant filtering
-  - Action: Update all ViewSet `get_queryset()` to use TenantManager; ADMIN role bypasses tenant filter; non-ADMIN always filtered
+  - Action: Update all ViewSet `get_queryset()` to use TenantManager; SYS_ADMIN role bypasses tenant filter; non-SYS_ADMIN always filtered
   - Verify: Test user in CN_DIYU cannot see EU souls via API
 
 ### M3.4: Tenant API + Auth Updates
 
 - [ ] **add_tenant_endpoints** 🟢
-  - Title: Add tenant management API (ADMIN only)
-  - Action: Create `backend/apps/tenants/views.py`, serializers.py, urls.py; GET /tenants/, GET /tenants/{code}/, PATCH (ADMIN only)
+  - Title: Add tenant management API (SYS_ADMIN only)
+  - Action: Create `backend/apps/tenants/views.py`, serializers.py, urls.py; GET /tenants/, GET /tenants/{code}/, PATCH (SYS_ADMIN only)
   - Verify: `curl -H "Authorization: Bearer $ADMIN_TOKEN" /api/v1/tenants/` returns 3 records
 
 - [ ] **update_auth_login_response** 🟢
@@ -130,7 +130,7 @@
 
 - [ ] **add_route_guards** 🟡
   - Title: Frontend route guards based on role
-  - Action: Create route guard HOC/Component; hide dispatch pages from GUARDIAN/VIEWER; hide admin pages from non-ADMIN
+  - Action: Create route guard HOC/Component; hide dispatch pages from GUARDIAN/VIEWER; hide admin pages from non-SYS_ADMIN
   - Verify: Menu items show/hide based on user role
 
 - [ ] **write_permission_tests** 🟡
@@ -163,7 +163,7 @@
 
 - [ ] **update_navbar_tenant_context** 🟡
   - Title: NavBar shows tenant + user info
-  - Action: Update `frontend/components/NavBar.tsx`; show tenant display_name, user role, logout button; show ADMIN dashboard link if role=ADMIN
+  - Action: Update `frontend/components/NavBar.tsx`; show tenant display_name, user role, logout button; show SYS_ADMIN dashboard link if role=SYS_ADMIN
   - Verify: NavBar displays "Chinese Afterlife (CN_DIYU)" when logged in as CN user
 
 - [ ] **update_login_redirect** 🟢
@@ -300,9 +300,9 @@
 ### M6.2: Statistics Backend
 
 - [ ] **add_global_stats_api** 🟡
-  - Title: Global statistics API (ADMIN only)
-  - Action: Create `backend/apps/stats/views.py`, serializers.py; `GET /stats/global/` (all-tenant counts), `GET /stats/by-tenant/` (per-tenant breakdown), `GET /stats/realm-occupancy/` (soul count per realm); ADMIN role required
-  - Verify: ADMIN token returns full stats; non-ADMIN returns 403
+  - Title: Global statistics API (SYS_ADMIN only)
+  - Action: Create `backend/apps/stats/views.py`, serializers.py; `GET /stats/global/` (all-tenant counts), `GET /stats/by-tenant/` (per-tenant breakdown), `GET /stats/realm-occupancy/` (soul count per realm); SYS_ADMIN role required
+  - Verify: SYS_ADMIN token returns full stats; non-SYS_ADMIN returns 403
 
 ### M6.3: Karma Frontend
 
@@ -316,11 +316,11 @@
 - [ ] **add_admin_dashboard_page** 🔴
   - Title: Admin statistics dashboard
   - Action: Create `frontend/app/admin/dashboard/page.tsx`; Recharts: PieChart (soul state distribution), BarChart (tenant comparison), Histogram (karma distribution)
-  - Verify: Dashboard renders with real API data when logged in as ADMIN
+  - Verify: Dashboard renders with real API data when logged in as SYS_ADMIN
 
 - [ ] **add_dispatch_audit_page** 🟢
   - Title: Dispatch audit page (read-only)
-  - Action: Create `frontend/app/admin/dispatch/audit/page.tsx`; paginated table of all dispatch records; read-only; ADMIN only
+  - Action: Create `frontend/app/admin/dispatch/audit/page.tsx`; paginated table of all dispatch records; read-only; SYS_ADMIN only
   - Verify: Page shows all dispatches across tenants; no edit controls
 
 ---
