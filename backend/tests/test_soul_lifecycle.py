@@ -9,10 +9,16 @@ from apps.reincarnation.models import Reincarnation
 from apps.disposition.services import DispositionService
 from apps.reincarnation.services import ReincarnationService
 from apps.realms.models import Realm
+from apps.tenants.models import Tenant
 
 
 @pytest.fixture
-def chinese_realms(db):
+def cn_tenant(db):
+    return Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
+
+
+@pytest.fixture
+def chinese_realms(db, cn_tenant):
     """Seed minimal Chinese realms needed for disposition routing."""
     Realm.objects.get_or_create(
         realm_code="DY_01_HEAVEN",
@@ -20,6 +26,7 @@ def chinese_realms(db):
             "name_local": "天堂", "name_zh": "第一层天界", "name_en": "First Heaven",
             "civilization": "CHINESE", "realm_type": "BLISS", "tier": 1,
             "is_eternal": True,
+            "tenant": cn_tenant,
         }
     )
     Realm.objects.get_or_create(
@@ -28,6 +35,7 @@ def chinese_realms(db):
             "name_local": "第十殿", "name_zh": "阎罗殿", "name_en": "Tenth Court Yama",
             "civilization": "CHINESE", "realm_type": "HELL", "tier": 10,
             "is_eternal": True,
+            "tenant": cn_tenant,
         }
     )
     return True
@@ -35,15 +43,16 @@ def chinese_realms(db):
 
 @pytest.mark.django_db
 class TestSoulLifecycle:
-    def test_full_lifecycle_passed(self, chinese_realms):
+    def test_full_lifecycle_passed(self, chinese_realms, cn_tenant):
         """Test: Create soul -> Die -> Judge PASSED -> Dispose -> Reincarnate -> Alive"""
         # 1. Create soul
         soul = Soul.objects.create(
             name="Zhang Wei",
-            civilization="CHINESE",
+            tenant=cn_tenant,
             birth_date="1990-01-01",
         )
         assert soul.current_state == SoulState.ALIVE
+        assert soul.civilization == "CHINESE"
 
         # 2. Mark dead
         soul.die()
@@ -56,6 +65,7 @@ class TestSoulLifecycle:
             soul=soul,
             civilization=soul.civilization,
             court="First Court Qinguang",
+            tenant=cn_tenant,
         )
         assert not judgment.is_final
 
@@ -96,11 +106,11 @@ class TestSoulLifecycle:
         assert reincarnation.cycle_count == 1
         assert reincarnation.rebirth_form == "HUMAN"
 
-    def test_full_lifecycle_failed(self, chinese_realms):
+    def test_full_lifecycle_failed(self, chinese_realms, cn_tenant):
         """Test: Soul with negative karma fails judgment and goes to hell tier 10"""
         soul = Soul.objects.create(
             name="Criminal Wang",
-            civilization="CHINESE",
+            tenant=cn_tenant,
             merit_score=0,
             demerit_score=100,  # karma = -100 → hell tier 10
         )
@@ -108,7 +118,9 @@ class TestSoulLifecycle:
         soul.refresh_from_db()
         assert soul.current_state == SoulState.JUDGING
 
-        judgment = Judgment.objects.create(soul=soul, civilization=soul.civilization)
+        judgment = Judgment.objects.create(
+            soul=soul, civilization=soul.civilization, tenant=cn_tenant
+        )
         judgment.conclude(Verdict.FAILED, "Murderer, condemned to Tenth Court")
         soul.refresh_from_db()
 
@@ -119,9 +131,9 @@ class TestSoulLifecycle:
         # karma=-100: tier = min(10, max(3, abs(-100)/10+1)) = min(10, max(3, 11)) = 10
         assert disposition.destination_realm.realm_code == "DY_10_YAMA"
 
-    def test_invalid_transitions(self):
+    def test_invalid_transitions(self, cn_tenant):
         """Test: Cannot die twice, cannot skip states"""
-        soul = Soul.objects.create(name="Test", civilization="CHINESE")
+        soul = Soul.objects.create(name="Test", tenant=cn_tenant)
         soul.die()
         soul.refresh_from_db()
         assert soul.current_state == SoulState.JUDGING

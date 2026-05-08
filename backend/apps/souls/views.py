@@ -19,7 +19,7 @@ class SoulViewSet(viewsets.ModelViewSet):
     Soul CRUD + state transitions + record management.
     """
     queryset = Soul.objects.prefetch_related("records").all()
-    filterset_fields = ["civilization", "current_state"]
+    filterset_fields = ["current_state", "tenant__code"]
     search_fields = ["name", "birth_name", "origin_location"]
     ordering_fields = ["created_at", "karmic_balance", "death_date"]
 
