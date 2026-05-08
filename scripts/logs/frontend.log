@@ -1,0 +1,128 @@
+
+> soul-ledger-frontend@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.5
+  - Local:        http://localhost:3333
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1609ms
+ ○ Compiling / ...
+ ✓ Compiled / in 3.1s (705 modules)
+ GET / 200 in 3414ms
+ ○ Compiling /login ...
+ ⨯ ./app/(auth)/layout.tsx:2:1
+Module not found: Can't resolve '../../globals.css'
+[0m [90m 1 |[39m [36mimport[39m type { [33mMetadata[39m } [36mfrom[39m [32m"next"[39m[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m [32m"../../globals.css"[39m[33m;[39m[0m
+[0m [90m   |[39m [31m[1m^[22m[39m[0m
+[0m [90m 3 |[39m[0m
+[0m [90m 4 |[39m [36mexport[39m [36mconst[39m metadata[33m:[39m [33mMetadata[39m [33m=[39m {[0m
+[0m [90m 5 |[39m   title[33m:[39m [32m"登录 - SoulLedger"[39m[33m,[39m[0m
+
+https://nextjs.org/docs/messages/module-not-found
+ ⨯ ./app/(auth)/layout.tsx:2:1
+Module not found: Can't resolve '../../globals.css'
+[0m [90m 1 |[39m [36mimport[39m type { [33mMetadata[39m } [36mfrom[39m [32m"next"[39m[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m [32m"../../globals.css"[39m[33m;[39m[0m
+[0m [90m   |[39m [31m[1m^[22m[39m[0m
+[0m [90m 3 |[39m[0m
+[0m [90m 4 |[39m [36mexport[39m [36mconst[39m metadata[33m:[39m [33mMetadata[39m [33m=[39m {[0m
+[0m [90m 5 |[39m   title[33m:[39m [32m"登录 - SoulLedger"[39m[33m,[39m[0m
+
+https://nextjs.org/docs/messages/module-not-found
+ ⨯ ./app/(auth)/layout.tsx:2:1
+Module not found: Can't resolve '../../globals.css'
+[0m [90m 1 |[39m [36mimport[39m type { [33mMetadata[39m } [36mfrom[39m [32m"next"[39m[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m [32m"../../globals.css"[39m[33m;[39m[0m
+[0m [90m   |[39m [31m[1m^[22m[39m[0m
+[0m [90m 3 |[39m[0m
+[0m [90m 4 |[39m [36mexport[39m [36mconst[39m metadata[33m:[39m [33mMetadata[39m [33m=[39m {[0m
+[0m [90m 5 |[39m   title[33m:[39m [32m"登录 - SoulLedger"[39m[33m,[39m[0m
+
+https://nextjs.org/docs/messages/module-not-found
+ ⨯ ./app/(auth)/layout.tsx:2:1
+Module not found: Can't resolve '../../globals.css'
+[0m [90m 1 |[39m [36mimport[39m type { [33mMetadata[39m } [36mfrom[39m [32m"next"[39m[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m [32m"../../globals.css"[39m[33m;[39m[0m
+[0m [90m   |[39m [31m[1m^[22m[39m[0m
+[0m [90m 3 |[39m[0m
+[0m [90m 4 |[39m [36mexport[39m [36mconst[39m metadata[33m:[39m [33mMetadata[39m [33m=[39m {[0m
+[0m [90m 5 |[39m   title[33m:[39m [32m"登录 - SoulLedger"[39m[33m,[39m[0m
+
+https://nextjs.org/docs/messages/module-not-found
+ GET /realms 500 in 14ms
+ GET /realms 500 in 12ms
+ GET /souls 500 in 13ms
+ GET / 500 in 10ms
+ GET / 500 in 18ms
+ GET / 500 in 15ms
+ GET / 500 in 12ms
+ GET / 500 in 11ms
+ GET / 500 in 11ms
+ GET / 500 in 11ms
+ GET / 500 in 14ms
+
+Could not open layout.tsx in the editor.
+The editor process exited with an error: Terminal editors can only be used on macOS.
+
+To set up the editor integration, add something like REACT_EDITOR=atom to the .env.local file in your project folder and restart the development server.
+
+ ✓ Compiled /_not-found in 774ms (936 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /_next/static/webpack/b6bb14419570214a.webpack.hot-update.json 404 in 970ms
+ GET / 200 in 24ms
+ GET / 200 in 32ms
+ ✓ Compiled in 167ms (508 modules)
+ ✓ Compiled /login in 289ms (434 modules)
+ ✓ Compiled in 829ms (939 modules)
+ GET / 200 in 121ms
+ ✓ Compiled in 313ms (939 modules)
+ ✓ Compiled in 557ms (936 modules)
+ ✓ Compiled in 338ms (936 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ components/NavBar.tsx (12:27) @ useState
+ ⨯ ReferenceError: useState is not defined
+    at NavBar (./components/NavBar.tsx:19:29)
+digest: "2625594786"
+[0m [90m 10 |[39m   [36mconst[39m { t[33m,[39m locale } [33m=[39m useI18n()[33m;[39m[0m
+[0m [90m 11 |[39m   [36mconst[39m router [33m=[39m useRouter()[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 12 |[39m   [36mconst[39m [user[33m,[39m setUser] [33m=[39m useState[33m<[39m[33mUser[39m [33m|[39m [36mnull[39m[33m>[39m([36mnull[39m)[33m;[39m[0m
+[0m [90m    |[39m                           [31m[1m^[22m[39m[0m
+[0m [90m 13 |[39m   [36mconst[39m [menuOpen[33m,[39m setMenuOpen] [33m=[39m useState([36mfalse[39m)[33m;[39m[0m
+[0m [90m 14 |[39m[0m
+[0m [90m 15 |[39m   useEffect(() [33m=>[39m {[0m
+ GET / 500 in 149ms
+ ✓ Compiled in 295ms (936 modules)
+ GET / 200 in 53ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 508ms (938 modules)
+ ⨯ ./components/NavBar.tsx
+Error: 
+  [31mx[0m Unexpected token `nav`. Expected jsx identifier
+    ,-[[36;1;4m/home/tardis/Documents/跨文明灵魂管理系统/frontend/components/NavBar.tsx[0m:38:1]
+ [2m38[0m |   };
+ [2m39[0m | 
+ [2m40[0m |   return (
+ [2m41[0m |     <nav className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm sticky top-0 z-50">
+    : [31;1m     ^^^[0m
+ [2m42[0m |       <div className="max-w-6xl mx-auto px-4">
+ [2m43[0m |         <div className="flex items-center justify-between h-14">
+ [2m44[0m |           {/* Logo */}
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/NavBar.tsx
+./app/layout.tsx
+ GET / 500 in 8ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 694ms (927 modules)
+ GET /_next/static/webpack/b6bb14419570214a.webpack.hot-update.json 404 in 755ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET / 200 in 18ms
+ GET / 200 in 24ms
+ ✓ Compiled in 446ms (941 modules)

@@ -1,0 +1,43 @@
+{
+  "nav": {
+    "title": "SoulLedger",
+    "subtitle": "Amset Netjer - Cross-Civilization Soul Management",
+    "home": "Per Djew",
+    "souls": "Aba Hemsu",
+    "realms": "Mekher",
+    "actors": "Netjeru",
+    "about": "Irw Kushed",
+    "dashboard": "Wetep Khet",
+    "journal": "Medew Netjer"
+  },
+  "auth": {
+    "login": "Sesen Pert",
+    "logout": "Iri Pert",
+    "register": "Kheme",
+    "username": "Ren Aba",
+    "password": "Pert Abuf",
+    "logging_in": "Khemut Sesen Pert...",
+    "login_success": "Sesen Pert Abuf",
+    "login_failed": "Sesen Pert Wehem",
+    "logout_success": "Iri Pert Abuf"
+  },
+  "home": {
+    "hero_title": "SoulLedger",
+    "hero_subtitle": "Aba Hemst - Amset Netjeru em Kehat - A Set",
+    "hero_description": "Aba Hemst - Amset Netjeru em Diyu Hanacht, Aset Menkhat we Aaru em Kemet - Aba em Kehat Setep.",
+    "civilizations_title": "Aset Ahamet Wets Khet",
+    "chinese_title": "Diyu Hanacht",
+    "chinese_subtitle": "𓂋𓈖𓏏",
+    "chinese_desc": "Seh Mech Wer - Meng Po She Men - Aru Hemsu Petow Ru - A Setep",
+    "european_title": "Aset Menkhat Wu Pet - Set",
+    "european_subtitle": "𓇳𓋹𓎛𓋴",
+    "european_desc": "Hemsu Khet Wenu - Per Djew Her - Seth Mech Dante - Lethe Ru Setep",
+    "egyptian_title": "Duaut",
+    "egyptian_subtitle": "𓂀𓍯𓂋𓃀",
+    "egyptian_desc": "Wsir Sheemtet - Unemu Her tepy Ma'at - Aaru Em Per Djewet"
+  },
+  "footer": {
+    "built_with": "Aha Seth Web Em Django + DRF + Next.js",
+    "version": "SoulLedger v0.1"
+  }
+}
