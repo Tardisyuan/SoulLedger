@@ -4,6 +4,7 @@ Soul core model + state machine.
 import uuid
 from django.db import models
 from django.utils import timezone
+from apps.tenants.managers import TenantManager
 
 
 class Civilization(models.TextChoices):
@@ -60,6 +61,8 @@ class Soul(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Soul"
         verbose_name_plural = "Souls"
+
+    objects = TenantManager()
 
     def __str__(self):
         return f"{self.name} ({self.civilization}) [{self.current_state}]"
