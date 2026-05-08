@@ -5,21 +5,25 @@ import { useI18n, LOCALE_LABELS, Locale } from "@/src/contexts/I18nContext";
 export function LanguageSwitcher() {
   const { locale, setLocale, hydrated } = useI18n();
 
+  if (!hydrated) {
+    return (
+      <select className="bg-slate-800 text-slate-300 text-sm rounded px-3 py-1.5 border border-slate-600">
+        <option>—</option>
+      </select>
+    );
+  }
+
   return (
-    <div className="flex items-center gap-1" suppressHydrationWarning>
+    <select
+      value={locale}
+      onChange={(e) => setLocale(e.target.value as Locale)}
+      className="bg-slate-800 text-white text-sm rounded px-3 py-1.5 border border-slate-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500"
+    >
       {(Object.keys(LOCALE_LABELS) as Locale[]).map((loc) => (
-        <button
-          key={loc}
-          onClick={() => setLocale(loc)}
-          className={`px-3 py-1 rounded text-sm transition-colors ${
-            locale === loc && hydrated
-              ? "bg-amber-600 text-white"
-              : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-          }`}
-        >
+        <option key={loc} value={loc}>
           {LOCALE_LABELS[loc]}
-        </button>
+        </option>
       ))}
-    </div>
+    </select>
   );
 }
