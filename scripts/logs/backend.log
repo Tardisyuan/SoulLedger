@@ -1,0 +1,4 @@
+INFO 2026-05-08 07:18:06,029 autoreload Watching for file changes with StatReloader
+INFO 2026-05-08 07:18:10,772 basehttp "GET /api/v1/souls/ HTTP/1.1" 200 52
+INFO 2026-05-08 07:18:19,822 basehttp "GET /api/v1/realms/ HTTP/1.1" 200 1796
+INFO 2026-05-08 07:18:19,980 basehttp "GET /api/v1/actors/ HTTP/1.1" 200 2861
