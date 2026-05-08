@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_celery_beat",
     # Local apps
+    "apps.tenants",
     "apps.authentication",
     "apps.souls",
     "apps.judgment",
