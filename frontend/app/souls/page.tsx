@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { soulsApi, Soul } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
-import SoulCreateModal from "@/src/components/souls/SoulCreateModal";
+import { SoulCreateModal } from "@/src/components/ui/Modal";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "bg-green-600",

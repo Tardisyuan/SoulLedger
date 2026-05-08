@@ -19,7 +19,8 @@
     "logging_in": "Khemut Sesen Pert...",
     "login_success": "Sesen Pert Abuf",
     "login_failed": "Sesen Pert Wehem",
-    "logout_success": "Iri Pert Abuf"
+    "logout_success": "Iri Pert Abuf",
+    "cancel": "Iri"
   },
   "home": {
     "hero_title": "SoulLedger",
@@ -72,6 +73,7 @@
     },
     "form": {
       "name_label": "Ren *",
+      "name_required": "Ren Her Tepy",
       "name_placeholder": "Ren Aba",
       "civilization_label": "Aset Ahamet",
       "birth_date_label": "Wepet Her Tepy",
