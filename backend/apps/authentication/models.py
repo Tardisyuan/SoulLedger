@@ -3,6 +3,7 @@ Custom user model for SoulLedger.
 """
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from apps.tenants.managers import TenantManager
 
 
 class UserRole(models.TextChoices):
@@ -41,6 +42,8 @@ class User(AbstractUser):
     class Meta:
         verbose_name = "User"
         verbose_name_plural = "Users"
+
+    objects = TenantManager()
 
     def __str__(self):
         return f"{self.username} ({self.role})"

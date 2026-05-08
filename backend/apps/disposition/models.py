@@ -5,6 +5,7 @@ import uuid
 from django.db import models
 from apps.souls.models import Soul
 from apps.judgment.models import Judgment
+from apps.tenants.managers import TenantManager
 
 
 class MemoryResetMechanism(models.TextChoices):
@@ -63,6 +64,8 @@ class Disposition(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Disposition"
         verbose_name_plural = "Dispositions"
+
+    objects = TenantManager()
 
     def __str__(self):
         realm = self.destination_realm.realm_code if self.destination_realm else "UNKNOWN"
