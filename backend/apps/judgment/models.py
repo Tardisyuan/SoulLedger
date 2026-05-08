@@ -57,6 +57,13 @@ class Judgment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     concluded_at = models.DateTimeField(null=True, blank=True)
 
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='judgments',
+        null=True,
+    )
+
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "Judgment"
