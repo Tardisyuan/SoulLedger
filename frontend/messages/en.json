@@ -10,6 +10,17 @@
     "dashboard": "Dashboard",
     "journal": "Journal"
   },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "username": "Username",
+    "password": "Password",
+    "logging_in": "Logging in...",
+    "login_success": "Login successful",
+    "login_failed": "Login failed",
+    "logout_success": "Logged out"
+  },
   "home": {
     "hero_title": "SoulLedger",
     "hero_subtitle": "Cross-civilization soul management system",

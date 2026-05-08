@@ -2,10 +2,74 @@ import axios from "axios";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
+  return null;
+}
+
 export const api = axios.create({
   baseURL: API_BASE,
   headers: { "Content-Type": "application/json" },
 });
+
+// Add JWT token to every request
+api.interceptors.request.use((config) => {
+  const token = getCookie("soulledger_access");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Handle 401 → redirect to login
+api.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    if (error.response?.status === 401 && !error.config._retry) {
+      error.config._retry = true;
+      const refresh = getCookie("soulledger_refresh");
+      if (refresh) {
+        try {
+          const res = await axios.post(`${API_BASE}/auth/refresh/`, { refresh });
+          const { access, refresh: newRefresh } = res.data;
+          document.cookie = `soulledger_access=${access}; path=/; max-age=1800; SameSite=Lax`;
+          document.cookie = `soulledger_refresh=${newRefresh}; path=/; max-age=604800; SameSite=Lax`;
+          error.config.headers.Authorization = `Bearer ${access}`;
+          return api(error.config);
+        } catch {
+          // Refresh failed → clear cookies and redirect
+          document.cookie = "soulledger_access=; Max-Age=0; path=/";
+          document.cookie = "soulledger_refresh=; Max-Age=0; path=/";
+          if (typeof window !== "undefined") {
+            window.location.href = "/login";
+          }
+        }
+      } else {
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Auth API
+export const authApi = {
+  login: (username: string, password: string) =>
+    api.post("/auth/login/", { username, password }),
+  register: (data: object) => api.post("/auth/register/", data),
+  logout: () => {
+    const refresh = getCookie("soulledger_refresh");
+    return api.post("/auth/logout/", { refresh });
+  },
+  profile: () => api.get("/auth/profile/"),
+  refresh: (refresh: string) =>
+    axios.post(`${API_BASE}/auth/refresh/`, { refresh }),
+};
 
 // Souls
 export const soulsApi = {
@@ -146,4 +210,14 @@ export interface SoulEvent {
   payload: Record<string, unknown>;
   actor: string;
   created_at: string;
+}
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  role: "ADMIN" | "JUDGE" | "GUARDIAN" | "VIEWER";
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
 }

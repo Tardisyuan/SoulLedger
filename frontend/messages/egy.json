@@ -6,7 +6,20 @@
     "souls": "Aba Hemsu",
     "realms": "Mekher",
     "actors": "Netjeru",
-    "about": "Irw Kushed"
+    "about": "Irw Kushed",
+    "dashboard": "Wetep Khet",
+    "journal": "Medew Netjer"
+  },
+  "auth": {
+    "login": "Sesen Pert",
+    "logout": "Iri Pert",
+    "register": "Kheme",
+    "username": "Ren Aba",
+    "password": "Pert Abuf",
+    "logging_in": "Khemut Sesen Pert...",
+    "login_success": "Sesen Pert Abuf",
+    "login_failed": "Sesen Pert Wehem",
+    "logout_success": "Iri Pert Abuf"
   },
   "home": {
     "hero_title": "SoulLedger",
