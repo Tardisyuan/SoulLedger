@@ -2,9 +2,31 @@
 > soul-ledger-frontend@0.1.0 dev
 > next dev
 
- ⚠ Port 3000 is in use, trying 3001 instead.
   ▲ Next.js 14.2.5
-  - Local:        http://localhost:3001
+  - Local:        http://localhost:3333
 
  ✓ Starting...
- ✓ Ready in 1878ms
+ ✓ Ready in 1556ms
+ ○ Compiling / ...
+ ✓ Compiled / in 2.1s (470 modules)
+ GET / 200 in 2300ms
+ GET / 200 in 41ms
+ GET / 200 in 24ms
+ ○ Compiling /souls ...
+ ✓ Compiled /souls in 1850ms (706 modules)
+ GET /souls 200 in 2052ms
+ ✓ Compiled in 290ms (318 modules)
+ ✓ Compiled in 518ms (709 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET / 200 in 245ms
+ ✓ Compiled in 214ms (695 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET / 200 in 117ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled in 187ms (695 modules)
+ GET / 200 in 233ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 824ms (698 modules)
+ GET /realms 404 in 91ms
+ GET /actors 404 in 20ms
+ GET /realms 404 in 19ms

@@ -13,6 +13,12 @@ class Verdict(models.TextChoices):
     RETRY = "RETRY", "Retry / Appeal"
 
 
+class JudgmentMethod(models.TextChoices):
+    STANDARD = "STANDARD", "Standard Trial (Chinese/European)"
+    HEART_WEIGHING = "HEART_WEIGHING", "Heart Weighing (Egyptian)"
+    DIABOLICAL_TRIAL = "DIABOLICAL_TRIAL", "Diabolical Trial (European Hell)"
+
+
 class Judgment(models.Model):
     """
     A single judgment proceeding for a soul.
@@ -34,6 +40,12 @@ class Judgment(models.Model):
     court = models.CharField(max_length=255, blank=True, help_text="Court name, e.g. 第一殿")
     evidence_json = models.JSONField(default=dict)
     confession = models.TextField(blank=True)
+    judgment_method = models.CharField(
+        max_length=30,
+        choices=JudgmentMethod.choices,
+        default=JudgmentMethod.STANDARD,
+        help_text="Method of judgment (affects disposition routing)",
+    )
     verdict = models.CharField(
         max_length=20,
         choices=Verdict.choices,

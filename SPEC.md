@@ -377,13 +377,14 @@ next_life.demerit_score = current.demerit_score × 0.2
 | **European** | karma ≥ 0 → Heaven（EU_HEAVEN） | karma < 0 → circle = min(9, abs(karma)/15+1) → Dante 九层地狱 |
 | **Egyptian** | 心脏平衡 → Aaru（EG_AARU） | 心脏比羽毛重 → Ammit 吞噬 或 Duat 深层 |
 
-### 5.5 Memory Reset 规则
+### 5.5 Memory Reset 机制（文化特定）
 
-| 方法 | 使用场景 | 实现 |
-|------|---------|------|
-| NONE | 接近得道者，保留完整记忆 | soul.description 不变 |
-| PARTIAL | 普通轮回，保留出生名 | soul.description = "" |
-| FULL | 重罪轮回，完全清除 | soul.name = "", birth_name = "" |
+| 值 | 文明 | 说明 |
+|----|------|------|
+| `MENGPO` | Chinese | 孟婆汤（清除现世记忆） |
+| `LETIES` | European | 忘川（Lethe 河水） |
+| `SPELL` | Egyptian | 咒语（魔法记忆消除） |
+| `NONE` | 通用 | 完整记忆保留 |
 
 ---
 

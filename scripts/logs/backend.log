@@ -1,4 +1,107 @@
-INFO 2026-05-08 07:18:06,029 autoreload Watching for file changes with StatReloader
-INFO 2026-05-08 07:18:10,772 basehttp "GET /api/v1/souls/ HTTP/1.1" 200 52
-INFO 2026-05-08 07:18:19,822 basehttp "GET /api/v1/realms/ HTTP/1.1" 200 1796
-INFO 2026-05-08 07:18:19,980 basehttp "GET /api/v1/actors/ HTTP/1.1" 200 2861
+INFO 2026-05-08 08:25:22,350 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 08:25:22
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 09:20:24,283 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/models.py changed, reloading.
+INFO 2026-05-08 09:20:25,127 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 09:20:25
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 09:20:37,666 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/models.py changed, reloading.
+INFO 2026-05-08 09:20:38,470 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 09:20:38
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 09:20:44,881 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/views.py changed, reloading.
+INFO 2026-05-08 09:20:45,961 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 09:20:46
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 09:21:03,558 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/souls/record_models.py changed, reloading.
+INFO 2026-05-08 09:21:04,373 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 09:21:04
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 09:21:10,797 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/realms/models.py changed, reloading.
+INFO 2026-05-08 09:21:11,578 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 09:21:11
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 09:21:20,037 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/judgment/models.py changed, reloading.
+INFO 2026-05-08 09:21:20,820 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 09:21:21
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 09:21:28,260 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/judgment/models.py changed, reloading.
+INFO 2026-05-08 09:21:29,081 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 09:21:29
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+INFO 2026-05-08 09:24:01,226 autoreload /home/tardis/Documents/跨文明灵魂管理系统/backend/apps/disposition/services.py changed, reloading.
+INFO 2026-05-08 09:24:02,129 autoreload Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 08, 2026 - 09:24:02
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/

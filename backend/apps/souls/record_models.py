@@ -13,6 +13,24 @@ class RecordType(models.TextChoices):
     DISPOSITION = "DISPOSITION", "Disposition Record"
 
 
+class RecordCategory(models.TextChoices):
+    # Merit categories
+    CHARITY = "CHARITY", "Charity / Generosity"
+    COMPASSION = "COMPASSION", "Compassion / Kindness"
+    HONESTY = "HONESTY", "Honesty / Integrity"
+    COURAGE = "COURAGE", "Courage / Bravery"
+    WISDOM = "WISDOM", "Wisdom / Knowledge"
+    PIETY = "PIETY", "Piety / Devotion"
+    # Demerit categories
+    CRUELTY = "CRUELTY", "Cruelty / Violence"
+    DECEPTION = "DECEPTION", "Deception / Lying"
+    COWARDICE = "COWARDICE", "Cowardice"
+    GREED = "GREED", "Greed / Avarice"
+    BLASPHEMY = "BLASPHEMY", "Blasphemy / Impiety"
+    MURDER = "MURDER", "Murder / Killing"
+    OTHER = "OTHER", "Other"
+
+
 class SoulRecord(models.Model):
     """
     Individual event/record attached to a soul.
@@ -25,6 +43,12 @@ class SoulRecord(models.Model):
         related_name="records",
     )
     record_type = models.CharField(max_length=20, choices=RecordType.choices)
+    category = models.CharField(
+        max_length=20,
+        choices=RecordCategory.choices,
+        default=RecordCategory.OTHER,
+        help_text="Standardized category for this record",
+    )
     civilization = models.CharField(
         max_length=20,
         choices=Civilization.choices,
@@ -34,6 +58,15 @@ class SoulRecord(models.Model):
     weight = models.IntegerField(
         default=1,
         help_text="Significance weight (1-100). Affects karma calculation.",
+    )
+    event_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date the event occurred (for time-decay calculation)",
+    )
+    is_milestone = models.BooleanField(
+        default=False,
+        help_text="If true, weight is doubled (major life event)",
     )
     evidence_json = models.JSONField(default=dict, blank=True)
     recorded_at = models.DateTimeField(auto_now_add=True)

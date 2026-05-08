@@ -54,6 +54,10 @@ class Realm(models.Model):
     description = models.TextField(blank=True)
     memory_reset_mechanism = models.CharField(max_length=100, blank=True)
     is_eternal = models.BooleanField(default=False)
+    is_judgment_required = models.BooleanField(
+        default=True,
+        help_text="Whether this realm requires a formal judgment process before entry",
+    )
     cycle_limit = models.IntegerField(null=True, blank=True)
 
     class Meta:
