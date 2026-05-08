@@ -15,3 +15,12 @@ class SoulEventViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = SoulEventSerializer
     filterset_fields = ["soul", "event_type", "actor"]
     ordering_fields = ["created_at"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'ADMIN':
+            return qs
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            return qs.filter(tenant=tenant)
+        return qs.none()

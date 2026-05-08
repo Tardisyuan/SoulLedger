@@ -15,6 +15,15 @@ class JudgmentViewSet(viewsets.ModelViewSet):
     filterset_fields = ["soul", "civilization", "verdict", "is_final"]
     ordering_fields = ["created_at", "concluded_at"]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'ADMIN':
+            return qs
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            return qs.filter(tenant=tenant)
+        return qs.none()
+
     def perform_create(self, serializer):
         judgment = serializer.save()
         soul = judgment.soul

@@ -15,6 +15,15 @@ class DispositionViewSet(viewsets.ModelViewSet):
     filterset_fields = ["soul", "is_executed", "is_eternal", "memory_reset"]
     ordering_fields = ["created_at", "executed_at"]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'ADMIN':
+            return qs
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            return qs.filter(tenant=tenant)
+        return qs.none()
+
     @action(detail=True, methods=["post"])
     def execute(self, request, pk=None):
         """

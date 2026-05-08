@@ -23,6 +23,15 @@ class SoulViewSet(viewsets.ModelViewSet):
     search_fields = ["name", "birth_name", "origin_location"]
     ordering_fields = ["created_at", "karmic_balance", "death_date"]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.user.role == 'ADMIN':  # SYS_ADMIN bypasses
+            return qs
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            return qs.filter(tenant=tenant)
+        return qs.none()
+
     def get_serializer_class(self):
         if self.action == "list":
             return SoulListSerializer
