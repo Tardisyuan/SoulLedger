@@ -16,7 +16,7 @@ const messages: Record<Locale, Record<string, any>> = {
 export const LOCALE_LABELS: Record<Locale, string> = {
   "zh-Hans": "简体中文",
   en: "English",
-  egy: "𓂀",
+  egy: "𓇳𓏏𓁹",
 };
 
 const LOCALE_COOKIE = "soulledger-locale";
