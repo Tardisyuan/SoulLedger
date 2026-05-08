@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { authApi } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 
@@ -11,42 +12,25 @@ export default function LoginPage() {
   const { showToast } = useToast();
   const router = useRouter();
   const [form, setForm] = useState({ username: "", password: "" });
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/auth/login/`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        }
-      );
+      const res = await authApi.login(form.username, form.password);
 
-      if (!res.ok) {
-        const data = await res.json();
-        const msg = data.detail || "Login failed";
-        setError(msg);
-        showToast(msg, "error");
-        return;
-      }
-
-      const tokens = await res.json();
-      // Store tokens in cookie
+      const tokens = res.data;
       document.cookie = `soulledger_access=${tokens.access}; path=/; max-age=1800; SameSite=Lax`;
       document.cookie = `soulledger_refresh=${tokens.refresh}; path=/; max-age=604800; SameSite=Lax`;
 
-      showToast("Login successful", "success");
+      showToast(t("auth.login_success"), "success");
       router.push("/souls");
-    } catch {
-      const msg = "Network error";
-      setError(msg);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })
+          ?.response?.data?.detail || "Login failed";
       showToast(msg, "error");
     } finally {
       setLoading(false);
