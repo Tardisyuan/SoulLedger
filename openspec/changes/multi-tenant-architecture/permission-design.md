@@ -7,13 +7,14 @@
 
 ## 1. Role Definitions
 
-| Role | Scope | Description | Examples |
+|| Role | Scope | Description | Examples |
 |------|-------|-------------|----------|
 | **TENANT_ADMIN** | Per-tenant | Full CRUD within tenant | 阎罗王 (CN), Satan (EU), Osiris (EG) |
 | **JUDGE** | Per-tenant | Execute judgment, view souls | 判官, St. Peter, Anubis |
 | **GUARDIAN** | Per-tenant | Add karma records, view souls | 牛头马面, Thanatos |
 | **VIEWER** | Per-tenant | Read-only access | Auditors, Observers |
-| **ADMIN** | Global | Read-only stats, no business intervention | System Administrator |
+| **SYS_ADMIN** | Global | Read-only stats, no business intervention | System Administrator |
+| **DISPATCH_JUDGE** | Per-tenant | Cross-tenant judgment participant | Can join foreign tenant's judgment sessions |
 
 ---
 
@@ -23,37 +24,39 @@
 
 Controls which menu items/navigation links are visible to each role.
 
-| Page | TENANT_ADMIN | JUDGE | GUARDIAN | VIEWER | ADMIN |
-|------|:------------:|:-----:|:--------:|:------:|:-----:|
-| `/{tenant}/souls/` | ✓ | ✓ | ✓ | ✓ | ✓ (via /admin/) |
-| `/{tenant}/souls/[id]/` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `/{tenant}/dispatch/propose/` | ✓ | ✓ | ✗ | ✗ | ✗ |
-| `/{tenant}/dispatch/pending/` | ✓ | ✓ | ✗ | ✗ | ✗ |
-| `/{tenant}/cross-judgments/` | ✓ | ✓ | ✗ | ✗ | ✗ |
-| `/{tenant}/realms/` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `/{tenant}/actors/` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `/{tenant}/profile/` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `/admin/dashboard/` | ✗ | ✗ | ✗ | ✗ | ✓ |
-| `/admin/dispatch/audit/` | ✗ | ✗ | ✗ | ✗ | ✓ |
+|| Page | TENANT_ADMIN | JUDGE | GUARDIAN | VIEWER | SYS_ADMIN | DISPATCH_JUDGE |
+|------|:------------:|:-----:|:--------:|:------:|:--------:|:--------------:|
+| `/{tenant}/souls/` | ✓ | ✓ | ✓ | ✓ | ✓ (via /admin/) | ✓ |
+| `/{tenant}/souls/[id]/` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/{tenant}/dispatch/propose/` | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ |
+| `/{tenant}/dispatch/pending/` | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ |
+| `/{tenant}/cross-judgments/` | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ |
+| `/{tenant}/realms/` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/{tenant}/actors/` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/{tenant}/profile/` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `/admin/dashboard/` | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ |
+| `/admin/dispatch/audit/` | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ |
 
 ### 2.2 Operation Permission Matrix
 
 Controls which API operations are allowed for each role.
 
-| Operation | TENANT_ADMIN | JUDGE | GUARDIAN | VIEWER |
-|-----------|:------------:|:-----:|:--------:|:------:|
-| `soul.create` | ✓ | ✓ | ✗ | ✗ |
-| `soul.die` | ✓ | ✓ | ✗ | ✗ |
-| `soul.transition` | ✓ | ✓ | ✗ | ✗ |
-| `soul.view` | ✓ | ✓ | ✓ | ✓ |
-| `soul.add_record` | ✓ | ✓ | ✓ | ✗ |
-| `judgment.conclude` | ✓ | ✓ | ✗ | ✗ |
-| `disposition.execute` | ✓ | ✓ | ✗ | ✗ |
-| `dispatch.propose` | ✓ | ✓ | ✗ | ✗ |
-| `dispatch.approve` | ✓ | ✓ | ✗ | ✗ |
-| `cross_judgment.join` | ✓ | ✓ | ✗ | ✗ |
-| `realm.view` | ✓ | ✓ | ✓ | ✓ |
-| `actor.view` | ✓ | ✓ | ✓ | ✓ |
+|| Operation | TENANT_ADMIN | JUDGE | GUARDIAN | VIEWER | DISPATCH_JUDGE |
+|-----------|:------------:|:-----:|:--------:|:------:|:--------------:|
+| `soul.create` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| `soul.die` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| `soul.transition` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| `soul.view` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `soul.add_record` | ✓ | ✓ | ✓ | ✗ | ✗ |
+| `judgment.conclude` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| `disposition.execute` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| `dispatch.propose` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| `dispatch.approve` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| `cross_judgment.create` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| `cross_judgment.join` | ✓ | ✓ | ✗ | ✗ | ✓ |
+| `cross_judgment.conclude` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| `realm.view` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `actor.view` | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### 2.3 Field-Level Visibility Matrix
 
@@ -127,14 +130,37 @@ class TenantPermission(BasePermission):
     """Ensures user can only access resources within their tenant."""
     
     def has_object_permission(self, request, view, obj):
-        if request.user.role == 'ADMIN':
-            return True  # ADMIN bypasses tenant check (read-only)
+        if request.user.role == 'SYS_ADMIN':
+            return True  # SYS_ADMIN bypasses tenant check (read-only)
         
         tenant = getattr(obj, 'tenant', None)
         if tenant is None:
             return True  # Non-tenant objects are public
         
         return str(request.user.tenant_id) == str(tenant.id)
+
+
+class CrossTenantPermission(BasePermission):
+    """Allows cross-tenant access for DISPATCH_JUDGE role."""
+    
+    def has_permission(self, request, view):
+        # Check if this is a cross-tenant request
+        target_tenant = getattr(view, 'target_tenant', None)
+        if target_tenant is None:
+            return True
+        
+        user_tenant = request.user.tenant_id
+        if str(target_tenant) == str(user_tenant):
+            return True  # Same tenant, normal access
+        
+        # Cross-tenant request - check for DISPATCH_JUDGE or cross_tenant permission
+        user = request.user
+        if user.role == 'DISPATCH_JUDGE':
+            return True
+        if hasattr(user, 'permissions') and 'cross_tenant' in user.permissions:
+            return True
+        
+        return False
 
 
 class RolePermission(BasePermission):
@@ -204,13 +230,16 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
           'dispatch.propose', 'dispatch.approve', 'realm.view', 'actor.view'],
   GUARDIAN: ['soul.view', 'soul.add_record', 'realm.view', 'actor.view'],
   VIEWER: ['soul.view', 'realm.view', 'actor.view'],
-  ADMIN: [], // Read-only, handled separately
+  DISPATCH_JUDGE: ['soul.view', 'cross_judgment.join'],
+  SYS_ADMIN: [], // Read-only, handled separately
 };
 
 const PAGE_ACCESS: Record<string, Role[]> = {
-  '/{tenant}/souls/': ['TENANT_ADMIN', 'JUDGE', 'GUARDIAN', 'VIEWER'],
+  '/{tenant}/souls/': ['TENANT_ADMIN', 'JUDGE', 'GUARDIAN', 'VIEWER', 'DISPATCH_JUDGE'],
   '/{tenant}/dispatch/propose/': ['TENANT_ADMIN', 'JUDGE'],
-  '/admin/dashboard/': ['ADMIN'],
+  '/{tenant}/dispatch/pending/': ['TENANT_ADMIN', 'JUDGE', 'DISPATCH_JUDGE'],
+  '/{tenant}/cross-judgments/': ['TENANT_ADMIN', 'JUDGE', 'DISPATCH_JUDGE'],
+  '/admin/dashboard/': ['SYS_ADMIN'],
 };
 ```
 
@@ -220,16 +249,16 @@ const PAGE_ACCESS: Record<string, Role[]> = {
 // frontend/components/RouteGuard.tsx
 
 export function RouteGuard({ children, requiredPermission }) {
-  const { hasPermission, isAdmin } = useAuth();
+  const { hasPermission, isSysAdmin } = useAuth();
   const router = useRouter();
   
   useEffect(() => {
-    if (isAdmin && !requiredPermission) return; // ADMIN can access most
+    if (isSysAdmin && !requiredPermission) return; // SYS_ADMIN can access most
     
     if (requiredPermission && !hasPermission(requiredPermission)) {
       router.push('/unauthorized');
     }
-  }, [hasPermission, isAdmin, requiredPermission]);
+  }, [hasPermission, isSysAdmin, requiredPermission]);
   
   return children;
 }
@@ -254,16 +283,16 @@ const visibleItems = dispatchMenuItems.filter(item =>
 
 ---
 
-## 6. ADMIN Read-Only Enforcement
+## 6. SYS_ADMIN Read-Only Enforcement
 
-ADMIN role has special handling to ensure read-only access at all levels:
+SYS_ADMIN role has special handling to ensure read-only access at all levels:
 
-| Layer | Enforcement |
+|| Layer | Enforcement |
 |-------|-------------|
-| API | `ADMIN.role == 'ADMIN'` bypasses tenant filter but all write operations return 403 |
-| Serializer | ADMIN sees all tenants' data but no sensitive fields (no karmic_balance for foreign tenants) |
-| Service | All mutation methods check `user.role != 'ADMIN'` and raise `PermissionDenied` |
-| Frontend | ADMIN menu shows only `/admin/*` pages, no business operation buttons |
+| API | `SYS_ADMIN.role == 'SYS_ADMIN'` bypasses tenant filter but all write operations return 403 |
+| Serializer | SYS_ADMIN sees all tenants' data but no sensitive fields (no karmic_balance for foreign tenants) |
+| Service | All mutation methods check `user.role != 'SYS_ADMIN'` and raise `PermissionDenied` |
+| Frontend | SYS_ADMIN menu shows only `/admin/*` pages, no business operation buttons |
 
 ---
 
