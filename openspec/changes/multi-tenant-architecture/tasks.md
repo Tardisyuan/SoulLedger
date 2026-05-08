@@ -1,329 +1,417 @@
-# Multi-Tenant Architecture — Task List (v2)
+# Multi-Tenant Architecture — Task List v2
 
-## Phase A: Multi-Tenant Infrastructure (Milestone 3)
-
-### A1: Tenant Model
-- [ ] **task: create_tenant_model**
-  标题：创建 Tenant 模型
-  描述：创建 Tenant 模型（code, display_name, description, settings, is_active, dispatch_enabled, api_endpoint）
-  文件：backend/apps/tenants/models.py
-  验证：python manage.py check
-
-- [ ] **task: seed_tenant_data**
-  标题：插入三条租户记录
-  描述：CN_DIYU / EU_HEAVEN_HELL / EG_DUAT 各一条，dispatch_enabled=True
-  文件：backend/scripts/seed_tenants.py
-  验证：SELECT * FROM tenants_tenant; 应有3条
-
-### A2: All Tables + tenant_id
-- [ ] **task: add_tenant_id_to_realms**
-  标题：Realm 表加 tenant_id
-  描述：tenant FK（可空），为现有数据填充 tenant_id
-  文件：backend/apps/realms/models.py, migrations
-
-- [ ] **task: add_tenant_id_to_actors**
-  标题：Actor 表加 tenant_id
-  文件：backend/apps/actors/models.py, migrations
-
-- [ ] **task: add_tenant_id_to_souls**
-  标题：Soul 表加 tenant_id
-  描述：加 tenant FK，移除 civilization 字段（已被 tenant 替代）
-  文件：backend/apps/souls/models.py, migrations
-
-- [ ] **task: add_tenant_id_to_judgment**
-  标题：Judgment 表加 tenant_id
-  文件：backend/apps/judgment/models.py, migrations
-
-- [ ] **task: add_tenant_id_to_disposition**
-  标题：Disposition 表加 tenant_id
-  文件：backend/apps/disposition/models.py, migrations
-
-- [ ] **task: add_tenant_id_to_reincarnation**
-  标题：Reincarnation 表加 tenant_id
-  文件：backend/apps/reincarnation/models.py, migrations
-
-- [ ] **task: add_tenant_id_to_events**
-  标题：SoulEvent 表加 tenant_id
-  文件：backend/apps/events/models.py, migrations
-
-- [ ] **task: update_user_tenant**
-  标题：User 表加 tenant_id
-  描述：从关联 actor 反推 tenant，或默认 CN_DIYU
-  文件：backend/apps/authentication/models.py, migrations
-
-### A3: Middleware + QuerySet
-- [ ] **task: create_tenant_middleware**
-  标题：TenantMiddleware 自动注入租户上下文
-  描述：从 request.user.tenant 读取，存入 thread-local
-  文件：backend/apps/tenants/middleware.py
-
-- [ ] **task: create_tenant_manager**
-  标题：TenantManager 自动过滤 QuerySet
-  描述：所有业务模型使用 TenantManager，自动加 tenant filter
-  文件：各 app managers.py
-
-- [ ] **task: update_viewsets_tenant_filter**
-  标题：所有 ViewSet 加租户过滤逻辑
-  描述：非 ADMIN 用户强制 tenant 过滤，ADMIN 可跨租户
-  文件：各 app views.py
-
-### A4: Tenant API + Auth Updates
-- [ ] **task: add_tenant_endpoints**
-  标题：租户管理 API（仅 ADMIN）
-  描述：GET /tenants/、GET /tenants/{code}/、PATCH
-  文件：backend/apps/tenants/views.py, serializers.py, urls.py
-
-- [ ] **task: update_auth_login_response**
-  标题：登录响应加 tenant 信息
-  描述：/auth/login/ 返回 user.tenant.code 和 display_name
-  文件：backend/apps/authentication/serializers.py
-
-### A5: Data Migration
-- [ ] **task: migrate_existing_data**
-  标题：现有数据迁移到多租户
-  描述：所有现有 soul/realm/actor 按 civilization 映射到对应 tenant_id
-  文件：backend/scripts/migrate_to_multitenant.py
-
-- [ ] **task: reseed_all_tenants**
-  标题：重写种子数据脚本
-  描述：seed_all_tenants.py，分别 seed 三个租户
-  文件：backend/scripts/seed_all_tenants.py
-  验证：三个租户 realms 总数 = 17+17+5=39，actors = 31+?+?
-
-- [ ] **task: cleanup_civilization_references**
-  标题：清理代码中所有 civilization 字段引用
-  描述：serializer/filter/query 中的 civilization 参数全部改为 tenant
-  文件：各 app serializers.py, views.py, urls.py
-
-### A6: Tests
-- [ ] **task: write_tenant_isolation_tests**
-  标题：租户隔离集成测试
-  描述：创建两个租户的用户，验证 A 租户看不到 B 租户数据
-  文件：backend/tests/test_tenant_isolation.py
-  验证：pytest -v（应全部失败或报权限错误）
-
-## Phase B: Tenant-Aware Frontend (Milestone 4)
-
-- [ ] **task: update_api_client_tenant**
-  标题：API client 支持 tenant 上下文
-  描述：请求自动带上当前 tenant，响应解析 tenant 信息
-  文件：frontend/lib/api.ts
-
-- [ ] **task: add_tenant_context**
-  标题：TenantContext 前端上下文
-  描述：从 JWT 解码获取 tenant_code，存储在 TenantContext
-  文件：frontend/contexts/TenantContext.tsx
-
-- [ ] **task: add_tenant_routing**
-  标题：前端按租户路由
-  描述：登录后跳转到 /{tenant_code}/souls/，NavBar 显示当前租户
-  文件：frontend/app/[tenant]/layout.tsx, page.tsx
-
-- [ ] **task: update_navbar_tenant_context**
-  标题：NavBar 显示当前租户 + 登出
-  描述：显示 tenant.display_name、user.role、logout 按钮
-  文件：frontend/components/NavBar.tsx
-
-- [ ] **task: update_login_redirect**
-  标题：登录后按租户跳转
-  描述：解析 JWT 中 tenant_code，跳转到 /{tenant}/souls/
-  文件：frontend/app/login/page.tsx
-
-## Phase C: Dispatch Module (Milestone 5)
-
-### C1: Dispatch Models
-- [ ] **task: create_dispatch_models**
-  标题：创建 DispatchRecord + CrossTenantJudgment 模型
-  描述：DispatchRecord（source_tenant, target_tenant, soul, reason, status, dispatched_at）
-       CrossTenantJudgment（participants from multiple tenants, status: PROPOSED/IN_REVIEW/APPROVED/REJECTED）
-  文件：backend/apps/dispatch/models.py
-  验证：python manage.py check
-
-- [ ] **task: create_dispatch_services**
-  标题：DispatchService + CrossTenantJudgmentService
-  描述：propose_dispatch(), approve_dispatch(), reject_dispatch(), execute_dispatch()
-       create_judgment_session(), join_judgment(), approve_judgment()
-  文件：backend/apps/dispatch/services.py
-
-### C2: Dispatch API
-- [ ] **task: add_dispatch_api**
-  标题：Dispatch API 端点
-  描述：POST /dispatch/propose/, /dispatch/{id}/approve/, /dispatch/{id}/reject/, /dispatch/{id}/execute/
-  文件：backend/apps/dispatch/views.py, serializers.py, urls.py
-
-- [ ] **task: add_cross_tenant_judgment_api**
-  标题：联合审判 API 端点
-  描述：GET /cross-tenant-judgments/, POST /cross-tenant-judgments/, POST /cross-tenant-judgments/{id}/participate/
-  文件：backend/apps/dispatch/views.py, serializers.py, urls.py
-
-### C3: Dispatch Frontend
-- [ ] **task: add_dispatch_frontend_pages**
-  标题：外派相关页面
-  描述：/{tenant}/dispatch/propose/, /{tenant}/dispatch/pending/, /{tenant}/dispatch/history/
-  文件：frontend/app/[tenant]/dispatch/
-
-- [ ] **task: add_cross_judgment_frontend**
-  标题：联合审判页面
-  描述：/{tenant}/cross-judgments/ 显示所有跨租户审判会话
-  文件：frontend/app/[tenant]/cross-judgments/
-
-### C4: Dispatch Tests
-- [ ] **task: write_dispatch_tests**
-  标题：外派流程集成测试
-  描述：测试 propose→approve→execute 全流程，跨租户隔离
-  文件：backend/tests/test_dispatch.py
-  验证：pytest -v
-
-## Phase D: Multi-Civilization Data (Milestone 6)
-
-- [ ] **task: seed_european_data**
-  标题：European realms + actors 数据
-  描述：17 realms（Heaven + Purgatory 7层 + Hell 9层），5 actors（St. Peter, Hades, Satan, Michael, Lucifer）
-  文件：backend/scripts/seed_european_data.py
-
-- [ ] **task: seed_egyptian_data**
-  标题：Egyptian realms + actors 数据
-  描述：5 realms（Aaru, Duat regions），4 actors（Osiris, Anubis, Thoth, Ma'at）
-  文件：backend/scripts/seed_egyptian_data.py
-
-- [ ] **task: verify_dispatch_routing_per_civilization**
-  标题：三大文明 dispatch 路由验证
-  描述：对每个租户测试 dispatch 路由规则
-  文件：backend/tests/test_dispatch_per_civilization.py
-
-## Phase E: Karma System (Milestone 7)
-
-- [ ] **task: implement_karma_time_decay**
-  标题：业力时间衰减
-  描述：effective_score = original × e^(-0.01×years_since_event)
-  文件：backend/apps/souls/services.py
-
-- [ ] **task: implement_karma_redis_cache**
-  标题：Redis 业力缓存
-  描述：TTL=5min，缓存 karma 计算结果
-  文件：backend/apps/souls/services.py
-
-- [ ] **task: implement_celery_tasks**
-  标题：Celery 定时任务
-  描述：每日重算、逾期检查（soul in JUDGING > 30 days 提醒）
-  文件：backend/config/celery.py
-
-- [ ] **task: add_karma_frontend**
-  标题：业力可视化前端
-  描述：Recharts 时间线图
-  文件：frontend/app/[tenant]/souls/[id]/page.tsx（加 karma chart）
-
-## Phase F: Statistics Dashboard (Milestone 8)
-
-- [ ] **task: add_global_stats_api**
-  标题：全局统计 API（仅 ADMIN）
-  描述：GET /stats/global/, GET /stats/by-tenant/, GET /stats/realm-occupancy/
-  文件：backend/apps/stats/views.py, serializers.py
-
-- [ ] **task: add_admin_dashboard_frontend**
-  标题：ADMIN 统计大屏
-  描述：/admin/dashboard/ 跨租户统计图表
-  文件：frontend/app/admin/dashboard/page.tsx
-
-## Phase G: Production (Milestone 9)
-
-- [ ] **task: docker_prod_config**
-  标题：docker-compose.prod.yml
-  文件：docker-compose.prod.yml
-
-- [ ] **task: multi_stage_dockerfile**
-  标题：多阶段 Dockerfile（< 500MB）
-  文件：backend/Dockerfile
-
-- [ ] **task: nginx_https_config**
-  标题：Nginx HTTPS 配置
-  文件：infrastructure/nginx.conf
-
-- [ ] **task: health_endpoint**
-  标题：/health/ 健康检查端点
-  文件：backend/config/urls.py
-
-- [ ] **task: structured_logging**
-  标题：结构化日志（structlog）
-  文件：backend/config/settings.py
-
-- [ ] **task: sentry_integration**
-  标题：Sentry 集成
-  文件：backend/config/settings.py
-
-## Phase H: SPEC.md Final Update
-
-- [ ] **task: final_spec_update**
-  标题：最终 SPEC.md 确认
-  描述：确认所有章节完整、一致、无遗留问题
-  文件：SPEC.md
+> Rewritten to align with 6-milestone structure. Tasks grouped by milestone.
+> Each task is: specific (concrete action), verifiable (can check), small (one session).
 
 ---
 
-## Dependency Graph
+## M3: Multi-Tenant Backend Infrastructure
 
-```
-M3: A1 → A2 → A3 → A4 → A5 → A6
-                              ↓
-M4: B1 → B2 → B3 → B4 → B5
-                          
-M5: C1 → C2 → C3 → C4
+**Prerequisite:** M2 ✅ (JWT auth done)
 
-M6: D1 → D2 → D3
+### M3.1: Tenant Model + Seed Data
 
-M7: E1 → E2 → E3 → E4
+- [ ] **create_tenant_model** 🔴
+  - Title: Create Tenant model
+  - Action: Create `backend/apps/tenants/models.py` with Tenant model (code, display_name, description, settings JSON, is_active, dispatch_enabled, api_endpoint)
+  - Verify: `python manage.py check`
 
-M8: F1 → F2
+- [ ] **seed_tenant_data** 🟢
+  - Title: Insert 3 tenant records
+  - Action: Create `backend/scripts/seed_tenants.py` inserting CN_DIYU, EU_HEAVEN_HELL, EG_DUAT with dispatch_enabled=True
+  - Verify: `SELECT * FROM tenants_tenant;` returns 3 rows
 
-M9: G1 → G2 → G3 → G4 → G5 → G6
+### M3.2: Add tenant_id to All Business Tables
 
-H: After all above
-```
+- [ ] **add_tenant_id_to_realms** 🟡
+  - Title: Add tenant_id to Realm model
+  - Action: Add `tenant FK → Tenant (nullable)` to Realm model; create migration; backfill for existing data
+  - Verify: `python manage.py makemigrations realms --check` passes
 
-## Acceptance Criteria Per Milestone
+- [ ] **add_tenant_id_to_actors** 🟡
+  - Title: Add tenant_id to Actor model
+  - Action: Same pattern as realms
+  - Verify: `python manage.py makemigrations actors --check` passes
 
-### M3 (Multi-Tenant Infrastructure) ✅
-- [ ] Tenant model created with 3 records
-- [ ] All business tables have tenant_id FK
-- [ ] TenantManager auto-filters queries by tenant
-- [ ] Non-ADMIN users only see their tenant's data
-- [ ] ADMIN can see all tenants' data
-- [ ] All tests pass (12 core + 2 isolation)
+- [ ] **add_tenant_id_to_souls** 🔴
+  - Title: Add tenant_id to Soul model
+  - Action: Add `tenant FK → Tenant (NOT NULL)`; remove `civilization` field (replaced by tenant); migrate existing souls to CN_DIYU
+  - Verify: `python manage.py makemigrations souls --check` passes
 
-### M4 (Tenant-Aware Frontend) ✅
-- [ ] URL contains tenant: /{tenant}/souls/
-- [ ] Login redirects to /{tenant_code}/souls/
-- [ ] NavBar shows current tenant name
-- [ ] Language switcher works on all pages
-- [ ] ADMIN sees /admin/dashboard/ link
+- [ ] **add_tenant_id_to_judgment** 🟡
+  - Title: Add tenant_id to Judgment model
+  - Action: Add `tenant FK → Tenant`; backfill from soul.tenant
+  - Verify: `python manage.py makemigrations judgment --check` passes
 
-### M5 (Dispatch Module) ✅
-- [ ] Can propose dispatch from one tenant to another
-- [ ] Target tenant can approve/reject dispatch
-- [ ] Dispatched soul appears in target tenant's data
-- [ ] Cross-tenant judgment sessions can be created
-- [ ] Participants from multiple tenants can join
+- [ ] **add_tenant_id_to_disposition** 🟡
+  - Title: Add tenant_id to Disposition model
+  - Action: Add `tenant FK → Tenant`; backfill from soul.tenant
+  - Verify: `python manage.py makemigrations disposition --check` passes
 
-### M6 (Multi-Civilization Data) ✅
-- [ ] European: 17 realms + 5 actors with data
-- [ ] Egyptian: 5 realms + 4 actors with data
-- [ ] All dispatch routing rules work per civilization
-- [ ] i18n displays correctly for all three languages
+- [ ] **add_tenant_id_to_reincarnation** 🟡
+  - Title: Add tenant_id to Reincarnation model
+  - Action: Add `tenant FK → Tenant`; backfill from soul.tenant
+  - Verify: `python manage.py makemigrations reincarnation --check` passes
 
-### M7 (Karma System) ✅
-- [ ] Time decay formula implemented
-- [ ] Redis cache reduces DB queries
-- [ ] Celery tasks run on schedule
-- [ ] Karma chart renders in frontend
+- [ ] **add_tenant_id_to_events** 🟡
+  - Title: Add tenant_id to SoulEvent model
+  - Action: Add `tenant FK → Tenant`; backfill from related soul.tenant
+  - Verify: `python manage.py makemigrations events --check` passes
 
-### M8 (Statistics Dashboard) ✅
-- [ ] /stats/global/ returns all-tenant data (ADMIN)
-- [ ] /stats/by-tenant/ returns per-tenant breakdown (ADMIN)
-- [ ] Dashboard charts render with real data
+- [ ] **add_tenant_id_to_user** 🟡
+  - Title: Add tenant_id to User model
+  - Action: Add `tenant FK → Tenant (NOT NULL)` to User model; set default=CN_DIYU for existing users
+  - Verify: `python manage.py makemigrations authentication --check` passes
 
-### M9 (Production) ✅
-- [ ] docker-compose.prod.yml runs all services
-- [ ] Dockerfile < 500MB
-- [ ] /health/ returns 200
-- [ ] Structured logs output JSON format
-- [ ] Sentry captures exceptions
+### M3.3: Middleware + TenantManager
+
+- [ ] **create_tenant_middleware** 🔴
+  - Title: Create TenantMiddleware
+  - Action: Create `backend/apps/tenants/middleware.py`; extract `tenant_code` from JWT; store in thread-local; attach `request.tenant`
+  - Verify: `python manage.py check`; unit test: request.tenant matches JWT claims
+
+- [ ] **create_tenant_manager** 🔴
+  - Title: Create TenantManager for auto-filtering
+  - Action: Create `backend/apps/tenants/managers.py` with TenantManager; update all business models to use TenantManager; auto-filter all queries by `self.tenant`
+  - Verify: `python manage.py shell` — query from user in CN_DIYU returns only CN_DIYU souls
+
+- [ ] **update_viewsets_tenant_filter** 🟡
+  - Title: Update all ViewSets for tenant filtering
+  - Action: Update all ViewSet `get_queryset()` to use TenantManager; ADMIN role bypasses tenant filter; non-ADMIN always filtered
+  - Verify: Test user in CN_DIYU cannot see EU souls via API
+
+### M3.4: Tenant API + Auth Updates
+
+- [ ] **add_tenant_endpoints** 🟢
+  - Title: Add tenant management API (ADMIN only)
+  - Action: Create `backend/apps/tenants/views.py`, serializers.py, urls.py; GET /tenants/, GET /tenants/{code}/, PATCH (ADMIN only)
+  - Verify: `curl -H "Authorization: Bearer $ADMIN_TOKEN" /api/v1/tenants/` returns 3 records
+
+- [ ] **update_auth_login_response** 🟢
+  - Title: Login response includes tenant info
+  - Action: Update `backend/apps/authentication/serializers.py`; login response includes `user.tenant.code` and `user.tenant.display_name`
+  - Verify: POST /auth/login/ response contains tenant.code and tenant.display_name
+
+### M3.5: Data Migration + Cleanup
+
+- [ ] **migrate_existing_data** 🔴
+  - Title: Migrate existing data to multi-tenant
+  - Action: Create `backend/scripts/migrate_to_multitenant.py`; map existing souls/realms/actors to tenant_id based on civilization field
+  - Verify: All souls have tenant_id; no orphan records
+
+- [ ] **cleanup_civilization_references** 🟡
+  - Title: Remove civilization field references
+  - Action: Search all code for `civilization`; replace with `tenant`; update serializers, filters, URLs
+  - Verify: `grep -r "civilization" backend/` returns no matches
+
+### M3.6: Testing
+
+- [ ] **write_tenant_isolation_tests** 🔴
+  - Title: Tenant isolation integration tests
+  - Action: Create `backend/tests/test_tenant_isolation.py`; create users in CN and EU; verify cross-tenant data access returns 0 results
+  - Verify: `pytest -v backend/tests/test_tenant_isolation.py` — all pass
+
+---
+
+## M4: Tenant-Aware Frontend + Landing Page
+
+**Prerequisite:** M3 ✅
+
+### M4.1: Core Frontend Tenant Support
+
+- [ ] **update_api_client_tenant** 🟡
+  - Title: API client injects tenant context
+  - Action: Update `frontend/lib/api.ts`; decode JWT to extract tenant_code; add tenant header/query param to all requests
+  - Verify: All API calls include `X-Tenant-Code` header or tenant in URL
+
+- [ ] **create_tenant_context** 🟡
+  - Title: TenantContext React context
+  - Action: Create `frontend/contexts/TenantContext.tsx`; store tenant_code and display_name; provide useTenant() hook
+  - Verify: `console.log(useTenant())` returns correct tenant in any page
+
+- [ ] **add_tenant_routing** 🔴
+  - Title: Frontend tenant route structure
+  - Action: Create `frontend/app/[tenant]/layout.tsx`; update page.tsx; all business pages under `[tenant]` dynamic route
+  - Verify: Navigating to /CN_DIYU/souls/ renders souls list; /EU_HEAVEN_HELL/souls/ renders different data
+
+- [ ] **update_navbar_tenant_context** 🟡
+  - Title: NavBar shows tenant + user info
+  - Action: Update `frontend/components/NavBar.tsx`; show tenant display_name, user role, logout button; show ADMIN dashboard link if role=ADMIN
+  - Verify: NavBar displays "Chinese Afterlife (CN_DIYU)" when logged in as CN user
+
+- [ ] **update_login_redirect** 🟢
+  - Title: Login redirects to tenant dashboard
+  - Action: Update `frontend/app/(auth)/login/page.tsx`; on successful login, decode JWT tenant_code and redirect to `/{tenant_code}/souls/`
+  - Verify: Login as CN user → redirects to /CN_DIYU/souls/
+
+### M4.2: Landing Page
+
+- [ ] **create_landing_page_tenant_selection** 🟡
+  - Title: Landing page with tenant selection
+  - Action: Update `frontend/app/page.tsx`; show 3 clickable tenant cards; clicking navigates to login for that tenant
+  - Verify: Landing page shows 3 civilizations with names and descriptions
+
+- [ ] **update_language_switcher** 🟢
+  - Title: Language switcher per-tenant
+  - Action: Ensure language switcher works on all pages; dispatch/judgment content respects user locale
+  - Verify: Switch from zh to en and all labels update
+
+---
+
+## M5: Dispatch Module
+
+**Prerequisite:** M3 ✅ + M4 ✅
+
+### M5.1: Dispatch Models
+
+- [ ] **create_dispatch_models** 🔴
+  - Title: Create DispatchRecord + CrossTenantJudgment models
+  - Action: Create `backend/apps/dispatch/models.py`; DispatchRecord (source_tenant, target_tenant, soul FK, reason, status, created_at, updated_at, dispatched_at); CrossTenantJudgment (title, description, status, created_at); CrossTenantJudgmentParticipant (judgment FK, tenant FK, actor FK, role: ADVISOR/CO_JUDGE/CHAIRMAN)
+  - Verify: `python manage.py check`
+
+- [ ] **create_dispatch_services** 🔴
+  - Title: DispatchService + CrossTenantJudgmentService
+  - Action: Create `backend/apps/dispatch/services.py`; propose_dispatch(soul, target_tenant, reason, judger), approve_dispatch(dispatch_id, approver), reject_dispatch(dispatch_id, reason), execute_dispatch(dispatch_id); create_judgment_session(title, participants), join_judgment(judgment_id, actor, role), conclude_judgment(judgment_id)
+  - Verify: `python manage.py check`; unit tests for each service method
+
+### M5.2: Dispatch API
+
+- [ ] **add_dispatch_api** 🔴
+  - Title: Dispatch REST API endpoints
+  - Action: Create `backend/apps/dispatch/views.py`, serializers.py, urls.py; POST /dispatch/propose/, GET /dispatch/ (list, filtered by tenant), GET /dispatch/{id}/, POST /dispatch/{id}/approve/, POST /dispatch/{id}/reject/, POST /dispatch/{id}/execute/
+  - Verify: `curl` commands exercise full dispatch workflow
+
+- [ ] **add_cross_tenant_judgment_api** 🔴
+  - Title: Cross-tenant judgment API endpoints
+  - Action: Add to dispatch views/serializers/urls; GET /cross-tenant-judgments/, POST /cross-tenant-judgments/, GET /cross-tenant-judgments/{id}/, POST /cross-tenant-judgments/{id}/participate/, POST /cross-tenant-judgments/{id}/conclude/
+  - Verify: Cross-tenant users can join same judgment session
+
+### M5.3: Dispatch Frontend
+
+- [ ] **add_dispatch_propose_page** 🟡
+  - Title: Dispatch propose page
+  - Action: Create `frontend/app/[tenant]/dispatch/propose/page.tsx`; form: select soul, select target tenant, enter reason; submit calls POST /dispatch/propose/
+  - Verify: Can propose dispatch from CN_DIYU to EU_HEAVEN_HELL
+
+- [ ] **add_dispatch_pending_page** 🟡
+  - Title: Dispatch pending page
+  - Action: Create `frontend/app/[tenant]/dispatch/pending/page.tsx`; list of pending dispatches for target tenant; approve/reject buttons
+  - Verify: EU user sees pending dispatch from CN with approve button
+
+- [ ] **add_dispatch_history_page** 🟢
+  - Title: Dispatch history page
+  - Action: Create `frontend/app/[tenant]/dispatch/history/page.tsx`; paginated list of all past dispatches with status badges
+  - Verify: History shows COMPLETED/REJECTED dispatches
+
+- [ ] **add_cross_judgment_page** 🟡
+  - Title: Cross-tenant judgment page
+  - Action: Create `frontend/app/[tenant]/cross-judgments/page.tsx`; list all cross-tenant judgment sessions; show participant list; join button
+  - Verify: Can view and join cross-tenant judgment as ADVISOR
+
+### M5.4: Dispatch Tests
+
+- [ ] **write_dispatch_tests** 🔴
+  - Title: Dispatch integration tests
+  - Action: Create `backend/tests/test_dispatch.py`; test full propose→approve→execute workflow; test cross-tenant isolation; test role permissions
+  - Verify: `pytest -v backend/tests/test_dispatch.py` — all pass
+
+---
+
+## M6: Karma System + Statistics Dashboard
+
+**Prerequisite:** M3 ✅ + M4 ✅
+
+### M6.1: Karma Backend
+
+- [ ] **implement_karma_time_decay** 🔴
+  - Title: Karma time-decay calculation
+  - Action: Add to `backend/apps/souls/services.py`; `effective_score = original × e^(-0.01 × years_since_event)`; method `calculate_effective_karma(soul_id)`
+  - Verify: Unit test: karma 100 merit 10 years ago → ~90.48 effective
+
+- [ ] **implement_karma_redis_cache** 🟡
+  - Title: Redis karma cache
+  - Action: Update `KarmaService`; cache key `karma:{soul_id}`; TTL=5 min; invalidate on soul record change
+  - Verify: Second call to karma for same soul hits cache (check Redis KEYS)
+
+- [ ] **add_karma_api_endpoint** 🟡
+  - Title: Karma API endpoint
+  - Action: Add to `backend/apps/souls/views.py`; `GET /souls/{id}/karma/`; returns original, effective, breakdown by event
+  - Verify: `curl /api/v1/souls/1/karma/` returns JSON with original and effective scores
+
+- [ ] **implement_celery_karma_tasks** 🟡
+  - Title: Celery karma tasks
+  - Action: Create `backend/apps/souls/tasks.py`; daily karma recalculation task; overdue judgment check (soul in JUDGING > 30 days → log warning)
+  - Verify: `celery -A config beat` shows scheduled tasks; overdue check logs warning for old judgments
+
+### M6.2: Statistics Backend
+
+- [ ] **add_global_stats_api** 🟡
+  - Title: Global statistics API (ADMIN only)
+  - Action: Create `backend/apps/stats/views.py`, serializers.py; `GET /stats/global/` (all-tenant counts), `GET /stats/by-tenant/` (per-tenant breakdown), `GET /stats/realm-occupancy/` (soul count per realm); ADMIN role required
+  - Verify: ADMIN token returns full stats; non-ADMIN returns 403
+
+### M6.3: Karma Frontend
+
+- [ ] **add_karma_chart** 🟡
+  - Title: Soul detail karma chart
+  - Action: Update `frontend/app/[tenant]/souls/[id]/page.tsx`; add Recharts LineChart showing karma over time (timeline of merit/demerit events)
+  - Verify: Karma chart renders with real soul data
+
+### M6.4: Statistics Dashboard Frontend
+
+- [ ] **add_admin_dashboard_page** 🔴
+  - Title: Admin statistics dashboard
+  - Action: Create `frontend/app/admin/dashboard/page.tsx`; Recharts: PieChart (soul state distribution), BarChart (tenant comparison), Histogram (karma distribution)
+  - Verify: Dashboard renders with real API data when logged in as ADMIN
+
+- [ ] **add_dispatch_audit_page** 🟢
+  - Title: Dispatch audit page (read-only)
+  - Action: Create `frontend/app/admin/dispatch/audit/page.tsx`; paginated table of all dispatch records; read-only; ADMIN only
+  - Verify: Page shows all dispatches across tenants; no edit controls
+
+---
+
+## M7: Extended Civilizations Data
+
+**Prerequisite:** M3 ✅
+
+- [ ] **seed_european_data** 🟢
+  - Title: Seed European realms + actors
+  - Action: Create `backend/scripts/seed_european_data.py`; 17 realms (Heaven 3 + Purgatory 7 + Hell 9); 5 actors (St. Peter, Hades, Satan, Michael, Lucifer); each with tenant_id=EU_HEAVEN_HELL
+  - Verify: `SELECT COUNT(*) FROM realms_realmmembership WHERE tenant_id=<EU_ID>;` = 17; actors = 5
+
+- [ ] **seed_egyptian_data** 🟢
+  - Title: Seed Egyptian realms + actors
+  - Action: Create `backend/scripts/seed_egyptian_data.py`; 5 realms (Aaru + Duat regions); 4 actors (Osiris, Anubis, Thoth, Ma'at); each with tenant_id=EG_DUAT
+  - Verify: `SELECT COUNT(*) FROM realms_realmmembership WHERE tenant_id=<EG_ID>;` = 5; actors = 4
+
+- [ ] **verify_civilization_dispatch_routing** 🟡
+  - Title: Verify dispatch works per civilization
+  - Action: Run `backend/scripts/seed_all_tenants.py` to verify all data; test dispatch from CN→EU and CN→EG routes correctly
+  - Verify: Each tenant's souls show correct realm count
+
+- [ ] **verify_i18n_all_locales** 🟢
+  - Title: Verify i18n for all 3 locales
+  - Action: Switch frontend to zh/en/eg locale; verify all labels, realm names, actor names display correctly
+  - Verify: No untranslated strings in any locale
+
+---
+
+## M8: Production Ready
+
+**Prerequisite:** All previous milestones
+
+### M8.1: Container & Deployment
+
+- [ ] **create_docker_compose_prod** 🟡
+  - Title: Production docker-compose
+  - Action: Create `docker-compose.prod.yml`; production networks, named volumes, restart policies, resource limits
+  - Verify: `docker-compose -f docker-compose.prod.yml config` passes
+
+- [ ] **create_multi_stage_dockerfile** 🟡
+  - Title: Multi-stage Dockerfile < 500MB
+  - Action: Rewrite `backend/Dockerfile`; multi-stage build (builder + runtime); final image < 500MB
+  - Verify: `docker build` produces image < 500MB (check `docker images`)
+
+- [ ] **configure_nginx_https** 🟡
+  - Title: Nginx HTTPS configuration
+  - Action: Create `infrastructure/nginx.conf`; SSL termination, HTTP → HTTPS redirect, proxy to Next.js and Django
+  - Verify: Nginx starts and serves HTTPS on port 443
+
+### M8.2: Observability
+
+- [ ] **add_health_endpoints** 🟢
+  - Title: Health check endpoints
+  - Action: Add `GET /health/` to `backend/config/urls.py` (returns 200 + {"status": "ok"}); add Next.js `/api/health` route
+  - Verify: `curl localhost:8000/health/` returns 200; `curl localhost:3333/api/health` returns 200
+
+- [ ] **configure_structured_logging** 🟡
+  - Title: Structured logging with structlog
+  - Action: Update `backend/config/settings.py`; configure structlog with JSON output; add request ID to all logs
+  - Verify: Django logs output JSON format (not plain text)
+
+- [ ] **integrate_sentry** 🟡
+  - Title: Sentry error tracking
+  - Action: Install `sentry-sdk`; configure in `backend/config/settings.py`; add source maps to Docker build
+  - Verify: `sentry-cli test` connects; test error triggers Sentry event
+
+### M8.3: Operations
+
+- [ ] **create_env_example** 🟢
+  - Title: .env.example with all required vars
+  - Action: Create `backend/.env.example`; list all required env vars (DATABASE_URL, REDIS_URL, JWT_SECRET, SENTRY_DSN, etc.); no real secrets
+  - Verify: Copy `.env.example` to `.env`, fill in values, Django starts
+
+---
+
+## Dependency Summary
+
+| Task | Milestone | Complexity | Dependencies |
+|------|-----------|------------|--------------|
+| create_tenant_model | M3.1 | 🔴 | M2 |
+| seed_tenant_data | M3.1 | 🟢 | M3.1 |
+| add_tenant_id_to_realms | M3.2 | 🟡 | M3.1 |
+| add_tenant_id_to_actors | M3.2 | 🟡 | M3.1 |
+| add_tenant_id_to_souls | M3.2 | 🔴 | M3.1 |
+| add_tenant_id_to_judgment | M3.2 | 🟡 | M3.2 |
+| add_tenant_id_to_disposition | M3.2 | 🟡 | M3.2 |
+| add_tenant_id_to_reincarnation | M3.2 | 🟡 | M3.2 |
+| add_tenant_id_to_events | M3.2 | 🟡 | M3.2 |
+| add_tenant_id_to_user | M3.2 | 🟡 | M3.1 |
+| create_tenant_middleware | M3.3 | 🔴 | M3.1 |
+| create_tenant_manager | M3.3 | 🔴 | M3.3 |
+| update_viewsets_tenant_filter | M3.3 | 🟡 | M3.3 |
+| add_tenant_endpoints | M3.4 | 🟢 | M3.3 |
+| update_auth_login_response | M3.4 | 🟢 | M3.4 |
+| migrate_existing_data | M3.5 | 🔴 | M3.2 |
+| cleanup_civilization_references | M3.5 | 🟡 | M3.2 |
+| write_tenant_isolation_tests | M3.6 | 🔴 | M3.3 |
+| update_api_client_tenant | M4.1 | 🟡 | M3 |
+| create_tenant_context | M4.1 | 🟡 | M4.1 |
+| add_tenant_routing | M4.1 | 🔴 | M4.1 |
+| update_navbar_tenant_context | M4.1 | 🟡 | M4.1 |
+| update_login_redirect | M4.2 | 🟢 | M4.1 |
+| create_landing_page_tenant_selection | M4.2 | 🟡 | M4.2 |
+| update_language_switcher | M4.2 | 🟢 | M4.1 |
+| create_dispatch_models | M5.1 | 🔴 | M3 |
+| create_dispatch_services | M5.1 | 🔴 | M5.1 |
+| add_dispatch_api | M5.2 | 🔴 | M5.1 |
+| add_cross_tenant_judgment_api | M5.2 | 🔴 | M5.1 |
+| add_dispatch_propose_page | M5.3 | 🟡 | M5.2 |
+| add_dispatch_pending_page | M5.3 | 🟡 | M5.2 |
+| add_dispatch_history_page | M5.3 | 🟢 | M5.3 |
+| add_cross_judgment_page | M5.3 | 🟡 | M5.2 |
+| write_dispatch_tests | M5.4 | 🔴 | M5.2 |
+| implement_karma_time_decay | M6.1 | 🔴 | M3 |
+| implement_karma_redis_cache | M6.1 | 🟡 | M6.1 |
+| add_karma_api_endpoint | M6.1 | 🟡 | M6.1 |
+| implement_celery_karma_tasks | M6.1 | 🟡 | M6.1 |
+| add_global_stats_api | M6.2 | 🟡 | M3 |
+| add_karma_chart | M6.3 | 🟡 | M6.1 |
+| add_admin_dashboard_page | M6.4 | 🔴 | M6.2 |
+| add_dispatch_audit_page | M6.4 | 🟢 | M5.3 |
+| seed_european_data | M7 | 🟢 | M3 |
+| seed_egyptian_data | M7 | 🟢 | M3 |
+| verify_civilization_dispatch_routing | M7 | 🟡 | M5, M7 |
+| verify_i18n_all_locales | M7 | 🟢 | M4.2 |
+| create_docker_compose_prod | M8.1 | 🟡 | All |
+| create_multi_stage_dockerfile | M8.1 | 🟡 | M8.1 |
+| configure_nginx_https | M8.1 | 🟡 | M8.1 |
+| add_health_endpoints | M8.2 | 🟢 | M8.1 |
+| configure_structured_logging | M8.2 | 🟡 | M8.2 |
+| integrate_sentry | M8.2 | 🟡 | M8.2 |
+| create_env_example | M8.3 | 🟢 | M8.2 |
+
+---
+
+## Complexity Totals
+
+| Milestone | 🔴 Complex | 🟡 Moderate | 🟢 Simple | Total |
+|-----------|-----------|-------------|-----------|-------|
+| M3 | 8 | 7 | 4 | 19 |
+| M4 | 1 | 4 | 2 | 7 |
+| M5 | 6 | 3 | 1 | 10 |
+| M6 | 2 | 6 | 1 | 9 |
+| M7 | 0 | 1 | 3 | 4 |
+| M8 | 0 | 5 | 2 | 7 |
+| **Total** | **17** | **26** | **13** | **56** |
