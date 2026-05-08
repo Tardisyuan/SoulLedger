@@ -19,7 +19,8 @@
     "logging_in": "Logging in...",
     "login_success": "Login successful",
     "login_failed": "Login failed",
-    "logout_success": "Logged out"
+    "logout_success": "Logged out",
+    "cancel": "Cancel"
   },
   "home": {
     "hero_title": "SoulLedger",
@@ -72,6 +73,7 @@
     },
     "form": {
       "name_label": "Name *",
+      "name_required": "Name is required",
       "name_placeholder": "Soul name",
       "civilization_label": "Civilization",
       "birth_date_label": "Birth Date",

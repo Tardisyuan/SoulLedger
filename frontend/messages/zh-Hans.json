@@ -19,7 +19,8 @@
     "logging_in": "登录中...",
     "login_success": "登录成功",
     "login_failed": "登录失败",
-    "logout_success": "已退出登录"
+    "logout_success": "已退出登录",
+    "cancel": "取消"
   },
   "home": {
     "hero_title": "灵魂账本",
@@ -73,6 +74,7 @@
     "form": {
       "name_label": "名称 *",
       "name_placeholder": "灵魂名称",
+      "name_required": "名称不能为空",
       "civilization_label": "文明",
       "birth_date_label": "出生日期",
       "location_label": "籍贯",
