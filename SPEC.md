@@ -390,7 +390,42 @@ next_life.demerit_score = current.demerit_score × 0.2
 
 ## 6. API 设计
 
-### 6.1 Souls
+> **认证方式：** Bearer JWT Token
+> - Access Token：30分钟有效
+> - Refresh Token：7天有效，支持自动刷新
+> - 所有业务端点（souls/realms/judgments等）均需携带有效 Token
+> - Token 失效 → 前端自动尝试刷新 → 失败则跳转登录页
+
+### 6.1 Auth（公开）
+
+| 方法 | 端点 | 描述 | 认证 |
+|------|------|------|------|
+| POST | /api/v1/auth/login/ | 登录（返回 access + refresh token） | 否 |
+| POST | /api/v1/auth/register/ | 注册新用户 | 否 |
+| POST | /api/v1/auth/refresh/ | 刷新 access token | 否 |
+| POST | /api/v1/auth/logout/ | 注销（token 黑名单） | 是 |
+| GET | /api/v1/auth/profile/ | 当前用户信息 | 是 |
+
+**用户角色：**
+- `ADMIN`：阎罗王/系统管理员 — 全权限
+- `JUDGE`：判官 — 审判权限
+- `GUARDIAN`：牛头马面 — 记录权限
+- `VIEWER`：访客 — 只读
+
+**请求示例：**
+```bash
+# 登录
+curl -X POST http://localhost:8000/api/v1/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}'
+# → {"access":"eyJ...","refresh":"eyJ..."}
+
+# 访问受保护端点
+curl http://localhost:8000/api/v1/souls/ \
+  -H "Authorization: Bearer eyJ..."
+```
+
+### 6.2 Souls
 
 | 方法 | 端点 | 描述 |
 |------|------|------|
@@ -405,7 +440,7 @@ next_life.demerit_score = current.demerit_score × 0.2
 | GET | /api/v1/souls/{id}/records/ | 业力记录列表 |
 | GET | /api/v1/souls/{id}/events/ | 事件日志 |
 
-### 6.2 Realms
+### 6.3 Realms
 
 | 方法 | 端点 | 描述 |
 |------|------|------|
@@ -413,7 +448,7 @@ next_life.demerit_score = current.demerit_score × 0.2
 | GET | /api/v1/realms/{code}/ | 详情 |
 | GET | /api/v1/realms/?localized=true | 多语言列表（Accept-Language header） |
 
-### 6.3 Actors
+### 6.4 Actors
 
 | 方法 | 端点 | 描述 |
 |------|------|------|
@@ -421,7 +456,7 @@ next_life.demerit_score = current.demerit_score × 0.2
 | GET | /api/v1/actors/{id}/ | 详情 |
 | GET | /api/v1/actors/?localized=true | 多语言列表 |
 
-### 6.4 Judgment
+### 6.5 Judgment
 
 | 方法 | 端点 | 描述 |
 |------|------|------|
@@ -429,27 +464,27 @@ next_life.demerit_score = current.demerit_score × 0.2
 | POST | /api/v1/judgment/ | 创建审判 |
 | POST | /api/v1/judgment/{id}/conclude/ | 判决（body: {verdict, notes}） |
 
-### 6.5 Disposition
+### 6.6 Disposition
 
 | 方法 | 端点 | 描述 |
 |------|------|------|
 | GET | /api/v1/disposition/ | 列表 |
 | POST | /api/v1/disposition/{id}/execute/ | 执行处置，触发轮回 |
 
-### 6.6 Reincarnation
+### 6.7 Reincarnation
 
 | 方法 | 端点 | 描述 |
 |------|------|------|
 | GET | /api/v1/reincarnation/ | 列表 |
 | POST | /api/v1/reincarnation/reborn/ | 快速轮回（body: {soul_id, disposition_id, new_identity}） |
 
-### 6.7 Events
+### 6.8 Events
 
 | 方法 | 端点 | 描述 |
 |------|------|------|
 | GET | /api/v1/events/ | 日志（?soul=&event_type=） |
 
-### 6.8 Stats（Milestone 5）
+### 6.9 Stats（Milestone 5）
 
 | 方法 | 端点 | 描述 |
 |------|------|------|
