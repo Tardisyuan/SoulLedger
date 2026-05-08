@@ -132,83 +132,35 @@ The dispatch-design §3.1 test scenario shows REJECTED judgment → "S1 在 CN_D
 
 ---
 
-### IG-2: Timeout for Cross-Tenant Judgments Not Specified
+### IG-2: Timeout for Cross-Tenant Judgments Not Specified **✅ RESOLVED**
 
 **Files:** SPEC.md §5.5, dispatch-design.md §3.1
 
-**Problem:** If a cross-tenant judgment has 3 tenants involved and one judge's vote is still pending after 30 days, what happens?
-- Is there a timeout?
-- Does the judgment auto-conclude with majority?
-- Does it stay IN_REVIEW forever?
-- Is there a reminder/escalation?
+**Resolution:** Added `voting_deadline` field to CrossTenantJudgmentParticipant (SPEC §3.13, dispatch-design §2.3). Implemented Celery periodic task `check_judgment_timeouts` in SPEC §5.5: auto-ABSTAIN after 7 days, majority vote decides final verdict.
 
-**Suggested Fix:** Add to SPEC §5.5 or dispatch-design.md §3: "CrossTenantJudgment votes have a 7-day timeout per participant. If a participant does not vote within 7 days, they are automatically marked as ABSTAIN. The CHAIRMAN can extend the timeout."
-
----
-
-### IG-3: Concurrent Operations Not Handled
+### IG-3: Concurrent Operations Not Handled **✅ RESOLVED**
 
 **Files:** SPEC.md §4, dispatch-design.md §3.3
 
-**Problem:** No mention of race conditions:
-1. Two judges from different tenants try to conclude the same CrossTenantJudgment simultaneously — who wins?
-2. Two dispatch proposals for the same soul (soul is in DISPOSED state) — is this prevented?
-3. Soul is being dispatched while a local judge tries to execute disposition locally
+**Resolution:** Added Section 4.6 "并发控制" to SPEC.md with SELECT FOR UPDATE pattern, 409 Conflict handling for concurrent conclude/dispatch/recall operations, and atomic transaction guarantees.
 
-**Suggested Fix:** Add concurrency handling section:
-- "Use SELECT FOR UPDATE on Soul during state transitions to prevent concurrent modifications"
-- "A soul in PENDING_DISPATCH or DISPATCHED state cannot accept another dispatch proposal"
-- "Concurrent conclude_judgment() calls: first writer wins, second gets 409 Conflict"
-
----
-
-### IG-4: Target Tenant Realm Full — Dispatch Rejection?
+### IG-4: Target Tenant Realm Full — Dispatch Rejection? **✅ RESOLVED**
 
 **Files:** SPEC.md §5.3.2, §5.3.4
 
-**Problem:** Edge case: Soul is dispatched to tenant B, but tenant B's target realm (e.g., Hell tier 3) is at full capacity. What happens?
-- Does dispatch auto-reject?
-- Does it queue?
-- Does it dispatch to an alternate realm?
+**Resolution:** Added note to SPEC §5.3.2: "地狱类地域（realm_type=HELL）没有容量上限（无'满员'限制），可无限接收外派灵魂". Hell realms have infinite capacity — no dispatch rejection due to fullness.
 
-**Suggested Fix:** Add to dispatch workflow: "Before approving dispatch, target tenant judge should verify target realm has capacity. If full, reject with alternative_target suggestion."
-
----
-
-### IG-5: Soul Recall After Dispatch
+### IG-5: Soul Recall After Dispatch **✅ RESOLVED**
 
 **Files:** SPEC.md §4.2, dispatch-design.md §3.2
 
-**Problem:** Soul is in DISPATCHED state (already moved to target tenant). What if source tenant needs to recall it?
-- Is recall possible?
-- What state does it return to?
-- Can target tenant refuse to release?
+**Resolution:** Added Section 4.5 "灵魂召回机制" to SPEC.md: source TENANT_ADMIN can recall dispatched soul BEFORE target starts punishment (DISPATCHED→DISPOSED via recall()). Added POST /api/v1/dispatch/{id}/recall/ endpoint to SPEC §6.11 and dispatch-design §4.2. Added SOUL_RECALLED event type.
 
-**Suggested Fix:** Add to SPEC §4.3: "DISPATCHED souls can be recalled by source tenant ADMIN before punishment execution begins. Recall triggers SOUL_RETURNED event, sets dispatch_status=null, and returns soul to DISPOSED state."
-
----
-
-### IG-6: Error Response Documentation Missing
+### IG-6: Error Response Documentation Missing **✅ RESOLVED**
 
 **Files:** SPEC.md §6
 
-**Problem:** No error response format defined. What does the API return on:
-- 400 Bad Request (validation error)?
-- 401 Unauthorized?
-- 403 Forbidden (wrong tenant)?
-- 404 Not Found?
-- 409 Conflict (state transition error)?
-
-**Suggested Fix:** Add error response schema:
-```json
-{
-  "error": "VALIDATION_ERROR",
-  "message": "Human readable message",
-  "details": { "field": ["error1", "error2"] }
-}
-```
-
----
+**Resolution:** Added Section 6.0.1 "错误响应格式" to SPEC.md with standardized error JSON schema (`error`, `message`, `details` fields), HTTP status code mapping (400/401/403/404/409/422), and request/response examples.
 
 ### IG-7: Field-Level Visibility for dispatch_status Incomplete
 
@@ -222,17 +174,11 @@ The dispatch-design §3.1 test scenario shows REJECTED judgment → "S1 在 CN_D
 
 ---
 
-### IG-8: UI/UX for Cross-Tenant Judgment Session Unclear
+### IG-8: UI/UX for Cross-Tenant Judgment Session Unclear **✅ RESOLVED**
 
 **Files:** SPEC.md §7, dispatch-design.md §3.1
 
-**Problem:** How does the frontend display a joint judgment session where judges from 3 tenants participate?
-- Do all judges see the same UI simultaneously (real-time)?
-- What language do they use?
-- How do they vote (one-click or discussion first)?
-- Is there a chat/messaging system for deliberation?
-
-**Suggested Fix:** Add a section to SPEC §7 or a new UI spec doc: "Cross-judgment session UI: judges from multiple tenants see a shared session view. Language defaults to source tenant's language. Voting is one-click per judge. No built-in chat — judges use external communication."
+**Resolution:** Added Section 7.6 "联合审判 UI" to SPEC.md with full page layout diagram, participant voting display, role-based operation buttons, language handling (source tenant's language), polling/WebSocket updates, and vote deadline countdown display.
 
 ---
 
@@ -332,8 +278,9 @@ These actually match. BUT SPEC.md §4.4 and §4.2 talk about "REINCARNATING" as 
 ### NH-1: Future Independent Deployment API Mechanics Unclear
 dispatch-design.md §6 shows the architecture but doesn't specify the API contract for when tenants are on separate servers. What happens to the dispatch workflow in split-mode?
 
-### NH-2: Notification System Not Specified
-How do DISPATCH_JUDGE users get notified of incoming cross-tenant judgment invitations? Email? In-app notification? Nothing?
+### NH-2: Notification System Not Specified **✅ RESOLVED**
+
+**Resolution:** Added Section 7.7 "应用内通知" to SPEC.md with in-app notification approach: notification model definition, notification types table (CROSS_JUDGMENT_INVITED/VOTE_CAST/CONCLUDED, DISPATCH_PROPOSED/APPROVED/REJECTED, SOUL_RECALLED), pending list + badge counter UI, and Celery-hook-based notification generation.
 
 ### NH-3: Audit Trail for State Transitions
 SoulEvent model exists but which events specifically are recorded? Not all state transitions may generate events.
@@ -364,13 +311,13 @@ These UI features in §7.X are marked optional but are listed in M4 milestone. E
 | CG-3: Reincarnation after dispatch | M5 (dispatch) depends on this |
 | CG-4: REJECTED judgment → soul fate | M5 dispatch module uses this |
 | CG-5: Karma record ownership | M5 dispatch needs this policy |
-| IG-2: Judgment timeout | M5 cross-tenant judgment uses this |
-| IG-3: Concurrent operations | M5 dispatch race conditions |
-| IG-4: Realm full handling | M5 dispatch edge case |
-| IG-5: Soul recall | M5 dispatch enhancement |
-| IG-6: Error responses | M5 API completeness |
-| IG-7: DISPATCH_JUDGE in permission matrix | M5 dispatch permissions |
-| IG-8: Cross-tenant judgment UI | M5 frontend |
+|| IG-2: Judgment timeout | M5 cross-tenant judgment uses this — **RESOLVED** |
+|| IG-3: Concurrent operations | M5 dispatch race conditions — **RESOLVED** |
+|| IG-4: Realm full handling | M5 dispatch edge case — **RESOLVED** |
+|| IG-5: Soul recall | M5 dispatch enhancement — **RESOLVED** |
+|| IG-6: Error responses | M5 API completeness — **RESOLVED** |
+|| IG-7: DISPATCH_JUDGE in permission matrix | M5 dispatch permissions |
+|| IG-8: Cross-tenant judgment UI | M5 frontend — **RESOLVED** |
 | INC-4: COMPLETED vs REINCARNATING | M5 state clarification |
 | INC-6: Cancel destination | M5 dispatch behavior |
 
@@ -378,9 +325,9 @@ These UI features in §7.X are marked optional but are listed in M4 milestone. E
 
 | Gap | Reason |
 |-----|--------|
-| NH-1: Independent deployment API | Future architecture, not in current scope |
-| NH-2: Notification system | Not in current SPEC |
-| NH-3: Audit trail details | Can be added later |
+|| NH-1: Independent deployment API | Future architecture, not in current scope |
+|| NH-2: Notification system | **RESOLVED** — In-app notification added to SPEC §7.7 |
+|| NH-3: Audit trail details | Can be added later |
 | NH-4: Settings drawer/theme | Marked optional in spec |
 
 ---
@@ -395,13 +342,13 @@ These UI features in §7.X are marked optional but are listed in M4 milestone. E
 | CG-4 | CRITICAL | SPEC §6.11.2 | REJECTED judgment fate undefined | YES (for M5) |
 | CG-5 | CRITICAL | SPEC §3.5 | Karma ownership after dispatch undefined | YES (for M5) |
 | IG-1 | IMPORTANT | SPEC §6 | No pagination specified | YES |
-| IG-2 | IMPORTANT | SPEC §5.5 | No judgment timeout | No |
-| IG-3 | IMPORTANT | SPEC §4 | No concurrent operation handling | No |
-| IG-4 | IMPORTANT | SPEC §5.3 | Realm full handling missing | No |
-| IG-5 | IMPORTANT | SPEC §4 | Soul recall not defined | No |
-| IG-6 | IMPORTANT | SPEC §6 | No error response format | No |
-| IG-7 | IMPORTANT | SPEC §6.X.2 | DISPATCH_JUDGE missing from matrix | No |
-| IG-8 | IMPORTANT | SPEC §7 | Cross-tenant judgment UI unclear | No |
+|| IG-2 | RESOLVED ✅ | SPEC §5.5 | Judgment timeout with auto-ABSTAIN | No |
+|| IG-3 | RESOLVED ✅ | SPEC §4 | Concurrent operation handling with SELECT FOR UPDATE | No |
+|| IG-4 | RESOLVED ✅ | SPEC §5.3 | Hell realms infinite capacity | No |
+|| IG-5 | RESOLVED ✅ | SPEC §4 | Soul recall before punishment starts | No |
+|| IG-6 | RESOLVED ✅ | SPEC §6 | Error response schema standardized | No |
+|| IG-7 | IMPORTANT | SPEC §6.X.2 | DISPATCH_JUDGE missing from matrix | No |
+|| IG-8 | RESOLVED ✅ | SPEC §7 | Cross-tenant judgment UI specified | No |
 | INC-1 | INCONSISTENCY | SPEC §3.3, §6.X.1 | Role naming TENANT_ADMIN vs ADMIN | YES |
 | INC-2 | INCONSISTENCY | SPEC §6.11, dispatch-design §4 | API endpoints mismatch | YES |
 | INC-3 | INCONSISTENCY | SPEC §4.3, dispatch-design §3.3 | approve() vs dispatch_confirm() | YES |

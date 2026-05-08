@@ -118,6 +118,10 @@ class CrossTenantJudgmentParticipant(models.Model):
     )
     role = models.CharField(max_length=20, choices=Role.choices)
     added_at = models.DateTimeField(auto_now_add=True)
+    voting_deadline = models.DateTimeField(
+        null=True,
+        help_text='投票截止时间（默认 added_at + 7 days，CHAIRMAN 可延长）'
+    )
     voted_at = models.DateTimeField(null=True)
     vote = models.CharField(max_length=20, choices=Vote.choices, null=True)
 ```
@@ -258,11 +262,12 @@ null ─────────────────────────
 |---------|------|---------|---------|
 | null | initiate_cross_judgment() | null | 发起跨租户审判（不改变 dispatch_status） |
 | null | propose_dispatch() | PENDING_DISPATCH | 发起外派（soul.state=DISPATCHED） |
-| PENDING_DISPATCH | approve() | DISPATCHED | 目标租户确认接收 |
-| PENDING_DISPATCH | reject() | DISPOSED | 目标租户拒绝（灵魂返回 DISPOSED，本地处置） |
-| PENDING_DISPATCH | cancel() | DISPOSED | 发起方取消（灵魂返回 DISPOSED，本地处置） |
-| DISPATCHED | execute_dispatch() | REINCARNATING | 目标租户执行惩罚，灵魂迁移 |
-| REINCARNATING | complete() | ALIVE | 轮回完成（在目标租户地域重生） |
+|| PENDING_DISPATCH | approve() | DISPATCHED | 目标租户确认接收 |
+|| PENDING_DISPATCH | reject() | DISPOSED | 目标租户拒绝（灵魂返回 DISPOSED，本地处置） |
+|| PENDING_DISPATCH | cancel() | DISPOSED | 发起方取消（灵魂返回 DISPOSED，本地处置） |
+|| DISPATCHED | execute_dispatch() | REINCARNATING | 目标租户执行惩罚，灵魂迁移 |
+|| DISPATCHED | recall() | DISPOSED | 来源租户 TENANT_ADMIN 召回（仅限惩罚开始前） |
+|| REINCARNATING | complete() | ALIVE | 轮回完成（在目标租户地域重生） |
 
 **取消/拒绝后的处理：**
 当 dispatch 被 reject 或 cancel 后：
@@ -295,8 +300,9 @@ null ─────────────────────────
 | POST | /api/v1/dispatch/{id}/approve/ | 目标租户法官批准 |
 | POST | /api/v1/dispatch/{id}/reject/ | 目标租户法官拒绝 |
 | POST | /api/v1/dispatch/{id}/cancel/ | 发起方取消外派 |
-| POST | /api/v1/dispatch/{id}/execute/ | 执行外派（移动灵魂到目标租户） |
-| GET | /api/v1/dispatch/{id}/status/ | 外派状态详情 |
+|| POST | /api/v1/dispatch/{id}/execute/ | 执行外派（移动灵魂到目标租户） |
+|| POST | /api/v1/dispatch/{id}/recall/ | 来源租户 TENANT_ADMIN 召回已外派灵魂（仅限惩罚开始前） |
+|| GET | /api/v1/dispatch/{id}/status/ | 外派状态详情 |
 
 ---
 
@@ -385,8 +391,9 @@ class DispatchService:
 |------|------|---------|
 | CROSS_JUDGMENT_CREATED | 跨租户审判创建 | 发起跨租户审判时 |
 | CROSS_JUDGMENT_JOINED | 参与者加入 | DISPATCH_JUDGE 接受邀请并 join |
-| CROSS_JUDGMENT_CONCLUDED | 审判结束 | 审判达成 verdict |
-| DISPATCH_PROPOSED | 外派提议 | 创建 DispatchRecord |
+|| CROSS_JUDGMENT_CONCLUDED | 审判结束 | 审判达成 verdict |
+|| CROSS_JUDGMENT_TIMEOUT | 投票超时自动弃权 | Celery 定时任务检测到 voting_deadline 过期 |
+|| DISPATCH_PROPOSED | 外派提议 | 创建 DispatchRecord |
 | DISPATCH_APPROVED | 外派批准 | 目标租户 approve() |
 | DISPATCH_REJECTED | 外派拒绝 | 目标租户 reject() |
 | DISPATCH_EXECUTED | 外派执行 | 灵魂迁移至目标租户 execute_dispatch() |
