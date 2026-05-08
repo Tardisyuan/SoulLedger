@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { createPortal } from "react-dom";
+import { createRoot, Root } from "react-dom/client";
 
 // ── Types ───────────────────────────────────────────
 
 export type ToastType = "success" | "error" | "info";
 
-export interface ToastItem {
+interface ToastItem {
   id: string;
   message: string;
   type: ToastType;
-  duration: number;
 }
 
-// ── Color Map ───────────────────────────────────────
+// ── Toast Store ─────────────────────────────────────
+
+let toasts: ToastItem[] = [];
+let nextId = 0;
 
 const TOAST_COLORS: Record<string, string> = {
   success: "border-emerald-600 bg-emerald-950/95 text-emerald-100",
@@ -28,13 +29,125 @@ const TOAST_ICONS: Record<string, string> = {
   info: "ℹ",
 };
 
-// ── Store (module-level, shared across re-renders) ──
+function renderToasts() {
+  const container = document.getElementById("toast-root");
+  if (!container) return;
+  const root = createRoot(container);
+  root.render(
+    <div
+      aria-live="polite"
+      style={{
+        position: "fixed",
+        top: "20px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 99999,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "8px",
+        pointerEvents: "none",
+      }}
+    >
+      {toasts.map((toast) => (
+        <ToastCard key={toast.id} toast={toast} />
+      ))}
+    </div>
+  );
+}
 
-let toasts: ToastItem[] = [];
-let listeners: Array<() => void> = [];
+function ToastCard({ toast }: { toast: ToastItem }) {
+  const color = TOAST_COLORS[toast.type] || TOAST_COLORS.info;
+  const icon = TOAST_ICONS[toast.type] || TOAST_ICONS.info;
 
-function notify() {
-  listeners.forEach((fn) => fn());
+  return (
+    <div
+      role="alert"
+      id={`toast-${toast.id}`}
+      style={{
+        pointerEvents: "auto",
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        minWidth: "300px",
+        maxWidth: "500px",
+        padding: "12px 16px",
+        borderRadius: "8px",
+        border: `1px solid var(--toast-${toast.type}-border, #4ade80)`,
+        backgroundColor: `var(--toast-${toast.type}-bg, rgba(6,78,59,0.95))`,
+        color: `var(--toast-${toast.type}-text, #d1fae5)`,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+        animation: "toastIn 0.3s ease-out",
+      }}
+    >
+      <span
+        style={{
+          flexShrink: 0,
+          width: "20px",
+          height: "20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: "50%",
+          background: "rgba(255,255,255,0.2)",
+          fontSize: "12px",
+          fontWeight: "bold",
+        }}
+      >
+        {icon}
+      </span>
+      <span style={{ flex: 1, fontSize: "14px" }}>{toast.message}</span>
+      <button
+        onClick={() => removeToast(toast.id)}
+        style={{
+          flexShrink: 0,
+          width: "20px",
+          height: "20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: "4px",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          opacity: 0.6,
+          color: "inherit",
+          fontSize: "16px",
+          padding: 0,
+        }}
+        aria-label="Dismiss"
+      >
+        ×
+      </button>
+      <style>{`
+        @keyframes toastIn {
+          from { opacity: 0; transform: translateY(-12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        #toast-${toast.id} {
+          --toast-success-border: #059669;
+          --toast-success-bg: rgba(6,78,59,0.97);
+          --toast-success-text: #d1fae5;
+          --toast-error-border: #dc2626;
+          --toast-error-bg: rgba(97,26,26,0.97);
+          --toast-error-text: #fecaca;
+          --toast-info-border: #2563eb;
+          --toast-info-bg: rgba(29,50,139,0.97);
+          --toast-info-text: #dbeafe;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function removeToast(id: string) {
+  toasts = toasts.filter((t) => t.id !== id);
+  if (toasts.length === 0) {
+    const container = document.getElementById("toast-root");
+    if (container) container.innerHTML = "";
+  } else {
+    renderToasts();
+  }
 }
 
 export function showToast(
@@ -42,99 +155,29 @@ export function showToast(
   type: ToastType = "info",
   duration: number = 5000
 ): string {
-  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  toasts = [...toasts, { id, message, type, duration }];
-  notify();
+  // Ensure toast root element exists
+  if (!document.getElementById("toast-root")) {
+    const root = document.createElement("div");
+    root.id = "toast-root";
+    document.body.appendChild(root);
+  }
+
+  const id = String(nextId++);
+  toasts = [...toasts, { id, message, type }];
+  renderToasts();
+
+  if (duration > 0) {
+    setTimeout(() => removeToast(id), duration);
+  }
+
   return id;
 }
 
 export function dismissToast(id: string) {
-  toasts = toasts.filter((t) => t.id !== id);
-  notify();
-}
-
-export function useToasts(): ToastItem[] {
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const listener = () => setTick((n) => n + 1);
-    listeners.push(listener);
-    return () => {
-      listeners = listeners.filter((l) => l !== listener);
-    };
-  }, []);
-  return toasts;
-}
-
-// ── Portal component ───────────────────────────────
-
-function ToastCard({ toast }: { toast: ToastItem }) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    requestAnimationFrame(() => setVisible(true));
-    if (toast.duration <= 0) return;
-    const timer = setTimeout(() => {
-      setVisible(false);
-      setTimeout(() => dismissToast(toast.id), 300);
-    }, toast.duration);
-    return () => clearTimeout(timer);
-  }, [toast.id, toast.duration]);
-
-  const color = TOAST_COLORS[toast.type] || TOAST_COLORS.info;
-  const icon = TOAST_ICONS[toast.type] || TOAST_ICONS.info;
-
-  return (
-    <div
-      role="alert"
-      className={`
-        pointer-events-auto flex items-center gap-3
-        min-w-[300px] max-w-lg
-        px-4 py-3 rounded-lg border shadow-2xl
-        transition-all duration-300 ease-out
-        ${color}
-        ${visible
-          ? "opacity-100 translate-y-0"
-          : "opacity-0 -translate-y-4"
-        }
-      `}
-    >
-      <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-white/20 text-xs font-bold">
-        {icon}
-      </span>
-      <span className="flex-1 text-sm">{toast.message}</span>
-      <button
-        onClick={() => {
-          setVisible(false);
-          setTimeout(() => dismissToast(toast.id), 300);
-        }}
-        className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 transition-colors text-sm opacity-60 hover:opacity-100"
-        aria-label="Dismiss"
-      >
-        ×
-      </button>
-    </div>
-  );
+  removeToast(id);
 }
 
 export function ToastContainer() {
-  const items = useToasts();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted || items.length === 0) return null;
-
-  return createPortal(
-    <div
-      aria-live="polite"
-      className="fixed top-5 left-1/2 -translate-x-1/2 z-[99999] flex flex-col items-center gap-2"
-    >
-      {items.map((toast) => (
-        <ToastCard key={toast.id} toast={toast} />
-      ))}
-    </div>,
-    document.body
-  );
+  // Container is injected directly via showToast's document.body manipulation
+  return null;
 }
