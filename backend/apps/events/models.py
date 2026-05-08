@@ -3,6 +3,7 @@ Audit event log — immutable record of all soul state changes.
 """
 import uuid
 from django.db import models
+from apps.tenants.managers import TenantManager
 
 
 class EventType(models.TextChoices):
@@ -41,6 +42,8 @@ class SoulEvent(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Soul Event"
         verbose_name_plural = "Soul Events"
+
+    objects = TenantManager()
 
     def __str__(self):
         return f"{self.event_type}: {self.soul.name} at {self.created_at}"

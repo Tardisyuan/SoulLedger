@@ -4,6 +4,7 @@ Reincarnation model — tracks rebirth cycles.
 import uuid
 from django.db import models
 from apps.souls.models import Soul
+from apps.tenants.managers import TenantManager
 
 
 class RebirthForm(models.TextChoices):
@@ -41,10 +42,19 @@ class Reincarnation(models.Model):
     notes = models.TextField(blank=True)
     reincarnated_at = models.DateTimeField(auto_now_add=True)
 
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='reincarnations',
+        null=True,
+    )
+
     class Meta:
         ordering = ["-reincarnated_at"]
         verbose_name = "Reincarnation"
         verbose_name_plural = "Reincarnations"
+
+    objects = TenantManager()
 
     def __str__(self):
         return f"{self.soul.name} reborn as {self.rebirth_form} (cycle {self.cycle_count})"

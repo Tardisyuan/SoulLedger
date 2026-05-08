@@ -4,6 +4,7 @@ Judgment model — records of soul judgment proceedings.
 import uuid
 from django.db import models
 from apps.souls.models import Soul, Civilization, SoulState
+from apps.tenants.managers import TenantManager
 
 
 class Verdict(models.TextChoices):
@@ -68,6 +69,8 @@ class Judgment(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Judgment"
         verbose_name_plural = "Judgments"
+
+    objects = TenantManager()
 
     def __str__(self):
         v = self.verdict or "PENDING"
