@@ -6,7 +6,9 @@
     "souls": "灵魂",
     "realms": "地域",
     "actors": "角色",
-    "about": "关于"
+    "about": "关于",
+    "dashboard": "控制台",
+    "journal": "运行日志"
   },
   "home": {
     "hero_title": "灵魂账本",
