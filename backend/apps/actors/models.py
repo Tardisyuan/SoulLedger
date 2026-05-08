@@ -47,6 +47,13 @@ class Actor(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='actors',
+        null=True,
+    )
+
     class Meta:
         ordering = ["civilization", "role", "name"]
         verbose_name = "Actor"
