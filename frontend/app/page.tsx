@@ -3,7 +3,7 @@
 import { useI18n } from "@/src/contexts/I18nContext";
 
 export default function HomePage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 text-white">
@@ -28,21 +28,19 @@ export default function HomePage() {
               subtitle={t("home.chinese_subtitle")}
               description={t("home.chinese_desc")}
               color="from-red-600 to-amber-700"
-              isEgyptian={false}
             />
             <CivilizationCard
               title={t("home.european_title")}
               subtitle={t("home.european_subtitle")}
               description={t("home.european_desc")}
               color="from-blue-600 to-indigo-800"
-              isEgyptian={false}
             />
             <CivilizationCard
               title={t("home.egyptian_title")}
               subtitle={t("home.egyptian_subtitle")}
               description={t("home.egyptian_desc")}
               color="from-amber-500 to-yellow-700"
-              isEgyptian={true}
+              isEgyptian
             />
           </div>
         </section>
@@ -51,9 +49,14 @@ export default function HomePage() {
           <p className="text-slate-500 text-sm">
             {t("footer.built_with")}
           </p>
-          <p className="text-amber-600 text-xs mt-1 font-egyptian" style={{ fontFamily: "'Noto Sans Egyptian Hieroglyphs', sans-serif" }}>
-            𓂀 𓋴 𓍯 𓂋 𓃀 𓆗 𓎛 𓃭 𓋹 𓋴 𓆗
-          </p>
+          {locale === "egy" && (
+            <p
+              className="text-amber-600 text-xs mt-1"
+              style={{ fontFamily: "'Noto Sans Egyptian Hieroglyphs', sans-serif" }}
+            >
+              𓂀 𓋴 𓍯 𓂋 𓃀 𓆗 𓎛 𓃭 𓋹 𓋴 𓆗
+            </p>
+          )}
         </div>
       </div>
     </main>
@@ -71,15 +74,13 @@ function CivilizationCard({
   subtitle: string;
   description: string;
   color: string;
-  isEgyptian: boolean;
+  isEgyptian?: boolean;
 }) {
   return (
     <div className={`rounded-xl bg-gradient-to-br ${color} p-px`}>
       <div className="bg-slate-900 rounded-xl p-6 h-full">
         <p
-          className={`text-2xl font-bold mb-1 ${
-            isEgyptian ? "font-egyptian" : ""
-          }`}
+          className="text-2xl font-bold mb-1"
           style={
             isEgyptian
               ? { fontFamily: "'Noto Sans Egyptian Hieroglyphs', sans-serif" }
