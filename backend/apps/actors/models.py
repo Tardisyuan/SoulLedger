@@ -4,6 +4,7 @@ Actor models — deities, judges, guardians, executors across civilizations.
 import uuid
 from django.db import models
 from apps.souls.models import Civilization
+from apps.tenants.managers import TenantManager
 
 
 class ActorRole(models.TextChoices):
@@ -58,6 +59,8 @@ class Actor(models.Model):
         ordering = ["civilization", "role", "name"]
         verbose_name = "Actor"
         verbose_name_plural = "Actors"
+
+    objects = TenantManager()
 
     def __str__(self):
         return f"{self.name} ({self.role})"
