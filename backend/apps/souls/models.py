@@ -67,10 +67,10 @@ class Soul(models.Model):
         """
         valid_transitions = {
             SoulState.ALIVE: [SoulState.JUDGING],
-            SoulState.JUDGING: [SoulState.DISPOSED, SoulState.JUDGING],  # retry/appeal
-            SoulState.DISPOSED: [SoulState.REINCARNATING],
+            SoulState.JUDGING: [SoulState.DISPOSED, SoulState.JUDGING],
+            SoulState.DISPOSED: [SoulState.REINCARNATING, SoulState.LOST],
             SoulState.REINCARNATING: [SoulState.ALIVE],
-            SoulState.LOST: [],  # terminal state
+            SoulState.LOST: [],
         }
         return new_state in valid_transitions.get(self.current_state, [])
 

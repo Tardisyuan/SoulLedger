@@ -17,7 +17,10 @@ class DispositionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def execute(self, request, pk=None):
-        """Execute a disposition and trigger reincarnation."""
+        """
+        Execute a disposition: mark executed, transition soul to REINCARNATING.
+        POST /disposition/{id}/execute/
+        """
         disposition = self.get_object()
         if disposition.is_executed:
             return Response({"error": "Already executed"}, status=status.HTTP_400_BAD_REQUEST)
@@ -26,4 +29,9 @@ class DispositionViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         DispositionService.execute(disposition)
+
+        # Also trigger ReincarnationService.execute
+        from apps.reincarnation.services import ReincarnationService
+        ReincarnationService.execute(disposition)
+
         return Response(DispositionSerializer(disposition).data)

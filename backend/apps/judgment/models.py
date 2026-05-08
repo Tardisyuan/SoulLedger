@@ -3,7 +3,7 @@ Judgment model — records of soul judgment proceedings.
 """
 import uuid
 from django.db import models
-from apps.souls.models import Soul, Civilization
+from apps.souls.models import Soul, Civilization, SoulState
 
 
 class Verdict(models.TextChoices):
@@ -64,4 +64,7 @@ class Judgment(models.Model):
 
         from apps.disposition.services import DispositionService
         DispositionService.create_from_judgment(self)
+
+        # Transition soul to DISPOSED after disposition is created
+        self.soul.transition_to(SoulState.DISPOSED, f"Judgment concluded: {verdict}")
         return True

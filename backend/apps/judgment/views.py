@@ -17,14 +17,16 @@ class JudgmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         judgment = serializer.save()
-        # Transition soul to JUDGING state
         soul = judgment.soul
         if soul.current_state == SoulState.ALIVE:
             soul.transition_to(SoulState.JUDGING, f"Judgment {judgment.id} initiated")
 
     @action(detail=True, methods=["post"])
     def conclude(self, request, pk=None):
-        """Conclude a judgment with a verdict."""
+        """
+        Conclude a judgment with a verdict.
+        Calls Judgment.conclude() which creates disposition and transitions soul to DISPOSED.
+        """
         judgment = self.get_object()
         if judgment.is_final:
             return Response({"error": "Judgment already concluded"}, status=status.HTTP_400_BAD_REQUEST)
@@ -35,8 +37,4 @@ class JudgmentViewSet(viewsets.ModelViewSet):
         notes = serializer.validated_data.get("notes", "")
 
         judgment.conclude(verdict, notes)
-
-        # Transition soul to DISPOSED
-        judgment.soul.transition_to(SoulState.DISPOSED, f"Judgment concluded: {verdict}")
-
         return Response(JudgmentSerializer(judgment).data)
