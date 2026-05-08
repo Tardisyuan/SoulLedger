@@ -8,14 +8,19 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from .serializers import RegisterSerializer, UserSerializer
+from .serializers import (
+    RegisterSerializer,
+    UserSerializer,
+    CustomTokenObtainPairSerializer,
+)
 
 
 class LoginView(TokenObtainPairView):
     """
     POST /api/v1/auth/login/
-    Returns access + refresh tokens.
+    Returns access + refresh tokens with tenant info.
     """
+    serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [AllowAny]
 
 
