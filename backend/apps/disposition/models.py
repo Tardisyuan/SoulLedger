@@ -52,6 +52,13 @@ class Disposition(models.Model):
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='dispositions',
+        null=True,
+    )
+
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "Disposition"
