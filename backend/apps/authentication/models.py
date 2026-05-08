@@ -22,6 +22,13 @@ class User(AbstractUser):
         default=UserRole.VIEWER,
     )
     # For API display — linked to an Actor in the underworld system
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="tenant_users",
+    )
     actor = models.ForeignKey(
         "actors.Actor",
         null=True,
