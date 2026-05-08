@@ -10,6 +10,17 @@
     "dashboard": "控制台",
     "journal": "运行日志"
   },
+  "auth": {
+    "login": "登录",
+    "logout": "登出",
+    "register": "注册",
+    "username": "用户名",
+    "password": "密码",
+    "logging_in": "登录中...",
+    "login_success": "登录成功",
+    "login_failed": "登录失败",
+    "logout_success": "已退出登录"
+  },
   "home": {
     "hero_title": "灵魂账本",
     "hero_subtitle": "跨文明灵魂管理系统",
