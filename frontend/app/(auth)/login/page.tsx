@@ -69,12 +69,6 @@ export default function LoginPage() {
             {t("auth.login") || "登录"}
           </h2>
 
-          {error && (
-            <div className="bg-red-900/40 border border-red-800 text-red-300 rounded-lg px-4 py-3 mb-4 text-sm">
-              {error}
-            </div>
-          )}
-
           <div className="space-y-4">
             <div>
               <label className="block text-sm text-zinc-400 mb-1">
