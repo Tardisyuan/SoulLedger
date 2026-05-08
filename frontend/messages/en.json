@@ -39,5 +39,48 @@
   "footer": {
     "built_with": "Built with Django + DRF + Next.js",
     "version": "SoulLedger v0.1"
+  },
+  "souls": {
+    "title": "Souls",
+    "create": "Create Soul",
+    "search_placeholder": "Search by name...",
+    "search": "Search",
+    "filter_state": "State",
+    "filter_civilization": "Civilization",
+    "all_states": "All States",
+    "all_civilizations": "All Civilizations",
+    "loading": "Loading...",
+    "no_souls": "No souls found",
+    "name": "Name",
+    "civilization": "Civilization",
+    "state": "State",
+    "karma": "Karma",
+    "death": "Death",
+    "action": "Action",
+    "view": "View",
+    "states": {
+      "ALIVE": "Alive",
+      "JUDGING": "Judging",
+      "DISPOSED": "Disposed",
+      "REINCARNATING": "Reincarnating",
+      "LOST": "Lost"
+    },
+    "civilizations": {
+      "CHINESE": "Chinese",
+      "EUROPEAN": "European",
+      "EGYPTIAN": "Egyptian"
+    },
+    "form": {
+      "name_label": "Name *",
+      "name_placeholder": "Soul name",
+      "civilization_label": "Civilization",
+      "birth_date_label": "Birth Date",
+      "location_label": "Location",
+      "location_placeholder": "e.g. Chengdu",
+      "submit": "Create Soul",
+      "submitting": "Creating...",
+      "create_success": "Soul created successfully",
+      "create_error": "Failed to create soul"
+    }
   }
 }

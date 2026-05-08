@@ -39,5 +39,48 @@
   "footer": {
     "built_with": "使用 Django + DRF + Next.js 构建",
     "version": "灵魂账本 v0.1"
+  },
+  "souls": {
+    "title": "灵魂",
+    "create": "创建灵魂",
+    "search_placeholder": "按名称搜索...",
+    "search": "搜索",
+    "filter_state": "状态",
+    "filter_civilization": "文明",
+    "all_states": "全部状态",
+    "all_civilizations": "全部文明",
+    "loading": "加载中...",
+    "no_souls": "未找到灵魂",
+    "name": "名称",
+    "civilization": "文明",
+    "state": "状态",
+    "karma": "业力",
+    "death": "死亡时间",
+    "action": "操作",
+    "view": "查看",
+    "states": {
+      "ALIVE": "存活",
+      "JUDGING": "审判中",
+      "DISPOSED": "已处置",
+      "REINCARNATING": "轮回中",
+      "LOST": "迷失"
+    },
+    "civilizations": {
+      "CHINESE": "中国",
+      "EUROPEAN": "欧洲",
+      "EGYPTIAN": "埃及"
+    },
+    "form": {
+      "name_label": "名称 *",
+      "name_placeholder": "灵魂名称",
+      "civilization_label": "文明",
+      "birth_date_label": "出生日期",
+      "location_label": "籍贯",
+      "location_placeholder": "如：成都",
+      "submit": "创建灵魂",
+      "submitting": "创建中...",
+      "create_success": "灵魂创建成功",
+      "create_error": "创建失败"
+    }
   }
 }

@@ -17,18 +17,6 @@ interface ToastItem {
 let toasts: ToastItem[] = [];
 let nextId = 0;
 
-const TOAST_COLORS: Record<string, string> = {
-  success: "border-emerald-600 bg-emerald-950/95 text-emerald-100",
-  error: "border-red-600 bg-red-950/95 text-red-100",
-  info: "border-blue-600 bg-blue-950/95 text-blue-100",
-};
-
-const TOAST_ICONS: Record<string, string> = {
-  success: "✓",
-  error: "✕",
-  info: "ℹ",
-};
-
 function renderToasts() {
   const container = document.getElementById("toast-root");
   if (!container) return;
@@ -45,7 +33,7 @@ function renderToasts() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "8px",
+        gap: "10px",
         pointerEvents: "none",
       }}
     >
@@ -57,94 +45,105 @@ function renderToasts() {
 }
 
 function ToastCard({ toast }: { toast: ToastItem }) {
-  const color = TOAST_COLORS[toast.type] || TOAST_COLORS.info;
-  const icon = TOAST_ICONS[toast.type] || TOAST_ICONS.info;
+  const colorMap = {
+    success: {
+      bg: "rgba(16, 64, 40, 0.98)",
+      border: "#10b981",
+      text: "#d1fae5",
+      icon: "✓",
+    },
+    error: {
+      bg: "rgba(64, 16, 16, 0.98)",
+      border: "#ef4444",
+      text: "#fecaca",
+      icon: "✕",
+    },
+    info: {
+      bg: "rgba(20, 50, 120, 0.98)",
+      border: "#3b82f6",
+      text: "#dbeafe",
+      icon: "ℹ",
+    },
+  };
+  const c = colorMap[toast.type] || colorMap.info;
 
   return (
     <div
       role="alert"
-      id={`toast-${toast.id}`}
       style={{
-        pointerEvents: "auto",
         display: "flex",
         alignItems: "center",
-        gap: "12px",
-        minWidth: "300px",
-        maxWidth: "500px",
-        padding: "12px 16px",
-        borderRadius: "8px",
-        border: `1px solid var(--toast-${toast.type}-border, #4ade80)`,
-        backgroundColor: `var(--toast-${toast.type}-bg, rgba(6,78,59,0.95))`,
-        color: `var(--toast-${toast.type}-text, #d1fae5)`,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-        animation: "toastIn 0.3s ease-out",
+        gap: "10px",
+        minWidth: "240px",
+        maxWidth: "420px",
+        padding: "14px 16px",
+        borderRadius: "6px",
+        border: `1px solid ${c.border}`,
+        borderLeft: `3px solid ${c.border}`,
+        background: c.bg,
+        color: c.text,
+        boxShadow: "0 4px 20px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.2)",
+        animation: "toastIn 0.25s cubic-bezier(0.22, 1, 0.36, 1)",
+        pointerEvents: "auto",
+        fontFamily:
+          "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       }}
     >
+      {/* Icon */}
       <span
         style={{
           flexShrink: 0,
-          width: "20px",
-          height: "20px",
+          width: "18px",
+          height: "18px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           borderRadius: "50%",
-          background: "rgba(255,255,255,0.2)",
-          fontSize: "12px",
+          background: `${c.border}33`,
+          color: c.border,
+          fontSize: "11px",
           fontWeight: "bold",
+          border: `1px solid ${c.border}55`,
         }}
       >
-        {icon}
+        {c.icon}
       </span>
-      <span style={{ flex: 1, fontSize: "14px" }}>{toast.message}</span>
+      {/* Message */}
+      <span style={{ flex: 1, fontSize: "14px", lineHeight: 1.4 }}>{toast.message}</span>
+      {/* Dismiss */}
       <button
         onClick={() => removeToast(toast.id)}
         style={{
           flexShrink: 0,
-          width: "20px",
-          height: "20px",
+          width: "18px",
+          height: "18px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: "4px",
+          borderRadius: "3px",
           background: "transparent",
           border: "none",
           cursor: "pointer",
-          opacity: 0.6,
-          color: "inherit",
+          color: c.text,
+          opacity: 0.5,
           fontSize: "16px",
           padding: 0,
+          lineHeight: 1,
         }}
         aria-label="Dismiss"
       >
         ×
       </button>
-      <style>{`
-        @keyframes toastIn {
-          from { opacity: 0; transform: translateY(-12px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        #toast-${toast.id} {
-          --toast-success-border: #059669;
-          --toast-success-bg: rgba(6,78,59,0.97);
-          --toast-success-text: #d1fae5;
-          --toast-error-border: #dc2626;
-          --toast-error-bg: rgba(97,26,26,0.97);
-          --toast-error-text: #fecaca;
-          --toast-info-border: #2563eb;
-          --toast-info-bg: rgba(29,50,139,0.97);
-          --toast-info-text: #dbeafe;
-        }
-      `}</style>
     </div>
   );
 }
 
 function removeToast(id: string) {
   toasts = toasts.filter((t) => t.id !== id);
+  const container = document.getElementById("toast-root");
+  if (!container) return;
   if (toasts.length === 0) {
-    const container = document.getElementById("toast-root");
-    if (container) container.innerHTML = "";
+    container.innerHTML = "";
   } else {
     renderToasts();
   }
@@ -155,7 +154,7 @@ export function showToast(
   type: ToastType = "info",
   duration: number = 5000
 ): string {
-  // Ensure toast root element exists
+  // Ensure root element exists
   if (!document.getElementById("toast-root")) {
     const root = document.createElement("div");
     root.id = "toast-root";
@@ -177,7 +176,17 @@ export function dismissToast(id: string) {
   removeToast(id);
 }
 
-export function ToastContainer() {
-  // Container is injected directly via showToast's document.body manipulation
-  return null;
+// Inject keyframes once
+if (typeof document !== "undefined") {
+  const style = document.createElement("style");
+  style.textContent = `
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-10px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+  `;
+  if (!document.getElementById("toast-keyframes")) {
+    style.id = "toast-keyframes";
+    document.head.appendChild(style);
+  }
 }

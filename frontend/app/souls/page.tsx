@@ -48,16 +48,34 @@ export default function SoulsPage() {
     loadSouls();
   }
 
+  const states = [
+    { value: "", label: t("souls.all_states") },
+    { value: "ALIVE", label: t("souls.states.ALIVE") },
+    { value: "JUDGING", label: t("souls.states.JUDGING") },
+    { value: "DISPOSED", label: t("souls.states.DISPOSED") },
+    { value: "REINCARNATING", label: t("souls.states.REINCARNATING") },
+  ];
+
+  const civilizations = [
+    { value: "", label: t("souls.all_civilizations") },
+    { value: "CHINESE", label: t("souls.civilizations.CHINESE") },
+    { value: "EUROPEAN", label: t("souls.civilizations.EUROPEAN") },
+    { value: "EGYPTIAN", label: t("souls.civilizations.EGYPTIAN") },
+  ];
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
+      {/* Page header */}
       <div className="border-b border-slate-800 px-6 py-4 flex items-center gap-4">
-        <Link href="/" className="text-slate-400 hover:text-white text-sm">← Home</Link>
-        <h1 className="text-xl font-bold text-amber-400 flex-1">Souls</h1>
+        <Link href="/" className="text-slate-400 hover:text-white text-sm">
+          ← {t("nav.home")}
+        </Link>
+        <h1 className="text-xl font-bold text-amber-400 flex-1">{t("souls.title")}</h1>
         <button
           onClick={() => setIsCreateModalOpen(true)}
           className="px-4 py-2 bg-amber-700 hover:bg-amber-600 rounded text-sm font-medium transition-colors"
         >
-          + Create Soul
+          + {t("souls.create")}
         </button>
       </div>
 
@@ -67,7 +85,7 @@ export default function SoulsPage() {
           <form onSubmit={handleSearch} className="flex gap-2 flex-1">
             <input
               type="text"
-              placeholder="Search by name..."
+              placeholder={t("souls.search_placeholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
@@ -76,7 +94,7 @@ export default function SoulsPage() {
               type="submit"
               className="px-4 py-2 bg-amber-700 hover:bg-amber-600 rounded text-sm transition-colors"
             >
-              Search
+              {t("souls.search")}
             </button>
           </form>
           <select
@@ -84,50 +102,49 @@ export default function SoulsPage() {
             onChange={(e) => setStateFilter(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
           >
-            <option value="">All States</option>
-            <option value="ALIVE">Alive</option>
-            <option value="JUDGING">Judging</option>
-            <option value="DISPOSED">Disposed</option>
-            <option value="REINCARNATING">Reincarnating</option>
+            {states.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
           </select>
           <select
             value={civilizationFilter}
             onChange={(e) => setCivilizationFilter(e.target.value)}
             className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
           >
-            <option value="">All Civilizations</option>
-            <option value="CHINESE">Chinese</option>
-            <option value="EUROPEAN">European</option>
-            <option value="EGYPTIAN">Egyptian</option>
+            {civilizations.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
           </select>
         </div>
 
         {/* Souls Table */}
         {loading ? (
-          <div className="text-center text-slate-400 py-12">Loading...</div>
+          <div className="text-center text-slate-400 py-12">{t("souls.loading")}</div>
         ) : souls.length === 0 ? (
-          <div className="text-center text-slate-500 py-12">No souls found</div>
+          <div className="text-center text-slate-500 py-12">{t("souls.no_souls")}</div>
         ) : (
           <div className="bg-slate-900 rounded-xl border border-slate-700 overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-slate-800 text-slate-400">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium">Name</th>
-                  <th className="text-left px-4 py-3 font-medium">Civilization</th>
-                  <th className="text-left px-4 py-3 font-medium">State</th>
-                  <th className="text-right px-4 py-3 font-medium">Karma</th>
-                  <th className="text-left px-4 py-3 font-medium">Death</th>
-                  <th className="text-left px-4 py-3 font-medium"></th>
+                  <th className="text-left px-4 py-3 font-medium">{t("souls.name")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("souls.civilization")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("souls.state")}</th>
+                  <th className="text-right px-4 py-3 font-medium">{t("souls.karma")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("souls.death")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("souls.action")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {souls.map((soul) => (
                   <tr key={soul.id} className="hover:bg-slate-800/50 transition-colors">
                     <td className="px-4 py-3 font-medium text-white">{soul.name}</td>
-                    <td className="px-4 py-3 text-slate-400">{soul.civilization}</td>
+                    <td className="px-4 py-3 text-slate-400">
+                      {t(`souls.civilizations.${soul.civilization}`)}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded text-xs font-bold text-white ${STATE_COLORS[soul.current_state]}`}>
-                        {soul.current_state}
+                        {t(`souls.states.${soul.current_state}`)}
                       </span>
                     </td>
                     <td className={`px-4 py-3 text-right font-mono text-sm ${soul.karmic_balance >= 0 ? "text-green-400" : "text-red-400"}`}>
@@ -139,7 +156,7 @@ export default function SoulsPage() {
                         href={`/souls/${soul.id}`}
                         className="text-amber-400 hover:text-amber-300 text-sm"
                       >
-                        View →
+                        {t("souls.view")} →
                       </Link>
                     </td>
                   </tr>

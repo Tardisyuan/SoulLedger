@@ -39,5 +39,48 @@
   "footer": {
     "built_with": "Aha Seth Web Em Django + DRF + Next.js",
     "version": "SoulLedger v0.1"
+  },
+  "souls": {
+    "title": "Aba Hemsu",
+    "create": "Kheme Aba",
+    "search_placeholder": "Shesep Her Ren...",
+    "search": "Shesep",
+    "filter_state": "Set Medu",
+    "filter_civilization": "Aset Ahamet",
+    "all_states": "Wetu Seth Medu",
+    "all_civilizations": "Wetu Aset Ahamet",
+    "loading": "Khemut...",
+    "no_souls": "Ma Rekhyu Aba Hemsu",
+    "name": "Ren",
+    "civilization": "Aset Ahamet",
+    "state": "Set Medu",
+    "karma": "Karma",
+    "death": "Wepet Ru",
+    "action": "Aha Seth",
+    "view": "Smen",
+    "states": {
+      "ALIVE": "Em Khet Her Tepy",
+      "JUDGING": "Em Sheemtet",
+      "DISPOSED": "Em Wetep",
+      "REINCARNATING": "Em Aru Her Tepy",
+      "LOST": "Ma Khet"
+    },
+    "civilizations": {
+      "CHINESE": "Hanacht",
+      "EUROPEAN": "Eremitee",
+      "EGYPTIAN": "Kemet"
+    },
+    "form": {
+      "name_label": "Ren *",
+      "name_placeholder": "Ren Aba",
+      "civilization_label": "Aset Ahamet",
+      "birth_date_label": "Wepet Her Tepy",
+      "location_label": "T3 Khet",
+      "location_placeholder": "Shen Medu: Per Djewet",
+      "submit": "Kheme Aba",
+      "submitting": "Em Kheme...",
+      "create_success": "Aba Kheme Wehem Abuf",
+      "create_error": "Ma Shemsu Em Kheme Aba"
+    }
   }
 }

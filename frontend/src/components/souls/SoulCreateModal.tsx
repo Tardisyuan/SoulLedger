@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { soulsApi } from "@/lib/api";
 import { useToast } from "@/src/contexts/ToastContext";
+import { useI18n } from "@/src/contexts/I18nContext";
 
 interface SoulCreateModalProps {
   isOpen: boolean;
@@ -10,17 +11,12 @@ interface SoulCreateModalProps {
   onCreated: () => void;
 }
 
-const CIVILIZATIONS = [
-  { value: "CHINESE", label: "Chinese" },
-  { value: "EUROPEAN", label: "European" },
-  { value: "EGYPTIAN", label: "Egyptian" },
-];
-
 export default function SoulCreateModal({
   isOpen,
   onClose,
   onCreated,
 }: SoulCreateModalProps) {
+  const { t } = useI18n();
   const { showToast } = useToast();
   const [name, setName] = useState("");
   const [civilization, setCivilization] = useState("CHINESE");
@@ -47,9 +43,7 @@ export default function SoulCreateModal({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = "";
-      };
+      return () => { document.body.style.overflow = ""; };
     }
   }, [isOpen]);
 
@@ -67,7 +61,7 @@ export default function SoulCreateModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      showToast("Name is required", "error");
+      showToast(t("souls.form.name_placeholder") + " *", "error");
       return;
     }
 
@@ -79,19 +73,23 @@ export default function SoulCreateModal({
         birth_date: birthDate || null,
         origin_location: originLocation,
       });
-      showToast("Soul created successfully", "success");
+      showToast(t("souls.form.create_success"), "success");
       onCreated();
       onClose();
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to create soul";
-      showToast(message, "error");
+    } catch {
+      showToast(t("souls.form.create_error"), "error");
     } finally {
       setLoading(false);
     }
   }
 
   if (!isOpen) return null;
+
+  const civilizations = [
+    { value: "CHINESE", label: t("souls.civilizations.CHINESE") },
+    { value: "EUROPEAN", label: t("souls.civilizations.EUROPEAN") },
+    { value: "EGYPTIAN", label: t("souls.civilizations.EGYPTIAN") },
+  ];
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center">
@@ -105,7 +103,7 @@ export default function SoulCreateModal({
       <div className="relative w-full max-w-md mx-4 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
-          <h2 className="text-lg font-semibold text-white">Create New Soul</h2>
+          <h2 className="text-lg font-semibold text-white">{t("souls.create")}</h2>
           <button
             onClick={onClose}
             disabled={loading}
@@ -121,7 +119,7 @@ export default function SoulCreateModal({
           {/* Name */}
           <div className="flex flex-col gap-1">
             <label className="text-xs text-slate-400">
-              Name <span className="text-red-400">*</span>
+              {t("souls.form.name_label")}
             </label>
             <input
               type="text"
@@ -131,30 +129,28 @@ export default function SoulCreateModal({
               onChange={(e) => setName(e.target.value)}
               disabled={loading}
               className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 disabled:opacity-50 transition-colors"
-              placeholder="Soul name"
+              placeholder={t("souls.form.name_placeholder")}
             />
           </div>
 
           {/* Civilization */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-400">Civilization</label>
+            <label className="text-xs text-slate-400">{t("souls.form.civilization_label")}</label>
             <select
               value={civilization}
               onChange={(e) => setCivilization(e.target.value)}
               disabled={loading}
               className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 disabled:opacity-50 transition-colors"
             >
-              {CIVILIZATIONS.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
+              {civilizations.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
               ))}
             </select>
           </div>
 
           {/* Birth Date */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-400">Birth Date</label>
+            <label className="text-xs text-slate-400">{t("souls.form.birth_date_label")}</label>
             <input
               type="date"
               value={birthDate}
@@ -166,14 +162,14 @@ export default function SoulCreateModal({
 
           {/* Origin Location */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-400">Location</label>
+            <label className="text-xs text-slate-400">{t("souls.form.location_label")}</label>
             <input
               type="text"
               value={originLocation}
               onChange={(e) => setOriginLocation(e.target.value)}
               disabled={loading}
               className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 disabled:opacity-50 transition-colors"
-              placeholder="e.g. Chengdu"
+              placeholder={t("souls.form.location_placeholder")}
             />
           </div>
 
@@ -185,7 +181,7 @@ export default function SoulCreateModal({
               disabled={loading}
               className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 rounded text-sm text-slate-300 transition-colors"
             >
-              Cancel
+              {t("auth.cancel") || "Cancel"}
             </button>
             <button
               type="submit"
@@ -194,30 +190,13 @@ export default function SoulCreateModal({
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <svg
-                    className="animate-spin h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Creating...
+                  {t("souls.form.submitting")}
                 </span>
-              ) : (
-                "Create Soul"
-              )}
+              ) : t("souls.form.submit")}
             </button>
           </div>
         </form>
