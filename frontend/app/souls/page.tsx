@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { soulsApi, Soul } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import SoulCreateModal from "@/src/components/souls/SoulCreateModal";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "bg-green-600",
@@ -20,6 +21,7 @@ export default function SoulsPage() {
   const [stateFilter, setStateFilter] = useState("");
   const [civilizationFilter, setCivilizationFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     loadSouls();
@@ -50,7 +52,13 @@ export default function SoulsPage() {
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="border-b border-slate-800 px-6 py-4 flex items-center gap-4">
         <Link href="/" className="text-slate-400 hover:text-white text-sm">← Home</Link>
-        <h1 className="text-xl font-bold text-amber-400">Souls</h1>
+        <h1 className="text-xl font-bold text-amber-400 flex-1">Souls</h1>
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="px-4 py-2 bg-amber-700 hover:bg-amber-600 rounded text-sm font-medium transition-colors"
+        >
+          + Create Soul
+        </button>
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-8">
@@ -141,96 +149,12 @@ export default function SoulsPage() {
           </div>
         )}
 
-        {/* Create Soul Form */}
-        <div className="mt-8 bg-slate-900 rounded-xl p-5 border border-slate-700">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase mb-4">Create New Soul</h2>
-          <CreateSoulForm onCreated={loadSouls} />
-        </div>
+        <SoulCreateModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreated={loadSouls}
+        />
       </div>
     </div>
-  );
-}
-
-function CreateSoulForm({ onCreated }: { onCreated: () => void }) {
-  const [name, setName] = useState("");
-  const [civilization, setCivilization] = useState("CHINESE");
-  const [birthDate, setBirthDate] = useState("");
-  const [location, setLocation] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setLoading(true);
-    try {
-      await soulsApi.create({
-        name: name.trim(),
-        civilization,
-        birth_date: birthDate || null,
-        origin_location: location,
-      });
-      setName("");
-      setLocation("");
-      setBirthDate("");
-      onCreated();
-    } catch (err) {
-      alert("Failed to create soul");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-wrap gap-3 items-end">
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-slate-400">Name *</label>
-        <input
-          type="text"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 w-40"
-          placeholder="Soul name"
-        />
-      </div>
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-slate-400">Civilization</label>
-        <select
-          value={civilization}
-          onChange={(e) => setCivilization(e.target.value)}
-          className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
-        >
-          <option value="CHINESE">Chinese</option>
-          <option value="EUROPEAN">European</option>
-          <option value="EGYPTIAN">Egyptian</option>
-        </select>
-      </div>
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-slate-400">Birth Date</label>
-        <input
-          type="date"
-          value={birthDate}
-          onChange={(e) => setBirthDate(e.target.value)}
-          className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
-        />
-      </div>
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-slate-400">Location</label>
-        <input
-          type="text"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 w-40"
-          placeholder="e.g. Chengdu"
-        />
-      </div>
-      <button
-        type="submit"
-        disabled={loading}
-        className="px-5 py-2 bg-amber-700 hover:bg-amber-600 disabled:opacity-50 rounded text-sm font-medium transition-colors"
-      >
-        {loading ? "Creating..." : "Create Soul"}
-      </button>
-    </form>
   );
 }

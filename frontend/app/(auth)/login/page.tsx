@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
 
 export default function LoginPage() {
   const { t } = useI18n();
+  const { showToast } = useToast();
   const router = useRouter();
   const [form, setForm] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
@@ -29,7 +31,9 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.detail || "Login failed");
+        const msg = data.detail || "Login failed";
+        setError(msg);
+        showToast(msg, "error");
         return;
       }
 
@@ -38,9 +42,12 @@ export default function LoginPage() {
       document.cookie = `soulledger_access=${tokens.access}; path=/; max-age=1800; SameSite=Lax`;
       document.cookie = `soulledger_refresh=${tokens.refresh}; path=/; max-age=604800; SameSite=Lax`;
 
+      showToast("Login successful", "success");
       router.push("/souls");
     } catch {
-      setError("Network error");
+      const msg = "Network error";
+      setError(msg);
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
