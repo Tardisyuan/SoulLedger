@@ -111,6 +111,33 @@
   - Action: Create `backend/tests/test_tenant_isolation.py`; create users in CN and EU; verify cross-tenant data access returns 0 results
   - Verify: `pytest -v backend/tests/test_tenant_isolation.py` — all pass
 
+### M3.7: Permission Enforcement
+
+- [ ] **add_drf_permission_classes** 🔴
+  - Title: DRF Permission Classes for all ViewSets
+  - Action: Create `backend/apps/tenants/permissions.py`; TenantPermission (user.tenant == obj.tenant), RolePermission (check user.role against allowed roles); apply to all ViewSets
+  - Verify: Non-tenant-user cannot access foreign tenant resources; 403 returned
+
+- [ ] **add_field_level_serializers** 🟡
+  - Title: Field-level serializer permissions
+  - Action: Create role-based field filtering in serializers; VIEWER cannot see karmic_balance/merit_score/demerit_score; GUARDIAN cannot see dispatch_status
+  - Verify: API response fields differ based on user role
+
+- [ ] **create_useauth_hook** 🟡
+  - Title: Frontend useAuth() permission hook
+  - Action: Create `frontend/hooks/useAuth.ts`; expose hasPermission(operation), role, tenantCode; integrate with API client
+  - Verify: `const { hasPermission } = useAuth(); hasPermission('soul.create')` returns correct value per role
+
+- [ ] **add_route_guards** 🟡
+  - Title: Frontend route guards based on role
+  - Action: Create route guard HOC/Component; hide dispatch pages from GUARDIAN/VIEWER; hide admin pages from non-ADMIN
+  - Verify: Menu items show/hide based on user role
+
+- [ ] **write_permission_tests** 🟡
+  - Title: Permission integration tests
+  - Action: Create `backend/tests/test_permissions.py`; test all operations against all roles; verify correct 403/200 responses
+  - Verify: `pytest -v backend/tests/test_permissions.py` — all pass
+
 ---
 
 ## M4: Tenant-Aware Frontend + Landing Page
@@ -155,6 +182,33 @@
   - Title: Language switcher per-tenant
   - Action: Ensure language switcher works on all pages; dispatch/judgment content respects user locale
   - Verify: Switch from zh to en and all labels update
+
+### M4.3: UI Framework (Optional)
+
+- [ ] **add_theme_provider** 🟡
+  - Title: ThemeProvider context
+  - Action: Create `frontend/contexts/ThemeContext.tsx`; wrap app with ThemeProvider; support light/dark/system; persist to localStorage
+  - Verify: Theme persists across page reloads
+
+- [ ] **add_theme_color_picker** 🟡
+  - Title: Accent color picker
+  - Action: Create color picker component; 6 presets (Amber/Crimson/Jade/Lapis/Obsidian/Custom); apply via CSS variables --color-accent
+  - Verify: UI accent color changes based on selection
+
+- [ ] **add_settings_drawer** 🟡
+  - Title: Settings drawer component
+  - Action: Create slide-in drawer from right; include language, theme, accent color, compact mode, quick actions toggles; persist settings to localStorage
+  - Verify: Settings drawer opens from navbar; settings persist
+
+- [ ] **add_personal_center** 🟡
+  - Title: Personal center page
+  - Action: Create `frontend/app/[tenant]/profile/page.tsx`; profile info, change password, notification preferences, activity history
+  - Verify: All sections render correctly with user data
+
+- [ ] **add_navigation_modes** 🟢
+  - Title: Compact/classic navigation modes
+  - Action: Add sidebar mode toggle; classic = expanded icons+labels; compact = icon-only with hover expand; store preference in localStorage
+  - Verify: Sidebar switches between modes correctly
 
 ---
 

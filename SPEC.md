@@ -936,6 +936,109 @@ PROPOSED → IN_REVIEW → APPROVED/REJECTED
 
 ---
 
+## 6.X 权限模型
+
+> 本节定义 SoulLedger 系统的细粒度权限控制体系，包括角色定义、三层权限粒度、外派特殊权限以及前后端实施方式。
+
+### 6.X.1 角色定义（Role Definition）
+
+| 角色 | 范围 | 说明 |
+|------|-------|-------------|
+| TENANT_ADMIN | Per-tenant | 阎罗王/撒旦/奥西里斯 — 租户内全权管理 |
+| JUDGE | Per-tenant | 判官 — 可执行审判、查看灵魂 |
+| GUARDIAN | Per-tenant | 牛头马面 — 可添加业力记录、查看灵魂 |
+| VIEWER | Per-tenant | 只读 — 仅仪表盘访问 |
+| ADMIN | Global | 系统管理员 — 只读统计，无法干预业务 |
+
+### 6.X.2 权限粒度（Permission Granularity）
+
+系统采用三层权限控制：
+
+**1. 页面可见性（Page Visibility）— 控制菜单项显示**
+
+| 页面 | TENANT_ADMIN | JUDGE | GUARDIAN | VIEWER | ADMIN |
+|------|-------------|-------|----------|--------|-------|
+| /{tenant}/souls/ | ✓ | ✓ | ✓ | ✓ | ✓ (via /admin/) |
+| /{tenant}/souls/[id]/ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| /{tenant}/dispatch/propose/ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| /{tenant}/dispatch/pending/ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| /{tenant}/cross-judgments/ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| /{tenant}/realms/ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| /{tenant}/actors/ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| /admin/dashboard/ | ✗ | ✗ | ✗ | ✗ | ✓ |
+| /admin/dispatch/audit/ | ✗ | ✗ | ✗ | ✗ | ✓ |
+
+**2. 操作权限（Operation Permission）— 控制 API 可执行操作**
+
+| 操作 | TENANT_ADMIN | JUDGE | GUARDIAN | VIEWER |
+|-----------|-------------|-------|----------|--------|
+| soul.create | ✓ | ✓ | ✗ | ✗ |
+| soul.die | ✓ | ✓ | ✗ | ✗ |
+| soul.transition | ✓ | ✓ | ✗ | ✗ |
+| soul.view | ✓ | ✓ | ✓ | ✓ |
+| soul.add_record | ✓ | ✓ | ✓ | ✗ |
+| judgment.conclude | ✓ | ✓ | ✗ | ✗ |
+| disposition.execute | ✓ | ✓ | ✗ | ✗ |
+| dispatch.propose | ✓ | ✓ | ✗ | ✗ |
+| dispatch.approve | ✓ | ✓ | ✗ | ✗ |
+| cross_judgment.join | ✓ | ✓ | ✗ | ✗ |
+| realm.view | ✓ | ✓ | ✓ | ✓ |
+| actor.view | ✓ | ✓ | ✓ | ✓ |
+
+**3. 字段级可见性（Field-Level Visibility）— 控制数据字段暴露**
+
+以 Soul 模型为例：
+
+| 字段 | TENANT_ADMIN | JUDGE | GUARDIAN | VIEWER |
+|-------|-------------|-------|----------|--------|
+| karmic_balance | ✓ | ✓ | ✗ | ✓ |
+| merit_score | ✓ | ✓ | ✓ | ✗ |
+| demerit_score | ✓ | ✓ | ✓ | ✗ |
+| death_date | ✓ | ✓ | ✓ | ✓ |
+| dispatch_status | ✓ | ✓ | ✗ | ✗ |
+
+### 6.X.3 外派权限（Dispatch Permission）
+
+外派模块有特殊权限要求：
+
+| 权限 | 可执行角色 | 说明 |
+|------|----------|------|
+| dispatch:propose | TENANT_ADMIN, JUDGE | 发起外派申请 |
+| dispatch:approve | TENANT_ADMIN, JUDGE (目标租户) | 批准外派 |
+| dispatch:reject | TENANT_ADMIN, JUDGE (目标租户) | 拒绝外派 |
+| cross_judgment:create | TENANT_ADMIN, JUDGE | 创建联合审判 |
+| cross_judgment:participate | DISPATCH_JUDGE | 参与联合审判 |
+
+### 6.X.4 权限实施（Permission Enforcement）
+
+**后端实施：**
+
+- **DRF Permission Classes**：每个 ViewSet 配置自定义 Permission Class
+  ```python
+  class SoulViewSet(ModelViewSet):
+      permission_classes = [IsAuthenticated, TenantPermission]
+      # TenantPermission 检查 user.tenant == obj.tenant
+  ```
+- **Service Layer 验证**：敏感操作在 Service 层二次校验
+- **ADMIN 只读保证**：ADMIN 角色 bypass tenant 过滤，但业务层强制 read-only
+
+**前端实施：**
+
+- **useAuth() Hook**：在组件渲染前检查角色和权限
+  ```typescript
+  const { hasPermission, role } = useAuth();
+  // hasPermission('soul.create') → boolean
+  ```
+- **路由守卫**：Router 层校验菜单可见性
+- **API 拦截**：请求自动携带 JWT，401/403 处理
+
+**中间件验证：**
+
+- TenantMiddleware 从 JWT 提取 tenant_id
+- 请求进入 ViewSet 前，验证用户 tenant 与资源 tenant 一致
+
+---
+
 ## 7. 前端架构
 
 ### 7.1 路由结构
@@ -1017,6 +1120,77 @@ GET /api/v1/stats/global/
 GET /api/v1/stats/by-tenant/
 ```
 
+### 7.X UI Framework（可选功能）
+
+> 以下为可选的 UI 增强功能，不影响核心业务，可根据项目进度选择性实现。
+
+#### 7.X.1 Theme System（主题系统）
+
+当前实现：Light/Dark 通过 Tailwind `dark:` classes + Cookie 切换。
+
+增强功能：
+- **ThemeProvider Context**：包装整个应用的 Theme 上下文
+- **系统偏好检测**：自动检测 `prefers-color-scheme`
+- **localStorage 持久化**：主题选择保存到 localStorage
+- **设置抽屉快捷切换**：在设置抽屉中提供主题切换
+
+```typescript
+interface ThemeContextType {
+  theme: 'light' | 'dark' | 'system';
+  resolvedTheme: 'light' | 'dark';
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
+}
+```
+
+#### 7.X.2 Theme Color（主题色）
+
+提供自定义强调色选择器（6 预设 + 自定义）：
+
+| 预设 | 名称 | 用途 |
+|------|------|------|
+| Amber（默认） | 地府金 | 中国地府主题色 |
+| Crimson | 血红色 | 欧洲地狱主题色 |
+| Jade | 玉绿 | 埃及主题色 |
+| Lapis | 石青蓝 | 备用蓝 |
+| Obsidian | 黑曜石黑 | 深色主题强调色 |
+| Custom | 自定义 | 用户输入 hex 值 |
+
+存储方式：CSS 变量 `--color-accent`、`--color-accent-hover`
+
+#### 7.X.3 Settings Drawer（设置抽屉）
+
+右侧滑入抽屉式设置面板（不跳转页面），设置持久化到 localStorage：
+
+| 设置项 | 类型 | 默认值 |
+|--------|------|--------|
+| Language | Select: zh-Hans / en / egy | zh-Hans |
+| Theme | Select: Light / Dark / System | System |
+| Accent Color | Color picker (6 presets + custom) | Amber |
+| Compact Mode | Toggle | Off |
+| Show Quick Actions | Toggle | On |
+
+#### 7.X.4 Personal Center（个人中心）
+
+路由：`/{tenant}/profile/` 或 `/profile/`
+
+功能模块：
+- **Profile Info**：用户名、显示名、角色、租户信息
+- **Change Password**：修改密码表单
+- **Notification Preferences**：通知偏好设置
+- **Appearance Settings**：外观设置（跳转设置抽屉快捷方式）
+- **Activity History**：近期操作历史
+
+#### 7.X.5 Navigation Modes（导航模式）
+
+两种导航模式（存储在用户偏好）：
+
+| 模式 | 描述 |
+|------|------|
+| **Classic Menu** | 传统侧边栏，图标 + 文字标签，始终展开 |
+| **Compact Menu** | 仅图标侧边栏，hover 展开 |
+
+两种模式均保持 NavBar 显示租户上下文。
+
 ---
 
 ## 8. 数据库设计
@@ -1085,7 +1259,7 @@ ALTER TABLE souls_soul ADD CONSTRAINT fk_soul_tenant
 
 **多租户后端基础设施**
 
-| 任务 | 状态 | 验收标准 |
+|| 任务 | 状态 | 验收标准 |
 |------|------|---------|
 | Tenant 模型 | 🔲 | code/display_name/settings/dispatch_enabled/api_endpoint |
 | 三租户种子数据 | 🔲 | CN_DIYU / EU_HEAVEN_HELL / EG_DUAT 各一条 |
@@ -1096,14 +1270,18 @@ ALTER TABLE souls_soul ADD CONSTRAINT fk_soul_tenant
 | ViewSet 租户过滤 | 🔲 | 非 ADMIN 强制 tenant 过滤，ADMIN 可跨租户 |
 | 租户隔离测试 | 🔲 | pytest 测试跨租户数据不可见 |
 | 登录响应加 tenant | 🔲 | /auth/login/ 返回 user.tenant.code 和 display_name |
+| **DRF Permission Classes** | 🔲 | 每个 ViewSet 配置 TenantPermission + RolePermission |
+| **useAuth() Hook** | 🔲 | 前端权限检查 hook，hasPermission(operation) → boolean |
+| **路由守卫** | 🔲 | 菜单项根据角色动态显示/隐藏 |
+| **字段级序列化** | 🔲 | 根据角色过滤响应字段（如 VIEWER 看不到 karmic_balance） |
 
-**Session 估算:** 3–4 sessions
+**Session 估算:** 4–5 sessions
 
 ### Milestone 4 🔲 待开始
 
 **租户感知前端 + 落地页**
 
-| 任务 | 状态 | 验收标准 |
+|| 任务 | 状态 | 验收标准 |
 |------|------|---------|
 | TenantContext | 🔲 | React context，存储 tenant_code/display_name |
 | API client 租户注入 | 🔲 | 请求自动带 tenant 上下文 |
@@ -1112,8 +1290,13 @@ ALTER TABLE souls_soul ADD CONSTRAINT fk_soul_tenant
 | NavBar 租户信息 | 🔲 | 显示当前租户名称 + 用户角色 + 登出 |
 | 落地页租户选择 | 🔲 | 三个租户卡片，点击进入该租户登录 |
 | 语言切换 | 🔲 | dispatch 内容按用户语言显示 |
+| **ThemeProvider** | 🔲 | 主题系统 Context（Light/Dark/System） |
+| **Theme Color Picker** | 🔲 | 6 预设 + 自定义强调色选择器 |
+| **Settings Drawer** | 🔲 | 右侧滑入抽屉，持久化到 localStorage |
+| **Personal Center** | 🔲 | /{tenant}/profile/ 用户信息、修改密码、历史 |
+| **Navigation Modes** | 🔲 | Classic/Compact 侧边栏切换 |
 
-**Session 估算:** 2–3 sessions | **依赖:** M3
+**Session 估算:** 3–4 sessions | **依赖:** M3
 
 ### Milestone 5 🔲 待开始
 
