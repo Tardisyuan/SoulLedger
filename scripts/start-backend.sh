@@ -16,6 +16,15 @@ fi
 
 cd "$BACKEND_DIR"
 
+# Use project-specific venv if available
+if [ -f "$BACKEND_DIR/.venv/bin/python" ]; then
+    PYTHON="$BACKEND_DIR/.venv/bin/python"
+elif [ -f "/home/tardis/.pyenv/versions/3.11.15/bin/python" ]; then
+    PYTHON="/home/tardis/.pyenv/versions/3.11.15/bin/python"
+else
+    PYTHON="python"
+fi
+
 # Check if already running
 if [ -f "$PID_FILE" ]; then
     OLD_PID=$(cat "$PID_FILE")
@@ -27,7 +36,7 @@ if [ -f "$PID_FILE" ]; then
 fi
 
 echo "Starting backend server..."
-nohup python manage.py runserver 0.0.0.0:8000 > "$LOG_FILE" 2>&1 &
+nohup "$PYTHON" manage.py runserver 0.0.0.0:8000 > "$LOG_FILE" 2>&1 &
 BACKEND_PID=$!
 echo $BACKEND_PID > "$PID_FILE"
 

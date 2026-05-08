@@ -1,0 +1,30 @@
+{
+  "nav": {
+    "title": "SoulLedger",
+    "subtitle": "Cross-Civilization Soul Management",
+    "home": "Home",
+    "souls": "Souls",
+    "realms": "Realms",
+    "actors": "Actors",
+    "about": "About"
+  },
+  "home": {
+    "hero_title": "SoulLedger",
+    "hero_subtitle": "Cross-civilization soul management system",
+    "hero_description": "Manage souls across Chinese Diyu, European Heaven & Hell, and Egyptian Duat — from a single unified platform.",
+    "civilizations_title": "Civilizations",
+    "chinese_title": "Chinese Diyu",
+    "chinese_subtitle": "中国地府",
+    "chinese_desc": "Ten Courts of Yama, Mengpo Soup, Six Realms of Reincarnation",
+    "european_title": "European Heaven & Hell",
+    "european_subtitle": "欧洲天堂地狱",
+    "european_desc": "Christian Tribunal, Purgatory, Dante's Circles, Lethe River",
+    "egyptian_title": "Egyptian Duat",
+    "egyptian_subtitle": "埃及冥界",
+    "egyptian_desc": "Osiris Judgment, Heart Weighing against Ma'at Feather, Field of Reeds"
+  },
+  "footer": {
+    "built_with": "Built with Django + DRF + Next.js",
+    "version": "SoulLedger v0.1"
+  }
+}

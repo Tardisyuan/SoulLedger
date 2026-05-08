@@ -22,7 +22,7 @@ if [ -f "$PID_FILE" ]; then
 fi
 
 echo "Starting frontend server..."
-nohup npm run dev > "$LOG_FILE" 2>&1 &
+PORT=3333 nohup npm run dev > "$LOG_FILE" 2>&1 &
 FRONTEND_PID=$!
 echo $FRONTEND_PID > "$PID_FILE"
 
@@ -30,7 +30,7 @@ sleep 5
 if kill -0 "$FRONTEND_PID" 2>/dev/null; then
     echo "Frontend started: PID $FRONTEND_PID"
     echo "Log: $LOG_FILE"
-    echo "UI: http://localhost:3000"
+    echo "UI: http://localhost:3333"
 else
     echo "Frontend failed to start — check $LOG_FILE"
     cat "$LOG_FILE"
