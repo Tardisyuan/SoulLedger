@@ -21,6 +21,12 @@ class SoulEvent(models.Model):
     Immutable audit log entry. Never delete.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="soul_events",
+        null=True,
+    )
     soul = models.ForeignKey(
         "souls.Soul",
         on_delete=models.CASCADE,
