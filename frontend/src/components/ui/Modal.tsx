@@ -21,7 +21,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
 
   return (
     <Transition show={isOpen} as={Fragment}>
-      <Dialog onClose={onClose} className="relative z-[10000]">
+      <Dialog open={isOpen} onClose={onClose} className="fixed inset-0 z-[10000]">
         {/* Backdrop */}
         <Transition.Child
           as={Fragment}
