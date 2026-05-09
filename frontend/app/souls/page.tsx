@@ -56,17 +56,17 @@ export default function SoulsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-canvas text-ink">
       {/* Page header */}
-      <div className="border-b border-slate-800 px-6 py-4 flex items-center gap-4">
-        <Link href="/" className="text-slate-400 hover:text-white text-sm">
+      <div className="border-b border-hairline px-6 py-4 flex items-center gap-4">
+        <Link href="/" className="text-ink-muted hover:text-ink text-sm">
           ← {t("nav.home")}
         </Link>
         <h1 className="text-xl font-bold text-amber-400 flex-1">{t("souls.title")}</h1>
         <RouteGuard operation="soul.create" fallback={null}>
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="px-4 py-2 bg-amber-700 hover:bg-amber-600 rounded text-sm font-medium transition-colors"
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 rounded-md text-sm font-medium transition-colors"
           >
             + {t("souls.create")}
           </button>
@@ -88,11 +88,11 @@ export default function SoulsPage() {
               placeholder={t("souls.search_placeholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+              className="flex-1 bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500"
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-amber-700 hover:bg-amber-600 rounded text-sm transition-colors"
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 rounded-md text-sm transition-colors"
             >
               {t("souls.search")}
             </button>
@@ -103,7 +103,7 @@ export default function SoulsPage() {
               setStateFilter(e.target.value);
               refetch();
             }}
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+            className="bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
           >
             {states.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
@@ -115,7 +115,7 @@ export default function SoulsPage() {
               setCivilizationFilter(e.target.value);
               refetch();
             }}
-            className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
+            className="bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
           >
             {civilizations.map((c) => (
               <option key={c.value} value={c.value}>{c.label}</option>
@@ -125,17 +125,17 @@ export default function SoulsPage() {
 
         {/* Loading / Error / Empty / Table */}
         {isLoading ? (
-          <div className="text-center text-slate-400 py-12">{t("souls.loading")}</div>
+          <div className="text-center text-ink-muted py-12">{t("souls.loading")}</div>
         ) : error ? (
           <div className="text-center text-red-400 py-12">
             {String(error)}
           </div>
         ) : souls.length === 0 ? (
-          <div className="text-center text-slate-500 py-12">{t("souls.no_souls")}</div>
+          <div className="text-center text-ink-subtle py-12">{t("souls.no_souls")}</div>
         ) : (
-          <div className="bg-slate-900 rounded-xl border border-slate-700 overflow-hidden">
+          <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-800 text-slate-400">
+              <thead className="bg-surface-2 text-ink-muted">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">{t("souls.name")}</th>
                   <th className="text-left px-4 py-3 font-medium">{t("souls.civilization")}</th>
@@ -145,22 +145,22 @@ export default function SoulsPage() {
                   <th className="text-left px-4 py-3 font-medium">{t("souls.action")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-hairline">
                 {souls.map((soul) => (
-                  <tr key={soul.id} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-white">{soul.name}</td>
-                    <td className="px-4 py-3 text-slate-400">
+                  <tr key={soul.id} className="hover:bg-surface-2/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-ink">{soul.name}</td>
+                    <td className="px-4 py-3 text-ink-muted">
                       {t(`souls.civilizations.${soul.civilization}`)}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold text-white ${STATE_COLORS[soul.current_state] ?? "bg-slate-600"}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold text-ink ${STATE_COLORS[soul.current_state] ?? "bg-surface-3"}`}>
                         {t(`souls.states.${soul.current_state}`)}
                       </span>
                     </td>
                     <td className={`px-4 py-3 text-right font-mono text-sm ${(soul.karmic_balance ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
                       {(soul.karmic_balance ?? 0) >= 0 ? "+" : ""}{soul.karmic_balance ?? 0}
                     </td>
-                    <td className="px-4 py-3 text-slate-400 text-xs">{soul.death_date || "—"}</td>
+                    <td className="px-4 py-3 text-ink-muted text-xs">{soul.death_date || "—"}</td>
                     <td className="px-4 py-3">
                       <Link
                         href={`/souls/${soul.id}`}

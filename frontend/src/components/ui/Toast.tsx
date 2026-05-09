@@ -61,7 +61,6 @@ function buildToastEl(item: ToastItem): HTMLElement {
     `border-left:3px solid ${c.border}`,
     `background:${c.bg}`,
     `color:${c.text}`,
-    "box-shadow:0 4px 20px rgba(0,0,0,0.35)",
     "animation:toastIn 0.25s cubic-bezier(0.22,1,0.36,1)",
     "pointer-events:auto",
     "font-family:ui-sans-serif,system-ui,-apple-system,sans-serif",
