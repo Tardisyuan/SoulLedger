@@ -68,11 +68,12 @@ class SoulListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views."""
     karmic_balance = serializers.SerializerMethodField()
     tenant_code = serializers.CharField(source="tenant.code", read_only=True)
+    civilization = serializers.CharField(read_only=True)
 
     class Meta:
         model = Soul
         fields = [
-            "id", "name", "current_state", "tenant_code",
+            "id", "name", "current_state", "tenant_code", "civilization",
             "birth_date", "death_date", "merit_score", "demerit_score",
             "karmic_balance", "created_at",
         ]
