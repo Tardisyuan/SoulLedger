@@ -20,7 +20,11 @@
     "login_success": "Sesen Pert Abuf",
     "login_failed": "Sesen Pert Wehem",
     "logout_success": "Iri Pert Abuf",
-    "cancel": "Iri"
+    "cancel": "Iri",
+    "error_invalid_credentials": "Ren em Sepy Usert",
+    "error_invalid_token": "Menf Her Tepy",
+    "error_token_expired": "Menf Wehem Seth",
+    "error_login_failed": "Sesen Pert Wehem"
   },
   "home": {
     "hero_title": "SoulLedger",

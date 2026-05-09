@@ -20,7 +20,11 @@
     "login_success": "Login successful",
     "login_failed": "Login failed",
     "logout_success": "Logged out",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "error_invalid_credentials": "Invalid username or password",
+    "error_invalid_token": "Invalid token",
+    "error_token_expired": "Token has expired",
+    "error_login_failed": "Login failed"
   },
   "home": {
     "hero_title": "SoulLedger",
