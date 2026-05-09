@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { soulsApi, Soul } from "@/lib/api";
+import { useSouls, useCreateSoul } from "@/src/hooks/useSouls";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
+import type { Soul } from "@/lib/api";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "bg-green-600",
@@ -16,37 +17,25 @@ const STATE_COLORS: Record<string, string> = {
 
 export default function SoulsPage() {
   const { t } = useI18n();
-  const [souls, setSouls] = useState<Soul[]>([]);
-  const [loading, setLoading] = useState(true);
   const [stateFilter, setStateFilter] = useState("");
   const [civilizationFilter, setCivilizationFilter] = useState("");
   const [search, setSearch] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  useEffect(() => {
-    loadSouls();
-  }, [stateFilter, civilizationFilter]);
+  // Build query params from filter state
+  const params: Record<string, string> = {};
+  if (stateFilter) params.current_state = stateFilter;
+  if (civilizationFilter) params.civilization = civilizationFilter;
+  if (search) params.search = search;
 
-  async function loadSouls() {
-    setLoading(true);
-    const params: Record<string, string> = {};
-    if (stateFilter) params.current_state = stateFilter;
-    if (civilizationFilter) params.civilization = civilizationFilter;
-    if (search) params.search = search;
-    try {
-      const res = await soulsApi.list(params);
-      setSouls(res.data.results || res.data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // TanStack Query — automatic caching, background refetch, loading/error states
+  const { data, isLoading, error, refetch } = useSouls(
+    Object.keys(params).length > 0 ? params : undefined
+  );
+  const souls = (data?.results ?? []) as Soul[];
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    loadSouls();
-  }
+  // Create mutation with auto-invalidation
+  const createMutation = useCreateSoul();
 
   const states = [
     { value: "", label: t("souls.all_states") },
@@ -82,7 +71,13 @@ export default function SoulsPage() {
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-6 items-center">
-          <form onSubmit={handleSearch} className="flex gap-2 flex-1">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              refetch(); // trigger refetch with current params
+            }}
+            className="flex gap-2 flex-1"
+          >
             <input
               type="text"
               placeholder={t("souls.search_placeholder")}
@@ -99,7 +94,10 @@ export default function SoulsPage() {
           </form>
           <select
             value={stateFilter}
-            onChange={(e) => setStateFilter(e.target.value)}
+            onChange={(e) => {
+              setStateFilter(e.target.value);
+              refetch();
+            }}
             className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
           >
             {states.map((s) => (
@@ -108,7 +106,10 @@ export default function SoulsPage() {
           </select>
           <select
             value={civilizationFilter}
-            onChange={(e) => setCivilizationFilter(e.target.value)}
+            onChange={(e) => {
+              setCivilizationFilter(e.target.value);
+              refetch();
+            }}
             className="bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
           >
             {civilizations.map((c) => (
@@ -117,9 +118,13 @@ export default function SoulsPage() {
           </select>
         </div>
 
-        {/* Souls Table */}
-        {loading ? (
+        {/* Loading / Error / Empty / Table */}
+        {isLoading ? (
           <div className="text-center text-slate-400 py-12">{t("souls.loading")}</div>
+        ) : error ? (
+          <div className="text-center text-red-400 py-12">
+            {String(error)}
+          </div>
         ) : souls.length === 0 ? (
           <div className="text-center text-slate-500 py-12">{t("souls.no_souls")}</div>
         ) : (
@@ -143,12 +148,12 @@ export default function SoulsPage() {
                       {t(`souls.civilizations.${soul.civilization}`)}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold text-white ${STATE_COLORS[soul.current_state]}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold text-white ${STATE_COLORS[soul.current_state] ?? "bg-slate-600"}`}>
                         {t(`souls.states.${soul.current_state}`)}
                       </span>
                     </td>
-                    <td className={`px-4 py-3 text-right font-mono text-sm ${soul.karmic_balance >= 0 ? "text-green-400" : "text-red-400"}`}>
-                      {soul.karmic_balance >= 0 ? "+" : ""}{soul.karmic_balance}
+                    <td className={`px-4 py-3 text-right font-mono text-sm ${(soul.karmic_balance ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {(soul.karmic_balance ?? 0) >= 0 ? "+" : ""}{soul.karmic_balance ?? 0}
                     </td>
                     <td className="px-4 py-3 text-slate-400 text-xs">{soul.death_date || "—"}</td>
                     <td className="px-4 py-3">
@@ -165,13 +170,16 @@ export default function SoulsPage() {
             </table>
           </div>
         )}
-
-        <SoulCreateModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          onCreated={loadSouls}
-        />
       </div>
+
+      <SoulCreateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreated={() => {
+          setIsCreateModalOpen(false);
+          refetch();
+        }}
+      />
     </div>
   );
 }
