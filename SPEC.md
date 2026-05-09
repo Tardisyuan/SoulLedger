@@ -1693,29 +1693,31 @@ ALTER TABLE souls_soul ADD CONSTRAINT fk_soul_tenant
 | 前端登录页 | ✅ | /login 页面，Token 存 cookie |
 | API 认证保护 | ✅ | 所有业务端点需 JWT |
 
-### Milestone 3 🔲 进行中
+### Milestone 3 ✅ 已完成
 
 **多租户后端基础设施**
 
-|| 任务 | 状态 | 验收标准 |
+| 任务 | 状态 | 验收标准 |
 |------|------|---------|
-| Tenant 模型 | 🔲 | code/display_name/settings/dispatch_enabled/api_endpoint |
-| 三租户种子数据 | 🔲 | CN_DIYU / EU_HEAVEN_HELL / EG_DUAT 各一条 |
-| 所有表加 tenant_id | 🔲 | Soul/Realm/Actor/Judgment/Disposition/Reincarnation/Event |
-| User → Tenant 关联 | 🔲 | user.tenant_id FK，用户只能访问同租户数据 |
-| TenantMiddleware | 🔲 | TenantMiddleware + thread_local.tenant |
-| TenantManager | 🔲 | 自动过滤 QuerySet，所有业务模型使用 |
-| ViewSet 租户过滤 | 🔲 | 非 ADMIN 强制 tenant 过滤，ADMIN 可跨租户 |
-| 租户隔离测试 | 🔲 | pytest 测试跨租户数据不可见 |
-| 登录响应加 tenant | 🔲 | /auth/login/ 返回 user.tenant.code 和 display_name |
-| **DRF Permission Classes** | 🔲 | 每个 ViewSet 配置 TenantPermission + RolePermission |
-| **useAuth() Hook** | 🔲 | 前端权限检查 hook，hasPermission(operation) → boolean |
-| **路由守卫** | 🔲 | 菜单项根据角色动态显示/隐藏 |
-| **字段级序列化** | 🔲 | 根据角色过滤响应字段（如 VIEWER 看不到 karmic_balance） |
+| Tenant 模型 | ✅ | code/display_name/settings/dispatch_enabled/api_endpoint |
+| 三租户种子数据 | ✅ | CN_DIYU / EU_HEAVEN_HELL / EG_DUAT 各一条 |
+| 所有表加 tenant_id | ✅ | Soul/Realm/Actor/Judgment/Disposition/Reincarnation/Event |
+| User → Tenant 关联 | ✅ | user.tenant_id FK，用户只能访问同租户数据 |
+| TenantMiddleware | ✅ | TenantMiddleware + thread_local.tenant |
+| TenantManager | ✅ | 自动过滤 QuerySet，所有业务模型使用 |
+| ViewSet 租户过滤 | ✅ | 非 ADMIN 强制 tenant 过滤，ADMIN 可跨租户 |
+| 租户隔离测试 | ✅ | pytest 57个测试全部通过 |
+| 登录响应加 tenant | ✅ | /auth/login/ 返回 user.tenant.code 和 display_name |
+| DRF Permission Classes | ✅ | TenantPermission，拒绝未认证 + 强制租户隔离 |
+| useAuth() Hook | ✅ | useAuth hook，hasPermission(operation) → boolean |
+| 路由守卫 | ✅ | RouteGuard 组件，按角色隐藏操作按钮 |
+| 字段级序列化 | ✅ | VIEWER 看不到 merit_score/demerit_score/karmic_balance |
+| 数据库索引 | ✅ | 4个新 migration：Soul/Judgment/Disposition/Reincarnation 复合索引 |
+| 安全修复 | ✅ | karma views tenant隔离、RegisterSerializer mass assignment、AnonymousUser.role 崩溃 |
 
 **Session 估算:** 4–5 sessions
 
-### Milestone 4 🔲 待开始
+### Milestone 4
 
 **租户感知前端 + 落地页**
 

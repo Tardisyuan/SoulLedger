@@ -21,15 +21,17 @@ class TenantMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest):
+        from apps.tenants.managers import set_current_tenant, clear_current_tenant
+
         tenant = self._resolve_tenant(request)
         request.tenant = tenant
-
-        # Set thread-local tenant for TenantManager auto-filtering
-        from apps.tenants.managers import set_current_tenant
         set_current_tenant(tenant)
 
-        response = self.get_response(request)
-        return response
+        try:
+            response = self.get_response(request)
+            return response
+        finally:
+            clear_current_tenant()
 
     # ------------------------------------------------------------------
     # Internal helpers

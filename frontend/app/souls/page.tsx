@@ -6,6 +6,8 @@ import { useSouls, useCreateSoul } from "@/src/hooks/useSouls";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import type { Soul } from "@/lib/api";
+import { useAuth } from "@/src/hooks/useAuth";
+import { RouteGuard } from "@/src/components/rbac";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "bg-green-600",
@@ -21,6 +23,7 @@ export default function SoulsPage() {
   const [civilizationFilter, setCivilizationFilter] = useState("");
   const [search, setSearch] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const { user } = useAuth();
 
   // Build query params from filter state
   const params: Record<string, string> = {};
@@ -60,12 +63,14 @@ export default function SoulsPage() {
           ← {t("nav.home")}
         </Link>
         <h1 className="text-xl font-bold text-amber-400 flex-1">{t("souls.title")}</h1>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="px-4 py-2 bg-amber-700 hover:bg-amber-600 rounded text-sm font-medium transition-colors"
-        >
-          + {t("souls.create")}
-        </button>
+        <RouteGuard operation="soul.create" fallback={null}>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-4 py-2 bg-amber-700 hover:bg-amber-600 rounded text-sm font-medium transition-colors"
+          >
+            + {t("souls.create")}
+          </button>
+        </RouteGuard>
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-8">
