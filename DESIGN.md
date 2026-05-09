@@ -1,6 +1,6 @@
 # SoulLedger Design System
 
-> Inspired by Linear's design philosophy — dark canvas, hairline borders, single chromatic accent.
+> Inspired by [Linear's official design system](https://getdesign.md/linear.app/design-md).
 
 ## 1. Visual Theme & Atmosphere
 
