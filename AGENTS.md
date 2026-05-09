@@ -8,6 +8,8 @@
 
 ## 1. 设计系统 — Linear Style
 
+**权威来源**: `https://getdesign.md/linear.app/design-md`
+
 **文件**: `DESIGN.md`（项目根目录）
 
 ### 绝对禁止
