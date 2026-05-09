@@ -9,7 +9,8 @@
     "about": "About",
     "dashboard": "Dashboard",
     "journal": "Journal",
-    "greeting": "Hello, {username}!"
+    "greeting": "Hello, {username}!",
+    "user_profile": "User Profile"
   },
   "auth": {
     "login": "Login",
@@ -89,5 +90,8 @@
       "create_success": "Soul created successfully",
       "create_error": "Failed to create soul"
     }
+  },
+  "common": {
+    "close": "Close"
   }
 }

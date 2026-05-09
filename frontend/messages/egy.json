@@ -9,7 +9,8 @@
     "about": "Irw Kushed",
     "dashboard": "Wetep Khet",
     "journal": "Medew Netjer",
-    "greeting": "Hello, {username}!"
+    "greeting": "Hello, {username}!",
+    "user_profile": "ملف المستخدم"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -89,5 +90,8 @@
       "create_success": "Aba Kheme Wehem Abuf",
       "create_error": "Ma Shemsu Em Kheme Aba"
     }
+  },
+  "common": {
+    "close": "إغلاق"
   }
 }

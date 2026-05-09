@@ -9,7 +9,8 @@
     "about": "关于",
     "dashboard": "控制台",
     "journal": "运行日志",
-    "greeting": "你好, {username}!"
+    "greeting": "你好, {username}!",
+    "user_profile": "用户信息"
   },
   "auth": {
     "login": "登录",
@@ -89,5 +90,8 @@
       "create_success": "灵魂创建成功",
       "create_error": "创建失败"
     }
+  },
+  "common": {
+    "close": "关闭"
   }
 }
