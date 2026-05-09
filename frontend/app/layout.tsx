@@ -23,7 +23,7 @@ export default function RootLayout({
           <I18nProvider>
             <TenantProvider>
               <ToastProvider>
-                <nav className="fixed top-0 right-0 z-50 p-4">
+                <nav className="fixed top-0 right-0 z-40 p-4">
                   <LanguageSwitcher />
                 </nav>
                 {children}
