@@ -90,28 +90,36 @@ export function NavBar() {
             )}
           </button>
 
-          {user && <div className="w-px h-5 bg-zinc-700" />}
+          <div className="w-px h-5 bg-zinc-700" />
 
-          {/* User greeting — clickable */}
-          {user && (
-            <button
-              onClick={() => setShowUserModal(true)}
-              className="text-zinc-300 text-sm hover:text-amber-400 transition-colors"
+          {user ? (
+            <>
+              {/* User greeting — clickable */}
+              <button
+                onClick={() => setShowUserModal(true)}
+                className="text-zinc-300 text-sm hover:text-amber-400 transition-colors"
+              >
+                {t("nav.greeting", { username: user.username })}
+              </button>
+
+              <div className="w-px h-5 bg-zinc-700" />
+
+              {/* Logout */}
+              <button
+                onClick={handleLogout}
+                className="text-zinc-400 hover:text-red-400 text-sm transition-colors"
+              >
+                {t("auth.logout")}
+              </button>
+            </>
+          ) : (
+            /* Login button — shown when not authenticated */
+            <Link
+              href="/login"
+              className="text-amber-500 hover:text-amber-400 text-sm font-medium transition-colors"
             >
-              {t("nav.greeting", { username: user.username })}
-            </button>
-          )}
-
-          {user && <div className="w-px h-5 bg-zinc-700" />}
-
-          {/* Logout */}
-          {user && (
-            <button
-              onClick={handleLogout}
-              className="text-zinc-400 hover:text-red-400 text-sm transition-colors"
-            >
-              {t("auth.logout")}
-            </button>
+              {t("auth.login")}
+            </Link>
           )}
         </div>
       </nav>

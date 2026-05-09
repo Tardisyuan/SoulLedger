@@ -12,7 +12,7 @@
     "greeting": "Hello, {username}!"
   },
   "auth": {
-    "login": "Sesen Pert",
+    "login": "تسجيل الدخول",
     "logout": "Iri Pert",
     "register": "Kheme",
     "username": "Ren Aba",
