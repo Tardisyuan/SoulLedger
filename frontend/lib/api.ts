@@ -24,11 +24,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 → redirect to login
+// Handle 401 → redirect to login (skip for auth endpoints which handle their own errors)
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     if (error.response?.status === 401 && !error.config._retry) {
+      const isAuthEndpoint = error.config.url?.includes("/auth/login") ||
+                             error.config.url?.includes("/auth/register");
+      if (isAuthEndpoint) {
+        // Login/register already handles 401 itself — just reject
+        return Promise.reject(error);
+      }
+
       error.config._retry = true;
       const refresh = getCookie("soulledger_refresh");
       if (refresh) {
@@ -40,7 +47,6 @@ api.interceptors.response.use(
           error.config.headers.Authorization = `Bearer ${access}`;
           return api(error.config);
         } catch {
-          // Refresh failed → clear cookies and redirect
           document.cookie = "soulledger_access=; Max-Age=0; path=/";
           document.cookie = "soulledger_refresh=; Max-Age=0; path=/";
           if (typeof window !== "undefined") {
