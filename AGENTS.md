@@ -185,15 +185,9 @@ t("nav.greeting", { username: user.username })
 | `EU_HEAVEN_HELL` | 欧洲 | 同上 |
 | `EG_DUAT` | 埃及 | 同上 |
 
-### 前端多租户
-
-- 当前租户：存储在 `localStorage`（key: `tenant_id`）
-- API 请求必须带 header：`X-Tenant-ID`
-- 登录时选择租户，写入 localStorage
-
 ### 后端多租户
 
-- `TenantMiddleware` 从 `X-Tenant-ID` header 设置 `request.tenant`
+- `TenantMiddleware` 从请求携带的 **JWT token** 中读取 `tenant_code` claim，自动解析对应 Tenant
 - 所有模型使用 `TenantManager`，查询自动过滤 tenant
 - `thread-local` 用 `try-finally` 保证清理
 - Soul 创建时 `perform_create` 必须设置 `tenant`
@@ -201,9 +195,9 @@ t("nav.greeting", { username: user.username })
 
 ### API 安全性
 
-- 所有 API 包含 `Authorization: Bearer <token>` header
-- 所有 API 包含 `X-Tenant-ID: <tenant_code>` header
-- 无 tenant header 的请求视为未授权
+- 所有 API 包含 `Authorization: Bearer <token>` header（JWT）
+- JWT payload 中包含 `tenant_code`，由登录接口写入
+- 无效/过期 token → 401，未知 tenant → 该 tenant 无数据（空结果）
 
 ---
 
