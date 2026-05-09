@@ -7,9 +7,11 @@ import {
   dispositionApi,
   reincarnationApi,
   type Soul,
+  type SoulInput,
   type Judgment,
   type KarmaSummary,
 } from "@/lib/api";
+import { useToast } from "@/src/contexts/ToastContext";
 
 // ── Query Keys ───────────────────────────────────────────────────────
 
@@ -102,6 +104,35 @@ export function useAddSoulRecord() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: soulKeys.detail(vars.id) });
       qc.invalidateQueries({ queryKey: soulKeys.karma(vars.id) });
+    },
+  });
+}
+
+export function useUpdateSoul() {
+  const qc = useQueryClient();
+  const { showToast } = useToast();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<SoulInput> }) =>
+      soulsApi.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: soulKeys.all });
+    },
+    onError: () => {
+      showToast("更新失败", "error");
+    },
+  });
+}
+
+export function useDeleteSoul() {
+  const qc = useQueryClient();
+  const { showToast } = useToast();
+  return useMutation({
+    mutationFn: (id: string) => soulsApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: soulKeys.all });
+    },
+    onError: () => {
+      showToast("删除失败", "error");
     },
   });
 }

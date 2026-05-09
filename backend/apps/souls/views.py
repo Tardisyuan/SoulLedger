@@ -31,6 +31,8 @@ class SoulViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user.is_authenticated:
             return qs.none()
+        # Exclude records with null tenant (orphaned records)
+        qs = qs.filter(tenant__isnull=False)
         if user.role == 'ADMIN':  # SYS_ADMIN bypasses
             return qs
         tenant = getattr(self.request, 'tenant', None)
@@ -44,6 +46,9 @@ class SoulViewSet(viewsets.ModelViewSet):
         return SoulSerializer
 
     def perform_create(self, serializer):
+        tenant = getattr(self.request, 'tenant', None)
+        # Inject tenant into validated_data so the serializer's create() can use it
+        serializer.validated_data['tenant'] = tenant
         soul = serializer.save()
         EventService.log_soul_created(soul)
 

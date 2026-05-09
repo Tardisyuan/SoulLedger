@@ -10,6 +10,11 @@ function getCookie(name: string): string | null {
   return null;
 }
 
+function getTenantId(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("tenant_id") || getCookie("tenant_id") || "";
+}
+
 export const api = axios.create({
   baseURL: API_BASE,
   headers: { "Content-Type": "application/json" },
@@ -20,6 +25,10 @@ api.interceptors.request.use((config) => {
   const token = getCookie("soulledger_access");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const tenantId = getTenantId();
+  if (tenantId) {
+    config.headers["X-Tenant-ID"] = tenantId;
   }
   return config;
 });
@@ -78,10 +87,20 @@ export const authApi = {
 };
 
 // Souls
+export interface SoulInput {
+  name: string;
+  civilization: "CHINESE" | "EUROPEAN" | "EGYPTIAN";
+  birth_date: string | null;
+  origin_location: string;
+  current_state?: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST";
+}
+
 export const soulsApi = {
   list: (params?: Record<string, string>) => api.get("/souls/", { params }),
   get: (id: string) => api.get(`/souls/${id}/`),
   create: (data: object) => api.post("/souls/", data),
+  update: (id: string, data: Partial<SoulInput>) => api.patch(`/souls/${id}/`, data),
+  delete: (id: string) => api.delete(`/souls/${id}/`),
   die: (id: string, data?: object) => api.post(`/souls/${id}/die/`, data),
   transition: (id: string, data: object) => api.post(`/souls/${id}/transition/`, data),
   karma: (id: string) => api.get(`/souls/${id}/karma/`),

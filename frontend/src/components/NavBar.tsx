@@ -32,8 +32,9 @@ export function NavBar() {
       <nav className="fixed top-0 left-0 right-0 z-50 h-14 bg-canvas border-b border-hairline flex items-center px-4 gap-4">
         {/* Left: Logo + Brand */}
         <Link
-          href="/souls"
+          href="/"
           className="flex items-center gap-2 shrink-0 group"
+          aria-label="SoulLedger Home"
         >
           <span className="text-xl">💀</span>
           <span className="text-amber-500 font-bold text-sm tracking-wide group-hover:text-amber-400 transition-colors">
