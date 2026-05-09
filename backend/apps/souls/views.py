@@ -28,7 +28,10 @@ class SoulViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if self.request.user.role == 'ADMIN':  # SYS_ADMIN bypasses
+        user = self.request.user
+        if not user.is_authenticated:
+            return qs.none()
+        if user.role == 'ADMIN':  # SYS_ADMIN bypasses
             return qs
         tenant = getattr(self.request, 'tenant', None)
         if tenant:

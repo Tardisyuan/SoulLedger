@@ -22,10 +22,12 @@ class DispositionViewSet(viewsets.ModelViewSet):
     serializer_class = DispositionSerializer
     filterset_fields = ["soul", "is_executed", "is_eternal", "memory_reset"]
     ordering_fields = ["created_at", "executed_at"]
-
     def get_queryset(self):
         qs = super().get_queryset()
-        if self.request.user.role == "ADMIN":
+        user = self.request.user
+        if not user.is_authenticated:
+            return qs.none()
+        if user.role == "ADMIN":
             return qs
         tenant = getattr(self.request, "tenant", None)
         if tenant:
