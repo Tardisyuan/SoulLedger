@@ -29,7 +29,7 @@ export function NavBar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 h-14 bg-zinc-900 border-b border-zinc-800 flex items-center px-4 gap-4">
+      <nav className="fixed top-0 left-0 right-0 z-50 h-14 bg-canvas border-b border-hairline flex items-center px-4 gap-4">
         {/* Left: Logo + Brand */}
         <Link
           href="/souls"
@@ -48,7 +48,7 @@ export function NavBar() {
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
 
-          <div className="w-px h-5 bg-zinc-700" />
+          <div className="w-px h-5 border-hairline" />
 
           {/* Theme toggle */}
           <button
@@ -56,7 +56,7 @@ export function NavBar() {
             title={
               theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
             }
-            className="text-zinc-400 hover:text-amber-500 transition-colors p-1 rounded"
+            className="text-ink-subtle hover:text-amber-500 transition-colors p-1 rounded"
           >
             {theme === "dark" ? (
               <svg
@@ -90,24 +90,24 @@ export function NavBar() {
             )}
           </button>
 
-          <div className="w-px h-5 bg-zinc-700" />
+          <div className="w-px h-5 border-hairline" />
 
           {user ? (
             <>
               {/* User greeting — clickable */}
               <button
                 onClick={() => setShowUserModal(true)}
-                className="text-zinc-300 text-sm hover:text-amber-400 transition-colors"
+                className="text-ink-muted text-sm hover:text-amber-500 transition-colors"
               >
                 {t("nav.greeting", { username: user.username })}
               </button>
 
-              <div className="w-px h-5 bg-zinc-700" />
+              <div className="w-px h-5 border-hairline" />
 
               {/* Logout */}
               <button
                 onClick={handleLogout}
-                className="text-zinc-400 hover:text-red-400 text-sm transition-colors"
+                className="text-ink-subtle hover:text-red-400 text-sm transition-colors"
               >
                 {t("auth.logout")}
               </button>
@@ -116,7 +116,7 @@ export function NavBar() {
             /* Login button — shown when not authenticated */
             <Link
               href="/login"
-              className="text-amber-500 hover:text-amber-400 text-sm font-medium transition-colors"
+              className="bg-amber-500 text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-400 transition-colors"
             >
               {t("auth.login")}
             </Link>

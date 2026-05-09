@@ -2,33 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap');
-
-/* Light mode (default) */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222 47% 11%;
-  --border: 214 32% 91%;
+  --canvas: 240 100% 0.4%;
+  --surface-1: 230 10% 6.5%;
+  --surface-2: 230 8% 9%;
+  --surface-3: 230 6% 10%;
+  --surface-4: 230 5% 11%;
+  --hairline: 225 8% 16%;
+  --hairline-strong: 225 7% 22%;
+  --ink: 220 10% 97%;
+  --ink-muted: 220 10% 83%;
+  --ink-subtle: 220 5% 55%;
+  --ink-tertiary: 220 4% 39%;
+  --primary: 38 92% 50%;       /* amber-500 */
+  --primary-hover: 43 96% 58%; /* amber-400 */
 }
 
-/* Dark mode — applied when .dark class is on <html> */
-.dark {
-  --background: 240 6% 10%;
-  --foreground: 210 40% 98%;
-  --border: 217 24% 22%;
-}
-
-body {
-  color: hsl(var(--foreground));
-  background: hsl(var(--background));
-  @apply transition-colors duration-200;
-}
-
-.font-egyptian {
-  font-family: 'Noto Sans Egyptian Hieroglyphs', 'Noto Sans', sans-serif;
-}
-
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
+@layer base {
+  body {
+    @apply bg-canvas text-ink;
+    color: hsl(var(--ink));
+    background: hsl(var(--canvas));
+  }
+  * {
+    border-color: hsl(var(--hairline));
+  }
+  a {
+    @apply text-ink-muted hover:text-amber-500 transition-colors duration-150;
+  }
+  button {
+    @apply transition-colors duration-150;
+  }
+  input, select, textarea {
+    @apply bg-surface-1 border-hairline text-ink placeholder-ink-subtle;
+  }
 }
