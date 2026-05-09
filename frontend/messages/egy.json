@@ -1,6 +1,6 @@
 {
   "nav": {
-    "title": "SoulLedger",
+    "title": "灵魂账本",
     "subtitle": "Amset Netjer - Cross-Civilization Soul Management",
     "home": "Per Djew",
     "souls": "Aba Hemsu",
@@ -8,7 +8,8 @@
     "actors": "Netjeru",
     "about": "Irw Kushed",
     "dashboard": "Wetep Khet",
-    "journal": "Medew Netjer"
+    "journal": "Medew Netjer",
+    "greeting": "Hello, {username}!"
   },
   "auth": {
     "login": "Sesen Pert",

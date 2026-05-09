@@ -4,17 +4,31 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap');
 
+/* Light mode (default) */
 :root {
   --background: 0 0% 100%;
   --foreground: 222 47% 11%;
   --border: 214 32% 91%;
 }
 
+/* Dark mode — applied when .dark class is on <html> */
+.dark {
+  --background: 240 6% 10%;
+  --foreground: 210 40% 98%;
+  --border: 217 24% 22%;
+}
+
 body {
   color: hsl(var(--foreground));
   background: hsl(var(--background));
+  @apply transition-colors duration-200;
 }
 
 .font-egyptian {
   font-family: 'Noto Sans Egyptian Hieroglyphs', 'Noto Sans', sans-serif;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
 }

@@ -8,7 +8,8 @@
     "actors": "角色",
     "about": "关于",
     "dashboard": "控制台",
-    "journal": "运行日志"
+    "journal": "运行日志",
+    "greeting": "你好, {username}!"
   },
   "auth": {
     "login": "登录",

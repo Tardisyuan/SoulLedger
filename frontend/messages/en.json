@@ -1,6 +1,6 @@
 {
   "nav": {
-    "title": "SoulLedger",
+    "title": "灵魂账本",
     "subtitle": "Cross-Civilization Soul Management",
     "home": "Home",
     "souls": "Souls",
@@ -8,7 +8,8 @@
     "actors": "Actors",
     "about": "About",
     "dashboard": "Dashboard",
-    "journal": "Journal"
+    "journal": "Journal",
+    "greeting": "Hello, {username}!"
   },
   "auth": {
     "login": "Login",
