@@ -6,10 +6,12 @@ import Link from "next/link";
 import { authApi } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
+import { useTenant } from "@/src/contexts/TenantContext";
 
 export default function LoginPage() {
   const { t } = useI18n();
   const { showToast } = useToast();
+  const { setUser } = useTenant();
   const router = useRouter();
   const [form, setForm] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -24,6 +26,12 @@ export default function LoginPage() {
       const tokens = res.data;
       document.cookie = `soulledger_access=${tokens.access}; path=/; max-age=1800; SameSite=Lax`;
       document.cookie = `soulledger_refresh=${tokens.refresh}; path=/; max-age=604800; SameSite=Lax`;
+
+      // Populate TenantContext so downstream components have tenant/user info
+      if (tokens.user) {
+        setUser(tokens.user);
+        document.cookie = `soulledger_user=${encodeURIComponent(JSON.stringify(tokens.user))}; path=/; max-age=${60 * 30}; SameSite=Lax`;
+      }
 
       showToast(t("auth.login_success"), "success");
       router.push("/souls");

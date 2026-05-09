@@ -3,12 +3,12 @@ import "./globals.css";
 import { ToastProvider } from "@/src/contexts/ToastContext";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { NavBar } from "@/components/NavBar";
+import { TenantProvider } from "@/src/contexts/TenantContext";
+import { QueryProvider } from "@/src/components/providers/QueryProvider";
 
 export const metadata: Metadata = {
-  title: "SoulLedger — Cross-Civilization Soul Management",
-  description:
-    "Unified afterlife management across Chinese, European, and Egyptian mythological systems",
+  title: "SoulLedger",
+  description: "Cross-civilization soul management system",
 };
 
 export default function RootLayout({
@@ -17,26 +17,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-Hans" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="zh-Hans">
       <body className="antialiased">
-        <I18nProvider>
-          <ToastProvider>
-            <NavBar />
-            {children}
-          </ToastProvider>
-        </I18nProvider>
+        <QueryProvider>
+          <I18nProvider>
+            <TenantProvider>
+              <ToastProvider>
+                <nav className="fixed top-0 right-0 z-50 p-4">
+                  <LanguageSwitcher />
+                </nav>
+                {children}
+              </ToastProvider>
+            </TenantProvider>
+          </I18nProvider>
+        </QueryProvider>
       </body>
     </html>
   );
