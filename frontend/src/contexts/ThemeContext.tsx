@@ -27,16 +27,14 @@ const STORAGE_KEY = "soulledger_theme";
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
 
-  // Hydrate from localStorage on mount
+  // Hydrate from localStorage on mount, and keep DOM in sync with state
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY) as Theme | null;
       if (saved === "light" || saved === "dark") {
         setThemeState(saved);
-        document.documentElement.classList.toggle("dark", saved === "dark");
-        document.documentElement.classList.toggle("light", saved === "light");
       } else {
-        // Default: dark
+        // Default: dark, ensure DOM matches
         document.documentElement.classList.add("dark");
         document.documentElement.classList.remove("light");
       }
@@ -44,6 +42,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       document.documentElement.classList.add("dark");
     }
   }, []);
+
+  // Sync DOM classes whenever theme changes
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    document.documentElement.classList.toggle("light", theme === "light");
+  }, [theme]);
 
   const setTheme = (t: Theme) => {
     setThemeState(t);
