@@ -55,18 +55,22 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["username", "email", "password", "role", "first_name", "last_name"]
+        # FIX: removed 'role' — role is always set to VIEWER on creation
+        # this prevents mass assignment of privileged roles during registration
+        fields = ["username", "email", "password", "first_name", "last_name"]
 
     def validate_password(self, value):
         validate_password(value)
         return value
 
     def create(self, validated_data):
+        # role is always VIEWER on registration — never user-controlled
+        validated_data.pop("role", None)
         user = User.objects.create_user(
             username=validated_data["username"],
             email=validated_data.get("email", ""),
             password=validated_data["password"],
-            role=validated_data.get("role", "VIEWER"),
+            role="VIEWER",  # always VIEWER on self-registration
             first_name=validated_data.get("first_name", ""),
             last_name=validated_data.get("last_name", ""),
         )
