@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { createPortal } from "react-dom";
 import { useTenant } from "@/src/contexts/TenantContext";
 
 interface UserModalProps {
@@ -18,13 +17,13 @@ export function UserModal({ open, onClose }: UserModalProps) {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
   if (!open) return null;
 
-  return createPortal(
+  return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center"
       onClick={onClose}
@@ -72,7 +71,6 @@ export function UserModal({ open, onClose }: UserModalProps) {
           关闭
         </button>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }
