@@ -56,6 +56,7 @@ class TestSoulRecord:
         soul = Soul.objects.create(name="积累功德", tenant=cn_tenant)
         SoulRecord.objects.create(
             soul=soul,
+            tenant=cn_tenant,
             record_type=RecordType.MERIT,
             description="救人一命",
             weight=50,
@@ -67,9 +68,9 @@ class TestSoulRecord:
 
     def test_multiple_records_accumulate(self, cn_tenant):
         soul = Soul.objects.create(name="混合记录", tenant=cn_tenant)
-        SoulRecord.objects.create(soul=soul, record_type=RecordType.MERIT, description="A", weight=10)
-        SoulRecord.objects.create(soul=soul, record_type=RecordType.DEMERIT, description="B", weight=3)
-        SoulRecord.objects.create(soul=soul, record_type=RecordType.MERIT, description="C", weight=7)
+        SoulRecord.objects.create(soul=soul, tenant=cn_tenant, record_type=RecordType.MERIT, description="A", weight=10)
+        SoulRecord.objects.create(soul=soul, tenant=cn_tenant, record_type=RecordType.DEMERIT, description="B", weight=3)
+        SoulRecord.objects.create(soul=soul, tenant=cn_tenant, record_type=RecordType.MERIT, description="C", weight=7)
         soul.refresh_from_db()
         assert soul.merit_score == 17
         assert soul.demerit_score == 3

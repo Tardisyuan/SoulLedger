@@ -4,6 +4,7 @@ Soul record model — merit/demerit/judgment evidence attached to a soul.
 import uuid
 from django.db import models
 from apps.souls.models import Soul, Civilization
+from apps.tenants.managers import TenantManager
 
 
 class RecordType(models.TextChoices):
@@ -60,7 +61,9 @@ class SoulRecord(models.Model):
         on_delete=models.CASCADE,
         related_name="soul_records",
         null=True,
+        blank=True,
     )
+    objects = TenantManager()
     description = models.TextField()
     weight = models.IntegerField(
         default=1,
@@ -88,6 +91,9 @@ class SoulRecord(models.Model):
 
     def save(self, *args, **kwargs):
         is_new = self._state.adding
+        # Auto-populate tenant from soul if not set
+        if self.tenant is None and self.soul_id is not None:
+            self.tenant = self.soul.tenant
         super().save(*args, **kwargs)
         if is_new:
             self._update_soul_karma()
