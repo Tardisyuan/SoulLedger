@@ -2,6 +2,8 @@
 
 Cross-civilization soul management system — mythology research + full-stack web application.
 
+---
+
 ## Civilization Coverage
 
 | Domain | Judgment | Memory Reset | Destination |
@@ -16,9 +18,9 @@ Cross-civilization soul management system — mythology research + full-stack we
 
 ```
 Frontend (Next.js 14)  →  http://localhost:3333
-Backend  (Django 5)   →  http://localhost:8000/api/v1/
-PostgreSQL 16         →  localhost:5432
-Redis 7                →  localhost:6379
+Backend  (Django 5)     →  http://localhost:8000/api/v1/
+PostgreSQL 16           →  localhost:5432
+Redis 7                 →  localhost:6379
 ```
 
 ---
@@ -42,7 +44,6 @@ cd backend
 cp .env.example .env
 pip install -r requirements.txt
 python manage.py migrate
-python scripts/seed_chinese_data.py   # load Chinese Diyu reference data
 python manage.py runserver 0.0.0.0:8000
 ```
 
@@ -55,10 +56,10 @@ PORT=3333 npm run dev
 
 ### Or use the scripts (from project root)
 ```bash
-bash scripts/start-backend.sh   # starts Django on :8000
-bash scripts/start-frontend.sh # starts Next.js on :3333
-bash scripts/stop-all.sh       # stops both
-bash scripts/status.sh        # check status
+bash scripts/start-backend.sh   # Django on :8000
+bash scripts/start-frontend.sh # Next.js on :3333
+bash scripts/stop-all.sh       # stop both
+bash scripts/status.sh         # check status
 ```
 
 ---
@@ -67,45 +68,48 @@ bash scripts/status.sh        # check status
 
 ```
 SoulLedger/
-├── backend/                   # Django 5 + DRF API
+├── backend/
 │   ├── apps/
-│   │   ├── souls/           # Soul model + state machine
-│   │   ├── judgment/        # Judgment records
-│   │   ├── disposition/     # Disposition + execution
-│   │   ├── karma/           # Karma ledger service
-│   │   ├── reincarnation/   # Rebirth cycle tracking
-│   │   ├── realms/          # Reference: afterlife realms
-│   │   ├── actors/          # Reference: deities, judges
-│   │   └── events/          # Audit event log
-│   ├── config/              # Django settings, URLs, Celery
-│   ├── scripts/
-│   │   └── seed_chinese_data.py  # Chinese Diyu seed data
-│   └── tests/
+│   │   ├── souls/           # Soul model, state machine, karma
+│   │   ├── tenants/         # Multi-tenant: Tenant model, middleware, TenantManager
+│   │   ├── authentication/  # JWT auth, login endpoint
+│   │   └── karma/           # Karma ledger service
+│   ├── config/               # Django settings, URLs, Celery
+│   ├── tests/
+│   └── scripts/
+│       └── seed_chinese_data.py  # Chinese Diyu seed data
 │
-├── frontend/                 # Next.js 14 (App Router)
-│   ├── app/                 # Pages
-│   ├── components/          # Reusable components
-│   └── lib/api.ts           # Type-safe API client
+├── frontend/
+│   ├── app/                 # Next.js 14 App Router pages
+│   │   ├── (auth)/login/   # Login page
+│   │   ├── souls/           # Soul list + detail pages
+│   │   └── page.tsx         # Home/landing page
+│   ├── src/
+│   │   ├── components/      # UI components
+│   │   │   ├── ui/          # BaseModal, Toast
+│   │   │   └── souls/       # SoulCreateModal, SoulEditModal
+│   │   ├── contexts/        # TenantContext, ThemeContext, I18nContext, ToastContext
+│   │   ├── hooks/           # TanStack Query hooks (useAuth, useSouls)
+│   │   └── middleware.ts    # Route guard
+│   ├── lib/api.ts           # Type-safe API client
+│   ├── messages/             # i18n translations (zh-Hans, en, egy)
+│   ├── tailwind.config.js   # Linear design tokens
+│   └── components/          # LanguageSwitcher
 │
-├── infrastructure/            # Docker infra only
+├── infrastructure/
 │   └── docker-compose.yml    # PostgreSQL + Redis
 │
-├── scripts/                  # Dev convenience scripts
+├── scripts/
 │   ├── start-backend.sh
 │   ├── start-frontend.sh
-│   ├── start-all.sh
-│   ├── stop-backend.sh
-│   ├── stop-frontend.sh
-│   ├── stop-all.sh
-│   └── status.sh
+│   └── stop-all.sh
 │
-├── docs/                     # Mythology research docs
-│   ├── 地府结构研究/
-│   ├── 欧洲天堂地狱/
-│   └── 埃及冥界/
+├── docs/                    # Mythology research docs
 │
-├── SPEC.md                   # Full project specification
-└── docker-compose.yml        # Full-stack compose (all services)
+├── DESIGN.md                # Linear design system specification
+├── AGENTS.md                # Agent work specification
+├── SPEC.md                  # Full project specification
+└── docker-compose.yml       # Full-stack compose
 ```
 
 ---
@@ -113,22 +117,21 @@ SoulLedger/
 ## Key API Endpoints
 
 ```
-GET    /api/v1/souls/                    # List souls
-POST   /api/v1/souls/                    # Create soul
-GET    /api/v1/souls/{id}/               # Soul detail
-POST   /api/v1/souls/{id}/die/          # Mark soul as dead → JUDGING
-POST   /api/v1/souls/{id}/transition/    # Manual state transition
-GET    /api/v1/souls/{id}/karma/        # Karma summary
+Authentication
+POST   /api/v1/auth/login/            # Login (returns JWT)
+POST   /api/v1/auth/refresh/         # Refresh token
 
-GET    /api/v1/realms/                   # List all realms
-GET    /api/v1/actors/                   # List all actors
-GET    /api/v1/events/                   # Audit event log
+Souls (requires X-Tenant-ID header)
+GET    /api/v1/souls/                # List souls (tenant-filtered)
+POST   /api/v1/souls/                # Create soul
+GET    /api/v1/souls/{id}/           # Soul detail + records
+PATCH  /api/v1/souls/{id}/           # Update soul
+DELETE /api/v1/souls/{id}/           # Delete soul
+POST   /api/v1/souls/{id}/transition/ # State transition
 
-POST   /api/v1/judgment/                # Initiate judgment
-POST   /api/v1/judgment/{id}/conclude/  # Submit verdict
-
-GET    /api/v1/disposition/              # List dispositions
-POST   /api/v1/disposition/{id}/execute/ # Execute → trigger reincarnation
+Karma (requires X-Tenant-ID header)
+GET    /api/v1/karma/balance/{soul_id}/  # Get karmic balance
+POST   /api/v1/karma/calculate/{soul_id}/ # Recalculate karma
 ```
 
 ---
@@ -145,7 +148,7 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE (new life)
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | Next.js 14, React 18, Tailwind CSS, TanStack Query, Zustand |
+| Frontend | Next.js 14, React 18, Tailwind CSS, TanStack Query v5, @headlessui/react, TypeScript |
 | Backend | Django 5, Django REST Framework, PostgreSQL 16 |
 | Task Queue | Celery 5, Redis 7 |
 | Cache | Redis 7 |
@@ -158,6 +161,16 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE (new life)
 Chinese Diyu realms and actors are pre-seeded:
 - **11 realms**: DY_01_HEAVEN through DY_10_YAMA
 - **16 actors**: 阎罗王, 孟婆, 牛头马面, 黑白无常, 判官, etc.
+
+---
+
+## Project Specifications
+
+| File | Purpose |
+|------|---------|
+| `DESIGN.md` | Linear design system — color tokens, typography, component styles |
+| `AGENTS.md` | Agent work specification — rules for Claude Code, sub-agents |
+| `SPEC.md` | Full project specification — milestones, models, API contracts |
 
 ---
 
