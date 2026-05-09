@@ -24,7 +24,7 @@ export function NavBar() {
       // ignore
     }
     logout();
-    router.push("/login");
+    router.push("/");
   };
 
   return (
