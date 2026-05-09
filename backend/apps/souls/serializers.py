@@ -6,6 +6,14 @@ from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
 
 
+def _is_viewer(context) -> bool:
+    """Check if the current user has VIEWER role."""
+    request = context.get("request")
+    if not request or not request.user:
+        return False
+    return getattr(request.user, "role", None) == "VIEWER"
+
+
 class SoulRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = SoulRecord
@@ -21,6 +29,11 @@ class SoulSerializer(serializers.ModelSerializer):
     tenant_code = serializers.CharField(source="tenant.code", read_only=True)
     records = SoulRecordSerializer(many=True, read_only=True)
 
+    # Field-level access control: VIEWER cannot see merit/demerit scores
+    merit_score = serializers.SerializerMethodField()
+    demerit_score = serializers.SerializerMethodField()
+    karmic_balance_value = serializers.SerializerMethodField()
+
     class Meta:
         model = Soul
         fields = [
@@ -31,10 +44,35 @@ class SoulSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "current_state", "merit_score", "demerit_score", "created_at", "updated_at"]
 
+    def get_merit_score(self, obj):
+        if _is_viewer(self.context):
+            return None  # VIEWER cannot see merit score
+        return obj.merit_score
+
+    def get_demerit_score(self, obj):
+        if _is_viewer(self.context):
+            return None  # VIEWER cannot see demerit score
+        return obj.demerit_score
+
+    def get_karmic_balance_value(self, obj):
+        if _is_viewer(self.context):
+            return None  # VIEWER cannot see karmic balance
+        return obj.karmic_balance
+
+    def to_representation(self, instance):
+        # Remove karmic_balance from output for VIEWER (use the computed field name)
+        data = super().to_representation(instance)
+        if _is_viewer(self.context):
+            # Remove karmic_balance field entirely for VIEWER
+            data.pop("merit_score", None)
+            data.pop("demerit_score", None)
+            data.pop("karmic_balance", None)
+        return data
+
 
 class SoulListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views."""
-    karmic_balance = serializers.IntegerField(read_only=True)
+    karmic_balance = serializers.SerializerMethodField()
     tenant_code = serializers.CharField(source="tenant.code", read_only=True)
 
     class Meta:
@@ -44,6 +82,19 @@ class SoulListSerializer(serializers.ModelSerializer):
             "birth_date", "death_date", "merit_score", "demerit_score",
             "karmic_balance", "created_at",
         ]
+
+    def get_karmic_balance(self, obj):
+        if _is_viewer(self.context):
+            return None
+        return obj.karmic_balance
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if _is_viewer(self.context):
+            data.pop("merit_score", None)
+            data.pop("demerit_score", None)
+            data.pop("karmic_balance", None)
+        return data
 
 
 class SoulTransitionSerializer(serializers.Serializer):

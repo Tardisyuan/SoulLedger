@@ -74,10 +74,36 @@ class ReincarnationViewSet(viewsets.ModelViewSet):
         new_identity = request.data.get("new_identity", "")
         rebirth_form = request.data.get("rebirth_form", "HUMAN")
 
-        soul = Soul.objects.get(id=soul_id)
+        # Tenant-isolated: check soul belongs to request's tenant
+        user_tenant = getattr(request, "tenant", None)
+        try:
+            soul = Soul.objects.get(id=soul_id)
+        except Soul.DoesNotExist:
+            return Response(
+                {"error": "NOT_FOUND", "message": "Soul not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if user_tenant and soul.tenant and str(soul.tenant.pk) != str(user_tenant.pk):
+            return Response(
+                {"error": "FORBIDDEN", "message": "Access denied: soul belongs to another tenant"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         disposition = None
         if disposition_id:
-            disposition = Disposition.objects.get(id=disposition_id)
+            try:
+                disposition = Disposition.objects.get(id=disposition_id)
+            except Disposition.DoesNotExist:
+                return Response(
+                    {"error": "NOT_FOUND", "message": "Disposition not found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            if user_tenant and disposition.tenant and str(disposition.tenant.pk) != str(user_tenant.pk):
+                return Response(
+                    {"error": "FORBIDDEN", "message": "Access denied: disposition belongs to another tenant"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         # Ensure soul is in REINCARNATING state
         if soul.current_state == SoulState.DISPOSED:
@@ -85,7 +111,7 @@ class ReincarnationViewSet(viewsets.ModelViewSet):
             soul.save()
         elif soul.current_state != SoulState.REINCARNATING:
             return Response(
-                {"error": f"Cannot reborn: soul is {soul.current_state}"},
+                {"error": "BAD_REQUEST", "message": f"Cannot reborn: soul is {soul.current_state}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

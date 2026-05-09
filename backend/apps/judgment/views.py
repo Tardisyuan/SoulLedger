@@ -7,19 +7,26 @@ from rest_framework.response import Response
 from apps.judgment.models import Judgment
 from apps.judgment.serializers import JudgmentSerializer, JudgmentConcludeSerializer
 from apps.souls.models import SoulState
+from apps.core.permissions import TenantPermission
 
 
 class JudgmentViewSet(viewsets.ModelViewSet):
-    queryset = Judgment.objects.all()
+    """
+    Judgment CRUD + conclude action.
+    Tenant-isolated via TenantPermission.
+    """
+    permission_classes = [TenantPermission]
+    queryset = Judgment.objects.select_related("soul", "soul__tenant", "tenant").all()
     serializer_class = JudgmentSerializer
     filterset_fields = ["soul", "civilization", "verdict", "is_final"]
     ordering_fields = ["created_at", "concluded_at"]
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if self.request.user.role == 'ADMIN':
+        # TenantPermission handles enforcement; this optimises the queryset
+        if self.request.user.role == "ADMIN":
             return qs
-        tenant = getattr(self.request, 'tenant', None)
+        tenant = getattr(self.request, "tenant", None)
         if tenant:
             return qs.filter(tenant=tenant)
         return qs.none()

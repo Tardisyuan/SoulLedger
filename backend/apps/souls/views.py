@@ -12,13 +12,16 @@ from apps.souls.serializers import (
 )
 from apps.karma.services import KarmaService
 from apps.events.services import EventService
+from apps.core.permissions import TenantPermission
 
 
 class SoulViewSet(viewsets.ModelViewSet):
     """
     Soul CRUD + state transitions + record management.
+    Tenant-isolated via TenantPermission + select_related for N+1 elimination.
     """
-    queryset = Soul.objects.prefetch_related("records").all()
+    permission_classes = [TenantPermission]
+    queryset = Soul.objects.select_related("tenant").prefetch_related("records").all()
     filterset_fields = ["current_state", "tenant__code"]
     search_fields = ["name", "birth_name", "origin_location"]
     ordering_fields = ["created_at", "karmic_balance", "death_date"]

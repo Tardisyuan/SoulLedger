@@ -7,19 +7,27 @@ from rest_framework.response import Response
 from apps.disposition.models import Disposition
 from apps.disposition.serializers import DispositionSerializer, DispositionExecuteSerializer
 from apps.disposition.services import DispositionService
+from apps.core.permissions import TenantPermission
 
 
 class DispositionViewSet(viewsets.ModelViewSet):
-    queryset = Disposition.objects.all()
+    """
+    Disposition CRUD + execute action.
+    Tenant-isolated via TenantPermission.
+    """
+    permission_classes = [TenantPermission]
+    queryset = Disposition.objects.select_related(
+        "soul", "soul__tenant", "destination_realm", "tenant"
+    ).all()
     serializer_class = DispositionSerializer
     filterset_fields = ["soul", "is_executed", "is_eternal", "memory_reset"]
     ordering_fields = ["created_at", "executed_at"]
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if self.request.user.role == 'ADMIN':
+        if self.request.user.role == "ADMIN":
             return qs
-        tenant = getattr(self.request, 'tenant', None)
+        tenant = getattr(self.request, "tenant", None)
         if tenant:
             return qs.filter(tenant=tenant)
         return qs.none()
