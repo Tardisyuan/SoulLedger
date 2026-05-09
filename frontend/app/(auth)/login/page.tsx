@@ -28,10 +28,18 @@ export default function LoginPage() {
       showToast(t("auth.login_success"), "success");
       router.push("/souls");
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { detail?: string } } })
-          ?.response?.data?.detail || "Login failed";
-      showToast(msg, "error");
+      const raw = (err as { response?: { data?: { detail?: string } } })
+        ?.response?.data?.detail || "Login failed";
+
+      // Map backend error messages to i18n keys
+      const msgKey: Record<string, string> = {
+        "No active account found with the given credentials": "auth.error_invalid_credentials",
+        "Invalid token": "auth.error_invalid_token",
+        "Token has expired": "auth.error_token_expired",
+      };
+
+      const i18nKey = msgKey[raw] ?? "auth.error_login_failed";
+      showToast(t(i18nKey) || raw, "error");
     } finally {
       setLoading(false);
     }
