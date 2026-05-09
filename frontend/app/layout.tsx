@@ -26,7 +26,7 @@ export default function RootLayout({
               <TenantProvider>
                 <ToastProvider>
                   <NavBar />
-                  <main className="pt-14">
+                  <main className="min-h-screen">
                     {children}
                   </main>
                 </ToastProvider>
