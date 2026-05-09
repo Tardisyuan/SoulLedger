@@ -25,14 +25,14 @@ const DEFAULT_LOCALE: Locale = "zh-Hans";
 interface I18nContextType {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, string>) => string;
   hydrated: boolean;
 }
 
 const I18nContext = createContext<I18nContextType>({
   locale: DEFAULT_LOCALE,
   setLocale: () => {},
-  t: (key) => key,
+  t: (key, params) => key,
   hydrated: false,
 });
 
@@ -59,7 +59,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: string): string => {
+    (key: string, params?: Record<string, string>): string => {
       if (!hydrated) return key;
       const parts = key.split(".");
       let value: any = messages[locale];
@@ -70,7 +70,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
           return key;
         }
       }
-      return typeof value === "string" ? value : key;
+      if (typeof value !== "string") return key;
+      if (!params) return value;
+      // Replace {{placeholder}} and {placeholder} patterns
+      return value.replace(/\{\{(\w+)\}\}|\{(\w+)\}/g, (_, p1, p2) => {
+        const key = p1 ?? p2;
+        return key in params ? params[key] : _;
+      });
     },
     [locale, hydrated]
   );

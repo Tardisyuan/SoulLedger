@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ToastProvider } from "@/src/contexts/ToastContext";
 import { I18nProvider } from "@/src/contexts/I18nContext";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeProvider } from "@/src/contexts/ThemeContext";
 import { TenantProvider } from "@/src/contexts/TenantContext";
 import { QueryProvider } from "@/src/components/providers/QueryProvider";
+import { NavBar } from "@/src/components/NavBar";
 
 export const metadata: Metadata = {
   title: "SoulLedger",
@@ -17,18 +18,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-Hans">
-      <body className="antialiased">
+    <html lang="zh-Hans" className="dark">
+      <body className="antialiased min-h-screen">
         <QueryProvider>
           <I18nProvider>
-            <TenantProvider>
-              <ToastProvider>
-                <nav className="fixed top-0 left-0 z-40 p-4">
-                  <LanguageSwitcher />
-                </nav>
-                {children}
-              </ToastProvider>
-            </TenantProvider>
+            <ThemeProvider>
+              <TenantProvider>
+                <ToastProvider>
+                  <NavBar />
+                  <main className="pt-14">
+                    {children}
+                  </main>
+                </ToastProvider>
+              </TenantProvider>
+            </ThemeProvider>
           </I18nProvider>
         </QueryProvider>
       </body>
