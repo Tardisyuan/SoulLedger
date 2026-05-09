@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -28,8 +34,11 @@ interface TenantContextValue {
   logout: () => void;
 }
 
-const USER_COOKIE = "soulledger_user";
-const ACCESS_COOKIE = "soulledger_access";
+// ── Constants ────────────────────────────────────────────────────────
+
+const USER_KEY = "soulledger_user";
+
+// ── Context ──────────────────────────────────────────────────────────
 
 const TenantContext = createContext<TenantContextValue>({
   user: null,
@@ -45,35 +54,35 @@ const TenantContext = createContext<TenantContextValue>({
 export function TenantProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(null);
 
-  // Hydrate from cookie on mount
+  // Hydrate from localStorage on mount (client-only)
   useEffect(() => {
     try {
-      const match = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith(`${USER_COOKIE}=`));
-      const raw = match?.split("=").slice(1).join("=");
+      const raw = localStorage.getItem(USER_KEY);
       if (raw) {
-        const parsed = JSON.parse(decodeURIComponent(raw)) as AuthUser;
-        setUserState(parsed);
+        setUserState(JSON.parse(raw) as AuthUser);
       }
     } catch {
-      // ignore parse errors
+      // ignore
     }
   }, []);
 
   const setUser = (u: AuthUser | null) => {
     setUserState(u);
     if (u) {
-      document.cookie = `${USER_COOKIE}=${encodeURIComponent(JSON.stringify(u))}; path=/; max-age=${60 * 30}; SameSite=Lax`;
+      localStorage.setItem(USER_KEY, JSON.stringify(u));
+      document.cookie = `${USER_KEY}=${encodeURIComponent(JSON.stringify(u))}; path=/; max-age=${60 * 30}; SameSite=Lax`;
     } else {
-      document.cookie = `${USER_COOKIE}=; Max-Age=0; path=/`;
+      localStorage.removeItem(USER_KEY);
+      document.cookie = `${USER_KEY}=; Max-Age=0; path=/`;
     }
   };
 
   const logout = () => {
     setUser(null);
-    document.cookie = `${USER_COOKIE}=; Max-Age=0; path=/`;
-    document.cookie = `${ACCESS_COOKIE}=; Max-Age=0; path=/`;
+    localStorage.removeItem(USER_KEY);
+    document.cookie = `${USER_KEY}=; Max-Age=0; path=/`;
+    document.cookie = `soulledger_access=; Max-Age=0; path=/`;
+    document.cookie = `soulledger_refresh=; Max-Age=0; path=/`;
   };
 
   return (
