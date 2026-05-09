@@ -10,11 +10,11 @@ import { useAuth } from "@/src/hooks/useAuth";
 import { RouteGuard } from "@/src/components/rbac";
 
 const STATE_COLORS: Record<string, string> = {
-  ALIVE: "bg-green-600",
-  JUDGING: "bg-yellow-600",
-  DISPOSED: "bg-orange-600",
-  REINCARNATING: "bg-blue-600",
-  LOST: "bg-red-600",
+  ALIVE: "bg-emerald-600/20 text-emerald-400",
+  JUDGING: "bg-amber-600/20 text-amber-400",
+  DISPOSED: "bg-surface-3 text-ink-muted",
+  REINCARNATING: "bg-blue-600/20 text-blue-400",
+  LOST: "bg-surface-3 text-ink-muted",
 };
 
 export default function SoulsPage() {
@@ -153,7 +153,7 @@ export default function SoulsPage() {
                       {t(`souls.civilizations.${soul.civilization}`)}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold text-ink ${STATE_COLORS[soul.current_state] ?? "bg-surface-3"}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul.current_state] ?? "bg-surface-3 text-ink-muted"}`}>
                         {t(`souls.states.${soul.current_state}`)}
                       </span>
                     </td>

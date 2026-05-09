@@ -1,7 +1,9 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
 import {
   soulsApi,
   judgmentApi,
@@ -16,17 +18,20 @@ import {
   KarmaSummary,
   SoulRecord,
 } from "@/lib/api";
+import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
+import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
+import { BaseModal } from "@/src/components/ui/Modal";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 const STATE_COLORS: Record<string, string> = {
-  ALIVE: "bg-green-600",
-  JUDGING: "bg-yellow-600",
-  DISPOSED: "bg-orange-600",
-  REINCARNATING: "bg-blue-600",
-  LOST: "bg-red-600",
+  ALIVE: "bg-emerald-600/20 text-emerald-400",
+  JUDGING: "bg-amber-600/20 text-amber-400",
+  DISPOSED: "bg-surface-3 text-ink-muted",
+  REINCARNATING: "bg-blue-600/20 text-blue-400",
+  LOST: "bg-surface-3 text-ink-muted",
 };
 
 const STATE_LABELS_ZH: Record<string, string> = {
@@ -39,7 +44,9 @@ const STATE_LABELS_ZH: Record<string, string> = {
 
 export default function SoulDetailPage({ params }: PageProps) {
   const { id } = use(params);
+  const router = useRouter();
   const { t } = useI18n();
+  const { showToast } = useToast();
   const [soul, setSoul] = useState<Soul | null>(null);
   const [karma, setKarma] = useState<KarmaSummary | null>(null);
   const [records, setRecords] = useState<SoulRecord[]>([]);
@@ -50,6 +57,11 @@ export default function SoulDetailPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const updateSoulMutation = useUpdateSoul();
+  const deleteSoulMutation = useDeleteSoul();
 
   useEffect(() => {
     if (!id) return;
@@ -129,6 +141,26 @@ export default function SoulDetailPage({ params }: PageProps) {
     }
   }
 
+  function handleEditSuccess() {
+    loadSoulData();
+  }
+
+  function handleDeleteConfirm() {
+    if (!soul) return;
+    setIsDeleteModalOpen(true);
+  }
+
+  async function handleDelete() {
+    if (!soul) return;
+    try {
+      await deleteSoulMutation.mutateAsync(soul.id);
+      showToast("删除成功", "success");
+      router.push("/souls");
+    } catch {
+      // error handled by hook
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-canvas text-ink flex items-center justify-center">
@@ -159,12 +191,26 @@ export default function SoulDetailPage({ params }: PageProps) {
         <div className="flex items-center gap-4">
           <a href="/" className="text-ink-muted hover:text-ink text-sm">← Home</a>
           <h1 className="text-xl font-bold text-amber-400">{soul.name}</h1>
-          <span className={`px-2 py-0.5 rounded text-xs font-bold text-ink ${STATE_COLORS[soul.current_state]}`}>
+          <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul.current_state]}`}>
             {soul.current_state} — {STATE_LABELS_ZH[soul.current_state] || soul.current_state}
           </span>
         </div>
-        <div className="text-ink-muted text-sm">
-          {soul.civilization} · {soul.birth_date || "?"} — {soul.death_date || "now"}
+        <div className="flex items-center gap-3">
+          <div className="text-ink-muted text-sm">
+            {soul.civilization} · {soul.birth_date || "?"} — {soul.death_date || "now"}
+          </div>
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="px-3 py-1.5 bg-surface-1 border border-hairline hover:bg-surface-2 text-ink-muted hover:text-ink rounded-md text-sm transition-colors"
+          >
+            编辑
+          </button>
+          <button
+            onClick={handleDeleteConfirm}
+            className="px-3 py-1.5 bg-red-900/50 border border-red-800 hover:bg-red-800 text-red-300 rounded-md text-sm transition-colors"
+          >
+            删除
+          </button>
         </div>
       </div>
 
@@ -366,6 +412,45 @@ export default function SoulDetailPage({ params }: PageProps) {
           </Section>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {soul && (
+        <SoulEditModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          soul={soul}
+          onUpdated={handleEditSuccess}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <BaseModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="确认删除"
+        footer={
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={deleteSoulMutation.isPending}
+              className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-ink-muted hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleteSoulMutation.isPending}
+              className="flex-1 px-4 py-2 bg-red-700 hover:bg-red-600 disabled:bg-red-900/50 text-white rounded text-sm font-medium transition-colors"
+            >
+              {deleteSoulMutation.isPending ? "删除中..." : "确认删除"}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-ink text-sm">确认删除此灵魂？此操作不可撤销。</p>
+      </BaseModal>
     </div>
   );
 }
