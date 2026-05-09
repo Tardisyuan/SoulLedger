@@ -54,45 +54,45 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-zinc-900 to-zinc-950">
+    <div className="min-h-screen flex items-center justify-center bg-canvas">
       <div className="w-full max-w-md px-6">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">{t("nav.title")}</h1>
-          <p className="text-zinc-400">{t("home.hero_subtitle")}</p>
+          <h1 className="text-3xl font-bold text-ink mb-2">{t("nav.title")}</h1>
+          <p className="text-ink-muted">{t("home.hero_subtitle")}</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 shadow-2xl"
+          className="bg-surface-1 border border-hairline rounded-lg p-8"
         >
-          <h2 className="text-xl font-semibold text-white mb-6 text-center">
+          <h2 className="text-xl font-semibold text-ink mb-6 text-center">
             {t("auth.login") || "登录"}
           </h2>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">
+              <label className="block text-sm text-ink-muted mb-1">
                 {t("auth.username") || "用户名"}
               </label>
               <input
                 type="text"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-amber-600 transition-colors"
+                className="w-full bg-surface-2 border border-hairline rounded-md px-4 py-2.5 text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500 transition-colors"
                 placeholder="admin"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">
+              <label className="block text-sm text-ink-muted mb-1">
                 {t("auth.password") || "密码"}
               </label>
               <input
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-amber-600 transition-colors"
+                className="w-full bg-surface-2 border border-hairline rounded-md px-4 py-2.5 text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500 transition-colors"
                 placeholder="••••••••"
                 required
               />
@@ -102,14 +102,14 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-6 bg-amber-700 hover:bg-amber-600 disabled:bg-zinc-700 text-white font-medium py-2.5 rounded-lg transition-colors"
+            className="w-full mt-6 bg-amber-500 hover:bg-amber-400 disabled:bg-surface-3 text-ink font-medium py-2.5 rounded-md transition-colors"
           >
             {loading ? (t("auth.logging_in") || "登录中...") : (t("auth.login") || "登录")}
           </button>
         </form>
 
-        <p className="text-center text-zinc-500 text-sm mt-6">
-          <Link href="/" className="text-amber-600 hover:text-amber-500">
+        <p className="text-center text-ink-subtle text-sm mt-6">
+          <Link href="/" className="text-amber-500 hover:text-amber-400">
             {t("nav.home")}
           </Link>
         </p>

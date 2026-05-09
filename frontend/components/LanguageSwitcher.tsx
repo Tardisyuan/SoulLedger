@@ -7,7 +7,7 @@ export function LanguageSwitcher() {
 
   if (!hydrated) {
     return (
-      <select className="bg-zinc-800 text-zinc-300 text-sm rounded px-3 py-1.5 border border-zinc-600 cursor-pointer">
+      <select className="bg-surface-2 text-ink-muted text-sm rounded-md px-3 py-1.5 border border-hairline cursor-pointer">
         <option>—</option>
       </select>
     );
@@ -17,7 +17,7 @@ export function LanguageSwitcher() {
     <select
       value={locale}
       onChange={(e) => setLocale(e.target.value as Locale)}
-      className="bg-zinc-800 text-zinc-300 text-sm rounded px-3 py-1.5 border border-zinc-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-zinc-500 transition-colors"
+      className="bg-surface-2 text-ink-muted text-sm rounded-md px-3 py-1.5 border border-hairline cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-hairline transition-colors"
     >
       {(Object.keys(LOCALE_LABELS) as Locale[]).map((loc) => (
         <option key={loc} value={loc}>

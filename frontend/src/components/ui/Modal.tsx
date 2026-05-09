@@ -47,7 +47,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md bg-surface-2 border border-hairline rounded-xl shadow-2xl">
+              <Dialog.Panel className="w-full max-w-md bg-surface-2 border border-hairline rounded-xl">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-hairline">
                   <Dialog.Title className="text-ink font-semibold text-base">{title}</Dialog.Title>
@@ -149,7 +149,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         type="submit"
         form="soul-create-form"
         disabled={loading || !name.trim()}
-        className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 rounded text-sm font-medium text-black transition-colors"
+        className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-surface-3 disabled:text-ink-subtle rounded text-sm font-medium text-black transition-colors"
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
