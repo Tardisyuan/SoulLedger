@@ -24,11 +24,13 @@ class Migration(migrations.Migration):
                 name="idx_soul_tenant_created",
             ),
         ),
+        # Note: karmic_balance is a @property, not a DB field - cannot index it directly
+        # Index on merit_score alone (part of karmic_balance computation)
         migrations.AddIndex(
             model_name="soul",
             index=models.Index(
-                fields=["tenant", "karmic_balance"],
-                name="idx_soul_tenant_karma",
+                fields=["tenant", "merit_score"],
+                name="idx_soul_tenant_merit",
             ),
         ),
         # SoulRecord: indexes for karmic queries

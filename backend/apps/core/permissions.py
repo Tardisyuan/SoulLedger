@@ -8,17 +8,17 @@ class TenantPermission(permissions.BasePermission):
     """
     Enforce tenant isolation at the DRF permission layer.
 
-    - SYS_ADMIN (role='ADMIN') bypasses tenant checks (global read-only stats)
-    - All other roles: resource tenant must match request tenant
+    - IsAuthenticated: unauthenticated requests are rejected (401)
+    - SYS_ADMIN (role='ADMIN') bypasses tenant filtering (global read)
+    - All other authenticated users: request must have a valid tenant
     """
 
     def has_permission(self, request, view):
-        # Allow unauthenticated requests to pass through (auth will handle it)
         if not request.user or not request.user.is_authenticated:
-            return True
+            return False  # Reject unauthenticated — let DRF's 401 take over
 
         # SYS_ADMIN bypasses tenant filtering (global access)
-        if request.user.role == 'ADMIN':
+        if getattr(request.user, 'role', None) == 'ADMIN':
             return True
 
         # Must have a tenant on the request (set by TenantMiddleware)
@@ -29,7 +29,7 @@ class TenantPermission(permissions.BasePermission):
             return False
 
         # SYS_ADMIN bypasses
-        if request.user.role == 'ADMIN':
+        if getattr(request.user, 'role', None) == 'ADMIN':
             return True
 
         tenant = getattr(request, 'tenant', None)

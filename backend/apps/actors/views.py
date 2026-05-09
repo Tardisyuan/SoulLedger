@@ -17,7 +17,10 @@ class ActorViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if self.request.user.role == 'ADMIN':
+        user = self.request.user
+        if not user.is_authenticated:
+            return qs.none()
+        if user.role == 'ADMIN':
             return qs
         tenant = getattr(self.request, 'tenant', None)
         if tenant:

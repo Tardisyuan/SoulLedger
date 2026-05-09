@@ -32,7 +32,6 @@ class SoulSerializer(serializers.ModelSerializer):
     # Field-level access control: VIEWER cannot see merit/demerit scores
     merit_score = serializers.SerializerMethodField()
     demerit_score = serializers.SerializerMethodField()
-    karmic_balance_value = serializers.SerializerMethodField()
 
     class Meta:
         model = Soul
@@ -53,11 +52,6 @@ class SoulSerializer(serializers.ModelSerializer):
         if _is_viewer(self.context):
             return None  # VIEWER cannot see demerit score
         return obj.demerit_score
-
-    def get_karmic_balance_value(self, obj):
-        if _is_viewer(self.context):
-            return None  # VIEWER cannot see karmic balance
-        return obj.karmic_balance
 
     def to_representation(self, instance):
         # Remove karmic_balance from output for VIEWER (use the computed field name)
