@@ -6,14 +6,12 @@ import { useSouls, useCreateSoul } from "@/src/hooks/useSouls";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import type { Soul } from "@/lib/api";
-import { useAuth } from "@/src/hooks/useAuth";
-import { RouteGuard } from "@/src/components/rbac";
 
 const STATE_COLORS: Record<string, string> = {
-  ALIVE: "bg-emerald-600/20 text-emerald-400",
-  JUDGING: "bg-amber-600/20 text-amber-400",
+  ALIVE: "bg-amber-500/20 text-amber-400",
+  JUDGING: "bg-amber-500/20 text-amber-400",
   DISPOSED: "bg-surface-3 text-ink-muted",
-  REINCARNATING: "bg-blue-600/20 text-blue-400",
+  REINCARNATING: "bg-blue-500/20 text-blue-400",
   LOST: "bg-surface-3 text-ink-muted",
 };
 
@@ -23,12 +21,17 @@ export default function SoulsPage() {
   const [civilizationFilter, setCivilizationFilter] = useState("");
   const [search, setSearch] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const { user } = useAuth();
 
   // Build query params from filter state
+  // Map civilization to tenant code for backend filtering
+  const civilizationToTenantCode: Record<string, string> = {
+    CHINESE: "CN_DIYU",
+    EUROPEAN: "EU_HEAVEN_HELL",
+    EGYPTIAN: "EG_DUAT",
+  };
   const params: Record<string, string> = {};
   if (stateFilter) params.current_state = stateFilter;
-  if (civilizationFilter) params.civilization = civilizationFilter;
+  if (civilizationFilter) params.tenant__code = civilizationToTenantCode[civilizationFilter] || civilizationFilter;
   if (search) params.search = search;
 
   // TanStack Query — automatic caching, background refetch, loading/error states
@@ -58,22 +61,20 @@ export default function SoulsPage() {
   return (
     <div className="min-h-screen bg-canvas text-ink">
       {/* Page header */}
-      <div className="border-b border-hairline px-6 py-4 flex items-center gap-4">
+      <div className="h-12 flex items-center px-6 gap-4 border-b border-hairline/50">
         <Link href="/" className="text-ink-muted hover:text-ink text-sm">
           ← {t("nav.home")}
         </Link>
-        <h1 className="text-xl font-bold text-amber-400 flex-1">{t("souls.title")}</h1>
-        <RouteGuard operation="soul.create" fallback={null}>
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 rounded-md text-sm font-medium transition-colors"
-          >
-            + {t("souls.create")}
-          </button>
-        </RouteGuard>
+        <h1 className="text-lg font-bold text-amber-400 flex-1">{t("souls.title")}</h1>
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 rounded-md text-sm font-medium transition-colors"
+        >
+          + {t("souls.create")}
+        </button>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-5xl mx-auto px-6 py-6">
         {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-6 items-center">
           <form
@@ -157,7 +158,7 @@ export default function SoulsPage() {
                         {t(`souls.states.${soul.current_state}`)}
                       </span>
                     </td>
-                    <td className={`px-4 py-3 text-right font-mono text-sm ${(soul.karmic_balance ?? 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    <td className={`px-4 py-3 text-right font-mono text-sm ${(soul.karmic_balance ?? 0) >= 0 ? "text-amber-400" : "text-red-400"}`}>
                       {(soul.karmic_balance ?? 0) >= 0 ? "+" : ""}{soul.karmic_balance ?? 0}
                     </td>
                     <td className="px-4 py-3 text-ink-muted text-xs">{soul.death_date || "—"}</td>
