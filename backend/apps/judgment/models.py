@@ -76,7 +76,7 @@ class Judgment(models.Model):
         v = self.verdict or "PENDING"
         return f"Judgment of {self.soul.name}: {v}"
 
-    def conclude(self, verdict: str, notes: str = "") -> bool:
+    def conclude(self, verdict: str, notes: str = "", create_workflow: bool = False) -> bool:
         from django.utils import timezone
         self.verdict = verdict
         self.notes = notes
@@ -86,6 +86,11 @@ class Judgment(models.Model):
 
         from apps.disposition.services import DispositionService
         DispositionService.create_from_judgment(self)
+
+        # Optionally create approval workflow
+        if create_workflow:
+            from apps.workflow.services import WorkflowService
+            WorkflowService.create_from_judgment(self)
 
         # Transition soul to DISPOSED after disposition is created
         self.soul.transition_to(SoulState.DISPOSED, f"Judgment concluded: {verdict}")
