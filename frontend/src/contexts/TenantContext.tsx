@@ -18,9 +18,11 @@ export interface TenantInfo {
 export interface AuthUser {
   id: number;
   username: string;
+  display_name: string;
   email: string;
   role: "ADMIN" | "JUDGE" | "GUARDIAN" | "VIEWER";
   tenant: TenantInfo | null;
+  permissions: string[];
 }
 
 interface TenantContextValue {

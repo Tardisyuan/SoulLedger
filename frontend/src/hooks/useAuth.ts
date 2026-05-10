@@ -1,27 +1,20 @@
 "use client";
 import { useTenant } from "@/src/contexts/TenantContext";
 
-export type Operation = "soul.create" | "soul.update" | "soul.delete" | "soul.judge" | "dispatch.propose" | "disposition.execute" | "admin.*";
-
-const ROLE_PERMISSIONS: Record<string, Operation[]> = {
-  ADMIN: ["soul.create", "soul.update", "soul.delete", "soul.judge", "dispatch.propose", "disposition.execute", "admin.*"],
-  JUDGE: ["soul.judge", "soul.create"],
-  GUARDIAN: ["soul.create", "soul.update"],
-  VIEWER: [],
-};
+export type Operation = string;
 
 export function useAuth() {
-  const { user, isAdmin } = useTenant();
+  const { user, isAdmin, isJudge, isGuardian, isViewer } = useTenant();
 
-  function hasPermission(operation: Operation): boolean {
+  function hasPermission(operation: string): boolean {
     if (!user) return false;
-    const perms = ROLE_PERMISSIONS[user.role] ?? [];
-    return perms.includes(operation) || perms.includes("admin.*" as Operation);
+    if (user.role === "ADMIN") return true;  // ADMIN has all permissions
+    return user.permissions?.includes(operation) ?? false;
   }
 
   function hasRole(role: string): boolean {
     return user?.role === role;
   }
 
-  return { user, isAdmin, hasPermission, hasRole };
+  return { user, isAdmin, isJudge, isGuardian, isViewer, hasPermission, hasRole };
 }
