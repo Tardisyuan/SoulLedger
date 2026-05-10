@@ -141,6 +141,41 @@ export const eventsApi = {
   list: (params?: Record<string, string>) => api.get("/events/", { params }),
 };
 
+// Permissions
+export const permApi = {
+  list: () => api.get("/perm/permissions/"),
+  rolePermissions: (role?: string) => api.get("/perm/role-permissions/", { params: role ? { role } : {} }),
+  init: () => api.post("/perm/init/"),
+};
+
+// Menus
+export interface MenuItem {
+  id: number;
+  name: string;
+  path: string;
+  icon: string;
+  order: number;
+  parent: number | null;
+  roles: string[];
+  is_active: boolean;
+  component: string;
+  children: MenuItem[];
+}
+
+export const menusApi = {
+  list: () => api.get("/menus/"),
+  all: () => api.get("/menus/all/"),
+  create: (data: Partial<MenuItem>) => api.post("/menus/create/", data),
+  update: (id: number, data: Partial<MenuItem>) => api.patch(`/menus/${id}/`, data),
+  delete: (id: number) => api.delete(`/menus/${id}/`),
+};
+
+// Audit
+export const auditApi = {
+  list: (params?: Record<string, string>) => api.get("/audit/", { params }),
+  create: (data: object) => api.post("/audit/create/", data),
+};
+
 // Types
 export interface Soul {
   id: string;
