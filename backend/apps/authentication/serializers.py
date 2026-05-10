@@ -16,17 +16,23 @@ class TenantInfoSerializer(serializers.Serializer):
 
 
 class UserWithTenantSerializer(serializers.ModelSerializer):
-    """User serializer with tenant info for login response."""
+    """User serializer with tenant info + role permissions for login response."""
     tenant = serializers.SerializerMethodField()
+    permissions = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "role", "tenant"]
+        fields = ["id", "username", "email", "role", "tenant", "display_name", "permissions"]
 
     def get_tenant(self, obj):
         if obj.tenant:
             return {"code": obj.tenant.code, "display_name": obj.tenant.display_name}
         return None
+
+    def get_permissions(self, obj):
+        """Get permissions based on user role."""
+        from apps.perm.models import ROLE_PERMISSIONS
+        return ROLE_PERMISSIONS.get(obj.role, [])
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -80,5 +86,5 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "email", "role", "first_name", "last_name", "is_active"]
+        fields = ["id", "username", "email", "role", "first_name", "last_name", "is_active", "display_name"]
         read_only_fields = ["id", "is_active"]
