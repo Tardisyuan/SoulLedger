@@ -1,0 +1,422 @@
+"use client";
+
+import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@/lib/api";
+import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
+import Link from "next/link";
+
+const STATUS_COLORS: Record<string, string> = {
+  PENDING: "bg-amber-500/20 text-amber-400 border-amber-500/50",
+  APPROVED: "bg-green-500/20 text-green-400 border-green-500/50",
+  REJECTED: "bg-red-500/20 text-red-400 border-red-500/50",
+  SKIPPED: "bg-gray-500/20 text-gray-400 border-gray-500/50",
+  ESCALATED: "bg-purple-500/20 text-purple-400 border-purple-500/50",
+};
+
+const VERDICT_COLORS: Record<string, string> = {
+  PASSED: "bg-green-500/20 text-green-400",
+  FAILED: "bg-red-500/20 text-red-400",
+  CONFIRMED: "bg-green-500/20 text-green-400",
+  REJECTED: "bg-red-500/20 text-red-400",
+  SKIPPED: "bg-gray-500/20 text-gray-400",
+};
+
+const NODE_TYPE_LABELS: Record<string, string> = {
+  TRIAL: "审判",
+  EVALUATION: "评估",
+  APPEAL: "申诉",
+  FINAL: "终审",
+  EXECUTION: "执行",
+};
+
+export default function WorkflowDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const { t } = useI18n();
+  const { showToast } = useToast();
+
+  const [selectedVerdict, setSelectedVerdict] = useState<string>("");
+  const [notes, setNotes] = useState("");
+  const [activeTab, setActiveTab] = useState<"nodes" | "history">("nodes");
+
+  // Fetch workflow detail
+  const { data: workflow, isLoading, error, refetch } = useQuery({
+    queryKey: ["workflow", id],
+    queryFn: () => workflowApi.get(id).then((res) => res.data as ApprovalWorkflow),
+  });
+
+  // Approve node mutation
+  const approveMutation = useMutation({
+    mutationFn: (payload: { node_id: string; verdict: string; notes: string }) =>
+      workflowApi.approveNode(id, payload.node_id, { verdict: payload.verdict, notes: payload.notes }),
+    onSuccess: () => {
+      showToast(t("workflow.detail.approve_success") || "Node approved successfully", "success");
+      setSelectedVerdict("");
+      setNotes("");
+      refetch();
+    },
+    onError: (err: any) => {
+      showToast(err?.response?.data?.error || t("workflow.detail.approve_error") || "Failed to approve node", "error");
+    },
+  });
+
+  // Advance mutation
+  const advanceMutation = useMutation({
+    mutationFn: () => workflowApi.advance(id),
+    onSuccess: () => {
+      showToast(t("workflow.detail.advance_success") || "Workflow advanced", "success");
+      refetch();
+    },
+    onError: (err: any) => {
+      showToast(err?.response?.data?.error || t("workflow.detail.advance_error") || "Failed to advance", "error");
+    },
+  });
+
+  const currentNode = workflow?.current_node_detail;
+  const sortedNodes = workflow?.nodes?.slice().sort((a, b) => a.node_order - b.node_order) || [];
+
+  function handleApproveNode() {
+    if (!currentNode) return;
+    if (!selectedVerdict) {
+      showToast(t("workflow.detail.select_verdict") || "Please select a verdict", "error");
+      return;
+    }
+    approveMutation.mutate({
+      node_id: currentNode.id,
+      verdict: selectedVerdict,
+      notes,
+    });
+  }
+
+  if (isLoading) {
+    return (
+      <div className="text-ink flex items-center justify-center py-12">
+        <div className="text-ink-muted">{t("workflow.detail.loading") || "Loading workflow..."}</div>
+      </div>
+    );
+  }
+
+  if (error || !workflow) {
+    return (
+      <div className="text-ink flex flex-col items-center justify-center gap-4 py-12">
+        <div className="text-red-400">{t("workflow.detail.not_found") || "Workflow not found"}</div>
+        <Link href="/workflow" className="text-amber-400 hover:text-amber-300">
+          {t("workflow.detail.back_to_list") || "Back to workflow list"}
+        </Link>
+      </div>
+    );
+  }
+
+  const statusColor = STATUS_COLORS[workflow.status] || STATUS_COLORS.PENDING;
+
+  return (
+    <div className="text-ink">
+      {/* Page header */}
+      <div className="h-12 flex items-center px-6 gap-4 border-b border-hairline/50">
+        <Link href="/workflow" className="text-ink-muted hover:text-ink text-sm">
+          ← {t("workflow.detail.back_to_list") || "Back to list"}
+        </Link>
+        <h1 className="text-lg font-bold text-amber-400 flex-1">{workflow.workflow_name}</h1>
+        <span className={`px-2 py-0.5 rounded text-xs font-bold border ${statusColor}`}>
+          {workflow.status}
+        </span>
+        {workflow.is_appeal && (
+          <span className="px-2 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400">
+            {t("workflow.detail.appeal") || "Appeal"}
+          </span>
+        )}
+      </div>
+
+      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+        {/* Workflow Info Card */}
+        <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
+          <h2 className="text-sm font-semibold text-ink-muted uppercase mb-3">
+            {t("workflow.detail.info") || "Workflow Information"}
+          </h2>
+          <dl className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <dt className="text-ink-muted">{t("workflow.detail.soul") || "Soul"}</dt>
+              <dd className="text-ink font-medium">{workflow.soul_name || workflow.soul}</dd>
+            </div>
+            <div>
+              <dt className="text-ink-muted">{t("workflow.detail.case_type") || "Case Type"}</dt>
+              <dd className="text-ink">{workflow.case_type}</dd>
+            </div>
+            <div>
+              <dt className="text-ink-muted">{t("workflow.detail.judgment_verdict") || "Judgment Verdict"}</dt>
+              <dd className="text-ink">{workflow.judgment_verdict || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-ink-muted">{t("workflow.detail.priority") || "Priority"}</dt>
+              <dd className="text-ink">
+                {workflow.priority === 0 ? t("workflow.detail.normal") || "Normal" :
+                 workflow.priority === 1 ? t("workflow.detail.urgent") || "Urgent" :
+                 t("workflow.detail.critical") || "Critical"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-ink-muted">{t("workflow.detail.created_at") || "Created"}</dt>
+              <dd className="text-ink">{new Date(workflow.created_at).toLocaleString()}</dd>
+            </div>
+            <div>
+              <dt className="text-ink-muted">{t("workflow.detail.completed_at") || "Completed"}</dt>
+              <dd className="text-ink">{workflow.completed_at ? new Date(workflow.completed_at).toLocaleString() : "—"}</dd>
+            </div>
+          </dl>
+        </div>
+
+        {/* Current Node Action Card */}
+        {currentNode && workflow.status !== "COMPLETED" && (
+          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
+            <h2 className="text-sm font-semibold text-amber-400 uppercase mb-3">
+              {t("workflow.detail.current_node") || "Current Node"}
+            </h2>
+            <div className="mb-4 p-3 bg-surface-2 rounded border border-hairline">
+              <div className="font-medium text-ink">{currentNode.node_name}</div>
+              <div className="text-xs text-ink-muted mt-1">
+                {NODE_TYPE_LABELS[currentNode.node_type] || currentNode.node_type} · {currentNode.court_code}
+              </div>
+              <div className="text-xs text-ink-subtle mt-1">
+                {t("workflow.detail.order") || "Order"}: {currentNode.node_order}
+              </div>
+            </div>
+
+            {/* Verdict Selection */}
+            <div className="space-y-2 mb-4">
+              <label className="block text-sm text-ink-muted mb-2">
+                {t("workflow.detail.select_verdict") || "Select Verdict"}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { key: "PASSED", label: t("workflow.verdicts.passed") || "Passed" },
+                  { key: "FAILED", label: t("workflow.verdicts.failed") || "Failed" },
+                  { key: "CONFIRMED", label: t("workflow.verdicts.confirmed") || "Confirmed" },
+                  { key: "REJECTED", label: t("workflow.verdicts.rejected") || "Rejected" },
+                  { key: "SKIPPED", label: t("workflow.verdicts.skipped") || "Skipped" },
+                ].map((opt) => (
+                  <label
+                    key={opt.key}
+                    className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition-colors text-sm ${
+                      selectedVerdict === opt.key
+                        ? "border-amber-500 bg-amber-500/10"
+                        : "border-hairline hover:bg-surface-2"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="verdict"
+                      value={opt.key}
+                      checked={selectedVerdict === opt.key}
+                      onChange={(e) => setSelectedVerdict(e.target.value)}
+                      className="accent-amber-500"
+                    />
+                    <span className="text-ink">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="mb-4">
+              <label className="block text-sm text-ink-muted mb-2">
+                {t("workflow.detail.notes") || "Notes"}
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className="w-full bg-surface-2 border border-hairline rounded p-3 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:border-amber-500/50"
+                placeholder={t("workflow.detail.notes_placeholder") || "Enter notes..."}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleApproveNode}
+                disabled={approveMutation.isPending}
+                className="flex-1 py-2.5 px-4 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-black"
+              >
+                {approveMutation.isPending
+                  ? t("workflow.detail.processing") || "Processing..."
+                  : t("workflow.detail.submit_decision") || "Submit Decision"}
+              </button>
+              <button
+                onClick={() => advanceMutation.mutate()}
+                disabled={advanceMutation.isPending}
+                className="py-2.5 px-4 bg-surface-2 hover:bg-surface-3 disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-ink border border-hairline"
+              >
+                {advanceMutation.isPending
+                  ? t("workflow.detail.advancing") || "Advancing..."
+                  : t("workflow.detail.advance") || "Advance"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Completed State */}
+        {workflow.status === "COMPLETED" && (
+          <div className="bg-green-500/10 rounded-lg p-5 border border-green-500/30">
+            <h2 className="text-sm font-semibold text-green-400 uppercase mb-2">
+              {t("workflow.detail.completed") || "Workflow Completed"}
+            </h2>
+            <p className="text-sm text-ink-muted">
+              {t("workflow.detail.completed_message") || "This workflow has been completed."}
+            </p>
+            {workflow.completed_at && (
+              <p className="text-xs text-ink-subtle mt-2">
+                {t("workflow.detail.completed_at") || "Completed at"}: {new Date(workflow.completed_at).toLocaleString()}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-hairline/50">
+          <button
+            onClick={() => setActiveTab("nodes")}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeTab === "nodes"
+                ? "text-amber-400 border-amber-400"
+                : "text-ink-muted border-transparent hover:text-ink"
+            }`}
+          >
+            {t("workflow.detail.nodes") || "Nodes"} ({sortedNodes.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeTab === "history"
+                ? "text-amber-400 border-amber-400"
+                : "text-ink-muted border-transparent hover:text-ink"
+            }`}
+          >
+            {t("workflow.detail.history") || "History"}
+          </button>
+        </div>
+
+        {/* Nodes Tab */}
+        {activeTab === "nodes" && (
+          <div className="space-y-3">
+            {sortedNodes.map((node, idx) => {
+              const isCurrent = workflow.current_node === node.id;
+              const isPast = node.status !== "PENDING";
+              const nodeColor = STATUS_COLORS[node.status] || STATUS_COLORS.PENDING;
+
+              return (
+                <div
+                  key={node.id}
+                  className={`bg-surface-1 rounded-lg p-4 border ${
+                    isCurrent ? "border-amber-500/50 shadow-lg shadow-amber-500/10" : "border-hairline"
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    {/* Node indicator */}
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${nodeColor}`}>
+                      {isPast ? (
+                        <span className="text-xs">{node.verdict?.[0] || "D"}</span>
+                      ) : (
+                        <span>{idx + 1}</span>
+                      )}
+                    </div>
+
+                    {/* Node details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-ink">{node.node_name}</span>
+                        {isCurrent && (
+                          <span className="px-1.5 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                            {t("workflow.detail.current") || "Current"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-ink-muted mt-1">
+                        {NODE_TYPE_LABELS[node.node_type] || node.node_type} · {node.court_code || "—"}
+                      </div>
+
+                      {/* Verdict and notes for completed nodes */}
+                      {isPast && (
+                        <div className="mt-3 pt-3 border-t border-hairline/50">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict] || ""}`}>
+                              {node.verdict}
+                            </span>
+                            {node.decided_at && (
+                              <span className="text-xs text-ink-subtle">
+                                {new Date(node.decided_at).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          {node.notes && (
+                            <p className="text-sm text-ink-muted italic">"{node.notes}"</p>
+                          )}
+                          {node.approver && (
+                            <p className="text-xs text-ink-subtle mt-1">
+                              {t("workflow.detail.approver") || "Approver"}: {node.approver}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Status badge */}
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium border ${nodeColor}`}>
+                      {node.status}
+                    </span>
+                  </div>
+
+                  {/* Connector line */}
+                  {idx < sortedNodes.length - 1 && (
+                    <div className="ml-4 mt-2 pl-4 border-l-2 border-hairline/50 h-4" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* History Tab */}
+        {activeTab === "history" && (
+          <div className="space-y-3">
+            {sortedNodes
+              .filter((n) => n.status !== "PENDING")
+              .sort((a, b) => {
+                const aTime = a.decided_at ? new Date(a.decided_at).getTime() : 0;
+                const bTime = b.decided_at ? new Date(b.decided_at).getTime() : 0;
+                return aTime - bTime;
+              })
+              .map((node) => (
+                <div key={node.id} className="bg-surface-1 rounded-lg p-4 border border-hairline">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-ink">{node.node_name}</span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict] || ""}`}>
+                      {node.verdict}
+                    </span>
+                  </div>
+                  <div className="text-xs text-ink-muted">
+                    {t("workflow.detail.decided_at") || "Decided at"}: {node.decided_at ? new Date(node.decided_at).toLocaleString() : "—"}
+                  </div>
+                  {node.notes && (
+                    <p className="text-sm text-ink-muted mt-2 italic">"{node.notes}"</p>
+                  )}
+                  {node.approver && (
+                    <p className="text-xs text-ink-subtle mt-1">
+                      {t("workflow.detail.approver") || "Approver"}: {node.approver}
+                    </p>
+                  )}
+                </div>
+              ))}
+            {sortedNodes.filter((n) => n.status !== "PENDING").length === 0 && (
+              <div className="text-center text-ink-subtle py-8">
+                {t("workflow.detail.no_history") || "No decisions have been made yet."}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

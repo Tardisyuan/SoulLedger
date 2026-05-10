@@ -136,6 +136,67 @@ export const reincarnationApi = {
   reborn: (data: object) => api.post("/reincarnation/reborn/", data),
 };
 
+// Workflow
+export interface ApprovalWorkflow {
+  id: string;
+  workflow_name: string;
+  soul: string;
+  soul_name?: string;
+  case_type: string;
+  priority: number;
+  status: string;
+  is_appeal: boolean;
+  cross_civilization: boolean;
+  current_node: string | null;
+  current_node_detail: ApprovalNode | null;
+  nodes: ApprovalNode[];
+  judgment_verdict?: string;
+  created_at: string;
+  completed_at: string | null;
+  tenant: string;
+}
+
+export interface ApprovalNode {
+  id: string;
+  workflow: string;
+  node_name: string;
+  node_order: number;
+  node_type: string;
+  approver_type: string;
+  approver_actor: string | null;
+  approver_role: string;
+  court_code: string;
+  realm: string | null;
+  required_verdicts: string[];
+  status: string;
+  verdict: string;
+  evidence_json: Record<string, unknown>;
+  notes: string;
+  approver: string | null;
+  decided_at: string | null;
+  created_at: string;
+}
+
+export const workflowApi = {
+  list: (params?: Record<string, string>) => api.get("/workflows/", { params }),
+  get: (id: string) => api.get(`/workflows/${id}/`),
+  create: (data: object) => api.post("/workflows/", data),
+  advance: (id: string) => api.post(`/workflows/${id}/advance/`),
+  approveNode: (id: string, nodeId: string, data: { verdict: string; notes?: string }) =>
+    api.post(`/workflows/${id}/approve_node/`, { ...data, node_id: nodeId }),
+  nodes: {
+    list: (params?: Record<string, string>) => api.get("/nodes/", { params }),
+    get: (id: string) => api.get(`/nodes/${id}/`),
+  },
+  templates: {
+    list: (params?: Record<string, string>) => api.get("/workflow/templates/", { params }),
+    get: (id: string) => api.get(`/workflow/templates/${id}/`),
+    create: (data: object) => api.post("/workflow/templates/", data),
+    update: (id: string, data: object) => api.patch(`/workflow/templates/${id}/`, data),
+    delete: (id: string) => api.delete(`/workflow/templates/${id}/`),
+  },
+};
+
 // Events
 export const eventsApi = {
   list: (params?: Record<string, string>) => api.get("/events/", { params }),
