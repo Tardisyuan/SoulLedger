@@ -137,6 +137,12 @@ class ApprovalWorkflow(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Approval Workflow"
         verbose_name_plural = "Approval Workflows"
+        indexes = [
+            models.Index(fields=["tenant", "status"]),
+            models.Index(fields=["soul"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["case_type"]),
+        ]
 
     def __str__(self):
         return f"{self.workflow_name} - {self.soul.name} ({self.status})"
@@ -334,6 +340,10 @@ class ApprovalNode(models.Model):
         ordering = ["workflow", "node_order"]
         verbose_name = "Approval Node"
         verbose_name_plural = "Approval Nodes"
+        indexes = [
+            models.Index(fields=["workflow", "node_order"]),
+            models.Index(fields=["status"]),
+        ]
 
     def __str__(self):
         return f"{self.workflow.soul.name} - {self.node_name} ({self.status})"

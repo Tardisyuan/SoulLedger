@@ -64,6 +64,11 @@ class Disposition(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Disposition"
         verbose_name_plural = "Dispositions"
+        indexes = [
+            models.Index(fields=["tenant", "created_at"]),
+            models.Index(fields=["soul"]),
+            models.Index(fields=["is_executed"]),
+        ]
 
     objects = TenantManager()
 

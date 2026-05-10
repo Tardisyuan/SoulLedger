@@ -59,6 +59,10 @@ class Actor(models.Model):
         ordering = ["civilization", "role", "name"]
         verbose_name = "Actor"
         verbose_name_plural = "Actors"
+        indexes = [
+            models.Index(fields=["civilization", "role"]),
+            models.Index(fields=["tenant", "civilization"]),
+        ]
 
     objects = TenantManager()
 

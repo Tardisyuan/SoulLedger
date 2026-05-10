@@ -57,6 +57,10 @@ class Soul(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Soul"
         verbose_name_plural = "Souls"
+        indexes = [
+            models.Index(fields=["tenant", "current_state"]),
+            models.Index(fields=["current_state"]),
+        ]
 
     objects = TenantManager()
 

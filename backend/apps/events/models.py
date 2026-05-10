@@ -42,6 +42,11 @@ class SoulEvent(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Soul Event"
         verbose_name_plural = "Soul Events"
+        indexes = [
+            models.Index(fields=["soul", "created_at"]),
+            models.Index(fields=["event_type"]),
+            models.Index(fields=["tenant", "created_at"]),
+        ]
 
     objects = TenantManager()
 
