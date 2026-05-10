@@ -5,7 +5,7 @@ import { I18nProvider } from "@/src/contexts/I18nContext";
 import { ThemeProvider } from "@/src/contexts/ThemeContext";
 import { TenantProvider } from "@/src/contexts/TenantContext";
 import { QueryProvider } from "@/src/components/providers/QueryProvider";
-import { NavBar } from "@/src/components/NavBar";
+import { AppLayout } from "@/src/components/layout/AppLayout";
 
 export const metadata: Metadata = {
   title: "SoulLedger",
@@ -25,10 +25,9 @@ export default function RootLayout({
             <ThemeProvider>
               <TenantProvider>
                 <ToastProvider>
-                  <NavBar />
-                  <main className="min-h-screen">
+                  <AppLayout>
                     {children}
-                  </main>
+                  </AppLayout>
                 </ToastProvider>
               </TenantProvider>
             </ThemeProvider>
