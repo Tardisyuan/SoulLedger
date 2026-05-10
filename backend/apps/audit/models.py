@@ -44,6 +44,12 @@ class AuditLog(models.Model):
         ordering = ["-timestamp"]
         verbose_name = "Audit Log"
         verbose_name_plural = "Audit Logs"
+        indexes = [
+            models.Index(fields=["tenant", "timestamp"]),
+            models.Index(fields=["user", "timestamp"]),
+            models.Index(fields=["resource", "resource_id"]),
+            models.Index(fields=["action"]),
+        ]
 
     def __str__(self):
         return f"{self.user} {self.action} {self.resource} at {self.timestamp}"

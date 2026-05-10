@@ -16,6 +16,12 @@ class User(AbstractUser):
     """
     Custom user with role field.
     """
+    display_name = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Display name shown in the navbar (e.g. 系统管理员)",
+    )
     role = models.CharField(
         max_length=20,
         choices=UserRole.choices,

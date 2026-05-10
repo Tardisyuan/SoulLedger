@@ -72,6 +72,11 @@ class Realm(models.Model):
         ordering = ["civilization", "realm_type", "tier"]
         verbose_name = "Realm"
         verbose_name_plural = "Realms"
+        indexes = [
+            models.Index(fields=["civilization", "realm_type"]),
+            models.Index(fields=["tenant", "civilization"]),
+            models.Index(fields=["realm_code"]),
+        ]
 
     objects = TenantManager()
 

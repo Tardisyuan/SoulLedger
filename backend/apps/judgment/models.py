@@ -69,6 +69,12 @@ class Judgment(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Judgment"
         verbose_name_plural = "Judgments"
+        indexes = [
+            models.Index(fields=["soul", "verdict"]),
+            models.Index(fields=["tenant", "created_at"]),
+            models.Index(fields=["verdict"]),
+            models.Index(fields=["is_final"]),
+        ]
 
     objects = TenantManager()
 
