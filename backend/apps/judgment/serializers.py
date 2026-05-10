@@ -21,3 +21,4 @@ class JudgmentSerializer(serializers.ModelSerializer):
 class JudgmentConcludeSerializer(serializers.Serializer):
     verdict = serializers.ChoiceField(choices=["PASSED", "FAILED", "PURGATORY", "RETRY"])
     notes = serializers.CharField(required=False, default="")
+    create_workflow = serializers.BooleanField(default=False)
