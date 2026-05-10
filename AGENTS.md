@@ -229,7 +229,7 @@ t("nav.greeting", { username: user.username })
 示例：
 ```
 fix: BaseModal Dialog centering + open prop
-feat: add X-Tenant-ID header to all API requests
+feat: add JWT auth to all API requests
 refactor: adopt Linear design system for souls pages
 ```
 
@@ -312,7 +312,7 @@ SoulLedger/
 5. Migration：`python manage.py makemigrations`
 
 **前端**：
-1. `lib/api.ts` — 添加 API 方法（含 `X-Tenant-ID`）
+1. `lib/api.ts` — 添加 API 方法（JWT Authorization）
 2. `hooks/useXxx.ts` — TanStack Query hooks
 3. `app/xxx/page.tsx` — 列表页（Linear 样式）
 4. `components/xxx/XxxModal.tsx` — 创建/编辑弹窗（用 `BaseModal`）
@@ -342,9 +342,174 @@ NavBar 路径：`src/components/NavBar.tsx`
 | M1 | ✅ 完成 | Django 项目结构，核心模型 |
 | M2 | ✅ 完成 | 认证、JWT、权限 |
 | M3 | ✅ 完成 | 多租户基础设施 |
-| M4 | 🔲 待开始 | 待定义 |
+| M4 | 🔲 待开始 | **权限管理与菜单系统** |
+| M5 | 🔲 待开始 | 审判流程完整化 |
+| M6 | 🔲 待开始 | 轮回与功德系统 |
+| M7 | 🔲 待开始 | 事件溯源与审计日志 |
 
 ---
 
-*最后更新：2026-05-09*
+## 9. M4 里程碑详细分解
+
+### M4.1 角色权限模型 (RBAC) — 参考 Snowy SaToken 设计
+
+**后端模型**：
+```python
+# 角色模型 (已存在于 User.role)
+ROLE_CHOICES = ["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"]
+
+# 权限模型
+class Permission(BaseModel):
+    codename = CharField(max_length=100, unique=True)  # e.g. "soul.create"
+    name = CharField(max_length=200)                   # e.g. "创建灵魂"
+    category = CharField(max_length=50)                # e.g. "soul", "karma", "system"
+
+# 角色-权限关联
+class RolePermission(BaseModel):
+    role = CharField(max_length=20)  # ADMIN/JUDGE/GUARDIAN/VIEWER
+    permission = ForeignKey(Permission)
+```
+
+**权限矩阵**：
+
+| 权限 codename | ADMIN | JUDGE | GUARDIAN | VIEWER |
+|---------------|-------|-------|----------|--------|
+| soul.read | ✅ | ✅ | ✅ | ✅ |
+| soul.create | ✅ | ❌ | ❌ | ❌ |
+| soul.update | ✅ | ❌ | ✅ | ❌ |
+| soul.delete | ✅ | ❌ | ❌ | ❌ |
+| judgment.execute | ✅ | ✅ | ❌ | ❌ |
+| karma.manage | ✅ | ❌ | ❌ | ❌ |
+| reincarnation.manage | ✅ | ✅ | ✅ | ❌ |
+| system.settings | ✅ | ❌ | ❌ | ❌ |
+| user.manage | ✅ | ❌ | ❌ | ❌ |
+
+### M4.2 菜单管理 CRUD
+
+**菜单模型**：
+```python
+class Menu(BaseModel):
+    name = CharField(max_length=100)
+    path = CharField(max_length=200)        # e.g. "/souls"
+    icon = CharField(max_length=50, null)   # e.g. "user"
+    order = IntegerField(default=0)
+    parent = ForeignKey("self", null)      # 层级菜单
+    roles = JSONField(default=list)         # ["ADMIN", "GUARDIAN"]
+    is_active = BooleanField(default=True)
+```
+
+**菜单结构**（按角色动态渲染）：
+```
+├── 首页 /dashboard (ALL)
+├── 灵魂管理 /souls (ALL)
+│   ├── 灵魂列表 (ALL)
+│   ├── 创建灵魂 (ADMIN)
+│   └── 编辑灵魂 (ADMIN, GUARDIAN)
+├── 审判管理 /judgment (ADMIN, JUDGE)
+│   ├── 待审判队列 (JUDGE+)
+│   └── 审判历史 (ADMIN, JUDGE)
+├── 功德系统 /karma (ADMIN)
+│   ├── 功德记录 (ADMIN)
+│   └── 功德规则 (ADMIN)
+├── 轮回管理 /reincarnation (ADMIN, JUDGE, GUARDIAN)
+│   ├── 轮回队列 (GUARDIAN+)
+│   └── 轮回历史 (ALL)
+└── 系统设置 /settings (ADMIN)
+    ├── 用户管理 (ADMIN)
+    ├── 租户设置 (ADMIN)
+    └── 菜单配置 (ADMIN)
+```
+
+### M4.3 前端路由守卫增强
+
+**路由守卫** (`src/components/rbac/RouteGuard.tsx`):
+- 读取用户 role
+- 根据菜单 API 获取可访问菜单
+- 动态生成路由
+- 未授权访问 → 重定向 /403
+
+### M4.4 页面级权限控制
+
+```tsx
+// 权限组件
+const RequirePermission = ({ permissions: string[], children }) => {
+  const { user } = useAuth();
+  const hasPermission = permissions.some(p => user.permissions?.includes(p));
+  return hasPermission ? children : null;
+};
+
+// 使用示例
+<RequirePermission permissions={["soul.create"]}>
+  <button>创建灵魂</button>
+</RequirePermission>
+```
+
+### M4.5 操作日志审计
+
+```python
+class AuditLog(BaseModel):
+    tenant = ForeignKey(Tenant)
+    user = ForeignKey(User)
+    action = CharField(max_length=50)      # CREATE, UPDATE, DELETE, EXECUTE
+    resource = CharField(max_length=100)   # e.g. "soul", "judgment"
+    resource_id = CharField(max_length=100)
+    changes = JSONField(null)             # {"field": ["old", "new"]}
+    ip = GenericIPAddressField(null)
+    timestamp = DateTimeField(auto_now_add=True)
+```
+
+---
+
+## 10. 系统架构（参考 Snowy 插件化设计）
+
+```
+跨文明灵魂管理系统/
+├── backend/
+│   ├── apps/
+│   │   ├── authentication/   # JWT 登录/登出/刷新
+│   │   ├── tenants/          # 多租户管理
+│   │   ├── souls/            # 灵魂 CRUD
+│   │   ├── actors/           # 角色管理
+│   │   ├── judgment/         # 审判流程
+│   │   ├── karma/            # 功德系统
+│   │   ├── reincarnation/    # 轮回管理
+│   │   ├── disposition/       # 灵魂处置
+│   │   ├── realms/           # 界域管理
+│   │   ├── events/           # 事件溯源
+│   │   ├── workflow/         # 工作流引擎
+│   │   ├── core/             # 公共模型/工具
+│   │   ├── menus/            # 菜单管理 ⭐ M4新增
+│   │   └── audit/            # 审计日志 ⭐ M4新增
+│   └── config/
+│       ├── settings.py
+│       └── urls.py
+├── frontend/
+│   ├── app/
+│   │   ├── (auth)/login/    # 登录页
+│   │   ├── souls/            # 灵魂管理
+│   │   ├── judgment/         # 审判管理
+│   │   ├── karma/            # 功德系统
+│   │   ├── reincarnation/    # 轮回管理
+│   │   ├── settings/         # 系统设置
+│   │   └── page.tsx          # 首页/Dashboard
+│   └── src/
+│       ├── components/
+│       │   ├── rbac/          # 权限组件 ⭐ M4新增
+│       │   │   ├── RouteGuard.tsx
+│       │   │   ├── RequirePermission.tsx
+│       │   │   └── PermissionDenied.tsx
+│       │   └── menus/        # 菜单组件 ⭐ M4新增
+│       ├── hooks/
+│       │   ├── useAuth.ts
+│       │   ├── usePermissions.ts  # M4新增
+│       │   └── useMenus.ts       # M4新增
+│       └── contexts/
+│           └── AuthContext.tsx
+└── scripts/
+    └── start-*.sh
+```
+
+---
+
+*最后更新：2026-05-10*
 *维护者：Hermes Agent（根据瑞鸿的要求生成）*
