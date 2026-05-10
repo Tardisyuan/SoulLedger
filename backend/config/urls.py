@@ -16,4 +16,8 @@ urlpatterns = [
     path("api/v1/realms/", include("apps.realms.urls")),
     path("api/v1/actors/", include("apps.actors.urls")),
     path("api/v1/events/", include("apps.events.urls")),
+    path("api/v1/perm/", include("apps.perm.urls")),
+    path("api/v1/menus/", include("apps.menus.urls")),
+    path("api/v1/audit/", include("apps.audit.urls")),
+    path("api/v1/", include("apps.workflow.urls")),
 ]
