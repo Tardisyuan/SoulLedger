@@ -30,8 +30,14 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
         return None
 
     def get_permissions(self, obj):
-        """Get permissions based on user role."""
-        from apps.perm.models import ROLE_PERMISSIONS
+        """Get permissions based on user role — reads from DB, falls back to hardcoded dict."""
+        from apps.perm.models import RolePermission, ROLE_PERMISSIONS
+        if RolePermission.objects.exists():
+            return list(
+                RolePermission.objects.filter(role=obj.role)
+                .select_related("permission")
+                .values_list("permission__codename", flat=True)
+            )
         return ROLE_PERMISSIONS.get(obj.role, [])
 
 

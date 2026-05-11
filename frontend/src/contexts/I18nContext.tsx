@@ -32,16 +32,14 @@ interface I18nContextType {
 const I18nContext = createContext<I18nContextType>({
   locale: DEFAULT_LOCALE,
   setLocale: () => {},
-  t: (key, params) => key,
+  t: (key) => key,
   hydrated: false,
 });
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  // Start with default locale to match server render (avoids hydration mismatch)
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
   const [hydrated, setHydrated] = useState(false);
 
-  // Read locale from cookie on mount (client only)
   useEffect(() => {
     const match = document.cookie
       .split("; ")
@@ -60,7 +58,6 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   const t = useCallback(
     (key: string, params?: Record<string, string>): string => {
-      if (!hydrated) return key;
       const parts = key.split(".");
       let value: any = messages[locale];
       for (const part of parts) {
@@ -72,13 +69,12 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       }
       if (typeof value !== "string") return key;
       if (!params) return value;
-      // Replace {{placeholder}} and {placeholder} patterns
       return value.replace(/\{\{(\w+)\}\}|\{(\w+)\}/g, (_, p1, p2) => {
-        const key = p1 ?? p2;
-        return key in params ? params[key] : _;
+        const k = p1 ?? p2;
+        return k in params ? params[k] : _;
       });
     },
-    [locale, hydrated]
+    [locale]
   );
 
   return (
