@@ -45,6 +45,9 @@ INSTALLED_APPS = [
     "apps.actors",
     "apps.realms",
     "apps.events",
+    "apps.audit",
+    "apps.menus",
+    "apps.perm",
 ]
 
 MIDDLEWARE = [
