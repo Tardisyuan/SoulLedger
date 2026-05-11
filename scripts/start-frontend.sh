@@ -9,6 +9,13 @@ PID_FILE="$SCRIPT_DIR/pids/frontend.pid"
 
 mkdir -p "$SCRIPT_DIR/logs" "$SCRIPT_DIR/pids"
 
+# Kill any process holding port 3333 (fallback for orphaned processes)
+if ss -tlnp 2>/dev/null | grep -q ':3333'; then
+    echo "Clearing port 3333..."
+    fuser -k 3333/tcp 2>/dev/null || true
+    sleep 1
+fi
+
 cd "$FRONTEND_DIR"
 
 # Check if already running
