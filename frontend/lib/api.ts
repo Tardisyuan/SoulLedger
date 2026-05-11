@@ -202,11 +202,58 @@ export const eventsApi = {
   list: (params?: Record<string, string>) => api.get("/events/", { params }),
 };
 
+// Karma Stats
+export interface KarmaStatsOverview {
+  total_souls: number;
+  state_distribution: { state: string; label: string; count: number }[];
+  tenants: {
+    tenant_code: string;
+    tenant_name: string;
+    total_souls: number;
+    state_breakdown: Record<string, number>;
+  }[];
+  karma_distribution: { label: string; count: number }[];
+}
+
+export const karmaApi = {
+  statsOverview: () => api.get<KarmaStatsOverview>("/karma/stats/overview/"),
+};
+
 // Permissions
+export interface Permission {
+  id: number;
+  codename: string;
+  name: string;
+  category: string;
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  display_name: string;
+}
+
 export const permApi = {
-  list: () => api.get("/perm/permissions/"),
-  rolePermissions: (role?: string) => api.get("/perm/role-permissions/", { params: role ? { role } : {} }),
+  list: () => api.get<Permission[]>("/perm/permissions/"),
+  create: (data: { codename: string; name: string; category: string }) =>
+    api.post("/perm/permissions/create/", data),
+  update: (id: number, data: Partial<{ codename: string; name: string; category: string }>) =>
+    api.put(`/perm/permissions/${id}/`, data),
+  delete: (id: number) => api.delete(`/perm/permissions/${id}/`),
+  rolePermissions: (role?: string) =>
+    api.get("/perm/role-permissions/", { params: role ? { role } : {} }),
+  assign: (role: string, permissionIds: number[]) =>
+    api.post("/perm/role-permissions/assign/", { role, permission_ids: permissionIds }),
   init: () => api.post("/perm/init/"),
+  roles: {
+    list: () => api.get<Role[]>("/perm/roles/"),
+    create: (data: { name: string; display_name: string }) =>
+      api.post("/perm/roles/create/", data),
+    update: (id: number, data: Partial<{ name: string; display_name: string }>) =>
+      api.put(`/perm/roles/${id}/`, data),
+    delete: (id: number) => api.delete(`/perm/roles/${id}/`),
+    init: () => api.post("/perm/roles/init/"),
+  },
 };
 
 // Menus
@@ -282,12 +329,28 @@ export interface Judgment {
   concluded_at: string | null;
 }
 
+export interface KarmaRecord {
+  id: string;
+  type: "MERIT" | "DEMERIT";
+  category: string;
+  description: string;
+  original_weight: number;
+  effective_weight: number;
+  years_elapsed: number;
+  decay_factor: number;
+  civilization: string;
+  recorded_at: string;
+  event_date: string | null;
+}
+
 export interface KarmaSummary {
   soul_id: string;
+  soul_name: string;
   merit_score: number;
   demerit_score: number;
   karmic_balance: number;
-  total_records: number;
+  record_count: number;
+  records: KarmaRecord[];
 }
 
 export interface SoulRecord {
@@ -297,6 +360,7 @@ export interface SoulRecord {
   category: string;
   description: string;
   weight: number;
+  event_date?: string | null;
   created_at: string;
 }
 
