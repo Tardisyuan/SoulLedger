@@ -1,7 +1,8 @@
 from django.db import models
+from apps.core.models import AuditUserFields
 
 
-class Tenant(models.Model):
+class Tenant(AuditUserFields, models.Model):
     """A tenant represents a civilization's afterlife system (Chinese Diyu, European Heaven-Hell, Egyptian Duat)."""
 
     code = models.CharField(max_length=50, unique=True, db_index=True)
@@ -22,7 +23,7 @@ class Tenant(models.Model):
         return self.code
 
 
-class Notification(models.Model):
+class Notification(AuditUserFields, models.Model):
     """In-app notification for dispatch invitations, judgment results, etc. (SPEC §7.7)."""
 
     recipient = models.ForeignKey(

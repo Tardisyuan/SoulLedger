@@ -4,6 +4,7 @@ Supports multi-stage approvals across Chinese, European, and Egyptian civilizati
 """
 import uuid
 from django.db import models
+from apps.core.models import AuditUserFields
 from apps.tenants.managers import TenantManager
 
 
@@ -48,7 +49,7 @@ class NodeType(models.TextChoices):
     EXECUTION = "EXECUTION", "执行"
 
 
-class ApprovalWorkflow(models.Model):
+class ApprovalWorkflow(AuditUserFields, models.Model):
     """
     Complete approval workflow instance for a judgment.
     Contains multiple ApprovalNodes representing each stage of approval.
@@ -197,7 +198,7 @@ class ApprovalWorkflow(models.Model):
         return False
 
 
-class WorkflowTemplate(models.Model):
+class WorkflowTemplate(AuditUserFields, models.Model):
     """
     Reusable workflow template definition.
     Stores template structure with nodes as JSON for flexibility.
@@ -253,7 +254,7 @@ class WorkflowTemplate(models.Model):
         return f"{self.name} ({self.civilization} - {self.case_type})"
 
 
-class ApprovalNode(models.Model):
+class ApprovalNode(AuditUserFields, models.Model):
     """
     Individual approval node within a workflow.
     Represents one stage/step in the approval process.

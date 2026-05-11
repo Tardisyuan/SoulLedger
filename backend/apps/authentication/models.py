@@ -3,6 +3,7 @@ Custom user model for SoulLedger.
 """
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from apps.core.models import AuditUserFields
 
 
 class UserRole(models.TextChoices):
@@ -12,7 +13,7 @@ class UserRole(models.TextChoices):
     VIEWER = "VIEWER", "Viewer (访客)"
 
 
-class User(AbstractUser):
+class User(AuditUserFields, AbstractUser):
     """
     Custom user with role field.
     """

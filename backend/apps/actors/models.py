@@ -3,6 +3,7 @@ Actor models — deities, judges, guardians, executors across civilizations.
 """
 import uuid
 from django.db import models
+from apps.core.models import AuditUserFields
 from apps.souls.models import Civilization
 from apps.tenants.managers import TenantManager
 
@@ -15,7 +16,7 @@ class ActorRole(models.TextChoices):
     OVERSEER = "OVERSEER", "Overseer / Admin"
 
 
-class Actor(models.Model):
+class Actor(AuditUserFields, models.Model):
     """
     A supernatural entity (deity, judge, warden, etc.)
     """
@@ -62,6 +63,14 @@ class Actor(models.Model):
         indexes = [
             models.Index(fields=["civilization", "role"]),
             models.Index(fields=["tenant", "civilization"]),
+            models.Index(fields=["role"]),
+            models.Index(fields=["is_active"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'civilization', 'name'],
+                name='unique_actor_tenant_civ_name'
+            ),
         ]
 
     objects = TenantManager()

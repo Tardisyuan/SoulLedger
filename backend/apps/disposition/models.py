@@ -3,6 +3,7 @@ Disposition model — where a soul goes after judgment.
 """
 import uuid
 from django.db import models
+from apps.core.models import AuditUserFields
 from apps.souls.models import Soul
 from apps.judgment.models import Judgment
 from apps.tenants.managers import TenantManager
@@ -15,7 +16,7 @@ class MemoryResetMechanism(models.TextChoices):
     NONE = "NONE", "No Reset"
 
 
-class Disposition(models.Model):
+class Disposition(AuditUserFields, models.Model):
     """
     The destination and sentence given to a soul after judgment.
     """
