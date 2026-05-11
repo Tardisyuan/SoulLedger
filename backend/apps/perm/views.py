@@ -1,13 +1,30 @@
 """
-Permission views
+Permission views — full CRUD for permissions and role-permission assignment
 """
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Permission, RolePermission, DEFAULT_PERMISSIONS, ROLE_PERMISSIONS
-from .serializers import PermissionSerializer
+from .models import Permission, RolePermission, Role, DEFAULT_PERMISSIONS, ROLE_PERMISSIONS, DEFAULT_ROLES
+from .serializers import (
+    PermissionSerializer,
+    PermissionCreateUpdateSerializer,
+    RolePermissionAssignSerializer,
+    RoleSerializer,
+    RoleCreateUpdateSerializer,
+)
+
+
+def _get_role_permissions_from_db(role):
+    """Fetch permission codenames for a role from DB, fallback to hardcoded dict."""
+    if RolePermission.objects.exists():
+        return list(
+            RolePermission.objects.filter(role=role)
+            .select_related("permission")
+            .values_list("permission__codename", flat=True)
+        )
+    return ROLE_PERMISSIONS.get(role, [])
 
 
 @api_view(["GET"])
@@ -22,29 +39,114 @@ def list_permissions(request):
     return Response(serializer.data)
 
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_permission(request):
+    """
+    POST /api/v1/perm/permissions/create/
+    创建新权限（仅 ADMIN）
+    """
+    if request.user.role != "ADMIN":
+        return Response({"error": "Only ADMIN can create permissions"}, status=status.HTTP_403_FORBIDDEN)
+
+    serializer = PermissionCreateUpdateSerializer(data=request.data)
+    if serializer.is_valid():
+        # Check duplicate codename
+        if Permission.objects.filter(codename=serializer.validated_data["codename"]).exists():
+            return Response(
+                {"error": "Permission with this codename already exists"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        permission = serializer.save()
+        return Response(PermissionSerializer(permission).data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["PUT", "DELETE"])
+@permission_classes([IsAuthenticated])
+def update_delete_permission(request, pk):
+    """
+    PUT /api/v1/perm/permissions/<pk>/
+    DELETE /api/v1/perm/permissions/<pk>/
+    更新/删除权限（仅 ADMIN）
+    """
+    if request.user.role != "ADMIN":
+        return Response({"error": "Only ADMIN can modify permissions"}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        permission = Permission.objects.get(pk=pk)
+    except Permission.DoesNotExist:
+        return Response({"error": "Permission not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "PUT":
+        serializer = PermissionCreateUpdateSerializer(permission, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(PermissionSerializer(permission).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == "DELETE":
+        # Also remove all RolePermission links
+        RolePermission.objects.filter(permission=permission).delete()
+        permission.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_role_permissions(request):
     """
     GET /api/v1/perm/role-permissions/?role=ADMIN
-    获取指定角色的权限列表
+    获取指定角色的权限列表（优先从数据库读，否则回退到硬编码字典）
     """
     role = request.query_params.get("role", request.user.role)
-    if role not in ROLE_PERMISSIONS:
-        return Response(
-            {"error": f"Invalid role: {role}"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    # 获取该角色的所有权限 codename
-    permission_codenames = ROLE_PERMISSIONS.get(role, [])
+    permission_codenames = _get_role_permissions_from_db(role)
     permissions = Permission.objects.filter(codename__in=permission_codenames)
     serializer = PermissionSerializer(permissions, many=True)
+    return Response({
+        "role": role,
+        "permissions": permission_codenames,
+        "details": serializer.data,
+    })
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def assign_role_permissions(request):
+    """
+    POST /api/v1/perm/role-permissions/assign/
+    为角色分配权限（替换该角色的所有权限，仅 ADMIN）
+    """
+    if request.user.role != "ADMIN":
+        return Response({"error": "Only ADMIN can assign permissions"}, status=status.HTTP_403_FORBIDDEN)
+
+    serializer = RolePermissionAssignSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    role = serializer.validated_data["role"]
+    permission_ids = serializer.validated_data["permission_ids"]
+
+    # Validate permission IDs exist
+    valid_ids = set(Permission.objects.filter(id__in=permission_ids).values_list("id", flat=True))
+    invalid_ids = set(permission_ids) - valid_ids
+    if invalid_ids:
+        return Response(
+            {"error": f"Permission IDs not found: {invalid_ids}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Replace all permissions for this role
+    RolePermission.objects.filter(role=role).delete()
+    created = []
+    for perm_id in permission_ids:
+        rp = RolePermission.objects.create(role=role, permission_id=perm_id)
+        created.append(rp.id)
 
     return Response({
         "role": role,
-        "permissions": [p.codename for p in permissions],
-        "details": serializer.data
+        "assigned_count": len(created),
+        "permission_ids": list(valid_ids),
     })
 
 
@@ -56,21 +158,110 @@ def init_permissions(request):
     初始化默认权限（仅 ADMIN 可操作）
     """
     if request.user.role != "ADMIN":
-        return Response(
-            {"error": "Only ADMIN can initialize permissions"},
-            status=status.HTTP_403_FORBIDDEN
-        )
+        return Response({"error": "Only ADMIN can initialize permissions"}, status=status.HTTP_403_FORBIDDEN)
 
     created_count = 0
     for codename, name, category in DEFAULT_PERMISSIONS:
         perm, created = Permission.objects.get_or_create(
             codename=codename,
-            defaults={"name": name, "category": category}
+            defaults={"name": name, "category": category},
         )
         if created:
             created_count += 1
 
     return Response({
         "message": f"Initialized {created_count} permissions",
-        "total": Permission.objects.count()
+        "total": Permission.objects.count(),
+    })
+
+
+# ── Role CRUD ────────────────────────────────────────────────────────────
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def list_roles(request):
+    """
+    GET /api/v1/perm/roles/
+    获取所有角色列表
+    """
+    roles = Role.objects.all()
+    serializer = RoleSerializer(roles, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_role(request):
+    """
+    POST /api/v1/perm/roles/create/
+    创建新角色（仅 ADMIN）
+    """
+    if request.user.role != "ADMIN":
+        return Response({"error": "Only ADMIN can create roles"}, status=status.HTTP_403_FORBIDDEN)
+
+    serializer = RoleCreateUpdateSerializer(data=request.data)
+    if serializer.is_valid():
+        if Role.objects.filter(name=serializer.validated_data["name"]).exists():
+            return Response(
+                {"error": "Role with this name already exists"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        role = serializer.save()
+        return Response(RoleSerializer(role).data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["PUT", "DELETE"])
+@permission_classes([IsAuthenticated])
+def update_delete_role(request, pk):
+    """
+    PUT /api/v1/perm/roles/<pk>/
+    DELETE /api/v1/perm/roles/<pk>/
+    更新/删除角色（仅 ADMIN）
+    """
+    if request.user.role != "ADMIN":
+        return Response({"error": "Only ADMIN can modify roles"}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        role = Role.objects.get(pk=pk)
+    except Role.DoesNotExist:
+        return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "PUT":
+        serializer = RoleCreateUpdateSerializer(role, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(RoleSerializer(role).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == "DELETE":
+        # Also remove all RolePermission links
+        RolePermission.objects.filter(role=role.name).delete()
+        role.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def init_roles(request):
+    """
+    POST /api/v1/perm/roles/init/
+    初始化默认角色（仅 ADMIN）
+    """
+    if request.user.role != "ADMIN":
+        return Response({"error": "Only ADMIN can initialize roles"}, status=status.HTTP_403_FORBIDDEN)
+
+    created_count = 0
+    for name, display_name in DEFAULT_ROLES:
+        role, created = Role.objects.get_or_create(
+            name=name,
+            defaults={"display_name": display_name},
+        )
+        if created:
+            created_count += 1
+
+    return Response({
+        "message": f"Initialized {created_count} roles",
+        "total": Role.objects.count(),
     })

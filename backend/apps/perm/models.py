@@ -2,10 +2,10 @@
 RBAC Permission models — 参考 Snowy SaToken 设计
 """
 from django.db import models
-from apps.tenants.managers import TenantManager
+from apps.core.models import AuditUserFields
 
 
-class Permission(models.Model):
+class Permission(AuditUserFields):
     """
     权限定义，如 soul.read, judgment.execute
     """
@@ -22,7 +22,7 @@ class Permission(models.Model):
         return f"{self.codename} ({self.name})"
 
 
-class RolePermission(models.Model):
+class RolePermission(AuditUserFields):
     """
     角色-权限关联
     """
@@ -64,6 +64,22 @@ DEFAULT_PERMISSIONS = [
     ("menu.manage", "菜单管理", "system"),
 ]
 
+class Role(AuditUserFields):
+    """
+    角色定义，如 ADMIN, JUDGE, GUARDIAN, VIEWER
+    """
+    name = models.CharField(max_length=20, unique=True)
+    display_name = models.CharField(max_length=100)
+
+    class Meta:
+        verbose_name = "Role"
+        verbose_name_plural = "Roles"
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.display_name})"
+
+
 # 默认角色权限矩阵
 ROLE_PERMISSIONS = {
     "ADMIN": ["soul.read", "soul.create", "soul.update", "soul.delete",
@@ -76,3 +92,11 @@ ROLE_PERMISSIONS = {
     "GUARDIAN": ["soul.read", "soul.update", "reincarnation.read", "reincarnation.manage"],
     "VIEWER": ["soul.read", "reincarnation.read"],
 }
+
+# 默认角色列表
+DEFAULT_ROLES = [
+    ("ADMIN", "Administrator"),
+    ("JUDGE", "Judge"),
+    ("GUARDIAN", "Guardian"),
+    ("VIEWER", "Viewer"),
+]
