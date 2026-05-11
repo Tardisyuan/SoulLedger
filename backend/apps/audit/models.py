@@ -2,6 +2,7 @@
 Audit log models - 操作审计追溯
 """
 from django.db import models
+from apps.core.models import AuditUserFields
 from apps.tenants.managers import TenantManager
 
 
@@ -15,7 +16,7 @@ class AuditAction(models.TextChoices):
     LOGOUT = "LOGOUT", "登出"
 
 
-class AuditLog(models.Model):
+class AuditLog(AuditUserFields, models.Model):
     """
     审计日志 - 记录所有操作
     """

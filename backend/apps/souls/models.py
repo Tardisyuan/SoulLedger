@@ -4,6 +4,7 @@ Soul core model + state machine.
 import uuid
 from django.db import models
 from django.utils import timezone
+from apps.core.models import AuditUserFields
 from apps.tenants.managers import TenantManager
 
 
@@ -21,7 +22,7 @@ class SoulState(models.TextChoices):
     LOST = "LOST", "Lost/Suspended"
 
 
-class Soul(models.Model):
+class Soul(AuditUserFields, models.Model):
     """
     Core soul entity. All other records link back to a Soul.
     Civilization is now derived from tenant FK.

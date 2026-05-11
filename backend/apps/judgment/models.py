@@ -3,6 +3,7 @@ Judgment model — records of soul judgment proceedings.
 """
 import uuid
 from django.db import models
+from apps.core.models import AuditUserFields
 from apps.souls.models import Soul, Civilization, SoulState
 from apps.tenants.managers import TenantManager
 
@@ -20,7 +21,7 @@ class JudgmentMethod(models.TextChoices):
     DIABOLICAL_TRIAL = "DIABOLICAL_TRIAL", "Diabolical Trial (European Hell)"
 
 
-class Judgment(models.Model):
+class Judgment(AuditUserFields, models.Model):
     """
     A single judgment proceeding for a soul.
     """

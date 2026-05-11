@@ -3,6 +3,7 @@ Reincarnation model — tracks rebirth cycles.
 """
 import uuid
 from django.db import models
+from apps.core.models import AuditUserFields
 from apps.souls.models import Soul
 from apps.tenants.managers import TenantManager
 
@@ -14,7 +15,7 @@ class RebirthForm(models.TextChoices):
     OTHER = "OTHER", "Other"
 
 
-class Reincarnation(models.Model):
+class Reincarnation(AuditUserFields, models.Model):
     """
     A single reincarnation event for a soul.
     """

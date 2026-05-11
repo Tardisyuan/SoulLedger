@@ -2,10 +2,11 @@
 Menu models for dynamic navigation based on user roles
 """
 from django.db import models
+from apps.core.models import AuditUserFields
 from apps.tenants.managers import TenantManager
 
 
-class Menu(models.Model):
+class Menu(AuditUserFields, models.Model):
     """
     菜单模型 - 参考 Snowy 的动态菜单设计
     """
