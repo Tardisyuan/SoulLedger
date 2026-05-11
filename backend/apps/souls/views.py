@@ -47,9 +47,15 @@ class SoulViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         tenant = getattr(self.request, 'tenant', None)
-        # Inject tenant into validated_data so the serializer's create() can use it
-        serializer.validated_data['tenant'] = tenant
+        # Fall back to user's tenant if not set on request
+        if not tenant:
+            user = getattr(self.request, 'user', None)
+            if user and getattr(user, 'tenant', None):
+                tenant = user.tenant
         soul = serializer.save()
+        if tenant:
+            soul.tenant = tenant
+            soul.save(update_fields=['tenant'])
         EventService.log_soul_created(soul)
 
     @action(detail=True, methods=["post"])
