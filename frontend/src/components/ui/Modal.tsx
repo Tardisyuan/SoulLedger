@@ -18,7 +18,7 @@ interface BaseModalProps {
 
 export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModalProps) {
   return (
-    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+    <Dialog open={isOpen} onClose={onClose} className="relative z-[9999]">
       {/* Backdrop */}
       <DialogBackdrop
         transition
