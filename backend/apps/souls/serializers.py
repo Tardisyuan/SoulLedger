@@ -28,6 +28,7 @@ class SoulSerializer(serializers.ModelSerializer):
     karmic_balance = serializers.IntegerField(read_only=True)
     tenant_code = serializers.CharField(source="tenant.code", read_only=True)
     records = SoulRecordSerializer(many=True, read_only=True)
+    tenant = serializers.PrimaryKeyRelatedField(read_only=True)
 
     # Field-level access control: VIEWER cannot see merit/demerit scores
     merit_score = serializers.SerializerMethodField()
@@ -36,7 +37,7 @@ class SoulSerializer(serializers.ModelSerializer):
     class Meta:
         model = Soul
         fields = [
-            "id", "name", "current_state", "tenant_code",
+            "id", "name", "current_state", "tenant_code", "tenant",
             "birth_date", "death_date", "origin_location", "birth_name",
             "description", "merit_score", "demerit_score",
             "karmic_balance", "created_at", "updated_at", "records",
