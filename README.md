@@ -174,5 +174,22 @@ Chinese Diyu realms and actors are pre-seeded:
 
 ---
 
+## Design Reference
+
+Menu and permission system design inspired by [Snowy](https://github.com/xiaonuobase/Snowy) (Apache-2.0).
+
+### Snowy's Unified Resource Model
+Snowy uses a single `SYS_RESOURCE` table where `MENU_TYPE` distinguishes menus (`MENU`, `CATALOG`, `IFRAME`) from permissions (`BUTTON`). Roles are assigned to resources via `SYS_RELATION` with categories `SYS_ROLE_HAS_RESOURCE` and `SYS_ROLE_HAS_PERMISSION`.
+
+### Current SoulLedger State
+- **Menu CRUD**: Complete (backend + frontend)
+- **Permission CRUD**: Backend read-only; frontend display-only (hardcoded `ROLE_PERMISSIONS` dict)
+- **Role-Permission assignment**: Hardcoded; no UI
+- **Permission enforcement**: Middleware missing; relies on view-level role checks only
+
+See [AGENTS.md](./AGENTS.md) for pending work on completing the menu+permission CRUD layer.
+
+---
+
 *Maintained by: Tardisyuan*
 *GitHub: https://github.com/Tardisyuan/SoulLedger*
