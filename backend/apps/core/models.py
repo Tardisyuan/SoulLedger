@@ -48,7 +48,8 @@ class AuditUserFields(SoftDeleteMixin, models.Model):
         current_user = get_current_user()
 
         # Set create_time and create_user on first save
-        if not self.pk:
+        # Use _state.adding instead of not pk because UUIDs are set at instance creation
+        if self._state.adding:
             if not self.create_time:
                 self.create_time = timezone.now()
             # Auto-fill create_user from current request context

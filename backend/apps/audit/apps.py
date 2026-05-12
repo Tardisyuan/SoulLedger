@@ -18,7 +18,12 @@ class AuditConfig(AppConfig):
                 continue
             if model._meta.abstract:
                 continue
+            # Skip AuditLog itself to avoid infinite loops during migrations
             if model._meta.label.split('.')[-1].startswith('Audit'):
+                continue
+            # Also explicitly skip the AuditLog model
+            from apps.audit.models import AuditLog
+            if model is AuditLog:
                 continue
 
             post_save.connect(_on_post_save, sender=model, dispatch_uid=f"audit_{model.__name__}_post_save")
