@@ -37,37 +37,39 @@ def auth_client(api_client, admin_user):
     import contextlib
     from apps.core import request_local as rl_module
 
-    # Create a context manager that keeps thread-local set during API calls
+    # Create a context manager that keeps contextvar set during API calls
     @contextlib.contextmanager
     def set_user_context():
         # Save original state
-        old_user = getattr(rl_module._thread_locals, 'user', None)
-        old_request = getattr(rl_module._thread_locals, 'request', None)
+        old_user = rl_module.get_current_user()
+        old_request = rl_module.get_current_request()
 
         # Set user for this context
-        rl_module._thread_locals.user = admin_user
-        rl_module._thread_locals.request = None
+        rl_module.set_current_user(admin_user)
+        rl_module.set_current_request(None)
 
         try:
             yield
         finally:
             # Restore original state
-            rl_module._thread_locals.user = old_user
-            rl_module._thread_locals.request = old_request
+            rl_module.clear_current_user()
+            if old_user:
+                rl_module.set_current_user(old_user)
+            if old_request:
+                rl_module.set_current_request(old_request)
 
     # Store context manager on the client for use in tests
     api_client.force_authenticate(user=admin_user)
     api_client.set_user_context = set_user_context
 
-    # Also set thread-local at module level for direct model operations
-    rl_module._thread_locals.user = admin_user
-    rl_module._thread_locals.request = None
+    # Also set contextvar at module level for direct model operations
+    rl_module.set_current_user(admin_user)
+    rl_module.set_current_request(None)
 
     yield api_client
 
-    # Clear thread-local after test
-    rl_module._thread_locals.user = None
-    rl_module._thread_locals.request = None
+    # Clear contextvar after test
+    rl_module.clear_current_user()
 
 
 @pytest.mark.django_db
