@@ -1,36 +1,39 @@
 """
-Thread-local tenant manager for automatic tenant filtering.
+Context-variable tenant manager for automatic tenant filtering.
 
 Usage:
     from apps.tenants.managers import TenantManager
     class MyModel(models.Model):
         objects = TenantManager()
+
+Uses contextvars.ContextVar instead of threading.local to properly
+support async contexts and Celery workers.
 """
-import threading
+import contextvars
 from django.db import models
 
-_tenant_local = threading.local()
+# Context variable for tenant (Celery-safe)
+_tenant_var: contextvars.ContextVar[object] = contextvars.ContextVar('tenant', default=None)
 
 
 def get_current_tenant():
-    """Return the current thread-local tenant, or None if not set."""
-    return getattr(_tenant_local, 'tenant', None)
+    """Return the current context-variable tenant, or None if not set."""
+    return _tenant_var.get()
 
 
 def set_current_tenant(tenant):
-    """Set the current thread-local tenant."""
-    _tenant_local.tenant = tenant
+    """Set the current context-variable tenant."""
+    _tenant_var.set(tenant)
 
 
 def clear_current_tenant():
-    """Clear the current thread-local tenant."""
-    if hasattr(_tenant_local, 'tenant'):
-        del _tenant_local.tenant
+    """Clear the current context-variable tenant."""
+    _tenant_var.set(None)
 
 
 class TenantManager(models.Manager):
     """
-    Manager that automatically filters querysets by the current thread-local tenant.
+    Manager that automatically filters querysets by the current context-variable tenant.
     When no tenant is set, returns unfiltered queryset (admin/superuser bypass).
     """
 

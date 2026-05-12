@@ -1,9 +1,12 @@
 """
-Thread-local storage for current request context.
+Context-variable storage for current request context.
 
 Allows accessing the current Django request and user from anywhere
 (e.g., in model save() methods, signals) without passing request objects
 through the entire call stack.
+
+Uses contextvars.ContextVar instead of threading.local to properly
+support async contexts and Celery workers.
 
 Usage:
     from apps.core.request_local import set_current_user, get_current_user
@@ -14,36 +17,38 @@ Usage:
     # In model save() or signals:
     user = get_current_user()
 """
-import threading
+import contextvars
 from typing import Optional
 
-_thread_locals = threading.local()
+# Context variables for request context (Celery-safe)
+_user_var: contextvars.ContextVar[Optional[object]] = contextvars.ContextVar('user', default=None)
+_request_var: contextvars.ContextVar[Optional[object]] = contextvars.ContextVar('request', default=None)
 
 
 def set_current_user(user):
-    """Store the current authenticated user in thread-local storage."""
-    _thread_locals.user = user
+    """Store the current authenticated user in context variable."""
+    _user_var.set(user)
 
 
 def get_current_user():
-    """Get the current authenticated user from thread-local storage."""
-    return getattr(_thread_locals, 'user', None)
+    """Get the current authenticated user from context variable."""
+    return _user_var.get()
 
 
 def set_current_request(request):
-    """Store the current Django request in thread-local storage."""
-    _thread_locals.request = request
+    """Store the current Django request in context variable."""
+    _request_var.set(request)
 
 
 def get_current_request():
-    """Get the current Django request from thread-local storage."""
-    return getattr(_thread_locals, 'request', None)
+    """Get the current Django request from context variable."""
+    return _request_var.get()
 
 
 def clear_current_user():
-    """Clear the thread-local user (call at end of request)."""
-    _thread_locals.user = None
-    _thread_locals.request = None
+    """Clear the context variable user (call at end of request)."""
+    _user_var.set(None)
+    _request_var.set(None)
 
 
 class RequestContextMiddleware:
