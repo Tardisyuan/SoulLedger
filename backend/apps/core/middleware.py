@@ -94,12 +94,12 @@ class PermissionMiddleware:
 
             return self.get_response(request)
         finally:
-            # Always clear thread-local at end of request
+            # Always clear context-variable at end of request
             clear_current_user()
 
     def process_view(self, request, view_func, view_args, view_kwargs):
         """
-        Set thread-local user after DRF request is set up but before view is called.
+        Set context-variable user after DRF request is set up but before view is called.
 
         DRF's force_authenticate sets request.user on the DRF Request object,
         which is created in APIView.initialize_request() before process_view runs.
@@ -125,7 +125,7 @@ class PermissionMiddleware:
             logger.debug(f"process_view: fallback to Django user={user}")
 
         if user is not None and getattr(user, 'is_authenticated', False):
-            logger.debug(f"process_view: setting thread-local user={user}")
+            logger.debug(f"process_view: setting context-variable user={user}")
             set_current_user(user)
             set_current_request(request)
 

@@ -22,15 +22,76 @@ class Permission(AuditUserFields):
         return f"{self.codename} ({self.name})"
 
 
+class DataScope(AuditUserFields):
+    """
+    数据范围定义，用于行级权限过滤
+    """
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=50, unique=True)
+    filter_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('realm', 'Realm范围'),
+            ('civilization', '文明范围'),
+            ('state', '状态范围'),
+            ('custom', '自定义'),
+        ],
+        default='custom'
+    )
+    # 过滤规则，存储为JSON如 {"realm_id": 1} 或 {"civilization": "CHINA"}
+    filter_rules = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        verbose_name = "Data Scope"
+        verbose_name_plural = "Data Scopes"
+        ordering = ["code"]
+
+    def __str__(self):
+        return f"{self.code} ({self.name})"
+
+
+class Role(AuditUserFields):
+    """
+    角色定义，如 ADMIN, JUDGE, GUARDIAN, VIEWER
+    """
+    name = models.CharField(max_length=20, unique=True)
+    display_name = models.CharField(max_length=100)
+
+    class Meta:
+        verbose_name = "Role"
+        verbose_name_plural = "Roles"
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.display_name})"
+
+
 class RolePermission(AuditUserFields):
     """
     角色-权限关联
     """
-    role = models.CharField(max_length=20)  # ADMIN, JUDGE, GUARDIAN, VIEWER
+    role = models.ForeignKey(
+        Role,
+        on_delete=models.CASCADE,
+        related_name="permissions"
+    )
     permission = models.ForeignKey(
         Permission,
         on_delete=models.CASCADE,
         related_name="role_permissions"
+    )
+    # 权限生效条件，如 {"current_state": ["PENDING", "APPEALING"]}
+    conditions = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='权限生效条件，如 {"current_state": ["PENDING", "APPEALING"]}'
+    )
+    # 数据范围，用于更复杂的行级过滤
+    data_scope = models.ForeignKey(
+        DataScope,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='role_permissions'
     )
 
     class Meta:
@@ -39,7 +100,7 @@ class RolePermission(AuditUserFields):
         verbose_name_plural = "Role Permissions"
 
     def __str__(self):
-        return f"{self.role} -> {self.permission.codename}"
+        return f"{self.role.name} -> {self.permission.codename}"
 
 
 # 默认权限矩阵
@@ -64,21 +125,6 @@ DEFAULT_PERMISSIONS = [
     ("menu.manage", "菜单管理", "system"),
 ]
 
-class Role(AuditUserFields):
-    """
-    角色定义，如 ADMIN, JUDGE, GUARDIAN, VIEWER
-    """
-    name = models.CharField(max_length=20, unique=True)
-    display_name = models.CharField(max_length=100)
-
-    class Meta:
-        verbose_name = "Role"
-        verbose_name_plural = "Roles"
-        ordering = ["name"]
-
-    def __str__(self):
-        return f"{self.name} ({self.display_name})"
-
 
 # 默认角色权限矩阵
 ROLE_PERMISSIONS = {
@@ -100,3 +146,58 @@ DEFAULT_ROLES = [
     ("GUARDIAN", "Guardian"),
     ("VIEWER", "Viewer"),
 ]
+
+
+class RowLevelDataScope(models.Model):
+    """
+    行级数据范围 - 行级访问控制
+    例如：JUDGE 角色只能看和处理 status=PENDING 的灵魂
+    """
+    id = models.UUIDField(primary_key=True, default=models.UUIDField().default, editable=False)
+
+    # 关联角色（使用 perm.Role 的 name 字段）
+    role = models.ForeignKey(
+        Role,
+        on_delete=models.CASCADE,
+        related_name='row_level_scopes'
+    )
+
+    # 文明范围（使用 CharField，因为 souls.Civilization 是 TextChoices 不是模型）
+    civilization = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        help_text='文明：CHINA, EUROPE, EGYPT'
+    )
+
+    # 模型名称
+    model_name = models.CharField(max_length=50)  # 'Soul', 'Judgment'
+
+    # 过滤条件（JSON 存储）
+    filter_conditions = models.JSONField(
+        default=dict,
+        help_text='过滤条件，如 {"current_state": "ALIVE"}'
+    )
+
+    # 权限类型
+    SCOPE_TYPES = [
+        ('READ', '读取'),
+        ('WRITE', '写入'),
+        ('DELETE', '删除'),
+    ]
+    scope_type = models.CharField(max_length=10, choices=SCOPE_TYPES)
+
+    # 优先级（数值越大优先级越高）
+    priority = models.IntegerField(default=0)
+
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'permissions_row_level_data_scope'
+        indexes = [
+            models.Index(fields=['role', 'model_name']),
+        ]
+
+    def __str__(self):
+        return f"{self.role.name} - {self.model_name} ({self.scope_type})"
