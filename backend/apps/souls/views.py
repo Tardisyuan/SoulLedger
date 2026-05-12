@@ -46,17 +46,41 @@ class SoulViewSet(viewsets.ModelViewSet):
         return SoulSerializer
 
     def perform_create(self, serializer):
-        tenant = getattr(self.request, 'tenant', None)
-        # Fall back to user's tenant if not set on request
-        if not tenant:
-            user = getattr(self.request, 'user', None)
-            if user and getattr(user, 'tenant', None):
-                tenant = user.tenant
-        soul = serializer.save()
-        if tenant:
-            soul.tenant = tenant
-            soul.save(update_fields=['tenant'])
-        EventService.log_soul_created(soul)
+        from apps.core.request_local import set_current_user, set_current_request, clear_current_user
+        set_current_user(self.request.user)
+        set_current_request(self.request)
+        try:
+            tenant = getattr(self.request, 'tenant', None)
+            # Fall back to user's tenant if not set on request
+            if not tenant:
+                user = getattr(self.request, 'user', None)
+                if user and getattr(user, 'tenant', None):
+                    tenant = user.tenant
+            soul = serializer.save()
+            if tenant:
+                soul.tenant = tenant
+                soul.save(update_fields=['tenant'])
+            EventService.log_soul_created(soul)
+        finally:
+            clear_current_user()
+
+    def perform_update(self, serializer):
+        from apps.core.request_local import set_current_user, set_current_request, clear_current_user
+        set_current_user(self.request.user)
+        set_current_request(self.request)
+        try:
+            super().perform_update(serializer)
+        finally:
+            clear_current_user()
+
+    def perform_destroy(self, instance):
+        from apps.core.request_local import set_current_user, set_current_request, clear_current_user
+        set_current_user(self.request.user)
+        set_current_request(self.request)
+        try:
+            super().perform_destroy(instance)
+        finally:
+            clear_current_user()
 
     @action(detail=True, methods=["post"])
     def die(self, request, pk=None):

@@ -56,12 +56,14 @@ class PermissionMiddleware:
 
     def __call__(self, request):
         # Set current user in thread-local for AuditUserFields.save()
-        if hasattr(request, 'user') and request.user.is_authenticated:
-            set_current_user(request.user)
+        # This runs BEFORE DRF sets request.user for force_authenticate,
+        # but process_view runs after DRF initialize_request.
+        # So we set user in process_view instead.
+        # Here we just ensure request flows through.
 
         try:
             # Short-circuit for unauthenticated requests — let DRF handle 401
-            if not hasattr(request, 'user') or not request.user.is_authenticated:
+            if not hasattr(request, 'user') or not getattr(request.user, 'is_authenticated', False):
                 return self.get_response(request)
 
             # Short-circuit for ADMIN role — bypass all permission checks
@@ -94,6 +96,40 @@ class PermissionMiddleware:
         finally:
             # Always clear thread-local at end of request
             clear_current_user()
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        """
+        Set thread-local user after DRF request is set up but before view is called.
+
+        DRF's force_authenticate sets request.user on the DRF Request object,
+        which is created in APIView.initialize_request() before process_view runs.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Try to get user from DRF Request (if available via view.request)
+        view = getattr(request, 'view', None)
+        user = None
+        drf_request = None
+
+        if view is not None:
+            # view.request is the DRF Request after initialize_request
+            drf_request = getattr(view, 'request', None)
+            if drf_request is not None:
+                user = getattr(drf_request, 'user', None)
+                logger.debug(f"process_view: got DRF user={user}, is_auth={getattr(user, 'is_authenticated', False) if user else 'N/A'}")
+
+        # Fallback to Django request user
+        if user is None:
+            user = getattr(request, 'user', None)
+            logger.debug(f"process_view: fallback to Django user={user}")
+
+        if user is not None and getattr(user, 'is_authenticated', False):
+            logger.debug(f"process_view: setting thread-local user={user}")
+            set_current_user(user)
+            set_current_request(request)
+
+        return None
 
     def _has_permission(self, role, codename):
         """

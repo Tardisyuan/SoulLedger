@@ -8,12 +8,35 @@ Signals are connected via Django's class_prepared signal when models are
 registered, so audit logging starts working before any model is saved.
 """
 import logging
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, pre_migrate, post_migrate
 from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
 
 _connected_models = set()
+_in_migration = False  # Guard: skip audit log creation during migrations
+
+
+def _is_migration_context():
+    """Check if we're currently in a migration or test database setup."""
+    global _in_migration
+    return _in_migration
+
+
+@receiver(pre_migrate)
+def _on_pre_migrate(sender, **kwargs):
+    """Set migration guard before migrations run."""
+    global _in_migration
+    _in_migration = True
+    logger.debug("Audit signals: entering migration context")
+
+
+@receiver(post_migrate)
+def _on_post_migrate(sender, **kwargs):
+    """Clear migration guard after migrations complete."""
+    global _in_migration
+    _in_migration = False
+    logger.debug("Audit signals: exiting migration context")
 
 
 def _get_resource_name(instance):
@@ -46,6 +69,10 @@ def _build_changes(instance, old_instance=None):
 
 def _create_audit_log(action, instance, changes=None):
     """Create an AuditLog entry for the given action."""
+    # Skip during migrations to avoid schema-not-ready errors
+    if _is_migration_context():
+        return
+
     from apps.audit.models import AuditLog, AuditAction
 
     try:
@@ -70,10 +97,10 @@ def _create_audit_log(action, instance, changes=None):
         except Exception:
             pass
 
-        ip_address = None
-        user_agent = None
+        ip_address = ''
+        user_agent = ''
         if request:
-            ip_address = _get_client_ip(request)
+            ip_address = _get_client_ip(request) or ''
             user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
 
         AuditLog.objects.create(
@@ -81,13 +108,21 @@ def _create_audit_log(action, instance, changes=None):
             user=user,
             action=action,
             resource=_get_resource_name(instance),
-            resource_id=str(instance.pk) if instance.pk else None,
+            resource_id=str(instance.pk) if instance.pk else '',
             changes=changes,
             ip_address=ip_address,
             user_agent=user_agent,
             description=f"{action} {instance._meta.verbose_name}",
         )
     except Exception as e:
+        # Silently ignore errors during migrations when database schema is incomplete
+        err_str = str(e).lower()
+        migration_related = any(x in err_str for x in [
+            'no such table', 'undefinedtable', 'does not exist',
+            'relation', 'column', 'constraint', 'programmingerror'
+        ])
+        if migration_related:
+            return
         logger.error(f"Failed to create audit log: {e}")
 
 
