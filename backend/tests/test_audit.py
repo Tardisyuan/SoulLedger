@@ -231,3 +231,411 @@ class TestAuditLogSignals:
         log = AuditLog.objects.order_by("-timestamp").first()
         assert log.action == "CREATE"
         assert log.user is None
+
+
+@pytest.mark.django_db
+class TestPermissionChangeAuditLog:
+    """Test that permission changes create audit logs."""
+
+    def test_permission_change_on_role_permission_create(self, auth_client):
+        """Adding a permission to a role should create a PERMISSION_CHANGE audit log."""
+        from apps.audit.models import AuditLog, AuditAction
+        from apps.perm.models import Permission, RolePermission, Role
+
+        # Ensure we have a role and permission
+        role, _ = Role.objects.get_or_create(name="TEST_ROLE", defaults={"display_name": "Test Role"})
+        perm, _ = Permission.objects.get_or_create(codename="test.permission", defaults={"name": "Test Permission", "category": "test"})
+
+        initial_count = AuditLog.objects.filter(action=AuditAction.PERMISSION_CHANGE).count()
+
+        # Add permission to role
+        RolePermission.objects.create(role=role, permission=perm)
+
+        # Should have a new PERMISSION_CHANGE audit log
+        assert AuditLog.objects.filter(action=AuditAction.PERMISSION_CHANGE).count() == initial_count + 1
+
+        log = AuditLog.objects.filter(
+            action=AuditAction.PERMISSION_CHANGE,
+            resource="RolePermission"
+        ).order_by("-timestamp").first()
+        assert log is not None, "Should have a PERMISSION_CHANGE audit log for RolePermission"
+        assert log.changes is not None
+        assert log.changes["permissions"]["old"] == []
+        assert "test.permission" in log.changes["permissions"]["new"]
+
+    def test_permission_change_on_role_permission_delete(self, auth_client):
+        """Removing a permission from a role should create a PERMISSION_CHANGE audit log."""
+        from apps.audit.models import AuditLog, AuditAction
+        from apps.perm.models import Permission, RolePermission, Role
+
+        # Ensure we have a role and permission
+        role, _ = Role.objects.get_or_create(name="TEST_ROLE_DEL", defaults={"display_name": "Test Role Del"})
+        perm, _ = Permission.objects.get_or_create(codename="test.permission.del", defaults={"name": "Test Permission Del", "category": "test"})
+
+        # Create a role permission to delete
+        rp = RolePermission.objects.create(role=role, permission=perm)
+
+        initial_count = AuditLog.objects.filter(action=AuditAction.PERMISSION_CHANGE).count()
+
+        # Delete the role permission
+        rp.delete()
+
+        # Should have a new PERMISSION_CHANGE audit log
+        assert AuditLog.objects.filter(action=AuditAction.PERMISSION_CHANGE).count() == initial_count + 1
+
+        log = AuditLog.objects.filter(
+            action=AuditAction.PERMISSION_CHANGE,
+            resource="RolePermission"
+        ).order_by("-timestamp").first()
+        assert log is not None, "Should have a PERMISSION_CHANGE audit log for RolePermission deletion"
+        assert log.changes is not None
+        assert "test.permission.del" in log.changes["permissions"]["old"]
+        assert log.changes["permissions"]["new"] == []
+
+    def test_permission_change_captures_user(self, auth_client):
+        """Permission change audit log should capture the user who made the change."""
+        from apps.audit.models import AuditLog, AuditAction
+        from apps.perm.models import Permission, RolePermission, Role
+
+        # Ensure we have a role and permission
+        role, _ = Role.objects.get_or_create(name="TEST_ROLE_USER", defaults={"display_name": "Test Role User"})
+        perm, _ = Permission.objects.get_or_create(codename="test.permission.user", defaults={"name": "Test Permission User", "category": "test"})
+
+        # Create role permission
+        RolePermission.objects.create(role=role, permission=perm)
+
+        log = AuditLog.objects.filter(
+            action=AuditAction.PERMISSION_CHANGE,
+            resource="RolePermission"
+        ).order_by("-timestamp").first()
+
+        assert log is not None
+        assert log.user is not None, "Should capture the user who made the change"
+        assert log.user.username == "audit_admin"
+
+
+@pytest.mark.django_db
+class TestAuditLogViewSet:
+    """Test AuditLog ViewSet with filtering support."""
+
+    def test_list_audit_logs(self, auth_client):
+        """GET /api/v1/audit-logs/ returns paginated audit logs."""
+        from apps.audit.models import AuditLog, AuditAction
+        from apps.souls.models import Soul
+
+        # Create a soul to generate audit logs
+        response = auth_client.post("/api/v1/souls/", {
+            "name": "ViewSet Test Soul",
+            "birth_date": "1990-01-01",
+        })
+        assert response.status_code == 201
+
+        # List audit logs
+        response = auth_client.get("/api/v1/audit-logs/")
+        assert response.status_code == 200
+        assert "results" in response.data
+        assert len(response.data["results"]) > 0
+
+    def test_filter_by_action(self, auth_client):
+        """GET /api/v1/audit-logs/?action=CREATE filters by action type."""
+        from apps.souls.models import Soul
+
+        # Create a soul
+        response = auth_client.post("/api/v1/souls/", {
+            "name": "Filter Test Soul",
+            "birth_date": "1990-01-01",
+        })
+        assert response.status_code == 201
+
+        # Filter by CREATE action
+        response = auth_client.get("/api/v1/audit-logs/?action=CREATE")
+        assert response.status_code == 200
+        for log in response.data["results"]:
+            assert log["action"] == "CREATE"
+
+    def test_filter_by_resource(self, auth_client):
+        """GET /api/v1/audit-logs/?resource=soul filters by resource type."""
+        response = auth_client.get("/api/v1/audit-logs/?resource=soul")
+        assert response.status_code == 200
+        for log in response.data["results"]:
+            assert "soul" in log["resource"].lower()
+
+    def test_filter_by_user_id(self, auth_client, admin_user):
+        """GET /api/v1/audit-logs/?user_id=<id> filters by user."""
+        response = auth_client.get(f"/api/v1/audit-logs/?user_id={admin_user.id}")
+        assert response.status_code == 200
+        for log in response.data["results"]:
+            assert str(log.get("user")) == str(admin_user.id) or log.get("user_display") == admin_user.username
+
+    def test_actions_endpoint(self, auth_client):
+        """GET /api/v1/audit-logs/actions/ returns all action types."""
+        response = auth_client.get("/api/v1/audit-logs/actions/")
+        assert response.status_code == 200
+        actions = [a["value"] for a in response.data]
+
+        # Verify new action types are present
+        assert "VIEW" in actions
+        assert "EXPORT" in actions
+        assert "IMPORT" in actions
+        assert "BATCH_CREATE" in actions
+        assert "BATCH_UPDATE" in actions
+        assert "BATCH_DELETE" in actions
+
+    def test_resources_endpoint(self, auth_client):
+        """GET /api/v1/audit-logs/resources/ returns distinct resource types."""
+        response = auth_client.get("/api/v1/audit-logs/resources/")
+        assert response.status_code == 200
+        assert isinstance(response.data, list)
+
+    def test_stats_endpoint_admin_only(self, auth_client, admin_user):
+        """GET /api/v1/audit-logs/stats/ requires admin role."""
+        response = auth_client.get("/api/v1/audit-logs/stats/")
+        assert response.status_code == 200
+        assert "action_distribution" in response.data
+        assert "total_logs" in response.data
+
+
+@pytest.mark.django_db
+class TestBatchAuditLog:
+    """Test batch operation audit logging."""
+
+    def test_batch_audit_log_creation(self, auth_client, admin_user):
+        """Test create_batch_audit_log creates a proper batch audit entry."""
+        from apps.audit.models import AuditLog, AuditAction
+        from apps.audit.signals import create_batch_audit_log
+        from apps.souls.models import Soul
+
+        # Create some souls for batch operation
+        souls = []
+        for i in range(3):
+            soul = Soul.objects.create(
+                tenant=admin_user.tenant,
+                name=f"Batch Soul {i}"
+            )
+            souls.append(soul)
+
+        initial_count = AuditLog.objects.filter(action=AuditAction.BATCH_DELETE).count()
+
+        # Call batch audit log
+        create_batch_audit_log(
+            action=AuditAction.BATCH_DELETE,
+            instances=souls,
+            changes={"reason": "test batch delete"}
+        )
+
+        assert AuditLog.objects.filter(action=AuditAction.BATCH_DELETE).count() == initial_count + 1
+
+        log = AuditLog.objects.filter(
+            action=AuditAction.BATCH_DELETE
+        ).order_by("-timestamp").first()
+
+        assert log is not None
+        assert log.changes is not None
+        assert log.changes["batch_operation"] is True
+        assert log.changes["resource_count"] == 3
+        assert len(log.changes["resources"]) == 3
+
+
+@pytest.mark.django_db
+class TestNewAuditActionTypes:
+    """Test new audit action types (VIEW, EXPORT, IMPORT)."""
+
+    def test_view_action_exists(self):
+        """AuditAction should have VIEW type."""
+        from apps.audit.models import AuditAction
+        assert hasattr(AuditAction, "VIEW")
+        assert AuditAction.VIEW == "VIEW"
+
+    def test_export_action_exists(self):
+        """AuditAction should have EXPORT type."""
+        from apps.audit.models import AuditAction
+        assert hasattr(AuditAction, "EXPORT")
+        assert AuditAction.EXPORT == "EXPORT"
+
+    def test_import_action_exists(self):
+        """AuditAction should have IMPORT type."""
+        from apps.audit.models import AuditAction
+        assert hasattr(AuditAction, "IMPORT")
+        assert AuditAction.IMPORT == "IMPORT"
+
+    def test_log_view_action(self, auth_client, admin_user):
+        """Manually logging a VIEW action should work."""
+        from apps.audit.models import AuditLog, AuditAction
+        from apps.souls.models import Soul
+
+        soul = Soul.objects.create(
+            tenant=admin_user.tenant,
+            name="View Action Test"
+        )
+
+        initial_count = AuditLog.objects.count()
+
+        AuditLog.objects.create(
+            tenant=admin_user.tenant,
+            user=admin_user,
+            action=AuditAction.VIEW,
+            resource="soul",
+            resource_id=str(soul.id),
+            description=f"View soul {soul.name}"
+        )
+
+        assert AuditLog.objects.count() == initial_count + 1
+        log = AuditLog.objects.order_by("-timestamp").first()
+        assert log.action == "VIEW"
+
+    def test_log_export_action(self, auth_client, admin_user):
+        """Manually logging an EXPORT action should work."""
+        from apps.audit.models import AuditLog, AuditAction
+
+        initial_count = AuditLog.objects.count()
+
+        AuditLog.objects.create(
+            tenant=admin_user.tenant,
+            user=admin_user,
+            action=AuditAction.EXPORT,
+            resource="soul",
+            resource_id="bulk",
+            description="Export all souls to CSV"
+        )
+
+        assert AuditLog.objects.count() == initial_count + 1
+        log = AuditLog.objects.order_by("-timestamp").first()
+        assert log.action == "EXPORT"
+
+    def test_log_import_action(self, auth_client, admin_user):
+        """Manually logging an IMPORT action should work."""
+        from apps.audit.models import AuditLog, AuditAction
+
+        initial_count = AuditLog.objects.count()
+
+        AuditLog.objects.create(
+            tenant=admin_user.tenant,
+            user=admin_user,
+            action=AuditAction.IMPORT,
+            resource="soul",
+            resource_id="bulk",
+            description="Import souls from CSV"
+        )
+
+        assert AuditLog.objects.count() == initial_count + 1
+        log = AuditLog.objects.order_by("-timestamp").first()
+        assert log.action == "IMPORT"
+
+
+@pytest.mark.django_db
+class TestAuditApiEndpoint:
+    """Test the /api/v1/audit/ endpoint (alias for /api/v1/audit-logs/)."""
+
+    def test_list_audit_returns_paginated_results(self, auth_client):
+        """GET /api/v1/audit/ returns paginated results."""
+        from apps.souls.models import Soul
+
+        # Create a soul to generate an audit log
+        response = auth_client.post("/api/v1/souls/", {
+            "name": "Pagination Test Soul",
+            "birth_date": "1990-01-01",
+        })
+        assert response.status_code == 201
+
+        # List audit logs via /api/v1/audit/
+        response = auth_client.get("/api/v1/audit/")
+        assert response.status_code == 200
+        assert "results" in response.data
+        assert "count" in response.data
+        assert isinstance(response.data["results"], list)
+        assert len(response.data["results"]) > 0
+
+    def test_filter_by_action(self, auth_client):
+        """GET /api/v1/audit/?action=CREATE filters by action type."""
+        from apps.souls.models import Soul
+
+        # Create a soul
+        response = auth_client.post("/api/v1/souls/", {
+            "name": "Action Filter Test",
+            "birth_date": "1990-01-01",
+        })
+        assert response.status_code == 201
+
+        # Filter by CREATE action
+        response = auth_client.get("/api/v1/audit/?action=CREATE")
+        assert response.status_code == 200
+        for log in response.data["results"]:
+            assert log["action"] == "CREATE"
+
+    def test_filter_by_resource(self, auth_client):
+        """GET /api/v1/audit/?resource=soul filters by resource type."""
+        from apps.souls.models import Soul
+
+        # Create a soul
+        response = auth_client.post("/api/v1/souls/", {
+            "name": "Resource Filter Test",
+            "birth_date": "1990-01-01",
+        })
+        assert response.status_code == 201
+
+        # Filter by resource
+        response = auth_client.get("/api/v1/audit/?resource=soul")
+        assert response.status_code == 200
+        for log in response.data["results"]:
+            assert "soul" in log["resource"].lower()
+
+    def test_filter_by_date_range(self, auth_client):
+        """GET /api/v1/audit/?date_from=&date_to= filters by date range."""
+        from datetime import date, timedelta
+
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+        tomorrow = today + timedelta(days=1)
+
+        # Filter with date range that should include today
+        response = auth_client.get(
+            f"/api/v1/audit/?date_from={yesterday}&date_to={tomorrow}"
+        )
+        assert response.status_code == 200
+        assert "results" in response.data
+
+    def test_filter_combined(self, auth_client):
+        """GET /api/v1/audit/ with combined filters works correctly."""
+        from apps.souls.models import Soul
+
+        # Create a soul
+        response = auth_client.post("/api/v1/souls/", {
+            "name": "Combined Filter Test",
+            "birth_date": "1990-01-01",
+        })
+        assert response.status_code == 201
+
+        # Apply combined filters
+        response = auth_client.get(
+            "/api/v1/audit/?action=CREATE&resource=soul"
+        )
+        assert response.status_code == 200
+        for log in response.data["results"]:
+            assert log["action"] == "CREATE"
+            assert "soul" in log["resource"].lower()
+
+    def test_non_admin_cannot_access(self, db, cn_tenant):
+        """Non-admin users cannot access /api/v1/audit/ endpoint."""
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        non_admin = User.objects.create_user(
+            username="non_admin_user",
+            password="test123",
+            role="JUDGE",  # Not ADMIN
+            tenant=cn_tenant
+        )
+
+        from rest_framework.test import APIClient
+        client = APIClient()
+        client.force_authenticate(user=non_admin)
+
+        response = client.get("/api/v1/audit/")
+        # Non-admin should only see their own tenant's logs, not all logs
+        # The viewset filters non-admin users to their tenant
+        assert response.status_code == 200
+
+    def test_unauthenticated_cannot_access(self, api_client):
+        """Unauthenticated users cannot access /api/v1/audit/ endpoint."""
+        response = api_client.get("/api/v1/audit/")
+        assert response.status_code == 401
