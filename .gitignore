@@ -9,6 +9,24 @@ staticfiles/
 
 .next/
 .env.local
-.env.local
-.env.local
 skills/
+
+# Runtime files
+scripts/logs/
+scripts/pids/
+*.pid
+
+# Claude Code / Swarm
+.claude/
+.claude-flow/
+.swarm/
+ruvector.db
+
+# TypeScript build cache
+frontend/tsconfig.tsbuildinfo
+
+# Screenshots/docs
+docs/
+
+# Scripts
+scripts/restart-*.sh

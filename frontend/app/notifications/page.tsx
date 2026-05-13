@@ -80,7 +80,17 @@ export default function NotificationsPage() {
     <div className="max-w-3xl mx-auto p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">{t("notifications.title")}</h1>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <span className="text-2xl">🔔</span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-amber-500 text-black text-xs font-bold rounded-full min-w-[18px] text-center">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </div>
+          <h1 className="text-2xl font-bold">{t("notifications.title")}</h1>
+        </div>
         {unreadCount > 0 && (
           <button
             onClick={handleMarkAllRead}

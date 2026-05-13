@@ -63,8 +63,8 @@ export default function AuditPage() {
       };
       if (actionFilter) params.action = actionFilter;
       if (resourceFilter) params.resource = resourceFilter;
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
+      if (dateFrom) params.start_date = dateFrom;
+      if (dateTo) params.end_date = dateTo;
 
       const res = await auditApi.list(params);
       return res.data as PaginatedResponse<AuditLogEntry>;
