@@ -20,6 +20,9 @@ export default function SoulsPage() {
   const [stateFilter, setStateFilter] = useState("");
   const [civilizationFilter, setCivilizationFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [karmaMin, setKarmaMin] = useState("");
+  const [karmaMax, setKarmaMax] = useState("");
+  const [ordering, setOrdering] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Build query params from filter state
@@ -29,10 +32,13 @@ export default function SoulsPage() {
     EUROPEAN: "EU_HEAVEN_HELL",
     EGYPTIAN: "EG_DUAT",
   };
-  const params: Record<string, string> = {};
-  if (stateFilter) params.current_state = stateFilter;
-  if (civilizationFilter) params.tenant__code = civilizationToTenantCode[civilizationFilter] || civilizationFilter;
+  const params: Record<string, string | number | undefined> = {};
+  if (stateFilter) params.state = stateFilter;
+  if (civilizationFilter) params.civilization = civilizationFilter;
   if (search) params.search = search;
+  if (karmaMin) params.karma_min = parseInt(karmaMin, 10);
+  if (karmaMax) params.karma_max = parseInt(karmaMax, 10);
+  if (ordering) params.ordering = ordering;
 
   // TanStack Query — automatic caching, background refetch, loading/error states
   const { data, isLoading, error, refetch } = useSouls(
@@ -121,6 +127,39 @@ export default function SoulsPage() {
             {civilizations.map((c) => (
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
+          </select>
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              placeholder={t("souls.karma_min")}
+              value={karmaMin}
+              onChange={(e) => setKarmaMin(e.target.value)}
+              onBlur={() => refetch()}
+              className="w-20 bg-surface-2 border border-hairline rounded-md px-2 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500"
+            />
+            <span className="text-ink-muted text-sm">-</span>
+            <input
+              type="number"
+              placeholder={t("souls.karma_max")}
+              value={karmaMax}
+              onChange={(e) => setKarmaMax(e.target.value)}
+              onBlur={() => refetch()}
+              className="w-20 bg-surface-2 border border-hairline rounded-md px-2 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500"
+            />
+          </div>
+          <select
+            value={ordering}
+            onChange={(e) => {
+              setOrdering(e.target.value);
+              refetch();
+            }}
+            className="bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+          >
+            <option value="">{t("souls.order_default")}</option>
+            <option value="name">{t("souls.order_name")}</option>
+            <option value="-name">{t("souls.order_name_desc")}</option>
+            <option value="karmic_balance">{t("souls.order_karma")}</option>
+            <option value="-karmic_balance">{t("souls.order_karma_desc")}</option>
           </select>
         </div>
 

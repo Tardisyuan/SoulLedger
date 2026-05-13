@@ -17,7 +17,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 
 export const soulKeys = {
   all: ["souls"] as const,
-  list: (params?: Record<string, string>) =>
+  list: (params?: Record<string, string | number | undefined>) =>
     [...soulKeys.all, "list", params] as const,
   detail: (id: string) => [...soulKeys.all, "detail", id] as const,
   karma: (id: string) => [...soulKeys.all, "karma", id] as const,
@@ -25,7 +25,7 @@ export const soulKeys = {
 
 // ── Souls ───────────────────────────────────────────────────────────
 
-export function useSouls(params?: Record<string, string>) {
+export function useSouls(params?: Record<string, string | number | undefined>) {
   return useQuery({
     queryKey: soulKeys.list(params),
     queryFn: async () => {
