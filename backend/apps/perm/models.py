@@ -53,9 +53,18 @@ class DataScope(AuditUserFields):
 class Role(AuditUserFields):
     """
     角色定义，如 ADMIN, JUDGE, GUARDIAN, VIEWER
+    支持层级继承，子角色继承父角色的权限
     """
     name = models.CharField(max_length=20, unique=True)
     display_name = models.CharField(max_length=100)
+    # 父角色，用于层级继承
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='children'
+    )
 
     class Meta:
         verbose_name = "Role"
@@ -64,6 +73,48 @@ class Role(AuditUserFields):
 
     def __str__(self):
         return f"{self.name} ({self.display_name})"
+
+    def get_inherited_permissions(self):
+        """
+        获取继承的权限（包含自己的权限和所有祖先的权限）
+        通过递归获取父角色权限形成继承链
+        """
+        # 获取自己的直接权限
+        own_permissions = set(
+            rp.permission.codename
+            for rp in self.permissions.all()
+        )
+
+        # 递归获取父角色权限
+        inherited_permissions = set()
+        if self.parent:
+            inherited_permissions = self.parent.get_inherited_permissions()
+
+        # 合并：自己的权限 + 继承的权限
+        return own_permissions | inherited_permissions
+
+    def get_ancestors(self):
+        """
+        获取所有祖先角色
+        """
+        ancestors = []
+        current = self.parent
+        while current is not None:
+            ancestors.append(current)
+            current = current.parent
+        return ancestors
+
+    def get_descendants(self):
+        """
+        获取所有后代角色
+        """
+        descendants = []
+        children = list(self.children.all())
+        while children:
+            child = children.pop(0)
+            descendants.append(child)
+            children.extend(list(child.children.all()))
+        return descendants
 
 
 class RolePermission(AuditUserFields):
