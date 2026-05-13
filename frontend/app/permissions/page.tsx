@@ -133,8 +133,12 @@ export default function PermissionsPage() {
     return acc;
   }, {});
 
-  // Initialize selected IDs when role data loads
-  const rolePermIds = (roleData?.details ?? []).map((p: Permission) => p.id);
+  // Sync selectedPermIds when roleData changes
+  useEffect(() => {
+    if (roleData?.details) {
+      setSelectedPermIds(roleData.details.map((p: Permission) => p.id));
+    }
+  }, [roleData]);
 
   function togglePermId(id: number) {
     setSelectedPermIds((prev) =>
@@ -219,7 +223,7 @@ export default function PermissionsPage() {
                         <p className="text-xs text-ink-muted uppercase mb-2">{cat}</p>
                         <div className="flex flex-wrap gap-2">
                           {permsByCategory[cat].map((perm) => {
-                            const checked = roleData.permissions.includes(perm.codename);
+                            const checked = selectedPermIds.includes(perm.id);
                             return (
                               <label
                                 key={perm.id}
