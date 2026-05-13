@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { menusApi, type MenuItem } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { menusApi, notificationsApi, type MenuItem } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useTheme } from "@/src/contexts/ThemeContext";
@@ -24,20 +24,33 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useTenant();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleLogout = async () => {
     try { await authApi.logout(); } catch { /* ignore */ }
+    queryClient.invalidateQueries({ queryKey: ["menus-sidebar"] });
     logout();
     router.push("/");
   };
 
   const { data: menus = [] } = useQuery<MenuItem[]>({
-    queryKey: ["menus-sidebar"],
+    queryKey: ["menus-sidebar", user?.role, !!user],
     queryFn: async () => {
-      const res = await menusApi.all();
+      // Use all() for admin (returns unfiltered), list() for others (role-filtered)
+      const res = user?.role === "ADMIN" ? await menusApi.all() : await menusApi.list();
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: notifications = [] } = useQuery({
+    queryKey: ["notifications-unread-count"],
+    queryFn: async () => {
+      const res = await notificationsApi.list({ is_read: "false" });
+      return res.data;
+    },
+    staleTime: 30000, // 30 seconds
+    enabled: !!user,
   });
 
   const sidebarWidth = collapsed ? "w-16" : "w-56";
@@ -108,6 +121,27 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* Right controls */}
           <div className="flex items-center gap-3">
+            {/* Notification Bell */}
+            {user && (
+              <Link
+                href="/notifications"
+                className="relative text-ink-subtle hover:text-amber-500 transition-colors p-1 rounded"
+                title={t("notifications.title")}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-black text-xs font-bold rounded-full flex items-center justify-center">
+                    {notifications.length > 9 ? "9+" : notifications.length}
+                  </span>
+                )}
+              </Link>
+            )}
+
+            <div className="w-px h-5 border-hairline" />
+
             <LanguageSwitcher />
 
             <div className="w-px h-5 border-hairline" />
