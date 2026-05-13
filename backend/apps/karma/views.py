@@ -1,15 +1,21 @@
 """
 REST views for Karma app.
 """
+import csv
+import io
 from django.db.models import Count
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.http import HttpResponse
 
 from apps.souls.models import Soul, SoulState, Civilization
 from apps.tenants.models import Tenant
 from apps.karma.services import KarmaService
 from apps.core.permissions import TenantPermission
+from apps.audit.models import AuditLog
+from apps.disposition.models import Disposition
+from apps.realms.models import Realm
 
 
 class KarmaBalanceView(APIView):
@@ -103,7 +109,8 @@ class KarmaOverviewStatsView(APIView):
     GET /karma/stats/overview/
 
     Admin-only overview statistics across all tenants.
-    Returns: total souls, state distribution, tenant totals, karma range stats.
+    Returns: total souls, state distribution, tenant totals, karma range stats,
+    recent activity, and souls by realm.
     """
     permission_classes = [TenantPermission]
 
@@ -149,7 +156,7 @@ class KarmaOverviewStatsView(APIView):
             )["avg_balance"]
             tenant_stats.append({
                 "tenant_code": tenant.code,
-                "tenant_name": tenant.name,
+                "tenant_name": tenant.display_name,
                 "total_souls": total,
                 "state_breakdown": {
                     s: state_breakdown.get(s, 0) for s in SoulState.values
@@ -173,6 +180,45 @@ class KarmaOverviewStatsView(APIView):
                     bucket["count"] += 1
                     break
 
+        # Recent activity (last 10 audit log entries)
+        recent_logs = AuditLog.objects.all()[:10]
+        recent_activity = [
+            {
+                "id": log.id,
+                "action": log.action,
+                "resource": log.resource,
+                "resource_id": log.resource_id,
+                "description": log.description,
+                "user": log.user.username if log.user else "System",
+                "timestamp": log.timestamp.isoformat(),
+            }
+            for log in recent_logs
+        ]
+
+        # Souls by realm/disposition breakdown
+        # Get counts of souls with dispositions by realm
+        realm_counts = dict(
+            Disposition.objects.exclude(is_executed=False)
+            .values("destination_realm__realm_code", "destination_realm__name_en")
+            .annotate(count=Count("id"))
+            .values_list("destination_realm__realm_code", "count")
+        )
+        # Add executed disposition souls grouped by realm
+        executed_realms = {}
+        for d in Disposition.objects.filter(is_executed=True).select_related("destination_realm"):
+            if d.destination_realm:
+                realm_code = d.destination_realm.realm_code
+                if realm_code not in executed_realms:
+                    executed_realms[realm_code] = {
+                        "realm_code": realm_code,
+                        "realm_name": d.destination_realm.name_en,
+                        "civilization": d.destination_realm.civilization,
+                        "count": 0,
+                    }
+                executed_realms[realm_code]["count"] += 1
+
+        souls_by_realm = list(executed_realms.values())
+
         return Response({
             "total_souls": total_souls,
             "state_distribution": state_distribution,
@@ -180,4 +226,48 @@ class KarmaOverviewStatsView(APIView):
             "karma_distribution": [
                 {"label": b["label"], "count": b["count"]} for b in karma_buckets
             ],
+            "recent_activity": recent_activity,
+            "souls_by_realm": souls_by_realm,
         })
+
+
+class KarmaExportStatsView(APIView):
+    """
+    GET /karma/stats/export/
+
+    Admin-only CSV export of all souls with their karma data.
+    """
+    permission_classes = [TenantPermission]
+
+    def get(self, request):
+        user = request.user
+        if getattr(user, 'role', None) != 'ADMIN':
+            return Response(
+                {"error": "FORBIDDEN", "message": "Admin access required"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = "attachment; filename=souls_karma_export.csv"
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "Soul ID", "Name", "Civilization", "State",
+            "Merit Score", "Demerit Score", "Karmic Balance",
+            "Death Date", "Created At"
+        ])
+
+        for soul in Soul.objects.select_related("tenant").all():
+            writer.writerow([
+                str(soul.id),
+                soul.name,
+                soul.civilization,
+                soul.current_state,
+                soul.merit_score,
+                soul.demerit_score,
+                soul.karmic_balance,
+                soul.death_date or "",
+                soul.created_at.isoformat(),
+            ])
+
+        return response
