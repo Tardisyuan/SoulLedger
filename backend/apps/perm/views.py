@@ -98,10 +98,11 @@ def update_delete_permission(request, pk):
 @permission_classes([IsAuthenticated])
 def get_role_permissions(request):
     """
-    GET /api/v1/perm/role-permissions/?role=ADMIN
-    获取指定角色的权限列表（优先从数据库读，否则回退到硬编码字典）
+    GET /api/v1/perm/role-permissions/
+    获取当前用户的角色权限（仅返回用户自己的角色）
     """
-    role = request.query_params.get("role", request.user.role)
+    # 仅允许用户查询自己的角色权限，防止枚举
+    role = request.user.role
     permission_codenames = _get_role_permissions_from_db(role)
     permissions = Permission.objects.filter(codename__in=permission_codenames)
     serializer = PermissionSerializer(permissions, many=True)
@@ -238,8 +239,8 @@ def update_delete_role(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == "DELETE":
-        # Also remove all RolePermission links
-        RolePermission.objects.filter(role=role.name).delete()
+        # Also remove all RolePermission links (use Role object, not role.name string)
+        RolePermission.objects.filter(role=role).delete()
         role.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

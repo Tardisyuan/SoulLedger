@@ -6,11 +6,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from apps.reincarnation.models import Reincarnation
 from apps.reincarnation.serializers import ReincarnationSerializer
+from apps.core.permissions import TenantPermission
 
 
 class ReincarnationViewSet(viewsets.ModelViewSet):
     queryset = Reincarnation.objects.all()
     serializer_class = ReincarnationSerializer
+    permission_classes = [TenantPermission]
     filterset_fields = ["soul", "rebirth_form", "cycle_count"]
     ordering_fields = ["reincarnated_at", "cycle_count"]
 

@@ -313,8 +313,15 @@ class LoginView(TokenObtainPairView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        # Capture request metadata before authentication
+        # Login rate limiting: max 5 attempts per 15 minutes per IP
         ip_address = _get_client_ip(request)
+        from django.core.cache import cache
+        rate_key = f"login_rate:{ip_address}"
+        attempts = cache.get(rate_key, 0)
+        if attempts >= 5:
+            return Response({"error": "登录尝试过于频繁，请15分钟后再试"}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        # Capture request metadata before authentication
         user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
         username = request.data.get('username', '')
 
@@ -322,7 +329,8 @@ class LoginView(TokenObtainPairView):
         try:
             response = super().post(request, *args, **kwargs)
             if response.status_code == 200:
-                # Login success
+                # Login success - clear rate limit counter
+                cache.delete(rate_key)
                 user = response.data.get('user', {})
                 user_id = user.get('id')
                 LoginLog.objects.create(
@@ -333,7 +341,8 @@ class LoginView(TokenObtainPairView):
                     user_agent=user_agent,
                 )
             else:
-                # Login failed (but returned response)
+                # Login failed (but returned response) - increment rate counter
+                cache.set(rate_key, attempts + 1, timeout=900)
                 LoginLog.objects.create(
                     username=username,
                     status='FAILED',
@@ -343,7 +352,8 @@ class LoginView(TokenObtainPairView):
                 )
             return response
         except Exception as e:
-            # Login failed due to exception
+            # Login failed due to exception - increment rate counter
+            cache.set(rate_key, attempts + 1, timeout=900)
             LoginLog.objects.create(
                 username=username,
                 status='FAILED',
@@ -450,18 +460,22 @@ def reset_password_request(request):
         # Security: return success even if user doesn't exist
         return Response({"detail": "验证码已发送到邮箱"})
 
-    # Generate 6-digit code
+    # Rate limiting: max 3 requests per 5 minutes per email
+    from django.core.cache import cache
+    rate_limit_key = f"pwd_reset_rate:{email}"
+    attempts = cache.get(rate_limit_key, 0)
+    if attempts >= 3:
+        return Response({"error": "请求过于频繁，请稍后再试"}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+    cache.set(rate_limit_key, attempts + 1, timeout=300)
+
+    # Generate secure code (8 digits)
     import secrets
-    code = str(secrets.randbelow(900000) + 100000)
+    code = str(secrets.randbelow(90000000) + 10000000)
 
     # Store in Redis cache, 5 minutes TTL
-    from django.core.cache import cache
     cache.set(f"pwd_reset:{email}", code, timeout=300)
 
-    # DEV: log the code; PROD: send via email/celery task
-    logger.info(f"PASSWORD RESET CODE for {email}: {code}")
-
-    # In production, send email here:
+    # In production, send email here (DO NOT log the code):
     # send_mail("密码重置验证码", f"您的验证码: {code}", ...)
 
     return Response({"detail": "验证码已发送到邮箱"})
