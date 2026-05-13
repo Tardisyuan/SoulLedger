@@ -298,7 +298,12 @@
     "state_distribution": "Set Medu Aba Hemsu Seth",
     "souls_by_civilization": "Aba Hemsu Seth Per Aset Ahamet",
     "karma_distribution": "Unemu Seth",
-    "per_civilization_breakdown": "Medew Seth Per Aset Ahamet"
+    "per_civilization_breakdown": "Medew Seth Per Aset Ahamet",
+    "recent_activity": "Khedu Sethet",
+    "export_stats": "Wehem Medew Seth",
+    "souls_by_realm": "Aba Seth Per Ahet",
+    "no_activity": "Ma Khedu Sethet",
+    "no_realm_data": "Ma Medew Ahet"
   },
   "karma": {
     "timeline": "Medew Unemu Seth",
@@ -351,5 +356,38 @@
       "conclude": "Wetep Seth",
       "notes_placeholder": "Shesep Medu Seth..."
     }
+  },
+  "profile": {
+    "title": "Aha Pepi",
+    "basic_info": "Ier Sefet Nefer",
+    "username": "Ren",
+    "email": "Email",
+    "role": "Ami",
+    "tenant": "Per Hemes",
+    "first_name": "Mdu",
+    "last_name": "Khen",
+    "change_password": "Shesepkhet Ra Hor",
+    "old_password": "Ra Aha",
+    "new_password": "Ra Ahem",
+    "confirm_password": "Pedet Ra",
+    "password_mismatch": "Mdu ma Shemsu",
+    "password_too_short": "Shesepkhet ma Hedj 8",
+    "password_changed": "Shesepkhet em Wepet Ra",
+    "password_change_failed": "Shesepkhet em Hedj Ra",
+    "profile_updated": "Pepi em Wepet",
+    "profile_update_failed": "Pepi em Hedj",
+    "save": "Pedet",
+    "cancel": "Khatem",
+    "avatar": "Wer Aha",
+    "upload_avatar": "Terqeq Aha"
+  },
+  "notifications": {
+    "title": "Mes Neteru",
+    "all": "Neteru Ankh",
+    "unread": "Maakheru",
+    "mark_all_read": "Pedjet Maakheru",
+    "mark_read": "Pedjet Maakheru Ankh",
+    "empty": "Maakheru Mehi",
+    "loading": "Smen..."
   }
 }
