@@ -1,54 +1,139 @@
 """
-Audit views
+Audit views - AuditLog ViewSet with filtering support.
 """
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import AuditLog
-from .serializers import AuditLogSerializer
+from .models import AuditLog, AuditAction
+from .serializers import AuditLogSerializer, AuditLogDetailSerializer
 
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def list_audit_logs(request):
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    GET /api/v1/audit/
-    获取审计日志列表（仅 ADMIN）
+    AuditLog ViewSet with filtering support.
+
+    Supports filtering by:
+    - user: User ID who performed the action
+    - action: Action type (CREATE, UPDATE, DELETE, etc.)
+    - resource: Resource type (soul, judgment, karma, etc.)
+    - resource_id: Specific resource ID
+    - start_date/end_date: Time range filter
+
+    Example:
+        GET /api/v1/audit-logs/?user=1&action=CREATE&resource=soul
+        GET /api/v1/audit-logs/?start_date=2024-01-01&end_date=2024-12-31
     """
-    if request.user.role != "ADMIN":
-        return Response(
-            {"error": "Only ADMIN can view audit logs"},
-            status=status.HTTP_403_FORBIDDEN
+    permission_classes = [IsAuthenticated]
+    serializer_class = AuditLogSerializer
+    filterset_fields = ["user", "action", "resource", "resource_id"]
+    ordering_fields = ["timestamp", "action", "resource"]
+    ordering = ["-timestamp"]
+
+    def get_queryset(self):
+        """Filter queryset based on user permissions and query params."""
+        user = self.request.user
+
+        # Non-admin users can only see their own tenant's logs
+        qs = AuditLog.objects.select_related("user", "tenant").all()
+
+        if getattr(user, 'role', None) != 'ADMIN':
+            tenant = getattr(self.request, 'tenant', None)
+            if tenant:
+                qs = qs.filter(tenant=tenant)
+            else:
+                qs = qs.filter(user=user)
+
+        # Apply query param filters
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+
+        action_param = self.request.query_params.get('action')
+        if action_param:
+            qs = qs.filter(action=action_param.upper())
+
+        resource = self.request.query_params.get('resource')
+        if resource:
+            qs = qs.filter(resource__icontains=resource)
+
+        resource_id = self.request.query_params.get('resource_id')
+        if resource_id:
+            qs = qs.filter(resource_id=resource_id)
+
+        start_date = self.request.query_params.get('start_date')
+        if start_date:
+            qs = qs.filter(timestamp__date__gte=start_date)
+
+        end_date = self.request.query_params.get('end_date')
+        if end_date:
+            qs = qs.filter(timestamp__date__lte=end_date)
+
+        return qs
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return AuditLogDetailSerializer
+        return AuditLogSerializer
+
+    @action(detail=False, methods=["get"])
+    def actions(self, request):
+        """
+        GET /api/v1/audit-logs/actions/
+        Returns all available action types.
+        """
+        return Response([
+            {"value": choice[0], "label": choice[1]}
+            for choice in AuditAction.choices
+        ])
+
+    @action(detail=False, methods=["get"])
+    def resources(self, request):
+        """
+        GET /api/v1/audit-logs/resources/
+        Returns all resource types that have audit logs.
+        """
+        resources = (
+            AuditLog.objects
+            .values_list("resource", flat=True)
+            .distinct()
+            .order_by("resource")
+        )
+        return Response(list(resources))
+
+    @action(detail=False, methods=["get"])
+    def stats(self, request):
+        """
+        GET /api/v1/audit-logs/stats/
+        Returns statistics about audit logs.
+        Requires ADMIN role.
+        """
+        if getattr(request.user, 'role', None) != 'ADMIN':
+            return Response(
+                {"error": "Admin access required"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        from django.db.models import Count
+
+        action_stats = (
+            AuditLog.objects
+            .values("action")
+            .annotate(count=Count("id"))
+            .order_by("-count")
         )
 
-    resource = request.query_params.get("resource")
-    action = request.query_params.get("action")
-    user_id = request.query_params.get("user_id")
+        resource_stats = (
+            AuditLog.objects
+            .values("resource")
+            .annotate(count=Count("id"))
+            .order_by("-count")[:20]
+        )
 
-    logs = AuditLog.objects.all()
-    if resource:
-        logs = logs.filter(resource=resource)
-    if action:
-        logs = logs.filter(action=action)
-    if user_id:
-        logs = logs.filter(user_id=user_id)
-
-    logs = logs[:100]  # 限制返回100条
-    serializer = AuditLogSerializer(logs, many=True)
-    return Response(serializer.data)
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def create_audit_log(request):
-    """
-    POST /api/v1/audit/
-    创建审计日志（内部调用）
-    """
-    serializer = AuditLogSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "action_distribution": list(action_stats),
+            "top_resources": list(resource_stats),
+            "total_logs": AuditLog.objects.count(),
+        })

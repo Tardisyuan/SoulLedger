@@ -1,12 +1,12 @@
 """
 Audit URL routing
 """
-from django.urls import path
-from . import views
+from rest_framework.routers import DefaultRouter
+from .views import AuditLogViewSet
 
 app_name = "audit"
 
-urlpatterns = [
-    path("", views.list_audit_logs, name="list"),
-    path("create/", views.create_audit_log, name="create"),
-]
+router = DefaultRouter()
+router.register("", AuditLogViewSet, basename="audit-log")
+
+urlpatterns = router.urls
