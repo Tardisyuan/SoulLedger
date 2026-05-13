@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import * as LucideIcons from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { menusApi, type MenuItem } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Modal } from "@/src/components/ui/Modal";
+import { IconPicker } from "@/src/components/ui/IconPicker";
+
+type LucideIconName = keyof typeof LucideIcons;
 
 const ROLE_OPTIONS = ["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"];
 
@@ -117,9 +122,20 @@ export default function MenusPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
-                {menus.map((menu) => (
+                {menus.map((menu) => {
+                  const MenuIcon = menu.icon
+                    ? (LucideIcons[menu.icon as LucideIconName] as unknown as LucideIcon)
+                    : null;
+                  return (
                   <tr key={menu.id} className="hover:bg-surface-2/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-ink">{menu.name}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {MenuIcon ? (
+                          <MenuIcon className="w-4 h-4 text-amber-400" />
+                        ) : null}
+                        <span className="font-medium text-ink">{menu.name}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-ink-muted text-xs font-mono">{menu.path}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
@@ -151,7 +167,8 @@ export default function MenusPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                );
+                })}
               </tbody>
             </table>
           </div>
@@ -186,11 +203,9 @@ export default function MenusPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-ink-muted mb-1">{t("menus.icon")}</label>
-              <input
+              <IconPicker
                 value={form.icon}
-                onChange={(e) => setForm({ ...form, icon: e.target.value })}
-                placeholder="e.g. Home"
-                className="w-full bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+                onChange={(icon) => setForm({ ...form, icon })}
               />
             </div>
             <div>

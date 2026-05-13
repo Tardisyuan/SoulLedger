@@ -28,8 +28,12 @@ class KarmaBalanceView(APIView):
     permission_classes = [TenantPermission]
 
     def get(self, request, soul_id):
+        tenant = getattr(request, 'tenant', None)
         try:
-            soul = Soul.objects.get(id=soul_id)
+            if tenant:
+                soul = Soul.objects.get(id=soul_id, tenant=tenant)
+            else:
+                soul = Soul.objects.get(id=soul_id)
         except Soul.DoesNotExist:
             return Response(
                 {"error": "NOT_FOUND", "message": "Soul not found"},
@@ -49,8 +53,12 @@ class KarmaRecalculateView(APIView):
     permission_classes = [TenantPermission]
 
     def post(self, request, soul_id):
+        tenant = getattr(request, 'tenant', None)
         try:
-            soul = Soul.objects.get(id=soul_id)
+            if tenant:
+                soul = Soul.objects.get(id=soul_id, tenant=tenant)
+            else:
+                soul = Soul.objects.get(id=soul_id)
         except Soul.DoesNotExist:
             return Response(
                 {"error": "NOT_FOUND", "message": "Soul not found"},
@@ -71,8 +79,12 @@ class KarmaEffectiveView(APIView):
     permission_classes = [TenantPermission]
 
     def get(self, request, soul_id):
+        tenant = getattr(request, 'tenant', None)
         try:
-            soul = Soul.objects.get(id=soul_id)
+            if tenant:
+                soul = Soul.objects.get(id=soul_id, tenant=tenant)
+            else:
+                soul = Soul.objects.get(id=soul_id)
         except Soul.DoesNotExist:
             return Response(
                 {"error": "NOT_FOUND", "message": "Soul not found"},
@@ -92,8 +104,12 @@ class KarmaInheritanceView(APIView):
     permission_classes = [TenantPermission]
 
     def get(self, request, soul_id):
+        tenant = getattr(request, 'tenant', None)
         try:
-            soul = Soul.objects.get(id=soul_id)
+            if tenant:
+                soul = Soul.objects.get(id=soul_id, tenant=tenant)
+            else:
+                soul = Soul.objects.get(id=soul_id)
         except Soul.DoesNotExist:
             return Response(
                 {"error": "NOT_FOUND", "message": "Soul not found"},
