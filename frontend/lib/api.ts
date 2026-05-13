@@ -78,6 +78,9 @@ export const authApi = {
     return api.post("/auth/logout/", { refresh });
   },
   profile: () => api.get("/auth/profile/"),
+  updateProfile: (data: object) => api.patch("/auth/profile/", data),
+  changePassword: (oldPassword: string, newPassword: string) =>
+    api.post("/auth/change-password/", { old_password: oldPassword, new_password: newPassword }),
   refresh: (refresh: string) =>
     axios.post(`${API_BASE}/auth/refresh/`, { refresh }),
 };
@@ -92,7 +95,15 @@ export interface SoulInput {
 }
 
 export const soulsApi = {
-  list: (params?: Record<string, string>) => api.get("/souls/", { params }),
+  list: (params?: {
+    page?: number;
+    search?: string;
+    civilization?: string;
+    state?: string;
+    karma_min?: number;
+    karma_max?: number;
+    ordering?: string;
+  }) => api.get("/souls/", { params }),
   get: (id: string) => api.get(`/souls/${id}/`),
   create: (data: object) => api.post("/souls/", data),
   update: (id: string, data: Partial<SoulInput>) => api.patch(`/souls/${id}/`, data),
@@ -213,10 +224,26 @@ export interface KarmaStatsOverview {
     state_breakdown: Record<string, number>;
   }[];
   karma_distribution: { label: string; count: number }[];
+  recent_activity: {
+    id: number;
+    action: string;
+    resource: string;
+    resource_id: string;
+    description: string;
+    user: string;
+    timestamp: string;
+  }[];
+  souls_by_realm: {
+    realm_code: string;
+    realm_name: string;
+    civilization: string;
+    count: number;
+  }[];
 }
 
 export const karmaApi = {
   statsOverview: () => api.get<KarmaStatsOverview>("/karma/stats/overview/"),
+  exportStats: () => api.get("/karma/stats/export/", { responseType: "blob" } as any),
 };
 
 // Permissions
@@ -282,6 +309,74 @@ export const menusApi = {
 export const auditApi = {
   list: (params?: Record<string, string>) => api.get("/audit/", { params }),
   create: (data: object) => api.post("/audit/create/", data),
+};
+
+// Users
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  role: "ADMIN" | "JUDGE" | "GUARDIAN" | "VIEWER";
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+  tenant?: {
+    id: number;
+    code: string;
+    display_name: string;
+  };
+}
+
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export interface CreateUserInput {
+  username: string;
+  email: string;
+  password: string;
+  role: "ADMIN" | "JUDGE" | "GUARDIAN" | "VIEWER";
+  first_name?: string;
+  last_name?: string;
+  tenant_id?: number;
+}
+
+export interface UpdateUserInput {
+  email?: string;
+  role?: "ADMIN" | "JUDGE" | "GUARDIAN" | "VIEWER";
+  first_name?: string;
+  last_name?: string;
+  is_active?: boolean;
+  tenant_id?: number;
+}
+
+export interface UserFilters {
+  page?: number;
+  search?: string;
+  role?: string;
+}
+
+export const usersApi = {
+  list: (params?: {
+    page?: number;
+    search?: string;
+    role?: string;
+    is_active?: string;
+    ordering?: string;
+  }) => api.get<PaginatedResponse<User>>("/users/", { params }),
+  get: (id: string) => api.get<User>(`/users/${id}/`),
+  create: (data: CreateUserInput) => api.post<User>("/users/", data),
+  update: (id: string, data: UpdateUserInput) => api.patch<User>(`/users/${id}/`, data),
+  delete: (id: string) => api.delete(`/users/${id}/`),
+  activate: (id: string) => api.post(`/users/${id}/activate/`),
+  deactivate: (id: string) => api.post(`/users/${id}/deactivate/`),
+  export: () => api.get("/users/export/", { responseType: "blob" } as any),
+  import: (data: FormData) => api.post("/users/import/", data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }),
 };
 
 // Types
@@ -392,6 +487,25 @@ export interface SoulEvent {
   actor: string;
   created_at: string;
 }
+
+// Notifications
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  notification_type: string;
+  is_read: boolean;
+  related_resource: string | null;
+  related_id: string | null;
+  created_at: string;
+}
+
+export const notificationsApi = {
+  list: (params?: Record<string, string>) =>
+    api.get<Notification[]>("/notifications/", { params }),
+  markRead: (id: string) => api.post<Notification>(`/notifications/${id}/mark_read/`),
+  markAllRead: () => api.post<{ marked_read: number }>("/notifications/mark_all_read/"),
+};
 
 export interface User {
   id: number;

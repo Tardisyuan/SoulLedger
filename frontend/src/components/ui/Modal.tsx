@@ -5,6 +5,8 @@ import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from "@headlessui/re
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { soulsApi } from "@/lib/api";
+import { soulCreateSchema } from "@/lib/validations/schemas";
+import { useFormValidation } from "@/lib/validations/useFormValidation";
 
 // ── BaseModal ─────────────────────────────────────
 
@@ -72,12 +74,15 @@ interface SoulCreateModalProps {
 export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalProps) {
   const { t } = useI18n();
   const { showToast } = useToast();
+  const { validate, getError, clearFieldError } = useFormValidation(soulCreateSchema);
+
   const [name, setName] = useState("");
-  const [civilization, setCivilization] = useState("CHINESE");
+  const [civilization, setCivilization] = useState<"CHINESE" | "EUROPEAN" | "EGYPTIAN">("CHINESE");
   const [birthDate, setBirthDate] = useState("");
   const [originLocation, setOriginLocation] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
       setName("");
@@ -89,18 +94,27 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) {
-      showToast(t("souls.form.name_required"), "error");
+
+    const formData = {
+      name: name.trim(),
+      civilization,
+      birth_date: birthDate || null,
+      origin_location: originLocation || null,
+    };
+
+    const result = validate(formData);
+    if (!result.success) {
       return;
     }
+
     setLoading(true);
     try {
-      await soulsApi.create({
-        name: name.trim(),
-        civilization,
-        birth_date: birthDate || null,
-        origin_location: originLocation,
-      });
+      if (!result.data) {
+        showToast(t("souls.form.create_error"), "error");
+        setLoading(false);
+        return
+      }
+      await soulsApi.create(result.data);
       showToast(t("souls.form.create_success"), "success");
       onCreated();
       onClose();
@@ -152,27 +166,42 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
           <label className="text-xs text-ink-subtle">{t("souls.form.name_label")}</label>
           <input
             type="text"
-            required
             autoFocus
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value)
+              clearFieldError('name')
+            }}
             disabled={loading}
-            className="bg-surface-1 border border-hairline rounded px-3 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500 disabled:opacity-50 transition-colors"
+            className={`bg-surface-1 border rounded px-3 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none disabled:opacity-50 transition-colors ${
+              getError('name') ? 'border-red-500 focus:border-red-500' : 'border-hairline focus:border-amber-500'
+            }`}
             placeholder={t("souls.form.name_placeholder")}
           />
+          {getError('name') && (
+            <span className="text-xs text-red-500">{getError('name')}</span>
+          )}
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-ink-subtle">{t("souls.form.civilization_label")}</label>
           <select
             value={civilization}
-            onChange={(e) => setCivilization(e.target.value)}
+            onChange={(e) => {
+              setCivilization(e.target.value as typeof civilization)
+              clearFieldError('civilization')
+            }}
             disabled={loading}
-            className="bg-surface-1 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500 disabled:opacity-50 transition-colors"
+            className={`bg-surface-1 border rounded px-3 py-2 text-sm text-ink focus:outline-none disabled:opacity-50 transition-colors ${
+              getError('civilization') ? 'border-red-500 focus:border-red-500' : 'border-hairline focus:border-amber-500'
+            }`}
           >
             <option value="CHINESE">{t("souls.civilizations.CHINESE")}</option>
             <option value="EUROPEAN">{t("souls.civilizations.EUROPEAN")}</option>
             <option value="EGYPTIAN">{t("souls.civilizations.EGYPTIAN")}</option>
           </select>
+          {getError('civilization') && (
+            <span className="text-xs text-red-500">{getError('civilization')}</span>
+          )}
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-ink-subtle">{t("souls.form.birth_date_label")}</label>

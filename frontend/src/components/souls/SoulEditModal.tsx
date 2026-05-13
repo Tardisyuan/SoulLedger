@@ -6,6 +6,8 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useUpdateSoul } from "@/src/hooks/useSouls";
 import type { Soul } from "@/lib/api";
+import { soulUpdateSchema } from "@/lib/validations/schemas";
+import { useFormValidation } from "@/lib/validations/useFormValidation";
 
 interface SoulEditModalProps {
   isOpen: boolean;
@@ -26,6 +28,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const { t } = useI18n();
   const { showToast } = useToast();
   const updateMutation = useUpdateSoul();
+  const { validate, getError, clearFieldError } = useFormValidation(soulUpdateSchema);
 
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -44,19 +47,23 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) {
-      showToast("名称不能为空", "error");
+
+    const formData = {
+      name: name.trim(),
+      birth_date: birthDate || null,
+      origin_location: originLocation || undefined,
+      current_state: currentState,
+    };
+
+    const result = validate(formData);
+    if (!result.success || !result.data) {
       return;
     }
+
     updateMutation.mutate(
       {
         id: soul.id,
-        data: {
-          name: name.trim(),
-          birth_date: birthDate || null,
-          origin_location: originLocation,
-          current_state: currentState,
-        },
+        data: result.data,
       },
       {
         onSuccess: () => {
@@ -113,14 +120,21 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
           <label className="text-xs text-ink-subtle">名称</label>
           <input
             type="text"
-            required
             autoFocus
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value)
+              clearFieldError('name')
+            }}
             disabled={updateMutation.isPending}
-            className="bg-surface-1 border border-hairline rounded px-3 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500 disabled:opacity-50 transition-colors"
+            className={`bg-surface-1 border rounded px-3 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none disabled:opacity-50 transition-colors ${
+              getError('name') ? 'border-red-500 focus:border-red-500' : 'border-hairline focus:border-amber-500'
+            }`}
             placeholder="输入灵魂名称"
           />
+          {getError('name') && (
+            <span className="text-xs text-red-500">{getError('name')}</span>
+          )}
         </div>
 
         {/* Birth Date */}
