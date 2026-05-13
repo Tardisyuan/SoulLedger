@@ -13,6 +13,7 @@ from apps.souls.serializers import (
 from apps.karma.services import KarmaService
 from apps.events.services import EventService
 from apps.core.permissions import TenantPermission
+from apps.perm.filters import DataScopeFilter
 
 
 class SoulViewSet(viewsets.ModelViewSet):
@@ -24,7 +25,7 @@ class SoulViewSet(viewsets.ModelViewSet):
     queryset = Soul.objects.select_related("tenant").prefetch_related("records").all()
     filterset_fields = ["current_state", "tenant__code"]
     search_fields = ["name", "birth_name", "origin_location"]
-    ordering_fields = ["created_at", "karmic_balance", "death_date"]
+    ordering_fields = ["name", "created_at", "death_date"]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -34,11 +35,73 @@ class SoulViewSet(viewsets.ModelViewSet):
         # Exclude records with null tenant (orphaned records)
         qs = qs.filter(tenant__isnull=False)
         if user.role == 'ADMIN':  # SYS_ADMIN bypasses
-            return qs
-        tenant = getattr(self.request, 'tenant', None)
-        if tenant:
-            return qs.filter(tenant=tenant)
-        return qs.none()
+            pass
+        else:
+            tenant = getattr(self.request, 'tenant', None)
+            if tenant:
+                qs = qs.filter(tenant=tenant)
+            else:
+                return qs.none()
+
+            # Apply row-level data scope filtering for non-ADMIN roles
+            qs = DataScopeFilter.filter_queryset(self.request, qs, Soul, scope_type='READ')
+
+        # Custom filtering via query params
+        params = self.request.query_params
+
+        # civilization filter (mapped from tenant code)
+        civilization = params.get('civilization')
+        if civilization:
+            tenant_mapping = {
+                'CHINESE': 'CN_DIYU',
+                'EUROPEAN': 'EU_HEAVEN_HELL',
+                'EGYPTIAN': 'EG_DUAT',
+            }
+            tenant_code = tenant_mapping.get(civilization)
+            if tenant_code:
+                qs = qs.filter(tenant__code=tenant_code)
+
+        # state filter (maps to current_state)
+        state = params.get('state')
+        if state:
+            qs = qs.filter(current_state=state)
+
+        # karma range filters and karma ordering - annotate _karmic_balance when needed
+        karma_min = params.get('karma_min')
+        karma_max = params.get('karma_max')
+        ordering = params.get('ordering', '').strip()
+        needs_karma_annotation = (
+            karma_min is not None or karma_max is not None or
+            ordering in ('karmic_balance', '-karmic_balance')
+        )
+        if needs_karma_annotation:
+            from django.db.models import F, ExpressionWrapper, IntegerField
+            karma_expr = ExpressionWrapper(F('merit_score') - F('demerit_score'), output_field=IntegerField())
+            qs = qs.annotate(_karmic_balance=karma_expr)
+            if karma_min is not None:
+                try:
+                    qs = qs.filter(_karmic_balance__gte=int(karma_min))
+                except ValueError:
+                    pass
+            if karma_max is not None:
+                try:
+                    qs = qs.filter(_karmic_balance__lte=int(karma_max))
+                except ValueError:
+                    pass
+            # Apply karma ordering directly since DRF ordering runs after get_queryset returns
+            if ordering in ('karmic_balance', '-karmic_balance'):
+                qs = qs.order_by('_karmic_balance' if ordering == 'karmic_balance' else '-_karmic_balance')
+                # Clear the filter's ordering to avoid double-ordering
+                self._skip_filter_ordering = True
+
+        return qs
+
+    def filter_queryset(self, queryset):
+        """Skip ordering if we already applied karma ordering in get_queryset."""
+        if getattr(self, '_skip_filter_ordering', False):
+            self._skip_filter_ordering = False
+            return queryset
+        return super().filter_queryset(queryset)
 
     def get_serializer_class(self):
         if self.action == "list":
