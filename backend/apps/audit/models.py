@@ -14,6 +14,13 @@ class AuditAction(models.TextChoices):
     READ = "READ", "读取"
     LOGIN = "LOGIN", "登录"
     LOGOUT = "LOGOUT", "登出"
+    VIEW = "VIEW", "查看"
+    EXPORT = "EXPORT", "导出"
+    IMPORT = "IMPORT", "导入"
+    PERMISSION_CHANGE = "PERMISSION_CHANGE", "权限变更"
+    BATCH_CREATE = "BATCH_CREATE", "批量创建"
+    BATCH_UPDATE = "BATCH_UPDATE", "批量更新"
+    BATCH_DELETE = "BATCH_DELETE", "批量删除"
 
 
 class AuditLog(AuditUserFields, models.Model):
