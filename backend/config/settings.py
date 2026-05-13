@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.menus",
     "apps.perm",
+    "apps.permissions",
+    "apps.notifications",
 ]
 
 MIDDLEWARE = [
@@ -148,6 +150,9 @@ SIMPLE_JWT = {
 
 # Redis
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+# Permission Cache TTL (seconds)
+CACHE_PERMISSION_TTL = int(os.getenv("CACHE_PERMISSION_TTL", "300"))  # 5 minutes
 
 # Cache (Redis)
 CACHES = {
