@@ -44,6 +44,7 @@ class User(AuditUserFields, AbstractUser):
         related_name="users",
         help_text="Linked underworld actor (e.g. Yanluo Wang as ADMIN)",
     )
+    avatar = models.ImageField(upload_to='avatars/%Y/%m/', null=True, blank=True)
 
     class Meta:
         verbose_name = "User"
@@ -51,3 +52,37 @@ class User(AuditUserFields, AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.role})"
+
+
+class LoginLog(models.Model):
+    """
+    登录日志 - 记录每次登录行为（成功/失败）
+    """
+    user = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        related_name="login_logs",
+        null=True,
+    )
+    username = models.CharField(max_length=150)  # 可以是未成功登录时的用户名
+    status = models.CharField(
+        max_length=10,
+        choices=[("SUCCESS", "成功"), ("FAILED", "失败")],
+    )
+    ip_address = models.GenericIPAddressField(null=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    failure_reason = models.CharField(max_length=200, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
+        verbose_name = "Login Log"
+        verbose_name_plural = "Login Logs"
+        indexes = [
+            models.Index(fields=["user", "timestamp"]),
+            models.Index(fields=["username", "timestamp"]),
+            models.Index(fields=["status", "timestamp"]),
+        ]
+
+    def __str__(self):
+        return f"{self.username} {self.status} at {self.timestamp}"

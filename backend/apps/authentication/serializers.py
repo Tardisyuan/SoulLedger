@@ -34,7 +34,7 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
         from apps.perm.models import RolePermission, ROLE_PERMISSIONS
         if RolePermission.objects.exists():
             return list(
-                RolePermission.objects.filter(role=obj.role)
+                RolePermission.objects.filter(role__name=obj.role)
                 .select_related("permission")
                 .values_list("permission__codename", flat=True)
             )
@@ -93,4 +93,83 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "email", "role", "first_name", "last_name", "is_active", "display_name"]
-        read_only_fields = ["id", "is_active"]
+        read_only_fields = ["id", "is_active", "username"]
+
+
+# ---------------------------------------------------------------------------
+# User Management API Serializers (Tenant Admin)
+# ---------------------------------------------------------------------------
+
+
+class UserManagementSerializer(serializers.ModelSerializer):
+    """User serializer for list/retrieve operations in user management API."""
+    tenant = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'role', 'tenant', 'is_active', 'create_time', 'avatar']
+        read_only_fields = ['id', 'create_time']
+
+    def get_tenant(self, obj):
+        if obj.tenant:
+            return {"id": obj.tenant.id, "code": obj.tenant.code, "display_name": obj.tenant.display_name}
+        return None
+
+
+class UserCreateSerializer(serializers.ModelSerializer):
+    """User serializer for creation with password handling."""
+    password = serializers.CharField(write_only=True, min_length=8)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'password', 'role', 'tenant', 'is_active']
+
+    def create(self, validated_data):
+        return User.objects.create_user(**validated_data)
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    """User serializer for updates (email, role, is_active only)."""
+
+    class Meta:
+        model = User
+        fields = ['email', 'role', 'is_active']
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """Serializer for changing password with old password verification."""
+    old_password = serializers.CharField(write_only=True, required=True)
+    new_password = serializers.CharField(write_only=True, required=True, min_length=8)
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("旧密码不正确")
+        return value
+
+    def validate_new_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("密码至少8位")
+        return value
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    """Serializer for requesting password reset."""
+    email = serializers.EmailField()
+
+
+class SetNewPasswordSerializer(serializers.Serializer):
+    """Serializer for setting new password via code."""
+    email = serializers.EmailField()
+    code = serializers.CharField(min_length=6, max_length=6)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+
+
+class LoginLogSerializer(serializers.ModelSerializer):
+    """Serializer for login log entries."""
+    class Meta:
+        from .models import LoginLog
+        model = LoginLog
+        fields = ["id", "user", "username", "status", "ip_address",
+                  "user_agent", "failure_reason", "timestamp"]
+        read_only_fields = fields
