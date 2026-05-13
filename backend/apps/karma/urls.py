@@ -5,10 +5,12 @@ from apps.karma.views import (
     KarmaEffectiveView,
     KarmaInheritanceView,
     KarmaOverviewStatsView,
+    KarmaExportStatsView,
 )
 
 urlpatterns = [
     path("stats/overview/", KarmaOverviewStatsView.as_view(), name="karma-stats-overview"),
+    path("stats/export/", KarmaExportStatsView.as_view(), name="karma-stats-export"),
     path("balance/<uuid:soul_id>/", KarmaBalanceView.as_view(), name="karma-balance"),
     path("calculate/<uuid:soul_id>/", KarmaRecalculateView.as_view(), name="karma-recalculate"),
     path("effective/<uuid:soul_id>/", KarmaEffectiveView.as_view(), name="karma-effective"),

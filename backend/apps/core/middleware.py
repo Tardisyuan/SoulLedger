@@ -13,6 +13,7 @@ Design Rationale:
   decorator is additive, not a replacement.
 - Falls back to ROLE_PERMISSIONS dict if no RolePermission DB table entry exists.
 - ADMINS (role='ADMIN') bypass all permission checks.
+- Uses Redis for permission caching with memory fallback.
 
 Usage:
     from apps.core.middleware import require_permission
@@ -38,6 +39,7 @@ Middleware Position:
 from functools import wraps
 from django.http import JsonResponse
 from apps.perm.models import RolePermission, ROLE_PERMISSIONS
+from apps.perm.cache import get_permission_cache
 from apps.core.request_local import set_current_user, clear_current_user
 
 
@@ -48,11 +50,12 @@ class PermissionMiddleware:
     This middleware only acts when a view has been decorated with
     @require_permission(). For unmarked endpoints, it passes through
     without any overhead.
+    Uses Redis-backed PermissionCache with memory fallback for performance.
     """
 
     def __init__(self, get_response):
         self.get_response = get_response
-        self._permission_cache = {}  # (role, codename) -> bool
+        self._permission_cache = get_permission_cache()
 
     def __call__(self, request):
         # Set current user in thread-local for AuditUserFields.save()
@@ -134,11 +137,12 @@ class PermissionMiddleware:
     def _has_permission(self, role, codename):
         """
         Check if role has the given permission codename.
-        Uses in-memory cache to avoid repeated DB queries.
+        Uses Redis-backed PermissionCache with memory fallback.
         """
-        cache_key = (role, codename)
-        if cache_key in self._permission_cache:
-            return self._permission_cache[cache_key]
+        # Check cache first
+        cached = self._permission_cache.get(role, codename)
+        if cached is not None:
+            return cached
 
         # Check RolePermission table first
         try:
@@ -150,7 +154,8 @@ class PermissionMiddleware:
             # DB unavailable — fall back to dict
             has_perm = codename in ROLE_PERMISSIONS.get(role, [])
 
-        self._permission_cache[cache_key] = has_perm
+        # Cache the result
+        self._permission_cache.set(role, codename, has_perm)
         return has_perm
 
 
