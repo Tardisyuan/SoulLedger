@@ -16,15 +16,17 @@ from .serializers import (
 )
 
 
-def _get_role_permissions_from_db(role):
+def _get_role_permissions_from_db(role_name):
     """Fetch permission codenames for a role from DB, fallback to hardcoded dict."""
-    if RolePermission.objects.exists():
-        return list(
-            RolePermission.objects.filter(role=role)
-            .select_related("permission")
-            .values_list("permission__codename", flat=True)
-        )
-    return ROLE_PERMISSIONS.get(role, [])
+    role_perms = list(
+        RolePermission.objects.filter(role__name=role_name)
+        .select_related("permission")
+        .values_list("permission__codename", flat=True)
+    )
+    # Use DB entries if any exist for this role, otherwise fallback to hardcoded
+    if role_perms:
+        return role_perms
+    return ROLE_PERMISSIONS.get(role_name, [])
 
 
 @api_view(["GET"])
