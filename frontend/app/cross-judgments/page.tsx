@@ -26,10 +26,10 @@ export default function CrossJudgmentsPage() {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-ink">
-          {t("cross_judgments.title") || "Cross-Tenant Judgments"}
+          {t("crossJudgments.title")}
         </h1>
         <p className="text-ink-subtle mt-1">
-          Joint judgments across multiple civilizations
+          {t("crossJudgments.subtitle")}
         </p>
       </div>
 
@@ -37,7 +37,7 @@ export default function CrossJudgmentsPage() {
         <p className="text-ink-muted">{t("common.loading")}</p>
       ) : judgments.length === 0 ? (
         <p className="text-ink-muted bg-surface-1 rounded-lg p-4 border border-hairline">
-          No cross-tenant judgments yet
+          {t("crossJudgments.no_judgments") || "No cross-tenant judgments yet"}
         </p>
       ) : (
         <div className="space-y-4">
@@ -51,7 +51,7 @@ export default function CrossJudgmentsPage() {
                 <div>
                   <h3 className="font-semibold text-ink">{j.title}</h3>
                   <p className="text-sm text-ink-subtle">
-                    Initiated by: {j.initiating_tenant}
+                    {t("crossJudgments.initiated_by") || "Initiated by"}: {j.initiating_tenant}
                   </p>
                 </div>
                 <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[j.status] || "bg-gray-500/20"}`}>
@@ -63,7 +63,7 @@ export default function CrossJudgmentsPage() {
               )}
               {j.participant_count !== undefined && (
                 <p className="mt-2 text-xs text-ink-muted">
-                  {j.participant_count} participants
+                  {j.participant_count} {t("crossJudgments.participants") || "participants"}
                 </p>
               )}
             </Link>
