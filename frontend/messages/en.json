@@ -167,7 +167,12 @@
   "common": {
     "close": "Close",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "loading": "Loading...",
+    "edit": "Edit",
+    "delete": "Delete",
+    "prev": "Previous",
+    "next": "Next"
   },
   "menus": {
     "title": "Menu Management",
@@ -314,6 +319,12 @@
     "no_realm_data": "No realm data available"
   },
   "karma": {
+    "title": "Karma Statistics",
+    "subtitle": "Soul karma overview",
+    "no_data": "No data available",
+    "total_souls": "Total Souls",
+    "active_souls": "Active Souls",
+    "judging_souls": "Under Judgment",
     "timeline": "Karma Timeline",
     "time_decay": "with time decay",
     "next_life_inheritance": "Next Life Inheritance",
@@ -321,7 +332,11 @@
     "original_weight": "Original",
     "effective_weight": "Effective",
     "decay_factor": "Decay Factor",
-    "years_elapsed": "Years Elapsed"
+    "years_elapsed": "Years Elapsed",
+    "state_distribution": "State Distribution",
+    "karma_distribution": "Karma Distribution",
+    "souls_by_realm": "Souls by Realm",
+    "recent_activity": "Recent Activity"
   },
   "judgment": {
     "title": "Judgment",
@@ -418,5 +433,66 @@
     "mark_read": "Mark as Read",
     "empty": "No notifications",
     "loading": "Loading..."
+  },
+  "realms": {
+    "title": "Realms",
+    "subtitle": "Cross-civilization realm management"
+  },
+  "actors": {
+    "title": "Actors",
+    "subtitle": "Cross-civilization actor management"
+  },
+  "dispatch": {
+    "title": "Dispatch Management",
+    "subtitle": "Cross-tenant soul dispatch",
+    "propose": "Propose Dispatch",
+    "pending": "Pending Proposals",
+    "history": "History",
+    "no_pending": "No pending proposals",
+    "no_history": "No dispatch history"
+  },
+  "crossJudgments": {
+    "title": "Cross-Tenant Judgments",
+    "subtitle": "Joint judgments across civilizations",
+    "no_judgments": "No cross-tenant judgments yet",
+    "initiated_by": "Initiated by",
+    "participants": "participants"
+  },
+  "users": {
+    "title": "User Management",
+    "create_user": "Create User",
+    "search_placeholder": "Search username or email...",
+    "all_roles": "All Roles",
+    "no_users": "No users found",
+    "active": "Active",
+    "inactive": "Inactive",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "delete_success": "User deleted",
+    "delete_error": "Failed to delete user",
+    "status_updated": "Status updated",
+    "status_update_error": "Failed to update status",
+    "page_info": "Page {{page}} of {{total}}"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "accent_color": "Accent Color",
+    "apply": "Apply",
+    "nav_mode": "Navigation Mode",
+    "classic": "Classic",
+    "compact": "Compact",
+    "classic_desc": "Full sidebar with icons and labels",
+    "compact_desc": "Icons only with tooltips on hover",
+    "colors": {
+      "amber": "Amber",
+      "blue": "Blue",
+      "green": "Green",
+      "purple": "Purple",
+      "red": "Red",
+      "rose": "Rose"
+    }
   }
 }
