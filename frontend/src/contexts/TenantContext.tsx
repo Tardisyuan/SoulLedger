@@ -11,6 +11,7 @@ import {
 // ── Types ────────────────────────────────────────────────────────────
 
 export interface TenantInfo {
+  id: number;
   code: string;
   display_name: string;
 }
@@ -72,10 +73,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     setUserState(u);
     if (u) {
       localStorage.setItem(USER_KEY, JSON.stringify(u));
-      document.cookie = `${USER_KEY}=${encodeURIComponent(JSON.stringify(u))}; path=/; max-age=${60 * 30}; SameSite=Lax`;
     } else {
       localStorage.removeItem(USER_KEY);
-      document.cookie = `${USER_KEY}=; Max-Age=0; path=/`;
     }
   };
 
