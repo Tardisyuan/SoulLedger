@@ -1,0 +1,130 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { dispatchApi, soulsApi, karmaApi } from "@/lib/api";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { useI18n } from "@/src/contexts/I18nContext";
+
+export default function ProposeDispatchPage() {
+  const { t } = useI18n();
+  const { user } = useTenant();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    soul_id: "",
+    target_tenant_code: "",
+    reason: "",
+  });
+
+  const { data: soulsResponse } = useQuery({
+    queryKey: ["dispatch", "souls"],
+    queryFn: () => soulsApi.list({ page: 1 }),
+    enabled: !!user,
+  });
+
+  const souls = soulsResponse?.data?.results || soulsResponse?.data || [];
+
+  const { data: statsData } = useQuery({
+    queryKey: ["dispatch", "tenants"],
+    queryFn: () => karmaApi.statsOverview(),
+    enabled: !!user,
+  });
+
+  const tenants = statsData?.data?.tenants || [];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.tenant?.code) return;
+
+    setLoading(true);
+    try {
+      // Note: Backend expects numeric IDs but frontend only has tenant codes
+      // Using tenant code directly - may need backend adjustment
+      await dispatchApi.propose({
+        source_tenant: user.tenant.code as any,
+        target_tenant: form.target_tenant_code as any,
+        soul: parseInt(form.soul_id),
+        reason: form.reason,
+      } as any);
+      router.push("/dispatch");
+    } catch (err) {
+      console.error("Failed to propose dispatch:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-6 max-w-2xl">
+      <h1 className="text-2xl font-bold text-ink mb-6">{t("dispatch.propose") || "Propose Dispatch"}</h1>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-ink mb-1">Target Soul</label>
+          <select
+            value={form.soul_id}
+            onChange={e => setForm({ ...form, soul_id: e.target.value })}
+            className="w-full bg-surface-1 border border-hairline rounded-lg px-3 py-2 text-ink"
+            required
+          >
+            <option value="">Select soul...</option>
+            {souls.map((s: any) => (
+              <option key={s.id} value={s.id}>
+                #{s.id} - {s.name} ({s.current_state})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-ink mb-1">Target Tenant</label>
+          <select
+            value={form.target_tenant_code}
+            onChange={e => setForm({ ...form, target_tenant_code: e.target.value })}
+            className="w-full bg-surface-1 border border-hairline rounded-lg px-3 py-2 text-ink"
+            required
+          >
+            <option value="">Select tenant...</option>
+            {tenants
+              .filter((t: any) => t.tenant_code !== user?.tenant?.code)
+              .map((t: any) => (
+                <option key={t.tenant_code} value={t.tenant_code}>
+                  {t.tenant_name} ({t.tenant_code})
+                </option>
+              ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-ink mb-1">Reason</label>
+          <textarea
+            value={form.reason}
+            onChange={e => setForm({ ...form, reason: e.target.value })}
+            className="w-full bg-surface-1 border border-hairline rounded-lg px-3 py-2 text-ink"
+            rows={4}
+            placeholder="Reason for dispatch..."
+            required
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-amber-500 text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-400 disabled:opacity-50"
+          >
+            {loading ? "Submitting..." : "Submit Proposal"}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="bg-surface-2 text-ink px-4 py-2 rounded-lg text-sm hover:bg-surface-3"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

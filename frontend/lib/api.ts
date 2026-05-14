@@ -20,11 +20,15 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Add JWT token to every request
+// Add JWT token and tenant ID to every request
 api.interceptors.request.use((config) => {
   const token = getCookie("soulledger_access");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const tenantId = getTenantId();
+  if (tenantId) {
+    config.headers["X-Tenant-ID"] = tenantId;
   }
   return config;
 });
@@ -34,8 +38,7 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     if (error.response?.status === 401 && !error.config._retry) {
-      const isAuthEndpoint = error.config.url?.includes("/auth/login") ||
-                             error.config.url?.includes("/auth/register");
+      const isAuthEndpoint = /^\/api\/v1\/auth\/(login|register|refresh)\/?$/.test(error.config.url || '');
       if (isAuthEndpoint) {
         // Login/register already handles 401 itself — just reject
         return Promise.reject(error);
@@ -47,8 +50,11 @@ api.interceptors.response.use(
         try {
           const res = await axios.post(`${API_BASE}/auth/refresh/`, { refresh });
           const { access, refresh: newRefresh } = res.data;
-          document.cookie = `soulledger_access=${access}; path=/; max-age=1800; SameSite=Lax`;
-          document.cookie = `soulledger_refresh=${newRefresh}; path=/; max-age=604800; SameSite=Lax`;
+          // S-H1: Add Secure and HttpOnly flags in production; S-M1: refresh token rotation
+          const isProd = process.env.NODE_ENV === 'production';
+          const cookieOpts = `path=/; max-age=1800; SameSite=Lax${isProd ? '; Secure; HttpOnly' : ''}`;
+          document.cookie = `soulledger_access=${access}; ${cookieOpts}`;
+          document.cookie = `soulledger_refresh=${newRefresh}; path=/; max-age=604800; SameSite=Lax${isProd ? '; Secure; HttpOnly' : ''}`;
           error.config.headers.Authorization = `Bearer ${access}`;
           return api(error.config);
         } catch {
@@ -242,8 +248,11 @@ export interface KarmaStatsOverview {
 }
 
 export const karmaApi = {
+  balance: (soulId: number) => api.get(`/karma/balance/${soulId}/`),
+  effective: (soulId: number) => api.get(`/karma/effective/${soulId}/`),
+  recalculate: (soulId: number) => api.post(`/karma/recalculate/${soulId}/`),
   statsOverview: () => api.get<KarmaStatsOverview>("/karma/stats/overview/"),
-  exportStats: () => api.get("/karma/stats/export/", { responseType: "blob" } as any),
+  exportStats: (params?: Record<string, string>) => api.get("/karma/stats/export/", { params, responseType: "blob" } as any),
 };
 
 // Permissions
@@ -379,6 +388,21 @@ export const usersApi = {
   }),
 };
 
+// Tenants
+export interface Tenant {
+  id: number;
+  code: string;
+  display_name: string;
+  description?: string;
+  is_active?: boolean;
+  dispatch_enabled?: boolean;
+}
+
+export const tenantsApi = {
+  list: (params?: Record<string, string>) => api.get<Tenant[]>("/tenants/", { params }),
+  get: (id: number) => api.get<Tenant>(`/tenants/${id}/`),
+};
+
 // Types
 export interface Soul {
   id: string;
@@ -507,12 +531,77 @@ export const notificationsApi = {
   markAllRead: () => api.post<{ marked_read: number }>("/notifications/mark_all_read/"),
 };
 
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  role: "ADMIN" | "JUDGE" | "GUARDIAN" | "VIEWER";
-  first_name: string;
-  last_name: string;
-  is_active: boolean;
+// Dispatch
+export interface DispatchRecord {
+  id: string;
+  source_tenant: string;
+  source_tenant_code: string;
+  target_tenant: string;
+  target_tenant_code: string;
+  soul: string;
+  soul_name: string;
+  dispatched_by: string;
+  dispatched_by_name: string;
+  status: "PROPOSED" | "APPROVED" | "REJECTED" | "EXECUTED" | "CANCELLED";
+  reason: string;
+  proposed_at: string;
+  decided_at: string | null;
+  executed_at: string | null;
+  create_time: string;
+  update_time: string;
 }
+
+export interface CrossTenantJudgment {
+  id: string;
+  title: string;
+  description: string;
+  initiating_tenant: string;
+  initiating_tenant_code: string;
+  status: "PROPOSED" | "ACTIVE" | "CONCLUDED" | "CANCELLED";
+  concluded_at: string | null;
+  conclusion_type: "PASS" | "FAIL" | null;
+  participants: CrossTenantJudgmentParticipant[];
+  create_time: string;
+  update_time: string;
+}
+
+export interface CrossTenantJudgmentParticipant {
+  id: string;
+  judgment: string;
+  participant_tenant: string;
+  participant_tenant_code: string;
+  participant_actor: string | null;
+  participant_actor_name: string | null;
+  role: "ADVISOR" | "CO_JUDGE" | "CHAIRMAN";
+  joined_at: string;
+}
+
+export const dispatchApi = {
+  list: (params?: Record<string, string>) => api.get<DispatchRecord[]>("/dispatch/records/", { params }),
+  get: (id: string) => api.get<DispatchRecord>(`/dispatch/records/${id}/`),
+  propose: (data: {
+    source_tenant: number;
+    target_tenant: number;
+    soul: number;
+    reason: string;
+  }) => api.post<DispatchRecord>("/dispatch/records/", data),
+  approve: (id: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/approve/`),
+  reject: (id: string, reason?: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/reject/`, { reason }),
+  execute: (id: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/execute/`),
+  proposed: () => api.get<DispatchRecord[]>("/dispatch/records/proposed/"),
+  history: () => api.get<DispatchRecord[]>("/dispatch/records/history/"),
+};
+
+export const crossTenantJudgmentsApi = {
+  list: (params?: Record<string, string>) => api.get<CrossTenantJudgment[]>("/dispatch/cross-tenant-judgments/", { params }),
+  get: (id: string) => api.get<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/`),
+  create: (data: { title: string; description: string }) =>
+    api.post<CrossTenantJudgment>("/dispatch/cross-tenant-judgments/", data),
+  participate: (id: string, data: {
+    participant_tenant: number;
+    participant_actor?: number;
+    role: "ADVISOR" | "CO_JUDGE" | "CHAIRMAN";
+  }) => api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/participate/`, data),
+  conclude: (id: string, conclusion_type: "PASS" | "FAIL") =>
+    api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/conclude/`, { conclusion_type }),
+};
