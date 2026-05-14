@@ -159,7 +159,12 @@
   "common": {
     "close": "إغلاق",
     "cancel": "إلغاء",
-    "save": "حفظ"
+    "save": "حفظ",
+    "loading": "Smen...",
+    "edit": "Khemen Seth",
+    "delete": "Wehem Seth",
+    "prev": "Em Tepy",
+    "next": "Em Khet"
   },
   "menus": {
     "title": "إدارة القائمة",
@@ -306,6 +311,12 @@
     "no_realm_data": "Ma Medew Ahet"
   },
   "karma": {
+    "title": "Medew Unemu Seth",
+    "subtitle": "Medew Unemu Aba Hemsu Seth",
+    "no_data": "Ma Rekhyu Medew Seth",
+    "total_souls": "Wetu Aba Hemsu Seth",
+    "active_souls": "Aba Hemsu Em Khet",
+    "judging_souls": "Em Sheemtet",
     "timeline": "Medew Unemu Seth",
     "time_decay": "Em Khet Her Tepy Seth",
     "next_life_inheritance": "Aru Tepy",
@@ -313,7 +324,11 @@
     "original_weight": "Khemut Seth",
     "effective_weight": "Em Tepy Seth",
     "decay_factor": "Khet Seth",
-    "years_elapsed": "Petep Seth"
+    "years_elapsed": "Petep Seth",
+    "state_distribution": "Set Medu Seth",
+    "karma_distribution": "Unemu Seth",
+    "souls_by_realm": "Aba Seth Per Ahet",
+    "recent_activity": "Khedu Sethet"
   },
   "judgment": {
     "title": "Sheemtet Seth",
@@ -389,5 +404,66 @@
     "mark_read": "Pedjet Maakheru Ankh",
     "empty": "Maakheru Mehi",
     "loading": "Smen..."
+  },
+  "realms": {
+    "title": "Mekher",
+    "subtitle": "Amset Netjeru em Kehat - Mekher"
+  },
+  "actors": {
+    "title": "Netjeru",
+    "subtitle": "Amset Netjeru em Kehat - Netjeru"
+  },
+  "dispatch": {
+    "title": "Iri Pert Abuf",
+    "subtitle": "Pert Abuf Em Kehat Seth",
+    "propose": "Sesen Pert Abuf",
+    "pending": "Pert Abuf Em Set Medu",
+    "history": "Medew Sethet",
+    "no_pending": "Ma Rekhyu Pert Abuf Em Set Medu",
+    "no_history": "Ma Rekhyu Medew Pert Abuf"
+  },
+  "crossJudgments": {
+    "title": "Sheemtet Seth Em Kehat",
+    "subtitle": "Sheemtet Seth Em Kehat Seth",
+    "no_judgments": "Ma Rekhyu Sheemtet Seth Em Kehat",
+    "initiated_by": "Sesen Abuf",
+    "participants": "Netjeru"
+  },
+  "users": {
+    "title": "Iri Netjeru",
+    "create_user": "Kheme Netjer",
+    "search_placeholder": "Shesep Her Ren...",
+    "all_roles": "Wetu Netjeru",
+    "no_users": "Ma Rekhyu Netjeru",
+    "active": "Em Khet",
+    "inactive": "Ma Em Khet",
+    "activate": "Sesen Em Khet",
+    "deactivate": "Sesen Ma Em Khet",
+    "delete_success": "Netjer Wehem Seth",
+    "delete_error": "Ma Wehem Seth Netjer",
+    "status_updated": "Set Medu Sesen Seth",
+    "status_update_error": "Ma Sesen Set Medu",
+    "page_info": "Per {{page}} Wu {{total}}"
+  },
+  "settings": {
+    "title": "Iri Sethety",
+    "theme": "Hetep Sethet",
+    "light": "Pepy Sethet",
+    "dark": "Khefere Sethet",
+    "accent_color": "Unemu Sethet",
+    "apply": "Iri Sethet",
+    "nav_mode": "Iri Mekher",
+    "classic": "Em Tepy",
+    "compact": "Em Khet",
+    "classic_desc": "Mekher Em Tepy Wu",
+    "compact_desc": "Mekher Maakher Wu",
+    "colors": {
+      "amber": "Amber",
+      "blue": "Blue",
+      "green": "Green",
+      "purple": "Purple",
+      "red": "Red",
+      "rose": "Rose"
+    }
   }
 }

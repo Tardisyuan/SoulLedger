@@ -1,33 +1,80 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Globe, Users, ArrowRightLeft, Scale, Gem, UserCog, User, Settings,
+  Folder, FileText, Home, Shield, ShieldCheck, ShieldAlert, ShieldQuestion,
+  Scroll, BookOpen, Bell, ChevronRight, ChevronDown, Sun, Moon, LogOut,
+  type LucideIcon
+} from "lucide-react";
 import { menusApi, notificationsApi, type MenuItem } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { authApi } from "@/lib/api";
+import { SettingsDrawer, useAccentColor } from "@/src/components/settings/SettingsDrawer";
 
-const ROLE_ICONS: Record<string, string> = {
-  ADMIN: "⚙️",
-  JUDGE: "⚖️",
-  GUARDIAN: "🛡️",
-  VIEWER: "👁️",
+const ICON_MAP: Record<string, LucideIcon> = {
+  globe: Globe,
+  users: Users,
+  "arrow-right-left": ArrowRightLeft,
+  scale: Scale,
+  gem: Gem,
+  "user-cog": UserCog,
+  user: User,
+  settings: Settings,
+  folder: Folder,
+  "file-text": FileText,
+  home: Home,
+  shield: Shield,
+  "shield-check": ShieldCheck,
+  "shield-alert": ShieldAlert,
+  "shield-question": ShieldQuestion,
+  scroll: Scroll,
+  "book-open": BookOpen,
+  bell: Bell,
+  "chevron-right": ChevronRight,
+  "chevron-down": ChevronDown,
 };
+
+const DEFAULT_ICON = Settings;
+
+const NAV_MODE_KEY = "soulledger_nav_mode";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
+  const [navMode, setNavMode] = useState<"classic" | "compact">("classic");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { user, logout } = useTenant();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
 
+  // Apply accent color on mount
+  useAccentColor();
+
+  // Hydrate nav mode from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(NAV_MODE_KEY);
+    if (saved === "compact" || saved === "classic") {
+      setNavMode(saved);
+      setCollapsed(saved === "compact");
+    }
+  }, []);
+
+  const handleNavModeChange = (mode: "classic" | "compact") => {
+    setNavMode(mode);
+    localStorage.setItem(NAV_MODE_KEY, mode);
+    setCollapsed(mode === "compact");
+  };
+
   const handleLogout = async () => {
-    try { await authApi.logout(); } catch { /* ignore */ }
+    try { await authApi.logout(); } catch (err) { console.error("Logout failed:", err); }
     queryClient.invalidateQueries({ queryKey: ["menus-sidebar"] });
     logout();
     router.push("/");
@@ -41,6 +88,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
+    enabled: !!user, // Only fetch when user is logged in
   });
 
   const { data: notifications = [] } = useQuery({
@@ -166,6 +214,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
             <div className="w-px h-5 border-hairline" />
 
+            {/* Settings gear */}
+            <button
+              onClick={() => setSettingsOpen(true)}
+              title="Settings"
+              className="text-ink-subtle hover:text-amber-500 transition-colors p-1 rounded"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+
+            <div className="w-px h-5 border-hairline" />
+
             {user ? (
               <>
                 <span className="text-ink-muted text-sm">
@@ -195,6 +257,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
+
+      {/* Settings Drawer */}
+      <SettingsDrawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        navMode={navMode}
+        onNavModeChange={handleNavModeChange}
+      />
     </div>
   );
 }
@@ -229,21 +299,18 @@ function SidebarMenuItem({
               : "text-ink-muted hover:bg-surface-2 hover:text-ink"
           }`}
         >
-          <span className="text-base shrink-0">
-            {menu.icon || (ROLE_ICONS[menu.roles?.[0]] || "📁")}
+          <span className="shrink-0">
+            {(() => {
+              const IconComponent = menu.icon ? ICON_MAP[menu.icon] || DEFAULT_ICON : DEFAULT_ICON;
+              return <IconComponent className="w-5 h-5" />;
+            })()}
           </span>
           {!collapsed && (
             <>
               <span className="flex-1 text-left text-sm truncate">{menu.name}</span>
-              <svg
-                className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
+              {hasChildren && (
+                <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`} />
+              )}
             </>
           )}
         </button>
@@ -272,8 +339,11 @@ function SidebarMenuItem({
           : "text-ink-muted hover:bg-surface-2 hover:text-ink"
       }`}
     >
-      <span className="text-base shrink-0">
-        {menu.icon || (ROLE_ICONS[menu.roles?.[0]] || "📄")}
+      <span className="shrink-0">
+        {(() => {
+          const IconComponent = menu.icon ? ICON_MAP[menu.icon] || DEFAULT_ICON : DEFAULT_ICON;
+          return <IconComponent className="w-5 h-5" />;
+        })()}
       </span>
       {!collapsed && (
         <span className="text-sm truncate">{menu.name}</span>
