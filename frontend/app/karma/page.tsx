@@ -17,7 +17,7 @@ export default function KarmaPage() {
   if (isLoading) return <div className="p-6">{t("common.loading")}</div>;
 
   if (!stats) {
-    return <div className="p-6 text-ink-muted">{t("karma.no_data") || "暂无数据"}</div>;
+    return <div className="p-6 text-ink-muted">{t("karma.no_data")}</div>;
   }
 
   const karmaStats = stats as KarmaStatsOverview;
@@ -25,24 +25,24 @@ export default function KarmaPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">{t("karma.title") || "功德统计"}</h1>
-        <p className="text-ink-subtle mt-1">{t("karma.subtitle") || "灵魂功德 overview"}</p>
+        <h1 className="text-2xl font-bold text-ink">{t("karma.title")}</h1>
+        <p className="text-ink-subtle mt-1">{t("karma.subtitle")}</p>
       </div>
 
       {/* Overview Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="bg-surface-1 border border-hairline rounded-lg p-4">
-          <div className="text-sm text-ink-muted">{t("karma.total_souls") || "总灵魂数"}</div>
+          <div className="text-sm text-ink-muted">{t("karma.total_souls")}</div>
           <div className="text-3xl font-bold text-amber-400 mt-1">{karmaStats.total_souls}</div>
         </div>
         <div className="bg-surface-1 border border-hairline rounded-lg p-4">
-          <div className="text-sm text-ink-muted">{t("karma.active_souls") || "活跃灵魂"}</div>
+          <div className="text-sm text-ink-muted">{t("karma.active_souls")}</div>
           <div className="text-3xl font-bold text-green-400 mt-1">
             {karmaStats.state_distribution.find(s => s.state === "ALIVE")?.count ?? 0}
           </div>
         </div>
         <div className="bg-surface-1 border border-hairline rounded-lg p-4">
-          <div className="text-sm text-ink-muted">{t("karma.judging_souls") || "审判中"}</div>
+          <div className="text-sm text-ink-muted">{t("karma.judging_souls")}</div>
           <div className="text-3xl font-bold text-amber-500 mt-1">
             {karmaStats.state_distribution.find(s => s.state === "JUDGING")?.count ?? 0}
           </div>
@@ -52,7 +52,7 @@ export default function KarmaPage() {
       {/* State Distribution */}
       <div className="bg-surface-1 border border-hairline rounded-lg p-4">
         <h2 className="text-lg font-semibold text-ink mb-4">
-          {t("karma.state_distribution") || "状态分布"}
+          {t("karma.state_distribution")}
         </h2>
         <div className="space-y-2">
           {karmaStats.state_distribution.map((item) => (
@@ -76,7 +76,7 @@ export default function KarmaPage() {
       {/* Karma Distribution */}
       <div className="bg-surface-1 border border-hairline rounded-lg p-4">
         <h2 className="text-lg font-semibold text-ink mb-4">
-          {t("karma.karma_distribution") || "功德分布"}
+          {t("karma.karma_distribution")}
         </h2>
         <div className="space-y-2">
           {karmaStats.karma_distribution.map((item, idx) => (
@@ -92,7 +92,7 @@ export default function KarmaPage() {
       {karmaStats.souls_by_realm && karmaStats.souls_by_realm.length > 0 && (
         <div className="bg-surface-1 border border-hairline rounded-lg p-4">
           <h2 className="text-lg font-semibold text-ink mb-4">
-            {t("karma.souls_by_realm") || "各领域灵魂数"}
+            {t("karma.souls_by_realm")}
           </h2>
           <div className="space-y-2">
             {karmaStats.souls_by_realm.map((item) => (
@@ -112,7 +112,7 @@ export default function KarmaPage() {
       {karmaStats.recent_activity && karmaStats.recent_activity.length > 0 && (
         <div className="bg-surface-1 border border-hairline rounded-lg p-4">
           <h2 className="text-lg font-semibold text-ink mb-4">
-            {t("karma.recent_activity") || "最近活动"}
+            {t("karma.recent_activity")}
           </h2>
           <div className="space-y-3">
             {karmaStats.recent_activity.slice(0, 10).map((activity) => (
