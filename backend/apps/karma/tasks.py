@@ -15,7 +15,7 @@ def recalculate_all_karma():
     from apps.karma.services import KarmaService
 
     updated = 0
-    for soul in Soul.objects.iterator():
+    for soul in Soul.objects.iterator(chunk_size=500):
         KarmaService.recalculate_soul_karma(soul)
         updated += 1
 

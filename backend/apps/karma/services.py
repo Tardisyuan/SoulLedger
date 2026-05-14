@@ -8,6 +8,8 @@ from django.utils import timezone
 from apps.souls.models import Soul
 
 KARMA_CACHE_TTL = 60 * 5  # 5 minutes
+INHERITANCE_FACTOR = 0.2
+DECAY_RATE = 0.01  # per year
 
 
 class KarmaService:
@@ -31,7 +33,7 @@ class KarmaService:
         """
         Apply exponential time decay: effective = original × e^(-0.01×years)
         """
-        return original_weight * math.exp(-0.01 * years)
+        return original_weight * math.exp(-DECAY_RATE * years)
 
     @classmethod
     def recalculate_soul_karma(cls, soul: Soul) -> dict:
@@ -58,7 +60,7 @@ class KarmaService:
         soul.save(update_fields=["merit_score", "demerit_score", "updated_at"])
 
         # Invalidate cache
-        cls._invalidate_cache(soul.id)
+        cls._invalidate_cache(soul)
 
         return {
             "soul_id": str(soul.id),
@@ -73,7 +75,8 @@ class KarmaService:
         Return full karma summary with time decay for a soul.
         Cached in Redis for KARMA_CACHE_TTL seconds.
         """
-        cache_key = f"karma:summary:{soul.id}"
+        tenant_code = soul.tenant.code if soul.tenant else "global"
+        cache_key = f"karma:summary:{tenant_code}:{soul.id}"
         cached = cache.get(cache_key)
         if cached is not None:
             return cached
@@ -102,7 +105,7 @@ class KarmaService:
                 "original_weight": r.weight,
                 "effective_weight": effective_weight,
                 "years_elapsed": round(years, 2),
-                "decay_factor": round(math.exp(-0.01 * years), 4),
+                "decay_factor": round(math.exp(-DECAY_RATE * years), 4),
                 "civilization": r.civilization,
                 "recorded_at": r.recorded_at.isoformat(),
                 "event_date": r.event_date.isoformat() if r.event_date else None,
@@ -123,10 +126,11 @@ class KarmaService:
         cache.set(cache_key, result, KARMA_CACHE_TTL)
         return result
 
-    @staticmethod
-    def _invalidate_cache(soul_id):
-        """Invalidate karma cache for a soul."""
-        cache_key = f"karma:summary:{soul_id}"
+    @classmethod
+    def _invalidate_cache(cls, soul: Soul):
+        """Invalidate karma cache for a soul (tenant-namespaced)."""
+        tenant_code = soul.tenant.code if soul.tenant else "global"
+        cache_key = f"karma:summary:{tenant_code}:{soul.id}"
         cache.delete(cache_key)
 
     @classmethod
@@ -152,7 +156,7 @@ class KarmaService:
         effective = cls.get_effective_karma(soul)
         return {
             "soul_id": str(soul.id),
-            "inherited_merit": round(effective["effective_merit"] * 0.2),
-            "inherited_demerit": round(effective["effective_demerit"] * 0.2),
+            "inherited_merit": round(effective["effective_merit"] * INHERITANCE_FACTOR),
+            "inherited_demerit": round(effective["effective_demerit"] * INHERITANCE_FACTOR),
             "inheritance_note": "20% of effective karma passes to next incarnation",
         }
