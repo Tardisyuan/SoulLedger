@@ -3,7 +3,7 @@ REST views for Karma app.
 """
 import csv
 import io
-from django.db.models import Count
+from django.db.models import Count, Avg, Q, Case, When, F
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -138,11 +138,14 @@ class KarmaOverviewStatsView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        total_souls = Soul.objects.count()
+        tenant = getattr(request, 'tenant', None)
+
+        # S-H3: All queries scoped to tenant
+        total_souls = Soul.objects.filter(tenant=tenant).count()
 
         # State distribution
         state_counts = dict(
-            Soul.objects.values_list("current_state")
+            Soul.objects.filter(tenant=tenant).values_list("current_state")
             .annotate(count=Count("id"))
             .values_list("current_state", "count")
         )
@@ -155,49 +158,56 @@ class KarmaOverviewStatsView(APIView):
             for s in SoulState.values
         ]
 
-        # Per-tenant soul counts
+        # Per-tenant soul counts - scoped to current tenant (S-H3)
         tenant_stats = []
-        for tenant in Tenant.objects.all().exclude(code__startswith="TEST"):
-            souls_qs = Soul.objects.filter(tenant=tenant)
-            total = souls_qs.count()
-            if total == 0:
-                continue
-            state_breakdown = dict(
-                souls_qs.values_list("current_state")
-                .annotate(count=Count("id"))
-                .values_list("current_state", "count")
-            )
-            avg_karma = souls_qs.aggregate(
-                avg_balance=Count("id")
-            )["avg_balance"]
-            tenant_stats.append({
-                "tenant_code": tenant.code,
-                "tenant_name": tenant.display_name,
-                "total_souls": total,
-                "state_breakdown": {
-                    s: state_breakdown.get(s, 0) for s in SoulState.values
-                },
-            })
+        tenant_obj = Tenant.objects.filter(code=tenant.code).first() if tenant else None
+        if tenant_obj:
+            tenant_data = Soul.objects.filter(tenant=tenant_obj).values('tenant__code', 'tenant__display_name').annotate(
+                total=Count('id'),
+            ).order_by('tenant__code')
 
-        # Karma distribution buckets
+            for td in tenant_data:
+                if td['total'] == 0:
+                    continue
+                state_breakdown = dict(
+                    Soul.objects.filter(tenant=tenant_obj)
+                    .values_list("current_state")
+                    .annotate(count=Count("id"))
+                    .values_list("current_state", "count")
+                )
+                tenant_stats.append({
+                    "tenant_code": td['tenant__code'],
+                    "tenant_name": td['tenant__display_name'],
+                    "total_souls": td['total'],
+                    "state_breakdown": {
+                        s: state_breakdown.get(s, 0) for s in SoulState.values
+                    },
+                })
+
+        # Karma distribution buckets - scoped to tenant (S-H3)
         karma_buckets = [
-            {"label": "< -50", "min": -99999, "max": -50, "count": 0},
-            {"label": "-50 to -20", "min": -50, "max": -20, "count": 0},
-            {"label": "-20 to -5", "min": -20, "max": -5, "count": 0},
-            {"label": "-5 to 5", "min": -5, "max": 5, "count": 0},
-            {"label": "5 to 20", "min": 5, "max": 20, "count": 0},
-            {"label": "20 to 50", "min": 20, "max": 50, "count": 0},
-            {"label": "> 50", "min": 50, "max": 99999, "count": 0},
+            {"label": "< -50", "min": -99999, "max": -50},
+            {"label": "-50 to -20", "min": -50, "max": -20},
+            {"label": "-20 to -5", "min": -20, "max": -5},
+            {"label": "-5 to 5", "min": -5, "max": 5},
+            {"label": "5 to 20", "min": 5, "max": 20},
+            {"label": "20 to 50", "min": 20, "max": 50},
+            {"label": "> 50", "min": 50, "max": 99999},
         ]
-        for soul in Soul.objects.all():
-            bal = soul.karmic_balance
-            for bucket in karma_buckets:
-                if bucket["min"] <= bal < bucket["max"]:
-                    bucket["count"] += 1
-                    break
+        bucket_counts = {}
+        for i, b in enumerate(karma_buckets):
+            # karmic_balance = merit_score - demerit_score, expressed via F()
+            bucket_counts[f'bucket_{i}'] = Count(
+                'id',
+                filter=Q(merit_score__gte=F('demerit_score') + b['min']) &
+                       Q(merit_score__lt=F('demerit_score') + b['max'])
+            )
+        bucket_result = Soul.objects.filter(tenant=tenant).aggregate(**bucket_counts)
+        for i, b in enumerate(karma_buckets):
+            b["count"] = bucket_result.get(f'bucket_{i}', 0)
 
-        # Recent activity (last 10 audit log entries)
-        recent_logs = AuditLog.objects.all()[:10]
+        # S-C2: Recent activity filtered to current tenant only
+        recent_logs = AuditLog.objects.filter(tenant=tenant).select_related("user").order_by("-timestamp")[:10]
         recent_activity = [
             {
                 "id": log.id,
@@ -211,17 +221,9 @@ class KarmaOverviewStatsView(APIView):
             for log in recent_logs
         ]
 
-        # Souls by realm/disposition breakdown
-        # Get counts of souls with dispositions by realm
-        realm_counts = dict(
-            Disposition.objects.exclude(is_executed=False)
-            .values("destination_realm__realm_code", "destination_realm__name_en")
-            .annotate(count=Count("id"))
-            .values_list("destination_realm__realm_code", "count")
-        )
-        # Add executed disposition souls grouped by realm
+        # Souls by realm/disposition breakdown - scoped to tenant (S-H3)
         executed_realms = {}
-        for d in Disposition.objects.filter(is_executed=True).select_related("destination_realm"):
+        for d in Disposition.objects.filter(tenant=tenant, is_executed=True).select_related("destination_realm").only("destination_realm__realm_code", "destination_realm__name_en", "destination_realm__civilization"):
             if d.destination_realm:
                 realm_code = d.destination_realm.realm_code
                 if realm_code not in executed_realms:
