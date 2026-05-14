@@ -7,6 +7,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from apps.authentication.views import UserViewSet
+from apps.core.health import HealthCheck, HealthCheckDetailed
 
 # User management router (registered at api/v1/users/ via path)
 user_router = DefaultRouter()
@@ -14,6 +15,8 @@ user_router.register(r'', UserViewSet, basename='user')
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("health/", HealthCheck.as_view(), name="health"),
+    path("health/detailed/", HealthCheckDetailed.as_view(), name="health_detailed"),
     path("api/v1/auth/", include("apps.authentication.urls")),
     path("api/v1/users/", include(user_router.urls)),
     path("api/v1/tenants/", include("apps.tenants.urls")),
@@ -31,4 +34,5 @@ urlpatterns = [
     path("api/v1/audit/", include("apps.audit.urls")),
     path("api/v1/", include("apps.workflow.urls")),
     path("api/v1/notifications/", include("apps.notifications.urls")),
+    path("api/v1/dispatch/", include("apps.dispatch.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

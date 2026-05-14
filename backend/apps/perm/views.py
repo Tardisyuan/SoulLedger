@@ -268,3 +268,55 @@ def init_roles(request):
         "message": f"Initialized {created_count} roles",
         "total": Role.objects.count(),
     })
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def init_role_permissions(request):
+    """
+    POST /api/v1/perm/role-permissions/init/
+    根据 ROLE_PERMISSIONS 字典为所有角色分配权限（仅 ADMIN）
+    """
+    if request.user.role != "ADMIN":
+        return Response({"error": "Only ADMIN can initialize role permissions"}, status=status.HTTP_403_FORBIDDEN)
+
+    # First ensure all permissions exist
+    perm_count_before = Permission.objects.count()
+    for codename, name, category in DEFAULT_PERMISSIONS:
+        Permission.objects.get_or_create(
+            codename=codename,
+            defaults={"name": name, "category": category},
+        )
+
+    # Clean up phantom permissions (test entries)
+    Permission.objects.filter(codename__startswith='test.').delete()
+
+    perm_count_after = Permission.objects.count()
+
+    # Assign permissions to roles based on ROLE_PERMISSIONS
+    results = {}
+    for role_name, perm_codenames in ROLE_PERMISSIONS.items():
+        role = Role.objects.filter(name=role_name).first()
+        if not role:
+            results[role_name] = f"Role not found"
+            continue
+
+        # Get permission objects
+        perms = Permission.objects.filter(codename__in=perm_codenames)
+        perm_ids = list(perms.values_list('id', flat=True))
+
+        # Remove existing and create new
+        RolePermission.objects.filter(role=role).delete()
+        created = []
+        for perm_id in perm_ids:
+            rp = RolePermission.objects.create(role=role, permission_id=perm_id)
+            created.append(rp.id)
+
+        results[role_name] = f"Assigned {len(created)} permissions"
+
+    return Response({
+        "message": "Role permissions initialized",
+        "permissions_added": perm_count_after - perm_count_before,
+        "permissions_total": perm_count_after,
+        "roles": results,
+    })

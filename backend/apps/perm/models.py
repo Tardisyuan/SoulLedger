@@ -170,6 +170,22 @@ DEFAULT_PERMISSIONS = [
     # reincarnation 权限
     ("reincarnation.read", "查看轮回", "reincarnation"),
     ("reincarnation.manage", "管理轮回", "reincarnation"),
+    # dashboard 权限
+    ("dashboard.read", "查看仪表盘", "dashboard"),
+    # audit 权限
+    ("audit.read", "查看审计日志", "audit"),
+    # notification 权限
+    ("notification.read", "查看通知", "notification"),
+    # dispatch 权限
+    ("dispatch.read", "查看调度", "dispatch"),
+    ("dispatch.manage", "管理调度", "dispatch"),
+    # cross-tenant judgment 权限
+    ("cross_judgment.read", "查看跨域审判", "cross_judgment"),
+    ("cross_judgment.create", "创建跨域审判", "cross_judgment"),
+    # realms 权限
+    ("realms.read", "查看领域", "realms"),
+    # actors 权限
+    ("actors.read", "查看角色", "actors"),
     # system 权限
     ("system.settings", "系统设置", "system"),
     ("user.manage", "用户管理", "system"),
@@ -179,15 +195,36 @@ DEFAULT_PERMISSIONS = [
 
 # 默认角色权限矩阵
 ROLE_PERMISSIONS = {
-    "ADMIN": ["soul.read", "soul.create", "soul.update", "soul.delete",
-              "judgment.read", "judgment.execute",
-              "karma.read", "karma.manage",
-              "reincarnation.read", "reincarnation.manage",
-              "system.settings", "user.manage", "menu.manage"],
-    "JUDGE": ["soul.read", "judgment.read", "judgment.execute",
-               "reincarnation.read", "reincarnation.manage"],
-    "GUARDIAN": ["soul.read", "soul.update", "reincarnation.read", "reincarnation.manage"],
-    "VIEWER": ["soul.read", "reincarnation.read"],
+    "ADMIN": [
+        "soul.read", "soul.create", "soul.update", "soul.delete",
+        "judgment.read", "judgment.execute",
+        "karma.read", "karma.manage",
+        "reincarnation.read", "reincarnation.manage",
+        "dashboard.read", "audit.read", "notification.read",
+        "dispatch.read", "dispatch.manage",
+        "cross_judgment.read", "cross_judgment.create",
+        "realms.read", "actors.read",
+        "system.settings", "user.manage", "menu.manage",
+    ],
+    "JUDGE": [
+        "soul.read", "judgment.read", "judgment.execute",
+        "reincarnation.read", "reincarnation.manage",
+        "karma.read", "dashboard.read",
+        "cross_judgment.read", "cross_judgment.create",
+        "realms.read", "actors.read",
+    ],
+    "GUARDIAN": [
+        "soul.read", "soul.update",
+        "reincarnation.read", "reincarnation.manage",
+        "karma.read", "dashboard.read",
+        "dispatch.read", "dispatch.manage",
+        "realms.read", "actors.read",
+    ],
+    "VIEWER": [
+        "soul.read", "reincarnation.read",
+        "karma.read", "dashboard.read",
+        "realms.read", "actors.read",
+    ],
 }
 
 # 默认角色列表
