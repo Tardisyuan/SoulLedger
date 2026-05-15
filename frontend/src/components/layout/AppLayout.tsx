@@ -112,11 +112,33 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <nav className={`h-16 border-b border-hairline shrink-0 flex items-center ${collapsed ? "justify-center px-0" : "justify-center px-5"}`}>
           <Link href="/" className="flex items-center gap-2.5 overflow-hidden">
-            <span className="text-2xl shrink-0">💀</span>
-            {!collapsed && (
-              <span className="text-amber-500 font-bold tracking-wide truncate">
-                SoulLedger
-              </span>
+            {collapsed ? (
+              /* Collapsed: Scale icon */
+              <svg className="w-7 h-7 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v18" stroke="currentColor"/>
+                <path d="M5 8l7-5 7 5" stroke="currentColor"/>
+                <circle cx="5" cy="8" r="2" fill="currentColor" stroke="none"/>
+                <circle cx="19" cy="8" r="2" fill="currentColor" stroke="none"/>
+                <path d="M5 16l7 5 7-5" stroke="currentColor"/>
+                <circle cx="5" cy="16" r="2" fill="currentColor" stroke="none"/>
+                <circle cx="19" cy="16" r="2" fill="currentColor" stroke="none"/>
+              </svg>
+            ) : (
+              /* Expanded: Scale + text */
+              <>
+                <svg className="w-7 h-7 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3v18"/>
+                  <path d="M5 8l7-5 7 5"/>
+                  <circle cx="5" cy="8" r="2" fill="currentColor" stroke="none"/>
+                  <circle cx="19" cy="8" r="2" fill="currentColor" stroke="none"/>
+                  <path d="M5 16l7 5 7-5"/>
+                  <circle cx="5" cy="16" r="2" fill="currentColor" stroke="none"/>
+                  <circle cx="19" cy="16" r="2" fill="currentColor" stroke="none"/>
+                </svg>
+                <span className="text-amber-500 font-bold tracking-wide truncate">
+                  SoulLedger
+                </span>
+              </>
             )}
           </Link>
         </nav>
@@ -139,23 +161,35 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Bottom: toggle + footer */}
         <div className="border-t border-hairline flex items-center">
-          {/* Toggle button */}
-          <div className={`flex ${collapsed ? "w-full justify-center" : "w-1/4"}`}>
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="w-8 h-8 flex items-center justify-center rounded-md text-ink-muted hover:text-amber-500 hover:bg-surface-2 transition-colors"
-              title={collapsed ? "展开菜单" : "收起菜单"}
-            >
-              {collapsed ? "→" : "←"}
-            </button>
-          </div>
-          {/* Divider */}
-          {!collapsed && <div className="w-px h-5 bg-hairline" />}
-          {/* Footer */}
-          {collapsed ? null : (
-            <div className="flex-1 text-xs text-ink-subtle text-center pr-4">
-              SoulLedger v0.1
+          {collapsed ? (
+            /* Collapsed: centered toggle */
+            <div className="w-full flex justify-center">
+              <button
+                onClick={() => setCollapsed(!collapsed)}
+                className="w-8 h-8 flex items-center justify-center rounded-md text-ink-muted hover:text-amber-500 hover:bg-surface-2 transition-colors"
+                title="展开菜单"
+              >
+                →
+              </button>
             </div>
+          ) : (
+            /* Expanded: button in left 1/4 (centered), footer in right 3/4 (centered) */
+            <>
+              <div className="w-1/4 flex justify-center">
+                <button
+                  onClick={() => setCollapsed(!collapsed)}
+                  className="w-8 h-8 flex items-center justify-center rounded-md text-ink-muted hover:text-amber-500 hover:bg-surface-2 transition-colors"
+                  title="收起菜单"
+                >
+                  ←
+                </button>
+              </div>
+              <div className="w-3/4 flex justify-center pr-4">
+                <div className="text-xs text-ink-subtle">
+                  SoulLedger v0.1
+                </div>
+              </div>
+            </>
           )}
         </div>
       </aside>
