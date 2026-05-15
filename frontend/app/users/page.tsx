@@ -10,6 +10,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { UserModal } from "@/src/components/users/UserModal";
 import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
 import { showToast } from "@/src/components/ui/Toast";
+import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "管理员",
@@ -143,11 +144,7 @@ export default function UsersPage() {
             </thead>
             <tbody className="divide-y divide-hairline">
               {isLoading ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-ink-muted">
-                    {t("common.loading") || "加载中..."}
-                  </td>
-                </tr>
+                <TableSkeleton rows={8} cols={6} />
               ) : users.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-sm text-ink-muted">
@@ -222,7 +219,15 @@ export default function UsersPage() {
         </div>
 
         {/* Pagination */}
-        {data && (
+        {isLoading ? (
+          <div className="flex items-center justify-between mt-4">
+            <Skeleton className="h-4 w-32" />
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-8 w-20" />
+            </div>
+          </div>
+        ) : data && (
           <div className="flex items-center justify-between mt-4">
             <p className="text-sm text-ink-muted">
               {t("users.page_info", {

@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { auditApi, type PaginatedResponse } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
+import { PageSection } from "@/components/ui/page-section";
+import { TableSkeleton } from "@/components/ui/skeleton";
 
 interface AuditLogEntry {
   id: number;
@@ -183,113 +185,117 @@ export default function AuditPage() {
         </div>
 
         {/* Audit table */}
-        <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-hairline bg-surface-2">
-                <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
-                  {t("audit.timestamp") || "时间"}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
-                  {t("audit.user") || "用户"}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
-                  {t("audit.action") || "操作"}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
-                  {t("audit.resource") || "资源"}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
-                  {t("audit.description") || "描述"}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
-                  {t("audit.ip_address") || "IP"}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-hairline">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-ink-muted">
-                    {t("audit.loading") || "加载中..."}
-                  </td>
-                </tr>
-              ) : logs.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-ink-muted">
-                    {t("audit.no_logs") || "暂无审计日志"}
-                  </td>
-                </tr>
-              ) : (
-                logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-surface-2/50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-ink-muted whitespace-nowrap">
-                      {new Date(log.timestamp).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink font-medium">
-                      {log.user_display || log.user || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          log.action === "CREATE"
-                            ? "bg-green-500/20 text-green-400"
-                            : log.action === "UPDATE"
-                            ? "bg-amber-500/20 text-amber-400"
-                            : log.action === "DELETE"
-                            ? "bg-red-500/20 text-red-400"
-                            : log.action === "LOGIN" || log.action === "LOGOUT"
-                            ? "bg-blue-500/20 text-blue-400"
-                            : "bg-surface-3 text-ink-muted"
-                        }`}
-                      >
-                        {log.action}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink-muted">
-                      {log.resource}
-                      {log.resource_id && (
-                        <span className="text-ink-subtle ml-1">#{log.resource_id}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink-muted max-w-xs truncate">
-                      {log.description || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-ink-subtle font-mono">
-                      {log.ip_address || "-"}
-                    </td>
+        <PageSection
+          title={t("audit.table_title") || "审计记录"}
+          isLoading={isLoading}
+          className="overflow-hidden p-0"
+        >
+          {isLoading ? (
+            <div className="p-4">
+              <TableSkeleton rows={8} cols={6} />
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="py-12 text-center text-sm text-ink-muted">
+              {t("audit.no_logs") || "暂无审计日志"}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-hairline bg-surface-2">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                      {t("audit.timestamp") || "时间"}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                      {t("audit.user") || "用户"}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                      {t("audit.action") || "操作"}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                      {t("audit.resource") || "资源"}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                      {t("audit.description") || "描述"}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                      {t("audit.ip_address") || "IP"}
+                    </th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  {logs.map((log) => (
+                    <tr key={log.id} className="hover:bg-surface-2/50 transition-colors">
+                      <td className="px-4 py-3 text-sm text-ink-muted whitespace-nowrap">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-ink font-medium">
+                        {log.user_display || log.user || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                            log.action === "CREATE"
+                              ? "bg-green-500/20 text-green-400"
+                              : log.action === "UPDATE"
+                              ? "bg-amber-500/20 text-amber-400"
+                              : log.action === "DELETE"
+                              ? "bg-red-500/20 text-red-400"
+                              : log.action === "LOGIN" || log.action === "LOGOUT"
+                              ? "bg-blue-500/20 text-blue-400"
+                              : "bg-surface-3 text-ink-muted"
+                          }`}
+                        >
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-ink-muted">
+                        {log.resource}
+                        {log.resource_id && (
+                          <span className="text-ink-subtle ml-1">#{log.resource_id}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-ink-muted max-w-xs truncate">
+                        {log.description || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-ink-subtle font-mono">
+                        {log.ip_address || "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PageSection>
 
         {/* Pagination */}
-        {data && totalPages > 0 && (
-          <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center justify-between mt-4">
+          {isLoading ? (
+            <div className="h-5 w-32 bg-muted animate-pulse rounded" />
+          ) : (
             <p className="text-sm text-ink-muted">
               {t("audit.page_info") || `第 ${page} / ${totalPages} 页`}
-              {data.count !== undefined && ` (${data.count} 条记录)`}
+              {data?.count !== undefined && ` (${data.count} 条记录)`}
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1 || isFetching}
-                className="px-3 py-1.5 text-sm bg-surface-1 border border-hairline rounded hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed text-ink-muted hover:text-ink transition-colors"
-              >
-                ← {t("common.prev") || "上一页"}
-              </button>
-              <button
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page >= totalPages || isFetching}
-                className="px-3 py-1.5 text-sm bg-surface-1 border border-hairline rounded hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed text-ink-muted hover:text-ink transition-colors"
-              >
-                {t("common.next") || "下一页"} →
-              </button>
-            </div>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1 || isFetching}
+              className="px-3 py-1.5 text-sm bg-surface-1 border border-hairline rounded hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed text-ink-muted hover:text-ink transition-colors"
+            >
+              ← {t("common.prev") || "上一页"}
+            </button>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!data || page >= totalPages || isFetching}
+              className="px-3 py-1.5 text-sm bg-surface-1 border border-hairline rounded hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed text-ink-muted hover:text-ink transition-colors"
+            >
+              {t("common.next") || "下一页"} →
+            </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -21,6 +21,7 @@ import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@/lib/api
 import { useI18n } from "@/src/contexts/I18nContext";
 import Link from "next/link";
 import WorkflowEditor from "@/src/components/workflow/WorkflowEditor";
+import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
 
 // Custom node component for workflow visualization
 function WorkflowNodeComponent({ data }: { data: { label: string; status: string; nodeType: string; courtCode: string } }) {
@@ -269,7 +270,7 @@ export default function WorkflowPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>("CHINESE_ROUTINE");
   const [workflowInstance, setWorkflowInstance] = useState<ApprovalWorkflow | null>(null);
 
-  const { data: workflowsData } = useQuery({
+  const { data: workflowsData, isLoading: isWorkflowsLoading } = useQuery({
     queryKey: ["workflows"],
     queryFn: async () => {
       const res = await workflowApi.list();
@@ -465,7 +466,9 @@ export default function WorkflowPage() {
         ) : (
           /* Instances tab */
           <div className="space-y-4">
-            {workflows.length === 0 ? (
+            {isWorkflowsLoading ? (
+              <ListSkeleton count={5} />
+            ) : workflows.length === 0 ? (
               <div className="text-center text-ink-subtle py-12">
                 {t("workflow.no_instances") || "暂无审批实例"}
               </div>

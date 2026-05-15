@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { judgmentApi, soulsApi, type Judgment, type Soul } from "@/lib/api";
+import { TableSkeleton } from "@/components/ui/skeleton";
 
 const VERDICT_COLORS: Record<string, string> = {
   PASSED: "bg-green-500/20 text-green-400",
@@ -91,8 +92,34 @@ export default function JudgmentQueuePage() {
 
         {/* Loading / Error / Empty / Table */}
         {judgmentLoading ? (
-          <div className="text-center text-ink-muted py-12">
-            {t("judgment.loading")}
+          <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-surface-2 text-ink-muted">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium">
+                    {t("judgment.soul_name")}
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium">
+                    {t("judgment.civilization")}
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium">
+                    {t("judgment.court")}
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium">
+                    {t("judgment.verdict")}
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium">
+                    {t("judgment.created")}
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium">
+                    {t("judgment.action")}
+                  </th>
+                </tr>
+              </thead>
+            </table>
+            <div className="p-4">
+              <TableSkeleton rows={5} cols={6} />
+            </div>
           </div>
         ) : judgmentError ? (
           <div className="text-center text-red-400 py-12">

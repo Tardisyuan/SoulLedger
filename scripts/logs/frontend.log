@@ -2,31 +2,145 @@
 > soul-ledger-frontend@0.1.0 dev
 > next dev
 
-  ▲ Next.js 14.2.5
+  ▲ Next.js 14.2.35
   - Local:        http://localhost:3333
   - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1634ms
- ○ Compiling /login ...
- ✓ Compiled /login in 1670ms (693 modules)
- GET /login 200 in 2247ms
- GET /login 200 in 67ms
- GET /login 200 in 25ms
- GET /login 200 in 26ms
- ○ Compiling /souls ...
- ✓ Compiled /souls in 750ms (699 modules)
- ✓ Compiled in 1396ms (713 modules)
- ✓ Compiled in 473ms (719 modules)
- ⚠ Fast Refresh had to perform a full reload due to a runtime error.
- GET /souls 200 in 292ms
- ✓ Compiled in 483ms (719 modules)
- ✓ Compiled in 731ms (719 modules)
- ✓ Compiled in 314ms (719 modules)
+ ✓ Ready in 2.1s
+ ○ Compiling / ...
+ ✓ Compiled / in 5.7s (879 modules)
+ GET / 200 in 6030ms
+ ⚠ Cross origin request detected from 192.168.2.115 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ✓ Compiled in 1031ms (905 modules)
+ ✓ Compiled /icon.svg in 306ms (533 modules)
+ GET /icon.svg?27d03d730695dd74 200 in 392ms
+ GET / 200 in 165ms
+ GET /icon.svg?27d03d730695dd74 200 in 10ms
+ ✓ Compiled in 656ms (937 modules)
+ ✓ Compiled /icon.ico in 124ms (535 modules)
+ GET /icon.ico?88d0a000244bf110 200 in 154ms
+ ✓ Compiled in 604ms (939 modules)
+ GET / 200 in 111ms
+ GET /icon.ico?88d0a000244bf110 200 in 16ms
+ GET / 200 in 26ms
+ GET /icon.ico?88d0a000244bf110 200 in 11ms
+ ○ Compiling /workflow ...
+ ✓ Compiled /workflow in 3.7s (1546 modules)
+ ✓ Compiled /souls in 446ms (1540 modules)
+ ✓ Compiled /judgment in 387ms (1546 modules)
+ ✓ Compiled /realms in 407ms (1552 modules)
+ ✓ Compiled /actors in 393ms (1558 modules)
+ ✓ Compiled /dispatch in 409ms (1564 modules)
+ ○ Compiling /cross-judgments ...
+ ✓ Compiled /cross-judgments in 723ms (1570 modules)
+ ✓ Compiled /karma in 501ms (1576 modules)
+ ○ Compiling /users ...
+ ✓ Compiled /users in 647ms (1588 modules)
+ ○ Compiling /profile ...
+ ✓ Compiled /profile in 523ms (1594 modules)
+ ✓ Compiled in 1231ms (1412 modules)
+ ✓ Compiled in 729ms (1389 modules)
  ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
- ✓ Compiled in 343ms (721 modules)
- GET /souls 200 in 351ms
- ✓ Compiled in 646ms (721 modules)
- ✓ Compiled in 295ms (721 modules)
- ✓ Compiled in 263ms (721 modules)
- ✓ Compiled in 269ms (721 modules)
+ GET /users 200 in 231ms
+ ✓ Compiled /icon.ico in 399ms (705 modules)
+ GET /icon.ico?88d0a000244bf110 200 in 495ms
+ ✓ Compiled in 517ms (1413 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /users 200 in 183ms
+ GET /icon.ico?88d0a000244bf110 200 in 18ms
+ ✓ Compiled in 625ms (1413 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /users 200 in 147ms
+ GET /icon.ico?88d0a000244bf110 200 in 22ms
+ ✓ Compiled in 1094ms (1427 modules)
+ ✓ Compiled /profile in 212ms (701 modules)
+ ✓ Compiled /audit in 482ms (1423 modules)
+ ✓ Compiled /notifications in 452ms (1429 modules)
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 4.5s (2379 modules)
+ ○ Compiling /menus ...
+ ✓ Compiled /menus in 7.9s (5319 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /permissions in 4.8s (5296 modules)
+ GET /_next/static/chunks/app/menus/lucide-react.js.map 404 in 5035ms
+ ○ Compiling /karma ...
+ ✓ Compiled /karma in 1575ms (2628 modules)
+ ✓ Compiled in 4.1s (5284 modules)
+ ✓ Compiled in 3s (5282 modules)
+ ✓ Compiled in 653ms (2662 modules)
+ GET /dashboard 200 in 317ms
+ ○ Compiling /icon.ico ...
+ ✓ Compiled /icon.ico in 2.5s (2652 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 2.4s (2656 modules)
+ GET /icon.ico?88d0a000244bf110 200 in 5659ms
+ ○ Compiling /workflow ...
+ ✓ Compiled /workflow in 1468ms (2780 modules)
+ GET /workflow 200 in 227ms
+ GET /icon.ico?88d0a000244bf110 200 in 17ms
+ GET /workflow 200 in 40ms
+ GET /icon.ico?88d0a000244bf110 200 in 7ms
+ ✓ Compiled in 1098ms (2662 modules)
+ ✓ Compiled in 1738ms (2662 modules)
+ ✓ Compiled in 1193ms (2663 modules)
+ ✓ Compiled in 757ms (2663 modules)
+ ⨯ [Error: ENOENT: no such file or directory, open '/home/tardis/Documents/跨文明灵魂管理系统/frontend/.next/static/webpack/app/actors/page.36da8b0225830925.hot-update.js'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/home/tardis/Documents/跨文明灵魂管理系统/frontend/.next/static/webpack/app/actors/page.36da8b0225830925.hot-update.js'
+}
+[Error: ENOENT: no such file or directory, open '/home/tardis/Documents/跨文明灵魂管理系统/frontend/.next/static/webpack/app/actors/page.36da8b0225830925.hot-update.js'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/home/tardis/Documents/跨文明灵魂管理系统/frontend/.next/static/webpack/app/actors/page.36da8b0225830925.hot-update.js'
+}
+[Error: ENOENT: no such file or directory, open '/home/tardis/Documents/跨文明灵魂管理系统/frontend/.next/static/webpack/app/actors/page.36da8b0225830925.hot-update.js'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/home/tardis/Documents/跨文明灵魂管理系统/frontend/.next/static/webpack/app/actors/page.36da8b0225830925.hot-update.js'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, lstat '/home/tardis/Documents/跨文明灵魂管理系统/frontend/.next/server'
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving '../../../../.next/server/app/icon.ico/route' in /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server for build dependencies doesn't lead to expected result '/home/tardis/Documents/跨文明灵魂管理系统/frontend/.next/server/app/icon.ico/route.js', but to 'Error: Can't resolve '../../../../.next/server/app/icon.ico/route' in '/home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ../../../../.next/server/app/icon.ico/route (expected /home/tardis/Documents/跨文明灵魂管理系统/frontend/.next/server/app/icon.ico/route.js)
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server/require.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server/require.js
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server/load-components.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server/load-components.js
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/utils.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/utils.js
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/handle-externals.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/handle-externals.js
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+<w>  at resolve commonjs /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving '../../../../.next/server/app/workflow/page' in /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server for build dependencies doesn't lead to expected result '/home/tardis/Documents/跨文明灵魂管理系统/frontend/.next/server/app/workflow/page.js', but to 'Error: Can't resolve '../../../../.next/server/app/workflow/page' in '/home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ../../../../.next/server/app/workflow/page (expected /home/tardis/Documents/跨文明灵魂管理系统/frontend/.next/server/app/workflow/page.js)
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server/require.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server/require.js
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server/load-components.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server/load-components.js
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/utils.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/utils.js
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/handle-externals.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/handle-externals.js
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+<w>  at resolve commonjs /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving '../../../../.next/server/app/_not-found/page' in /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server for build dependencies doesn't lead to expected result '/home/tardis/Documents/跨文明灵魂管理系统/frontend/.next/server/app/_not-found/page.js', but to 'Error: Can't resolve '../../../../.next/server/app/_not-found/page' in '/home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ../../../../.next/server/app/_not-found/page (expected /home/tardis/Documents/跨文明灵魂管理系统/frontend/.next/server/app/_not-found/page.js)
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server/require.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server/require.js
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server/load-components.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/server/load-components.js
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/utils.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/utils.js
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/handle-externals.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/handle-externals.js
+<w>  at file dependencies /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+<w>  at file /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+<w>  at resolve commonjs /home/tardis/Documents/跨文明灵魂管理系统/frontend/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js

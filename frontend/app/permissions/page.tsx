@@ -7,6 +7,8 @@ import { permApi, Permission, Role } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { BaseModal } from "@/src/components/ui/Modal";
+import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
+import { PageSection } from "@/components/ui/page-section";
 
 const CATEGORIES = ["soul", "judgment", "karma", "reincarnation", "system"];
 
@@ -31,7 +33,7 @@ export default function PermissionsPage() {
   const [deletingRole, setDeletingRole] = useState<Role | null>(null);
 
   // Fetch all permissions
-  const { data: allPerms = [] } = useQuery({
+  const { data: allPerms = [], isLoading: isPermsLoading } = useQuery({
     queryKey: ["permissions"],
     queryFn: async () => {
       const res = await permApi.list();
@@ -40,7 +42,7 @@ export default function PermissionsPage() {
   });
 
   // Fetch roles from API
-  const { data: roles = [] } = useQuery({
+  const { data: roles = [], isLoading: isRolesLoading } = useQuery({
     queryKey: ["roles"],
     queryFn: async () => {
       const res = await permApi.roles.list();
@@ -49,7 +51,7 @@ export default function PermissionsPage() {
   });
 
   // Fetch role's current permissions
-  const { data: roleData } = useQuery({
+  const { data: roleData, isLoading: isRoleDataLoading } = useQuery({
     queryKey: ["role-permissions", selectedRoleName],
     queryFn: async () => {
       const res = await permApi.rolePermissions(selectedRoleName);
@@ -168,33 +170,43 @@ export default function PermissionsPage() {
 
       <div className="max-w-6xl mx-auto px-6 py-6 space-y-8">
         {/* ── Role Selector + Assignment ── */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-md font-semibold text-ink">{t("permissions.select_role")}</h2>
-            {isAdmin && (
+        <PageSection
+          title={t("permissions.select_role")}
+          isLoading={isRolesLoading}
+          actions={
+            isAdmin && !isRolesLoading ? (
               <button
                 onClick={() => setIsRoleCreateOpen(true)}
                 className="text-xs text-amber-400 hover:text-amber-300 underline"
               >
                 {t("permissions.roles_title")} →
               </button>
-            )}
-          </div>
-          <div className="flex gap-2 mb-4 flex-wrap">
-            {roles.map((role) => (
-              <button
-                key={role.name}
-                onClick={() => setSelectedRoleName(role.name)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  selectedRoleName === role.name
-                    ? "bg-amber-500 text-black"
-                    : "bg-surface-2 text-ink-muted border border-hairline hover:border-amber-500"
-                }`}
-              >
-                {role.display_name || role.name}
-              </button>
-            ))}
-          </div>
+            ) : undefined
+          }
+        >
+          {isRolesLoading ? (
+            <div className="flex gap-2 flex-wrap">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-10 w-24" />
+              ))}
+            </div>
+          ) : (
+            <div className="flex gap-2 mb-4 flex-wrap">
+              {roles.map((role) => (
+                <button
+                  key={role.name}
+                  onClick={() => setSelectedRoleName(role.name)}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    selectedRoleName === role.name
+                      ? "bg-amber-500 text-black"
+                      : "bg-surface-2 text-ink-muted border border-hairline hover:border-amber-500"
+                  }`}
+                >
+                  {role.display_name || role.name}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Role permissions assignment — ADMIN only */}
           {isAdmin ? (
@@ -203,7 +215,7 @@ export default function PermissionsPage() {
                 <h3 className="text-sm font-semibold text-ink">{t("permissions.assign")}</h3>
                 <button
                   onClick={handleAssignSave}
-                  disabled={assignMutation.isPending}
+                  disabled={assignMutation.isPending || isRoleDataLoading}
                   className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black rounded text-sm font-medium transition-colors"
                 >
                   {assignMutation.isPending ? t("permissions.submitting") : t("permissions.assign_button")}
@@ -211,7 +223,20 @@ export default function PermissionsPage() {
               </div>
 
               {/* Sync selected IDs when roleData changes */}
-              {roleData && (
+              {isRoleDataLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i}>
+                      <Skeleton className="h-3 w-16 mb-2" />
+                      <div className="flex flex-wrap gap-2">
+                        {[1, 2, 3, 4].map((j) => (
+                          <Skeleton key={j} className="h-7 w-32" />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : roleData ? (
                 <div
                   className="mt-2 space-y-4"
                   key={selectedRoleName}
@@ -257,7 +282,7 @@ export default function PermissionsPage() {
                     ) : null
                   )}
                 </div>
-              )}
+              ) : null}
 
               {assignMutation.isSuccess && (
                 <p className="mt-2 text-sm text-green-400">{t("permissions.assign_success")}</p>
@@ -269,114 +294,131 @@ export default function PermissionsPage() {
           ) : (
             <div className="bg-surface-1 rounded-lg border border-hairline p-4">
               <p className="text-ink-muted text-sm">{t("permissions.admin_only")}</p>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {(roleData?.permissions ?? []).map((perm: string) => (
-                  <span key={perm} className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-sm font-mono">
-                    {perm}
-                  </span>
-                ))}
-              </div>
+              {isRoleDataLoading ? (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-6 w-20" />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {(roleData?.permissions ?? []).map((perm: string) => (
+                    <span key={perm} className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-sm font-mono">
+                      {perm}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-        </section>
+        </PageSection>
 
         {/* ── All Permissions Table + CRUD ── */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-md font-semibold text-ink">{t("permissions.all_permissions")}</h2>
-            {isAdmin && (
+        <PageSection
+          title={t("permissions.all_permissions")}
+          isLoading={isPermsLoading}
+          actions={
+            isAdmin && !isPermsLoading ? (
               <button
                 onClick={() => setIsCreateOpen(true)}
                 className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-black rounded text-sm font-medium transition-colors"
               >
                 + {t("permissions.create")}
               </button>
-            )}
-          </div>
-
-          <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-surface-2 text-ink-muted">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium">{t("permissions.codename")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("permissions.name")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("permissions.category")}</th>
-                  {isAdmin && <th className="text-right px-4 py-3 font-medium">{t("souls.action")}</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {allPerms.map((perm) => (
-                  <tr key={perm.id} className="hover:bg-surface-2/50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-amber-400 text-xs">{perm.codename}</td>
-                    <td className="px-4 py-3 text-ink">{perm.name}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 bg-surface-2 text-ink-muted rounded text-xs">
-                        {perm.category}
-                      </span>
-                    </td>
-                    {isAdmin && (
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => { setEditingPerm(perm); setIsEditOpen(true); }}
-                          className="text-amber-400 hover:text-amber-300 text-xs mr-3"
-                        >
-                          {t("permissions.edit")}
-                        </button>
-                        <button
-                          onClick={() => { setDeletingPerm(perm); setIsDeleteOpen(true); }}
-                          className="text-red-400 hover:text-red-300 text-xs"
-                        >
-                          {t("permissions.delete")}
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* ── Roles Table (ADMIN only) ── */}
-        {isAdmin && (
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-md font-semibold text-ink">{t("permissions.roles_title")}</h2>
-            </div>
+            ) : undefined
+          }
+        >
+          {isPermsLoading ? (
+            <TableSkeleton rows={8} cols={4} />
+          ) : (
             <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-surface-2 text-ink-muted">
                   <tr>
+                    <th className="text-left px-4 py-3 font-medium">{t("permissions.codename")}</th>
                     <th className="text-left px-4 py-3 font-medium">{t("permissions.name")}</th>
-                    <th className="text-left px-4 py-3 font-medium">Display Name</th>
-                    <th className="text-right px-4 py-3 font-medium">{t("souls.action")}</th>
+                    <th className="text-left px-4 py-3 font-medium">{t("permissions.category")}</th>
+                    {isAdmin && <th className="text-right px-4 py-3 font-medium">{t("souls.action")}</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
-                  {roles.map((role) => (
-                    <tr key={role.id} className="hover:bg-surface-2/50 transition-colors">
-                      <td className="px-4 py-3 font-mono text-amber-400 text-xs">{role.name}</td>
-                      <td className="px-4 py-3 text-ink">{role.display_name}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => { setEditingRole(role); setIsRoleEditOpen(true); }}
-                          className="text-amber-400 hover:text-amber-300 text-xs mr-3"
-                        >
-                          {t("permissions.edit_role")}
-                        </button>
-                        <button
-                          onClick={() => { setDeletingRole(role); setIsRoleDeleteOpen(true); }}
-                          className="text-red-400 hover:text-red-300 text-xs"
-                        >
-                          {t("permissions.delete_role")}
-                        </button>
+                  {allPerms.map((perm) => (
+                    <tr key={perm.id} className="hover:bg-surface-2/50 transition-colors">
+                      <td className="px-4 py-3 font-mono text-amber-400 text-xs">{perm.codename}</td>
+                      <td className="px-4 py-3 text-ink">{perm.name}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 bg-surface-2 text-ink-muted rounded text-xs">
+                          {perm.category}
+                        </span>
                       </td>
+                      {isAdmin && (
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => { setEditingPerm(perm); setIsEditOpen(true); }}
+                            className="text-amber-400 hover:text-amber-300 text-xs mr-3"
+                          >
+                            {t("permissions.edit")}
+                          </button>
+                          <button
+                            onClick={() => { setDeletingPerm(perm); setIsDeleteOpen(true); }}
+                            className="text-red-400 hover:text-red-300 text-xs"
+                          >
+                            {t("permissions.delete")}
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </section>
+          )}
+        </PageSection>
+
+        {/* ── Roles Table (ADMIN only) ── */}
+        {isAdmin && (
+          <PageSection
+            title={t("permissions.roles_title")}
+            isLoading={isRolesLoading}
+          >
+            {isRolesLoading ? (
+              <TableSkeleton rows={3} cols={3} />
+            ) : (
+              <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-surface-2 text-ink-muted">
+                    <tr>
+                      <th className="text-left px-4 py-3 font-medium">{t("permissions.name")}</th>
+                      <th className="text-left px-4 py-3 font-medium">Display Name</th>
+                      <th className="text-right px-4 py-3 font-medium">{t("souls.action")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-hairline">
+                    {roles.map((role) => (
+                      <tr key={role.id} className="hover:bg-surface-2/50 transition-colors">
+                        <td className="px-4 py-3 font-mono text-amber-400 text-xs">{role.name}</td>
+                        <td className="px-4 py-3 text-ink">{role.display_name}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => { setEditingRole(role); setIsRoleEditOpen(true); }}
+                            className="text-amber-400 hover:text-amber-300 text-xs mr-3"
+                          >
+                            {t("permissions.edit_role")}
+                          </button>
+                          <button
+                            onClick={() => { setDeletingRole(role); setIsRoleDeleteOpen(true); }}
+                            className="text-red-400 hover:text-red-300 text-xs"
+                          >
+                            {t("permissions.delete_role")}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PageSection>
         )}
       </div>
 

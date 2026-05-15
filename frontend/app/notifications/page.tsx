@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notificationsApi, type Notification } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { PageSection } from "@/components/ui/page-section";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type FilterType = "all" | "unread";
 
@@ -131,25 +133,41 @@ export default function NotificationsPage() {
         </button>
       </div>
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <span className="text-ink-muted">{t("notifications.loading")}</span>
-        </div>
-      )}
+      {/* Notification List Section */}
+      <PageSection isLoading={isLoading}>
+        {/* Skeleton items while loading */}
+        {isLoading && (
+          <>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-4 rounded-lg border border-hairline space-y-3">
+                <div className="flex items-start gap-3">
+                  <Skeleton className="h-8 w-8 rounded" />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex justify-between">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-4 w-20" />
+                    </div>
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-2/3" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
 
-      {/* Empty State */}
-      {!isLoading && notifications.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <span className="text-4xl mb-4">🔔</span>
-          <p className="text-ink-muted">{t("notifications.empty")}</p>
-        </div>
-      )}
+        {/* Empty State */}
+        {!isLoading && notifications.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <span className="text-4xl mb-4">🔔</span>
+            <p className="text-ink-muted">{t("notifications.empty")}</p>
+          </div>
+        )}
 
-      {/* Notification List */}
-      {!isLoading && notifications.length > 0 && (
-        <div className="space-y-3">
-          {notifications.map((notification) => (
+        {/* Notification List */}
+        {!isLoading && notifications.length > 0 && (
+          <div className="space-y-3">
+            {notifications.map((notification) => (
             <div
               key={notification.id}
               className={`p-4 rounded-lg border transition-colors ${
@@ -206,7 +224,8 @@ export default function NotificationsPage() {
             </div>
           ))}
         </div>
-      )}
+        )}
+      </PageSection>
     </div>
   );
 }

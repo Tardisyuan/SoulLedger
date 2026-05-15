@@ -9,6 +9,8 @@ import { menusApi, type MenuItem } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Modal } from "@/src/components/ui/Modal";
 import { IconPicker } from "@/src/components/ui/IconPicker";
+import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
+import { PageSection } from "@/components/ui/page-section";
 
 type LucideIconName = keyof typeof LucideIcons;
 
@@ -102,77 +104,83 @@ export default function MenusPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-6">
-        {isLoading ? (
-          <div className="text-center text-ink-muted py-12">{t("souls.loading")}</div>
-        ) : error ? (
-          <div className="text-center text-red-400 py-12">{String(error)}</div>
-        ) : menus.length === 0 ? (
-          <div className="text-center text-ink-subtle py-12">{t("menus.no_menus")}</div>
-        ) : (
-          <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-surface-2 text-ink-muted">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium">{t("menus.name")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("menus.path")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("menus.roles")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("menus.order")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("menus.status")}</th>
-                  <th className="text-right px-4 py-3 font-medium">{t("menus.action")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {menus.map((menu) => {
-                  const MenuIcon = menu.icon
-                    ? (LucideIcons[menu.icon as LucideIconName] as unknown as LucideIcon)
-                    : null;
-                  return (
-                  <tr key={menu.id} className="hover:bg-surface-2/50 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {MenuIcon ? (
-                          <MenuIcon className="w-4 h-4 text-amber-400" />
-                        ) : null}
-                        <span className="font-medium text-ink">{menu.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-ink-muted text-xs font-mono">{menu.path}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {menu.roles.map((role) => (
-                          <span key={role} className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded text-xs">
-                            {role}
+        <PageSection
+          title={t("menus.title")}
+          isLoading={isLoading}
+          error={error ? String(error) : undefined}
+        >
+          {menus.length === 0 && !isLoading ? (
+            <div className="text-center text-ink-subtle py-12">{t("menus.no_menus")}</div>
+          ) : (
+            <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
+              {isLoading ? (
+                <TableSkeleton rows={5} cols={6} />
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-surface-2 text-ink-muted">
+                    <tr>
+                      <th className="text-left px-4 py-3 font-medium">{t("menus.name")}</th>
+                      <th className="text-left px-4 py-3 font-medium">{t("menus.path")}</th>
+                      <th className="text-left px-4 py-3 font-medium">{t("menus.roles")}</th>
+                      <th className="text-left px-4 py-3 font-medium">{t("menus.order")}</th>
+                      <th className="text-left px-4 py-3 font-medium">{t("menus.status")}</th>
+                      <th className="text-right px-4 py-3 font-medium">{t("menus.action")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-hairline">
+                    {menus.map((menu) => {
+                      const MenuIcon = menu.icon
+                        ? (LucideIcons[menu.icon as LucideIconName] as unknown as LucideIcon)
+                        : null;
+                      return (
+                      <tr key={menu.id} className="hover:bg-surface-2/50 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            {MenuIcon ? (
+                              <MenuIcon className="w-4 h-4 text-amber-400" />
+                            ) : null}
+                            <span className="font-medium text-ink">{menu.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-ink-muted text-xs font-mono">{menu.path}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {menu.roles.map((role) => (
+                              <span key={role} className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded text-xs">
+                                {role}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-ink-muted">{menu.order}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${menu.is_active ? "bg-green-500/20 text-green-400" : "bg-surface-3 text-ink-muted"}`}>
+                            {menu.is_active ? t("menus.active") : t("menus.inactive")}
                           </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-ink-muted">{menu.order}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${menu.is_active ? "bg-green-500/20 text-green-400" : "bg-surface-3 text-ink-muted"}`}>
-                        {menu.is_active ? t("menus.active") : t("menus.inactive")}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => openEdit(menu)}
-                        className="text-amber-400 hover:text-amber-300 text-sm mr-3"
-                      >
-                        {t("menus.edit")}
-                      </button>
-                      <button
-                        onClick={() => deleteMutation.mutate(menu.id)}
-                        className="text-red-400 hover:text-red-300 text-sm"
-                      >
-                        {t("menus.delete")}
-                      </button>
-                    </td>
-                  </tr>
-                );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => openEdit(menu)}
+                            className="text-amber-400 hover:text-amber-300 text-sm mr-3"
+                          >
+                            {t("menus.edit")}
+                          </button>
+                          <button
+                            onClick={() => deleteMutation.mutate(menu.id)}
+                            className="text-red-400 hover:text-red-300 text-sm"
+                          >
+                            {t("menus.delete")}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+        </PageSection>
       </div>
 
       {/* Create/Edit Modal */}
