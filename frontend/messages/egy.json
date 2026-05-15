@@ -372,6 +372,10 @@
       "notes_placeholder": "Shesep Medu Seth..."
     }
   },
+  "audit": {
+    "title": "Medew Sethet",
+    "table_title": "Wu Medew Sethet"
+  },
   "profile": {
     "title": "Aha Pepi",
     "basic_info": "Ier Sefet Nefer",
@@ -407,11 +411,15 @@
   },
   "realms": {
     "title": "Mekher",
-    "subtitle": "Amset Netjeru em Kehat - Mekher"
+    "subtitle": "Amset Netjeru em Kehat - Mekher",
+    "listTitle": "Wu Mekher"
   },
   "actors": {
     "title": "Netjeru",
-    "subtitle": "Amset Netjeru em Kehat - Netjeru"
+    "subtitle": "Amset Netjeru em Kehat - Netjeru",
+    "section": {
+      "actors": "Wu Netjeru"
+    }
   },
   "dispatch": {
     "title": "Iri Pert Abuf",
@@ -425,6 +433,7 @@
   "crossJudgments": {
     "title": "Sheemtet Seth Em Kehat",
     "subtitle": "Sheemtet Seth Em Kehat Seth",
+    "list_title": "Wu Sheemtet Seth",
     "no_judgments": "Ma Rekhyu Sheemtet Seth Em Kehat",
     "initiated_by": "Sesen Abuf",
     "participants": "Netjeru"

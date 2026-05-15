@@ -382,6 +382,7 @@
   },
   "audit": {
     "title": "审计日志",
+    "table_title": "审计记录",
     "timestamp": "时间",
     "user": "用户",
     "action": "操作",
@@ -436,11 +437,15 @@
   },
   "realms": {
     "title": "地域",
-    "subtitle": "跨文明地域管理"
+    "subtitle": "跨文明地域管理",
+    "listTitle": "地域列表"
   },
   "actors": {
     "title": "角色",
-    "subtitle": "跨文明角色管理"
+    "subtitle": "跨文明角色管理",
+    "section": {
+      "actors": "角色列表"
+    }
   },
   "dispatch": {
     "title": "调度管理",
@@ -454,6 +459,7 @@
   "crossJudgments": {
     "title": "跨文明审判",
     "subtitle": "多文明联合审判",
+    "list_title": "跨文明审判列表",
     "no_judgments": "暂无跨文明审判",
     "initiated_by": "发起方",
     "participants": "参与者"
