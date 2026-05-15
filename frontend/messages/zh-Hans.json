@@ -472,7 +472,7 @@
     "delete_error": "用户删除失败",
     "status_updated": "状态已更新",
     "status_update_error": "状态更新失败",
-    "page_info": "第 {{page}} 页，共 {{total}} 页"
+    "page_info": "第 {{page}} 页，共 {{total}} 页 ({{count}} 条记录)"
   },
   "settings": {
     "title": "设置",

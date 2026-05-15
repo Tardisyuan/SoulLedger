@@ -472,7 +472,7 @@
     "delete_error": "Failed to delete user",
     "status_updated": "Status updated",
     "status_update_error": "Failed to update status",
-    "page_info": "Page {{page}} of {{total}}"
+    "page_info": "Page {{page}} of {{total}} ({{count}} records)"
   },
   "settings": {
     "title": "Settings",

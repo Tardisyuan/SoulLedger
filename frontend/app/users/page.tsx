@@ -225,8 +225,11 @@ export default function UsersPage() {
         {data && (
           <div className="flex items-center justify-between mt-4">
             <p className="text-sm text-ink-muted">
-              {t("users.page_info") || `第 ${page} 页，共 ${Math.ceil((data.count || 0) / 20)} 页`}
-              {data.count !== undefined && ` (${data.count} 条记录)`}
+              {t("users.page_info", {
+                page: String(page),
+                total: String(Math.ceil((data.count || 0) / 20)),
+                count: String(data.count || 0),
+              })}
             </p>
             <div className="flex gap-2">
               <button

@@ -443,7 +443,7 @@
     "delete_error": "Ma Wehem Seth Netjer",
     "status_updated": "Set Medu Sesen Seth",
     "status_update_error": "Ma Sesen Set Medu",
-    "page_info": "Per {{page}} Wu {{total}}"
+    "page_info": "Per {{page}} Wu {{total}} ({{count}} Medtu)"
   },
   "settings": {
     "title": "Iri Sethety",
