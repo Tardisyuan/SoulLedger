@@ -32,6 +32,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
+
+  // Track navigation state by pathname changes
+  useEffect(() => {
+    if (pathname !== prevPathname) {
+      setIsNavigating(true);
+      setPrevPathname(pathname);
+      // Small delay to ensure content loads before hiding indicator
+      const timer = setTimeout(() => setIsNavigating(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [pathname, prevPathname]);
 
   // Apply accent color on mount
   useAccentColor();
@@ -174,6 +188,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <main className={`transition-all duration-200 ${collapsed ? "ml-16" : "ml-56"}`}>
+        {/* Navigation loading bar */}
+        {isNavigating && (
+          <div className="fixed top-0 left-0 right-0 z-[99999] h-1 bg-amber-500 animate-pulse" />
+        )}
+
         {/* Top header */}
         <header className="sticky top-0 z-40 h-16 bg-canvas/80 backdrop-blur-sm border-b border-hairline flex items-center px-6 gap-4">
           {/* Breadcrumb / Page title area */}
