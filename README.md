@@ -1,44 +1,44 @@
 # SoulLedger
 
-Cross-civilization soul management system — mythology research + full-stack web application.
+跨文明灵魂管理系统 — 三种文明(中国/欧洲/埃及)的灵魂审判与轮回全栈Web应用
 
 ---
 
-## Civilization Coverage
+## 文明覆盖
 
-| Domain | Judgment | Memory Reset | Destination |
-|--------|----------|--------------|-------------|
-| **Chinese Diyu** | Ten Courts of Yama | 孟婆汤 (Mengpo Soup) | 六道轮回 (Six Realms) |
-| **European Heaven & Hell** | Mortal Sin + Dante Circles | Lethe River | Heaven / Purgatory / Hell |
-| **Egyptian Duat** | Heart vs Ma'at Feather | Spell Recitation | Aaru (beyond Duat) |
+| 领域 | 审判 | 记忆重置 | 归宿 |
+|------|------|----------|------|
+| **中国地府** | 十殿阎王审判 | 孟婆汤 | 六道轮回 |
+| **欧洲天堂地狱** | 原罪 + 但丁九层地狱圈 | 忘川河 | 天堂/炼狱/地狱 |
+| **埃及冥界** | 心脏称重 vs 玛特羽毛 | 咒语诵读 | 芦苇原/阿图姆 |
 
 ---
 
-## Architecture
+## 系统架构
 
 ```
-Frontend (Next.js 14)  →  http://localhost:3333
-Backend  (Django 5)     →  http://localhost:8000/api/v1/
-PostgreSQL 16           →  localhost:5432
-Redis 7                 →  localhost:6379
+前端 (Next.js 14)  →  http://localhost:3333
+后端 (Django 5)    →  http://localhost:8000/api/v1/
+PostgreSQL 16       →  localhost:5432
+Redis 7             →  localhost:6379
 ```
 
 ---
 
-## Quick Start
+## 快速启动
 
-### Prerequisites
+### 环境要求
 - Python 3.11+
 - Node.js 20+
-- Docker (for PostgreSQL + Redis)
+- Docker (用于 PostgreSQL + Redis)
 
-### 1. Start infrastructure
+### 1. 启动基础设施
 ```bash
 cd infrastructure
 docker compose up -d
 ```
 
-### 2. Start backend
+### 2. 启动后端
 ```bash
 cd backend
 cp .env.example .env
@@ -47,149 +47,204 @@ python manage.py migrate
 python manage.py runserver 0.0.0.0:8000
 ```
 
-### 3. Start frontend
+### 3. 启动前端
 ```bash
 cd frontend
 npm install
 PORT=3333 npm run dev
 ```
 
-### Or use the scripts (from project root)
+### 或使用脚本 (项目根目录)
 ```bash
-bash scripts/start-backend.sh   # Django on :8000
-bash scripts/start-frontend.sh # Next.js on :3333
-bash scripts/stop-all.sh       # stop both
-bash scripts/status.sh         # check status
+bash scripts/start-backend.sh    # Django on :8000
+bash scripts/start-frontend.sh  # Next.js on :3333
+bash scripts/stop-all.sh        # 停止两者
+bash scripts/status.sh          # 查看状态
+bash scripts/restart-backend.sh # 重启后端
+bash scripts/restart-frontend.sh # 重启前端
 ```
 
 ---
 
-## Project Structure
+## 项目结构
 
 ```
 SoulLedger/
 ├── backend/
 │   ├── apps/
-│   │   ├── souls/           # Soul model, state machine, karma
-│   │   ├── tenants/         # Multi-tenant: Tenant model, middleware, TenantManager
-│   │   ├── authentication/  # JWT auth, login endpoint
-│   │   └── karma/           # Karma ledger service
-│   ├── config/               # Django settings, URLs, Celery
-│   ├── tests/
+│   │   ├── souls/            # 灵魂模型、状态机、因果
+│   │   ├── karma/           # 功德计算服务 (含时间衰减、继承)
+│   │   ├── actors/          # 角色系统 (判官、守护者等)
+│   │   ├── realms/          # 领域系统 (地府、天堂、冥界)
+│   │   ├── dispatch/        # 灵魂调度记录
+│   │   ├── cross/           # 跨域审判
+│   │   ├── audit/           # 审计日志
+│   │   ├── tenants/        # 多租户: Tenant模型、中间件
+│   │   ├── authentication/  # JWT认证
+│   │   ├── workflow/        # 审批流程系统
+│   │   └── perm/           # 权限与菜单系统
+│   ├── config/              # Django配置、URL、Celery
+│   ├── tests/               # pytest测试
 │   └── scripts/
-│       └── seed_chinese_data.py  # Chinese Diyu seed data
+│       ├── populate_chinese.py   # 中国角色数据
+│       ├── populate_european.py  # 欧洲角色数据
+│       └── populate_egyptian.py  # 埃及角色数据
 │
 ├── frontend/
-│   ├── app/                 # Next.js 14 App Router pages
-│   │   ├── (auth)/login/   # Login page
-│   │   ├── souls/           # Soul list + detail pages
-│   │   └── page.tsx         # Home/landing page
+│   ├── app/                 # Next.js 14 App Router 页面
+│   │   ├── souls/          # 灵魂列表与详情
+│   │   ├── actors/         # 角色管理
+│   │   ├── realms/         # 领域管理
+│   │   ├── karma/          # 功德管理
+│   │   ├── dispatch/       # 调度管理
+│   │   ├── cross-judgments/ # 跨域审判
+│   │   ├── workflow/       # 审批流程可视化
+│   │   ├── audit/          # 审计日志
+│   │   ├── users/          # 用户管理
+│   │   ├── profile/        # 个人资料
+│   │   ├── notifications/  # 通知中心
+│   │   ├── menus/          # 菜单管理
+│   │   ├── permissions/    # 权限管理
+│   │   └── (auth)/login/  # 登录页
 │   ├── src/
-│   │   ├── components/      # UI components
-│   │   │   ├── ui/          # BaseModal, Toast
-│   │   │   └── souls/       # SoulCreateModal, SoulEditModal
-│   │   ├── contexts/        # TenantContext, ThemeContext, I18nContext, ToastContext
-│   │   ├── hooks/           # TanStack Query hooks (useAuth, useSouls)
-│   │   └── middleware.ts    # Route guard
-│   ├── lib/api.ts           # Type-safe API client
-│   ├── messages/             # i18n translations (zh-Hans, en, egy)
-│   ├── tailwind.config.js   # Linear design tokens
-│   └── components/          # LanguageSwitcher
+│   │   ├── components/     # UI组件
+│   │   │   ├── layout/    # AppLayout侧边栏
+│   │   │   └── settings/  # SettingsDrawer设置抽屉
+│   │   ├── contexts/       # TenantContext, ThemeContext, I18nContext
+│   │   ├── hooks/          # TanStack Query hooks
+│   │   └── middleware.ts   # 路由守卫
+│   ├── lib/api.ts          # 类型安全API客户端
+│   ├── messages/            # i18n翻译 (zh-Hans, en, egy)
+│   └── tailwind.config.js  # Linear设计系统
 │
 ├── infrastructure/
-│   └── docker-compose.yml    # PostgreSQL + Redis
+│   └── docker-compose.yml  # PostgreSQL + Redis
 │
 ├── scripts/
-│   ├── start-backend.sh
-│   ├── start-frontend.sh
-│   └── stop-all.sh
+│   ├── start-*.sh
+│   ├── stop-*.sh
+│   ├── restart-*.sh
+│   ├── status.sh
+│   └── logs/
 │
-├── docs/                    # Mythology research docs
+├── docs/                   # 神话研究文档
+│   ├── 地府结构研究/
+│   ├── 欧洲天堂地狱/
+│   └── 埃及冥界/
 │
-├── DESIGN.md                # Linear design system specification
-├── AGENTS.md                # Agent work specification
-├── SPEC.md                  # Full project specification
-└── docker-compose.yml       # Full-stack compose
+├── DESIGN.md               # Linear设计系统规范
+├── AGENTS.md               # Agent工作规范
+└── SPEC.md                 # 完整项目规范
 ```
 
 ---
 
-## Key API Endpoints
+## 主要功能
+
+### M1-M6 已完成里程碑
+- **M1**: 核心灵魂CRUD + 状态机
+- **M2**: 多租户系统 (CN_DIYU / EU_HEAVEN_HELL / EG_DUAT)
+- **M3**: JWT认证 + 权限中间件
+- **M4**: 角色与领域系统 (Actors + Realms)
+- **M5**: 审批流程系统 (Workflow + 7种审判类型)
+- **M6**: 功德系统 (时间衰减 + 因果继承)
+
+### 页面模块
+| 页面 | 功能 | 角色 |
+|------|------|------|
+| `/souls` | 灵魂列表与详情 | ALL |
+| `/karma` | 功德时间衰减计算 | JUDGE+ |
+| `/dispatch` | 灵魂调度记录 | ADMIN |
+| `/cross-judgments` | 跨域审判 | JUDGE+ |
+| `/actors` | 角色管理 | ADMIN |
+| `/realms` | 领域管理 | ADMIN |
+| `/workflow` | 审批流程可视化 | JUDGE+ |
+| `/audit` | 审计日志 | ADMIN |
+| `/users` | 用户管理 | ADMIN |
+| `/profile` | 个人资料 | ALL |
+| `/notifications` | 通知中心 | ALL |
+| `/menus` | 菜单管理 | ADMIN |
+| `/permissions` | 权限管理 | ADMIN |
+
+---
+
+## 关键API
 
 ```
-Authentication
-POST   /api/v1/auth/login/            # Login (returns JWT)
-POST   /api/v1/auth/refresh/         # Refresh token
+认证
+POST /api/v1/auth/login/         # 登录 (返回JWT)
+POST /api/v1/auth/refresh/      # 刷新Token
 
-Souls (requires X-Tenant-ID header)
-GET    /api/v1/souls/                # List souls (tenant-filtered)
-POST   /api/v1/souls/                # Create soul
-GET    /api/v1/souls/{id}/           # Soul detail + records
-PATCH  /api/v1/souls/{id}/           # Update soul
-DELETE /api/v1/souls/{id}/           # Delete soul
-POST   /api/v1/souls/{id}/transition/ # State transition
+灵魂 (需 X-Tenant-ID header)
+GET    /api/v1/souls/                     # 列表
+POST   /api/v1/souls/                     # 创建
+GET    /api/v1/souls/{id}/               # 详情
+PATCH  /api/v1/souls/{id}/               # 更新
+DELETE /api/v1/souls/{id}/               # 删除
+POST   /api/v1/souls/{id}/transition/    # 状态转换
 
-Karma (requires X-Tenant-ID header)
-GET    /api/v1/karma/balance/{soul_id}/  # Get karmic balance
-POST   /api/v1/karma/calculate/{soul_id}/ # Recalculate karma
+功德
+GET    /api/v1/karma/balance/{soul_id}/     # 因果余额
+POST   /api/v1/karma/calculate/{soul_id}/  # 重算因果
+
+角色与领域
+GET /api/v1/actors/   # 角色列表
+GET /api/v1/realms/   # 领域列表
+
+调度
+GET  /api/v1/dispatch/records/      # 调度记录
+POST /api/v1/dispatch/records/      # 创建调度
+GET  /api/v1/dispatch/proposed/     # 待审批
+
+审批流程
+GET    /api/v1/workflows/                    # 流程列表
+GET    /api/v1/nodes/                        # 节点列表
+POST   /api/v1/workflow/templates/           # 创建模板
 ```
 
 ---
 
-## State Machine
+## 状态机
 
 ```
-ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE (new life)
+ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE (新生命)
 ```
 
 ---
 
-## Tech Stack
+## 技术栈
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | Next.js 14, React 18, Tailwind CSS, TanStack Query v5, @headlessui/react, TypeScript |
-| Backend | Django 5, Django REST Framework, PostgreSQL 16 |
-| Task Queue | Celery 5, Redis 7 |
-| Cache | Redis 7 |
-| Container | Docker Compose |
-
----
-
-## Reference Data
-
-Chinese Diyu realms and actors are pre-seeded:
-- **11 realms**: DY_01_HEAVEN through DY_10_YAMA
-- **16 actors**: 阎罗王, 孟婆, 牛头马面, 黑白无常, 判官, etc.
+| 层级 | 技术 |
+|------|------|
+| 前端 | Next.js 14, React 18, Tailwind CSS, TanStack Query v5, @xyflow/react, TypeScript |
+| 后端 | Django 5, Django REST Framework, django-multitenant, Celery |
+| 数据库 | PostgreSQL 16 |
+| 任务队列 | Celery 5, Redis 7 |
+| 容器 | Docker Compose |
 
 ---
 
-## Project Specifications
+## 预置数据
 
-| File | Purpose |
-|------|---------|
-| `DESIGN.md` | Linear design system — color tokens, typography, component styles |
-| `AGENTS.md` | Agent work specification — rules for Claude Code, sub-agents |
-| `SPEC.md` | Full project specification — milestones, models, API contracts |
+三个文明的领域和角色已预填充:
 
----
+### 中国地府 (CN_DIYU)
+- **11领域**: 天界、枉死城、十殿阎王等
+- **33角色**: 十殿阎王、魏征、崔府君、地藏王菩萨、牛头马面、黑白无常等
 
-## Design Reference
+### 欧洲天堂地狱 (EU_HEAVEN_HELL)
+- **15角色**: Michael, Gabriel, Lucifer, Hades, 希腊三判官, Odin, Freya, Hel等
 
-Menu and permission system design inspired by [Snowy](https://github.com/xiaonuobase/Snowy) (Apache-2.0).
-
-### Snowy's Unified Resource Model
-Snowy uses a single `SYS_RESOURCE` table where `MENU_TYPE` distinguishes menus (`MENU`, `CATALOG`, `IFRAME`) from permissions (`BUTTON`). Roles are assigned to resources via `SYS_RELATION` with categories `SYS_ROLE_HAS_RESOURCE` and `SYS_ROLE_HAS_PERMISSION`.
-
-### Current SoulLedger State
-- **Menu CRUD**: Complete (backend + frontend)
-- **Permission CRUD**: Backend read-only; frontend display-only (hardcoded `ROLE_PERMISSIONS` dict)
-- **Role-Permission assignment**: Hardcoded; no UI
-- **Permission enforcement**: Middleware missing; relies on view-level role checks only
-
-See [AGENTS.md](./AGENTS.md) for pending work on completing the menu+permission CRUD layer.
+### 埃及冥界 (EG_DUAT)
+- **43角色**: Osiris, Anubis, Thoth, Horus + 42审判者 + Ammit等
 
 ---
 
-*Maintained by: Tardisyuan*
+## 设计参考
+
+菜单和权限系统设计灵感来自 [Snowy](https://github.com/xiaonuobase/Snowy) (Apache-2.0)。
+
+---
+
+*维护者: Tardisyuan*
 *GitHub: https://github.com/Tardisyuan/SoulLedger*
