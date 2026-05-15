@@ -31,14 +31,14 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
       <div className="fixed inset-0 flex w-screen items-center justify-center p-4">
         <DialogPanel
           transition
-          className="w-full max-w-md bg-surface-2 border border-hairline rounded-lg duration-200 ease-out data-closed:scale-95 data-closed:opacity-0"
+          className="w-full max-w-md bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg duration-200 ease-out data-closed:scale-95 data-closed:opacity-0"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-hairline">
-            <DialogTitle className="text-ink font-semibold text-base">{title}</DialogTitle>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[hsl(var(--color-hairline))]">
+            <DialogTitle className="text-[hsl(var(--color-ink))] font-semibold text-base">{title}</DialogTitle>
             <button
               onClick={onClose}
-              className="text-ink-subtle hover:text-ink transition-colors text-lg leading-none"
+              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))] transition-colors text-lg leading-none"
               aria-label="Close"
             >
               ×
@@ -50,7 +50,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
 
           {/* Footer */}
           {footer && (
-            <div className="px-6 pb-5 border-t border-hairline pt-4">
+            <div className="px-6 pb-5 border-t border-[hsl(var(--color-hairline))] pt-4">
               {footer}
             </div>
           )}
@@ -131,7 +131,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         type="button"
         onClick={onClose}
         disabled={loading}
-        className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-ink-muted hover:bg-surface-3 disabled:opacity-50 rounded text-sm transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded text-sm transition-colors"
       >
         {t("auth.cancel")}
       </button>
@@ -139,7 +139,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         type="submit"
         form="soul-create-form"
         disabled={loading || !name.trim()}
-        className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-surface-3 disabled:text-ink-subtle rounded text-sm font-medium text-black transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] rounded text-sm font-medium text-black transition-colors"
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
@@ -163,7 +163,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
     >
       <form id="soul-create-form" onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-ink-subtle">{t("souls.form.name_label")}</label>
+          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.name_label")}</label>
           <input
             type="text"
             autoFocus
@@ -173,8 +173,8 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
               clearFieldError('name')
             }}
             disabled={loading}
-            className={`bg-surface-1 border rounded px-3 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none disabled:opacity-50 transition-colors ${
-              getError('name') ? 'border-red-500 focus:border-red-500' : 'border-hairline focus:border-amber-500'
+            className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none disabled:opacity-50 transition-colors ${
+              getError('name') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
             placeholder={t("souls.form.name_placeholder")}
           />
@@ -183,7 +183,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
           )}
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-ink-subtle">{t("souls.form.civilization_label")}</label>
+          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.civilization_label")}</label>
           <select
             value={civilization}
             onChange={(e) => {
@@ -191,8 +191,8 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
               clearFieldError('civilization')
             }}
             disabled={loading}
-            className={`bg-surface-1 border rounded px-3 py-2 text-sm text-ink focus:outline-none disabled:opacity-50 transition-colors ${
-              getError('civilization') ? 'border-red-500 focus:border-red-500' : 'border-hairline focus:border-amber-500'
+            className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none disabled:opacity-50 transition-colors ${
+              getError('civilization') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
           >
             <option value="CHINESE">{t("souls.civilizations.CHINESE")}</option>
@@ -204,17 +204,17 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
           )}
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-ink-subtle">{t("souls.form.birth_date_label")}</label>
+          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.birth_date_label")}</label>
           <input
             type="date"
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
             disabled={loading}
-            className="bg-surface-1 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500 disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-ink-subtle">{t("souls.form.location_label")}</label>
+          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.location_label")}</label>
           <input
             type="text"
             value={originLocation}

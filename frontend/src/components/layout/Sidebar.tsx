@@ -6,13 +6,7 @@ import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { menusApi, type MenuItem } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
-
-const ROLE_ICONS: Record<string, string> = {
-  ADMIN: "⚙️",
-  JUDGE: "⚖️",
-  GUARDIAN: "🛡️",
-  VIEWER: "👁️",
-};
+import { getIconByName, DEFAULT_ICON } from "../../lib/icons";
 
 export function Sidebar() {
   const { t } = useI18n();
@@ -32,16 +26,16 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`fixed left-0 top-0 h-full bg-surface-1 border-r border-hairline z-50 transition-all duration-200 flex flex-col ${
+      className={`fixed left-0 top-0 h-full bg-[hsl(var(--color-surface-1))] border-r border-[hsl(var(--color-hairline))] z-50 transition-all duration-200 flex flex-col ${
         collapsed ? "w-16" : "w-56"
       }`}
     >
       {/* Logo */}
-      <div className="h-14 flex items-center px-4 border-b border-hairline shrink-0">
+      <div className="h-14 flex items-center px-4 border-b border-[hsl(var(--color-hairline))] shrink-0">
         <Link href="/" className="flex items-center gap-2 overflow-hidden">
           <span className="text-xl shrink-0">💀</span>
           {!collapsed && (
-            <span className="text-amber-500 font-bold text-sm tracking-wide truncate">
+            <span className="text-[hsl(var(--color-accent))] font-bold text-sm tracking-wide truncate">
               SoulLedger
             </span>
           )}
@@ -51,7 +45,7 @@ export function Sidebar() {
       {/* Toggle button */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-16 w-6 h-6 bg-surface-2 border border-hairline rounded-full flex items-center justify-center text-ink-muted hover:text-amber-500 transition-colors z-10"
+        className="absolute -right-3 top-16 w-6 h-6 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-full flex items-center justify-center text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] transition-colors z-10"
       >
         {collapsed ? "→" : "←"}
       </button>
@@ -70,7 +64,7 @@ export function Sidebar() {
 
       {/* Footer */}
       {!collapsed && (
-        <div className="p-3 border-t border-hairline text-xs text-ink-subtle text-center">
+        <div className="p-3 border-t border-[hsl(var(--color-hairline))] text-xs text-[hsl(var(--color-ink-subtle))] text-center">
           SoulLedger v0.1
         </div>
       )}
@@ -101,16 +95,15 @@ function MenuItem({
         onClick={hasChildren ? (e) => { e.preventDefault(); } : undefined}
         className={`flex items-center justify-center h-10 mx-2 my-0.5 rounded-md transition-colors ${
           active
-            ? "bg-amber-500/20 text-amber-400"
-            : "text-ink-muted hover:bg-surface-2 hover:text-ink"
+            ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
+            : "text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]"
         }`}
         title={menu.name}
       >
-        {menu.icon ? (
-          <span className="text-base">{menu.icon}</span>
-        ) : (
-          <span className="text-base">{ROLE_ICONS[menu.roles?.[0]] || "📄"}</span>
-        )}
+        {(() => {
+          const Icon = getIconByName(menu.icon);
+          return <Icon className="w-5 h-5" />;
+        })()}
       </Link>
     );
   }
@@ -122,15 +115,14 @@ function MenuItem({
           onClick={() => setExpanded(!expanded)}
           className={`w-full flex items-center gap-2 h-10 px-3 my-0.5 rounded-md transition-colors ${
             active
-              ? "bg-amber-500/20 text-amber-400"
-              : "text-ink-muted hover:bg-surface-2 hover:text-ink"
+              ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
+              : "text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]"
           }`}
         >
-          {menu.icon ? (
-            <span className="text-base shrink-0">{menu.icon}</span>
-          ) : (
-            <span className="text-base shrink-0">{ROLE_ICONS[menu.roles?.[0]] || "📁"}</span>
-          )}
+          {(() => {
+            const Icon = getIconByName(menu.icon);
+            return <Icon className="w-5 h-5 shrink-0" />;
+          })()}
           <span className="flex-1 text-left text-sm truncate">{menu.name}</span>
           <span className={`text-xs transition-transform ${expanded ? "rotate-90" : ""}`}>
             ▸
@@ -158,15 +150,14 @@ function MenuItem({
       href={menu.path}
       className={`flex items-center gap-2 h-10 px-3 my-0.5 rounded-md transition-colors ${
         active
-          ? "bg-amber-500/20 text-amber-400"
-          : "text-ink-muted hover:bg-surface-2 hover:text-ink"
+          ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
+          : "text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]"
       }`}
     >
-      {menu.icon ? (
-        <span className="text-base shrink-0">{menu.icon}</span>
-      ) : (
-        <span className="text-base shrink-0">{ROLE_ICONS[menu.roles?.[0]] || "📄"}</span>
-      )}
+      {(() => {
+        const Icon = getIconByName(menu.icon);
+        return <Icon className="w-5 h-5 shrink-0" />;
+      })()}
       <span className="text-sm truncate">{menu.name}</span>
     </Link>
   );

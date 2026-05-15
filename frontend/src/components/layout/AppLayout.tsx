@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Popover, Transition, Dialog } from "@headlessui/react";
 import {
   Globe, Users, ArrowRightLeft, Scale, Gem, UserCog, User, Settings,
   Folder, FileText, Home, Shield, ShieldCheck, ShieldAlert, ShieldQuestion,
   Scroll, BookOpen, Bell, ChevronRight, ChevronDown, Sun, Moon, LogOut,
   type LucideIcon
 } from "lucide-react";
+import { getIconByName, DEFAULT_ICON } from "../../lib/icons";
 import { menusApi, notificationsApi, type MenuItem } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -18,31 +20,6 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { authApi } from "@/lib/api";
 import { SettingsDrawer, useAccentColor } from "@/src/components/settings/SettingsDrawer";
 
-const ICON_MAP: Record<string, LucideIcon> = {
-  globe: Globe,
-  users: Users,
-  "arrow-right-left": ArrowRightLeft,
-  scale: Scale,
-  gem: Gem,
-  "user-cog": UserCog,
-  user: User,
-  settings: Settings,
-  folder: Folder,
-  "file-text": FileText,
-  home: Home,
-  shield: Shield,
-  "shield-check": ShieldCheck,
-  "shield-alert": ShieldAlert,
-  "shield-question": ShieldQuestion,
-  scroll: Scroll,
-  "book-open": BookOpen,
-  bell: Bell,
-  "chevron-right": ChevronRight,
-  "chevron-down": ChevronDown,
-};
-
-const DEFAULT_ICON = Settings;
-
 const NAV_MODE_KEY = "soulledger_nav_mode";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -50,6 +27,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [navMode, setNavMode] = useState<"classic" | "compact">("classic");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const { user, logout } = useTenant();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
@@ -107,14 +85,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-canvas">
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-surface-1 border-r border-hairline z-50 transition-all duration-200 flex flex-col`}
+        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-[hsl(var(--color-surface-1))] border-r border-[hsl(var(--color-hairline))] z-50 transition-all duration-200 flex flex-col`}
       >
         {/* Logo */}
-        <nav className={`h-16 border-b border-hairline shrink-0 flex items-center ${collapsed ? "justify-center px-0" : "justify-center px-5"}`}>
+        <nav className={`h-16 border-b border-[hsl(var(--color-hairline))] shrink-0 flex items-center ${collapsed ? "justify-center px-0" : "justify-center px-5"}`}>
           <Link href="/" className="flex items-center gap-2.5 overflow-hidden">
             {collapsed ? (
               /* Collapsed: Scale icon */
-              <svg className="w-7 h-7 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-7 h-7 shrink-0 text-[hsl(var(--color-accent))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 3v18" stroke="currentColor"/>
                 <path d="M5 8l7-5 7 5" stroke="currentColor"/>
                 <circle cx="5" cy="8" r="2" fill="currentColor" stroke="none"/>
@@ -126,7 +104,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ) : (
               /* Expanded: Scale + text */
               <>
-                <svg className="w-7 h-7 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-7 h-7 shrink-0 text-[hsl(var(--color-accent))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 3v18"/>
                   <path d="M5 8l7-5 7 5"/>
                   <circle cx="5" cy="8" r="2" fill="currentColor" stroke="none"/>
@@ -135,7 +113,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <circle cx="5" cy="16" r="2" fill="currentColor" stroke="none"/>
                   <circle cx="19" cy="16" r="2" fill="currentColor" stroke="none"/>
                 </svg>
-                <span className="text-amber-500 font-bold tracking-wide truncate">
+                <span className="text-[hsl(var(--color-accent))] font-bold tracking-wide truncate">
                   SoulLedger
                 </span>
               </>
@@ -166,7 +144,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="w-full flex justify-center">
               <button
                 onClick={() => setCollapsed(!collapsed)}
-                className="w-8 h-8 flex items-center justify-center rounded-md text-ink-muted hover:text-amber-500 hover:bg-surface-2 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
                 title="展开菜单"
               >
                 →
@@ -178,14 +156,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="w-1/4 flex justify-center">
                 <button
                   onClick={() => setCollapsed(!collapsed)}
-                  className="w-8 h-8 flex items-center justify-center rounded-md text-ink-muted hover:text-amber-500 hover:bg-surface-2 transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
                   title="收起菜单"
                 >
                   ←
                 </button>
               </div>
               <div className="w-3/4 flex justify-center pr-4">
-                <div className="text-xs text-ink-subtle">
+                <div className="text-xs text-[hsl(var(--color-ink-subtle))]">
                   SoulLedger v0.1
                 </div>
               </div>
@@ -203,23 +181,57 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* Right controls */}
           <div className="flex items-center gap-3">
-            {/* Notification Bell */}
+            {/* Notification Bell with Popover */}
             {user && (
-              <Link
-                href="/notifications"
-                className="relative text-ink-subtle hover:text-amber-500 transition-colors p-1 rounded"
-                title={t("notifications.title")}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                </svg>
-                {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-black text-xs font-bold rounded-full flex items-center justify-center">
-                    {notifications.length > 9 ? "9+" : notifications.length}
-                  </span>
-                )}
-              </Link>
+              <Popover className="relative">
+                <Popover.Button className="relative text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded outline-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                  {notifications.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[hsl(var(--color-accent))] text-black text-xs font-bold rounded-full flex items-center justify-center">
+                      {notifications.length > 9 ? "9+" : notifications.length}
+                    </span>
+                  )}
+                </Popover.Button>
+                <Transition
+                  as={Fragment}
+                  enter="transition ease-out duration-100"
+                  enterFrom="transform opacity-0 scale-95"
+                  enterTo="transform opacity-100 scale-100"
+                  leave="transition ease-in duration-75"
+                  leaveFrom="transform opacity-100 scale-100"
+                  leaveTo="transform opacity-0 scale-95"
+                >
+                  <Popover.Panel className="absolute right-0 mt-2 w-80 origin-top-right rounded-lg bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-xl focus:outline-none z-[99998]">
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-[hsl(var(--color-ink))]">{t("notifications.title")}</h3>
+                        <Link href="/notifications" className="text-xs text-[hsl(var(--color-accent))] hover:underline">
+                          查看全部
+                        </Link>
+                      </div>
+                      {notifications.length === 0 ? (
+                        <p className="text-sm text-[hsl(var(--color-ink-subtle))] text-center py-4">
+                          {t("notifications.empty")}
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {notifications.slice(0, 5).map((n: any) => (
+                            <div key={n.id} className="p-2 rounded hover:bg-[hsl(var(--color-surface-2))] cursor-pointer">
+                              <p className="text-sm text-[hsl(var(--color-ink))]">{n.message || n.title}</p>
+                              <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
+                                {new Date(n.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </Popover.Panel>
+                </Transition>
+              </Popover>
             )}
 
             <div className="w-px h-5 border-hairline" />
@@ -232,7 +244,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <button
               onClick={toggleTheme}
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              className="text-ink-subtle hover:text-amber-500 transition-colors p-1 rounded"
+              className="text-ink-subtle hover:text-accent transition-colors p-1 rounded"
             >
               {theme === "dark" ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -252,7 +264,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => setSettingsOpen(true)}
               title="Settings"
-              className="text-ink-subtle hover:text-amber-500 transition-colors p-1 rounded"
+              className="text-ink-subtle hover:text-accent transition-colors p-1 rounded"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3" />
@@ -264,12 +276,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
             {user ? (
               <>
-                <span className="text-ink-muted text-sm">
+                <Link
+                  href="/profile"
+                  className="text-[hsl(var(--color-ink-muted))] text-sm hover:text-[hsl(var(--color-accent))] transition-colors"
+                >
                   {t("nav.greeting", { username: user.display_name || user.username })}
-                </span>
+                </Link>
                 <div className="w-px h-5 border-hairline" />
                 <button
-                  onClick={handleLogout}
+                  onClick={() => setLogoutConfirmOpen(true)}
                   className="text-ink-subtle hover:text-red-400 text-sm transition-colors"
                 >
                   {t("auth.logout")}
@@ -278,7 +293,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ) : (
               <Link
                 href="/login"
-                className="bg-amber-500 text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-400 transition-colors"
+                className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent))] transition-colors"
               >
                 {t("auth.login")}
               </Link>
@@ -299,6 +314,61 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         navMode={navMode}
         onNavModeChange={handleNavModeChange}
       />
+
+      {/* Logout Confirmation Dialog */}
+      <Transition appear show={logoutConfirmOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-[99998]" onClose={() => setLogoutConfirmOpen(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md rounded-xl bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6 shadow-2xl">
+                  <Dialog.Title className="text-lg font-semibold text-[hsl(var(--color-ink))]">
+                    确认退出登录
+                  </Dialog.Title>
+                  <Dialog.Description className="mt-2 text-sm text-[hsl(var(--color-ink-muted))]">
+                    确定要退出当前账号吗？
+                  </Dialog.Description>
+
+                  <div className="mt-6 flex justify-end gap-3">
+                    <button
+                      onClick={() => setLogoutConfirmOpen(false)}
+                      className="px-4 py-2 rounded-md bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] text-sm hover:bg-[hsl(var(--color-surface-3))] transition-colors"
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="px-4 py-2 rounded-md bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30 transition-colors"
+                    >
+                      确认退出
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </div>
   );
 }
@@ -329,13 +399,13 @@ function SidebarMenuItem({
           onClick={() => setExpanded(!expanded)}
           className={`w-full flex items-center ${collapsed ? "justify-center px-0" : "gap-3 px-3"} h-12 rounded-lg transition-colors ${
             active
-              ? "bg-amber-500/20 text-amber-400"
-              : "text-ink-muted hover:bg-surface-2 hover:text-ink"
+              ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
+              : "text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]"
           }`}
         >
-          <span className="shrink-0">
+          <span className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${active ? "bg-[hsl(var(--color-accent))]/20" : ""}`}>
             {(() => {
-              const IconComponent = menu.icon ? ICON_MAP[menu.icon] || DEFAULT_ICON : DEFAULT_ICON;
+              const IconComponent = getIconByName(menu.icon);
               return <IconComponent className="w-5 h-5" />;
             })()}
           </span>
@@ -369,13 +439,13 @@ function SidebarMenuItem({
       href={menu.path}
       className={`flex items-center ${collapsed ? "justify-center w-full px-0" : "gap-3 px-3"} h-12 rounded-lg transition-colors ${indent} ${
         active
-          ? "bg-amber-500/20 text-amber-400"
-          : "text-ink-muted hover:bg-surface-2 hover:text-ink"
+          ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
+          : "text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]"
       }`}
     >
-      <span className="shrink-0">
+      <span className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${active ? "bg-[hsl(var(--color-accent))]/20" : ""}`}>
         {(() => {
-          const IconComponent = menu.icon ? ICON_MAP[menu.icon] || DEFAULT_ICON : DEFAULT_ICON;
+          const IconComponent = getIconByName(menu.icon);
           return <IconComponent className="w-5 h-5" />;
         })()}
       </span>

@@ -81,7 +81,7 @@ def create_menu(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(["PUT", "DELETE"])
+@api_view(["GET", "PUT", "PATCH", "DELETE"])
 @permission_classes([IsAuthenticated])
 def update_delete_menu(request, pk):
     """
@@ -103,7 +103,11 @@ def update_delete_menu(request, pk):
             status=status.HTTP_404_NOT_FOUND
         )
 
-    if request.method == "PUT":
+    if request.method == "GET":
+        serializer = MenuSerializer(menu)
+        return Response(serializer.data)
+
+    if request.method in ["PUT", "PATCH"]:
         serializer = MenuCreateUpdateSerializer(menu, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()

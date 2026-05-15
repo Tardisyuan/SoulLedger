@@ -17,6 +17,27 @@ const ACCENT_COLORS = [
 const NAV_MODE_KEY = "soulledger_nav_mode";
 const ACCENT_COLOR_KEY = "soulledger_accent_color";
 
+// Convert hex to HSL string for CSS variable
+function hexToHsl(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
 interface SettingsDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -34,13 +55,14 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
     const saved = localStorage.getItem(ACCENT_COLOR_KEY);
     if (saved) {
       setAccentColor(saved);
+      document.documentElement.style.setProperty("--color-accent", hexToHsl(saved));
     }
   }, []);
 
   const applyAccentColor = (color: string) => {
     setAccentColor(color);
     localStorage.setItem(ACCENT_COLOR_KEY, color);
-    document.documentElement.style.setProperty("--color-accent", color);
+    document.documentElement.style.setProperty("--color-accent", hexToHsl(color));
   };
 
   const handleCustomHex = () => {
@@ -55,12 +77,12 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-50"
+        className="fixed inset-0 bg-black/50 z-[99998]"
         onClick={onClose}
       />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 h-full w-80 bg-surface-1 border-l border-hairline z-50 shadow-xl overflow-y-auto">
+      <div className="fixed right-0 top-0 h-full w-80 bg-surface-1 border-l border-hairline z-[99998] shadow-xl overflow-y-auto">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -81,7 +103,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 onClick={toggleTheme}
                 className={`flex-1 py-2 px-3 rounded-md text-sm transition-colors ${
                   theme === "light"
-                    ? "bg-amber-500 text-black"
+                    ? "bg-accent text-black"
                     : "bg-surface-2 text-ink-muted hover:bg-surface-3"
                 }`}
               >
@@ -94,7 +116,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 onClick={toggleTheme}
                 className={`flex-1 py-2 px-3 rounded-md text-sm transition-colors ${
                   theme === "dark"
-                    ? "bg-amber-500 text-black"
+                    ? "bg-accent text-black"
                     : "bg-surface-2 text-ink-muted hover:bg-surface-3"
                 }`}
               >
@@ -116,7 +138,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                   onClick={() => applyAccentColor(color.value)}
                   className={`h-10 rounded-md ${color.class} transition-all ${
                     accentColor === color.value
-                      ? "ring-2 ring-offset-2 ring-offset-surface-1 ring-amber-400 scale-105"
+                      ? "ring-2 ring-offset-2 ring-offset-surface-1 ring-[hsl(var(--color-accent))] scale-105"
                       : "hover:scale-105"
                   }`}
                   title={t(`settings.colors.${color.name.toLowerCase()}`) || color.name}
@@ -129,7 +151,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 value={customHex}
                 onChange={(e) => setCustomHex(e.target.value)}
                 placeholder="#ff5500"
-                className="flex-1 bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500"
+                className="flex-1 bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-accent"
               />
               <button
                 onClick={handleCustomHex}
@@ -148,7 +170,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 onClick={() => onNavModeChange("classic")}
                 className={`flex-1 py-2 px-3 rounded-md text-sm transition-colors ${
                   navMode === "classic"
-                    ? "bg-amber-500 text-black"
+                    ? "bg-accent text-black"
                     : "bg-surface-2 text-ink-muted hover:bg-surface-3"
                 }`}
               >
@@ -158,7 +180,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 onClick={() => onNavModeChange("compact")}
                 className={`flex-1 py-2 px-3 rounded-md text-sm transition-colors ${
                   navMode === "compact"
-                    ? "bg-amber-500 text-black"
+                    ? "bg-accent text-black"
                     : "bg-surface-2 text-ink-muted hover:bg-surface-3"
                 }`}
               >
@@ -181,9 +203,9 @@ export function useAccentColor() {
   useEffect(() => {
     const saved = localStorage.getItem(ACCENT_COLOR_KEY);
     if (saved) {
-      document.documentElement.style.setProperty("--color-accent", saved);
+      document.documentElement.style.setProperty("--color-accent", hexToHsl(saved));
     } else {
-      document.documentElement.style.setProperty("--color-accent", "#f59e0b");
+      document.documentElement.style.setProperty("--color-accent", hexToHsl("#f59e0b"));
     }
   }, []);
 }

@@ -67,14 +67,14 @@ export default function SoulsPage() {
   return (
     <div className="min-h-screen bg-canvas text-ink">
       {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-hairline/50">
-        <Link href="/" className="text-ink-muted hover:text-ink text-sm">
+      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
+        <Link href="/" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
           ← {t("nav.home")}
         </Link>
-        <h1 className="text-lg font-bold text-amber-400 flex-1">{t("souls.title")}</h1>
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">{t("souls.title")}</h1>
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 rounded-md text-sm font-medium transition-colors"
+          className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] rounded-md text-sm font-medium transition-colors"
         >
           + {t("souls.create")}
         </button>
@@ -95,11 +95,11 @@ export default function SoulsPage() {
               placeholder={t("souls.search_placeholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500"
+              className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 rounded-md text-sm transition-colors"
+              className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] rounded-md text-sm transition-colors"
             >
               {t("souls.search")}
             </button>
@@ -110,7 +110,7 @@ export default function SoulsPage() {
               setStateFilter(e.target.value);
               refetch();
             }}
-            className="bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+            className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           >
             {states.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
@@ -122,7 +122,7 @@ export default function SoulsPage() {
               setCivilizationFilter(e.target.value);
               refetch();
             }}
-            className="bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+            className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           >
             {civilizations.map((c) => (
               <option key={c.value} value={c.value}>{c.label}</option>
@@ -135,16 +135,16 @@ export default function SoulsPage() {
               value={karmaMin}
               onChange={(e) => setKarmaMin(e.target.value)}
               onBlur={() => refetch()}
-              className="w-20 bg-surface-2 border border-hairline rounded-md px-2 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500"
+              className="w-20 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-2 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
-            <span className="text-ink-muted text-sm">-</span>
+            <span className="text-[hsl(var(--color-ink-muted))] text-sm">-</span>
             <input
               type="number"
               placeholder={t("souls.karma_max")}
               value={karmaMax}
               onChange={(e) => setKarmaMax(e.target.value)}
               onBlur={() => refetch()}
-              className="w-20 bg-surface-2 border border-hairline rounded-md px-2 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500"
+              className="w-20 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-2 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
           </div>
           <select
@@ -153,7 +153,7 @@ export default function SoulsPage() {
               setOrdering(e.target.value);
               refetch();
             }}
-            className="bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+            className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           >
             <option value="">{t("souls.order_default")}</option>
             <option value="name">{t("souls.order_name")}</option>
@@ -165,9 +165,9 @@ export default function SoulsPage() {
 
         {/* Loading / Error / Empty / Table */}
         {isLoading ? (
-          <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-surface-2 text-ink-muted">
+              <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">{t("souls.name")}</th>
                   <th className="text-left px-4 py-3 font-medium">{t("souls.civilization")}</th>
@@ -177,14 +177,14 @@ export default function SoulsPage() {
                   <th className="text-left px-4 py-3 font-medium">{t("souls.action")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-hairline">
+              <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="px-4 py-3"><div className="h-4 w-20 bg-surface-2 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-20 bg-[hsl(var(--color-surface-2))] rounded"></div></td>
                     <td className="px-4 py-3"><div className="h-4 w-16 bg-surface-2 rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-5 w-16 bg-surface-2 rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-12 bg-surface-2 rounded ml-auto"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-20 bg-surface-2 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-5 w-16 bg-[hsl(var(--color-surface-2))] rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-12 bg-[hsl(var(--color-surface-2))] rounded ml-auto"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-20 bg-[hsl(var(--color-surface-2))] rounded"></div></td>
                     <td className="px-4 py-3"><div className="h-4 w-12 bg-surface-2 rounded"></div></td>
                   </tr>
                 ))}
@@ -198,9 +198,9 @@ export default function SoulsPage() {
         ) : souls.length === 0 ? (
           <div className="text-center text-ink-subtle py-12">{t("souls.no_souls")}</div>
         ) : (
-          <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-surface-2 text-ink-muted">
+              <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">{t("souls.name")}</th>
                   <th className="text-left px-4 py-3 font-medium">{t("souls.civilization")}</th>
@@ -210,11 +210,11 @@ export default function SoulsPage() {
                   <th className="text-left px-4 py-3 font-medium">{t("souls.action")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-hairline">
+              <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
                 {souls.map((soul) => (
-                  <tr key={soul.id} className="hover:bg-surface-2/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-ink">{soul.name}</td>
-                    <td className="px-4 py-3 text-ink-muted">
+                  <tr key={soul.id} className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">{soul.name}</td>
+                    <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
                       {t(`souls.civilizations.${soul.civilization}`)}
                     </td>
                     <td className="px-4 py-3">
@@ -222,14 +222,14 @@ export default function SoulsPage() {
                         {t(`souls.states.${soul.current_state}`)}
                       </span>
                     </td>
-                    <td className={`px-4 py-3 text-right font-mono text-sm ${(soul.karmic_balance ?? 0) >= 0 ? "text-amber-400" : "text-red-400"}`}>
+                    <td className={`px-4 py-3 text-right font-mono text-sm ${(soul.karmic_balance ?? 0) >= 0 ? "text-[hsl(var(--color-accent))]" : "text-red-400"}`}>
                       {(soul.karmic_balance ?? 0) >= 0 ? "+" : ""}{soul.karmic_balance ?? 0}
                     </td>
-                    <td className="px-4 py-3 text-ink-muted text-xs">{soul.death_date || "—"}</td>
+                    <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs">{soul.death_date || "—"}</td>
                     <td className="px-4 py-3">
                       <Link
                         href={`/souls/${soul.id}`}
-                        className="text-amber-400 hover:text-amber-300 text-sm"
+                        className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))] text-sm"
                       >
                         {t("souls.view")} →
                       </Link>
