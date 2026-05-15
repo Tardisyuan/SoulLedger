@@ -165,7 +165,32 @@ export default function SoulsPage() {
 
         {/* Loading / Error / Empty / Table */}
         {isLoading ? (
-          <div className="text-center text-ink-muted py-12">{t("souls.loading")}</div>
+          <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-surface-2 text-ink-muted">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium">{t("souls.name")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("souls.civilization")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("souls.state")}</th>
+                  <th className="text-right px-4 py-3 font-medium">{t("souls.karma")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("souls.death")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("souls.action")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-hairline">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-4 py-3"><div className="h-4 w-20 bg-surface-2 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-16 bg-surface-2 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-5 w-16 bg-surface-2 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-12 bg-surface-2 rounded ml-auto"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-20 bg-surface-2 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-12 bg-surface-2 rounded"></div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : error ? (
           <div className="text-center text-red-400 py-12">
             {String(error)}
