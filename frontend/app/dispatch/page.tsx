@@ -4,6 +4,8 @@ import Link from "next/link";
 import { dispatchApi } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { Skeleton, CardSkeleton, ListSkeleton } from "@/components/ui/skeleton";
+import { PageSection } from "@/components/ui/page-section";
 
 export default function DispatchPage() {
   const { t } = useI18n();
@@ -23,6 +25,7 @@ export default function DispatchPage() {
 
   return (
     <div className="p-6">
+      {/* Page Header - rendered immediately */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-ink">{t("dispatch.title")}</h1>
@@ -36,11 +39,10 @@ export default function DispatchPage() {
         </Link>
       </div>
 
-      {/* Pending Proposals */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold text-ink mb-3">{t("dispatch.pending")}</h2>
+      {/* Pending Proposals - skeleton while loading */}
+      <PageSection title={t("dispatch.pending")} isLoading={loadingProposed} className="mb-8">
         {loadingProposed ? (
-          <p className="text-ink-muted">{t("common.loading")}</p>
+          <ListSkeleton count={3} />
         ) : proposed.length === 0 ? (
           <p className="text-ink-muted bg-surface-1 rounded-lg p-4 border border-hairline">{t("dispatch.no_pending") || "No pending proposals"}</p>
         ) : (
@@ -50,13 +52,12 @@ export default function DispatchPage() {
             ))}
           </div>
         )}
-      </section>
+      </PageSection>
 
-      {/* History */}
-      <section>
-        <h2 className="text-lg font-semibold text-ink mb-3">{t("dispatch.history")}</h2>
+      {/* History - skeleton while loading */}
+      <PageSection title={t("dispatch.history")} isLoading={loadingHistory}>
         {loadingHistory ? (
-          <p className="text-ink-muted">{t("common.loading")}</p>
+          <ListSkeleton count={5} />
         ) : history.length === 0 ? (
           <p className="text-ink-muted bg-surface-1 rounded-lg p-4 border border-hairline">{t("dispatch.no_history") || "No dispatch history"}</p>
         ) : (
@@ -66,7 +67,7 @@ export default function DispatchPage() {
             ))}
           </div>
         )}
-      </section>
+      </PageSection>
     </div>
   );
 }

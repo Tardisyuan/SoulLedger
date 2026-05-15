@@ -6,6 +6,8 @@ import { authApi } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { showToast } from "@/src/components/ui/Toast";
+import { PageSection } from "@/components/ui/page-section";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "管理员",
@@ -96,14 +98,6 @@ export default function ProfilePage() {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-canvas flex items-center justify-center">
-        <p className="text-ink-muted">{t("common.loading") || "加载中..."}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-canvas text-ink">
       {/* Page header */}
@@ -115,53 +109,62 @@ export default function ProfilePage() {
 
       <div className="max-w-2xl mx-auto px-6 py-8">
         {/* Basic Info Section */}
-        <section className="mb-8">
-          <h2 className="text-sm font-semibold text-ink-subtle uppercase tracking-wider mb-4">
-            {t("profile.basic_info") || "基本信息"}
-          </h2>
-          <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
-            {/* Username (read-only) */}
-            <div className="flex items-center px-4 py-3 border-b border-hairline">
-              <label className="w-32 text-sm text-ink-subtle shrink-0">
-                {t("profile.username") || "用户名"}
-              </label>
+        <PageSection
+          title={t("profile.basic_info") || "基本信息"}
+          isLoading={isLoading}
+          className="mb-8"
+        >
+          {/* Username (read-only) */}
+          <div className="flex items-center px-4 py-3 border-b border-hairline">
+            <label className="w-32 text-sm text-ink-subtle shrink-0">
+              {t("profile.username") || "用户名"}
+            </label>
+            {isLoading ? (
+              <Skeleton className="h-4 w-32" />
+            ) : (
               <span className="text-sm text-ink font-medium">
                 {profile?.username || user?.username}
               </span>
-            </div>
+            )}
+          </div>
 
-            {/* Email */}
-            <div className="flex items-center px-4 py-3 border-b border-hairline">
-              <label className="w-32 text-sm text-ink-subtle shrink-0">
-                {t("profile.email") || "邮箱"}
-              </label>
-              {editingField === "email" ? (
-                <div className="flex-1 flex gap-2">
-                  <input
-                    type="email"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    className="flex-1 bg-surface-2 border border-hairline rounded px-2 py-1 text-sm text-ink focus:outline-none focus:border-amber-500"
-                    autoFocus
-                  />
-                  <button
-                    onClick={() => handleEditSave("email")}
-                    className="px-2 py-1 bg-amber-500 text-black rounded text-xs hover:bg-amber-400"
-                  >
-                    {t("common.save") || "保存"}
-                  </button>
-                  <button
-                    onClick={() => setEditingField(null)}
-                    className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-ink-muted hover:text-ink"
-                  >
-                    {t("common.cancel") || "取消"}
-                  </button>
-                </div>
-              ) : (
-                <div className="flex-1 flex items-center gap-2">
+          {/* Email */}
+          <div className="flex items-center px-4 py-3 border-b border-hairline">
+            <label className="w-32 text-sm text-ink-subtle shrink-0">
+              {t("profile.email") || "邮箱"}
+            </label>
+            {editingField === "email" ? (
+              <div className="flex-1 flex gap-2">
+                <input
+                  type="email"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="flex-1 bg-surface-2 border border-hairline rounded px-2 py-1 text-sm text-ink focus:outline-none focus:border-amber-500"
+                  autoFocus
+                />
+                <button
+                  onClick={() => handleEditSave("email")}
+                  className="px-2 py-1 bg-amber-500 text-black rounded text-xs hover:bg-amber-400"
+                >
+                  {t("common.save") || "保存"}
+                </button>
+                <button
+                  onClick={() => setEditingField(null)}
+                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-ink-muted hover:text-ink"
+                >
+                  {t("common.cancel") || "取消"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center gap-2">
+                {isLoading ? (
+                  <Skeleton className="h-4 w-48" />
+                ) : (
                   <span className="text-sm text-ink">
                     {profile?.email || user?.email || "-"}
                   </span>
+                )}
+                {!isLoading && (
                   <button
                     onClick={() => {
                       setEditingField("email");
@@ -171,42 +174,48 @@ export default function ProfilePage() {
                   >
                     {t("common.edit") || "编辑"}
                   </button>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
+          </div>
 
-            {/* First Name */}
-            <div className="flex items-center px-4 py-3 border-b border-hairline">
-              <label className="w-32 text-sm text-ink-subtle shrink-0">
-                {t("profile.first_name") || "名"}
-              </label>
-              {editingField === "first_name" ? (
-                <div className="flex-1 flex gap-2">
-                  <input
-                    type="text"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    className="flex-1 bg-surface-2 border border-hairline rounded px-2 py-1 text-sm text-ink focus:outline-none focus:border-amber-500"
-                    autoFocus
-                  />
-                  <button
-                    onClick={() => handleEditSave("first_name")}
-                    className="px-2 py-1 bg-amber-500 text-black rounded text-xs hover:bg-amber-400"
-                  >
-                    {t("common.save") || "保存"}
-                  </button>
-                  <button
-                    onClick={() => setEditingField(null)}
-                    className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-ink-muted hover:text-ink"
-                  >
-                    {t("common.cancel") || "取消"}
-                  </button>
-                </div>
-              ) : (
-                <div className="flex-1 flex items-center gap-2">
+          {/* First Name */}
+          <div className="flex items-center px-4 py-3 border-b border-hairline">
+            <label className="w-32 text-sm text-ink-subtle shrink-0">
+              {t("profile.first_name") || "名"}
+            </label>
+            {editingField === "first_name" ? (
+              <div className="flex-1 flex gap-2">
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="flex-1 bg-surface-2 border border-hairline rounded px-2 py-1 text-sm text-ink focus:outline-none focus:border-amber-500"
+                  autoFocus
+                />
+                <button
+                  onClick={() => handleEditSave("first_name")}
+                  className="px-2 py-1 bg-amber-500 text-black rounded text-xs hover:bg-amber-400"
+                >
+                  {t("common.save") || "保存"}
+                </button>
+                <button
+                  onClick={() => setEditingField(null)}
+                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-ink-muted hover:text-ink"
+                >
+                  {t("common.cancel") || "取消"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center gap-2">
+                {isLoading ? (
+                  <Skeleton className="h-4 w-24" />
+                ) : (
                   <span className="text-sm text-ink">
                     {profile?.first_name || "-"}
                   </span>
+                )}
+                {!isLoading && (
                   <button
                     onClick={() => {
                       setEditingField("first_name");
@@ -216,42 +225,48 @@ export default function ProfilePage() {
                   >
                     {t("common.edit") || "编辑"}
                   </button>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
+          </div>
 
-            {/* Last Name */}
-            <div className="flex items-center px-4 py-3 border-b border-hairline">
-              <label className="w-32 text-sm text-ink-subtle shrink-0">
-                {t("profile.last_name") || "姓"}
-              </label>
-              {editingField === "last_name" ? (
-                <div className="flex-1 flex gap-2">
-                  <input
-                    type="text"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    className="flex-1 bg-surface-2 border border-hairline rounded px-2 py-1 text-sm text-ink focus:outline-none focus:border-amber-500"
-                    autoFocus
-                  />
-                  <button
-                    onClick={() => handleEditSave("last_name")}
-                    className="px-2 py-1 bg-amber-500 text-black rounded text-xs hover:bg-amber-400"
-                  >
-                    {t("common.save") || "保存"}
-                  </button>
-                  <button
-                    onClick={() => setEditingField(null)}
-                    className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-ink-muted hover:text-ink"
-                  >
-                    {t("common.cancel") || "取消"}
-                  </button>
-                </div>
-              ) : (
-                <div className="flex-1 flex items-center gap-2">
+          {/* Last Name */}
+          <div className="flex items-center px-4 py-3 border-b border-hairline">
+            <label className="w-32 text-sm text-ink-subtle shrink-0">
+              {t("profile.last_name") || "姓"}
+            </label>
+            {editingField === "last_name" ? (
+              <div className="flex-1 flex gap-2">
+                <input
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="flex-1 bg-surface-2 border border-hairline rounded px-2 py-1 text-sm text-ink focus:outline-none focus:border-amber-500"
+                  autoFocus
+                />
+                <button
+                  onClick={() => handleEditSave("last_name")}
+                  className="px-2 py-1 bg-amber-500 text-black rounded text-xs hover:bg-amber-400"
+                >
+                  {t("common.save") || "保存"}
+                </button>
+                <button
+                  onClick={() => setEditingField(null)}
+                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-ink-muted hover:text-ink"
+                >
+                  {t("common.cancel") || "取消"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center gap-2">
+                {isLoading ? (
+                  <Skeleton className="h-4 w-24" />
+                ) : (
                   <span className="text-sm text-ink">
                     {profile?.last_name || "-"}
                   </span>
+                )}
+                {!isLoading && (
                   <button
                     onClick={() => {
                       setEditingField("last_name");
@@ -261,15 +276,19 @@ export default function ProfilePage() {
                   >
                     {t("common.edit") || "编辑"}
                   </button>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
+          </div>
 
-            {/* Role (read-only) */}
-            <div className="flex items-center px-4 py-3 border-b border-hairline">
-              <label className="w-32 text-sm text-ink-subtle shrink-0">
-                {t("profile.role") || "角色"}
-              </label>
+          {/* Role (read-only) */}
+          <div className="flex items-center px-4 py-3 border-b border-hairline">
+            <label className="w-32 text-sm text-ink-subtle shrink-0">
+              {t("profile.role") || "角色"}
+            </label>
+            {isLoading ? (
+              <Skeleton className="h-5 w-20" />
+            ) : (
               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                 profile?.role === "ADMIN"
                   ? "bg-red-500/20 text-red-400"
@@ -281,98 +300,101 @@ export default function ProfilePage() {
               }`}>
                 {ROLE_LABELS[profile?.role || user?.role || ""] || profile?.role || user?.role}
               </span>
-            </div>
+            )}
+          </div>
 
-            {/* Tenant (read-only) */}
-            <div className="flex items-center px-4 py-3">
-              <label className="w-32 text-sm text-ink-subtle shrink-0">
-                {t("profile.tenant") || "租户"}
-              </label>
+          {/* Tenant (read-only) */}
+          <div className="flex items-center px-4 py-3">
+            <label className="w-32 text-sm text-ink-subtle shrink-0">
+              {t("profile.tenant") || "租户"}
+            </label>
+            {isLoading ? (
+              <Skeleton className="h-4 w-32" />
+            ) : (
               <span className="text-sm text-ink">
                 {profile?.tenant?.display_name || profile?.tenant?.code || user?.tenant?.display_name || user?.tenant?.code || "-"}
               </span>
-            </div>
-          </div>
-        </section>
-
-        {/* Change Password Section */}
-        <section>
-          <h2 className="text-sm font-semibold text-ink-subtle uppercase tracking-wider mb-4">
-            {t("profile.change_password") || "修改密码"}
-          </h2>
-          <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden p-4">
-            {!showPasswordForm ? (
-              <button
-                onClick={() => setShowPasswordForm(true)}
-                className="px-4 py-2 bg-surface-2 hover:bg-surface-3 border border-hairline rounded text-sm text-ink transition-colors"
-              >
-                {t("profile.change_password") || "修改密码"}
-              </button>
-            ) : (
-              <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm text-ink-subtle mb-1">
-                    {t("profile.old_password") || "旧密码"}
-                  </label>
-                  <input
-                    type="password"
-                    value={passwordForm.oldPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
-                    className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-ink-subtle mb-1">
-                    {t("profile.new_password") || "新密码"}
-                  </label>
-                  <input
-                    type="password"
-                    value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                    className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
-                    minLength={8}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-ink-subtle mb-1">
-                    {t("profile.confirm_password") || "确认密码"}
-                  </label>
-                  <input
-                    type="password"
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                    className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
-                    minLength={8}
-                    required
-                  />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="submit"
-                    disabled={changePasswordMutation.isPending}
-                    className="px-4 py-2 bg-amber-500 text-black rounded text-sm font-medium hover:bg-amber-400 disabled:opacity-50 transition-colors"
-                  >
-                    {changePasswordMutation.isPending
-                      ? (t("common.loading") || "提交中...")
-                      : (t("common.save") || "保存")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPasswordForm(false);
-                      setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
-                    }}
-                    className="px-4 py-2 bg-surface-2 border border-hairline rounded text-sm text-ink-muted hover:text-ink transition-colors"
-                  >
-                    {t("common.cancel") || "取消"}
-                  </button>
-                </div>
-              </form>
             )}
           </div>
-        </section>
+        </PageSection>
+
+        {/* Change Password Section */}
+        <PageSection title={t("profile.change_password") || "修改密码"}>
+          {!isLoading && !showPasswordForm ? (
+            <button
+              onClick={() => setShowPasswordForm(true)}
+              className="px-4 py-2 bg-surface-2 hover:bg-surface-3 border border-hairline rounded text-sm text-ink transition-colors"
+            >
+              {t("profile.change_password") || "修改密码"}
+            </button>
+          ) : isLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : showPasswordForm ? (
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm text-ink-subtle mb-1">
+                  {t("profile.old_password") || "旧密码"}
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.oldPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
+                  className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-ink-subtle mb-1">
+                  {t("profile.new_password") || "新密码"}
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+                  minLength={8}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-ink-subtle mb-1">
+                  {t("profile.confirm_password") || "确认密码"}
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+                  minLength={8}
+                  required
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={changePasswordMutation.isPending}
+                  className="px-4 py-2 bg-amber-500 text-black rounded text-sm font-medium hover:bg-amber-400 disabled:opacity-50 transition-colors"
+                >
+                  {changePasswordMutation.isPending
+                    ? (t("common.loading") || "提交中...")
+                    : (t("common.save") || "保存")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordForm(false);
+                    setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+                  }}
+                  className="px-4 py-2 bg-surface-2 border border-hairline rounded text-sm text-ink-muted hover:text-ink transition-colors"
+                >
+                  {t("common.cancel") || "取消"}
+                </button>
+              </div>
+            </form>
+          ) : null}
+        </PageSection>
       </div>
     </div>
   );
