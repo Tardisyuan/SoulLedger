@@ -9,43 +9,64 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(var(--surface-1));
+  background: hsl(var(--color-surface-1));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--hairline-strong));
+  background: hsl(var(--color-hairline-strong));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary));
+  background: hsl(var(--color-accent));
 }
 
 ::-webkit-scrollbar-corner {
-  background: hsl(var(--surface-1));
+  background: hsl(var(--color-surface-1));
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--hairline-strong)) hsl(var(--surface-1));
+  scrollbar-color: hsl(var(--color-hairline-strong)) hsl(var(--color-surface-1));
 }
 
+/* Dark theme is default - html element gets 'dark' class from ThemeContext on mount */
+
 :root {
-  --canvas: 240 100% 0.4%;
-  --surface-1: 230 10% 6.5%;
-  --surface-2: 230 8% 9%;
-  --surface-3: 230 6% 10%;
-  --surface-4: 230 5% 11%;
-  --hairline: 225 8% 16%;
-  --hairline-strong: 225 7% 22%;
-  --ink: 220 10% 97%;
-  --ink-muted: 220 10% 83%;
-  --ink-subtle: 220 5% 55%;
-  --ink-tertiary: 220 4% 39%;
-  --primary: 38 92% 50%;       /* amber-500 */
-  --primary-hover: 43 96% 58%; /* amber-400 */
+  --color-canvas: 240 15% 4%;
+  --color-surface-1: 240 13% 7%;
+  --color-surface-2: 240 12% 9%;
+  --color-surface-3: 240 11% 10%;
+  --color-surface-4: 240 11% 11%;
+  --color-hairline: 220 8% 18%;
+  --color-hairline-strong: 220 7% 22%;
+  --color-hairline-tertiary: 220 6% 26%;
+  --color-ink: 210 11% 96%;
+  --color-ink-muted: 213 15% 80%;
+  --color-ink-subtle: 215 8% 57%;
+  --color-ink-tertiary: 215 6% 41%;
+  --color-accent: 38 92% 50%;
+  --color-accent-hover: 43 96% 58%;
+}
+
+/* Light theme override */
+.light {
+  --color-canvas: 0 0% 100%;
+  --color-surface-1: 0 0% 98%;
+  --color-surface-2: 0 0% 96%;
+  --color-surface-3: 0 0% 94%;
+  --color-surface-4: 0 0% 92%;
+  --color-hairline: 220 10% 90%;
+  --color-hairline-strong: 220 10% 85%;
+  --color-hairline-tertiary: 220 8% 80%;
+  --color-ink: 220 15% 10%;
+  --color-ink-muted: 220 10% 35%;
+  --color-ink-subtle: 220 8% 50%;
+  --color-ink-tertiary: 220 6% 60%;
+  --color-accent: 38 92% 50%;
+  --color-accent-hover: 43 96% 58%;
 }
 
 @layer base {

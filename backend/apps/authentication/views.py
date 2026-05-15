@@ -2,6 +2,7 @@
 Auth views: register, login, logout, profile.
 """
 import logging
+import secrets
 from django.contrib.auth import get_user_model
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
@@ -241,7 +242,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 User.objects.create_user(
                     username=username,
                     email=email,
-                    password=password or 'ChangeMe123!',
+                    password=password or secrets.token_urlsafe(16),
                     role=role,
                     tenant=tenant,
                 )

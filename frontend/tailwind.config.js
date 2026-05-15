@@ -9,27 +9,34 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        canvas: '#010102',
+        canvas: 'hsl(var(--color-canvas))',
         surface: {
-          1: '#0f1011',
-          2: '#141516',
-          3: '#18191a',
-          4: '#191a1b',
+          1: 'hsl(var(--color-surface-1))',
+          2: 'hsl(var(--color-surface-2))',
+          3: 'hsl(var(--color-surface-3))',
+          4: 'hsl(var(--color-surface-4))',
         },
         hairline: {
-          DEFAULT: '#23252a',
-          strong: '#34343a',
-          tertiary: '#3e3e44',
+          DEFAULT: 'hsl(var(--color-hairline))',
+          strong: 'hsl(var(--color-hairline-strong))',
+          tertiary: 'hsl(var(--color-hairline-tertiary))',
         },
         ink: {
-          DEFAULT: '#f7f8f8',
-          muted: '#d0d6e0',
-          subtle: '#8a8f98',
-          tertiary: '#62666d',
+          DEFAULT: 'hsl(var(--color-ink))',
+          muted: 'hsl(var(--color-ink-muted))',
+          subtle: 'hsl(var(--color-ink-subtle))',
+          tertiary: 'hsl(var(--color-ink-tertiary))',
         },
-        border: "hsl(var(--border))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        accent: {
+          DEFAULT: 'hsl(var(--color-accent))',
+          hover: 'hsl(var(--color-accent-hover))',
+        },
+        // Keep existing amber palette for direct usage
+        amber: {
+          400: '#fcd34d',
+          500: '#fbbf24',
+          600: '#f59e0b',
+        },
       },
     },
   },

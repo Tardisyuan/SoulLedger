@@ -275,7 +275,9 @@ class KarmaExportStatsView(APIView):
             "Death Date", "Created At"
         ])
 
-        for soul in Soul.objects.select_related("tenant").all():
+        tenant = getattr(request, 'tenant', None)
+        qs = Soul.objects.select_related("tenant").filter(tenant=tenant) if tenant else Soul.objects.none()
+        for soul in qs:
             writer.writerow([
                 str(soul.id),
                 soul.name,
