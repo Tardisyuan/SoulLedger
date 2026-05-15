@@ -71,17 +71,17 @@ export default function UsersPage() {
   return (
     <div className="min-h-screen bg-canvas text-ink">
       {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-hairline/50">
-        <Link href="/" className="text-ink-muted hover:text-ink text-sm">
+      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
+        <Link href="/" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
           ← {t("nav.home")}
         </Link>
-        <h1 className="text-lg font-bold text-amber-400 flex-1">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
           {t("users.title") || "用户管理"}
         </h1>
         {isAdmin && (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black rounded text-xs font-medium transition-colors"
+            className="px-3 py-1 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] text-black rounded text-xs font-medium transition-colors"
           >
             + {t("users.create_user") || "创建用户"}
           </button>
@@ -99,7 +99,7 @@ export default function UsersPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="flex-1 min-w-[200px] bg-surface-1 border border-hairline rounded px-3 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500 transition-colors"
+            className="flex-1 min-w-[200px] bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] transition-colors"
           />
           <select
             value={roleFilter}
@@ -107,7 +107,7 @@ export default function UsersPage() {
               setRoleFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-surface-1 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] transition-colors"
           >
             <option value="">{t("users.all_roles") || "所有角色"}</option>
             <option value="ADMIN">{ROLE_LABELS.ADMIN}</option>
@@ -118,23 +118,23 @@ export default function UsersPage() {
         </div>
 
         {/* Users table */}
-        <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
+        <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-hairline bg-surface-2">
-                <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+              <tr className="border-b border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-2))]">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
                   {t("users.username") || "用户名"}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
                   {t("users.email") || "邮箱"}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
                   {t("users.role") || "角色"}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
                   {t("users.tenant") || "租户"}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
                   {t("users.status") || "状态"}
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-ink-subtle uppercase tracking-wider">
@@ -142,7 +142,7 @@ export default function UsersPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-hairline">
+            <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
               {isLoading ? (
                 <TableSkeleton rows={8} cols={6} />
               ) : users.length === 0 ? (
@@ -153,11 +153,11 @@ export default function UsersPage() {
                 </tr>
               ) : (
                 users.map((user) => (
-                  <tr key={user.id} className="hover:bg-surface-2/50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-ink font-medium">
+                  <tr key={user.id} className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors">
+                    <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))] font-medium">
                       {user.username}
                     </td>
-                    <td className="px-4 py-3 text-sm text-ink-muted">
+                    <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))]">
                       {user.email}
                     </td>
                     <td className="px-4 py-3 text-sm">
@@ -165,7 +165,7 @@ export default function UsersPage() {
                         user.role === "ADMIN"
                           ? "bg-red-500/20 text-red-400"
                           : user.role === "JUDGE"
-                          ? "bg-amber-500/20 text-amber-400"
+                          ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
                           : user.role === "GUARDIAN"
                           ? "bg-blue-500/20 text-blue-400"
                           : "bg-gray-500/20 text-gray-400"
@@ -173,7 +173,7 @@ export default function UsersPage() {
                         {ROLE_LABELS[user.role] || user.role}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-ink-muted">
+                    <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))]">
                       {user.tenant?.display_name || user.tenant?.code || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm">
@@ -187,7 +187,7 @@ export default function UsersPage() {
                           <>
                             <button
                               onClick={() => setEditingUser(user)}
-                              className="px-2 py-1 text-xs bg-surface-2 hover:bg-surface-3 border border-hairline rounded text-ink-muted hover:text-ink transition-colors"
+                              className="px-2 py-1 text-xs bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
                             >
                               {t("common.edit") || "编辑"}
                             </button>
@@ -240,14 +240,14 @@ export default function UsersPage() {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 text-sm bg-surface-1 border border-hairline rounded hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed text-ink-muted hover:text-ink transition-colors"
+                className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
               >
                 ← {t("common.prev") || "上一页"}
               </button>
               <button
                 onClick={() => setPage(p => p + 1)}
                 disabled={!data.next}
-                className="px-3 py-1.5 text-sm bg-surface-1 border border-hairline rounded hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed text-ink-muted hover:text-ink transition-colors"
+                className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
               >
                 {t("common.next") || "下一页"} →
               </button>

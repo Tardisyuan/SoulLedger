@@ -63,11 +63,11 @@ export default function JudgmentQueuePage() {
   return (
     <div className="text-ink">
       {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-hairline/50">
-        <Link href="/" className="text-ink-muted hover:text-ink text-sm">
+      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
+        <Link href="/" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
           ← {t("nav.home")}
         </Link>
-        <h1 className="text-lg font-bold text-amber-400 flex-1">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
           {t("judgment.title")}
         </h1>
       </div>
@@ -81,8 +81,8 @@ export default function JudgmentQueuePage() {
               onClick={() => setTab(t.key)}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
                 tab === t.key
-                  ? "text-amber-400 border-amber-400"
-                  : "text-ink-muted border-transparent hover:text-ink"
+                  ? "text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent))]"
+                  : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
               }`}
             >
               {t.label}
@@ -92,9 +92,9 @@ export default function JudgmentQueuePage() {
 
         {/* Loading / Error / Empty / Table */}
         {judgmentLoading ? (
-          <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-surface-2 text-ink-muted">
+              <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">
                     {t("judgment.soul_name")}
@@ -130,9 +130,9 @@ export default function JudgmentQueuePage() {
             {t("judgment.no_judgments")}
           </div>
         ) : (
-          <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-surface-2 text-ink-muted">
+              <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">
                     {t("judgment.soul_name")}
@@ -154,19 +154,19 @@ export default function JudgmentQueuePage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-hairline">
+              <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
                 {judgments.map((judgment) => (
                   <tr
                     key={judgment.id}
-                    className="hover:bg-surface-2/50 transition-colors"
+                    className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors"
                   >
-                    <td className="px-4 py-3 font-medium text-ink">
+                    <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">
                       {soulNameMap[judgment.soul] || judgment.soul}
                     </td>
-                    <td className="px-4 py-3 text-ink-muted">
+                    <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
                       {t(`souls.civilizations.${judgment.civilization}`)}
                     </td>
-                    <td className="px-4 py-3 text-ink-muted">
+                    <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
                       {judgment.court}
                     </td>
                     <td className="px-4 py-3">
@@ -191,7 +191,7 @@ export default function JudgmentQueuePage() {
                     <td className="px-4 py-3">
                       <Link
                         href={`/judgment/${judgment.id}`}
-                        className="text-amber-400 hover:text-amber-300 text-sm"
+                        className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))] text-sm"
                       >
                         {t("judgment.view")} →
                       </Link>

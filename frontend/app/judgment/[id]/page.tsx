@@ -100,52 +100,52 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="text-ink">
+    <div className="text-[hsl(var(--color-ink))]">
       {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-hairline/50">
-        <a href="/judgment" className="text-ink-muted hover:text-ink text-sm">
+      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
+        <a href="/judgment" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
           ← {t("judgment.detail.back_to_list")}
         </a>
-        <h1 className="text-lg font-bold text-amber-400 flex-1">{t("judgment.title")}</h1>
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">{t("judgment.title")}</h1>
         {judgment.is_final && (
-          <span className="px-2 py-0.5 rounded text-xs font-bold bg-surface-3 text-ink-muted">
+          <span className="px-2 py-0.5 rounded text-xs font-bold bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]">
             {t("judgment.detail.final")}
           </span>
         )}
-        <div className="text-ink-muted text-sm">
+        <div className="text-[hsl(var(--color-ink-muted))] text-sm">
           {new Date(judgment.created_at).toLocaleDateString()}
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         {/* Soul Info */}
-        <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-          <h2 className="text-sm font-semibold text-ink-muted uppercase mb-3">
+        <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+          <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
             {t("judgment.detail.soul_info")}
           </h2>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
               <dt className="text-ink-muted">{t("judgment.detail.soul_name")}</dt>
-              <dd className="text-ink font-medium">{soulData?.name || judgment.soul}</dd>
+              <dd className="text-[hsl(var(--color-ink))] font-medium">{soulData?.name || judgment.soul}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-ink-muted">{t("judgment.detail.civilization")}</dt>
-              <dd className="text-ink">{judgment.civilization}</dd>
+              <dd className="text-[hsl(var(--color-ink))]">{judgment.civilization}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-ink-muted">{t("judgment.detail.court")}</dt>
-              <dd className="text-ink">{judgment.court}</dd>
+              <dd className="text-[hsl(var(--color-ink))]">{judgment.court}</dd>
             </div>
           </dl>
         </div>
 
         {/* Evidence */}
         {judgment.evidence_json && Object.keys(judgment.evidence_json).length > 0 && (
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-            <h2 className="text-sm font-semibold text-ink-muted uppercase mb-3">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
               {t("judgment.detail.evidence")}
             </h2>
-            <div className="bg-surface-2 rounded p-3 text-sm font-mono text-ink overflow-auto">
+            <div className="bg-[hsl(var(--color-surface-2))] rounded p-3 text-sm font-mono text-[hsl(var(--color-ink))] overflow-auto">
               <pre>{JSON.stringify(judgment.evidence_json, null, 2)}</pre>
             </div>
           </div>
@@ -153,18 +153,18 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
         {/* Confession */}
         {judgment.confession && (
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-            <h2 className="text-sm font-semibold text-ink-muted uppercase mb-3">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
               {t("judgment.detail.confession")}
             </h2>
-            <p className="text-sm text-ink italic">"{judgment.confession}"</p>
+            <p className="text-sm text-[hsl(var(--color-ink))] italic">"{judgment.confession}"</p>
           </div>
         )}
 
         {/* Current Verdict (if final) */}
         {judgment.is_final && judgment.verdict && (
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-            <h2 className="text-sm font-semibold text-ink-muted uppercase mb-3">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
               {t("judgment.detail.verdict")}
             </h2>
             <div className="flex items-center gap-3">
@@ -176,16 +176,16 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 {judgment.verdict}
               </span>
               {judgment.concluded_at && (
-                <span className="text-xs text-ink-muted">
+                <span className="text-xs text-[hsl(var(--color-ink-muted))]">
                   {t("judgment.detail.concluded_at")}:{" "}
                   {new Date(judgment.concluded_at).toLocaleString()}
                 </span>
               )}
             </div>
             {judgment.notes && (
-              <div className="mt-3 pt-3 border-t border-hairline">
-                <p className="text-sm text-ink-muted">{t("judgment.detail.notes")}:</p>
-                <p className="text-sm text-ink mt-1">{judgment.notes}</p>
+              <div className="mt-3 pt-3 border-t border-[hsl(var(--color-hairline))]">
+                <p className="text-sm text-[hsl(var(--color-ink-muted))]">"{t("judgment.detail.notes")}:"</p>
+                <p className="text-sm text-[hsl(var(--color-ink))] mt-1">{judgment.notes}</p>
               </div>
             )}
           </div>
@@ -193,8 +193,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
         {/* Conclude Form (if not final) */}
         {!judgment.is_final && (
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-            <h2 className="text-sm font-semibold text-ink-muted uppercase mb-3">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
               {t("judgment.detail.render_verdict")}
             </h2>
 
@@ -211,7 +211,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   className={`flex items-center gap-3 p-3 rounded border cursor-pointer transition-colors ${
                     selectedVerdict === opt.key
                       ? opt.color + " bg-opacity-20 border-2"
-                      : "border-hairline hover:bg-surface-2"
+                      : "border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))]"
                   }`}
                 >
                   <input
@@ -222,21 +222,21 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                     onChange={(e) => setSelectedVerdict(e.target.value)}
                     className="accent-amber-500"
                   />
-                  <span className="text-sm font-medium text-ink">{opt.label}</span>
+                  <span className="text-sm font-medium text-[hsl(var(--color-ink))]">{opt.label}</span>
                 </label>
               ))}
             </div>
 
             {/* Notes Textarea */}
             <div className="mb-4">
-              <label className="block text-sm text-ink-muted mb-2">
+              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-2">
                 {t("judgment.detail.notes")}
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={4}
-                className="w-full bg-surface-2 border border-hairline rounded p-3 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:border-amber-500/50"
+                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded p-3 text-sm text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]/50"
                 placeholder={t("judgment.detail.notes_placeholder")}
               />
             </div>
@@ -245,7 +245,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             <button
               onClick={handleConclude}
               disabled={concludeMutation.isPending}
-              className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-black"
+              className="w-full py-2.5 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-black"
             >
               {concludeMutation.isPending
                 ? t("judgment.detail.concluding")

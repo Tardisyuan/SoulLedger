@@ -57,15 +57,15 @@ export default function ProposeDispatchPage() {
 
   return (
     <div className="p-6 max-w-2xl">
-      <h1 className="text-2xl font-bold text-ink mb-6">{t("dispatch.propose") || "Propose Dispatch"}</h1>
+      <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))] mb-6">{t("dispatch.propose") || "Propose Dispatch"}</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-ink mb-1">Target Soul</label>
+          <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">Target Soul</label>
           <select
             value={form.soul_id}
             onChange={e => setForm({ ...form, soul_id: e.target.value })}
-            className="w-full bg-surface-1 border border-hairline rounded-lg px-3 py-2 text-ink"
+            className="w-full bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))]"
             required
           >
             <option value="">Select soul...</option>
@@ -78,11 +78,11 @@ export default function ProposeDispatchPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-ink mb-1">Target Tenant</label>
+          <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">Target Tenant</label>
           <select
             value={form.target_tenant_code}
             onChange={e => setForm({ ...form, target_tenant_code: e.target.value })}
-            className="w-full bg-surface-1 border border-hairline rounded-lg px-3 py-2 text-ink"
+            className="w-full bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))]"
             required
           >
             <option value="">Select tenant...</option>
@@ -97,11 +97,11 @@ export default function ProposeDispatchPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-ink mb-1">Reason</label>
+          <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">Reason</label>
           <textarea
             value={form.reason}
             onChange={e => setForm({ ...form, reason: e.target.value })}
-            className="w-full bg-surface-1 border border-hairline rounded-lg px-3 py-2 text-ink"
+            className="w-full bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))]"
             rows={4}
             placeholder="Reason for dispatch..."
             required
@@ -112,14 +112,14 @@ export default function ProposeDispatchPage() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-amber-500 text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-400 disabled:opacity-50"
+            className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent))] disabled:opacity-50"
           >
             {loading ? "Submitting..." : "Submit Proposal"}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
-            className="bg-surface-2 text-ink px-4 py-2 rounded-lg text-sm hover:bg-surface-3"
+            className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] px-4 py-2 rounded-lg text-sm hover:bg-[hsl(var(--color-surface-3))]"
           >
             Cancel
           </button>
