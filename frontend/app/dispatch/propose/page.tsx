@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { dispatchApi, soulsApi, karmaApi } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { Skeleton } from "@/src/components/ui/skeleton";
 
 export default function ProposeDispatchPage() {
   const { t } = useI18n();
@@ -17,7 +18,7 @@ export default function ProposeDispatchPage() {
     reason: "",
   });
 
-  const { data: soulsResponse } = useQuery({
+  const { data: soulsResponse, isLoading: soulsLoading } = useQuery({
     queryKey: ["dispatch", "souls"],
     queryFn: () => soulsApi.list({ page: 1 }),
     enabled: !!user,
@@ -25,7 +26,7 @@ export default function ProposeDispatchPage() {
 
   const souls = soulsResponse?.data?.results || soulsResponse?.data || [];
 
-  const { data: statsData } = useQuery({
+  const { data: statsData, isLoading: tenantsLoading } = useQuery({
     queryKey: ["dispatch", "tenants"],
     queryFn: () => karmaApi.statsOverview(),
     enabled: !!user,
@@ -62,38 +63,46 @@ export default function ProposeDispatchPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">Target Soul</label>
-          <select
-            value={form.soul_id}
-            onChange={e => setForm({ ...form, soul_id: e.target.value })}
-            className="w-full bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))]"
-            required
-          >
-            <option value="">Select soul...</option>
-            {souls.map((s: any) => (
-              <option key={s.id} value={s.id}>
-                #{s.id} - {s.name} ({s.current_state})
-              </option>
-            ))}
-          </select>
+          {soulsLoading ? (
+            <Skeleton className="h-10 w-full" />
+          ) : (
+            <select
+              value={form.soul_id}
+              onChange={e => setForm({ ...form, soul_id: e.target.value })}
+              className="w-full bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))]"
+              required
+            >
+              <option value="">Select soul...</option>
+              {souls.map((s: any) => (
+                <option key={s.id} value={s.id}>
+                  #{s.id} - {s.name} ({s.current_state})
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">Target Tenant</label>
-          <select
-            value={form.target_tenant_code}
-            onChange={e => setForm({ ...form, target_tenant_code: e.target.value })}
-            className="w-full bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))]"
-            required
-          >
-            <option value="">Select tenant...</option>
-            {tenants
-              .filter((t: any) => t.tenant_code !== user?.tenant?.code)
-              .map((t: any) => (
-                <option key={t.tenant_code} value={t.tenant_code}>
-                  {t.tenant_name} ({t.tenant_code})
-                </option>
-              ))}
-          </select>
+          {tenantsLoading ? (
+            <Skeleton className="h-10 w-full" />
+          ) : (
+            <select
+              value={form.target_tenant_code}
+              onChange={e => setForm({ ...form, target_tenant_code: e.target.value })}
+              className="w-full bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))]"
+              required
+            >
+              <option value="">Select tenant...</option>
+              {tenants
+                .filter((t: any) => t.tenant_code !== user?.tenant?.code)
+                .map((t: any) => (
+                  <option key={t.tenant_code} value={t.tenant_code}>
+                    {t.tenant_name} ({t.tenant_code})
+                  </option>
+                ))}
+            </select>
+          )}
         </div>
 
         <div>
