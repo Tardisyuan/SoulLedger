@@ -27,10 +27,10 @@ export default function CrossJudgmentsPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))]">
           {t("crossJudgments.title")}
         </h1>
-        <p className="text-ink-subtle mt-1">
+        <p className="text-[hsl(var(--color-ink-subtle))] mt-1">
           {t("crossJudgments.subtitle")}
         </p>
       </div>
@@ -42,7 +42,7 @@ export default function CrossJudgmentsPage() {
         {isLoading ? (
           <ListSkeleton count={3} />
         ) : judgments.length === 0 ? (
-          <p className="text-ink-muted py-4 text-center">
+          <p className="text-[hsl(var(--color-ink-muted))] py-4 text-center">
             {t("crossJudgments.no_judgments") || "No cross-tenant judgments yet"}
           </p>
         ) : (
@@ -51,12 +51,12 @@ export default function CrossJudgmentsPage() {
               <Link
                 key={j.id}
                 href={`/cross-judgments/${j.id}`}
-                className="block bg-surface-1 border border-hairline rounded-lg p-4 hover:border-amber-500/50 transition-colors"
+                className="block bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4 hover:border-[hsl(var(--color-accent))]/50 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-ink">{j.title}</h3>
-                    <p className="text-sm text-ink-subtle">
+                    <h3 className="font-semibold text-[hsl(var(--color-ink))]">{j.title}</h3>
+                    <p className="text-sm text-[hsl(var(--color-ink-subtle))]">
                       {t("crossJudgments.initiated_by") || "Initiated by"}: {j.initiating_tenant}
                     </p>
                   </div>
@@ -65,10 +65,10 @@ export default function CrossJudgmentsPage() {
                   </span>
                 </div>
                 {j.description && (
-                  <p className="mt-2 text-sm text-ink-muted line-clamp-2">{j.description}</p>
+                  <p className="mt-2 text-sm text-[hsl(var(--color-ink-muted))] line-clamp-2">{j.description}</p>
                 )}
                 {j.participant_count !== undefined && (
-                  <p className="mt-2 text-xs text-ink-muted">
+                  <p className="mt-2 text-xs text-[hsl(var(--color-ink-muted))]">
                     {j.participant_count} {t("crossJudgments.participants") || "participants"}
                   </p>
                 )}

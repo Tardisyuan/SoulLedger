@@ -37,7 +37,7 @@ export function NavBar() {
           aria-label="SoulLedger Home"
         >
           <span className="text-xl">💀</span>
-          <span className="text-amber-500 font-bold text-sm tracking-wide group-hover:text-amber-400 transition-colors">
+          <span className="text-[hsl(var(--color-accent))] font-bold text-sm tracking-wide group-hover:text-[hsl(var(--color-accent))] transition-colors">
             SoulLedger
           </span>
         </Link>
@@ -57,7 +57,7 @@ export function NavBar() {
             title={
               theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
             }
-            className="text-ink-subtle hover:text-amber-500 transition-colors p-1 rounded"
+            className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
           >
             {theme === "dark" ? (
               <svg
@@ -98,7 +98,7 @@ export function NavBar() {
               {/* User greeting — clickable */}
               <button
                 onClick={() => setShowUserModal(true)}
-                className="text-ink-muted text-sm hover:text-amber-500 transition-colors"
+                className="text-[hsl(var(--color-ink-muted))] text-sm hover:text-[hsl(var(--color-accent))] transition-colors"
               >
                 {t("nav.greeting", { username: user.username })}
               </button>
@@ -117,7 +117,7 @@ export function NavBar() {
             /* Login button — shown when not authenticated */
             <Link
               href="/login"
-              className="bg-amber-500 text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-400 transition-colors"
+              className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent))] transition-colors"
             >
               {t("auth.login")}
             </Link>

@@ -37,13 +37,13 @@ function WorkflowNodeComponent({ data }: { data: { label: string; status: string
 
   return (
     <div className={`px-4 py-3 rounded-lg border-2 ${colorClass} min-w-[160px]`}>
-      <Handle type="target" position={Position.Top} className="!bg-amber-500" />
-      <div className="text-sm font-semibold text-ink">{data.label}</div>
-      <div className="text-xs text-ink-muted mt-1">{data.nodeType}</div>
+      <Handle type="target" position={Position.Top} className="!bg-[hsl(var(--color-accent))]" />
+      <div className="text-sm font-semibold text-[hsl(var(--color-ink))]">{data.label}</div>
+      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">{data.nodeType}</div>
       {data.courtCode && (
-        <div className="text-xs text-ink-subtle mt-1">{data.courtCode}</div>
+        <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">{data.courtCode}</div>
       )}
-      <Handle type="source" position={Position.Bottom} className="!bg-amber-500" />
+      <Handle type="source" position={Position.Bottom} className="!bg-[hsl(var(--color-accent))]" />
     </div>
   );
 }
@@ -350,11 +350,11 @@ export default function WorkflowPage() {
   return (
     <div className="text-ink">
       {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-hairline/50">
-        <Link href="/" className="text-ink-muted hover:text-ink text-sm">
+      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
+        <Link href="/" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
           ← {t("nav.home")}
         </Link>
-        <h1 className="text-lg font-bold text-amber-400 flex-1">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
           {t("workflow.title") || "审批流程"}
         </h1>
       </div>
@@ -368,8 +368,8 @@ export default function WorkflowPage() {
               onClick={() => setTab(t.key)}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
                 tab === t.key
-                  ? "text-amber-400 border-amber-400"
-                  : "text-ink-muted border-transparent hover:text-ink"
+                  ? "text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent))]"
+                  : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
               }`}
             >
               {t.label}
@@ -384,7 +384,7 @@ export default function WorkflowPage() {
               {Object.entries(templatesByCiv).map(([civ, templates]) => (
                 <div key={civ}>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-semibold text-amber-400">
+                    <span className="text-sm font-semibold text-[hsl(var(--color-accent))]">
                       {CIVILIZATION_LABELS[civ]}
                     </span>
                     <span className="text-xs text-ink-muted">
@@ -401,8 +401,8 @@ export default function WorkflowPage() {
                         }}
                         className={`px-3 py-1.5 rounded text-sm transition-colors ${
                           selectedTemplate === tmpl.key
-                            ? "bg-amber-500 text-black"
-                            : "bg-surface-2 text-ink-muted hover:text-ink hover:bg-surface-3"
+                            ? "bg-[hsl(var(--color-accent))] text-black"
+                            : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] hover:bg-[hsl(var(--color-surface-3))]"
                         }`}
                         title={tmpl.description}
                       >
@@ -415,13 +415,13 @@ export default function WorkflowPage() {
             </div>
 
             {/* Flow description */}
-            <div className="mb-4 text-sm text-ink">
+            <div className="mb-4 text-sm text-[hsl(var(--color-ink))]">
               <span className="font-medium">{currentTemplate?.name}</span>
-              <span className="text-ink-muted ml-2">— {currentTemplate?.description}</span>
+              <span className="text-[hsl(var(--color-ink-muted))] ml-2">— {currentTemplate?.description}</span>
             </div>
 
             {/* React Flow canvas */}
-            <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
               <div className="h-[500px]">
                 <ReactFlow
                   nodes={nodes}
@@ -430,10 +430,10 @@ export default function WorkflowPage() {
                   onEdgesChange={onEdgesChange}
                   nodeTypes={nodeTypes}
                   fitView
-                  className="bg-surface-2"
+                  className="bg-[hsl(var(--color-surface-2))]"
                 >
                   <Background />
-                  <Controls className="!bg-surface-1 !border-hairline" />
+                  <Controls className="!bg-[hsl(var(--color-surface-1))] !border-[hsl(var(--color-hairline))]" />
                 </ReactFlow>
               </div>
             </div>
@@ -441,7 +441,7 @@ export default function WorkflowPage() {
             {/* Legend */}
             <div className="mt-4 flex flex-wrap gap-4 text-xs text-ink-muted">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-amber-500/20 border border-amber-500/50" />
+                <div className="w-3 h-3 rounded bg-[hsl(var(--color-accent))]/20 border border-[hsl(var(--color-accent))]/50" />
                 <span>待审批</span>
               </div>
               <div className="flex items-center gap-2">
@@ -476,13 +476,13 @@ export default function WorkflowPage() {
               workflows.map((wf) => (
                 <div
                   key={wf.id}
-                  className="bg-surface-1 rounded-lg p-4 border border-hairline hover:border-amber-500/50 transition-colors cursor-pointer"
+                  className="bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))] hover:border-[hsl(var(--color-accent))]/50 transition-colors cursor-pointer"
                   onClick={() => router.push(`/workflow/${wf.id}`)}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium text-ink">{wf.workflow_name}</div>
-                      <div className="text-xs text-ink-muted mt-1">
+                      <div className="font-medium text-[hsl(var(--color-ink))]">{wf.workflow_name}</div>
+                      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
                         {wf.case_type} · {wf.soul}
                       </div>
                     </div>
@@ -492,7 +492,7 @@ export default function WorkflowPage() {
                           wf.status === "COMPLETED"
                             ? "bg-green-500/20 text-green-400"
                             : wf.status === "IN_PROGRESS"
-                            ? "bg-amber-500/20 text-amber-400"
+                            ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
                             : "bg-surface-3 text-ink-muted"
                         }`}
                       >

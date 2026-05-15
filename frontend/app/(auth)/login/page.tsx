@@ -58,42 +58,42 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-canvas">
       <div className="w-full max-w-md px-6">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-ink mb-2">{t("nav.title")}</h1>
-          <p className="text-ink-muted">{t("home.hero_subtitle")}</p>
+          <h1 className="text-3xl font-bold text-[hsl(var(--color-ink))] mb-2">{t("nav.title")}</h1>
+          <p className="text-[hsl(var(--color-ink-muted))]">{t("home.hero_subtitle")}</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-surface-1 border border-hairline rounded-lg p-8"
+          className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-8"
         >
-          <h2 className="text-xl font-semibold text-ink mb-6 text-center">
+          <h2 className="text-xl font-semibold text-[hsl(var(--color-ink))] mb-6 text-center">
             {t("auth.login") || "登录"}
           </h2>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-ink-muted mb-1">
+              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">
                 {t("auth.username") || "用户名"}
               </label>
               <input
                 type="text"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
-                className="w-full bg-surface-2 border border-hairline rounded-md px-4 py-2.5 text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-4 py-2.5 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] transition-colors"
                 placeholder="admin"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm text-ink-muted mb-1">
+              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">
                 {t("auth.password") || "密码"}
               </label>
               <input
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full bg-surface-2 border border-hairline rounded-md px-4 py-2.5 text-ink placeholder-ink-subtle focus:outline-none focus:border-amber-500 transition-colors"
+                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-4 py-2.5 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] transition-colors"
                 placeholder="••••••••"
                 required
               />
@@ -103,14 +103,14 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-6 bg-amber-500 hover:bg-amber-400 disabled:bg-surface-3 text-ink font-medium py-2.5 rounded-md transition-colors"
+            className="w-full mt-6 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink))] font-medium py-2.5 rounded-md transition-colors"
           >
             {loading ? (t("auth.logging_in") || "登录中...") : (t("auth.login") || "登录")}
           </button>
         </form>
 
-        <p className="text-center text-ink-subtle text-sm mt-6">
-          <Link href="/" className="text-amber-500 hover:text-amber-400">
+        <p className="text-center text-[hsl(var(--color-ink-subtle))] text-sm mt-6">
+          <Link href="/" className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))]">
             {t("nav.home")}
           </Link>
         </p>

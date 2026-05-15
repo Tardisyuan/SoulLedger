@@ -20,8 +20,8 @@ export default function ActorsPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">{t("actors.title")}</h1>
-        <p className="text-ink-subtle mt-1">{t("actors.subtitle")}</p>
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))]">{t("actors.title")}</h1>
+        <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("actors.subtitle")}</p>
       </div>
 
       <PageSection title={t("actors.section.actors")} isLoading={isLoading} className="mt-6">
@@ -29,7 +29,7 @@ export default function ActorsPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 9 }).map((_, i) => (
               <CardGridItem key={i} isLoading>
-                <div className="bg-surface-1 border border-hairline rounded-lg p-4">
+                <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <Skeleton className="h-8 w-8" />
                     <div className="flex-1 min-w-0 space-y-2">
@@ -46,13 +46,13 @@ export default function ActorsPage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {actors.map((actor: any) => (
-              <div key={actor.id} className="bg-surface-1 border border-hairline rounded-lg p-4">
+              <div key={actor.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">{actor.icon || "👤"}</span>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-ink truncate">{actor.name}</h3>
-                    <p className="text-sm text-ink-subtle">{actor.name_zh || actor.name}</p>
-                    <p className="text-xs text-ink-muted mt-1">{actor.title || actor.role}</p>
+                    <h3 className="font-semibold text-[hsl(var(--color-ink))] truncate">{actor.name}</h3>
+                    <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{actor.name_zh || actor.name}</p>
+                    <p className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">{actor.title || actor.role}</p>
                   </div>
                   <span className={`px-2 py-1 rounded text-xs ${
                     actor.role === 'JUDGE' ? 'bg-amber-500/20 text-amber-400' :
@@ -63,7 +63,7 @@ export default function ActorsPage() {
                   </span>
                 </div>
                 {actor.description && (
-                  <p className="mt-2 text-sm text-ink-muted line-clamp-2">{actor.description}</p>
+                  <p className="mt-2 text-sm text-[hsl(var(--color-ink-muted))] line-clamp-2">{actor.description}</p>
                 )}
               </div>
             ))}

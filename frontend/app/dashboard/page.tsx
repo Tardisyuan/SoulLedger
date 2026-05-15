@@ -74,14 +74,14 @@ export default function DashboardPage() {
 
   // Page header renders immediately
   const pageHeader = (
-    <div className="border-b border-hairline pb-4 flex justify-between items-start">
+    <div className="border-b border-[hsl(var(--color-hairline))] pb-4 flex justify-between items-start">
       <div>
-        <h1 className="text-2xl font-bold text-amber-400">{t("dashboard.title")}</h1>
-        <p className="text-ink-muted text-sm mt-1">{t("dashboard.subtitle")}</p>
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">{t("dashboard.title")}</h1>
+        <p className="text-[hsl(var(--color-ink-muted))] text-sm mt-1">{t("dashboard.subtitle")}</p>
       </div>
       <button
         onClick={handleExport}
-        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-medium rounded transition-colors text-sm"
+        className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] text-black font-medium rounded transition-colors text-sm"
       >
         {t("dashboard.export_stats")}
       </button>
@@ -130,7 +130,7 @@ export default function DashboardPage() {
             label={t("dashboard.under_judgment")}
             value={stats?.state_distribution.find(s => s.state === "JUDGING")?.count}
             isLoading={loading}
-            color="text-amber-400"
+            color="text-[hsl(var(--color-accent))]"
           />
           <StatCard
             label={t("dashboard.disposed")}
@@ -143,7 +143,7 @@ export default function DashboardPage() {
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* State distribution pie chart */}
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
             <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">{t("dashboard.state_distribution")}</h2>
             {loading ? (
               <div className="h-[240px] flex items-center justify-center">
@@ -179,7 +179,7 @@ export default function DashboardPage() {
           </div>
 
           {/* tenant comparison bar chart */}
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
             <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">{t("dashboard.souls_by_civilization")}</h2>
             {loading ? (
               <div className="h-[240px] flex items-center justify-center">
@@ -202,11 +202,11 @@ export default function DashboardPage() {
         </div>
 
         {/* Per-tenant breakdown */}
-        <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
+        <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
           <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">{t("dashboard.per_civilization_breakdown")}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="bg-surface-2 rounded-lg p-4 border border-hairline">
+              <div key={i} className="bg-[hsl(var(--color-surface-2))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">
                 {loading ? (
                   <div className="space-y-3">
                     <Skeleton className="h-4 w-24" />
@@ -223,7 +223,7 @@ export default function DashboardPage() {
                       />
                       <span className="font-medium text-ink">{stats.tenants[i].tenant_name || stats.tenants[i].tenant_code}</span>
                     </div>
-                    <div className="text-2xl font-bold text-amber-400 mb-3">{stats.tenants[i].total_souls}</div>
+                    <div className="text-2xl font-bold text-[hsl(var(--color-accent))] mb-3">{stats.tenants[i].total_souls}</div>
                     <div className="space-y-1">
                       {Object.entries(stats.tenants[i].state_breakdown).map(([state, count]) => (
                         <div key={state} className="flex justify-between text-xs">
@@ -242,7 +242,7 @@ export default function DashboardPage() {
         {/* Karma distribution and Souls by Realm */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Karma distribution */}
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
             <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">{t("dashboard.karma_distribution")}</h2>
             {loading ? (
               <div className="h-[180px] flex items-center justify-center">
@@ -264,7 +264,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Souls by Realm */}
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
             <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">{t("dashboard.souls_by_realm")}</h2>
             {loading ? (
               <div className="h-[180px] flex items-center justify-center">
@@ -291,7 +291,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
+        <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
           <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">{t("dashboard.recent_activity")}</h2>
           {loading ? (
             <div className="space-y-3">
@@ -304,13 +304,13 @@ export default function DashboardPage() {
           ) : stats?.recent_activity && stats.recent_activity.length > 0 ? (
             <div className="space-y-2">
               {stats.recent_activity.map((log) => (
-                <div key={log.id} className="flex items-start gap-3 py-2 border-b border-hairline last:border-0">
+                <div key={log.id} className="flex items-start gap-3 py-2 border-b border-[hsl(var(--color-hairline))] last:border-0">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded bg-surface-2 text-ink-muted">{log.action}</span>
-                      <span className="text-sm font-medium text-ink truncate">{log.description || log.resource}</span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">{log.action}</span>
+                      <span className="text-sm font-medium text-[hsl(var(--color-ink))] truncate">{log.description || log.resource}</span>
                     </div>
-                    <div className="text-xs text-ink-muted mt-1">
+                    <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
                       {log.user} · {formatTimestamp(log.timestamp)}
                     </div>
                   </div>

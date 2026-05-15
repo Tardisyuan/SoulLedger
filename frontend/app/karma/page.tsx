@@ -21,8 +21,8 @@ export default function KarmaPage() {
     <div className="p-6 space-y-6">
       {/* Page Header - renders immediately */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">{t("karma.title")}</h1>
-        <p className="text-ink-subtle mt-1">{t("karma.subtitle")}</p>
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))]">{t("karma.title")}</h1>
+        <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("karma.subtitle")}</p>
       </div>
 
       {/* Overview Cards - each section loads independently */}
@@ -31,7 +31,7 @@ export default function KarmaPage() {
           label={t("karma.total_souls")}
           value={karmaStats?.total_souls}
           isLoading={isLoading}
-          color="text-amber-400"
+          color="text-[hsl(var(--color-accent))]"
         />
         <OverviewCard
           label={t("karma.active_souls")}
@@ -43,7 +43,7 @@ export default function KarmaPage() {
           label={t("karma.judging_souls")}
           value={karmaStats?.state_distribution.find(s => s.state === "JUDGING")?.count}
           isLoading={isLoading}
-          color="text-amber-500"
+          color="text-[hsl(var(--color-accent))]"
         />
       </div>
 
@@ -63,12 +63,12 @@ export default function KarmaPage() {
                     item.state === "REINCARNATING" ? "bg-blue-500" :
                     "bg-red-500"
                   }`} />
-                  <span className="text-sm text-ink">{item.label}</span>
+                  <span className="text-sm text-[hsl(var(--color-ink))]">{item.label}</span>
                 </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-12" />
                 ) : (
-                  <span className="text-sm font-mono text-ink-muted">{item.count}</span>
+                  <span className="text-sm font-mono text-[hsl(var(--color-ink-muted))]">{item.count}</span>
                 )}
               </div>
             ))}
@@ -84,11 +84,11 @@ export default function KarmaPage() {
           <div className="space-y-2">
             {karmaStats?.karma_distribution.map((item, idx) => (
               <div key={idx} className="flex items-center justify-between">
-                <span className="text-sm text-ink">{item.label}</span>
+                <span className="text-sm text-[hsl(var(--color-ink))]">{item.label}</span>
                 {isLoading ? (
                   <Skeleton className="h-4 w-12" />
                 ) : (
-                  <span className="text-sm font-mono text-amber-400">{item.count}</span>
+                  <span className="text-sm font-mono text-[hsl(var(--color-accent))]">{item.count}</span>
                 )}
               </div>
             ))}
@@ -106,13 +106,13 @@ export default function KarmaPage() {
               {karmaStats.souls_by_realm.map((item) => (
                 <div key={item.realm_code} className="flex items-center justify-between">
                   <div>
-                    <span className="text-sm text-ink">{item.realm_name}</span>
-                    <span className="text-xs text-ink-muted ml-2">({item.civilization})</span>
+                    <span className="text-sm text-[hsl(var(--color-ink))]">{item.realm_name}</span>
+                    <span className="text-xs text-[hsl(var(--color-ink-muted))] ml-2">({item.civilization})</span>
                   </div>
                   {isLoading ? (
                     <Skeleton className="h-4 w-12" />
                   ) : (
-                    <span className="text-sm font-mono text-ink-muted">{item.count}</span>
+                    <span className="text-sm font-mono text-[hsl(var(--color-ink-muted))]">{item.count}</span>
                   )}
                 </div>
               ))}
@@ -132,7 +132,7 @@ export default function KarmaPage() {
                 <div key={activity.id} className="flex items-start gap-3 text-sm">
                   <div className="flex-1 min-w-0">
                     <p className="text-ink">{activity.description}</p>
-                    <p className="text-xs text-ink-muted mt-1">
+                    <p className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
                       {activity.user} · {new Date(activity.timestamp).toLocaleString()}
                     </p>
                   </div>
@@ -159,7 +159,7 @@ function OverviewCard({
   color?: string;
 }) {
   return (
-    <div className="bg-surface-1 border border-hairline rounded-lg p-4">
+    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
       <div className="text-sm text-ink-muted">{label}</div>
       {isLoading ? (
         <Skeleton className="h-8 w-20 mt-1" />
@@ -183,7 +183,7 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-surface-1 border border-hairline rounded-lg p-4">
+    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
       <h2 className="text-lg font-semibold text-ink mb-4">{title}</h2>
       {children}
     </div>

@@ -28,12 +28,12 @@ export default function DispatchPage() {
       {/* Page Header - rendered immediately */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-ink">{t("dispatch.title")}</h1>
-          <p className="text-ink-subtle mt-1">{t("dispatch.subtitle")}</p>
+          <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))]">{t("dispatch.title")}</h1>
+          <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("dispatch.subtitle")}</p>
         </div>
         <Link
           href="/dispatch/propose"
-          className="bg-amber-500 text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-400 transition-colors"
+          className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent))] transition-colors"
         >
           {t("dispatch.propose")}
         </Link>
@@ -44,7 +44,7 @@ export default function DispatchPage() {
         {loadingProposed ? (
           <ListSkeleton count={3} />
         ) : proposed.length === 0 ? (
-          <p className="text-ink-muted bg-surface-1 rounded-lg p-4 border border-hairline">{t("dispatch.no_pending") || "No pending proposals"}</p>
+          <p className="text-[hsl(var(--color-ink-muted))] bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">{t("dispatch.no_pending") || "No pending proposals"}</p>
         ) : (
           <div className="space-y-3">
             {proposed.map((d: any) => (
@@ -59,7 +59,7 @@ export default function DispatchPage() {
         {loadingHistory ? (
           <ListSkeleton count={5} />
         ) : history.length === 0 ? (
-          <p className="text-ink-muted bg-surface-1 rounded-lg p-4 border border-hairline">{t("dispatch.no_history") || "No dispatch history"}</p>
+          <p className="text-[hsl(var(--color-ink-muted))] bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">{t("dispatch.no_history") || "No dispatch history"}</p>
         ) : (
           <div className="space-y-3">
             {history.map((d: any) => (
@@ -82,11 +82,11 @@ function DispatchCard({ dispatch }: { dispatch: any }) {
   };
 
   return (
-    <div className="bg-surface-1 border border-hairline rounded-lg p-4">
+    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-medium text-ink">Soul #{dispatch.soul}</p>
-          <p className="text-sm text-ink-subtle">
+          <p className="font-medium text-[hsl(var(--color-ink))]">Soul #{dispatch.soul}</p>
+          <p className="text-sm text-[hsl(var(--color-ink-subtle))]">
             {dispatch.source_tenant_code} → {dispatch.target_tenant_code}
           </p>
         </div>
@@ -95,7 +95,7 @@ function DispatchCard({ dispatch }: { dispatch: any }) {
         </span>
       </div>
       {dispatch.reason && (
-        <p className="mt-2 text-sm text-ink-muted">{dispatch.reason}</p>
+        <p className="mt-2 text-sm text-[hsl(var(--color-ink-muted))]">{dispatch.reason}</p>
       )}
     </div>
   );
