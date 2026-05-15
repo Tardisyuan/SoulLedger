@@ -103,7 +103,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       >
         {/* Logo */}
         <nav className={`h-16 border-b border-[hsl(var(--color-hairline))] shrink-0 flex items-center ${collapsed ? "justify-center px-0" : "justify-center px-5"}`}>
-          <Link href="/" className="flex items-center gap-2.5 overflow-hidden">
+          <Link href="/" prefetch={true} className="flex items-center gap-2.5 overflow-hidden">
             {collapsed ? (
               /* Collapsed: Scale icon */
               <svg className="w-7 h-7 shrink-0 text-[hsl(var(--color-accent))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -456,6 +456,7 @@ function SidebarMenuItem({
   return (
     <Link
       href={menu.path}
+      prefetch={true}
       className={`flex items-center ${collapsed ? "justify-center w-full px-0" : "gap-3 px-3"} h-12 rounded-lg transition-colors ${indent} ${
         active
           ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"

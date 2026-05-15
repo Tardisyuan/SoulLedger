@@ -7,21 +7,4 @@
   - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1538ms
- ○ Compiling /dashboard ...
- ✓ Compiled /souls in 16.5s (2643 modules)
- GET /judgment 200 in 9807ms
- GET /souls 200 in 69ms
- ⚠ Cross origin request detected from 192.168.2.115 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
-Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
- ✓ Compiled /icon.ico in 384ms (1404 modules)
- GET /icon.ico?88d0a000244bf110 200 in 481ms
- ○ Compiling /notifications ...
- ✓ Compiled /notifications in 1317ms (2146 modules)
- ✓ Compiled /dashboard in 331ms (1374 modules)
- ○ Compiling /profile ...
- ✓ Compiled /profile in 1453ms (2636 modules)
- ✓ Compiled in 465ms (1277 modules)
- ✓ Compiled in 463ms (1277 modules)
- ✓ Compiled in 611ms (1277 modules)
- ✓ Compiled in 3.4s (2651 modules)
+ ✓ Ready in 2.1s
