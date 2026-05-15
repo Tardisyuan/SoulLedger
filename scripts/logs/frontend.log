@@ -7,74 +7,21 @@
   - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 2.4s
- ○ Compiling /workflow ...
- ✓ Compiled /workflow in 8.6s (1980 modules)
- GET /workflow 200 in 9093ms
+ ✓ Ready in 1538ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /souls in 16.5s (2643 modules)
+ GET /judgment 200 in 9807ms
+ GET /souls 200 in 69ms
  ⚠ Cross origin request detected from 192.168.2.115 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
 Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
- ○ Compiling /icon.ico ...
- ✓ Compiled /icon.ico in 738ms (1063 modules)
- GET /icon.ico?88d0a000244bf110 200 in 847ms
- ○ Compiling /souls ...
- ✓ Compiled /souls in 1819ms (2007 modules)
- ✓ Compiled /judgment in 456ms (1999 modules)
- GET /souls 200 in 210ms
- GET /icon.ico?88d0a000244bf110 200 in 30ms
- GET /workflow 200 in 78ms
- GET /icon.ico?88d0a000244bf110 200 in 11ms
- ○ Compiling /realms ...
- ✓ Compiled /realms in 1227ms (2011 modules)
- ✓ Compiled /actors in 475ms (2017 modules)
- ○ Compiling /dispatch ...
- ✓ Compiled /dispatch in 833ms (2023 modules)
- ○ Compiling /dashboard ...
- ✓ Compiled /dashboard in 4.7s (2927 modules)
- ✓ Compiled in 2.2s (2775 modules)
- ✓ Compiled in 811ms (2775 modules)
- ⚠ Fast Refresh had to perform a full reload due to a runtime error.
- ⨯ src/components/layout/AppLayout.tsx (36:35) @ useNavigation
- ⨯ TypeError: (0 , next_navigation__WEBPACK_IMPORTED_MODULE_3__.useNavigation) is not a function
-    at AppLayout (./src/components/layout/AppLayout.tsx:51:86)
-digest: "1216932490"
-[0m [90m 34 |[39m   [36mconst[39m router [33m=[39m useRouter()[33m;[39m[0m
-[0m [90m 35 |[39m   [36mconst[39m queryClient [33m=[39m useQueryClient()[33m;[39m[0m
-[0m[31m[1m>[22m[39m[90m 36 |[39m   [36mconst[39m navigation [33m=[39m useNavigation()[33m;[39m[0m
-[0m [90m    |[39m                                   [31m[1m^[22m[39m[0m
-[0m [90m 37 |[39m   [36mconst[39m isNavigating [33m=[39m navigation[33m.[39mstate [33m===[39m [32m"loading"[39m[33m;[39m[0m
-[0m [90m 38 |[39m[0m
-[0m [90m 39 |[39m   [90m// Apply accent color on mount[39m[0m
- GET /dashboard 500 in 417ms
- ✓ Compiled in 762ms (2775 modules)
- ⨯ src/components/layout/AppLayout.tsx (36:35) @ useNavigation
- ⨯ TypeError: (0 , next_navigation__WEBPACK_IMPORTED_MODULE_3__.useNavigation) is not a function
-    at AppLayout (./src/components/layout/AppLayout.tsx:51:86)
-digest: "1216932490"
-[0m [90m 34 |[39m   [36mconst[39m router [33m=[39m useRouter()[33m;[39m[0m
-[0m [90m 35 |[39m   [36mconst[39m queryClient [33m=[39m useQueryClient()[33m;[39m[0m
-[0m[31m[1m>[22m[39m[90m 36 |[39m   [36mconst[39m navigation [33m=[39m useNavigation()[33m;[39m[0m
-[0m [90m    |[39m                                   [31m[1m^[22m[39m[0m
-[0m [90m 37 |[39m   [36mconst[39m isNavigating [33m=[39m navigation[33m.[39mstate [33m===[39m [32m"loading"[39m[33m;[39m[0m
-[0m [90m 38 |[39m[0m
-[0m [90m 39 |[39m   [90m// Apply accent color on mount[39m[0m
- GET /dashboard 500 in 283ms
- ⚠ Fast Refresh had to perform a full reload due to a runtime error.
- ✓ Compiled in 831ms (2775 modules)
- ⨯ src/components/layout/AppLayout.tsx (35:22) @ useNavigation
- ⨯ ReferenceError: useNavigation is not defined
-    at AppLayout (./src/components/layout/AppLayout.tsx:50:24)
-digest: "2284261008"
-[0m [90m 33 |[39m   [36mconst[39m router [33m=[39m useRouter()[33m;[39m[0m
-[0m [90m 34 |[39m   [36mconst[39m queryClient [33m=[39m useQueryClient()[33m;[39m[0m
-[0m[31m[1m>[22m[39m[90m 35 |[39m   [36mconst[39m navigation [33m=[39m useNavigation()[33m;[39m[0m
-[0m [90m    |[39m                      [31m[1m^[22m[39m[0m
-[0m [90m 36 |[39m   [36mconst[39m isNavigating [33m=[39m navigation[33m.[39mstate [33m===[39m [32m"loading"[39m[33m;[39m[0m
-[0m [90m 37 |[39m[0m
-[0m [90m 38 |[39m   [90m// Apply accent color on mount[39m[0m
- GET /dashboard 500 in 124ms
- ✓ Compiled in 767ms (2775 modules)
- GET /dashboard 200 in 131ms
- ○ Compiling /icon.ico ...
- ✓ Compiled /icon.ico in 931ms (1406 modules)
- GET /icon.ico?88d0a000244bf110 200 in 1021ms
- ✓ Compiled in 966ms (2807 modules)
+ ✓ Compiled /icon.ico in 384ms (1404 modules)
+ GET /icon.ico?88d0a000244bf110 200 in 481ms
+ ○ Compiling /notifications ...
+ ✓ Compiled /notifications in 1317ms (2146 modules)
+ ✓ Compiled /dashboard in 331ms (1374 modules)
+ ○ Compiling /profile ...
+ ✓ Compiled /profile in 1453ms (2636 modules)
+ ✓ Compiled in 465ms (1277 modules)
+ ✓ Compiled in 463ms (1277 modules)
+ ✓ Compiled in 611ms (1277 modules)
+ ✓ Compiled in 3.4s (2651 modules)
