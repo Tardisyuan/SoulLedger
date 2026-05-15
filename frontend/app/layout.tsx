@@ -11,6 +11,9 @@ import { ProgressBar } from "@/src/components/ui/progress-bar";
 export const metadata: Metadata = {
   title: "SoulLedger",
   description: "Cross-civilization soul management system",
+  icons: {
+    icon: "/icon.ico",
+  },
 };
 
 export default function RootLayout({

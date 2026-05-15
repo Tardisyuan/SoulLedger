@@ -34,8 +34,7 @@ export default function LoginPage() {
       }
 
       showToast(t("auth.login_success"), "success");
-      const redirectPath = tokens.user?.tenant?.code ? `/${tokens.user.tenant.code}/souls` : "/souls";
-      router.push(redirectPath);
+      router.push("/souls");
     } catch (err: unknown) {
       const raw = (err as { response?: { data?: { detail?: string } } })
         ?.response?.data?.detail || "Login failed";
