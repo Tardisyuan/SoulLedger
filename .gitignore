@@ -30,3 +30,9 @@ docs/
 
 # Scripts
 scripts/restart-*.sh
+
+# Docker data directories
+docker/postgres/
+docker/redis/
+infrastructure/docker/postgres/
+infrastructure/docker/redis/
