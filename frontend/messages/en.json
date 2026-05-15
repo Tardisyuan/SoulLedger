@@ -382,6 +382,7 @@
   },
   "audit": {
     "title": "Audit Log",
+    "table_title": "Audit Records",
     "timestamp": "Timestamp",
     "user": "User",
     "action": "Action",
@@ -436,11 +437,15 @@
   },
   "realms": {
     "title": "Realms",
-    "subtitle": "Cross-civilization realm management"
+    "subtitle": "Cross-civilization realm management",
+    "listTitle": "Realms List"
   },
   "actors": {
     "title": "Actors",
-    "subtitle": "Cross-civilization actor management"
+    "subtitle": "Cross-civilization actor management",
+    "section": {
+      "actors": "Actors List"
+    }
   },
   "dispatch": {
     "title": "Dispatch Management",
@@ -454,6 +459,7 @@
   "crossJudgments": {
     "title": "Cross-Tenant Judgments",
     "subtitle": "Joint judgments across civilizations",
+    "list_title": "Cross-Judgment Cases",
     "no_judgments": "No cross-tenant judgments yet",
     "initiated_by": "Initiated by",
     "participants": "participants"
