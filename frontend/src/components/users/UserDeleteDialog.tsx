@@ -44,7 +44,7 @@ export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDelet
         type="button"
         onClick={onClose}
         disabled={deleteMutation.isPending}
-        className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-ink-muted hover:bg-surface-3 disabled:opacity-50 rounded text-sm transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded text-sm transition-colors"
       >
         {t("common.cancel") || "取消"}
       </button>
@@ -52,7 +52,7 @@ export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDelet
         type="button"
         onClick={handleConfirm}
         disabled={deleteMutation.isPending}
-        className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-400 disabled:bg-surface-3 disabled:text-ink-subtle rounded text-sm font-medium text-white transition-colors"
+        className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-400 disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] rounded text-sm font-medium text-white transition-colors"
       >
         {deleteMutation.isPending ? (
           <span className="flex items-center justify-center gap-2">
@@ -75,21 +75,21 @@ export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDelet
       footer={footer}
     >
       <div className="space-y-4">
-        <p className="text-sm text-ink">
+        <p className="text-sm text-[hsl(var(--color-ink))]">
           {t("users.delete_confirm") || "确定要删除以下用户吗？此操作无法撤销。"}
         </p>
         {user && (
-          <div className="bg-surface-1 rounded border border-hairline p-3 space-y-1">
-            <p className="text-sm font-medium text-ink">
-              <span className="text-ink-subtle">{t("users.username") || "用户名"}: </span>
+          <div className="bg-[hsl(var(--color-surface-1))] rounded border border-[hsl(var(--color-hairline))] p-3 space-y-1">
+            <p className="text-sm font-medium text-[hsl(var(--color-ink))]">
+              <span className="text-[hsl(var(--color-ink-subtle))]">{t("users.username") || "用户名"}: </span>
               {user.username}
             </p>
-            <p className="text-sm text-ink">
-              <span className="text-ink-subtle">{t("users.email") || "邮箱"}: </span>
+            <p className="text-sm text-[hsl(var(--color-ink))]">
+              <span className="text-[hsl(var(--color-ink-subtle))]">{t("users.email") || "邮箱"}: </span>
               {user.email}
             </p>
-            <p className="text-sm text-ink">
-              <span className="text-ink-subtle">{t("users.role") || "角色"}: </span>
+            <p className="text-sm text-[hsl(var(--color-ink))]">
+              <span className="text-[hsl(var(--color-ink-subtle))]">{t("users.role") || "角色"}: </span>
               {user.role}
             </p>
           </div>

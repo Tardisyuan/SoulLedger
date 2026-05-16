@@ -9,7 +9,11 @@
     "about": "Irw Kushed",
     "dashboard": "Wetep Khet",
     "journal": "Medew Netjer",
-    "greeting": "Hello, {{username}}!",
+    "greeting": "Aha, {{username}}!",
+    "greeting_morning": "Wahet Hery",
+    "greeting_afternoon": "Ineb Hor",
+    "greeting_evening": "Djet Qed",
+    "greeting_night": "Djet pet",
     "user_profile": "ملف المستخدم"
   },
   "auth": {
@@ -29,6 +33,7 @@
     "error_login_failed": "Sesen Pert Wehem"
   },
   "home": {
+    "console": "Wetep Khet",
     "hero_title": "SoulLedger",
     "hero_subtitle": "Aba Hemst - Amset Netjeru em Kehat - A Set",
     "hero_description": "Aba Hemst - Amset Netjeru em Diyu Hanacht, Aset Menkhat we Aaru em Kemet - Aba em Kehat Setep.",
@@ -414,6 +419,11 @@
     "subtitle": "Amset Netjeru em Kehat - Mekher",
     "listTitle": "Wu Mekher"
   },
+  "organization": {
+    "title": "Shemsu",
+    "subtitle": "Amset Netjeru em Kehat - Shemsu",
+    "listTitle": "Wu Shemsu"
+  },
   "actors": {
     "title": "Netjeru",
     "subtitle": "Amset Netjeru em Kehat - Netjeru",
@@ -452,7 +462,9 @@
     "delete_error": "Ma Wehem Seth Netjer",
     "status_updated": "Set Medu Sesen Seth",
     "status_update_error": "Ma Sesen Set Medu",
-    "page_info": "Per {{page}} Wu {{total}} ({{count}} Medtu)"
+    "page_info": "Per {{page}} Wu {{total}} ({{count}} Medtu)",
+    "organization": "Shemsu",
+    "position": "Iri Medu"
   },
   "settings": {
     "title": "Iri Sethety",

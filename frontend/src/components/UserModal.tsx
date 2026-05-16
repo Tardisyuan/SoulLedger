@@ -16,7 +16,7 @@ export function UserModal({ open, onClose }: UserModalProps) {
   const footer = (
     <button
       onClick={onClose}
-      className="w-full py-2 rounded-lg bg-surface-1 border border-hairline hover:bg-surface-2 text-ink-muted text-sm transition-colors"
+      className="w-full py-2 rounded-lg bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] text-sm transition-colors"
     >
       {t("common.close") || "关闭"}
     </button>
@@ -38,12 +38,12 @@ export function UserModal({ open, onClose }: UserModalProps) {
         </div>
 
         {/* Username */}
-        <h2 className="text-ink text-xl font-semibold mb-1">
+        <h2 className="text-[hsl(var(--color-ink))] text-xl font-semibold mb-1">
           {user?.username}
         </h2>
 
         {/* Email */}
-        <p className="text-ink-subtle text-sm mb-4">{user?.email}</p>
+        <p className="text-[hsl(var(--color-ink-subtle))] text-sm mb-4">{user?.email}</p>
 
         {/* Role badge */}
         <div className="inline-block px-3 py-1 rounded-full bg-amber-500/20 text-amber-500 text-xs font-medium mb-4">
@@ -52,7 +52,7 @@ export function UserModal({ open, onClose }: UserModalProps) {
 
         {/* Tenant */}
         {user?.tenant && (
-          <p className="text-ink-tertiary text-xs">
+          <p className="text-[hsl(var(--color-ink-tertiary))] text-xs">
             {user.tenant.display_name} · {user.tenant.code}
           </p>
         )}

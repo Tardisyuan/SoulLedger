@@ -60,19 +60,19 @@ export default function AdminStatsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-canvas text-ink flex items-center justify-center">
-        <div className="text-ink-muted">Loading statistics...</div>
+      <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))] flex items-center justify-center">
+        <div className="text-[hsl(var(--color-ink-muted))]">Loading statistics...</div>
       </div>
     );
   }
 
   if (error || !stats) {
     return (
-      <div className="min-h-screen bg-canvas text-ink flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4">
         <div className="text-red-400">{String(error || "Failed to load statistics")}</div>
         <button
           onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-surface-1 border border-hairline rounded-md text-sm hover:bg-surface-2"
+          className="px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] rounded-md text-sm hover:bg-[hsl(var(--color-surface-2))]"
         >
           Retry
         </button>
@@ -92,16 +92,16 @@ export default function AdminStatsPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-canvas text-ink">
+    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Header */}
-      <div className="border-b border-hairline px-6 py-4 flex items-center justify-between">
+      <div className="border-b border-[hsl(var(--color-hairline))] px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-amber-400">Karma Statistics</h1>
-          <p className="text-sm text-ink-muted mt-0.5">System-wide karmic overview</p>
+          <p className="text-sm text-[hsl(var(--color-ink-muted))] mt-0.5">System-wide karmic overview</p>
         </div>
         <button
           onClick={handleExport}
-          className="px-4 py-2 bg-surface-1 border border-hairline hover:bg-surface-2 text-ink-muted rounded-md text-sm transition-colors"
+          className="px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] rounded-md text-sm transition-colors"
         >
           Export CSV
         </button>
@@ -110,14 +110,14 @@ export default function AdminStatsPage() {
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-            <div className="text-sm text-ink-muted uppercase tracking-wide">Total Souls</div>
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+            <div className="text-sm text-[hsl(var(--color-ink-muted))] uppercase tracking-wide">Total Souls</div>
             <div className="text-3xl font-bold text-amber-400 mt-2">
               {stats.total_souls.toLocaleString()}
             </div>
           </div>
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-            <div className="text-sm text-ink-muted uppercase tracking-wide">Avg Karma Balance</div>
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+            <div className="text-sm text-[hsl(var(--color-ink-muted))] uppercase tracking-wide">Avg Karma Balance</div>
             <div className="text-3xl font-bold mt-2">
               {(stats.karma_distribution.reduce((sum, k) => {
                 // Parse label like "< -50", "-50 to -20", "-5 to 5", "> 50" to get midpoint
@@ -137,12 +137,12 @@ export default function AdminStatsPage() {
               }, 0) / (stats.total_souls || 1)).toFixed(2)}
             </div>
           </div>
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-            <div className="text-sm text-ink-muted uppercase tracking-wide">State Breakdown</div>
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+            <div className="text-sm text-[hsl(var(--color-ink-muted))] uppercase tracking-wide">State Breakdown</div>
             <div className="mt-2 space-y-1">
               {stats.state_distribution.map((s) => (
                 <div key={s.state} className="flex justify-between text-sm">
-                  <span className="text-ink-muted">{s.label || s.state}</span>
+                  <span className="text-[hsl(var(--color-ink-muted))]">{s.label || s.state}</span>
                   <span className="font-medium">{s.count}</span>
                 </div>
               ))}
@@ -153,8 +153,8 @@ export default function AdminStatsPage() {
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* State Distribution Pie */}
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-            <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
               Soul State Distribution
             </h2>
             <ResponsiveContainer width="100%" height={280}>
@@ -186,15 +186,15 @@ export default function AdminStatsPage() {
                 />
                 <Legend
                   wrapperStyle={{ fontSize: 12 }}
-                  formatter={(value) => <span className="text-ink-muted">{value}</span>}
+                  formatter={(value) => <span className="text-[hsl(var(--color-ink-muted))]">{value}</span>}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
 
           {/* Karma Distribution Bar */}
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-            <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
               Karma Score Distribution
             </h2>
             <ResponsiveContainer width="100%" height={280}>
@@ -226,15 +226,15 @@ export default function AdminStatsPage() {
         </div>
 
         {/* Top Karma Souls Table */}
-        <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-          <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">
+        <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+          <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
             Top Karma Souls
           </h2>
           {stats.souls_by_realm && stats.souls_by_realm.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-ink-muted border-b border-hairline">
+                  <tr className="text-left text-[hsl(var(--color-ink-muted))] border-b border-[hsl(var(--color-hairline))]">
                     <th className="pb-2 font-medium">Realm</th>
                     <th className="pb-2 font-medium">Civilization</th>
                     <th className="pb-2 font-medium text-right">Soul Count</th>
@@ -244,10 +244,10 @@ export default function AdminStatsPage() {
                   {stats.souls_by_realm.slice(0, 10).map((realm, idx) => (
                     <tr
                       key={`${realm.realm_code}-${idx}`}
-                      className="border-b border-hairline/50"
+                      className="border-b border-[hsl(var(--color-hairline))]/50"
                     >
-                      <td className="py-2 text-ink">{realm.realm_name || realm.realm_code}</td>
-                      <td className="py-2 text-ink-muted">{realm.civilization}</td>
+                      <td className="py-2 text-[hsl(var(--color-ink))]">{realm.realm_name || realm.realm_code}</td>
+                      <td className="py-2 text-[hsl(var(--color-ink-muted))]">{realm.civilization}</td>
                       <td className="py-2 text-right font-medium">{realm.count}</td>
                     </tr>
                   ))}
@@ -255,34 +255,34 @@ export default function AdminStatsPage() {
               </table>
             </div>
           ) : (
-            <div className="text-center text-ink-muted py-8">No realm data available</div>
+            <div className="text-center text-[hsl(var(--color-ink-muted))] py-8">No realm data available</div>
           )}
         </div>
 
         {/* Tenant Breakdown */}
         {stats.tenants && stats.tenants.length > 0 && (
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-            <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
               Tenant Breakdown
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {stats.tenants.map((tenant) => (
                 <div
                   key={tenant.tenant_code}
-                  className="bg-surface-2 rounded-lg p-4 border border-hairline"
+                  className="bg-[hsl(var(--color-surface-2))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]"
                 >
-                  <div className="font-medium text-ink mb-2">
+                  <div className="font-medium text-[hsl(var(--color-ink))] mb-2">
                     {tenant.tenant_name || tenant.tenant_code}
                   </div>
                   <div className="text-2xl font-bold text-amber-400">
                     {tenant.total_souls}
                   </div>
-                  <div className="text-xs text-ink-muted mt-1">souls</div>
+                  <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">souls</div>
                   <div className="mt-3 space-y-1">
                     {Object.entries(tenant.state_breakdown).map(([state, count]) => (
                       <div key={state} className="flex justify-between text-xs">
-                        <span className="text-ink-subtle">{state}</span>
-                        <span className="text-ink-muted">{count as number}</span>
+                        <span className="text-[hsl(var(--color-ink-subtle))]">{state}</span>
+                        <span className="text-[hsl(var(--color-ink-muted))]">{count as number}</span>
                       </div>
                     ))}
                   </div>
@@ -294,22 +294,22 @@ export default function AdminStatsPage() {
 
         {/* Recent Activity */}
         {stats.recent_activity && stats.recent_activity.length > 0 && (
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-            <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
               Recent Activity
             </h2>
             <div className="space-y-2">
               {stats.recent_activity.slice(0, 10).map((activity) => (
                 <div
                   key={activity.id}
-                  className="flex items-center justify-between py-2 border-b border-hairline/50 text-sm"
+                  className="flex items-center justify-between py-2 border-b border-[hsl(var(--color-hairline))]/50 text-sm"
                 >
                   <div>
                     <span className="text-amber-400">{activity.action}</span>
-                    <span className="text-ink-muted"> on {activity.resource}</span>
-                    <span className="text-ink-subtle"> #{activity.resource_id}</span>
+                    <span className="text-[hsl(var(--color-ink-muted))]"> on {activity.resource}</span>
+                    <span className="text-[hsl(var(--color-ink-subtle))]"> #{activity.resource_id}</span>
                   </div>
-                  <div className="text-ink-subtle text-xs">
+                  <div className="text-[hsl(var(--color-ink-subtle))] text-xs">
                     {new Date(activity.timestamp).toLocaleString()}
                   </div>
                 </div>

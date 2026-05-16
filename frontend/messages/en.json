@@ -10,6 +10,10 @@
     "dashboard": "Dashboard",
     "journal": "Journal",
     "greeting": "Hello, {{username}}!",
+    "greeting_morning": "Good Morning",
+    "greeting_afternoon": "Good Afternoon",
+    "greeting_evening": "Good Evening",
+    "greeting_night": "Good Night",
     "user_profile": "User Profile"
   },
   "auth": {
@@ -29,6 +33,7 @@
     "error_login_failed": "Login failed"
   },
   "home": {
+    "console": "Console",
     "hero_title": "SoulLedger",
     "hero_subtitle": "Cross-civilization soul management system",
     "hero_description": "Manage souls across Chinese Diyu, European Heaven & Hell, and Egyptian Duat — from a single unified platform.",
@@ -195,6 +200,7 @@
   },
   "permissions": {
     "title": "Permission Management",
+    "subtitle": "Manage system roles and permissions",
     "select_role": "Select Role",
     "role_perms": "{{role}} Permissions",
     "all_permissions": "All Permissions",
@@ -440,6 +446,11 @@
     "subtitle": "Cross-civilization realm management",
     "listTitle": "Realms List"
   },
+  "organization": {
+    "title": "Organizations",
+    "subtitle": "Cross-civilization organization management",
+    "listTitle": "Organizations List"
+  },
   "actors": {
     "title": "Actors",
     "subtitle": "Cross-civilization actor management",
@@ -478,7 +489,9 @@
     "delete_error": "Failed to delete user",
     "status_updated": "Status updated",
     "status_update_error": "Failed to update status",
-    "page_info": "Page {{page}} of {{total}} ({{count}} records)"
+    "page_info": "Page {{page}} of {{total}} ({{count}} records)",
+    "organization": "Organization",
+    "position": "Position"
   },
   "settings": {
     "title": "Settings",

@@ -131,7 +131,7 @@ export default function KarmaPage() {
               {karmaStats.recent_activity.slice(0, 10).map((activity) => (
                 <div key={activity.id} className="flex items-start gap-3 text-sm">
                   <div className="flex-1 min-w-0">
-                    <p className="text-ink">{activity.description}</p>
+                    <p className="text-[hsl(var(--color-ink))]">{activity.description}</p>
                     <p className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
                       {activity.user} · {new Date(activity.timestamp).toLocaleString()}
                     </p>
@@ -151,7 +151,7 @@ function OverviewCard({
   label,
   value,
   isLoading,
-  color = "text-ink",
+  color = "text-[hsl(var(--color-ink))]",
 }: {
   label: string;
   value?: number;
@@ -160,7 +160,7 @@ function OverviewCard({
 }) {
   return (
     <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
-      <div className="text-sm text-ink-muted">{label}</div>
+      <div className="text-sm text-[hsl(var(--color-ink-muted))]">{label}</div>
       {isLoading ? (
         <Skeleton className="h-8 w-20 mt-1" />
       ) : (
@@ -184,7 +184,7 @@ function SectionCard({
 }) {
   return (
     <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
-      <h2 className="text-lg font-semibold text-ink mb-4">{title}</h2>
+      <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))] mb-4">{title}</h2>
       {children}
     </div>
   );

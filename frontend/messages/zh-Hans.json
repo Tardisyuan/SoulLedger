@@ -2,7 +2,8 @@
   "nav": {
     "title": "灵魂账本",
     "subtitle": "跨文明灵魂管理系统",
-    "home": "首页",
+    "home": "欢迎页",
+    "welcome": "欢迎页",
     "souls": "灵魂",
     "realms": "地域",
     "actors": "角色",
@@ -10,6 +11,10 @@
     "dashboard": "控制台",
     "journal": "运行日志",
     "greeting": "你好, {{username}}!",
+    "greeting_morning": "上午好",
+    "greeting_afternoon": "下午好",
+    "greeting_evening": "晚上好",
+    "greeting_night": "夜深了",
     "user_profile": "用户信息"
   },
   "auth": {
@@ -29,6 +34,7 @@
     "error_login_failed": "登录失败"
   },
   "home": {
+    "console": "控制台",
     "hero_title": "灵魂账本",
     "hero_subtitle": "跨文明灵魂管理系统",
     "hero_description": "统一管理中国地府、欧洲天堂地狱、埃及冥界三大文明体系的灵魂操作系统。",
@@ -195,6 +201,7 @@
   },
   "permissions": {
     "title": "权限管理",
+    "subtitle": "管理系统角色与权限",
     "select_role": "选择角色",
     "role_perms": "{{role}} 权限",
     "all_permissions": "所有权限",
@@ -440,6 +447,11 @@
     "subtitle": "跨文明地域管理",
     "listTitle": "地域列表"
   },
+  "organization": {
+    "title": "组织架构",
+    "subtitle": "跨文明组织管理",
+    "listTitle": "组织列表"
+  },
   "actors": {
     "title": "角色",
     "subtitle": "跨文明角色管理",
@@ -478,7 +490,9 @@
     "delete_error": "用户删除失败",
     "status_updated": "状态已更新",
     "status_update_error": "状态更新失败",
-    "page_info": "第 {{page}} 页，共 {{total}} 页 ({{count}} 条记录)"
+    "page_info": "第 {{page}} 页，共 {{total}} 页 ({{count}} 条记录)",
+    "organization": "组织",
+    "position": "职位"
   },
   "settings": {
     "title": "设置",

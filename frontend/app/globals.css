@@ -79,7 +79,7 @@
     border-color: hsl(var(--hairline));
   }
   a {
-    @apply text-ink-muted hover:text-amber-500 transition-colors duration-150;
+    @apply text-ink-muted hover:text-[hsl(var(--color-accent))] transition-colors duration-150;
   }
   button {
     @apply transition-colors duration-150;

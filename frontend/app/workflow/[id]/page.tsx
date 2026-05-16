@@ -93,15 +93,15 @@ export default function WorkflowDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="text-ink flex items-center justify-center py-12">
-        <div className="text-ink-muted">{t("workflow.detail.loading") || "Loading workflow..."}</div>
+      <div className="text-[hsl(var(--color-ink))] flex items-center justify-center py-12">
+        <div className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.loading") || "Loading workflow..."}</div>
       </div>
     );
   }
 
   if (error || !workflow) {
     return (
-      <div className="text-ink flex flex-col items-center justify-center gap-4 py-12">
+      <div className="text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4 py-12">
         <div className="text-red-400">{t("workflow.detail.not_found") || "Workflow not found"}</div>
         <Link href="/workflow" className="text-amber-400 hover:text-amber-300">
           {t("workflow.detail.back_to_list") || "Back to workflow list"}
@@ -113,13 +113,13 @@ export default function WorkflowDetailPage() {
   const statusColor = STATUS_COLORS[workflow.status] || STATUS_COLORS.PENDING;
 
   return (
-    <div className="text-ink">
+    <div className="text-[hsl(var(--color-ink))]">
       {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-hairline/50">
-        <Link href="/workflow" className="text-ink-muted hover:text-ink text-sm">
+      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
+        <Link href="/workflow" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
           ← {t("workflow.detail.back_to_list") || "Back to list"}
         </Link>
-        <h1 className="text-lg font-bold text-amber-400 flex-1">{workflow.workflow_name}</h1>
+        <h1 className="text-lg font-bold text-[hsl(var(--color-ink))] flex-1">{workflow.workflow_name}</h1>
         <span className={`px-2 py-0.5 rounded text-xs font-bold border ${statusColor}`}>
           {workflow.status}
         </span>
@@ -132,61 +132,61 @@ export default function WorkflowDetailPage() {
 
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
         {/* Workflow Info Card */}
-        <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-          <h2 className="text-sm font-semibold text-ink-muted uppercase mb-3">
+        <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+          <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
             {t("workflow.detail.info") || "Workflow Information"}
           </h2>
           <dl className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <dt className="text-ink-muted">{t("workflow.detail.soul") || "Soul"}</dt>
-              <dd className="text-ink font-medium">{workflow.soul_name || workflow.soul}</dd>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.soul") || "Soul"}</dt>
+              <dd className="text-[hsl(var(--color-ink))] font-medium">{workflow.soul_name || workflow.soul}</dd>
             </div>
             <div>
-              <dt className="text-ink-muted">{t("workflow.detail.case_type") || "Case Type"}</dt>
-              <dd className="text-ink">{workflow.case_type}</dd>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.case_type") || "Case Type"}</dt>
+              <dd className="text-[hsl(var(--color-ink))]">{workflow.case_type}</dd>
             </div>
             <div>
-              <dt className="text-ink-muted">{t("workflow.detail.judgment_verdict") || "Judgment Verdict"}</dt>
-              <dd className="text-ink">{workflow.judgment_verdict || "—"}</dd>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.judgment_verdict") || "Judgment Verdict"}</dt>
+              <dd className="text-[hsl(var(--color-ink))]">{workflow.judgment_verdict || "—"}</dd>
             </div>
             <div>
-              <dt className="text-ink-muted">{t("workflow.detail.priority") || "Priority"}</dt>
-              <dd className="text-ink">
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.priority") || "Priority"}</dt>
+              <dd className="text-[hsl(var(--color-ink))]">
                 {workflow.priority === 0 ? t("workflow.detail.normal") || "Normal" :
                  workflow.priority === 1 ? t("workflow.detail.urgent") || "Urgent" :
                  t("workflow.detail.critical") || "Critical"}
               </dd>
             </div>
             <div>
-              <dt className="text-ink-muted">{t("workflow.detail.created_at") || "Created"}</dt>
-              <dd className="text-ink">{new Date(workflow.created_at).toLocaleString()}</dd>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.created_at") || "Created"}</dt>
+              <dd className="text-[hsl(var(--color-ink))]">{new Date(workflow.created_at).toLocaleString()}</dd>
             </div>
             <div>
-              <dt className="text-ink-muted">{t("workflow.detail.completed_at") || "Completed"}</dt>
-              <dd className="text-ink">{workflow.completed_at ? new Date(workflow.completed_at).toLocaleString() : "—"}</dd>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.completed_at") || "Completed"}</dt>
+              <dd className="text-[hsl(var(--color-ink))]">{workflow.completed_at ? new Date(workflow.completed_at).toLocaleString() : "—"}</dd>
             </div>
           </dl>
         </div>
 
         {/* Current Node Action Card */}
         {currentNode && workflow.status !== "COMPLETED" && (
-          <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-            <h2 className="text-sm font-semibold text-amber-400 uppercase mb-3">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-accent))] uppercase mb-3">
               {t("workflow.detail.current_node") || "Current Node"}
             </h2>
-            <div className="mb-4 p-3 bg-surface-2 rounded border border-hairline">
-              <div className="font-medium text-ink">{currentNode.node_name}</div>
-              <div className="text-xs text-ink-muted mt-1">
+            <div className="mb-4 p-3 bg-[hsl(var(--color-surface-2))] rounded border border-[hsl(var(--color-hairline))]">
+              <div className="font-medium text-[hsl(var(--color-ink))]">{currentNode.node_name}</div>
+              <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
                 {NODE_TYPE_LABELS[currentNode.node_type] || currentNode.node_type} · {currentNode.court_code}
               </div>
-              <div className="text-xs text-ink-subtle mt-1">
+              <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
                 {t("workflow.detail.order") || "Order"}: {currentNode.node_order}
               </div>
             </div>
 
             {/* Verdict Selection */}
             <div className="space-y-2 mb-4">
-              <label className="block text-sm text-ink-muted mb-2">
+              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-2">
                 {t("workflow.detail.select_verdict") || "Select Verdict"}
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -201,8 +201,8 @@ export default function WorkflowDetailPage() {
                     key={opt.key}
                     className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition-colors text-sm ${
                       selectedVerdict === opt.key
-                        ? "border-amber-500 bg-amber-500/10"
-                        : "border-hairline hover:bg-surface-2"
+                        ? "border-[hsl(var(--color-accent))] bg-[hsl(var(--color-accent))]/10"
+                        : "border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))]"
                     }`}
                   >
                     <input
@@ -211,9 +211,9 @@ export default function WorkflowDetailPage() {
                       value={opt.key}
                       checked={selectedVerdict === opt.key}
                       onChange={(e) => setSelectedVerdict(e.target.value)}
-                      className="accent-amber-500"
+                      className="accent-[hsl(var(--color-accent))]"
                     />
-                    <span className="text-ink">{opt.label}</span>
+                    <span className="text-[hsl(var(--color-ink))]">{opt.label}</span>
                   </label>
                 ))}
               </div>
@@ -221,14 +221,14 @@ export default function WorkflowDetailPage() {
 
             {/* Notes */}
             <div className="mb-4">
-              <label className="block text-sm text-ink-muted mb-2">
+              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-2">
                 {t("workflow.detail.notes") || "Notes"}
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="w-full bg-surface-2 border border-hairline rounded p-3 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:border-amber-500/50"
+                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded p-3 text-sm text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]/50"
                 placeholder={t("workflow.detail.notes_placeholder") || "Enter notes..."}
               />
             </div>
@@ -247,7 +247,7 @@ export default function WorkflowDetailPage() {
               <button
                 onClick={() => advanceMutation.mutate()}
                 disabled={advanceMutation.isPending}
-                className="py-2.5 px-4 bg-surface-2 hover:bg-surface-3 disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-ink border border-hairline"
+                className="py-2.5 px-4 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-[hsl(var(--color-ink))] border border-[hsl(var(--color-hairline))]"
               >
                 {advanceMutation.isPending
                   ? t("workflow.detail.advancing") || "Advancing..."
@@ -263,11 +263,11 @@ export default function WorkflowDetailPage() {
             <h2 className="text-sm font-semibold text-green-400 uppercase mb-2">
               {t("workflow.detail.completed") || "Workflow Completed"}
             </h2>
-            <p className="text-sm text-ink-muted">
+            <p className="text-sm text-[hsl(var(--color-ink-muted))]">
               {t("workflow.detail.completed_message") || "This workflow has been completed."}
             </p>
             {workflow.completed_at && (
-              <p className="text-xs text-ink-subtle mt-2">
+              <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-2">
                 {t("workflow.detail.completed_at") || "Completed at"}: {new Date(workflow.completed_at).toLocaleString()}
               </p>
             )}
@@ -275,13 +275,13 @@ export default function WorkflowDetailPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-hairline/50">
+        <div className="flex gap-1 border-b border-[hsl(var(--color-hairline))]/50">
           <button
             onClick={() => setActiveTab("nodes")}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
               activeTab === "nodes"
-                ? "text-amber-400 border-amber-400"
-                : "text-ink-muted border-transparent hover:text-ink"
+                ? "text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent))]"
+                : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
             }`}
           >
             {t("workflow.detail.nodes") || "Nodes"} ({sortedNodes.length})
@@ -290,8 +290,8 @@ export default function WorkflowDetailPage() {
             onClick={() => setActiveTab("history")}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
               activeTab === "history"
-                ? "text-amber-400 border-amber-400"
-                : "text-ink-muted border-transparent hover:text-ink"
+                ? "text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent))]"
+                : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
             }`}
           >
             {t("workflow.detail.history") || "History"}
@@ -309,8 +309,8 @@ export default function WorkflowDetailPage() {
               return (
                 <div
                   key={node.id}
-                  className={`bg-surface-1 rounded-lg p-4 border ${
-                    isCurrent ? "border-amber-500/50 shadow-lg shadow-amber-500/10" : "border-hairline"
+                  className={`bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border ${
+                    isCurrent ? "border-[hsl(var(--color-accent))]/50 shadow-lg shadow-[hsl(var(--color-accent))]/10" : "border-[hsl(var(--color-hairline))]"
                   }`}
                 >
                   <div className="flex items-start gap-4">
@@ -326,35 +326,35 @@ export default function WorkflowDetailPage() {
                     {/* Node details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-ink">{node.node_name}</span>
+                        <span className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</span>
                         {isCurrent && (
-                          <span className="px-1.5 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                          <span className="px-1.5 py-0.5 rounded text-xs bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] border border-[hsl(var(--color-accent))]/30">
                             {t("workflow.detail.current") || "Current"}
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-ink-muted mt-1">
+                      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
                         {NODE_TYPE_LABELS[node.node_type] || node.node_type} · {node.court_code || "—"}
                       </div>
 
                       {/* Verdict and notes for completed nodes */}
                       {isPast && (
-                        <div className="mt-3 pt-3 border-t border-hairline/50">
+                        <div className="mt-3 pt-3 border-t border-[hsl(var(--color-hairline))]/50">
                           <div className="flex items-center gap-2 mb-2">
                             <span className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict] || ""}`}>
                               {node.verdict}
                             </span>
                             {node.decided_at && (
-                              <span className="text-xs text-ink-subtle">
+                              <span className="text-xs text-[hsl(var(--color-ink-subtle))]">
                                 {new Date(node.decided_at).toLocaleString()}
                               </span>
                             )}
                           </div>
                           {node.notes && (
-                            <p className="text-sm text-ink-muted italic">"{node.notes}"</p>
+                            <p className="text-sm text-[hsl(var(--color-ink-muted))] italic">"{node.notes}"</p>
                           )}
                           {node.approver && (
-                            <p className="text-xs text-ink-subtle mt-1">
+                            <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
                               {t("workflow.detail.approver") || "Approver"}: {node.approver}
                             </p>
                           )}
@@ -370,7 +370,7 @@ export default function WorkflowDetailPage() {
 
                   {/* Connector line */}
                   {idx < sortedNodes.length - 1 && (
-                    <div className="ml-4 mt-2 pl-4 border-l-2 border-hairline/50 h-4" />
+                    <div className="ml-4 mt-2 pl-4 border-l-2 border-[hsl(var(--color-hairline))]/50 h-4" />
                   )}
                 </div>
               );
@@ -389,28 +389,28 @@ export default function WorkflowDetailPage() {
                 return aTime - bTime;
               })
               .map((node) => (
-                <div key={node.id} className="bg-surface-1 rounded-lg p-4 border border-hairline">
+                <div key={node.id} className="bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-ink">{node.node_name}</span>
+                    <span className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</span>
                     <span className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict] || ""}`}>
                       {node.verdict}
                     </span>
                   </div>
-                  <div className="text-xs text-ink-muted">
+                  <div className="text-xs text-[hsl(var(--color-ink-muted))]">
                     {t("workflow.detail.decided_at") || "Decided at"}: {node.decided_at ? new Date(node.decided_at).toLocaleString() : "—"}
                   </div>
                   {node.notes && (
-                    <p className="text-sm text-ink-muted mt-2 italic">"{node.notes}"</p>
+                    <p className="text-sm text-[hsl(var(--color-ink-muted))] mt-2 italic">"{node.notes}"</p>
                   )}
                   {node.approver && (
-                    <p className="text-xs text-ink-subtle mt-1">
+                    <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
                       {t("workflow.detail.approver") || "Approver"}: {node.approver}
                     </p>
                   )}
                 </div>
               ))}
             {sortedNodes.filter((n) => n.status !== "PENDING").length === 0 && (
-              <div className="text-center text-ink-subtle py-8">
+              <div className="text-center text-[hsl(var(--color-ink-subtle))] py-8">
                 {t("workflow.detail.no_history") || "No decisions have been made yet."}
               </div>
             )}

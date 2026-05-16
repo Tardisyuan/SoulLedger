@@ -15,9 +15,9 @@ const CIVILIZATION_LABELS: Record<string, { name: string; icon: string }> = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  CHINESE: "bg-amber-500/20 text-amber-400",
-  EUROPEAN: "bg-blue-500/20 text-blue-400",
-  EGYPTIAN: "bg-purple-500/20 text-purple-400",
+  CHINESE: "bg-[hsl(38,92%,50%,0.2)] text-[hsl(38,92%,50%)]",
+  EUROPEAN: "bg-[hsl(217,91%,52%,0.2)] text-[hsl(217,91%,52%)]",
+  EGYPTIAN: "bg-[hsl(271,81%,56%,0.2)] text-[hsl(271,81%,56%)]",
 };
 
 export default function OrganizationsPage() {
@@ -61,18 +61,18 @@ export default function OrganizationsPage() {
   const renderOrg = (org: Organization, depth: number = 0) => (
     <div
       key={org.id}
-      className="flex items-center gap-3 py-2 px-3 hover:bg-surface-2 rounded transition-colors"
+      className="flex items-center gap-3 py-2 px-3 hover:bg-[hsl(var(--color-surface-2))] rounded transition-colors"
       style={{ paddingLeft: `${depth * 20 + 12}px` }}
     >
       <span className="text-lg">{depth === 0 ? "🏛️" : depth === 1 ? "⚖️" : "📋"}</span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h4 className="font-medium text-ink truncate">{org.name}</h4>
-          <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${CATEGORY_COLORS[org.category] || "bg-surface-2 text-ink-muted"}`}>
+          <h4 className="font-medium text-[hsl(var(--color-ink))] truncate">{org.name}</h4>
+          <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${CATEGORY_COLORS[org.category] || "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]"}`}>
             {org.level === 0 ? "根" : `L${org.level}`}
           </span>
         </div>
-        <p className="text-sm text-ink-subtle truncate">{org.code}</p>
+        <p className="text-sm text-[hsl(var(--color-ink-subtle))] truncate">{org.code}</p>
       </div>
     </div>
   );
@@ -114,19 +114,19 @@ export default function OrganizationsPage() {
                   {/* Category Header */}
                   <button
                     onClick={() => toggleCollapse(category)}
-                    className="w-full flex items-center gap-3 mb-4 px-4 py-3 bg-surface-2 border border-hairline rounded-lg hover:bg-surface-3 transition-colors text-left"
+                    className="w-full flex items-center gap-3 mb-4 px-4 py-3 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg hover:bg-[hsl(var(--color-surface-3))] transition-colors text-left"
                   >
                     <span className="text-2xl">{info.icon}</span>
                     <div className="flex-1">
-                      <h2 className="font-semibold text-ink">{info.name}</h2>
-                      <p className="text-sm text-ink-subtle">{orgs.length} organizations</p>
+                      <h2 className="font-semibold text-[hsl(var(--color-ink))]">{info.name}</h2>
+                      <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{orgs.length} organizations</p>
                     </div>
-                    <ChevronDown className={`w-5 h-5 text-ink-muted transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                    <ChevronDown className={`w-5 h-5 text-[hsl(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
                   </button>
 
                   {/* Organization Tree */}
                   {!isCollapsed && (
-                    <div className="bg-surface-1 border border-hairline rounded-lg overflow-hidden">
+                    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg overflow-hidden">
                       {renderTree(orgs, null, 0)}
                     </div>
                   )}

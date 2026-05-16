@@ -10,9 +10,9 @@ import type { Soul } from "@/lib/api";
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "bg-amber-500/20 text-amber-400",
   JUDGING: "bg-amber-500/20 text-amber-400",
-  DISPOSED: "bg-surface-3 text-ink-muted",
+  DISPOSED: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
   REINCARNATING: "bg-blue-500/20 text-blue-400",
-  LOST: "bg-surface-3 text-ink-muted",
+  LOST: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
 };
 
 export default function SoulsPage() {
@@ -65,12 +65,9 @@ export default function SoulsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-canvas text-ink">
+    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <Link href="/" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
-          ← {t("nav.home")}
-        </Link>
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">{t("souls.title")}</h1>
         <button
           onClick={() => setIsCreateModalOpen(true)}
@@ -181,11 +178,11 @@ export default function SoulsPage() {
                 {Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     <td className="px-4 py-3"><div className="h-4 w-20 bg-[hsl(var(--color-surface-2))] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-16 bg-surface-2 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-16 bg-[hsl(var(--color-surface-2))] rounded"></div></td>
                     <td className="px-4 py-3"><div className="h-5 w-16 bg-[hsl(var(--color-surface-2))] rounded"></div></td>
                     <td className="px-4 py-3"><div className="h-4 w-12 bg-[hsl(var(--color-surface-2))] rounded ml-auto"></div></td>
                     <td className="px-4 py-3"><div className="h-4 w-20 bg-[hsl(var(--color-surface-2))] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-12 bg-surface-2 rounded"></div></td>
+                    <td className="px-4 py-3"><div className="h-4 w-12 bg-[hsl(var(--color-surface-2))] rounded"></div></td>
                   </tr>
                 ))}
               </tbody>
@@ -196,7 +193,7 @@ export default function SoulsPage() {
             {String(error)}
           </div>
         ) : souls.length === 0 ? (
-          <div className="text-center text-ink-subtle py-12">{t("souls.no_souls")}</div>
+          <div className="text-center text-[hsl(var(--color-ink-subtle))] py-12">{t("souls.no_souls")}</div>
         ) : (
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
             <table className="w-full text-sm">
@@ -218,7 +215,7 @@ export default function SoulsPage() {
                       {t(`souls.civilizations.${soul.civilization}`)}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul.current_state] ?? "bg-surface-3 text-ink-muted"}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul.current_state] ?? "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
                         {t(`souls.states.${soul.current_state}`)}
                       </span>
                     </td>

@@ -40,8 +40,8 @@ export default function RealmsPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">{t("realms.title")}</h1>
-        <p className="text-ink-subtle mt-1">{t("realms.subtitle")}</p>
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">{t("realms.title")}</h1>
+        <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("realms.subtitle")}</p>
       </div>
 
       <PageSection title={t("realms.listTitle") || "Realms"} isLoading={isLoading}>
@@ -62,37 +62,37 @@ export default function RealmsPage() {
                   {/* Civilization Header */}
                   <button
                     onClick={() => toggleCollapse(civ)}
-                    className="w-full flex items-center gap-3 mb-4 px-4 py-3 bg-surface-2 border border-hairline rounded-lg hover:bg-surface-3 transition-colors text-left"
+                    className="w-full flex items-center gap-3 mb-4 px-4 py-3 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg hover:bg-[hsl(var(--color-surface-3))] transition-colors text-left"
                   >
                     <span className="text-2xl">{info.icon}</span>
                     <div className="flex-1">
-                      <h2 className="font-semibold text-ink">{info.name}</h2>
-                      <p className="text-sm text-ink-subtle">{civRealms.length} realms</p>
+                      <h2 className="font-semibold text-[hsl(var(--color-ink))]">{info.name}</h2>
+                      <p className="text-sm text-[hsl(var(--color-ink))]-subtle">{civRealms.length} realms</p>
                     </div>
-                    <ChevronDown className={`w-5 h-5 text-ink-muted transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                    <ChevronDown className={`w-5 h-5 text-[hsl(var(--color-ink))]-muted transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
                   </button>
 
                   {/* Realm Cards Grid - responsive 4/3/2/1 */}
                   {!isCollapsed && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                       {(civRealms as any[]).map((realm) => (
-                        <div key={realm.id} className="bg-surface-1 border border-hairline rounded-lg p-4 hover:border-amber-500/30 transition-colors">
+                        <div key={realm.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4 hover:border-[hsl(var(--color-accent))]/30 transition-colors">
                           <div className="flex items-start gap-3">
                             <span className="text-xl">{realm.icon || "🏛️"}</span>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-ink truncate">{realm.name_en}</h3>
-                              <p className="text-sm text-ink-subtle truncate">{realm.name_zh || realm.name_en}</p>
+                              <h3 className="font-semibold text-[hsl(var(--color-ink))] truncate">{realm.name_en}</h3>
+                              <p className="text-sm text-[hsl(var(--color-ink))]-subtle truncate">{realm.name_zh || realm.name_en}</p>
                             </div>
                             <span className={`shrink-0 px-2 py-1 rounded text-xs font-medium ${
                               realm.realm_type === 'HELL' ? 'bg-red-500/20 text-red-400' :
                               realm.realm_type === 'BLISS' ? 'bg-green-500/20 text-green-400' :
-                              'bg-yellow-500/20 text-yellow-400'
+                              'bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]'
                             }`}>
                               {realm.realm_type}
                             </span>
                           </div>
                           {realm.description && (
-                            <p className="mt-2 text-sm text-ink-muted line-clamp-2">{realm.description}</p>
+                            <p className="mt-2 text-sm text-[hsl(var(--color-ink))]-muted line-clamp-2">{realm.description}</p>
                           )}
                         </div>
                       ))}
