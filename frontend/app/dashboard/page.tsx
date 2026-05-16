@@ -112,7 +112,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas text-ink p-6">
+    <div className="min-h-screen bg-canvas text-[hsl(var(--color-ink))] p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header - renders immediately */}
         {pageHeader}
@@ -144,7 +144,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* State distribution pie chart */}
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">{t("dashboard.state_distribution")}</h2>
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink))]-muted uppercase mb-4">{t("dashboard.state_distribution")}</h2>
             {loading ? (
               <div className="h-[240px] flex items-center justify-center">
                 <Skeleton className="h-[200px] w-[200px] rounded-full" />
@@ -180,7 +180,7 @@ export default function DashboardPage() {
 
           {/* tenant comparison bar chart */}
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">{t("dashboard.souls_by_civilization")}</h2>
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink))]-muted uppercase mb-4">{t("dashboard.souls_by_civilization")}</h2>
             {loading ? (
               <div className="h-[240px] flex items-center justify-center">
                 <Skeleton className="h-full w-full" />
@@ -203,7 +203,7 @@ export default function DashboardPage() {
 
         {/* Per-tenant breakdown */}
         <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-          <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">{t("dashboard.per_civilization_breakdown")}</h2>
+          <h2 className="text-sm font-semibold text-[hsl(var(--color-ink))]-muted uppercase mb-4">{t("dashboard.per_civilization_breakdown")}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[0, 1, 2].map((i) => (
               <div key={i} className="bg-[hsl(var(--color-surface-2))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">
@@ -221,13 +221,13 @@ export default function DashboardPage() {
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: CIVILIZATION_COLORS[stats.tenants[i].tenant_code] || "#6b7280" }}
                       />
-                      <span className="font-medium text-ink">{stats.tenants[i].tenant_name || stats.tenants[i].tenant_code}</span>
+                      <span className="font-medium text-[hsl(var(--color-ink))]">{stats.tenants[i].tenant_name || stats.tenants[i].tenant_code}</span>
                     </div>
                     <div className="text-2xl font-bold text-[hsl(var(--color-accent))] mb-3">{stats.tenants[i].total_souls}</div>
                     <div className="space-y-1">
                       {Object.entries(stats.tenants[i].state_breakdown).map(([state, count]) => (
                         <div key={state} className="flex justify-between text-xs">
-                          <span className="text-ink-muted">{state}</span>
+                          <span className="text-[hsl(var(--color-ink))]-muted">{state}</span>
                           <span style={{ color: STATE_COLORS[state] || "#8a8f98" }}>{count as number}</span>
                         </div>
                       ))}
@@ -243,7 +243,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Karma distribution */}
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">{t("dashboard.karma_distribution")}</h2>
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink))]-muted uppercase mb-4">{t("dashboard.karma_distribution")}</h2>
             {loading ? (
               <div className="h-[180px] flex items-center justify-center">
                 <Skeleton className="h-full w-full" />
@@ -265,7 +265,7 @@ export default function DashboardPage() {
 
           {/* Souls by Realm */}
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">{t("dashboard.souls_by_realm")}</h2>
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink))]-muted uppercase mb-4">{t("dashboard.souls_by_realm")}</h2>
             {loading ? (
               <div className="h-[180px] flex items-center justify-center">
                 <Skeleton className="h-full w-full" />
@@ -283,7 +283,7 @@ export default function DashboardPage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[180px] flex items-center justify-center text-ink-muted text-sm">
+              <div className="h-[180px] flex items-center justify-center text-[hsl(var(--color-ink))]-muted text-sm">
                 {t("dashboard.no_realm_data")}
               </div>
             )}
@@ -292,7 +292,7 @@ export default function DashboardPage() {
 
         {/* Recent Activity */}
         <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-          <h2 className="text-sm font-semibold text-ink-muted uppercase mb-4">{t("dashboard.recent_activity")}</h2>
+          <h2 className="text-sm font-semibold text-[hsl(var(--color-ink))]-muted uppercase mb-4">{t("dashboard.recent_activity")}</h2>
           {loading ? (
             <div className="space-y-3">
               {[0, 1, 2].map((i) => (
@@ -318,7 +318,7 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="py-8 text-center text-ink-muted text-sm">
+            <div className="py-8 text-center text-[hsl(var(--color-ink))]-muted text-sm">
               {t("dashboard.no_activity")}
             </div>
           )}
@@ -332,7 +332,7 @@ function StatCard({
   label,
   value,
   isLoading,
-  color = "text-ink",
+  color = "text-[hsl(var(--color-ink))]",
 }: {
   label: string;
   value?: number;
@@ -340,8 +340,8 @@ function StatCard({
   color?: string;
 }) {
   return (
-    <div className="bg-surface-1 rounded-lg p-4 border border-hairline">
-      <div className="text-xs text-ink-muted uppercase mb-1">{label}</div>
+    <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">
+      <div className="text-xs text-[hsl(var(--color-ink-muted))] uppercase mb-1">{label}</div>
       {isLoading ? (
         <Skeleton className="h-8 w-16" />
       ) : (

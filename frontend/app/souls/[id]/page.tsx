@@ -37,9 +37,9 @@ import { Skeleton, SkeletonCard } from "@/src/components/ui/skeleton";
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "bg-emerald-600/20 text-emerald-400",
   JUDGING: "bg-amber-600/20 text-amber-400",
-  DISPOSED: "bg-surface-3 text-ink-muted",
+  DISPOSED: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
   REINCARNATING: "bg-blue-600/20 text-blue-400",
-  LOST: "bg-surface-3 text-ink-muted",
+  LOST: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
 };
 
 export default function SoulDetailPage() {
@@ -165,7 +165,7 @@ export default function SoulDetailPage() {
   // Error state - only show when we have actual data fetch error, not during initial load
   if (error && !soul) {
     return (
-      <div className="min-h-screen bg-canvas text-ink flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-canvas text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4">
         <div className="text-red-400">{error || t("souls.detail.not_found")}</div>
         <a href="/souls/" className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))]">{t("souls.detail.back_to_list")}</a>
       </div>
@@ -179,11 +179,11 @@ export default function SoulDetailPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-canvas text-ink">
+    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Header - always render, show skeleton if loading */}
       <div className="border-b border-[hsl(var(--color-hairline))] px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <a href="/souls" className="text-ink-muted hover:text-ink text-sm">{t("souls.detail.back_to_list").slice(0, 2)}</a>
+          <a href="/souls" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">{t("souls.detail.back_to_list").slice(0, 2)}</a>
           {loading ? (
             <Skeleton className="h-6 w-32" />
           ) : (
@@ -196,9 +196,9 @@ export default function SoulDetailPage() {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <div className="text-[hsl(var(--color-ink-muted))] text-sm">
+          <span className="text-[hsl(var(--color-ink-muted))] text-sm">
             {loading ? <Skeleton className="h-4 w-40" /> : `${soul?.civilization} · ${soul?.birth_date || "?"} — ${soul?.death_date || "—"}`}
-          </div>
+          </span>
           {!loading && soul && (
             <>
               <button
@@ -289,7 +289,7 @@ export default function SoulDetailPage() {
                   <span className="text-lg font-bold text-red-400">-{karma.demerit_score}</span>
                 </div>
                 <div className="border-t border-[hsl(var(--color-hairline))] pt-2 flex justify-between items-center">
-                  <span className="text-sm text-ink-muted">{t("souls.detail.balance")}</span>
+                  <span className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
                   <span className={`text-xl font-bold ${karma.karmic_balance >= 0 ? "text-green-400" : "text-red-400"}`}>
                     {karma.karmic_balance >= 0 ? "+" : ""}{karma.karmic_balance}
                   </span>
@@ -346,7 +346,7 @@ export default function SoulDetailPage() {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-ink-muted">{t("souls.detail.no_karma")}</p>
+              <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.no_karma")}</p>
             )}
           </div>
 
@@ -371,7 +371,7 @@ export default function SoulDetailPage() {
                 )}
                 {soul?.current_state === "JUDGING" && (
                   <div className="space-y-2">
-                    <p className="text-xs text-ink-muted text-center">{t("souls.detail.render_judgment")}</p>
+                    <p className="text-xs text-[hsl(var(--color-ink-muted))] text-center">{t("souls.detail.render_judgment")}</p>
                     {verdictOptions.map((opt) => (
                       <button
                         key={opt.key}
@@ -400,7 +400,7 @@ export default function SoulDetailPage() {
                   </div>
                 )}
                 {soul?.current_state === "ALIVE" && reincarnations.length > 0 && (
-                  <div className="text-center text-ink-subtle text-xs pt-2">
+                  <div className="text-center text-[hsl(var(--color-ink-subtle))] text-xs pt-2">
                     {reincarnations.length} {t("souls.detail.previous_reincarnations")}
                   </div>
                 )}
@@ -463,12 +463,12 @@ export default function SoulDetailPage() {
                       <div className="text-sm font-medium text-[hsl(var(--color-ink))]">
                         → {d.destination_realm || t("souls.detail.destination")}
                       </div>
-                      <div className="text-xs text-ink-muted mt-1">
+                      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
                         {t("souls.detail.memory_reset")}: {d.memory_reset} · {d.is_eternal ? t("souls.detail.eternal") : `${d.memory_reset} ${t("souls.detail.memory_reset")}`}
                       </div>
                     </div>
                     <span className={`px-2 py-0.5 rounded text-xs ${
-                      d.is_executed ? "bg-blue-900 text-blue-300" : "bg-surface-3 text-ink-muted"
+                      d.is_executed ? "bg-blue-900 text-blue-300" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                     }`}>
                       {d.is_executed ? t("souls.detail.executed") : t("souls.detail.pending")}
                     </span>
@@ -495,7 +495,7 @@ export default function SoulDetailPage() {
                       <div className="text-sm font-medium text-[hsl(var(--color-ink))]">
                         → {r.new_identity} ({r.rebirth_form})
                       </div>
-                      <div className="text-xs text-ink-muted mt-1">
+                      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
                         {t("souls.detail.cycle")} {r.cycle_count} · {r.target_realm}
                       </div>
                     </div>
@@ -519,7 +519,7 @@ export default function SoulDetailPage() {
               <EmptyState>{t("souls.detail.no_events")}</EmptyState>
             ) : (
               events.map((e) => (
-                <div key={e.id} className="bg-surface-2 rounded-lg p-3 border border-hairline text-xs">
+                <div key={e.id} className="bg-[hsl(var(--color-surface-2))] rounded-lg p-3 border border-[hsl(var(--color-hairline))] text-xs">
                   <div className="flex justify-between">
                     <span className="text-[hsl(var(--color-ink))] font-mono">{e.event_type}</span>
                     <span className="text-[hsl(var(--color-ink-subtle))]">{e.created_at?.slice(0, 19).replace("T", " ")}</span>
@@ -570,7 +570,7 @@ export default function SoulDetailPage() {
           </div>
         }
       >
-        <p className="text-ink text-sm">{t("souls.detail.delete_confirm_message")}</p>
+        <p className="text-[hsl(var(--color-ink))] text-sm">{t("souls.detail.delete_confirm_message")}</p>
       </BaseModal>
     </div>
   );
@@ -600,7 +600,7 @@ function Section({ title, count, children }: { title: string; count: number; chi
   return (
     <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
       <div className="flex items-center gap-2 mb-4">
-        <h2 className="text-sm font-semibold text-ink-muted uppercase">{title}</h2>
+        <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase">{title}</h2>
         <span className="bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink))] text-xs px-1.5 py-0.5 rounded">{count}</span>
       </div>
       <div className="space-y-3">{children}</div>
@@ -609,5 +609,5 @@ function Section({ title, count, children }: { title: string; count: number; chi
 }
 
 function EmptyState({ children }: { children: string }) {
-  return <div className="text-ink-subtle text-sm text-center py-4">{children}</div>;
+  return <div className="text-[hsl(var(--color-ink-subtle))] text-sm text-center py-4">{children}</div>;
 }

@@ -90,14 +90,13 @@ export default function MenusPage() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas text-ink">
+    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-hairline/50">
-        <Link href="/" className="text-ink-muted hover:text-ink text-sm">← {t("nav.home")}</Link>
-        <h1 className="text-lg font-bold text-amber-400 flex-1">{t("menus.title")}</h1>
+      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">{t("menus.title")}</h1>
         <button
           onClick={openCreate}
-          className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 rounded-md text-sm font-medium transition-colors"
+          className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] rounded-md text-sm font-medium transition-colors"
         >
           + {t("menus.create")}
         </button>
@@ -110,14 +109,14 @@ export default function MenusPage() {
           error={error ? String(error) : undefined}
         >
           {menus.length === 0 && !isLoading ? (
-            <div className="text-center text-ink-subtle py-12">{t("menus.no_menus")}</div>
+            <div className="text-center text-[hsl(var(--color-ink-subtle))] py-12">{t("menus.no_menus")}</div>
           ) : (
-            <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
               {isLoading ? (
                 <TableSkeleton rows={5} cols={6} />
               ) : (
                 <table className="w-full text-sm">
-                  <thead className="bg-surface-2 text-ink-muted">
+                  <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
                     <tr>
                       <th className="text-left px-4 py-3 font-medium">{t("menus.name")}</th>
                       <th className="text-left px-4 py-3 font-medium">{t("menus.path")}</th>
@@ -127,41 +126,41 @@ export default function MenusPage() {
                       <th className="text-right px-4 py-3 font-medium">{t("menus.action")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-hairline">
+                  <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
                     {menus.map((menu) => {
                       const MenuIcon = menu.icon
                         ? (LucideIcons[menu.icon as LucideIconName] as unknown as LucideIcon)
                         : null;
                       return (
-                      <tr key={menu.id} className="hover:bg-surface-2/50 transition-colors">
+                      <tr key={menu.id} className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             {MenuIcon ? (
-                              <MenuIcon className="w-4 h-4 text-amber-400" />
+                              <MenuIcon className="w-4 h-4 text-[hsl(var(--color-accent))]" />
                             ) : null}
-                            <span className="font-medium text-ink">{menu.name}</span>
+                            <span className="font-medium text-[hsl(var(--color-ink))]">{menu.name}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-ink-muted text-xs font-mono">{menu.path}</td>
+                        <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs font-mono">{menu.path}</td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-1">
                             {menu.roles.map((role) => (
-                              <span key={role} className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded text-xs">
+                              <span key={role} className="px-1.5 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] rounded text-xs">
                                 {role}
                               </span>
                             ))}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-ink-muted">{menu.order}</td>
+                        <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{menu.order}</td>
                         <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${menu.is_active ? "bg-green-500/20 text-green-400" : "bg-surface-3 text-ink-muted"}`}>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${menu.is_active ? "bg-green-500/20 text-green-400" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
                             {menu.is_active ? t("menus.active") : t("menus.inactive")}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button
                             onClick={() => openEdit(menu)}
-                            className="text-amber-400 hover:text-amber-300 text-sm mr-3"
+                            className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-sm mr-3"
                           >
                             {t("menus.edit")}
                           </button>
@@ -191,52 +190,52 @@ export default function MenusPage() {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-ink-muted mb-1">{t("menus.name")}</label>
+            <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.name")}</label>
             <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
-              className="w-full bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+              className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
           </div>
           <div>
-            <label className="block text-sm text-ink-muted mb-1">{t("menus.path")}</label>
+            <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.path")}</label>
             <input
               value={form.path}
               onChange={(e) => setForm({ ...form, path: e.target.value })}
               required
-              className="w-full bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+              className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-ink-muted mb-1">{t("menus.icon")}</label>
+              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.icon")}</label>
               <IconPicker
                 value={form.icon}
                 onChange={(icon) => setForm({ ...form, icon })}
               />
             </div>
             <div>
-              <label className="block text-sm text-ink-muted mb-1">{t("menus.order")}</label>
+              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.order")}</label>
               <input
                 type="number"
                 value={form.order}
                 onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
-                className="w-full bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm text-ink-muted mb-1">{t("menus.component")}</label>
+            <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("menus.component")}</label>
             <input
               value={form.component}
               onChange={(e) => setForm({ ...form, component: e.target.value })}
               placeholder="e.g. souls"
-              className="w-full bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+              className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
           </div>
           <div>
-            <label className="block text-sm text-ink-muted mb-1">{t("menus.roles")}</label>
+            <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("menus.roles")}</label>
             <div className="flex flex-wrap gap-2">
               {ROLE_OPTIONS.map((role) => (
                 <button
@@ -245,8 +244,8 @@ export default function MenusPage() {
                   onClick={() => toggleRole(role)}
                   className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
                     form.roles.includes(role)
-                      ? "bg-amber-500 text-black font-medium"
-                      : "bg-surface-2 text-ink-muted border border-hairline hover:border-amber-500"
+                      ? "bg-[hsl(var(--color-accent))] text-black font-medium"
+                      : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] border border-hairline hover:border-[hsl(var(--color-accent))]"
                   }`}
                 >
                   {role}
@@ -261,19 +260,19 @@ export default function MenusPage() {
               checked={form.is_active}
               onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
             />
-            <label htmlFor="is_active" className="text-sm text-ink">{t("menus.active")}</label>
+            <label htmlFor="is_active" className="text-sm text-[hsl(var(--color-ink))]">{t("menus.active")}</label>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={() => { setIsCreateModalOpen(false); setEditingMenu(null); }}
-              className="px-4 py-2 bg-surface-2 hover:bg-surface-3 rounded-md text-sm text-ink-muted transition-colors"
+              className="px-4 py-2 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] rounded-md text-sm text-[hsl(var(--color-ink-muted))] transition-colors"
             >
               {t("common.cancel")}
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 rounded-md text-sm font-medium text-black transition-colors"
+              className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] rounded-md text-sm font-medium text-black transition-colors"
             >
               {editingMenu ? t("menus.save") : t("menus.create")}
             </button>

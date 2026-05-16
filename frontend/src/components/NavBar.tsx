@@ -29,7 +29,7 @@ export function NavBar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 h-14 bg-canvas border-b border-hairline flex items-center px-4 gap-4">
+      <nav className="fixed top-0 left-0 right-0 z-50 h-14 bg-[hsl(var(--color-canvas))] border-b border-[hsl(var(--color-hairline))] flex items-center px-4 gap-4">
         {/* Left: Logo + Brand */}
         <Link
           href="/"
@@ -49,7 +49,7 @@ export function NavBar() {
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
 
-          <div className="w-px h-5 border-hairline" />
+          <div className="w-px h-5 border-[hsl(var(--color-hairline))]" />
 
           {/* Theme toggle */}
           <button
@@ -91,7 +91,7 @@ export function NavBar() {
             )}
           </button>
 
-          <div className="w-px h-5 border-hairline" />
+          <div className="w-px h-5 border-[hsl(var(--color-hairline))]" />
 
           {user ? (
             <>
@@ -103,12 +103,12 @@ export function NavBar() {
                 {t("nav.greeting", { username: user.username })}
               </button>
 
-              <div className="w-px h-5 border-hairline" />
+              <div className="w-px h-5 border-[hsl(var(--color-hairline))]" />
 
               {/* Logout */}
               <button
                 onClick={handleLogout}
-                className="text-ink-subtle hover:text-red-400 text-sm transition-colors"
+                className="text-[hsl(var(--color-ink-subtle))] hover:text-red-400 text-sm transition-colors"
               >
                 {t("auth.logout")}
               </button>

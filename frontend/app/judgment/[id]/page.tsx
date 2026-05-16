@@ -82,15 +82,15 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   if (isLoading) {
     return (
-      <div className="text-ink flex items-center justify-center py-12">
-        <div className="text-ink-muted">{t("judgment.detail.loading")}</div>
+      <div className="text-[hsl(var(--color-ink))] flex items-center justify-center py-12">
+        <div className="text-[hsl(var(--color-ink-muted))]">{t("judgment.detail.loading")}</div>
       </div>
     );
   }
 
   if (error || !judgment) {
     return (
-      <div className="text-ink flex flex-col items-center justify-center gap-4 py-12">
+      <div className="text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4 py-12">
         <div className="text-red-400">{t("judgment.detail.not_found")}</div>
         <a href="/judgment" className="text-amber-400 hover:text-amber-300">
           {t("judgment.detail.back_to_list")}
@@ -125,15 +125,15 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           </h2>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <dt className="text-ink-muted">{t("judgment.detail.soul_name")}</dt>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("judgment.detail.soul_name")}</dt>
               <dd className="text-[hsl(var(--color-ink))] font-medium">{soulData?.name || judgment.soul}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-ink-muted">{t("judgment.detail.civilization")}</dt>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("judgment.detail.civilization")}</dt>
               <dd className="text-[hsl(var(--color-ink))]">{judgment.civilization}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-ink-muted">{t("judgment.detail.court")}</dt>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("judgment.detail.court")}</dt>
               <dd className="text-[hsl(var(--color-ink))]">{judgment.court}</dd>
             </div>
           </dl>
@@ -170,7 +170,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             <div className="flex items-center gap-3">
               <span
                 className={`px-3 py-1.5 rounded text-sm font-bold ${
-                  VERDICT_COLORS[judgment.verdict] || "bg-surface-3 text-ink-muted"
+                  VERDICT_COLORS[judgment.verdict] || "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                 }`}
               >
                 {judgment.verdict}

@@ -99,10 +99,10 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas text-ink">
+    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-hairline/50">
-        <h1 className="text-lg font-bold text-amber-400 flex-1">
+      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
           {t("profile.title") || "个人中心"}
         </h1>
       </div>
@@ -115,22 +115,22 @@ export default function ProfilePage() {
           className="mb-8"
         >
           {/* Username (read-only) */}
-          <div className="flex items-center px-4 py-3 border-b border-hairline">
-            <label className="w-32 text-sm text-ink-subtle shrink-0">
+          <div className="flex items-center px-4 py-3 border-b border-[hsl(var(--color-hairline))]">
+            <label className="w-32 text-sm text-[hsl(var(--color-ink-subtle))] shrink-0">
               {t("profile.username") || "用户名"}
             </label>
             {isLoading ? (
               <Skeleton className="h-4 w-32" />
             ) : (
-              <span className="text-sm text-ink font-medium">
+              <span className="text-sm text-[hsl(var(--color-ink))] font-medium">
                 {profile?.username || user?.username}
               </span>
             )}
           </div>
 
           {/* Email */}
-          <div className="flex items-center px-4 py-3 border-b border-hairline">
-            <label className="w-32 text-sm text-ink-subtle shrink-0">
+          <div className="flex items-center px-4 py-3 border-b border-[hsl(var(--color-hairline))]">
+            <label className="w-32 text-sm text-[hsl(var(--color-ink-subtle))] shrink-0">
               {t("profile.email") || "邮箱"}
             </label>
             {editingField === "email" ? (
@@ -139,18 +139,18 @@ export default function ProfilePage() {
                   type="email"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  className="flex-1 bg-surface-2 border border-hairline rounded px-2 py-1 text-sm text-ink focus:outline-none focus:border-amber-500"
+                  className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded px-2 py-1 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
                   autoFocus
                 />
                 <button
                   onClick={() => handleEditSave("email")}
-                  className="px-2 py-1 bg-amber-500 text-black rounded text-xs hover:bg-amber-400"
+                  className="px-2 py-1 bg-[hsl(var(--color-accent))] text-black rounded text-xs hover:bg-[hsl(var(--color-accent-hover))]"
                 >
                   {t("common.save") || "保存"}
                 </button>
                 <button
                   onClick={() => setEditingField(null)}
-                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-ink-muted hover:text-ink"
+                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-[hsl(var(--color-ink))]-muted hover:text-[hsl(var(--color-ink))]"
                 >
                   {t("common.cancel") || "取消"}
                 </button>
@@ -160,7 +160,7 @@ export default function ProfilePage() {
                 {isLoading ? (
                   <Skeleton className="h-4 w-48" />
                 ) : (
-                  <span className="text-sm text-ink">
+                  <span className="text-sm text-[hsl(var(--color-ink))]">
                     {profile?.email || user?.email || "-"}
                   </span>
                 )}
@@ -170,7 +170,7 @@ export default function ProfilePage() {
                       setEditingField("email");
                       setEditValue(profile?.email || user?.email || "");
                     }}
-                    className="ml-auto text-xs text-amber-500 hover:text-amber-400"
+                    className="ml-auto text-xs text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))]"
                   >
                     {t("common.edit") || "编辑"}
                   </button>
@@ -180,8 +180,8 @@ export default function ProfilePage() {
           </div>
 
           {/* First Name */}
-          <div className="flex items-center px-4 py-3 border-b border-hairline">
-            <label className="w-32 text-sm text-ink-subtle shrink-0">
+          <div className="flex items-center px-4 py-3 border-b border-[hsl(var(--color-hairline))]">
+            <label className="w-32 text-sm text-[hsl(var(--color-ink-subtle))] shrink-0">
               {t("profile.first_name") || "名"}
             </label>
             {editingField === "first_name" ? (
@@ -190,18 +190,18 @@ export default function ProfilePage() {
                   type="text"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  className="flex-1 bg-surface-2 border border-hairline rounded px-2 py-1 text-sm text-ink focus:outline-none focus:border-amber-500"
+                  className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded px-2 py-1 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
                   autoFocus
                 />
                 <button
                   onClick={() => handleEditSave("first_name")}
-                  className="px-2 py-1 bg-amber-500 text-black rounded text-xs hover:bg-amber-400"
+                  className="px-2 py-1 bg-[hsl(var(--color-accent))] text-black rounded text-xs hover:bg-[hsl(var(--color-accent-hover))]"
                 >
                   {t("common.save") || "保存"}
                 </button>
                 <button
                   onClick={() => setEditingField(null)}
-                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-ink-muted hover:text-ink"
+                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-[hsl(var(--color-ink))]-muted hover:text-[hsl(var(--color-ink))]"
                 >
                   {t("common.cancel") || "取消"}
                 </button>
@@ -211,7 +211,7 @@ export default function ProfilePage() {
                 {isLoading ? (
                   <Skeleton className="h-4 w-24" />
                 ) : (
-                  <span className="text-sm text-ink">
+                  <span className="text-sm text-[hsl(var(--color-ink))]">
                     {profile?.first_name || "-"}
                   </span>
                 )}
@@ -221,7 +221,7 @@ export default function ProfilePage() {
                       setEditingField("first_name");
                       setEditValue(profile?.first_name || "");
                     }}
-                    className="ml-auto text-xs text-amber-500 hover:text-amber-400"
+                    className="ml-auto text-xs text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))]"
                   >
                     {t("common.edit") || "编辑"}
                   </button>
@@ -231,8 +231,8 @@ export default function ProfilePage() {
           </div>
 
           {/* Last Name */}
-          <div className="flex items-center px-4 py-3 border-b border-hairline">
-            <label className="w-32 text-sm text-ink-subtle shrink-0">
+          <div className="flex items-center px-4 py-3 border-b border-[hsl(var(--color-hairline))]">
+            <label className="w-32 text-sm text-[hsl(var(--color-ink-subtle))] shrink-0">
               {t("profile.last_name") || "姓"}
             </label>
             {editingField === "last_name" ? (
@@ -241,18 +241,18 @@ export default function ProfilePage() {
                   type="text"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  className="flex-1 bg-surface-2 border border-hairline rounded px-2 py-1 text-sm text-ink focus:outline-none focus:border-amber-500"
+                  className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded px-2 py-1 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
                   autoFocus
                 />
                 <button
                   onClick={() => handleEditSave("last_name")}
-                  className="px-2 py-1 bg-amber-500 text-black rounded text-xs hover:bg-amber-400"
+                  className="px-2 py-1 bg-[hsl(var(--color-accent))] text-black rounded text-xs hover:bg-[hsl(var(--color-accent-hover))]"
                 >
                   {t("common.save") || "保存"}
                 </button>
                 <button
                   onClick={() => setEditingField(null)}
-                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-ink-muted hover:text-ink"
+                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-[hsl(var(--color-ink))]-muted hover:text-[hsl(var(--color-ink))]"
                 >
                   {t("common.cancel") || "取消"}
                 </button>
@@ -262,7 +262,7 @@ export default function ProfilePage() {
                 {isLoading ? (
                   <Skeleton className="h-4 w-24" />
                 ) : (
-                  <span className="text-sm text-ink">
+                  <span className="text-sm text-[hsl(var(--color-ink))]">
                     {profile?.last_name || "-"}
                   </span>
                 )}
@@ -272,7 +272,7 @@ export default function ProfilePage() {
                       setEditingField("last_name");
                       setEditValue(profile?.last_name || "");
                     }}
-                    className="ml-auto text-xs text-amber-500 hover:text-amber-400"
+                    className="ml-auto text-xs text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))]"
                   >
                     {t("common.edit") || "编辑"}
                   </button>
@@ -282,8 +282,8 @@ export default function ProfilePage() {
           </div>
 
           {/* Role (read-only) */}
-          <div className="flex items-center px-4 py-3 border-b border-hairline">
-            <label className="w-32 text-sm text-ink-subtle shrink-0">
+          <div className="flex items-center px-4 py-3 border-b border-[hsl(var(--color-hairline))]">
+            <label className="w-32 text-sm text-[hsl(var(--color-ink-subtle))] shrink-0">
               {t("profile.role") || "角色"}
             </label>
             {isLoading ? (
@@ -305,13 +305,13 @@ export default function ProfilePage() {
 
           {/* Tenant (read-only) */}
           <div className="flex items-center px-4 py-3">
-            <label className="w-32 text-sm text-ink-subtle shrink-0">
+            <label className="w-32 text-sm text-[hsl(var(--color-ink-subtle))] shrink-0">
               {t("profile.tenant") || "租户"}
             </label>
             {isLoading ? (
               <Skeleton className="h-4 w-32" />
             ) : (
-              <span className="text-sm text-ink">
+              <span className="text-sm text-[hsl(var(--color-ink))]">
                 {profile?.tenant?.display_name || profile?.tenant?.code || user?.tenant?.display_name || user?.tenant?.code || "-"}
               </span>
             )}
@@ -323,7 +323,7 @@ export default function ProfilePage() {
           {!isLoading && !showPasswordForm ? (
             <button
               onClick={() => setShowPasswordForm(true)}
-              className="px-4 py-2 bg-surface-2 hover:bg-surface-3 border border-hairline rounded text-sm text-ink transition-colors"
+              className="px-4 py-2 bg-surface-2 hover:bg-surface-3 border border-hairline rounded text-sm text-[hsl(var(--color-ink))] transition-colors"
             >
               {t("profile.change_password") || "修改密码"}
             </button>
@@ -334,39 +334,39 @@ export default function ProfilePage() {
           ) : showPasswordForm ? (
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm text-ink-subtle mb-1">
+                <label className="block text-sm text-[hsl(var(--color-ink-subtle))] mb-1">
                   {t("profile.old_password") || "旧密码"}
                 </label>
                 <input
                   type="password"
                   value={passwordForm.oldPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
-                  className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+                  className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-amber-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm text-ink-subtle mb-1">
+                <label className="block text-sm text-[hsl(var(--color-ink-subtle))] mb-1">
                   {t("profile.new_password") || "新密码"}
                 </label>
                 <input
                   type="password"
                   value={passwordForm.newPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                  className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+                  className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-amber-500"
                   minLength={8}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm text-ink-subtle mb-1">
+                <label className="block text-sm text-[hsl(var(--color-ink-subtle))] mb-1">
                   {t("profile.confirm_password") || "确认密码"}
                 </label>
                 <input
                   type="password"
                   value={passwordForm.confirmPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                  className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+                  className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-amber-500"
                   minLength={8}
                   required
                 />
@@ -375,7 +375,7 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={changePasswordMutation.isPending}
-                  className="px-4 py-2 bg-amber-500 text-black rounded text-sm font-medium hover:bg-amber-400 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 bg-[hsl(var(--color-accent))] text-black rounded text-sm font-medium hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-50 transition-colors"
                 >
                   {changePasswordMutation.isPending
                     ? (t("common.loading") || "提交中...")
@@ -387,7 +387,7 @@ export default function ProfilePage() {
                     setShowPasswordForm(false);
                     setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
                   }}
-                  className="px-4 py-2 bg-surface-2 border border-hairline rounded text-sm text-ink-muted hover:text-ink transition-colors"
+                  className="px-4 py-2 bg-surface-2 border border-hairline rounded text-sm text-[hsl(var(--color-ink))]-muted hover:text-[hsl(var(--color-ink))] transition-colors"
                 >
                   {t("common.cancel") || "取消"}
                 </button>

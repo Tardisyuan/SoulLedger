@@ -80,19 +80,16 @@ export default function AuditPage() {
   // Access denied for non-admin
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-canvas text-ink">
-        <div className="h-12 flex items-center px-6 gap-4 border-b border-hairline/50">
-          <Link href="/" className="text-ink-muted hover:text-ink text-sm">
-            ← {t("nav.home")}
-          </Link>
+      <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
+        <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
           <h1 className="text-lg font-bold text-amber-400 flex-1">
             {t("audit.title") || "审计日志"}
           </h1>
         </div>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <p className="text-ink-muted text-lg">{t("audit.access_denied") || "访问被拒绝"}</p>
-            <p className="text-ink-subtle text-sm mt-2">
+            <p className="text-[hsl(var(--color-ink))]-muted text-lg">{t("audit.access_denied") || "访问被拒绝"}</p>
+            <p className="text-[hsl(var(--color-ink))]-subtle text-sm mt-2">
               {t("audit.admin_only") || "仅管理员可查看审计日志"}
             </p>
           </div>
@@ -102,13 +99,10 @@ export default function AuditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-canvas text-ink">
+    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-hairline/50">
-        <Link href="/" className="text-ink-muted hover:text-ink text-sm">
-          ← {t("nav.home")}
-        </Link>
-        <h1 className="text-lg font-bold text-amber-400 flex-1">
+      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
           {t("audit.title") || "审计日志"}
         </h1>
       </div>
@@ -122,7 +116,7 @@ export default function AuditPage() {
               setActionFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-surface-1 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500 transition-colors min-w-[160px]"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-amber-500 transition-colors min-w-[160px]"
           >
             {ACTION_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -137,7 +131,7 @@ export default function AuditPage() {
               setResourceFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-surface-1 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500 transition-colors min-w-[160px]"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-amber-500 transition-colors min-w-[160px]"
           >
             {RESOURCE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -154,7 +148,7 @@ export default function AuditPage() {
               setPage(1);
             }}
             placeholder={t("audit.filter_date_from") || "开始日期"}
-            className="bg-surface-1 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-amber-500 transition-colors"
           />
 
           <input
@@ -165,7 +159,7 @@ export default function AuditPage() {
               setPage(1);
             }}
             placeholder={t("audit.filter_date_to") || "结束日期"}
-            className="bg-surface-1 border border-hairline rounded px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-amber-500 transition-colors"
           />
 
           {(actionFilter || resourceFilter || dateFrom || dateTo) && (
@@ -177,7 +171,7 @@ export default function AuditPage() {
                 setDateTo("");
                 setPage(1);
               }}
-              className="px-3 py-2 text-sm text-ink-muted hover:text-ink bg-surface-1 border border-hairline rounded transition-colors"
+              className="px-3 py-2 text-sm text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded transition-colors"
             >
               {t("audit.clear_filters") || "清除筛选"}
             </button>
@@ -195,41 +189,41 @@ export default function AuditPage() {
               <TableSkeleton rows={8} cols={6} />
             </div>
           ) : logs.length === 0 ? (
-            <div className="py-12 text-center text-sm text-ink-muted">
+            <div className="py-12 text-center text-sm text-[hsl(var(--color-ink))]-muted">
               {t("audit.no_logs") || "暂无审计日志"}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-hairline bg-surface-2">
-                    <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                  <tr className="border-b border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-2))]">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink))]-subtle uppercase tracking-wider">
                       {t("audit.timestamp") || "时间"}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink))]-subtle uppercase tracking-wider">
                       {t("audit.user") || "用户"}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink))]-subtle uppercase tracking-wider">
                       {t("audit.action") || "操作"}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink))]-subtle uppercase tracking-wider">
                       {t("audit.resource") || "资源"}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink))]-subtle uppercase tracking-wider">
                       {t("audit.description") || "描述"}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink))]-subtle uppercase tracking-wider">
                       {t("audit.ip_address") || "IP"}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-hairline">
+                <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
                   {logs.map((log) => (
-                    <tr key={log.id} className="hover:bg-surface-2/50 transition-colors">
-                      <td className="px-4 py-3 text-sm text-ink-muted whitespace-nowrap">
+                    <tr key={log.id} className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors">
+                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))]-muted whitespace-nowrap">
                         {new Date(log.timestamp).toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-sm text-ink font-medium">
+                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))] font-medium">
                         {log.user_display || log.user || "-"}
                       </td>
                       <td className="px-4 py-3 text-sm">
@@ -243,22 +237,22 @@ export default function AuditPage() {
                               ? "bg-red-500/20 text-red-400"
                               : log.action === "LOGIN" || log.action === "LOGOUT"
                               ? "bg-blue-500/20 text-blue-400"
-                              : "bg-surface-3 text-ink-muted"
+                              : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                           }`}
                         >
                           {log.action}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-ink-muted">
+                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))]-muted">
                         {log.resource}
                         {log.resource_id && (
-                          <span className="text-ink-subtle ml-1">#{log.resource_id}</span>
+                          <span className="text-[hsl(var(--color-ink))]-subtle ml-1">#{log.resource_id}</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-ink-muted max-w-xs truncate">
+                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))]-muted max-w-xs truncate">
                         {log.description || "-"}
                       </td>
-                      <td className="px-4 py-3 text-sm text-ink-subtle font-mono">
+                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))]-subtle font-mono">
                         {log.ip_address || "-"}
                       </td>
                     </tr>
@@ -274,7 +268,7 @@ export default function AuditPage() {
           {isLoading ? (
             <div className="h-5 w-32 bg-muted animate-pulse rounded" />
           ) : (
-            <p className="text-sm text-ink-muted">
+            <p className="text-sm text-[hsl(var(--color-ink))]-muted">
               {t("audit.page_info") || `第 ${page} / ${totalPages} 页`}
               {data?.count !== undefined && ` (${data.count} 条记录)`}
             </p>
@@ -283,14 +277,14 @@ export default function AuditPage() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1 || isFetching}
-              className="px-3 py-1.5 text-sm bg-surface-1 border border-hairline rounded hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed text-ink-muted hover:text-ink transition-colors"
+              className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
             >
               ← {t("common.prev") || "上一页"}
             </button>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={!data || page >= totalPages || isFetching}
-              className="px-3 py-1.5 text-sm bg-surface-1 border border-hairline rounded hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed text-ink-muted hover:text-ink transition-colors"
+              className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
             >
               {t("common.next") || "下一页"} →
             </button>

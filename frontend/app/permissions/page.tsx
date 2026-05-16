@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { permApi, Permission, Role } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -153,19 +152,23 @@ export default function PermissionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-canvas text-ink">
-      {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-hairline/50">
-        <Link href="/" className="text-ink-muted hover:text-ink text-sm">← {t("nav.home")}</Link>
-        <h1 className="text-lg font-bold text-amber-400 flex-1">{t("permissions.title")}</h1>
-        {isAdmin && (
-          <button
-            onClick={() => setIsRoleCreateOpen(true)}
-            className="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black rounded text-xs font-medium transition-colors"
-          >
-            + {t("permissions.create_role")}
-          </button>
-        )}
+    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
+      {/* Page header - realms style */}
+      <div className="px-6 pt-6 pb-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-[hsl(var(--color-accent))]">{t("permissions.title")}</h1>
+            <p className="text-sm sm:text-base text-[hsl(var(--color-ink-subtle))] mt-1 hidden sm:block">{t("permissions.subtitle")}</p>
+          </div>
+          {isAdmin && (
+            <button
+              onClick={() => setIsRoleCreateOpen(true)}
+              className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-xs sm:text-sm font-medium transition-colors shrink-0"
+            >
+              + {t("permissions.create_role")}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-6 space-y-8">
@@ -177,7 +180,7 @@ export default function PermissionsPage() {
             isAdmin && !isRolesLoading ? (
               <button
                 onClick={() => setIsRoleCreateOpen(true)}
-                className="text-xs text-amber-400 hover:text-amber-300 underline"
+                className="text-xs text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] underline"
               >
                 {t("permissions.roles_title")} →
               </button>
@@ -198,8 +201,8 @@ export default function PermissionsPage() {
                   onClick={() => setSelectedRoleName(role.name)}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     selectedRoleName === role.name
-                      ? "bg-amber-500 text-black"
-                      : "bg-surface-2 text-ink-muted border border-hairline hover:border-amber-500"
+                      ? "bg-[hsl(var(--color-accent))] text-black"
+                      : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] border border-hairline hover:border-[hsl(var(--color-accent))]"
                   }`}
                 >
                   {role.display_name || role.name}
@@ -210,13 +213,13 @@ export default function PermissionsPage() {
 
           {/* Role permissions assignment — ADMIN only */}
           {isAdmin ? (
-            <div className="bg-surface-1 rounded-lg border border-hairline p-4">
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] p-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-ink">{t("permissions.assign")}</h3>
+                <h3 className="text-sm font-semibold text-[hsl(var(--color-ink))]">{t("permissions.assign")}</h3>
                 <button
                   onClick={handleAssignSave}
                   disabled={assignMutation.isPending || isRoleDataLoading}
-                  className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black rounded text-sm font-medium transition-colors"
+                  className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-50 text-black rounded text-sm font-medium transition-colors"
                 >
                   {assignMutation.isPending ? t("permissions.submitting") : t("permissions.assign_button")}
                 </button>
@@ -245,7 +248,7 @@ export default function PermissionsPage() {
                   {CATEGORIES.map((cat) =>
                     permsByCategory[cat]?.length > 0 ? (
                       <div key={cat}>
-                        <p className="text-xs text-ink-muted uppercase mb-2">{cat}</p>
+                        <p className="text-xs text-[hsl(var(--color-ink))]-muted uppercase mb-2">{cat}</p>
                         <div className="flex flex-wrap gap-2">
                           {permsByCategory[cat].map((perm) => {
                             const checked = selectedPermIds.includes(perm.id);
@@ -254,13 +257,13 @@ export default function PermissionsPage() {
                                 key={perm.id}
                                 className={`flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer text-sm transition-colors ${
                                   checked
-                                    ? "bg-amber-500/20 text-amber-400"
-                                    : "bg-surface-2 text-ink-muted"
+                                    ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
+                                    : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]"
                                 }`}
                               >
                                 <input
                                   type="checkbox"
-                                  className="accent-amber-500"
+                                  className="accent-[hsl(var(--color-accent))]"
                                   checked={checked}
                                   onChange={() => {
                                     if (checked) {
@@ -273,7 +276,7 @@ export default function PermissionsPage() {
                                   }}
                                 />
                                 <span className="font-mono text-xs">{perm.codename}</span>
-                                <span className="text-xs text-ink-subtle">— {perm.name}</span>
+                                <span className="text-xs text-[hsl(var(--color-ink-subtle))]">— {perm.name}</span>
                               </label>
                             );
                           })}
@@ -292,8 +295,8 @@ export default function PermissionsPage() {
               )}
             </div>
           ) : (
-            <div className="bg-surface-1 rounded-lg border border-hairline p-4">
-              <p className="text-ink-muted text-sm">{t("permissions.admin_only")}</p>
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] p-4">
+              <p className="text-[hsl(var(--color-ink-muted))] text-sm">{t("permissions.admin_only")}</p>
               {isRoleDataLoading ? (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {[1, 2, 3].map((i) => (
@@ -303,7 +306,7 @@ export default function PermissionsPage() {
               ) : (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {(roleData?.permissions ?? []).map((perm: string) => (
-                    <span key={perm} className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-sm font-mono">
+                    <span key={perm} className="px-2 py-1 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] rounded text-sm font-mono">
                       {perm}
                     </span>
                   ))}
@@ -321,7 +324,7 @@ export default function PermissionsPage() {
             isAdmin && !isPermsLoading ? (
               <button
                 onClick={() => setIsCreateOpen(true)}
-                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-black rounded text-sm font-medium transition-colors"
+                className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium transition-colors"
               >
                 + {t("permissions.create")}
               </button>
@@ -331,9 +334,9 @@ export default function PermissionsPage() {
           {isPermsLoading ? (
             <TableSkeleton rows={8} cols={4} />
           ) : (
-            <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-surface-2 text-ink-muted">
+                <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
                   <tr>
                     <th className="text-left px-4 py-3 font-medium">{t("permissions.codename")}</th>
                     <th className="text-left px-4 py-3 font-medium">{t("permissions.name")}</th>
@@ -341,13 +344,13 @@ export default function PermissionsPage() {
                     {isAdmin && <th className="text-right px-4 py-3 font-medium">{t("souls.action")}</th>}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-hairline">
+                <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
                   {allPerms.map((perm) => (
-                    <tr key={perm.id} className="hover:bg-surface-2/50 transition-colors">
-                      <td className="px-4 py-3 font-mono text-amber-400 text-xs">{perm.codename}</td>
-                      <td className="px-4 py-3 text-ink">{perm.name}</td>
+                    <tr key={perm.id} className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors">
+                      <td className="px-4 py-3 font-mono text-[hsl(var(--color-accent))] text-xs">{perm.codename}</td>
+                      <td className="px-4 py-3 text-[hsl(var(--color-ink))]">{perm.name}</td>
                       <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 bg-surface-2 text-ink-muted rounded text-xs">
+                        <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
                           {perm.category}
                         </span>
                       </td>
@@ -355,7 +358,7 @@ export default function PermissionsPage() {
                         <td className="px-4 py-3 text-right">
                           <button
                             onClick={() => { setEditingPerm(perm); setIsEditOpen(true); }}
-                            className="text-amber-400 hover:text-amber-300 text-xs mr-3"
+                            className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-xs mr-3"
                           >
                             {t("permissions.edit")}
                           </button>
@@ -375,47 +378,42 @@ export default function PermissionsPage() {
           )}
         </PageSection>
 
-        {/* ── Roles Table (ADMIN only) ── */}
+        {/* ── Roles Grid (ADMIN only) ── */}
         {isAdmin && (
-          <PageSection
-            title={t("permissions.roles_title")}
-            isLoading={isRolesLoading}
-          >
+          <PageSection title={t("permissions.roles_title")} isLoading={isRolesLoading}>
             {isRolesLoading ? (
-              <TableSkeleton rows={3} cols={3} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
+                    <Skeleton className="h-4 w-2/3 mb-2" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                ))}
+              </div>
             ) : (
-              <div className="bg-surface-1 rounded-lg border border-hairline overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-surface-2 text-ink-muted">
-                    <tr>
-                      <th className="text-left px-4 py-3 font-medium">{t("permissions.name")}</th>
-                      <th className="text-left px-4 py-3 font-medium">Display Name</th>
-                      <th className="text-right px-4 py-3 font-medium">{t("souls.action")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-hairline">
-                    {roles.map((role) => (
-                      <tr key={role.id} className="hover:bg-surface-2/50 transition-colors">
-                        <td className="px-4 py-3 font-mono text-amber-400 text-xs">{role.name}</td>
-                        <td className="px-4 py-3 text-ink">{role.display_name}</td>
-                        <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => { setEditingRole(role); setIsRoleEditOpen(true); }}
-                            className="text-amber-400 hover:text-amber-300 text-xs mr-3"
-                          >
-                            {t("permissions.edit_role")}
-                          </button>
-                          <button
-                            onClick={() => { setDeletingRole(role); setIsRoleDeleteOpen(true); }}
-                            className="text-red-400 hover:text-red-300 text-xs"
-                          >
-                            {t("permissions.delete_role")}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {roles.map((role) => (
+                  <div key={role.id} className="bg-surface-1 border border-hairline rounded-lg p-3 hover:border-[hsl(var(--color-accent))]/30 transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-medium text-[hsl(var(--color-ink))] truncate text-sm">{role.display_name || role.name}</h3>
+                      <p className="text-xs text-[hsl(var(--color-ink))]-muted font-mono truncate">{role.name}</p>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => { setEditingRole(role); setIsRoleEditOpen(true); }}
+                        className="flex-1 px-2 py-1 text-xs text-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))]/10 rounded transition-colors border border-[hsl(var(--color-accent))]/30"
+                      >
+                        {t("permissions.edit_role")}
+                      </button>
+                      <button
+                        onClick={() => { setDeletingRole(role); setIsRoleDeleteOpen(true); }}
+                        className="flex-1 px-2 py-1 text-xs text-red-400 hover:bg-red-400/10 rounded transition-colors border border-red-400/30"
+                      >
+                        {t("permissions.delete_role")}
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </PageSection>
@@ -454,7 +452,7 @@ export default function PermissionsPage() {
               type="button"
               onClick={() => { setIsDeleteOpen(false); setDeletingPerm(null); }}
               disabled={deleteMutation.isPending}
-              className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-ink-muted hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
+              className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink))]-muted hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
             >
               {t("permissions.cancel_delete")}
             </button>
@@ -469,7 +467,7 @@ export default function PermissionsPage() {
           </div>
         }
       >
-        <p className="text-ink text-sm">{t("permissions.confirm_delete_message")}</p>
+        <p className="text-[hsl(var(--color-ink))] text-sm">{t("permissions.confirm_delete_message")}</p>
       </BaseModal>
 
       {/* ── Role Management Modals ── */}
@@ -502,7 +500,7 @@ export default function PermissionsPage() {
               type="button"
               onClick={() => { setIsRoleDeleteOpen(false); setDeletingRole(null); }}
               disabled={roleDeleteMutation.isPending}
-              className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-ink-muted hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
+              className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink))]-muted hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
             >
               {t("permissions.cancel_delete")}
             </button>
@@ -517,7 +515,7 @@ export default function PermissionsPage() {
           </div>
         }
       >
-        <p className="text-ink text-sm">{t("permissions.confirm_delete_role_message")}</p>
+        <p className="text-[hsl(var(--color-ink))] text-sm">{t("permissions.confirm_delete_role_message")}</p>
       </BaseModal>
 
     </div>
@@ -582,7 +580,7 @@ function PermissionFormModal({
             type="button"
             onClick={handleClose}
             disabled={isPending}
-            className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-ink-muted hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
+            className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink))]-muted hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
           >
             {t("common.cancel")}
           </button>
@@ -590,7 +588,7 @@ function PermissionFormModal({
             type="button"
             onClick={handleSubmit}
             disabled={isPending || !codename.trim() || !name.trim()}
-            className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black rounded text-sm font-medium transition-colors"
+            className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-50 text-black rounded text-sm font-medium transition-colors"
           >
             {isPending ? t("permissions.submitting") : t("permissions.submit")}
           </button>
@@ -600,31 +598,31 @@ function PermissionFormModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <p className="text-red-400 text-sm">{error}</p>}
         <div>
-          <label className="block text-sm text-ink-muted mb-1">{t("permissions.codename_label")}</label>
+          <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("permissions.codename_label")}</label>
           <input
             type="text"
             value={codename}
             onChange={(e) => setCodename(e.target.value)}
             placeholder={t("permissions.codename_placeholder")}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-ink text-sm focus:outline-none focus:border-amber-500"
+            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
         </div>
         <div>
-          <label className="block text-sm text-ink-muted mb-1">{t("permissions.name_label")}</label>
+          <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("permissions.name_label")}</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("permissions.name_placeholder")}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-ink text-sm focus:outline-none focus:border-amber-500"
+            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
         </div>
         <div>
-          <label className="block text-sm text-ink-muted mb-1">{t("permissions.category_label")}</label>
+          <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("permissions.category_label")}</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-ink text-sm focus:outline-none focus:border-amber-500"
+            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>{c}</option>
@@ -690,7 +688,7 @@ function RoleFormModal({
             type="button"
             onClick={handleClose}
             disabled={isPending}
-            className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-ink-muted hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
+            className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink))]-muted hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
           >
             {t("common.cancel")}
           </button>
@@ -698,7 +696,7 @@ function RoleFormModal({
             type="button"
             onClick={handleSubmit}
             disabled={isPending || !name.trim() || !displayName.trim()}
-            className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black rounded text-sm font-medium transition-colors"
+            className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-50 text-black rounded text-sm font-medium transition-colors"
           >
             {isPending ? t("permissions.submitting") : t("permissions.submit")}
           </button>
@@ -708,23 +706,23 @@ function RoleFormModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <p className="text-red-400 text-sm">{error}</p>}
         <div>
-          <label className="block text-sm text-ink-muted mb-1">{t("permissions.role_name_label")}</label>
+          <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("permissions.role_name_label")}</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("permissions.role_name_placeholder")}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-ink text-sm focus:outline-none focus:border-amber-500"
+            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
         </div>
         <div>
-          <label className="block text-sm text-ink-muted mb-1">{t("permissions.display_name_label")}</label>
+          <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("permissions.display_name_label")}</label>
           <input
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder={t("permissions.display_name_placeholder")}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-ink text-sm focus:outline-none focus:border-amber-500"
+            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
         </div>
       </form>

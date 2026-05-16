@@ -244,20 +244,20 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 px-3 py-2 bg-surface-2 border border-hairline rounded-md text-sm text-ink hover:border-amber-500 transition-colors min-w-[120px]"
+          className="flex items-center gap-2 px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md text-sm text-[hsl(var(--color-ink))] hover:border-[hsl(var(--color-accent))] transition-colors min-w-[120px]"
         >
           {SelectedIcon ? (
             <SelectedIcon className="w-4 h-4 text-amber-400" />
           ) : (
-            <span className="text-ink-muted">选择图标</span>
+            <span className="text-[hsl(var(--color-ink-muted))]">选择图标</span>
           )}
-          {value && <span className="text-ink-subtle ml-auto text-xs">{value}</span>}
+          {value && <span className="text-[hsl(var(--color-ink-subtle))] ml-auto text-xs">{value}</span>}
         </button>
         {value && (
           <button
             type="button"
             onClick={() => onChange("")}
-            className="text-ink-muted hover:text-red-400 text-xs"
+            className="text-[hsl(var(--color-ink-muted))] hover:text-red-400 text-xs"
           >
             清除
           </button>
@@ -275,7 +275,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="搜索图标..."
-            className="w-full bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink focus:outline-none focus:border-amber-500"
+            className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
 
           {!search && (
@@ -288,7 +288,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                   className={`px-2 py-1 rounded text-xs transition-colors ${
                     activeCategory === cat.label
                       ? "bg-amber-500 text-black"
-                      : "bg-surface-2 text-ink-muted hover:text-ink"
+                      : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
                   }`}
                 >
                   {cat.label}
@@ -313,7 +313,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                   className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
                     isSelected
                       ? "bg-amber-500/20 text-amber-400 ring-1 ring-amber-500"
-                      : "text-ink-muted hover:bg-surface-2 hover:text-ink"
+                      : "text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]"
                   }`}
                 >
                   {(() => {
@@ -326,7 +326,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
           </div>
 
           {displayIcons.length === 0 && (
-            <p className="text-center text-ink-muted text-sm py-4">没有找到图标</p>
+            <p className="text-center text-[hsl(var(--color-ink-muted))] text-sm py-4">没有找到图标</p>
           )}
         </div>
       </BaseModal>

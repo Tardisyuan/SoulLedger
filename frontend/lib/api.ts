@@ -329,11 +329,28 @@ export interface User {
   first_name: string;
   last_name: string;
   is_active: boolean;
+  organization_id?: number;
+  organization_name?: string;
+  position?: string;
   tenant?: {
     id: number;
     code: string;
     display_name: string;
   };
+}
+
+// Organizations
+export interface Organization {
+  id: number;
+  name: string;
+  code: string;
+  category: "CHINESE" | "EUROPEAN" | "EGYPTIAN";
+  parent_id: number | null;
+  level: number;
+  sort?: number;
+  ext?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -403,6 +420,13 @@ export const tenantsApi = {
   get: (id: number) => api.get<Tenant>(`/tenants/${id}/`),
 };
 
+// Organizations
+export const organizationsApi = {
+  list: (params?: { category?: string }) => api.get<Organization[]>("/organizations/", { params }),
+  get: (id: number) => api.get<Organization>(`/organizations/${id}/`),
+  tree: () => api.get<Organization[]>("/organizations/tree/"),
+};
+
 // Types
 export interface Soul {
   id: string;
@@ -432,9 +456,12 @@ export interface Realm {
 export interface Actor {
   id: string;
   name: string;
+  name_zh?: string;
   civilization: string;
   role: string;
-  title: string;
+  title?: string;
+  icon?: string;
+  description?: string;
 }
 
 export interface Judgment {

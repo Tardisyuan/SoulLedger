@@ -66,17 +66,17 @@ function EditableNodeComponent({
   return (
     <div
       className={`px-4 py-3 rounded-lg border-2 min-w-[180px] cursor-pointer transition-all ${
-        selected ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-surface-2" : ""
+        selected ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-[hsl(var(--color-surface-2))]" : ""
       } ${colorClass}`}
     >
       <Handle type="target" position={Position.Top} className="!bg-amber-500" />
-      <div className="text-sm font-semibold text-ink">{data.label}</div>
-      <div className="text-xs text-ink-muted mt-1">{data.nodeType}</div>
+      <div className="text-sm font-semibold text-[hsl(var(--color-ink))]">{data.label}</div>
+      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">{data.nodeType}</div>
       {data.courtCode && (
-        <div className="text-xs text-ink-subtle mt-1">🏛 {data.courtCode}</div>
+        <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">🏛 {data.courtCode}</div>
       )}
       {data.approverRole && (
-        <div className="text-xs text-ink-subtle">👤 {data.approverRole}</div>
+        <div className="text-xs text-[hsl(var(--color-ink-subtle))]">👤 {data.approverRole}</div>
       )}
       <Handle type="source" position={Position.Bottom} className="!bg-amber-500" />
     </div>
@@ -360,9 +360,9 @@ export default function WorkflowEditor({
   ];
 
   return (
-    <div className="flex flex-col h-full bg-surface-2 rounded-lg">
+    <div className="flex flex-col h-full bg-[hsl(var(--color-surface-2))] rounded-lg">
       {/* Toolbar */}
-      <div className="flex items-center gap-3 p-3 border-b border-hairline bg-surface-1">
+      <div className="flex items-center gap-3 p-3 border-b border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))]">
         {/* Template info inputs */}
         <div className="flex-1 flex items-center gap-3">
           <input
@@ -370,12 +370,12 @@ export default function WorkflowEditor({
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
             placeholder="模板名称"
-            className="px-3 py-1.5 bg-surface-2 border border-hairline rounded text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:border-amber-500"
+            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink))] placeholder:[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
           <select
             value={templateCiv}
             onChange={(e) => setTemplateCiv(e.target.value as typeof templateCiv)}
-            className="px-3 py-1.5 bg-surface-2 border border-hairline rounded text-sm text-ink focus:outline-none focus:border-amber-500"
+            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           >
             <option value="CHINESE">中国地府</option>
             <option value="EUROPEAN">欧洲天堂地狱</option>
@@ -384,7 +384,7 @@ export default function WorkflowEditor({
           <select
             value={templateCaseType}
             onChange={(e) => setTemplateCaseType(e.target.value)}
-            className="px-3 py-1.5 bg-surface-2 border border-hairline rounded text-sm text-ink focus:outline-none focus:border-amber-500"
+            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           >
             <option value="ROUTINE">常规审判</option>
             <option value="APPEAL">申诉审判</option>
@@ -434,15 +434,15 @@ export default function WorkflowEditor({
           nodeTypes={nodeTypes}
           onNodeDoubleClick={(_, node) => handleNodeEdit(node.id)}
           fitView
-          className="bg-surface-2"
+          className="bg-[hsl(var(--color-surface-2))]"
           defaultEdgeOptions={{
             markerEnd: { type: MarkerType.ArrowClosed, color: "#d97706" },
             style: { stroke: "#d97706", strokeWidth: 2 },
           }}
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-          <Controls className="!bg-surface-1 !border-hairline !rounded" />
-          <Panel position="top-left" className="bg-surface-1/90 backdrop-blur px-3 py-2 rounded border border-hairline text-xs text-ink-muted">
+          <Controls className="!bg-[hsl(var(--color-surface-1))] !border-[hsl(var(--color-hairline))] !rounded" />
+          <Panel position="top-left" className="bg-[hsl(var(--color-surface-1))]/90 backdrop-blur px-3 py-2 rounded border border-[hsl(var(--color-hairline))] text-xs text-[hsl(var(--color-ink-muted))]">
             双击节点编辑 · 拖拽连接节点
           </Panel>
         </ReactFlow>
@@ -457,18 +457,18 @@ export default function WorkflowEditor({
         {editData && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">节点名称</label>
+              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">节点名称</label>
               <input
                 type="text"
                 value={editData.node_name}
                 onChange={(e) =>
                   setEditData({ ...editData, node_name: e.target.value })
                 }
-                className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-ink focus:outline-none focus:border-amber-500"
+                className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">节点类型</label>
+              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">节点类型</label>
               <select
                 value={editData.node_type}
                 onChange={(e) =>
@@ -477,7 +477,7 @@ export default function WorkflowEditor({
                     node_type: e.target.value as NodeEditData["node_type"],
                   })
                 }
-                className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-ink focus:outline-none focus:border-amber-500"
+                className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
               >
                 {nodeTypeOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -487,7 +487,7 @@ export default function WorkflowEditor({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">法庭/宫殿代码</label>
+              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">法庭/宫殿代码</label>
               <input
                 type="text"
                 value={editData.court_code}
@@ -495,11 +495,11 @@ export default function WorkflowEditor({
                   setEditData({ ...editData, court_code: e.target.value })
                 }
                 placeholder="例如: 第一殿, 真理大厅"
-                className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-ink placeholder:text-ink-subtle focus:outline-none focus:border-amber-500"
+                className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">审批人类型</label>
+              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">审批人类型</label>
               <select
                 value={editData.approver_type}
                 onChange={(e) =>
@@ -508,7 +508,7 @@ export default function WorkflowEditor({
                     approver_type: e.target.value as NodeEditData["approver_type"],
                   })
                 }
-                className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-ink focus:outline-none focus:border-amber-500"
+                className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
               >
                 {approverTypeOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -518,7 +518,7 @@ export default function WorkflowEditor({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">审批角色</label>
+              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">审批角色</label>
               <input
                 type="text"
                 value={editData.approver_role}
@@ -526,13 +526,13 @@ export default function WorkflowEditor({
                   setEditData({ ...editData, approver_role: e.target.value })
                 }
                 placeholder="例如: JUDGE, OVERSEER"
-                className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-ink placeholder:text-ink-subtle focus:outline-none focus:border-amber-500"
+                className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
               />
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <button
                 onClick={() => setEditModalOpen(false)}
-                className="px-4 py-2 bg-surface-3 hover:bg-surface-4 text-ink text-sm rounded transition-colors"
+                className="px-4 py-2 bg-[hsl(var(--color-surface-3))] hover:bg-[hsl(var(--color-surface-4))] text-[hsl(var(--color-ink))] text-sm rounded transition-colors"
               >
                 取消
               </button>

@@ -61,12 +61,9 @@ export default function JudgmentQueuePage() {
   ] as const;
 
   return (
-    <div className="text-ink">
+    <div className="text-[hsl(var(--color-ink))]">
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <Link href="/" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
-          ← {t("nav.home")}
-        </Link>
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
           {t("judgment.title")}
         </h1>
@@ -74,7 +71,7 @@ export default function JudgmentQueuePage() {
 
       <div className="max-w-5xl mx-auto px-6 py-6">
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-hairline/50">
+        <div className="flex gap-1 mb-6 border-b border-[hsl(var(--color-hairline))]/50">
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -126,7 +123,7 @@ export default function JudgmentQueuePage() {
             {String(judgmentError)}
           </div>
         ) : judgments.length === 0 ? (
-          <div className="text-center text-ink-subtle py-12">
+          <div className="text-center text-[hsl(var(--color-ink-subtle))] py-12">
             {t("judgment.no_judgments")}
           </div>
         ) : (
@@ -174,7 +171,7 @@ export default function JudgmentQueuePage() {
                         <span
                           className={`px-2 py-0.5 rounded text-xs font-bold ${
                             VERDICT_COLORS[judgment.verdict] ??
-                            "bg-surface-3 text-ink-muted"
+                            "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                           }`}
                         >
                           {t(`judgment.verdicts.${judgment.verdict}`)}
@@ -185,7 +182,7 @@ export default function JudgmentQueuePage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-ink-muted text-xs">
+                    <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs">
                       {new Date(judgment.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">

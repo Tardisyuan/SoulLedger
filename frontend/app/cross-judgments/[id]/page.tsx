@@ -130,7 +130,7 @@ export default function CrossJudgmentDetailPage() {
             <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))] mb-2">Verdict</h2>
             <p className={`text-lg font-bold ${
               judgment.conclusion_type === "PASS" ? "text-green-400" :
-              judgment.conclusion_type === "FAIL" ? "text-red-400" : "text-ink"
+              judgment.conclusion_type === "FAIL" ? "text-red-400" : "text-[hsl(var(--color-ink))]"
             }`}>
               {judgment.conclusion_type}
             </p>

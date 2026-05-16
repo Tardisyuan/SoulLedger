@@ -82,14 +82,14 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
       />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 h-full w-80 bg-surface-1 border-l border-hairline z-[99998] shadow-xl overflow-y-auto">
+      <div className="fixed right-0 top-0 h-full w-80 bg-[hsl(var(--color-surface-1))] border-l border-[hsl(var(--color-hairline))] z-[99998] shadow-xl overflow-y-auto">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-ink">{t("settings.title") || "Settings"}</h2>
+            <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{t("settings.title") || "Settings"}</h2>
             <button
               onClick={onClose}
-              className="text-ink-muted hover:text-ink transition-colors"
+              className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -97,14 +97,14 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Theme Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-ink-muted mb-3">{t("settings.theme") || "Theme"}</h3>
+            <h3 className="text-sm font-medium text-[hsl(var(--color-ink-muted))] mb-3">{t("settings.theme") || "Theme"}</h3>
             <div className="flex gap-2">
               <button
                 onClick={toggleTheme}
                 className={`flex-1 py-2 px-3 rounded-md text-sm transition-colors ${
                   theme === "light"
-                    ? "bg-accent text-black"
-                    : "bg-surface-2 text-ink-muted hover:bg-surface-3"
+                    ? "bg-[hsl(var(--color-accent))] text-black"
+                    : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
                 }`}
               >
                 <span className="flex items-center justify-center gap-2">
@@ -116,8 +116,8 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 onClick={toggleTheme}
                 className={`flex-1 py-2 px-3 rounded-md text-sm transition-colors ${
                   theme === "dark"
-                    ? "bg-accent text-black"
-                    : "bg-surface-2 text-ink-muted hover:bg-surface-3"
+                    ? "bg-[hsl(var(--color-accent))] text-black"
+                    : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
                 }`}
               >
                 <span className="flex items-center justify-center gap-2">
@@ -130,7 +130,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Accent Color Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-ink-muted mb-3">{t("settings.accent_color") || "Accent Color"}</h3>
+            <h3 className="text-sm font-medium text-[hsl(var(--color-ink-muted))] mb-3">{t("settings.accent_color") || "Accent Color"}</h3>
             <div className="grid grid-cols-3 gap-2 mb-3">
               {ACCENT_COLORS.map((color) => (
                 <button
@@ -151,11 +151,11 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 value={customHex}
                 onChange={(e) => setCustomHex(e.target.value)}
                 placeholder="#ff5500"
-                className="flex-1 bg-surface-2 border border-hairline rounded-md px-3 py-2 text-sm text-ink placeholder-ink-subtle focus:outline-none focus:border-accent"
+                className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
               />
               <button
                 onClick={handleCustomHex}
-                className="px-4 py-2 bg-surface-2 border border-hairline rounded-md text-sm text-ink-muted hover:bg-surface-3 hover:text-ink transition-colors"
+                className="px-4 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md text-sm text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] hover:text-[hsl(var(--color-ink))] transition-colors"
               >
                 {t("settings.apply") || "Apply"}
               </button>
@@ -164,14 +164,14 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Navigation Mode Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-ink-muted mb-3">{t("settings.nav_mode") || "Navigation Mode"}</h3>
+            <h3 className="text-sm font-medium text-[hsl(var(--color-ink-muted))] mb-3">{t("settings.nav_mode") || "Navigation Mode"}</h3>
             <div className="flex gap-2">
               <button
                 onClick={() => onNavModeChange("classic")}
                 className={`flex-1 py-2 px-3 rounded-md text-sm transition-colors ${
                   navMode === "classic"
-                    ? "bg-accent text-black"
-                    : "bg-surface-2 text-ink-muted hover:bg-surface-3"
+                    ? "bg-[hsl(var(--color-accent))] text-black"
+                    : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
                 }`}
               >
                 {t("settings.classic") || "Classic"}
@@ -180,14 +180,14 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 onClick={() => onNavModeChange("compact")}
                 className={`flex-1 py-2 px-3 rounded-md text-sm transition-colors ${
                   navMode === "compact"
-                    ? "bg-accent text-black"
-                    : "bg-surface-2 text-ink-muted hover:bg-surface-3"
+                    ? "bg-[hsl(var(--color-accent))] text-black"
+                    : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
                 }`}
               >
                 {t("settings.compact") || "Compact"}
               </button>
             </div>
-            <p className="text-xs text-ink-subtle mt-2">
+            <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-2">
               {navMode === "compact"
                 ? (t("settings.compact_desc") || "Icons only with tooltips on hover")
                 : (t("settings.classic_desc") || "Full sidebar with icons and labels")}
