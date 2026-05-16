@@ -78,6 +78,7 @@
     "death": "Death",
     "action": "Action",
     "view": "View",
+    "page_info": "Page {{page}} / {{total}} ({{count}} records)",
     "states": {
       "ALIVE": "Alive",
       "JUDGING": "Judging",
@@ -357,6 +358,7 @@
     "created": "Created",
     "action": "Action",
     "view": "View",
+    "page_info": "Page {{page}} of {{total}} ({{count}} records)",
     "verdicts": {
       "passed": "Passed",
       "failed": "Failed",
@@ -404,9 +406,25 @@
     "no_logs": "No audit logs",
     "loading": "Loading...",
     "clear_filters": "Clear Filters",
-    "page_info": "Page {{page}} / {{total}}",
+    "page_info": "Page {{page}} of {{total}} ({{count}} records)",
     "access_denied": "Access Denied",
-    "admin_only": "Only administrators can view audit logs"
+    "admin_only": "Only administrators can view audit logs",
+    "actions": {
+      "CREATE": "Created",
+      "UPDATE": "Updated",
+      "DELETE": "Deleted",
+      "EXECUTE": "Executed",
+      "READ": "Read",
+      "LOGIN": "Logged in",
+      "LOGOUT": "Logged out",
+      "VIEW": "Viewed",
+      "EXPORT": "Exported",
+      "IMPORT": "Imported",
+      "PERMISSION_CHANGE": "Changed permissions",
+      "BATCH_CREATE": "Batch created",
+      "BATCH_UPDATE": "Batch updated",
+      "BATCH_DELETE": "Batch deleted"
+    }
   },
   "profile": {
     "title": "Personal Center",
@@ -444,7 +462,77 @@
   "realms": {
     "title": "Realms",
     "subtitle": "Cross-civilization realm management",
-    "listTitle": "Realms List"
+    "listTitle": "Realms List",
+    "count": "realms",
+    "civilizations": {
+      "CHINESE": "Chinese Diyu",
+      "EUROPEAN": "European Heaven & Hell",
+      "EGYPTIAN": "Egyptian Duat"
+    },
+    "types": {
+      "HELL": "Hell",
+      "PURGATORY": "Purgatory",
+      "BLISS": "Bliss",
+      "NEUTRAL": "Neutral"
+    },
+    "codes": {
+      "DY_01_HEAVEN": "天堂",
+      "DY_02_YANGLIU": "杨柳宫",
+      "DY_03_QISHI": "第七殿",
+      "DY_04_TAISHAN": "泰山府",
+      "DY_05_CITY": "城池狱",
+      "DY_06_ZHUAN": "转轮狱",
+      "DY_07_JIAN": "剑树狱",
+      "DY_08_HAN": "寒冰狱",
+      "DY_09_YANG": "烊铜狱",
+      "DY_10_YAMA": "第十殿",
+      "DY_00_PURGATORY": "待审所",
+      "EG_AARU": "阿鲁之地",
+      "EG_DEVOURER": "吞噬者",
+      "EG_AM_TYAT": "阿姆·特亚特",
+      "EG_DUAT_ENTRY": "杜阿特入口",
+      "EG_HALL_TWO_TRUTHS": "真理殿堂",
+      "EU_HEAVEN": "天堂",
+      "EU_HELL_1ST": "第一层地狱",
+      "EU_HELL_2ND": "第二层地狱",
+      "EU_HELL_3RD": "第三层地狱",
+      "EU_HELL_4TH": "第四层地狱",
+      "EU_HELL_5TH": "第五层地狱",
+      "EU_HELL_6TH": "第六层地狱",
+      "EU_HELL_7TH": "第七层地狱",
+      "EU_HELL_8TH": "第八层地狱",
+      "EU_HELL_9TH": "第九层地狱",
+      "EU_PURGATORY": "炼狱"
+    },
+    "names": {
+      "DY_01_HEAVEN": "First Heaven",
+      "DY_02_YANGLIU": "Yangliu Palace",
+      "DY_03_QISHI": "Seventh Court Qishi",
+      "DY_04_TAISHAN": "Mount Tai Court",
+      "DY_05_CITY": "City Prison Hell",
+      "DY_06_ZHUAN": "Wheel of Rebirth Hell",
+      "DY_07_JIAN": "Sword Tree Hell",
+      "DY_08_HAN": "Ice Prison Hell",
+      "DY_09_YANG": "Molten Copper Hell",
+      "DY_10_YAMA": "Tenth Court Yama",
+      "DY_00_PURGATORY": "Purgatory Holding",
+      "EG_AARU": "Field of Reeds (Aaru)",
+      "EG_DEVOURER": "Devourer's Realm",
+      "EG_AM_TYAT": "Path of Amtyat",
+      "EG_DUAT_ENTRY": "Gate of Duat",
+      "EG_HALL_TWO_TRUTHS": "Hall of Two Truths",
+      "EU_HEAVEN": "Kingdom of Heaven",
+      "EU_HELL_1ST": "First Circle - Limbo",
+      "EU_HELL_2ND": "Second Circle - Lust",
+      "EU_HELL_3RD": "Third Circle - Gluttony",
+      "EU_HELL_4TH": "Fourth Circle - Greed",
+      "EU_HELL_5TH": "Fifth Circle - Anger",
+      "EU_HELL_6TH": "Sixth Circle - Heresy",
+      "EU_HELL_7TH": "Seventh Circle - Violence",
+      "EU_HELL_8TH": "Eighth Circle - Malebolge",
+      "EU_HELL_9TH": "Ninth Circle - Treachery",
+      "EU_PURGATORY": "Purgatory"
+    }
   },
   "organization": {
     "title": "Organizations",
@@ -491,7 +579,19 @@
     "status_update_error": "Failed to update status",
     "page_info": "Page {{page}} of {{total}} ({{count}} records)",
     "organization": "Organization",
-    "position": "Position"
+    "position": "Position",
+    "username": "Username",
+    "email": "Email",
+    "role": "Role",
+    "tenant": "Tenant",
+    "status": "Status",
+    "actions": "Actions",
+    "roles": {
+      "ADMIN": "Administrator",
+      "JUDGE": "Judge",
+      "GUARDIAN": "Guardian",
+      "VIEWER": "Viewer"
+    }
   },
   "settings": {
     "title": "Settings",

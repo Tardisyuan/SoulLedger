@@ -88,3 +88,47 @@
     @apply bg-surface-1 border-hairline text-ink placeholder-ink-subtle;
   }
 }
+
+/* React Flow Controls Dark Mode Override */
+.react-flow__controls {
+  background: hsl(var(--color-surface-1)) !important;
+  border: 1px solid hsl(var(--color-hairline)) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+.react-flow__controls-button {
+  background: hsl(var(--color-surface-1)) !important;
+  border-bottom: 1px solid hsl(var(--color-hairline)) !important;
+  fill: hsl(var(--color-ink-muted)) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: hsl(var(--color-surface-2)) !important;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+
+.react-flow__controls-button svg {
+  fill: hsl(var(--color-ink-muted)) !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
+}
+
+/* React Flow minimap dark mode */
+.react-flow__minimap {
+  background: hsl(var(--color-surface-1)) !important;
+  border: 1px solid hsl(var(--color-hairline)) !important;
+  border-radius: 8px !important;
+}
+
+.react-flow__minimap-mask {
+  fill: hsl(var(--color-surface-3) / 0.8) !important;
+}
+
+/* React Flow background dots */
+.react-flow__background circle {
+  fill: hsl(var(--color-hairline)) !important;
+}

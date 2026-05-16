@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
 import { karmaApi, KarmaStatsOverview } from "@/lib/api";
 import {
   PieChart,
@@ -41,6 +42,7 @@ const REALM_COLORS: Record<string, string> = {
 
 export default function DashboardPage() {
   const { t } = useI18n();
+  const { showToast } = useToast();
   const [stats, setStats] = useState<KarmaStatsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +70,7 @@ export default function DashboardPage() {
       link.click();
       link.remove();
     } catch {
-      alert("Failed to export statistics");
+      showToast("Failed to export statistics", "error");
     }
   };
 
@@ -144,7 +146,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* State distribution pie chart */}
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink))]-muted uppercase mb-4">{t("dashboard.state_distribution")}</h2>
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">{t("dashboard.state_distribution")}</h2>
             {loading ? (
               <div className="h-[240px] flex items-center justify-center">
                 <Skeleton className="h-[200px] w-[200px] rounded-full" />
@@ -180,7 +182,7 @@ export default function DashboardPage() {
 
           {/* tenant comparison bar chart */}
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink))]-muted uppercase mb-4">{t("dashboard.souls_by_civilization")}</h2>
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">{t("dashboard.souls_by_civilization")}</h2>
             {loading ? (
               <div className="h-[240px] flex items-center justify-center">
                 <Skeleton className="h-full w-full" />
@@ -203,7 +205,7 @@ export default function DashboardPage() {
 
         {/* Per-tenant breakdown */}
         <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-          <h2 className="text-sm font-semibold text-[hsl(var(--color-ink))]-muted uppercase mb-4">{t("dashboard.per_civilization_breakdown")}</h2>
+          <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">{t("dashboard.per_civilization_breakdown")}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[0, 1, 2].map((i) => (
               <div key={i} className="bg-[hsl(var(--color-surface-2))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">
@@ -227,7 +229,7 @@ export default function DashboardPage() {
                     <div className="space-y-1">
                       {Object.entries(stats.tenants[i].state_breakdown).map(([state, count]) => (
                         <div key={state} className="flex justify-between text-xs">
-                          <span className="text-[hsl(var(--color-ink))]-muted">{state}</span>
+                          <span className="text-[hsl(var(--color-ink-muted))]">{state}</span>
                           <span style={{ color: STATE_COLORS[state] || "#8a8f98" }}>{count as number}</span>
                         </div>
                       ))}
@@ -243,7 +245,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Karma distribution */}
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink))]-muted uppercase mb-4">{t("dashboard.karma_distribution")}</h2>
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">{t("dashboard.karma_distribution")}</h2>
             {loading ? (
               <div className="h-[180px] flex items-center justify-center">
                 <Skeleton className="h-full w-full" />
@@ -265,7 +267,7 @@ export default function DashboardPage() {
 
           {/* Souls by Realm */}
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink))]-muted uppercase mb-4">{t("dashboard.souls_by_realm")}</h2>
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">{t("dashboard.souls_by_realm")}</h2>
             {loading ? (
               <div className="h-[180px] flex items-center justify-center">
                 <Skeleton className="h-full w-full" />
@@ -283,16 +285,16 @@ export default function DashboardPage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[180px] flex items-center justify-center text-[hsl(var(--color-ink))]-muted text-sm">
+              <div className="h-[180px] flex items-center justify-center text-[hsl(var(--color-ink-muted))] text-sm">
                 {t("dashboard.no_realm_data")}
               </div>
             )}
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Activity - grouped by action type */}
         <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-          <h2 className="text-sm font-semibold text-[hsl(var(--color-ink))]-muted uppercase mb-4">{t("dashboard.recent_activity")}</h2>
+          <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">{t("dashboard.recent_activity")}</h2>
           {loading ? (
             <div className="space-y-3">
               {[0, 1, 2].map((i) => (
@@ -302,23 +304,55 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : stats?.recent_activity && stats.recent_activity.length > 0 ? (
-            <div className="space-y-2">
-              {stats.recent_activity.map((log) => (
-                <div key={log.id} className="flex items-start gap-3 py-2 border-b border-[hsl(var(--color-hairline))] last:border-0">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">{log.action}</span>
-                      <span className="text-sm font-medium text-[hsl(var(--color-ink))] truncate">{log.description || log.resource}</span>
+            (() => {
+              // Group by action type
+              const grouped: Record<string, typeof stats.recent_activity> = {};
+              stats.recent_activity.forEach((log) => {
+                const action = log.action || "OTHER";
+                if (!grouped[action]) grouped[action] = [];
+                grouped[action].push(log);
+              });
+
+              const actionColors: Record<string, string> = {
+                CREATE: "bg-green-500/20 text-green-400 border-green-500/30",
+                UPDATE: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+                DELETE: "bg-red-500/20 text-red-400 border-red-500/30",
+                LOGIN: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+                LOGOUT: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+                TRANSFER: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+                JUDGMENT: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+                OTHER: "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] border-[hsl(var(--color-hairline))]",
+              };
+
+              return (
+                <div className="space-y-4">
+                  {Object.entries(grouped).map(([action, logs]) => (
+                    <div key={action}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-xs px-2 py-0.5 rounded border font-medium ${actionColors[action] || actionColors.OTHER}`}>
+                          {action}
+                        </span>
+                        <span className="text-xs text-[hsl(var(--color-ink-muted))]">{logs.length} {logs.length === 1 ? "action" : "actions"}</span>
+                      </div>
+                      <div className="space-y-1 pl-2 border-l-2 border-[hsl(var(--color-hairline))]">
+                        {logs.map((log) => (
+                          <div key={log.id} className="flex items-start gap-3 py-1.5 px-2 rounded hover:bg-[hsl(var(--color-surface-2))] transition-colors">
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm text-[hsl(var(--color-ink))] truncate">{log.description || log.resource}</span>
+                              <div className="text-xs text-[hsl(var(--color-ink-muted))]">
+                                {log.user} · {formatTimestamp(log.timestamp)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
-                      {log.user} · {formatTimestamp(log.timestamp)}
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              );
+            })()
           ) : (
-            <div className="py-8 text-center text-[hsl(var(--color-ink))]-muted text-sm">
+            <div className="py-8 text-center text-[hsl(var(--color-ink-muted))] text-sm">
               {t("dashboard.no_activity")}
             </div>
           )}

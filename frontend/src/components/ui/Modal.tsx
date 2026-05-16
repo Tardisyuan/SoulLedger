@@ -24,7 +24,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
       {/* Backdrop */}
       <DialogBackdrop
         transition
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm duration-200 ease-out data-closed:opacity-0"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm duration-200 ease-out data-closed:opacity-0 dark:bg-black/80"
       />
 
       {/* Centered panel */}
@@ -226,5 +226,71 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         </div>
       </form>
     </BaseModal>
+  );
+}
+
+// ── ConfirmDialog ─────────────────────────────────────
+
+interface ConfirmDialogProps {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: "danger" | "warning" | "info";
+}
+
+export function ConfirmDialog({
+  isOpen,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmText,
+  cancelText,
+  variant = "danger",
+}: ConfirmDialogProps) {
+  const { t } = useI18n();
+
+  const variantColors = {
+    danger: "bg-red-500 hover:bg-red-600",
+    warning: "bg-yellow-500 hover:bg-yellow-600",
+    info: "bg-blue-500 hover:bg-blue-600",
+  };
+
+  return (
+    <Dialog open={isOpen} onClose={onCancel} className="relative z-[9999]">
+      <DialogBackdrop
+        transition
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm duration-200 ease-out data-closed:opacity-0 dark:bg-black/80"
+      />
+      <div className="fixed inset-0 flex w-screen items-center justify-center p-4">
+        <DialogPanel
+          transition
+          className="w-full max-w-sm bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg duration-200 ease-out data-closed:scale-95 data-closed:opacity-0"
+        >
+          <div className="px-6 py-5">
+            <h3 className="text-lg font-semibold text-[hsl(var(--color-ink))] mb-2">{title}</h3>
+            <p className="text-sm text-[hsl(var(--color-ink-muted))]">{message}</p>
+          </div>
+          <div className="px-6 pb-5 flex gap-3">
+            <button
+              onClick={onCancel}
+              className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] rounded text-sm transition-colors"
+            >
+              {cancelText || t("common.cancel")}
+            </button>
+            <button
+              onClick={onConfirm}
+              className={`flex-1 px-4 py-2 text-white rounded text-sm font-medium transition-colors ${variantColors[variant]}`}
+            >
+              {confirmText || t("common.confirm")}
+            </button>
+          </div>
+        </DialogPanel>
+      </div>
+    </Dialog>
   );
 }

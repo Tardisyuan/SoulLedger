@@ -8,15 +8,16 @@ import { judgmentApi, soulsApi, type Judgment, type Soul } from "@/lib/api";
 import { TableSkeleton } from "@/components/ui/skeleton";
 
 const VERDICT_COLORS: Record<string, string> = {
-  PASSED: "bg-green-500/20 text-green-400",
-  FAILED: "bg-red-500/20 text-red-400",
-  PURGATORY: "bg-amber-500/20 text-amber-400",
-  RETRY: "bg-blue-500/20 text-blue-400",
+  PASSED: "bg-[hsl(142,76%,36%,0.2)] text-[hsl(142,76%,36%)]",
+  FAILED: "bg-[hsl(0,84%,60%,0.2)] text-[hsl(0,84%,60%)]",
+  PURGATORY: "bg-[hsl(38,92%,50%,0.2)] text-[hsl(38,92%,50%)]",
+  RETRY: "bg-[hsl(217,91%,52%,0.2)] text-[hsl(217,91%,52%)]",
 };
 
 export default function JudgmentQueuePage() {
   const { t } = useI18n();
   const [tab, setTab] = useState<"pending" | "concluded">("pending");
+  const [page, setPage] = useState(1);
 
   // Fetch judgments with filter based on tab
   const {
@@ -24,9 +25,9 @@ export default function JudgmentQueuePage() {
     isLoading: judgmentLoading,
     error: judgmentError,
   } = useQuery({
-    queryKey: ["judgments", tab],
+    queryKey: ["judgments", tab, page],
     queryFn: async () => {
-      const params: Record<string, string> = {};
+      const params: Record<string, string> = { page: String(page) };
       if (tab === "pending") {
         params.has_verdict = "false";
       } else {
@@ -47,6 +48,7 @@ export default function JudgmentQueuePage() {
   });
 
   const judgments = (judgmentData?.results ?? judgmentData ?? []) as Judgment[];
+  const totalPages = judgmentData ? Math.ceil(judgmentData.count / 20) : 0;
   const souls = (soulsData?.results ?? soulsData ?? []) as Soul[];
 
   // Build soul ID -> name map
@@ -75,7 +77,7 @@ export default function JudgmentQueuePage() {
           {tabs.map((t) => (
             <button
               key={t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => { setTab(t.key); setPage(1); }}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
                 tab === t.key
                   ? "text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent))]"
@@ -119,7 +121,7 @@ export default function JudgmentQueuePage() {
             </div>
           </div>
         ) : judgmentError ? (
-          <div className="text-center text-red-400 py-12">
+          <div className="text-center text-[hsl(0,84%,60%)] py-12">
             {String(judgmentError)}
           </div>
         ) : judgments.length === 0 ? (
@@ -127,6 +129,7 @@ export default function JudgmentQueuePage() {
             {t("judgment.no_judgments")}
           </div>
         ) : (
+          <>
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
@@ -177,7 +180,7 @@ export default function JudgmentQueuePage() {
                           {t(`judgment.verdicts.${judgment.verdict}`)}
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400">
+                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-[hsl(38,92%,50%,0.2)] text-[hsl(38,92%,50%)]">
                           {t("judgment.pending")}
                         </span>
                       )}
@@ -198,6 +201,36 @@ export default function JudgmentQueuePage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {judgments.length > 0 && (
+            <div className="flex items-center justify-between mt-4 px-2">
+              <p className="text-sm text-[hsl(var(--color-ink-muted))]">
+                {t("judgment.page_info", {
+                  page: String(page),
+                  total: String(totalPages),
+                  count: String(judgmentData?.count ?? 0),
+                })}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
+                >
+                  ← {t("common.prev")}
+                </button>
+                <button
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={page >= totalPages}
+                  className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
+                >
+                  {t("common.next")} →
+                </button>
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
     </div>

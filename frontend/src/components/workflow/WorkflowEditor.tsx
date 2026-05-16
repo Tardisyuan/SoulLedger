@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect, useMemo } from "react";
+import { useCallback, useState, useEffect, useMemo, useRef } from "react";
 import {
   ReactFlow,
   Node,
@@ -54,11 +54,11 @@ function EditableNodeComponent({
   selected: boolean;
 }) {
   const nodeTypeColors: Record<string, string> = {
-    TRIAL: "border-amber-500/50 bg-amber-500/10",
-    EVALUATION: "border-blue-500/50 bg-blue-500/10",
-    APPEAL: "border-purple-500/50 bg-purple-500/10",
-    FINAL: "border-green-500/50 bg-green-500/10",
-    EXECUTION: "border-red-500/50 bg-red-500/10",
+    TRIAL: "border-[hsl(var(--color-accent))] bg-[hsl(var(--color-surface-3))]",
+    EVALUATION: "border-blue-500 bg-[hsl(var(--color-surface-3))]",
+    APPEAL: "border-purple-500 bg-[hsl(var(--color-surface-3))]",
+    FINAL: "border-green-500 bg-[hsl(var(--color-surface-3))]",
+    EXECUTION: "border-red-500 bg-[hsl(var(--color-surface-3))]",
   };
 
   const colorClass = nodeTypeColors[data.nodeType] || nodeTypeColors.TRIAL;
@@ -66,10 +66,10 @@ function EditableNodeComponent({
   return (
     <div
       className={`px-4 py-3 rounded-lg border-2 min-w-[180px] cursor-pointer transition-all ${
-        selected ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-[hsl(var(--color-surface-2))]" : ""
+        selected ? "ring-2 ring-[hsl(var(--color-accent))] ring-offset-2 ring-offset-[hsl(var(--color-surface-2))]" : ""
       } ${colorClass}`}
     >
-      <Handle type="target" position={Position.Top} className="!bg-amber-500" />
+      <Handle type="target" position={Position.Top} className="!bg-[hsl(var(--color-accent))]" />
       <div className="text-sm font-semibold text-[hsl(var(--color-ink))]">{data.label}</div>
       <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">{data.nodeType}</div>
       {data.courtCode && (
@@ -78,7 +78,7 @@ function EditableNodeComponent({
       {data.approverRole && (
         <div className="text-xs text-[hsl(var(--color-ink-subtle))]">👤 {data.approverRole}</div>
       )}
-      <Handle type="source" position={Position.Bottom} className="!bg-amber-500" />
+      <Handle type="source" position={Position.Bottom} className="!bg-[hsl(var(--color-accent))]" />
     </div>
   );
 }
@@ -107,10 +107,12 @@ interface NodeDataUpdates {
 
 export default function WorkflowEditor({
   templateId,
+  initialTemplateData,
   onClose,
   onSave,
 }: {
   templateId?: string;
+  initialTemplateData?: any;
   onClose?: () => void;
   onSave?: (template: WorkflowTemplateInput) => void;
 }) {
@@ -124,6 +126,8 @@ export default function WorkflowEditor({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editData, setEditData] = useState<NodeEditData | null>(null);
+
+  // Form state - initialized from query data
   const [templateName, setTemplateName] = useState("新流程模板");
   const [templateDescription, setTemplateDescription] = useState("");
   const [templateCiv, setTemplateCiv] = useState<"CHINESE" | "EUROPEAN" | "EGYPTIAN">("CHINESE");
@@ -139,13 +143,26 @@ export default function WorkflowEditor({
     enabled: !!templateId,
   });
 
-  // Populate form when template loads
+  // Populate form when template loads - use ref to track initialization
+  const initRef = useRef(false);
+
+  // Reset init flag when templateId changes
   useEffect(() => {
-    if (existingTemplate) {
-      setTemplateName(existingTemplate.name);
-      setTemplateDescription(existingTemplate.description);
-      setTemplateCiv(existingTemplate.civilization);
-      setTemplateCaseType(existingTemplate.case_type);
+    initRef.current = false;
+  }, [templateId]);
+
+  // Populate form when template loads or templateId changes
+  useEffect(() => {
+    if (!initRef.current && existingTemplate) {
+      initRef.current = true;
+      const civ = existingTemplate.civilization;
+      setTemplateName(existingTemplate.name || "");
+      setTemplateDescription(existingTemplate.description || "");
+      // Validate civilization value
+      if (civ === "CHINESE" || civ === "EUROPEAN" || civ === "EGYPTIAN") {
+        setTemplateCiv(civ);
+      }
+      setTemplateCaseType(existingTemplate.case_type || "ROUTINE");
 
       const flowNodes = (existingTemplate.nodes_json || []).map(
         (n: TemplateNode, idx: number) => ({
@@ -171,15 +188,62 @@ export default function WorkflowEditor({
             id: `e${prevNode.id}-${n.id}`,
             source: prevNode.id || `node-${idx}`,
             target: n.id || `node-${idx + 1}`,
-            markerEnd: { type: MarkerType.ArrowClosed, color: "#d97706" },
-            style: { stroke: "#d97706", strokeWidth: 2 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
+            style: { stroke: "#f59e0b", strokeWidth: 2 },
           };
         });
 
       setNodes(flowNodes);
       setEdges(flowEdges);
     }
-  }, [existingTemplate, setNodes, setEdges]);
+  }, [existingTemplate, templateId, setNodes, setEdges]);
+
+  // Handle initial template data (for predefined templates)
+  useEffect(() => {
+    if (!initRef.current && initialTemplateData && !templateId) {
+      initRef.current = true;
+      const civ = initialTemplateData.civilization;
+      setTemplateName(initialTemplateData.name || initialTemplateData.templateName || "");
+      setTemplateDescription(initialTemplateData.description || initialTemplateData.templateDescription || "");
+      if (civ === "CHINESE" || civ === "EUROPEAN" || civ === "EGYPTIAN") {
+        setTemplateCiv(civ);
+      }
+      setTemplateCaseType(initialTemplateData.case_type || initialTemplateData.caseType || "ROUTINE");
+
+      const nodesData = initialTemplateData.nodes_json || initialTemplateData.nodes || [];
+      const flowNodes = nodesData.map(
+        (n: any, idx: number) => ({
+          id: n.id || `node-${idx}`,
+          type: "editableNode",
+          position: { x: 250, y: idx * 160 },
+          data: {
+            id: n.id || `node-${idx}`,
+            label: n.node_name || n.label || "",
+            nodeType: n.node_type || n.nodeType || "TRIAL",
+            courtCode: n.court_code || n.courtCode || "",
+            approverRole: n.approver_role || n.approverRole || "",
+            approverType: n.approver_type || n.approverType || "ROLE",
+          },
+        })
+      );
+
+      const flowEdges = nodesData
+        .filter((_: unknown, idx: number) => idx > 0)
+        .map((n: any, idx: number) => {
+          const prevNode = nodesData[idx];
+          return {
+            id: `e${prevNode.id}-${n.id}`,
+            source: prevNode.id || `node-${idx}`,
+            target: n.id || `node-${idx + 1}`,
+            markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
+            style: { stroke: "#f59e0b", strokeWidth: 2 },
+          };
+        });
+
+      setNodes(flowNodes);
+      setEdges(flowEdges);
+    }
+  }, [initialTemplateData, templateId, setNodes, setEdges]);
 
   // Convert React Flow nodes to template nodes
   const getTemplateNodes = useCallback((): TemplateNode[] => {
@@ -304,8 +368,8 @@ export default function WorkflowEditor({
         addEdge(
           {
             ...connection,
-            markerEnd: { type: MarkerType.ArrowClosed, color: "#d97706" },
-            style: { stroke: "#d97706", strokeWidth: 2 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
+            style: { stroke: "#f59e0b", strokeWidth: 2 },
           },
           eds
         )
@@ -402,7 +466,7 @@ export default function WorkflowEditor({
         <div className="flex items-center gap-2">
           <button
             onClick={addNode}
-            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-black text-sm font-medium rounded transition-colors"
+            className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-sm font-medium rounded transition-colors"
           >
             + 添加节点
           </button>
@@ -416,7 +480,7 @@ export default function WorkflowEditor({
           <button
             onClick={handleSave}
             disabled={saveMutation.isPending}
-            className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-black text-sm font-medium rounded transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
           >
             {saveMutation.isPending ? "保存中..." : "保存模板"}
           </button>
@@ -436,8 +500,8 @@ export default function WorkflowEditor({
           fitView
           className="bg-[hsl(var(--color-surface-2))]"
           defaultEdgeOptions={{
-            markerEnd: { type: MarkerType.ArrowClosed, color: "#d97706" },
-            style: { stroke: "#d97706", strokeWidth: 2 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
+            style: { stroke: "#f59e0b", strokeWidth: 2 },
           }}
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
@@ -547,7 +611,7 @@ export default function WorkflowEditor({
                   });
                   setEditModalOpen(false);
                 }}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black text-sm font-medium rounded transition-colors"
+                className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-sm font-medium rounded transition-colors"
               >
                 保存
               </button>

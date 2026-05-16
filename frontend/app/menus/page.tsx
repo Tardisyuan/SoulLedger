@@ -226,7 +226,7 @@ export default function MenusPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("menus.component")}</label>
+            <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.component")}</label>
             <input
               value={form.component}
               onChange={(e) => setForm({ ...form, component: e.target.value })}
@@ -235,7 +235,7 @@ export default function MenusPage() {
             />
           </div>
           <div>
-            <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("menus.roles")}</label>
+            <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.roles")}</label>
             <div className="flex flex-wrap gap-2">
               {ROLE_OPTIONS.map((role) => (
                 <button

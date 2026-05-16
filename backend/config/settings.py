@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "apps.permissions",
     "apps.notifications",
     "apps.dispatch",
+    "apps.org",
 ]
 
 MIDDLEWARE = [
@@ -66,6 +67,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.core.request_local.RequestContextMiddleware",
     "apps.core.middleware.PermissionMiddleware",
     "apps.tenants.middleware.TenantMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

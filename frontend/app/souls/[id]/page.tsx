@@ -31,7 +31,7 @@ import {
 } from "@/lib/api";
 import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
-import { BaseModal } from "@/src/components/ui/Modal";
+import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton, SkeletonCard } from "@/src/components/ui/skeleton";
 
 const STATE_COLORS: Record<string, string> = {
@@ -60,6 +60,9 @@ export default function SoulDetailPage() {
   const [actionLoading, setActionLoading] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState("");
+  const [confirmCallback, setConfirmCallback] = useState<(() => void) | null>(null);
 
   const updateSoulMutation = useUpdateSoul();
   const deleteSoulMutation = useDeleteSoul();
@@ -99,16 +102,19 @@ export default function SoulDetailPage() {
 
   async function handleDie() {
     if (!soul) return;
-    if (!confirm(t("souls.detail.mark_dead_confirm", { name: soul.name }))) return;
-    setActionLoading("die");
-    try {
-      await soulsApi.die(soul.id, {});
-      await loadSoulData();
-    } catch (e: any) {
-      alert(e?.response?.data?.error || "Failed");
-    } finally {
-      setActionLoading("");
-    }
+    setConfirmMessage(t("souls.detail.mark_dead_confirm", { name: soul.name }));
+    setConfirmCallback(() => async () => {
+      setActionLoading("die");
+      try {
+        await soulsApi.die(soul.id, {});
+        await loadSoulData();
+      } catch (e: any) {
+        showToast(e?.response?.data?.error || "Failed", "error");
+      } finally {
+        setActionLoading("");
+      }
+    });
+    setIsConfirmOpen(true);
   }
 
   async function handleJudgment(verdict: string) {
@@ -119,7 +125,7 @@ export default function SoulDetailPage() {
       await judgmentApi.conclude(jRes.data.id, { verdict, notes: `Auto-judged. Karma: ${karma?.karmic_balance}` });
       await loadSoulData();
     } catch (e: any) {
-      alert(e?.response?.data?.error || e?.message || "Failed");
+      showToast(e?.response?.data?.error || e?.message || "Failed", "error");
     } finally {
       setActionLoading("");
     }
@@ -136,7 +142,7 @@ export default function SoulDetailPage() {
       });
       await loadSoulData();
     } catch (e: any) {
-      alert(e?.response?.data?.error || e?.message || "Failed");
+      showToast(e?.response?.data?.error || e?.message || "Failed", "error");
     } finally {
       setActionLoading("");
     }
@@ -572,6 +578,19 @@ export default function SoulDetailPage() {
       >
         <p className="text-[hsl(var(--color-ink))] text-sm">{t("souls.detail.delete_confirm_message")}</p>
       </BaseModal>
+
+      {/* Custom Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        title={t("common.confirm")}
+        message={confirmMessage}
+        onConfirm={() => {
+          setIsConfirmOpen(false);
+          confirmCallback?.();
+        }}
+        onCancel={() => setIsConfirmOpen(false)}
+        variant="warning"
+      />
     </div>
   );
 }

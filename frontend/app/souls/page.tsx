@@ -8,15 +8,16 @@ import { SoulCreateModal } from "@/src/components/ui/Modal";
 import type { Soul } from "@/lib/api";
 
 const STATE_COLORS: Record<string, string> = {
-  ALIVE: "bg-amber-500/20 text-amber-400",
-  JUDGING: "bg-amber-500/20 text-amber-400",
+  ALIVE: "bg-[hsl(38,92%,50%,0.2)] text-[hsl(38,92%,50%)]",
+  JUDGING: "bg-[hsl(38,92%,50%,0.2)] text-[hsl(38,92%,50%)]",
   DISPOSED: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
-  REINCARNATING: "bg-blue-500/20 text-blue-400",
+  REINCARNATING: "bg-[hsl(217,91%,52%,0.2)] text-[hsl(217,91%,52%)]",
   LOST: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
 };
 
 export default function SoulsPage() {
   const { t } = useI18n();
+  const [page, setPage] = useState(1);
   const [stateFilter, setStateFilter] = useState("");
   const [civilizationFilter, setCivilizationFilter] = useState("");
   const [search, setSearch] = useState("");
@@ -32,7 +33,7 @@ export default function SoulsPage() {
     EUROPEAN: "EU_HEAVEN_HELL",
     EGYPTIAN: "EG_DUAT",
   };
-  const params: Record<string, string | number | undefined> = {};
+  const params: Record<string, string | number | undefined> = { page };
   if (stateFilter) params.state = stateFilter;
   if (civilizationFilter) params.civilization = civilizationFilter;
   if (search) params.search = search;
@@ -41,10 +42,9 @@ export default function SoulsPage() {
   if (ordering) params.ordering = ordering;
 
   // TanStack Query — automatic caching, background refetch, loading/error states
-  const { data, isLoading, error, refetch } = useSouls(
-    Object.keys(params).length > 0 ? params : undefined
-  );
+  const { data, isLoading, error, refetch } = useSouls(params);
   const souls = (data?.results ?? []) as Soul[];
+  const totalPages = data ? Math.ceil(data.count / 20) : 0;
 
   // Create mutation with auto-invalidation
   const createMutation = useCreateSoul();
@@ -83,7 +83,8 @@ export default function SoulsPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              refetch(); // trigger refetch with current params
+              setPage(1);
+              refetch();
             }}
             className="flex gap-2 flex-1"
           >
@@ -91,7 +92,10 @@ export default function SoulsPage() {
               type="text"
               placeholder={t("souls.search_placeholder")}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
             <button
@@ -105,6 +109,7 @@ export default function SoulsPage() {
             value={stateFilter}
             onChange={(e) => {
               setStateFilter(e.target.value);
+              setPage(1);
               refetch();
             }}
             className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
@@ -117,6 +122,7 @@ export default function SoulsPage() {
             value={civilizationFilter}
             onChange={(e) => {
               setCivilizationFilter(e.target.value);
+              setPage(1);
               refetch();
             }}
             className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
@@ -131,7 +137,7 @@ export default function SoulsPage() {
               placeholder={t("souls.karma_min")}
               value={karmaMin}
               onChange={(e) => setKarmaMin(e.target.value)}
-              onBlur={() => refetch()}
+              onBlur={() => { setPage(1); refetch(); }}
               className="w-20 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-2 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
             <span className="text-[hsl(var(--color-ink-muted))] text-sm">-</span>
@@ -140,7 +146,7 @@ export default function SoulsPage() {
               placeholder={t("souls.karma_max")}
               value={karmaMax}
               onChange={(e) => setKarmaMax(e.target.value)}
-              onBlur={() => refetch()}
+              onBlur={() => { setPage(1); refetch(); }}
               className="w-20 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-2 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
           </div>
@@ -148,6 +154,7 @@ export default function SoulsPage() {
             value={ordering}
             onChange={(e) => {
               setOrdering(e.target.value);
+              setPage(1);
               refetch();
             }}
             className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
@@ -195,6 +202,7 @@ export default function SoulsPage() {
         ) : souls.length === 0 ? (
           <div className="text-center text-[hsl(var(--color-ink-subtle))] py-12">{t("souls.no_souls")}</div>
         ) : (
+          <>
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
@@ -236,6 +244,36 @@ export default function SoulsPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {souls.length > 0 && (
+            <div className="flex items-center justify-between mt-4 px-2">
+              <p className="text-sm text-[hsl(var(--color-ink-muted))]">
+                {t("souls.page_info", {
+                  page: String(page),
+                  total: String(totalPages),
+                  count: String(data?.count ?? 0),
+                })}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
+                >
+                  ← {t("common.prev")}
+                </button>
+                <button
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={page >= totalPages}
+                  className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
+                >
+                  {t("common.next")} →
+                </button>
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
 

@@ -44,6 +44,20 @@ class User(AuditUserFields, AbstractUser):
         related_name="users",
         help_text="Linked underworld actor (e.g. Yanluo Wang as ADMIN)",
     )
+    organization = models.ForeignKey(
+        "org.Organization",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users",
+        help_text="所属组织：如 第一殿、冥王厅",
+    )
+    position = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="职位：如 第一殿殿主",
+    )
     avatar = models.ImageField(upload_to='avatars/%Y/%m/', null=True, blank=True)
 
     class Meta:

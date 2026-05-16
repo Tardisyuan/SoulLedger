@@ -107,7 +107,7 @@ EGYPTIAN_REALMS = [
      "The weighing of the heart against Ma'at's feather", "SPELL", False, None),
     ("EG_AARU", "阿鲁之地", "芦苇之地", "Field of Reeds (Aaru)", "Aaru", RealmType.BLISS, 1,
      "Egyptian paradise - eternal life in the Field of Reeds beyond Duat", "NONE", True, None),
-    ("EG_AM_TYAT", "阿姆·特yat", "芦苇之地边境", "Path of Amtyat", "Amtyat", RealmType.NEUTRAL, 3,
+    ("EG_AM_TYAT", "阿姆·特亚特", "芦苇之地边境", "Path of Amtyat", "Amtyat", RealmType.NEUTRAL, 3,
      "Border realm before the final judgment", "SPELL", False, None),
     ("EG_DEVOURER", "吞噬者", "阿米特之地", "Devourer's Realm", "AmMit", RealmType.HELL, 10,
      "Ammit waits here - soul destroyed if heart fails weighing", "SPELL", True, None),

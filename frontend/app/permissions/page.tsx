@@ -248,7 +248,7 @@ export default function PermissionsPage() {
                   {CATEGORIES.map((cat) =>
                     permsByCategory[cat]?.length > 0 ? (
                       <div key={cat}>
-                        <p className="text-xs text-[hsl(var(--color-ink))]-muted uppercase mb-2">{cat}</p>
+                        <p className="text-xs text-[hsl(var(--color-ink-muted))] uppercase mb-2">{cat}</p>
                         <div className="flex flex-wrap gap-2">
                           {permsByCategory[cat].map((perm) => {
                             const checked = selectedPermIds.includes(perm.id);
@@ -396,7 +396,7 @@ export default function PermissionsPage() {
                   <div key={role.id} className="bg-surface-1 border border-hairline rounded-lg p-3 hover:border-[hsl(var(--color-accent))]/30 transition-colors">
                     <div className="min-w-0 flex-1">
                       <h3 className="font-medium text-[hsl(var(--color-ink))] truncate text-sm">{role.display_name || role.name}</h3>
-                      <p className="text-xs text-[hsl(var(--color-ink))]-muted font-mono truncate">{role.name}</p>
+                      <p className="text-xs text-[hsl(var(--color-ink-muted))] font-mono truncate">{role.name}</p>
                     </div>
                     <div className="flex gap-2 mt-2">
                       <button
@@ -452,7 +452,7 @@ export default function PermissionsPage() {
               type="button"
               onClick={() => { setIsDeleteOpen(false); setDeletingPerm(null); }}
               disabled={deleteMutation.isPending}
-              className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink))]-muted hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
+              className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink-muted))] hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
             >
               {t("permissions.cancel_delete")}
             </button>
@@ -500,7 +500,7 @@ export default function PermissionsPage() {
               type="button"
               onClick={() => { setIsRoleDeleteOpen(false); setDeletingRole(null); }}
               disabled={roleDeleteMutation.isPending}
-              className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink))]-muted hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
+              className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink-muted))] hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
             >
               {t("permissions.cancel_delete")}
             </button>
@@ -580,7 +580,7 @@ function PermissionFormModal({
             type="button"
             onClick={handleClose}
             disabled={isPending}
-            className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink))]-muted hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
+            className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink-muted))] hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
           >
             {t("common.cancel")}
           </button>
@@ -598,7 +598,7 @@ function PermissionFormModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <p className="text-red-400 text-sm">{error}</p>}
         <div>
-          <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("permissions.codename_label")}</label>
+          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.codename_label")}</label>
           <input
             type="text"
             value={codename}
@@ -608,7 +608,7 @@ function PermissionFormModal({
           />
         </div>
         <div>
-          <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("permissions.name_label")}</label>
+          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.name_label")}</label>
           <input
             type="text"
             value={name}
@@ -618,7 +618,7 @@ function PermissionFormModal({
           />
         </div>
         <div>
-          <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("permissions.category_label")}</label>
+          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.category_label")}</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
@@ -688,7 +688,7 @@ function RoleFormModal({
             type="button"
             onClick={handleClose}
             disabled={isPending}
-            className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink))]-muted hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
+            className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink-muted))] hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
           >
             {t("common.cancel")}
           </button>
@@ -706,7 +706,7 @@ function RoleFormModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <p className="text-red-400 text-sm">{error}</p>}
         <div>
-          <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("permissions.role_name_label")}</label>
+          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.role_name_label")}</label>
           <input
             type="text"
             value={name}
@@ -716,7 +716,7 @@ function RoleFormModal({
           />
         </div>
         <div>
-          <label className="block text-sm text-[hsl(var(--color-ink))]-muted mb-1">{t("permissions.display_name_label")}</label>
+          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.display_name_label")}</label>
           <input
             type="text"
             value={displayName}

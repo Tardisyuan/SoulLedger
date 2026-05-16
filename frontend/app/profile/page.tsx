@@ -150,7 +150,7 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={() => setEditingField(null)}
-                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-[hsl(var(--color-ink))]-muted hover:text-[hsl(var(--color-ink))]"
+                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
                 >
                   {t("common.cancel") || "取消"}
                 </button>
@@ -201,7 +201,7 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={() => setEditingField(null)}
-                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-[hsl(var(--color-ink))]-muted hover:text-[hsl(var(--color-ink))]"
+                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
                 >
                   {t("common.cancel") || "取消"}
                 </button>
@@ -252,7 +252,7 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={() => setEditingField(null)}
-                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-[hsl(var(--color-ink))]-muted hover:text-[hsl(var(--color-ink))]"
+                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
                 >
                   {t("common.cancel") || "取消"}
                 </button>
@@ -387,7 +387,7 @@ export default function ProfilePage() {
                     setShowPasswordForm(false);
                     setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
                   }}
-                  className="px-4 py-2 bg-surface-2 border border-hairline rounded text-sm text-[hsl(var(--color-ink))]-muted hover:text-[hsl(var(--color-ink))] transition-colors"
+                  className="px-4 py-2 bg-surface-2 border border-hairline rounded text-sm text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
                 >
                   {t("common.cancel") || "取消"}
                 </button>
