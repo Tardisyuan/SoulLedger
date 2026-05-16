@@ -54,6 +54,7 @@ class Role(AuditUserFields):
     """
     角色定义，如 ADMIN, JUDGE, GUARDIAN, VIEWER
     支持层级继承，子角色继承父角色的权限
+    新增 scope 字段：GLOBAL=全局权限，ORG=组织级权限
     """
     name = models.CharField(max_length=20, unique=True)
     display_name = models.CharField(max_length=100)
@@ -64,6 +65,26 @@ class Role(AuditUserFields):
         null=True,
         blank=True,
         related_name='children'
+    )
+    # 角色作用域：GLOBAL=全局，ORG=组织级
+    SCOPE_CHOICES = [
+        ('GLOBAL', '全局'),
+        ('ORG', '组织级'),
+    ]
+    scope = models.CharField(
+        max_length=10,
+        choices=SCOPE_CHOICES,
+        default='ORG',
+        help_text="作用域：GLOBAL=全局权限，ORG=组织级权限"
+    )
+    # ORG 角色专属组织（GLOBAL 角色此字段为空）
+    organization = models.ForeignKey(
+        'org.Organization',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='roles',
+        help_text="ORG角色专属组织，GLOBAL角色此字段为空"
     )
 
     class Meta:
