@@ -53,9 +53,8 @@ def clear_current_user():
 
 class RequestContextMiddleware:
     """
-    Django middleware that sets thread-local user from Django's request user.
-    Uses process_view to set user AFTER DRF authentication has run,
-    so that request.user is properly set even when using force_authenticate.
+    Django middleware that sets thread-local request context.
+    Uses process_request to capture request early, and process_view for auth.
     """
 
     def __init__(self, get_response):
@@ -63,6 +62,8 @@ class RequestContextMiddleware:
 
     def __call__(self, request):
         try:
+            # Capture request in context as early as possible
+            set_current_request(request)
             return self.get_response(request)
         finally:
             clear_current_user()
@@ -87,6 +88,5 @@ class RequestContextMiddleware:
         if user is not None and getattr(user, 'is_authenticated', False):
             logger.debug(f"process_view: setting thread-local user={user}")
             set_current_user(user)
-            set_current_request(request)
         return None
 

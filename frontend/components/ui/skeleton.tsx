@@ -8,32 +8,36 @@ export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       className={cn(
-        'animate-pulse rounded-md bg-muted',
+        'animate-pulse rounded-md bg-[hsl(var(--color-surface-2))]',
         className
       )}
     />
   )
 }
 
-// 表格骨架屏
+// 表格骨架屏 - 使用 tr/td 以便在 tbody 中使用
 export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
   return (
-    <div className="space-y-2">
+    <>
       {/* 表头 */}
-      <div className="flex gap-4 py-2 border-b">
+      <tr className="border-b border-[hsl(var(--color-hairline))]">
         {Array.from({ length: cols }).map((_, i) => (
-          <Skeleton key={i} className="h-4 flex-1" />
+          <td key={i} className="px-4 py-3">
+            <Skeleton className="h-4 w-full" />
+          </td>
         ))}
-      </div>
+      </tr>
       {/* 行 */}
       {Array.from({ length: rows }).map((_, rowIdx) => (
-        <div key={rowIdx} className="flex gap-4 py-2">
+        <tr key={rowIdx} className="border-b border-[hsl(var(--color-hairline))]">
           {Array.from({ length: cols }).map((_, colIdx) => (
-            <Skeleton key={colIdx} className="h-4 flex-1" />
+            <td key={colIdx} className="px-4 py-3">
+              <Skeleton className="h-4 w-full" />
+            </td>
           ))}
-        </div>
+        </tr>
       ))}
-    </div>
+    </>
   )
 }
 

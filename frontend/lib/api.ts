@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -121,15 +121,39 @@ export const soulsApi = {
   records: (id: string) => api.get(`/souls/${id}/records/`),
 };
 
+// Helper: fetch all pages of a paginated response
+async function fetchAllPages<T>(url: string, params: Record<string, string> = {}): Promise<T[]> {
+  const results: T[] = [];
+  let nextUrl: string | null = `${API_BASE}${url}?${new URLSearchParams(params)}`;
+
+  while (nextUrl) {
+    const resp: AxiosResponse<PaginatedResponse<T>> = await axios.get(nextUrl, {
+      headers: {
+        Authorization: `Bearer ${getCookie("soulledger_access")}`,
+      },
+    });
+    results.push(...resp.data.results);
+    nextUrl = resp.data.next ? (resp.data.next.startsWith("http") ? resp.data.next : `${API_BASE}${resp.data.next}`) : null;
+  }
+
+  return results;
+}
+
 // Realms
 export const realmsApi = {
-  list: (params?: Record<string, string>) => api.get("/realms/", { params }),
+  list: async (params?: Record<string, string>) => {
+    const data = await fetchAllPages<any>("/realms/", params);
+    return { data: { results: data, count: data.length } };
+  },
   get: (code: string) => api.get(`/realms/${code}/`),
 };
 
 // Actors
 export const actorsApi = {
-  list: (params?: Record<string, string>) => api.get("/actors/", { params }),
+  list: async (params?: Record<string, string>) => {
+    const data = await fetchAllPages<any>("/actors/", params);
+    return { data: { results: data, count: data.length } };
+  },
   get: (id: string) => api.get(`/actors/${id}/`),
 };
 

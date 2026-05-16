@@ -79,6 +79,7 @@
     "death": "死亡时间",
     "action": "操作",
     "view": "查看",
+    "page_info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)",
     "states": {
       "ALIVE": "存活",
       "JUDGING": "审判中",
@@ -358,6 +359,7 @@
     "created": "创建时间",
     "action": "操作",
     "view": "查看",
+    "page_info": "第 {{page}} 页，共 {{total}} 页 ({{count}} 条记录)",
     "verdicts": {
       "passed": "通过",
       "failed": "失败",
@@ -405,9 +407,25 @@
     "no_logs": "暂无审计日志",
     "loading": "加载中...",
     "clear_filters": "清除筛选",
-    "page_info": "第 {{page}} / {{total}} 页",
+    "page_info": "第 {{page}} 页，共 {{total}} 页 ({{count}} 条记录)",
     "access_denied": "访问被拒绝",
-    "admin_only": "仅管理员可查看审计日志"
+    "admin_only": "仅管理员可查看审计日志",
+    "actions": {
+      "CREATE": "创建",
+      "UPDATE": "更新",
+      "DELETE": "删除",
+      "EXECUTE": "执行",
+      "READ": "读取",
+      "LOGIN": "登录",
+      "LOGOUT": "登出",
+      "VIEW": "查看",
+      "EXPORT": "导出",
+      "IMPORT": "导入",
+      "PERMISSION_CHANGE": "权限变更",
+      "BATCH_CREATE": "批量创建",
+      "BATCH_UPDATE": "批量更新",
+      "BATCH_DELETE": "批量删除"
+    }
   },
   "profile": {
     "title": "个人中心",
@@ -445,7 +463,77 @@
   "realms": {
     "title": "地域",
     "subtitle": "跨文明地域管理",
-    "listTitle": "地域列表"
+    "listTitle": "地域列表",
+    "count": "个地域",
+    "civilizations": {
+      "CHINESE": "中国地府",
+      "EUROPEAN": "欧洲天堂地狱",
+      "EGYPTIAN": "埃及杜阿特"
+    },
+    "types": {
+      "HELL": "地狱",
+      "PURGATORY": "炼狱",
+      "BLISS": "天堂",
+      "NEUTRAL": "中立"
+    },
+    "codes": {
+      "DY_01_HEAVEN": "天堂",
+      "DY_02_YANGLIU": "杨柳宫",
+      "DY_03_QISHI": "第七殿",
+      "DY_04_TAISHAN": "泰山府",
+      "DY_05_CITY": "城池狱",
+      "DY_06_ZHUAN": "转轮狱",
+      "DY_07_JIAN": "剑树狱",
+      "DY_08_HAN": "寒冰狱",
+      "DY_09_YANG": "烊铜狱",
+      "DY_10_YAMA": "第十殿",
+      "DY_00_PURGATORY": "待审所",
+      "EG_AARU": "阿鲁之地",
+      "EG_DEVOURER": "吞噬者",
+      "EG_AM_TYAT": "阿姆·特亚特",
+      "EG_DUAT_ENTRY": "杜阿特入口",
+      "EG_HALL_TWO_TRUTHS": "真理殿堂",
+      "EU_HEAVEN": "天堂",
+      "EU_HELL_1ST": "第一层地狱",
+      "EU_HELL_2ND": "第二层地狱",
+      "EU_HELL_3RD": "第三层地狱",
+      "EU_HELL_4TH": "第四层地狱",
+      "EU_HELL_5TH": "第五层地狱",
+      "EU_HELL_6TH": "第六层地狱",
+      "EU_HELL_7TH": "第七层地狱",
+      "EU_HELL_8TH": "第八层地狱",
+      "EU_HELL_9TH": "第九层地狱",
+      "EU_PURGATORY": "炼狱"
+    },
+    "names": {
+      "DY_01_HEAVEN": "第一层天界",
+      "DY_02_YANGLIU": "杨柳宫",
+      "DY_03_QISHI": "齐世寺",
+      "DY_04_TAISHAN": "泰山府",
+      "DY_05_CITY": "城池监狱",
+      "DY_06_ZHUAN": "转轮寺",
+      "DY_07_JIAN": "剑树狱",
+      "DY_08_HAN": "寒冰狱",
+      "DY_09_YANG": "烊铜狱",
+      "DY_10_YAMA": "第十殿",
+      "DY_00_PURGATORY": "待审所",
+      "EG_AARU": "芦苇原",
+      "EG_DEVOURER": "吞噬者领域",
+      "EG_AM_TYAT": "阿姆·特亚特之路",
+      "EG_DUAT_ENTRY": "杜阿特入口",
+      "EG_HALL_TWO_TRUTHS": "真理大厅",
+      "EU_HEAVEN": "天国",
+      "EU_HELL_1ST": "第一圈 - 地狱边境",
+      "EU_HELL_2ND": "第二圈 - 淫欲",
+      "EU_HELL_3RD": "第三圈 - 暴食",
+      "EU_HELL_4TH": "第四圈 - 贪婪",
+      "EU_HELL_5TH": "第五圈 - 愤怒",
+      "EU_HELL_6TH": "第六圈 - 异端",
+      "EU_HELL_7TH": "第七圈 - 暴力",
+      "EU_HELL_8TH": "第八圈 - 恶毒沟",
+      "EU_HELL_9TH": "第九圈 - 背叛",
+      "EU_PURGATORY": "炼狱"
+    }
   },
   "organization": {
     "title": "组织架构",
@@ -492,7 +580,19 @@
     "status_update_error": "状态更新失败",
     "page_info": "第 {{page}} 页，共 {{total}} 页 ({{count}} 条记录)",
     "organization": "组织",
-    "position": "职位"
+    "position": "职位",
+    "username": "用户名",
+    "email": "邮箱",
+    "role": "角色",
+    "tenant": "租户",
+    "status": "状态",
+    "actions": "操作",
+    "roles": {
+      "ADMIN": "管理员",
+      "JUDGE": "审判者",
+      "GUARDIAN": "守护者",
+      "VIEWER": "查看者"
+    }
   },
   "settings": {
     "title": "设置",

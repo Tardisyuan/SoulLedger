@@ -88,9 +88,9 @@ export default function AuditPage() {
         </div>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <p className="text-[hsl(var(--color-ink))]-muted text-lg">{t("audit.access_denied") || "访问被拒绝"}</p>
-            <p className="text-[hsl(var(--color-ink))]-subtle text-sm mt-2">
-              {t("audit.admin_only") || "仅管理员可查看审计日志"}
+            <p className="text-[hsl(var(--color-ink-muted))] text-lg">{t("audit.access_denied")}</p>
+            <p className="text-[hsl(var(--color-ink-subtle))] text-sm mt-2">
+              {t("audit.admin_only")}
             </p>
           </div>
         </div>
@@ -179,17 +179,13 @@ export default function AuditPage() {
         </div>
 
         {/* Audit table */}
-        <PageSection
-          title={t("audit.table_title") || "审计记录"}
-          isLoading={isLoading}
-          className="overflow-hidden p-0"
-        >
+        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg overflow-hidden">
           {isLoading ? (
             <div className="p-4">
               <TableSkeleton rows={8} cols={6} />
             </div>
           ) : logs.length === 0 ? (
-            <div className="py-12 text-center text-sm text-[hsl(var(--color-ink))]-muted">
+            <div className="py-12 text-center text-sm text-[hsl(var(--color-ink-muted))]">
               {t("audit.no_logs") || "暂无审计日志"}
             </div>
           ) : (
@@ -197,30 +193,30 @@ export default function AuditPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-2))]">
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink))]-subtle uppercase tracking-wider">
-                      {t("audit.timestamp") || "时间"}
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
+                      {t("audit.timestamp")}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink))]-subtle uppercase tracking-wider">
-                      {t("audit.user") || "用户"}
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
+                      {t("audit.user")}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink))]-subtle uppercase tracking-wider">
-                      {t("audit.action") || "操作"}
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
+                      {t("audit.action")}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink))]-subtle uppercase tracking-wider">
-                      {t("audit.resource") || "资源"}
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
+                      {t("audit.resource")}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink))]-subtle uppercase tracking-wider">
-                      {t("audit.description") || "描述"}
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
+                      {t("audit.description")}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink))]-subtle uppercase tracking-wider">
-                      {t("audit.ip_address") || "IP"}
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
+                      {t("audit.ip_address")}
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
                   {logs.map((log) => (
                     <tr key={log.id} className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors">
-                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))]-muted whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))] whitespace-nowrap">
                         {new Date(log.timestamp).toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))] font-medium">
@@ -240,19 +236,19 @@ export default function AuditPage() {
                               : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                           }`}
                         >
-                          {log.action}
+                          {t(`audit.actions.${log.action}`)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))]-muted">
+                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))]">
                         {log.resource}
                         {log.resource_id && (
-                          <span className="text-[hsl(var(--color-ink))]-subtle ml-1">#{log.resource_id}</span>
+                          <span className="text-[hsl(var(--color-ink-subtle))] ml-1">#{log.resource_id}</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))]-muted max-w-xs truncate">
+                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))] max-w-xs truncate">
                         {log.description || "-"}
                       </td>
-                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))]-subtle font-mono">
+                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-subtle))] font-mono">
                         {log.ip_address || "-"}
                       </td>
                     </tr>
@@ -261,16 +257,15 @@ export default function AuditPage() {
               </table>
             </div>
           )}
-        </PageSection>
+        </div>
 
         {/* Pagination */}
         <div className="flex items-center justify-between mt-4">
           {isLoading ? (
             <div className="h-5 w-32 bg-muted animate-pulse rounded" />
           ) : (
-            <p className="text-sm text-[hsl(var(--color-ink))]-muted">
-              {t("audit.page_info") || `第 ${page} / ${totalPages} 页`}
-              {data?.count !== undefined && ` (${data.count} 条记录)`}
+            <p className="text-sm text-[hsl(var(--color-ink-muted))]">
+              {t("audit.page_info", { page: String(page), total: String(totalPages), count: String(data?.count || 0) })}
             </p>
           )}
           <div className="flex gap-2">

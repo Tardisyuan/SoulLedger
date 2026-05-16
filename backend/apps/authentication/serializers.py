@@ -92,7 +92,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "email", "role", "first_name", "last_name", "is_active", "display_name"]
+        fields = ["id", "username", "email", "role", "first_name", "last_name", "is_active", "display_name", "organization", "position"]
         read_only_fields = ["id", "is_active", "username"]
 
 
@@ -104,15 +104,21 @@ class UserSerializer(serializers.ModelSerializer):
 class UserManagementSerializer(serializers.ModelSerializer):
     """User serializer for list/retrieve operations in user management API."""
     tenant = serializers.SerializerMethodField()
+    organization = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'role', 'tenant', 'is_active', 'create_time', 'avatar']
+        fields = ['id', 'username', 'email', 'role', 'tenant', 'organization', 'position', 'is_active', 'create_time', 'avatar']
         read_only_fields = ['id', 'create_time']
 
     def get_tenant(self, obj):
         if obj.tenant:
             return {"id": obj.tenant.id, "code": obj.tenant.code, "display_name": obj.tenant.display_name}
+        return None
+
+    def get_organization(self, obj):
+        if obj.organization:
+            return {"id": obj.organization.id, "code": obj.organization.code, "name": obj.organization.name}
         return None
 
 
@@ -122,18 +128,18 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password', 'role', 'tenant', 'is_active']
+        fields = ['id', 'username', 'email', 'password', 'role', 'tenant', 'organization', 'position', 'is_active']
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
-    """User serializer for updates (email, role, is_active only)."""
+    """User serializer for updates (email, role, is_active, organization, position)."""
 
     class Meta:
         model = User
-        fields = ['email', 'role', 'is_active']
+        fields = ['email', 'role', 'is_active', 'organization', 'position']
 
 
 class ChangePasswordSerializer(serializers.Serializer):

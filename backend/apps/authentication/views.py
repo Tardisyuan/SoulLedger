@@ -314,6 +314,10 @@ class LoginView(TokenObtainPairView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
+        # Set request context for audit logging before any database operations
+        from apps.core.request_local import set_current_request
+        set_current_request(request)
+
         # Login rate limiting: max 5 attempts per 15 minutes per IP
         ip_address = _get_client_ip(request)
         from django.core.cache import cache

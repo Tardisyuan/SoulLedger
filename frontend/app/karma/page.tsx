@@ -4,6 +4,7 @@ import { karmaApi, type KarmaStatsOverview } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 export default function KarmaPage() {
   const { t } = useI18n();
@@ -80,18 +81,29 @@ export default function KarmaPage() {
       <SectionCard title={t("karma.karma_distribution")} isLoading={isLoading} error={error}>
         {error ? (
           <div className="text-red-400 text-sm">{t("common.error")}</div>
+        ) : isLoading ? (
+          <Skeleton className="h-48 w-full" />
         ) : (
-          <div className="space-y-2">
-            {karmaStats?.karma_distribution.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between">
-                <span className="text-sm text-[hsl(var(--color-ink))]">{item.label}</span>
-                {isLoading ? (
-                  <Skeleton className="h-4 w-12" />
-                ) : (
-                  <span className="text-sm font-mono text-[hsl(var(--color-accent))]">{item.count}</span>
-                )}
-              </div>
-            ))}
+          <div className="h-48 min-h-[192px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={karmaStats?.karma_distribution} margin={{ top: 5, right: 30, left: 20, bottom: 20 }}>
+                <XAxis dataKey="label" tick={{ fill: 'hsl(var(--color-ink-muted))', fontSize: 12 }} />
+                <YAxis tick={{ fill: 'hsl(var(--color-ink-muted))', fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--color-surface-1))',
+                    border: '1px solid hsl(var(--color-hairline))',
+                    borderRadius: '8px',
+                    color: 'hsl(var(--color-ink))',
+                  }}
+                />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  {karmaStats?.karma_distribution.map((_, idx) => (
+                    <Cell key={idx} fill="hsl(var(--color-accent))" fillOpacity={0.8 - idx * 0.1} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         )}
       </SectionCard>
@@ -127,14 +139,36 @@ export default function KarmaPage() {
           {error ? (
             <div className="text-red-400 text-sm">{t("common.error")}</div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {karmaStats.recent_activity.slice(0, 10).map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3 text-sm">
+                <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg bg-[hsl(var(--color-surface-2))]/50 hover:bg-[hsl(var(--color-surface-2))] transition-colors">
+                  {/* Action badge */}
+                  <div className="flex-shrink-0 mt-0.5">
+                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                      activity.action === "CREATE" ? "bg-green-500/20 text-green-400" :
+                      activity.action === "UPDATE" ? "bg-blue-500/20 text-blue-400" :
+                      activity.action === "DELETE" ? "bg-red-500/20 text-red-400" :
+                      activity.action === "EXECUTE" ? "bg-purple-500/20 text-purple-400" :
+                      "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
+                    }`}>
+                      {t(`audit.actions.${activity.action}`)}
+                    </span>
+                  </div>
+                  {/* Details */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[hsl(var(--color-ink))]">{activity.description}</p>
-                    <p className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
-                      {activity.user} · {new Date(activity.timestamp).toLocaleString()}
+                    <p className="text-sm text-[hsl(var(--color-ink))] font-medium">
+                      {activity.description || t(`audit.actions.${activity.action}`)}
                     </p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-[hsl(var(--color-ink-muted))]">
+                      <span className="flex items-center gap-1">
+                        <span className="opacity-60">{activity.user}</span>
+                      </span>
+                      <span className="opacity-40">·</span>
+                      <span>{activity.resource}</span>
+                      <span className="opacity-60">#{activity.resource_id}</span>
+                      <span className="opacity-40">·</span>
+                      <span>{new Date(activity.timestamp).toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
               ))}
