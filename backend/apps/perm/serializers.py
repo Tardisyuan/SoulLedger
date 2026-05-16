@@ -40,15 +40,17 @@ class RolePermissionAssignSerializer(serializers.Serializer):
 
 
 class RoleSerializer(serializers.ModelSerializer):
+    organization_name = serializers.CharField(source='organization.name', read_only=True)
+
     class Meta:
         model = Role
-        fields = ["id", "name", "display_name"]
+        fields = ["id", "name", "display_name", "scope", "organization", "organization_name"]
 
 
 class RoleCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
-        fields = ["name", "display_name"]
+        fields = ["name", "display_name", "scope", "organization"]
 
     def validate_name(self, value):
         # Only allow uppercase letters and underscores
