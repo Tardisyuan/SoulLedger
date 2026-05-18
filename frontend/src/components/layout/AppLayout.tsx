@@ -12,7 +12,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { getIconByName, DEFAULT_ICON } from "../../lib/icons";
-import { menusApi, notificationsApi, type MenuItem } from "@/lib/api";
+import { menusApi, notificationsApi, type MenuItem, type Notification } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useTheme } from "@/src/contexts/ThemeContext";
@@ -237,7 +237,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         </p>
                       ) : (
                         <div className="space-y-2 max-h-64 overflow-y-auto">
-                          {notifications.slice(0, 5).map((n: any) => (
+                          {notifications.slice(0, 5).map((n: Notification) => (
                             <div key={n.id} className="p-2 rounded hover:bg-[hsl(var(--color-surface-2))] cursor-pointer">
                               <p className="text-sm text-[hsl(var(--color-ink))]">{n.message || n.title}</p>
                               <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">

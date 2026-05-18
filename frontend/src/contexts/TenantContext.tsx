@@ -16,6 +16,7 @@ export interface TenantInfo {
   display_name: string;
 }
 
+// Permissions stored separately in memory only (not localStorage) for security
 export interface AuthUser {
   id: number;
   username: string;
@@ -25,6 +26,9 @@ export interface AuthUser {
   tenant: TenantInfo | null;
   permissions: string[];
 }
+
+// Safe subset persisted to localStorage (no permissions)
+type CachedUser = Omit<AuthUser, "permissions"> & { permissions?: never };
 
 interface TenantContextValue {
   user: AuthUser | null;
@@ -58,11 +62,14 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(null);
 
   // Hydrate from localStorage on mount (client-only)
+  // Permissions are NOT loaded from localStorage for security - they must be fetched from server
   useEffect(() => {
     try {
       const raw = localStorage.getItem(USER_KEY);
       if (raw) {
-        setUserState(JSON.parse(raw) as AuthUser);
+        const cached = JSON.parse(raw) as CachedUser;
+        // Restore basic user info, but permissions must be refetched from server
+        setUserState({ ...cached, permissions: [] });
       }
     } catch {
       // ignore
@@ -72,7 +79,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const setUser = (u: AuthUser | null) => {
     setUserState(u);
     if (u) {
-      localStorage.setItem(USER_KEY, JSON.stringify(u));
+      // Store only safe user fields to localStorage, NOT permissions
+      const { permissions: _ignored, ...safeUser } = u;
+      localStorage.setItem(USER_KEY, JSON.stringify(safeUser));
     } else {
       localStorage.removeItem(USER_KEY);
     }

@@ -351,7 +351,7 @@ export default function WorkflowDetailPage() {
                             )}
                           </div>
                           {node.notes && (
-                            <p className="text-sm text-[hsl(var(--color-ink-muted))] italic">"{node.notes}"</p>
+                            <p className="text-sm text-[hsl(var(--color-ink-muted))] italic">&ldquo;{node.notes}&rdquo;</p>
                           )}
                           {node.approver && (
                             <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
@@ -400,7 +400,7 @@ export default function WorkflowDetailPage() {
                     {t("workflow.detail.decided_at") || "Decided at"}: {node.decided_at ? new Date(node.decided_at).toLocaleString() : "—"}
                   </div>
                   {node.notes && (
-                    <p className="text-sm text-[hsl(var(--color-ink-muted))] mt-2 italic">"{node.notes}"</p>
+                    <p className="text-sm text-[hsl(var(--color-ink-muted))] mt-2 italic">&ldquo;{node.notes}&rdquo;</p>
                   )}
                   {node.approver && (
                     <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">

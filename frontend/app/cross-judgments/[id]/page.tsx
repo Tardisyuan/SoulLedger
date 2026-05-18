@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { crossTenantJudgmentsApi } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -17,12 +17,7 @@ export default function CrossJudgmentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!user || !id) return;
-    loadData();
-  }, [user, id]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -33,7 +28,12 @@ export default function CrossJudgmentDetailPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id]);
+
+  useEffect(() => {
+    if (!user || !id) return;
+    loadData();
+  }, [user, id, loadData]);
 
   if (error && !judgment) {
     return (

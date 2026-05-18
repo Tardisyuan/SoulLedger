@@ -18,6 +18,7 @@ import {
   Legend,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getDisplayNameForTenant } from "@/src/config/civilizations";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "#10b981",
@@ -97,7 +98,7 @@ export default function DashboardPage() {
   })) ?? [];
 
   const tenantData = stats?.tenants.map((t) => ({
-    name: t.tenant_code.replace("CN_DIYU", "Chinese").replace("EU_HEAVEN_HELL", "European").replace("EG_DUAT", "Egyptian"),
+    name: getDisplayNameForTenant(t.tenant_code),
     total: t.total_souls,
     ...t.state_breakdown,
   })) ?? [];

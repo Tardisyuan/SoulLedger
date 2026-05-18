@@ -23,6 +23,38 @@ import Link from "next/link";
 import WorkflowEditor from "@/src/components/workflow/WorkflowEditor";
 import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
 import { BaseModal } from "@/src/components/ui/Modal";
+import { WORKFLOW_TEMPLATES, type TemplateKey } from "@/src/config/workflow-templates";
+
+// ── Types for template data ──────────────────────────────────────
+
+// Node that can be rendered in React Flow - unified shape
+interface FlowNode {
+  id: string | number;
+  node_name: string;
+  status?: string;
+  node_type?: string;
+  court_code?: string;
+  approver_role?: string;
+}
+
+// Backend template from workflow API
+interface BackendTemplate {
+  id: string | number;
+  name: string;
+  description?: string;
+  civilization: string;
+  case_type?: string;
+  nodes_json?: FlowNode[];
+}
+
+// Frontend template node (from WORKFLOW_TEMPLATES)
+interface FrontendNode {
+  id: string;
+  name: string;
+  court: string;
+  type: string;
+  order: number;
+}
 
 // Custom node component for workflow visualization
 function WorkflowNodeComponent({ data }: { data: { label: string; status: string; nodeType: string; courtCode: string } }) {
@@ -53,205 +85,6 @@ const nodeTypes: NodeTypes = {
   workflowNode: WorkflowNodeComponent,
 };
 
-// Workflow templates by civilization and case type
-const WORKFLOW_TEMPLATES = {
-  // ========== 中国地府 ==========
-  // 常规审判 - 十殿完整流程
-  CHINESE_ROUTINE: {
-    civilization: "CHINESE",
-    caseType: "ROUTINE",
-    name: "十殿审判流程",
-    description: "完整十殿审判，根据罪行裁定轮回",
-    nodes: [
-      { id: "n1", name: "秦广王 · 分流", court: "第一殿", type: "分流", order: 1 },
-      { id: "n2", name: "楚江王 · 初审", court: "第二殿", type: "初审", order: 2 },
-      { id: "n3", name: "宋帝王 · 二审", court: "第三殿", type: "二审", order: 3 },
-      { id: "n4", name: "五官王 · 三审", court: "第四殿", type: "三审", order: 4 },
-      { id: "n5", name: "阎罗王 · 四审", court: "第五殿", type: "四审", order: 5 },
-      { id: "n6", name: "卞城王 · 五审", court: "第六殿", type: "五审", order: 6 },
-      { id: "n7", name: "泰山王 · 六审", court: "第七殿", type: "六审", order: 7 },
-      { id: "n8", name: "都市王 · 七审", court: "第八殿", type: "七审", order: 8 },
-      { id: "n9", name: "平等王 · 八审", court: "第九殿", type: "八审", order: 9 },
-      { id: "n10", name: "转轮王 · 终审", court: "第十殿", type: "终审", order: 10 },
-    ],
-  },
-  // 申诉流程 - 本殿→上一殿→酆都大帝
-  CHINESE_APPEAL: {
-    civilization: "CHINESE",
-    caseType: "APPEAL",
-    name: "申诉审判流程",
-    description: "察查司审核 → 原殿复核 → 上级殿 → 酆都大帝终审",
-    nodes: [
-      { id: "n1", name: "魏征 · 察查司", court: "察查司", type: "申诉受理", order: 1 },
-      { id: "n2", name: "原殿阎王 · 复核", court: "原审判殿", type: "原殿复核", order: 2 },
-      { id: "n3", name: "上级殿阎王", court: "上一殿", type: "上级复核", order: 3 },
-      { id: "n4", name: "酆都大帝 · 终审", court: "酆都", type: "终审", order: 4 },
-    ],
-  },
-  // 跨域审判
-  CHINESE_CROSS_REALM: {
-    civilization: "CHINESE",
-    caseType: "CROSS_REALM",
-    name: "跨域审判流程",
-    description: "涉及多地区协调的复杂案件",
-    nodes: [
-      { id: "n1", name: "案件分类", court: "第一殿", type: "分流", order: 1 },
-      { id: "n2", name: "城隍初审", court: "城隍体系", type: "地方初审", order: 2 },
-      { id: "n3", name: "十殿联审", court: "十殿", type: "联审", order: 3 },
-      { id: "n4", name: "酆都大帝 · 终审", court: "酆都", type: "终审", order: 4 },
-    ],
-  },
-  // 枉死城流程
-  CHINESE_WANG_SI: {
-    civilization: "CHINESE",
-    caseType: "SPECIAL",
-    name: "枉死城流程",
-    description: "冤死灵魂申诉 → 城隍/地藏王处理",
-    nodes: [
-      { id: "n1", name: "枉死城登记", court: "枉死城", type: "登记", order: 1 },
-      { id: "n2", name: "城隍申诉审理", court: "城隍", type: "申诉", order: 2 },
-      { id: "n3", name: "地藏王超度", court: "九华山", type: "超度", order: 3 },
-      { id: "n4", name: "寿数折抵", court: "枉死城", type: "等待", order: 4 },
-    ],
-  },
-  // 阿鼻地狱 - 重大罪行直接入狱
-  CHINESE_ABYSS: {
-    civilization: "CHINESE",
-    caseType: "SPECIAL",
-    name: "阿鼻地狱流程",
-    description: "五逆十恶直接入阿鼻地狱，永不轮回",
-    nodes: [
-      { id: "n1", name: "罪行核定", court: "第一殿", type: "罪行评定", order: 1 },
-      { id: "n2", name: "阿鼻地狱入狱", court: "阿鼻地狱", type: "入狱执行", order: 2 },
-    ],
-  },
-  // 直送轮回 - 大善人
-  CHINESE_REINCARNATION: {
-    civilization: "CHINESE",
-    caseType: "ROUTINE",
-    name: "直送轮回流程",
-    description: "大善人(功德≥500)直接轮回",
-    nodes: [
-      { id: "n1", name: "功德核定", court: "第一殿", type: "分流", order: 1 },
-      { id: "n2", name: "转轮王安排", court: "第十殿", type: "安排轮回", order: 2 },
-    ],
-  },
-
-  // ========== 欧洲天堂地狱 ==========
-  // 基督教末日审判
-  EUROPEAN_LAST_JUDGMENT: {
-    civilization: "EUROPEAN",
-    caseType: "ROUTINE",
-    name: "末日审判流程",
-    description: "末日审判，灵魂分流至天堂/地狱/炼狱",
-    nodes: [
-      { id: "n1", name: "米迦勒称量灵魂", court: "审判庭", type: "初审判", order: 1 },
-      { id: "n2", name: "四天使投票", court: "天堂", type: "投票", order: 2 },
-      { id: "n3", name: "上帝 · 终审", court: "天堂", type: "终审", order: 3 },
-    ],
-  },
-  // 希腊冥界三法官
-  EUROPEAN_GREEK: {
-    civilization: "EUROPEAN",
-    caseType: "ROUTINE",
-    name: "希腊冥界审判",
-    description: "米诺斯、拉达曼迪斯、埃阿斯三法官审判",
-    nodes: [
-      { id: "n1", name: "米诺斯初审", court: "冥界", type: "初审", order: 1 },
-      { id: "n2", name: "拉达曼迪斯复核", court: "冥界", type: "复核", order: 2 },
-      { id: "n3", name: "埃阿斯终审", court: "冥界", type: "终审", order: 3 },
-      { id: "n4", name: "分流执行", court: "冥界", type: "执行", order: 4 },
-    ],
-  },
-  // 北欧分流 - 无统一审判所，按死亡类型分流
-  EUROPEAN_NORDIC: {
-    civilization: "EUROPEAN",
-    caseType: "ROUTINE",
-    name: "北欧灵魂分流",
-    description: "按死亡类型分流至英灵殿/海姆冥界/纳斯特隆德",
-    nodes: [
-      { id: "n1", name: "死亡类型判定", court: "北欧", type: "分流", order: 1 },
-      { id: "n2", name: "英灵殿遴选", court: "瓦尔哈拉", type: "英灵殿", order: 2 },
-      { id: "n3", name: "海姆冥界", court: "海姆", type: "普通死亡", order: 3 },
-    ],
-  },
-  // 地狱圈层审判 - 但丁神曲
-  EUROPEAN_HELL: {
-    civilization: "EUROPEAN",
-    caseType: "SPECIAL",
-    name: "地狱圈层流程",
-    description: "根据罪行分配至九层地狱",
-    nodes: [
-      { id: "n1", name: "罪行分类", court: "地狱边境", type: "分类", order: 1 },
-      { id: "n2", name: "但丁引导", court: "地狱第一层", type: "引导", order: 2 },
-      { id: "n3", name: "各层处罚执行", court: "各层地狱", type: "执行", order: 3 },
-    ],
-  },
-
-  // ========== 埃及冥界 ==========
-  // 心脏称重 - 常规流程
-  EGYPTIAN_WEIGHING: {
-    civilization: "EGYPTIAN",
-    caseType: "HEART_WEIGHING",
-    name: "心脏称重仪式",
-    description: "阿努比斯初审 → 四十二神祇陪审 → 欧西里斯终审",
-    nodes: [
-      { id: "n1", name: "阿努比斯初审", court: "杜阿特", type: "初审", order: 1 },
-      { id: "n2", name: "四十二神祇陪审", court: "真理大厅", type: "陪审", order: 2 },
-      { id: "n3", name: "欧西里斯终审", court: "真理大厅", type: "终审", order: 3 },
-    ],
-  },
-  // 阿米特吞噬 - 称重失败
-  EGYPTIAN_AMMIT: {
-    civilization: "EGYPTIAN",
-    caseType: "SPECIAL",
-    name: "阿米特吞噬流程",
-    description: "心脏比羽毛重，称重失败，被阿米特吞噬",
-    nodes: [
-      { id: "n1", name: "称重失败记录", court: "真理大厅", type: "记录", order: 1 },
-      { id: "n2", name: "阿米特吞噬", court: "真理大厅", type: "执行", order: 2 },
-    ],
-  },
-  // 杜阿特穿越 - 生前旅程
-  EGYPTIAN_DUAT: {
-    civilization: "EGYPTIAN",
-    caseType: "ROUTINE",
-    name: "杜阿特穿越流程",
-    description: "穿越十二门，最终到达真理大厅",
-    nodes: [
-      { id: "n1", name: "第一门", court: "杜阿特", type: "穿越", order: 1 },
-      { id: "n2", name: "中间各门", court: "杜阿特", type: "穿越", order: 2 },
-      { id: "n3", name: "最终门", court: "杜阿特", type: "穿越", order: 3 },
-      { id: "n4", name: "真理大厅", court: "真理大厅", type: "到达", order: 4 },
-    ],
-  },
-  // 芦苇原接纳 - 通过审判后
-  EGYPTIAN_AARU: {
-    civilization: "EGYPTIAN",
-    caseType: "ROUTINE",
-    name: "芦苇原接纳流程",
-    description: "通过审判后进入芦苇原，永生之地",
-    nodes: [
-      { id: "n1", name: "审判通过", court: "真理大厅", type: "确认", order: 1 },
-      { id: "n2", name: "芦苇原接纳", court: "芦苇原", type: "接纳", order: 2 },
-      { id: "n3", name: "永恒安息", court: "芦苇原", type: "安息", order: 3 },
-    ],
-  },
-  // 神判流程 - 涉及神力
-  EGYPTIAN_DIVINE: {
-    civilization: "EGYPTIAN",
-    caseType: "DIVINE_TRIAL",
-    name: "神判流程",
-    description: "托特神谕 → 九神会终审",
-    nodes: [
-      { id: "n1", name: "托特神谕", court: "真理大厅", type: "神谕", order: 1 },
-      { id: "n2", name: "九神会审议", court: "赫利奥波利斯", type: "审议", order: 2 },
-      { id: "n3", name: "终审裁决", court: "赫利奥波利斯", type: "终审", order: 3 },
-    ],
-  },
-};
-
-type TemplateKey = keyof typeof WORKFLOW_TEMPLATES;
 
 const CIVILIZATION_LABELS: Record<string, string> = {
   CHINESE: "中国地府",
@@ -307,7 +140,7 @@ export default function WorkflowPage() {
   });
 
   const workflows = (workflowsData?.results ?? workflowsData ?? []) as ApprovalWorkflow[];
-  const templates = (templatesData?.results ?? templatesData ?? []) as any[];
+  const templates = (templatesData?.results ?? templatesData ?? []) as BackendTemplate[];
   const queryClient = useQueryClient();
 
   // Delete template mutation
@@ -327,18 +160,30 @@ export default function WorkflowPage() {
   // Build nodes and edges for React Flow
   const flowNodes = useMemo(() => {
     const nodesToRender = workflowInstance?.nodes?.length
-      ? workflowInstance.nodes
-      : currentTemplate?.nodes || [];
+      ? workflowInstance.nodes.map((n): FlowNode => ({
+          id: n.id,
+          node_name: n.node_name,
+          status: n.status,
+          node_type: n.node_type,
+          court_code: n.court_code,
+        }))
+      : (currentTemplate?.nodes || []).map((n): FlowNode => ({
+          id: n.id,
+          node_name: n.name,
+          status: undefined,
+          node_type: n.type,
+          court_code: n.court,
+        }));
 
-    return nodesToRender.map((n: any, idx: number) => ({
-      id: n.id,
+    return nodesToRender.map((n, idx) => ({
+      id: String(n.id),
       type: "workflowNode",
       position: { x: 250, y: idx * 150 },
       data: {
-        label: n.node_name || n.name,
+        label: n.node_name,
         status: n.status || "PENDING",
-        nodeType: n.node_type || n.type,
-        courtCode: n.court_code || n.court,
+        nodeType: n.node_type || "",
+        courtCode: n.court_code || "",
       },
     }));
   }, [currentTemplate, workflowInstance]);
@@ -348,12 +193,12 @@ export default function WorkflowPage() {
       ? workflowInstance.nodes
       : currentTemplate?.nodes || [];
 
-    return nodesToRender.slice(0, -1).map((n: any, idx: number) => {
+    return nodesToRender.slice(0, -1).map((n, idx) => {
       const nextNode = nodesToRender[idx + 1];
       return {
         id: `e${n.id}-${nextNode?.id}`,
-        source: n.id,
-        target: nextNode?.id,
+        source: String(n.id),
+        target: String(nextNode?.id),
         markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
         animated: workflowInstance?.current_node === n.id,
         style: { stroke: "#f59e0b", strokeWidth: 2 },
@@ -444,7 +289,7 @@ export default function WorkflowPage() {
                 ) : templates.length > 0 ? (
                   <div className="space-y-2">
                     <div className="text-xs font-semibold text-[hsl(var(--color-ink-muted))] px-2">自定义模板</div>
-                    {templates.map((tmpl: any) => (
+                    {templates.map((tmpl: BackendTemplate) => (
                       <button
                         key={tmpl.id}
                         onClick={() => {
@@ -458,7 +303,7 @@ export default function WorkflowPage() {
                       >
                         <div className="text-sm font-medium truncate">{tmpl.name}</div>
                         <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-0.5">
-                          {tmpl.civilization} · {CASE_TYPE_LABELS[tmpl.case_type] || tmpl.case_type}
+                          {tmpl.civilization} · {CASE_TYPE_LABELS[tmpl.case_type || ''] || tmpl.case_type}
                         </div>
                       </button>
                     ))}
@@ -500,8 +345,8 @@ export default function WorkflowPage() {
                 {(editingTemplateId || selectedTemplate) && (
                   <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] p-4">
                     {/* 后端模板预览 */}
-                    {editingTemplateId && templates.find((t: any) => String(t.id) === editingTemplateId) && (() => {
-                      const tmpl = templates.find((t: any) => String(t.id) === editingTemplateId);
+                    {editingTemplateId && templates.find((t: BackendTemplate) => String(t.id) === editingTemplateId) && (() => {
+                      const tmpl = templates.find((t: BackendTemplate) => String(t.id) === editingTemplateId)!;
                       return (
                         <>
                           <div className="flex items-start justify-between mb-4">
@@ -512,7 +357,7 @@ export default function WorkflowPage() {
                                   {tmpl.civilization}
                                 </span>
                                 <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
-                                  {CASE_TYPE_LABELS[tmpl.case_type] || tmpl.case_type}
+                                  {CASE_TYPE_LABELS[tmpl.case_type || ''] || tmpl.case_type}
                                 </span>
                               </div>
                             </div>
@@ -557,7 +402,7 @@ export default function WorkflowPage() {
                             {(tmpl.nodes_json || []).length} 个节点
                           </div>
                           <div className="space-y-2 max-h-80 overflow-y-auto">
-                            {(tmpl.nodes_json || []).map((node: any, idx: number) => (
+                            {(tmpl.nodes_json || []).map((node: FlowNode, idx: number) => (
                               <div key={idx} className="flex items-center gap-3 p-2 bg-[hsl(var(--color-surface-2))] rounded">
                                 <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] flex items-center justify-center text-xs font-bold shrink-0">
                                   {idx + 1}
@@ -594,7 +439,7 @@ export default function WorkflowPage() {
                               onClick={() => {
                                 setViewingTemplate({
                                   ...currentTemplate,
-                                  nodes_json: currentTemplate.nodes.map((n: any) => ({
+                                  nodes_json: currentTemplate.nodes.map((n: FrontendNode) => ({
                                     id: n.id,
                                     node_name: n.name,
                                     court_code: n.court,
@@ -614,7 +459,7 @@ export default function WorkflowPage() {
                                   description: currentTemplate.description,
                                   civilization: currentTemplate.civilization,
                                   case_type: currentTemplate.caseType,
-                                  nodes_json: currentTemplate.nodes.map((n: any) => ({
+                                  nodes_json: currentTemplate.nodes.map((n: FrontendNode) => ({
                                     id: n.id,
                                     node_name: n.name,
                                     court_code: n.court,
@@ -634,7 +479,7 @@ export default function WorkflowPage() {
                           {currentTemplate.nodes.length} 个节点
                         </div>
                         <div className="space-y-2 max-h-80 overflow-y-auto">
-                          {currentTemplate.nodes.map((node: any, idx: number) => (
+                          {currentTemplate.nodes.map((node: FrontendNode, idx: number) => (
                             <div key={idx} className="flex items-center gap-3 p-2 bg-[hsl(var(--color-surface-2))] rounded">
                               <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] flex items-center justify-center text-xs font-bold shrink-0">
                                 {idx + 1}
@@ -754,7 +599,7 @@ export default function WorkflowPage() {
               <div>
                 <span className="text-xs text-[hsl(var(--color-ink-subtle))]">节点列表</span>
                 <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
-                  {(viewingTemplate.nodes_json || []).map((node: any, idx: number) => (
+                  {(viewingTemplate.nodes_json || []).map((node: FlowNode, idx: number) => (
                     <div key={idx} className="bg-[hsl(var(--color-surface-3))] rounded p-2 text-sm">
                       <div className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</div>
                       <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
@@ -806,7 +651,7 @@ export default function WorkflowPage() {
           }
         >
           <div className="space-y-3">
-            <p className="text-[hsl(var(--color-ink))]">确定要删除模板 <strong>"{confirmingTemplate?.name}"</strong> 吗？</p>
+            <p className="text-[hsl(var(--color-ink))]">确定要删除模板 <strong>&ldquo;{confirmingTemplate?.name}&rdquo;</strong> 吗？</p>
             <p className="text-sm text-red-400">此操作不可撤销，删除后无法恢复。</p>
           </div>
         </BaseModal>
