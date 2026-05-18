@@ -296,6 +296,9 @@ def _get_client_ip(request):
 
 def _on_post_save(sender, instance, created, **kwargs):
     """Handle post_save - log CREATE or UPDATE."""
+    # Skip SoulEvent - it creates its own events via EventService and should not generate AuditLogs
+    if sender._meta.label.split('.')[-1] == 'SoulEvent':
+        return
     from apps.audit.models import AuditAction
 
     action = AuditAction.CREATE if created else AuditAction.UPDATE
@@ -311,6 +314,9 @@ def _on_post_save(sender, instance, created, **kwargs):
 
 def _on_post_delete(sender, instance, **kwargs):
     """Handle post_delete - log DELETE."""
+    # Skip SoulEvent - it creates its own events via EventService and should not generate AuditLogs
+    if sender._meta.label.split('.')[-1] == 'SoulEvent':
+        return
     from apps.audit.models import AuditAction
     _create_audit_log(AuditAction.DELETE, instance)
 
@@ -420,6 +426,9 @@ def _connect_model_signals(model):
         return
     # Skip self (AuditLog model)
     if model._meta.label.split('.')[-1].startswith('Audit'):
+        return
+    # Skip SoulEvent (internal event log, creates SoulEvent entries which should not generate AuditLogs)
+    if model._meta.label.split('.')[-1] == 'SoulEvent':
         return
 
     post_save.connect(_on_post_save, sender=model, dispatch_uid=f"audit_{model.__name__}_post_save")
