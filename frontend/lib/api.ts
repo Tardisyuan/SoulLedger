@@ -127,13 +127,17 @@ async function fetchAllPages<T>(url: string, params: Record<string, string> = {}
   let nextUrl: string | null = `${API_BASE}${url}?${new URLSearchParams(params)}`;
 
   while (nextUrl) {
-    const resp: AxiosResponse<PaginatedResponse<T>> = await axios.get(nextUrl, {
-      headers: {
-        Authorization: `Bearer ${getCookie("soulledger_access")}`,
-      },
+    const urlObj = new URL(nextUrl);
+    const relativePath = nextUrl.replace(API_BASE, "");
+    const resp: AxiosResponse<PaginatedResponse<T>> = await api.get(relativePath, {
+      params: Object.fromEntries(urlObj.searchParams),
     });
     results.push(...resp.data.results);
-    nextUrl = resp.data.next ? (resp.data.next.startsWith("http") ? resp.data.next : `${API_BASE}${resp.data.next}`) : null;
+    nextUrl = resp.data.next
+      ? resp.data.next.startsWith("http")
+        ? resp.data.next
+        : `${API_BASE}${resp.data.next}`
+      : null;
   }
 
   return results;

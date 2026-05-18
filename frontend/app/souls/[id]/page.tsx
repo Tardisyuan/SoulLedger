@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -67,12 +67,7 @@ export default function SoulDetailPage() {
   const updateSoulMutation = useUpdateSoul();
   const deleteSoulMutation = useDeleteSoul();
 
-  useEffect(() => {
-    if (!id) return;
-    loadSoulData();
-  }, [id]);
-
-  async function loadSoulData() {
+  const loadSoulData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -98,7 +93,12 @@ export default function SoulDetailPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id, t]);
+
+  useEffect(() => {
+    if (!id) return;
+    loadSoulData();
+  }, [id, loadSoulData]);
 
   async function handleDie() {
     if (!soul) return;

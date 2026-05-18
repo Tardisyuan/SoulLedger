@@ -157,7 +157,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
               {t("judgment.detail.confession")}
             </h2>
-            <p className="text-sm text-[hsl(var(--color-ink))] italic">"{judgment.confession}"</p>
+            <p className="text-sm text-[hsl(var(--color-ink))] italic">&ldquo;{judgment.confession}&rdquo;</p>
           </div>
         )}
 
@@ -184,7 +184,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             </div>
             {judgment.notes && (
               <div className="mt-3 pt-3 border-t border-[hsl(var(--color-hairline))]">
-                <p className="text-sm text-[hsl(var(--color-ink-muted))]">"{t("judgment.detail.notes")}:"</p>
+                <p className="text-sm text-[hsl(var(--color-ink-muted))]">&ldquo;{t("judgment.detail.notes")}:&rdquo;</p>
                 <p className="text-sm text-[hsl(var(--color-ink))] mt-1">{judgment.notes}</p>
               </div>
             )}
