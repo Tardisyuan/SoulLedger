@@ -24,9 +24,11 @@ from apps.tenants.models import Tenant
 from apps.souls.models import Soul
 from apps.actors.models import Actor
 from apps.core.permissions import TenantPermission
+from apps.core.mixins import TenantCreateMixin
+from apps.core.viewsets import AuditUserViewSetMixin
 
 
-class DispatchRecordViewSet(viewsets.ModelViewSet):
+class DispatchRecordViewSet(AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
     """
     DispatchRecord CRUD + actions.
     """
@@ -54,9 +56,6 @@ class DispatchRecordViewSet(viewsets.ModelViewSet):
         if tenant:
             return qs.filter(source_tenant=tenant) | qs.filter(target_tenant=tenant)
         return qs.none()
-
-    def perform_create(self, serializer):
-        serializer.save(tenant=getattr(self.request, "tenant", None))
 
     @action(detail=False, methods=["get"])
     def proposed(self, request):

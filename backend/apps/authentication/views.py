@@ -26,7 +26,7 @@ from .serializers import (
     UserUpdateSerializer,
     LoginLogSerializer,
 )
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import TenantPermission, IsAdminPermission
 
 
 # ---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ class UserViewSet(viewsets.ModelViewSet):
         POST   /api/v1/users/{id}/deactivate/   - 停用用户
         POST   /api/v1/users/{id}/reset_password/ - 重置密码
     """
-    permission_classes = [TenantPermission]
+    permission_classes = [TenantPermission, IsAdminPermission]
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -59,19 +59,10 @@ class UserViewSet(viewsets.ModelViewSet):
             return UserUpdateSerializer
         return UserManagementSerializer
 
-    def check_permissions(self, request):
-        """Only ADMIN users can access user management endpoints."""
-        # Call parent first to check base permissions (IsAuthenticated, etc.)
-        super().check_permissions(request)
-        # Then check role-based permission
-        if getattr(request.user, 'role', None) != 'ADMIN':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only ADMIN users can manage users")
-
     def get_queryset(self):
         qs = User.objects.select_related('tenant').all()
         user = self.request.user
-        # Non-ADMIN users cannot access user management (handled in check_permissions)
+        # Non-ADMIN users cannot access user management (handled by IsAdminPermission)
         if getattr(user, 'role', None) != 'ADMIN':
             return qs.none()
         # ADMIN users see all users in their tenant
@@ -271,14 +262,8 @@ class LoginLogViewSet(viewsets.ReadOnlyModelViewSet):
         GET /api/v1/login-logs/        - 获取登录日志列表
         GET /api/v1/login-logs/{id}/   - 获取登录日志详情
     """
-    permission_classes = [TenantPermission]
+    permission_classes = [TenantPermission, IsAdminPermission]
     serializer_class = LoginLogSerializer
-
-    def check_permissions(self, request):
-        super().check_permissions(request)
-        if getattr(request.user, 'role', None) != 'ADMIN':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only ADMIN users can view login logs")
 
     def get_queryset(self):
         from .models import LoginLog

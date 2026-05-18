@@ -37,19 +37,20 @@ class SoulEvent(AuditUserFields, models.Model):
     event_type = models.CharField(max_length=30, choices=EventType.choices)
     payload = models.JSONField(default=dict)
     actor = models.CharField(max_length=255, blank=True, help_text="User or system")
-    created_at = models.DateTimeField(auto_now_add=True)
+    # Original created_at field (separate from AuditUserFields.create_time)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-create_time"]
         verbose_name = "Soul Event"
         verbose_name_plural = "Soul Events"
         indexes = [
-            models.Index(fields=["soul", "created_at"]),
+            models.Index(fields=["soul", "create_time"]),
             models.Index(fields=["event_type"]),
-            models.Index(fields=["tenant", "created_at"]),
+            models.Index(fields=["tenant", "create_time"]),
         ]
 
     objects = TenantManager()
 
     def __str__(self):
-        return f"{self.event_type}: {self.soul.name} at {self.created_at}"
+        return f"{self.event_type}: {self.soul.name} at {self.create_time}"

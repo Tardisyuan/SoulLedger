@@ -16,9 +16,11 @@ from apps.workflow.serializers import (
 )
 from apps.workflow.services import WorkflowService
 from apps.core.permissions import TenantPermission
+from apps.core.mixins import TenantQuerySetMixin, TenantCreateMixin
+from apps.core.viewsets import AuditUserViewSetMixin
 
 
-class WorkflowTemplateViewSet(viewsets.ModelViewSet):
+class WorkflowTemplateViewSet(TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     WorkflowTemplate CRUD.
     """
@@ -33,23 +35,8 @@ class WorkflowTemplateViewSet(viewsets.ModelViewSet):
             return WorkflowTemplateListSerializer
         return WorkflowTemplateSerializer
 
-    def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        if user.role == "ADMIN":
-            return qs
-        tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            return qs.filter(tenant=tenant)
-        return qs.none()
 
-    def perform_create(self, serializer):
-        serializer.save(tenant=getattr(self.request, "tenant", None))
-
-
-class ApprovalWorkflowViewSet(viewsets.ModelViewSet):
+class ApprovalWorkflowViewSet(TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     ApprovalWorkflow CRUD + node actions.
     """
@@ -64,21 +51,6 @@ class ApprovalWorkflowViewSet(viewsets.ModelViewSet):
         if self.action == "list":
             return ApprovalWorkflowListSerializer
         return ApprovalWorkflowSerializer
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        if user.role == "ADMIN":
-            return qs
-        tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            return qs.filter(tenant=tenant)
-        return qs.none()
-
-    def perform_create(self, serializer):
-        serializer.save(tenant=getattr(self.request, "tenant", None))
 
     @action(detail=True, methods=["post"])
     def advance(self, request, pk=None):
@@ -168,7 +140,7 @@ class ApprovalWorkflowViewSet(viewsets.ModelViewSet):
         return Response({"error": "Failed to create workflow"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ApprovalNodeViewSet(viewsets.ModelViewSet):
+class ApprovalNodeViewSet(AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
     """
     ApprovalNode CRUD.
     """

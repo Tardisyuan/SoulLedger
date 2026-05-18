@@ -275,8 +275,12 @@ class KarmaExportStatsView(APIView):
             "Death Date", "Created At"
         ])
 
-        tenant = getattr(request, 'tenant', None)
-        qs = Soul.objects.select_related("tenant").filter(tenant=tenant) if tenant else Soul.objects.none()
+        tenant = getattr(request, 'tenant', None) or getattr(request.user, 'tenant', None)
+        # Admin exports all souls, others export only their tenant's souls
+        if getattr(user, 'role', None) == 'ADMIN':
+            qs = Soul.objects.select_related("tenant").all()
+        else:
+            qs = Soul.objects.select_related("tenant").filter(tenant=tenant) if tenant else Soul.objects.none()
         for soul in qs:
             writer.writerow([
                 str(soul.id),
