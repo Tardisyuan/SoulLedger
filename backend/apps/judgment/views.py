@@ -9,6 +9,8 @@ from apps.judgment.models import Judgment
 from apps.judgment.serializers import JudgmentSerializer, JudgmentConcludeSerializer
 from apps.souls.models import SoulState
 from apps.core.permissions import TenantPermission
+from apps.core.mixins import TenantQuerySetMixin, TenantCreateMixin
+from apps.core.viewsets import AuditUserViewSetMixin
 
 
 class JudgmentFilter(filters.FilterSet):
@@ -21,7 +23,7 @@ class JudgmentFilter(filters.FilterSet):
         fields = ["soul", "civilization", "verdict", "is_final"]
 
 
-class JudgmentViewSet(viewsets.ModelViewSet):
+class JudgmentViewSet(TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     Judgment CRUD + conclude action.
     Tenant-isolated via TenantPermission.
@@ -31,18 +33,6 @@ class JudgmentViewSet(viewsets.ModelViewSet):
     serializer_class = JudgmentSerializer
     filterset_class = JudgmentFilter
     ordering_fields = ["created_at", "concluded_at"]
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        if user.role == "ADMIN":
-            return qs
-        tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            return qs.filter(tenant=tenant)
-        return qs.none()
 
     def perform_create(self, serializer):
         judgment = serializer.save()

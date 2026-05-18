@@ -17,7 +17,7 @@
 ## 系统架构
 
 ```
-前端 (Next.js 14)  →  http://localhost:3333
+前端 (Next.js 16)  →  http://localhost:3333
 后端 (Django 5)    →  http://localhost:8000/api/v1/
 PostgreSQL 16       →  localhost:5432
 Redis 7             →  localhost:6379
@@ -148,6 +148,7 @@ SoulLedger/
 - **M4**: 角色与领域系统 (Actors + Realms)
 - **M5**: 审批流程系统 (Workflow + 7种审判类型)
 - **M6**: 功德系统 (时间衰减 + 因果继承)
+- **M7**: 用户与组织重构 (Tenant 清理、AuditUserViewSetMixin)
 
 ### 页面模块
 | 页面 | 功能 | 角色 |
@@ -216,7 +217,7 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE (新生命)
 
 | 层级 | 技术 |
 |------|------|
-| 前端 | Next.js 14, React 18, Tailwind CSS, TanStack Query v5, @xyflow/react, TypeScript |
+| 前端 | Next.js 16, React 18, Tailwind CSS, TanStack Query v5, @xyflow/react, TypeScript |
 | 后端 | Django 5, Django REST Framework, django-multitenant, Celery |
 | 数据库 | PostgreSQL 16 |
 | 任务队列 | Celery 5, Redis 7 |

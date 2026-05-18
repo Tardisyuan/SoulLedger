@@ -42,3 +42,34 @@ class TenantPermission(permissions.BasePermission):
             return True  # No tenant field — allow
 
         return str(obj_tenant.pk) == str(tenant.pk)
+
+
+class IsAdminPermission(permissions.BasePermission):
+    """
+    Permission class that only allows ADMIN role users.
+    Use this for admin-only endpoints like user management, role management.
+    """
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return getattr(request.user, 'role', None) == 'ADMIN'
+
+    def has_object_permission(self, request, view, obj):
+        return getattr(request.user, 'role', None) == 'ADMIN'
+
+
+def admin_required(view_func):
+    """
+    Decorator for function-based views that requires ADMIN role.
+    Use for @api_view decorated endpoints that need admin check.
+    """
+    def wrapper(request, *args, **kwargs):
+        if getattr(request, 'user', None) is None:
+            from rest_framework.exceptions import NotAuthenticated
+            raise NotAuthenticated()
+        if getattr(request.user, 'role', None) != 'ADMIN':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Admin access required")
+        return view_func(request, *args, **kwargs)
+    return wrapper

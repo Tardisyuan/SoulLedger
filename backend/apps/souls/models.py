@@ -65,6 +65,28 @@ class Soul(AuditUserFields, models.Model):
 
     objects = TenantManager()
 
+    def save(self, *args, **kwargs):
+        # Set tenant from thread-local request context on first save
+        is_new = self._state.adding
+        if is_new and self.tenant_id is None:
+            from apps.core.request_local import get_current_request
+            request = get_current_request()
+            if request:
+                tenant = getattr(request, 'tenant', None)
+                if not tenant:
+                    user = getattr(request, 'user', None)
+                    if user:
+                        tenant = getattr(user, 'tenant', None)
+                if tenant:
+                    self.tenant = tenant
+
+        super().save(*args, **kwargs)
+
+        # Log SOUL_CREATED event after first save (not on updates)
+        if is_new:
+            from apps.events.services import EventService
+            EventService.log_soul_created(self)
+
     def __str__(self):
         return f"{self.name} ({self.civilization}) [{self.current_state}]"
 
