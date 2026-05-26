@@ -14,15 +14,16 @@ interface ToastItem {
 // ── Pure DOM toast — no React state, no effects, no portals ──
 
 const COLOR = {
-  success: { bg: "rgba(16,64,40,0.98)", border: "#10b981", text: "#d1fae5", icon: "✓" },
-  error:   { bg: "rgba(64,16,16,0.98)", border: "#ef4444", text: "#fecaca",  icon: "✕" },
-  info:    { bg: "rgba(20,50,120,0.98)", border: "#3b82f6", text: "#dbeafe",  icon: "ℹ" },
+  success: { bg: "rgba(16,64,40,0.98)", border: "hsl(142 76% 36%)", text: "#d1fae5", icon: "✓" },
+  error:   { bg: "rgba(64,16,16,0.98)", border: "hsl(0 84% 60%)", text: "#fecaca",  icon: "✕" },
+  info:    { bg: "rgba(20,50,120,0.98)", border: "hsl(217 91% 60%)", text: "#dbeafe",  icon: "ℹ" },
 };
 
 let toasts: ToastItem[] = [];
 let nextId = 0;
 
-function getContainer(): HTMLElement {
+function getContainer(): HTMLElement | null {
+  if (typeof document === "undefined") return null;
   let el = document.getElementById("toast-container") as HTMLElement;
   if (!el) {
     el = document.createElement("div");
@@ -68,11 +69,25 @@ function buildToastEl(item: ToastItem): HTMLElement {
     "line-height:1.4",
   ].join(";");
 
-  el.innerHTML = `
-    <span style="flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:${c.border}33;color:${c.border};font-size:11px;font-weight:bold;border:1px solid ${c.border}55;">${c.icon}</span>
-    <span style="flex:1">${item.message}</span>
-    <button id="toast-close-${item.id}" style="flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:3px;background:transparent;border:none;cursor:pointer;color:${c.text};opacity:0.5;font-size:16px;padding:0;line-height:1;">×</button>
-  `;
+  // Icon span
+  const iconSpan = document.createElement("span");
+  iconSpan.style.cssText = `flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:${c.border}33;color:${c.border};font-size:11px;font-weight:bold;border:1px solid ${c.border}55;`;
+  iconSpan.textContent = c.icon;
+
+  // Message span — use textContent to prevent XSS
+  const msgSpan = document.createElement("span");
+  msgSpan.style.cssText = "flex:1;";
+  msgSpan.textContent = item.message;
+
+  // Close button
+  const closeBtn = document.createElement("button");
+  closeBtn.id = `toast-close-${item.id}`;
+  closeBtn.style.cssText = "flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:3px;background:transparent;border:none;cursor:pointer;color:" + c.text + ";opacity:0.5;font-size:16px;padding:0;line-height:1;";
+  closeBtn.textContent = "×";
+
+  el.appendChild(iconSpan);
+  el.appendChild(msgSpan);
+  el.appendChild(closeBtn);
 
   el.querySelector(`#toast-close-${item.id}`)?.addEventListener("click", () => removeToast(item.id));
 
@@ -112,6 +127,7 @@ export function showToast(
   toasts = [...toasts, item];
 
   const container = getContainer();
+  if (!container) return "";
   const el = buildToastEl(item);
   container.appendChild(el);
 

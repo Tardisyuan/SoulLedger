@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useAuth } from "@/src/hooks/useAuth";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { karmaApi, KarmaStatsOverview } from "@/lib/api";
 import {
   PieChart,
@@ -36,6 +38,11 @@ const CHART_COLORS = [
 
 export default function AdminStatsPage() {
   const { t } = useI18n();
+  const { isAdmin } = useAuth();
+
+  if (!isAdmin) {
+    return <PermissionDenied />;
+  }
 
   const { data: stats, isLoading, error } = useQuery({
     queryKey: ["karma-stats"],
@@ -61,7 +68,7 @@ export default function AdminStatsPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))] flex items-center justify-center">
-        <div className="text-[hsl(var(--color-ink-muted))]">Loading statistics...</div>
+        <div className="text-[hsl(var(--color-ink-muted))]">{t("admin.loading_stats")}</div>
       </div>
     );
   }
@@ -69,12 +76,12 @@ export default function AdminStatsPage() {
   if (error || !stats) {
     return (
       <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4">
-        <div className="text-red-400">{String(error || "Failed to load statistics")}</div>
+        <div className="text-red-400">{String(error || t("admin.failed_load"))}</div>
         <button
           onClick={() => window.location.reload()}
           className="px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] rounded-md text-sm hover:bg-[hsl(var(--color-surface-2))]"
         >
-          Retry
+          {t("common.retry")}
         </button>
       </div>
     );
@@ -96,14 +103,14 @@ export default function AdminStatsPage() {
       {/* Header */}
       <div className="border-b border-[hsl(var(--color-hairline))] px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-amber-400">Karma Statistics</h1>
-          <p className="text-sm text-[hsl(var(--color-ink-muted))] mt-0.5">System-wide karmic overview</p>
+          <h1 className="text-xl font-bold text-amber-400">{t("admin.karma_stats")}</h1>
+          <p className="text-sm text-[hsl(var(--color-ink-muted))] mt-0.5">{t("admin.system_wide_overview")}</p>
         </div>
         <button
           onClick={handleExport}
           className="px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] rounded-md text-sm transition-colors"
         >
-          Export CSV
+          {t("admin.export_csv")}
         </button>
       </div>
 
@@ -111,13 +118,13 @@ export default function AdminStatsPage() {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <div className="text-sm text-[hsl(var(--color-ink-muted))] uppercase tracking-wide">Total Souls</div>
+            <div className="text-sm text-[hsl(var(--color-ink-muted))] uppercase tracking-wide">{t("admin.total_souls")}</div>
             <div className="text-3xl font-bold text-amber-400 mt-2">
               {stats.total_souls.toLocaleString()}
             </div>
           </div>
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <div className="text-sm text-[hsl(var(--color-ink-muted))] uppercase tracking-wide">Avg Karma Balance</div>
+            <div className="text-sm text-[hsl(var(--color-ink-muted))] uppercase tracking-wide">{t("admin.avg_karma")}</div>
             <div className="text-3xl font-bold mt-2">
               {(stats.karma_distribution.reduce((sum, k) => {
                 // Parse label like "< -50", "-50 to -20", "-5 to 5", "> 50" to get midpoint
@@ -138,7 +145,7 @@ export default function AdminStatsPage() {
             </div>
           </div>
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <div className="text-sm text-[hsl(var(--color-ink-muted))] uppercase tracking-wide">State Breakdown</div>
+            <div className="text-sm text-[hsl(var(--color-ink-muted))] uppercase tracking-wide">{t("admin.state_breakdown")}</div>
             <div className="mt-2 space-y-1">
               {stats.state_distribution.map((s) => (
                 <div key={s.state} className="flex justify-between text-sm">
@@ -155,7 +162,7 @@ export default function AdminStatsPage() {
           {/* State Distribution Pie */}
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
             <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
-              Soul State Distribution
+              {t("admin.state_distribution")}
             </h2>
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
@@ -178,8 +185,8 @@ export default function AdminStatsPage() {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    background: "#0f1011",
-                    border: "1px solid #23252a",
+                    background: "hsl(var(--color-surface-2))",
+                    border: "1px solid hsl(var(--color-hairline))",
                     borderRadius: "6px",
                     fontSize: 12,
                   }}
@@ -195,26 +202,26 @@ export default function AdminStatsPage() {
           {/* Karma Distribution Bar */}
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
             <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
-              Karma Score Distribution
+              {t("admin.karma_distribution")}
             </h2>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={karmaDistData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#23252a" />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--color-hairline))" />
                 <XAxis
                   dataKey="name"
-                  tick={{ fill: "#8a8f98", fontSize: 10 }}
-                  axisLine={{ stroke: "#23252a" }}
-                  tickLine={{ stroke: "#23252a" }}
+                  tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 10 }}
+                  axisLine={{ stroke: "hsl(var(--color-hairline))" }}
+                  tickLine={{ stroke: "hsl(var(--color-hairline))" }}
                 />
                 <YAxis
-                  tick={{ fill: "#8a8f98", fontSize: 10 }}
-                  axisLine={{ stroke: "#23252a" }}
-                  tickLine={{ stroke: "#23252a" }}
+                  tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 10 }}
+                  axisLine={{ stroke: "hsl(var(--color-hairline))" }}
+                  tickLine={{ stroke: "hsl(var(--color-hairline))" }}
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "#0f1011",
-                    border: "1px solid #23252a",
+                    background: "hsl(var(--color-surface-2))",
+                    border: "1px solid hsl(var(--color-hairline))",
                     borderRadius: "6px",
                     fontSize: 12,
                   }}
@@ -228,16 +235,16 @@ export default function AdminStatsPage() {
         {/* Top Karma Souls Table */}
         <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
           <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
-            Top Karma Souls
+            {t("admin.top_karma")}
           </h2>
           {stats.souls_by_realm && stats.souls_by_realm.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-[hsl(var(--color-ink-muted))] border-b border-[hsl(var(--color-hairline))]">
-                    <th className="pb-2 font-medium">Realm</th>
-                    <th className="pb-2 font-medium">Civilization</th>
-                    <th className="pb-2 font-medium text-right">Soul Count</th>
+                    <th className="pb-2 font-medium">{t("admin.realm")}</th>
+                    <th className="pb-2 font-medium">{t("admin.civilization")}</th>
+                    <th className="pb-2 font-medium text-right">{t("admin.soul_count")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -255,7 +262,7 @@ export default function AdminStatsPage() {
               </table>
             </div>
           ) : (
-            <div className="text-center text-[hsl(var(--color-ink-muted))] py-8">No realm data available</div>
+            <div className="text-center text-[hsl(var(--color-ink-muted))] py-8">{t("admin.no_realm_data")}</div>
           )}
         </div>
 
@@ -263,7 +270,7 @@ export default function AdminStatsPage() {
         {stats.tenants && stats.tenants.length > 0 && (
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
             <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
-              Tenant Breakdown
+              {t("admin.tenant_breakdown")}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {stats.tenants.map((tenant) => (
@@ -277,7 +284,7 @@ export default function AdminStatsPage() {
                   <div className="text-2xl font-bold text-amber-400">
                     {tenant.total_souls}
                   </div>
-                  <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">souls</div>
+                  <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">{t("admin.souls")}</div>
                   <div className="mt-3 space-y-1">
                     {Object.entries(tenant.state_breakdown).map(([state, count]) => (
                       <div key={state} className="flex justify-between text-xs">
@@ -296,7 +303,7 @@ export default function AdminStatsPage() {
         {stats.recent_activity && stats.recent_activity.length > 0 && (
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
             <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
-              Recent Activity
+              {t("admin.recent_activity")}
             </h2>
             <div className="space-y-2">
               {stats.recent_activity.slice(0, 10).map((activity) => (
@@ -306,7 +313,7 @@ export default function AdminStatsPage() {
                 >
                   <div>
                     <span className="text-amber-400">{activity.action}</span>
-                    <span className="text-[hsl(var(--color-ink-muted))]"> on {activity.resource}</span>
+                    <span className="text-[hsl(var(--color-ink-muted))]"> {t("admin.on")} {activity.resource}</span>
                     <span className="text-[hsl(var(--color-ink-subtle))]"> #{activity.resource_id}</span>
                   </div>
                   <div className="text-[hsl(var(--color-ink-subtle))] text-xs">

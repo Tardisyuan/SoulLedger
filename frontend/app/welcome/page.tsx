@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { karmaApi, soulsApi, workflowApi, type KarmaStatsOverview } from "@/lib/api";
@@ -44,7 +45,18 @@ interface AgentStatus {
 
 export default function WelcomePage() {
   const { t } = useI18n();
+  const router = useRouter();
   const { user } = useTenant();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!user) {
+      router.replace("/login");
+    }
+  }, [user, router]);
+
+  // Don't render anything while checking auth
+  if (!user) return null;
   const [stats, setStats] = useState<KarmaStatsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -135,10 +147,10 @@ export default function WelcomePage() {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return "刚刚";
-    if (minutes < 60) return `${minutes}分钟前`;
+    if (minutes < 1) return t("welcome.just_now");
+    if (minutes < 60) return t("welcome.minutes_ago", { n: String(minutes) });
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}小时前`;
+    if (hours < 24) return t("welcome.hours_ago", { n: String(hours) });
     return date.toLocaleDateString("zh-CN");
   };
 
@@ -192,7 +204,7 @@ export default function WelcomePage() {
           <div className="lg:col-span-2 bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] p-5">
             <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))] mb-4 flex items-center gap-2">
               <Zap className="w-5 h-5 text-[hsl(var(--color-accent))]" />
-              快捷操作
+              {t("welcome.quick_actions")}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {quickActions.map((action, i) => (
@@ -213,7 +225,7 @@ export default function WelcomePage() {
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] p-5">
             <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))] mb-4 flex items-center gap-2">
               <Bot className="w-5 h-5 text-[hsl(var(--color-accent))]" />
-              AI 智能体状态
+              {t("welcome.agent_status")}
             </h2>
             <div className="space-y-3">
               {agents.map((agent, i) => (
@@ -237,7 +249,7 @@ export default function WelcomePage() {
                     agent.status === "active" ? "bg-emerald-400/20 text-emerald-400" :
                     agent.status === "busy" ? "bg-amber-400/20 text-amber-400" : "bg-gray-400/20 text-gray-400"
                   }`}>
-                    {agent.status === "active" ? "运行中" : agent.status === "busy" ? "工作中" : "空闲"}
+                    {agent.status === "active" ? t("welcome.running") : agent.status === "busy" ? t("welcome.working") : t("welcome.idle")}
                   </span>
                 </div>
               ))}
@@ -248,7 +260,7 @@ export default function WelcomePage() {
                 className="text-sm text-[hsl(var(--color-accent))] hover:underline flex items-center gap-1"
               >
                 <Sparkles className="w-4 h-4" />
-                管理智能体
+                {t("welcome.manage_agents")}
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -259,7 +271,7 @@ export default function WelcomePage() {
         <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] p-5">
           <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))] mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-[hsl(var(--color-accent))]" />
-            最近活动
+            {t("welcome.recent_activity")}
           </h2>
           <div className="space-y-3">
             {activities.map((activity) => (
@@ -289,7 +301,7 @@ export default function WelcomePage() {
             href="/audit"
             className="mt-4 text-sm text-[hsl(var(--color-accent))] hover:underline flex items-center gap-1"
           >
-            查看全部活动
+            {t("welcome.view_all_activity")}
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -301,7 +313,7 @@ export default function WelcomePage() {
               <Globe className="w-6 h-6 text-blue-400" />
             </div>
             <div>
-              <div className="text-sm text-[hsl(var(--color-ink-muted))]">当前文明</div>
+              <div className="text-sm text-[hsl(var(--color-ink-muted))]">{t("welcome.current_civilization")}</div>
               <div className="text-lg font-semibold text-[hsl(var(--color-ink))]">{user?.tenant?.display_name || "SoulLedger"}</div>
             </div>
           </div>
@@ -310,7 +322,7 @@ export default function WelcomePage() {
               <Shield className="w-6 h-6 text-emerald-400" />
             </div>
             <div>
-              <div className="text-sm text-[hsl(var(--color-ink-muted))]">用户角色</div>
+              <div className="text-sm text-[hsl(var(--color-ink-muted))]">{t("welcome.user_role")}</div>
               <div className="text-lg font-semibold text-[hsl(var(--color-ink))]">{user?.role || "ADMIN"}</div>
             </div>
           </div>
@@ -319,7 +331,7 @@ export default function WelcomePage() {
               <Sparkles className="w-6 h-6 text-purple-400" />
             </div>
             <div>
-              <div className="text-sm text-[hsl(var(--color-ink-muted))]">系统版本</div>
+              <div className="text-sm text-[hsl(var(--color-ink-muted))]">{t("welcome.system_version")}</div>
               <div className="text-lg font-semibold text-[hsl(var(--color-ink))]">v0.1</div>
             </div>
           </div>

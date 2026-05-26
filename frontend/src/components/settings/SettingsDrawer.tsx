@@ -52,16 +52,25 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
   const [customHex, setCustomHex] = useState("");
 
   useEffect(() => {
-    const saved = localStorage.getItem(ACCENT_COLOR_KEY);
-    if (saved) {
-      setAccentColor(saved);
-      document.documentElement.style.setProperty("--color-accent", hexToHsl(saved));
+    try {
+      const saved = localStorage.getItem(ACCENT_COLOR_KEY);
+      if (saved && /^#[0-9a-fA-F]{6}$/.test(saved)) {
+        setAccentColor(saved);
+        document.documentElement.style.setProperty("--color-accent", hexToHsl(saved));
+      }
+    } catch {
+      // localStorage unavailable (SSR or private browsing)
     }
   }, []);
 
   const applyAccentColor = (color: string) => {
+    if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
     setAccentColor(color);
-    localStorage.setItem(ACCENT_COLOR_KEY, color);
+    try {
+      localStorage.setItem(ACCENT_COLOR_KEY, color);
+    } catch {
+      // localStorage unavailable
+    }
     document.documentElement.style.setProperty("--color-accent", hexToHsl(color));
   };
 
@@ -201,10 +210,15 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
 export function useAccentColor() {
   useEffect(() => {
-    const saved = localStorage.getItem(ACCENT_COLOR_KEY);
-    if (saved) {
-      document.documentElement.style.setProperty("--color-accent", hexToHsl(saved));
-    } else {
+    try {
+      const saved = localStorage.getItem(ACCENT_COLOR_KEY);
+      if (saved && /^#[0-9a-fA-F]{6}$/.test(saved)) {
+        document.documentElement.style.setProperty("--color-accent", hexToHsl(saved));
+      } else {
+        document.documentElement.style.setProperty("--color-accent", hexToHsl("#f59e0b"));
+      }
+    } catch {
+      // localStorage unavailable (SSR or private browsing)
       document.documentElement.style.setProperty("--color-accent", hexToHsl("#f59e0b"));
     }
   }, []);
