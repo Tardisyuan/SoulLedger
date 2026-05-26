@@ -17,13 +17,20 @@ if not SECRET_KEY:
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
 
 if DEBUG:
-    # Only allow all origins in DEBUG mode
-    pass
-
-ALLOWED_HOSTS = os.getenv(
-    "ALLOWED_HOSTS",
-    "*",
-).split(",")
+    # In DEBUG mode, allow localhost by default
+    ALLOWED_HOSTS = os.getenv(
+        "ALLOWED_HOSTS",
+        "localhost,127.0.0.1,[::1]",
+    ).split(",")
+else:
+    # In production, ALLOWED_HOSTS must be explicitly configured
+    _hosts = os.getenv("ALLOWED_HOSTS", "")
+    if not _hosts:
+        raise ValueError(
+            "ALLOWED_HOSTS environment variable must be set in production (DEBUG=False). "
+            "Example: ALLOWED_HOSTS=example.com,www.example.com"
+        )
+    ALLOWED_HOSTS = [h.strip() for h in _hosts.split(",") if h.strip()]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -39,6 +46,7 @@ INSTALLED_APPS = [
     "django_filters",
     "corsheaders",
     "django_celery_beat",
+    "drf_spectacular",
     # Local apps
     "apps.tenants",
     "apps.authentication",
@@ -124,8 +132,18 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # CORS
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3333"
+    "CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3333,http://192.168.2.115:3333"
 ).split(",")
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "origin",
+    "user-agent",
+    "x-tenant-id",
+    "x-requested-with",
+]
 
 # REST Framework
 REST_FRAMEWORK = {
@@ -139,12 +157,22 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "60/minute",
+        "register": "5/hour",
+        "login": "10/minute",
+        "password_reset": "3/5minute",
+    },
 }
 
 # JWT Settings
@@ -229,6 +257,14 @@ if not DEBUG:
             "level": "INFO",
         },
     }
+
+# drf-spectacular (API docs)
+SPECTACULAR_SETTINGS = {
+    "TITLE": "SoulLedger API",
+    "DESCRIPTION": "Cross-civilization soul management system API",
+    "VERSION": "0.1.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+}
 
 # Sentry integration
 import sentry_sdk

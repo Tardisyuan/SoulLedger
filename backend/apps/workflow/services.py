@@ -84,11 +84,39 @@ WORKFLOW_TEMPLATES = {
 }
 
 
+# Valid case types per civilization
+VALID_CASE_TYPES_BY_CIVILIZATION = {
+    Civilization.CHINESE: {CaseType.ROUTINE, CaseType.APPEAL, CaseType.CROSS_REALM, CaseType.SPECIAL},
+    Civilization.EUROPEAN: {CaseType.CANONIZATION, CaseType.PURGATORY_REVIEW, CaseType.HERESY_TRIAL, CaseType.ROUTINE},
+    Civilization.EGYPTIAN: {CaseType.HEART_WEIGHING, CaseType.DIVINE_TRIAL, CaseType.ROUTINE},
+}
+
+
 class WorkflowService:
     """
     Creates approval workflow instances from concluded judgments.
     Routes to civilization-specific templates.
     """
+
+    @classmethod
+    def validate_civilization_case_type(cls, civilization: str, case_type: str) -> Optional[str]:
+        """
+        Validate that case_type is appropriate for the given civilization.
+
+        Args:
+            civilization: The civilization code
+            case_type: The case type to validate
+
+        Returns:
+            Error message if invalid, None if valid
+        """
+        valid_types = VALID_CASE_TYPES_BY_CIVILIZATION.get(civilization, set())
+        if case_type not in valid_types:
+            return (
+                f"Case type '{case_type}' is not valid for civilization '{civilization}'. "
+                f"Valid types: {', '.join(sorted(t.value for t in valid_types))}"
+            )
+        return None
 
     @classmethod
     def create_from_judgment(
@@ -109,6 +137,9 @@ class WorkflowService:
 
         Returns:
             Created ApprovalWorkflow or None if no template matches
+
+        Raises:
+            ValueError: If case_type is not valid for the civilization
         """
         soul = judgment.soul
         civilization = soul.civilization
@@ -123,6 +154,11 @@ class WorkflowService:
                 case_type = CaseType.HEART_WEIGHING
             else:
                 case_type = CaseType.ROUTINE  # European default
+
+        # Validate case_type for civilization
+        validation_error = cls.validate_civilization_case_type(civilization, case_type)
+        if validation_error:
+            raise ValueError(validation_error)
 
         # Look up template
         template = WORKFLOW_TEMPLATES.get((civilization, case_type))

@@ -129,12 +129,16 @@ class ApprovalWorkflowViewSet(TenantQuerySetMixin, TenantCreateMixin, AuditUserV
         is_appeal = request.data.get("is_appeal", False)
         priority = request.data.get("priority", 0)
 
-        workflow = WorkflowService.create_from_judgment(
-            judgment,
-            case_type=case_type,
-            is_appeal=is_appeal,
-            priority=priority,
-        )
+        try:
+            workflow = WorkflowService.create_from_judgment(
+                judgment,
+                case_type=case_type,
+                is_appeal=is_appeal,
+                priority=priority,
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         if workflow:
             return Response(ApprovalWorkflowSerializer(workflow).data, status=status.HTTP_201_CREATED)
         return Response({"error": "Failed to create workflow"}, status=status.HTTP_400_BAD_REQUEST)

@@ -170,6 +170,12 @@ class SetNewPasswordSerializer(serializers.Serializer):
     code = serializers.CharField(min_length=6, max_length=6)
     new_password = serializers.CharField(write_only=True, min_length=8)
 
+    def validate_code(self, value):
+        """Ensure code is exactly 6 digits."""
+        if not value.isdigit() or len(value) != 6:
+            raise serializers.ValidationError("验证码必须是6位数字")
+        return value
+
 
 class LoginLogSerializer(serializers.ModelSerializer):
     """Serializer for login log entries."""
