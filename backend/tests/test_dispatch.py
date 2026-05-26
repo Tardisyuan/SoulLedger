@@ -146,25 +146,21 @@ def eu_actor(db, eu_tenant):
 @pytest.fixture
 def auth_headers(api_client, cn_admin_user):
     """Authenticated headers dict with CN admin user."""
-    api_client.force_authenticate(user=cn_admin_user)
-    response = api_client.post("/api/v1/auth/login/", {
-        "username": "cn_admin",
-        "password": "admin123",
-    })
-    token = response.data.get("access")
-    return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+    from rest_framework_simplejwt.tokens import RefreshToken
+    token = RefreshToken.for_user(cn_admin_user)
+    if cn_admin_user.tenant:
+        token["tenant_code"] = cn_admin_user.tenant.code
+    return {"HTTP_AUTHORIZATION": f"Bearer {token.access_token}"}
 
 
 @pytest.fixture
 def eu_auth_headers(api_client, eu_admin_user):
     """Authenticated headers dict with EU admin user."""
-    api_client.force_authenticate(user=eu_admin_user)
-    response = api_client.post("/api/v1/auth/login/", {
-        "username": "eu_admin",
-        "password": "admin123",
-    })
-    token = response.data.get("access")
-    return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+    from rest_framework_simplejwt.tokens import RefreshToken
+    token = RefreshToken.for_user(eu_admin_user)
+    if eu_admin_user.tenant:
+        token["tenant_code"] = eu_admin_user.tenant.code
+    return {"HTTP_AUTHORIZATION": f"Bearer {token.access_token}"}
 
 
 class TestDispatchRecordModel:

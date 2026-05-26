@@ -16,13 +16,12 @@ class TestUserManagementAPI:
         self.client = api_client
         self.admin_user = admin_user
         self.cn_tenant = cn_tenant
-        # Login to get JWT token with tenant_code
-        response = self.client.post("/api/v1/auth/login/", {
-            "username": "admin",
-            "password": "admin123",
-        })
-        token = response.data["access"]
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        # Generate JWT token directly to bypass login rate limiter
+        from rest_framework_simplejwt.tokens import RefreshToken
+        token = RefreshToken.for_user(admin_user)
+        if admin_user.tenant:
+            token["tenant_code"] = admin_user.tenant.code
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
 
     def test_list_users_authenticated(self):
         """GET /api/v1/users/ with auth returns 200."""
@@ -120,8 +119,9 @@ class TestUserManagementAPI:
 
         response = self.client.delete(f"/api/v1/users/{user.id}/")
         assert response.status_code == 204
-        # Verify user is deleted
-        assert not User.objects.filter(id=user.id).exists()
+        # Verify user is soft-deleted (User uses SoftDeleteMixin)
+        user.refresh_from_db()
+        assert user.is_deleted == True
 
     def test_activate_user(self):
         """POST /api/v1/users/{id}/activate/ returns 200."""
@@ -407,13 +407,12 @@ class TestUserManagementPermission:
         self.client = api_client
         self.judge_user = judge_user
         self.cn_tenant = cn_tenant
-        # Login as judge to get JWT token
-        response = self.client.post("/api/v1/auth/login/", {
-            "username": "judge",
-            "password": "judge123",
-        })
-        token = response.data["access"]
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        # Generate JWT token directly to bypass login rate limiter
+        from rest_framework_simplejwt.tokens import RefreshToken
+        token = RefreshToken.for_user(judge_user)
+        if judge_user.tenant:
+            token["tenant_code"] = judge_user.tenant.code
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
 
     def test_judge_cannot_list_users(self):
         """Non-ADMIN user cannot list users (returns 403)."""
@@ -524,6 +523,17 @@ class TestUserManagementUnauthenticated:
 class TestPasswordReset:
     """Test password reset flow: request code + set new password."""
 
+    @pytest.fixture(autouse=True)
+    def _clear_reset_rate_limit(self):
+        """Clear password reset rate limit keys in Redis before each test."""
+        from django.core.cache import cache
+        for email in [
+            "admin@example.com", "admin2@example.com", "admin3@example.com",
+            "admin4@example.com", "admin5@example.com", "nonexistent@example.com",
+        ]:
+            cache.delete(f"pwd_reset_rate:{email}")
+        yield
+
     def test_request_reset_code(self, api_client, admin_user):
         """POST /api/v1/auth/reset-password/ returns success for valid email."""
         admin_user.email = "admin@example.com"
@@ -623,13 +633,12 @@ class TestProfileAPI:
     def setup(self, api_client, admin_user, cn_tenant):
         self.client = api_client
         self.admin_user = admin_user
-        # Login to get JWT token
-        response = self.client.post("/api/v1/auth/login/", {
-            "username": "admin",
-            "password": "admin123",
-        })
-        token = response.data["access"]
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        # Generate JWT token directly to bypass login rate limiter
+        from rest_framework_simplejwt.tokens import RefreshToken
+        token = RefreshToken.for_user(admin_user)
+        if admin_user.tenant:
+            token["tenant_code"] = admin_user.tenant.code
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
 
     def test_get_profile(self):
         """GET /api/v1/auth/profile/ returns current user profile."""
@@ -797,13 +806,12 @@ class TestLoginLog:
             ip_address="127.0.0.1",
         )
 
-        # Login as admin
-        response = api_client.post("/api/v1/auth/login/", {
-            "username": "admin",
-            "password": "admin123",
-        }, format="json")
-        token = response.data["access"]
-        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        # Generate JWT token directly to bypass login rate limiter
+        from rest_framework_simplejwt.tokens import RefreshToken
+        token = RefreshToken.for_user(admin_user)
+        if admin_user.tenant:
+            token["tenant_code"] = admin_user.tenant.code
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
 
         # List login logs
         response = api_client.get("/api/v1/auth/login-logs/")
@@ -814,14 +822,12 @@ class TestLoginLog:
         """ADMIN can filter login logs by status."""
         from apps.authentication.models import LoginLog
 
-        # Login as admin first to get token (this creates a SUCCESS log)
-        response = api_client.post("/api/v1/auth/login/", {
-            "username": "admin",
-            "password": "admin123",
-        }, format="json")
-        assert response.status_code == 200
-        token = response.data["access"]
-        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        # Generate JWT token directly to bypass login rate limiter
+        from rest_framework_simplejwt.tokens import RefreshToken
+        token = RefreshToken.for_user(admin_user)
+        if admin_user.tenant:
+            token["tenant_code"] = admin_user.tenant.code
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
 
         # Create a FAILED log
         LoginLog.objects.create(user=None, username="hacker", status="FAILED")
@@ -838,13 +844,12 @@ class TestLoginLog:
         from apps.authentication.models import LoginLog
         LoginLog.objects.create(user=judge_user, username="judge", status="SUCCESS")
 
-        # Login as judge
-        response = api_client.post("/api/v1/auth/login/", {
-            "username": "judge",
-            "password": "judge123",
-        }, format="json")
-        token = response.data["access"]
-        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        # Generate JWT token directly to bypass login rate limiter
+        from rest_framework_simplejwt.tokens import RefreshToken
+        token = RefreshToken.for_user(judge_user)
+        if judge_user.tenant:
+            token["tenant_code"] = judge_user.tenant.code
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
 
         response = api_client.get("/api/v1/auth/login-logs/")
         assert response.status_code == 403
@@ -854,13 +859,12 @@ class TestLoginLog:
         from apps.authentication.models import LoginLog
         LoginLog.objects.create(user=admin_user, username="admin", status="SUCCESS")
 
-        # Login as admin
-        response = api_client.post("/api/v1/auth/login/", {
-            "username": "admin",
-            "password": "admin123",
-        }, format="json")
-        token = response.data["access"]
-        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        # Generate JWT token directly to bypass login rate limiter
+        from rest_framework_simplejwt.tokens import RefreshToken
+        token = RefreshToken.for_user(admin_user)
+        if admin_user.tenant:
+            token["tenant_code"] = admin_user.tenant.code
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
 
         # Cannot create
         response = api_client.post("/api/v1/auth/login-logs/", {

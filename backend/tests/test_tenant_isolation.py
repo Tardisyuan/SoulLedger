@@ -32,13 +32,12 @@ class TestTenantIsolationAPI:
         return Soul.objects.create(name=name, tenant=tenant)
 
     def _get_auth_headers(self, client, user):
-        """Login and get auth headers."""
-        resp = client.post("/api/v1/auth/login/", {
-            "username": user.username,
-            "password": "testpass123",
-        })
-        token = resp.data["access"]
-        return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+        """Get auth headers using JWT token directly (avoids login rate limiter)."""
+        from rest_framework_simplejwt.tokens import RefreshToken
+        token = RefreshToken.for_user(user)
+        if user.tenant:
+            token["tenant_code"] = user.tenant.code
+        return {"HTTP_AUTHORIZATION": f"Bearer {token.access_token}"}
 
     def test_soul_tenant_isolation(self, django_user_model):
         """Soul from tenant A cannot be accessed by tenant B."""

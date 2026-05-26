@@ -87,29 +87,39 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
             }
             new_permissions = [perm_codename]
         else:
-            # For updates/deletes, we need to get old state before the operation
-            # For post_delete, instance still has the data but is marked for deletion
-            # For post_save on update, we can query the old state
-            try:
-                # Try to get the old permission from DB (works for updates, not for deletes)
-                old_rp = sender.objects.get(pk=instance.pk)
-                old_permissions = [old_rp.permission.codename]
-                new_permissions = [perm_codename]
-                changes = {
-                    "permissions": {
-                        "old": old_permissions,
-                        "new": new_permissions
-                    }
-                }
-            except Exception:
-                # For deletes, instance still has the data
+            # Check for soft delete first
+            is_soft_delete = hasattr(instance, 'is_deleted') and instance.is_deleted
+            if is_soft_delete:
+                # Permission was soft-deleted (removed from role)
                 old_permissions = [perm_codename]
+                new_permissions = []
                 changes = {
                     "permissions": {
                         "old": old_permissions,
                         "new": []
                     }
                 }
+            else:
+                # For updates, query the old state
+                try:
+                    old_rp = sender.objects.get(pk=instance.pk)
+                    old_permissions = [old_rp.permission.codename]
+                    new_permissions = [perm_codename]
+                    changes = {
+                        "permissions": {
+                            "old": old_permissions,
+                            "new": new_permissions
+                        }
+                    }
+                except Exception:
+                    # For hard deletes, instance still has the data
+                    old_permissions = [perm_codename]
+                    changes = {
+                        "permissions": {
+                            "old": old_permissions,
+                            "new": []
+                        }
+                    }
 
     # Invalidate cache
     if role_name:
@@ -295,15 +305,28 @@ def _get_client_ip(request):
 
 
 def _on_post_save(sender, instance, created, **kwargs):
-    """Handle post_save - log CREATE or UPDATE."""
+    """Handle post_save - log CREATE or UPDATE (or DELETE for soft deletes)."""
     # Skip SoulEvent - it creates its own events via EventService and should not generate AuditLogs
     if sender._meta.label.split('.')[-1] == 'SoulEvent':
         return
     from apps.audit.models import AuditAction
 
-    action = AuditAction.CREATE if created else AuditAction.UPDATE
+    # Detect soft delete: is_deleted changed from False to True
+    is_soft_delete = (
+        not created
+        and hasattr(instance, 'is_deleted')
+        and instance.is_deleted
+    )
+
+    if is_soft_delete:
+        action = AuditAction.DELETE
+    elif created:
+        action = AuditAction.CREATE
+    else:
+        action = AuditAction.UPDATE
+
     changes = None
-    if not created:
+    if not created and not is_soft_delete:
         try:
             old_instance = sender.objects.get(pk=instance.pk)
             changes = _build_changes(instance, old_instance)

@@ -39,7 +39,7 @@ class TestSoulModel:
     def test_die_transitions_to_judging(self, cn_tenant):
         soul = Soul.objects.create(name="死者", tenant=cn_tenant)
         result = soul.die(location="北京")
-        assert result is True
+        assert result is not None  # die() returns a Judgment object
         assert soul.current_state == SoulState.JUDGING
         assert soul.death_date is not None
 
@@ -47,7 +47,7 @@ class TestSoulModel:
         soul = Soul.objects.create(name="死者", tenant=cn_tenant)
         soul.die()
         result = soul.die()
-        assert result is False
+        assert result is None  # die() returns None when soul is not ALIVE
 
 
 @pytest.mark.django_db
