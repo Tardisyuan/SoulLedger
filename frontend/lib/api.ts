@@ -22,7 +22,7 @@ export const api = axios.create({
 
 // Add JWT token and tenant ID to every request
 api.interceptors.request.use((config) => {
-  const token = getCookie("soulledger_access");
+  const token = getCookie("soulledger_access") || (typeof sessionStorage !== "undefined" ? sessionStorage.getItem("soulledger_access") : null);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -50,21 +50,22 @@ api.interceptors.response.use(
         try {
           const res = await axios.post(`${API_BASE}/auth/refresh/`, { refresh });
           const { access, refresh: newRefresh } = res.data;
-          // S-H1: Add Secure and HttpOnly flags in production; S-M1: refresh token rotation
-          const isProd = process.env.NODE_ENV === 'production';
-          const cookieOpts = `path=/; max-age=1800; SameSite=Lax${isProd ? '; Secure; HttpOnly' : ''}`;
-          document.cookie = `soulledger_access=${access}; ${cookieOpts}`;
-          document.cookie = `soulledger_refresh=${newRefresh}; path=/; max-age=604800; SameSite=Lax${isProd ? '; Secure; HttpOnly' : ''}`;
+          // NOTE: HttpOnly cannot be set from JS; tokens stored in sessionStorage for XSS mitigation
+          // TODO: Implement server-set httpOnly cookies via BFF pattern for production
+          sessionStorage.setItem("soulledger_access", access);
+          document.cookie = `soulledger_refresh=${newRefresh}; path=/; max-age=604800; SameSite=Lax`;
           error.config.headers.Authorization = `Bearer ${access}`;
           return api(error.config);
         } catch {
           document.cookie = "soulledger_access=; Max-Age=0; path=/";
           document.cookie = "soulledger_refresh=; Max-Age=0; path=/";
+          sessionStorage.removeItem("soulledger_access");
           if (typeof window !== "undefined") {
             window.location.href = "/login";
           }
         }
       } else {
+        sessionStorage.removeItem("soulledger_access");
         if (typeof window !== "undefined") {
           window.location.href = "/login";
         }
@@ -81,6 +82,7 @@ export const authApi = {
   register: (data: object) => api.post("/auth/register/", data),
   logout: () => {
     const refresh = getCookie("soulledger_refresh");
+    sessionStorage.removeItem("soulledger_access");
     return api.post("/auth/logout/", { refresh });
   },
   profile: () => api.get("/auth/profile/"),
@@ -280,7 +282,7 @@ export const karmaApi = {
   effective: (soulId: number) => api.get(`/karma/effective/${soulId}/`),
   recalculate: (soulId: number) => api.post(`/karma/recalculate/${soulId}/`),
   statsOverview: () => api.get<KarmaStatsOverview>("/karma/stats/overview/"),
-  exportStats: (params?: Record<string, string>) => api.get("/karma/stats/export/", { params, responseType: "blob" } as any),
+  exportStats: (params?: Record<string, string>) => api.get("/karma/stats/export/", { params, responseType: "blob" }),
 };
 
 // Permissions
@@ -405,6 +407,7 @@ export interface UpdateUserInput {
   last_name?: string;
   is_active?: boolean;
   tenant_id?: number;
+  password?: string;
 }
 
 export interface UserFilters {
@@ -427,7 +430,7 @@ export const usersApi = {
   delete: (id: string) => api.delete(`/users/${id}/`),
   activate: (id: string) => api.post(`/users/${id}/activate/`),
   deactivate: (id: string) => api.post(`/users/${id}/deactivate/`),
-  export: () => api.get("/users/export/", { responseType: "blob" } as any),
+  export: () => api.get("/users/export/", { responseType: "blob" }),
   import: (data: FormData) => api.post("/users/import/", data, {
     headers: { "Content-Type": "multipart/form-data" },
   }),
@@ -495,6 +498,7 @@ export interface Actor {
 export interface Judgment {
   id: string;
   soul: string;
+  soul_name: string;
   civilization: string;
   court: string;
   verdict: "PASSED" | "FAILED" | "PURGATORY" | "RETRY" | null;
@@ -564,7 +568,7 @@ export interface SoulEvent {
   event_type: string;
   payload: Record<string, unknown>;
   actor: string;
-  created_at: string;
+  create_time: string;
 }
 
 // Notifications

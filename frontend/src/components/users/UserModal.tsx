@@ -83,15 +83,15 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.username.trim()) {
-      showToast("用户名不能为空", "error");
+      showToast(t("users.username_empty"), "error");
       return;
     }
     if (!formData.email.trim()) {
-      showToast("邮箱不能为空", "error");
+      showToast(t("users.email_empty"), "error");
       return;
     }
     if (!isEditing && !formData.password) {
-      showToast("密码不能为空", "error");
+      showToast(t("users.password_empty"), "error");
       return;
     }
 
@@ -104,7 +104,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
         tenant_id: formData.tenant_id,
       };
       if (formData.password) {
-        (updateData as any).password = formData.password;
+        updateData.password = formData.password;
       }
       updateMutation.mutate({ id: String(user.id), data: updateData });
     } else {
