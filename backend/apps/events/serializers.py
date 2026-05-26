@@ -10,4 +10,4 @@ class SoulEventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SoulEvent
-        fields = ["id", "soul", "soul_name", "event_type", "payload", "actor", "created_at"]
+        fields = ["id", "soul", "soul_name", "event_type", "payload", "actor", "create_time"]

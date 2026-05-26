@@ -80,6 +80,11 @@ class Soul(AuditUserFields, models.Model):
                 if tenant:
                     self.tenant = tenant
 
+        # Enforce tenant requirement on creation
+        if is_new and self.tenant_id is None:
+            from django.core.exceptions import ValidationError
+            raise ValidationError("Tenant is required when creating a Soul.")
+
         super().save(*args, **kwargs)
 
         # Log SOUL_CREATED event after first save (not on updates)
@@ -119,7 +124,7 @@ class Soul(AuditUserFields, models.Model):
         }
         return new_state in valid_transitions.get(self.current_state, [])
 
-    def transition_to(self, new_state: str, reason: str = "") -> bool:
+    def transition_to(self, new_state: str, reason: str = "", **kwargs) -> bool:
         """
         Attempt state transition with pessimistic locking to prevent race conditions.
         Returns True if successful.
@@ -140,6 +145,11 @@ class Soul(AuditUserFields, models.Model):
                 from django.utils import timezone as tz
                 locked_soul.death_date = tz.now().date()
 
+            # Apply any extra field updates (e.g. death_date, origin_location from die())
+            for field, value in kwargs.items():
+                if hasattr(locked_soul, field):
+                    setattr(locked_soul, field, value)
+
             locked_soul.save()
 
         # Log outside the transaction to avoid holding locks during external calls
@@ -149,11 +159,30 @@ class Soul(AuditUserFields, models.Model):
         self.death_date = locked_soul.death_date
         return True
 
-    def die(self, death_date=None, location: str = "") -> bool:
-        """Shortcut: mark soul as dead and begin judgment."""
+    def die(self, death_date=None, location: str = "") -> "Judgment | None":
+        """Mark soul as dead, transition to JUDGING, and create a Judgment record."""
         if self.current_state != SoulState.ALIVE:
-            return False
-        self.death_date = death_date or timezone.now().date()
-        if location:
-            self.origin_location = location
-        return self.transition_to(SoulState.JUDGING, "Death recorded, judgment initiated")
+            return None
+        result = self.transition_to(
+            SoulState.JUDGING,
+            "Death recorded, judgment initiated",
+            death_date=death_date or timezone.now().date(),
+            **({"origin_location": location} if location else {}),
+        )
+        if not result:
+            return None
+
+        from apps.judgment.models import Judgment, JudgmentMethod
+
+        method_map = {
+            Civilization.CHINESE: JudgmentMethod.STANDARD,
+            Civilization.EUROPEAN: JudgmentMethod.STANDARD,
+            Civilization.EGYPTIAN: JudgmentMethod.HEART_WEIGHING,
+        }
+        judgment = Judgment.objects.create(
+            soul=self,
+            civilization=self.civilization,
+            tenant=self.tenant,
+            judgment_method=method_map.get(self.civilization, JudgmentMethod.STANDARD),
+        )
+        return judgment

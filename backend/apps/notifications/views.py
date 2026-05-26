@@ -31,7 +31,13 @@ class NotificationViewSet(viewsets.ModelViewSet):
         if not self.request.user.is_authenticated:
             return UserNotification.objects.none()
 
-        return UserNotification.objects.filter(user=self.request.user).select_related("user")
+        qs = UserNotification.objects.filter(user=self.request.user).select_related("user")
+
+        # Defense-in-depth: ensure user belongs to the current tenant
+        tenant = getattr(self.request, "tenant", None)
+        if tenant:
+            qs = qs.filter(user__tenant=tenant)
+        return qs
 
     @action(detail=True, methods=["post"])
     def mark_read(self, request, pk=None):

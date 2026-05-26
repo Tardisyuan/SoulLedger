@@ -8,6 +8,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -162,6 +163,15 @@ class UserViewSet(viewsets.ModelViewSet):
                 {'error': f'Invalid role. Must be one of: {valid_roles}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        # Prevent privilege escalation: assigning user's role must be >= target role
+        ROLE_HIERARCHY = {'ADMIN': 10, 'JUDGE': 20, 'GUARDIAN': 30, 'VIEWER': 40}
+        caller_level = ROLE_HIERARCHY.get(request.user.role, 50)
+        target_level = ROLE_HIERARCHY.get(new_role, 50)
+        if caller_level > target_level:
+            return Response(
+                {'error': 'Cannot assign a role more privileged than your own'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         user.role = new_role
         user.save(update_fields=['role'])
         return Response(UserManagementSerializer(user).data)
@@ -193,6 +203,8 @@ class UserViewSet(viewsets.ModelViewSet):
         """从CSV文件批量导入用户"""
         import csv
         import io
+        from django.core.validators import validate_email
+        from django.core.exceptions import ValidationError
 
         file = request.FILES.get('file')
         if not file:
@@ -210,6 +222,7 @@ class UserViewSet(viewsets.ModelViewSet):
         reader = csv.DictReader(io.StringIO(decoded_file))
         created = 0
         errors = []
+        generated_passwords = []
 
         for i, row in enumerate(reader):
             try:
@@ -222,6 +235,14 @@ class UserViewSet(viewsets.ModelViewSet):
                     errors.append(f"Row {i+2}: username is required")
                     continue
 
+                # Validate email format
+                if email:
+                    try:
+                        validate_email(email)
+                    except ValidationError:
+                        errors.append(f"Row {i+2}: invalid email '{email}'")
+                        continue
+
                 if role not in ['ADMIN', 'JUDGE', 'GUARDIAN', 'VIEWER']:
                     errors.append(f"Row {i+2}: invalid role '{role}'")
                     continue
@@ -230,10 +251,15 @@ class UserViewSet(viewsets.ModelViewSet):
                     errors.append(f"Row {i+2}: username '{username}' already exists")
                     continue
 
+                # Require password in CSV
+                if not password:
+                    errors.append(f"Row {i+2}: password is required")
+                    continue
+
                 User.objects.create_user(
                     username=username,
                     email=email,
-                    password=password or secrets.token_urlsafe(16),
+                    password=password,
                     role=role,
                     tenant=tenant,
                 )
@@ -243,7 +269,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
         return Response({
             'created': created,
-            'errors': errors[:50],  # Limit error messages
+            'errors': errors[:50],
         })
 
 
@@ -385,7 +411,18 @@ def register_view(request):
     """
     POST /api/v1/auth/register/
     Create a new user account.
+    Rate limited via DRF throttle (RegisterThrottle: 5/hour per IP).
     """
+    from .throttles import RegisterThrottle
+
+    # DRF throttle check
+    throttle = RegisterThrottle()
+    if not throttle.allow_request(request, None):
+        return Response(
+            {"error": "Registration attempts too frequent, try again later"},
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
     serializer = RegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
@@ -458,9 +495,9 @@ def reset_password_request(request):
         return Response({"error": "请求过于频繁，请稍后再试"}, status=status.HTTP_429_TOO_MANY_REQUESTS)
     cache.set(rate_limit_key, attempts + 1, timeout=300)
 
-    # Generate secure code (8 digits)
+    # Generate secure 6-digit code
     import secrets
-    code = str(secrets.randbelow(90000000) + 10000000)
+    code = f"{secrets.randbelow(900000) + 100000:06d}"
 
     # Store in Redis cache, 5 minutes TTL
     cache.set(f"pwd_reset:{email}", code, timeout=300)
