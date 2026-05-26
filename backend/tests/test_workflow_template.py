@@ -106,7 +106,7 @@ class TestWorkflowTemplateAPI:
         assert len(response.data["nodes"]) == 2
 
     def test_delete_template(self, cn_tenant):
-        """DELETE /api/v1/workflow/templates/{id}/ removes the template."""
+        """DELETE /api/v1/workflow/templates/{id}/ soft-deletes the template."""
         template = WorkflowTemplate.objects.create(
             name="待删除模板",
             civilization="CHINESE",
@@ -115,7 +115,9 @@ class TestWorkflowTemplateAPI:
         )
         response = self.client.delete(f"/api/v1/workflow/templates/{template.id}/")
         assert response.status_code == 204
-        assert WorkflowTemplate.objects.filter(id=template.id).exists() is False
+        # Soft delete: object still exists but is marked as deleted
+        template.refresh_from_db()
+        assert template.is_deleted is True
 
     def test_list_templates_admin_sees_all(self, cn_tenant, eu_tenant):
         """ADMIN users can see templates from all tenants."""

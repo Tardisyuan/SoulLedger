@@ -10,6 +10,8 @@ from rest_framework.test import APIClient
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
 
+
+
 @pytest.fixture
 def api_client():
     """DRF APIClient for making test requests."""
@@ -89,22 +91,19 @@ def soul_data():
 @pytest.fixture
 def auth_headers(api_client, admin_user):
     """Authenticated headers dict with admin user."""
-    api_client.force_authenticate(user=admin_user)
-    response = api_client.post("/api/v1/auth/login/", {
-        "username": "admin",
-        "password": "admin123",
-    })
-    token = response.data.get("access")
-    return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+    from rest_framework_simplejwt.tokens import RefreshToken
+    token = RefreshToken.for_user(admin_user)
+    # Add tenant_code claim
+    if admin_user.tenant:
+        token["tenant_code"] = admin_user.tenant.code
+    return {"HTTP_AUTHORIZATION": f"Bearer {token.access_token}"}
 
 
 @pytest.fixture
 def eu_auth_headers(api_client, eu_admin_user):
     """Authenticated headers dict with EU admin user."""
-    api_client.force_authenticate(user=eu_admin_user)
-    response = api_client.post("/api/v1/auth/login/", {
-        "username": "eu_admin",
-        "password": "admin123",
-    })
-    token = response.data.get("access")
-    return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+    from rest_framework_simplejwt.tokens import RefreshToken
+    token = RefreshToken.for_user(eu_admin_user)
+    if eu_admin_user.tenant:
+        token["tenant_code"] = eu_admin_user.tenant.code
+    return {"HTTP_AUTHORIZATION": f"Bearer {token.access_token}"}
