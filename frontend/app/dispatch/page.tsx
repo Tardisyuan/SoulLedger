@@ -1,7 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { dispatchApi } from "@/lib/api";
+import { dispatchApi, type DispatchRecord } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton, CardSkeleton, ListSkeleton } from "@/components/ui/skeleton";
@@ -47,7 +47,7 @@ export default function DispatchPage() {
           <p className="text-[hsl(var(--color-ink-muted))] bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">{t("dispatch.no_pending") || "No pending proposals"}</p>
         ) : (
           <div className="space-y-3">
-            {proposed.map((d: any) => (
+            {proposed.map((d: DispatchRecord) => (
               <DispatchCard key={d.id} dispatch={d} />
             ))}
           </div>
@@ -62,7 +62,7 @@ export default function DispatchPage() {
           <p className="text-[hsl(var(--color-ink-muted))] bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">{t("dispatch.no_history") || "No dispatch history"}</p>
         ) : (
           <div className="space-y-3">
-            {history.map((d: any) => (
+            {history.map((d: DispatchRecord) => (
               <DispatchCard key={d.id} dispatch={d} />
             ))}
           </div>
@@ -72,25 +72,26 @@ export default function DispatchPage() {
   );
 }
 
-function DispatchCard({ dispatch }: { dispatch: any }) {
+function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
+  const { t } = useI18n();
   const statusColors: Record<string, string> = {
-    PROPOSED: "bg-yellow-500/20 text-yellow-400",
-    APPROVED: "bg-green-500/20 text-green-400",
-    REJECTED: "bg-red-500/20 text-red-400",
-    EXECUTED: "bg-blue-500/20 text-blue-400",
-    CANCELLED: "bg-gray-500/20 text-gray-400",
+    PROPOSED: "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))]",
+    APPROVED: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]",
+    REJECTED: "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]",
+    EXECUTED: "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]",
+    CANCELLED: "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]",
   };
 
   return (
     <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-medium text-[hsl(var(--color-ink))]">Soul #{dispatch.soul}</p>
+          <p className="font-medium text-[hsl(var(--color-ink))]">{t("dispatch.soul_prefix")}{dispatch.soul}</p>
           <p className="text-sm text-[hsl(var(--color-ink-subtle))]">
             {dispatch.source_tenant_code} → {dispatch.target_tenant_code}
           </p>
         </div>
-        <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[dispatch.status] || "bg-gray-500/20"}`}>
+        <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[dispatch.status] || "bg-[hsl(var(--color-status-lost)/0.2)]"}`}>
           {dispatch.status}
         </span>
       </div>

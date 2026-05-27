@@ -8,10 +8,10 @@ import { PageSection } from "@/components/ui/page-section";
 import { CardSkeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
 
-const CIVILIZATION_LABELS: Record<string, { name: string; icon: string }> = {
-  CHINESE: { name: "中国地府", icon: "🏯" },
-  EUROPEAN: { name: "欧洲天堂与地狱", icon: "⛪" },
-  EGYPTIAN: { name: "埃及杜阿特", icon: "𓋴" },
+const CIVILIZATION_ICONS: Record<string, string> = {
+  CHINESE: "🏯",
+  EUROPEAN: "⛪",
+  EGYPTIAN: "𓋴",
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -69,7 +69,7 @@ export default function OrganizationsPage() {
         <div className="flex items-center gap-2">
           <h4 className="font-medium text-[hsl(var(--color-ink))] truncate">{org.name}</h4>
           <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${CATEGORY_COLORS[org.category] || "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]"}`}>
-            {org.level === 0 ? "根" : `L${org.level}`}
+            {org.level === 0 ? t("organization.root") : `L${org.level}`}
           </span>
         </div>
         <p className="text-sm text-[hsl(var(--color-ink-subtle))] truncate">{org.code}</p>
@@ -106,7 +106,7 @@ export default function OrganizationsPage() {
         ) : (
           <div className="space-y-8">
             {Object.entries(grouped).map(([category, orgs]) => {
-              const info = CIVILIZATION_LABELS[category] || { name: category, icon: "🌍" };
+              const info = { name: t(`organization.civilizations.${category}`) || category, icon: CIVILIZATION_ICONS[category] || "🌍" };
               const isCollapsed = collapsed[category];
 
               return (
@@ -119,7 +119,7 @@ export default function OrganizationsPage() {
                     <span className="text-2xl">{info.icon}</span>
                     <div className="flex-1">
                       <h2 className="font-semibold text-[hsl(var(--color-ink))]">{info.name}</h2>
-                      <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{orgs.length} organizations</p>
+                      <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("organization.organizations_count", { count: String(orgs.length) })}</p>
                     </div>
                     <ChevronDown className={`w-5 h-5 text-[hsl(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
                   </button>

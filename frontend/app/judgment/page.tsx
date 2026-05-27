@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { judgmentApi, soulsApi, type Judgment, type Soul } from "@/lib/api";
+import { judgmentApi, type Judgment } from "@/lib/api";
 import { TableSkeleton } from "@/components/ui/skeleton";
 
 const VERDICT_COLORS: Record<string, string> = {
@@ -38,24 +38,8 @@ export default function JudgmentQueuePage() {
     },
   });
 
-  // Fetch all souls to map IDs to names
-  const { data: soulsData } = useQuery({
-    queryKey: ["souls-all"],
-    queryFn: async () => {
-      const res = await soulsApi.list();
-      return res.data;
-    },
-  });
-
   const judgments = (judgmentData?.results ?? judgmentData ?? []) as Judgment[];
   const totalPages = judgmentData ? Math.ceil(judgmentData.count / 20) : 0;
-  const souls = (soulsData?.results ?? soulsData ?? []) as Soul[];
-
-  // Build soul ID -> name map
-  const soulNameMap: Record<string, string> = {};
-  for (const soul of souls) {
-    soulNameMap[soul.id] = soul.name;
-  }
 
   const tabs = [
     { key: "pending", label: t("judgment.pending") },
@@ -161,7 +145,7 @@ export default function JudgmentQueuePage() {
                     className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors"
                   >
                     <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">
-                      {soulNameMap[judgment.soul] || judgment.soul}
+                      {judgment.soul_name || judgment.soul}
                     </td>
                     <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
                       {t(`souls.civilizations.${judgment.civilization}`)}

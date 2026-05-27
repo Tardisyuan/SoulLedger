@@ -56,14 +56,26 @@ interface FrontendNode {
   order: number;
 }
 
+// Flexible template type for preview/display (handles both backend and frontend shapes)
+interface TemplatePreviewData {
+  id?: string | number;
+  name: string;
+  description?: string;
+  civilization: string;
+  case_type?: string;
+  caseType?: string;
+  nodes_json?: FlowNode[];
+  nodes?: FrontendNode[];
+}
+
 // Custom node component for workflow visualization
 function WorkflowNodeComponent({ data }: { data: { label: string; status: string; nodeType: string; courtCode: string } }) {
   const statusColors: Record<string, string> = {
-    PENDING: "bg-amber-500/20 border-amber-500/50",
-    APPROVED: "bg-green-500/20 border-green-500/50",
-    REJECTED: "bg-red-500/20 border-red-500/50",
-    SKIPPED: "bg-gray-500/20 border-gray-500/50",
-    ESCALATED: "bg-purple-500/20 border-purple-500/50",
+    PENDING: "bg-[hsl(var(--color-status-warning)/0.2)] border-[hsl(var(--color-status-warning)/0.5)]",
+    APPROVED: "bg-[hsl(var(--color-status-success)/0.2)] border-[hsl(var(--color-status-success)/0.5)]",
+    REJECTED: "bg-[hsl(var(--color-status-error)/0.2)] border-[hsl(var(--color-status-error)/0.5)]",
+    SKIPPED: "bg-[hsl(var(--color-status-lost)/0.2)] border-[hsl(var(--color-status-lost)/0.5)]",
+    ESCALATED: "bg-[hsl(var(--color-verdict-retry)/0.2)] border-[hsl(var(--color-verdict-retry)/0.5)]",
   };
 
   const colorClass = statusColors[data.status] || statusColors.PENDING;
@@ -86,28 +98,16 @@ const nodeTypes: NodeTypes = {
 };
 
 
-const CIVILIZATION_LABELS: Record<string, string> = {
-  CHINESE: "中国地府",
-  EUROPEAN: "欧洲天堂地狱",
-  EGYPTIAN: "埃及冥界",
-};
-
-const CIVILIZATION_DESCRIPTIONS: Record<string, string> = {
-  CHINESE: "十殿阎王 · 城隍体系 · 枉死城",
-  EUROPEAN: "末日审判 · 希腊三法官 · 北欧分流",
-  EGYPTIAN: "心脏称重 · 阿米特吞噬 · 芦苇原",
-};
-
-const CASE_TYPE_LABELS: Record<string, string> = {
-  ROUTINE: "常规审判",
-  APPEAL: "申诉审判",
-  CROSS_REALM: "跨域审判",
-  SPECIAL: "特案审判",
-  HEART_WEIGHING: "心脏称重",
-  DIVINE_TRIAL: "神判",
-  CANONIZATION: "封圣审查",
-  PURGATORY_REVIEW: "炼狱复核",
-  HERESY_TRIAL: "异端审判",
+const CASE_TYPE_KEYS: Record<string, string> = {
+  ROUTINE: "workflow.case_types.ROUTINE",
+  APPEAL: "workflow.case_types.APPEAL",
+  CROSS_REALM: "workflow.case_types.CROSS_REALM",
+  SPECIAL: "workflow.case_types.SPECIAL",
+  HEART_WEIGHING: "workflow.case_types.HEART_WEIGHING",
+  DIVINE_TRIAL: "workflow.case_types.DIVINE_TRIAL",
+  CANONIZATION: "workflow.case_types.CANONIZATION",
+  PURGATORY_REVIEW: "workflow.case_types.PURGATORY_REVIEW",
+  HERESY_TRIAL: "workflow.case_types.HERESY_TRIAL",
 };
 
 export default function WorkflowPage() {
@@ -116,11 +116,11 @@ export default function WorkflowPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>("CHINESE_ROUTINE");
   const [workflowInstance, setWorkflowInstance] = useState<ApprovalWorkflow | null>(null);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
-  const [editingTemplateData, setEditingTemplateData] = useState<any>(null);
-  const [viewingTemplate, setViewingTemplate] = useState<any>(null);
+  const [editingTemplateData, setEditingTemplateData] = useState<TemplatePreviewData | null>(null);
+  const [viewingTemplate, setViewingTemplate] = useState<TemplatePreviewData | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [confirmingTemplate, setConfirmingTemplate] = useState<any>(null);
+  const [confirmingTemplate, setConfirmingTemplate] = useState<BackendTemplate | null>(null);
 
   const { data: workflowsData, isLoading: isWorkflowsLoading } = useQuery({
     queryKey: ["workflows"],
@@ -227,14 +227,14 @@ export default function WorkflowPage() {
   }, []);
 
   const tabs = [
-    { key: "existing", label: "现有流程" },
-    { key: "editor", label: "模板编辑器" },
+    { key: "existing", label: t("workflow.existing") || "现有流程" },
+    { key: "editor", label: t("workflow.editor") || "模板编辑器" },
     { key: "instances", label: t("workflow.instances") || "审批实例" },
   ] as const;
   const [tab, setTab] = useState<"existing" | "editor" | "instances">("existing");
 
   return (
-    <div className="text-ink">
+    <div className="text-[hsl(var(--color-ink))]">
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
@@ -244,18 +244,18 @@ export default function WorkflowPage() {
 
       <div className="max-w-6xl mx-auto px-6 py-6">
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-hairline/50">
-          {tabs.map((t) => (
+        <div className="flex gap-1 mb-6 border-b border-[hsl(var(--color-hairline))]/50">
+          {tabs.map((tabItem) => (
             <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
+              key={tabItem.key}
+              onClick={() => setTab(tabItem.key)}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                tab === t.key
+                tab === tabItem.key
                   ? "text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent))]"
                   : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
               }`}
             >
-              {t.label}
+              {tabItem.label}
             </button>
           ))}
         </div>
@@ -265,8 +265,8 @@ export default function WorkflowPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))]">流程模板</h2>
-                <p className="text-sm text-[hsl(var(--color-ink-muted))]">选择模板进行编辑</p>
+                <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{t("workflow.templates") || "流程模板"}</h2>
+                <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("workflow.select_template") || "选择模板进行编辑"}</p>
               </div>
               <button
                 onClick={() => {
@@ -275,7 +275,7 @@ export default function WorkflowPage() {
                 }}
                 className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium transition-colors"
               >
-                + 新建模板
+                + {t("workflow.new_template") || "新建模板"}
               </button>
             </div>
 
@@ -288,7 +288,7 @@ export default function WorkflowPage() {
                   <ListSkeleton count={3} />
                 ) : templates.length > 0 ? (
                   <div className="space-y-2">
-                    <div className="text-xs font-semibold text-[hsl(var(--color-ink-muted))] px-2">自定义模板</div>
+                    <div className="text-xs font-semibold text-[hsl(var(--color-ink-muted))] px-2">{t("workflow.custom_templates") || "自定义模板"}</div>
                     {templates.map((tmpl: BackendTemplate) => (
                       <button
                         key={tmpl.id}
@@ -303,7 +303,7 @@ export default function WorkflowPage() {
                       >
                         <div className="text-sm font-medium truncate">{tmpl.name}</div>
                         <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-0.5">
-                          {tmpl.civilization} · {CASE_TYPE_LABELS[tmpl.case_type || ''] || tmpl.case_type}
+                          {tmpl.civilization} · {t(CASE_TYPE_KEYS[tmpl.case_type || '']) || tmpl.case_type}
                         </div>
                       </button>
                     ))}
@@ -312,11 +312,11 @@ export default function WorkflowPage() {
 
                 {/* 预定义模板列表 */}
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-[hsl(var(--color-ink-muted))] px-2">预定义模板</div>
+                  <div className="text-xs font-semibold text-[hsl(var(--color-ink-muted))] px-2">{t("workflow.predefined_templates") || "预定义模板"}</div>
                   {Object.entries(templatesByCiv).map(([civ, civTemplates]) => (
                     <div key={civ} className="space-y-1">
                       <div className="text-xs text-[hsl(var(--color-accent))] px-2 py-1 font-medium">
-                        {CIVILIZATION_LABELS[civ]}
+                        {t(`workflow.civilizations.${civ}`)}
                       </div>
                       {civTemplates.map((tmpl) => (
                         <button
@@ -345,8 +345,8 @@ export default function WorkflowPage() {
                 {(editingTemplateId || selectedTemplate) && (
                   <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] p-4">
                     {/* 后端模板预览 */}
-                    {editingTemplateId && templates.find((t: BackendTemplate) => String(t.id) === editingTemplateId) && (() => {
-                      const tmpl = templates.find((t: BackendTemplate) => String(t.id) === editingTemplateId)!;
+                    {editingTemplateId && templates.find((tpl: BackendTemplate) => String(tpl.id) === editingTemplateId) && (() => {
+                      const tmpl = templates.find((tpl: BackendTemplate) => String(tpl.id) === editingTemplateId)!;
                       return (
                         <>
                           <div className="flex items-start justify-between mb-4">
@@ -357,7 +357,7 @@ export default function WorkflowPage() {
                                   {tmpl.civilization}
                                 </span>
                                 <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
-                                  {CASE_TYPE_LABELS[tmpl.case_type || ''] || tmpl.case_type}
+                                  {t(CASE_TYPE_KEYS[tmpl.case_type || '']) || tmpl.case_type}
                                 </span>
                               </div>
                             </div>
@@ -375,7 +375,7 @@ export default function WorkflowPage() {
                                 }}
                                 className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink-muted))]"
                               >
-                                查看
+                                {t("workflow.view")}
                               </button>
                               <button
                                 onClick={() => {
@@ -384,22 +384,22 @@ export default function WorkflowPage() {
                                 }}
                                 className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium"
                               >
-                                编辑
+                                {t("common.edit") || "编辑"}
                               </button>
                               <button
                                 onClick={() => {
                                   setConfirmingTemplate(tmpl);
                                   setConfirmModalOpen(true);
                                 }}
-                                className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded text-sm font-medium"
+                                className="px-3 py-1.5 bg-[hsl(var(--color-status-error)/0.2)] hover:bg-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))] border border-[hsl(var(--color-status-error)/0.3)] rounded text-sm font-medium"
                               >
-                                删除
+                                {t("common.delete") || "删除"}
                               </button>
                             </div>
                           </div>
-                          <p className="text-sm text-[hsl(var(--color-ink-muted))] mb-4">{tmpl.description || "无描述"}</p>
+                          <p className="text-sm text-[hsl(var(--color-ink-muted))] mb-4">{tmpl.description || t("workflow.no_description")}</p>
                           <div className="text-xs text-[hsl(var(--color-ink-subtle))] mb-3">
-                            {(tmpl.nodes_json || []).length} 个节点
+                            {t("workflow.nodes_count", { count: String((tmpl.nodes_json || []).length) })}
                           </div>
                           <div className="space-y-2 max-h-80 overflow-y-auto">
                             {(tmpl.nodes_json || []).map((node: FlowNode, idx: number) => (
@@ -430,7 +430,7 @@ export default function WorkflowPage() {
                                 {currentTemplate.civilization}
                               </span>
                               <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
-                                {CASE_TYPE_LABELS[currentTemplate.caseType] || currentTemplate.caseType}
+                                {t(CASE_TYPE_KEYS[currentTemplate.caseType || '']) || currentTemplate.caseType}
                               </span>
                             </div>
                           </div>
@@ -450,7 +450,7 @@ export default function WorkflowPage() {
                               }}
                               className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink-muted))]"
                             >
-                              查看
+                              {t("workflow.view")}
                             </button>
                             <button
                               onClick={() => {
@@ -470,13 +470,13 @@ export default function WorkflowPage() {
                               }}
                               className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium"
                             >
-                              编辑
+                              {t("common.edit") || "编辑"}
                             </button>
                           </div>
                         </div>
                         <p className="text-sm text-[hsl(var(--color-ink-muted))] mb-4">{currentTemplate.description}</p>
                         <div className="text-xs text-[hsl(var(--color-ink-subtle))] mb-3">
-                          {currentTemplate.nodes.length} 个节点
+                          {t("workflow.nodes_count", { count: String(currentTemplate.nodes.length) })}
                         </div>
                         <div className="space-y-2 max-h-80 overflow-y-auto">
                           {currentTemplate.nodes.map((node: FrontendNode, idx: number) => (
@@ -500,7 +500,7 @@ export default function WorkflowPage() {
                 {/* 未选中状态 */}
                 {!editingTemplateId && !selectedTemplate && (
                   <div className="text-center text-[hsl(var(--color-ink-muted))] py-16 bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))]">
-                    请从左侧选择一个模板
+                    {t("workflow.select_from_left") || "请从左侧选择一个模板"}
                   </div>
                 )}
               </div>
@@ -530,7 +530,7 @@ export default function WorkflowPage() {
             {isWorkflowsLoading ? (
               <ListSkeleton count={5} />
             ) : workflows.length === 0 ? (
-              <div className="text-center text-ink-subtle py-12">
+              <div className="text-center text-[hsl(var(--color-ink-subtle))] py-12">
                 {t("workflow.no_instances") || "暂无审批实例"}
               </div>
             ) : (
@@ -551,17 +551,17 @@ export default function WorkflowPage() {
                       <span
                         className={`px-2 py-0.5 rounded text-xs font-bold ${
                           wf.status === "COMPLETED"
-                            ? "bg-green-500/20 text-green-400"
+                            ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]"
                             : wf.status === "IN_PROGRESS"
                             ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
-                            : "bg-surface-3 text-ink-muted"
+                            : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                         }`}
                       >
                         {wf.status}
                       </span>
                       {wf.is_appeal && (
-                        <span className="px-2 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400">
-                          申诉
+                        <span className="px-2 py-0.5 rounded text-xs bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))]">
+                          {t("workflow.appeal_badge")}
                         </span>
                       )}
                     </div>
@@ -576,45 +576,45 @@ export default function WorkflowPage() {
         <BaseModal
           isOpen={viewModalOpen}
           onClose={() => setViewModalOpen(false)}
-          title={viewingTemplate?.name || "模板详情"}
+          title={viewingTemplate?.name || t("workflow.template_detail")}
         >
           {viewingTemplate && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <span className="text-xs text-[hsl(var(--color-ink-subtle))]">文明</span>
+                  <span className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.civilization")}</span>
                   <p className="text-sm text-[hsl(var(--color-ink))] font-medium">{viewingTemplate.civilization}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-[hsl(var(--color-ink-subtle))]">案件类型</span>
+                  <span className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("workflow.detail.case_type")}</span>
                   <p className="text-sm text-[hsl(var(--color-ink))] font-medium">
-                    {CASE_TYPE_LABELS[viewingTemplate.case_type] || CASE_TYPE_LABELS[viewingTemplate.caseType] || viewingTemplate.case_type || viewingTemplate.caseType || "无"}
+                    {t(CASE_TYPE_KEYS[viewingTemplate.case_type || viewingTemplate.caseType || '']) || viewingTemplate.case_type || viewingTemplate.caseType || "—"}
                   </p>
                 </div>
               </div>
               <div>
-                <span className="text-xs text-[hsl(var(--color-ink-subtle))]">描述</span>
-                <p className="text-sm text-[hsl(var(--color-ink))]">{viewingTemplate.description || "无"}</p>
+                <span className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("workflow.detail.notes")}</span>
+                <p className="text-sm text-[hsl(var(--color-ink))]">{viewingTemplate.description || "—"}</p>
               </div>
               <div>
-                <span className="text-xs text-[hsl(var(--color-ink-subtle))]">节点列表</span>
+                <span className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("workflow.detail.nodes")}</span>
                 <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
                   {(viewingTemplate.nodes_json || []).map((node: FlowNode, idx: number) => (
                     <div key={idx} className="bg-[hsl(var(--color-surface-3))] rounded p-2 text-sm">
                       <div className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</div>
                       <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
                         {node.court_code && <span>🏛 {node.court_code}</span>}
-                        <span className="ml-2">类型: {node.node_type}</span>
+                        <span className="ml-2">{node.node_type}</span>
                       </div>
                       {node.approver_role && (
                         <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
-                          审批角色: {node.approver_role}
+                          {node.approver_role}
                         </div>
                       )}
                     </div>
                   ))}
                   {(viewingTemplate.nodes_json || []).length === 0 && (
-                    <p className="text-sm text-[hsl(var(--color-ink-muted))]">暂无节点数据</p>
+                    <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("workflow.no_node_data")}</p>
                   )}
                 </div>
               </div>
@@ -626,14 +626,14 @@ export default function WorkflowPage() {
         <BaseModal
           isOpen={confirmModalOpen}
           onClose={() => setConfirmModalOpen(false)}
-          title="确认删除"
+          title={t("common.confirm_delete") || "确认删除"}
           footer={
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setConfirmModalOpen(false)}
                 className="px-4 py-2 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink-muted))]"
               >
-                取消
+                {t("common.cancel") || "取消"}
               </button>
               <button
                 onClick={() => {
@@ -643,16 +643,16 @@ export default function WorkflowPage() {
                   setConfirmModalOpen(false);
                 }}
                 disabled={deleteMutation.isPending}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm font-medium disabled:opacity-50"
+                className="px-4 py-2 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] text-white rounded text-sm font-medium disabled:opacity-50"
               >
-                {deleteMutation.isPending ? "删除中..." : "确认删除"}
+                {deleteMutation.isPending ? (t("common.deleting") || "删除中...") : (t("common.confirm_delete") || "确认删除")}
               </button>
             </div>
           }
         >
           <div className="space-y-3">
-            <p className="text-[hsl(var(--color-ink))]">确定要删除模板 <strong>&ldquo;{confirmingTemplate?.name}&rdquo;</strong> 吗？</p>
-            <p className="text-sm text-red-400">此操作不可撤销，删除后无法恢复。</p>
+            <p className="text-[hsl(var(--color-ink))]">{t("workflow.delete_confirm_msg", { name: confirmingTemplate?.name || "" }) || `确定要删除模板 "${confirmingTemplate?.name}" 吗？`}</p>
+            <p className="text-sm text-[hsl(var(--color-status-error))]">{t("workflow.delete_irreversible") || "此操作不可撤销，删除后无法恢复。"}</p>
           </div>
         </BaseModal>
       </div>

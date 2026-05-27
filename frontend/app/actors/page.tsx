@@ -8,10 +8,10 @@ import { PageSection } from "@/components/ui/page-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
 
-const CIVILIZATION_LABELS: Record<string, { name: string; icon: string }> = {
-  CHINESE: { name: "中国地府", icon: "🏯" },
-  EUROPEAN: { name: "欧洲天堂地狱", icon: "⛪" },
-  EGYPTIAN: { name: "埃及冥界", icon: "𓋴" },
+const CIVILIZATION_ICONS: Record<string, string> = {
+  CHINESE: "🏯",
+  EUROPEAN: "⛪",
+  EGYPTIAN: "𓋴",
 };
 
 export default function ActorsPage() {
@@ -65,7 +65,7 @@ export default function ActorsPage() {
         ) : (
           <div className="space-y-8">
             {Object.entries(grouped).map(([civ, civActors]: [string, Actor[]]) => {
-              const info = CIVILIZATION_LABELS[civ] || { name: civ, icon: "🌍" };
+              const info = { name: t(`actors.civilizations.${civ}`) || civ, icon: CIVILIZATION_ICONS[civ] || "🌍" };
               const isCollapsed = collapsed[civ];
 
               return (

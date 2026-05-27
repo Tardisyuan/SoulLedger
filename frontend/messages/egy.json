@@ -14,7 +14,10 @@
     "greeting_afternoon": "Ineb Hor",
     "greeting_evening": "Djet Qed",
     "greeting_night": "Djet pet",
-    "user_profile": "ملف المستخدم"
+    "user_profile": "ملف المستخدم",
+    "expand_menu": "Seshem Menu",
+    "collapse_menu": "Sekhem Menu",
+    "settings": "Sekhem"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -30,7 +33,10 @@
     "error_invalid_credentials": "Ren em Sepy Usert",
     "error_invalid_token": "Menf Her Tepy",
     "error_token_expired": "Menf Wehem Seth",
-    "error_login_failed": "Sesen Pert Wehem"
+    "error_login_failed": "Sesen Pert Wehem",
+    "confirm_logout": "Sesen Pert Abuf",
+    "confirm_logout_desc": "Sesen Sheemtet Sen Pert Abuf?",
+    "confirm_logout_btn": "Sesen Pert Abuf"
   },
   "home": {
     "console": "Wetep Khet",
@@ -156,6 +162,8 @@
       "delete_confirm_message": "Sesen Wehem Seth Wu? Ma Shemsu Seth Em Her Tepy.",
       "delete_success": "Aba Wehem Seth",
       "delete_failed": "Ma Wehem Seth",
+      "error_update": "Ma Sethet Em Khemen",
+      "error_delete": "Ma Wehem Seth",
       "failed": "Ma Sethet",
       "passed": "Sethet",
       "purgatory": "Khet Her Tepy",
@@ -170,7 +178,9 @@
     "edit": "Khemen Seth",
     "delete": "Wehem Seth",
     "prev": "Em Tepy",
-    "next": "Em Khet"
+    "next": "Em Khet",
+    "confirm_delete": "Sesen Wehem Seth",
+    "deleting": "Em Wehem Seth..."
   },
   "menus": {
     "title": "إدارة القائمة",
@@ -249,6 +259,16 @@
   },
   "workflow": {
     "title": "Em Her Tepy Seth",
+    "existing": "Kheme Seth Wu Em Khet",
+    "editor": "Pet Sethety",
+    "templates": "Pet Sethety Wu",
+    "select_template": "Sesh Pet Sethety Em Khemen",
+    "new_template": "Pet Sethety Werpet",
+    "custom_templates": "Pet Sethety Wu Ab",
+    "predefined_templates": "Pet Sethety Wu Pedjety",
+    "delete_confirm_msg": "Sesen Wehem Pet Sethety \"{{name}}\"?",
+    "delete_irreversible": "Ma Shemsu Seth Em Her Tepy.",
+    "select_from_left": "Sesh Pet Sethety Em Sa",
     "template": "Pet Sethety",
     "instances": "Em Kheme Seth Wu",
     "no_instances": "Ma Rekhyu Em Kheme Seth Wu",
@@ -314,7 +334,9 @@
     "export_stats": "Wehem Medew Seth",
     "souls_by_realm": "Aba Seth Per Ahet",
     "no_activity": "Ma Khedu Sethet",
-    "no_realm_data": "Ma Medew Ahet"
+    "no_realm_data": "Ma Medew Ahet",
+    "error_load": "Ma Khemut Medew",
+    "error_export": "Ma Wehem Medew"
   },
   "karma": {
     "title": "Medew Unemu Seth",
@@ -376,7 +398,8 @@
       "select_verdict": "Sesep Unemu Seth",
       "concluding": "Em Wetep Seth...",
       "conclude": "Wetep Seth",
-      "notes_placeholder": "Shesep Medu Seth..."
+      "notes_placeholder": "Shesep Medu Seth...",
+      "no_evidence": "Ma Medu Sethet Em Khemen Seth"
     }
   },
   "audit": {
@@ -448,7 +471,8 @@
     "mark_all_read": "Pedjet Maakheru",
     "mark_read": "Pedjet Maakheru Ankh",
     "empty": "Maakheru Mehi",
-    "loading": "Smen..."
+    "loading": "Smen...",
+    "view_all": "Pet Neteru Ankh"
   },
   "realms": {
     "title": "Mekher",

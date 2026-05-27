@@ -10,6 +10,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 interface JudgmentDetail {
   id: string;
   soul: string;
+  soul_name: string;
   civilization: string;
   court: string;
   evidence_json: Record<string, unknown> | null;
@@ -25,11 +26,17 @@ interface PageProps {
   params: { id: string };
 }
 
-const VERDICT_COLORS: Record<string, string> = {
-  PASSED: "bg-amber-500/20 text-amber-400",
-  FAILED: "bg-red-600/20 text-red-400",
-  PURGATORY: "bg-blue-500/20 text-blue-400",
-  RETRY: "bg-purple-500/20 text-purple-400",
+const VERDICT_CONFIG: Record<string, { bg: string; text: string; border: string }> = {
+  PASSED: { bg: "bg-amber-500/15", text: "text-amber-400", border: "border-amber-500/30" },
+  FAILED: { bg: "bg-red-600/15", text: "text-red-400", border: "border-red-600/30" },
+  PURGATORY: { bg: "bg-blue-500/15", text: "text-blue-400", border: "border-blue-500/30" },
+  RETRY: { bg: "bg-purple-500/15", text: "text-purple-400", border: "border-purple-500/30" },
+};
+
+const CIVILIZATION_ICONS: Record<string, string> = {
+  CHINESE: "CN",
+  EUROPEAN: "EU",
+  EGYPTIAN: "EG",
 };
 
 export default function JudgmentDetailPage({ params }: PageProps) {
@@ -82,7 +89,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   if (isLoading) {
     return (
-      <div className="text-[hsl(var(--color-ink))] flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-20">
         <div className="text-[hsl(var(--color-ink-muted))]">{t("judgment.detail.loading")}</div>
       </div>
     );
@@ -90,169 +97,228 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   if (error || !judgment) {
     return (
-      <div className="text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4 py-12">
-        <div className="text-red-400">{t("judgment.detail.not_found")}</div>
-        <a href="/judgment" className="text-amber-400 hover:text-amber-300">
+      <div className="flex flex-col items-center justify-center gap-4 py-20">
+        <div className="text-red-400 text-lg">{t("judgment.detail.not_found")}</div>
+        <a href="/judgment" className="text-[hsl(var(--color-accent))] hover:underline text-sm">
           {t("judgment.detail.back_to_list")}
         </a>
       </div>
     );
   }
 
+  const verdictCfg = judgment.verdict ? VERDICT_CONFIG[judgment.verdict] : null;
+  const civIcon = CIVILIZATION_ICONS[judgment.civilization] || "??";
+
   return (
-    <div className="text-[hsl(var(--color-ink))]">
-      {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <a href="/judgment" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
-          ← {t("judgment.detail.back_to_list")}
-        </a>
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">{t("judgment.title")}</h1>
+    <div className="text-[hsl(var(--color-ink))] max-w-5xl mx-auto px-6 py-6 space-y-6">
+      {/* Back link */}
+      <a
+        href="/judgment"
+        className="inline-flex items-center gap-1 text-sm text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
+      >
+        ← {t("judgment.detail.back_to_list")}
+      </a>
+
+      {/* Title row */}
+      <div className="flex items-center gap-4">
+        <h1 className="text-xl font-bold text-[hsl(var(--color-accent))] flex-1">
+          {t("judgment.title")}
+        </h1>
         {judgment.is_final && (
-          <span className="px-2 py-0.5 rounded text-xs font-bold bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]">
+          <span className="px-2.5 py-1 rounded text-xs font-bold bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] border border-[hsl(var(--color-hairline))]">
             {t("judgment.detail.final")}
           </span>
         )}
-        <div className="text-[hsl(var(--color-ink-muted))] text-sm">
+        <span className="text-xs text-[hsl(var(--color-ink-subtle))]">
           {new Date(judgment.created_at).toLocaleDateString()}
-        </div>
+        </span>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        {/* Soul Info */}
-        <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-          <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
-            {t("judgment.detail.soul_info")}
-          </h2>
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("judgment.detail.soul_name")}</dt>
-              <dd className="text-[hsl(var(--color-ink))] font-medium">{soulData?.name || judgment.soul}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("judgment.detail.civilization")}</dt>
-              <dd className="text-[hsl(var(--color-ink))]">{judgment.civilization}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("judgment.detail.court")}</dt>
-              <dd className="text-[hsl(var(--color-ink))]">{judgment.court}</dd>
-            </div>
-          </dl>
-        </div>
-
-        {/* Evidence */}
-        {judgment.evidence_json && Object.keys(judgment.evidence_json).length > 0 && (
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
-              {t("judgment.detail.evidence")}
-            </h2>
-            <div className="bg-[hsl(var(--color-surface-2))] rounded p-3 text-sm font-mono text-[hsl(var(--color-ink))] overflow-auto">
-              <pre>{JSON.stringify(judgment.evidence_json, null, 2)}</pre>
-            </div>
-          </div>
-        )}
-
-        {/* Confession */}
-        {judgment.confession && (
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
-              {t("judgment.detail.confession")}
-            </h2>
-            <p className="text-sm text-[hsl(var(--color-ink))] italic">&ldquo;{judgment.confession}&rdquo;</p>
-          </div>
-        )}
-
-        {/* Current Verdict (if final) */}
-        {judgment.is_final && judgment.verdict && (
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
-              {t("judgment.detail.verdict")}
-            </h2>
-            <div className="flex items-center gap-3">
-              <span
-                className={`px-3 py-1.5 rounded text-sm font-bold ${
-                  VERDICT_COLORS[judgment.verdict] || "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
-                }`}
-              >
-                {judgment.verdict}
+      {/* Main grid: sidebar + content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left sidebar — soul info + metadata */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Soul card */}
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
+            <div className="px-4 py-3 border-b border-[hsl(var(--color-hairline))] flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-[hsl(var(--color-surface-3))] flex items-center justify-center text-xs font-bold text-[hsl(var(--color-ink-muted))]">
+                {civIcon}
               </span>
-              {judgment.concluded_at && (
-                <span className="text-xs text-[hsl(var(--color-ink-muted))]">
-                  {t("judgment.detail.concluded_at")}:{" "}
-                  {new Date(judgment.concluded_at).toLocaleString()}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-[hsl(var(--color-ink))] truncate">
+                  {soulData?.name || judgment.soul_name || judgment.soul}
+                </div>
+                <div className="text-xs text-[hsl(var(--color-ink-subtle))]">
+                  {t(`souls.civilizations.${judgment.civilization}`)}
+                </div>
+              </div>
+            </div>
+            <div className="px-4 py-3 space-y-2.5 text-sm">
+              <div className="flex justify-between">
+                <span className="text-[hsl(var(--color-ink-muted))]">{t("judgment.detail.court")}</span>
+                <span className="text-[hsl(var(--color-ink))]">{judgment.court || "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[hsl(var(--color-ink-muted))]">{t("judgment.detail.soul_name")}</span>
+                <span className="text-[hsl(var(--color-ink))] text-right truncate max-w-[140px]" title={judgment.soul}>
+                  {soulData?.name || judgment.soul_name || "—"}
                 </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Verdict badge (if final) */}
+          {judgment.is_final && verdictCfg && (
+            <div className={`rounded-lg border p-4 ${verdictCfg.bg} ${verdictCfg.border}`}>
+              <div className="text-xs font-medium text-[hsl(var(--color-ink-muted))] uppercase mb-2">
+                {t("judgment.detail.verdict")}
+              </div>
+              <div className={`text-lg font-bold ${verdictCfg.text}`}>
+                {t(`judgment.verdicts.${judgment.verdict}`)}
+              </div>
+              {judgment.concluded_at && (
+                <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-2">
+                  {new Date(judgment.concluded_at).toLocaleString()}
+                </div>
+              )}
+              {judgment.notes && (
+                <div className="mt-3 pt-3 border-t border-current/10">
+                  <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-1">{t("judgment.detail.notes")}:</p>
+                  <p className="text-sm text-[hsl(var(--color-ink))]">{judgment.notes}</p>
+                </div>
               )}
             </div>
-            {judgment.notes && (
-              <div className="mt-3 pt-3 border-t border-[hsl(var(--color-hairline))]">
-                <p className="text-sm text-[hsl(var(--color-ink-muted))]">&ldquo;{t("judgment.detail.notes")}:&rdquo;</p>
-                <p className="text-sm text-[hsl(var(--color-ink))] mt-1">{judgment.notes}</p>
+          )}
+
+          {/* Pending indicator */}
+          {!judgment.is_final && (
+            <div className="rounded-lg border border-[hsl(38,92%,50%,0.3)] bg-[hsl(38,92%,50%,0.08)] p-4">
+              <div className="text-xs font-medium text-[hsl(var(--color-ink-muted))] uppercase mb-1">
+                {t("judgment.detail.verdict")}
               </div>
-            )}
-          </div>
-        )}
+              <div className="text-sm font-bold text-[hsl(38,92%,50%)]">
+                {t("judgment.pending")}
+              </div>
+            </div>
+          )}
+        </div>
 
-        {/* Conclude Form (if not final) */}
-        {!judgment.is_final && (
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
-              {t("judgment.detail.render_verdict")}
-            </h2>
+        {/* Right main content */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Evidence */}
+          {judgment.evidence_json && Object.keys(judgment.evidence_json).length > 0 && (
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
+              <div className="px-5 py-3 border-b border-[hsl(var(--color-hairline))]">
+                <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase">
+                  {t("judgment.detail.evidence")}
+                </h2>
+              </div>
+              <div className="p-4">
+                <pre className="bg-[hsl(var(--color-surface-2))] rounded p-4 text-xs font-mono text-[hsl(var(--color-ink))] overflow-auto max-h-64">
+                  {JSON.stringify(judgment.evidence_json, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
 
-            {/* Verdict Radio Buttons */}
-            <div className="space-y-2 mb-4">
-              {[
-                { key: "PASSED", label: t("judgment.verdicts.passed"), color: "border-amber-500/50 hover:bg-amber-500/10" },
-                { key: "FAILED", label: t("judgment.verdicts.failed"), color: "border-red-600/50 hover:bg-red-600/10" },
-                { key: "PURGATORY", label: t("judgment.verdicts.purgatory"), color: "border-blue-500/50 hover:bg-blue-500/10" },
-                { key: "RETRY", label: t("judgment.verdicts.retry"), color: "border-purple-500/50 hover:bg-purple-500/10" },
-              ].map((opt) => (
-                <label
-                  key={opt.key}
-                  className={`flex items-center gap-3 p-3 rounded border cursor-pointer transition-colors ${
-                    selectedVerdict === opt.key
-                      ? opt.color + " bg-opacity-20 border-2"
-                      : "border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))]"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="verdict"
-                    value={opt.key}
-                    checked={selectedVerdict === opt.key}
-                    onChange={(e) => setSelectedVerdict(e.target.value)}
-                    className="accent-amber-500"
+          {/* Confession */}
+          {judgment.confession && (
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
+              <div className="px-5 py-3 border-b border-[hsl(var(--color-hairline))]">
+                <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase">
+                  {t("judgment.detail.confession")}
+                </h2>
+              </div>
+              <div className="p-5">
+                <p className="text-sm text-[hsl(var(--color-ink))] italic leading-relaxed">
+                  &ldquo;{judgment.confession}&rdquo;
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Empty state for evidence/confession */}
+          {(!judgment.evidence_json || Object.keys(judgment.evidence_json).length === 0) && !judgment.confession && (
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] p-8 text-center">
+              <p className="text-sm text-[hsl(var(--color-ink-subtle))]">
+                {t("judgment.no_evidence")}
+              </p>
+            </div>
+          )}
+
+          {/* Conclude form (if not final) */}
+          {!judgment.is_final && (
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
+              <div className="px-5 py-3 border-b border-[hsl(var(--color-hairline))]">
+                <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase">
+                  {t("judgment.detail.render_verdict")}
+                </h2>
+              </div>
+              <div className="p-5 space-y-4">
+                {/* Verdict options as cards */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { key: "PASSED", label: t("judgment.verdicts.passed"), color: "border-amber-500/40 hover:bg-amber-500/10", activeColor: "border-amber-500 bg-amber-500/15 ring-1 ring-amber-500/30" },
+                    { key: "FAILED", label: t("judgment.verdicts.failed"), color: "border-red-600/40 hover:bg-red-600/10", activeColor: "border-red-600 bg-red-600/15 ring-1 ring-red-600/30" },
+                    { key: "PURGATORY", label: t("judgment.verdicts.purgatory"), color: "border-blue-500/40 hover:bg-blue-500/10", activeColor: "border-blue-500 bg-blue-500/15 ring-1 ring-blue-500/30" },
+                    { key: "RETRY", label: t("judgment.verdicts.retry"), color: "border-purple-500/40 hover:bg-purple-500/10", activeColor: "border-purple-500 bg-purple-500/15 ring-1 ring-purple-500/30" },
+                  ].map((opt) => (
+                    <label
+                      key={opt.key}
+                      className={`flex items-center gap-3 p-3.5 rounded-lg border cursor-pointer transition-all ${
+                        selectedVerdict === opt.key
+                          ? opt.activeColor
+                          : `border-[hsl(var(--color-hairline))] ${opt.color}`
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="verdict"
+                        value={opt.key}
+                        checked={selectedVerdict === opt.key}
+                        onChange={(e) => setSelectedVerdict(e.target.value)}
+                        className="sr-only"
+                      />
+                      <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        selectedVerdict === opt.key ? "border-current" : "border-[hsl(var(--color-ink-subtle))]"
+                      }`}>
+                        {selectedVerdict === opt.key && (
+                          <span className="w-2 h-2 rounded-full bg-current" />
+                        )}
+                      </span>
+                      <span className="text-sm font-medium text-[hsl(var(--color-ink))]">{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-2">
+                    {t("judgment.detail.notes")}
+                  </label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={4}
+                    className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg p-3 text-sm text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]/50 resize-none"
+                    placeholder={t("judgment.detail.notes_placeholder")}
                   />
-                  <span className="text-sm font-medium text-[hsl(var(--color-ink))]">{opt.label}</span>
-                </label>
-              ))}
-            </div>
+                </div>
 
-            {/* Notes Textarea */}
-            <div className="mb-4">
-              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-2">
-                {t("judgment.detail.notes")}
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={4}
-                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded p-3 text-sm text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]/50"
-                placeholder={t("judgment.detail.notes_placeholder")}
-              />
+                {/* Submit */}
+                <button
+                  onClick={handleConclude}
+                  disabled={concludeMutation.isPending || !selectedVerdict}
+                  className="w-full py-2.5 px-4 bg-[hsl(var(--color-accent))] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-all text-black"
+                >
+                  {concludeMutation.isPending
+                    ? t("judgment.detail.concluding")
+                    : t("judgment.detail.conclude")}
+                </button>
+              </div>
             </div>
-
-            {/* Conclude Button */}
-            <button
-              onClick={handleConclude}
-              disabled={concludeMutation.isPending}
-              className="w-full py-2.5 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-black"
-            >
-              {concludeMutation.isPending
-                ? t("judgment.detail.concluding")
-                : t("judgment.detail.conclude")}
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

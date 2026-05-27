@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { karmaApi, KarmaStatsOverview } from "@/lib/api";
@@ -44,21 +45,15 @@ const REALM_COLORS: Record<string, string> = {
 export default function DashboardPage() {
   const { t } = useI18n();
   const { showToast } = useToast();
-  const [stats, setStats] = useState<KarmaStatsOverview | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    karmaApi.statsOverview()
-      .then((res) => {
-        setStats(res.data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Failed to load statistics");
-        setLoading(false);
-      });
-  }, []);
+  const { data: stats, isLoading: loading, error: queryError } = useQuery<KarmaStatsOverview>({
+    queryKey: ["dashboard", "stats"],
+    queryFn: async () => {
+      const res = await karmaApi.statsOverview();
+      return res.data;
+    },
+    staleTime: 60_000,
+  });
+  const error = queryError ? t("dashboard.error_load") : null;
 
   const handleExport = async () => {
     try {
@@ -71,7 +66,7 @@ export default function DashboardPage() {
       link.click();
       link.remove();
     } catch {
-      showToast("Failed to export statistics", "error");
+      showToast(t("dashboard.error_export"), "error");
     }
   };
 
@@ -97,10 +92,10 @@ export default function DashboardPage() {
     color: STATE_COLORS[s.state] || "#6b7280",
   })) ?? [];
 
-  const tenantData = stats?.tenants.map((t) => ({
-    name: getDisplayNameForTenant(t.tenant_code),
-    total: t.total_souls,
-    ...t.state_breakdown,
+  const tenantData = stats?.tenants.map((tenant) => ({
+    name: getDisplayNameForTenant(tenant.tenant_code),
+    total: tenant.total_souls,
+    ...tenant.state_breakdown,
   })) ?? [];
 
   const realmChartData = stats?.souls_by_realm.map((r) => ({
@@ -127,7 +122,7 @@ export default function DashboardPage() {
             label={t("dashboard.alive")}
             value={stats?.state_distribution.find(s => s.state === "ALIVE")?.count}
             isLoading={loading}
-            color="text-emerald-400"
+            color="text-[hsl(var(--color-status-success))]"
           />
           <StatCard
             label={t("dashboard.under_judgment")}
@@ -139,7 +134,7 @@ export default function DashboardPage() {
             label={t("dashboard.disposed")}
             value={stats?.state_distribution.find(s => s.state === "DISPOSED")?.count}
             isLoading={loading}
-            color="text-gray-400"
+            color="text-[hsl(var(--color-status-lost))]"
           />
         </div>
 
@@ -153,7 +148,7 @@ export default function DashboardPage() {
                 <Skeleton className="h-[200px] w-[200px] rounded-full" />
               </div>
             ) : error ? (
-              <div className="h-[240px] flex items-center justify-center text-red-400">{error}</div>
+              <div className="h-[240px] flex items-center justify-center text-[hsl(var(--color-status-error))]">{error}</div>
             ) : (
               <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
@@ -171,10 +166,10 @@ export default function DashboardPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: "#0f1011", border: "1px solid #23252a", borderRadius: "6px", fontSize: 12 }}
+                    contentStyle={{ background: "hsl(var(--color-surface-1))", border: "1px solid hsl(var(--color-hairline))", borderRadius: "6px", fontSize: 12 }}
                   />
                   <Legend
-                    formatter={(value) => <span style={{ color: "#8a8f98", fontSize: 12 }}>{value}</span>}
+                    formatter={(value) => <span style={{ color: "hsl(var(--color-ink-muted))", fontSize: 12 }}>{value}</span>}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -191,11 +186,11 @@ export default function DashboardPage() {
             ) : (
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={tenantData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#23252a" />
-                  <XAxis dataKey="name" tick={{ fill: "#8a8f98", fontSize: 11 }} />
-                  <YAxis tick={{ fill: "#8a8f98", fontSize: 11 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--color-hairline))" />
+                  <XAxis dataKey="name" tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }} />
+                  <YAxis tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }} />
                   <Tooltip
-                    contentStyle={{ background: "#0f1011", border: "1px solid #23252a", borderRadius: "6px", fontSize: 12 }}
+                    contentStyle={{ background: "hsl(var(--color-surface-1))", border: "1px solid hsl(var(--color-hairline))", borderRadius: "6px", fontSize: 12 }}
                   />
                   <Bar dataKey="total" fill="#f59e0b" radius={[4, 4, 0, 0]} name={t("dashboard.total_souls")} />
                 </BarChart>
@@ -254,11 +249,11 @@ export default function DashboardPage() {
             ) : (
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={stats?.karma_distribution ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#23252a" />
-                  <XAxis dataKey="label" tick={{ fill: "#8a8f98", fontSize: 11 }} />
-                  <YAxis tick={{ fill: "#8a8f98", fontSize: 11 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--color-hairline))" />
+                  <XAxis dataKey="label" tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }} />
+                  <YAxis tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }} />
                   <Tooltip
-                    contentStyle={{ background: "#0f1011", border: "1px solid #23252a", borderRadius: "6px", fontSize: 12 }}
+                    contentStyle={{ background: "hsl(var(--color-surface-1))", border: "1px solid hsl(var(--color-hairline))", borderRadius: "6px", fontSize: 12 }}
                   />
                   <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Souls" />
                 </BarChart>
@@ -276,11 +271,11 @@ export default function DashboardPage() {
             ) : realmChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={realmChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#23252a" />
-                  <XAxis dataKey="name" tick={{ fill: "#8a8f98", fontSize: 11 }} />
-                  <YAxis tick={{ fill: "#8a8f98", fontSize: 11 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--color-hairline))" />
+                  <XAxis dataKey="name" tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }} />
+                  <YAxis tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }} />
                   <Tooltip
-                    contentStyle={{ background: "#0f1011", border: "1px solid #23252a", borderRadius: "6px", fontSize: 12 }}
+                    contentStyle={{ background: "hsl(var(--color-surface-1))", border: "1px solid hsl(var(--color-hairline))", borderRadius: "6px", fontSize: 12 }}
                   />
                   <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Souls" />
                 </BarChart>
@@ -315,13 +310,13 @@ export default function DashboardPage() {
               });
 
               const actionColors: Record<string, string> = {
-                CREATE: "bg-green-500/20 text-green-400 border-green-500/30",
-                UPDATE: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-                DELETE: "bg-red-500/20 text-red-400 border-red-500/30",
-                LOGIN: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-                LOGOUT: "bg-gray-500/20 text-gray-400 border-gray-500/30",
-                TRANSFER: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-                JUDGMENT: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+                CREATE: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.3)]",
+                UPDATE: "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))] border-[hsl(var(--color-status-info)/0.3)]",
+                DELETE: "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.3)]",
+                LOGIN: "bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))] border-[hsl(var(--color-verdict-retry)/0.3)]",
+                LOGOUT: "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))] border-[hsl(var(--color-status-lost)/0.3)]",
+                TRANSFER: "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.3)]",
+                JUDGMENT: "bg-[hsl(var(--color-accent)/0.2)] text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent)/0.3)]",
                 OTHER: "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] border-[hsl(var(--color-hairline))]",
               };
 

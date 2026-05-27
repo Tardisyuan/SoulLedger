@@ -9,27 +9,27 @@ import { useToast } from "@/src/contexts/ToastContext";
 import Link from "next/link";
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: "bg-amber-500/20 text-amber-400 border-amber-500/50",
-  APPROVED: "bg-green-500/20 text-green-400 border-green-500/50",
-  REJECTED: "bg-red-500/20 text-red-400 border-red-500/50",
-  SKIPPED: "bg-gray-500/20 text-gray-400 border-gray-500/50",
-  ESCALATED: "bg-purple-500/20 text-purple-400 border-purple-500/50",
+  PENDING: "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.5)]",
+  APPROVED: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.5)]",
+  REJECTED: "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.5)]",
+  SKIPPED: "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))] border-[hsl(var(--color-status-lost)/0.5)]",
+  ESCALATED: "bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))] border-[hsl(var(--color-verdict-retry)/0.5)]",
 };
 
 const VERDICT_COLORS: Record<string, string> = {
-  PASSED: "bg-green-500/20 text-green-400",
-  FAILED: "bg-red-500/20 text-red-400",
-  CONFIRMED: "bg-green-500/20 text-green-400",
-  REJECTED: "bg-red-500/20 text-red-400",
-  SKIPPED: "bg-gray-500/20 text-gray-400",
+  PASSED: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]",
+  FAILED: "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]",
+  CONFIRMED: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]",
+  REJECTED: "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]",
+  SKIPPED: "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]",
 };
 
-const NODE_TYPE_LABELS: Record<string, string> = {
-  TRIAL: "审判",
-  EVALUATION: "评估",
-  APPEAL: "申诉",
-  FINAL: "终审",
-  EXECUTION: "执行",
+const NODE_TYPE_KEYS: Record<string, string> = {
+  TRIAL: "workflow.node_type.trial",
+  EVALUATION: "workflow.node_type.evaluation",
+  APPEAL: "workflow.node_type.appeal",
+  FINAL: "workflow.node_type.final",
+  EXECUTION: "workflow.node_type.execution",
 };
 
 export default function WorkflowDetailPage() {
@@ -58,7 +58,7 @@ export default function WorkflowDetailPage() {
       setNotes("");
       refetch();
     },
-    onError: (err: any) => {
+    onError: (err: { response?: { data?: { error?: string } }; message?: string }) => {
       showToast(err?.response?.data?.error || t("workflow.detail.approve_error") || "Failed to approve node", "error");
     },
   });
@@ -70,7 +70,7 @@ export default function WorkflowDetailPage() {
       showToast(t("workflow.detail.advance_success") || "Workflow advanced", "success");
       refetch();
     },
-    onError: (err: any) => {
+    onError: (err: { response?: { data?: { error?: string } }; message?: string }) => {
       showToast(err?.response?.data?.error || t("workflow.detail.advance_error") || "Failed to advance", "error");
     },
   });
@@ -102,8 +102,8 @@ export default function WorkflowDetailPage() {
   if (error || !workflow) {
     return (
       <div className="text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4 py-12">
-        <div className="text-red-400">{t("workflow.detail.not_found") || "Workflow not found"}</div>
-        <Link href="/workflow" className="text-amber-400 hover:text-amber-300">
+        <div className="text-[hsl(var(--color-status-error))]">{t("workflow.detail.not_found") || "Workflow not found"}</div>
+        <Link href="/workflow" className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))]">
           {t("workflow.detail.back_to_list") || "Back to workflow list"}
         </Link>
       </div>
@@ -124,7 +124,7 @@ export default function WorkflowDetailPage() {
           {workflow.status}
         </span>
         {workflow.is_appeal && (
-          <span className="px-2 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400">
+          <span className="px-2 py-0.5 rounded text-xs bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))]">
             {t("workflow.detail.appeal") || "Appeal"}
           </span>
         )}
@@ -177,7 +177,7 @@ export default function WorkflowDetailPage() {
             <div className="mb-4 p-3 bg-[hsl(var(--color-surface-2))] rounded border border-[hsl(var(--color-hairline))]">
               <div className="font-medium text-[hsl(var(--color-ink))]">{currentNode.node_name}</div>
               <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
-                {NODE_TYPE_LABELS[currentNode.node_type] || currentNode.node_type} · {currentNode.court_code}
+                {t(NODE_TYPE_KEYS[currentNode.node_type]) || currentNode.node_type} · {currentNode.court_code}
               </div>
               <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
                 {t("workflow.detail.order") || "Order"}: {currentNode.node_order}
@@ -238,7 +238,7 @@ export default function WorkflowDetailPage() {
               <button
                 onClick={handleApproveNode}
                 disabled={approveMutation.isPending}
-                className="flex-1 py-2.5 px-4 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-black"
+                className="flex-1 py-2.5 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-black"
               >
                 {approveMutation.isPending
                   ? t("workflow.detail.processing") || "Processing..."
@@ -259,8 +259,8 @@ export default function WorkflowDetailPage() {
 
         {/* Completed State */}
         {workflow.status === "COMPLETED" && (
-          <div className="bg-green-500/10 rounded-lg p-5 border border-green-500/30">
-            <h2 className="text-sm font-semibold text-green-400 uppercase mb-2">
+          <div className="bg-[hsl(var(--color-status-success)/0.1)] rounded-lg p-5 border border-[hsl(var(--color-status-success)/0.3)]">
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-status-success))] uppercase mb-2">
               {t("workflow.detail.completed") || "Workflow Completed"}
             </h2>
             <p className="text-sm text-[hsl(var(--color-ink-muted))]">
@@ -334,7 +334,7 @@ export default function WorkflowDetailPage() {
                         )}
                       </div>
                       <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
-                        {NODE_TYPE_LABELS[node.node_type] || node.node_type} · {node.court_code || "—"}
+                        {t(NODE_TYPE_KEYS[node.node_type]) || node.node_type} · {node.court_code || "—"}
                       </div>
 
                       {/* Verdict and notes for completed nodes */}

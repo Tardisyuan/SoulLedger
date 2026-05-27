@@ -63,7 +63,7 @@ export default function UsersPage() {
   const users = data?.results ?? [];
 
   return (
-    <div className="min-h-screen bg-canvas text-ink">
+    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <Link href="/" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
@@ -131,7 +131,7 @@ export default function UsersPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
                   {t("users.status")}
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-ink-subtle uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
                   {t("users.actions")}
                 </th>
               </tr>
@@ -141,7 +141,7 @@ export default function UsersPage() {
                 <TableSkeleton rows={8} cols={6} />
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-ink-muted">
+                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-[hsl(var(--color-ink-muted))]">
                     {t("users.no_users")}
                   </td>
                 </tr>
@@ -157,12 +157,12 @@ export default function UsersPage() {
                     <td className="px-4 py-3 text-sm">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                         user.role === "ADMIN"
-                          ? "bg-red-500/20 text-red-400"
+                          ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]"
                           : user.role === "JUDGE"
                           ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
                           : user.role === "GUARDIAN"
-                          ? "bg-blue-500/20 text-blue-400"
-                          : "bg-gray-500/20 text-gray-400"
+                          ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]"
+                          : "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]"
                       }`}>
                         {t(`users.roles.${user.role}`)}
                       </span>
@@ -171,7 +171,7 @@ export default function UsersPage() {
                       {user.tenant?.display_name || user.tenant?.code || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      <span className={user.is_active ? "text-green-400" : "text-red-400"}>
+                      <span className={user.is_active ? "text-[hsl(var(--color-status-success))]" : "text-[hsl(var(--color-status-error))]"}>
                         {user.is_active ? t("users.active") : t("users.inactive")}
                       </span>
                     </td>
@@ -191,13 +191,13 @@ export default function UsersPage() {
                                 isActive: !user.is_active,
                               })}
                               disabled={toggleStatusMutation.isPending}
-                              className="px-2 py-1 text-xs bg-surface-2 hover:bg-surface-3 border border-hairline rounded text-ink-muted hover:text-ink transition-colors disabled:opacity-50"
+                              className="px-2 py-1 text-xs bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors disabled:opacity-50"
                             >
                               {user.is_active ? t("users.deactivate") : t("users.activate")}
                             </button>
                             <button
                               onClick={() => setDeleteUser(user)}
-                              className="px-2 py-1 text-xs bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded text-red-400 transition-colors"
+                              className="px-2 py-1 text-xs bg-[hsl(var(--color-status-error)/0.2)] hover:bg-[hsl(var(--color-status-error)/0.3)] border border-[hsl(var(--color-status-error)/0.3)] rounded text-[hsl(var(--color-status-error))] transition-colors"
                             >
                               {t("common.delete")}
                             </button>
