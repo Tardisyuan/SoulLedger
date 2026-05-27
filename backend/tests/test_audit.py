@@ -524,10 +524,10 @@ class TestNewAuditActionTypes:
 
 @pytest.mark.django_db
 class TestAuditApiEndpoint:
-    """Test the /api/v1/audit/ endpoint (alias for /api/v1/audit-logs/)."""
+    """Test the /api/v1/audit-logs/ endpoint (alias for /api/v1/audit-logs/)."""
 
     def test_list_audit_returns_paginated_results(self, auth_client):
-        """GET /api/v1/audit/ returns paginated results."""
+        """GET /api/v1/audit-logs/ returns paginated results."""
         from apps.souls.models import Soul
 
         # Create a soul to generate an audit log
@@ -537,8 +537,8 @@ class TestAuditApiEndpoint:
         })
         assert response.status_code == 201
 
-        # List audit logs via /api/v1/audit/
-        response = auth_client.get("/api/v1/audit/")
+        # List audit logs via /api/v1/audit-logs/
+        response = auth_client.get("/api/v1/audit-logs/")
         assert response.status_code == 200
         assert "results" in response.data
         assert "count" in response.data
@@ -546,7 +546,7 @@ class TestAuditApiEndpoint:
         assert len(response.data["results"]) > 0
 
     def test_filter_by_action(self, auth_client):
-        """GET /api/v1/audit/?action=CREATE filters by action type."""
+        """GET /api/v1/audit-logs/?action=CREATE filters by action type."""
         from apps.souls.models import Soul
 
         # Create a soul
@@ -557,13 +557,13 @@ class TestAuditApiEndpoint:
         assert response.status_code == 201
 
         # Filter by CREATE action
-        response = auth_client.get("/api/v1/audit/?action=CREATE")
+        response = auth_client.get("/api/v1/audit-logs/?action=CREATE")
         assert response.status_code == 200
         for log in response.data["results"]:
             assert log["action"] == "CREATE"
 
     def test_filter_by_resource(self, auth_client):
-        """GET /api/v1/audit/?resource=soul filters by resource type."""
+        """GET /api/v1/audit-logs/?resource=soul filters by resource type."""
         from apps.souls.models import Soul
 
         # Create a soul
@@ -574,13 +574,13 @@ class TestAuditApiEndpoint:
         assert response.status_code == 201
 
         # Filter by resource
-        response = auth_client.get("/api/v1/audit/?resource=soul")
+        response = auth_client.get("/api/v1/audit-logs/?resource=soul")
         assert response.status_code == 200
         for log in response.data["results"]:
             assert "soul" in log["resource"].lower()
 
     def test_filter_by_date_range(self, auth_client):
-        """GET /api/v1/audit/?date_from=&date_to= filters by date range."""
+        """GET /api/v1/audit-logs/?date_from=&date_to= filters by date range."""
         from datetime import date, timedelta
 
         today = date.today()
@@ -589,13 +589,13 @@ class TestAuditApiEndpoint:
 
         # Filter with date range that should include today
         response = auth_client.get(
-            f"/api/v1/audit/?date_from={yesterday}&date_to={tomorrow}"
+            f"/api/v1/audit-logs/?date_from={yesterday}&date_to={tomorrow}"
         )
         assert response.status_code == 200
         assert "results" in response.data
 
     def test_filter_combined(self, auth_client):
-        """GET /api/v1/audit/ with combined filters works correctly."""
+        """GET /api/v1/audit-logs/ with combined filters works correctly."""
         from apps.souls.models import Soul
 
         # Create a soul
@@ -607,7 +607,7 @@ class TestAuditApiEndpoint:
 
         # Apply combined filters
         response = auth_client.get(
-            "/api/v1/audit/?action=CREATE&resource=soul"
+            "/api/v1/audit-logs/?action=CREATE&resource=soul"
         )
         assert response.status_code == 200
         for log in response.data["results"]:
@@ -615,7 +615,7 @@ class TestAuditApiEndpoint:
             assert "soul" in log["resource"].lower()
 
     def test_non_admin_cannot_access(self, db, cn_tenant):
-        """Non-admin users cannot access /api/v1/audit/ without tenant context."""
+        """Non-admin users cannot access /api/v1/audit-logs/ without tenant context."""
         from django.contrib.auth import get_user_model
         from django.test import RequestFactory
         from rest_framework.test import force_authenticate
@@ -630,7 +630,7 @@ class TestAuditApiEndpoint:
 
         # Without tenant context → 403 (TenantPermission enforced)
         factory = RequestFactory()
-        request = factory.get("/api/v1/audit/")
+        request = factory.get("/api/v1/audit-logs/")
         force_authenticate(request, user=non_admin)
         # No request.tenant set — simulates missing middleware context
 
@@ -656,7 +656,7 @@ class TestAuditApiEndpoint:
         )
 
         factory = RequestFactory()
-        request = factory.get("/api/v1/audit/")
+        request = factory.get("/api/v1/audit-logs/")
         force_authenticate(request, user=non_admin)
         request.tenant = cn_tenant  # Inject tenant context
 
@@ -668,6 +668,6 @@ class TestAuditApiEndpoint:
         assert response.status_code == 200
 
     def test_unauthenticated_cannot_access(self, api_client):
-        """Unauthenticated users cannot access /api/v1/audit/ endpoint."""
-        response = api_client.get("/api/v1/audit/")
+        """Unauthenticated users cannot access /api/v1/audit-logs/ endpoint."""
+        response = api_client.get("/api/v1/audit-logs/")
         assert response.status_code == 401
