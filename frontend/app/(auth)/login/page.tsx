@@ -24,17 +24,18 @@ export default function LoginPage() {
       const res = await authApi.login(form.username, form.password);
 
       const tokens = res.data;
-      document.cookie = `soulledger_access=${tokens.access}; path=/; max-age=1800; SameSite=Lax`;
+      // Store access token in sessionStorage (not cookie) to limit XSS exposure
+      sessionStorage.setItem("soulledger_access", tokens.access);
       document.cookie = `soulledger_refresh=${tokens.refresh}; path=/; max-age=604800; SameSite=Lax`;
 
       // Populate TenantContext so downstream components have tenant/user info
       if (tokens.user) {
         setUser(tokens.user);
-        document.cookie = `soulledger_user=${encodeURIComponent(JSON.stringify(tokens.user))}; path=/; max-age=${60 * 30}; SameSite=Lax`;
       }
 
       showToast(t("auth.login_success"), "success");
-      router.push("/souls");
+      window.location.href = "/souls";
+      return;
     } catch (err: unknown) {
       const raw = (err as { response?: { data?: { detail?: string } } })
         ?.response?.data?.detail || "Login failed";
