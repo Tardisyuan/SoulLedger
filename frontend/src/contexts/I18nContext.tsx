@@ -7,7 +7,7 @@ import egyMessages from "../../messages/egy.json";
 
 export type Locale = "zh-Hans" | "en" | "egy";
 
-const messages: Record<Locale, Record<string, any>> = {
+const messages: Record<Locale, Record<string, unknown>> = {
   "zh-Hans": zhMessages,
   en: enMessages,
   egy: egyMessages,
@@ -59,10 +59,10 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const t = useCallback(
     (key: string, params?: Record<string, string>): string => {
       const parts = key.split(".");
-      let value: any = messages[locale];
+      let value: unknown = messages[locale];
       for (const part of parts) {
-        if (value && typeof value === "object" && part in value) {
-          value = value[part];
+        if (value && typeof value === "object" && part in (value as Record<string, unknown>)) {
+          value = (value as Record<string, unknown>)[part];
         } else {
           return key;
         }

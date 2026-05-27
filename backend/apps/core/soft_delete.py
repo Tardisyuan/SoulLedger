@@ -27,6 +27,10 @@ class SoftDeleteMixin(models.Model):
     class Meta:
         abstract = True
 
+    def delete(self, using=None, keep_parents=False):
+        """Override to perform soft delete instead of hard delete."""
+        self.soft_delete()
+
     def soft_delete(self, user=None, reason=""):
         """Mark this record as deleted without actually removing it."""
         self.is_deleted = True

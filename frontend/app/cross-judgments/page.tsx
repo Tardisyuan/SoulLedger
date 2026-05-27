@@ -1,7 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { crossTenantJudgmentsApi } from "@/lib/api";
+import { crossTenantJudgmentsApi, type CrossTenantJudgment } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
@@ -47,7 +47,7 @@ export default function CrossJudgmentsPage() {
           </p>
         ) : (
           <div className="space-y-4">
-            {judgments.map((j: any) => (
+            {judgments.map((j: CrossTenantJudgment) => (
               <Link
                 key={j.id}
                 href={`/cross-judgments/${j.id}`}
@@ -67,9 +67,9 @@ export default function CrossJudgmentsPage() {
                 {j.description && (
                   <p className="mt-2 text-sm text-[hsl(var(--color-ink-muted))] line-clamp-2">{j.description}</p>
                 )}
-                {j.participant_count !== undefined && (
+                {j.participants.length > 0 && (
                   <p className="mt-2 text-xs text-[hsl(var(--color-ink-muted))]">
-                    {j.participant_count} {t("crossJudgments.participants") || "participants"}
+                    {j.participants.length} {t("crossJudgments.participants") || "participants"}
                   </p>
                 )}
               </Link>

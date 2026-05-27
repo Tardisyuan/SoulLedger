@@ -1,6 +1,7 @@
 """
 RBAC Permission models — 参考 Snowy SaToken 设计
 """
+import uuid
 from django.db import models
 from apps.core.models import AuditUserFields
 
@@ -95,11 +96,17 @@ class Role(AuditUserFields):
     def __str__(self):
         return f"{self.name} ({self.display_name})"
 
-    def get_inherited_permissions(self):
+    def get_inherited_permissions(self, _visited=None):
         """
         获取继承的权限（包含自己的权限和所有祖先的权限）
         通过递归获取父角色权限形成继承链
         """
+        if _visited is None:
+            _visited = set()
+        if self.pk in _visited:
+            return set()  # Cycle detection
+        _visited.add(self.pk)
+
         # 获取自己的直接权限
         own_permissions = set(
             rp.permission.codename
@@ -109,7 +116,7 @@ class Role(AuditUserFields):
         # 递归获取父角色权限
         inherited_permissions = set()
         if self.parent:
-            inherited_permissions = self.parent.get_inherited_permissions()
+            inherited_permissions = self.parent.get_inherited_permissions(_visited)
 
         # 合并：自己的权限 + 继承的权限
         return own_permissions | inherited_permissions
@@ -262,7 +269,7 @@ class RowLevelDataScope(models.Model):
     行级数据范围 - 行级访问控制
     例如：JUDGE 角色只能看和处理 status=PENDING 的灵魂
     """
-    id = models.UUIDField(primary_key=True, default=models.UUIDField().default, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # 关联角色（使用 perm.Role 的 name 字段）
     role = models.ForeignKey(

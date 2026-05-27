@@ -12,6 +12,7 @@ import {
   type KarmaSummary,
 } from "@/lib/api";
 import { useToast } from "@/src/contexts/ToastContext";
+import { useI18n } from "@/src/contexts/I18nContext";
 
 // ── Query Keys ───────────────────────────────────────────────────────
 
@@ -111,6 +112,7 @@ export function useAddSoulRecord() {
 export function useUpdateSoul() {
   const qc = useQueryClient();
   const { showToast } = useToast();
+  const { t } = useI18n();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<SoulInput> }) =>
       soulsApi.update(id, data),
@@ -118,7 +120,7 @@ export function useUpdateSoul() {
       qc.invalidateQueries({ queryKey: soulKeys.all });
     },
     onError: () => {
-      showToast("更新失败", "error");
+      showToast(t("souls.error_update"), "error");
     },
   });
 }
@@ -126,13 +128,14 @@ export function useUpdateSoul() {
 export function useDeleteSoul() {
   const qc = useQueryClient();
   const { showToast } = useToast();
+  const { t } = useI18n();
   return useMutation({
     mutationFn: (id: string) => soulsApi.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: soulKeys.all });
     },
     onError: () => {
-      showToast("删除失败", "error");
+      showToast(t("souls.error_delete"), "error");
     },
   });
 }
