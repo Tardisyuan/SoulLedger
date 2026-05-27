@@ -13,6 +13,9 @@ if (process.env.SENTRY_DSN) {
 
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    optimizeCss: true,
+  },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
   },
