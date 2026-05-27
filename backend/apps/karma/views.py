@@ -30,10 +30,7 @@ class KarmaBalanceView(APIView):
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
-            if tenant:
-                soul = Soul.objects.get(id=soul_id, tenant=tenant)
-            else:
-                soul = Soul.objects.get(id=soul_id)
+            soul = Soul.objects.get(id=soul_id, tenant=tenant)
         except Soul.DoesNotExist:
             return Response(
                 {"error": "NOT_FOUND", "message": "Soul not found"},
@@ -55,10 +52,7 @@ class KarmaRecalculateView(APIView):
     def post(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
-            if tenant:
-                soul = Soul.objects.get(id=soul_id, tenant=tenant)
-            else:
-                soul = Soul.objects.get(id=soul_id)
+            soul = Soul.objects.get(id=soul_id, tenant=tenant)
         except Soul.DoesNotExist:
             return Response(
                 {"error": "NOT_FOUND", "message": "Soul not found"},
@@ -81,10 +75,7 @@ class KarmaEffectiveView(APIView):
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
-            if tenant:
-                soul = Soul.objects.get(id=soul_id, tenant=tenant)
-            else:
-                soul = Soul.objects.get(id=soul_id)
+            soul = Soul.objects.get(id=soul_id, tenant=tenant)
         except Soul.DoesNotExist:
             return Response(
                 {"error": "NOT_FOUND", "message": "Soul not found"},
@@ -106,10 +97,7 @@ class KarmaInheritanceView(APIView):
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
-            if tenant:
-                soul = Soul.objects.get(id=soul_id, tenant=tenant)
-            else:
-                soul = Soul.objects.get(id=soul_id)
+            soul = Soul.objects.get(id=soul_id, tenant=tenant)
         except Soul.DoesNotExist:
             return Response(
                 {"error": "NOT_FOUND", "message": "Soul not found"},
@@ -275,7 +263,7 @@ class KarmaExportStatsView(APIView):
             "Death Date", "Created At"
         ])
 
-        tenant = getattr(request, 'tenant', None) or getattr(request.user, 'tenant', None)
+        tenant = getattr(request, 'tenant', None)
         # Admin exports all souls, others export only their tenant's souls
         if getattr(user, 'role', None) == 'ADMIN':
             qs = Soul.objects.select_related("tenant").all()

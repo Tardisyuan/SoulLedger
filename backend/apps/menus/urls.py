@@ -1,14 +1,15 @@
 """
 Menu URL routing
 """
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from . import views
 
 app_name = "menus"
 
+router = DefaultRouter()
+router.register(r"", views.MenuViewSet, basename="menu")
+
 urlpatterns = [
-    path("", views.list_menus, name="list"),
-    path("all/", views.all_menus, name="all"),
-    path("create/", views.create_menu, name="create"),
-    path("<int:pk>/", views.update_delete_menu, name="detail"),
+    path("", include(router.urls)),
 ]

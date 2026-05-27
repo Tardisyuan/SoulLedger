@@ -4,14 +4,15 @@ Audit views - AuditLog ViewSet with filtering support.
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from apps.core.permissions import TenantPermission
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import AuditLog, AuditAction
 from .serializers import AuditLogSerializer, AuditLogDetailSerializer
+from apps.core.viewsets import CodenameViewSetMixin
 
 
-class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     """
     AuditLog ViewSet with filtering support.
 
@@ -26,7 +27,13 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         GET /api/v1/audit-logs/?user=1&action=CREATE&resource=soul
         GET /api/v1/audit-logs/?start_date=2024-01-01&end_date=2024-12-31
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [TenantPermission]
+    permission_codename = "audit_log"
+    extra_permissions = {
+        'actions': ['audit_log.read'],
+        'resources': ['audit_log.read'],
+        'stats': ['audit_log.read'],
+    }
     serializer_class = AuditLogSerializer
     filterset_fields = ["user", "action", "resource", "resource_id"]
     ordering_fields = ["timestamp", "action", "resource"]
@@ -44,7 +51,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
             if tenant:
                 qs = qs.filter(tenant=tenant)
             else:
-                qs = qs.filter(user=user)
+                qs = qs.none()
 
         # Apply query param filters
         user_id = self.request.query_params.get('user_id')
@@ -93,11 +100,17 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     def resources(self, request):
         """
         GET /api/v1/audit-logs/resources/
-        Returns all resource types that have audit logs.
+        Returns all resource types that have audit logs (tenant-scoped).
         """
+        qs = AuditLog.objects.all()
+        if getattr(request.user, 'role', None) != 'ADMIN':
+            tenant = getattr(request, 'tenant', None)
+            if tenant:
+                qs = qs.filter(tenant=tenant)
+            else:
+                return Response([])
         resources = (
-            AuditLog.objects
-            .values_list("resource", flat=True)
+            qs.values_list("resource", flat=True)
             .distinct()
             .order_by("resource")
         )
@@ -121,7 +134,11 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         # Filter by tenant for non-admin users
         qs = AuditLog.objects.all()
         if request.user.role != 'ADMIN':
-            qs = qs.filter(tenant=request.tenant)
+            tenant = getattr(request, 'tenant', None)
+            if tenant:
+                qs = qs.filter(tenant=tenant)
+            else:
+                qs = qs.none()
 
         action_stats = (
             qs.values("action")

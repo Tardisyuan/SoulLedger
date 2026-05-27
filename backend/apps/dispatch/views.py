@@ -25,14 +25,22 @@ from apps.souls.models import Soul
 from apps.actors.models import Actor
 from apps.core.permissions import TenantPermission
 from apps.core.mixins import TenantCreateMixin
-from apps.core.viewsets import AuditUserViewSetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
 
-class DispatchRecordViewSet(AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
+class DispatchRecordViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
     """
     DispatchRecord CRUD + actions.
     """
     permission_classes = [TenantPermission]
+    permission_codename = "dispatch"
+    extra_permissions = {
+        'proposed': ['dispatch.read'],
+        'history': ['dispatch.read'],
+        'approve': ['dispatch.approve'],
+        'reject': ['dispatch.reject'],
+        'execute': ['dispatch.execute'],
+    }
     queryset = DispatchRecord.objects.select_related(
         "source_tenant", "target_tenant", "soul", "dispatched_by"
     ).all()
@@ -148,11 +156,16 @@ class DispatchRecordViewSet(AuditUserViewSetMixin, TenantCreateMixin, viewsets.M
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CrossTenantJudgmentViewSet(viewsets.ModelViewSet):
+class CrossTenantJudgmentViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     """
     CrossTenantJudgment CRUD + actions.
     """
     permission_classes = [TenantPermission]
+    permission_codename = "dispatch"
+    extra_permissions = {
+        'participate': ['dispatch.participate'],
+        'conclude': ['dispatch.conclude'],
+    }
     queryset = CrossTenantJudgment.objects.select_related(
         "initiating_tenant"
     ).prefetch_related("participants").all()
@@ -186,6 +199,16 @@ class CrossTenantJudgmentViewSet(viewsets.ModelViewSet):
         Join as a participant in a cross-tenant judgment.
         """
         judgment = self.get_object()
+
+        # Verify user's tenant is involved (initiating or already a participant)
+        request_tenant = getattr(request, 'tenant', None)
+        if not request_tenant:
+            return Response({"error": "Tenant context required"}, status=status.HTTP_403_FORBIDDEN)
+        is_initiating = judgment.initiating_tenant_id == request_tenant.pk
+        is_participant = judgment.participants.filter(participant_tenant=request_tenant).exists()
+        if not is_initiating and not is_participant:
+            return Response({"error": "Not authorized to add participants"}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = CrossTenantJudgmentParticipateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -199,7 +222,10 @@ class CrossTenantJudgmentViewSet(viewsets.ModelViewSet):
 
         actor = None
         if actor_id:
-            actor = Actor.objects.filter(id=actor_id).select_related("realm").first()
+            actor_qs = Actor.objects.filter(id=actor_id).select_related("realm")
+            if getattr(request.user, 'role', None) != 'ADMIN' and request_tenant:
+                actor_qs = actor_qs.filter(tenant=request_tenant)
+            actor = actor_qs.first()
 
         try:
             participant = CrossTenantJudgmentService.add_participant(
@@ -220,6 +246,16 @@ class CrossTenantJudgmentViewSet(viewsets.ModelViewSet):
         Conclude a cross-tenant judgment.
         """
         judgment = self.get_object()
+
+        # Verify user's tenant is involved (initiating or a participant)
+        request_tenant = getattr(request, 'tenant', None)
+        if not request_tenant:
+            return Response({"error": "Tenant context required"}, status=status.HTTP_403_FORBIDDEN)
+        is_initiating = judgment.initiating_tenant_id == request_tenant.pk
+        is_participant = judgment.participants.filter(participant_tenant=request_tenant).exists()
+        if not is_initiating and not is_participant:
+            return Response({"error": "Not authorized to conclude this judgment"}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = CrossTenantJudgmentConcludeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 

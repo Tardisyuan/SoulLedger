@@ -5,11 +5,17 @@ from apps.tenants.serializers import TenantSerializer
 
 
 class TenantViewSet(viewsets.ReadOnlyModelViewSet):
-    """Tenant management API — read-only for all authenticated users, SYS_ADMIN gets full list."""
+    """Tenant management API — read-only. Non-ADMIN users see only their own tenant."""
 
     serializer_class = TenantSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = "code"
 
     def get_queryset(self):
-        return Tenant.objects.all().order_by("code")
+        user = self.request.user
+        if getattr(user, 'role', None) == 'ADMIN':
+            return Tenant.objects.all().order_by("code")
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            return Tenant.objects.filter(pk=tenant.pk)
+        return Tenant.objects.none()

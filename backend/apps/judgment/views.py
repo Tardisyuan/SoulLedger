@@ -10,7 +10,7 @@ from apps.judgment.serializers import JudgmentSerializer, JudgmentConcludeSerial
 from apps.souls.models import SoulState
 from apps.core.permissions import TenantPermission
 from apps.core.mixins import TenantQuerySetMixin, TenantCreateMixin
-from apps.core.viewsets import AuditUserViewSetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 
 
 class JudgmentFilter(filters.FilterSet):
@@ -23,12 +23,16 @@ class JudgmentFilter(filters.FilterSet):
         fields = ["soul", "civilization", "verdict", "is_final"]
 
 
-class JudgmentViewSet(TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
+class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     Judgment CRUD + conclude action.
     Tenant-isolated via TenantPermission.
     """
     permission_classes = [TenantPermission]
+    permission_codename = "judgment"
+    extra_permissions = {
+        'conclude': ['judgment.execute'],
+    }
     queryset = Judgment.objects.select_related("soul", "soul__tenant", "tenant").all()
     serializer_class = JudgmentSerializer
     filterset_class = JudgmentFilter

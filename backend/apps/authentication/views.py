@@ -28,6 +28,7 @@ from .serializers import (
     LoginLogSerializer,
 )
 from apps.core.permissions import TenantPermission, IsAdminPermission
+from apps.core.viewsets import CodenameViewSetMixin
 
 
 # ---------------------------------------------------------------------------
@@ -35,7 +36,7 @@ from apps.core.permissions import TenantPermission, IsAdminPermission
 # ---------------------------------------------------------------------------
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     """
     用户管理 API
 
@@ -52,6 +53,18 @@ class UserViewSet(viewsets.ModelViewSet):
         POST   /api/v1/users/{id}/reset_password/ - 重置密码
     """
     permission_classes = [TenantPermission, IsAdminPermission]
+    permission_codename = "user"
+    extra_permissions = {
+        'activate': ['user.activate'],
+        'deactivate': ['user.deactivate'],
+        'reset_password': ['user.reset_password'],
+        'batch_activate': ['user.activate'],
+        'batch_deactivate': ['user.deactivate'],
+        'own_roles': ['user.read'],
+        'assign_roles': ['user.assign_roles'],
+        'export_csv': ['user.read'],
+        'import_csv': ['user.create'],
+    }
 
     def get_serializer_class(self):
         if self.action == 'create':

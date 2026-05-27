@@ -8,32 +8,26 @@ from apps.disposition.models import Disposition
 from apps.disposition.serializers import DispositionSerializer, DispositionExecuteSerializer
 from apps.disposition.services import DispositionService
 from apps.core.permissions import TenantPermission
-from apps.core.viewsets import AuditUserViewSetMixin
+from apps.core.mixins import TenantQuerySetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 
 
-class DispositionViewSet(AuditUserViewSetMixin, viewsets.ModelViewSet):
+class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     Disposition CRUD + execute action.
     Tenant-isolated via TenantPermission.
     """
     permission_classes = [TenantPermission]
+    permission_codename = "disposition"
+    extra_permissions = {
+        'execute': ['disposition.execute'],
+    }
     queryset = Disposition.objects.select_related(
         "soul", "soul__tenant", "destination_realm", "tenant"
     ).all()
     serializer_class = DispositionSerializer
     filterset_fields = ["soul", "is_executed", "is_eternal", "memory_reset"]
     ordering_fields = ["created_at", "executed_at"]
-    def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        if user.role == "ADMIN":
-            return qs
-        tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            return qs.filter(tenant=tenant)
-        return qs.none()
 
     @action(detail=True, methods=["post"])
     def execute(self, request, pk=None):
