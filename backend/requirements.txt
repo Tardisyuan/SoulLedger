@@ -15,6 +15,7 @@ celery>=5.3
 django-celery-beat>=2.5
 
 # Utils
+Pillow>=10.0
 python-dotenv>=1.0
 dj-static>=0.0.6
 gunicorn>=21.0
