@@ -9,6 +9,15 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: ci-test-key-not-for-production
+      DEBUG: 'true'
+      DB_HOST: localhost
+      DB_PORT: 3306
+      DB_NAME: soulledger_test
+      DB_USER: root
+      DB_PASSWORD: root
+      REDIS_URL: redis://localhost:6379/0
     services:
       mysql:
         image: mysql:8.0
@@ -35,28 +44,10 @@ jobs:
           cd backend
           pip install -r requirements.txt
       - name: Check migrations
-        env:
-          SECRET_KEY: ci-test-key-not-for-production
-          DEBUG: 'true'
-          DB_HOST: localhost
-          DB_PORT: 3306
-          DB_NAME: soulledger_test
-          DB_USER: root
-          DB_PASSWORD: root
-          REDIS_URL: redis://localhost:6379/0
         run: |
           cd backend
           python manage.py makemigrations --check --dry-run
       - name: Run tests
-        env:
-          DJANGO_SETTINGS_MODULE: config.settings
-          DB_HOST: localhost
-          DB_PORT: 3306
-          DB_NAME: soulledger_test
-          DB_USER: root
-          DB_PASSWORD: root
-          REDIS_URL: redis://localhost:6379/0
-          DEBUG: 'true'
         run: |
           cd backend
           python manage.py migrate
