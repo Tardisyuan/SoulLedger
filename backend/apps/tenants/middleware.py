@@ -69,7 +69,12 @@ def _extract_tenant_code_from_jwt(request: HttpRequest) -> str | None:
 
     try:
         from rest_framework_simplejwt.tokens import AccessToken
+        from rest_framework_simplejwt.exceptions import (
+            TokenError, InvalidToken,
+        )
         token = AccessToken(token_str)
         return token.get("tenant_code")
+    except (TokenError, InvalidToken):
+        return None
     except Exception:
         return None

@@ -118,16 +118,19 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
 
         from django.db.models import Count
 
+        # Filter by tenant for non-admin users
+        qs = AuditLog.objects.all()
+        if request.user.role != 'ADMIN':
+            qs = qs.filter(tenant=request.tenant)
+
         action_stats = (
-            AuditLog.objects
-            .values("action")
+            qs.values("action")
             .annotate(count=Count("id"))
             .order_by("-count")
         )
 
         resource_stats = (
-            AuditLog.objects
-            .values("resource")
+            qs.values("resource")
             .annotate(count=Count("id"))
             .order_by("-count")[:20]
         )
@@ -135,5 +138,5 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         return Response({
             "action_distribution": list(action_stats),
             "top_resources": list(resource_stats),
-            "total_logs": AuditLog.objects.count(),
+            "total_logs": qs.count(),
         })

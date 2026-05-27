@@ -37,8 +37,6 @@ class SoulEvent(AuditUserFields, models.Model):
     event_type = models.CharField(max_length=30, choices=EventType.choices)
     payload = models.JSONField(default=dict)
     actor = models.CharField(max_length=255, blank=True, help_text="User or system")
-    # Original created_at field (separate from AuditUserFields.create_time)
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
         ordering = ["-create_time"]

@@ -161,29 +161,31 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
 
     def complete_node(self, node_id: uuid.UUID, verdict: str, notes: str = "", user=None) -> bool:
         """Mark a node as completed and advance to next."""
+        from django.db import transaction
         from django.utils import timezone
 
-        node = self.nodes.filter(id=node_id).first()
-        if not node:
-            return False
+        with transaction.atomic():
+            node = self.nodes.filter(id=node_id).first()
+            if not node:
+                return False
 
-        node.status = NodeStatus.APPROVED if verdict in ["PASSED", "CONFIRMED"] else NodeStatus.REJECTED
-        node.verdict = verdict
-        node.notes = notes
-        node.decided_at = timezone.now()
-        if user:
-            node.approver = user
-        node.save()
+            node.status = NodeStatus.APPROVED if verdict in ["PASSED", "CONFIRMED"] else NodeStatus.REJECTED
+            node.verdict = verdict
+            node.notes = notes
+            node.decided_at = timezone.now()
+            if user:
+                node.approver = user
+            node.save()
 
-        # Advance to next node
-        next_node = self.get_next_node()
-        if next_node:
-            self.current_node = next_node
-            self.status = ApprovalWorkflowStatus.IN_PROGRESS
-        else:
-            self.current_node = None
-            self.status = ApprovalWorkflowStatus.COMPLETED
-            self.completed_at = timezone.now()
+            # Advance to next node
+            next_node = self.get_next_node()
+            if next_node:
+                self.current_node = next_node
+                self.status = ApprovalWorkflowStatus.IN_PROGRESS
+            else:
+                self.current_node = None
+                self.status = ApprovalWorkflowStatus.COMPLETED
+                self.completed_at = timezone.now()
         self.save()
 
         return True
@@ -209,14 +211,11 @@ class WorkflowTemplate(AuditUserFields, models.Model):
     description = models.TextField(blank=True, default="")
 
     # Template categorization
+    from apps.souls.models import Civilization
     civilization = models.CharField(
         max_length=30,
-        choices=[
-            ("CHINESE", "中国地府"),
-            ("EUROPEAN", "欧洲天堂地狱"),
-            ("EGYPTIAN", "埃及冥界"),
-        ],
-        default="CHINESE",
+        choices=Civilization.choices,
+        default=Civilization.CHINESE,
     )
     case_type = models.CharField(
         max_length=30,

@@ -8,9 +8,10 @@ from apps.disposition.models import Disposition
 from apps.disposition.serializers import DispositionSerializer, DispositionExecuteSerializer
 from apps.disposition.services import DispositionService
 from apps.core.permissions import TenantPermission
+from apps.core.viewsets import AuditUserViewSetMixin
 
 
-class DispositionViewSet(viewsets.ModelViewSet):
+class DispositionViewSet(AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     Disposition CRUD + execute action.
     Tenant-isolated via TenantPermission.

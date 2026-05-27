@@ -5,12 +5,14 @@ from rest_framework import viewsets
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.events.models import SoulEvent
 from apps.events.serializers import SoulEventSerializer
+from apps.core.permissions import TenantPermission
 
 
 class SoulEventViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Read-only audit log.
     """
+    permission_classes = [TenantPermission]
     queryset = SoulEvent.objects.all()
     serializer_class = SoulEventSerializer
     filterset_fields = ["soul", "event_type", "actor"]

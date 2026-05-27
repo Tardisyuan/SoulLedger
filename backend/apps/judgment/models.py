@@ -84,21 +84,24 @@ class Judgment(AuditUserFields, models.Model):
         return f"Judgment of {self.soul.name}: {v}"
 
     def conclude(self, verdict: str, notes: str = "", create_workflow: bool = False) -> bool:
+        from django.db import transaction
         from django.utils import timezone
-        self.verdict = verdict
-        self.notes = notes
-        self.is_final = True
-        self.concluded_at = timezone.now()
-        self.save()
 
-        from apps.disposition.services import DispositionService
-        DispositionService.create_from_judgment(self)
+        with transaction.atomic():
+            self.verdict = verdict
+            self.notes = notes
+            self.is_final = True
+            self.concluded_at = timezone.now()
+            self.save()
 
-        # Optionally create approval workflow
-        if create_workflow:
-            from apps.workflow.services import WorkflowService
-            WorkflowService.create_from_judgment(self)
+            from apps.disposition.services import DispositionService
+            DispositionService.create_from_judgment(self)
 
-        # Transition soul to DISPOSED after disposition is created
-        self.soul.transition_to(SoulState.DISPOSED, f"Judgment concluded: {verdict}")
+            # Optionally create approval workflow
+            if create_workflow:
+                from apps.workflow.services import WorkflowService
+                WorkflowService.create_from_judgment(self)
+
+            # Transition soul to DISPOSED after disposition is created
+            self.soul.transition_to(SoulState.DISPOSED, f"Judgment concluded: {verdict}")
         return True
