@@ -7,9 +7,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from apps.notifications.models import UserNotification
 from apps.notifications.serializers import UserNotificationSerializer, UserNotificationListSerializer
+from apps.core.viewsets import CodenameViewSetMixin
 
 
-class NotificationViewSet(viewsets.ModelViewSet):
+class NotificationViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     """
     ViewSet for user notifications.
 
@@ -18,6 +19,11 @@ class NotificationViewSet(viewsets.ModelViewSet):
     mark_all_read: POST /api/v1/notifications/mark_all_read/ - Mark all notifications as read
     """
     permission_classes = [IsAuthenticated]
+    permission_codename = "notification"
+    extra_permissions = {
+        'mark_read': ['notification.update'],
+        'mark_all_read': ['notification.update'],
+    }
     serializer_class = UserNotificationSerializer
     pagination_class = None
 

@@ -17,14 +17,15 @@ from apps.workflow.serializers import (
 from apps.workflow.services import WorkflowService
 from apps.core.permissions import TenantPermission
 from apps.core.mixins import TenantQuerySetMixin, TenantCreateMixin
-from apps.core.viewsets import AuditUserViewSetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
 
-class WorkflowTemplateViewSet(TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
+class WorkflowTemplateViewSet(CodenameViewSetMixin, TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     WorkflowTemplate CRUD.
     """
     permission_classes = [TenantPermission]
+    permission_codename = "workflow"
     queryset = WorkflowTemplate.objects.select_related("tenant").all()
     serializer_class = WorkflowTemplateSerializer
     ordering_fields = ["created_at", "name", "civilization"]
@@ -36,11 +37,18 @@ class WorkflowTemplateViewSet(TenantQuerySetMixin, TenantCreateMixin, AuditUserV
         return WorkflowTemplateSerializer
 
 
-class ApprovalWorkflowViewSet(TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
+class ApprovalWorkflowViewSet(CodenameViewSetMixin, TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     ApprovalWorkflow CRUD + node actions.
     """
     permission_classes = [TenantPermission]
+    permission_codename = "workflow"
+    extra_permissions = {
+        'advance': ['workflow.advance'],
+        'approve_node': ['workflow.approve'],
+        'stats': ['workflow.read'],
+        'create_from_judgment': ['workflow.create'],
+    }
     queryset = ApprovalWorkflow.objects.select_related(
         "soul", "soul__tenant", "tenant", "current_node", "coordinating_realm"
     ).prefetch_related("nodes").all()
@@ -144,11 +152,12 @@ class ApprovalWorkflowViewSet(TenantQuerySetMixin, TenantCreateMixin, AuditUserV
         return Response({"error": "Failed to create workflow"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ApprovalNodeViewSet(AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
+class ApprovalNodeViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
     """
     ApprovalNode CRUD.
     """
     permission_classes = [TenantPermission]
+    permission_codename = "workflow"
     queryset = ApprovalNode.objects.select_related("workflow", "workflow__soul", "approver", "realm", "approver_actor").all()
     serializer_class = ApprovalNodeSerializer
     ordering_fields = ["node_order", "created_at"]

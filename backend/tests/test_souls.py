@@ -16,7 +16,11 @@ class TestKarmaAPI:
         self.client = api_client
         self.admin_user = admin_user
         self.cn_tenant = cn_tenant
-        self.client.force_authenticate(user=admin_user)
+        # Use JWT auth so TenantMiddleware sets request.tenant from tenant_code claim
+        from rest_framework_simplejwt.tokens import RefreshToken
+        token = RefreshToken.for_user(admin_user)
+        token["tenant_code"] = cn_tenant.code
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
 
     def test_karma_balance_via_soul_endpoint(self, soul_data):
         """GET /api/v1/souls/{soul_id}/karma/ returns 200."""

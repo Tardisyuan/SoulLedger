@@ -80,8 +80,12 @@ class PermissionMiddleware:
 
             required_perms = getattr(view, '_required_permissions', None)
             if not required_perms:
-                # No permissions declared on this view — pass through
-                return self.get_response(request)
+                # Fallback: check for get_required_permissions() method (ViewSet mixin)
+                get_perms_fn = getattr(view, 'get_required_permissions', None)
+                if callable(get_perms_fn):
+                    required_perms = get_perms_fn()
+                if not required_perms:
+                    return self.get_response(request)
 
             # Evaluate each required permission
             user_role = getattr(request.user, 'role', None)
@@ -137,22 +141,34 @@ class PermissionMiddleware:
     def _has_permission(self, role, codename):
         """
         Check if role has the given permission codename.
-        Uses Redis-backed PermissionCache with memory fallback.
+
+        Priority: cache → DB (Permission + RolePermission) → ROLE_PERMISSIONS dict.
+        Falls back to dict only when the Permission object is not seeded in DB,
+        ensuring DB is authoritative for seeded codenames.
         """
         # Check cache first
         cached = self._permission_cache.get(role, codename)
         if cached is not None:
             return cached
 
-        # Check RolePermission table first
         try:
-            has_perm = RolePermission.objects.filter(
-                role=role,
-                permission__codename=codename
-            ).exists()
+            from apps.perm.models import Permission
+            perm_exists = Permission.objects.filter(codename=codename).exists()
         except Exception:
-            # DB unavailable — fall back to dict
+            perm_exists = False
+
+        if not perm_exists:
+            # Unseeded codename — fall back to ROLE_PERMISSIONS dict
             has_perm = codename in ROLE_PERMISSIONS.get(role, [])
+        else:
+            # Seeded — DB is authoritative
+            try:
+                has_perm = RolePermission.objects.filter(
+                    role=role,
+                    permission__codename=codename
+                ).exists()
+            except Exception:
+                has_perm = codename in ROLE_PERMISSIONS.get(role, [])
 
         # Cache the result
         self._permission_cache.set(role, codename, has_perm)

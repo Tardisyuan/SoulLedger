@@ -615,8 +615,10 @@ class TestAuditApiEndpoint:
             assert "soul" in log["resource"].lower()
 
     def test_non_admin_cannot_access(self, db, cn_tenant):
-        """Non-admin users cannot access /api/v1/audit/ endpoint."""
+        """Non-admin users cannot access /api/v1/audit/ without tenant context."""
         from django.contrib.auth import get_user_model
+        from django.test import RequestFactory
+        from rest_framework.test import force_authenticate
 
         User = get_user_model()
         non_admin = User.objects.create_user(
@@ -626,13 +628,43 @@ class TestAuditApiEndpoint:
             tenant=cn_tenant
         )
 
-        from rest_framework.test import APIClient
-        client = APIClient()
-        client.force_authenticate(user=non_admin)
+        # Without tenant context → 403 (TenantPermission enforced)
+        factory = RequestFactory()
+        request = factory.get("/api/v1/audit/")
+        force_authenticate(request, user=non_admin)
+        # No request.tenant set — simulates missing middleware context
 
-        response = client.get("/api/v1/audit/")
-        # Non-admin should only see their own tenant's logs, not all logs
-        # The viewset filters non-admin users to their tenant
+        from apps.audit.views import AuditLogViewSet
+        view = AuditLogViewSet.as_view({"get": "list"})
+        response = view(request)
+        response.render()
+        # TenantPermission denies access when tenant is None for non-ADMIN
+        assert response.status_code == 403
+
+    def test_non_admin_with_tenant_can_access(self, db, cn_tenant):
+        """Non-admin users with tenant context can access audit logs (tenant-scoped)."""
+        from django.contrib.auth import get_user_model
+        from django.test import RequestFactory
+        from rest_framework.test import force_authenticate
+
+        User = get_user_model()
+        non_admin = User.objects.create_user(
+            username="non_admin_tenant_user",
+            password="test123",
+            role="JUDGE",
+            tenant=cn_tenant
+        )
+
+        factory = RequestFactory()
+        request = factory.get("/api/v1/audit/")
+        force_authenticate(request, user=non_admin)
+        request.tenant = cn_tenant  # Inject tenant context
+
+        from apps.audit.views import AuditLogViewSet
+        view = AuditLogViewSet.as_view({"get": "list"})
+        response = view(request)
+        response.render()
+        # Non-admin with tenant context should get 200 (tenant-scoped results)
         assert response.status_code == 200
 
     def test_unauthenticated_cannot_access(self, api_client):

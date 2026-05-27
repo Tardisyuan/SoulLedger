@@ -7,12 +7,18 @@ from rest_framework.response import Response
 from apps.reincarnation.models import Reincarnation
 from apps.reincarnation.serializers import ReincarnationSerializer
 from apps.core.permissions import TenantPermission
+from apps.core.viewsets import CodenameViewSetMixin
 
 
-class ReincarnationViewSet(viewsets.ModelViewSet):
+class ReincarnationViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     queryset = Reincarnation.objects.all()
     serializer_class = ReincarnationSerializer
     permission_classes = [TenantPermission]
+    permission_codename = "reincarnation"
+    extra_permissions = {
+        'complete': ['reincarnation.complete'],
+        'reborn': ['reincarnation.reborn'],
+    }
     filterset_fields = ["soul", "rebirth_form", "cycle_count"]
     ordering_fields = ["reincarnated_at", "cycle_count"]
 
@@ -79,35 +85,31 @@ class ReincarnationViewSet(viewsets.ModelViewSet):
         new_identity = request.data.get("new_identity", "")
         rebirth_form = request.data.get("rebirth_form", "HUMAN")
 
-        # Tenant-isolated: check soul belongs to request's tenant
+        # Tenant-isolated: filter soul by tenant (ADMIN bypasses)
         user_tenant = getattr(request, "tenant", None)
+        soul_qs = Soul.objects.all()
+        if getattr(request.user, 'role', None) != 'ADMIN' and user_tenant:
+            soul_qs = soul_qs.filter(tenant=user_tenant)
+
         try:
-            soul = Soul.objects.get(id=soul_id)
+            soul = soul_qs.get(id=soul_id)
         except Soul.DoesNotExist:
             return Response(
                 {"error": "NOT_FOUND", "message": "Soul not found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if user_tenant and soul.tenant and str(soul.tenant.pk) != str(user_tenant.pk):
-            return Response(
-                {"error": "FORBIDDEN", "message": "Access denied: soul belongs to another tenant"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         disposition = None
         if disposition_id:
+            disp_qs = Disposition.objects.all()
+            if getattr(request.user, 'role', None) != 'ADMIN' and user_tenant:
+                disp_qs = disp_qs.filter(tenant=user_tenant)
             try:
-                disposition = Disposition.objects.get(id=disposition_id)
+                disposition = disp_qs.get(id=disposition_id)
             except Disposition.DoesNotExist:
                 return Response(
                     {"error": "NOT_FOUND", "message": "Disposition not found"},
                     status=status.HTTP_404_NOT_FOUND,
-                )
-            if user_tenant and disposition.tenant and str(disposition.tenant.pk) != str(user_tenant.pk):
-                return Response(
-                    {"error": "FORBIDDEN", "message": "Access denied: disposition belongs to another tenant"},
-                    status=status.HTTP_403_FORBIDDEN,
                 )
 
         # Ensure soul is in REINCARNATING state

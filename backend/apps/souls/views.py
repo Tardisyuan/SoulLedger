@@ -12,16 +12,23 @@ from apps.souls.serializers import (
 )
 from apps.karma.services import KarmaService
 from apps.core.permissions import TenantPermission
-from apps.perm.filters import DataScopeFilter
-from apps.core.viewsets import AuditUserViewSetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 
 
-class SoulViewSet(AuditUserViewSetMixin, viewsets.ModelViewSet):
+class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     Soul CRUD + state transitions + record management.
     Tenant-isolated via TenantPermission + select_related for N+1 elimination.
     """
     permission_classes = [TenantPermission]
+    permission_codename = "soul"
+    extra_permissions = {
+        'die': ['soul.die'],
+        'transition': ['soul.transition'],
+        'karma': ['soul.read'],
+        'add_record': ['soul.update'],
+        'records': ['soul.read'],
+    }
     queryset = Soul.objects.select_related("tenant").prefetch_related("records").all()
     filterset_fields = ["current_state", "tenant__code"]
     search_fields = ["name", "birth_name", "origin_location"]
@@ -42,9 +49,6 @@ class SoulViewSet(AuditUserViewSetMixin, viewsets.ModelViewSet):
                 qs = qs.filter(tenant=tenant)
             else:
                 return qs.none()
-
-            # Apply row-level data scope filtering for non-ADMIN roles
-            qs = DataScopeFilter.filter_queryset(self.request, qs, Soul, scope_type='READ')
 
         # Custom filtering via query params
         params = self.request.query_params
