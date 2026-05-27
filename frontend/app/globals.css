@@ -69,14 +69,51 @@
   --color-accent-hover: 43 96% 58%;
 }
 
+/* Semantic status colors (theme-aware) */
+:root {
+  --color-status-alive: 160 84% 39%;
+  --color-status-judging: 38 92% 50%;
+  --color-status-disposed: 220 80% 55%;
+  --color-status-reincarnating: 217 91% 60%;
+  --color-status-lost: 0 0% 50%;
+  --color-karma-merit: 142 76% 36%;
+  --color-karma-demerit: 0 84% 60%;
+  --color-verdict-passed: 38 92% 50%;
+  --color-verdict-failed: 0 84% 60%;
+  --color-verdict-purgatory: 217 91% 60%;
+  --color-verdict-retry: 270 76% 55%;
+  --color-status-success: 142 76% 36%;
+  --color-status-error: 0 84% 60%;
+  --color-status-warning: 38 92% 50%;
+  --color-status-info: 217 91% 60%;
+}
+
+.light {
+  --color-status-alive: 160 84% 30%;
+  --color-status-judging: 38 92% 40%;
+  --color-status-disposed: 220 80% 45%;
+  --color-status-reincarnating: 217 91% 50%;
+  --color-status-lost: 0 0% 40%;
+  --color-karma-merit: 142 76% 28%;
+  --color-karma-demerit: 0 84% 50%;
+  --color-verdict-passed: 38 92% 40%;
+  --color-verdict-failed: 0 84% 50%;
+  --color-verdict-purgatory: 217 91% 50%;
+  --color-verdict-retry: 270 76% 45%;
+  --color-status-success: 142 76% 28%;
+  --color-status-error: 0 84% 50%;
+  --color-status-warning: 38 92% 40%;
+  --color-status-info: 217 91% 50%;
+}
+
 @layer base {
   body {
     @apply bg-canvas text-ink;
-    color: hsl(var(--ink));
-    background: hsl(var(--canvas));
+    color: hsl(var(--color-ink));
+    background: hsl(var(--color-canvas));
   }
   * {
-    border-color: hsl(var(--hairline));
+    border-color: hsl(var(--color-hairline));
   }
   a {
     @apply text-ink-muted hover:text-[hsl(var(--color-accent))] transition-colors duration-150;

@@ -12,13 +12,13 @@ export default function TestPage() {
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       <div className="pt-14">
         <div className="max-w-4xl mx-auto p-8">
-          <h1 className="text-2xl font-bold text-amber-400 mb-4">Modal Test</h1>
+          <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))] mb-4">Modal Test</h1>
           <p className="text-[hsl(var(--color-ink-muted))] mb-6">
             Click the button below to test if the modal displays correctly on top of everything.
           </p>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black rounded font-medium transition-colors"
+            className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded font-medium transition-colors"
           >
             Open Modal
           </button>
@@ -33,13 +33,13 @@ export default function TestPage() {
           <div className="flex gap-3">
             <button
               onClick={() => setIsModalOpen(false)}
-              className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink-muted))] hover:bg-surface-3 rounded text-sm transition-colors"
+              className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] rounded text-sm transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={() => setIsModalOpen(false)}
-              className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black rounded text-sm font-medium transition-colors"
+              className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium transition-colors"
             >
               Confirm
             </button>

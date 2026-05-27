@@ -52,16 +52,24 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Hydrate nav mode from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem(NAV_MODE_KEY);
-    if (saved === "compact" || saved === "classic") {
-      setNavMode(saved);
-      setCollapsed(saved === "compact");
+    try {
+      const saved = localStorage.getItem(NAV_MODE_KEY);
+      if (saved === "compact" || saved === "classic") {
+        setNavMode(saved);
+        setCollapsed(saved === "compact");
+      }
+    } catch {
+      // localStorage unavailable (SSR or private browsing)
     }
   }, []);
 
   const handleNavModeChange = (mode: "classic" | "compact") => {
     setNavMode(mode);
-    localStorage.setItem(NAV_MODE_KEY, mode);
+    try {
+      localStorage.setItem(NAV_MODE_KEY, mode);
+    } catch {
+      // localStorage unavailable
+    }
     setCollapsed(mode === "compact");
   };
 
@@ -159,7 +167,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <button
                 onClick={() => setCollapsed(!collapsed)}
                 className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
-                title="展开菜单"
+                title={t("nav.expand_menu")}
               >
                 →
               </button>
@@ -171,7 +179,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <button
                   onClick={() => setCollapsed(!collapsed)}
                   className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
-                  title="收起菜单"
+                  title={t("nav.collapse_menu")}
                 >
                   ←
                 </button>
@@ -190,7 +198,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <main className={`transition-all duration-200 ${collapsed ? "ml-16" : "ml-56"}`}>
         {/* Navigation loading bar */}
         {isNavigating && (
-          <div className="fixed top-0 left-0 right-0 z-[99999] h-1 bg-amber-500 animate-pulse" />
+          <div className="fixed top-0 left-0 right-0 z-[99999] h-1 bg-[hsl(var(--color-accent))] animate-pulse" />
         )}
 
         {/* Top header */}
@@ -228,7 +236,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-[hsl(var(--color-ink))]">{t("notifications.title")}</h3>
                         <Link href="/notifications" className="text-xs text-[hsl(var(--color-accent))] hover:underline">
-                          查看全部
+                          {t("notifications.view_all")}
                         </Link>
                       </div>
                       {notifications.length === 0 ? (
@@ -282,7 +290,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {/* Settings gear */}
             <button
               onClick={() => setSettingsOpen(true)}
-              title="Settings"
+              title={t("nav.settings")}
               className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -304,7 +312,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="w-px h-5 border-[hsl(var(--color-hairline))]" />
                 <button
                   onClick={() => setLogoutConfirmOpen(true)}
-                  className="text-[hsl(var(--color-ink-subtle))] hover:text-red-400 text-sm transition-colors"
+                  className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-status-error))] text-sm transition-colors"
                 >
                   {t("auth.logout")}
                 </button>
@@ -362,10 +370,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               >
                 <Dialog.Panel className="w-full max-w-md rounded-xl bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6 shadow-2xl">
                   <Dialog.Title className="text-lg font-semibold text-[hsl(var(--color-ink))]">
-                    确认退出登录
+                    {t("auth.confirm_logout")}
                   </Dialog.Title>
                   <Dialog.Description className="mt-2 text-sm text-[hsl(var(--color-ink-muted))]">
-                    确定要退出当前账号吗？
+                    {t("auth.confirm_logout_desc")}
                   </Dialog.Description>
 
                   <div className="mt-6 flex justify-end gap-3">
@@ -373,13 +381,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       onClick={() => setLogoutConfirmOpen(false)}
                       className="px-4 py-2 rounded-md bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] text-sm hover:bg-[hsl(var(--color-surface-3))] transition-colors"
                     >
-                      取消
+                      {t("common.cancel")}
                     </button>
                     <button
                       onClick={handleLogout}
-                      className="px-4 py-2 rounded-md bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30 transition-colors"
+                      className="px-4 py-2 rounded-md bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))] text-sm hover:bg-[hsl(var(--color-status-error)/0.3)] transition-colors"
                     >
-                      确认退出
+                      {t("auth.confirm_logout_btn")}
                     </button>
                   </div>
                 </Dialog.Panel>

@@ -35,10 +35,10 @@ import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton, SkeletonCard } from "@/src/components/ui/skeleton";
 
 const STATE_COLORS: Record<string, string> = {
-  ALIVE: "bg-emerald-600/20 text-emerald-400",
-  JUDGING: "bg-amber-600/20 text-amber-400",
+  ALIVE: "bg-[hsl(var(--color-status-alive)/0.2)] text-[hsl(var(--color-status-alive))]",
+  JUDGING: "bg-[hsl(var(--color-status-judging)/0.2)] text-[hsl(var(--color-status-judging))]",
   DISPOSED: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
-  REINCARNATING: "bg-blue-600/20 text-blue-400",
+  REINCARNATING: "bg-[hsl(var(--color-status-reincarnating)/0.2)] text-[hsl(var(--color-status-reincarnating))]",
   LOST: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
 };
 
@@ -88,8 +88,9 @@ export default function SoulDetailPage() {
       setDispositions(dispRes.data.results || dispRes.data);
       setReincarnations(reincRes.data.results || reincRes.data);
       setEvents(evtsRes.data.results || evtsRes.data);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || t("souls.detail.loading"));
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } }; message?: string };
+      setError(err?.response?.data?.detail || err?.message || t("souls.detail.loading"));
     } finally {
       setLoading(false);
     }
@@ -108,8 +109,9 @@ export default function SoulDetailPage() {
       try {
         await soulsApi.die(soul.id, {});
         await loadSoulData();
-      } catch (e: any) {
-        showToast(e?.response?.data?.error || "Failed", "error");
+      } catch (e: unknown) {
+        const err = e as { response?: { data?: { error?: string } }; message?: string };
+        showToast(err?.response?.data?.error || "Failed", "error");
       } finally {
         setActionLoading("");
       }
@@ -124,8 +126,9 @@ export default function SoulDetailPage() {
       const jRes = await judgmentApi.create({ soul: soul.id, civilization: soul.civilization });
       await judgmentApi.conclude(jRes.data.id, { verdict, notes: `Auto-judged. Karma: ${karma?.karmic_balance}` });
       await loadSoulData();
-    } catch (e: any) {
-      showToast(e?.response?.data?.error || e?.message || "Failed", "error");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } }; message?: string };
+      showToast(err?.response?.data?.error || err?.message || "Failed", "error");
     } finally {
       setActionLoading("");
     }
@@ -141,8 +144,9 @@ export default function SoulDetailPage() {
         rebirth_form: "HUMAN",
       });
       await loadSoulData();
-    } catch (e: any) {
-      showToast(e?.response?.data?.error || e?.message || "Failed", "error");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { error?: string } }; message?: string };
+      showToast(err?.response?.data?.error || err?.message || "Failed", "error");
     } finally {
       setActionLoading("");
     }
@@ -171,17 +175,17 @@ export default function SoulDetailPage() {
   // Error state - only show when we have actual data fetch error, not during initial load
   if (error && !soul) {
     return (
-      <div className="min-h-screen bg-canvas text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4">
-        <div className="text-red-400">{error || t("souls.detail.not_found")}</div>
+      <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4">
+        <div className="text-[hsl(var(--color-status-error))]">{error || t("souls.detail.not_found")}</div>
         <a href="/souls/" className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))]">{t("souls.detail.back_to_list")}</a>
       </div>
     );
   }
 
   const verdictOptions = [
-    { key: "PASSED", color: "bg-green-600 hover:bg-green-500" },
-    { key: "FAILED", color: "bg-red-700 hover:bg-red-600" },
-    { key: "PURGATORY", color: "bg-yellow-600 hover:bg-yellow-500" },
+    { key: "PASSED", color: "bg-[hsl(var(--color-verdict-passed))] hover:bg-[hsl(var(--color-verdict-passed)/0.8)]" },
+    { key: "FAILED", color: "bg-[hsl(var(--color-verdict-failed))] hover:bg-[hsl(var(--color-verdict-failed)/0.8)]" },
+    { key: "PURGATORY", color: "bg-[hsl(var(--color-verdict-purgatory))] hover:bg-[hsl(var(--color-verdict-purgatory)/0.8)]" },
   ];
 
   return (
@@ -189,7 +193,7 @@ export default function SoulDetailPage() {
       {/* Header - always render, show skeleton if loading */}
       <div className="border-b border-[hsl(var(--color-hairline))] px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <a href="/souls" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">{t("souls.detail.back_to_list").slice(0, 2)}</a>
+          <a href="/souls" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">← {t("souls.detail.back_to_list")}</a>
           {loading ? (
             <Skeleton className="h-6 w-32" />
           ) : (
@@ -215,7 +219,7 @@ export default function SoulDetailPage() {
               </button>
               <button
                 onClick={handleDeleteConfirm}
-                className="px-3 py-1.5 bg-red-900/50 border border-red-800 hover:bg-red-800 text-red-300 rounded-md text-sm transition-colors"
+                className="px-3 py-1.5 bg-[hsl(var(--color-status-error)/0.2)] border border-[hsl(var(--color-status-error)/0.3)] hover:bg-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))] rounded-md text-sm transition-colors"
               >
                 {t("souls.detail.delete")}
               </button>
@@ -287,16 +291,16 @@ export default function SoulDetailPage() {
             ) : karma ? (
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-400">{t("souls.detail.merit")}</span>
-                  <span className="text-lg font-bold text-green-400">+{karma.merit_score}</span>
+                  <span className="text-sm text-[hsl(var(--color-karma-merit))]">{t("souls.detail.merit")}</span>
+                  <span className="text-lg font-bold text-[hsl(var(--color-karma-merit))]">+{karma.merit_score}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-red-400">{t("souls.detail.demerit")}</span>
-                  <span className="text-lg font-bold text-red-400">-{karma.demerit_score}</span>
+                  <span className="text-sm text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.demerit")}</span>
+                  <span className="text-lg font-bold text-[hsl(var(--color-karma-demerit))]">-{karma.demerit_score}</span>
                 </div>
                 <div className="border-t border-[hsl(var(--color-hairline))] pt-2 flex justify-between items-center">
                   <span className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
-                  <span className={`text-xl font-bold ${karma.karmic_balance >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  <span className={`text-xl font-bold ${karma.karmic_balance >= 0 ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"}`}>
                     {karma.karmic_balance >= 0 ? "+" : ""}{karma.karmic_balance}
                   </span>
                 </div>
@@ -308,22 +312,22 @@ export default function SoulDetailPage() {
                     <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-2">{t("karma.timeline")} ({t("karma.time_decay")})</p>
                     <ResponsiveContainer width="100%" height={120}>
                       <LineChart data={getKarmaChartData(karma.records)}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#23252a" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--color-hairline))" />
                         <XAxis
                           dataKey="date"
-                          tick={{ fill: "#8a8f98", fontSize: 9 }}
+                          tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 9 }}
                           tickFormatter={(v) => v.slice(5, 10)}
                         />
-                        <YAxis tick={{ fill: "#8a8f98", fontSize: 9 }} width={30} />
+                        <YAxis tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 9 }} width={30} />
                         <Tooltip
-                          contentStyle={{ background: "#0f1011", border: "1px solid #23252a", borderRadius: "6px", fontSize: 11 }}
-                          labelStyle={{ color: "#8a8f98" }}
+                          contentStyle={{ background: "hsl(var(--color-surface-2))", border: "1px solid hsl(var(--color-hairline))", borderRadius: "6px", fontSize: 11 }}
+                          labelStyle={{ color: "hsl(var(--color-ink-muted))" }}
                         />
-                        <ReferenceLine x={0} stroke="#23252a" />
+                        <ReferenceLine x={0} stroke="hsl(var(--color-hairline))" />
                         <Line
                           type="monotone"
                           dataKey="cumulative"
-                          stroke="#f59e0b"
+                          stroke="hsl(var(--color-accent))"
                           strokeWidth={2}
                           dot={false}
                           name="Balance"
@@ -336,12 +340,12 @@ export default function SoulDetailPage() {
                       <div className="mt-3 pt-2 border-t border-[hsl(var(--color-hairline))]">
                         <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-1">{t("karma.next_life_inheritance")}</p>
                         <div className="flex justify-between text-xs">
-                          <span className="text-green-400">{t("souls.detail.merit")}: +{Math.round(karma.merit_score * 0.2)}</span>
-                          <span className="text-red-400">{t("souls.detail.demerit")}: -{Math.round(karma.demerit_score * 0.2)}</span>
+                          <span className="text-[hsl(var(--color-karma-merit))]">{t("souls.detail.merit")}: +{Math.round(karma.merit_score * 0.2)}</span>
+                          <span className="text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.demerit")}: -{Math.round(karma.demerit_score * 0.2)}</span>
                         </div>
                         <div className="flex justify-between text-xs mt-1">
                           <span className="text-[hsl(var(--color-ink-subtle))]">{t("souls.detail.balance")}: </span>
-                          <span className={karma.karmic_balance >= 0 ? "text-green-400" : "text-red-400"}>
+                          <span className={karma.karmic_balance >= 0 ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"}>
                             {karma.karmic_balance >= 0 ? "+" : ""}{Math.round(karma.karmic_balance * 0.2)}
                           </span>
                         </div>
@@ -370,7 +374,7 @@ export default function SoulDetailPage() {
                   <button
                     onClick={handleDie}
                     disabled={!!actionLoading}
-                    className="w-full py-2 px-4 bg-red-700 hover:bg-red-600 disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
+                    className="w-full py-2 px-4 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
                   >
                     {actionLoading === "die" ? t("souls.detail.processing") : t("souls.detail.mark_dead")}
                   </button>
@@ -395,13 +399,13 @@ export default function SoulDetailPage() {
                     key={disp.id}
                     onClick={() => handleReincarnate(disp.id)}
                     disabled={!!actionLoading}
-                    className="w-full py-2 px-4 bg-blue-700 hover:bg-blue-600 disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
+                    className="w-full py-2 px-4 bg-[hsl(var(--color-status-info))] hover:bg-[hsl(var(--color-status-info)/0.8)] disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
                   >
                     {actionLoading === "reincarnate" ? t("souls.detail.processing") : `${t("souls.detail.reincarnate")} ${disp.destination_realm || t("souls.detail.destination")}`}
                   </button>
                 ))}
                 {soul?.current_state === "REINCARNATING" && (
-                  <div className="text-center text-blue-400 text-sm py-2">
+                  <div className="text-center text-[hsl(var(--color-status-info))] text-sm py-2">
                     {t("souls.detail.being_reborn")}
                   </div>
                 )}
@@ -436,9 +440,9 @@ export default function SoulDetailPage() {
                     </div>
                     {j.verdict && (
                       <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                        j.verdict === "PASSED" ? "bg-green-900 text-green-300" :
-                        j.verdict === "FAILED" ? "bg-red-900 text-red-300" :
-                        "bg-yellow-900 text-yellow-300"
+                        j.verdict === "PASSED" ? "bg-[hsl(var(--color-verdict-passed)/0.2)] text-[hsl(var(--color-verdict-passed))]" :
+                        j.verdict === "FAILED" ? "bg-[hsl(var(--color-verdict-failed)/0.2)] text-[hsl(var(--color-verdict-failed))]" :
+                        "bg-[hsl(var(--color-verdict-purgatory)/0.2)] text-[hsl(var(--color-verdict-purgatory))]"
                       }`}>
                         {t(`souls.detail.verdict_${j.verdict.toLowerCase()}`) || j.verdict}
                       </span>
@@ -474,7 +478,7 @@ export default function SoulDetailPage() {
                       </div>
                     </div>
                     <span className={`px-2 py-0.5 rounded text-xs ${
-                      d.is_executed ? "bg-blue-900 text-blue-300" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
+                      d.is_executed ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                     }`}>
                       {d.is_executed ? t("souls.detail.executed") : t("souls.detail.pending")}
                     </span>
@@ -528,7 +532,7 @@ export default function SoulDetailPage() {
                 <div key={e.id} className="bg-[hsl(var(--color-surface-2))] rounded-lg p-3 border border-[hsl(var(--color-hairline))] text-xs">
                   <div className="flex justify-between">
                     <span className="text-[hsl(var(--color-ink))] font-mono">{e.event_type}</span>
-                    <span className="text-[hsl(var(--color-ink-subtle))]">{e.created_at?.slice(0, 19).replace("T", " ")}</span>
+                    <span className="text-[hsl(var(--color-ink-subtle))]">{e.create_time?.slice(0, 19).replace("T", " ")}</span>
                   </div>
                   {e.actor && e.actor !== "system" && (
                     <div className="text-[hsl(var(--color-ink-subtle))] mt-0.5">Actor: {e.actor}</div>
@@ -569,7 +573,7 @@ export default function SoulDetailPage() {
               type="button"
               onClick={handleDelete}
               disabled={deleteSoulMutation.isPending}
-              className="flex-1 px-4 py-2 bg-red-700 hover:bg-red-600 disabled:bg-red-900/50 text-white rounded text-sm font-medium transition-colors"
+              className="flex-1 px-4 py-2 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 text-white rounded text-sm font-medium transition-colors"
             >
               {deleteSoulMutation.isPending ? t("souls.detail.deleting") : t("souls.detail.confirm_delete_action")}
             </button>
