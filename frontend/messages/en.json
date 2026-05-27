@@ -14,7 +14,10 @@
     "greeting_afternoon": "Good Afternoon",
     "greeting_evening": "Good Evening",
     "greeting_night": "Good Night",
-    "user_profile": "User Profile"
+    "user_profile": "User Profile",
+    "expand_menu": "Expand menu",
+    "collapse_menu": "Collapse menu",
+    "settings": "Settings"
   },
   "auth": {
     "login": "Login",
@@ -30,7 +33,10 @@
     "error_invalid_credentials": "Invalid username or password",
     "error_invalid_token": "Invalid token",
     "error_token_expired": "Token has expired",
-    "error_login_failed": "Login failed"
+    "error_login_failed": "Login failed",
+    "confirm_logout": "Confirm Logout",
+    "confirm_logout_desc": "Are you sure you want to log out?",
+    "confirm_logout_btn": "Confirm Logout"
   },
   "home": {
     "console": "Console",
@@ -109,7 +115,8 @@
       "updating": "Saving...",
       "birth_date_edit_label": "Birth Date",
       "location_edit_label": "Origin Location",
-      "state_label": "Current State"
+      "state_label": "Current State",
+      "edit_title": "Edit Soul"
     },
     "detail": {
       "loading": "Loading soul data...",
@@ -164,6 +171,8 @@
       "delete_confirm_message": "Delete this soul? This action cannot be undone.",
       "delete_success": "Soul deleted",
       "delete_failed": "Failed to delete",
+      "error_update": "Update failed",
+      "error_delete": "Delete failed",
       "failed": "Failed",
       "passed": "Passed",
       "purgatory": "Purgatory",
@@ -178,7 +187,13 @@
     "edit": "Edit",
     "delete": "Delete",
     "prev": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "confirm_delete": "Confirm Delete",
+    "deleting": "Deleting...",
+    "back": "← Back",
+    "submitting": "Submitting...",
+    "create": "Create",
+    "retry": "Retry"
   },
   "menus": {
     "title": "Menu Management",
@@ -258,6 +273,16 @@
   },
   "workflow": {
     "title": "Approval Workflow",
+    "existing": "Existing Workflows",
+    "editor": "Template Editor",
+    "templates": "Workflow Templates",
+    "select_template": "Select a template to edit",
+    "new_template": "New Template",
+    "custom_templates": "Custom Templates",
+    "predefined_templates": "Predefined Templates",
+    "delete_confirm_msg": "Delete template \"{{name}}\"?",
+    "delete_irreversible": "This action cannot be undone.",
+    "select_from_left": "Select a template from the left",
     "template": "Templates",
     "instances": "Instances",
     "no_instances": "No workflow instances",
@@ -304,6 +329,60 @@
       "confirmed": "Confirmed",
       "rejected": "Rejected",
       "skipped": "Skipped"
+    },
+    "node_type": {
+      "trial": "Trial",
+      "evaluation": "Evaluation",
+      "appeal": "Appeal",
+      "final": "Final",
+      "execution": "Execution"
+    },
+    "approver_types": {
+      "ROLE": "Role",
+      "ACTOR": "Actor",
+      "SYSTEM": "System"
+    },
+    "civilizations": {
+      "CHINESE": "Chinese Diyu",
+      "EUROPEAN": "European Heaven & Hell",
+      "EGYPTIAN": "Egyptian Duat"
+    },
+    "case_types": {
+      "ROUTINE": "Routine Trial",
+      "APPEAL": "Appeal Trial",
+      "CROSS_REALM": "Cross-Realm Trial",
+      "SPECIAL": "Special Trial",
+      "HEART_WEIGHING": "Heart Weighing",
+      "DIVINE_TRIAL": "Divine Trial",
+      "CANONIZATION": "Canonization",
+      "PURGATORY_REVIEW": "Purgatory Review",
+      "HERESY_TRIAL": "Heresy Trial"
+    },
+    "view": "View",
+    "nodes_count": "{{count}} nodes",
+    "no_description": "No description",
+    "appeal_badge": "Appeal",
+    "template_detail": "Template Detail",
+    "no_node_data": "No node data",
+    "editor": {
+      "new_template_name": "New Template",
+      "template_name_placeholder": "Template Name",
+      "add_node": "Add Node",
+      "delete_selected": "Delete Selected",
+      "saving": "Saving...",
+      "save_template": "Save Template",
+      "hint": "Double-click node to edit · Drag to connect nodes",
+      "edit_node": "Edit Node",
+      "node_name": "Node Name",
+      "node_type": "Node Type",
+      "court_code": "Court / Palace Code",
+      "court_placeholder": "e.g. First Court, Hall of Truth",
+      "approver_type": "Approver Type",
+      "approver_role": "Approver Role",
+      "approver_placeholder": "e.g. JUDGE, OVERSEER",
+      "new_node": "New Node",
+      "saved": "Template saved",
+      "save_failed": "Save failed"
     }
   },
   "dashboard": {
@@ -323,11 +402,16 @@
     "export_stats": "Export Stats",
     "souls_by_realm": "Souls by Realm",
     "no_activity": "No recent activity",
-    "no_realm_data": "No realm data available"
+    "no_realm_data": "No realm data available",
+    "error_load": "Failed to load statistics",
+    "error_export": "Failed to export statistics"
   },
   "karma": {
     "title": "Karma Statistics",
     "subtitle": "Soul karma overview",
+    "balance": "Balance",
+    "effective": "Effective",
+    "no_history": "No karma history available",
     "no_data": "No data available",
     "total_souls": "Total Souls",
     "active_souls": "Active Souls",
@@ -385,7 +469,8 @@
       "select_verdict": "Please select a verdict",
       "concluding": "Concluding...",
       "conclude": "Conclude",
-      "notes_placeholder": "Enter notes..."
+      "notes_placeholder": "Enter notes...",
+      "no_evidence": "No evidence or confession records"
     }
   },
   "audit": {
@@ -457,7 +542,8 @@
     "mark_all_read": "Mark All as Read",
     "mark_read": "Mark as Read",
     "empty": "No notifications",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "view_all": "View All"
   },
   "realms": {
     "title": "Realms",
@@ -537,13 +623,25 @@
   "organization": {
     "title": "Organizations",
     "subtitle": "Cross-civilization organization management",
-    "listTitle": "Organizations List"
+    "listTitle": "Organizations List",
+    "civilizations": {
+      "CHINESE": "Chinese Diyu",
+      "EUROPEAN": "European Heaven & Hell",
+      "EGYPTIAN": "Egyptian Duat"
+    },
+    "root": "Root",
+    "organizations_count": "{{count}} organizations"
   },
   "actors": {
     "title": "Actors",
     "subtitle": "Cross-civilization actor management",
     "section": {
       "actors": "Actors List"
+    },
+    "civilizations": {
+      "CHINESE": "Chinese Diyu",
+      "EUROPEAN": "European Heaven & Hell",
+      "EGYPTIAN": "Egyptian Duat"
     }
   },
   "dispatch": {
@@ -553,7 +651,16 @@
     "pending": "Pending Proposals",
     "history": "History",
     "no_pending": "No pending proposals",
-    "no_history": "No dispatch history"
+    "no_history": "No dispatch history",
+    "target_soul": "Target Soul",
+    "select_soul": "Select soul...",
+    "target_tenant": "Target Tenant",
+    "select_tenant": "Select tenant...",
+    "reason": "Reason",
+    "reason_placeholder": "Reason for dispatch...",
+    "submitting": "Submitting...",
+    "submit_proposal": "Submit Proposal",
+    "soul_prefix": "Soul #"
   },
   "crossJudgments": {
     "title": "Cross-Tenant Judgments",
@@ -561,11 +668,15 @@
     "list_title": "Cross-Judgment Cases",
     "no_judgments": "No cross-tenant judgments yet",
     "initiated_by": "Initiated by",
-    "participants": "participants"
+    "participants": "Participants",
+    "no_participants": "No participants yet",
+    "verdict": "Verdict",
+    "failed_to_load": "Failed to load"
   },
   "users": {
     "title": "User Management",
     "create_user": "Create User",
+    "edit_user": "Edit User",
     "search_placeholder": "Search username or email...",
     "all_roles": "All Roles",
     "no_users": "No users found",
@@ -586,6 +697,27 @@
     "tenant": "Tenant",
     "status": "Status",
     "actions": "Actions",
+    "create_success": "User created",
+    "create_error": "Failed to create user",
+    "update_success": "User updated",
+    "update_error": "Failed to update user",
+    "username_empty": "Username is required",
+    "email_empty": "Email is required",
+    "password_empty": "Password is required",
+    "password": "Password",
+    "optional": "optional",
+    "username_placeholder": "Enter username",
+    "email_placeholder": "Enter email",
+    "password_placeholder": "Enter password",
+    "password_edit_placeholder": "Leave empty to keep current",
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "first_name_placeholder": "First Name",
+    "last_name_placeholder": "Last Name",
+    "role_admin": "Administrator",
+    "role_judge": "Judge",
+    "role_guardian": "Guardian",
+    "role_viewer": "Viewer",
     "roles": {
       "ADMIN": "Administrator",
       "JUDGE": "Judge",
@@ -613,5 +745,53 @@
       "red": "Red",
       "rose": "Rose"
     }
+  },
+  "admin": {
+    "karma_stats": "Karma Statistics",
+    "system_wide_overview": "System-wide karmic overview",
+    "export_csv": "Export CSV",
+    "loading_stats": "Loading statistics...",
+    "failed_load": "Failed to load statistics",
+    "retry": "Retry",
+    "total_souls": "Total Souls",
+    "avg_karma": "Avg Karma Balance",
+    "state_breakdown": "State Breakdown",
+    "state_distribution": "Soul State Distribution",
+    "karma_distribution": "Karma Score Distribution",
+    "top_karma": "Top Karma Souls",
+    "realm": "Realm",
+    "civilization": "Civilization",
+    "soul_count": "Soul Count",
+    "no_realm_data": "No realm data available",
+    "tenant_breakdown": "Tenant Breakdown",
+    "souls": "souls",
+    "recent_activity": "Recent Activity",
+    "on": "on"
+  },
+  "welcome": {
+    "quick_actions": "Quick Actions",
+    "agent_status": "AI Agent Status",
+    "running": "Running",
+    "working": "Working",
+    "idle": "Idle",
+    "manage_agents": "Manage Agents",
+    "recent_activity": "Recent Activity",
+    "view_all_activity": "View All Activity",
+    "current_civilization": "Current Civilization",
+    "user_role": "User Role",
+    "system_version": "System Version",
+    "just_now": "Just now",
+    "minutes_ago": "{{n}}m ago",
+    "hours_ago": "{{n}}h ago"
+  },
+  "permission": {
+    "denied_title": "Permission Denied",
+    "denied_message": "You don't have permission to access this page or perform this action."
+  },
+  "icon_picker": {
+    "select": "Select Icon",
+    "search": "Search icons...",
+    "clear": "Clear",
+    "no_results": "No icons found"
   }
 }

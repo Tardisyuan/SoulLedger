@@ -8,6 +8,8 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
+import { PermissionFormModal } from "@/src/components/permissions/PermissionFormModal";
+import { RoleFormModal } from "@/src/components/permissions/RoleFormModal";
 
 const CATEGORIES = ["soul", "judgment", "karma", "reincarnation", "system"];
 
@@ -288,10 +290,10 @@ export default function PermissionsPage() {
               ) : null}
 
               {assignMutation.isSuccess && (
-                <p className="mt-2 text-sm text-green-400">{t("permissions.assign_success")}</p>
+                <p className="mt-2 text-sm text-[hsl(var(--color-status-success))]">{t("permissions.assign_success")}</p>
               )}
               {assignMutation.isError && (
-                <p className="mt-2 text-sm text-red-400">{t("permissions.assign_error")}</p>
+                <p className="mt-2 text-sm text-[hsl(var(--color-status-error))]">{t("permissions.assign_error")}</p>
               )}
             </div>
           ) : (
@@ -364,7 +366,7 @@ export default function PermissionsPage() {
                           </button>
                           <button
                             onClick={() => { setDeletingPerm(perm); setIsDeleteOpen(true); }}
-                            className="text-red-400 hover:text-red-300 text-xs"
+                            className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-xs"
                           >
                             {t("permissions.delete")}
                           </button>
@@ -393,7 +395,7 @@ export default function PermissionsPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {roles.map((role) => (
-                  <div key={role.id} className="bg-surface-1 border border-hairline rounded-lg p-3 hover:border-[hsl(var(--color-accent))]/30 transition-colors">
+                  <div key={role.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-3 hover:border-[hsl(var(--color-accent))]/30 transition-colors">
                     <div className="min-w-0 flex-1">
                       <h3 className="font-medium text-[hsl(var(--color-ink))] truncate text-sm">{role.display_name || role.name}</h3>
                       <p className="text-xs text-[hsl(var(--color-ink-muted))] font-mono truncate">{role.name}</p>
@@ -407,7 +409,7 @@ export default function PermissionsPage() {
                       </button>
                       <button
                         onClick={() => { setDeletingRole(role); setIsRoleDeleteOpen(true); }}
-                        className="flex-1 px-2 py-1 text-xs text-red-400 hover:bg-red-400/10 rounded transition-colors border border-red-400/30"
+                        className="flex-1 px-2 py-1 text-xs text-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.1)] rounded transition-colors border border-[hsl(var(--color-status-error)/0.3)]"
                       >
                         {t("permissions.delete_role")}
                       </button>
@@ -452,7 +454,7 @@ export default function PermissionsPage() {
               type="button"
               onClick={() => { setIsDeleteOpen(false); setDeletingPerm(null); }}
               disabled={deleteMutation.isPending}
-              className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink-muted))] hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
+              className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 rounded text-sm transition-colors"
             >
               {t("permissions.cancel_delete")}
             </button>
@@ -460,7 +462,7 @@ export default function PermissionsPage() {
               type="button"
               onClick={() => deletingPerm && deleteMutation.mutate(deletingPerm.id)}
               disabled={deleteMutation.isPending}
-              className="flex-1 px-4 py-2 bg-red-700 hover:bg-red-600 disabled:bg-red-900/50 text-white rounded text-sm font-medium transition-colors"
+              className="flex-1 px-4 py-2 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 text-white rounded text-sm font-medium transition-colors"
             >
               {deleteMutation.isPending ? t("permissions.deleting") : t("permissions.confirm_delete_action")}
             </button>
@@ -500,7 +502,7 @@ export default function PermissionsPage() {
               type="button"
               onClick={() => { setIsRoleDeleteOpen(false); setDeletingRole(null); }}
               disabled={roleDeleteMutation.isPending}
-              className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink-muted))] hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
+              className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 rounded text-sm transition-colors"
             >
               {t("permissions.cancel_delete")}
             </button>
@@ -508,7 +510,7 @@ export default function PermissionsPage() {
               type="button"
               onClick={() => deletingRole && roleDeleteMutation.mutate(deletingRole.id)}
               disabled={roleDeleteMutation.isPending}
-              className="flex-1 px-4 py-2 bg-red-700 hover:bg-red-600 disabled:bg-red-900/50 text-white rounded text-sm font-medium transition-colors"
+              className="flex-1 px-4 py-2 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 text-white rounded text-sm font-medium transition-colors"
             >
               {roleDeleteMutation.isPending ? t("permissions.deleting") : t("permissions.confirm_delete_action")}
             </button>
@@ -519,213 +521,5 @@ export default function PermissionsPage() {
       </BaseModal>
 
     </div>
-  );
-}
-
-// ── Permission Form Modal ─────────────────────────────────────────────
-
-function PermissionFormModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  isPending,
-  error,
-  title,
-  initialData,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: { codename: string; name: string; category: string }) => void;
-  isPending: boolean;
-  error: string | null;
-  title: string;
-  initialData?: Permission;
-}) {
-  const { t } = useI18n();
-  const [codename, setCodename] = useState("");
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState("soul");
-
-  // Reset form when modal opens with new data (useEffect avoids setState during render)
-  useEffect(() => {
-    if (isOpen) {
-      setCodename(initialData?.codename ?? "");
-      setName(initialData?.name ?? "");
-      setCategory(initialData?.category ?? "soul");
-    }
-  }, [isOpen, initialData]);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!codename.trim()) return;
-    if (!name.trim()) return;
-    onSubmit({ codename: codename.trim(), name: name.trim(), category });
-  }
-
-  function handleClose() {
-    setCodename("");
-    setName("");
-    setCategory("soul");
-    onClose();
-  }
-
-  return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title={title}
-      footer={
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isPending}
-            className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink-muted))] hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
-          >
-            {t("common.cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isPending || !codename.trim() || !name.trim()}
-            className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-50 text-black rounded text-sm font-medium transition-colors"
-          >
-            {isPending ? t("permissions.submitting") : t("permissions.submit")}
-          </button>
-        </div>
-      }
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-        <div>
-          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.codename_label")}</label>
-          <input
-            type="text"
-            value={codename}
-            onChange={(e) => setCodename(e.target.value)}
-            placeholder={t("permissions.codename_placeholder")}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.name_label")}</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("permissions.name_placeholder")}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.category_label")}</label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-      </form>
-    </BaseModal>
-  );
-}
-
-// ── Role Form Modal ─────────────────────────────────────────────
-
-function RoleFormModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  isPending,
-  error,
-  title,
-  initialData,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: { name: string; display_name: string }) => void;
-  isPending: boolean;
-  error: string | null;
-  title: string;
-  initialData?: Role;
-}) {
-  const { t } = useI18n();
-  const [name, setName] = useState("");
-  const [displayName, setDisplayName] = useState("");
-
-  useEffect(() => {
-    if (isOpen) {
-      setName(initialData?.name ?? "");
-      setDisplayName(initialData?.display_name ?? "");
-    }
-  }, [isOpen, initialData]);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    if (!displayName.trim()) return;
-    onSubmit({ name: name.trim().toUpperCase(), display_name: displayName.trim() });
-  }
-
-  function handleClose() {
-    setName("");
-    setDisplayName("");
-    onClose();
-  }
-
-  return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title={title}
-      footer={
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isPending}
-            className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink-muted))] hover:bg-surface-2 disabled:opacity-50 rounded text-sm transition-colors"
-          >
-            {t("common.cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isPending || !name.trim() || !displayName.trim()}
-            className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-50 text-black rounded text-sm font-medium transition-colors"
-          >
-            {isPending ? t("permissions.submitting") : t("permissions.submit")}
-          </button>
-        </div>
-      }
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-        <div>
-          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.role_name_label")}</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("permissions.role_name_placeholder")}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.display_name_label")}</label>
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder={t("permissions.display_name_placeholder")}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
-          />
-        </div>
-      </form>
-    </BaseModal>
   );
 }

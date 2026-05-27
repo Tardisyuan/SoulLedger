@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { dispatchApi, soulsApi, karmaApi } from "@/lib/api";
+import { dispatchApi, soulsApi, karmaApi, type Soul } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/src/components/ui/skeleton";
@@ -43,11 +43,11 @@ export default function ProposeDispatchPage() {
       // Note: Backend expects numeric IDs but frontend only has tenant codes
       // Using tenant code directly - may need backend adjustment
       await dispatchApi.propose({
-        source_tenant: user.tenant.code as any,
-        target_tenant: form.target_tenant_code as any,
+        source_tenant: user.tenant.code as unknown as number,
+        target_tenant: form.target_tenant_code as unknown as number,
         soul: parseInt(form.soul_id),
         reason: form.reason,
-      } as any);
+      });
       router.push("/dispatch");
     } catch (err) {
       console.error("Failed to propose dispatch:", err);
@@ -62,7 +62,7 @@ export default function ProposeDispatchPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">Target Soul</label>
+          <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("dispatch.target_soul")}</label>
           {soulsLoading ? (
             <Skeleton className="h-10 w-full" />
           ) : (
@@ -72,8 +72,8 @@ export default function ProposeDispatchPage() {
               className="w-full bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))]"
               required
             >
-              <option value="">Select soul...</option>
-              {souls.map((s: any) => (
+              <option value="">{t("dispatch.select_soul")}</option>
+              {souls.map((s: Soul) => (
                 <option key={s.id} value={s.id}>
                   #{s.id} - {s.name} ({s.current_state})
                 </option>
@@ -83,7 +83,7 @@ export default function ProposeDispatchPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">Target Tenant</label>
+          <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("dispatch.target_tenant")}</label>
           {tenantsLoading ? (
             <Skeleton className="h-10 w-full" />
           ) : (
@@ -93,10 +93,10 @@ export default function ProposeDispatchPage() {
               className="w-full bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))]"
               required
             >
-              <option value="">Select tenant...</option>
+              <option value="">{t("dispatch.select_tenant")}</option>
               {tenants
-                .filter((t: any) => t.tenant_code !== user?.tenant?.code)
-                .map((t: any) => (
+                .filter((t: { tenant_code: string }) => t.tenant_code !== user?.tenant?.code)
+                .map((t: { tenant_code: string; tenant_name: string }) => (
                   <option key={t.tenant_code} value={t.tenant_code}>
                     {t.tenant_name} ({t.tenant_code})
                   </option>
@@ -106,13 +106,13 @@ export default function ProposeDispatchPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">Reason</label>
+          <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("dispatch.reason")}</label>
           <textarea
             value={form.reason}
             onChange={e => setForm({ ...form, reason: e.target.value })}
             className="w-full bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))]"
             rows={4}
-            placeholder="Reason for dispatch..."
+            placeholder={t("dispatch.reason_placeholder")}
             required
           />
         </div>
@@ -123,14 +123,14 @@ export default function ProposeDispatchPage() {
             disabled={loading}
             className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent))] disabled:opacity-50"
           >
-            {loading ? "Submitting..." : "Submit Proposal"}
+            {loading ? t("dispatch.submitting") : t("dispatch.submit_proposal")}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
             className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] px-4 py-2 rounded-lg text-sm hover:bg-[hsl(var(--color-surface-3))]"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

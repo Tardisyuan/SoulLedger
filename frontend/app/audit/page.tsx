@@ -82,7 +82,7 @@ export default function AuditPage() {
     return (
       <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
         <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-          <h1 className="text-lg font-bold text-amber-400 flex-1">
+          <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
             {t("audit.title") || "审计日志"}
           </h1>
         </div>
@@ -226,13 +226,13 @@ export default function AuditPage() {
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                             log.action === "CREATE"
-                              ? "bg-green-500/20 text-green-400"
+                              ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]"
                               : log.action === "UPDATE"
-                              ? "bg-amber-500/20 text-amber-400"
+                              ? "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))]"
                               : log.action === "DELETE"
-                              ? "bg-red-500/20 text-red-400"
+                              ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]"
                               : log.action === "LOGIN" || log.action === "LOGOUT"
-                              ? "bg-blue-500/20 text-blue-400"
+                              ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]"
                               : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                           }`}
                         >

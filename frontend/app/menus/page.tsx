@@ -153,7 +153,7 @@ export default function MenusPage() {
                         </td>
                         <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{menu.order}</td>
                         <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${menu.is_active ? "bg-green-500/20 text-green-400" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${menu.is_active ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
                             {menu.is_active ? t("menus.active") : t("menus.inactive")}
                           </span>
                         </td>
@@ -166,7 +166,7 @@ export default function MenusPage() {
                           </button>
                           <button
                             onClick={() => deleteMutation.mutate(menu.id)}
-                            className="text-red-400 hover:text-red-300 text-sm"
+                            className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-sm"
                           >
                             {t("menus.delete")}
                           </button>

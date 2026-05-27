@@ -15,7 +15,10 @@
     "greeting_afternoon": "下午好",
     "greeting_evening": "晚上好",
     "greeting_night": "夜深了",
-    "user_profile": "用户信息"
+    "user_profile": "用户信息",
+    "expand_menu": "展开菜单",
+    "collapse_menu": "收起菜单",
+    "settings": "设置"
   },
   "auth": {
     "login": "登录",
@@ -31,7 +34,10 @@
     "error_invalid_credentials": "账号或密码错误",
     "error_invalid_token": "无效的令牌",
     "error_token_expired": "令牌已过期",
-    "error_login_failed": "登录失败"
+    "error_login_failed": "登录失败",
+    "confirm_logout": "确认退出登录",
+    "confirm_logout_desc": "确定要退出当前账号吗？",
+    "confirm_logout_btn": "确认退出"
   },
   "home": {
     "console": "控制台",
@@ -110,7 +116,8 @@
       "updating": "更新中...",
       "birth_date_edit_label": "出生日期",
       "location_edit_label": "起源地点",
-      "state_label": "当前状态"
+      "state_label": "当前状态",
+      "edit_title": "编辑灵魂"
     },
     "detail": {
       "loading": "加载灵魂数据中...",
@@ -165,6 +172,8 @@
       "delete_confirm_message": "确认删除此灵魂？此操作不可撤销。",
       "delete_success": "删除成功",
       "delete_failed": "删除失败",
+      "error_update": "更新失败",
+      "error_delete": "删除失败",
       "failed": "失败",
       "passed": "通过",
       "purgatory": "待定",
@@ -179,7 +188,13 @@
     "edit": "编辑",
     "delete": "删除",
     "prev": "上一页",
-    "next": "下一页"
+    "next": "下一页",
+    "confirm_delete": "确认删除",
+    "deleting": "删除中...",
+    "back": "← 返回",
+    "submitting": "提交中...",
+    "create": "创建",
+    "retry": "重试"
   },
   "menus": {
     "title": "菜单管理",
@@ -259,6 +274,16 @@
   },
   "workflow": {
     "title": "审批流程",
+    "existing": "现有流程",
+    "editor": "模板编辑器",
+    "templates": "流程模板",
+    "select_template": "选择模板进行编辑",
+    "new_template": "新建模板",
+    "custom_templates": "自定义模板",
+    "predefined_templates": "预定义模板",
+    "delete_confirm_msg": "确定要删除模板 \"{{name}}\" 吗？",
+    "delete_irreversible": "此操作不可撤销，删除后无法恢复。",
+    "select_from_left": "请从左侧选择一个模板",
     "template": "模板编辑器",
     "instances": "审批实例",
     "no_instances": "暂无审批实例",
@@ -305,6 +330,60 @@
       "confirmed": "确认",
       "rejected": "拒绝",
       "skipped": "跳过"
+    },
+    "node_type": {
+      "trial": "审判",
+      "evaluation": "评估",
+      "appeal": "申诉",
+      "final": "终审",
+      "execution": "执行"
+    },
+    "approver_types": {
+      "ROLE": "职能角色",
+      "ACTOR": "指定人员",
+      "SYSTEM": "系统自动"
+    },
+    "civilizations": {
+      "CHINESE": "中国地府",
+      "EUROPEAN": "欧洲天堂地狱",
+      "EGYPTIAN": "埃及冥界"
+    },
+    "case_types": {
+      "ROUTINE": "常规审判",
+      "APPEAL": "申诉审判",
+      "CROSS_REALM": "跨域审判",
+      "SPECIAL": "特案审判",
+      "HEART_WEIGHING": "心脏称重",
+      "DIVINE_TRIAL": "神判",
+      "CANONIZATION": "封圣审查",
+      "PURGATORY_REVIEW": "炼狱复核",
+      "HERESY_TRIAL": "异端审判"
+    },
+    "view": "查看",
+    "nodes_count": "{{count}} 个节点",
+    "no_description": "无描述",
+    "appeal_badge": "申诉",
+    "template_detail": "模板详情",
+    "no_node_data": "暂无节点数据",
+    "editor": {
+      "new_template_name": "新流程模板",
+      "template_name_placeholder": "模板名称",
+      "add_node": "添加节点",
+      "delete_selected": "删除选中",
+      "saving": "保存中...",
+      "save_template": "保存模板",
+      "hint": "双击节点编辑 · 拖拽连接节点",
+      "edit_node": "编辑节点",
+      "node_name": "节点名称",
+      "node_type": "节点类型",
+      "court_code": "法庭/宫殿代码",
+      "court_placeholder": "例如: 第一殿, 真理大厅",
+      "approver_type": "审批人类型",
+      "approver_role": "审批角色",
+      "approver_placeholder": "例如: JUDGE, OVERSEER",
+      "new_node": "新节点",
+      "saved": "模板已保存",
+      "save_failed": "保存失败"
     }
   },
   "dashboard": {
@@ -324,11 +403,16 @@
     "export_stats": "导出统计",
     "souls_by_realm": "地域分布",
     "no_activity": "暂无最近活动",
-    "no_realm_data": "暂无地域数据"
+    "no_realm_data": "暂无地域数据",
+    "error_load": "加载统计数据失败",
+    "error_export": "导出统计数据失败"
   },
   "karma": {
     "title": "功德统计",
-    "subtitle": "灵魂功德 overview",
+    "subtitle": "灵魂功德概览",
+    "balance": "余额",
+    "effective": "有效",
+    "no_history": "暂无业力历史",
     "no_data": "暂无数据",
     "total_souls": "总灵魂数",
     "active_souls": "活跃灵魂",
@@ -386,7 +470,8 @@
       "select_verdict": "请选择裁决",
       "concluding": "结案处理中...",
       "conclude": "结案",
-      "notes_placeholder": "输入备注..."
+      "notes_placeholder": "输入备注...",
+      "no_evidence": "暂无证据和供词记录"
     }
   },
   "audit": {
@@ -458,7 +543,8 @@
     "mark_all_read": "全部已读",
     "mark_read": "标为已读",
     "empty": "暂无通知",
-    "loading": "加载中..."
+    "loading": "加载中...",
+    "view_all": "查看全部"
   },
   "realms": {
     "title": "地域",
@@ -538,13 +624,25 @@
   "organization": {
     "title": "组织架构",
     "subtitle": "跨文明组织管理",
-    "listTitle": "组织列表"
+    "listTitle": "组织列表",
+    "civilizations": {
+      "CHINESE": "中国地府",
+      "EUROPEAN": "欧洲天堂与地狱",
+      "EGYPTIAN": "埃及杜阿特"
+    },
+    "root": "根",
+    "organizations_count": "{{count}} 个组织"
   },
   "actors": {
     "title": "角色",
     "subtitle": "跨文明角色管理",
     "section": {
       "actors": "角色列表"
+    },
+    "civilizations": {
+      "CHINESE": "中国地府",
+      "EUROPEAN": "欧洲天堂地狱",
+      "EGYPTIAN": "埃及冥界"
     }
   },
   "dispatch": {
@@ -554,7 +652,16 @@
     "pending": "待处理提案",
     "history": "历史记录",
     "no_pending": "暂无待处理提案",
-    "no_history": "暂无调度历史"
+    "no_history": "暂无调度历史",
+    "target_soul": "目标灵魂",
+    "select_soul": "选择灵魂...",
+    "target_tenant": "目标租户",
+    "select_tenant": "选择租户...",
+    "reason": "理由",
+    "reason_placeholder": "调度理由...",
+    "submitting": "提交中...",
+    "submit_proposal": "提交提案",
+    "soul_prefix": "灵魂 #"
   },
   "crossJudgments": {
     "title": "跨文明审判",
@@ -562,11 +669,15 @@
     "list_title": "跨文明审判列表",
     "no_judgments": "暂无跨文明审判",
     "initiated_by": "发起方",
-    "participants": "参与者"
+    "participants": "参与者",
+    "no_participants": "暂无参与者",
+    "verdict": "裁决",
+    "failed_to_load": "加载失败"
   },
   "users": {
     "title": "用户管理",
     "create_user": "创建用户",
+    "edit_user": "编辑用户",
     "search_placeholder": "搜索用户名或邮箱...",
     "all_roles": "所有角色",
     "no_users": "暂无用户",
@@ -587,6 +698,27 @@
     "tenant": "租户",
     "status": "状态",
     "actions": "操作",
+    "create_success": "用户创建成功",
+    "create_error": "用户创建失败",
+    "update_success": "用户更新成功",
+    "update_error": "用户更新失败",
+    "username_empty": "用户名不能为空",
+    "email_empty": "邮箱不能为空",
+    "password_empty": "密码不能为空",
+    "password": "密码",
+    "optional": "可选",
+    "username_placeholder": "输入用户名",
+    "email_placeholder": "输入邮箱",
+    "password_placeholder": "输入密码",
+    "password_edit_placeholder": "留空则不修改",
+    "first_name": "名",
+    "last_name": "姓",
+    "first_name_placeholder": "名",
+    "last_name_placeholder": "姓",
+    "role_admin": "管理员",
+    "role_judge": "审判者",
+    "role_guardian": "守护者",
+    "role_viewer": "查看者",
     "roles": {
       "ADMIN": "管理员",
       "JUDGE": "审判者",
@@ -614,5 +746,53 @@
       "red": "红色",
       "rose": "玫瑰"
     }
+  },
+  "admin": {
+    "karma_stats": "业力统计",
+    "system_wide_overview": "系统业力概览",
+    "export_csv": "导出CSV",
+    "loading_stats": "加载统计数据中...",
+    "failed_load": "加载统计数据失败",
+    "retry": "重试",
+    "total_souls": "灵魂总数",
+    "avg_karma": "平均业力余额",
+    "state_breakdown": "状态分布",
+    "state_distribution": "灵魂状态分布",
+    "karma_distribution": "业力分数分布",
+    "top_karma": "顶级业力灵魂",
+    "realm": "领域",
+    "civilization": "文明",
+    "soul_count": "灵魂数量",
+    "no_realm_data": "暂无领域数据",
+    "tenant_breakdown": "租户分布",
+    "souls": "灵魂",
+    "recent_activity": "最近活动",
+    "on": "于"
+  },
+  "welcome": {
+    "quick_actions": "快捷操作",
+    "agent_status": "AI 智能体状态",
+    "running": "运行中",
+    "working": "工作中",
+    "idle": "空闲",
+    "manage_agents": "管理智能体",
+    "recent_activity": "最近活动",
+    "view_all_activity": "查看全部活动",
+    "current_civilization": "当前文明",
+    "user_role": "用户角色",
+    "system_version": "系统版本",
+    "just_now": "刚刚",
+    "minutes_ago": "{{n}}分钟前",
+    "hours_ago": "{{n}}小时前"
+  },
+  "permission": {
+    "denied_title": "权限不足",
+    "denied_message": "您没有权限访问此页面或执行此操作。"
+  },
+  "icon_picker": {
+    "select": "选择图标",
+    "search": "搜索图标...",
+    "clear": "清除",
+    "no_results": "没有找到图标"
   }
 }

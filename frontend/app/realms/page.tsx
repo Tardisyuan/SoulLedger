@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { realmsApi } from "@/lib/api";
+import { realmsApi, type Realm } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
@@ -15,9 +15,9 @@ const CIVILIZATION_CONFIG: Record<string, { nameKey: string; icon: React.ReactNo
 };
 
 const REALM_TYPE_CONFIG: Record<string, { icon: React.ReactNode; className: string }> = {
-  HELL: { icon: <Flame className="w-4 h-4" />, className: 'bg-red-500/10 border-red-500/30 text-red-400' },
-  PURGATORY: { icon: <Cloud className="w-4 h-4" />, className: 'bg-blue-500/10 border-blue-500/30 text-blue-400' },
-  BLISS: { icon: <CircleDot className="w-4 h-4" />, className: 'bg-green-500/10 border-green-500/30 text-green-400' },
+  HELL: { icon: <Flame className="w-4 h-4" />, className: 'bg-[hsl(var(--color-status-error)/0.1)] border-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))]' },
+  PURGATORY: { icon: <Cloud className="w-4 h-4" />, className: 'bg-[hsl(var(--color-status-info)/0.1)] border-[hsl(var(--color-status-info)/0.3)] text-[hsl(var(--color-status-info))]' },
+  BLISS: { icon: <CircleDot className="w-4 h-4" />, className: 'bg-[hsl(var(--color-status-success)/0.1)] border-[hsl(var(--color-status-success)/0.3)] text-[hsl(var(--color-status-success))]' },
   NEUTRAL: { icon: <Castle className="w-4 h-4" />, className: 'bg-[hsl(var(--color-accent))]/10 border-[hsl(var(--color-accent))]/30 text-[hsl(var(--color-accent))]' },
 };
 
@@ -33,7 +33,7 @@ export default function RealmsPage() {
   });
 
   // Group by civilization
-  const grouped: Record<string, any[]> = realms.reduce((acc: Record<string, any[]>, realm: any) => {
+  const grouped: Record<string, Realm[]> = realms.reduce<Record<string, Realm[]>>((acc, realm) => {
     const civ = realm.civilization || "UNKNOWN";
     if (!acc[civ]) acc[civ] = [];
     acc[civ].push(realm);
@@ -87,8 +87,8 @@ export default function RealmsPage() {
                             <div className="flex items-start gap-3">
                               <div className="text-[hsl(var(--color-ink-muted))]">{typeConfig.icon}</div>
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-[hsl(var(--color-ink))] truncate">{t(`realms.names.${realm.realm_code}`, realm.name_en)}</h3>
-                                <p className="text-sm text-[hsl(var(--color-ink-tertiary))] truncate">{t(`realms.codes.${realm.realm_code}`, realm.name_local)}</p>
+                                <h3 className="font-semibold text-[hsl(var(--color-ink))] truncate">{t(`realms.names.${realm.realm_code}`) || realm.name_en}</h3>
+                                <p className="text-sm text-[hsl(var(--color-ink-tertiary))] truncate">{t(`realms.codes.${realm.realm_code}`) || realm.name_local}</p>
                               </div>
                             </div>
                             <div className="mt-2 flex items-center justify-between">
@@ -97,9 +97,7 @@ export default function RealmsPage() {
                                 {t(`realms.types.${realm.realm_type}`)}
                               </span>
                             </div>
-                            {realm.description && (
-                              <p className="mt-2 text-sm text-[hsl(var(--color-ink-muted))] line-clamp-2">{realm.description}</p>
-                            )}
+                            {/* TODO: Add description field to Realm API response */}
                           </div>
                         );
                       })}

@@ -128,7 +128,7 @@ export default function WorkflowEditor({
   const [editData, setEditData] = useState<NodeEditData | null>(null);
 
   // Form state - initialized from query data
-  const [templateName, setTemplateName] = useState("新流程模板");
+  const [templateName, setTemplateName] = useState("");
   const [templateDescription, setTemplateDescription] = useState("");
   const [templateCiv, setTemplateCiv] = useState<"CHINESE" | "EUROPEAN" | "EGYPTIAN">("CHINESE");
   const [templateCaseType, setTemplateCaseType] = useState("ROUTINE");
@@ -271,7 +271,7 @@ export default function WorkflowEditor({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workflow-templates"] });
-      showToast("模板已保存", "success");
+      showToast(t("workflow.editor.saved"), "success");
       onSave?.({
         name: templateName,
         description: templateDescription,
@@ -281,7 +281,7 @@ export default function WorkflowEditor({
       });
     },
     onError: () => {
-      showToast("保存失败", "error");
+      showToast(t("workflow.editor.save_failed"), "error");
     },
   });
 
@@ -294,7 +294,7 @@ export default function WorkflowEditor({
       position: { x: 250, y: nodes.length * 160 + 80 },
       data: {
         id: newId,
-        label: `新节点 ${nodes.length + 1}`,
+        label: `${t("workflow.editor.new_node")} ${nodes.length + 1}`,
         nodeType: "TRIAL",
         courtCode: "",
         approverRole: "",
@@ -410,17 +410,17 @@ export default function WorkflowEditor({
 
   // Node type options
   const nodeTypeOptions = [
-    { value: "TRIAL", label: "审判" },
-    { value: "EVALUATION", label: "评估" },
-    { value: "APPEAL", label: "申诉" },
-    { value: "FINAL", label: "终审" },
-    { value: "EXECUTION", label: "执行" },
+    { value: "TRIAL", label: t("workflow.node_type.trial") },
+    { value: "EVALUATION", label: t("workflow.node_type.evaluation") },
+    { value: "APPEAL", label: t("workflow.node_type.appeal") },
+    { value: "FINAL", label: t("workflow.node_type.final") },
+    { value: "EXECUTION", label: t("workflow.node_type.execution") },
   ];
 
   const approverTypeOptions = [
-    { value: "ROLE", label: "职能角色" },
-    { value: "ACTOR", label: "指定人员" },
-    { value: "SYSTEM", label: "系统自动" },
+    { value: "ROLE", label: t("workflow.approver_types.ROLE") },
+    { value: "ACTOR", label: t("workflow.approver_types.ACTOR") },
+    { value: "SYSTEM", label: t("workflow.approver_types.SYSTEM") },
   ];
 
   return (
@@ -433,7 +433,7 @@ export default function WorkflowEditor({
             type="text"
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
-            placeholder="模板名称"
+            placeholder={t("workflow.editor.template_name_placeholder")}
             className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink))] placeholder:[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
           <select
@@ -441,24 +441,24 @@ export default function WorkflowEditor({
             onChange={(e) => setTemplateCiv(e.target.value as typeof templateCiv)}
             className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           >
-            <option value="CHINESE">中国地府</option>
-            <option value="EUROPEAN">欧洲天堂地狱</option>
-            <option value="EGYPTIAN">埃及冥界</option>
+            <option value="CHINESE">{t("workflow.civilizations.CHINESE")}</option>
+            <option value="EUROPEAN">{t("workflow.civilizations.EUROPEAN")}</option>
+            <option value="EGYPTIAN">{t("workflow.civilizations.EGYPTIAN")}</option>
           </select>
           <select
             value={templateCaseType}
             onChange={(e) => setTemplateCaseType(e.target.value)}
             className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           >
-            <option value="ROUTINE">常规审判</option>
-            <option value="APPEAL">申诉审判</option>
-            <option value="CROSS_REALM">跨域审判</option>
-            <option value="SPECIAL">特案审判</option>
-            <option value="CANONIZATION">封圣审查</option>
-            <option value="PURGATORY_REVIEW">炼狱复核</option>
-            <option value="HERESY_TRIAL">异端审判</option>
-            <option value="HEART_WEIGHING">心脏称重</option>
-            <option value="DIVINE_TRIAL">神判</option>
+            <option value="ROUTINE">{t("workflow.case_types.ROUTINE")}</option>
+            <option value="APPEAL">{t("workflow.case_types.APPEAL")}</option>
+            <option value="CROSS_REALM">{t("workflow.case_types.CROSS_REALM")}</option>
+            <option value="SPECIAL">{t("workflow.case_types.SPECIAL")}</option>
+            <option value="CANONIZATION">{t("workflow.case_types.CANONIZATION")}</option>
+            <option value="PURGATORY_REVIEW">{t("workflow.case_types.PURGATORY_REVIEW")}</option>
+            <option value="HERESY_TRIAL">{t("workflow.case_types.HERESY_TRIAL")}</option>
+            <option value="HEART_WEIGHING">{t("workflow.case_types.HEART_WEIGHING")}</option>
+            <option value="DIVINE_TRIAL">{t("workflow.case_types.DIVINE_TRIAL")}</option>
           </select>
         </div>
 
@@ -468,21 +468,21 @@ export default function WorkflowEditor({
             onClick={addNode}
             className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-sm font-medium rounded transition-colors"
           >
-            + 添加节点
+            + {t("workflow.editor.add_node")}
           </button>
           <button
             onClick={deleteSelectedNode}
             disabled={!selectedNodeId}
             className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-medium rounded border border-red-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            删除选中
+            {t("workflow.editor.delete_selected")}
           </button>
           <button
             onClick={handleSave}
             disabled={saveMutation.isPending}
             className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
           >
-            {saveMutation.isPending ? "保存中..." : "保存模板"}
+            {saveMutation.isPending ? t("workflow.editor.saving") : t("workflow.editor.save_template")}
           </button>
         </div>
       </div>
@@ -507,7 +507,7 @@ export default function WorkflowEditor({
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
           <Controls className="!bg-[hsl(var(--color-surface-1))] !border-[hsl(var(--color-hairline))] !rounded" />
           <Panel position="top-left" className="bg-[hsl(var(--color-surface-1))]/90 backdrop-blur px-3 py-2 rounded border border-[hsl(var(--color-hairline))] text-xs text-[hsl(var(--color-ink-muted))]">
-            双击节点编辑 · 拖拽连接节点
+            {t("workflow.editor.hint")}
           </Panel>
         </ReactFlow>
       </div>
@@ -516,12 +516,12 @@ export default function WorkflowEditor({
       <Modal
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
-        title="编辑节点"
+        title={t("workflow.editor.edit_node")}
       >
         {editData && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">节点名称</label>
+              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.node_name")}</label>
               <input
                 type="text"
                 value={editData.node_name}
@@ -532,7 +532,7 @@ export default function WorkflowEditor({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">节点类型</label>
+              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.node_type")}</label>
               <select
                 value={editData.node_type}
                 onChange={(e) =>
@@ -551,19 +551,19 @@ export default function WorkflowEditor({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">法庭/宫殿代码</label>
+              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.court_code")}</label>
               <input
                 type="text"
                 value={editData.court_code}
                 onChange={(e) =>
                   setEditData({ ...editData, court_code: e.target.value })
                 }
-                placeholder="例如: 第一殿, 真理大厅"
+                placeholder={t("workflow.editor.court_placeholder")}
                 className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">审批人类型</label>
+              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.approver_type")}</label>
               <select
                 value={editData.approver_type}
                 onChange={(e) =>
@@ -582,14 +582,14 @@ export default function WorkflowEditor({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">审批角色</label>
+              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.approver_role")}</label>
               <input
                 type="text"
                 value={editData.approver_role}
                 onChange={(e) =>
                   setEditData({ ...editData, approver_role: e.target.value })
                 }
-                placeholder="例如: JUDGE, OVERSEER"
+                placeholder={t("workflow.editor.approver_placeholder")}
                 className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
               />
             </div>
@@ -598,7 +598,7 @@ export default function WorkflowEditor({
                 onClick={() => setEditModalOpen(false)}
                 className="px-4 py-2 bg-[hsl(var(--color-surface-3))] hover:bg-[hsl(var(--color-surface-4))] text-[hsl(var(--color-ink))] text-sm rounded transition-colors"
               >
-                取消
+                {t("common.cancel")}
               </button>
               <button
                 onClick={() => {
@@ -613,7 +613,7 @@ export default function WorkflowEditor({
                 }}
                 className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-sm font-medium rounded transition-colors"
               >
-                保存
+                {t("common.save")}
               </button>
             </div>
           </div>

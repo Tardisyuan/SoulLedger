@@ -67,6 +67,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { BaseModal } from "@/src/components/ui/Modal";
+import { useI18n } from "@/src/contexts/I18nContext";
 
 interface IconPickerProps {
   value: string;
@@ -212,6 +213,7 @@ const ICON_CATEGORIES: IconCategory[] = [
 ];
 
 export function IconPicker({ value, onChange }: IconPickerProps) {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("navigation");
   const [search, setSearch] = useState("");
@@ -249,7 +251,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
           {SelectedIcon ? (
             <SelectedIcon className="w-4 h-4 text-amber-400" />
           ) : (
-            <span className="text-[hsl(var(--color-ink-muted))]">选择图标</span>
+            <span className="text-[hsl(var(--color-ink-muted))]">{t("icon_picker.select")}</span>
           )}
           {value && <span className="text-[hsl(var(--color-ink-subtle))] ml-auto text-xs">{value}</span>}
         </button>
@@ -259,7 +261,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             onClick={() => onChange("")}
             className="text-[hsl(var(--color-ink-muted))] hover:text-red-400 text-xs"
           >
-            清除
+            {t("icon_picker.clear")}
           </button>
         )}
       </div>
@@ -267,14 +269,14 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
       <BaseModal
         isOpen={isOpen}
         onClose={() => { setIsOpen(false); setSearch(""); }}
-        title="选择图标"
+        title={t("icon_picker.select")}
       >
         <div className="space-y-3">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索图标..."
+            placeholder={t("icon_picker.search")}
             className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
 
@@ -326,7 +328,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
           </div>
 
           {displayIcons.length === 0 && (
-            <p className="text-center text-[hsl(var(--color-ink-muted))] text-sm py-4">没有找到图标</p>
+            <p className="text-center text-[hsl(var(--color-ink-muted))] text-sm py-4">{t("icon_picker.no_results")}</p>
           )}
         </div>
       </BaseModal>

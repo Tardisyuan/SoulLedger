@@ -24,7 +24,7 @@ export default function CrossJudgmentDetailPage() {
       const res = await crossTenantJudgmentsApi.get(id as string);
       setJudgment(res.data);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || "Failed to load");
+      setError(e?.response?.data?.detail || e?.message || t("crossJudgments.failed_to_load"));
     } finally {
       setLoading(false);
     }
@@ -42,18 +42,18 @@ export default function CrossJudgmentDetailPage() {
           onClick={() => router.back()}
           className="mb-4 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] text-sm"
         >
-          ← Back
+          {t("common.back")}
         </button>
-        <div className="text-red-400">{error}</div>
+        <div className="text-[hsl(var(--color-status-error))]">{error}</div>
       </div>
     );
   }
 
   const statusColors: Record<string, string> = {
-    PROPOSED: "bg-yellow-500/20 text-yellow-400",
-    ACTIVE: "bg-blue-500/20 text-blue-400",
-    CONCLUDED: "bg-green-500/20 text-green-400",
-    CANCELLED: "bg-gray-500/20 text-gray-400",
+    PROPOSED: "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))]",
+    ACTIVE: "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]",
+    CONCLUDED: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]",
+    CANCELLED: "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]",
   };
 
   return (
@@ -62,7 +62,7 @@ export default function CrossJudgmentDetailPage() {
         onClick={() => router.back()}
         className="mb-4 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] text-sm"
       >
-        ← Back
+        {t("common.back")}
       </button>
 
       <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-6">
@@ -77,7 +77,7 @@ export default function CrossJudgmentDetailPage() {
               <>
                 <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))]">{judgment?.title}</h1>
                 <p className="text-[hsl(var(--color-ink-subtle))] mt-1">
-                  Initiated by: {judgment?.initiating_tenant}
+                  {t("crossJudgments.initiated_by")}: {judgment?.initiating_tenant}
                 </p>
               </>
             )}
@@ -85,7 +85,7 @@ export default function CrossJudgmentDetailPage() {
           {loading ? (
             <Skeleton className="h-6 w-20" />
           ) : (
-            <span className={`px-3 py-1 rounded text-sm font-medium ${statusColors[judgment?.status] || "bg-gray-500/20"}`}>
+            <span className={`px-3 py-1 rounded text-sm font-medium ${statusColors[judgment?.status] || "bg-[hsl(var(--color-status-lost)/0.2)]"}`}>
               {judgment?.status}
             </span>
           )}
@@ -99,7 +99,7 @@ export default function CrossJudgmentDetailPage() {
 
         {/* Participants */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))] mb-3">Participants</h2>
+          <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))] mb-3">{t("crossJudgments.participants")}</h2>
           {loading ? (
             <div className="space-y-2">
               <Skeleton className="h-16 w-full" />
@@ -120,17 +120,17 @@ export default function CrossJudgmentDetailPage() {
               ))}
             </div>
           ) : (
-            <p className="text-[hsl(var(--color-ink-muted))]">No participants yet</p>
+            <p className="text-[hsl(var(--color-ink-muted))]">{t("crossJudgments.no_participants")}</p>
           )}
         </div>
 
         {/* Conclusion (if concluded) */}
         {!loading && judgment?.status === "CONCLUDED" && (
           <div className="bg-[hsl(var(--color-surface-2))] rounded-lg p-4">
-            <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))] mb-2">Verdict</h2>
+            <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))] mb-2">{t("crossJudgments.verdict")}</h2>
             <p className={`text-lg font-bold ${
-              judgment.conclusion_type === "PASS" ? "text-green-400" :
-              judgment.conclusion_type === "FAIL" ? "text-red-400" : "text-[hsl(var(--color-ink))]"
+              judgment.conclusion_type === "PASS" ? "text-[hsl(var(--color-status-success))]" :
+              judgment.conclusion_type === "FAIL" ? "text-[hsl(var(--color-status-error))]" : "text-[hsl(var(--color-ink))]"
             }`}>
               {judgment.conclusion_type}
             </p>

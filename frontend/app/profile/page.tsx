@@ -9,13 +9,6 @@ import { showToast } from "@/src/components/ui/Toast";
 import { PageSection } from "@/components/ui/page-section";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const ROLE_LABELS: Record<string, string> = {
-  ADMIN: "管理员",
-  JUDGE: "审判者",
-  GUARDIAN: "守护者",
-  VIEWER: "查看者",
-};
-
 export default function ProfilePage() {
   const { t } = useI18n();
   const { user, setUser } = useTenant();
@@ -150,7 +143,7 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={() => setEditingField(null)}
-                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
+                  className="px-2 py-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-xs text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
                 >
                   {t("common.cancel") || "取消"}
                 </button>
@@ -201,7 +194,7 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={() => setEditingField(null)}
-                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
+                  className="px-2 py-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-xs text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
                 >
                   {t("common.cancel") || "取消"}
                 </button>
@@ -252,7 +245,7 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={() => setEditingField(null)}
-                  className="px-2 py-1 bg-surface-2 border border-hairline rounded text-xs text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
+                  className="px-2 py-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-xs text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
                 >
                   {t("common.cancel") || "取消"}
                 </button>
@@ -291,14 +284,14 @@ export default function ProfilePage() {
             ) : (
               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                 profile?.role === "ADMIN"
-                  ? "bg-red-500/20 text-red-400"
+                  ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]"
                   : profile?.role === "JUDGE"
-                  ? "bg-amber-500/20 text-amber-400"
+                  ? "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))]"
                   : profile?.role === "GUARDIAN"
-                  ? "bg-blue-500/20 text-blue-400"
-                  : "bg-gray-500/20 text-gray-400"
+                  ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]"
+                  : "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]"
               }`}>
-                {ROLE_LABELS[profile?.role || user?.role || ""] || profile?.role || user?.role}
+                {t(`users.roles.${profile?.role || user?.role || ""}`) || profile?.role || user?.role}
               </span>
             )}
           </div>
@@ -323,7 +316,7 @@ export default function ProfilePage() {
           {!isLoading && !showPasswordForm ? (
             <button
               onClick={() => setShowPasswordForm(true)}
-              className="px-4 py-2 bg-surface-2 hover:bg-surface-3 border border-hairline rounded text-sm text-[hsl(var(--color-ink))] transition-colors"
+              className="px-4 py-2 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink))] transition-colors"
             >
               {t("profile.change_password") || "修改密码"}
             </button>
@@ -341,7 +334,7 @@ export default function ProfilePage() {
                   type="password"
                   value={passwordForm.oldPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
-                  className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-amber-500"
+                  className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
                   required
                 />
               </div>
@@ -353,7 +346,7 @@ export default function ProfilePage() {
                   type="password"
                   value={passwordForm.newPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                  className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-amber-500"
+                  className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
                   minLength={8}
                   required
                 />
@@ -366,7 +359,7 @@ export default function ProfilePage() {
                   type="password"
                   value={passwordForm.confirmPassword}
                   onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                  className="w-full bg-surface-2 border border-hairline rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-amber-500"
+                  className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
                   minLength={8}
                   required
                 />
@@ -387,7 +380,7 @@ export default function ProfilePage() {
                     setShowPasswordForm(false);
                     setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
                   }}
-                  className="px-4 py-2 bg-surface-2 border border-hairline rounded text-sm text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
+                  className="px-4 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
                 >
                   {t("common.cancel") || "取消"}
                 </button>

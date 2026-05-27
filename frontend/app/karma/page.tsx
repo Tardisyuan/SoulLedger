@@ -38,7 +38,7 @@ export default function KarmaPage() {
           label={t("karma.active_souls")}
           value={karmaStats?.state_distribution.find(s => s.state === "ALIVE")?.count}
           isLoading={isLoading}
-          color="text-green-400"
+          color="text-[hsl(var(--color-status-success))]"
         />
         <OverviewCard
           label={t("karma.judging_souls")}
@@ -51,18 +51,18 @@ export default function KarmaPage() {
       {/* State Distribution */}
       <SectionCard title={t("karma.state_distribution")} isLoading={isLoading} error={error}>
         {error ? (
-          <div className="text-red-400 text-sm">{t("common.error")}</div>
+          <div className="text-[hsl(var(--color-status-error))] text-sm">{t("common.error")}</div>
         ) : (
           <div className="space-y-2">
             {karmaStats?.state_distribution.map((item) => (
               <div key={item.state} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className={`w-3 h-3 rounded-full ${
-                    item.state === "ALIVE" ? "bg-green-500" :
-                    item.state === "JUDGING" ? "bg-amber-500" :
-                    item.state === "DISPOSED" ? "bg-gray-500" :
-                    item.state === "REINCARNATING" ? "bg-blue-500" :
-                    "bg-red-500"
+                    item.state === "ALIVE" ? "bg-[hsl(var(--color-status-alive))]" :
+                    item.state === "JUDGING" ? "bg-[hsl(var(--color-status-judging))]" :
+                    item.state === "DISPOSED" ? "bg-[hsl(var(--color-status-lost))]" :
+                    item.state === "REINCARNATING" ? "bg-[hsl(var(--color-status-reincarnating))]" :
+                    "bg-[hsl(var(--color-status-error))]"
                   }`} />
                   <span className="text-sm text-[hsl(var(--color-ink))]">{item.label}</span>
                 </div>
@@ -80,7 +80,7 @@ export default function KarmaPage() {
       {/* Karma Distribution */}
       <SectionCard title={t("karma.karma_distribution")} isLoading={isLoading} error={error}>
         {error ? (
-          <div className="text-red-400 text-sm">{t("common.error")}</div>
+          <div className="text-[hsl(var(--color-status-error))] text-sm">{t("common.error")}</div>
         ) : isLoading ? (
           <Skeleton className="h-48 w-full" />
         ) : (
@@ -112,7 +112,7 @@ export default function KarmaPage() {
       {karmaStats?.souls_by_realm && karmaStats.souls_by_realm.length > 0 && (
         <SectionCard title={t("karma.souls_by_realm")} isLoading={isLoading} error={error}>
           {error ? (
-            <div className="text-red-400 text-sm">{t("common.error")}</div>
+            <div className="text-[hsl(var(--color-status-error))] text-sm">{t("common.error")}</div>
           ) : (
             <div className="space-y-2">
               {karmaStats.souls_by_realm.map((item) => (
@@ -137,7 +137,7 @@ export default function KarmaPage() {
       {karmaStats?.recent_activity && karmaStats.recent_activity.length > 0 && (
         <SectionCard title={t("karma.recent_activity")} isLoading={isLoading} error={error}>
           {error ? (
-            <div className="text-red-400 text-sm">{t("common.error")}</div>
+            <div className="text-[hsl(var(--color-status-error))] text-sm">{t("common.error")}</div>
           ) : (
             <div className="space-y-2">
               {karmaStats.recent_activity.slice(0, 10).map((activity) => (
@@ -145,10 +145,10 @@ export default function KarmaPage() {
                   {/* Action badge */}
                   <div className="flex-shrink-0 mt-0.5">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                      activity.action === "CREATE" ? "bg-green-500/20 text-green-400" :
-                      activity.action === "UPDATE" ? "bg-blue-500/20 text-blue-400" :
-                      activity.action === "DELETE" ? "bg-red-500/20 text-red-400" :
-                      activity.action === "EXECUTE" ? "bg-purple-500/20 text-purple-400" :
+                      activity.action === "CREATE" ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]" :
+                      activity.action === "UPDATE" ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]" :
+                      activity.action === "DELETE" ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]" :
+                      activity.action === "EXECUTE" ? "bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))]" :
                       "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
                     }`}>
                       {t(`audit.actions.${activity.action}`)}

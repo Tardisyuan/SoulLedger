@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
+import { useI18n } from "@/src/contexts/I18nContext";
 
 export interface KarmaHistoryPoint {
   date: string;
@@ -50,6 +51,7 @@ export function KarmaChart({
   effectiveKarma,
   history,
 }: Omit<KarmaChartProps, "soulId">) {
+  const { t } = useI18n();
   const hasDecay = Math.abs(karmicBalance - effectiveKarma) > 0.01;
 
   return (
@@ -57,7 +59,7 @@ export function KarmaChart({
       {/* Summary Row */}
       <div className="flex gap-4 text-sm">
         <div className="flex-1">
-          <span className="text-[#8a8f98]">Balance: </span>
+          <span className="text-[#8a8f98]">{t("karma.balance")}: </span>
           <span
             className={`font-bold ${
               karmicBalance >= 0 ? "text-green-400" : "text-red-400"
@@ -69,7 +71,7 @@ export function KarmaChart({
         </div>
         {hasDecay && (
           <div className="flex-1">
-            <span className="text-[#8a8f98]">Effective: </span>
+            <span className="text-[#8a8f98]">{t("karma.effective")}: </span>
             <span
               className={`font-bold ${
                 effectiveKarma >= 0 ? "text-blue-400" : "text-red-400"
@@ -84,8 +86,9 @@ export function KarmaChart({
 
       {/* Chart */}
       {history.length > 0 ? (
-        <ResponsiveContainer width="100%" height={140}>
-          <AreaChart
+        <div style={{ minWidth: 0, minHeight: 140 }}>
+          <ResponsiveContainer width="100%" height={140}>
+            <AreaChart
             data={history}
             margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
           >
@@ -122,9 +125,10 @@ export function KarmaChart({
             />
           </AreaChart>
         </ResponsiveContainer>
+        </div>
       ) : (
         <div className="h-[140px] flex items-center justify-center text-[#8a8f98] text-xs">
-          No karma history available
+          {t("karma.no_history")}
         </div>
       )}
     </div>

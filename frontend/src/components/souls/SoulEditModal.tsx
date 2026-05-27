@@ -16,13 +16,7 @@ interface SoulEditModalProps {
   onUpdated: () => void;
 }
 
-const STATE_OPTIONS = [
-  { value: "ALIVE", label: "存活" },
-  { value: "JUDGING", label: "审判中" },
-  { value: "DISPOSED", label: "已处置" },
-  { value: "REINCARNATING", label: "轮回中" },
-  { value: "LOST", label: "失踪" },
-];
+const STATE_OPTION_VALUES = ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "LOST"] as const;
 
 export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModalProps) {
   const { t } = useI18n();
@@ -67,12 +61,12 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
       },
       {
         onSuccess: () => {
-          showToast("更新成功", "success");
+          showToast(t("souls.form.update_success"), "success");
           onUpdated();
           onClose();
         },
         onError: () => {
-          showToast("更新失败", "error");
+          showToast(t("souls.form.update_error"), "error");
         },
       }
     );
@@ -86,7 +80,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
         disabled={updateMutation.isPending}
         className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 rounded text-sm transition-colors"
       >
-        取消
+        {t("common.cancel")}
       </button>
       <button
         type="submit"
@@ -100,9 +94,9 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            更新中...
+            {t("souls.form.updating")}
           </span>
-        ) : "保存"}
+        ) : t("common.save")}
       </button>
     </div>
   );
@@ -111,13 +105,13 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      title="编辑灵魂"
+      title={t("souls.form.edit_title") || "Edit Soul"}
       footer={footer}
     >
       <form id="soul-edit-form" onSubmit={handleSubmit} className="space-y-4">
         {/* Name */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">名称</label>
+          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.name_label")}</label>
           <input
             type="text"
             autoFocus
@@ -130,7 +124,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
             className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none disabled:opacity-50 transition-colors ${
               getError('name') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
-            placeholder="输入灵魂名称"
+            placeholder={t("souls.form.name_placeholder")}
           />
           {getError('name') && (
             <span className="text-xs text-red-500">{getError('name')}</span>
@@ -139,7 +133,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
 
         {/* Birth Date */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">出生日期</label>
+          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.birth_date_label")}</label>
           <input
             type="date"
             value={birthDate}
@@ -151,29 +145,29 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
 
         {/* Origin Location */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">起源地点</label>
+          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.location_edit_label")}</label>
           <input
             type="text"
             value={originLocation}
             onChange={(e) => setOriginLocation(e.target.value)}
             disabled={updateMutation.isPending}
             className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
-            placeholder="输入起源地点"
+            placeholder={t("souls.form.location_placeholder")}
           />
         </div>
 
         {/* Current State */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">当前状态</label>
+          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.state_label")}</label>
           <select
             value={currentState}
             onChange={(e) => setCurrentState(e.target.value as Soul["current_state"])}
             disabled={updateMutation.isPending}
             className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
           >
-            {STATE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
+            {STATE_OPTION_VALUES.map((val) => (
+              <option key={val} value={val}>
+                {t(`souls.states.${val}`)}
               </option>
             ))}
           </select>
