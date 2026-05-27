@@ -133,7 +133,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         disabled={loading}
         className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded text-sm transition-colors"
       >
-        {t("auth.cancel")}
+        {t("common.cancel")}
       </button>
       <button
         type="submit"
