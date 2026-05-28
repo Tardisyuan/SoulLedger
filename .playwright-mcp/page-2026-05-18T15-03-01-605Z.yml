@@ -1,0 +1,40 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - img [ref=e5]
+        - generic [ref=e7]: SoulLedger
+      - generic [ref=e8]:
+        - combobox [ref=e9] [cursor=pointer]:
+          - option "—" [selected]
+        - button "Switch to light mode" [ref=e11] [cursor=pointer]:
+          - img [ref=e12]
+        - link "控制台" [ref=e16] [cursor=pointer]:
+          - /url: /login
+          - text: 控制台
+          - img [ref=e17]
+    - main [ref=e21]:
+      - generic [ref=e22]:
+        - heading "灵魂账本" [level=1] [ref=e23]
+        - paragraph [ref=e24]: 跨文明灵魂管理系统
+        - paragraph [ref=e25]: 统一管理中国地府、欧洲天堂地狱、埃及冥界三大文明体系的灵魂操作系统。
+      - generic [ref=e26]:
+        - heading "文明体系" [level=2] [ref=e27]
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - paragraph [ref=e30]: 中国地府
+            - paragraph [ref=e31]: 中国
+            - paragraph [ref=e32]: 十殿阎王、孟婆汤、六道轮回
+          - generic [ref=e33]:
+            - paragraph [ref=e34]: 欧洲天堂与地狱
+            - paragraph [ref=e35]: 欧洲
+            - paragraph [ref=e36]: 基督教审判、炼狱、但丁地狱、忘川河
+          - generic [ref=e37]:
+            - paragraph [ref=e38]: 埃及冥界
+            - paragraph [ref=e39]: 埃及
+            - paragraph [ref=e40]: 奥西里斯审判、心脏称重、芦苇之地
+      - generic [ref=e41]:
+        - paragraph [ref=e42]: 万古轮回皆有录
+        - paragraph [ref=e43]: SoulLedger v0.1
+  - button "Open Next.js Dev Tools" [ref=e49] [cursor=pointer]:
+    - img [ref=e50]

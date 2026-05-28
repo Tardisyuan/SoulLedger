@@ -365,8 +365,7 @@ export const menuButtonsApi = {
 
 // Audit
 export const auditApi = {
-  list: (params?: Record<string, string>) => api.get("/audit/", { params }),
-  create: (data: object) => api.post("/audit/create/", data),
+  list: (params?: Record<string, string>) => api.get("/audit-logs/", { params }),
 };
 
 // Users

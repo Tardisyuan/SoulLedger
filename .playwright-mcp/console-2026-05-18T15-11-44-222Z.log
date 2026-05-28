@@ -1,0 +1,13 @@
+[     184ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3333/login:0
+[     278ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[     353ms] [LOG] [HMR] connected @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   68626ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[   68773ms] [LOG] [HMR] connected @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[  246481ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[  248780ms] [LOG] [HMR] connected @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[  251219ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[  251429ms] [LOG] [HMR] connected @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[  256009ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[  259414ms] [LOG] [HMR] connected @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[  296662ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[  296779ms] [LOG] [HMR] connected @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477

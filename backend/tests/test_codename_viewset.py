@@ -253,16 +253,16 @@ class TestWorkflowViewSetsCodename(TestCase):
 class TestAuditLogViewSetCodename(TestCase):
     def test_audit_log_viewset_has_codename(self):
         from apps.audit.views import AuditLogViewSet
-        self.assertEqual(AuditLogViewSet.permission_codename, "audit_log")
+        self.assertEqual(AuditLogViewSet.permission_codename, "audit")
 
     def test_audit_log_viewset_extra_permissions(self):
         from apps.audit.views import AuditLogViewSet
         self.assertIn("actions", AuditLogViewSet.extra_permissions)
-        self.assertEqual(AuditLogViewSet.extra_permissions["actions"], ["audit_log.read"])
+        self.assertEqual(AuditLogViewSet.extra_permissions["actions"], ["audit.read"])
         self.assertIn("resources", AuditLogViewSet.extra_permissions)
-        self.assertEqual(AuditLogViewSet.extra_permissions["resources"], ["audit_log.read"])
+        self.assertEqual(AuditLogViewSet.extra_permissions["resources"], ["audit.read"])
         self.assertIn("stats", AuditLogViewSet.extra_permissions)
-        self.assertEqual(AuditLogViewSet.extra_permissions["stats"], ["audit_log.read"])
+        self.assertEqual(AuditLogViewSet.extra_permissions["stats"], ["audit.read"])
 
     def test_audit_log_viewset_inherits_mixin(self):
         from apps.audit.views import AuditLogViewSet

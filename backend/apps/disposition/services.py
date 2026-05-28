@@ -58,6 +58,8 @@ class DispositionService:
         Create a disposition based on judgment verdict and civilization.
         Routes to the correct realm using civilization-specific rules.
         """
+        from django.db import transaction
+
         soul = judgment.soul
         verdict = judgment.verdict
         civilization = soul.civilization
@@ -65,13 +67,14 @@ class DispositionService:
         realm_code = cls._route_to_realm(soul, verdict, judgment.judgment_method)
         realm = Realm.objects.filter(realm_code=realm_code).first()
 
-        disposition = Disposition.objects.create(
-            soul=soul,
-            judgment=judgment,
-            destination_realm=realm,
-            is_eternal=(realm.is_eternal if realm else False),
-            notes=f"Auto-created from {civilization} judgment {judgment.id}",
-        )
+        with transaction.atomic():
+            disposition = Disposition.objects.create(
+                soul=soul,
+                judgment=judgment,
+                destination_realm=realm,
+                is_eternal=(realm.is_eternal if realm else False),
+                notes=f"Auto-created from {civilization} judgment {judgment.id}",
+            )
 
         from apps.events.services import log_disposition_created
         log_disposition_created(disposition)
