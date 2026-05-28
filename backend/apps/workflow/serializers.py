@@ -36,37 +36,11 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
             "case_type",
             "is_active",
             "nodes",
-            "nodes_json",
             "created_at",
             "updated_at",
             "tenant",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
-
-    def to_internal_value(self, data):
-        # Extract nodes before validation
-        nodes_data = data.get("nodes", None)
-        ret = super().to_internal_value(data)
-        if nodes_data is not None:
-            ret["nodes"] = nodes_data
-        return ret
-
-    def create(self, validated_data):
-        nodes = validated_data.pop("nodes", None)
-        template = WorkflowTemplate.objects.create(**validated_data)
-        if nodes is not None:
-            template.nodes_json = nodes
-            template.save()
-        return template
-
-    def update(self, instance, validated_data):
-        nodes = validated_data.pop("nodes", None)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        if nodes is not None:
-            instance.nodes_json = nodes
-        instance.save()
-        return instance
 
 
 class WorkflowTemplateListSerializer(serializers.ModelSerializer):

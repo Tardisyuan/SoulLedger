@@ -98,5 +98,26 @@ services:
     depends_on:
       - backend
 
+  backup:
+    image: postgres:16-alpine
+    volumes:
+      - ./scripts:/scripts
+      - ./backups:/backups
+    environment:
+      - PGHOST=db
+      - PGPORT=5432
+      - PGDATABASE=soulledger
+      - PGUSER=soulledger
+      - PGPASSWORD=${DB_PASSWORD:-devpassword}
+    entrypoint: /bin/sh
+    command: >
+      -c "echo '0 2 * * * /scripts/backup-db.sh /backups' > /etc/crontabs/root &&
+          crond -f -l 2"
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - production
+
 volumes:
   postgres_data:

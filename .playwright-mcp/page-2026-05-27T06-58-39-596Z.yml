@@ -1,0 +1,293 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - link "Skip to content" [ref=e4] [cursor=pointer]:
+        - /url: "#start-of-content"
+      - banner [ref=e6]:
+        - heading "Navigation Menu" [level=2] [ref=e7]
+        - generic [ref=e9]:
+          - button "Toggle navigation" [ref=e11] [cursor=pointer]
+          - link "Homepage" [ref=e17] [cursor=pointer]:
+            - /url: /
+            - img [ref=e18]
+          - generic [ref=e20]:
+            - link "Sign in" [ref=e21] [cursor=pointer]:
+              - /url: /login?return_to=https%3A%2F%2Fgithub.com%2Fxiaonuobase%2FSnowy%2Ftree%2Fmaster%2Fsnowy-plugin-api
+            - button "Appearance settings" [ref=e24] [cursor=pointer]:
+              - img
+    - main [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e32]:
+            - img [ref=e33]
+            - link "xiaonuobase" [ref=e36] [cursor=pointer]:
+              - /url: /xiaonuobase
+            - generic [ref=e37]: /
+            - strong [ref=e38]:
+              - link "Snowy" [ref=e39] [cursor=pointer]:
+                - /url: /xiaonuobase/Snowy
+            - generic [ref=e40]: Public
+          - generic [ref=e41]:
+            - list:
+              - listitem [ref=e42]:
+                - link "You must be signed in to change notification settings" [ref=e43] [cursor=pointer]:
+                  - /url: /login?return_to=%2Fxiaonuobase%2FSnowy
+                  - img [ref=e44]
+                  - text: Notifications
+              - listitem [ref=e46]:
+                - link "Fork 174" [ref=e47] [cursor=pointer]:
+                  - /url: /login?return_to=%2Fxiaonuobase%2FSnowy
+                  - img [ref=e48]
+                  - text: Fork
+                  - generic "174" [ref=e50]
+              - listitem [ref=e51]:
+                - link "You must be signed in to star a repository" [ref=e53] [cursor=pointer]:
+                  - /url: /login?return_to=%2Fxiaonuobase%2FSnowy
+                  - img [ref=e54]
+                  - text: Star
+                  - generic "777 users starred this repository" [ref=e56]: "777"
+        - navigation "Repository" [ref=e57]:
+          - list [ref=e58]:
+            - listitem [ref=e59]:
+              - link "Code" [ref=e60] [cursor=pointer]:
+                - /url: /xiaonuobase/Snowy
+                - img [ref=e61]
+                - generic [ref=e63]: Code
+            - listitem [ref=e64]:
+              - link "Issues 6" [ref=e65] [cursor=pointer]:
+                - /url: /xiaonuobase/Snowy/issues
+                - img [ref=e66]
+                - generic [ref=e69]: Issues
+                - generic "6" [ref=e70]
+            - listitem [ref=e71]:
+              - link "Pull requests 5" [ref=e72] [cursor=pointer]:
+                - /url: /xiaonuobase/Snowy/pulls
+                - img [ref=e73]
+                - generic [ref=e75]: Pull requests
+                - generic "5" [ref=e76]
+            - listitem [ref=e77]:
+              - link "Actions" [ref=e78] [cursor=pointer]:
+                - /url: /xiaonuobase/Snowy/actions
+                - img [ref=e79]
+                - generic [ref=e81]: Actions
+            - listitem [ref=e82]:
+              - link "Projects" [ref=e83] [cursor=pointer]:
+                - /url: /xiaonuobase/Snowy/projects
+                - img [ref=e84]
+                - generic [ref=e86]: Projects
+            - listitem [ref=e87]:
+              - link "Wiki" [ref=e88] [cursor=pointer]:
+                - /url: /xiaonuobase/Snowy/wiki
+                - img [ref=e89]
+                - generic [ref=e91]: Wiki
+            - listitem [ref=e92]
+            - listitem [ref=e93]
+          - button "Additional navigation options" [ref=e97] [cursor=pointer]:
+            - img
+      - generic [ref=e108]:
+        - generic [ref=e112]:
+          - generic [ref=e113]:
+            - heading "Expand file tree" [level=2] [ref=e115]:
+              - button "Expand file tree" [ref=e116] [cursor=pointer]:
+                - img [ref=e117]
+            - button "master branch" [ref=e121] [cursor=pointer]:
+              - generic [ref=e122]:
+                - generic [ref=e124]:
+                  - img [ref=e126]
+                  - generic [ref=e129]: master
+                - generic:
+                  - img
+            - generic [ref=e131]:
+              - navigation "Breadcrumbs" [ref=e132]:
+                - heading "Breadcrumbs" [level=2] [ref=e133]
+                - list [ref=e134]:
+                  - listitem [ref=e135]:
+                    - link "Snowy" [ref=e136] [cursor=pointer]:
+                      - /url: /xiaonuobase/Snowy/tree/master
+              - generic [ref=e137]:
+                - text: /
+                - heading "snowy-plugin-api" [level=1] [ref=e138]
+                - text: /
+              - button "Copy path" [ref=e139] [cursor=pointer]:
+                - img [ref=e140]
+          - generic [ref=e145]:
+            - heading "Directory actions" [level=2] [ref=e146]
+            - generic [ref=e149]:
+              - img [ref=e151]
+              - combobox "Go to file" [ref=e153]
+            - heading "More options" [level=2] [ref=e154]
+            - button "More options" [ref=e155] [cursor=pointer]:
+              - img [ref=e156]
+        - generic [ref=e158]:
+          - generic [ref=e160]:
+            - heading "Latest commit" [level=2] [ref=e161]
+            - generic [ref=e162]:
+              - generic [ref=e164]:
+                - link "Thatpot" [ref=e165] [cursor=pointer]:
+                  - /url: /Thatpot
+                  - img "Thatpot" [ref=e166]
+                - link "commits by Thatpot" [ref=e167] [cursor=pointer]:
+                  - /url: /xiaonuobase/Snowy/commits?author=Thatpot
+                  - text: Thatpot
+              - link "【升级】优化导包，完成升级3.6.4版本" [ref=e171] [cursor=pointer]:
+                - /url: /xiaonuobase/Snowy/commit/08770a559ff1102e37912b230ea7bd6bf2a7a8be
+            - generic [ref=e172]:
+              - generic [ref=e174]:
+                - link "Commit 08770a5" [ref=e175] [cursor=pointer]:
+                  - /url: /xiaonuobase/Snowy/commit/08770a559ff1102e37912b230ea7bd6bf2a7a8be
+                  - text: 08770a5
+                - text: ·
+                - generic "Apr 23, 2026, 2:49 AM GMT+10" [ref=e176]: Apr 23, 2026last month
+              - generic [ref=e177]:
+                - heading "History" [level=2] [ref=e178]
+                - link "View commit history for this file." [ref=e180] [cursor=pointer]:
+                  - /url: /xiaonuobase/Snowy/commits/master/snowy-plugin-api
+                  - generic [ref=e181]:
+                    - generic:
+                      - img
+          - generic [ref=e182]:
+            - generic [ref=e183]:
+              - heading "Folders and files" [level=2] [ref=e184]
+              - table "Folders and files" [ref=e185]:
+                - rowgroup [ref=e186]:
+                  - row "Name Last commit message Last commit date" [ref=e187]:
+                    - columnheader "Name" [ref=e188]
+                    - columnheader "Last commit message" [ref=e189]:
+                      - generic "Last commit message" [ref=e190]
+                    - columnheader "Last commit date" [ref=e191]:
+                      - generic "Last commit date" [ref=e192]
+                - rowgroup [ref=e193]:
+                  - row "parent directory Parent directory" [ref=e194]:
+                    - cell "parent directory Parent directory" [ref=e195]:
+                      - heading "parent directory" [level=3] [ref=e196]
+                      - link "Parent directory" [ref=e197] [cursor=pointer]:
+                        - /url: /xiaonuobase/Snowy/tree/master
+                        - generic [ref=e198]:
+                          - img [ref=e199]
+                          - text: ..
+                  - row "snowy-plugin-auth-api, (Directory) 【更新】更新实时刷新数据权限范围及产品readme Mar 12, 20262 months ago" [ref=e201]:
+                    - cell "snowy-plugin-auth-api, (Directory)" [ref=e202]:
+                      - generic [ref=e203]:
+                        - img [ref=e204]
+                        - link "snowy-plugin-auth-api, (Directory)" [ref=e209] [cursor=pointer]:
+                          - /url: /xiaonuobase/Snowy/tree/master/snowy-plugin-api/snowy-plugin-auth-api
+                          - text: snowy-plugin-auth-api
+                    - cell "【更新】更新实时刷新数据权限范围及产品readme" [ref=e210]:
+                      - link "【更新】更新实时刷新数据权限范围及产品readme" [ref=e213] [cursor=pointer]:
+                        - /url: /xiaonuobase/Snowy/commit/447c4cad2daf06b5097c61cc9ad60903e3f086c4
+                    - cell "Mar 12, 20262 months ago" [ref=e214]:
+                      - generic [ref=e215]: Mar 12, 20262 months ago
+                  - row "snowy-plugin-biz-api, (Directory) 【升级】优化导包，完成升级3.6.4版本 Apr 23, 2026last month" [ref=e216]:
+                    - cell "snowy-plugin-biz-api, (Directory)" [ref=e217]:
+                      - generic [ref=e218]:
+                        - img [ref=e219]
+                        - link "snowy-plugin-biz-api, (Directory)" [ref=e224] [cursor=pointer]:
+                          - /url: /xiaonuobase/Snowy/tree/master/snowy-plugin-api/snowy-plugin-biz-api
+                          - text: snowy-plugin-biz-api
+                    - cell "【升级】优化导包，完成升级3.6.4版本" [ref=e225]:
+                      - link "【升级】优化导包，完成升级3.6.4版本" [ref=e228] [cursor=pointer]:
+                        - /url: /xiaonuobase/Snowy/commit/08770a559ff1102e37912b230ea7bd6bf2a7a8be
+                    - cell "Apr 23, 2026last month" [ref=e229]:
+                      - generic [ref=e230]: Apr 23, 2026last month
+                  - row "snowy-plugin-client-api, (Directory) 【底座】C端使用更新、上传组件优化 Apr 1, 20262 months ago" [ref=e231]:
+                    - cell "snowy-plugin-client-api, (Directory)" [ref=e232]:
+                      - generic [ref=e233]:
+                        - img [ref=e234]
+                        - link "snowy-plugin-client-api, (Directory)" [ref=e239] [cursor=pointer]:
+                          - /url: /xiaonuobase/Snowy/tree/master/snowy-plugin-api/snowy-plugin-client-api
+                          - text: snowy-plugin-client-api
+                    - cell "【底座】C端使用更新、上传组件优化" [ref=e240]:
+                      - link "【底座】C端使用更新、上传组件优化" [ref=e243] [cursor=pointer]:
+                        - /url: /xiaonuobase/Snowy/commit/ac610565e4f26d502590e6657c14601e0fc2ea0e
+                    - cell "Apr 1, 20262 months ago" [ref=e244]:
+                      - generic [ref=e245]: Apr 1, 20262 months ago
+                  - row "snowy-plugin-dev-api, (Directory) 【更新】修改两个首页及使用过程中一些常见的细节改进 Apr 22, 2026last month" [ref=e246]:
+                    - cell "snowy-plugin-dev-api, (Directory)" [ref=e247]:
+                      - generic [ref=e248]:
+                        - img [ref=e249]
+                        - link "snowy-plugin-dev-api, (Directory)" [ref=e254] [cursor=pointer]:
+                          - /url: /xiaonuobase/Snowy/tree/master/snowy-plugin-api/snowy-plugin-dev-api
+                          - text: snowy-plugin-dev-api
+                    - cell "【更新】修改两个首页及使用过程中一些常见的细节改进" [ref=e255]:
+                      - link "【更新】修改两个首页及使用过程中一些常见的细节改进" [ref=e258] [cursor=pointer]:
+                        - /url: /xiaonuobase/Snowy/commit/1ecd1aee084fd0b0c71b55e61d367cc6166405c0
+                    - cell "Apr 22, 2026last month" [ref=e259]:
+                      - generic [ref=e260]: Apr 22, 2026last month
+                  - row "snowy-plugin-gen-api, (Directory) 【升级】全新V3.0发布 May 7, 20242 years ago" [ref=e261]:
+                    - cell "snowy-plugin-gen-api, (Directory)" [ref=e262]:
+                      - generic [ref=e263]:
+                        - img [ref=e264]
+                        - link "snowy-plugin-gen-api, (Directory)" [ref=e269] [cursor=pointer]:
+                          - /url: /xiaonuobase/Snowy/tree/master/snowy-plugin-api/snowy-plugin-gen-api
+                          - text: snowy-plugin-gen-api
+                    - cell "【升级】全新V3.0发布" [ref=e270]:
+                      - link "【升级】全新V3.0发布" [ref=e273] [cursor=pointer]:
+                        - /url: /xiaonuobase/Snowy/commit/f06cd305f4c1a59b0234ae5f2cdc844880260fc0
+                    - cell "May 7, 20242 years ago" [ref=e274]:
+                      - generic [ref=e275]: May 7, 20242 years ago
+                  - row "snowy-plugin-mobile-api, (Directory) 【升级】v3.5.0后端更新，更新日志见推文 May 14, 2025last year" [ref=e276]:
+                    - cell "snowy-plugin-mobile-api, (Directory)" [ref=e277]:
+                      - generic [ref=e278]:
+                        - img [ref=e279]
+                        - link "snowy-plugin-mobile-api, (Directory)" [ref=e284] [cursor=pointer]:
+                          - /url: /xiaonuobase/Snowy/tree/master/snowy-plugin-api/snowy-plugin-mobile-api
+                          - text: snowy-plugin-mobile-api
+                    - cell "【升级】v3.5.0后端更新，更新日志见推文" [ref=e285]:
+                      - link "【升级】v3.5.0后端更新，更新日志见推文" [ref=e288] [cursor=pointer]:
+                        - /url: /xiaonuobase/Snowy/commit/9dd127479a40f532085bac98e1a7b71371546b3a
+                    - cell "May 14, 2025last year" [ref=e289]:
+                      - generic [ref=e290]: May 14, 2025last year
+                  - row "snowy-plugin-sys-api, (Directory) 【底座】SysOrgApi增加getAncestorNodes接口，供其他地方调用 Apr 22, 2026last month" [ref=e291]:
+                    - cell "snowy-plugin-sys-api, (Directory)" [ref=e292]:
+                      - generic [ref=e293]:
+                        - img [ref=e294]
+                        - link "snowy-plugin-sys-api, (Directory)" [ref=e299] [cursor=pointer]:
+                          - /url: /xiaonuobase/Snowy/tree/master/snowy-plugin-api/snowy-plugin-sys-api
+                          - text: snowy-plugin-sys-api
+                    - cell "【底座】SysOrgApi增加getAncestorNodes接口，供其他地方调用" [ref=e300]:
+                      - link "【底座】SysOrgApi增加getAncestorNodes接口，供其他地方调用" [ref=e303] [cursor=pointer]:
+                        - /url: /xiaonuobase/Snowy/commit/3810abb285ad7e8e211f3298f6a8ecf6e20e461d
+                    - cell "Apr 22, 2026last month" [ref=e304]:
+                      - generic [ref=e305]: Apr 22, 2026last month
+                  - row "README.md, (File) 【更新】注释没有使用的数据库驱动依赖，更新README Mar 8, 20233 years ago" [ref=e306]:
+                    - cell "README.md, (File)" [ref=e307]:
+                      - generic [ref=e308]:
+                        - img [ref=e309]
+                        - link "README.md, (File)" [ref=e314] [cursor=pointer]:
+                          - /url: /xiaonuobase/Snowy/blob/master/snowy-plugin-api/README.md
+                          - text: README.md
+                    - cell "【更新】注释没有使用的数据库驱动依赖，更新README" [ref=e315]:
+                      - link "【更新】注释没有使用的数据库驱动依赖，更新README" [ref=e318] [cursor=pointer]:
+                        - /url: /xiaonuobase/Snowy/commit/11f6938623461ea0944e4247fb36d6a8a379c9f9
+                    - cell "Mar 8, 20233 years ago" [ref=e319]:
+                      - generic [ref=e320]: Mar 8, 20233 years ago
+                  - row "pom.xml, (File) 【升级】全新V3.0发布 May 7, 20242 years ago" [ref=e321]:
+                    - cell "pom.xml, (File)" [ref=e322]:
+                      - generic [ref=e323]:
+                        - img [ref=e324]
+                        - link "pom.xml, (File)" [ref=e329] [cursor=pointer]:
+                          - /url: /xiaonuobase/Snowy/blob/master/snowy-plugin-api/pom.xml
+                          - text: pom.xml
+                    - cell "【升级】全新V3.0发布" [ref=e330]:
+                      - link "【升级】全新V3.0发布" [ref=e333] [cursor=pointer]:
+                        - /url: /xiaonuobase/Snowy/commit/f06cd305f4c1a59b0234ae5f2cdc844880260fc0
+                    - cell "May 7, 20242 years ago" [ref=e334]:
+                      - generic [ref=e335]: May 7, 20242 years ago
+            - generic [ref=e337]:
+              - heading "README.md" [level=2] [ref=e339]:
+                - link "README.md" [ref=e340] [cursor=pointer]:
+                  - /url: "#readme"
+              - article [ref=e342]:
+                - generic [ref=e343]:
+                  - heading "插件API接口模块" [level=1] [ref=e344]
+                  - 'link "Permalink: 插件API接口模块" [ref=e345] [cursor=pointer]':
+                    - /url: "#插件api接口模块"
+                    - img [ref=e346]
+                - paragraph [ref=e348]: "####登录鉴权插件api接口: snowy-plugin-auth-api"
+                - paragraph [ref=e349]: "####业务功能插件api接口: snowy-plugin-biz-api"
+                - paragraph [ref=e350]: "####C端功能插件api接口: snowy-plugin-client-api"
+                - paragraph [ref=e351]: "####开发工具插件api接口: snowy-plugin-dev-api"
+                - paragraph [ref=e352]: "####代码生成api接口: snowy-plugin-gen-api"
+                - paragraph [ref=e353]: "####移动端管理api接口: snowy-plugin-mobile-api"
+                - paragraph [ref=e354]: "####系统功能插件api接口: snowy-plugin-sys-api"
+  - alert [ref=e358]
