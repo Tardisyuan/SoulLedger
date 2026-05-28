@@ -1,0 +1,4 @@
+[     206ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3333/login:0
+[     284ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[     352ms] [LOG] [HMR] connected @ http://localhost:3333/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[  112547ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://192.168.2.115:8000/api/v1/auth/login/:0

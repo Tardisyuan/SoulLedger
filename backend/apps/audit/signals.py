@@ -307,7 +307,8 @@ def _create_audit_log(action, instance, changes=None):
 
         trace_id = _get_trace_id(request)
 
-        AuditLog.objects.create(
+        from django.db import transaction
+        transaction.on_commit(lambda: AuditLog.objects.create(
             tenant=tenant,
             user=user,
             action=action,
@@ -318,7 +319,7 @@ def _create_audit_log(action, instance, changes=None):
             user_agent=user_agent,
             description=f"{action} {instance._meta.verbose_name}",
             trace_id=trace_id,
-        )
+        ))
     except Exception as e:
         # Silently ignore errors during migrations when database schema is incomplete
         err_str = str(e).lower()

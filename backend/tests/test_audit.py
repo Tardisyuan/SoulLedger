@@ -123,9 +123,12 @@ class TestAuditUserFields:
         assert soul.create_user is None, "Anonymous save should have null create_user"
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 class TestAuditLogSignals:
-    """Test that AuditLog entries are created on model changes."""
+    """Test that AuditLog entries are created on model changes.
+
+    Uses transaction=True so that transaction.on_commit() callbacks fire.
+    """
 
     def test_audit_log_created_on_soul_create(self, auth_client):
         """Creating a soul should log an AuditLog entry."""
@@ -314,9 +317,12 @@ class TestPermissionChangeAuditLog:
         assert log.user.username == "audit_admin"
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 class TestAuditLogViewSet:
-    """Test AuditLog ViewSet with filtering support."""
+    """Test AuditLog ViewSet with filtering support.
+
+    Uses transaction=True so that transaction.on_commit() callbacks fire.
+    """
 
     def test_list_audit_logs(self, auth_client):
         """GET /api/v1/audit-logs/ returns paginated audit logs."""
@@ -522,9 +528,12 @@ class TestNewAuditActionTypes:
         assert log.action == "IMPORT"
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 class TestAuditApiEndpoint:
-    """Test the /api/v1/audit-logs/ endpoint (alias for /api/v1/audit-logs/)."""
+    """Test the /api/v1/audit-logs/ endpoint.
+
+    Uses transaction=True so that transaction.on_commit() callbacks fire.
+    """
 
     def test_list_audit_returns_paginated_results(self, auth_client):
         """GET /api/v1/audit-logs/ returns paginated results."""
