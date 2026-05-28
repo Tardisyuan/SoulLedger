@@ -2,6 +2,10 @@ node_modules/
 __pycache__/
 *.pyc
 .env
+.env.development
+.env.staging
+.env.production
+.env.local
 db.sqlite3
 staticfiles/
 .pytest_cache/
