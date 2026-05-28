@@ -17,7 +17,10 @@
     "user_profile": "User Profile",
     "expand_menu": "Expand menu",
     "collapse_menu": "Collapse menu",
-    "settings": "Settings"
+    "settings": "Settings",
+    "welcome": "Welcome",
+    "theme_light": "Switch to light mode",
+    "theme_dark": "Switch to dark mode"
   },
   "auth": {
     "login": "Login",
@@ -193,7 +196,8 @@
     "back": "← Back",
     "submitting": "Submitting...",
     "create": "Create",
-    "retry": "Retry"
+    "retry": "Retry",
+    "confirm": "Confirm"
   },
   "menus": {
     "title": "Menu Management",
@@ -212,7 +216,9 @@
     "active": "Active",
     "inactive": "Inactive",
     "no_menus": "No menus found",
-    "all_menus": "All Menus"
+    "all_menus": "All Menus",
+    "action": "Action",
+    "component_placeholder": "e.g. souls"
   },
   "permissions": {
     "title": "Permission Management",
@@ -274,7 +280,26 @@
   "workflow": {
     "title": "Approval Workflow",
     "existing": "Existing Workflows",
-    "editor": "Template Editor",
+    "editor": {
+      "new_template_name": "New Template",
+      "template_name_placeholder": "Template Name",
+      "add_node": "Add Node",
+      "delete_selected": "Delete Selected",
+      "saving": "Saving...",
+      "save_template": "Save Template",
+      "hint": "Double-click node to edit · Drag to connect nodes",
+      "edit_node": "Edit Node",
+      "node_name": "Node Name",
+      "node_type": "Node Type",
+      "court_code": "Court / Palace Code",
+      "court_placeholder": "e.g. First Court, Hall of Truth",
+      "approver_type": "Approver Type",
+      "approver_role": "Approver Role",
+      "approver_placeholder": "e.g. JUDGE, OVERSEER",
+      "new_node": "New Node",
+      "saved": "Template saved",
+      "save_failed": "Save failed"
+    },
     "templates": "Workflow Templates",
     "select_template": "Select a template to edit",
     "new_template": "New Template",
@@ -363,27 +388,7 @@
     "no_description": "No description",
     "appeal_badge": "Appeal",
     "template_detail": "Template Detail",
-    "no_node_data": "No node data",
-    "editor": {
-      "new_template_name": "New Template",
-      "template_name_placeholder": "Template Name",
-      "add_node": "Add Node",
-      "delete_selected": "Delete Selected",
-      "saving": "Saving...",
-      "save_template": "Save Template",
-      "hint": "Double-click node to edit · Drag to connect nodes",
-      "edit_node": "Edit Node",
-      "node_name": "Node Name",
-      "node_type": "Node Type",
-      "court_code": "Court / Palace Code",
-      "court_placeholder": "e.g. First Court, Hall of Truth",
-      "approver_type": "Approver Type",
-      "approver_role": "Approver Role",
-      "approver_placeholder": "e.g. JUDGE, OVERSEER",
-      "new_node": "New Node",
-      "saved": "Template saved",
-      "save_failed": "Save failed"
-    }
+    "no_node_data": "No node data"
   },
   "dashboard": {
     "title": "SoulLedger Statistics",
@@ -792,6 +797,47 @@
     "select": "Select Icon",
     "search": "Search icons...",
     "clear": "Clear",
-    "no_results": "No icons found"
+    "no_results": "No icons found",
+    "categories": {
+      "navigation": "Navigation",
+      "users": "Users",
+      "notifications": "Notifications",
+      "actions": "Actions",
+      "view": "View",
+      "status": "Status",
+      "security": "Security",
+      "soul": "Soul",
+      "travel": "Travel",
+      "files": "Files",
+      "charts": "Charts",
+      "admin": "Admin",
+      "time": "Time",
+      "media": "Media"
+    }
+  },
+  "menu_buttons": {
+    "title": "Menu Buttons",
+    "all_menus": "All Menus",
+    "create": "Add Button",
+    "edit": "Edit Button",
+    "no_buttons": "No buttons configured",
+    "name": "Button Name",
+    "code": "Code",
+    "permission": "Permission",
+    "bind_menu": "Bind to Menu",
+    "select_menu": "Select a menu",
+    "code_placeholder": "e.g. add, edit, delete, export",
+    "permission_placeholder": "e.g. soul.create, judgment.delete"
+  },
+  "error": {
+    "title": "Server Error",
+    "description": "Sorry, the server encountered a problem",
+    "retry": "Retry",
+    "home": "Return Home"
+  },
+  "not_found": {
+    "title": "Page Not Found",
+    "description": "Sorry, the page you visited does not exist",
+    "home": "Return Home"
   }
 }

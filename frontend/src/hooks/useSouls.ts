@@ -120,7 +120,7 @@ export function useUpdateSoul() {
       qc.invalidateQueries({ queryKey: soulKeys.all });
     },
     onError: () => {
-      showToast(t("souls.error_update"), "error");
+      showToast(t("souls.detail.error_update"), "error");
     },
   });
 }
@@ -135,7 +135,7 @@ export function useDeleteSoul() {
       qc.invalidateQueries({ queryKey: soulKeys.all });
     },
     onError: () => {
-      showToast(t("souls.error_delete"), "error");
+      showToast(t("souls.detail.error_delete"), "error");
     },
   });
 }

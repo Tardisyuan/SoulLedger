@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Actions CI/CD pipeline (backend + frontend + migration check)
 - Pre-commit hooks (ruff, prettier, eslint, trailing-whitespace)
 - API documentation via DRF Spectacular (Swagger UI at `/api/docs/`)
-- Frontend test framework: Jest + React Testing Library (124 tests)
+- Frontend test framework: Jest + React Testing Library (126 tests)
 - Semantic color tokens for theme-aware status/karma/verdict colors
 - i18n: ~100 new translation keys across en.json and zh-Hans.json
 - Data scope architecture design (Snowy analysis) documented for M7

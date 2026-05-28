@@ -27,6 +27,9 @@ class KarmaBalanceView(APIView):
     """
     permission_classes = [TenantPermission]
 
+    def get_required_permissions(self):
+        return ['karma.read']
+
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
@@ -48,6 +51,9 @@ class KarmaRecalculateView(APIView):
     Recalculates and persists karmic scores for a soul. Tenant-isolated.
     """
     permission_classes = [TenantPermission]
+
+    def get_required_permissions(self):
+        return ['karma.update']
 
     def post(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
@@ -72,6 +78,9 @@ class KarmaEffectiveView(APIView):
     """
     permission_classes = [TenantPermission]
 
+    def get_required_permissions(self):
+        return ['karma.read']
+
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
@@ -93,6 +102,9 @@ class KarmaInheritanceView(APIView):
     Returns reincarnation inheritance karma (20% of effective).
     """
     permission_classes = [TenantPermission]
+
+    def get_required_permissions(self):
+        return ['karma.read']
 
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
@@ -118,6 +130,9 @@ class KarmaOverviewStatsView(APIView):
     """
     permission_classes = [TenantPermission]
 
+    def get_required_permissions(self):
+        return ['karma.read']
+
     def get(self, request):
         user = request.user
         if getattr(user, 'role', None) != 'ADMIN':
@@ -128,12 +143,15 @@ class KarmaOverviewStatsView(APIView):
 
         tenant = getattr(request, 'tenant', None)
 
+        # ADMIN without tenant: show all souls
+        soul_qs = Soul.objects.all() if tenant is None else Soul.objects.filter(tenant=tenant)
+
         # S-H3: All queries scoped to tenant
-        total_souls = Soul.objects.filter(tenant=tenant).count()
+        total_souls = soul_qs.count()
 
         # State distribution
         state_counts = dict(
-            Soul.objects.filter(tenant=tenant).values_list("current_state")
+            soul_qs.values_list("current_state")
             .annotate(count=Count("id"))
             .values_list("current_state", "count")
         )
@@ -146,31 +164,30 @@ class KarmaOverviewStatsView(APIView):
             for s in SoulState.values
         ]
 
-        # Per-tenant soul counts - scoped to current tenant (S-H3)
+        # Per-tenant soul counts
         tenant_stats = []
-        tenant_obj = Tenant.objects.filter(code=tenant.code).first() if tenant else None
-        if tenant_obj:
-            tenant_data = Soul.objects.filter(tenant=tenant_obj).values('tenant__code', 'tenant__display_name').annotate(
-                total=Count('id'),
-            ).order_by('tenant__code')
+        tenant_data = soul_qs.values('tenant', 'tenant__code', 'tenant__display_name').annotate(
+            total=Count('id'),
+        ).order_by('tenant__code')
 
-            for td in tenant_data:
-                if td['total'] == 0:
-                    continue
-                state_breakdown = dict(
-                    Soul.objects.filter(tenant=tenant_obj)
-                    .values_list("current_state")
-                    .annotate(count=Count("id"))
-                    .values_list("current_state", "count")
-                )
-                tenant_stats.append({
-                    "tenant_code": td['tenant__code'],
-                    "tenant_name": td['tenant__display_name'],
-                    "total_souls": td['total'],
-                    "state_breakdown": {
-                        s: state_breakdown.get(s, 0) for s in SoulState.values
-                    },
-                })
+        for td in tenant_data:
+            if td['total'] == 0:
+                continue
+            state_breakdown = dict(
+                soul_qs.filter(tenant__code=td['tenant__code'])
+                .values_list("current_state")
+                .annotate(count=Count("id"))
+                .values_list("current_state", "count")
+            )
+            tenant_stats.append({
+                "tenant_id": td['tenant'],
+                "tenant_code": td['tenant__code'],
+                "tenant_name": td['tenant__display_name'],
+                "total_souls": td['total'],
+                "state_breakdown": {
+                    s: state_breakdown.get(s, 0) for s in SoulState.values
+                },
+            })
 
         # Karma distribution buckets - scoped to tenant (S-H3)
         karma_buckets = [
@@ -190,12 +207,13 @@ class KarmaOverviewStatsView(APIView):
                 filter=Q(merit_score__gte=F('demerit_score') + b['min']) &
                        Q(merit_score__lt=F('demerit_score') + b['max'])
             )
-        bucket_result = Soul.objects.filter(tenant=tenant).aggregate(**bucket_counts)
+        bucket_result = soul_qs.aggregate(**bucket_counts)
         for i, b in enumerate(karma_buckets):
             b["count"] = bucket_result.get(f'bucket_{i}', 0)
 
         # S-C2: Recent activity filtered to current tenant only
-        recent_logs = AuditLog.objects.filter(tenant=tenant).select_related("user").order_by("-timestamp")[:10]
+        audit_qs = AuditLog.objects.all() if tenant is None else AuditLog.objects.filter(tenant=tenant)
+        recent_logs = audit_qs.select_related("user").order_by("-timestamp")[:10]
         recent_activity = [
             {
                 "id": log.id,
@@ -211,7 +229,8 @@ class KarmaOverviewStatsView(APIView):
 
         # Souls by realm/disposition breakdown - scoped to tenant (S-H3)
         executed_realms = {}
-        for d in Disposition.objects.filter(tenant=tenant, is_executed=True).select_related("destination_realm").only("destination_realm__realm_code", "destination_realm__name_en", "destination_realm__civilization"):
+        disp_qs = Disposition.objects.all() if tenant is None else Disposition.objects.filter(tenant=tenant)
+        for d in disp_qs.filter(is_executed=True).select_related("destination_realm").only("destination_realm__realm_code", "destination_realm__name_en", "destination_realm__civilization"):
             if d.destination_realm:
                 realm_code = d.destination_realm.realm_code
                 if realm_code not in executed_realms:
@@ -244,6 +263,9 @@ class KarmaExportStatsView(APIView):
     Admin-only CSV export of all souls with their karma data.
     """
     permission_classes = [TenantPermission]
+
+    def get_required_permissions(self):
+        return ['karma.read']
 
     def get(self, request):
         user = request.user

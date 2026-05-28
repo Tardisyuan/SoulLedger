@@ -7,10 +7,10 @@ from rest_framework.response import Response
 from apps.reincarnation.models import Reincarnation
 from apps.reincarnation.serializers import ReincarnationSerializer
 from apps.core.permissions import TenantPermission
-from apps.core.viewsets import CodenameViewSetMixin
+from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 
 
-class ReincarnationViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
+class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ModelViewSet):
     queryset = Reincarnation.objects.all()
     serializer_class = ReincarnationSerializer
     permission_classes = [TenantPermission]

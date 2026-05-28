@@ -26,6 +26,8 @@ class AuditAction(models.TextChoices):
 class AuditLog(AuditUserFields, models.Model):
     """
     审计日志 - 记录所有操作
+
+    支持 trace_id 用于关联同一请求内的多个操作。
     """
     tenant = models.ForeignKey(
         "tenants.Tenant",
@@ -47,6 +49,13 @@ class AuditLog(AuditUserFields, models.Model):
     user_agent = models.CharField(max_length=500, blank=True)
     description = models.CharField(max_length=500, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+    trace_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="请求追踪ID，关联同一HTTP请求内的多个操作",
+    )
 
     class Meta:
         ordering = ["-timestamp"]
@@ -57,6 +66,7 @@ class AuditLog(AuditUserFields, models.Model):
             models.Index(fields=["user", "timestamp"]),
             models.Index(fields=["resource", "resource_id"]),
             models.Index(fields=["action"]),
+            models.Index(fields=["trace_id"]),
         ]
 
     def __str__(self):

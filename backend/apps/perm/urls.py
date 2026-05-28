@@ -18,4 +18,6 @@ urlpatterns = [
     path("roles/<int:pk>/", views.update_delete_role, name="detail-role"),
     path("roles/init/", views.init_roles, name="init-roles"),
     path("init/", views.init_permissions, name="init"),
+    path("export/", views.export_permissions, name="export"),
+    path("import/", views.import_permissions, name="import"),
 ]

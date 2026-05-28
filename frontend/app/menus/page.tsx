@@ -11,6 +11,7 @@ import { Modal } from "@/src/components/ui/Modal";
 import { IconPicker } from "@/src/components/ui/IconPicker";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 type LucideIconName = keyof typeof LucideIcons;
 
@@ -94,12 +95,20 @@ export default function MenusPage() {
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">{t("menus.title")}</h1>
-        <button
-          onClick={openCreate}
-          className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] rounded-md text-sm font-medium transition-colors"
+        <Link
+          href="/menus/buttons"
+          className="px-4 py-1.5 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] rounded-md text-sm text-[hsl(var(--color-ink-muted))] transition-colors"
         >
-          + {t("menus.create")}
-        </button>
+          {t("menu_buttons.title")}
+        </Link>
+        <RequirePermission permissions="menu.create">
+          <button
+            onClick={openCreate}
+            className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] rounded-md text-sm font-medium transition-colors"
+          >
+            + {t("menus.create")}
+          </button>
+        </RequirePermission>
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-6">
@@ -146,7 +155,7 @@ export default function MenusPage() {
                           <div className="flex flex-wrap gap-1">
                             {menu.roles.map((role) => (
                               <span key={role} className="px-1.5 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] rounded text-xs">
-                                {role}
+                                {t(`users.roles.${role}` as any)}
                               </span>
                             ))}
                           </div>
@@ -158,18 +167,22 @@ export default function MenusPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => openEdit(menu)}
-                            className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-sm mr-3"
-                          >
-                            {t("menus.edit")}
-                          </button>
-                          <button
-                            onClick={() => deleteMutation.mutate(menu.id)}
-                            className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-sm"
-                          >
-                            {t("menus.delete")}
-                          </button>
+                          <RequirePermission permissions="menu.update">
+                            <button
+                              onClick={() => openEdit(menu)}
+                              className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-sm mr-3"
+                            >
+                              {t("menus.edit")}
+                            </button>
+                          </RequirePermission>
+                          <RequirePermission permissions="menu.delete">
+                            <button
+                              onClick={() => deleteMutation.mutate(menu.id)}
+                              className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-sm"
+                            >
+                              {t("menus.delete")}
+                            </button>
+                          </RequirePermission>
                         </td>
                       </tr>
                     );
@@ -230,7 +243,7 @@ export default function MenusPage() {
             <input
               value={form.component}
               onChange={(e) => setForm({ ...form, component: e.target.value })}
-              placeholder="e.g. souls"
+              placeholder={t("menus.component_placeholder")}
               className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
           </div>
@@ -248,7 +261,7 @@ export default function MenusPage() {
                       : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] border border-hairline hover:border-[hsl(var(--color-accent))]"
                   }`}
                 >
-                  {role}
+                  {t(`users.roles.${role}` as any)}
                 </button>
               ))}
             </div>

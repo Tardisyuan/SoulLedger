@@ -19,7 +19,7 @@
 ```
 前端 (Next.js 16)  →  http://localhost:3333
 后端 (Django 5)    →  http://localhost:8000/api/v1/
-PostgreSQL 16       →  localhost:5432
+PostgreSQL 16       →  localhost:5432 (Docker)
 Redis 7             →  localhost:6379
 ```
 
@@ -74,24 +74,28 @@ SoulLedger/
 │   ├── apps/
 │   │   ├── souls/            # 灵魂模型、状态机、因果
 │   │   ├── karma/           # 功德计算服务 (含时间衰减、继承)
+│   │   ├── judgment/        # 审判系统
+│   │   ├── disposition/     # 处置方案
+│   │   ├── reincarnation/   # 轮回系统
 │   │   ├── actors/          # 角色系统 (判官、守护者等)
 │   │   ├── realms/          # 领域系统 (地府、天堂、冥界)
 │   │   ├── dispatch/        # 灵魂调度记录
-│   │   ├── cross/           # 跨域审判
-│   │   ├── audit/           # 审计日志
-│   │   ├── tenants/        # 多租户: Tenant模型、中间件
+│   │   ├── permissions/     # 跨域审判授权
+│   │   ├── audit/           # 审计日志 (含 trace_id)
+│   │   ├── tenants/        # 多租户: Tenant模型、TenantManager
 │   │   ├── authentication/  # JWT认证
 │   │   ├── workflow/        # 审批流程系统
-│   │   └── perm/           # 权限与菜单系统
-│   ├── config/              # Django配置、URL、Celery
-│   ├── tests/               # pytest测试
-│   └── scripts/
-│       ├── populate_chinese.py   # 中国角色数据
-│       ├── populate_european.py  # 欧洲角色数据
-│       └── populate_egyptian.py  # 埃及角色数据
+│   │   ├── menus/           # 树形菜单 + MenuButton
+│   │   ├── perm/           # RBAC: Permission, Role, DataScope, FieldPermission
+│   │   ├── core/           # 公共: middleware, viewsets, mixins
+│   │   ├── events/         # 灵魂事件
+│   │   ├── notifications/  # 通知系统
+│   │   └── org/            # 组织架构
+│   ├── config/              # Django配置、URL
+│   ├── tests/               # pytest测试 (383 tests)
 │
 ├── frontend/
-│   ├── app/                 # Next.js 14 App Router 页面
+│   ├── app/                 # Next.js 16 App Router 页面
 │   │   ├── souls/          # 灵魂列表与详情
 │   │   ├── actors/         # 角色管理
 │   │   ├── realms/         # 领域管理
@@ -121,16 +125,19 @@ SoulLedger/
 │   └── docker-compose.yml  # PostgreSQL + Redis
 │
 ├── scripts/
-│   ├── start-*.sh
-│   ├── stop-*.sh
-│   ├── restart-*.sh
-│   ├── status.sh
-│   └── logs/
+│   ├── start-*.sh          # 启动服务
+│   ├── stop-*.sh           # 停止服务 (PID_FILE + 双重检查)
+│   ├── restart-*.sh        # 重启服务
+│   ├── status.sh           # 查看状态
+│   ├── backup-db.sh        # PostgreSQL 数据库备份
+│   ├── pids/               # PID 文件
+│   └── logs/               # 日志文件
 │
-├── docs/                   # 神话研究文档
-│   ├── 地府结构研究/
-│   ├── 欧洲天堂地狱/
-│   └── 埃及冥界/
+├── docs/                   # 项目文档 + 神话研究
+│   ├── AUDIT_REPORT_*.md   # 项目审核报告
+│   ├── ROADMAP_V2.md       # 产品路线图
+│   ├── snowy-analysis.md   # Snowy 基线分析
+│   └── (世界观文档: 地府/欧洲/埃及神话体系)
 │
 ├── DESIGN.md               # Linear设计系统规范
 ├── AGENTS.md               # Agent工作规范
@@ -148,7 +155,7 @@ SoulLedger/
 - **M4**: 角色与领域系统 (Actors + Realms)
 - **M5**: 审批流程系统 (Workflow + 7种审判类型)
 - **M6**: 功德系统 (时间衰减 + 因果继承)
-- **M7**: 用户与组织重构 (Tenant 清理、AuditUserViewSetMixin)
+- **M7**: 用户与组织重构 + 权限系统完整实现 (RBAC codename, DataScope, Button Permission, Field Permission, Audit Trail, Tree Menu, Permission Export)
 
 ### 页面模块
 | 页面 | 功能 | 角色 |
@@ -218,8 +225,8 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE (新生命)
 | 层级 | 技术 |
 |------|------|
 | 前端 | Next.js 16, React 18, Tailwind CSS, TanStack Query v5, @xyflow/react, TypeScript |
-| 后端 | Django 5, Django REST Framework, django-multitenant, Celery |
-| 数据库 | PostgreSQL 16 |
+| 后端 | Django 5, Django REST Framework, 自定义 TenantManager (contextvars), Celery |
+| 数据库 | PostgreSQL 16 (生产/CI), SQLite (本地开发) |
 | 任务队列 | Celery 5, Redis 7 |
 | 容器 | Docker Compose |
 

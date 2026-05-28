@@ -6,6 +6,7 @@ import { dispatchApi, soulsApi, karmaApi, type Soul } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 export default function ProposeDispatchPage() {
   const { t } = useI18n();
@@ -118,13 +119,15 @@ export default function ProposeDispatchPage() {
         </div>
 
         <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent))] disabled:opacity-50"
+          <RequirePermission permissions="dispatch.create">
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent))] disabled:opacity-50"
           >
             {loading ? t("dispatch.submitting") : t("dispatch.submit_proposal")}
           </button>
+          </RequirePermission>
           <button
             type="button"
             onClick={() => router.back()}

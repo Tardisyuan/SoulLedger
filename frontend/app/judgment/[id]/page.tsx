@@ -6,6 +6,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { judgmentApi, soulsApi, type Soul } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 interface JudgmentDetail {
   id: string;
@@ -306,15 +307,17 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 </div>
 
                 {/* Submit */}
-                <button
-                  onClick={handleConclude}
-                  disabled={concludeMutation.isPending || !selectedVerdict}
-                  className="w-full py-2.5 px-4 bg-[hsl(var(--color-accent))] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-all text-black"
-                >
+                <RequirePermission permissions="judgment.conclude">
+                  <button
+                    onClick={handleConclude}
+                    disabled={concludeMutation.isPending || !selectedVerdict}
+                    className="w-full py-2.5 px-4 bg-[hsl(var(--color-accent))] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-all text-black"
+                  >
                   {concludeMutation.isPending
                     ? t("judgment.detail.concluding")
                     : t("judgment.detail.conclude")}
                 </button>
+                </RequirePermission>
               </div>
             </div>
           )}

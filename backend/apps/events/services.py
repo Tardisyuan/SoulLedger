@@ -45,6 +45,32 @@ class EventService:
             "is_eternal": disposition.is_eternal,
         }, actor)
 
+    @staticmethod
+    def log_judgment_concluded(judgment, actor: str = "system") -> None:
+        court_code = None
+        if hasattr(judgment, 'court') and judgment.court:
+            court_code = judgment.court.code if hasattr(judgment.court, 'code') else str(judgment.court)
+        EventService.log(judgment.soul, "JUDGMENT_CONCLUDED", {
+            "judgment_id": str(judgment.id),
+            "verdict": judgment.verdict,
+            "court": court_code,
+        }, actor)
+
+    @staticmethod
+    def log_karma_recalculated(soul, old_score: int, new_score: int, actor: str = "system") -> None:
+        EventService.log(soul, "KARMA_RECALCULATED", {
+            "old_score": old_score,
+            "new_score": new_score,
+            "delta": new_score - old_score,
+        }, actor)
+
+    @staticmethod
+    def log_reincarnation_triggered(reincarnation, actor: str = "system") -> None:
+        EventService.log(reincarnation.soul, "REINCARNATION_TRIGGERED", {
+            "reincarnation_id": str(reincarnation.id),
+            "new_identity": reincarnation.new_identity if hasattr(reincarnation, 'new_identity') else None,
+        }, actor)
+
 
 # Alias for backward compatibility
 log_soul_state_change = EventService.log_soul_state_change

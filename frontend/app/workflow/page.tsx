@@ -24,6 +24,7 @@ import WorkflowEditor from "@/src/components/workflow/WorkflowEditor";
 import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { WORKFLOW_TEMPLATES, type TemplateKey } from "@/src/config/workflow-templates";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 // ── Types for template data ──────────────────────────────────────
 
@@ -268,15 +269,17 @@ export default function WorkflowPage() {
                 <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{t("workflow.templates") || "流程模板"}</h2>
                 <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("workflow.select_template") || "选择模板进行编辑"}</p>
               </div>
-              <button
-                onClick={() => {
-                  setEditingTemplateId(null);
-                  setTab("editor");
-                }}
-                className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium transition-colors"
-              >
-                + {t("workflow.new_template") || "新建模板"}
-              </button>
+              <RequirePermission permissions="workflow.create">
+                <button
+                  onClick={() => {
+                    setEditingTemplateId(null);
+                    setTab("editor");
+                  }}
+                  className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium transition-colors"
+                >
+                  + {t("workflow.new_template") || "新建模板"}
+                </button>
+              </RequirePermission>
             </div>
 
             {/* 左右布局 */}
@@ -377,24 +380,28 @@ export default function WorkflowPage() {
                               >
                                 {t("workflow.view")}
                               </button>
-                              <button
-                                onClick={() => {
-                                  setEditingTemplateId(String(tmpl.id));
-                                  setTab("editor");
-                                }}
-                                className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium"
-                              >
-                                {t("common.edit") || "编辑"}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setConfirmingTemplate(tmpl);
-                                  setConfirmModalOpen(true);
-                                }}
-                                className="px-3 py-1.5 bg-[hsl(var(--color-status-error)/0.2)] hover:bg-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))] border border-[hsl(var(--color-status-error)/0.3)] rounded text-sm font-medium"
-                              >
-                                {t("common.delete") || "删除"}
-                              </button>
+                              <RequirePermission permissions="workflow.update">
+                                <button
+                                  onClick={() => {
+                                    setEditingTemplateId(String(tmpl.id));
+                                    setTab("editor");
+                                  }}
+                                  className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium"
+                                >
+                                  {t("common.edit") || "编辑"}
+                                </button>
+                              </RequirePermission>
+                              <RequirePermission permissions="workflow.delete">
+                                <button
+                                  onClick={() => {
+                                    setConfirmingTemplate(tmpl);
+                                    setConfirmModalOpen(true);
+                                  }}
+                                  className="px-3 py-1.5 bg-[hsl(var(--color-status-error)/0.2)] hover:bg-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))] border border-[hsl(var(--color-status-error)/0.3)] rounded text-sm font-medium"
+                                >
+                                  {t("common.delete") || "删除"}
+                                </button>
+                              </RequirePermission>
                             </div>
                           </div>
                           <p className="text-sm text-[hsl(var(--color-ink-muted))] mb-4">{tmpl.description || t("workflow.no_description")}</p>
@@ -452,26 +459,28 @@ export default function WorkflowPage() {
                             >
                               {t("workflow.view")}
                             </button>
-                            <button
-                              onClick={() => {
-                                setEditingTemplateData({
-                                  name: currentTemplate.name,
-                                  description: currentTemplate.description,
-                                  civilization: currentTemplate.civilization,
-                                  case_type: currentTemplate.caseType,
-                                  nodes_json: currentTemplate.nodes.map((n: FrontendNode) => ({
-                                    id: n.id,
-                                    node_name: n.name,
-                                    court_code: n.court,
-                                    node_type: n.type,
-                                  })),
-                                });
-                                setTab("editor");
-                              }}
-                              className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium"
-                            >
-                              {t("common.edit") || "编辑"}
-                            </button>
+                            <RequirePermission permissions="workflow.update">
+                              <button
+                                onClick={() => {
+                                  setEditingTemplateData({
+                                    name: currentTemplate.name,
+                                    description: currentTemplate.description,
+                                    civilization: currentTemplate.civilization,
+                                    case_type: currentTemplate.caseType,
+                                    nodes_json: currentTemplate.nodes.map((n: FrontendNode) => ({
+                                      id: n.id,
+                                      node_name: n.name,
+                                      court_code: n.court,
+                                      node_type: n.type,
+                                    })),
+                                  });
+                                  setTab("editor");
+                                }}
+                                className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium"
+                              >
+                                {t("common.edit") || "编辑"}
+                              </button>
+                            </RequirePermission>
                           </div>
                         </div>
                         <p className="text-sm text-[hsl(var(--color-ink-muted))] mb-4">{currentTemplate.description}</p>

@@ -6,16 +6,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi, type User, type PaginatedResponse } from "@/lib/api";
 import { userKeys } from "@/lib/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { useTenant } from "@/src/contexts/TenantContext";
 import { UserModal } from "@/src/components/users/UserModal";
 import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
 import { showToast } from "@/src/components/ui/Toast";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 
 export default function UsersPage() {
   const { t } = useI18n();
-  const { isAdmin } = useTenant();
   const queryClient = useQueryClient();
 
   const [page, setPage] = useState(1);
@@ -72,14 +71,14 @@ export default function UsersPage() {
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
           {t("users.title")}
         </h1>
-        {isAdmin && (
+        <RequirePermission permissions="user.create">
           <button
             onClick={() => setIsModalOpen(true)}
             className="px-3 py-1 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] text-black rounded text-xs font-medium transition-colors"
           >
             + {t("users.create_user")}
           </button>
-        )}
+        </RequirePermission>
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-6">
@@ -177,32 +176,34 @@ export default function UsersPage() {
                     </td>
                     <td className="px-4 py-3 text-sm text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {isAdmin && (
-                          <>
-                            <button
-                              onClick={() => setEditingUser(user)}
-                              className="px-2 py-1 text-xs bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
-                            >
-                              {t("common.edit")}
-                            </button>
-                            <button
-                              onClick={() => toggleStatusMutation.mutate({
-                                id: String(user.id),
-                                isActive: !user.is_active,
-                              })}
-                              disabled={toggleStatusMutation.isPending}
-                              className="px-2 py-1 text-xs bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors disabled:opacity-50"
-                            >
-                              {user.is_active ? t("users.deactivate") : t("users.activate")}
-                            </button>
-                            <button
-                              onClick={() => setDeleteUser(user)}
-                              className="px-2 py-1 text-xs bg-[hsl(var(--color-status-error)/0.2)] hover:bg-[hsl(var(--color-status-error)/0.3)] border border-[hsl(var(--color-status-error)/0.3)] rounded text-[hsl(var(--color-status-error))] transition-colors"
-                            >
-                              {t("common.delete")}
-                            </button>
-                          </>
-                        )}
+                        <RequirePermission permissions="user.update">
+                          <button
+                            onClick={() => setEditingUser(user)}
+                            className="px-2 py-1 text-xs bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
+                          >
+                            {t("common.edit")}
+                          </button>
+                        </RequirePermission>
+                        <RequirePermission permissions={["user.update", "user.activate"]}>
+                          <button
+                            onClick={() => toggleStatusMutation.mutate({
+                              id: String(user.id),
+                              isActive: !user.is_active,
+                            })}
+                            disabled={toggleStatusMutation.isPending}
+                            className="px-2 py-1 text-xs bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors disabled:opacity-50"
+                          >
+                            {user.is_active ? t("users.deactivate") : t("users.activate")}
+                          </button>
+                        </RequirePermission>
+                        <RequirePermission permissions="user.delete">
+                          <button
+                            onClick={() => setDeleteUser(user)}
+                            className="px-2 py-1 text-xs bg-[hsl(var(--color-status-error)/0.2)] hover:bg-[hsl(var(--color-status-error)/0.3)] border border-[hsl(var(--color-status-error)/0.3)] rounded text-[hsl(var(--color-status-error))] transition-colors"
+                          >
+                            {t("common.delete")}
+                          </button>
+                        </RequirePermission>
                       </div>
                     </td>
                   </tr>

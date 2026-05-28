@@ -1,26 +1,36 @@
 #!/bin/bash
-# SoulLedger Database Backup Script
-# Usage: ./scripts/backup-db.sh [backup_dir]
+# SoulLedger Database Backup Script (PostgreSQL)
+#
+# Usage:
+#   ./scripts/backup-db.sh                    # Backup to ./backups/
+#   ./scripts/backup-db.sh /path/to/backups   # Backup to specified directory
+#
+# Cron example (daily at 2am):
+#   0 2 * * * cd /path/to/SoulLedger && ./scripts/backup-db.sh
 
 set -euo pipefail
 
+# Configuration (override via environment variables)
 BACKUP_DIR="${1:-./backups}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="${BACKUP_DIR}/soulledger_${TIMESTAMP}.sql.gz"
-
-# Create backup directory if it doesn't exist
-mkdir -p "$BACKUP_DIR"
-
-# Load environment variables
-if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs)
-fi
-
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
 DB_NAME="${DB_NAME:-soulledger}"
 DB_USER="${DB_USER:-soulledger}"
 DB_PASSWORD="${DB_PASSWORD:-devpassword}"
+RETENTION_DAYS="${RETENTION_DAYS:-30}"
+
+BACKUP_FILE="${BACKUP_DIR}/soulledger_${TIMESTAMP}.sql.gz"
+
+mkdir -p "$BACKUP_DIR"
+
+# Load .env if present
+if [ -f .env ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source .env
+    set +a
+fi
 
 echo "Backing up SoulLedger database..."
 echo "  Host: ${DB_HOST}:${DB_PORT}"
@@ -46,11 +56,8 @@ else
     exit 1
 fi
 
-# Clean up old backups (keep last 30)
-BACKUP_COUNT=$(ls -1 "${BACKUP_DIR}"/soulledger_*.sql.gz 2>/dev/null | wc -l)
-if [ "$BACKUP_COUNT" -gt 30 ]; then
-    echo "Cleaning old backups (keeping last 30)..."
-    ls -1t "${BACKUP_DIR}"/soulledger_*.sql.gz | tail -n +31 | xargs rm -f
-fi
+# Clean up old backups
+echo "Cleaning up backups older than ${RETENTION_DAYS} days..."
+find "$BACKUP_DIR" -name "soulledger_*.sql.gz" -mtime +"$RETENTION_DAYS" -delete 2>/dev/null || true
 
 echo "Done."

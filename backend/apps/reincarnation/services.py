@@ -20,6 +20,14 @@ class ReincarnationService:
             SoulState.REINCARNATING,
             f"Reincarnation triggered from disposition {disposition.id}"
         )
+        # Log domain event
+        from apps.events.services import EventService
+        from apps.reincarnation.models import Reincarnation
+        # The reincarnation record is created in complete_rebirth, log with disposition info
+        EventService.log(disposition.soul, "REINCARNATION_TRIGGERED", {
+            "disposition_id": str(disposition.id),
+            "destination_realm": disposition.destination_realm.realm_code if disposition.destination_realm else None,
+        })
         return True
 
     @staticmethod

@@ -17,7 +17,10 @@
     "user_profile": "ملف المستخدم",
     "expand_menu": "Seshem Menu",
     "collapse_menu": "Sekhem Menu",
-    "settings": "Sekhem"
+    "settings": "Sekhem",
+    "welcome": "Per Djew",
+    "theme_light": "Sekhem Pepy Sethet",
+    "theme_dark": "Sekhem Khefere Sethet"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -107,7 +110,8 @@
       "updating": "Em Khemen Seth...",
       "birth_date_edit_label": "Wepet Her Tepy",
       "location_edit_label": "T3 Khet Seth",
-      "state_label": "Set Medu Tepy"
+      "state_label": "Set Medu Tepy",
+      "edit_title": "Edit Soul"
     },
     "detail": {
       "loading": "Khemut Aba Hemsu...",
@@ -168,7 +172,15 @@
       "passed": "Sethet",
       "purgatory": "Khet Her Tepy",
       "confirm_judgment": "Sesen Sheemtet Seth?"
-    }
+    },
+    "order_name_desc": "Name Z-A",
+    "karma_range": "Karma Range",
+    "order_karma_desc": "Karma High-Low",
+    "karma_max": "Max",
+    "karma_min": "Min",
+    "order_name": "Name A-Z",
+    "order_default": "Default",
+    "order_karma": "Karma Low-High"
   },
   "common": {
     "close": "إغلاق",
@@ -180,7 +192,12 @@
     "prev": "Em Tepy",
     "next": "Em Khet",
     "confirm_delete": "Sesen Wehem Seth",
-    "deleting": "Em Wehem Seth..."
+    "deleting": "Em Wehem Seth...",
+    "back": "← Khet",
+    "submitting": "Em Send...",
+    "create": "Seshem",
+    "retry": "Khemu",
+    "confirm": "Sesen"
   },
   "menus": {
     "title": "إدارة القائمة",
@@ -199,7 +216,9 @@
     "active": "نشط",
     "inactive": "غير نشط",
     "no_menus": "لم يتم العثور على قوائم",
-    "all_menus": "جميع القوائم"
+    "all_menus": "جميع القوائم",
+    "action": "Aha Seth",
+    "component_placeholder": "مثال: souls"
   },
   "permissions": {
     "title": "إدارة الصلاحيات",
@@ -255,12 +274,32 @@
     "role_create_error": "Ma Kheme Netjer Seth",
     "role_edit_error": "Ma Khemen Seth Netjer",
     "confirm_delete_role": "Sesen Wehem Netjer?",
-    "confirm_delete_role_message": "Ma Shemsu Sethety Wu Em Khet Seth. Iri Tepy."
+    "confirm_delete_role_message": "Ma Shemsu Sethety Wu Em Khet Seth. Iri Tepy.",
+    "subtitle": "Manage system roles and permissions"
   },
   "workflow": {
     "title": "Em Her Tepy Seth",
     "existing": "Kheme Seth Wu Em Khet",
-    "editor": "Pet Sethety",
+    "editor": {
+      "new_template_name": "New Template",
+      "template_name_placeholder": "Template Name",
+      "add_node": "Add Node",
+      "delete_selected": "Delete Selected",
+      "saving": "Saving...",
+      "save_template": "Save Template",
+      "hint": "Double-click node to edit · Drag to connect nodes",
+      "edit_node": "Edit Node",
+      "node_name": "Node Name",
+      "node_type": "Node Type",
+      "court_code": "Court / Palace Code",
+      "court_placeholder": "e.g. First Court, Hall of Truth",
+      "approver_type": "Approver Type",
+      "approver_role": "Approver Role",
+      "approver_placeholder": "e.g. JUDGE, OVERSEER",
+      "new_node": "New Node",
+      "saved": "Template saved",
+      "save_failed": "Save failed"
+    },
     "templates": "Pet Sethety Wu",
     "select_template": "Sesh Pet Sethety Em Khemen",
     "new_template": "Pet Sethety Werpet",
@@ -315,7 +354,41 @@
       "confirmed": "Sesen Seth",
       "rejected": "Wehem Seth",
       "skipped": "Iri Tepy"
-    }
+    },
+    "case_types": {
+      "HEART_WEIGHING": "Heart Weighing",
+      "DIVINE_TRIAL": "Divine Trial",
+      "ROUTINE": "Routine Trial",
+      "CROSS_REALM": "Cross-Realm Trial",
+      "CANONIZATION": "Canonization",
+      "PURGATORY_REVIEW": "Purgatory Review",
+      "APPEAL": "Appeal Trial",
+      "SPECIAL": "Special Trial",
+      "HERESY_TRIAL": "Heresy Trial"
+    },
+    "node_type": {
+      "appeal": "Appeal",
+      "evaluation": "Evaluation",
+      "execution": "Execution",
+      "trial": "Trial",
+      "final": "Final"
+    },
+    "civilizations": {
+      "EGYPTIAN": "Egyptian Duat",
+      "EUROPEAN": "European Heaven & Hell",
+      "CHINESE": "Chinese Diyu"
+    },
+    "template_detail": "Template Detail",
+    "appeal_badge": "Appeal",
+    "no_node_data": "No node data",
+    "approver_types": {
+      "ACTOR": "Actor",
+      "SYSTEM": "System",
+      "ROLE": "Role"
+    },
+    "no_description": "No description",
+    "view": "View",
+    "nodes_count": "{{count}} nodes"
   },
   "dashboard": {
     "title": "Medew Aba Hemsu Seth",
@@ -356,7 +429,10 @@
     "state_distribution": "Set Medu Seth",
     "karma_distribution": "Unemu Seth",
     "souls_by_realm": "Aba Seth Per Ahet",
-    "recent_activity": "Khedu Sethet"
+    "recent_activity": "Khedu Sethet",
+    "balance": "Balance",
+    "effective": "Effective",
+    "no_history": "No karma history available"
   },
   "judgment": {
     "title": "Sheemtet Seth",
@@ -552,13 +628,25 @@
   "organization": {
     "title": "Shemsu",
     "subtitle": "Amset Netjeru em Kehat - Shemsu",
-    "listTitle": "Wu Shemsu"
+    "listTitle": "Wu Shemsu",
+    "civilizations": {
+      "CHINESE": "Chinese Diyu",
+      "EGYPTIAN": "Egyptian Duat",
+      "EUROPEAN": "European Heaven & Hell"
+    },
+    "root": "Root",
+    "organizations_count": "{{count}} organizations"
   },
   "actors": {
     "title": "Netjeru",
     "subtitle": "Amset Netjeru em Kehat - Netjeru",
     "section": {
       "actors": "Wu Netjeru"
+    },
+    "civilizations": {
+      "CHINESE": "Chinese Diyu",
+      "EGYPTIAN": "Egyptian Duat",
+      "EUROPEAN": "European Heaven & Hell"
     }
   },
   "dispatch": {
@@ -568,7 +656,16 @@
     "pending": "Pert Abuf Em Set Medu",
     "history": "Medew Sethet",
     "no_pending": "Ma Rekhyu Pert Abuf Em Set Medu",
-    "no_history": "Ma Rekhyu Medew Pert Abuf"
+    "no_history": "Ma Rekhyu Medew Pert Abuf",
+    "select_soul": "Select soul...",
+    "reason_placeholder": "Reason for dispatch...",
+    "target_soul": "Target Soul",
+    "select_tenant": "Select tenant...",
+    "submitting": "Submitting...",
+    "target_tenant": "Target Tenant",
+    "submit_proposal": "Submit Proposal",
+    "reason": "Reason",
+    "soul_prefix": "Soul #"
   },
   "crossJudgments": {
     "title": "Sheemtet Seth Em Kehat",
@@ -576,7 +673,10 @@
     "list_title": "Wu Sheemtet Seth",
     "no_judgments": "Ma Rekhyu Sheemtet Seth Em Kehat",
     "initiated_by": "Sesen Abuf",
-    "participants": "Netjeru"
+    "participants": "Netjeru",
+    "no_participants": "No participants yet",
+    "verdict": "Verdict",
+    "failed_to_load": "Failed to load"
   },
   "users": {
     "title": "Iri Netjeru",
@@ -606,7 +706,29 @@
       "JUDGE": "Hemsu Seth",
       "GUARDIAN": "Smen Khet",
       "VIEWER": "Smen Pepy"
-    }
+    },
+    "password_empty": "Password is required",
+    "username_empty": "Username is required",
+    "first_name": "First Name",
+    "role_viewer": "Viewer",
+    "optional": "optional",
+    "create_error": "Failed to create user",
+    "password_edit_placeholder": "Leave empty to keep current",
+    "first_name_placeholder": "First Name",
+    "last_name": "Last Name",
+    "last_name_placeholder": "Last Name",
+    "username_placeholder": "Enter username",
+    "update_success": "User updated",
+    "password": "Password",
+    "role_admin": "Administrator",
+    "email_placeholder": "Enter email",
+    "password_placeholder": "Enter password",
+    "update_error": "Failed to update user",
+    "email_empty": "Email is required",
+    "create_success": "User created",
+    "role_guardian": "Guardian",
+    "role_judge": "Judge",
+    "edit_user": "Edit User"
   },
   "settings": {
     "title": "Iri Sethety",
@@ -628,5 +750,94 @@
       "red": "Red",
       "rose": "Rose"
     }
+  },
+  "menu_buttons": {
+    "title": "Sekhem Menu",
+    "all_menus": "Renenu Menu",
+    "create": "Kheper Sekhem",
+    "edit": "Sekhem Sekhem",
+    "no_buttons": "Sekhem renu em hotep",
+    "name": "Ren Sekhem",
+    "code": "Medu",
+    "permission": "Sekhem",
+    "bind_menu": "Kheper Menu",
+    "select_menu": "Sekhem Menu",
+    "code_placeholder": "renu add, edit, delete, export",
+    "permission_placeholder": "renu soul.create, judgment.delete"
+  },
+  "error": {
+    "title": "Setesh Medjat",
+    "description": "Per medjat em Setesh",
+    "retry": "Khemu",
+    "home": "Per Djew"
+  },
+  "not_found": {
+    "title": "Medjat Nen Renpet",
+    "description": "Per medjat nen pet",
+    "home": "Per Djew"
+  },
+  "icon_picker": {
+    "select": "Sekhem Medu",
+    "search": "Shesed medu...",
+    "clear": "Khet",
+    "no_results": "Medu nen",
+    "categories": {
+      "navigation": "Per Medu",
+      "users": "Renu",
+      "notifications": "Smedj",
+      "actions": "Khet",
+      "view": "Maa",
+      "status": "Sekhem",
+      "security": "Sa",
+      "soul": "Ba",
+      "travel": "Sekhet",
+      "files": "Medjat",
+      "charts": "Seshem",
+      "admin": "Hem",
+      "time": "Renpet",
+      "media": "Seshen"
+    }
+  },
+  "admin": {
+    "state_breakdown": "State Breakdown",
+    "loading_stats": "Loading statistics...",
+    "souls": "souls",
+    "civilization": "Civilization",
+    "avg_karma": "Avg Karma Balance",
+    "state_distribution": "Soul State Distribution",
+    "karma_stats": "Karma Statistics",
+    "no_realm_data": "No realm data available",
+    "failed_load": "Failed to load statistics",
+    "export_csv": "Export CSV",
+    "tenant_breakdown": "Tenant Breakdown",
+    "retry": "Retry",
+    "karma_distribution": "Karma Score Distribution",
+    "total_souls": "Total Souls",
+    "on": "on",
+    "soul_count": "Soul Count",
+    "top_karma": "Top Karma Souls",
+    "recent_activity": "Recent Activity",
+    "realm": "Realm",
+    "system_wide_overview": "System-wide karmic overview"
+  },
+  "permission": {
+    "denied_message": "You don't have permission to access this page or perform this action.",
+    "denied_title": "Permission Denied"
+  },
+  "welcome": {
+    "user_role": "User Role",
+    "recent_activity": "Recent Activity",
+    "current_civilization": "Current Civilization",
+    "quick_actions": "Quick Actions",
+    "just_now": "Just now",
+    "minutes_ago": "{{n}}m ago",
+    "view_all_activity": "View All Activity",
+    "system_version": "System Version",
+    "hours_ago": "{{n}}h ago",
+    "idle": "Idle",
+    "running": "Running",
+    "manage_agents": "Manage Agents",
+    "agent_status": "AI Agent Status",
+    "working": "Working"
   }
 }

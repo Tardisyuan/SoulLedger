@@ -97,6 +97,36 @@ class DispatchRecord(AuditUserFields, models.Model):
     def __str__(self):
         return f"Dispatch {self.soul.name} {self.source_tenant.code}->{self.target_tenant.code} ({self.status})"
 
+    # ── State Machine ──────────────────────────────────────────────
+
+    VALID_TRANSITIONS = {
+        DispatchStatus.PROPOSED: [DispatchStatus.APPROVED, DispatchStatus.REJECTED, DispatchStatus.CANCELLED],
+        DispatchStatus.APPROVED: [DispatchStatus.EXECUTED, DispatchStatus.CANCELLED],
+        DispatchStatus.REJECTED: [],
+        DispatchStatus.EXECUTED: [],
+        DispatchStatus.CANCELLED: [],
+    }
+
+    def can_transition_to(self, new_status: str) -> bool:
+        return new_status in self.VALID_TRANSITIONS.get(self.status, [])
+
+    def transition_to(self, new_status: str, **kwargs) -> bool:
+        from django.db import transaction as db_transaction
+        with db_transaction.atomic():
+            locked = DispatchRecord.objects.select_for_update().get(pk=self.pk)
+            if not locked.can_transition_to(new_status):
+                return False
+            locked.status = new_status
+            for field, value in kwargs.items():
+                if hasattr(locked, field):
+                    setattr(locked, field, value)
+            locked.save()
+        self.status = locked.status
+        for field in kwargs:
+            if hasattr(self, field):
+                setattr(self, field, getattr(locked, field))
+        return True
+
 
 class CrossTenantJudgment(AuditUserFields, models.Model):
     """
@@ -143,6 +173,35 @@ class CrossTenantJudgment(AuditUserFields, models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.status})"
+
+    # ── State Machine ──────────────────────────────────────────────
+
+    VALID_TRANSITIONS = {
+        JudgmentStatus.PROPOSED: [JudgmentStatus.ACTIVE, JudgmentStatus.CANCELLED],
+        JudgmentStatus.ACTIVE: [JudgmentStatus.CONCLUDED, JudgmentStatus.CANCELLED],
+        JudgmentStatus.CONCLUDED: [],
+        JudgmentStatus.CANCELLED: [],
+    }
+
+    def can_transition_to(self, new_status: str) -> bool:
+        return new_status in self.VALID_TRANSITIONS.get(self.status, [])
+
+    def transition_to(self, new_status: str, **kwargs) -> bool:
+        from django.db import transaction as db_transaction
+        with db_transaction.atomic():
+            locked = CrossTenantJudgment.objects.select_for_update().get(pk=self.pk)
+            if not locked.can_transition_to(new_status):
+                return False
+            locked.status = new_status
+            for field, value in kwargs.items():
+                if hasattr(locked, field):
+                    setattr(locked, field, value)
+            locked.save()
+        self.status = locked.status
+        for field in kwargs:
+            if hasattr(self, field):
+                setattr(self, field, getattr(locked, field))
+        return True
 
 
 class CrossTenantJudgmentParticipant(AuditUserFields, models.Model):

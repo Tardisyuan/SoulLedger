@@ -8,6 +8,7 @@ from apps.workflow.models import (
     ApprovalWorkflow,
     ApprovalNode,
     ApprovalWorkflowStatus,
+    WorkflowTemplate,
     NodeStatus,
     NodeType,
     CaseType,
@@ -160,8 +161,24 @@ class WorkflowService:
         if validation_error:
             raise ValueError(validation_error)
 
-        # Look up template
-        template = WORKFLOW_TEMPLATES.get((civilization, case_type))
+        # Look up template: DB first, then hardcoded fallback
+        template = None
+        try:
+            db_template = WorkflowTemplate.objects.filter(
+                civilization=civilization,
+                case_type=case_type,
+                is_active=True,
+            ).first()
+            if db_template:
+                template = {
+                    "name": db_template.name,
+                    "nodes": db_template.nodes_json,
+                }
+        except Exception:
+            pass
+
+        if template is None:
+            template = WORKFLOW_TEMPLATES.get((civilization, case_type))
 
         # Fallback for unhandled combinations
         if template is None:

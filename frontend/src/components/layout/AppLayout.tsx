@@ -186,7 +186,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
               <div className="w-3/4 flex justify-center pr-4">
                 <div className="text-xs text-[hsl(var(--color-ink-subtle))]">
-                  SoulLedger v0.1
+                  {t("footer.version")}
                 </div>
               </div>
             </>
@@ -270,7 +270,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {/* Theme toggle */}
             <button
               onClick={toggleTheme}
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={theme === "dark" ? t("nav.theme_light") : t("nav.theme_dark")}
               className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
             >
               {theme === "dark" ? (

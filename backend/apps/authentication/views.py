@@ -291,7 +291,7 @@ class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
 # ---------------------------------------------------------------------------
 
 
-class LoginLogViewSet(viewsets.ReadOnlyModelViewSet):
+class LoginLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     """
     登录日志 API
 
@@ -302,6 +302,7 @@ class LoginLogViewSet(viewsets.ReadOnlyModelViewSet):
         GET /api/v1/login-logs/{id}/   - 获取登录日志详情
     """
     permission_classes = [TenantPermission, IsAdminPermission]
+    permission_codename = "login_log"
     serializer_class = LoginLogSerializer
 
     def get_queryset(self):

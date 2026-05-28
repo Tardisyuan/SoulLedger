@@ -17,10 +17,10 @@ from apps.workflow.serializers import (
 from apps.workflow.services import WorkflowService
 from apps.core.permissions import TenantPermission
 from apps.core.mixins import TenantQuerySetMixin, TenantCreateMixin
-from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 
 
-class WorkflowTemplateViewSet(CodenameViewSetMixin, TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
+class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     WorkflowTemplate CRUD.
     """
@@ -37,7 +37,7 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, TenantQuerySetMixin, TenantC
         return WorkflowTemplateSerializer
 
 
-class ApprovalWorkflowViewSet(CodenameViewSetMixin, TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
+class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     ApprovalWorkflow CRUD + node actions.
     """
@@ -152,7 +152,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, TenantQuerySetMixin, TenantC
         return Response({"error": "Failed to create workflow"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ApprovalNodeViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
+class ApprovalNodeViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
     """
     ApprovalNode CRUD.
     """
