@@ -254,6 +254,7 @@ export interface KarmaStatsOverview {
   total_souls: number;
   state_distribution: { state: string; label: string; count: number }[];
   tenants: {
+    tenant_id: number;
     tenant_code: string;
     tenant_name: string;
     total_souls: number;
@@ -280,7 +281,7 @@ export interface KarmaStatsOverview {
 export const karmaApi = {
   balance: (soulId: number) => api.get(`/karma/balance/${soulId}/`),
   effective: (soulId: number) => api.get(`/karma/effective/${soulId}/`),
-  recalculate: (soulId: number) => api.post(`/karma/recalculate/${soulId}/`),
+  recalculate: (soulId: number) => api.post(`/karma/calculate/${soulId}/`),
   statsOverview: () => api.get<KarmaStatsOverview>("/karma/stats/overview/"),
   exportStats: (params?: Record<string, string>) => api.get("/karma/stats/export/", { params, responseType: "blob" }),
 };
@@ -339,9 +340,27 @@ export interface MenuItem {
 export const menusApi = {
   list: () => api.get("/menus/"),
   all: () => api.get("/menus/all/"),
+  tree: () => api.get("/menus/tree/"),
   create: (data: Partial<MenuItem>) => api.post("/menus/create/", data),
   update: (id: number, data: Partial<MenuItem>) => api.patch(`/menus/${id}/`, data),
   delete: (id: number) => api.delete(`/menus/${id}/`),
+};
+
+// Menu Buttons
+export interface MenuButton {
+  id: number;
+  name: string;
+  code: string;
+  permission: string;
+  order: number;
+  is_active: boolean;
+}
+
+export const menuButtonsApi = {
+  list: (menuId?: number) => api.get("/menus/buttons/", { params: menuId ? { menu_id: menuId } : {} }),
+  create: (data: Partial<MenuButton>) => api.post("/menus/buttons/", data),
+  update: (id: number, data: Partial<MenuButton>) => api.patch(`/menus/buttons/${id}/`, data),
+  delete: (id: number) => api.delete(`/menus/buttons/${id}/`),
 };
 
 // Audit
@@ -430,8 +449,8 @@ export const usersApi = {
   delete: (id: string) => api.delete(`/users/${id}/`),
   activate: (id: string) => api.post(`/users/${id}/activate/`),
   deactivate: (id: string) => api.post(`/users/${id}/deactivate/`),
-  export: () => api.get("/users/export/", { responseType: "blob" }),
-  import: (data: FormData) => api.post("/users/import/", data, {
+  export: () => api.get("/users/export_csv/", { responseType: "blob" }),
+  import: (data: FormData) => api.post("/users/import_csv/", data, {
     headers: { "Content-Type": "multipart/form-data" },
   }),
 };

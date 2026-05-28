@@ -8,7 +8,6 @@ export default function Loading() {
           <div className="absolute inset-0 border-4 border-amber-500/20 rounded-full" />
           <div className="absolute inset-0 border-4 border-transparent border-t-amber-500 rounded-full animate-spin" />
         </div>
-        <p className="text-[hsl(var(--color-ink-muted))] animate-pulse">加载中...</p>
       </div>
     </div>
   );

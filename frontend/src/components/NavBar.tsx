@@ -54,9 +54,7 @@ export function NavBar() {
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            title={
-              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
-            }
+            title={theme === "dark" ? t("nav.theme_light") : t("nav.theme_dark")}
             className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
           >
             {theme === "dark" ? (

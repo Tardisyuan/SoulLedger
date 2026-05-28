@@ -164,6 +164,8 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
                 else:
                     description = f"Permission updated on role {role_name}"
 
+            trace_id = _get_trace_id(request)
+
             AuditLog.objects.create(
                 tenant=tenant,
                 user=user,
@@ -174,6 +176,7 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
                 ip_address=ip_address,
                 user_agent=user_agent,
                 description=description,
+                trace_id=trace_id,
             )
             logger.debug(f"Created PERMISSION_CHANGE audit log for {model_name} {resource_id}")
         except Exception as e:
@@ -237,6 +240,35 @@ def _build_changes(instance, old_instance=None):
     return changes if changes else None
 
 
+def _get_trace_id(request=None):
+    """Extract or generate trace_id from request for correlation."""
+    if request is None:
+        try:
+            from apps.core.request_local import get_current_request
+            request = get_current_request()
+        except Exception:
+            return ''
+
+    if request is None:
+        return ''
+
+    # Check for existing trace_id on request (set by middleware)
+    trace_id = getattr(request, '_audit_trace_id', None)
+    if trace_id:
+        return trace_id
+
+    # Generate new trace_id from request headers or create one
+    import uuid
+    trace_id = request.META.get('HTTP_X_TRACE_ID', '')
+    if not trace_id:
+        trace_id = uuid.uuid4().hex[:16]
+
+    # Cache on request for reuse within same request
+    if request:
+        request._audit_trace_id = trace_id
+    return trace_id
+
+
 def _create_audit_log(action, instance, changes=None):
     """Create an AuditLog entry for the given action."""
     # Skip during migrations to avoid schema-not-ready errors
@@ -273,6 +305,8 @@ def _create_audit_log(action, instance, changes=None):
             ip_address = _get_client_ip(request) or ''
             user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
 
+        trace_id = _get_trace_id(request)
+
         AuditLog.objects.create(
             tenant=tenant,
             user=user,
@@ -283,6 +317,7 @@ def _create_audit_log(action, instance, changes=None):
             ip_address=ip_address,
             user_agent=user_agent,
             description=f"{action} {instance._meta.verbose_name}",
+            trace_id=trace_id,
         )
     except Exception as e:
         # Silently ignore errors during migrations when database schema is incomplete

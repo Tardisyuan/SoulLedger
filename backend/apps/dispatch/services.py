@@ -3,7 +3,7 @@ Dispatch service — handles cross-tenant soul dispatching logic.
 """
 from django.db import transaction
 from django.utils import timezone
-from apps.dispatch.models import DispatchRecord, DispatchStatus, CrossTenantJudgment, CrossTenantJudgmentParticipant
+from apps.dispatch.models import DispatchRecord, DispatchStatus, CrossTenantJudgment, CrossTenantJudgmentParticipant, JudgmentStatus
 from apps.souls.models import Soul, SoulState
 from apps.events.models import SoulEvent, EventType
 from apps.tenants.models import Notification
@@ -58,6 +58,20 @@ class DispatchService:
         # Notify target tenant
         DispatchService._notify_target_tenant(dispatch_record)
 
+        # Log domain event
+        SoulEvent.objects.create(
+            tenant=source_tenant,
+            soul=soul,
+            event_type=EventType.STATE_CHANGED,
+            payload={
+                "action": "DISPATCH_PROPOSED",
+                "dispatch_id": str(dispatch_record.id),
+                "target_tenant": target_tenant.code,
+                "reason": reason,
+            },
+            actor=str(dispatcher),
+        )
+
         return dispatch_record
 
     @staticmethod
@@ -89,15 +103,20 @@ class DispatchService:
         Returns:
             DispatchRecord: Updated dispatch record
         """
-        if dispatch_record.status != DispatchStatus.PROPOSED:
+        if not dispatch_record.transition_to(DispatchStatus.APPROVED, decided_at=timezone.now()):
             raise ValueError(f"Cannot approve dispatch in status: {dispatch_record.status}")
-
-        dispatch_record.status = DispatchStatus.APPROVED
-        dispatch_record.decided_at = timezone.now()
-        dispatch_record.save()
 
         # Notify source tenant
         DispatchService._notify_approval(dispatch_record, approved=True)
+
+        # Log domain event
+        SoulEvent.objects.create(
+            tenant=dispatch_record.source_tenant,
+            soul=dispatch_record.soul,
+            event_type=EventType.STATE_CHANGED,
+            payload={"action": "DISPATCH_APPROVED", "dispatch_id": str(dispatch_record.id)},
+            actor=str(approver),
+        )
 
         return dispatch_record
 
@@ -114,16 +133,22 @@ class DispatchService:
         Returns:
             DispatchRecord: Updated dispatch record
         """
-        if dispatch_record.status != DispatchStatus.PROPOSED:
+        if not dispatch_record.transition_to(DispatchStatus.REJECTED, decided_at=timezone.now()):
             raise ValueError(f"Cannot reject dispatch in status: {dispatch_record.status}")
-
-        dispatch_record.status = DispatchStatus.REJECTED
-        dispatch_record.decided_at = timezone.now()
         dispatch_record.reason = f"{dispatch_record.reason}\n\nRejection reason: {reason}"
-        dispatch_record.save()
+        dispatch_record.save(update_fields=["reason"])
 
         # Notify source tenant
         DispatchService._notify_approval(dispatch_record, approved=False, reason=reason)
+
+        # Log domain event
+        SoulEvent.objects.create(
+            tenant=dispatch_record.source_tenant,
+            soul=dispatch_record.soul,
+            event_type=EventType.STATE_CHANGED,
+            payload={"action": "DISPATCH_REJECTED", "dispatch_id": str(dispatch_record.id), "reason": reason},
+            actor=str(rejector),
+        )
 
         return dispatch_record
 
@@ -164,7 +189,7 @@ class DispatchService:
         Raises:
             ValueError: If dispatch is not in APPROVED status
         """
-        if dispatch_record.status != DispatchStatus.APPROVED:
+        if not dispatch_record.can_transition_to(DispatchStatus.EXECUTED):
             raise ValueError(f"Cannot execute dispatch in status: {dispatch_record.status}")
 
         with transaction.atomic():
@@ -188,10 +213,8 @@ class DispatchService:
                 actor=str(executor),
             )
 
-            # Update dispatch record
-            dispatch_record.status = DispatchStatus.EXECUTED
-            dispatch_record.executed_at = timezone.now()
-            dispatch_record.save()
+            # Update dispatch record via state machine
+            dispatch_record.transition_to(DispatchStatus.EXECUTED, executed_at=timezone.now())
 
         return dispatch_record
 
@@ -207,12 +230,8 @@ class DispatchService:
         Returns:
             DispatchRecord: Updated dispatch record
         """
-        if dispatch_record.status not in [DispatchStatus.PROPOSED, DispatchStatus.APPROVED]:
+        if not dispatch_record.transition_to(DispatchStatus.CANCELLED, decided_at=timezone.now()):
             raise ValueError(f"Cannot cancel dispatch in status: {dispatch_record.status}")
-
-        dispatch_record.status = DispatchStatus.CANCELLED
-        dispatch_record.decided_at = timezone.now()
-        dispatch_record.save()
 
         return dispatch_record
 
@@ -262,7 +281,7 @@ class CrossTenantJudgmentService:
         Returns:
             CrossTenantJudgmentParticipant: Created participant record
         """
-        if judgment.status != "PROPOSED":
+        if judgment.status != JudgmentStatus.PROPOSED:
             raise ValueError("Can only add participants to proposed judgments")
 
         participant = CrossTenantJudgmentParticipant.objects.create(
@@ -304,11 +323,9 @@ class CrossTenantJudgmentService:
         Returns:
             CrossTenantJudgment: Updated judgment
         """
-        if judgment.status != "PROPOSED":
+        if not judgment.transition_to(JudgmentStatus.ACTIVE):
             raise ValueError(f"Cannot activate judgment in status: {judgment.status}")
-
-        CrossTenantJudgment.objects.filter(id=judgment.id).update(status="ACTIVE")
-        return CrossTenantJudgment.objects.get(id=judgment.id)
+        return judgment
 
     @staticmethod
     @transaction.atomic
@@ -324,13 +341,8 @@ class CrossTenantJudgmentService:
         Returns:
             CrossTenantJudgment: Updated judgment
         """
-        if judgment.status != "ACTIVE":
+        if not judgment.transition_to(JudgmentStatus.CONCLUDED, concluded_at=timezone.now(), conclusion_type=conclusion_type):
             raise ValueError(f"Cannot conclude judgment in status: {judgment.status}")
-
-        judgment.status = "CONCLUDED"
-        judgment.concluded_at = timezone.now()
-        judgment.conclusion_type = conclusion_type
-        judgment.save()
 
         # Notify all participants
         from apps.authentication.models import User

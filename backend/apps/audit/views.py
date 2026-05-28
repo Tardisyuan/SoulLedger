@@ -157,3 +157,77 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
             "top_resources": list(resource_stats),
             "total_logs": qs.count(),
         })
+
+    @action(detail=False, methods=["get"], url_path="timeline")
+    def timeline(self, request):
+        """
+        GET /api/v1/audit-logs/timeline/
+        权限变更时间线 — 查询权限相关操作的审计日志。
+
+        Query params:
+            resource: 资源类型过滤 (Role, RolePermission, Menu, MenuButton, FieldPermission, RowLevelDataScope)
+            action: 操作类型过滤 (CREATE, UPDATE, DELETE, PERMISSION_CHANGE)
+            start_date: 开始日期 (YYYY-MM-DD)
+            end_date: 结束日期 (YYYY-MM-DD)
+            limit: 返回条数 (默认 50)
+        """
+        qs = AuditLog.objects.select_related("user").all()
+
+        # Tenant filter
+        if getattr(request.user, 'role', None) != 'ADMIN':
+            tenant = getattr(request, 'tenant', None)
+            if tenant:
+                qs = qs.filter(tenant=tenant)
+            else:
+                return Response([])
+
+        # Permission-related resource types
+        permission_resources = [
+            'Role', 'RolePermission', 'Menu', 'MenuButton',
+            'FieldPermission', 'RowLevelDataScope', 'DataScope', 'Permission'
+        ]
+
+        resource_filter = request.query_params.get('resource')
+        if resource_filter:
+            qs = qs.filter(resource__icontains=resource_filter)
+        else:
+            # Default: only permission-related resources
+            qs = qs.filter(resource__in=permission_resources)
+
+        action_filter = request.query_params.get('action')
+        if action_filter:
+            qs = qs.filter(action=action_filter.upper())
+
+        start_date = request.query_params.get('start_date')
+        if start_date:
+            qs = qs.filter(timestamp__date__gte=start_date)
+
+        end_date = request.query_params.get('end_date')
+        if end_date:
+            qs = qs.filter(timestamp__date__lte=end_date)
+
+        limit = int(request.query_params.get('limit', 50))
+        qs = qs.order_by('-timestamp')[:limit]
+
+        serializer = AuditLogSerializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="trace/(?P<trace_id>[^/.]+)")
+    def by_trace(self, request, trace_id=None):
+        """
+        GET /api/v1/audit-logs/trace/{trace_id}/
+        按 trace_id 查询关联操作 — 查看同一请求内的所有变更。
+        """
+        qs = AuditLog.objects.select_related("user").filter(trace_id=trace_id)
+
+        # Tenant filter
+        if getattr(request.user, 'role', None) != 'ADMIN':
+            tenant = getattr(request, 'tenant', None)
+            if tenant:
+                qs = qs.filter(tenant=tenant)
+            else:
+                return Response([])
+
+        qs = qs.order_by('timestamp')
+        serializer = AuditLogSerializer(qs, many=True)
+        return Response(serializer.data)

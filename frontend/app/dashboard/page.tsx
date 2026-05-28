@@ -20,6 +20,7 @@ import {
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDisplayNameForTenant } from "@/src/config/civilizations";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "#10b981",
@@ -77,12 +78,14 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">{t("dashboard.title")}</h1>
         <p className="text-[hsl(var(--color-ink-muted))] text-sm mt-1">{t("dashboard.subtitle")}</p>
       </div>
-      <button
-        onClick={handleExport}
-        className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] text-black font-medium rounded transition-colors text-sm"
-      >
-        {t("dashboard.export_stats")}
-      </button>
+      <RequirePermission permissions="karma.export">
+        <button
+          onClick={handleExport}
+          className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] text-black font-medium rounded transition-colors text-sm"
+        >
+          {t("dashboard.export_stats")}
+        </button>
+      </RequirePermission>
     </div>
   );
 

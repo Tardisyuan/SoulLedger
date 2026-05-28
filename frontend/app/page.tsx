@@ -30,7 +30,7 @@ export default function HomePage() {
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={theme === "dark" ? t("nav.theme_light") : t("nav.theme_dark")}
             className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
           >
             {theme === "dark" ? (
@@ -125,7 +125,7 @@ export default function HomePage() {
             </p>
           )}
           <p className="text-[hsl(var(--color-ink-subtle))] text-sm mt-1">
-            SoulLedger v0.1
+            {t("footer.version")}
           </p>
         </div>
       </main>

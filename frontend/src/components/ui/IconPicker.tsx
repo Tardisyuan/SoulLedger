@@ -293,7 +293,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                       : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
                   }`}
                 >
-                  {cat.label}
+                  {t(`icon_picker.categories.${cat.label}`)}
                 </button>
               ))}
             </div>

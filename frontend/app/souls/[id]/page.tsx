@@ -33,6 +33,7 @@ import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton, SkeletonCard } from "@/src/components/ui/skeleton";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "bg-[hsl(var(--color-status-alive)/0.2)] text-[hsl(var(--color-status-alive))]",
@@ -211,18 +212,22 @@ export default function SoulDetailPage() {
           </span>
           {!loading && soul && (
             <>
-              <button
-                onClick={() => setIsEditModalOpen(true)}
-                className="px-3 py-1.5 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] rounded-md text-sm transition-colors"
-              >
-                {t("souls.detail.edit")}
-              </button>
-              <button
-                onClick={handleDeleteConfirm}
-                className="px-3 py-1.5 bg-[hsl(var(--color-status-error)/0.2)] border border-[hsl(var(--color-status-error)/0.3)] hover:bg-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))] rounded-md text-sm transition-colors"
-              >
-                {t("souls.detail.delete")}
-              </button>
+              <RequirePermission permissions="soul.update">
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="px-3 py-1.5 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] rounded-md text-sm transition-colors"
+                >
+                  {t("souls.detail.edit")}
+                </button>
+              </RequirePermission>
+              <RequirePermission permissions="soul.delete">
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="px-3 py-1.5 bg-[hsl(var(--color-status-error)/0.2)] border border-[hsl(var(--color-status-error)/0.3)] hover:bg-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))] rounded-md text-sm transition-colors"
+                >
+                  {t("souls.detail.delete")}
+                </button>
+              </RequirePermission>
             </>
           )}
         </div>

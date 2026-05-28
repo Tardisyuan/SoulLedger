@@ -6,6 +6,7 @@ import { permApi, Permission, Role } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { BaseModal } from "@/src/components/ui/Modal";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
 import { PermissionFormModal } from "@/src/components/permissions/PermissionFormModal";
@@ -162,14 +163,14 @@ export default function PermissionsPage() {
             <h1 className="text-2xl lg:text-3xl font-bold text-[hsl(var(--color-accent))]">{t("permissions.title")}</h1>
             <p className="text-sm sm:text-base text-[hsl(var(--color-ink-subtle))] mt-1 hidden sm:block">{t("permissions.subtitle")}</p>
           </div>
-          {isAdmin && (
+          <RequirePermission permissions="system.settings">
             <button
               onClick={() => setIsRoleCreateOpen(true)}
               className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-xs sm:text-sm font-medium transition-colors shrink-0"
             >
               + {t("permissions.create_role")}
             </button>
-          )}
+          </RequirePermission>
         </div>
       </div>
 

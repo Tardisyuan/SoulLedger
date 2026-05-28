@@ -5,14 +5,16 @@ from rest_framework import viewsets
 from apps.actors.models import Actor
 from apps.actors.serializers import ActorSerializer, ActorListSerializer, ActorLocalizedSerializer
 from apps.core.permissions import TenantPermission
+from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 
 
-class ActorViewSet(viewsets.ReadOnlyModelViewSet):
+class ActorViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnlyModelViewSet):
     """
     Read-only actor listing and detail.
     Use '?localized=true' query param to get display_name resolved by Accept-Language.
     """
     permission_classes = [TenantPermission]
+    permission_codename = "actor"
     queryset = Actor.objects.filter(is_active=True)
     filterset_fields = ["civilization", "role"]
     ordering_fields = ["civilization", "role", "name"]

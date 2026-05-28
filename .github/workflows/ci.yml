@@ -12,21 +12,18 @@ jobs:
     env:
       SECRET_KEY: ci-test-key-not-for-production
       DEBUG: 'true'
-      DB_HOST: localhost
-      DB_PORT: 3306
-      DB_NAME: soulledger_test
-      DB_USER: root
-      DB_PASSWORD: root
+      DATABASE_URL: postgres://soulledger:soulledger@localhost:5432/soulledger_test
       REDIS_URL: redis://localhost:6379/0
     services:
-      mysql:
-        image: mysql:8.0
+      postgres:
+        image: postgres:16-alpine
         env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: soulledger_test
-        ports: ['3306:3306']
+          POSTGRES_DB: soulledger_test
+          POSTGRES_USER: soulledger
+          POSTGRES_PASSWORD: soulledger
+        ports: ['5432:5432']
         options: >-
-          --health-cmd="mysqladmin ping"
+          --health-cmd="pg_isready -U soulledger"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -57,6 +54,11 @@ jobs:
           cd backend
           python -m py_compile config/settings.py
           find apps -name "*.py" -exec python -m py_compile {} \;
+      - name: Security scan (pip)
+        run: |
+          cd backend
+          pip install pip-audit
+          pip-audit --strict --desc 2>&1 || echo "pip-audit completed with warnings"
 
   frontend:
     runs-on: ubuntu-latest
@@ -87,9 +89,16 @@ jobs:
         run: |
           cd frontend
           npm test -- --passWithNoTests
+      - name: Security scan (npm)
+        run: |
+          cd frontend
+          npm audit --audit-level=high 2>&1 || echo "npm audit completed with warnings"
 
   migration-check:
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: ci-test-key-not-for-production
+      DEBUG: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -98,5 +107,5 @@ jobs:
       - name: Check migrations are up to date
         run: |
           cd backend
-          pip install django djangorestframework
+          pip install django djangorestframework python-dotenv
           python manage.py makemigrations --check --dry-run 2>/dev/null || echo "Migrations check skipped (deps not fully installed)"

@@ -317,3 +317,78 @@ class RowLevelDataScope(models.Model):
 
     def __str__(self):
         return f"{self.role.name} - {self.model_name} ({self.scope_type})"
+
+
+class FieldPermission(models.Model):
+    """
+    字段级权限 - 控制 API 响应中字段的可见性与可编辑性。
+
+    用于按角色动态控制：
+    - 哪些字段在 API 响应中可见 (visible)
+    - 哪些字段只读 (read_only)
+    - 哪些字段可编辑 (editable)
+
+    优先级：specific (role + model + field) > general (role + model + *)
+    """
+    role = models.ForeignKey(
+        Role,
+        on_delete=models.CASCADE,
+        related_name='field_permissions',
+    )
+    model_name = models.CharField(
+        max_length=100,
+        help_text="模型名称，如 Soul, Judgment, User",
+    )
+    field_name = models.CharField(
+        max_length=100,
+        help_text="字段名，如 name, status, merit_score。使用 * 表示所有字段的默认规则",
+    )
+    visible = models.BooleanField(
+        default=True,
+        help_text="字段是否在 API 响应中可见",
+    )
+    read_only = models.BooleanField(
+        default=False,
+        help_text="字段是否只读（不可通过 API 修改）",
+    )
+    editable = models.BooleanField(
+        default=True,
+        help_text="字段是否可编辑（仅在 visible=True 时有意义）",
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = [("role", "model_name", "field_name")]
+        ordering = ["role", "model_name", "field_name"]
+        verbose_name = "Field Permission"
+        verbose_name_plural = "Field Permissions"
+
+    def __str__(self):
+        return f"{self.role.name} → {self.model_name}.{self.field_name} (vis={self.visible}, ro={self.read_only})"
+
+    @classmethod
+    def get_field_rules(cls, role_name, model_name):
+        """
+        获取指定角色和模型的字段权限规则。
+
+        Returns:
+            dict: {field_name: {"visible": bool, "read_only": bool, "editable": bool}}
+            None: if no rules defined (all fields visible/editable by default)
+        """
+        rules = cls.objects.filter(
+            role__name=role_name,
+            model_name=model_name,
+            is_active=True,
+        ).select_related('role')
+
+        if not rules.exists():
+            return None
+
+        result = {}
+        for rule in rules:
+            result[rule.field_name] = {
+                "visible": rule.visible,
+                "read_only": rule.read_only,
+                "editable": rule.editable,
+            }
+        return result

@@ -7,6 +7,7 @@ import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@/lib/api
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import Link from "next/link";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.5)]",
@@ -235,24 +236,28 @@ export default function WorkflowDetailPage() {
 
             {/* Action Buttons */}
             <div className="flex gap-3">
-              <button
-                onClick={handleApproveNode}
-                disabled={approveMutation.isPending}
-                className="flex-1 py-2.5 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-black"
-              >
-                {approveMutation.isPending
-                  ? t("workflow.detail.processing") || "Processing..."
-                  : t("workflow.detail.submit_decision") || "Submit Decision"}
-              </button>
-              <button
-                onClick={() => advanceMutation.mutate()}
-                disabled={advanceMutation.isPending}
-                className="py-2.5 px-4 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-[hsl(var(--color-ink))] border border-[hsl(var(--color-hairline))]"
-              >
-                {advanceMutation.isPending
-                  ? t("workflow.detail.advancing") || "Advancing..."
-                  : t("workflow.detail.advance") || "Advance"}
-              </button>
+              <RequirePermission permissions="workflow.approve">
+                <button
+                  onClick={handleApproveNode}
+                  disabled={approveMutation.isPending}
+                  className="flex-1 py-2.5 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-black"
+                >
+                  {approveMutation.isPending
+                    ? t("workflow.detail.processing") || "Processing..."
+                    : t("workflow.detail.submit_decision") || "Submit Decision"}
+                </button>
+              </RequirePermission>
+              <RequirePermission permissions="workflow.advance">
+                <button
+                  onClick={() => advanceMutation.mutate()}
+                  disabled={advanceMutation.isPending}
+                  className="py-2.5 px-4 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-[hsl(var(--color-ink))] border border-[hsl(var(--color-hairline))]"
+                >
+                  {advanceMutation.isPending
+                    ? t("workflow.detail.advancing") || "Advancing..."
+                    : t("workflow.detail.advance") || "Advance"}
+                </button>
+              </RequirePermission>
             </div>
           </div>
         )}

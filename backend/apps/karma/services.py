@@ -6,6 +6,7 @@ from datetime import datetime
 from django.core.cache import cache
 from django.utils import timezone
 from apps.souls.models import Soul
+from apps.karma.models import SoulRecord  # noqa: F401 — re-exported from souls for BC
 
 KARMA_CACHE_TTL = 60 * 5  # 5 minutes
 INHERITANCE_FACTOR = 0.2
@@ -41,6 +42,9 @@ class KarmaService:
         Recalculate merit/demerit totals with time decay from all records.
         Updates soul's denormalised merit/demerit scores.
         """
+        old_merit = soul.merit_score
+        old_demerit = soul.demerit_score
+
         records = soul.records.all()
 
         merit = 0
@@ -61,6 +65,10 @@ class KarmaService:
 
         # Invalidate cache
         cls._invalidate_cache(soul)
+
+        # Log domain event
+        from apps.events.services import EventService
+        EventService.log_karma_recalculated(soul, old_merit, soul.merit_score)
 
         return {
             "soul_id": str(soul.id),

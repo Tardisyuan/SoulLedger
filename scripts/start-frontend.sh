@@ -28,8 +28,15 @@ if [ -f "$PID_FILE" ]; then
     rm -f "$PID_FILE"
 fi
 
-echo "Starting frontend server..."
-PORT=3333 nohup npm run dev > "$LOG_FILE" 2>&1 &
+# Auto-detect server IP for API URL
+SERVER_IP=$(hostname -I | awk '{print $1}')
+NEXT_PUBLIC_API_URL="http://${SERVER_IP}:8000/api/v1"
+
+echo "Building frontend..."
+npm run build > "$LOG_FILE" 2>&1
+
+echo "Starting frontend server (production mode)..."
+PORT=3333 NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" nohup npm start > "$LOG_FILE" 2>&1 &
 FRONTEND_PID=$!
 echo $FRONTEND_PID > "$PID_FILE"
 

@@ -120,8 +120,17 @@ def assign_role_permissions(request):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    role = serializer.validated_data["role"]
+    role_name = serializer.validated_data["role"]
     permission_ids = serializer.validated_data["permission_ids"]
+
+    # Look up the Role object
+    try:
+        role = Role.objects.get(name=role_name)
+    except Role.DoesNotExist:
+        return Response(
+            {"error": f"Role '{role_name}' not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
     # Validate permission IDs exist
     valid_ids = set(Permission.objects.filter(id__in=permission_ids).values_list("id", flat=True))
@@ -140,7 +149,7 @@ def assign_role_permissions(request):
         created.append(rp.id)
 
     return Response({
-        "role": role,
+        "role": role_name,
         "assigned_count": len(created),
         "permission_ids": list(valid_ids),
     })
@@ -300,4 +309,44 @@ def init_role_permissions(request):
         "permissions_added": perm_count_after - perm_count_before,
         "permissions_total": perm_count_after,
         "roles": results,
+    })
+
+
+# ── Permission Export/Import ────────────────────────────────────────────
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsAdminPermission])
+def export_permissions(request):
+    """
+    GET /api/v1/perm/export/
+    导出所有权限配置为 JSON（仅 ADMIN）
+    """
+    from .export import export_permissions_json_response
+    return export_permissions_json_response()
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsAdminPermission])
+def import_permissions(request):
+    """
+    POST /api/v1/perm/import/
+    导入权限配置（仅 ADMIN）
+    Body: JSON from export endpoint
+    """
+    from .export import import_permissions as do_import
+
+    data = request.data
+    if not data:
+        return Response(
+            {"error": "No data provided"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    overwrite = request.data.get('overwrite', False)
+    stats = do_import(data, overwrite=overwrite)
+
+    return Response({
+        "message": "Permissions imported successfully",
+        "stats": stats,
     })

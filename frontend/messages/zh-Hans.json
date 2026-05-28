@@ -18,7 +18,9 @@
     "user_profile": "用户信息",
     "expand_menu": "展开菜单",
     "collapse_menu": "收起菜单",
-    "settings": "设置"
+    "settings": "设置",
+    "theme_light": "切换到浅色模式",
+    "theme_dark": "切换到深色模式"
   },
   "auth": {
     "login": "登录",
@@ -194,7 +196,8 @@
     "back": "← 返回",
     "submitting": "提交中...",
     "create": "创建",
-    "retry": "重试"
+    "retry": "重试",
+    "confirm": "确认"
   },
   "menus": {
     "title": "菜单管理",
@@ -213,7 +216,9 @@
     "active": "激活",
     "inactive": "停用",
     "no_menus": "未找到菜单",
-    "all_menus": "所有菜单"
+    "all_menus": "所有菜单",
+    "action": "操作",
+    "component_placeholder": "如：souls"
   },
   "permissions": {
     "title": "权限管理",
@@ -275,7 +280,26 @@
   "workflow": {
     "title": "审批流程",
     "existing": "现有流程",
-    "editor": "模板编辑器",
+    "editor": {
+      "new_template_name": "新流程模板",
+      "template_name_placeholder": "模板名称",
+      "add_node": "添加节点",
+      "delete_selected": "删除选中",
+      "saving": "保存中...",
+      "save_template": "保存模板",
+      "hint": "双击节点编辑 · 拖拽连接节点",
+      "edit_node": "编辑节点",
+      "node_name": "节点名称",
+      "node_type": "节点类型",
+      "court_code": "法庭/宫殿代码",
+      "court_placeholder": "例如: 第一殿, 真理大厅",
+      "approver_type": "审批人类型",
+      "approver_role": "审批角色",
+      "approver_placeholder": "例如: JUDGE, OVERSEER",
+      "new_node": "新节点",
+      "saved": "模板已保存",
+      "save_failed": "保存失败"
+    },
     "templates": "流程模板",
     "select_template": "选择模板进行编辑",
     "new_template": "新建模板",
@@ -364,27 +388,7 @@
     "no_description": "无描述",
     "appeal_badge": "申诉",
     "template_detail": "模板详情",
-    "no_node_data": "暂无节点数据",
-    "editor": {
-      "new_template_name": "新流程模板",
-      "template_name_placeholder": "模板名称",
-      "add_node": "添加节点",
-      "delete_selected": "删除选中",
-      "saving": "保存中...",
-      "save_template": "保存模板",
-      "hint": "双击节点编辑 · 拖拽连接节点",
-      "edit_node": "编辑节点",
-      "node_name": "节点名称",
-      "node_type": "节点类型",
-      "court_code": "法庭/宫殿代码",
-      "court_placeholder": "例如: 第一殿, 真理大厅",
-      "approver_type": "审批人类型",
-      "approver_role": "审批角色",
-      "approver_placeholder": "例如: JUDGE, OVERSEER",
-      "new_node": "新节点",
-      "saved": "模板已保存",
-      "save_failed": "保存失败"
-    }
+    "no_node_data": "暂无节点数据"
   },
   "dashboard": {
     "title": "灵魂账本统计",
@@ -793,6 +797,47 @@
     "select": "选择图标",
     "search": "搜索图标...",
     "clear": "清除",
-    "no_results": "没有找到图标"
+    "no_results": "没有找到图标",
+    "categories": {
+      "navigation": "导航",
+      "users": "用户",
+      "notifications": "通知",
+      "actions": "操作",
+      "view": "视图",
+      "status": "状态",
+      "security": "安全",
+      "soul": "灵魂",
+      "travel": "旅行",
+      "files": "文件",
+      "charts": "图表",
+      "admin": "管理",
+      "time": "时间",
+      "media": "媒体"
+    }
+  },
+  "menu_buttons": {
+    "title": "菜单按钮",
+    "all_menus": "所有菜单",
+    "create": "添加按钮",
+    "edit": "编辑按钮",
+    "no_buttons": "暂无按钮配置",
+    "name": "按钮名称",
+    "code": "编码",
+    "permission": "权限",
+    "bind_menu": "绑定菜单",
+    "select_menu": "选择菜单",
+    "code_placeholder": "如 add、edit、delete、export",
+    "permission_placeholder": "如 soul.create、judgment.delete"
+  },
+  "error": {
+    "title": "服务器错误",
+    "description": "抱歉，服务器遇到了问题",
+    "retry": "重试",
+    "home": "返回首页"
+  },
+  "not_found": {
+    "title": "页面未找到",
+    "description": "抱歉，您访问的页面不存在",
+    "home": "返回首页"
   }
 }

@@ -9,6 +9,7 @@ export function usePermissions() {
   const { user } = useTenant();
 
   const hasPermission = (permission: string): boolean => {
+    if (user?.role === "ADMIN") return true;
     return user?.permissions?.includes(permission) ?? false;
   };
 

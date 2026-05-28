@@ -73,3 +73,53 @@ def admin_required(view_func):
             raise PermissionDenied("Admin access required")
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def user_has_permission(user, codename):
+    """
+    Check if a user has a specific permission codename.
+
+    Uses the same logic as PermissionMiddleware._has_permission:
+    1. ADMIN always has all permissions
+    2. Check DB (Permission + RolePermission) if seeded
+    3. Fallback to ROLE_PERMISSIONS dict
+
+    Args:
+        user: Django User instance
+        codename: Permission codename string (e.g., "soul.read")
+
+    Returns:
+        True if user has the permission, False otherwise
+    """
+    if not user or not user.is_authenticated:
+        return False
+
+    role = getattr(user, 'role', None)
+    if not role:
+        return False
+
+    # ADMIN bypasses all permission checks
+    if role == 'ADMIN':
+        return True
+
+    # Check if permission exists in DB (seeded)
+    try:
+        from apps.perm.models import Permission
+        perm_exists = Permission.objects.filter(codename=codename).exists()
+    except Exception:
+        perm_exists = False
+
+    if perm_exists:
+        # DB is authoritative for seeded codenames
+        try:
+            from apps.perm.models import RolePermission
+            return RolePermission.objects.filter(
+                role=role,
+                permission__codename=codename
+            ).exists()
+        except Exception:
+            pass
+
+    # Fallback to ROLE_PERMISSIONS dict (unseeded codenames)
+    from apps.perm.models import ROLE_PERMISSIONS
+    return codename in ROLE_PERMISSIONS.get(role, [])

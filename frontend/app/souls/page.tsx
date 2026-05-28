@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSouls, useCreateSoul } from "@/src/hooks/useSouls";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import type { Soul } from "@/lib/api";
 
 const STATE_COLORS: Record<string, string> = {
@@ -69,12 +70,14 @@ export default function SoulsPage() {
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">{t("souls.title")}</h1>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] rounded-md text-sm font-medium transition-colors"
-        >
-          + {t("souls.create")}
-        </button>
+        <RequirePermission permissions="soul.create">
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] rounded-md text-sm font-medium transition-colors"
+          >
+            + {t("souls.create")}
+          </button>
+        </RequirePermission>
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-6">

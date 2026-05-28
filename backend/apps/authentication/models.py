@@ -28,6 +28,16 @@ class User(AuditUserFields, AbstractUser):
         choices=UserRole.choices,
         default=UserRole.VIEWER,
     )
+    # RBAC role FK — bridges to the full perm.Role model with hierarchy/inheritance.
+    # Once fully migrated, `role` CharField can be deprecated.
+    rbac_role = models.ForeignKey(
+        "perm.Role",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users",
+        help_text="RBAC role with hierarchy and permission inheritance",
+    )
     # For API display — linked to an Actor in the underworld system
     tenant = models.ForeignKey(
         "tenants.Tenant",

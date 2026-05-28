@@ -32,6 +32,7 @@ urlpatterns = [
     path("api/v1/perm/", include("apps.perm.urls")),
     path("api/v1/menus/", include("apps.menus.urls")),
     path("api/v1/audit-logs/", include("apps.audit.urls")),
+    path("api/v1/audit/", include("apps.audit.urls")),
     path("api/v1/", include("apps.workflow.urls")),
     path("api/v1/notifications/", include("apps.notifications.urls")),
     path("api/v1/dispatch/", include("apps.dispatch.urls")),

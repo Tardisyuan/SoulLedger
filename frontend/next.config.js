@@ -1,16 +1,5 @@
 /** @type {import('next').NextConfig} */
 
-// Sentry configuration (only if SENTRY_DSN is set)
-let sentryConfig = {};
-if (process.env.SENTRY_DSN) {
-    const withSentryConfig = require("@sentry/nextjs")({
-        sentryUrl: process.env.SENTRY_DSN,
-        wideOrient: true,
-        setCommits: { auto: true },
-    });
-    sentryConfig = withSentryConfig;
-}
-
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
@@ -21,6 +10,14 @@ const nextConfig = {
   },
 };
 
-module.exports = sentryConfig.sentryConfig
-    ? sentryConfig.sentryConfig(nextConfig)
-    : nextConfig;
+// Wrap with Sentry only when SENTRY_DSN is set
+if (process.env.SENTRY_DSN) {
+  const { withSentryConfig } = require("@sentry/nextjs");
+  module.exports = withSentryConfig(nextConfig, {
+    silent: true,
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+  });
+} else {
+  module.exports = nextConfig;
+}

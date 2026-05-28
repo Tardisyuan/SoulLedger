@@ -3,9 +3,10 @@ REST serializers for Judgment app.
 """
 from rest_framework import serializers
 from apps.judgment.models import Judgment
+from apps.core.field_permissions import FieldPermissionMixin
 
 
-class JudgmentSerializer(serializers.ModelSerializer):
+class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
     soul_name = serializers.CharField(source="soul.name", read_only=True)
     judge_name = serializers.CharField(source="judge.name", read_only=True)
 

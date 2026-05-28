@@ -30,8 +30,16 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
         return None
 
     def get_permissions(self, obj):
-        """Get permissions based on user role — reads from DB, falls back to hardcoded dict."""
+        """Get permissions based on rbac_role (preferred) or legacy role field."""
         from apps.perm.models import RolePermission, ROLE_PERMISSIONS
+        # Prefer rbac_role FK if set
+        if obj.rbac_role_id:
+            return list(
+                RolePermission.objects.filter(role=obj.rbac_role)
+                .select_related("permission")
+                .values_list("permission__codename", flat=True)
+            )
+        # Fallback: query by role name
         if RolePermission.objects.exists():
             return list(
                 RolePermission.objects.filter(role__name=obj.role)

@@ -1,0 +1,17 @@
+version: "3.9"
+
+# Staging overrides
+services:
+  backend:
+    environment:
+      - DEBUG=false
+      - SENTRY_DSN=${SENTRY_DSN}
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2"
+
+  frontend:
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_SENTRY_DSN=${SENTRY_DSN}
+    command: npm run start
