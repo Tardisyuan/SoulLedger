@@ -28,11 +28,11 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         GET /api/v1/audit-logs/?start_date=2024-01-01&end_date=2024-12-31
     """
     permission_classes = [TenantPermission]
-    permission_codename = "audit_log"
+    permission_codename = "audit"
     extra_permissions = {
-        'actions': ['audit_log.read'],
-        'resources': ['audit_log.read'],
-        'stats': ['audit_log.read'],
+        'actions': ['audit.read'],
+        'resources': ['audit.read'],
+        'stats': ['audit.read'],
     }
     serializer_class = AuditLogSerializer
     filterset_fields = ["user", "action", "resource", "resource_id"]
