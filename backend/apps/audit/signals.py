@@ -489,6 +489,10 @@ def _connect_model_signals(model):
     # Skip SoulEvent (internal event log, creates SoulEvent entries which should not generate AuditLogs)
     if model._meta.label.split('.')[-1] == 'SoulEvent':
         return
+    # Skip Role and RolePermission — they have dedicated handler _invalidate_permission_cache
+    # which creates PERMISSION_CHANGE audit logs (avoids duplicate CREATE/UPDATE logs)
+    if model._meta.label.split('.')[-1] in ('Role', 'RolePermission'):
+        return
 
     post_save.connect(_on_post_save, sender=model, dispatch_uid=f"audit_{model.__name__}_post_save")
     post_delete.connect(_on_post_delete, sender=model, dispatch_uid=f"audit_{model.__name__}_post_delete")

@@ -3,29 +3,6 @@ Core mixins for ViewSets.
 """
 
 
-class AuditMixin:
-    """
-    Mixin that automatically populates create_user and update_user audit fields
-    when creating or updating objects via a ViewSet.
-
-    Requires the request.user to be authenticated.
-    Only sets fields if the model instance has them.
-    """
-
-    def perform_create(self, serializer):
-        # For DRF serializers, pass extra kwargs to save()
-        kwargs = {}
-        if hasattr(serializer.instance, 'create_user'):
-            kwargs['create_user'] = self.request.user
-        serializer.save(**kwargs)
-
-    def perform_update(self, serializer):
-        kwargs = {}
-        if hasattr(serializer.instance, 'update_user'):
-            kwargs['update_user'] = self.request.user
-        serializer.save(**kwargs)
-
-
 class TenantQuerySetMixin:
     """
     Mixin that provides tenant isolation for ViewSets.
