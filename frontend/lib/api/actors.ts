@@ -4,10 +4,10 @@ async function fetchAllPages<T>(url: string, params: Record<string, string> = {}
   const results: T[] = [];
   let nextUrl: string | null = `${API_BASE}${url}?${new URLSearchParams(params)}`;
   while (nextUrl) {
-    const parsed = new URL(nextUrl);
+    const parsed: URL = new URL(nextUrl);
     const searchParams: Record<string, string> = {};
-    parsed.searchParams.forEach((v, k) => { searchParams[k] = v; });
-    const relativePath = nextUrl.replace(API_BASE, "");
+    parsed.searchParams.forEach((v: string, k: string) => { searchParams[k] = v; });
+    const relativePath: string = nextUrl.replace(API_BASE, "");
     const resp = await api.get(relativePath, { params: searchParams });
     results.push(...resp.data.results);
     nextUrl = resp.data.next ? (resp.data.next.startsWith("http") ? resp.data.next : `${API_BASE}${resp.data.next}`) : null;
