@@ -442,9 +442,8 @@ class TestApprovalWorkflowAPI:
             f"/api/v1/workflows/{wf.id}/advance/",
             format="json"
         )
-        # Since node 2 is the last, advance returns False (no next node)
-        # and workflow is COMPLETED
-        assert response.status_code in [200, 400]  # Accept either - depends on implementation
+        # Since node 2 is the last, advance returns 200 (no-op) or 400 (already completed)
+        assert response.status_code in [200, 400], f"Expected 200 or 400, got {response.status_code}"
 
     def test_workflow_stats_endpoint(self, authenticated_client, workflow):
         """GET /api/v1/workflows/{id}/stats/ returns progress stats."""
@@ -455,6 +454,11 @@ class TestApprovalWorkflowAPI:
         assert "completed_nodes" in response.data
         assert "pending_nodes" in response.data
         assert "progress_percent" in response.data
+        # Verify values are reasonable (not negative, not absurd)
+        assert response.data["total_nodes"] >= 0
+        assert response.data["completed_nodes"] >= 0
+        assert response.data["pending_nodes"] >= 0
+        assert 0 <= response.data["progress_percent"] <= 100
 
     def test_unauthenticated_access_denied(self, api_client, workflow):
         """Unauthenticated requests return 401."""

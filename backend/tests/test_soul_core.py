@@ -37,9 +37,11 @@ class TestSoulModel:
         assert soul.can_transition_to(SoulState.DISPOSED) is False
 
     def test_die_transitions_to_judging(self, cn_tenant):
+        from apps.judgment.models import Judgment
         soul = Soul.objects.create(name="死者", tenant=cn_tenant)
         result = soul.die(location="北京")
-        assert result is not None  # die() returns a Judgment object
+        assert isinstance(result, Judgment), f"Expected Judgment object, got {type(result)}"
+        assert result.soul == soul, "Judgment should reference the soul"
         assert soul.current_state == SoulState.JUDGING
         assert soul.death_date is not None
 

@@ -232,13 +232,16 @@ class TestNotificationAPI:
         from apps.notifications.models import UserNotification, NotificationType
         import time
 
+        from django.utils import timezone
+        from datetime import timedelta
+
         n1 = UserNotification.objects.create(
             user=admin_user,
             title="First",
             message="First",
             notification_type=NotificationType.SYSTEM,
+            created_at=timezone.now() - timedelta(seconds=1),
         )
-        time.sleep(0.01)  # Small delay to ensure different timestamps
         n2 = UserNotification.objects.create(
             user=admin_user,
             title="Second",
@@ -259,7 +262,9 @@ class TestNotificationEdgeCases:
 
     def test_mark_read_non_existent_notification(self, auth_client):
         """Marking non-existent notification should return 404."""
-        response = auth_client.post("/api/v1/notifications/99999/mark_read/")
+        import uuid
+        fake_id = uuid.uuid4()
+        response = auth_client.post(f"/api/v1/notifications/{fake_id}/mark_read/")
         assert response.status_code == 404
 
     def test_cannot_mark_other_users_notification_read(self, auth_client, judge_user, admin_user):

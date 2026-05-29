@@ -508,15 +508,15 @@ class TestUserManagementUnauthenticated:
     """Test User Management unauthenticated access."""
 
     def test_unauthenticated_list_denied(self, api_client):
-        """Unauthenticated GET /api/v1/users/ returns 401/403."""
+        """Unauthenticated GET /api/v1/users/ returns 401."""
         response = api_client.get("/api/v1/users/")
-        assert response.status_code in [401, 403]
+        assert response.status_code == 401, f"Expected 401, got {response.status_code}"
 
     def test_unauthenticated_create_denied(self, api_client):
-        """Unauthenticated POST /api/v1/users/ returns 401/403."""
+        """Unauthenticated POST /api/v1/users/ returns 401."""
         data = {"username": "hacker", "password": "pass123"}
         response = api_client.post("/api/v1/users/", data, format="json")
-        assert response.status_code in [401, 403]
+        assert response.status_code == 401, f"Expected 401, got {response.status_code}"
 
 
 @pytest.mark.django_db
