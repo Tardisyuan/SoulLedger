@@ -376,39 +376,47 @@ export default function SoulDetailPage() {
             ) : (
               <div className="space-y-2">
                 {soul?.current_state === "ALIVE" && (
-                  <button
-                    onClick={handleDie}
-                    disabled={!!actionLoading}
-                    className="w-full py-2 px-4 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
-                  >
-                    {actionLoading === "die" ? t("souls.detail.processing") : t("souls.detail.mark_dead")}
-                  </button>
+                  <RequirePermission permissions="soul.die">
+                    <button
+                      onClick={handleDie}
+                      disabled={!!actionLoading}
+                      className="w-full py-2 px-4 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
+                    >
+                      {actionLoading === "die" ? t("souls.detail.processing") : t("souls.detail.mark_dead")}
+                    </button>
+                  </RequirePermission>
                 )}
                 {soul?.current_state === "JUDGING" && (
                   <div className="space-y-2">
                     <p className="text-xs text-[hsl(var(--color-ink-muted))] text-center">{t("souls.detail.render_judgment")}</p>
-                    {verdictOptions.map((opt) => (
-                      <button
-                        key={opt.key}
-                        onClick={() => handleJudgment(opt.key)}
-                        disabled={!!actionLoading}
-                        className={`w-full py-2 px-4 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 ${opt.color}`}
-                      >
-                        {actionLoading === `judge-${opt.key}` ? t("souls.detail.processing") : t(`souls.detail.verdict_${opt.key.toLowerCase()}`)}
-                      </button>
-                    ))}
+                    <RequirePermission permissions="judgment.create">
+                      {verdictOptions.map((opt) => (
+                        <button
+                          key={opt.key}
+                          onClick={() => handleJudgment(opt.key)}
+                          disabled={!!actionLoading}
+                          className={`w-full py-2 px-4 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 ${opt.color}`}
+                        >
+                          {actionLoading === `judge-${opt.key}` ? t("souls.detail.processing") : t(`souls.detail.verdict_${opt.key.toLowerCase()}`)}
+                        </button>
+                      ))}
+                    </RequirePermission>
                   </div>
                 )}
-                {soul?.current_state === "DISPOSED" && dispositions.filter(d => !d.is_executed).map((disp) => (
-                  <button
-                    key={disp.id}
-                    onClick={() => handleReincarnate(disp.id)}
-                    disabled={!!actionLoading}
-                    className="w-full py-2 px-4 bg-[hsl(var(--color-status-info))] hover:bg-[hsl(var(--color-status-info)/0.8)] disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
-                  >
-                    {actionLoading === "reincarnate" ? t("souls.detail.processing") : `${t("souls.detail.reincarnate")} ${disp.destination_realm || t("souls.detail.destination")}`}
-                  </button>
-                ))}
+                {soul?.current_state === "DISPOSED" && (
+                  <RequirePermission permissions="reincarnation.reborn">
+                    {dispositions.filter(d => !d.is_executed).map((disp) => (
+                      <button
+                        key={disp.id}
+                        onClick={() => handleReincarnate(disp.id)}
+                        disabled={!!actionLoading}
+                        className="w-full py-2 px-4 bg-[hsl(var(--color-status-info))] hover:bg-[hsl(var(--color-status-info)/0.8)] disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
+                      >
+                        {actionLoading === "reincarnate" ? t("souls.detail.processing") : `${t("souls.detail.reincarnate")} ${disp.destination_realm || t("souls.detail.destination")}`}
+                      </button>
+                    ))}
+                  </RequirePermission>
+                )}
                 {soul?.current_state === "REINCARNATING" && (
                   <div className="text-center text-[hsl(var(--color-status-info))] text-sm py-2">
                     {t("souls.detail.being_reborn")}

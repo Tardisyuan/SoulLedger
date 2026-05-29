@@ -5,12 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { dispatchApi, soulsApi, karmaApi, type Soul } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 export default function ProposeDispatchPage() {
   const { t } = useI18n();
   const { user } = useTenant();
+  const { showToast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -44,14 +46,14 @@ export default function ProposeDispatchPage() {
       // Note: Backend expects numeric IDs but frontend only has tenant codes
       // Using tenant code directly - may need backend adjustment
       await dispatchApi.propose({
-        source_tenant: user.tenant.code as unknown as number,
-        target_tenant: form.target_tenant_code as unknown as number,
+        source_tenant_code: user.tenant.code,
+        target_tenant_code: form.target_tenant_code,
         soul: parseInt(form.soul_id),
         reason: form.reason,
       });
       router.push("/dispatch");
     } catch (err) {
-      console.error("Failed to propose dispatch:", err);
+      showToast(t("dispatch.propose_error") || "Failed to propose dispatch", "error");
     } finally {
       setLoading(false);
     }
