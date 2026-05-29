@@ -26,7 +26,7 @@ export default function RealmsPage() {
   const { user } = useTenant();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
-  const { data: realms = [], isLoading } = useQuery({
+  const { data: realms = [], isLoading, error } = useQuery({
     queryKey: ["realms", user?.tenant?.code, user?.role],
     queryFn: () => realmsApi.list().then(r => r.data.results || []),
     enabled: !!user,

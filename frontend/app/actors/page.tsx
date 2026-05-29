@@ -19,7 +19,7 @@ export default function ActorsPage() {
   const { user } = useTenant();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
-  const { data: actors = [], isLoading } = useQuery({
+  const { data: actors = [], isLoading, error } = useQuery({
     queryKey: ["actors"],
     queryFn: () => actorsApi.list().then(r => r.data.results || []),
     enabled: !!user,

@@ -13,7 +13,7 @@ export default function CrossJudgmentDetailPage() {
   const router = useRouter();
   const id = params.id;
 
-  const [judgment, setJudgment] = useState<any>(null);
+  const [judgment, setJudgment] = useState<import("@/lib/api").CrossTenantJudgment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -23,8 +23,9 @@ export default function CrossJudgmentDetailPage() {
     try {
       const res = await crossTenantJudgmentsApi.get(id as string);
       setJudgment(res.data);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || t("crossJudgments.failed_to_load"));
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } }; message?: string };
+      setError(err?.response?.data?.detail || err?.message || t("crossJudgments.failed_to_load"));
     } finally {
       setLoading(false);
     }
@@ -85,7 +86,7 @@ export default function CrossJudgmentDetailPage() {
           {loading ? (
             <Skeleton className="h-6 w-20" />
           ) : (
-            <span className={`px-3 py-1 rounded text-sm font-medium ${statusColors[judgment?.status] || "bg-[hsl(var(--color-status-lost)/0.2)]"}`}>
+            <span className={`px-3 py-1 rounded text-sm font-medium ${statusColors[judgment?.status ?? ""] || "bg-[hsl(var(--color-status-lost)/0.2)]"}`}>
               {judgment?.status}
             </span>
           )}
@@ -107,7 +108,7 @@ export default function CrossJudgmentDetailPage() {
             </div>
           ) : judgment?.participants && judgment.participants.length > 0 ? (
             <div className="space-y-2">
-              {judgment.participants.map((p: any, i: number) => (
+              {judgment.participants.map((p: import("@/lib/api").CrossTenantJudgmentParticipant, i: number) => (
                 <div key={i} className="flex items-center gap-3 bg-[hsl(var(--color-surface-2))] rounded-lg px-4 py-2">
                   <span className="text-lg">👤</span>
                   <div>

@@ -83,7 +83,7 @@ export default function AuditPage() {
       <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
         <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
           <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
-            {t("audit.title") || "审计日志"}
+            {t("audit.title")}
           </h1>
         </div>
         <div className="flex items-center justify-center h-64">
@@ -103,7 +103,7 @@ export default function AuditPage() {
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
-          {t("audit.title") || "审计日志"}
+          {t("audit.title")}
         </h1>
       </div>
 
@@ -120,7 +120,7 @@ export default function AuditPage() {
           >
             {ACTION_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
-                {opt.value ? opt.label : t("audit.all_actions") || "所有操作"}
+                {opt.value ? opt.label : t("audit.all_actions")}
               </option>
             ))}
           </select>
@@ -135,7 +135,7 @@ export default function AuditPage() {
           >
             {RESOURCE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
-                {opt.value ? opt.label : t("audit.all_resources") || "所有资源"}
+                {opt.value ? opt.label : t("audit.all_resources")}
               </option>
             ))}
           </select>
@@ -147,7 +147,7 @@ export default function AuditPage() {
               setDateFrom(e.target.value);
               setPage(1);
             }}
-            placeholder={t("audit.filter_date_from") || "开始日期"}
+            placeholder={t("audit.filter_date_from")}
             className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-amber-500 transition-colors"
           />
 
@@ -158,7 +158,7 @@ export default function AuditPage() {
               setDateTo(e.target.value);
               setPage(1);
             }}
-            placeholder={t("audit.filter_date_to") || "结束日期"}
+            placeholder={t("audit.filter_date_to")}
             className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-amber-500 transition-colors"
           />
 
@@ -173,7 +173,7 @@ export default function AuditPage() {
               }}
               className="px-3 py-2 text-sm text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded transition-colors"
             >
-              {t("audit.clear_filters") || "清除筛选"}
+              {t("audit.clear_filters")}
             </button>
           )}
         </div>
@@ -186,7 +186,7 @@ export default function AuditPage() {
             </div>
           ) : logs.length === 0 ? (
             <div className="py-12 text-center text-sm text-[hsl(var(--color-ink-muted))]">
-              {t("audit.no_logs") || "暂无审计日志"}
+              {t("audit.no_logs")}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -274,14 +274,14 @@ export default function AuditPage() {
               disabled={page === 1 || isFetching}
               className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
             >
-              ← {t("common.prev") || "上一页"}
+              ← {t("common.prev")}
             </button>
             <button
               onClick={() => setPage((p) => p + 1)}
               disabled={!data || page >= totalPages || isFetching}
               className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
             >
-              {t("common.next") || "下一页"} →
+              {t("common.next")} →
             </button>
           </div>
         </div>

@@ -44,7 +44,7 @@ export default function DispatchPage() {
         {loadingProposed ? (
           <ListSkeleton count={3} />
         ) : proposed.length === 0 ? (
-          <p className="text-[hsl(var(--color-ink-muted))] bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">{t("dispatch.no_pending") || "No pending proposals"}</p>
+          <p className="text-[hsl(var(--color-ink-muted))] bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">{t("dispatch.no_pending")}</p>
         ) : (
           <div className="space-y-3">
             {proposed.map((d: DispatchRecord) => (
@@ -59,7 +59,7 @@ export default function DispatchPage() {
         {loadingHistory ? (
           <ListSkeleton count={5} />
         ) : history.length === 0 ? (
-          <p className="text-[hsl(var(--color-ink-muted))] bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">{t("dispatch.no_history") || "No dispatch history"}</p>
+          <p className="text-[hsl(var(--color-ink-muted))] bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">{t("dispatch.no_history")}</p>
         ) : (
           <div className="space-y-3">
             {history.map((d: DispatchRecord) => (

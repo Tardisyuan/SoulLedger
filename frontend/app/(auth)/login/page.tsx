@@ -67,13 +67,13 @@ export default function LoginPage() {
           className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-8"
         >
           <h2 className="text-xl font-semibold text-[hsl(var(--color-ink))] mb-6 text-center">
-            {t("auth.login") || "登录"}
+            {t("auth.login")}
           </h2>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">
-                {t("auth.username") || "用户名"}
+                {t("auth.username")}
               </label>
               <input
                 type="text"
@@ -87,7 +87,7 @@ export default function LoginPage() {
 
             <div>
               <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">
-                {t("auth.password") || "密码"}
+                {t("auth.password")}
               </label>
               <input
                 type="password"
@@ -105,7 +105,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full mt-6 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink))] font-medium py-2.5 rounded-md transition-colors"
           >
-            {loading ? (t("auth.logging_in") || "登录中...") : (t("auth.login") || "登录")}
+            {loading ? (t("auth.logging_in")) : (t("auth.login"))}
           </button>
         </form>
 

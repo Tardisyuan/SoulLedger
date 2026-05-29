@@ -53,7 +53,7 @@ export default function ProposeDispatchPage() {
       });
       router.push("/dispatch");
     } catch (err) {
-      showToast(t("dispatch.propose_error") || "Failed to propose dispatch", "error");
+      showToast(t("dispatch.propose_error"), "error");
     } finally {
       setLoading(false);
     }
@@ -61,7 +61,7 @@ export default function ProposeDispatchPage() {
 
   return (
     <div className="p-6 max-w-2xl">
-      <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))] mb-6">{t("dispatch.propose") || "Propose Dispatch"}</h1>
+      <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))] mb-6">{t("dispatch.propose")}</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
