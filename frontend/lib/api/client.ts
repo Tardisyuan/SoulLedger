@@ -16,8 +16,6 @@ function getTenantId(): string {
   return localStorage.getItem("tenant_id") || getCookie("tenant_id") || "";
 }
 
-export const API_BASE = API_BASE_URL;
-
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },

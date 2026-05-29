@@ -5,7 +5,8 @@ export interface User {
   username: string;
   email: string;
   role: string;
-  tenant?: { code: string; display_name: string };
+  tenant?: { id?: number; code: string; display_name: string };
+  tenant_id?: number;
   display_name?: string;
   permissions?: string[];
   first_name?: string;
@@ -21,17 +22,27 @@ export interface CreateUserInput {
   username: string;
   email: string;
   password: string;
+  first_name?: string;
+  last_name?: string;
   role?: string;
   tenant?: number;
+  tenant_id?: number;
   display_name?: string;
+  organization?: number;
+  position?: string;
 }
 
 export interface UpdateUserInput {
   email?: string;
+  first_name?: string;
+  last_name?: string;
   role?: string;
   is_active?: boolean;
+  tenant?: number;
+  tenant_id?: number;
   organization?: number;
   position?: string;
+  password?: string;
 }
 
 export interface UserFilters {
