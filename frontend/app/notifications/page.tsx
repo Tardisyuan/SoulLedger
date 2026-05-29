@@ -23,7 +23,7 @@ export default function NotificationsPage() {
     queryFn: async () => {
       const params: Record<string, string> | undefined = filter === "unread" ? { is_read: "false" } : undefined;
       const res = await notificationsApi.list(params);
-      return res.data;
+      return res.data as import("@/lib/api").Notification[];
     },
     refetchInterval: 30000, // Refresh every 30 seconds
   });
@@ -42,8 +42,8 @@ export default function NotificationsPage() {
     },
   });
 
-  const handleMarkRead = (id: string) => {
-    markReadMutation.mutate(id);
+  const handleMarkRead = (id: string | number) => {
+    markReadMutation.mutate(String(id));
   };
 
   const handleMarkAllRead = () => {
@@ -183,7 +183,7 @@ export default function NotificationsPage() {
               <div className="flex items-start gap-3">
                 {/* Icon */}
                 {(() => {
-                  const IconComponent = getNotificationIcon(notification.notification_type);
+                  const IconComponent = getNotificationIcon(notification.notification_type ?? "");
                   return (
                     <div className="w-10 h-10 rounded-lg bg-[hsl(var(--color-accent))]/10 flex items-center justify-center shrink-0">
                       <IconComponent className="w-5 h-5 text-[hsl(var(--color-accent))]" />

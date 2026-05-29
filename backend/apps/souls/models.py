@@ -6,6 +6,7 @@ from django.db import models
 from django.utils import timezone
 from apps.core.models import AuditUserFields
 from apps.tenants.managers import TenantManager
+from apps.souls.querysets import SoulManager
 
 
 class Civilization(models.TextChoices):
@@ -63,7 +64,7 @@ class Soul(AuditUserFields, models.Model):
             models.Index(fields=["current_state"]),
         ]
 
-    objects = TenantManager()
+    objects = SoulManager()
 
     def save(self, *args, **kwargs):
         # Set tenant from thread-local request context on first save
