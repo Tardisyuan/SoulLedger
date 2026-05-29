@@ -19,15 +19,3 @@ class SoulEventViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.Rea
     serializer_class = SoulEventSerializer
     filterset_fields = ["soul", "event_type", "actor"]
     ordering_fields = ["created_at"]
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        if user.role == 'ADMIN':
-            return qs
-        tenant = getattr(self.request, 'tenant', None)
-        if tenant:
-            return qs.filter(tenant=tenant)
-        return qs.none()

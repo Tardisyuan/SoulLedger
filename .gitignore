@@ -31,6 +31,7 @@ frontend/tsconfig.tsbuildinfo
 
 # Screenshots/docs
 docs/
+.playwright-mcp/
 
 # Scripts
 scripts/restart-*.sh

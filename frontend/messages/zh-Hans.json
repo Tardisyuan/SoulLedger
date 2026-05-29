@@ -199,6 +199,9 @@
     "retry": "重试",
     "confirm": "确认"
   },
+  "pagination": {
+    "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)"
+  },
   "menus": {
     "title": "菜单管理",
     "create": "创建菜单",

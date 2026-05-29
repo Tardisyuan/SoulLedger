@@ -199,6 +199,9 @@
     "retry": "Khemu",
     "confirm": "Sesen"
   },
+  "pagination": {
+    "info": "Per {{page}} / {{total}} ({{count}} medu)"
+  },
   "menus": {
     "title": "إدارة القائمة",
     "create": "إنشاء قائمة",

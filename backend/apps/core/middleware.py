@@ -38,8 +38,6 @@ Middleware Position:
 """
 from functools import wraps
 from django.http import JsonResponse
-from apps.perm.models import RolePermission, ROLE_PERMISSIONS
-from apps.perm.cache import get_permission_cache
 from apps.core.request_local import set_current_user, clear_current_user
 
 
@@ -55,15 +53,9 @@ class PermissionMiddleware:
 
     def __init__(self, get_response):
         self.get_response = get_response
-        self._permission_cache = get_permission_cache()
+        self._current_user = None
 
     def __call__(self, request):
-        # Set current user in thread-local for AuditUserFields.save()
-        # This runs BEFORE DRF sets request.user for force_authenticate,
-        # but process_view runs after DRF initialize_request.
-        # So we set user in process_view instead.
-        # Here we just ensure request flows through.
-
         try:
             # Short-circuit for unauthenticated requests — let DRF handle 401
             if not hasattr(request, 'user') or not getattr(request.user, 'is_authenticated', False):
@@ -72,6 +64,9 @@ class PermissionMiddleware:
             # Short-circuit for ADMIN role — bypass all permission checks
             if getattr(request.user, 'role', None) == 'ADMIN':
                 return self.get_response(request)
+
+            # Store user for _has_permission delegation
+            self._current_user = request.user
 
             # Check if the matched view has required permissions
             view = getattr(request, 'view', None)
@@ -87,13 +82,9 @@ class PermissionMiddleware:
                 if not required_perms:
                     return self.get_response(request)
 
-            # Evaluate each required permission
-            user_role = getattr(request.user, 'role', None)
-            if not user_role:
-                return JsonResponse({'error': 'No role assigned'}, status=403)
-
+            # Evaluate each required permission via unified checker
             for perm_codename in required_perms:
-                if not self._has_permission(user_role, perm_codename):
+                if not self._has_permission(None, perm_codename):
                     return JsonResponse(
                         {'error': f'Permission denied: {perm_codename}'},
                         status=403
@@ -141,38 +132,17 @@ class PermissionMiddleware:
     def _has_permission(self, role, codename):
         """
         Check if role has the given permission codename.
-
-        Priority: cache → DB (Permission + RolePermission) → ROLE_PERMISSIONS dict.
-        Falls back to dict only when the Permission object is not seeded in DB,
-        ensuring DB is authoritative for seeded codenames.
+        Delegates to apps.perm.checker.check_permission (single source of truth).
+        Uses self._current_user when available, falls back to role-based check.
         """
-        # Check cache first
-        cached = self._permission_cache.get(role, codename)
-        if cached is not None:
-            return cached
-
-        try:
-            from apps.perm.models import Permission
-            perm_exists = Permission.objects.filter(codename=codename).exists()
-        except Exception:
-            perm_exists = False
-
-        if not perm_exists:
-            # Unseeded codename — fall back to ROLE_PERMISSIONS dict
-            has_perm = codename in ROLE_PERMISSIONS.get(role, [])
-        else:
-            # Seeded — DB is authoritative
-            try:
-                has_perm = RolePermission.objects.filter(
-                    role=role,
-                    permission__codename=codename
-                ).exists()
-            except Exception:
-                has_perm = codename in ROLE_PERMISSIONS.get(role, [])
-
-        # Cache the result
-        self._permission_cache.set(role, codename, has_perm)
-        return has_perm
+        from apps.perm.checker import check_permission
+        if self._current_user:
+            return check_permission(self._current_user, codename)
+        # Fallback for direct role-based calls (e.g., tests)
+        from apps.core.permissions import user_has_permission
+        from types import SimpleNamespace
+        fake_user = SimpleNamespace(is_authenticated=True, role=role)
+        return check_permission(fake_user, codename)
 
 
 def require_permission(codename_or_list):

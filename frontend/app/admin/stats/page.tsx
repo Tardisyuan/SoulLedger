@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { useAuth } from "@/src/hooks/useAuth";
+import { useTenant } from "@/src/contexts/TenantContext";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { karmaApi, KarmaStatsOverview } from "@/lib/api";
 import {
@@ -38,7 +38,7 @@ const CHART_COLORS = [
 
 export default function AdminStatsPage() {
   const { t } = useI18n();
-  const { isAdmin } = useAuth();
+  const { isAdmin } = useTenant();
 
   if (!isAdmin) {
     return <PermissionDenied />;
