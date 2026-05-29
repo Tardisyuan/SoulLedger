@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { permApi, Permission, Role } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -16,6 +17,7 @@ const CATEGORIES = ["soul", "judgment", "karma", "reincarnation", "system"];
 
 export default function PermissionsPage() {
   const { t } = useI18n();
+  const { showToast } = useToast();
   const { isAdmin, user } = useTenant();
   const queryClient = useQueryClient();
 
@@ -69,6 +71,7 @@ export default function PermissionsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["role-permissions"] });
     },
+    onError: () => showToast(t("permissions.assign_error") || "Failed to assign permissions", "error"),
   });
 
   // Create mutation
@@ -79,6 +82,7 @@ export default function PermissionsPage() {
       queryClient.invalidateQueries({ queryKey: ["permissions"] });
       setIsCreateOpen(false);
     },
+    onError: () => showToast(t("permissions.create_error") || "Failed to create permission", "error"),
   });
 
   // Edit mutation
@@ -90,6 +94,7 @@ export default function PermissionsPage() {
       setIsEditOpen(false);
       setEditingPerm(null);
     },
+    onError: () => showToast(t("permissions.edit_error") || "Failed to update permission", "error"),
   });
 
   // Delete mutation
@@ -100,6 +105,7 @@ export default function PermissionsPage() {
       setIsDeleteOpen(false);
       setDeletingPerm(null);
     },
+    onError: () => showToast(t("permissions.delete_error") || "Failed to delete permission", "error"),
   });
 
   // Role CRUD mutations
@@ -110,6 +116,7 @@ export default function PermissionsPage() {
       queryClient.invalidateQueries({ queryKey: ["roles"] });
       setIsRoleCreateOpen(false);
     },
+    onError: () => showToast(t("permissions.role_create_error") || "Failed to create role", "error"),
   });
 
   const roleEditMutation = useMutation({
@@ -120,6 +127,7 @@ export default function PermissionsPage() {
       setIsRoleEditOpen(false);
       setEditingRole(null);
     },
+    onError: () => showToast(t("permissions.role_edit_error") || "Failed to update role", "error"),
   });
 
   const roleDeleteMutation = useMutation({
@@ -129,6 +137,7 @@ export default function PermissionsPage() {
       setIsRoleDeleteOpen(false);
       setDeletingRole(null);
     },
+    onError: () => showToast(t("permissions.role_delete_error") || "Failed to delete role", "error"),
   });
 
   // Build permission map by category

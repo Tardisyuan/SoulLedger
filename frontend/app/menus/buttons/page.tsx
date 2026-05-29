@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { menuButtonsApi, menusApi, type MenuButton, type MenuItem } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
 import { Modal } from "@/src/components/ui/Modal";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
@@ -12,6 +13,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 export default function MenuButtonsPage() {
   const { t } = useI18n();
+  const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [selectedMenuId, setSelectedMenuId] = useState<number | undefined>();
 
@@ -34,11 +36,13 @@ export default function MenuButtonsPage() {
   const createMutation = useMutation({
     mutationFn: (data: Partial<MenuButton>) => menuButtonsApi.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu-buttons"] }),
+    onError: () => showToast(t("menu_buttons.create_error") || "Failed to create button", "error"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => menuButtonsApi.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu-buttons"] }),
+    onError: () => showToast(t("menu_buttons.delete_error") || "Failed to delete button", "error"),
   });
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

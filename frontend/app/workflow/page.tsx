@@ -19,6 +19,7 @@ import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
 import Link from "next/link";
 import WorkflowEditor from "@/src/components/workflow/WorkflowEditor";
 import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
@@ -113,6 +114,7 @@ const CASE_TYPE_KEYS: Record<string, string> = {
 
 export default function WorkflowPage() {
   const { t } = useI18n();
+  const { showToast } = useToast();
   const router = useRouter();
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>("CHINESE_ROUTINE");
   const [workflowInstance, setWorkflowInstance] = useState<ApprovalWorkflow | null>(null);
@@ -153,6 +155,7 @@ export default function WorkflowPage() {
       queryClient.invalidateQueries({ queryKey: ["workflow-templates"] });
       setEditingTemplateId(null);
     },
+    onError: () => showToast(t("workflow.delete_error") || "Failed to delete template", "error"),
   });
 
   const selectedCivilization = selectedTemplate.split("_")[0];
