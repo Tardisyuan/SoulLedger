@@ -13,34 +13,44 @@ from apps.tenants.models import Tenant
 class TestLoginTenantInfo:
     """Test that login endpoint returns tenant info for frontend redirect."""
 
-    def test_login_returns_tenant_info(self, api_client, db):
+    def test_login_returns_tenant_info(self, api_client, db, django_user_model):
         """Login response should include tenant code for frontend redirect."""
+        # Create test user with tenant
+        from apps.tenants.models import Tenant
+        tenant, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "地府"})
+        django_user_model.objects.create_user(
+            username="test_admin", password="admin123", role="ADMIN", tenant=tenant
+        )
         resp = api_client.post(
             "/api/v1/auth/login/",
-            {"username": "admin", "password": "admin123"},
+            {"username": "test_admin", "password": "admin123"},
             content_type="application/json",
         )
-        if resp.status_code == 200:
-            data = resp.json()
-            # Should have tenant info for frontend redirect
-            assert "user" in data
-            user = data["user"]
-            assert "tenant" in user
-            if user["tenant"]:
-                assert "code" in user["tenant"]
-                assert "display_name" in user["tenant"]
+        assert resp.status_code == 200, f"Login failed with status {resp.status_code}: {resp.content}"
+        data = resp.json()
+        assert "user" in data
+        user = data["user"]
+        assert "tenant" in user
+        assert user["tenant"] is not None, "Tenant should not be None for admin user"
+        assert "code" in user["tenant"]
+        assert "display_name" in user["tenant"]
 
-    def test_login_response_has_access_token(self, api_client, db):
+    def test_login_response_has_access_token(self, api_client, db, django_user_model):
         """Login response should include access and refresh tokens."""
+        from apps.tenants.models import Tenant
+        tenant, _ = Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "地府"})
+        django_user_model.objects.create_user(
+            username="test_admin2", password="admin123", role="ADMIN", tenant=tenant
+        )
         resp = api_client.post(
             "/api/v1/auth/login/",
-            {"username": "admin", "password": "admin123"},
+            {"username": "test_admin2", "password": "admin123"},
             content_type="application/json",
         )
-        if resp.status_code == 200:
-            data = resp.json()
-            assert "access" in data
-            assert "refresh" in data
+        assert resp.status_code == 200, f"Login failed with status {resp.status_code}: {resp.content}"
+        data = resp.json()
+        assert "access" in data
+        assert "refresh" in data
 
 
 class TestTenantHeaderInjection:
@@ -71,10 +81,10 @@ class TestTenantHeaderInjection:
         cn_civilizations = {a.get("civilization") for a in cn_actors}
         eu_civilizations = {a.get("civilization") for a in eu_actors}
 
-        # CN actors should be CHINESE civilization
+        # CN actors should be CHINESE civilization (if any exist)
         if cn_actors:
             assert "CHINESE" in cn_civilizations
-        # EU actors should be EUROPEAN civilization
+        # EU actors should be EUROPEAN civilization (if any exist)
         if eu_actors:
             assert "EUROPEAN" in eu_civilizations
 
@@ -97,7 +107,7 @@ class TestTenantHeaderInjection:
         cn_realms = cn_resp.json().get("results", [])
         eu_realms = eu_resp.json().get("results", [])
 
-        # CN realms should have CHINESE civilization
+        # CN realms should have CHINESE civilization (if any exist)
         if cn_realms:
             cn_civilizations = {r.get("civilization") for r in cn_realms}
             assert "CHINESE" in cn_civilizations
@@ -109,7 +119,7 @@ class TestKarmaStatsEndpoint:
     def test_karma_stats_requires_auth(self, api_client, db):
         """Karma stats endpoint should require authentication."""
         resp = api_client.get("/api/v1/karma/stats/overview/")
-        assert resp.status_code in [401, 403]
+        assert resp.status_code == 401, f"Expected 401, got {resp.status_code}"
 
     def test_karma_stats_with_valid_token(self, api_client, db, auth_headers):
         """Karma stats endpoint should work with valid token."""
@@ -117,10 +127,10 @@ class TestKarmaStatsEndpoint:
             "/api/v1/karma/stats/overview/",
             HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
         data = resp.json()
         # Should have stats data
-        assert "total_souls" in data or "overview" in data
+        assert "total_souls" in data, f"Missing 'total_souls' in response: {data.keys()}"
 
     def test_karma_stats_includes_tenant_breakdown(self, api_client, db, auth_headers):
         """Karma stats should include per-tenant breakdown."""
@@ -128,10 +138,10 @@ class TestKarmaStatsEndpoint:
             "/api/v1/karma/stats/overview/",
             HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
         )
-        if resp.status_code == 200:
-            data = resp.json()
-            # Should include tenants breakdown
-            assert "tenants" in data or "tenant_breakdown" in data
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+        data = resp.json()
+        # Should include tenants breakdown
+        assert "tenants" in data, f"Missing 'tenants' in response: {data.keys()}"
 
 
 class TestTenantIsolation:

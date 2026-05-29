@@ -229,7 +229,7 @@ ROLE_PERMISSIONS = {
         "karma.read", "karma.manage",
         "reincarnation.read", "reincarnation.manage",
         "dashboard.read", "audit.read", "notification.read",
-        "dispatch.read", "dispatch.manage",
+        "dispatch.read", "dispatch.manage", "dispatch.approve", "dispatch.reject", "dispatch.execute",
         "cross_judgment.read", "cross_judgment.create",
         "realms.read", "actors.read",
         "system.settings", "user.manage", "menu.manage",
