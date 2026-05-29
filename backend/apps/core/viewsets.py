@@ -59,13 +59,13 @@ class CodenameViewSetMixin:
 
 class DataScopeViewSetMixin:
     """
-    Mixin that applies RowLevelDataScope filtering to get_queryset().
+    Mixin that provides tenant isolation + RowLevelDataScope filtering.
 
-    Calls super().get_queryset() first (preserving tenant filtering from
-    TenantQuerySetMixin or manual logic), then applies DataScopeFilter.
+    Combines TenantQuerySetMixin logic (tenant filtering, ADMIN bypass)
+    with DataScopeFilter (row-level data scope rules).
 
-    ADMIN bypasses data scope filtering (handled by DataScopeFilter.filter_queryset).
-    Unauthenticated users get empty queryset.
+    ViewSets using this mixin do NOT need TenantQuerySetMixin or manual
+    tenant filtering in get_queryset().
     """
 
     def get_queryset(self):
@@ -73,8 +73,16 @@ class DataScopeViewSetMixin:
         user = self.request.user
         if not user.is_authenticated:
             return qs.none()
+        # ADMIN bypasses both tenant filtering and data scope
         if getattr(user, 'role', None) == 'ADMIN':
             return qs
+        # Tenant isolation
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            qs = qs.filter(tenant=tenant)
+        else:
+            return qs.none()
+        # Data scope filtering
         from apps.perm.filters import DataScopeFilter
         return DataScopeFilter.filter_queryset(self.request, qs, self.queryset.model)
 

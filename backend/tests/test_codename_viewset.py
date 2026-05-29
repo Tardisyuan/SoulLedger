@@ -337,7 +337,7 @@ class TestHasPermissionFallback(TestCase):
     def test_granted_when_in_dict_and_not_in_db(self):
         """When Permission not in DB but ROLE_PERMISSIONS dict grants it, should grant."""
         from apps.perm.models import Permission
-        from apps.core.middleware import ROLE_PERMISSIONS
+        from apps.perm.models import ROLE_PERMISSIONS
         # Ensure codename does NOT exist in DB
         Permission.objects.filter(codename="soul.read").delete()
 

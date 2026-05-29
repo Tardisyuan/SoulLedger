@@ -199,6 +199,9 @@
     "retry": "Retry",
     "confirm": "Confirm"
   },
+  "pagination": {
+    "info": "Page {{page}} / {{total}} ({{count}} records)"
+  },
   "menus": {
     "title": "Menu Management",
     "create": "Create Menu",

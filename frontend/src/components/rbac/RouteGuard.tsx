@@ -1,15 +1,14 @@
 "use client";
-import { useAuth } from "@/src/hooks/useAuth";
-import type { Operation } from "@/src/hooks/useAuth";
+import { usePermissions } from "@/src/hooks/usePermissions";
 
 type RouteGuardProps = {
   children: React.ReactNode;
-  operation: Operation;
+  permission: string;
   fallback?: React.ReactNode;
 };
 
-export function RouteGuard({ children, operation, fallback = null }: RouteGuardProps) {
-  const { hasPermission } = useAuth();
-  if (!hasPermission(operation)) return <>{fallback}</>;
+export function RouteGuard({ children, permission, fallback = null }: RouteGuardProps) {
+  const { hasPermission } = usePermissions();
+  if (!hasPermission(permission)) return <>{fallback}</>;
   return <>{children}</>;
 }

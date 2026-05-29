@@ -28,7 +28,7 @@ describe("RouteGuard", () => {
     mockHasPermission.mockReturnValue(true);
 
     render(
-      <RouteGuard operation="soul.view">
+      <RouteGuard permission="soul.view">
         <div>Secret Page</div>
       </RouteGuard>
     );
@@ -40,7 +40,7 @@ describe("RouteGuard", () => {
     mockHasPermission.mockReturnValue(false);
 
     render(
-      <RouteGuard operation="soul.delete">
+      <RouteGuard permission="soul.delete">
         <div>Secret Page</div>
       </RouteGuard>
     );
@@ -52,7 +52,7 @@ describe("RouteGuard", () => {
     mockHasPermission.mockReturnValue(false);
 
     render(
-      <RouteGuard operation="admin.panel" fallback={<div>Redirecting...</div>}>
+      <RouteGuard permission="admin.panel" fallback={<div>Redirecting...</div>}>
         <div>Admin Panel</div>
       </RouteGuard>
     );
@@ -65,7 +65,7 @@ describe("RouteGuard", () => {
     mockHasPermission.mockReturnValue(false);
 
     const { container } = render(
-      <RouteGuard operation="forbidden">
+      <RouteGuard permission="forbidden">
         <div>Hidden</div>
       </RouteGuard>
     );
@@ -78,7 +78,7 @@ describe("RouteGuard", () => {
     mockHasPermission.mockReturnValue(true);
 
     render(
-      <RouteGuard operation="judgment.review">
+      <RouteGuard permission="judgment.review">
         <div>Content</div>
       </RouteGuard>
     );
@@ -93,7 +93,7 @@ describe("RouteGuard", () => {
     mockHasPermission.mockReturnValue(true);
 
     render(
-      <RouteGuard operation="soul.delete">
+      <RouteGuard permission="soul.delete">
         <div>Admin Allowed</div>
       </RouteGuard>
     );
@@ -106,7 +106,7 @@ describe("RouteGuard", () => {
     mockHasPermission.mockReturnValue(true);
 
     render(
-      <RouteGuard operation="any.arbitrary.operation">
+      <RouteGuard permission="any.arbitrary.operation">
         <div>Always Allowed</div>
       </RouteGuard>
     );
