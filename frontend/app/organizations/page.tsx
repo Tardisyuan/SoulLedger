@@ -49,7 +49,7 @@ export default function OrganizationsPage() {
     });
     // Sort by level and sort
     Object.keys(tree).forEach(key => {
-      tree[key].sort((a, b) => a.sort ?? a.level - (b.sort ?? b.level));
+      tree[key].sort((a, b) => (a.sort ?? a.level ?? 0) - (b.sort ?? b.level ?? 0));
     });
     return tree;
   };
@@ -68,7 +68,7 @@ export default function OrganizationsPage() {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <h4 className="font-medium text-[hsl(var(--color-ink))] truncate">{org.name}</h4>
-          <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${CATEGORY_COLORS[org.category] || "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]"}`}>
+          <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${CATEGORY_COLORS[org.category ?? ""] || "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]"}`}>
             {org.level === 0 ? t("organization.root") : `L${org.level}`}
           </span>
         </div>

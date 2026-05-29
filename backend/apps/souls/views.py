@@ -35,73 +35,43 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     ordering_fields = ["name", "created_at", "death_date"]
 
     def get_queryset(self):
+        """
+        Build queryset with filtering from query params.
+        Tenant isolation is handled by DataScopeViewSetMixin (via super()).
+        Karma/civilization filtering delegated to SoulQuerySet manager.
+        """
         qs = super().get_queryset()
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        # Exclude records with null tenant (orphaned records)
-        qs = qs.filter(tenant__isnull=False)
-        if user.role == 'ADMIN':  # SYS_ADMIN bypasses
-            pass
-        else:
-            tenant = getattr(self.request, 'tenant', None)
-            if tenant:
-                qs = qs.filter(tenant=tenant)
-            else:
-                return qs.none()
+        qs = qs.exclude_orphaned()
 
-        # Custom filtering via query params
         params = self.request.query_params
 
-        # civilization filter (mapped from tenant code)
+        # Civilization filter
         civilization = params.get('civilization')
         if civilization:
-            tenant_mapping = {
-                'CHINESE': 'CN_DIYU',
-                'EUROPEAN': 'EU_HEAVEN_HELL',
-                'EGYPTIAN': 'EG_DUAT',
-            }
-            tenant_code = tenant_mapping.get(civilization)
-            if tenant_code:
-                qs = qs.filter(tenant__code=tenant_code)
+            qs = qs.filter_by_civilization(civilization)
 
-        # state filter (maps to current_state)
+        # State filter
         state = params.get('state')
         if state:
-            qs = qs.filter(current_state=state)
+            qs = qs.filter_by_state(state)
 
-        # karma range filters and karma ordering - annotate _karmic_balance when needed
+        # Karma range filtering
         karma_min = params.get('karma_min')
         karma_max = params.get('karma_max')
         ordering = params.get('ordering', '').strip()
-        needs_karma_annotation = (
-            karma_min is not None or karma_max is not None or
-            ordering in ('karmic_balance', '-karmic_balance')
-        )
-        if needs_karma_annotation:
-            from django.db.models import F, ExpressionWrapper, IntegerField
-            karma_expr = ExpressionWrapper(F('merit_score') - F('demerit_score'), output_field=IntegerField())
-            qs = qs.annotate(_karmic_balance=karma_expr)
-            if karma_min is not None:
-                try:
-                    qs = qs.filter(_karmic_balance__gte=int(karma_min))
-                except ValueError:
-                    pass
-            if karma_max is not None:
-                try:
-                    qs = qs.filter(_karmic_balance__lte=int(karma_max))
-                except ValueError:
-                    pass
-            # Apply karma ordering directly since DRF ordering runs after get_queryset returns
-            if ordering in ('karmic_balance', '-karmic_balance'):
-                qs = qs.order_by('_karmic_balance' if ordering == 'karmic_balance' else '-_karmic_balance')
-                # Clear the filter's ordering to avoid double-ordering
-                self._skip_filter_ordering = True
+
+        if karma_min is not None or karma_max is not None:
+            qs = qs.filter_by_karma_range(karma_min, karma_max)
+
+        # Karma ordering (applied here since DRF ordering runs after get_queryset)
+        if ordering in ('karmic_balance', '-karmic_balance'):
+            qs = qs.order_by_karma(descending=ordering.startswith('-'))
+            self._skip_filter_ordering = True
 
         return qs
 
     def filter_queryset(self, queryset):
-        """Skip ordering if we already applied karma ordering in get_queryset."""
+        """Skip DRF ordering if karma ordering already applied."""
         if getattr(self, '_skip_filter_ordering', False):
             self._skip_filter_ordering = False
             return queryset
