@@ -7,6 +7,7 @@ import type { LucideIcon } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { menusApi, type MenuItem } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
 import { Modal } from "@/src/components/ui/Modal";
 import { IconPicker } from "@/src/components/ui/IconPicker";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
@@ -19,6 +20,7 @@ const ROLE_OPTIONS = ["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"];
 
 export default function MenusPage() {
   const { t } = useI18n();
+  const { showToast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: menus = [], isLoading, error } = useQuery<MenuItem[]>({
@@ -32,11 +34,13 @@ export default function MenusPage() {
   const createMutation = useMutation({
     mutationFn: (data: Partial<MenuItem>) => menusApi.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menus"] }),
+    onError: () => showToast(t("menus.create_error") || "Failed to create menu", "error"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => menusApi.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menus"] }),
+    onError: () => showToast(t("menus.delete_error") || "Failed to delete menu", "error"),
   });
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

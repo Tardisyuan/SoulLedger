@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { notificationsApi, type Notification } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useToast } from "@/src/contexts/ToastContext";
 import { PageSection } from "@/components/ui/page-section";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -15,6 +16,7 @@ type FilterType = "all" | "unread";
 
 export default function NotificationsPage() {
   const { t } = useI18n();
+  const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<FilterType>("all");
 
@@ -33,6 +35,7 @@ export default function NotificationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
+    onError: () => showToast(t("notifications.mark_read_error") || "Failed to mark as read", "error"),
   });
 
   const markAllReadMutation = useMutation({
@@ -40,6 +43,7 @@ export default function NotificationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
+    onError: () => showToast(t("notifications.mark_all_error") || "Failed to mark all as read", "error"),
   });
 
   const handleMarkRead = (id: string | number) => {
