@@ -333,13 +333,15 @@ export default function PermissionsPage() {
           title={t("permissions.all_permissions")}
           isLoading={isPermsLoading}
           actions={
-            isAdmin && !isPermsLoading ? (
-              <button
-                onClick={() => setIsCreateOpen(true)}
-                className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium transition-colors"
-              >
-                + {t("permissions.create")}
-              </button>
+            !isPermsLoading ? (
+              <RequirePermission permissions="system.settings">
+                <button
+                  onClick={() => setIsCreateOpen(true)}
+                  className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium transition-colors"
+                >
+                  + {t("permissions.create")}
+                </button>
+              </RequirePermission>
             ) : undefined
           }
         >
@@ -353,7 +355,7 @@ export default function PermissionsPage() {
                     <th className="text-left px-4 py-3 font-medium">{t("permissions.codename")}</th>
                     <th className="text-left px-4 py-3 font-medium">{t("permissions.name")}</th>
                     <th className="text-left px-4 py-3 font-medium">{t("permissions.category")}</th>
-                    {isAdmin && <th className="text-right px-4 py-3 font-medium">{t("souls.action")}</th>}
+                    <th className="text-right px-4 py-3 font-medium">{t("souls.action")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
@@ -366,8 +368,8 @@ export default function PermissionsPage() {
                           {perm.category}
                         </span>
                       </td>
-                      {isAdmin && (
-                        <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-3 text-right">
+                        <RequirePermission permissions="system.settings">
                           <button
                             onClick={() => { setEditingPerm(perm); setIsEditOpen(true); }}
                             className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-xs mr-3"
@@ -380,8 +382,8 @@ export default function PermissionsPage() {
                           >
                             {t("permissions.delete")}
                           </button>
+                        </RequirePermission>
                         </td>
-                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -390,8 +392,8 @@ export default function PermissionsPage() {
           )}
         </PageSection>
 
-        {/* ── Roles Grid (ADMIN only) ── */}
-        {isAdmin && (
+        {/* ── Roles Grid ── */}
+        <RequirePermission permissions="system.settings">
           <PageSection title={t("permissions.roles_title")} isLoading={isRolesLoading}>
             {isRolesLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -429,7 +431,7 @@ export default function PermissionsPage() {
               </div>
             )}
           </PageSection>
-        )}
+        </RequirePermission>
       </div>
 
       {/* ── Create Permission Modal ── */}

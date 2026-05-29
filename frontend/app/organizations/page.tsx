@@ -25,7 +25,7 @@ export default function OrganizationsPage() {
   const { user } = useTenant();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
-  const { data: organizations = [], isLoading } = useQuery({
+  const { data: organizations = [], isLoading, error } = useQuery({
     queryKey: ["organizations"],
     queryFn: () => organizationsApi.list().then(r => r.data as Organization[]),
     enabled: !!user,

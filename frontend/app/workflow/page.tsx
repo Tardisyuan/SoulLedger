@@ -155,7 +155,7 @@ export default function WorkflowPage() {
       queryClient.invalidateQueries({ queryKey: ["workflow-templates"] });
       setEditingTemplateId(null);
     },
-    onError: () => showToast(t("workflow.delete_error") || "Failed to delete template", "error"),
+    onError: () => showToast(t("workflow.delete_error"), "error"),
   });
 
   const selectedCivilization = selectedTemplate.split("_")[0];
@@ -231,9 +231,9 @@ export default function WorkflowPage() {
   }, []);
 
   const tabs = [
-    { key: "existing", label: t("workflow.existing") || "现有流程" },
-    { key: "editor", label: t("workflow.editor") || "模板编辑器" },
-    { key: "instances", label: t("workflow.instances") || "审批实例" },
+    { key: "existing", label: t("workflow.existing") },
+    { key: "editor", label: t("workflow.editor") },
+    { key: "instances", label: t("workflow.instances") },
   ] as const;
   const [tab, setTab] = useState<"existing" | "editor" | "instances">("existing");
 
@@ -242,7 +242,7 @@ export default function WorkflowPage() {
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
-          {t("workflow.title") || "审批流程"}
+          {t("workflow.title")}
         </h1>
       </div>
 
@@ -269,8 +269,8 @@ export default function WorkflowPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{t("workflow.templates") || "流程模板"}</h2>
-                <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("workflow.select_template") || "选择模板进行编辑"}</p>
+                <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{t("workflow.templates")}</h2>
+                <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("workflow.select_template")}</p>
               </div>
               <RequirePermission permissions="workflow.create">
                 <button
@@ -280,7 +280,7 @@ export default function WorkflowPage() {
                   }}
                   className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium transition-colors"
                 >
-                  + {t("workflow.new_template") || "新建模板"}
+                  + {t("workflow.new_template")}
                 </button>
               </RequirePermission>
             </div>
@@ -294,7 +294,7 @@ export default function WorkflowPage() {
                   <ListSkeleton count={3} />
                 ) : templates.length > 0 ? (
                   <div className="space-y-2">
-                    <div className="text-xs font-semibold text-[hsl(var(--color-ink-muted))] px-2">{t("workflow.custom_templates") || "自定义模板"}</div>
+                    <div className="text-xs font-semibold text-[hsl(var(--color-ink-muted))] px-2">{t("workflow.custom_templates")}</div>
                     {templates.map((tmpl: BackendTemplate) => (
                       <button
                         key={tmpl.id}
@@ -318,7 +318,7 @@ export default function WorkflowPage() {
 
                 {/* 预定义模板列表 */}
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-[hsl(var(--color-ink-muted))] px-2">{t("workflow.predefined_templates") || "预定义模板"}</div>
+                  <div className="text-xs font-semibold text-[hsl(var(--color-ink-muted))] px-2">{t("workflow.predefined_templates")}</div>
                   {Object.entries(templatesByCiv).map(([civ, civTemplates]) => (
                     <div key={civ} className="space-y-1">
                       <div className="text-xs text-[hsl(var(--color-accent))] px-2 py-1 font-medium">
@@ -391,7 +391,7 @@ export default function WorkflowPage() {
                                   }}
                                   className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium"
                                 >
-                                  {t("common.edit") || "编辑"}
+                                  {t("common.edit")}
                                 </button>
                               </RequirePermission>
                               <RequirePermission permissions="workflow.delete">
@@ -402,7 +402,7 @@ export default function WorkflowPage() {
                                   }}
                                   className="px-3 py-1.5 bg-[hsl(var(--color-status-error)/0.2)] hover:bg-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))] border border-[hsl(var(--color-status-error)/0.3)] rounded text-sm font-medium"
                                 >
-                                  {t("common.delete") || "删除"}
+                                  {t("common.delete")}
                                 </button>
                               </RequirePermission>
                             </div>
@@ -481,7 +481,7 @@ export default function WorkflowPage() {
                                 }}
                                 className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium"
                               >
-                                {t("common.edit") || "编辑"}
+                                {t("common.edit")}
                               </button>
                             </RequirePermission>
                           </div>
@@ -512,7 +512,7 @@ export default function WorkflowPage() {
                 {/* 未选中状态 */}
                 {!editingTemplateId && !selectedTemplate && (
                   <div className="text-center text-[hsl(var(--color-ink-muted))] py-16 bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))]">
-                    {t("workflow.select_from_left") || "请从左侧选择一个模板"}
+                    {t("workflow.select_from_left")}
                   </div>
                 )}
               </div>
@@ -543,7 +543,7 @@ export default function WorkflowPage() {
               <ListSkeleton count={5} />
             ) : workflows.length === 0 ? (
               <div className="text-center text-[hsl(var(--color-ink-subtle))] py-12">
-                {t("workflow.no_instances") || "暂无审批实例"}
+                {t("workflow.no_instances")}
               </div>
             ) : (
               workflows.map((wf) => (
@@ -638,14 +638,14 @@ export default function WorkflowPage() {
         <BaseModal
           isOpen={confirmModalOpen}
           onClose={() => setConfirmModalOpen(false)}
-          title={t("common.confirm_delete") || "确认删除"}
+          title={t("common.confirm_delete")}
           footer={
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setConfirmModalOpen(false)}
                 className="px-4 py-2 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink-muted))]"
               >
-                {t("common.cancel") || "取消"}
+                {t("common.cancel")}
               </button>
               <button
                 onClick={() => {
@@ -657,14 +657,14 @@ export default function WorkflowPage() {
                 disabled={deleteMutation.isPending}
                 className="px-4 py-2 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] text-white rounded text-sm font-medium disabled:opacity-50"
               >
-                {deleteMutation.isPending ? (t("common.deleting") || "删除中...") : (t("common.confirm_delete") || "确认删除")}
+                {deleteMutation.isPending ? (t("common.deleting")) : (t("common.confirm_delete"))}
               </button>
             </div>
           }
         >
           <div className="space-y-3">
-            <p className="text-[hsl(var(--color-ink))]">{t("workflow.delete_confirm_msg", { name: confirmingTemplate?.name || "" }) || `确定要删除模板 "${confirmingTemplate?.name}" 吗？`}</p>
-            <p className="text-sm text-[hsl(var(--color-status-error))]">{t("workflow.delete_irreversible") || "此操作不可撤销，删除后无法恢复。"}</p>
+            <p className="text-[hsl(var(--color-ink))]">{t("workflow.delete_confirm_msg", { name: confirmingTemplate?.name || "" })}</p>
+            <p className="text-sm text-[hsl(var(--color-status-error))]">{t("workflow.delete_irreversible")}</p>
           </div>
         </BaseModal>
       </div>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { karmaApi, soulsApi, workflowApi, type KarmaStatsOverview } from "@/lib/api";
+import { karmaApi, type KarmaStatsOverview } from "@/lib/api";
 import {
   Users,
   Scale,

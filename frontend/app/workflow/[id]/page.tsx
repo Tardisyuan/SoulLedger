@@ -54,13 +54,13 @@ export default function WorkflowDetailPage() {
     mutationFn: (payload: { node_id: string; verdict: string; notes: string }) =>
       workflowApi.approveNode(id, payload.node_id, { verdict: payload.verdict, notes: payload.notes }),
     onSuccess: () => {
-      showToast(t("workflow.detail.approve_success") || "Node approved successfully", "success");
+      showToast(t("workflow.detail.approve_success"), "success");
       setSelectedVerdict("");
       setNotes("");
       refetch();
     },
     onError: (err: { response?: { data?: { error?: string } }; message?: string }) => {
-      showToast(err?.response?.data?.error || t("workflow.detail.approve_error") || "Failed to approve node", "error");
+      showToast(err?.response?.data?.error || t("workflow.detail.approve_error"), "error");
     },
   });
 
@@ -68,11 +68,11 @@ export default function WorkflowDetailPage() {
   const advanceMutation = useMutation({
     mutationFn: () => workflowApi.advance(id),
     onSuccess: () => {
-      showToast(t("workflow.detail.advance_success") || "Workflow advanced", "success");
+      showToast(t("workflow.detail.advance_success"), "success");
       refetch();
     },
     onError: (err: { response?: { data?: { error?: string } }; message?: string }) => {
-      showToast(err?.response?.data?.error || t("workflow.detail.advance_error") || "Failed to advance", "error");
+      showToast(err?.response?.data?.error || t("workflow.detail.advance_error"), "error");
     },
   });
 
@@ -82,7 +82,7 @@ export default function WorkflowDetailPage() {
   function handleApproveNode() {
     if (!currentNode) return;
     if (!selectedVerdict) {
-      showToast(t("workflow.detail.select_verdict") || "Please select a verdict", "error");
+      showToast(t("workflow.detail.select_verdict"), "error");
       return;
     }
     approveMutation.mutate({
@@ -95,7 +95,7 @@ export default function WorkflowDetailPage() {
   if (isLoading) {
     return (
       <div className="text-[hsl(var(--color-ink))] flex items-center justify-center py-12">
-        <div className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.loading") || "Loading workflow..."}</div>
+        <div className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.loading")}</div>
       </div>
     );
   }
@@ -103,9 +103,9 @@ export default function WorkflowDetailPage() {
   if (error || !workflow) {
     return (
       <div className="text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4 py-12">
-        <div className="text-[hsl(var(--color-status-error))]">{t("workflow.detail.not_found") || "Workflow not found"}</div>
+        <div className="text-[hsl(var(--color-status-error))]">{t("workflow.detail.not_found")}</div>
         <Link href="/workflow" className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))]">
-          {t("workflow.detail.back_to_list") || "Back to workflow list"}
+          {t("workflow.detail.back_to_list")}
         </Link>
       </div>
     );
@@ -118,7 +118,7 @@ export default function WorkflowDetailPage() {
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <Link href="/workflow" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
-          ← {t("workflow.detail.back_to_list") || "Back to list"}
+          ← {t("workflow.detail.back_to_list")}
         </Link>
         <h1 className="text-lg font-bold text-[hsl(var(--color-ink))] flex-1">{workflow.workflow_name}</h1>
         <span className={`px-2 py-0.5 rounded text-xs font-bold border ${statusColor}`}>
@@ -126,7 +126,7 @@ export default function WorkflowDetailPage() {
         </span>
         {workflow.is_appeal && (
           <span className="px-2 py-0.5 rounded text-xs bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))]">
-            {t("workflow.detail.appeal") || "Appeal"}
+            {t("workflow.detail.appeal")}
           </span>
         )}
       </div>
@@ -135,35 +135,35 @@ export default function WorkflowDetailPage() {
         {/* Workflow Info Card */}
         <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
           <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
-            {t("workflow.detail.info") || "Workflow Information"}
+            {t("workflow.detail.info")}
           </h2>
           <dl className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.soul") || "Soul"}</dt>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.soul")}</dt>
               <dd className="text-[hsl(var(--color-ink))] font-medium">{workflow.soul_name || workflow.soul}</dd>
             </div>
             <div>
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.case_type") || "Case Type"}</dt>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.case_type")}</dt>
               <dd className="text-[hsl(var(--color-ink))]">{workflow.case_type}</dd>
             </div>
             <div>
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.judgment_verdict") || "Judgment Verdict"}</dt>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.judgment_verdict")}</dt>
               <dd className="text-[hsl(var(--color-ink))]">{workflow.judgment_verdict || "—"}</dd>
             </div>
             <div>
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.priority") || "Priority"}</dt>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.priority")}</dt>
               <dd className="text-[hsl(var(--color-ink))]">
-                {workflow.priority === 0 ? t("workflow.detail.normal") || "Normal" :
-                 workflow.priority === 1 ? t("workflow.detail.urgent") || "Urgent" :
-                 t("workflow.detail.critical") || "Critical"}
+                {workflow.priority === 0 ? t("workflow.detail.normal") :
+                 workflow.priority === 1 ? t("workflow.detail.urgent") :
+                 t("workflow.detail.critical")}
               </dd>
             </div>
             <div>
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.created_at") || "Created"}</dt>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.created_at")}</dt>
               <dd className="text-[hsl(var(--color-ink))]">{new Date(workflow.created_at).toLocaleString()}</dd>
             </div>
             <div>
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.completed_at") || "Completed"}</dt>
+              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.completed_at")}</dt>
               <dd className="text-[hsl(var(--color-ink))]">{workflow.completed_at ? new Date(workflow.completed_at).toLocaleString() : "—"}</dd>
             </div>
           </dl>
@@ -173,7 +173,7 @@ export default function WorkflowDetailPage() {
         {currentNode && workflow.status !== "COMPLETED" && (
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
             <h2 className="text-sm font-semibold text-[hsl(var(--color-accent))] uppercase mb-3">
-              {t("workflow.detail.current_node") || "Current Node"}
+              {t("workflow.detail.current_node")}
             </h2>
             <div className="mb-4 p-3 bg-[hsl(var(--color-surface-2))] rounded border border-[hsl(var(--color-hairline))]">
               <div className="font-medium text-[hsl(var(--color-ink))]">{currentNode.node_name}</div>
@@ -181,22 +181,22 @@ export default function WorkflowDetailPage() {
                 {t(NODE_TYPE_KEYS[currentNode.node_type]) || currentNode.node_type} · {currentNode.court_code}
               </div>
               <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
-                {t("workflow.detail.order") || "Order"}: {currentNode.node_order}
+                {t("workflow.detail.order")}: {currentNode.node_order}
               </div>
             </div>
 
             {/* Verdict Selection */}
             <div className="space-y-2 mb-4">
               <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-2">
-                {t("workflow.detail.select_verdict") || "Select Verdict"}
+                {t("workflow.detail.select_verdict")}
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { key: "PASSED", label: t("workflow.verdicts.passed") || "Passed" },
-                  { key: "FAILED", label: t("workflow.verdicts.failed") || "Failed" },
-                  { key: "CONFIRMED", label: t("workflow.verdicts.confirmed") || "Confirmed" },
-                  { key: "REJECTED", label: t("workflow.verdicts.rejected") || "Rejected" },
-                  { key: "SKIPPED", label: t("workflow.verdicts.skipped") || "Skipped" },
+                  { key: "PASSED", label: t("workflow.verdicts.passed") },
+                  { key: "FAILED", label: t("workflow.verdicts.failed") },
+                  { key: "CONFIRMED", label: t("workflow.verdicts.confirmed") },
+                  { key: "REJECTED", label: t("workflow.verdicts.rejected") },
+                  { key: "SKIPPED", label: t("workflow.verdicts.skipped") },
                 ].map((opt) => (
                   <label
                     key={opt.key}
@@ -223,14 +223,14 @@ export default function WorkflowDetailPage() {
             {/* Notes */}
             <div className="mb-4">
               <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-2">
-                {t("workflow.detail.notes") || "Notes"}
+                {t("workflow.detail.notes")}
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded p-3 text-sm text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]/50"
-                placeholder={t("workflow.detail.notes_placeholder") || "Enter notes..."}
+                placeholder={t("workflow.detail.notes_placeholder")}
               />
             </div>
 
@@ -243,8 +243,8 @@ export default function WorkflowDetailPage() {
                   className="flex-1 py-2.5 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-black"
                 >
                   {approveMutation.isPending
-                    ? t("workflow.detail.processing") || "Processing..."
-                    : t("workflow.detail.submit_decision") || "Submit Decision"}
+                    ? t("workflow.detail.processing")
+                    : t("workflow.detail.submit_decision")}
                 </button>
               </RequirePermission>
               <RequirePermission permissions="workflow.advance">
@@ -254,8 +254,8 @@ export default function WorkflowDetailPage() {
                   className="py-2.5 px-4 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-[hsl(var(--color-ink))] border border-[hsl(var(--color-hairline))]"
                 >
                   {advanceMutation.isPending
-                    ? t("workflow.detail.advancing") || "Advancing..."
-                    : t("workflow.detail.advance") || "Advance"}
+                    ? t("workflow.detail.advancing")
+                    : t("workflow.detail.advance")}
                 </button>
               </RequirePermission>
             </div>
@@ -266,14 +266,14 @@ export default function WorkflowDetailPage() {
         {workflow.status === "COMPLETED" && (
           <div className="bg-[hsl(var(--color-status-success)/0.1)] rounded-lg p-5 border border-[hsl(var(--color-status-success)/0.3)]">
             <h2 className="text-sm font-semibold text-[hsl(var(--color-status-success))] uppercase mb-2">
-              {t("workflow.detail.completed") || "Workflow Completed"}
+              {t("workflow.detail.completed")}
             </h2>
             <p className="text-sm text-[hsl(var(--color-ink-muted))]">
-              {t("workflow.detail.completed_message") || "This workflow has been completed."}
+              {t("workflow.detail.completed_message")}
             </p>
             {workflow.completed_at && (
               <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-2">
-                {t("workflow.detail.completed_at") || "Completed at"}: {new Date(workflow.completed_at).toLocaleString()}
+                {t("workflow.detail.completed_at")}: {new Date(workflow.completed_at).toLocaleString()}
               </p>
             )}
           </div>
@@ -289,7 +289,7 @@ export default function WorkflowDetailPage() {
                 : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
             }`}
           >
-            {t("workflow.detail.nodes") || "Nodes"} ({sortedNodes.length})
+            {t("workflow.detail.nodes")} ({sortedNodes.length})
           </button>
           <button
             onClick={() => setActiveTab("history")}
@@ -299,7 +299,7 @@ export default function WorkflowDetailPage() {
                 : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
             }`}
           >
-            {t("workflow.detail.history") || "History"}
+            {t("workflow.detail.history")}
           </button>
         </div>
 
@@ -334,7 +334,7 @@ export default function WorkflowDetailPage() {
                         <span className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</span>
                         {isCurrent && (
                           <span className="px-1.5 py-0.5 rounded text-xs bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] border border-[hsl(var(--color-accent))]/30">
-                            {t("workflow.detail.current") || "Current"}
+                            {t("workflow.detail.current")}
                           </span>
                         )}
                       </div>
@@ -360,7 +360,7 @@ export default function WorkflowDetailPage() {
                           )}
                           {node.approver && (
                             <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
-                              {t("workflow.detail.approver") || "Approver"}: {node.approver}
+                              {t("workflow.detail.approver")}: {node.approver}
                             </p>
                           )}
                         </div>
@@ -402,21 +402,21 @@ export default function WorkflowDetailPage() {
                     </span>
                   </div>
                   <div className="text-xs text-[hsl(var(--color-ink-muted))]">
-                    {t("workflow.detail.decided_at") || "Decided at"}: {node.decided_at ? new Date(node.decided_at).toLocaleString() : "—"}
+                    {t("workflow.detail.decided_at")}: {node.decided_at ? new Date(node.decided_at).toLocaleString() : "—"}
                   </div>
                   {node.notes && (
                     <p className="text-sm text-[hsl(var(--color-ink-muted))] mt-2 italic">&ldquo;{node.notes}&rdquo;</p>
                   )}
                   {node.approver && (
                     <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
-                      {t("workflow.detail.approver") || "Approver"}: {node.approver}
+                      {t("workflow.detail.approver")}: {node.approver}
                     </p>
                   )}
                 </div>
               ))}
             {sortedNodes.filter((n) => n.status !== "PENDING").length === 0 && (
               <div className="text-center text-[hsl(var(--color-ink-subtle))] py-8">
-                {t("workflow.detail.no_history") || "No decisions have been made yet."}
+                {t("workflow.detail.no_history")}
               </div>
             )}
           </div>
