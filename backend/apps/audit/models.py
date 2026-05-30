@@ -31,7 +31,7 @@ class AuditLog(AuditUserFields, models.Model):
     """
     tenant = models.ForeignKey(
         "tenants.Tenant",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="audit_logs",
         null=True,
     )

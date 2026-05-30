@@ -11,7 +11,7 @@ from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 
 
 class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ModelViewSet):
-    queryset = Reincarnation.objects.all()
+    queryset = Reincarnation.objects.select_related("soul", "disposition", "tenant").all()
     serializer_class = ReincarnationSerializer
     permission_classes = [TenantPermission]
     permission_codename = "reincarnation"

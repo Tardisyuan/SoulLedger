@@ -15,7 +15,7 @@ class RealmViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnl
     """
     permission_classes = [TenantPermission]
     permission_codename = "realm"
-    queryset = Realm.objects.all()
+    queryset = Realm.objects.select_related("parent_realm").all()
     filterset_fields = ["civilization", "realm_type"]
     ordering_fields = ["civilization", "tier"]
 

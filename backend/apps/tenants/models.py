@@ -54,6 +54,10 @@ class Notification(AuditUserFields, models.Model):
         ordering = ["-created_at"]
         verbose_name = "Notification"
         verbose_name_plural = "Notifications"
+        indexes = [
+            models.Index(fields=["recipient", "is_read"], name="idx_notification_recipient_read"),
+            models.Index(fields=["tenant", "created_at"], name="idx_notification_tenant_date"),
+        ]
 
     def __str__(self):
         return f"[{self.notification_type}] {self.title}"
