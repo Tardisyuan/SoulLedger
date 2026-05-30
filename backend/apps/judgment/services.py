@@ -17,6 +17,7 @@ class JudgmentConclusionService:
     def conclude_judgment(judgment, verdict: str, notes: str = "", create_workflow: bool = False) -> bool:
         """
         Execute the full judgment conclusion saga.
+        Wrapped in transaction.atomic() for consistency.
 
         Steps:
         1. Update judgment state (verdict, notes, final flag)
@@ -25,26 +26,27 @@ class JudgmentConclusionService:
         4. Transition soul to DISPOSED
         5. Log domain event
         """
-        # Step 1: Update judgment state
-        judgment.verdict = verdict
-        judgment.notes = notes
-        judgment.is_final = True
-        judgment.concluded_at = timezone.now()
-        judgment.save()
+        with transaction.atomic():
+            # Step 1: Update judgment state
+            judgment.verdict = verdict
+            judgment.notes = notes
+            judgment.is_final = True
+            judgment.concluded_at = timezone.now()
+            judgment.save()
 
-        # Step 2: Create disposition (cross-context: judgment → disposition)
-        from apps.disposition.services import DispositionService
-        DispositionService.create_from_judgment(judgment)
+            # Step 2: Create disposition (cross-context: judgment → disposition)
+            from apps.disposition.services import DispositionService
+            DispositionService.create_from_judgment(judgment)
 
-        # Step 3: Optionally create workflow (cross-context: judgment → workflow)
-        if create_workflow:
-            from apps.workflow.services import WorkflowService
-            WorkflowService.create_from_judgment(judgment)
+            # Step 3: Optionally create workflow (cross-context: judgment → workflow)
+            if create_workflow:
+                from apps.workflow.services import WorkflowService
+                WorkflowService.create_from_judgment(judgment)
 
-        # Step 4: Transition soul state (cross-context: judgment → souls)
-        judgment.soul.transition_to(SoulState.DISPOSED, f"Judgment concluded: {verdict}")
+            # Step 4: Transition soul state (cross-context: judgment → souls)
+            judgment.soul.transition_to(SoulState.DISPOSED, f"Judgment concluded: {verdict}")
 
-        # Step 5: Log domain event (cross-context: judgment → events)
+        # Step 5: Log domain event (outside transaction for performance)
         from apps.events.services import EventService
         EventService.log_judgment_concluded(judgment)
 

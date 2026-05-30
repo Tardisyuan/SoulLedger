@@ -54,6 +54,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, TenantC
         return DispatchRecordSerializer
 
     def get_queryset(self):
+        from django.db.models import Q
         qs = super().get_queryset()
         user = self.request.user
         if not user.is_authenticated:
@@ -62,7 +63,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, TenantC
             return qs
         tenant = getattr(self.request, "tenant", None)
         if tenant:
-            return qs.filter(source_tenant=tenant) | qs.filter(target_tenant=tenant)
+            return qs.filter(Q(source_tenant=tenant) | Q(target_tenant=tenant))
         return qs.none()
 
     @action(detail=False, methods=["get"])
@@ -179,6 +180,7 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
         return CrossTenantJudgmentSerializer
 
     def get_queryset(self):
+        from django.db.models import Q
         qs = super().get_queryset()
         user = self.request.user
         if not user.is_authenticated:
@@ -187,7 +189,7 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
             return qs
         tenant = getattr(self.request, "tenant", None)
         if tenant:
-            return qs.filter(initiating_tenant=tenant) | qs.filter(participants__participant_tenant=tenant)
+            return qs.filter(Q(initiating_tenant=tenant) | Q(participants__participant_tenant=tenant))
         return qs.none()
 
     def perform_create(self, serializer):
