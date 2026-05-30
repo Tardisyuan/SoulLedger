@@ -68,6 +68,3 @@ class AuditUserFields(SoftDeleteMixin, models.Model):
 
     class Meta:
         abstract = True
-        indexes = [
-            models.Index(fields=["version"]),
-        ]
