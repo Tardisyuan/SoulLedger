@@ -58,17 +58,17 @@ export default function JudgmentQueuePage() {
       <div className="max-w-5xl mx-auto px-6 py-6">
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-[hsl(var(--color-hairline))]/50">
-          {tabs.map((t) => (
+          {tabs.map((tabItem) => (
             <button
-              key={t.key}
-              onClick={() => { setTab(t.key); setPage(1); }}
+              key={tabItem.key}
+              onClick={() => { setTab(tabItem.key); setPage(1); }}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                tab === t.key
+                tab === tabItem.key
                   ? "text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent))]"
                   : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
               }`}
             >
-              {t.label}
+              {tabItem.label}
             </button>
           ))}
         </div>

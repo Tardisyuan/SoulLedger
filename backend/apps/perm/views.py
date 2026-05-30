@@ -143,10 +143,8 @@ def assign_role_permissions(request):
 
     # Replace all permissions for this role
     RolePermission.objects.filter(role=role).delete()
-    created = []
-    for perm_id in permission_ids:
-        rp = RolePermission.objects.create(role=role, permission_id=perm_id)
-        created.append(rp.id)
+    to_create = [RolePermission(role=role, permission_id=pid) for pid in permission_ids]
+    created = RolePermission.objects.bulk_create(to_create)
 
     return Response({
         "role": role_name,
@@ -297,10 +295,8 @@ def init_role_permissions(request):
 
         # Remove existing and create new
         RolePermission.objects.filter(role=role).delete()
-        created = []
-        for perm_id in perm_ids:
-            rp = RolePermission.objects.create(role=role, permission_id=perm_id)
-            created.append(rp.id)
+        to_create = [RolePermission(role=role, permission_id=pid) for pid in perm_ids]
+        created = RolePermission.objects.bulk_create(to_create)
 
         results[role_name] = f"Assigned {len(created)} permissions"
 
