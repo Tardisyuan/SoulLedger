@@ -407,10 +407,10 @@ describe('API Client — lib/api.ts', () => {
       });
     });
 
-    it('templates.list() should GET /workflow/templates/', () => {
+    it('templates.list() should GET /workflows/templates/', () => {
       mockInstance.get.mockResolvedValueOnce({ data: [] });
       workflowApi.templates.list();
-      expect(mockInstance.get).toHaveBeenCalledWith('/workflow/templates/', { params: undefined });
+      expect(mockInstance.get).toHaveBeenCalledWith('/workflows/templates/', { params: undefined });
     });
   });
 });
