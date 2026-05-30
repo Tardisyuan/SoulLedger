@@ -15,6 +15,20 @@ jest.mock("@/src/contexts/I18nContext", () => ({
         "icon_picker.clear": "Clear",
         "icon_picker.search": "Search icons...",
         "icon_picker.no_results": "No results found",
+        "icon_picker.categories.navigation": "Navigation",
+        "icon_picker.categories.users": "Users",
+        "icon_picker.categories.notifications": "Notifications",
+        "icon_picker.categories.actions": "Actions",
+        "icon_picker.categories.view": "View",
+        "icon_picker.categories.status": "Status",
+        "icon_picker.categories.security": "Security",
+        "icon_picker.categories.soul": "Soul",
+        "icon_picker.categories.travel": "Travel",
+        "icon_picker.categories.files": "Files",
+        "icon_picker.categories.charts": "Charts",
+        "icon_picker.categories.admin": "Admin",
+        "icon_picker.categories.time": "Time",
+        "icon_picker.categories.media": "Media",
       };
       return map[key] ?? key;
     },
@@ -110,8 +124,8 @@ describe("IconPicker", () => {
     render(<IconPicker {...defaultProps} />);
     fireEvent.click(screen.getByText("Select Icon"));
 
-    expect(screen.getByText("navigation")).toBeInTheDocument();
-    expect(screen.getByText("users")).toBeInTheDocument();
+    expect(screen.getByText("Navigation")).toBeInTheDocument();
+    expect(screen.getByText("Users")).toBeInTheDocument();
     expect(screen.getByText("soul")).toBeInTheDocument();
     expect(screen.getByText("security")).toBeInTheDocument();
   });
@@ -120,7 +134,7 @@ describe("IconPicker", () => {
     render(<IconPicker {...defaultProps} />);
     fireEvent.click(screen.getByText("Select Icon"));
 
-    const navBtn = screen.getByText("navigation");
+    const navBtn = screen.getByText("Navigation");
     expect(navBtn.className).toContain("bg-amber-500");
   });
 
@@ -128,11 +142,11 @@ describe("IconPicker", () => {
     render(<IconPicker {...defaultProps} />);
     fireEvent.click(screen.getByText("Select Icon"));
 
-    fireEvent.click(screen.getByText("users"));
-    const usersBtn = screen.getByText("users");
+    fireEvent.click(screen.getByText("Users"));
+    const usersBtn = screen.getByText("Users");
     expect(usersBtn.className).toContain("bg-amber-500");
 
-    const navBtn = screen.getByText("navigation");
+    const navBtn = screen.getByText("Navigation");
     expect(navBtn.className).not.toContain("bg-amber-500");
   });
 
@@ -219,8 +233,8 @@ describe("IconPicker", () => {
     const searchInput = screen.getByPlaceholderText("Search icons...");
     fireEvent.change(searchInput, { target: { value: "Home" } });
 
-    expect(screen.queryByText("navigation")).not.toBeInTheDocument();
-    expect(screen.queryByText("users")).not.toBeInTheDocument();
+    expect(screen.queryByText("Navigation")).not.toBeInTheDocument();
+    expect(screen.queryByText("Users")).not.toBeInTheDocument();
   });
 
   it("should show 'no results' message when search matches nothing", () => {
@@ -239,10 +253,10 @@ describe("IconPicker", () => {
 
     const searchInput = screen.getByPlaceholderText("Search icons...");
     fireEvent.change(searchInput, { target: { value: "Home" } });
-    expect(screen.queryByText("navigation")).not.toBeInTheDocument();
+    expect(screen.queryByText("Navigation")).not.toBeInTheDocument();
 
     fireEvent.change(searchInput, { target: { value: "" } });
-    expect(screen.getByText("navigation")).toBeInTheDocument();
+    expect(screen.getByText("Navigation")).toBeInTheDocument();
   });
 
   // --- Clear selection ---
