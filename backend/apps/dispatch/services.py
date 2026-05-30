@@ -305,8 +305,8 @@ class CrossTenantJudgmentService:
         from apps.tenants.models import Notification
 
         target_users = User.objects.filter(tenant=judgment.initiating_tenant, is_active=True)
-        for user in target_users:
-            Notification.objects.create(
+        notifications = [
+            Notification(
                 recipient=user,
                 notification_type="CROSS_JUDGMENT_INVITED",
                 title=f"Participant Joined: {judgment.title}",
@@ -314,6 +314,9 @@ class CrossTenantJudgmentService:
                 related_object_id=str(judgment.id),
                 related_object_type="CrossTenantJudgment",
             )
+            for user in target_users
+        ]
+        Notification.objects.bulk_create(notifications)
 
         # Activate judgment after participant joins
         CrossTenantJudgmentService.activate(judgment)
@@ -356,16 +359,20 @@ class CrossTenantJudgmentService:
         from apps.authentication.models import User
         from apps.tenants.models import Notification
 
+        notifications = []
         for participant in judgment.participants.all():
             target_users = User.objects.filter(tenant=participant.participant_tenant, is_active=True)
             for user in target_users:
-                Notification.objects.create(
-                    recipient=user,
-                    notification_type="JUDGMENT_CONCLUDED",
-                    title=f"Judgment Concluded: {judgment.title}",
-                    message=f"The cross-tenant judgment '{judgment.title}' has concluded with result: {conclusion_type}",
-                    related_object_id=str(judgment.id),
-                    related_object_type="CrossTenantJudgment",
+                notifications.append(
+                    Notification(
+                        recipient=user,
+                        notification_type="JUDGMENT_CONCLUDED",
+                        title=f"Judgment Concluded: {judgment.title}",
+                        message=f"The cross-tenant judgment '{judgment.title}' has concluded with result: {conclusion_type}",
+                        related_object_id=str(judgment.id),
+                        related_object_type="CrossTenantJudgment",
+                    )
                 )
+        Notification.objects.bulk_create(notifications)
 
         return judgment

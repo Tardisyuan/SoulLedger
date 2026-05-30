@@ -112,6 +112,7 @@ export default function WorkflowEditor({
   onSave,
 }: {
   templateId?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- data comes from multiple sources with different shapes
   initialTemplateData?: any;
   onClose?: () => void;
   onSave?: (template: WorkflowTemplateInput) => void;
@@ -212,7 +213,7 @@ export default function WorkflowEditor({
 
       const nodesData = initialTemplateData.nodes_json || initialTemplateData.nodes || [];
       const flowNodes = nodesData.map(
-        (n: any, idx: number) => ({
+        (n: Record<string, unknown>, idx: number) => ({
           id: n.id || `node-${idx}`,
           type: "editableNode",
           position: { x: 250, y: idx * 160 },
@@ -229,7 +230,7 @@ export default function WorkflowEditor({
 
       const flowEdges = nodesData
         .filter((_: unknown, idx: number) => idx > 0)
-        .map((n: any, idx: number) => {
+        .map((n: Record<string, unknown>, idx: number) => {
           const prevNode = nodesData[idx];
           return {
             id: `e${prevNode.id}-${n.id}`,
