@@ -32,11 +32,12 @@ class DataScopeFilter:
                 self._scopes = []
                 return self._scopes
 
-            model_name = self.model_class.__name__
+            # Normalize model name to lowercase for consistent matching
+            model_name = self.model_class.__name__.lower()
             self._scopes = list(
                 RowLevelDataScope.objects.filter(
                     role__name=user_role,
-                    model_name=model_name,
+                    model_name__iexact=model_name,
                     scope_type=self.scope_type,
                     is_active=True,
                 ).select_related('role')
