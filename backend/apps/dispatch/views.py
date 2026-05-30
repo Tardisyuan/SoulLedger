@@ -25,7 +25,7 @@ from apps.souls.models import Soul
 from apps.actors.models import Actor
 from apps.core.permissions import TenantPermission
 from apps.core.mixins import TenantCreateMixin
-from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 
 
 class DispatchRecordViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
@@ -156,7 +156,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, TenantC
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CrossTenantJudgmentViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
+class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ModelViewSet):
     """
     CrossTenantJudgment CRUD + actions.
     """

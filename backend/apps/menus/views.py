@@ -154,6 +154,13 @@ class MenuButtonViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         if not user.is_authenticated:
             return MenuButton.objects.none()
         qs = super().get_queryset()
+        # Tenant filtering for non-ADMIN users
+        if getattr(user, 'role', None) != 'ADMIN':
+            tenant = getattr(self.request, 'tenant', None)
+            if tenant:
+                qs = qs.filter(menu__tenant=tenant)
+            else:
+                return MenuButton.objects.none()
         # Filter by menu_id if provided
         menu_id = self.request.query_params.get('menu_id')
         if menu_id:
