@@ -4,9 +4,9 @@ Views for notifications.
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from apps.notifications.models import UserNotification
 from apps.notifications.serializers import UserNotificationSerializer, UserNotificationListSerializer
+from apps.core.permissions import TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin
 
 
@@ -18,7 +18,7 @@ class NotificationViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     mark_read: POST /api/v1/notifications/{id}/mark_read/ - Mark single notification as read
     mark_all_read: POST /api/v1/notifications/mark_all_read/ - Mark all notifications as read
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [TenantPermission]
     permission_codename = "notification"
     extra_permissions = {
         'mark_read': ['notification.update'],

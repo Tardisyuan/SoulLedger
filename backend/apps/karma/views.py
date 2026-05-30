@@ -291,7 +291,8 @@ class KarmaExportStatsView(APIView):
             qs = Soul.objects.select_related("tenant").all()
         else:
             qs = Soul.objects.select_related("tenant").filter(tenant=tenant) if tenant else Soul.objects.none()
-        for soul in qs:
+        # Use iterator() to stream results without loading all into memory
+        for soul in qs.iterator(chunk_size=1000):
             writer.writerow([
                 str(soul.id),
                 soul.name,

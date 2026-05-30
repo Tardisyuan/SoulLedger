@@ -121,11 +121,17 @@ class PermissionCache:
 
     def invalidate_role(self, role: str) -> None:
         """Clear all cached permissions for a role and its descendants."""
-        # Invalidate Redis
+        # Invalidate Redis using SCAN (non-blocking) instead of KEYS
         if self._redis_client is not None:
             try:
                 pattern = f"perm:{role}:*"
-                keys = self._redis_client.keys(pattern)
+                keys = []
+                cursor = 0
+                while True:
+                    cursor, batch = self._redis_client.scan(cursor=cursor, match=pattern, count=100)
+                    keys.extend(batch)
+                    if cursor == 0:
+                        break
                 if keys:
                     self._redis_client.delete(*keys)
                     logger.debug(f"PermissionCache: invalidated {len(keys)} keys for role={role}")
@@ -149,11 +155,17 @@ class PermissionCache:
 
     def invalidate_all(self) -> None:
         """Clear all permission caches."""
-        # Clear Redis
+        # Clear Redis using SCAN (non-blocking) instead of KEYS
         if self._redis_client is not None:
             try:
                 pattern = "perm:*"
-                keys = self._redis_client.keys(pattern)
+                keys = []
+                cursor = 0
+                while True:
+                    cursor, batch = self._redis_client.scan(cursor=cursor, match=pattern, count=100)
+                    keys.extend(batch)
+                    if cursor == 0:
+                        break
                 if keys:
                     self._redis_client.delete(*keys)
                     logger.debug(f"PermissionCache: invalidated {len(keys)} all keys")
