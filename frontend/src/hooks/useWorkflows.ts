@@ -4,21 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@/lib/api";
 import { showToast } from "@/src/components/ui/Toast";
 import { useI18n } from "@/src/contexts/I18nContext";
-
-// ── Query Keys ───────────────────────────────────────────────────────
-
-export const workflowKeys = {
-  all: ["workflows"] as const,
-  list: (params?: Record<string, string>) =>
-    [...workflowKeys.all, "list", params] as const,
-  detail: (id: string) => [...workflowKeys.all, "detail", id] as const,
-  templates: {
-    all: ["workflow-templates"] as const,
-    list: (params?: Record<string, string>) =>
-      [...workflowKeys.templates.all, "list", params] as const,
-    detail: (id: string) => [...workflowKeys.templates.all, "detail", id] as const,
-  },
-};
+import { workflowKeys } from "@/lib/query_keys";
 
 // ── Workflow Queries ─────────────────────────────────────────────────
 

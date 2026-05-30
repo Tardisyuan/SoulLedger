@@ -135,7 +135,9 @@ class TestNotificationAPI:
         response = auth_client.get("/api/v1/notifications/")
 
         assert response.status_code == 200
-        assert len(response.data) == 2
+        # Handle both paginated and non-paginated responses
+        data = response.data.get("results", response.data) if isinstance(response.data, dict) else response.data
+        assert len(data) == 2
 
     def test_list_notifications_unauthenticated(self, api_client):
         """GET /api/v1/notifications/ without auth should return 401."""
@@ -157,8 +159,9 @@ class TestNotificationAPI:
         # admin_user should not see it
         response = auth_client.get("/api/v1/notifications/")
         assert response.status_code == 200
-        # Check that no notification with title "Judge Notification" appears
-        titles = [n["title"] for n in response.data]
+        # Handle both paginated and non-paginated responses
+        data = response.data.get("results", response.data) if isinstance(response.data, dict) else response.data
+        titles = [n["title"] for n in data]
         assert "Judge Notification" not in titles
 
     def test_mark_notification_as_read(self, auth_client, admin_user):
@@ -252,8 +255,9 @@ class TestNotificationAPI:
         response = auth_client.get("/api/v1/notifications/")
 
         assert response.status_code == 200
-        assert response.data[0]["title"] == "Second"
-        assert response.data[1]["title"] == "First"
+        data = response.data.get("results", response.data) if isinstance(response.data, dict) else response.data
+        assert data[0]["title"] == "Second"
+        assert data[1]["title"] == "First"
 
 
 @pytest.mark.django_db
@@ -286,4 +290,5 @@ class TestNotificationEdgeCases:
         """Empty notification list should return empty array."""
         response = auth_client.get("/api/v1/notifications/")
         assert response.status_code == 200
-        assert response.data == []
+        data = response.data.get("results", response.data) if isinstance(response.data, dict) else response.data
+        assert data == []
