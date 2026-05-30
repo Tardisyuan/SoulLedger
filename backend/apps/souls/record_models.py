@@ -85,6 +85,11 @@ class SoulRecord(models.Model):
         ordering = ["-recorded_at"]
         verbose_name = "Soul Record"
         verbose_name_plural = "Soul Records"
+        indexes = [
+            models.Index(fields=["soul", "record_type"], name="idx_soulrecord_soul_type"),
+            models.Index(fields=["soul", "recorded_at"], name="idx_soulrecord_soul_date"),
+            models.Index(fields=["tenant", "recorded_at"], name="idx_soulrecord_tenant_date"),
+        ]
 
     def __str__(self):
         return f"{self.record_type}: {self.description[:50]}"

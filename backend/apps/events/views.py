@@ -15,7 +15,7 @@ class SoulEventViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.Rea
     """
     permission_classes = [TenantPermission]
     permission_codename = "event"
-    queryset = SoulEvent.objects.all()
+    queryset = SoulEvent.objects.select_related("soul", "tenant").all()
     serializer_class = SoulEventSerializer
     filterset_fields = ["soul", "event_type", "actor"]
     ordering_fields = ["created_at"]

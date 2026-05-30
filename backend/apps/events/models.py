@@ -25,7 +25,7 @@ class SoulEvent(AuditUserFields, models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey(
         "tenants.Tenant",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="soul_events",
         null=True,
     )
