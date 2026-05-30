@@ -81,8 +81,8 @@ class DispatchService:
 
         # Find users in target tenant
         target_users = User.objects.filter(tenant=dispatch_record.target_tenant, is_active=True)
-        for user in target_users:
-            Notification.objects.create(
+        notifications = [
+            Notification(
                 recipient=user,
                 notification_type="DISPATCH_PROPOSED",
                 title=f"Incoming Dispatch: {dispatch_record.soul.name}",
@@ -90,6 +90,10 @@ class DispatchService:
                 related_object_id=str(dispatch_record.id),
                 related_object_type="DispatchRecord",
             )
+            for user in target_users
+        ]
+        if notifications:
+            Notification.objects.bulk_create(notifications)
 
     @staticmethod
     def approve(dispatch_record, approver):
@@ -164,8 +168,8 @@ class DispatchService:
         if reason:
             message += f" Reason: {reason}"
 
-        for user in target_users:
-            Notification.objects.create(
+        notifications = [
+            Notification(
                 recipient=user,
                 notification_type=notification_type,
                 title=title,
@@ -173,6 +177,10 @@ class DispatchService:
                 related_object_id=str(dispatch_record.id),
                 related_object_type="DispatchRecord",
             )
+            for user in target_users
+        ]
+        if notifications:
+            Notification.objects.bulk_create(notifications)
 
     @staticmethod
     def execute(dispatch_record, executor):
