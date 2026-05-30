@@ -65,16 +65,23 @@ export function useSoulKarma(id: string) {
 
 export function useCreateSoul() {
   const qc = useQueryClient();
+  const { t } = useI18n();
+  const { showToast } = useToast();
   return useMutation({
     mutationFn: (data: object) => soulsApi.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: soulKeys.all });
+    },
+    onError: () => {
+      showToast(t("souls.form.create_error") || "Failed to create soul", "error");
     },
   });
 }
 
 export function useMarkSoulDead() {
   const qc = useQueryClient();
+  const { t } = useI18n();
+  const { showToast } = useToast();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data?: object }) =>
       soulsApi.die(id, data),
@@ -82,11 +89,16 @@ export function useMarkSoulDead() {
       qc.invalidateQueries({ queryKey: soulKeys.detail(vars.id) });
       qc.invalidateQueries({ queryKey: soulKeys.all });
     },
+    onError: () => {
+      showToast(t("souls.detail.failed") || "Operation failed", "error");
+    },
   });
 }
 
 export function useTransitionSoul() {
   const qc = useQueryClient();
+  const { t } = useI18n();
+  const { showToast } = useToast();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: object }) =>
       soulsApi.transition(id, data),
@@ -94,17 +106,25 @@ export function useTransitionSoul() {
       qc.invalidateQueries({ queryKey: soulKeys.detail(vars.id) });
       qc.invalidateQueries({ queryKey: soulKeys.all });
     },
+    onError: () => {
+      showToast(t("souls.detail.failed") || "Operation failed", "error");
+    },
   });
 }
 
 export function useAddSoulRecord() {
   const qc = useQueryClient();
+  const { t } = useI18n();
+  const { showToast } = useToast();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: object }) =>
       soulsApi.addRecord(id, data),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: soulKeys.detail(vars.id) });
       qc.invalidateQueries({ queryKey: soulKeys.karma(vars.id) });
+    },
+    onError: () => {
+      showToast(t("souls.detail.failed") || "Operation failed", "error");
     },
   });
 }

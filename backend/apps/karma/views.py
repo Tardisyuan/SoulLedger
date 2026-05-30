@@ -164,30 +164,30 @@ class KarmaOverviewStatsView(APIView):
             for s in SoulState.values
         ]
 
-        # Per-tenant soul counts
-        tenant_stats = []
-        tenant_data = soul_qs.values('tenant', 'tenant__code', 'tenant__display_name').annotate(
-            total=Count('id'),
-        ).order_by('tenant__code')
+        # Per-tenant soul counts with state breakdown (single query, no N+1)
+        tenant_state_data = (
+            soul_qs
+            .values('tenant', 'tenant__code', 'tenant__display_name', 'current_state')
+            .annotate(count=Count('id'))
+            .order_by('tenant__code')
+        )
 
-        for td in tenant_data:
-            if td['total'] == 0:
-                continue
-            state_breakdown = dict(
-                soul_qs.filter(tenant__code=td['tenant__code'])
-                .values_list("current_state")
-                .annotate(count=Count("id"))
-                .values_list("current_state", "count")
-            )
-            tenant_stats.append({
-                "tenant_id": td['tenant'],
-                "tenant_code": td['tenant__code'],
-                "tenant_name": td['tenant__display_name'],
-                "total_souls": td['total'],
-                "state_breakdown": {
-                    s: state_breakdown.get(s, 0) for s in SoulState.values
-                },
-            })
+        # Build tenant stats from aggregated data
+        tenant_map: dict = {}
+        for row in tenant_state_data:
+            tid = row['tenant']
+            if tid not in tenant_map:
+                tenant_map[tid] = {
+                    "tenant_id": tid,
+                    "tenant_code": row['tenant__code'],
+                    "tenant_name": row['tenant__display_name'],
+                    "total_souls": 0,
+                    "state_breakdown": {s: 0 for s in SoulState.values},
+                }
+            tenant_map[tid]["total_souls"] += row['count']
+            tenant_map[tid]["state_breakdown"][row['current_state']] = row['count']
+
+        tenant_stats = [v for v in tenant_map.values() if v['total_souls'] > 0]
 
         # Karma distribution buckets - scoped to tenant (S-H3)
         karma_buckets = [
