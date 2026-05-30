@@ -160,64 +160,6 @@ export function useDeleteSoul() {
   });
 }
 
-// ── Judgment ────────────────────────────────────────────────────────
-
-export function useJudgments(params?: Record<string, string>) {
-  return useQuery({
-    queryKey: ["judgments", params] as const,
-    queryFn: async () => {
-      const res = await judgmentApi.list(params);
-      return res.data as { results: Judgment[]; count: number };
-    },
-    staleTime: 30_000,
-  });
-}
-
-export function useConcludeJudgment() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: object }) =>
-      judgmentApi.conclude(id, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["judgments"] });
-      qc.invalidateQueries({ queryKey: soulKeys.all });
-    },
-  });
-}
-
-// ── Disposition ─────────────────────────────────────────────────────
-
-export function useDispositions(params?: Record<string, string>) {
-  return useQuery({
-    queryKey: ["dispositions", params] as const,
-    queryFn: async () => {
-      const res = await dispositionApi.list(params);
-      return res.data as unknown[];
-    },
-    staleTime: 30_000,
-  });
-}
-
-export function useExecuteDisposition() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data?: object }) =>
-      dispositionApi.execute(id, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["dispositions"] });
-      qc.invalidateQueries({ queryKey: soulKeys.all });
-    },
-  });
-}
-
-// ── Reincarnation ──────────────────────────────────────────────────
-
-export function useReborn() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: object) => reincarnationApi.reborn(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: soulKeys.all });
-    },
-  });
-}
+// NOTE: Judgment hooks (useJudgments, useConcludeJudgment) are in useJudgments.ts
+// NOTE: Disposition hooks (useDispositions, useExecuteDisposition) are in useDispositions.ts
+// NOTE: Reincarnation hooks (useReborn) are in useReincarnation.ts
