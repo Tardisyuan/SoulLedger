@@ -346,7 +346,7 @@ export default function WorkflowDetailPage() {
                       {isPast && (
                         <div className="mt-3 pt-3 border-t border-[hsl(var(--color-hairline))]/50">
                           <div className="flex items-center gap-2 mb-2">
-                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict] || ""}`}>
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict ?? ""] || ""}`}>
                               {node.verdict}
                             </span>
                             {node.decided_at && (
@@ -397,7 +397,7 @@ export default function WorkflowDetailPage() {
                 <div key={node.id} className="bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</span>
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict] || ""}`}>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict ?? ""] || ""}`}>
                       {node.verdict}
                     </span>
                   </div>
