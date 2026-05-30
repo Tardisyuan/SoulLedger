@@ -4,113 +4,81 @@
 import { render, screen } from "@testing-library/react";
 import { RouteGuard } from "@/src/components/rbac/RouteGuard";
 
-// Mock the useAuth hook
+// Mock the usePermissions hook
 const mockHasPermission = jest.fn();
 
-jest.mock("@/src/hooks/useAuth", () => ({
-  useAuth: () => ({
-    user: { id: 1, username: "tester", role: "JUDGE", permissions: [] },
-    isAdmin: false,
-    isJudge: true,
-    isGuardian: false,
-    isViewer: false,
+jest.mock("@/src/hooks/usePermissions", () => ({
+  usePermissions: () => ({
     hasPermission: mockHasPermission,
-    hasRole: jest.fn(),
+    hasAnyPermission: (perms: string[]) => perms.some(p => mockHasPermission(p)),
+    hasAllPermissions: (perms: string[]) => perms.every(p => mockHasPermission(p)),
+    permissions: [],
   }),
 }));
 
 describe("RouteGuard", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockHasPermission.mockReset();
   });
 
-  it("should render children when the user has permission", () => {
+  it("renders children when permission is granted", () => {
     mockHasPermission.mockReturnValue(true);
-
     render(
       <RouteGuard permission="soul.view">
-        <div>Secret Page</div>
+        <div>Protected Content</div>
       </RouteGuard>
     );
-
-    expect(screen.getByText("Secret Page")).toBeInTheDocument();
+    expect(screen.getByText("Protected Content")).toBeInTheDocument();
   });
 
-  it("should not render children when the user lacks permission", () => {
+  it("does not render children when permission is denied", () => {
     mockHasPermission.mockReturnValue(false);
-
     render(
       <RouteGuard permission="soul.delete">
-        <div>Secret Page</div>
+        <div>Protected Content</div>
       </RouteGuard>
     );
-
-    expect(screen.queryByText("Secret Page")).not.toBeInTheDocument();
+    expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
   });
 
-  it("should render fallback when the user lacks permission", () => {
+  it("renders fallback when permission is denied", () => {
     mockHasPermission.mockReturnValue(false);
-
     render(
-      <RouteGuard permission="admin.panel" fallback={<div>Redirecting...</div>}>
-        <div>Admin Panel</div>
+      <RouteGuard permission="admin.panel" fallback={<div>Access Denied</div>}>
+        <div>Protected Content</div>
       </RouteGuard>
     );
-
-    expect(screen.queryByText("Admin Panel")).not.toBeInTheDocument();
-    expect(screen.getByText("Redirecting...")).toBeInTheDocument();
+    expect(screen.getByText("Access Denied")).toBeInTheDocument();
+    expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
   });
 
-  it("should default to null fallback when access is denied", () => {
+  it("renders nothing when permission is denied and no fallback", () => {
     mockHasPermission.mockReturnValue(false);
-
     const { container } = render(
       <RouteGuard permission="forbidden">
-        <div>Hidden</div>
+        <div>Protected Content</div>
       </RouteGuard>
     );
-
-    expect(screen.queryByText("Hidden")).not.toBeInTheDocument();
     expect(container.textContent).toBe("");
   });
 
-  it("should pass the operation to hasPermission", () => {
+  it("calls hasPermission with correct permission string", () => {
     mockHasPermission.mockReturnValue(true);
-
     render(
       <RouteGuard permission="judgment.review">
         <div>Content</div>
       </RouteGuard>
     );
-
     expect(mockHasPermission).toHaveBeenCalledWith("judgment.review");
   });
 
-  // --- ADMIN role always has permission ---
-
-  it("should render children for ADMIN role (all operations allowed)", () => {
-    // When ADMIN, hasPermission returns true for any operation
+  it("handles permission check returning true for admin", () => {
     mockHasPermission.mockReturnValue(true);
-
     render(
       <RouteGuard permission="soul.delete">
-        <div>Admin Allowed</div>
+        <div>Admin Content</div>
       </RouteGuard>
     );
-
-    expect(screen.getByText("Admin Allowed")).toBeInTheDocument();
-    expect(mockHasPermission).toHaveBeenCalledWith("soul.delete");
-  });
-
-  it("should grant access regardless of operation string when user is ADMIN", () => {
-    mockHasPermission.mockReturnValue(true);
-
-    render(
-      <RouteGuard permission="any.arbitrary.operation">
-        <div>Always Allowed</div>
-      </RouteGuard>
-    );
-
-    expect(screen.getByText("Always Allowed")).toBeInTheDocument();
+    expect(screen.getByText("Admin Content")).toBeInTheDocument();
   });
 });
