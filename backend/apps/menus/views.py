@@ -185,12 +185,11 @@ class MenuButtonViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def list_menus(request):
     """
     GET /api/v1/menus/
     获取用户可访问的菜单树（根据角色过滤）
-    空 roles 的菜单对所有用户公开，包括未认证用户
     """
     is_authenticated = getattr(request.user, 'is_authenticated', False)
     user_role = getattr(request.user, 'role', None)
