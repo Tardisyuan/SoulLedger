@@ -13,6 +13,7 @@ class EventService:
     def log(soul: Soul, event_type: str, payload: dict, actor: str = "system") -> None:
         from apps.events.models import SoulEvent
         SoulEvent.objects.create(
+            tenant=soul.tenant,
             soul=soul,
             event_type=event_type,
             payload=payload,

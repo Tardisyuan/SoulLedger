@@ -38,7 +38,7 @@ Middleware Position:
 """
 from functools import wraps
 from django.http import JsonResponse
-from apps.core.request_local import set_current_user, clear_current_user
+from apps.core.request_local import set_current_user, set_current_request, clear_current_user
 
 
 class PermissionMiddleware:

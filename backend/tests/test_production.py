@@ -18,10 +18,30 @@ class TestHealthEndpoints:
         assert resp.status_code == 200
         assert resp.json()['status'] == 'ok'
 
-    def test_health_detailed_endpoint(self, api_client):
-        """GET /health/detailed/ should return 200 or auth error"""
-        resp = api_client.get('/health/detailed/')
-        # Returns 200 if DB/Redis healthy, 503 if not
+    def test_health_detailed_endpoint(self, db, django_user_model):
+        """GET /health/detailed/ should return 200 for ADMIN, 401/403 for others"""
+        from django.test import Client
+
+        client = Client()
+
+        # Unauthenticated should get 401
+        resp = client.get('/health/detailed/')
+        assert resp.status_code == 401
+
+        # Non-admin should get 403
+        user = django_user_model.objects.create_user(
+            username="test_viewer", password="test123", role="VIEWER"
+        )
+        client.force_login(user)
+        resp = client.get('/health/detailed/')
+        assert resp.status_code == 403
+
+        # Admin should get 200 or 503
+        admin = django_user_model.objects.create_user(
+            username="test_admin", password="admin123", role="ADMIN"
+        )
+        client.force_login(admin)
+        resp = client.get('/health/detailed/')
         assert resp.status_code in [200, 503]
 
     def test_health_endpoint_no_auth_required(self, api_client):

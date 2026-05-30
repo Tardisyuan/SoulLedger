@@ -1,7 +1,7 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
 from apps.tenants.models import Tenant
 from apps.tenants.serializers import TenantSerializer
+from apps.core.permissions import TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin
 
 
@@ -9,7 +9,7 @@ class TenantViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     """Tenant management API — read-only. Non-ADMIN users see only their own tenant."""
 
     serializer_class = TenantSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [TenantPermission]
     permission_codename = "tenant"
     lookup_field = "code"
 

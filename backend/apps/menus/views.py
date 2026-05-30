@@ -14,6 +14,7 @@ from .serializers import (
     MenuButtonSerializer,
     MenuButtonCreateUpdateSerializer,
 )
+from apps.core.permissions import TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin
 
 
@@ -21,7 +22,7 @@ class MenuViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     """
     Menu CRUD ViewSet — supports tree structure with button resources.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [TenantPermission]
     permission_codename = "menu"
     extra_permissions = {
         'all': ['menu.read'],
@@ -138,7 +139,7 @@ class MenuButtonViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
 
     绑定到 Menu 上的操作按钮，每个按钮关联一个 permission codename。
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [TenantPermission]
     permission_codename = "menu"
     queryset = MenuButton.objects.select_related("menu").all()
     serializer_class = MenuButtonSerializer
