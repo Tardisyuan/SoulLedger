@@ -44,8 +44,8 @@ test.describe("Protected routes redirect", () => {
   for (const route of protectedRoutes) {
     test(`redirects ${route} to login when unauthenticated`, async ({ page }) => {
       await page.goto(route);
-      // Should redirect to login or show login form
-      await expect(page).toHaveURL(/login|\/$|\/dashboard/);
+      // Should redirect to login (with redirect param) or welcome
+      await expect(page).toHaveURL(/login|welcome|\/$/);
     });
   }
 });
