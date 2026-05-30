@@ -33,7 +33,7 @@ export function middleware(request: NextRequest) {
   // Auth guard: check for refresh token cookie (access token is in sessionStorage, inaccessible to middleware)
   const refreshToken = request.cookies.get("soulledger_refresh")?.value;
   if (!refreshToken && !isPublicPath(pathname)) {
-    const loginUrl = new URL("/welcome", request.url);
+    const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
