@@ -374,10 +374,10 @@ describe('API Client — lib/api.ts', () => {
       expect(mockInstance.get).toHaveBeenCalledWith('/karma/balance/42/');
     });
 
-    it('recalculate() should POST /karma/recalculate/:id/', () => {
+    it('recalculate() should POST /karma/calculate/:id/', () => {
       mockInstance.post.mockResolvedValueOnce({ data: {} });
       karmaApi.recalculate(7);
-      expect(mockInstance.post).toHaveBeenCalledWith('/karma/recalculate/7/');
+      expect(mockInstance.post).toHaveBeenCalledWith('/karma/calculate/7/');
     });
   });
 
