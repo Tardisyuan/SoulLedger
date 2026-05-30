@@ -398,13 +398,12 @@ describe('API Client — lib/api.ts', () => {
       expect(mockInstance.post).toHaveBeenCalledWith('/workflows/wf-1/advance/');
     });
 
-    it('approveNode() should POST with node_id embedded', () => {
+    it('approveNode() should POST /workflows/nodes/:nodeId/approve/', () => {
       mockInstance.post.mockResolvedValueOnce({ data: {} });
       workflowApi.approveNode('wf-1', 'node-5', { verdict: 'PASS', notes: 'LGTM' });
-      expect(mockInstance.post).toHaveBeenCalledWith('/workflows/wf-1/approve_node/', {
+      expect(mockInstance.post).toHaveBeenCalledWith('/workflows/nodes/node-5/approve/', {
         verdict: 'PASS',
         notes: 'LGTM',
-        node_id: 'node-5',
       });
     });
 
