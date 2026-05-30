@@ -62,6 +62,7 @@ export function useCreateSoul() {
     mutationFn: (data: object) => soulsApi.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: soulKeys.all });
+      showToast(t("souls.form.create_success") || "Soul created", "success");
     },
     onError: () => {
       showToast(t("souls.form.create_error") || "Failed to create soul", "error");
@@ -129,6 +130,7 @@ export function useUpdateSoul() {
       soulsApi.update(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: soulKeys.all });
+      showToast(t("souls.form.update_success") || "Soul updated", "success");
     },
     onError: () => {
       showToast(t("souls.detail.error_update"), "error");
