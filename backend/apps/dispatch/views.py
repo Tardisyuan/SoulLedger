@@ -46,7 +46,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, TenantC
     ).all()
     serializer_class = DispatchRecordSerializer
     ordering_fields = ["proposed_at", "status"]
-    pagination_class = None
+    # pagination_class = None  # Removed: paginate to prevent large payloads
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -172,7 +172,7 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
     ).prefetch_related("participants").all()
     serializer_class = CrossTenantJudgmentSerializer
     ordering_fields = ["create_time", "status"]
-    pagination_class = None
+    # pagination_class = None  # Removed: paginate to prevent large payloads
 
     def get_serializer_class(self):
         if self.action == "list":

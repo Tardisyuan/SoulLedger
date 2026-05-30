@@ -25,7 +25,7 @@ class NotificationViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         'mark_all_read': ['notification.update'],
     }
     serializer_class = UserNotificationSerializer
-    pagination_class = None
+    # pagination_class = None  # Removed: paginate to prevent large payloads
 
     def get_serializer_class(self):
         if self.action == "list":

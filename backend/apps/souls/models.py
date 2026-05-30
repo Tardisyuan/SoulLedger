@@ -162,28 +162,32 @@ class Soul(AuditUserFields, models.Model):
 
     def die(self, death_date=None, location: str = "") -> "Judgment | None":
         """Mark soul as dead, transition to JUDGING, and create a Judgment record."""
+        from django.db import transaction
+
         if self.current_state != SoulState.ALIVE:
             return None
-        result = self.transition_to(
-            SoulState.JUDGING,
-            "Death recorded, judgment initiated",
-            death_date=death_date or timezone.now().date(),
-            **({"origin_location": location} if location else {}),
-        )
-        if not result:
-            return None
 
-        from apps.judgment.models import Judgment, JudgmentMethod
+        with transaction.atomic():
+            result = self.transition_to(
+                SoulState.JUDGING,
+                "Death recorded, judgment initiated",
+                death_date=death_date or timezone.now().date(),
+                **({"origin_location": location} if location else {}),
+            )
+            if not result:
+                return None
 
-        method_map = {
-            Civilization.CHINESE: JudgmentMethod.STANDARD,
-            Civilization.EUROPEAN: JudgmentMethod.STANDARD,
-            Civilization.EGYPTIAN: JudgmentMethod.HEART_WEIGHING,
-        }
-        judgment = Judgment.objects.create(
-            soul=self,
-            civilization=self.civilization,
-            tenant=self.tenant,
-            judgment_method=method_map.get(self.civilization, JudgmentMethod.STANDARD),
-        )
-        return judgment
+            from apps.judgment.models import Judgment, JudgmentMethod
+
+            method_map = {
+                Civilization.CHINESE: JudgmentMethod.STANDARD,
+                Civilization.EUROPEAN: JudgmentMethod.STANDARD,
+                Civilization.EGYPTIAN: JudgmentMethod.HEART_WEIGHING,
+            }
+            judgment = Judgment.objects.create(
+                soul=self,
+                civilization=self.civilization,
+                tenant=self.tenant,
+                judgment_method=method_map.get(self.civilization, JudgmentMethod.STANDARD),
+            )
+            return judgment

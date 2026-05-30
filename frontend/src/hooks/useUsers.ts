@@ -4,15 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi, type User, type CreateUserInput, type UpdateUserInput, type PaginatedResponse } from "@/lib/api";
 import { showToast } from "@/src/components/ui/Toast";
 import { useI18n } from "@/src/contexts/I18nContext";
-
-// ── Query Keys ───────────────────────────────────────────────────────
-
-export const userKeys = {
-  all: ["users"] as const,
-  list: (params?: Record<string, string | number | undefined>) =>
-    [...userKeys.all, "list", params] as const,
-  detail: (id: string) => [...userKeys.all, "detail", id] as const,
-};
+import { userKeys } from "@/lib/query_keys";
 
 // ── Queries ──────────────────────────────────────────────────────────
 

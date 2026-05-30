@@ -4,11 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dispositionApi, type Disposition } from "@/lib/api";
 import { showToast } from "@/src/components/ui/Toast";
 import { useI18n } from "@/src/contexts/I18nContext";
-
-export const dispositionKeys = {
-  all: ["dispositions"] as const,
-  list: (params?: Record<string, string>) => [...dispositionKeys.all, "list", params] as const,
-};
+import { dispositionKeys } from "@/lib/query_keys";
 
 export function useDispositions(params?: Record<string, string>) {
   return useQuery({
