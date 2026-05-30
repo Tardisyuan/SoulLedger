@@ -22,7 +22,7 @@ class PermissionCache:
 
     def __init__(self):
         self._redis_client = None
-        self._fallback_cache: dict[tuple[str, str], bool] = {}
+        self._fallback_cache: dict[tuple[str, str], tuple[bool, float]] = {}
         self._ttl = getattr(settings, 'CACHE_PERMISSION_TTL', 300)
         self._connect_redis()
 
@@ -52,6 +52,8 @@ class PermissionCache:
         Returns:
             True if permission granted, False if denied, None if not cached.
         """
+        import time
+
         # Try Redis first
         if self._redis_client is not None:
             try:
@@ -63,12 +65,21 @@ class PermissionCache:
                 logger.warning(f"PermissionCache: Redis get failed, falling back: {e}")
                 self._redis_client = None
 
-        # Fallback to memory cache
+        # Fallback to memory cache with TTL check
         cache_key = (role, codename)
-        return self._fallback_cache.get(cache_key)
+        entry = self._fallback_cache.get(cache_key)
+        if entry is not None:
+            value, timestamp = entry
+            if time.time() - timestamp < self._ttl:
+                return value
+            # Expired - remove from cache
+            del self._fallback_cache[cache_key]
+        return None
 
     def set(self, role: str, codename: str, has_permission: bool) -> None:
         """Cache permission result with TTL."""
+        import time
+
         # Update Redis if available
         if self._redis_client is not None:
             try:
@@ -83,8 +94,9 @@ class PermissionCache:
                 logger.warning(f"PermissionCache: Redis set failed, falling back: {e}")
                 self._redis_client = None
 
-        # Fallback to memory cache
-        self._fallback_cache[(role, codename)] = has_permission
+        # Fallback to memory cache with timestamp
+        import time
+        self._fallback_cache[(role, codename)] = (has_permission, time.time())
 
     def has_permission(self, role_name: str, permission_codename: str) -> Optional[bool]:
         """
