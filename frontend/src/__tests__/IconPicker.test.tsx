@@ -126,8 +126,8 @@ describe("IconPicker", () => {
 
     expect(screen.getByText("Navigation")).toBeInTheDocument();
     expect(screen.getByText("Users")).toBeInTheDocument();
-    expect(screen.getByText("soul")).toBeInTheDocument();
-    expect(screen.getByText("security")).toBeInTheDocument();
+    expect(screen.getByText("Soul")).toBeInTheDocument();
+    expect(screen.getByText("Security")).toBeInTheDocument();
   });
 
   it("should start with 'navigation' as the active category", () => {
