@@ -7,6 +7,19 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - /data/postgres:/var/lib/postgresql/data
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  redis:
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256m
 
   backend:
     environment:
@@ -14,16 +27,44 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - SENTRY_DSN=${SENTRY_DSN}
       - SECURE_SSL_REDIRECT=true
+      - SECURE_PROXY_SSL_HEADER=HTTP_X_FORWARDED_PROTO,https
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
     command: >
       sh -c "python manage.py migrate &&
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4"
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   celery:
+    environment:
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
     restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   celery-beat:
+    environment:
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
     restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256m
 
   frontend:
     environment:
@@ -31,6 +72,16 @@ services:
       - NEXT_PUBLIC_SENTRY_DSN=${SENTRY_DSN}
     command: npm run start
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   nginx:
     image: nginx:alpine
@@ -44,3 +95,7 @@ services:
       - frontend
       - backend
     restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256m

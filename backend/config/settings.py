@@ -106,7 +106,16 @@ WSGI_APPLICATION = "config.wsgi.application"
 import dj_database_url
 
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
-DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
+if not DEBUG and "sqlite" in DATABASE_URL.lower():
+    raise ValueError(
+        "SQLite must not be used in production (DEBUG=False). "
+        "Set DATABASE_URL to a PostgreSQL connection string."
+    )
+DATABASES = {
+    "default": dj_database_url.parse(
+        DATABASE_URL, conn_max_age=600, conn_health_checks=True
+    )
+}
 
 AUTH_USER_MODEL = "authentication.User"
 
@@ -236,6 +245,7 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
     # Logging - JSON format for production
     LOGGING = {
@@ -271,10 +281,17 @@ import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
 
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+if not SENTRY_DSN and not DEBUG:
+    import warnings
+    warnings.warn(
+        "SENTRY_DSN is not set in production (DEBUG=False). "
+        "Error tracking via Sentry will be unavailable.",
+        stacklevel=2,
+    )
 if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[DjangoIntegration()],
         traces_sample_rate=0.1,
-        send_default_pii=True,
+        send_default_pii=False,
     )
