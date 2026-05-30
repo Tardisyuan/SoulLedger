@@ -6,7 +6,7 @@ import { dispatchApi, soulsApi, karmaApi, type Soul } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { Skeleton } from "@/src/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 export default function ProposeDispatchPage() {

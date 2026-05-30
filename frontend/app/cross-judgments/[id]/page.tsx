@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { crossTenantJudgmentsApi } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { Skeleton } from "@/src/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CrossJudgmentDetailPage() {
   const { t } = useI18n();
