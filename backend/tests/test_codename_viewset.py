@@ -328,10 +328,10 @@ class TestHasPermissionFallback(TestCase):
         """When Permission object doesn't exist, fall back to ROLE_PERMISSIONS dict."""
         from apps.perm.models import Permission
         # Ensure codename does NOT exist in DB
-        Permission.objects.filter(codename="soul.die").delete()
+        Permission.objects.filter(codename="nonexistent.action").delete()
 
-        # JUDGE has "soul.read" in ROLE_PERMISSIONS but not "soul.die"
-        result = self.middleware._has_permission("JUDGE", "soul.die")
+        # No role has "nonexistent.action" in ROLE_PERMISSIONS
+        result = self.middleware._has_permission("JUDGE", "nonexistent.action")
         self.assertFalse(result)
 
     def test_granted_when_in_dict_and_not_in_db(self):

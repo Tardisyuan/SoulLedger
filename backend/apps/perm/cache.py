@@ -54,7 +54,9 @@ class PermissionCache:
         """
         import time
 
-        # Try Redis first
+        # Try Redis first (with reconnection attempt)
+        if self._redis_client is None:
+            self._connect_redis()  # Attempt reconnection
         if self._redis_client is not None:
             try:
                 key = self._make_key(role, codename)
