@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dispositionApi, type Disposition } from "@/lib/api";
-import { showToast } from "@/src/components/ui/Toast";
+import { useToast } from "@/src/contexts/ToastContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { dispositionKeys } from "@/lib/query_keys";
 
@@ -20,6 +20,7 @@ export function useDispositions(params?: Record<string, string>) {
 export function useExecuteDisposition() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data?: object }) =>
       dispositionApi.execute(id, data),

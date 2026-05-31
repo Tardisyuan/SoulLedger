@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { judgmentApi, type Judgment } from "@/lib/api";
 import { showToast } from "@/src/components/ui/Toast";
+import { useToast } from "@/src/contexts/ToastContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { judgmentKeys } from "@/lib/query_keys";
 
@@ -36,6 +37,7 @@ export function useJudgment(id: string) {
 export function useCreateJudgment() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
 
   return useMutation({
     mutationFn: (data: object) => judgmentApi.create(data),
@@ -52,6 +54,7 @@ export function useCreateJudgment() {
 export function useConcludeJudgment() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: object }) =>
