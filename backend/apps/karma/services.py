@@ -61,7 +61,7 @@ class KarmaService:
 
         soul.merit_score = round(merit)
         soul.demerit_score = round(demerit)
-        soul.save(update_fields=["merit_score", "demerit_score", "updated_at"])
+        soul.save(update_fields=["merit_score", "demerit_score", "update_time"])
 
         # Invalidate cache
         cls._invalidate_cache(soul)

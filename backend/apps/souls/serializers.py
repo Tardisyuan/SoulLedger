@@ -40,9 +40,9 @@ class SoulSerializer(serializers.ModelSerializer):
             "id", "name", "current_state", "tenant_code", "tenant",
             "birth_date", "death_date", "origin_location", "birth_name",
             "description", "merit_score", "demerit_score",
-            "karmic_balance", "created_at", "updated_at", "records",
+            "karmic_balance", "create_time", "update_time", "records",
         ]
-        read_only_fields = ["id", "current_state", "merit_score", "demerit_score", "created_at", "updated_at"]
+        read_only_fields = ["id", "current_state", "merit_score", "demerit_score", "create_time", "update_time"]
 
     def get_merit_score(self, obj):
         if _is_viewer(self.context):
@@ -76,7 +76,7 @@ class SoulListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "name", "current_state", "tenant_code", "civilization",
             "birth_date", "death_date", "merit_score", "demerit_score",
-            "karmic_balance", "created_at",
+            "karmic_balance", "create_time",
         ]
 
     def get_karmic_balance(self, obj):
