@@ -29,32 +29,31 @@ class TestGuardianRoleEnforcement:
         assert response.status_code == 200
 
     def test_guardian_cannot_create_soul(self, api_client, guardian_user, cn_tenant):
-        """GUARDIAN should not be able to create souls (only soul.update)."""
+        """GUARDIAN has no soul.create permission but SoulViewSet does not enforce it yet."""
         client = _get_auth_client(api_client, guardian_user)
         response = client.post("/api/v1/souls/", {
             "name": "Guardian Soul",
         }, format="json")
-        # Note: Permission middleware may not enforce create for all ViewSets
-        assert response.status_code in [201, 403, 401]
+        # TODO: SoulViewSet create permission not yet enforced; fix when middleware is added
+        assert response.status_code == 201
 
     def test_guardian_can_read_karma(self, api_client, guardian_user, cn_tenant):
-        """GUARDIAN should be able to read karma (overview is admin-only)."""
+        """Overview stats endpoint has hardcoded ADMIN check; GUARDIAN gets 403."""
         client = _get_auth_client(api_client, guardian_user)
         response = client.get("/api/v1/karma/stats/overview/")
-        # Overview stats endpoint has hardcoded ADMIN check
-        assert response.status_code in [200, 403]
+        assert response.status_code == 403
 
     def test_guardian_can_read_dispatch(self, api_client, guardian_user, cn_tenant):
         """GUARDIAN should be able to read dispatch."""
         client = _get_auth_client(api_client, guardian_user)
         response = client.get("/api/v1/dispatch/records/")
-        assert response.status_code in [200, 401, 403]
+        assert response.status_code == 200
 
     def test_guardian_cannot_manage_users(self, api_client, guardian_user, cn_tenant):
         """GUARDIAN should not be able to manage users."""
         client = _get_auth_client(api_client, guardian_user)
         response = client.get("/api/v1/users/")
-        assert response.status_code in [403, 401]
+        assert response.status_code == 403
 
 
 @pytest.mark.django_db
@@ -68,19 +67,19 @@ class TestViewerRoleEnforcement:
         assert response.status_code == 200
 
     def test_viewer_cannot_create_soul(self, api_client, viewer_user, cn_tenant):
-        """VIEWER should not be able to create souls."""
+        """VIEWER has no soul.create permission but SoulViewSet does not enforce it yet."""
         client = _get_auth_client(api_client, viewer_user)
         response = client.post("/api/v1/souls/", {
             "name": "Viewer Soul",
         }, format="json")
-        # Note: Permission middleware may not enforce create for all ViewSets
-        assert response.status_code in [201, 403, 401]
+        # TODO: SoulViewSet create permission not yet enforced; fix when middleware is added
+        assert response.status_code == 201
 
     def test_viewer_cannot_manage_users(self, api_client, viewer_user, cn_tenant):
         """VIEWER should not be able to manage users."""
         client = _get_auth_client(api_client, viewer_user)
         response = client.get("/api/v1/users/")
-        assert response.status_code in [403, 401]
+        assert response.status_code == 403
 
     def test_viewer_cannot_manage_permissions(self, api_client, viewer_user, cn_tenant):
         """VIEWER should not be able to create permissions."""
@@ -89,7 +88,7 @@ class TestViewerRoleEnforcement:
             "codename": "test.viewer_perm",
             "name": "Viewer Perm",
         }, format="json")
-        assert response.status_code in [403, 401]
+        assert response.status_code == 403
 
     def test_viewer_can_read_realms(self, api_client, viewer_user, cn_tenant):
         """VIEWER should be able to read realms."""
