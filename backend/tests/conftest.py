@@ -77,6 +77,30 @@ def eu_admin_user(db, django_user_model, eu_tenant):
 
 
 @pytest.fixture
+def guardian_user(db, django_user_model, cn_tenant):
+    """Guardian user with CN_DIYU tenant."""
+    user = django_user_model.objects.create_user(
+        username="guardian",
+        password="guardian123",
+        role="GUARDIAN",
+        tenant=cn_tenant,
+    )
+    return user
+
+
+@pytest.fixture
+def viewer_user(db, django_user_model, cn_tenant):
+    """Viewer user with CN_DIYU tenant."""
+    user = django_user_model.objects.create_user(
+        username="viewer",
+        password="viewer123",
+        role="VIEWER",
+        tenant=cn_tenant,
+    )
+    return user
+
+
+@pytest.fixture
 def soul_data():
     """Sample soul creation data."""
     return {
