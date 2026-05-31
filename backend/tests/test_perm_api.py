@@ -51,7 +51,7 @@ class TestPermissionAPI:
             "codename": "test.create",
             "name": "Test Create",
         }, format="json")
-        assert response.status_code in [403, 401]
+        assert response.status_code == 403
 
 
 @pytest.mark.django_db
@@ -154,4 +154,4 @@ class TestPermissionRoleMatrix:
             "codename": "test.create",
             "name": "Test",
         }, format="json")
-        assert response.status_code in [403, 401]
+        assert response.status_code == 403

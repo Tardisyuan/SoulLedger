@@ -442,8 +442,8 @@ class TestApprovalWorkflowAPI:
             f"/api/v1/workflows/{wf.id}/advance/",
             format="json"
         )
-        # Since node 2 is the last, advance returns 200 (no-op) or 400 (already completed)
-        assert response.status_code in [200, 400], f"Expected 200 or 400, got {response.status_code}"
+        # Node 2 is the last node; advance is a no-op
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
 
     def test_workflow_stats_endpoint(self, authenticated_client, workflow):
         """GET /api/v1/workflows/{id}/stats/ returns progress stats."""

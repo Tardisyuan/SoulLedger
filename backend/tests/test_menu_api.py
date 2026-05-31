@@ -106,4 +106,4 @@ class TestMenuButtonAPI:
             "name": "Test",
             "path": "/test",
         }, format="json")
-        assert response.status_code in [403, 401]
+        assert response.status_code == 403
