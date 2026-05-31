@@ -104,13 +104,6 @@ class SoulRecord(models.Model):
             self._update_soul_karma()
 
     def _update_soul_karma(self):
-        """Recalculate karma, debounced to avoid O(n²) on bulk imports."""
-        import time
-        now = time.monotonic()
-        cache_key = f"_karma_last_{self.soul_id}"
-        last = getattr(self, '_karma_debounce_cache', {}).get(cache_key)
-        if last and (now - last) < 1.0:
-            return  # Skip if recalculated within last second
-        getattr(self, '_karma_debounce_cache', {})[cache_key] = now
+        """Recalculate karma. Uses cache debounce only for bulk operations."""
         from apps.karma.services import KarmaService
         KarmaService.recalculate_soul_karma(self.soul)
