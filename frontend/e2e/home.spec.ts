@@ -9,17 +9,15 @@ test.describe("Home page", () => {
 
   test("has working language switcher", async ({ page }) => {
     await page.goto("/");
-    // Verify the page loads without errors
     await expect(page.locator("body")).toBeVisible();
   });
 
   test("navigates to login page", async ({ page }) => {
     await page.goto("/");
     const loginLink = page.getByRole("link", { name: /console|login/i });
-    if (await loginLink.isVisible()) {
-      await loginLink.click();
-      await expect(page).toHaveURL(/login/);
-    }
+    await expect(loginLink).toBeVisible();
+    await loginLink.click();
+    await expect(page).toHaveURL(/login/);
   });
 });
 
@@ -33,7 +31,6 @@ test.describe("Login page", () => {
     await page.goto("/login");
     const submitBtn = page.getByRole("button", { name: /login|sign in|登录/i });
     await submitBtn.click();
-    // Should stay on login page
     await expect(page).toHaveURL(/login/);
   });
 });
@@ -44,8 +41,8 @@ test.describe("Protected routes redirect", () => {
   for (const route of protectedRoutes) {
     test(`redirects ${route} to login when unauthenticated`, async ({ page }) => {
       await page.goto(route);
-      // Should redirect to login (with redirect param) or welcome
-      await expect(page).toHaveURL(/login|welcome|\/$/);
+      // Must redirect to /login specifically, not just any URL
+      await expect(page).toHaveURL(/login/);
     });
   }
 });
