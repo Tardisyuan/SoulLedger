@@ -4,7 +4,8 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement } from "react";
-import { useUsers, useCreateUser, useDeleteUser, userKeys } from "@/src/hooks/useUsers";
+import { useUsers, useCreateUser, useDeleteUser } from "@/src/hooks/useUsers";
+import { userKeys } from "@/lib/query_keys";
 
 // Mock the API
 jest.mock("@/lib/api", () => ({
