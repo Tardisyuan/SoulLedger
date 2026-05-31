@@ -4,7 +4,12 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement } from "react";
-import { useWorkflows, useWorkflowTemplates, workflowKeys } from "@/src/hooks/useWorkflows";
+import {
+  useWorkflows, useWorkflowTemplates,
+  useCreateWorkflow, useAdvanceWorkflow, useApproveNode,
+  useCreateWorkflowTemplate, useUpdateWorkflowTemplate, useDeleteWorkflowTemplate,
+} from "@/src/hooks/useWorkflows";
+import { workflowKeys } from "@/lib/query_keys";
 
 // Mock the API
 jest.mock("@/lib/api", () => ({
@@ -70,5 +75,48 @@ describe("useWorkflowTemplates", () => {
     const { result } = renderHook(() => useWorkflowTemplates(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.results).toEqual([]);
+  });
+});
+
+describe("useCreateWorkflow", () => {
+  it("returns mutation object", () => {
+    const { result } = renderHook(() => useCreateWorkflow(), { wrapper: createWrapper() });
+    expect(result.current).toHaveProperty("mutate");
+    expect(result.current).toHaveProperty("isPending");
+  });
+});
+
+describe("useAdvanceWorkflow", () => {
+  it("returns mutation object", () => {
+    const { result } = renderHook(() => useAdvanceWorkflow(), { wrapper: createWrapper() });
+    expect(result.current).toHaveProperty("mutate");
+  });
+});
+
+describe("useApproveNode", () => {
+  it("returns mutation object", () => {
+    const { result } = renderHook(() => useApproveNode(), { wrapper: createWrapper() });
+    expect(result.current).toHaveProperty("mutate");
+  });
+});
+
+describe("useCreateWorkflowTemplate", () => {
+  it("returns mutation object", () => {
+    const { result } = renderHook(() => useCreateWorkflowTemplate(), { wrapper: createWrapper() });
+    expect(result.current).toHaveProperty("mutate");
+  });
+});
+
+describe("useUpdateWorkflowTemplate", () => {
+  it("returns mutation object", () => {
+    const { result } = renderHook(() => useUpdateWorkflowTemplate(), { wrapper: createWrapper() });
+    expect(result.current).toHaveProperty("mutate");
+  });
+});
+
+describe("useDeleteWorkflowTemplate", () => {
+  it("returns mutation object", () => {
+    const { result } = renderHook(() => useDeleteWorkflowTemplate(), { wrapper: createWrapper() });
+    expect(result.current).toHaveProperty("mutate");
   });
 });
