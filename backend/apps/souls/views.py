@@ -32,7 +32,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     queryset = Soul.objects.select_related("tenant").prefetch_related("records").all()
     filterset_fields = ["current_state", "tenant__code"]
     search_fields = ["name", "birth_name", "origin_location"]
-    ordering_fields = ["name", "created_at", "death_date"]
+    ordering_fields = ["name", "create_time", "death_date"]
 
     def get_queryset(self):
         """

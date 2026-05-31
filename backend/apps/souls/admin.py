@@ -8,11 +8,11 @@ from apps.souls.record_models import SoulRecord
 
 @admin.register(Soul)
 class SoulAdmin(admin.ModelAdmin):
-    list_display = ["name", "current_state", "karmic_balance", "death_date", "created_at", "tenant"]
+    list_display = ["name", "current_state", "karmic_balance", "death_date", "create_time", "tenant"]
     list_filter = ["current_state", "tenant"]
     search_fields = ["name", "birth_name"]
-    readonly_fields = ["id", "karmic_balance", "merit_score", "demerit_score", "created_at", "updated_at"]
-    ordering = ["-created_at"]
+    readonly_fields = ["id", "karmic_balance", "merit_score", "demerit_score", "create_time", "update_time"]
+    ordering = ["-create_time"]
 
 
 @admin.register(SoulRecord)

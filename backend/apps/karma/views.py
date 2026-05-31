@@ -302,7 +302,7 @@ class KarmaExportStatsView(APIView):
                 soul.demerit_score,
                 soul.karmic_balance,
                 soul.death_date or "",
-                soul.created_at.isoformat(),
+                soul.create_time.isoformat(),
             ])
 
         return response

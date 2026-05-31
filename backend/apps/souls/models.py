@@ -45,9 +45,6 @@ class Soul(AuditUserFields, models.Model):
     merit_score = models.IntegerField(default=0)
     demerit_score = models.IntegerField(default=0)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
     tenant = models.ForeignKey(
         'tenants.Tenant',
         on_delete=models.CASCADE,
@@ -56,7 +53,7 @@ class Soul(AuditUserFields, models.Model):
     )
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-create_time"]
         verbose_name = "Soul"
         verbose_name_plural = "Souls"
         indexes = [
