@@ -112,3 +112,40 @@ class TestDispatchAudit(TransactionTestCase):
             action=AuditAction.CREATE,
         ).first()
         assert audit is not None
+
+
+@pytest.mark.django_db(transaction=True)
+class TestUserAudit(TransactionTestCase):
+    """Test audit logs for User operations."""
+
+    def test_create_user_generates_audit(self):
+        """Creating a user should generate an audit log."""
+        from apps.tenants.models import Tenant
+        from apps.authentication.models import User
+        tenant = Tenant.objects.create(code="AUDIT_USER", display_name="Audit User")
+        user = User.objects.create_user(
+            username="audituser", password="test123",
+            role="VIEWER", tenant=tenant,
+        )
+        audit = AuditLog.objects.filter(
+            resource="user",
+            action=AuditAction.CREATE,
+            resource_id=str(user.id),
+        ).first()
+        assert audit is not None
+
+
+@pytest.mark.django_db(transaction=True)
+class TestMenuAudit(TransactionTestCase):
+    """Test audit logs for Menu operations."""
+
+    def test_create_menu_generates_audit(self):
+        """Creating a menu should generate an audit log."""
+        from apps.menus.models import Menu
+        menu = Menu.objects.create(name="Audit Menu", path="/audit-menu", order=1)
+        audit = AuditLog.objects.filter(
+            resource="menu",
+            action=AuditAction.CREATE,
+            resource_id=str(menu.id),
+        ).first()
+        assert audit is not None
