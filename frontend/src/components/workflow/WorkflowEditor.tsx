@@ -112,7 +112,6 @@ export default function WorkflowEditor({
   onSave,
 }: {
   templateId?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- data comes from multiple sources with different shapes
   initialTemplateData?: any;
   onClose?: () => void;
   onSave?: (template: WorkflowTemplateInput) => void;
