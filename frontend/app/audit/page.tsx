@@ -8,6 +8,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { PageSection } from "@/components/ui/page-section";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/src/components/ui/Pagination";
 
 interface AuditLogEntry {
   id: number;
@@ -260,31 +261,16 @@ export default function AuditPage() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between mt-4">
-          {isLoading ? (
-            <div className="h-5 w-32 bg-muted animate-pulse rounded" />
-          ) : (
-            <p className="text-sm text-[hsl(var(--color-ink-muted))]">
-              {t("audit.page_info", { page: String(page), total: String(totalPages), count: String(data?.count || 0) })}
-            </p>
-          )}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1 || isFetching}
-              className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
-            >
-              ← {t("common.prev")}
-            </button>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={!data || page >= totalPages || isFetching}
-              className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
-            >
-              {t("common.next")} →
-            </button>
-          </div>
-        </div>
+        {isLoading ? (
+          <div className="h-5 w-32 bg-muted animate-pulse rounded mt-4" />
+        ) : data && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            count={data.count || 0}
+            onPageChange={setPage}
+          />
+        )}
       </div>
     </div>
   );

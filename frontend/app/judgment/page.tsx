@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { judgmentApi, type Judgment } from "@/lib/api";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/src/components/ui/Pagination";
 
 const VERDICT_COLORS: Record<string, string> = {
   PASSED: "bg-[hsl(142,76%,36%,0.2)] text-[hsl(142,76%,36%)]",
@@ -188,30 +189,13 @@ export default function JudgmentQueuePage() {
 
           {/* Pagination */}
           {judgments.length > 0 && (
-            <div className="flex items-center justify-between mt-4 px-2">
-              <p className="text-sm text-[hsl(var(--color-ink-muted))]">
-                {t("judgment.page_info", {
-                  page: String(page),
-                  total: String(totalPages),
-                  count: String(judgmentData?.count ?? 0),
-                })}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
-                >
-                  ← {t("common.prev")}
-                </button>
-                <button
-                  onClick={() => setPage(p => p + 1)}
-                  disabled={page >= totalPages}
-                  className="px-3 py-1.5 text-sm bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
-                >
-                  {t("common.next")} →
-                </button>
-              </div>
+            <div className="px-2">
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                count={judgmentData?.count ?? 0}
+                onPageChange={setPage}
+              />
             </div>
           )}
           </>

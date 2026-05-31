@@ -21,6 +21,24 @@ services:
         limits:
           memory: 256m
 
+  pgbouncer:
+    image: edoburu/pgbouncer:1.23.1
+    environment:
+      DATABASE_URL: postgres://soulledger:${DB_PASSWORD}@db:5432/soulledger
+      MAX_CLIENT_CONN: 200
+      DEFAULT_POOL_SIZE: 20
+      POOL_MODE: transaction
+      ADMIN_USERS: soulledger
+    ports: []
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
   backend:
     environment:
       - DEBUG=false
@@ -28,9 +46,12 @@ services:
       - SENTRY_DSN=${SENTRY_DSN}
       - SECURE_SSL_REDIRECT=true
       - SECURE_PROXY_SSL_HEADER=HTTP_X_FORWARDED_PROTO,https
+      - DATABASE_URL=postgres://soulledger:${DB_PASSWORD}@pgbouncer:5432/soulledger
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
       - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
+    depends_on:
+      - pgbouncer
     command: >
       sh -c "python manage.py migrate &&
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4"
@@ -48,9 +69,12 @@ services:
 
   celery:
     environment:
+      - DATABASE_URL=postgres://soulledger:${DB_PASSWORD}@pgbouncer:5432/soulledger
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/1
       - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/2
+    depends_on:
+      - pgbouncer
     restart: always
     deploy:
       resources:
