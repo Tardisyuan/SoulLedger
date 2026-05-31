@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi, type User, type CreateUserInput, type UpdateUserInput, type PaginatedResponse } from "@/lib/api";
-import { showToast } from "@/src/components/ui/Toast";
+import { useToast } from "@/src/contexts/ToastContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { userKeys } from "@/lib/query_keys";
 
@@ -36,6 +36,7 @@ export function useUser(id: string) {
 export function useCreateUser() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
 
   return useMutation({
     mutationFn: (data: CreateUserInput) => usersApi.create(data),
@@ -52,6 +53,7 @@ export function useCreateUser() {
 export function useUpdateUser() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateUserInput }) =>
@@ -69,6 +71,7 @@ export function useUpdateUser() {
 export function useDeleteUser() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
 
   return useMutation({
     mutationFn: (id: string) => usersApi.delete(id),
@@ -85,6 +88,7 @@ export function useDeleteUser() {
 export function useToggleUserStatus() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
 
   return useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>

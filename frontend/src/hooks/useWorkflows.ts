@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@/lib/api";
-import { showToast } from "@/src/components/ui/Toast";
+import { useToast } from "@/src/contexts/ToastContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { workflowKeys } from "@/lib/query_keys";
 
@@ -61,6 +61,7 @@ export function useWorkflowTemplate(id: string) {
 export function useCreateWorkflow() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
 
   return useMutation({
     mutationFn: (data: object) => workflowApi.create(data),
@@ -77,6 +78,7 @@ export function useCreateWorkflow() {
 export function useAdvanceWorkflow() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
 
   return useMutation({
     mutationFn: (id: string) => workflowApi.advance(id),
@@ -93,6 +95,7 @@ export function useAdvanceWorkflow() {
 export function useApproveNode() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
 
   return useMutation({
     mutationFn: ({ nodeId, data }: { nodeId: string; data: object }) =>
@@ -110,6 +113,7 @@ export function useApproveNode() {
 export function useCreateWorkflowTemplate() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
 
   return useMutation({
     mutationFn: (data: object) => workflowApi.templates.create(data),
@@ -126,6 +130,7 @@ export function useCreateWorkflowTemplate() {
 export function useUpdateWorkflowTemplate() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: object }) =>
@@ -143,6 +148,7 @@ export function useUpdateWorkflowTemplate() {
 export function useDeleteWorkflowTemplate() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
 
   return useMutation({
     mutationFn: (id: string) => workflowApi.templates.delete(id),

@@ -2,12 +2,13 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { reincarnationApi } from "@/lib/api";
-import { showToast } from "@/src/components/ui/Toast";
+import { useToast } from "@/src/contexts/ToastContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 
 export function useReborn() {
   const qc = useQueryClient();
   const { t } = useI18n();
+  const { showToast } = useToast();
   return useMutation({
     mutationFn: (data: object) => reincarnationApi.reborn(data),
     onSuccess: () => {
