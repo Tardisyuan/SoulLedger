@@ -10,10 +10,19 @@ module.exports = {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
   },
   collectCoverageFrom: [
-    'lib/api.ts',
+    'lib/**/*.ts',
+    'src/**/*.{ts,tsx}',
     'app/**/*.tsx',
-    'src/**/*.tsx',
     '!src/**/*.d.ts',
+    '!src/__tests__/**',
   ],
+  coverageThreshold: {
+    global: {
+      branches: 60,
+      functions: 60,
+      lines: 60,
+      statements: 60,
+    },
+  },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 };
