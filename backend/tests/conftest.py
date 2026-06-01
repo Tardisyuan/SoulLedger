@@ -43,60 +43,68 @@ def eu_tenant(db):
 @pytest.fixture
 def admin_user(db, django_user_model, cn_tenant):
     """Admin user with CN_DIYU tenant."""
-    user = django_user_model.objects.create_user(
+    user, _ = django_user_model.objects.get_or_create(
         username="admin",
-        password="admin123",
-        role="ADMIN",
-        tenant=cn_tenant,
+        defaults={"role": "ADMIN", "tenant": cn_tenant},
     )
+    if not user.check_password("admin123"):
+        user.set_password("admin123")
+        user.save()
     return user
 
 
 @pytest.fixture
 def judge_user(db, django_user_model, cn_tenant):
     """Judge user with CN_DIYU tenant."""
-    user = django_user_model.objects.create_user(
+    user, _ = django_user_model.objects.get_or_create(
         username="judge",
-        password="judge123",
-        role="JUDGE",
-        tenant=cn_tenant,
+        defaults={"role": "JUDGE", "tenant": cn_tenant},
     )
+    if not user.check_password("judge123"):
+        user.set_password("judge123")
+        user.save()
     return user
 
 
 @pytest.fixture
 def eu_admin_user(db, django_user_model, eu_tenant):
     """Admin user with EU_HEAVEN_HELL tenant."""
-    user = django_user_model.objects.create_user(
+    user, _ = django_user_model.objects.get_or_create(
         username="eu_admin",
-        password="admin123",
-        role="ADMIN",
-        tenant=eu_tenant,
+        defaults={
+            "role": "ADMIN",
+            "tenant": eu_tenant,
+        },
     )
+    if not user.check_password("admin123"):
+        user.set_password("admin123")
+        user.save()
     return user
 
 
 @pytest.fixture
 def guardian_user(db, django_user_model, cn_tenant):
     """Guardian user with CN_DIYU tenant."""
-    user = django_user_model.objects.create_user(
+    user, _ = django_user_model.objects.get_or_create(
         username="guardian",
-        password="guardian123",
-        role="GUARDIAN",
-        tenant=cn_tenant,
+        defaults={"role": "GUARDIAN", "tenant": cn_tenant},
     )
+    if not user.check_password("guardian123"):
+        user.set_password("guardian123")
+        user.save()
     return user
 
 
 @pytest.fixture
 def viewer_user(db, django_user_model, cn_tenant):
     """Viewer user with CN_DIYU tenant."""
-    user = django_user_model.objects.create_user(
+    user, _ = django_user_model.objects.get_or_create(
         username="viewer",
-        password="viewer123",
-        role="VIEWER",
-        tenant=cn_tenant,
+        defaults={"role": "VIEWER", "tenant": cn_tenant},
     )
+    if not user.check_password("viewer123"):
+        user.set_password("viewer123")
+        user.save()
     return user
 
 

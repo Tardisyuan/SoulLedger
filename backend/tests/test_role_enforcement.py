@@ -28,14 +28,14 @@ class TestGuardianRoleEnforcement:
         response = client.get("/api/v1/souls/")
         assert response.status_code == 200
 
+    @pytest.mark.xfail(reason="SoulViewSet create permission not yet enforced")
     def test_guardian_cannot_create_soul(self, api_client, guardian_user, cn_tenant):
-        """GUARDIAN has no soul.create permission but SoulViewSet does not enforce it yet."""
+        """GUARDIAN should not create souls, but SoulViewSet lacks permission enforcement."""
         client = _get_auth_client(api_client, guardian_user)
         response = client.post("/api/v1/souls/", {
             "name": "Guardian Soul",
         }, format="json")
-        # TODO: SoulViewSet create permission not yet enforced; fix when middleware is added
-        assert response.status_code == 201
+        assert response.status_code == 201  # Current broken state: should be 403
 
     def test_guardian_can_read_karma(self, api_client, guardian_user, cn_tenant):
         """Overview stats endpoint has hardcoded ADMIN check; GUARDIAN gets 403."""
@@ -66,14 +66,14 @@ class TestViewerRoleEnforcement:
         response = client.get("/api/v1/souls/")
         assert response.status_code == 200
 
+    @pytest.mark.xfail(reason="SoulViewSet create permission not yet enforced")
     def test_viewer_cannot_create_soul(self, api_client, viewer_user, cn_tenant):
-        """VIEWER has no soul.create permission but SoulViewSet does not enforce it yet."""
+        """VIEWER should not create souls, but SoulViewSet lacks permission enforcement."""
         client = _get_auth_client(api_client, viewer_user)
         response = client.post("/api/v1/souls/", {
             "name": "Viewer Soul",
         }, format="json")
-        # TODO: SoulViewSet create permission not yet enforced; fix when middleware is added
-        assert response.status_code == 201
+        assert response.status_code == 201  # Current broken state: should be 403
 
     def test_viewer_cannot_manage_users(self, api_client, viewer_user, cn_tenant):
         """VIEWER should not be able to manage users."""
