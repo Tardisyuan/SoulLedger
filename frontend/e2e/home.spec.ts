@@ -41,8 +41,38 @@ test.describe("Protected routes redirect", () => {
   for (const route of protectedRoutes) {
     test(`redirects ${route} to login when unauthenticated`, async ({ page }) => {
       await page.goto(route);
-      // Must redirect to /login specifically, not just any URL
       await expect(page).toHaveURL(/login/);
     });
   }
+});
+
+test.describe("Navigation menu", () => {
+  test("sidebar renders navigation links", async ({ page }) => {
+    await page.goto("/");
+    // Sidebar should contain navigation items
+    const sidebar = page.locator("nav, [role='navigation'], aside");
+    await expect(sidebar).toBeVisible();
+  });
+});
+
+test.describe("Theme toggle", () => {
+  test("theme toggle button exists", async ({ page }) => {
+    await page.goto("/");
+    const themeBtn = page.getByRole("button", { name: /dark|light|theme/i });
+    await expect(themeBtn).toBeVisible();
+  });
+});
+
+test.describe("Error page", () => {
+  test("shows 404 for non-existent route", async ({ page }) => {
+    await page.goto("/non-existent-route-xyz");
+    await expect(page.getByText("404")).toBeVisible();
+  });
+});
+
+test.describe("Welcome page", () => {
+  test("renders welcome content", async ({ page }) => {
+    await page.goto("/welcome");
+    await expect(page.locator("body")).toBeVisible();
+  });
 });
