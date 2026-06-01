@@ -115,17 +115,17 @@ describe("useCreateUser behavior", () => {
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useCreateUser(), { wrapper });
     await act(async () => {
-      result.current.mutate({ username: "newuser", email: "test@example.com" });
+      result.current.mutate({ username: "newuser", email: "test@example.com", password: "pass123" });
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(usersApi.create).toHaveBeenCalledWith({ username: "newuser", email: "test@example.com" });
+    expect(usersApi.create).toHaveBeenCalledWith({ username: "newuser", email: "test@example.com", password: "pass123" });
   });
 
   it("invalidates user queries on success", async () => {
     const { queryClient, wrapper } = createWrapper();
     const { result } = renderHook(() => useCreateUser(), { wrapper });
     await act(async () => {
-      result.current.mutate({ username: "newuser" });
+      result.current.mutate({ username: "newuser", email: "test@example.com", password: "pass123" });
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith(
@@ -137,7 +137,7 @@ describe("useCreateUser behavior", () => {
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useCreateUser(), { wrapper });
     await act(async () => {
-      result.current.mutate({ username: "newuser" });
+      result.current.mutate({ username: "newuser", email: "test@example.com", password: "pass123" });
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), "success");
@@ -148,7 +148,7 @@ describe("useCreateUser behavior", () => {
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useCreateUser(), { wrapper });
     await act(async () => {
-      result.current.mutate({ username: "newuser" });
+      result.current.mutate({ username: "newuser", email: "test@example.com", password: "pass123" });
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), "error");
