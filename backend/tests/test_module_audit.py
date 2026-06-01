@@ -72,9 +72,8 @@ class TestJudgmentAudit(TransactionTestCase):
 class TestKarmaAudit(TransactionTestCase):
     """Test audit logs for Karma operations."""
 
-    def test_create_soul_record_no_audit(self):
-        """SoulRecord does not inherit AuditUserFields, so no audit log is created.
-        This documents the gap — SoulRecord should inherit AuditUserFields."""
+    def test_create_soul_record_generates_audit(self):
+        """SoulRecord now inherits AuditUserFields, so audit log IS created."""
         import uuid
         from apps.tenants.models import Tenant
         tenant = Tenant.objects.create(code=f"AUDIT_KARMA_{uuid.uuid4().hex[:8]}", display_name="Audit Karma")
@@ -85,9 +84,11 @@ class TestKarmaAudit(TransactionTestCase):
             description="Good deed",
             weight=10,
         )
-        # SoulRecord does not inherit AuditUserFields — no audit log generated
-        audit = AuditLog.objects.filter(resource="soulrecord").first()
-        assert audit is None  # Documents the gap
+        audit = AuditLog.objects.filter(
+            resource="soulrecord",
+            action=AuditAction.CREATE,
+        ).first()
+        assert audit is not None
 
 
 @pytest.mark.django_db(transaction=True)
@@ -147,5 +148,41 @@ class TestMenuAudit(TransactionTestCase):
             resource="menu",
             action=AuditAction.CREATE,
             resource_id=str(menu.id),
+        ).first()
+        assert audit is not None
+
+
+@pytest.mark.django_db(transaction=True)
+class TestWorkflowAudit(TransactionTestCase):
+    """Test audit logs for Workflow operations."""
+
+    def test_create_workflow_template_generates_audit(self):
+        """Creating a workflow template should generate an audit log."""
+        from apps.workflow.models import WorkflowTemplate
+        template = WorkflowTemplate.objects.create(
+            name="Audit Workflow",
+            civilization="CHINESE",
+            case_type="ROUTINE",
+        )
+        audit = AuditLog.objects.filter(
+            resource="workflowtemplate",
+            action=AuditAction.CREATE,
+            resource_id=str(template.id),
+        ).first()
+        assert audit is not None
+
+
+@pytest.mark.django_db(transaction=True)
+class TestTenantAudit(TransactionTestCase):
+    """Test audit logs for Tenant operations."""
+
+    def test_create_tenant_generates_audit(self):
+        """Creating a tenant should generate an audit log."""
+        from apps.tenants.models import Tenant
+        tenant = Tenant.objects.create(code="AUDIT_TENANT", display_name="Audit Tenant")
+        audit = AuditLog.objects.filter(
+            resource="tenant",
+            action=AuditAction.CREATE,
+            resource_id=str(tenant.id),
         ).first()
         assert audit is not None
