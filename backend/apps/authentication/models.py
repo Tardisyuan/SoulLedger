@@ -78,9 +78,10 @@ class User(AuditUserFields, AbstractUser):
         return f"{self.username} ({self.role})"
 
 
-class LoginLog(models.Model):
+class LoginLog(AuditUserFields, models.Model):
     """
     登录日志 - 记录每次登录行为（成功/失败）
+    Inherits AuditUserFields for audit trail and soft delete.
     """
     user = models.ForeignKey(
         "authentication.User",
