@@ -3,6 +3,7 @@ UserNotification model for in-app notifications.
 """
 from django.db import models
 from django.conf import settings
+from apps.core.models import AuditUserFields
 
 
 class NotificationType(models.TextChoices):
@@ -15,9 +16,10 @@ class NotificationType(models.TextChoices):
     ROLE_ASSIGNED = "ROLE_ASSIGNED", "Role Assigned"
 
 
-class UserNotification(models.Model):
+class UserNotification(AuditUserFields, models.Model):
     """
     In-app notification for users (separate from tenant dispatch notifications).
+    Inherits AuditUserFields for audit trail and soft delete.
     """
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

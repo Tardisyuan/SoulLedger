@@ -4,6 +4,7 @@ Soul record model — merit/demerit/judgment evidence attached to a soul.
 import uuid
 from django.db import models
 from apps.souls.models import Soul, Civilization
+from apps.core.models import AuditUserFields
 from apps.tenants.managers import TenantManager
 
 
@@ -32,10 +33,11 @@ class RecordCategory(models.TextChoices):
     OTHER = "OTHER", "Other"
 
 
-class SoulRecord(models.Model):
+class SoulRecord(AuditUserFields, models.Model):
     """
     Individual event/record attached to a soul.
     evidence_json stores flexible structured evidence.
+    Inherits AuditUserFields for audit trail and soft delete.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     soul = models.ForeignKey(
