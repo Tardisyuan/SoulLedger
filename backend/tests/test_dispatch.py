@@ -384,22 +384,28 @@ class TestDispatchAPI:
         resp = api_client.get("/api/v1/dispatch/records/", {"status": "PROPOSED"})
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
 
-    @pytest.mark.xfail(reason="Test ordering issue - passes in isolation but fails in full suite")
-    def test_dispatch_approve(self, api_client, db, cn_tenant, eu_tenant, cn_soul, cn_admin_user, eu_auth_headers):
+    @pytest.mark.xfail(reason="Test ordering issue — fixture state pollution in full suite; passes in isolation")
+    def test_dispatch_approve(self, api_client, db, cn_tenant, eu_tenant, cn_soul, cn_admin_user, eu_admin_user):
         """Test approving a dispatch via API."""
+        # Create fresh dispatch record with isolated data
         dr = DispatchRecord.objects.create(
             source_tenant=cn_tenant,
             target_tenant=eu_tenant,
             soul=cn_soul,
             dispatched_by=cn_admin_user,
-            reason="Test",
+            reason="Test approve",
             tenant=cn_tenant,
         )
+        # Authenticate as EU admin (target tenant can approve)
+        from rest_framework_simplejwt.tokens import RefreshToken
+        token = RefreshToken.for_user(eu_admin_user)
+        if eu_admin_user.tenant:
+            token["tenant_code"] = eu_admin_user.tenant.code
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
         resp = api_client.post(
             f"/api/v1/dispatch/records/{dr.id}/approve/",
-            HTTP_AUTHORIZATION=eu_auth_headers["HTTP_AUTHORIZATION"],
         )
-        assert resp.status_code == 200, f"Expected 200 for approval, got {resp.status_code}: {resp.content}"
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.content}"
 
     def test_cross_judgment_list(self, api_client, db, cn_tenant, cn_admin_user):
         """Test listing cross-tenant judgments."""
