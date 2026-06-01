@@ -186,3 +186,30 @@ class TestTenantAudit(TransactionTestCase):
             resource_id=str(tenant.id),
         ).first()
         assert audit is not None
+
+
+@pytest.mark.django_db(transaction=True)
+class TestNotificationAudit(TransactionTestCase):
+    """Test audit logs for Notification operations."""
+
+    def test_create_notification_generates_audit(self):
+        """Creating a notification should generate an audit log."""
+        from apps.tenants.models import Tenant
+        from apps.notifications.models import UserNotification, NotificationType
+        from apps.authentication.models import User
+        tenant = Tenant.objects.create(code="AUDIT_NOTIF", display_name="Audit Notif")
+        user = User.objects.create_user(
+            username="notifuser", password="test123",
+            role="VIEWER", tenant=tenant,
+        )
+        notification = UserNotification.objects.create(
+            user=user,
+            title="Test Notification",
+            message="Test message",
+            notification_type=NotificationType.SYSTEM,
+        )
+        audit = AuditLog.objects.filter(
+            resource="usernotification",
+            action=AuditAction.CREATE,
+        ).first()
+        assert audit is not None
