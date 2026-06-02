@@ -29,6 +29,7 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     permission_codename = "workflow"
     queryset = WorkflowTemplate.objects.select_related("tenant").all()
     serializer_class = WorkflowTemplateSerializer
+    filterset_class = None  # Templates are small, no filtering needed
     ordering_fields = ["created_at", "name", "civilization"]
     pagination_class = None  # Templates are small, return full list
 
@@ -163,15 +164,15 @@ class ApprovalNodeViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUser
     permission_codename = "workflow"
     queryset = ApprovalNode.objects.select_related("workflow", "workflow__soul", "approver", "realm", "approver_actor").all()
     serializer_class = ApprovalNodeSerializer
+    filterset_class = None  # Nodes are accessed via workflow, no direct filtering needed
     ordering_fields = ["node_order", "created_at"]
 
     def get_queryset(self):
+        # DataScopeViewSetMixin handles auth check, ADMIN bypass, and tenant
+        # isolation via qs.filter(tenant=tenant). ApprovalNode has no direct
+        # tenant field, so we additionally filter by workflow__tenant to ensure
+        # only nodes belonging to workflows in the current tenant are returned.
         qs = super().get_queryset()
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        if user.role == "ADMIN":
-            return qs
         tenant = getattr(self.request, "tenant", None)
         if tenant:
             return qs.filter(workflow__tenant=tenant)
