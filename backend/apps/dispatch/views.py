@@ -20,6 +20,7 @@ from apps.dispatch.serializers import (
     CrossTenantJudgmentConcludeSerializer,
 )
 from apps.dispatch.services import DispatchService, CrossTenantJudgmentService
+from apps.dispatch.filters import DispatchFilter
 from apps.tenants.models import Tenant
 from apps.souls.models import Soul
 from apps.actors.models import Actor
@@ -44,9 +45,10 @@ class DispatchRecordViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, TenantC
     queryset = DispatchRecord.objects.select_related(
         "source_tenant", "target_tenant", "soul", "dispatched_by"
     ).all()
+    filterset_class = DispatchFilter
+    search_fields = DispatchFilter.search_fields
+    ordering_fields = DispatchFilter.ordering_fields
     serializer_class = DispatchRecordSerializer
-    ordering_fields = ["proposed_at", "status"]
-    # pagination_class = None  # Removed: paginate to prevent large payloads
 
     def get_serializer_class(self):
         if self.action == "list":

@@ -849,6 +849,8 @@
     "actors_placeholder": "按名称、头衔或描述搜索角色...",
     "realms_placeholder": "按代码、名称或描述搜索地域...",
     "karma_placeholder": "按灵魂名称或描述搜索业力记录...",
+    "workflow_placeholder": "按名称、灵魂或案件类型搜索审批流程...",
+    "dispatch_placeholder": "按灵魂名称或原因搜索调度记录...",
     "clear": "清除搜索",
     "active_filters": "筛选:",
     "remove": "移除",
