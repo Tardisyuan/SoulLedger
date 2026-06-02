@@ -114,24 +114,6 @@ def eu_actor(db, eu_tenant):
     return actor
 
 
-@pytest.fixture
-def auth_headers(api_client, cn_admin_user):
-    """Authenticated headers dict with CN admin user."""
-    from rest_framework_simplejwt.tokens import RefreshToken
-    token = RefreshToken.for_user(cn_admin_user)
-    if cn_admin_user.tenant:
-        token["tenant_code"] = cn_admin_user.tenant.code
-    return {"HTTP_AUTHORIZATION": f"Bearer {token.access_token}"}
-
-
-@pytest.fixture
-def eu_auth_headers(api_client, eu_admin_user):
-    """Authenticated headers dict with EU admin user."""
-    from rest_framework_simplejwt.tokens import RefreshToken
-    token = RefreshToken.for_user(eu_admin_user)
-    if eu_admin_user.tenant:
-        token["tenant_code"] = eu_admin_user.tenant.code
-    return {"HTTP_AUTHORIZATION": f"Bearer {token.access_token}"}
 
 
 class TestDispatchRecordModel:
@@ -356,7 +338,7 @@ class TestDispatchAPI:
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
 
     @pytest.mark.xfail(reason="Test ordering issue — fixture state pollution in full suite; passes in isolation")
-    def test_dispatch_approve(self, api_client, db, cn_tenant, eu_tenant, cn_soul, cn_admin_user, eu_admin_user):
+    def test_dispatch_approve(self, api_client, db, cn_tenant, eu_tenant, cn_soul, cn_admin_user, eu_auth_headers):
         """Test approving a dispatch via API."""
         # Create fresh dispatch record with isolated data
         dr = DispatchRecord.objects.create(
@@ -367,12 +349,8 @@ class TestDispatchAPI:
             reason="Test approve",
             tenant=cn_tenant,
         )
-        # Authenticate as EU admin (target tenant can approve)
-        from rest_framework_simplejwt.tokens import RefreshToken
-        token = RefreshToken.for_user(eu_admin_user)
-        if eu_admin_user.tenant:
-            token["tenant_code"] = eu_admin_user.tenant.code
-        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+        # Authenticate as EU admin (target tenant can approve) using shared fixture
+        api_client.credentials(HTTP_AUTHORIZATION=eu_auth_headers["HTTP_AUTHORIZATION"])
         resp = api_client.post(
             f"/api/v1/dispatch/records/{dr.id}/approve/",
         )

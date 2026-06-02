@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { setupAuthenticatedPage } from "./fixtures";
 
 test.describe("Home page", () => {
   test("renders hero title and civilization cards", async ({ page }) => {
