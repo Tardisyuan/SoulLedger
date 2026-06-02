@@ -15,33 +15,12 @@ class TestJudgmentAPI:
     """Test Judgment API endpoints."""
 
     @pytest.fixture
-    def api_client(self):
-        return APIClient()
-
-    @pytest.fixture
-    def cn_tenant(self, db):
-        tenant, _ = Tenant.objects.get_or_create(
-            code="CN_DIYU",
-            defaults={"display_name": "Chinese Diyu"}
-        )
-        return tenant
-
-    @pytest.fixture
     def eg_tenant(self, db):
         tenant, _ = Tenant.objects.get_or_create(
             code="EG_DUAT",
             defaults={"display_name": "Egyptian Duat"}
         )
         return tenant
-
-    @pytest.fixture
-    def admin_user(self, cn_tenant, django_user_model):
-        return django_user_model.objects.create_user(
-            username="admin",
-            password="admin123",
-            role="ADMIN",
-            tenant=cn_tenant,
-        )
 
     @pytest.fixture
     def eg_admin_user(self, eg_tenant, django_user_model):
