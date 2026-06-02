@@ -58,6 +58,12 @@ class TestTenantHeaderInjection:
 
     def test_actors_respect_tenant_header(self, api_client, db, cn_tenant, eu_tenant, auth_headers):
         """CN tenant should see CN actors, EU tenant should see EU actors."""
+        from apps.actors.models import Actor
+
+        # Create test data: one CN actor, one EU actor
+        Actor.objects.create(name="判官", civilization="CHINESE", role="JUDGE", tenant=cn_tenant)
+        Actor.objects.create(name="Hades", civilization="EUROPEAN", role="JUDGE", tenant=eu_tenant)
+
         # Get actors for CN tenant
         cn_resp = api_client.get(
             "/api/v1/actors/",
@@ -81,15 +87,27 @@ class TestTenantHeaderInjection:
         cn_civilizations = {a.get("civilization") for a in cn_actors}
         eu_civilizations = {a.get("civilization") for a in eu_actors}
 
-        # CN actors should be CHINESE civilization (if any exist)
-        if cn_actors:
-            assert "CHINESE" in cn_civilizations
-        # EU actors should be EUROPEAN civilization (if any exist)
-        if eu_actors:
-            assert "EUROPEAN" in eu_civilizations
+        # CN actors should be CHINESE civilization
+        assert len(cn_actors) > 0, "No CN actors found"
+        assert "CHINESE" in cn_civilizations
+        # EU actors should be EUROPEAN civilization
+        assert len(eu_actors) > 0, "No EU actors found"
+        assert "EUROPEAN" in eu_civilizations
 
     def test_realms_respect_tenant_header(self, api_client, db, cn_tenant, eu_tenant, auth_headers):
         """Realms should be filtered by tenant civilization."""
+        from apps.realms.models import Realm
+
+        # Create test data: one CN realm, one EU realm
+        Realm.objects.create(
+            realm_code="CN_HELL", civilization="CHINESE", name_local="奈何狱",
+            realm_type="HELL", tenant=cn_tenant,
+        )
+        Realm.objects.create(
+            realm_code="EU_HEAVEN", civilization="EUROPEAN", name_local="Heaven",
+            realm_type="BLISS", tenant=eu_tenant,
+        )
+
         cn_resp = api_client.get(
             "/api/v1/realms/",
             HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
@@ -107,10 +125,10 @@ class TestTenantHeaderInjection:
         cn_realms = cn_resp.json().get("results", [])
         eu_realms = eu_resp.json().get("results", [])
 
-        # CN realms should have CHINESE civilization (if any exist)
-        if cn_realms:
-            cn_civilizations = {r.get("civilization") for r in cn_realms}
-            assert "CHINESE" in cn_civilizations
+        # CN realms should have CHINESE civilization
+        assert len(cn_realms) > 0, "No CN realms found"
+        cn_civilizations = {r.get("civilization") for r in cn_realms}
+        assert "CHINESE" in cn_civilizations
 
 
 class TestKarmaStatsEndpoint:

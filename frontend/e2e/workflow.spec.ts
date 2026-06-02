@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { setupAuthenticatedPage } from "./fixtures";
 
 test.describe("Workflow page", () => {
   test("renders workflow page without errors", async ({ page }) => {
