@@ -846,6 +846,8 @@
   "search": {
     "placeholder": "Shesed...",
     "aria_label": "Shesed",
+    "actors_placeholder": "Shesed netjeru...",
+    "realms_placeholder": "Shesed mekher...",
     "clear": "Khet Shesed",
     "active_filters": "Sekhem:",
     "remove": "Wesekh",

@@ -4,6 +4,7 @@ REST views for Actors app.
 from rest_framework import viewsets
 from apps.actors.models import Actor
 from apps.actors.serializers import ActorSerializer, ActorListSerializer, ActorLocalizedSerializer
+from apps.actors.filters import ActorFilter
 from apps.core.permissions import TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 
@@ -16,8 +17,9 @@ class ActorViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnl
     permission_classes = [TenantPermission]
     permission_codename = "actor"
     queryset = Actor.objects.filter(is_active=True)
-    filterset_fields = ["civilization", "role"]
-    ordering_fields = ["civilization", "role", "name"]
+    filterset_class = ActorFilter
+    search_fields = ActorFilter.search_fields
+    ordering_fields = ActorFilter.ordering_fields
 
     def get_serializer_class(self):
         if self.request.query_params.get("localized"):
