@@ -842,5 +842,19 @@
     "title": "Page Not Found",
     "description": "Sorry, the page you visited does not exist",
     "home": "Return Home"
+  },
+  "search": {
+    "placeholder": "Search...",
+    "aria_label": "Search",
+    "clear": "Clear search",
+    "active_filters": "Filters:",
+    "remove": "Remove",
+    "clear_all": "Clear All"
+  },
+  "filter": {
+    "all": "All",
+    "yes": "Yes",
+    "no": "No",
+    "clear_all": "Clear All"
   }
 }

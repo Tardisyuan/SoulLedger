@@ -10,6 +10,7 @@ from apps.souls.models import Soul, SoulState
 from apps.souls.serializers import (
     SoulSerializer, SoulListSerializer, SoulTransitionSerializer, SoulRecordSerializer
 )
+from apps.souls.filters import SoulFilter
 from apps.karma.services import KarmaService
 from apps.core.permissions import TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
@@ -30,40 +31,21 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         'records': ['soul.read'],
     }
     queryset = Soul.objects.select_related("tenant").prefetch_related("records").all()
-    filterset_fields = ["current_state", "tenant__code"]
-    search_fields = ["name", "birth_name", "origin_location"]
-    ordering_fields = ["name", "create_time", "death_date"]
+    filterset_class = SoulFilter
+    search_fields = SoulFilter.search_fields
+    ordering_fields = SoulFilter.ordering_fields
 
     def get_queryset(self):
         """
         Build queryset with filtering from query params.
         Tenant isolation is handled by DataScopeViewSetMixin (via super()).
-        Karma/civilization filtering delegated to SoulQuerySet manager.
+        FilterSet handles search, filters, and ordering.
         """
         qs = super().get_queryset()
         qs = qs.exclude_orphaned()
 
-        params = self.request.query_params
-
-        # Civilization filter
-        civilization = params.get('civilization')
-        if civilization:
-            qs = qs.filter_by_civilization(civilization)
-
-        # State filter
-        state = params.get('state')
-        if state:
-            qs = qs.filter_by_state(state)
-
-        # Karma range filtering
-        karma_min = params.get('karma_min')
-        karma_max = params.get('karma_max')
-        ordering = params.get('ordering', '').strip()
-
-        if karma_min is not None or karma_max is not None:
-            qs = qs.filter_by_karma_range(karma_min, karma_max)
-
         # Karma ordering (applied here since DRF ordering runs after get_queryset)
+        ordering = self.request.query_params.get('ordering', '').strip()
         if ordering in ('karmic_balance', '-karmic_balance'):
             qs = qs.order_by_karma(descending=ordering.startswith('-'))
             self._skip_filter_ordering = True
@@ -71,11 +53,14 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         return qs
 
     def filter_queryset(self, queryset):
-        """Skip DRF ordering if karma ordering already applied."""
+        """Apply FilterSet filtering, skip DRF ordering if karma ordering already applied."""
+        # Apply FilterSet filtering (search, filters, etc.)
+        qs = super().filter_queryset(queryset)
+        # Skip DRF ordering if karma ordering already applied
         if getattr(self, '_skip_filter_ordering', False):
             self._skip_filter_ordering = False
-            return queryset
-        return super().filter_queryset(queryset)
+            return qs
+        return qs
 
     def get_serializer_class(self):
         if self.action == "list":
