@@ -11,23 +11,6 @@ from apps.dispatch.services import DispatchService, CrossTenantJudgmentService
 
 
 @pytest.fixture
-def api_client():
-    """DRF APIClient for making test requests."""
-    from rest_framework.test import APIClient
-    return APIClient()
-
-
-@pytest.fixture
-def cn_tenant(db):
-    """Chinese Diyu tenant."""
-    tenant, _ = Tenant.objects.get_or_create(
-        code="CN_DIYU",
-        defaults={"display_name": "Chinese Diyu", "dispatch_enabled": True}
-    )
-    return tenant
-
-
-@pytest.fixture
 def eu_tenant(db):
     """European Heaven/Hell tenant."""
     tenant, _ = Tenant.objects.get_or_create(
@@ -55,18 +38,6 @@ def cn_admin_user(db, django_user_model, cn_tenant):
         password="admin123",
         role="ADMIN",
         tenant=cn_tenant,
-    )
-    return user
-
-
-@pytest.fixture
-def eu_admin_user(db, django_user_model, eu_tenant):
-    """Admin user with EU_HEAVEN_HELL tenant."""
-    user = django_user_model.objects.create_user(
-        username="eu_admin",
-        password="admin123",
-        role="ADMIN",
-        tenant=eu_tenant,
     )
     return user
 

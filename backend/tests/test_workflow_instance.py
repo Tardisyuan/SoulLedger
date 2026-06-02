@@ -23,14 +23,6 @@ class TestWorkflowService:
     """Test WorkflowService.create_from_judgment."""
 
     @pytest.fixture
-    def cn_tenant(self, db):
-        tenant, _ = Tenant.objects.get_or_create(
-            code="CN_DIYU",
-            defaults={"display_name": "Chinese Diyu"}
-        )
-        return tenant
-
-    @pytest.fixture
     def soul(self, cn_tenant):
         # civilization is derived from tenant, not directly settable
         return Soul.objects.create(
@@ -136,14 +128,6 @@ class TestWorkflowService:
 @pytest.mark.django_db
 class TestApprovalWorkflowModel:
     """Test ApprovalWorkflow model methods."""
-
-    @pytest.fixture
-    def cn_tenant(self, db):
-        tenant, _ = Tenant.objects.get_or_create(
-            code="CN_DIYU",
-            defaults={"display_name": "Chinese Diyu"}
-        )
-        return tenant
 
     @pytest.fixture
     def soul(self, cn_tenant):
@@ -284,27 +268,6 @@ class TestApprovalWorkflowModel:
 @pytest.mark.django_db
 class TestApprovalWorkflowAPI:
     """Test workflow API endpoints."""
-
-    @pytest.fixture
-    def api_client(self):
-        return APIClient()
-
-    @pytest.fixture
-    def cn_tenant(self, db):
-        tenant, _ = Tenant.objects.get_or_create(
-            code="CN_DIYU",
-            defaults={"display_name": "Chinese Diyu"}
-        )
-        return tenant
-
-    @pytest.fixture
-    def admin_user(self, cn_tenant, django_user_model):
-        return django_user_model.objects.create_user(
-            username="admin",
-            password="admin123",
-            role="ADMIN",
-            tenant=cn_tenant,
-        )
 
     @pytest.fixture
     def soul(self, cn_tenant):
@@ -469,14 +432,6 @@ class TestApprovalWorkflowAPI:
 @pytest.mark.django_db
 class TestJudgmentWorkflowIntegration:
     """Test integration between Judgment.conclude and workflow creation."""
-
-    @pytest.fixture
-    def cn_tenant(self, db):
-        tenant, _ = Tenant.objects.get_or_create(
-            code="CN_DIYU",
-            defaults={"display_name": "Chinese Diyu"}
-        )
-        return tenant
 
     @pytest.fixture
     def soul(self, cn_tenant):
