@@ -849,6 +849,8 @@
     "actors_placeholder": "Search actors by name, title, or description...",
     "realms_placeholder": "Search realms by code, name, or description...",
     "karma_placeholder": "Search karma records by soul name or description...",
+    "workflow_placeholder": "Search workflows by name, soul, or case type...",
+    "dispatch_placeholder": "Search dispatch records by soul name or reason...",
     "clear": "Clear search",
     "active_filters": "Filters:",
     "remove": "Remove",

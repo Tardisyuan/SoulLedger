@@ -849,6 +849,8 @@
     "actors_placeholder": "Shesed netjeru...",
     "realms_placeholder": "Shesed mekher...",
     "karma_placeholder": "Shesed ba records...",
+    "workflow_placeholder": "Shesed approval workflows...",
+    "dispatch_placeholder": "Shesed dispatch records...",
     "clear": "Khet Shesed",
     "active_filters": "Sekhem:",
     "remove": "Wesekh",

@@ -14,6 +14,7 @@ from apps.workflow.serializers import (
     WorkflowTemplateSerializer,
     WorkflowTemplateListSerializer,
 )
+from apps.workflow.filters import WorkflowFilter
 from apps.workflow.services import WorkflowService
 from apps.core.permissions import TenantPermission
 from apps.core.mixins import TenantQuerySetMixin, TenantCreateMixin
@@ -52,8 +53,10 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     queryset = ApprovalWorkflow.objects.select_related(
         "soul", "soul__tenant", "tenant", "current_node", "coordinating_realm"
     ).prefetch_related("nodes").all()
+    filterset_class = WorkflowFilter
+    search_fields = WorkflowFilter.search_fields
+    ordering_fields = WorkflowFilter.ordering_fields
     serializer_class = ApprovalWorkflowSerializer
-    ordering_fields = ["created_at", "priority", "status"]
 
     def get_serializer_class(self):
         if self.action == "list":
