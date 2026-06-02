@@ -846,6 +846,8 @@
   "search": {
     "placeholder": "Search...",
     "aria_label": "Search",
+    "actors_placeholder": "Search actors by name, title, or description...",
+    "realms_placeholder": "Search realms by code, name, or description...",
     "clear": "Clear search",
     "active_filters": "Filters:",
     "remove": "Remove",

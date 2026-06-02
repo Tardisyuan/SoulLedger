@@ -4,6 +4,7 @@ REST views for Realms app.
 from rest_framework import viewsets
 from apps.realms.models import Realm
 from apps.realms.serializers import RealmSerializer, RealmListSerializer, RealmLocalizedSerializer
+from apps.realms.filters import RealmFilter
 from apps.core.permissions import TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 
@@ -16,8 +17,9 @@ class RealmViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnl
     permission_classes = [TenantPermission]
     permission_codename = "realm"
     queryset = Realm.objects.select_related("parent_realm").all()
-    filterset_fields = ["civilization", "realm_type"]
-    ordering_fields = ["civilization", "tier"]
+    filterset_class = RealmFilter
+    search_fields = RealmFilter.search_fields
+    ordering_fields = RealmFilter.ordering_fields
 
     def get_serializer_class(self):
         if self.action == "list":

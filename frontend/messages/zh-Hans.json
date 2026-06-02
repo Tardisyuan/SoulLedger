@@ -846,6 +846,8 @@
   "search": {
     "placeholder": "搜索...",
     "aria_label": "搜索",
+    "actors_placeholder": "按名称、头衔或描述搜索角色...",
+    "realms_placeholder": "按代码、名称或描述搜索地域...",
     "clear": "清除搜索",
     "active_filters": "筛选:",
     "remove": "移除",
