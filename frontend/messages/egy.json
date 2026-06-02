@@ -842,5 +842,19 @@
     "manage_agents": "Manage Agents",
     "agent_status": "AI Agent Status",
     "working": "Working"
+  },
+  "search": {
+    "placeholder": "Shesed...",
+    "aria_label": "Shesed",
+    "clear": "Khet Shesed",
+    "active_filters": "Sekhem:",
+    "remove": "Wesekh",
+    "clear_all": "Khet Semau"
+  },
+  "filter": {
+    "all": "Neb",
+    "yes": "Ken",
+    "no": "Nen",
+    "clear_all": "Khet Semau"
   }
 }
