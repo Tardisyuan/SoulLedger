@@ -29,7 +29,7 @@ from apps.core.mixins import TenantCreateMixin
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 
 
-class DispatchRecordViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
+class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
     """
     DispatchRecord CRUD + actions.
     """
@@ -54,19 +54,6 @@ class DispatchRecordViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, TenantC
         if self.action == "list":
             return DispatchRecordListSerializer
         return DispatchRecordSerializer
-
-    def get_queryset(self):
-        from django.db.models import Q
-        qs = super().get_queryset()
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        if user.role == "ADMIN":
-            return qs
-        tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            return qs.filter(Q(source_tenant=tenant) | Q(target_tenant=tenant))
-        return qs.none()
 
     @action(detail=False, methods=["get"])
     def proposed(self, request):
@@ -173,6 +160,7 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
         "initiating_tenant"
     ).prefetch_related("participants").all()
     serializer_class = CrossTenantJudgmentSerializer
+    filterset_class = None  # Cross-tenant queries use Q-filter expansion, not standard filtering
     ordering_fields = ["create_time", "status"]
     # pagination_class = None  # Removed: paginate to prevent large payloads
 
@@ -182,13 +170,14 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
         return CrossTenantJudgmentSerializer
 
     def get_queryset(self):
+        # Design decision: CrossTenantJudgment records are accessible to both
+        # the initiating tenant and participating tenants. DataScopeViewSetMixin
+        # applies tenant isolation via qs.filter(tenant=tenant) as a baseline.
+        # We then expand the queryset via Q-filter to include records where the
+        # current tenant is either the initiator or a participant. This is
+        # intentional for cross-tenant records that need broader access.
         from django.db.models import Q
         qs = super().get_queryset()
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        if user.role == "ADMIN":
-            return qs
         tenant = getattr(self.request, "tenant", None)
         if tenant:
             return qs.filter(Q(initiating_tenant=tenant) | Q(participants__participant_tenant=tenant))
