@@ -4,7 +4,11 @@ Webhook delivery service — handles webhook sending, signing, and retry logic.
 import json
 import time
 import logging
+import ipaddress
+import socket
+from urllib.parse import urlparse
 import requests
+from django.conf import settings
 from django.utils import timezone
 from apps.death_sync.models import (
     WebhookConfig, WebhookDeliveryLog, WebhookDeliveryStatus,
@@ -16,6 +20,50 @@ logger = logging.getLogger(__name__)
 
 # Retry delays in seconds (exponential backoff)
 RETRY_DELAYS = [30, 120, 600, 3600, 21600]  # 30s, 2m, 10m, 1h, 6h
+
+# SSRF: private/loopback IP ranges to block
+_BLOCKED_NETWORKS = [
+    ipaddress.ip_network("127.0.0.0/8"),      # loopback IPv4
+    ipaddress.ip_network("::1/128"),           # loopback IPv6
+    ipaddress.ip_network("10.0.0.0/8"),        # private class A
+    ipaddress.ip_network("172.16.0.0/12"),     # private class B
+    ipaddress.ip_network("192.168.0.0/16"),    # private class C
+    ipaddress.ip_network("169.254.0.0/16"),    # link-local
+    ipaddress.ip_network("::ffff:0:0/96"),     # IPv4-mapped IPv6
+]
+
+
+def _validate_webhook_url(url):
+    """
+    Validate a webhook URL to prevent SSRF attacks.
+
+    Raises ValueError if the URL is unsafe.
+    """
+    parsed = urlparse(url)
+
+    # Enforce HTTPS in production
+    if not settings.DEBUG and parsed.scheme != "https":
+        raise ValueError(
+            f"Webhook URL must use HTTPS in production, got: {parsed.scheme}"
+        )
+
+    hostname = parsed.hostname
+    if not hostname:
+        raise ValueError("Webhook URL must have a valid hostname")
+
+    # Resolve the hostname and check for private/loopback IPs
+    try:
+        resolved = socket.getaddrinfo(hostname, None)
+    except socket.gaierror:
+        raise ValueError(f"Could not resolve webhook hostname: {hostname}")
+
+    for family, _, _, _, sockaddr in resolved:
+        ip = ipaddress.ip_address(sockaddr[0])
+        for network in _BLOCKED_NETWORKS:
+            if ip in network:
+                raise ValueError(
+                    f"Webhook URL resolves to a private/loopback IP: {ip}"
+                )
 
 
 class WebhookService:
@@ -54,6 +102,20 @@ class WebhookService:
 
         payload_bytes = json.dumps(payload).encode()
         timestamp = str(int(time.time()))
+
+        # SSRF protection: validate URL before sending
+        try:
+            _validate_webhook_url(webhook.url)
+        except ValueError as e:
+            logger.warning(f"SSRF validation failed for webhook {webhook.id}: {e}")
+            delivery_log = WebhookDeliveryLog.objects.create(
+                webhook=webhook,
+                registration=registration,
+                status=WebhookDeliveryStatus.FAILED,
+                request_body=payload,
+                error_message=str(e),
+            )
+            return delivery_log
 
         # Create delivery log
         delivery_log = WebhookDeliveryLog.objects.create(

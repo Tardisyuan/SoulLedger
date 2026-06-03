@@ -73,75 +73,76 @@ class DeathSyncService:
             ValueError: On invalid payload or soul lookup failure
             IntegrityError: On duplicate idempotency_key (caught and returned as 409)
         """
-        start_time = timezone.now()
-        lookup_data = payload.get("soul_lookup", {})
+        with transaction.atomic():
+            start_time = timezone.now()
+            lookup_data = payload.get("soul_lookup", {})
 
-        # Create request record (for idempotency tracking)
-        request_record = DeathRegistrationRequest(
-            tenant=tenant,
-            api_key=api_key,
-            idempotency_key=idempotency_key,
-            source_system=api_key.system_type,
-            source_reference_id=payload.get("source_reference", ""),
-            source_payload=payload,
-            source_ip=source_ip,
-            status=DeathRegistrationStatus.PENDING,
-        )
-
-        try:
-            # Lookup soul
-            soul = DeathSyncService.lookup_soul(tenant, lookup_data)
-            if soul is None:
-                request_record.status = DeathRegistrationStatus.FAILED
-                request_record.error_code = "SOUL_NOT_FOUND"
-                request_record.error_message = "No soul found matching the provided lookup criteria"
-                request_record.save()
-                return request_record
-
-            # Check soul state
-            if soul.current_state != SoulState.ALIVE:
-                request_record.status = DeathRegistrationStatus.FAILED
-                request_record.error_code = "SOUL_NOT_ALIVE"
-                request_record.error_message = f"Soul is already in state: {soul.current_state}"
-                request_record.soul = soul
-                request_record.save()
-                return request_record
-
-            # Call soul.die() - the domain service handles state transition
-            death_date = payload.get("death_date")
-            death_location = payload.get("death_location", "")
-
-            judgment = soul.die(
-                death_date=death_date,
-                location=death_location,
+            # Create request record (for idempotency tracking)
+            request_record = DeathRegistrationRequest(
+                tenant=tenant,
+                api_key=api_key,
+                idempotency_key=idempotency_key,
+                source_system=api_key.system_type,
+                source_reference_id=payload.get("source_reference", ""),
+                source_payload=payload,
+                source_ip=source_ip,
+                status=DeathRegistrationStatus.PENDING,
             )
 
-            if judgment is None:
-                request_record.status = DeathRegistrationStatus.FAILED
-                request_record.error_code = "INVALID_TRANSITION"
-                request_record.error_message = "State machine rejected the transition"
+            try:
+                # Lookup soul
+                soul = DeathSyncService.lookup_soul(tenant, lookup_data)
+                if soul is None:
+                    request_record.status = DeathRegistrationStatus.FAILED
+                    request_record.error_code = "SOUL_NOT_FOUND"
+                    request_record.error_message = "No soul found matching the provided lookup criteria"
+                    request_record.save()
+                    return request_record
+
+                # Check soul state
+                if soul.current_state != SoulState.ALIVE:
+                    request_record.status = DeathRegistrationStatus.FAILED
+                    request_record.error_code = "SOUL_NOT_ALIVE"
+                    request_record.error_message = f"Soul is already in state: {soul.current_state}"
+                    request_record.soul = soul
+                    request_record.save()
+                    return request_record
+
+                # Call soul.die() - the domain service handles state transition
+                death_date = payload.get("death_date")
+                death_location = payload.get("death_location", "")
+
+                judgment = soul.die(
+                    death_date=death_date,
+                    location=death_location,
+                )
+
+                if judgment is None:
+                    request_record.status = DeathRegistrationStatus.FAILED
+                    request_record.error_code = "INVALID_TRANSITION"
+                    request_record.error_message = "State machine rejected the transition"
+                    request_record.soul = soul
+                    request_record.save()
+                    return request_record
+
+                # Success
+                request_record.status = DeathRegistrationStatus.PROCESSED
                 request_record.soul = soul
+                request_record.judgment = judgment
+                request_record.processing_duration_ms = int(
+                    (timezone.now() - start_time).total_seconds() * 1000
+                )
                 request_record.save()
+
                 return request_record
 
-            # Success
-            request_record.status = DeathRegistrationStatus.PROCESSED
-            request_record.soul = soul
-            request_record.judgment = judgment
-            request_record.processing_duration_ms = int(
-                (timezone.now() - start_time).total_seconds() * 1000
-            )
-            request_record.save()
-
-            return request_record
-
-        except Exception as e:
-            logger.exception(f"Death registration failed: {e}")
-            request_record.status = DeathRegistrationStatus.FAILED
-            request_record.error_code = "INTERNAL_ERROR"
-            request_record.error_message = str(e)
-            request_record.save()
-            return request_record
+            except Exception as e:
+                logger.exception(f"Death registration failed: {e}")
+                request_record.status = DeathRegistrationStatus.FAILED
+                request_record.error_code = "INTERNAL_ERROR"
+                request_record.error_message = str(e)
+                request_record.save()
+                return request_record
 
     @staticmethod
     def process_batch(tenant, api_key, registrations, source_ip=None):
@@ -171,7 +172,7 @@ class DeathSyncService:
                 results.append(result)
             except Exception as e:
                 logger.exception(f"Batch item {idx} failed: {e}")
-                results.append(DeathRegistrationRequest(
+                failed_record = DeathRegistrationRequest(
                     tenant=tenant,
                     api_key=api_key,
                     idempotency_key=idempotency_key,
@@ -180,5 +181,7 @@ class DeathSyncService:
                     status=DeathRegistrationStatus.FAILED,
                     error_code="INTERNAL_ERROR",
                     error_message=str(e),
-                ))
+                )
+                failed_record.save()
+                results.append(failed_record)
         return results
