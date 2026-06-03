@@ -1,8 +1,11 @@
 """
 REST views for death_sync app.
 """
+import hashlib
+import json
 from django.db import IntegrityError
 from rest_framework import viewsets, status
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.death_sync.models import (
@@ -22,7 +25,7 @@ class ExternalApiKeyViewSet(viewsets.ModelViewSet):
     """
     CRUD for external API keys (admin only).
     """
-    permission_classes = [TenantPermission]
+    permission_classes = [IsAdminUser]
     queryset = ExternalApiKey.objects.all()
     serializer_class = ExternalApiKeySerializer
 
@@ -105,7 +108,10 @@ class DeathRegistrationViewSet(viewsets.ModelViewSet):
         serializer = DeathRegistrationCreateSerializer(data=data)
         serializer.is_valid(raise_exception=True)
 
-        idempotency_key = request.headers.get("X-Idempotency-Key", f"{api_key.id}_{hash(str(data))}")
+        idempotency_key = request.headers.get(
+            "X-Idempotency-Key",
+            f"{api_key.id}_{hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()}",
+        )
         source_system = request.headers.get("X-Source-System", api_key.system_type)
 
         try:
