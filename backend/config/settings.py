@@ -277,6 +277,9 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
+# Encryption key for Fernet (death sync webhook secrets)
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY", "")
+
 # Sentry integration
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration

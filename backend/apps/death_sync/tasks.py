@@ -51,6 +51,7 @@ def retry_failed_webhooks():
     """
     Retry failed webhook deliveries where next_retry_at has passed.
     Runs periodically via Celery Beat.
+    Uses .iterator() to avoid loading all retries into memory.
     """
     from apps.death_sync.models import WebhookDeliveryLog, WebhookDeliveryStatus
 
@@ -60,23 +61,40 @@ def retry_failed_webhooks():
         next_retry_at__lte=now,
     ).select_related("webhook", "registration")
 
-    for delivery_log in pending_retries:
+    count = 0
+    for delivery_log in pending_retries.iterator(chunk_size=100):
         deliver_webhook.delay(str(delivery_log.id))
+        count += 1
 
-    return pending_retries.count()
+    return count
 
 
 @shared_task(name="death_sync.cleanup_old_requests")
-def cleanup_old_requests(days=90):
+def cleanup_old_requests(days=90, batch_size=1000):
     """
-    Delete DeathRegistrationRequest records older than N days.
+    Delete DeathRegistrationRequest records older than N days in batches.
     Runs weekly via Celery Beat.
     """
+    import time
     from apps.death_sync.models import DeathRegistrationRequest
 
     cutoff = timezone.now() - timezone.timedelta(days=days)
-    deleted_count, _ = DeathRegistrationRequest.objects.filter(
-        request_timestamp__lt=cutoff
-    ).delete()
+    total_deleted = 0
 
-    return deleted_count
+    while True:
+        # Get a batch of IDs to delete
+        batch_ids = list(
+            DeathRegistrationRequest.objects.filter(
+                request_timestamp__lt=cutoff
+            ).values_list("id", flat=True)[:batch_size]
+        )
+        if not batch_ids:
+            break
+
+        deleted, _ = DeathRegistrationRequest.objects.filter(id__in=batch_ids).delete()
+        total_deleted += deleted
+
+        # Brief pause between batches to avoid lock contention
+        time.sleep(0.1)
+
+    return total_deleted
