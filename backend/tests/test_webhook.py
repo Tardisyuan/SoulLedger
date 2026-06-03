@@ -158,3 +158,20 @@ class TestWebhookConfig:
         )
         assert "test.example.com" in str(webhook)
         assert "DEATH_REGISTERED" in str(webhook)
+
+
+# ── Health Check Tests ───────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestHealthCheck:
+    def test_health_check_requires_auth(self):
+        """Health check requires API key authentication."""
+        from rest_framework.test import APIRequestFactory
+        from apps.death_sync.views import DeathSyncHealthView
+
+        factory = APIRequestFactory()
+        request = factory.get("/api/v1/death-sync/health/")
+        view = DeathSyncHealthView.as_view()
+        response = view(request)
+        # Without auth, should return 401
+        assert response.status_code == 401
