@@ -186,19 +186,49 @@ class WebhookViewSet(viewsets.ModelViewSet):
 
 class DeathSyncHealthView(APIView):
     """
-    Health check for death sync API.
+    Health check for death sync API with monitoring metrics.
     """
     authentication_classes = [APIKeyAuthentication]
 
     def get(self, request):
+        from django.utils import timezone
+        from datetime import timedelta
+
         api_key = getattr(request, 'api_key', None)
+        tenant = getattr(request, 'tenant', None)
+
+        # Count pending/failed registrations in last 24h
+        cutoff_24h = timezone.now() - timedelta(hours=24)
+        pending_count = DeathRegistrationRequest.objects.filter(
+            status=DeathRegistrationStatus.PENDING,
+            request_timestamp__gte=cutoff_24h,
+        ).count()
+        failed_count = DeathRegistrationRequest.objects.filter(
+            status=DeathRegistrationStatus.FAILED,
+            request_timestamp__gte=cutoff_24h,
+        ).count()
+
+        # Count failed webhooks in last 24h
+        from apps.death_sync.models import WebhookDeliveryLog, WebhookDeliveryStatus
+        failed_webhooks = WebhookDeliveryLog.objects.filter(
+            status=WebhookDeliveryStatus.FAILED,
+            created_at__gte=cutoff_24h,
+        ).count()
+
         return Response({
             "api_key": {
                 "name": api_key.name if api_key else None,
                 "system_type": api_key.system_type if api_key else None,
                 "is_active": api_key.is_active if api_key else False,
+                "rate_limit_remaining": {
+                    "per_minute": api_key.rate_limit_per_minute if api_key else 0,
+                    "per_hour": api_key.rate_limit_per_hour if api_key else 0,
+                },
             },
             "system": {
                 "status": "healthy",
+                "pending_registrations_24h": pending_count,
+                "failed_registrations_24h": failed_count,
+                "failed_webhooks_24h": failed_webhooks,
             },
         })
