@@ -1,5 +1,6 @@
 """
 Rate limiting for death sync API.
+Uses Redis INCR for atomic counter operations.
 """
 from rest_framework.throttling import BaseThrottle
 from django.core.cache import cache
@@ -7,7 +8,7 @@ from django.core.cache import cache
 
 class ApiKeyRateThrottle(BaseThrottle):
     """
-    Per-API-key rate limiting using Django cache (Redis).
+    Per-API-key rate limiting using Redis INCR for atomicity.
     Falls back to in-memory if Redis unavailable.
     """
     cache_key_prefix = "death_sync_throttle"
@@ -34,10 +35,21 @@ class ApiKeyRateThrottle(BaseThrottle):
             return True
 
         cache_key = self.get_cache_key(request, view)
-        count = cache.get(cache_key, 0)
-        if count >= limit:
+
+        # Use Redis INCR for atomic counter (falls back to memory if Redis unavailable)
+        try:
+            from django_redis import get_redis_connection
+            conn = get_redis_connection("default")
+            count = conn.incr(cache_key)
+            if count == 1:
+                conn.expire(cache_key, period)
+        except Exception:
+            # Fallback: non-atomic but safe for single-process
+            count = cache.get(cache_key, 0)
+            cache.set(cache_key, count + 1, period)
+
+        if count > limit:
             self.wait = period
             return False
 
-        cache.set(cache_key, count + 1, period)
         return True
