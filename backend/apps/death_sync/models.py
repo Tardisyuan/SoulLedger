@@ -229,9 +229,10 @@ class WebhookConfig(AuditUserFields, models.Model):
         help_text="Event types to subscribe to. Empty = all events.",
     )
 
-    # Security
-    signing_secret = models.CharField(
-        max_length=64,
+    # Security (encrypted at rest)
+    from apps.death_sync.fields import EncryptedCharField
+    signing_secret = EncryptedCharField(
+        max_length=500,
         help_text="HMAC-SHA256 signing secret for payload verification",
     )
 
