@@ -3,6 +3,7 @@ API Key authentication for external death sync systems.
 """
 import hashlib
 import time
+from django.db import models
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from django.utils import timezone
