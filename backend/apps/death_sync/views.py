@@ -112,7 +112,8 @@ class DeathRegistrationViewSet(viewsets.ModelViewSet):
             "X-Idempotency-Key",
             f"{api_key.id}_{hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()}",
         )
-        source_system = request.headers.get("X-Source-System", api_key.system_type)
+        # Use API key's system_type, not client-provided header (prevents impersonation)
+        source_system = api_key.system_type
 
         try:
             result = DeathSyncService.register_death(

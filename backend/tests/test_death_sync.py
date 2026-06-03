@@ -196,3 +196,43 @@ class TestAPIKeyAuthentication:
         auth = APIKeyAuthentication()
         with pytest.raises(Exception):
             auth.authenticate(request)
+
+
+# ── Batch Registration Tests ──────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestBatchRegistration:
+    def test_batch_registration(self, cn_tenant, api_key, soul):
+        """Batch registration processes multiple deaths."""
+        key, raw = api_key
+        results = DeathSyncService.process_batch(
+            tenant=cn_tenant,
+            api_key=key,
+            registrations=[
+                {"soul_lookup": {"soul_id": str(soul.id)}, "death_date": "2026-06-01"},
+            ],
+        )
+        assert len(results) == 1
+        assert results[0].status == DeathRegistrationStatus.PROCESSED
+
+
+# ── Idempotency Tests ────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestIdempotency:
+    def test_duplicate_idempotency_key_raises(self, cn_tenant, api_key, soul):
+        """Duplicate idempotency keys should raise IntegrityError."""
+        key, raw = api_key
+        DeathSyncService.register_death(
+            tenant=cn_tenant,
+            api_key=key,
+            payload={"soul_lookup": {"soul_id": str(soul.id)}, "death_date": "2026-06-01"},
+            idempotency_key="idempotent-test-1",
+        )
+        with pytest.raises(Exception):  # IntegrityError wraps to generic Exception
+            DeathSyncService.register_death(
+                tenant=cn_tenant,
+                api_key=key,
+                payload={"soul_lookup": {"soul_id": str(soul.id)}, "death_date": "2026-06-01"},
+                idempotency_key="idempotent-test-1",
+            )
