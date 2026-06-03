@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.dispatch",
     "apps.org",
+    "apps.death_sync",
 ]
 
 MIDDLEWARE = [
