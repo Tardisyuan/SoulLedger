@@ -9,6 +9,9 @@ django-cors-headers>=4.3
 psycopg2-binary>=2.9
 dj-database-url>=2.0
 
+# HTTP
+requests>=2.31
+
 # Redis + Celery
 redis>=5.0
 celery>=5.3
