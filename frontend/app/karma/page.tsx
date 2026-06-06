@@ -4,7 +4,7 @@ import { karmaApi, type KarmaStatsOverview } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { LazyBarChart } from "@/src/components/charts/LazyDashboardCharts";
 
 export default function KarmaPage() {
   const { t } = useI18n();
@@ -85,25 +85,13 @@ export default function KarmaPage() {
           <Skeleton className="h-48 w-full" />
         ) : (
           <div className="h-48 min-h-[192px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={karmaStats?.karma_distribution} margin={{ top: 5, right: 30, left: 20, bottom: 20 }}>
-                <XAxis dataKey="label" tick={{ fill: 'hsl(var(--color-ink-muted))', fontSize: 12 }} />
-                <YAxis tick={{ fill: 'hsl(var(--color-ink-muted))', fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--color-surface-1))',
-                    border: '1px solid hsl(var(--color-hairline))',
-                    borderRadius: '8px',
-                    color: 'hsl(var(--color-ink))',
-                  }}
-                />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {karmaStats?.karma_distribution.map((_, idx) => (
-                    <Cell key={idx} fill="hsl(var(--color-accent))" fillOpacity={0.8 - idx * 0.1} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <LazyBarChart
+              data={karmaStats?.karma_distribution ?? []}
+              dataKey="count"
+              fill="hsl(var(--color-accent))"
+              height={192}
+              showGrid={false}
+            />
           </div>
         )}
       </SectionCard>

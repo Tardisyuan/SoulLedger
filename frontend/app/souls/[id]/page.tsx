@@ -4,16 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-} from "recharts";
+import { LazySoulLineChart } from "@/src/components/charts/LazyDashboardCharts";
 import {
   soulsApi,
   judgmentApi,
@@ -315,30 +306,7 @@ export default function SoulDetailPage() {
                 {karma.records && karma.records.length > 0 && (
                   <div className="mt-4">
                     <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-2">{t("karma.timeline")} ({t("karma.time_decay")})</p>
-                    <ResponsiveContainer width="100%" height={120}>
-                      <LineChart data={getKarmaChartData(karma.records)}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--color-hairline))" />
-                        <XAxis
-                          dataKey="date"
-                          tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 9 }}
-                          tickFormatter={(v) => v.slice(5, 10)}
-                        />
-                        <YAxis tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 9 }} width={30} />
-                        <Tooltip
-                          contentStyle={{ background: "hsl(var(--color-surface-2))", border: "1px solid hsl(var(--color-hairline))", borderRadius: "6px", fontSize: 11 }}
-                          labelStyle={{ color: "hsl(var(--color-ink-muted))" }}
-                        />
-                        <ReferenceLine x={0} stroke="hsl(var(--color-hairline))" />
-                        <Line
-                          type="monotone"
-                          dataKey="cumulative"
-                          stroke="hsl(var(--color-accent))"
-                          strokeWidth={2}
-                          dot={false}
-                          name="Balance"
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    <LazySoulLineChart data={getKarmaChartData(karma.records)} />
 
                     {/* Reincarnation Inheritance Preview */}
                     {karma.karmic_balance !== 0 && (

@@ -1,27 +1,13 @@
 "use client";
 
-import { useCallback, useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ReactFlow,
-  Node,
-  Edge,
-  Controls,
-  Background,
-  useNodesState,
-  useEdgesState,
-  MarkerType,
-  NodeTypes,
-  Handle,
-  Position,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import Link from "next/link";
-import WorkflowEditor from "@/src/components/workflow/WorkflowEditor";
+import { LazyWorkflowEditor } from "@/src/components/charts/LazyWorkflowEditor";
 import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { WORKFLOW_TEMPLATES, type TemplateKey } from "@/src/config/workflow-templates";
@@ -69,36 +55,6 @@ interface TemplatePreviewData {
   nodes_json?: FlowNode[];
   nodes?: FrontendNode[];
 }
-
-// Custom node component for workflow visualization
-function WorkflowNodeComponent({ data }: { data: { label: string; status: string; nodeType: string; courtCode: string } }) {
-  const statusColors: Record<string, string> = {
-    PENDING: "bg-[hsl(var(--color-status-warning)/0.2)] border-[hsl(var(--color-status-warning)/0.5)]",
-    APPROVED: "bg-[hsl(var(--color-status-success)/0.2)] border-[hsl(var(--color-status-success)/0.5)]",
-    REJECTED: "bg-[hsl(var(--color-status-error)/0.2)] border-[hsl(var(--color-status-error)/0.5)]",
-    SKIPPED: "bg-[hsl(var(--color-status-lost)/0.2)] border-[hsl(var(--color-status-lost)/0.5)]",
-    ESCALATED: "bg-[hsl(var(--color-verdict-retry)/0.2)] border-[hsl(var(--color-verdict-retry)/0.5)]",
-  };
-
-  const colorClass = statusColors[data.status] || statusColors.PENDING;
-
-  return (
-    <div className={`px-4 py-3 rounded-lg border-2 ${colorClass} min-w-[160px]`}>
-      <Handle type="target" position={Position.Top} className="!bg-[hsl(var(--color-accent))]" />
-      <div className="text-sm font-semibold text-[hsl(var(--color-ink))]">{data.label}</div>
-      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">{data.nodeType}</div>
-      {data.courtCode && (
-        <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">{data.courtCode}</div>
-      )}
-      <Handle type="source" position={Position.Bottom} className="!bg-[hsl(var(--color-accent))]" />
-    </div>
-  );
-}
-
-const nodeTypes: NodeTypes = {
-  workflowNode: WorkflowNodeComponent,
-};
-
 
 const CASE_TYPE_KEYS: Record<string, string> = {
   ROUTINE: "workflow.case_types.ROUTINE",
@@ -160,64 +116,6 @@ export default function WorkflowPage() {
 
   const selectedCivilization = selectedTemplate.split("_")[0];
   const currentTemplate = WORKFLOW_TEMPLATES[selectedTemplate];
-
-  // Build nodes and edges for React Flow
-  const flowNodes = useMemo(() => {
-    const nodesToRender = workflowInstance?.nodes?.length
-      ? workflowInstance.nodes.map((n): FlowNode => ({
-          id: n.id,
-          node_name: n.node_name,
-          status: n.status,
-          node_type: n.node_type,
-          court_code: n.court_code,
-        }))
-      : (currentTemplate?.nodes || []).map((n): FlowNode => ({
-          id: n.id,
-          node_name: n.name,
-          status: undefined,
-          node_type: n.type,
-          court_code: n.court,
-        }));
-
-    return nodesToRender.map((n, idx) => ({
-      id: String(n.id),
-      type: "workflowNode",
-      position: { x: 250, y: idx * 150 },
-      data: {
-        label: n.node_name,
-        status: n.status || "PENDING",
-        nodeType: n.node_type || "",
-        courtCode: n.court_code || "",
-      },
-    }));
-  }, [currentTemplate, workflowInstance]);
-
-  const flowEdges = useMemo(() => {
-    const nodesToRender = workflowInstance?.nodes?.length
-      ? workflowInstance.nodes
-      : currentTemplate?.nodes || [];
-
-    return nodesToRender.slice(0, -1).map((n, idx) => {
-      const nextNode = nodesToRender[idx + 1];
-      return {
-        id: `e${n.id}-${nextNode?.id}`,
-        source: String(n.id),
-        target: String(nextNode?.id),
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
-        animated: workflowInstance?.current_node === n.id,
-        style: { stroke: "#f59e0b", strokeWidth: 2 },
-      };
-    });
-  }, [currentTemplate, workflowInstance]);
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(flowEdges);
-
-  // Update nodes/edges when template changes
-  useEffect(() => {
-    setNodes(flowNodes);
-    setEdges(flowEdges);
-  }, [flowNodes, flowEdges, setNodes, setEdges]);
 
   // Group templates by civilization
   const templatesByCiv = useMemo(() => {
@@ -521,7 +419,7 @@ export default function WorkflowPage() {
         ) : tab === "editor" ? (
           /* Editor tab */
           <div className="h-[calc(100vh-220px)]">
-            <WorkflowEditor
+            <LazyWorkflowEditor
               templateId={editingTemplateId || undefined}
               initialTemplateData={editingTemplateData}
               onClose={() => {

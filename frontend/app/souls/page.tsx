@@ -173,8 +173,8 @@ export default function SoulsPage() {
 
         {/* Loading / Error / Empty / Table */}
         {isLoading ? (
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden overflow-x-auto">
+            <table className="w-full text-sm min-w-[600px]">
               <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">{t("souls.name")}</th>
@@ -207,8 +207,8 @@ export default function SoulsPage() {
           <div className="text-center text-[hsl(var(--color-ink-subtle))] py-12">{t("souls.no_souls")}</div>
         ) : (
           <>
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden overflow-x-auto">
+            <table className="w-full text-sm min-w-[600px]">
               <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">{t("souls.name")}</th>

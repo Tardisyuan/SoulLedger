@@ -1,23 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { karmaApi, KarmaStatsOverview } from "@/lib/api";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+  LazyDashboardPieChart,
+  LazyBarChart,
+} from "@/src/components/charts/LazyDashboardCharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDisplayNameForTenant } from "@/src/config/civilizations";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -153,29 +144,7 @@ export default function DashboardPage() {
             ) : error ? (
               <div className="h-[240px] flex items-center justify-center text-[hsl(var(--color-status-error))]">{error}</div>
             ) : (
-              <ResponsiveContainer width="100%" height={240}>
-                <PieChart>
-                  <Pie
-                    data={stateData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={90}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {stateData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--color-surface-1))", border: "1px solid hsl(var(--color-hairline))", borderRadius: "6px", fontSize: 12 }}
-                  />
-                  <Legend
-                    formatter={(value) => <span style={{ color: "hsl(var(--color-ink-muted))", fontSize: 12 }}>{value}</span>}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <LazyDashboardPieChart data={stateData} />
             )}
           </div>
 
@@ -187,17 +156,7 @@ export default function DashboardPage() {
                 <Skeleton className="h-full w-full" />
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={tenantData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--color-hairline))" />
-                  <XAxis dataKey="name" tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }} />
-                  <YAxis tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }} />
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--color-surface-1))", border: "1px solid hsl(var(--color-hairline))", borderRadius: "6px", fontSize: 12 }}
-                  />
-                  <Bar dataKey="total" fill="#f59e0b" radius={[4, 4, 0, 0]} name={t("dashboard.total_souls")} />
-                </BarChart>
-              </ResponsiveContainer>
+              <LazyBarChart data={tenantData} dataKey="total" name={t("dashboard.total_souls")} />
             )}
           </div>
         </div>
@@ -250,17 +209,7 @@ export default function DashboardPage() {
                 <Skeleton className="h-full w-full" />
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={stats?.karma_distribution ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--color-hairline))" />
-                  <XAxis dataKey="label" tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }} />
-                  <YAxis tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }} />
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--color-surface-1))", border: "1px solid hsl(var(--color-hairline))", borderRadius: "6px", fontSize: 12 }}
-                  />
-                  <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Souls" />
-                </BarChart>
-              </ResponsiveContainer>
+              <LazyBarChart data={stats?.karma_distribution ?? []} dataKey="count" fill="#8b5cf6" height={180} name="Souls" />
             )}
           </div>
 
@@ -272,17 +221,7 @@ export default function DashboardPage() {
                 <Skeleton className="h-full w-full" />
               </div>
             ) : realmChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={realmChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--color-hairline))" />
-                  <XAxis dataKey="name" tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }} />
-                  <YAxis tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }} />
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--color-surface-1))", border: "1px solid hsl(var(--color-hairline))", borderRadius: "6px", fontSize: 12 }}
-                  />
-                  <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Souls" />
-                </BarChart>
-              </ResponsiveContainer>
+              <LazyBarChart data={realmChartData} dataKey="count" fill="#3b82f6" height={180} name="Souls" />
             ) : (
               <div className="h-[180px] flex items-center justify-center text-[hsl(var(--color-ink-muted))] text-sm">
                 {t("dashboard.no_realm_data")}
@@ -361,7 +300,7 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({
+function StatCardInner({
   label,
   value,
   isLoading,
@@ -383,3 +322,5 @@ function StatCard({
     </div>
   );
 }
+
+const StatCard = React.memo(StatCardInner);

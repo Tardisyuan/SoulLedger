@@ -83,21 +83,23 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
   };
 
   return (
-    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-medium text-[hsl(var(--color-ink))]">{t("dispatch.soul_prefix")}{dispatch.soul}</p>
-          <p className="text-sm text-[hsl(var(--color-ink-subtle))]">
-            {dispatch.source_tenant_code} → {dispatch.target_tenant_code}
-          </p>
+    <Link href={`/dispatch/${dispatch.id}`} className="block">
+      <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4 hover:border-[hsl(var(--color-accent))] transition-colors cursor-pointer">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-[hsl(var(--color-ink))]">{t("dispatch.soul_prefix")}{dispatch.soul}</p>
+            <p className="text-sm text-[hsl(var(--color-ink-subtle))]">
+              {dispatch.source_tenant_code} → {dispatch.target_tenant_code}
+            </p>
+          </div>
+          <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[dispatch.status] || "bg-[hsl(var(--color-status-lost)/0.2)]"}`}>
+            {dispatch.status}
+          </span>
         </div>
-        <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[dispatch.status] || "bg-[hsl(var(--color-status-lost)/0.2)]"}`}>
-          {dispatch.status}
-        </span>
+        {dispatch.reason && (
+          <p className="mt-2 text-sm text-[hsl(var(--color-ink-muted))]">{dispatch.reason}</p>
+        )}
       </div>
-      {dispatch.reason && (
-        <p className="mt-2 text-sm text-[hsl(var(--color-ink-muted))]">{dispatch.reason}</p>
-      )}
-    </div>
+    </Link>
   );
 }
