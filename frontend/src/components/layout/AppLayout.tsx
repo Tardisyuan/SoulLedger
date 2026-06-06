@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
+import React, { useState, useEffect, Fragment } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,6 +19,7 @@ import { useTheme } from "@/src/contexts/ThemeContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { authApi } from "@/lib/api";
 import { SettingsDrawer, useAccentColor } from "@/src/components/settings/SettingsDrawer";
+import { ConnectionStatus } from "@/src/components/connection-status";
 
 const NAV_MODE_KEY = "soulledger_nav_mode";
 
@@ -41,6 +42,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     if (pathname !== prevPathname) {
       setIsNavigating(true);
       setPrevPathname(pathname);
+      // Auto-close mobile menu on navigation
+      setMobileMenuOpen(false);
       // Small delay to ensure content loads before hiding indicator
       const timer = setTimeout(() => setIsNavigating(false), 300);
       return () => clearTimeout(timer);
@@ -101,13 +104,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     enabled: !!user,
   });
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sidebarWidth = collapsed ? "w-16" : "w-56";
 
   return (
     <div className="min-h-screen bg-[hsl(var(--color-canvas))]">
+      {/* Mobile overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-[hsl(var(--color-surface-1))] border-r border-[hsl(var(--color-hairline))] z-50 transition-all duration-200 flex flex-col`}
+        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-[hsl(var(--color-surface-1))] border-r border-[hsl(var(--color-hairline))] z-50 transition-all duration-200 flex flex-col
+          ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
         {/* Logo */}
         <nav className={`h-16 border-b border-[hsl(var(--color-hairline))] shrink-0 flex items-center ${collapsed ? "justify-center px-0" : "justify-center px-5"}`}>
@@ -195,19 +208,36 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className={`transition-all duration-200 ${collapsed ? "ml-16" : "ml-56"}`}>
+      <main className={`transition-all duration-200 ${collapsed ? "ml-0 md:ml-16" : "ml-0 md:ml-56"}`}>
         {/* Navigation loading bar */}
         {isNavigating && (
           <div className="fixed top-0 left-0 right-0 z-[99999] h-1 bg-[hsl(var(--color-accent))] animate-pulse" />
         )}
 
         {/* Top header */}
-        <header className="sticky top-0 z-40 h-16 bg-[hsl(var(--color-canvas))]/80 backdrop-blur-sm border-b border-[hsl(var(--color-hairline))] flex items-center px-6 gap-4">
+        <header className="sticky top-0 z-40 h-16 bg-[hsl(var(--color-canvas))]/80 backdrop-blur-sm border-b border-[hsl(var(--color-hairline))] flex items-center px-4 md:px-6 gap-3 md:gap-4">
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 rounded-md text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))]"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+
           {/* Breadcrumb / Page title area */}
           <div className="flex-1" />
 
           {/* Right controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
+            {/* WebSocket Connection Status */}
+            <ConnectionStatus />
+
+            <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
+
             {/* Notification Bell with Popover */}
             {user && (
               <Popover className="relative">
@@ -400,7 +430,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SidebarMenuItem({
+function SidebarMenuItemInner({
   menu,
   collapsed,
   depth = 0,
@@ -486,3 +516,5 @@ function SidebarMenuItem({
     </Link>
   );
 }
+
+const SidebarMenuItem = React.memo(SidebarMenuItemInner);

@@ -62,6 +62,7 @@ export function RequireButton({
     return <>{children}</>;
   }
 
-  // No permission or code specified — show by default
-  return <>{children}</>;
+  // No permission or code specified — FAIL CLOSED: hide by default
+  // Security: never render without explicit permission check
+  return <>{fallback}</>;
 }

@@ -4,6 +4,8 @@ import { ToastProvider } from "@/src/contexts/ToastContext";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { ThemeProvider } from "@/src/contexts/ThemeContext";
 import { TenantProvider } from "@/src/contexts/TenantContext";
+import { WebSocketProvider } from "@/src/contexts/WebSocketContext";
+import { SocialEventBusProvider } from "@/hooks/useSocialEventBus";
 import { QueryProvider } from "@/src/components/providers/QueryProvider";
 import { AppLayoutWrapper } from "@/src/components/layout/AppLayoutWrapper";
 
@@ -24,11 +26,15 @@ export default function RootLayout({
           <I18nProvider>
             <ThemeProvider>
               <TenantProvider>
-                <ToastProvider>
-                  <AppLayoutWrapper>
-                    {children}
-                  </AppLayoutWrapper>
-                </ToastProvider>
+                <WebSocketProvider>
+                  <SocialEventBusProvider>
+                    <ToastProvider>
+                    <AppLayoutWrapper>
+                      {children}
+                    </AppLayoutWrapper>
+                  </ToastProvider>
+                  </SocialEventBusProvider>
+                </WebSocketProvider>
               </TenantProvider>
             </ThemeProvider>
           </I18nProvider>
