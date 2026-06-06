@@ -15,7 +15,6 @@ from apps.karma.services import KarmaService
 from apps.core.permissions import TenantPermission
 from apps.audit.models import AuditLog
 from apps.disposition.models import Disposition
-from apps.realms.models import Realm
 
 
 class KarmaBalanceView(APIView):

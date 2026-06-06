@@ -36,6 +36,8 @@ urlpatterns = [
     path("api/v1/notifications/", include("apps.notifications.urls")),
     path("api/v1/dispatch/", include("apps.dispatch.urls")),
     path("api/v1/death-sync/", include("apps.death_sync.urls")),
+    path("api/v1/organizations/", include("apps.org.urls")),
+    path("api/v1/social/", include("apps.social.urls")),
     # API docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),

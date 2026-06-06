@@ -33,6 +33,8 @@ else:
     ALLOWED_HOSTS = [h.strip() for h in _hosts.split(",") if h.strip()]
 
 INSTALLED_APPS = [
+    "daphne",
+    "channels",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -67,6 +69,7 @@ INSTALLED_APPS = [
     "apps.dispatch",
     "apps.org",
     "apps.death_sync",
+    "apps.social",
 ]
 
 MIDDLEWARE = [
@@ -102,6 +105,32 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
+
+# Redis
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+# Channel Layers (for WebSocket real-time events)
+import urllib.parse as _urlparse
+
+_redis_parsed = _urlparse.urlparse(REDIS_URL)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [
+                {
+                    "host": _redis_parsed.hostname or "localhost",
+                    "port": _redis_parsed.port or 6379,
+                    "db": int(_redis_parsed.path.lstrip("/") or "0"),
+                    **({"password": _redis_parsed.password} if _redis_parsed.password else {}),
+                }
+            ],
+            "capacity": 1500,
+            "expiry": 10,
+        },
+    },
+}
 
 # Database
 import dj_database_url
@@ -194,9 +223,6 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
 }
-
-# Redis
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 # Permission Cache TTL (seconds)
 CACHE_PERMISSION_TTL = int(os.getenv("CACHE_PERMISSION_TTL", "300"))  # 5 minutes

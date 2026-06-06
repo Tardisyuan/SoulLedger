@@ -38,6 +38,15 @@ class SoulRecord(AuditUserFields, models.Model):
     Individual event/record attached to a soul.
     evidence_json stores flexible structured evidence.
     Inherits AuditUserFields for audit trail and soft delete.
+
+    Batch mode: Use SoulRecord.batch() context manager to defer karma
+    recalculation until the batch completes, avoiding O(N²) cascade.
+
+    Usage:
+        with SoulRecord.batch():
+            for item in items:
+                SoulRecord.objects.create(soul=soul, ...)
+        # Karma recalculation runs once per unique soul here
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     soul = models.ForeignKey(
@@ -83,6 +92,10 @@ class SoulRecord(AuditUserFields, models.Model):
     evidence_json = models.JSONField(default=dict, blank=True)
     recorded_at = models.DateTimeField(auto_now_add=True)
 
+    # Batch mode flags (class-level, not instance)
+    _batch_mode = False
+    _deferred_souls = set()
+
     class Meta:
         ordering = ["-recorded_at"]
         verbose_name = "Soul Record"
@@ -98,6 +111,44 @@ class SoulRecord(AuditUserFields, models.Model):
     def __str__(self):
         return f"{self.record_type}: {self.description[:50]}"
 
+    @classmethod
+    def batch(cls):
+        """Context manager for batch record creation.
+        Defers karma recalculation until the batch completes.
+
+        Usage:
+            with SoulRecord.batch():
+                for item in items:
+                    SoulRecord.objects.create(soul=soul, ...)
+        """
+        import contextvars
+
+        class BatchContext:
+            def __enter__(self_batch):
+                cls._batch_mode = True
+                cls._deferred_souls = set()
+                return self_batch
+
+            def __exit__(self_batch, exc_type, exc_val, exc_tb):
+                cls._batch_mode = False
+                # Flush deferred karma recalculations
+                cls._flush_karma_recalculations()
+                cls._deferred_soul_ids = set()
+                return False
+
+        return BatchContext()
+
+    @classmethod
+    def _flush_karma_recalculations(cls):
+        """Run karma recalculation once per unique soul."""
+        from apps.karma.services import KarmaService
+        for soul_id in cls._deferred_souls:
+            try:
+                soul = Soul.objects.get(pk=soul_id)
+                KarmaService.recalculate_soul_karma(soul)
+            except Soul.DoesNotExist:
+                pass
+
     def save(self, *args, **kwargs):
         is_new = self._state.adding
         # Auto-populate tenant from soul if not set
@@ -105,7 +156,11 @@ class SoulRecord(AuditUserFields, models.Model):
             self.tenant = self.soul.tenant
         super().save(*args, **kwargs)
         if is_new:
-            self._update_soul_karma()
+            if SoulRecord._batch_mode:
+                # Defer karma recalculation until batch completes
+                SoulRecord._deferred_souls.add(self.soul_id)
+            else:
+                self._update_soul_karma()
 
     def _update_soul_karma(self):
         """Recalculate karma. Uses cache debounce only for bulk operations."""

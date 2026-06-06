@@ -25,7 +25,10 @@ class MenuTreeSerializer(serializers.ModelSerializer):
         ]
 
     def get_children(self, obj):
-        children = obj.children.filter(is_active=True).order_by("order")
+        children_map = self.context.get('children_map', {})
+        children = children_map.get(obj.id, [])
+        # Sort by order (already filtered by is_active in the view)
+        children = sorted(children, key=lambda m: m.order)
         return MenuTreeSerializer(children, many=True, context=self.context).data
 
     def get_buttons(self, obj):
