@@ -17,10 +17,11 @@
 ## 系统架构
 
 ```
-前端 (Next.js 16)  →  http://localhost:3333
-后端 (Django 5)    →  http://localhost:8000/api/v1/
-PostgreSQL 16       →  localhost:5432 (Docker)
-Redis 7             →  localhost:6379
+前端 (Next.js 16)       →  http://localhost:3333
+后端 (Django 5 + DRF)   →  http://localhost:8000/api/v1/
+WebSocket (channels)    →  ws://localhost:8000/ws/notifications/
+PostgreSQL 16            →  localhost:5432 (Docker)
+Redis 7                  →  localhost:6379 (Channel Layer + Celery)
 ```
 
 ---
@@ -73,89 +74,70 @@ SoulLedger/
 ├── backend/
 │   ├── apps/
 │   │   ├── souls/            # 灵魂模型、状态机、因果
-│   │   ├── karma/           # 功德计算服务 (含时间衰减、继承)
-│   │   ├── judgment/        # 审判系统
-│   │   ├── disposition/     # 处置方案
-│   │   ├── reincarnation/   # 轮回系统
-│   │   ├── actors/          # 角色系统 (判官、守护者等)
-│   │   ├── realms/          # 领域系统 (地府、天堂、冥界)
-│   │   ├── dispatch/        # 灵魂调度记录
-│   │   ├── permissions/     # 跨域审判授权
-│   │   ├── audit/           # 审计日志 (含 trace_id)
-│   │   ├── tenants/        # 多租户: Tenant模型、TenantManager
-│   │   ├── authentication/  # JWT认证
-│   │   ├── workflow/        # 审批流程系统
-│   │   ├── menus/           # 树形菜单 + MenuButton
-│   │   ├── perm/           # RBAC: Permission, Role, DataScope, FieldPermission
-│   │   ├── core/           # 公共: middleware, viewsets, mixins
-│   │   ├── events/         # 灵魂事件
-│   │   ├── notifications/  # 通知系统
-│   │   └── org/            # 组织架构
-│   ├── config/              # Django配置、URL
-│   ├── tests/               # pytest测试 (383 tests)
+│   │   ├── karma/            # 功德计算服务 (含时间衰减、继承)
+│   │   ├── judgment/         # 审判系统
+│   │   ├── disposition/      # 处置方案
+│   │   ├── reincarnation/    # 轮回系统
+│   │   ├── actors/           # 角色系统 (判官、守护者等)
+│   │   ├── realms/           # 领域系统 (地府、天堂、冥界)
+│   │   ├── dispatch/         # 灵魂调度记录
+│   │   ├── permissions/      # 跨域审判授权
+│   │   ├── audit/            # 审计日志 (含 trace_id)
+│   │   ├── tenants/          # 多租户: Tenant模型、TenantManager
+│   │   ├── authentication/   # JWT认证
+│   │   ├── workflow/         # 审批流程系统
+│   │   ├── menus/            # 树形菜单 + MenuButton
+│   │   ├── perm/             # RBAC: Permission, Role, DataScope, FieldPermission
+│   │   ├── core/             # 公共: middleware, viewsets, mixins, WebSocket auth
+│   │   ├── events/           # EventBus: EventEnvelope, DomainEventHandler, HandlerRegistry
+│   │   ├── notifications/    # 通知系统 + WebSocket Consumer
+│   │   ├── death_sync/       # 死亡同步 API
+│   │   ├── social/           # 社交域: Post, Comment, Reaction, Follow, UserProfile
+│   │   └── org/              # 组织架构
+│   ├── config/               # Django配置、URL、ASGI (WebSocket路由)
+│   └── tests/                # pytest测试 (108 tests)
 │
 ├── frontend/
-│   ├── app/                 # Next.js 16 App Router 页面
-│   │   ├── souls/          # 灵魂列表与详情
-│   │   ├── actors/         # 角色管理
-│   │   ├── realms/         # 领域管理
-│   │   ├── karma/          # 功德管理
-│   │   ├── dispatch/       # 调度管理
-│   │   ├── cross-judgments/ # 跨域审判
-│   │   ├── workflow/       # 审批流程可视化
-│   │   ├── audit/          # 审计日志
-│   │   ├── users/          # 用户管理
-│   │   ├── profile/        # 个人资料
-│   │   ├── notifications/  # 通知中心
-│   │   ├── menus/          # 菜单管理
-│   │   ├── permissions/    # 权限管理
-│   │   └── (auth)/login/  # 登录页
-│   ├── src/
-│   │   ├── components/     # UI组件
-│   │   │   ├── layout/    # AppLayout侧边栏
-│   │   │   └── settings/  # SettingsDrawer设置抽屉
-│   │   ├── contexts/       # TenantContext, ThemeContext, I18nContext
-│   │   ├── hooks/          # TanStack Query hooks
-│   │   └── middleware.ts   # 路由守卫
-│   ├── lib/api.ts          # 类型安全API客户端
-│   ├── messages/            # i18n翻译 (zh-Hans, en, egy)
-│   └── tailwind.config.js  # Linear设计系统
+│   ├── app/                  # Next.js 16 App Router 页面
+│   │   ├── souls/            # 灵魂列表与详情
+│   │   ├── karma/            # 功德管理
+│   │   ├── dispatch/         # 调度管理
+│   │   ├── workflow/         # 审批流程可视化
+│   │   ├── users/            # 用户管理
+│   │   ├── menus/            # 菜单管理
+│   │   ├── permissions/      # 权限管理
+│   │   ├── admin/stats/      # 管理仪表盘
+│   │   └── (auth)/login/     # 登录页
+│   ├── lib/
+│   │   ├── api/              # 类型安全API客户端
+│   │   ├── social/           # 社交域 hooks + queryKeys
+│   │   └── ws/               # WebSocket 客户端 (WSClient)
+│   ├── hooks/                # TanStack Query hooks + SocialEventBus
+│   ├── src/components/       # UI组件 (AppLayout, RequireButton, ConnectionStatus)
+│   ├── messages/             # i18n翻译 (zh-Hans, en, egy)
+│   └── middleware.ts         # 路由守卫
 │
 ├── infrastructure/
-│   └── docker-compose.yml  # PostgreSQL + Redis
+│   └── docker-compose.yml    # PostgreSQL + Redis
 │
-├── scripts/
-│   ├── start-*.sh          # 启动服务
-│   ├── stop-*.sh           # 停止服务 (PID_FILE + 双重检查)
-│   ├── restart-*.sh        # 重启服务
-│   ├── status.sh           # 查看状态
-│   ├── backup-db.sh        # PostgreSQL 数据库备份
-│   ├── pids/               # PID 文件
-│   └── logs/               # 日志文件
-│
-├── docs/                   # 项目文档 + 神话研究
-│   ├── AUDIT_REPORT_*.md   # 项目审核报告
-│   ├── ROADMAP_V2.md       # 产品路线图
-│   ├── snowy-analysis.md   # Snowy 基线分析
-│   └── (世界观文档: 地府/欧洲/埃及神话体系)
-│
-├── DESIGN.md               # Linear设计系统规范
-├── AGENTS.md               # Agent工作规范
-└── SPEC.md                 # 完整项目规范
+├── scripts/                  # 启动/停止/重启/状态脚本
+├── docs/                     # 项目文档 + 神话研究
+├── DESIGN.md                 # Linear设计系统规范
+└── SPEC.md                   # 完整项目规范
 ```
 
 ---
 
 ## 主要功能
 
-### M1-M6 已完成里程碑
-- **M1**: 核心灵魂CRUD + 状态机
-- **M2**: 多租户系统 (CN_DIYU / EU_HEAVEN_HELL / EG_DUAT)
-- **M3**: JWT认证 + 权限中间件
-- **M4**: 角色与领域系统 (Actors + Realms)
-- **M5**: 审批流程系统 (Workflow + 7种审判类型)
+### 里程碑
+- **M1-M5**: 核心系统 (灵魂CRUD + 多租户 + JWT + 角色领域 + 审批流程)
 - **M6**: 功德系统 (时间衰减 + 因果继承)
-- **M7**: 用户与组织重构 + 权限系统完整实现 (RBAC codename, DataScope, Button Permission, Field Permission, Audit Trail, Tree Menu, Permission Export)
+- **M7**: DDD重构 + 权限系统 (RBAC, DataScope, FieldPermission, Audit Trail)
+- **M8-M9**: 工程质量 + Bug修复
+- **M10**: 搜索系统
+- **M11**: Death Sync API + WebSocket基础设施
+- **M12**: Realtime系统 (EventBus + HandlerRegistry + Social域 + 前端 closure) ✅ **FINAL_CLOSE**
 
 ### 页面模块
 | 页面 | 功能 | 角色 |
@@ -163,16 +145,11 @@ SoulLedger/
 | `/souls` | 灵魂列表与详情 | ALL |
 | `/karma` | 功德时间衰减计算 | JUDGE+ |
 | `/dispatch` | 灵魂调度记录 | ADMIN |
-| `/cross-judgments` | 跨域审判 | JUDGE+ |
-| `/actors` | 角色管理 | ADMIN |
-| `/realms` | 领域管理 | ADMIN |
 | `/workflow` | 审批流程可视化 | JUDGE+ |
-| `/audit` | 审计日志 | ADMIN |
 | `/users` | 用户管理 | ADMIN |
-| `/profile` | 个人资料 | ALL |
-| `/notifications` | 通知中心 | ALL |
 | `/menus` | 菜单管理 | ADMIN |
 | `/permissions` | 权限管理 | ADMIN |
+| `/admin/stats` | 管理仪表盘 | ADMIN |
 
 ---
 
@@ -224,11 +201,14 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE (新生命)
 
 | 层级 | 技术 |
 |------|------|
-| 前端 | Next.js 16, React 18, Tailwind CSS, TanStack Query v5, @xyflow/react, TypeScript |
-| 后端 | Django 5, Django REST Framework, 自定义 TenantManager (contextvars), Celery |
-| 数据库 | PostgreSQL 16 (生产/CI), SQLite (本地开发) |
+| 前端 | Next.js 16, React 18, Tailwind CSS, TanStack Query v5, TypeScript |
+| 后端 | Django 5, Django REST Framework, channels, contextvars TenantManager |
+| 数据库 | PostgreSQL 16 (生产/Docker), SQLite (本地开发) |
+| 实时通信 | WebSocket (channels + RedisChannelLayer) |
+| 事件总线 | EventBus (EventEnvelope + DomainEventHandler + HandlerRegistry) |
 | 任务队列 | Celery 5, Redis 7 |
 | 容器 | Docker Compose |
+| 测试 | 108 后端 tests, 277 前端 tests |
 
 ---
 
@@ -245,6 +225,29 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE (新生命)
 
 ### 埃及冥界 (EG_DUAT)
 - **43角色**: Osiris, Anubis, Thoth, Horus + 42审判者 + Ammit等
+
+---
+
+## 安全特性
+
+- JWT + API Key 认证
+- RBAC 4级角色 (ADMIN/JUDGE/GUARDIAN/VIEWER) + DataScope + FieldPermission
+- Fernet 加密 (webhook secrets, PII payloads)
+- Redis INCR 原子速率限制
+- SSRF 防护 (webhook URL 验证)
+- CSP / HSTS / X-Frame-Options
+
+## 实时架构
+
+```
+EventService → EventBus → Handlers → ChannelLayer → Consumer → Frontend
+                                     (Redis)         (WebSocket)
+```
+
+- EventBus: 统一事件总线, EventEnvelope + DomainEventHandler
+- HandlerRegistry: O(1) 分发, 支持 event_type/domain/global 处理器
+- 5 个域: soul, workflow, notification, dispatch, deathsync, social
+- ChannelNaming: `rt_tenant_{code}`, `rt_user_{user_id}`
 
 ---
 
