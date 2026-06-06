@@ -90,7 +90,6 @@ export type EventPayload =
 
 // ── Handler Type ───────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type EventHandler = (
   payload: any,
   context: EventContext,
