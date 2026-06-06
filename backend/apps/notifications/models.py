@@ -68,9 +68,16 @@ def notify_user(
     notification_type: str = NotificationType.SYSTEM,
     related_resource: str = None,
     related_id: str = None,
-) -> UserNotification:
+) -> None:
     """
-    Create a notification for a specific user.
+    Publish a notification event to EventBus.
+
+    The EventBus routes to NotificationHandler which creates the
+    UserNotification record and pushes to WebSocket via RealtimeEventPublisher.
+
+    Business modules should use event_bus.publish_notification() or
+    event_bus.publish("notification", {...}) directly for full decoupling.
+    This helper is a convenience wrapper.
 
     Args:
         user: User instance to notify
@@ -79,15 +86,24 @@ def notify_user(
         notification_type: Type of notification (choices from NotificationType)
         related_resource: Optional resource type (e.g., 'workflow', 'judgment')
         related_id: Optional resource UUID
-
-    Returns:
-        Created UserNotification instance
     """
-    return UserNotification.objects.create(
-        user=user,
-        title=title[:200],  # Ensure max length
-        message=message,
-        notification_type=notification_type,
-        related_resource=related_resource,
-        related_id=related_id,
+    from apps.events.event_bus import event_bus
+
+    # Resolve tenant code from user for realtime push
+    tenant_code = None
+    if hasattr(user, "tenant") and user.tenant:
+        tenant_code = user.tenant.code
+
+    event_bus.publish_notification(
+        user_id=user.id,
+        notification_data={
+            "user_id": user.id,
+            "title": title,
+            "message": message,
+            "notification_type": notification_type,
+            "related_resource": related_resource,
+            "related_id": related_id,
+        },
+        tenant_code=tenant_code,
+        permission="notification.read",
     )
