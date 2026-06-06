@@ -62,8 +62,8 @@ test.describe("Navigation menu", () => {
 test.describe("Theme toggle", () => {
   test("theme toggle button exists", async ({ page }) => {
     await page.goto("/");
-    // Theme button uses title attribute for tooltip
-    const themeBtn = page.locator("button[title*='暗'], button[title*='亮'], button[title*='dark'], button[title*='light'], button[title*='主题'], button[title*='theme']").first();
+    // Theme button has title with "模式" (mode) in zh-Hans, or "dark"/"light" in en
+    const themeBtn = page.locator("button[title*='模式'], button[title*='mode'], button[title*='theme']").first();
     await expect(themeBtn).toBeVisible();
   });
 });
