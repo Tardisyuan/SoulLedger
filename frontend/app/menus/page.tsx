@@ -124,7 +124,7 @@ export default function MenusPage() {
           {menus.length === 0 && !isLoading ? (
             <div className="text-center text-[hsl(var(--color-ink-subtle))] py-12">{t("menus.no_menus")}</div>
           ) : (
-            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden overflow-x-auto">
               {isLoading ? (
                 <TableSkeleton rows={5} cols={6} />
               ) : (

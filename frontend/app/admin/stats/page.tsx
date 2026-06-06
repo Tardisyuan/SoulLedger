@@ -6,18 +6,9 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { karmaApi, KarmaStatsOverview } from "@/lib/api";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+  LazyDashboardPieChart,
+  LazyAdminBarChart,
+} from "@/src/components/charts/LazyDashboardCharts";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "#10b981",
@@ -164,39 +155,7 @@ export default function AdminStatsPage() {
             <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
               {t("admin.state_distribution")}
             </h2>
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={stateData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={2}
-                  dataKey="value"
-                  label={({ name, percent }) =>
-                    `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
-                  }
-                  labelLine={false}
-                >
-                  {stateData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--color-surface-2))",
-                    border: "1px solid hsl(var(--color-hairline))",
-                    borderRadius: "6px",
-                    fontSize: 12,
-                  }}
-                />
-                <Legend
-                  wrapperStyle={{ fontSize: 12 }}
-                  formatter={(value) => <span className="text-[hsl(var(--color-ink-muted))]">{value}</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <LazyDashboardPieChart data={stateData} height={280} />
           </div>
 
           {/* Karma Distribution Bar */}
@@ -204,31 +163,7 @@ export default function AdminStatsPage() {
             <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
               {t("admin.karma_distribution")}
             </h2>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={karmaDistData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--color-hairline))" />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 10 }}
-                  axisLine={{ stroke: "hsl(var(--color-hairline))" }}
-                  tickLine={{ stroke: "hsl(var(--color-hairline))" }}
-                />
-                <YAxis
-                  tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 10 }}
-                  axisLine={{ stroke: "hsl(var(--color-hairline))" }}
-                  tickLine={{ stroke: "hsl(var(--color-hairline))" }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--color-surface-2))",
-                    border: "1px solid hsl(var(--color-hairline))",
-                    borderRadius: "6px",
-                    fontSize: 12,
-                  }}
-                />
-                <Bar dataKey="count" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <LazyAdminBarChart data={karmaDistData} />
           </div>
         </div>
 

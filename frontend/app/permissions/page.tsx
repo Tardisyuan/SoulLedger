@@ -348,7 +348,7 @@ export default function PermissionsPage() {
           {isPermsLoading ? (
             <TableSkeleton rows={8} cols={4} />
           ) : (
-            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
                   <tr>
