@@ -4,7 +4,6 @@ REST views for Soul app.
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
 
 from apps.souls.models import Soul, SoulState
 from apps.souls.serializers import (

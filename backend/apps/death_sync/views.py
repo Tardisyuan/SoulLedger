@@ -18,7 +18,6 @@ from apps.death_sync.serializers import (
     DeathRegistrationCreateSerializer, HealthSerializer,
 )
 from apps.death_sync.authentication import APIKeyAuthentication
-from apps.core.permissions import TenantPermission
 
 
 class ExternalApiKeyViewSet(viewsets.ModelViewSet):

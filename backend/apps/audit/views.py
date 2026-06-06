@@ -5,7 +5,6 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from apps.core.permissions import TenantPermission
-from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import AuditLog, AuditAction
 from .serializers import AuditLogSerializer, AuditLogDetailSerializer
