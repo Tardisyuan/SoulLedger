@@ -1,5 +1,7 @@
 # SoulLedger
 
+[English](README.en.md) | **中文**
+
 跨文明灵魂管理系统 — 三种文明(中国/欧洲/埃及)的灵魂审判与轮回全栈Web应用
 
 ---
