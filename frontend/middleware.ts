@@ -7,10 +7,17 @@ const DEFAULT_LOCALE = "zh-Hans";
 // Routes that don't require authentication
 const PUBLIC_PATHS = ["/", "/welcome", "/(auth)/login", "/(auth)/register"];
 
+// Routes that require ADMIN role (checked via localStorage in client)
+const ADMIN_PATHS = ["/admin", "/permissions", "/menus"];
+
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(
     (p) => pathname === p || pathname === p.replace("(auth)/", "")
   );
+}
+
+function isAdminPath(pathname: string): boolean {
+  return ADMIN_PATHS.some((p) => pathname.startsWith(p));
 }
 
 export function middleware(request: NextRequest) {
@@ -30,12 +37,18 @@ export function middleware(request: NextRequest) {
     sameSite: "lax",
   });
 
-  // Auth guard: check for refresh token cookie (access token is in sessionStorage, inaccessible to middleware)
+  // Auth guard: check for refresh token cookie
   const refreshToken = request.cookies.get("soulledger_refresh")?.value;
   if (!refreshToken && !isPublicPath(pathname)) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Admin route guard: add header for client-side verification
+  // (Server-side role check requires JWT decode which middleware can't do)
+  if (isAdminPath(pathname) && refreshToken) {
+    response.headers.set("X-Requires-Admin", "true");
   }
 
   return response;

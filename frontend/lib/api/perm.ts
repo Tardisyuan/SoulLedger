@@ -20,14 +20,14 @@ export const permApi = {
   // Permission CRUD (flat structure for backward compatibility)
   list: () => api.get("/perm/permissions/"),
   create: (data: Partial<Permission>) => api.post("/perm/permissions/", data),
-  update: (id: number, data: Partial<Permission>) => api.patch(`/perm/permissions/${id}/`, data),
+  update: (id: number, data: Partial<Permission>) => api.put(`/perm/permissions/${id}/`, data),
   delete: (id: number) => api.delete(`/perm/permissions/${id}/`),
 
   // Role CRUD
   roles: {
     list: () => api.get("/perm/roles/"),
     create: (data: Partial<Role>) => api.post("/perm/roles/", data),
-    update: (id: number, data: Partial<Role>) => api.patch(`/perm/roles/${id}/`, data),
+    update: (id: number, data: Partial<Role>) => api.put(`/perm/roles/${id}/`, data),
     delete: (id: number) => api.delete(`/perm/roles/${id}/`),
     getPermissions: (name: string) => api.get(`/perm/roles/${name}/permissions/`),
     assignPermissions: (name: string, data: { permission_ids: number[] }) =>
