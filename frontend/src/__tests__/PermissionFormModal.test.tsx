@@ -90,7 +90,7 @@ describe("PermissionFormModal", () => {
 
   it("populates form fields with initialData", () => {
     const initialData: Permission = {
-      id: "1",
+      id: 1,
       codename: "soul.view",
       name: "查看灵魂",
       category: "soul",

@@ -88,10 +88,12 @@ describe("RoleFormModal", () => {
 
   it("populates form fields with initialData", () => {
     const initialData: Role = {
-      id: "1",
+      id: 1,
       name: "ADMIN",
       display_name: "管理员",
-      permissions: [],
+      parent: null,
+      scope: "global",
+      organization: null,
     };
     render(<RoleFormModal {...defaultProps} initialData={initialData} />);
     expect(screen.getByDisplayValue("ADMIN")).toBeInTheDocument();
