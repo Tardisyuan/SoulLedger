@@ -57,15 +57,11 @@ jest.mock("@/src/components/ui/Toast", () => ({
 }));
 
 const mockUser: User = {
-  id: "1",
+  id: 1,
   username: "testuser",
   email: "test@example.com",
   role: "admin",
   is_active: true,
-  date_joined: "2026-01-01",
-  last_login: null,
-  groups: [],
-  user_permissions: [],
 };
 
 describe("UserDeleteDialog", () => {
