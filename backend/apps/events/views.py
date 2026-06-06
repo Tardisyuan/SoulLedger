@@ -2,7 +2,6 @@
 REST views for Events app (audit log).
 """
 from rest_framework import viewsets
-from django_filters.rest_framework import DjangoFilterBackend
 from apps.events.models import SoulEvent
 from apps.events.serializers import SoulEventSerializer
 from apps.core.permissions import TenantPermission

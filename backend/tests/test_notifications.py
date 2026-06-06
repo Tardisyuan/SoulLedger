@@ -91,10 +91,14 @@ class TestNotificationModel:
         assert notification.is_read is False
 
     def test_notify_user_helper(self, admin_user):
-        """notify_user helper function should create notification."""
-        from apps.notifications.models import notify_user, NotificationType
+        """notify_user helper publishes to EventBus, creating notification via handler."""
+        from apps.notifications.models import notify_user, NotificationType, UserNotification
 
-        notification = notify_user(
+        # Ensure handlers are configured so the EventBus dispatches to NotificationHandler
+        from apps.events.event_bus import configure_default_handlers
+        configure_default_handlers()
+
+        notify_user(
             user=admin_user,
             title="Helper Test",
             message="Created via helper",
@@ -103,7 +107,13 @@ class TestNotificationModel:
             related_id="123",
         )
 
-        assert notification.id is not None
+        # NotificationHandler creates the record via EventBus
+        notification = UserNotification.objects.filter(
+            user=admin_user,
+            title="Helper Test",
+        ).first()
+
+        assert notification is not None
         assert notification.title == "Helper Test"
         assert notification.notification_type == NotificationType.WORKFLOW_ASSIGNED
         assert notification.related_resource == "workflow"
