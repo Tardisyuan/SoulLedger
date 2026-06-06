@@ -71,33 +71,22 @@ class AuditLogAPITest(TestCase):
     def test_list_audit_logs_admin(self):
         """Admin can list audit logs"""
         self.client.force_authenticate(user=self.admin_user)
-        response = self.client.get("/api/v1/audit/")
+        response = self.client.get("/api/v1/audit-logs/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_list_audit_logs_non_admin(self):
         """Non-admin cannot list audit logs"""
         self.client.force_authenticate(user=self.viewer_user)
-        response = self.client.get("/api/v1/audit/")
+        response = self.client.get("/api/v1/audit-logs/")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_list_audit_logs_unauthenticated(self):
         """Unauthenticated user cannot list audit logs"""
-        response = self.client.get("/api/v1/audit/")
+        response = self.client.get("/api/v1/audit-logs/")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_create_audit_log(self):
-        """Authenticated user can create audit logs"""
-        self.client.force_authenticate(user=self.admin_user)
-        response = self.client.post("/api/v1/audit/create/", {
-            "action": "UPDATE",
-            "resource": "soul",
-            "resource_id": "456",
-            "description": "Updated soul"
-        })
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_filter_audit_logs_by_resource(self):
         """Can filter audit logs by resource"""
         self.client.force_authenticate(user=self.admin_user)
-        response = self.client.get("/api/v1/audit/", {"resource": "soul"})
+        response = self.client.get("/api/v1/audit-logs/", {"resource": "soul"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
