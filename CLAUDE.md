@@ -1,175 +1,250 @@
-# Ruflo — Claude Code Configuration
+# CLAUDE.md
 
-## Rules
+This file provides guidance to Claude Code when working with this repository.
 
-- Do what has been asked; nothing more, nothing less
-- NEVER create files unless absolutely necessary — prefer editing existing files
-- NEVER create documentation files unless explicitly requested
-- NEVER save working files or tests to root — use `/src`, `/tests`, `/docs`, `/config`, `/scripts`
-- ALWAYS read a file before editing it
-- NEVER commit secrets, credentials, or .env files
-- Keep files under 500 lines
-- Validate input at system boundaries
+# Core Principle
 
-## Agent Comms (SendMessage-First Coordination)
+Implement first. Verify second. Review last.
 
-Named agents coordinate via `SendMessage`, not polling or shared state.
+Priority:
 
-```
-Lead (you) ←→ architect ←→ developer ←→ tester ←→ reviewer
-              (named agents message each other directly)
-```
+1. Understand
+2. Implement
+3. Verify
+4. Review
+5. Report
 
-### Spawning a Coordinated Team
+Never:
 
-```javascript
-// ALL agents in ONE message, each knows WHO to message next
-Agent({ prompt: "Research the codebase. SendMessage findings to 'architect'.",
-  subagent_type: "researcher", name: "researcher", run_in_background: true })
-Agent({ prompt: "Wait for 'researcher'. Design solution. SendMessage to 'coder'.",
-  subagent_type: "system-architect", name: "architect", run_in_background: true })
-Agent({ prompt: "Wait for 'architect'. Implement it. SendMessage to 'tester'.",
-  subagent_type: "coder", name: "coder", run_in_background: true })
-Agent({ prompt: "Wait for 'coder'. Write tests. SendMessage results to 'reviewer'.",
-  subagent_type: "tester", name: "tester", run_in_background: true })
-Agent({ prompt: "Wait for 'tester'. Review code quality and security.",
-  subagent_type: "reviewer", name: "reviewer", run_in_background: true })
+Review → Review → Review → Implement
 
-// Kick off the pipeline
-SendMessage({ to: "researcher", summary: "Start", message: "[task context]" })
-```
+Working code is more valuable than perfect code.
 
-### Patterns
+---
 
-| Pattern | Flow | Use When |
-|---------|------|----------|
-| **Pipeline** | A → B → C → D | Sequential dependencies (feature dev) |
-| **Fan-out** | Lead → A, B, C → Lead | Independent parallel work (research) |
-| **Supervisor** | Lead ↔ workers | Ongoing coordination (complex refactor) |
+# Completion Criteria
 
-### Rules
+A task is NOT complete because code was written.
 
-- ALWAYS name agents — `name: "role"` makes them addressable
-- ALWAYS include comms instructions in prompts — who to message, what to send
-- Spawn ALL agents in ONE message with `run_in_background: true`
-- After spawning: STOP, tell user what's running, wait for results
-- NEVER poll status — agents message back or complete automatically
+A task is complete only when:
 
-## Swarm & Routing
+- implementation finished
+- validation executed
+- evidence collected
 
-### Config
-- **Topology**: hierarchical-mesh (anti-drift)
-- **Max Agents**: 15
-- **Memory**: hybrid
-- **HNSW**: Enabled
-- **Neural**: Enabled
+Without validation:
 
-```bash
-npx @claude-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized
+Use:
+
+- implemented but not verified
+- likely fixed
+- requires validation
+
+Do NOT use:
+
+- fixed
+- resolved
+- verified
+- production ready
+
+---
+
+# Verification Policy
+
+Every code change requires validation.
+
+Backend:
+
+``` bash
+cd backend
+python -m pytest --tb=short -q
 ```
 
-### Agent Routing
+Frontend:
 
-| Task | Agents | Topology |
-|------|--------|----------|
-| Bug Fix | researcher, coder, tester | hierarchical |
-| Feature | architect, coder, tester, reviewer | hierarchical |
-| Refactor | architect, coder, reviewer | hierarchical |
-| Performance | perf-engineer, coder | hierarchical |
-| Security | security-architect, auditor | hierarchical |
-
-### When to Swarm
-- **YES**: 3+ files, new features, cross-module refactoring, API changes, security, performance
-- **NO**: single file edits, 1-2 line fixes, docs updates, config changes, questions
-
-### 3-Tier Model Routing
-
-| Tier | Handler | Use Cases |
-|------|---------|-----------|
-| 1 | Agent Booster (WASM) | Simple transforms — skip LLM, use Edit directly |
-| 2 | Haiku | Simple tasks, low complexity |
-| 3 | Sonnet/Opus | Architecture, security, complex reasoning |
-
-## Memory & Learning
-
-### Before Any Task
-```bash
-npx @claude-flow/cli@latest memory search --query "[task keywords]" --namespace patterns
-npx @claude-flow/cli@latest hooks route --task "[task description]"
+``` bash
+cd frontend
+npm run lint
+npm run build
+npm test
+npx tsc --noEmit
 ```
 
-### After Success
-```bash
-npx @claude-flow/cli@latest memory store --namespace patterns --key "[name]" --value "[what worked]"
-npx @claude-flow/cli@latest hooks post-task --task-id "[id]" --success true --store-results true
+After push:
+
+``` bash
+gh run list --limit 3
 ```
 
-### MCP Tools (use `ToolSearch("keyword")` to discover)
+---
 
-| Category | Key Tools |
-|----------|-----------|
-| **Memory** | `memory_store`, `memory_search`, `memory_search_unified` |
-| **Bridge** | `memory_import_claude`, `memory_bridge_status` |
-| **Swarm** | `swarm_init`, `swarm_status`, `swarm_health` |
-| **Agents** | `agent_spawn`, `agent_list`, `agent_status` |
-| **Hooks** | `hooks_route`, `hooks_post-task`, `hooks_worker-dispatch` |
-| **Security** | `aidefence_scan`, `aidefence_is_safe`, `aidefence_has_pii` |
-| **Hive-Mind** | `hive-mind_init`, `hive-mind_consensus`, `hive-mind_spawn` |
+# Verification Truthfulness
 
-### Background Workers
+Never claim success without evidence.
 
-| Worker | When |
-|--------|------|
-| `audit` | After security changes |
-| `optimize` | After performance work |
-| `testgaps` | After adding features |
-| `map` | Every 5+ file changes |
-| `document` | After API changes |
+Required evidence:
 
-```bash
-npx @claude-flow/cli@latest hooks worker dispatch --trigger audit
-```
+Build:
 
-## Agents
+- command
+- exit code
 
-**Core**: `coder`, `reviewer`, `tester`, `planner`, `researcher`
-**Architecture**: `system-architect`, `backend-dev`, `mobile-dev`
-**Security**: `security-architect`, `security-auditor`
-**Performance**: `performance-engineer`, `perf-analyzer`
-**Coordination**: `hierarchical-coordinator`, `mesh-coordinator`, `adaptive-coordinator`
-**GitHub**: `pr-manager`, `code-review-swarm`, `issue-tracker`, `release-manager`
+Tests:
 
-Any string works as a custom agent type.
+- command
+- passed count
 
-## Build & Test
+Runtime:
 
-- ALWAYS run tests after code changes
-- ALWAYS verify build succeeds before committing
+- request sample
+- response sample
 
-```bash
-npm run build && npm test
-```
+---
 
-## CLI Quick Reference
+# Root Cause Rule
 
-```bash
-npx @claude-flow/cli@latest init --wizard           # Setup
-npx @claude-flow/cli@latest swarm init --v3-mode     # Start swarm
-npx @claude-flow/cli@latest memory search --query "" # Vector search
-npx @claude-flow/cli@latest hooks route --task ""    # Route to agent
-npx @claude-flow/cli@latest doctor --fix             # Diagnostics
-npx @claude-flow/cli@latest security scan            # Security scan
-npx @claude-flow/cli@latest performance benchmark    # Benchmarks
-```
+Before fixing:
 
-26 commands, 140+ subcommands. Use `--help` on any command for details.
+1. Symptom
+2. Root cause
+3. Proposed fix
 
-## Setup
+Do not patch symptoms only.
 
-```bash
-claude mcp add claude-flow -- npx -y @claude-flow/cli@latest
-npx @claude-flow/cli@latest daemon start
-npx @claude-flow/cli@latest doctor --fix
-```
+---
 
-**Agent tool** handles execution (agents, files, code, git). **MCP tools** handle coordination (swarm, memory, hooks). **CLI** is the same via Bash.
+# Change Impact Analysis
+
+Before editing:
+
+Identify:
+
+- callers
+- consumers
+- tests
+- documentation
+
+After editing:
+
+Verify affected modules.
+
+---
+
+# Technical Debt
+
+P0
+
+- security vulnerability
+- deployment blocker
+- data corruption
+- production outage
+
+Must fix now.
+
+P1
+
+- functional issue
+- incomplete feature
+- performance issue
+
+Next milestone.
+
+P2
+
+- code quality
+- naming
+- refactor
+
+As needed.
+
+---
+
+# Review Rules
+
+Review only when:
+
+- explicitly requested
+- milestone closure
+- security review
+
+Maximum:
+
+- 2 review rounds
+- 1 architecture review per milestone
+
+If same issue appears twice:
+
+Upgrade to P0.
+
+---
+
+# Report Rules
+
+Do not generate report files unless explicitly requested.
+
+Default output:
+
+- issue list
+- fix list
+- validation result
+
+Maximum:
+
+- one report per milestone
+
+---
+
+# Large Refactor Rule
+
+Before changing more than 3 files:
+
+1. identify dependencies
+2. identify tests
+3. identify rollback plan
+
+---
+
+# Agent Usage
+
+Use agents for:
+
+- cross-module changes
+- security audits
+- performance investigations
+- large refactors
+
+Avoid agents for:
+
+- small fixes
+- single-file changes
+- configuration updates
+
+---
+
+# Self Improvement
+
+Claude may propose improvements.
+
+Claude may NOT directly modify CLAUDE.md.
+
+Required workflow:
+
+1. detect recurring issue
+2. create proposal
+3. provide evidence
+4. wait for approval
+
+Only approved changes may enter CLAUDE.md.
+
+---
+
+# Default Behaviour
+
+When uncertain:
+
+1. inspect code
+2. gather evidence
+3. implement
+4. verify
+
+Never assume.
