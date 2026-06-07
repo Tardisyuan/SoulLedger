@@ -2,6 +2,7 @@
 Celery tasks for Judgment app.
 """
 from datetime import timedelta
+
 from celery import shared_task
 from django.utils import timezone
 
@@ -14,7 +15,6 @@ def auto_conclude_stale_judgments(days_threshold: int = 30):
     or verdict are flagged (not auto-concluded, just logged).
     """
     from apps.judgment.models import Judgment
-    from apps.souls.models import SoulState
 
     threshold = timezone.now() - timedelta(days=days_threshold)
     stale_judgments = Judgment.objects.filter(

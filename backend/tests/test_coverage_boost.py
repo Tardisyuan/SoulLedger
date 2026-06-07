@@ -4,37 +4,44 @@ Comprehensive tests for uncovered service/model code paths.
 Targets: WorkflowService, DeathSyncService, PermissionCache, EventService,
          Actor model, Realm model, SoulRecord, DispatchRecord.
 """
-import uuid
 import time
-from unittest.mock import patch, MagicMock, AsyncMock
-from django.utils import timezone
-from django.test import TestCase, override_settings
-from django.contrib.auth import get_user_model
-import pytest
+import uuid
+from unittest.mock import MagicMock, patch
 
-from apps.souls.models import Soul, SoulState, Civilization
-from apps.judgment.models import Judgment, Verdict, JudgmentMethod
-from apps.tenants.models import Tenant
-from apps.workflow.models import (
-    ApprovalWorkflow, ApprovalNode, ApprovalWorkflowStatus,
-    NodeStatus, CaseType, NodeType, WorkflowTemplate,
-)
-from apps.workflow.services import WorkflowService, WORKFLOW_TEMPLATES
+import pytest
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+
+from apps.actors.models import Actor, ActorRole
 from apps.death_sync.models import (
-    ExternalApiKey, DeathRegistrationRequest, DeathRegistrationStatus,
+    DeathRegistrationRequest,
+    DeathRegistrationStatus,
+    ExternalApiKey,
 )
 from apps.death_sync.services import DeathSyncService
+from apps.dispatch.models import (
+    CrossTenantJudgment,
+    DispatchRecord,
+    DispatchStatus,
+    JudgmentStatus,
+)
+from apps.events.models import SoulEvent
+from apps.events.realtime import ChannelNaming, RealtimeEventPublisher
+from apps.events.services import EventService
+from apps.judgment.models import Judgment
 from apps.perm.cache import PermissionCache, get_permission_cache
 from apps.perm.checker import check_permission, check_permissions
-from apps.events.services import EventService
-from apps.events.models import SoulEvent, EventType
-from apps.events.realtime import RealtimeEventPublisher, ChannelNaming
-from apps.actors.models import Actor, ActorRole
 from apps.realms.models import Realm, RealmType
-from apps.souls.record_models import SoulRecord, RecordType, RecordCategory
-from apps.dispatch.models import (
-    DispatchRecord, DispatchStatus, CrossTenantJudgment, JudgmentStatus,
+from apps.souls.models import Civilization, Soul, SoulState
+from apps.souls.record_models import RecordCategory, RecordType, SoulRecord
+from apps.tenants.models import Tenant
+from apps.workflow.models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowStatus,
+    CaseType,
+    WorkflowTemplate,
 )
+from apps.workflow.services import WorkflowService
 
 User = get_user_model()
 
@@ -532,7 +539,7 @@ class TestPermissionCache:
         assert c.get("ADMIN", "test.perm") is True
 
     def test_has_permission_db_lookup(self, db):
-        from apps.perm.models import Permission, RolePermission, Role
+        from apps.perm.models import Permission, Role, RolePermission
         role, _ = Role.objects.get_or_create(
             name="JUDGE", defaults={"display_name": "Judge"}
         )
@@ -549,7 +556,7 @@ class TestPermissionCache:
             assert result is True
 
     def test_has_permission_inherited(self, db):
-        from apps.perm.models import Permission, RolePermission, Role
+        from apps.perm.models import Permission, Role, RolePermission
         parent, _ = Role.objects.get_or_create(
             name="PARENT_ROLE", defaults={"display_name": "Parent"}
         )

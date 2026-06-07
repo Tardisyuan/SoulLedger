@@ -3,6 +3,7 @@ Auth views: register, login, logout, profile.
 """
 import logging
 import secrets
+
 from django.contrib.auth import get_user_model
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
@@ -14,21 +15,21 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
-from .serializers import (
-    RegisterSerializer,
-    UserSerializer,
-    CustomTokenObtainPairSerializer,
-    ChangePasswordSerializer,
-    ResetPasswordSerializer,
-    SetNewPasswordSerializer,
-    UserManagementSerializer,
-    UserCreateSerializer,
-    UserUpdateSerializer,
-    LoginLogSerializer,
-)
-from apps.core.permissions import TenantPermission, IsAdminPermission
+from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin
 
+from .serializers import (
+    ChangePasswordSerializer,
+    CustomTokenObtainPairSerializer,
+    LoginLogSerializer,
+    RegisterSerializer,
+    ResetPasswordSerializer,
+    SetNewPasswordSerializer,
+    UserCreateSerializer,
+    UserManagementSerializer,
+    UserSerializer,
+    UserUpdateSerializer,
+)
 
 # ---------------------------------------------------------------------------
 # User Management ViewSet (Tenant Admin)
@@ -133,7 +134,6 @@ class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def reset_password(self, request, pk=None):
         """重置用户密码，返回随机生成的新密码"""
-        import secrets
         user = self.get_object()
         new_password = secrets.token_urlsafe(12)
         user.set_password(new_password)
@@ -192,6 +192,7 @@ class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     def export_csv(self, request):
         """导出用户列表为CSV文件"""
         import csv
+
         from django.http import HttpResponse
 
         qs = self.get_queryset()
@@ -215,8 +216,9 @@ class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         """从CSV文件批量导入用户"""
         import csv
         import io
-        from django.core.validators import validate_email
+
         from django.core.exceptions import ValidationError
+        from django.core.validators import validate_email
 
         file = request.FILES.get('file')
         if not file:
@@ -234,7 +236,6 @@ class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         reader = csv.DictReader(io.StringIO(decoded_file))
         created = 0
         errors = []
-        generated_passwords = []
 
         for i, row in enumerate(reader):
             try:
@@ -495,7 +496,7 @@ def reset_password_request(request):
 
     # Check if user exists (but always return success for security)
     try:
-        user = User.objects.get(email=email)
+        User.objects.get(email=email)
     except User.DoesNotExist:
         # Security: return success even if user doesn't exist
         return Response({"detail": "验证码已发送到邮箱"})
@@ -509,7 +510,6 @@ def reset_password_request(request):
     cache.set(rate_limit_key, attempts + 1, timeout=300)
 
     # Generate secure 6-digit code
-    import secrets
     code = f"{secrets.randbelow(900000) + 100000:06d}"
 
     # Store in Redis cache, 5 minutes TTL

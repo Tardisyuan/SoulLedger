@@ -1,8 +1,9 @@
 """
 URL configuration for notifications app.
 """
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
 from apps.notifications.views import NotificationViewSet
 
 router = DefaultRouter()

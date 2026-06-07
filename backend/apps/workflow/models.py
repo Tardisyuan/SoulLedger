@@ -3,7 +3,9 @@ Workflow models — approval workflow engine for soul judgment.
 Supports multi-stage approvals across Chinese, European, and Egyptian civilizations.
 """
 import uuid
+
 from django.db import models
+
 from apps.core.models import AuditUserFields
 from apps.tenants.managers import TenantManager
 

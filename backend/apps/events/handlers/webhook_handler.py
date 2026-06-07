@@ -9,6 +9,7 @@ import hmac
 import json
 import logging
 import urllib.request
+
 from apps.events.event_bus import DomainEventHandler, EventEnvelope
 
 logger = logging.getLogger(__name__)

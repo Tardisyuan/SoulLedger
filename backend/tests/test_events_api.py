@@ -2,8 +2,9 @@
 Tests for SoulEvent (Events) API endpoints.
 """
 import pytest
-from apps.events.models import SoulEvent, EventType
-from apps.souls.models import Soul, SoulState
+
+from apps.events.models import EventType, SoulEvent
+from apps.souls.models import Soul
 
 
 @pytest.mark.django_db

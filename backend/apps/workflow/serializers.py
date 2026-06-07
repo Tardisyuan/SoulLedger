@@ -2,7 +2,8 @@
 Serializers for workflow app.
 """
 from rest_framework import serializers
-from apps.workflow.models import ApprovalWorkflow, ApprovalNode, WorkflowTemplate
+
+from apps.workflow.models import ApprovalNode, ApprovalWorkflow, WorkflowTemplate
 
 
 class WorkflowTemplateNodeSerializer(serializers.Serializer):

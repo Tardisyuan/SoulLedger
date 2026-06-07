@@ -2,9 +2,10 @@
 REST views for Actors app.
 """
 from rest_framework import viewsets
-from apps.actors.models import Actor
-from apps.actors.serializers import ActorSerializer, ActorListSerializer, ActorLocalizedSerializer
+
 from apps.actors.filters import ActorFilter
+from apps.actors.models import Actor
+from apps.actors.serializers import ActorListSerializer, ActorLocalizedSerializer, ActorSerializer
 from apps.core.permissions import TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 

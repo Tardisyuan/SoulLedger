@@ -2,8 +2,10 @@
 Social domain models: Post, Comment, Reaction, Follow, UserProfile.
 """
 import uuid
-from django.db import models
+
 from django.core.exceptions import ValidationError
+from django.db import models
+
 from apps.core.models import AuditUserFields
 
 

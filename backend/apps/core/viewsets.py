@@ -1,9 +1,7 @@
 """
 ViewSet mixins for SoulLedger.
 """
-from rest_framework import viewsets
-from apps.core.request_local import set_current_user, set_current_request, clear_current_user
-
+from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 
 # Standard DRF action → permission codename suffix mapping
 ACTION_PERM_MAP = {

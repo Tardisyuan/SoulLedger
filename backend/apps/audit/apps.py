@@ -8,9 +8,10 @@ class AuditConfig(AppConfig):
     def ready(self):
         # Connect audit signals to all models inheriting from AuditUserFields
         from django.apps import apps
-        from django.db.models.signals import post_save, post_delete
+        from django.db.models.signals import post_delete, post_save
+
+        from apps.audit.signals import _on_post_delete, _on_post_save
         from apps.core.models import AuditUserFields
-        from apps.audit.signals import _on_post_save, _on_post_delete
 
         connected = 0
         for model in apps.get_models():

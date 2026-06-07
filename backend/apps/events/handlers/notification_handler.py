@@ -10,6 +10,7 @@ EventEnvelope payload (two supported formats):
     Nested: {"notification": {"user_id": ..., "title": ..., "message": ...}}
 """
 import logging
+
 from apps.events.event_bus import DomainEventHandler, EventEnvelope
 
 logger = logging.getLogger(__name__)
@@ -35,8 +36,8 @@ class NotificationHandler(DomainEventHandler):
         Creates a UserNotification record. WebSocket delivery is handled by
         the WebSocketHandler which is also registered for the notification domain.
         """
-        from apps.notifications.models import UserNotification, NotificationType
         from apps.authentication.models import User
+        from apps.notifications.models import NotificationType, UserNotification
 
         # Support both flat payload and nested {"notification": {...}} format
         payload = envelope.payload

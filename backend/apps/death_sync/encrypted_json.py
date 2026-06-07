@@ -2,6 +2,7 @@
 Encrypted JSON field for death_sync models.
 """
 import json
+
 from django.db import models
 
 

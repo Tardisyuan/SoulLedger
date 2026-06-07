@@ -1,33 +1,34 @@
 """
 Views for the social domain.
 """
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from apps.social.models import Post, Comment, Reaction, Follow, UserProfile
+
+from apps.core.permissions import TenantPermission
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
+from apps.social.models import Comment, Follow, Post, Reaction, UserProfile
+from apps.social.permissions import (
+    IsAuthorOrReadOnly,
+    IsFollowOwnerOrReadOnly,
+    IsProfileOwnerOrReadOnly,
+    IsReactionOwnerOrReadOnly,
+)
 from apps.social.serializers import (
-    PostSerializer,
-    PostCreateSerializer,
-    PostListSerializer,
-    CommentSerializer,
     CommentCreateSerializer,
     CommentListSerializer,
-    ReactionSerializer,
-    ReactionCreateSerializer,
-    FollowSerializer,
+    CommentSerializer,
     FollowCreateSerializer,
+    FollowSerializer,
+    PostCreateSerializer,
+    PostListSerializer,
+    PostSerializer,
+    ReactionCreateSerializer,
+    ReactionSerializer,
     UserProfileSerializer,
     UserProfileUpdateSerializer,
 )
-from apps.social.services import PostService, CommentService, ReactionService, FollowService
-from apps.social.permissions import (
-    IsAuthorOrReadOnly,
-    IsReactionOwnerOrReadOnly,
-    IsFollowOwnerOrReadOnly,
-    IsProfileOwnerOrReadOnly,
-)
-from apps.core.permissions import TenantPermission
-from apps.core.viewsets import CodenameViewSetMixin, AuditUserViewSetMixin
+from apps.social.services import CommentService, FollowService, PostService, ReactionService
 
 
 class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):

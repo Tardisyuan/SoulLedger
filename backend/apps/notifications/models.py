@@ -1,8 +1,9 @@
 """
 UserNotification model for in-app notifications.
 """
-from django.db import models
 from django.conf import settings
+from django.db import models
+
 from apps.core.models import AuditUserFields
 
 

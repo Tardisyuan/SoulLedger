@@ -2,6 +2,7 @@
 REST serializers for Reincarnation app.
 """
 from rest_framework import serializers
+
 from apps.reincarnation.models import Reincarnation
 
 

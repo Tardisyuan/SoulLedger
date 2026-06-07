@@ -6,7 +6,6 @@ Designed to gracefully fall back when Redis is unavailable.
 Supports role hierarchy inheritance.
 """
 import logging
-from typing import Optional
 
 from django.conf import settings
 
@@ -45,7 +44,7 @@ class PermissionCache:
         """Generate Redis key for role+codename pair."""
         return f"perm:{role}:{codename}"
 
-    def get(self, role: str, codename: str) -> Optional[bool]:
+    def get(self, role: str, codename: str) -> bool | None:
         """
         Get cached permission result.
 
@@ -97,10 +96,9 @@ class PermissionCache:
                 self._redis_client = None
 
         # Fallback to memory cache with timestamp
-        import time
         self._fallback_cache[(role, codename)] = (has_permission, time.time())
 
-    def has_permission(self, role_name: str, permission_codename: str) -> Optional[bool]:
+    def has_permission(self, role_name: str, permission_codename: str) -> bool | None:
         """
         Check if a role has a specific permission, considering role hierarchy inheritance.
 
@@ -191,7 +189,7 @@ class PermissionCache:
 
 
 # Global singleton instance
-_permission_cache: Optional[PermissionCache] = None
+_permission_cache: PermissionCache | None = None
 
 
 def get_permission_cache() -> PermissionCache:

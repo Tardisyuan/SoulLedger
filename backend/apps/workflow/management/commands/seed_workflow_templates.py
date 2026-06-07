@@ -2,9 +2,10 @@
 Seed workflow templates from hardcoded dict into WorkflowTemplate model.
 """
 from django.core.management.base import BaseCommand
+
+from apps.tenants.models import Tenant
 from apps.workflow.models import WorkflowTemplate
 from apps.workflow.services import WORKFLOW_TEMPLATES
-from apps.tenants.models import Tenant
 
 
 class Command(BaseCommand):

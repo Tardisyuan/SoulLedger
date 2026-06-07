@@ -3,8 +3,9 @@ Workflow FilterSet — filtering, search, and ordering for Workflow API.
 """
 import django_filters as filters
 from django.db.models import Q
-from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+
 from apps.souls.models import Civilization
+from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
 
 
 class WorkflowFilter(filters.FilterSet):

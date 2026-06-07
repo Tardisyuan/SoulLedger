@@ -1,15 +1,16 @@
 """
 Tests for Death Sync API.
 """
+
 import pytest
-import hashlib
-from django.test import TestCase
+
+from apps.death_sync.authentication import APIKeyAuthentication
 from apps.death_sync.models import (
-    ExternalApiKey, DeathRegistrationRequest, DeathRegistrationStatus,
-    WebhookConfig, WebhookDeliveryLog,
+    DeathRegistrationRequest,
+    DeathRegistrationStatus,
+    ExternalApiKey,
 )
 from apps.death_sync.services import DeathSyncService
-from apps.death_sync.authentication import APIKeyAuthentication
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
 
@@ -52,8 +53,9 @@ class TestExternalApiKeyModel:
         assert len(prefix) == 8
 
     def test_is_expired(self, cn_tenant):
-        from django.utils import timezone
         from datetime import timedelta
+
+        from django.utils import timezone
         key = ExternalApiKey.objects.create(
             tenant=cn_tenant, name="Test", system_type="CUSTOM",
             key_hash="abc", key_prefix="slk_abc",
@@ -62,8 +64,9 @@ class TestExternalApiKeyModel:
         assert key.is_expired is True
 
     def test_not_expired(self, cn_tenant):
-        from django.utils import timezone
         from datetime import timedelta
+
+        from django.utils import timezone
         key = ExternalApiKey.objects.create(
             tenant=cn_tenant, name="Test", system_type="CUSTOM",
             key_hash="abc", key_prefix="slk_abc",
@@ -179,12 +182,13 @@ class TestAPIKeyAuthentication:
             auth.authenticate(request)
 
     def test_authenticate_expired_key(self, cn_tenant):
-        from rest_framework.test import APIRequestFactory
-        from django.utils import timezone
         from datetime import timedelta
 
+        from django.utils import timezone
+        from rest_framework.test import APIRequestFactory
+
         raw_key, key_hash, key_prefix = ExternalApiKey.generate_key()
-        key = ExternalApiKey.objects.create(
+        ExternalApiKey.objects.create(
             tenant=cn_tenant, name="Expired", system_type="CUSTOM",
             key_hash=key_hash, key_prefix=key_prefix,
             expires_at=timezone.now() - timedelta(days=1),

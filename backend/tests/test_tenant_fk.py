@@ -2,15 +2,16 @@
 Tests for tenant FK on all 8 business models (M3.2a - M3.2h).
 """
 import pytest
-from apps.tenants.models import Tenant
-from apps.realms.models import Realm, RealmType
+
 from apps.actors.models import Actor, ActorRole
-from apps.souls.models import Soul, Civilization
-from apps.judgment.models import Judgment, JudgmentMethod
-from apps.disposition.models import Disposition
-from apps.reincarnation.models import Reincarnation, RebirthForm
-from apps.events.models import SoulEvent, EventType
 from apps.authentication.models import User
+from apps.disposition.models import Disposition
+from apps.events.models import EventType, SoulEvent
+from apps.judgment.models import Judgment, JudgmentMethod
+from apps.realms.models import Realm, RealmType
+from apps.reincarnation.models import RebirthForm, Reincarnation
+from apps.souls.models import Civilization, Soul
+from apps.tenants.models import Tenant
 
 
 @pytest.mark.django_db

@@ -2,11 +2,12 @@
 Karma calculation service with time decay and Redis caching.
 """
 import math
-from datetime import datetime
+
 from django.core.cache import cache
 from django.utils import timezone
-from apps.souls.models import Soul
+
 from apps.karma.models import SoulRecord  # noqa: F401 — re-exported from souls for BC
+from apps.souls.models import Soul
 
 KARMA_CACHE_TTL = 60 * 5  # 5 minutes
 INHERITANCE_FACTOR = 0.2
@@ -43,7 +44,6 @@ class KarmaService:
         Updates soul's denormalised merit/demerit scores.
         """
         old_merit = soul.merit_score
-        old_demerit = soul.demerit_score
 
         records = soul.records.all()
 

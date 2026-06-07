@@ -14,20 +14,19 @@ Covers:
   - EventBus handler_count / reset
   - Error swallowing in handlers
 """
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from apps.events.event_bus import (
+    DomainEventHandler,
     EventBus,
     EventEnvelope,
-    DomainEventHandler,
-    event_bus,
 )
-from apps.events.handlers.registry import handler_registry, DomainEventHandlerRegistry
 from apps.events.handlers.audit_handler import AuditHandler
-from apps.events.handlers.websocket_handler import WebSocketHandler
 from apps.events.handlers.notification_handler import NotificationHandler
-from apps.events.handlers.webhook_handler import WebhookHandler
-
+from apps.events.handlers.registry import DomainEventHandlerRegistry
+from apps.events.handlers.websocket_handler import WebSocketHandler
 
 # ------------------------------------------------------------------
 # EventEnvelope
@@ -357,9 +356,9 @@ class TestHandlerRegistry:
 @pytest.mark.django_db
 class TestAuditHandler:
     def test_creates_soul_event(self, db):
+        from apps.events.models import SoulEvent
         from apps.souls.models import Soul, SoulState
         from apps.tenants.models import Tenant
-        from apps.events.models import SoulEvent
 
         tenant, _ = Tenant.objects.get_or_create(
             code="CN_DIYU", defaults={"display_name": "Test"}
@@ -511,10 +510,10 @@ class TestNotificationHandler:
 @pytest.mark.django_db
 class TestBackwardCompat:
     def test_event_service_delegates_to_bus(self, db):
-        from apps.souls.models import Soul, SoulState
-        from apps.tenants.models import Tenant
         from apps.events.models import SoulEvent
         from apps.events.services import EventService
+        from apps.souls.models import Soul, SoulState
+        from apps.tenants.models import Tenant
 
         tenant, _ = Tenant.objects.get_or_create(
             code="CN_DIYU", defaults={"display_name": "T"}
@@ -531,10 +530,10 @@ class TestBackwardCompat:
         ).exists()
 
     def test_event_service_convenience_methods(self, db):
-        from apps.souls.models import Soul, SoulState
-        from apps.tenants.models import Tenant
         from apps.events.models import SoulEvent
         from apps.events.services import EventService
+        from apps.souls.models import Soul, SoulState
+        from apps.tenants.models import Tenant
 
         tenant, _ = Tenant.objects.get_or_create(
             code="CN_DIYU", defaults={"display_name": "T"}
@@ -553,8 +552,7 @@ class TestBackwardCompat:
         ).exists()
 
     def test_backward_compat_aliases(self):
-        from apps.events.services import log_soul_state_change, log_disposition_created
-        from apps.events.services import EventService
+        from apps.events.services import EventService, log_disposition_created, log_soul_state_change
 
         assert log_soul_state_change is EventService.log_soul_state_change
         assert log_disposition_created is EventService.log_disposition_created

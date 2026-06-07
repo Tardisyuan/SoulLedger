@@ -4,14 +4,15 @@ Covers: Chinese Diyu, European Heaven/Hell, Egyptian Duat
 """
 import os
 import sys
+
 import django
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
-from apps.realms.models import Realm, RealmType, Civilization
 from apps.actors.models import Actor, ActorRole
+from apps.realms.models import Civilization, Realm, RealmType
 from apps.tenants.models import Tenant
 
 

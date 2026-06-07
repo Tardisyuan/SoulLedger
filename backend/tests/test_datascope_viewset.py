@@ -8,11 +8,11 @@ import pytest
 from django.test import RequestFactory
 from rest_framework.test import force_authenticate
 
-from apps.souls.models import Soul, SoulState
-from apps.judgment.models import Judgment, Verdict, JudgmentMethod
 from apps.disposition.models import Disposition
-from apps.tenants.models import Tenant
+from apps.judgment.models import Judgment, JudgmentMethod, Verdict
 from apps.perm.models import Role, RowLevelDataScope
+from apps.souls.models import Soul, SoulState
+from apps.tenants.models import Tenant
 
 
 @pytest.fixture

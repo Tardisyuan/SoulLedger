@@ -3,8 +3,9 @@ Karma Record FilterSet — filtering, search, and ordering for Karma API.
 """
 import django_filters as filters
 from django.db.models import Q
-from apps.souls.record_models import SoulRecord, RecordType
+
 from apps.souls.models import Civilization
+from apps.souls.record_models import RecordType, SoulRecord
 
 
 class SoulRecordFilter(filters.FilterSet):

@@ -12,19 +12,17 @@ Usage:
   python manage.py migrate_to_multitenant           # execute
   python manage.py migrate_to_multitenant --dry-run  # preview only
 """
-import sys
 from django.core.management.base import BaseCommand
-from django.db import transaction
 
-from apps.tenants.models import Tenant
-from apps.souls.models import Soul, Civilization, SoulState
-from apps.realms.models import Realm
 from apps.actors.models import Actor
-from apps.judgment.models import Judgment
-from apps.disposition.models import Disposition
-from apps.reincarnation.models import Reincarnation
-from apps.events.models import SoulEvent
 from apps.authentication.models import User
+from apps.disposition.models import Disposition
+from apps.events.models import SoulEvent
+from apps.judgment.models import Judgment
+from apps.realms.models import Realm
+from apps.reincarnation.models import Reincarnation
+from apps.souls.models import Civilization, Soul
+from apps.tenants.models import Tenant
 
 # Mapping from civilization code → tenant code
 CIV_TO_TENANT = {

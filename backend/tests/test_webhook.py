@@ -1,16 +1,21 @@
 """
 Tests for Webhook system.
 """
+
 import pytest
-import json
+
 from apps.death_sync.models import (
-    ExternalApiKey, WebhookConfig, WebhookDeliveryLog,
-    WebhookDeliveryStatus, DeathRegistrationRequest, DeathRegistrationStatus,
+    DeathRegistrationRequest,
+    DeathRegistrationStatus,
+    ExternalApiKey,
+    WebhookConfig,
+    WebhookDeliveryLog,
+    WebhookDeliveryStatus,
 )
-from apps.death_sync.webhook_service import WebhookService, RETRY_DELAYS
-from apps.death_sync.signing import sign_payload, verify_signature, is_timestamp_fresh
-from apps.tenants.models import Tenant
+from apps.death_sync.signing import is_timestamp_fresh, sign_payload, verify_signature
+from apps.death_sync.webhook_service import WebhookService
 from apps.souls.models import Soul
+from apps.tenants.models import Tenant
 
 
 @pytest.fixture
@@ -167,6 +172,7 @@ class TestHealthCheck:
     def test_health_check_requires_auth(self):
         """Health check requires API key authentication."""
         from rest_framework.test import APIRequestFactory
+
         from apps.death_sync.views import DeathSyncHealthView
 
         factory = APIRequestFactory()

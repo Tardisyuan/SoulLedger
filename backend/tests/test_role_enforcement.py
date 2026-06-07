@@ -4,9 +4,6 @@ Verifies that roles without permissions are properly denied.
 """
 import pytest
 from rest_framework_simplejwt.tokens import RefreshToken
-from apps.souls.models import Soul, SoulState
-from apps.judgment.models import Judgment, JudgmentMethod
-from apps.souls.models import Civilization
 
 
 def _get_auth_client(api_client, user):

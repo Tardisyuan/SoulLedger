@@ -3,6 +3,7 @@ Dispatch FilterSet — filtering, search, and ordering for Dispatch API.
 """
 import django_filters as filters
 from django.db.models import Q
+
 from apps.dispatch.models import DispatchRecord, DispatchStatus
 
 

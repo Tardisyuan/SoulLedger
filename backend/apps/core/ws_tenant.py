@@ -18,7 +18,7 @@ class TenantMiddleware(BaseMiddleware):
     """Resolve tenant from JWT and set scope["tenant"]."""
 
     async def __call__(self, scope, receive, send):
-        from apps.tenants.managers import set_current_tenant, clear_current_tenant
+        from apps.tenants.managers import clear_current_tenant, set_current_tenant
 
         user = scope.get("user")
         tenant = None

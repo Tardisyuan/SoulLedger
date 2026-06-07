@@ -3,10 +3,9 @@ Performance regression tests.
 Verifies query counts and response times for critical endpoints.
 """
 import pytest
-from django.test.utils import override_settings
+
+from apps.karma.models import RecordType, SoulRecord
 from apps.souls.models import Soul, SoulState
-from apps.judgment.models import Judgment, JudgmentMethod
-from apps.karma.models import SoulRecord, RecordType
 
 
 @pytest.mark.django_db
@@ -25,8 +24,8 @@ class TestQueryPerformance:
         for i in range(5):
             Soul.objects.create(name=f"Soul {i}", tenant=cn_tenant)
 
-        from django.test.utils import CaptureQueriesContext
         from django.db import connection
+        from django.test.utils import CaptureQueriesContext
         with CaptureQueriesContext(connection) as ctx:
             resp = api_client.get("/api/v1/souls/")
             assert resp.status_code == 200
@@ -45,8 +44,8 @@ class TestQueryPerformance:
 
         soul = Soul.objects.create(name="Detail Soul", tenant=cn_tenant)
 
-        from django.test.utils import CaptureQueriesContext
         from django.db import connection
+        from django.test.utils import CaptureQueriesContext
         with CaptureQueriesContext(connection) as ctx:
             resp = api_client.get(f"/api/v1/souls/{soul.id}/")
             assert resp.status_code == 200

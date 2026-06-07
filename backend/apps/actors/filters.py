@@ -3,6 +3,7 @@ Actor FilterSet — filtering, search, and ordering for Actor API.
 """
 import django_filters as filters
 from django.db.models import Q
+
 from apps.actors.models import Actor, ActorRole
 from apps.souls.models import Civilization
 

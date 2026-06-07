@@ -1,11 +1,13 @@
 """
 Death Sync models — external death registration integration.
 """
-import uuid
 import hashlib
 import secrets
+import uuid
+
 from django.db import models
 from django.utils import timezone
+
 from apps.core.models import AuditUserFields
 
 

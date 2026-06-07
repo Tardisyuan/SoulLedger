@@ -82,7 +82,7 @@ def reverse_seed(apps, schema_editor):
     """Remove seeded data scopes."""
     try:
         RowLevelDataScope = apps.get_model('perm', 'RowLevelDataScope')
-        Role = apps.get_model('perm', 'Role')
+        apps.get_model('perm', 'Role')
     except LookupError:
         return
 

@@ -10,6 +10,7 @@ Uses contextvars.ContextVar instead of threading.local to properly
 support async contexts and Celery workers.
 """
 import contextvars
+
 from django.db import models
 
 # Context variable for tenant (Celery-safe)

@@ -2,10 +2,11 @@
 Basic tests for Soul Core models and state machine.
 """
 import pytest
-from apps.souls.models import Soul, SoulState, Civilization
-from apps.souls.record_models import SoulRecord, RecordType
-from apps.realms.models import Realm, RealmType
+
 from apps.actors.models import Actor, ActorRole
+from apps.realms.models import Realm, RealmType
+from apps.souls.models import Civilization, Soul, SoulState
+from apps.souls.record_models import RecordType, SoulRecord
 from apps.tenants.models import Tenant
 
 

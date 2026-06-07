@@ -2,8 +2,9 @@
 REST serializers for Disposition app.
 """
 from rest_framework import serializers
-from apps.disposition.models import Disposition
+
 from apps.core.field_permissions import FieldPermissionMixin
+from apps.disposition.models import Disposition
 
 
 class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):

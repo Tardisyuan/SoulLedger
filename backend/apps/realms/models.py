@@ -2,7 +2,9 @@
 Realm reference data — cross-civilization afterlife realms.
 """
 import uuid
+
 from django.db import models
+
 from apps.core.models import AuditUserFields
 from apps.souls.models import Civilization
 from apps.tenants.managers import TenantManager

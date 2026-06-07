@@ -111,7 +111,7 @@ class TestUserManagementAPI:
         update_data = {"is_active": False}
         response = self.client.patch(f"/api/v1/users/{user.id}/", update_data, format="json")
         assert response.status_code == 200
-        assert response.data["is_active"] == False
+        assert not response.data["is_active"]
 
     def test_delete_user(self):
         """DELETE /api/v1/users/{id}/ returns 204."""
@@ -121,7 +121,7 @@ class TestUserManagementAPI:
         assert response.status_code == 204
         # Verify user is soft-deleted (User uses SoftDeleteMixin)
         user.refresh_from_db()
-        assert user.is_deleted == True
+        assert user.is_deleted
 
     def test_activate_user(self):
         """POST /api/v1/users/{id}/activate/ returns 200."""
@@ -129,7 +129,7 @@ class TestUserManagementAPI:
 
         response = self.client.post(f"/api/v1/users/{user.id}/activate/")
         assert response.status_code == 200
-        assert response.data["is_active"] == True
+        assert response.data["is_active"]
 
     def test_deactivate_user(self):
         """POST /api/v1/users/{id}/deactivate/ returns 200."""
@@ -137,7 +137,7 @@ class TestUserManagementAPI:
 
         response = self.client.post(f"/api/v1/users/{user.id}/deactivate/")
         assert response.status_code == 200
-        assert response.data["is_active"] == False
+        assert not response.data["is_active"]
 
     def test_reset_password(self):
         """POST /api/v1/users/{id}/reset_password/ returns 200 with new password."""
@@ -162,8 +162,8 @@ class TestUserManagementAPI:
 
         user1.refresh_from_db()
         user2.refresh_from_db()
-        assert user1.is_active == True
-        assert user2.is_active == True
+        assert user1.is_active
+        assert user2.is_active
 
     def test_batch_deactivate_users(self):
         """POST /api/v1/users/batch_deactivate/ deactivates multiple users."""
@@ -176,8 +176,8 @@ class TestUserManagementAPI:
 
         user1.refresh_from_db()
         user2.refresh_from_db()
-        assert user1.is_active == False
-        assert user2.is_active == False
+        assert not user1.is_active
+        assert not user2.is_active
 
     def test_batch_activate_empty_list(self):
         """POST /api/v1/users/batch_activate/ with empty user_ids returns 400."""
@@ -261,12 +261,12 @@ class TestUserManagementAPI:
         response = self.client.get("/api/v1/users/?is_active=true")
         assert response.status_code == 200
         results = response.data.get("results", response.data)
-        assert all(u["is_active"] == True for u in results)
+        assert all(u["is_active"] for u in results)
 
         response2 = self.client.get("/api/v1/users/?is_active=false")
         assert response2.status_code == 200
         results2 = response2.data.get("results", response2.data)
-        assert all(u["is_active"] == False for u in results2)
+        assert all(not u["is_active"] for u in results2)
 
     def test_search_users_by_username(self):
         """GET /api/v1/users/?search=admin returns matching users."""
@@ -320,7 +320,6 @@ class TestUserManagementAPI:
     def test_import_csv_success(self):
         """POST /api/v1/users/import_csv/ with valid CSV creates users."""
         csv_content = "username,email,role,password\nimportuser1,imp1@test.com,JUDGE,TestPass123\nimportuser2,imp2@test.com,VIEWER,TestPass123"
-        import io
         from django.core.files.uploadedfile import SimpleUploadedFile
         csv_file = SimpleUploadedFile(
             "users.csv",
@@ -340,7 +339,6 @@ class TestUserManagementAPI:
     def test_import_csv_invalid_role(self):
         """POST /api/v1/users/import_csv/ with invalid role reports error."""
         csv_content = "username,email,role,password\nbaduser,bad@test.com,SUPERADMIN,TestPass123"
-        import io
         from django.core.files.uploadedfile import SimpleUploadedFile
         csv_file = SimpleUploadedFile(
             "users.csv",
@@ -684,7 +682,7 @@ class TestProfileAPI:
         # Read-only fields should be unchanged
         assert response.data["username"] == "admin"
         assert response.data["role"] == "ADMIN"
-        assert response.data["is_active"] == True
+        assert response.data["is_active"]
 
     def test_change_password_success(self):
         """POST /api/v1/auth/change-password/ with correct old password succeeds."""
@@ -820,10 +818,10 @@ class TestLoginLog:
 
     def test_admin_can_filter_login_logs_by_status(self, api_client, admin_user, cn_tenant):
         """ADMIN can filter login logs by status."""
-        from apps.authentication.models import LoginLog
-
         # Generate JWT token directly to bypass login rate limiter
         from rest_framework_simplejwt.tokens import RefreshToken
+
+        from apps.authentication.models import LoginLog
         token = RefreshToken.for_user(admin_user)
         if admin_user.tenant:
             token["tenant_code"] = admin_user.tenant.code

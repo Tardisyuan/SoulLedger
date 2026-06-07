@@ -2,8 +2,8 @@
 Tests for audit functionality: auto create_user/update_user and AuditLog signals.
 """
 import os
+
 import pytest
-from unittest.mock import patch
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
@@ -35,6 +35,7 @@ def admin_user(db, django_user_model, cn_tenant):
 def auth_client(api_client, admin_user):
     """APIClient authenticated as admin_user."""
     import contextlib
+
     from apps.core import request_local as rl_module
 
     # Create a context manager that keeps contextvar set during API calls
@@ -242,8 +243,8 @@ class TestPermissionChangeAuditLog:
 
     def test_permission_change_on_role_permission_create(self, auth_client):
         """Adding a permission to a role should create a PERMISSION_CHANGE audit log."""
-        from apps.audit.models import AuditLog, AuditAction
-        from apps.perm.models import Permission, RolePermission, Role
+        from apps.audit.models import AuditAction, AuditLog
+        from apps.perm.models import Permission, Role, RolePermission
 
         # Ensure we have a role and permission
         role, _ = Role.objects.get_or_create(name="TEST_ROLE", defaults={"display_name": "Test Role"})
@@ -268,8 +269,8 @@ class TestPermissionChangeAuditLog:
 
     def test_permission_change_on_role_permission_delete(self, auth_client):
         """Removing a permission from a role should create a PERMISSION_CHANGE audit log."""
-        from apps.audit.models import AuditLog, AuditAction
-        from apps.perm.models import Permission, RolePermission, Role
+        from apps.audit.models import AuditAction, AuditLog
+        from apps.perm.models import Permission, Role, RolePermission
 
         # Ensure we have a role and permission
         role, _ = Role.objects.get_or_create(name="TEST_ROLE_DEL", defaults={"display_name": "Test Role Del"})
@@ -297,8 +298,8 @@ class TestPermissionChangeAuditLog:
 
     def test_permission_change_captures_user(self, auth_client):
         """Permission change audit log should capture the user who made the change."""
-        from apps.audit.models import AuditLog, AuditAction
-        from apps.perm.models import Permission, RolePermission, Role
+        from apps.audit.models import AuditAction, AuditLog
+        from apps.perm.models import Permission, Role, RolePermission
 
         # Ensure we have a role and permission
         role, _ = Role.objects.get_or_create(name="TEST_ROLE_USER", defaults={"display_name": "Test Role User"})
@@ -326,8 +327,6 @@ class TestAuditLogViewSet:
 
     def test_list_audit_logs(self, auth_client):
         """GET /api/v1/audit-logs/ returns paginated audit logs."""
-        from apps.audit.models import AuditLog, AuditAction
-        from apps.souls.models import Soul
 
         # Create a soul to generate audit logs
         response = auth_client.post("/api/v1/souls/", {
@@ -344,7 +343,6 @@ class TestAuditLogViewSet:
 
     def test_filter_by_action(self, auth_client):
         """GET /api/v1/audit-logs/?action=CREATE filters by action type."""
-        from apps.souls.models import Soul
 
         # Create a soul
         response = auth_client.post("/api/v1/souls/", {
@@ -407,7 +405,7 @@ class TestBatchAuditLog:
 
     def test_batch_audit_log_creation(self, auth_client, admin_user):
         """Test create_batch_audit_log creates a proper batch audit entry."""
-        from apps.audit.models import AuditLog, AuditAction
+        from apps.audit.models import AuditAction, AuditLog
         from apps.audit.signals import create_batch_audit_log
         from apps.souls.models import Soul
 
@@ -466,7 +464,7 @@ class TestNewAuditActionTypes:
 
     def test_log_view_action(self, auth_client, admin_user):
         """Manually logging a VIEW action should work."""
-        from apps.audit.models import AuditLog, AuditAction
+        from apps.audit.models import AuditAction, AuditLog
         from apps.souls.models import Soul
 
         soul = Soul.objects.create(
@@ -491,7 +489,7 @@ class TestNewAuditActionTypes:
 
     def test_log_export_action(self, auth_client, admin_user):
         """Manually logging an EXPORT action should work."""
-        from apps.audit.models import AuditLog, AuditAction
+        from apps.audit.models import AuditAction, AuditLog
 
         initial_count = AuditLog.objects.count()
 
@@ -510,7 +508,7 @@ class TestNewAuditActionTypes:
 
     def test_log_import_action(self, auth_client, admin_user):
         """Manually logging an IMPORT action should work."""
-        from apps.audit.models import AuditLog, AuditAction
+        from apps.audit.models import AuditAction, AuditLog
 
         initial_count = AuditLog.objects.count()
 
@@ -537,7 +535,6 @@ class TestAuditApiEndpoint:
 
     def test_list_audit_returns_paginated_results(self, auth_client):
         """GET /api/v1/audit-logs/ returns paginated results."""
-        from apps.souls.models import Soul
 
         # Create a soul to generate an audit log
         response = auth_client.post("/api/v1/souls/", {
@@ -556,7 +553,6 @@ class TestAuditApiEndpoint:
 
     def test_filter_by_action(self, auth_client):
         """GET /api/v1/audit-logs/?action=CREATE filters by action type."""
-        from apps.souls.models import Soul
 
         # Create a soul
         response = auth_client.post("/api/v1/souls/", {
@@ -573,7 +569,6 @@ class TestAuditApiEndpoint:
 
     def test_filter_by_resource(self, auth_client):
         """GET /api/v1/audit-logs/?resource=soul filters by resource type."""
-        from apps.souls.models import Soul
 
         # Create a soul
         response = auth_client.post("/api/v1/souls/", {
@@ -605,7 +600,6 @@ class TestAuditApiEndpoint:
 
     def test_filter_combined(self, auth_client):
         """GET /api/v1/audit-logs/ with combined filters works correctly."""
-        from apps.souls.models import Soul
 
         # Create a soul
         response = auth_client.post("/api/v1/souls/", {

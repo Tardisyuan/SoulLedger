@@ -122,7 +122,7 @@ class TestLoginRateLimiting:
                 "apps.authentication.views.TokenObtainPairView.post",
                 side_effect=Exception("boom"),
             ):
-                for i in range(5):
+                for _i in range(5):
                     with pytest.raises(Exception, match="boom"):
                         self._login("exc_user", "x")
 

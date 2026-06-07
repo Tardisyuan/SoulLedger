@@ -10,7 +10,6 @@ Channel Naming Convention:
   rt:user:{user_id}   — per-user targeted delivery
 """
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +26,9 @@ class RealtimeEventPublisher:
         domain: str,
         event_type: str,
         payload: dict,
-        tenant_code: Optional[str] = None,
-        user_ids: Optional[list[int]] = None,
-        permission: Optional[str] = None,
+        tenant_code: str | None = None,
+        user_ids: list[int] | None = None,
+        permission: str | None = None,
     ) -> None:
         from apps.events.event_bus import event_bus
         event_bus.publish(
@@ -45,8 +44,8 @@ class RealtimeEventPublisher:
     def publish_notification(
         user_id: int,
         notification_data: dict,
-        tenant_code: Optional[str] = None,
-        permission: Optional[str] = "notification.read",
+        tenant_code: str | None = None,
+        permission: str | None = "notification.read",
     ) -> None:
         from apps.events.event_bus import event_bus
         event_bus.publish_notification(
@@ -60,9 +59,9 @@ class RealtimeEventPublisher:
     def publish_workflow(
         event_type: str,
         payload: dict,
-        tenant_code: Optional[str] = None,
-        user_ids: Optional[list[int]] = None,
-        permission: Optional[str] = "workflow.read",
+        tenant_code: str | None = None,
+        user_ids: list[int] | None = None,
+        permission: str | None = "workflow.read",
     ) -> None:
         from apps.events.event_bus import event_bus
         event_bus.publish_workflow(
@@ -77,9 +76,9 @@ class RealtimeEventPublisher:
     def publish_dispatch(
         event_type: str,
         payload: dict,
-        tenant_code: Optional[str] = None,
-        user_ids: Optional[list[int]] = None,
-        permission: Optional[str] = "dispatch.read",
+        tenant_code: str | None = None,
+        user_ids: list[int] | None = None,
+        permission: str | None = "dispatch.read",
     ) -> None:
         from apps.events.event_bus import event_bus
         event_bus.publish_dispatch(
@@ -94,8 +93,8 @@ class RealtimeEventPublisher:
     def publish_deathsync(
         event_type: str,
         payload: dict,
-        tenant_code: Optional[str] = None,
-        permission: Optional[str] = "audit.read",
+        tenant_code: str | None = None,
+        permission: str | None = "audit.read",
     ) -> None:
         from apps.events.event_bus import event_bus
         event_bus.publish_deathsync(

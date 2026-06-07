@@ -1,10 +1,10 @@
 """
 Tests for audit app - Audit logging
 """
-from django.test import TestCase
 from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
+from django.test import TestCase
 from rest_framework import status
+from rest_framework.test import APIClient
 
 User = get_user_model()
 
@@ -13,7 +13,7 @@ class AuditLogModelTest(TestCase):
     """Test AuditLog model"""
 
     def test_audit_log_str(self):
-        from apps.audit.models import AuditLog, AuditAction
+        from apps.audit.models import AuditAction, AuditLog
         from apps.tenants.models import Tenant
 
         tenant = Tenant.objects.create(code="TEST", display_name="Test")
@@ -58,7 +58,7 @@ class AuditLogAPITest(TestCase):
             tenant=self.tenant
         )
         # 创建测试审计日志
-        from apps.audit.models import AuditLog, AuditAction
+        from apps.audit.models import AuditAction, AuditLog
 
         AuditLog.objects.create(
             tenant=self.tenant,

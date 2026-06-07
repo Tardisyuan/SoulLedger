@@ -2,12 +2,12 @@
 Tests for dispatch module (M5 — Cross-Tenant Soul Dispatching).
 """
 import pytest
-from django.test import Client
-from apps.tenants.models import Tenant
-from apps.souls.models import Soul
+
 from apps.actors.models import Actor
-from apps.dispatch.models import DispatchRecord, CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchStatus
-from apps.dispatch.services import DispatchService, CrossTenantJudgmentService
+from apps.dispatch.models import CrossTenantJudgment, DispatchRecord, DispatchStatus
+from apps.dispatch.services import CrossTenantJudgmentService, DispatchService
+from apps.souls.models import Soul
+from apps.tenants.models import Tenant
 
 
 @pytest.fixture
@@ -157,7 +157,7 @@ class TestDispatchRecordModel:
 
     def test_cancelled_dispatch_allows_new(self, db, cn_tenant, eu_tenant, cn_soul, cn_admin_user, eg_tenant):
         """A cancelled dispatch should not block new dispatches."""
-        dr1 = DispatchRecord.objects.create(
+        DispatchRecord.objects.create(
             source_tenant=cn_tenant,
             target_tenant=eu_tenant,
             soul=cn_soul,

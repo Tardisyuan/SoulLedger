@@ -10,6 +10,7 @@ sys.path.insert(0, '/home/tardis/Documents/跨文明灵魂管理系统/backend')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 import django
+
 django.setup()
 
 from apps.actors.models import Actor, ActorRole
@@ -51,9 +52,9 @@ def run():
     )
     if created_wz:
         created.append('魏征 (Wei Zheng)')
-        print(f"Created: 魏征")
+        print("Created: 魏征")
     else:
-        print(f"Already exists: 魏征")
+        print("Already exists: 魏征")
 
     # 2. 崔府君 - Cui Fujun (aka 崔判官), Registrar/Judge
     cui_fujun, created_cf = Actor.objects.get_or_create(
@@ -72,9 +73,9 @@ def run():
     )
     if created_cf:
         created.append('崔府君 (Cui Fujun)')
-        print(f"Created: 崔府君")
+        print("Created: 崔府君")
     else:
-        print(f"Already exists: 崔府君")
+        print("Already exists: 崔府君")
 
     # 3. 地藏王菩萨 - Ksitigarbha Bodhisattva
     kshitigarbha, created_ks = Actor.objects.get_or_create(
@@ -93,9 +94,9 @@ def run():
     )
     if created_ks:
         created.append('地藏王菩萨 (Ksitigarbha)')
-        print(f"Created: 地藏王菩萨")
+        print("Created: 地藏王菩萨")
     else:
-        print(f"Already exists: 地藏王菩萨")
+        print("Already exists: 地藏王菩萨")
 
     # Fix 转轮王 court number (was 第九殿, should be 第十殿)
     zhuanlun = Actor.objects.filter(name_zh='转轮王').first()

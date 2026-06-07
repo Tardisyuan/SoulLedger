@@ -1,13 +1,14 @@
 """
 URL configuration for death_sync app.
 """
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
 from apps.death_sync.views import (
-    ExternalApiKeyViewSet,
     DeathRegistrationViewSet,
-    WebhookViewSet,
     DeathSyncHealthView,
+    ExternalApiKeyViewSet,
+    WebhookViewSet,
 )
 
 router = DefaultRouter()

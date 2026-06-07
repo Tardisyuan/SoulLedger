@@ -5,8 +5,8 @@ M8 Production Readiness Tests
 - Docker configuration validation
 """
 import pytest
-from django.test import Client
 from django.conf import settings
+from django.test import Client
 
 
 class TestHealthEndpoints:
@@ -20,7 +20,6 @@ class TestHealthEndpoints:
 
     def test_health_detailed_endpoint(self, db, django_user_model):
         """GET /health/detailed/ should return 200 for ADMIN, 401/403 for others"""
-        from django.test import Client
 
         client = Client()
 
@@ -130,7 +129,6 @@ class TestDockerConfiguration:
 
     def test_nginx_has_security_headers(self):
         """nginx.conf should have security headers"""
-        import os
         path = '/home/tardis/Documents/跨文明灵魂管理系统/infrastructure/nginx.conf'
         with open(path) as f:
             content = f.read()
@@ -151,7 +149,6 @@ class TestEnvExample:
 
     def test_env_example_has_required_vars(self):
         """.env.example should document required variables"""
-        import os
         path = '/home/tardis/Documents/跨文明灵魂管理系统/.env.example'
         with open(path) as f:
             content = f.read()
@@ -161,7 +158,6 @@ class TestEnvExample:
 
     def test_env_example_no_real_secrets(self):
         """.env.example should not contain real secrets"""
-        import os
         path = '/home/tardis/Documents/跨文明灵魂管理系统/.env.example'
         with open(path) as f:
             content = f.read()
@@ -181,7 +177,6 @@ class TestBackendDockerfile:
 
     def test_dockerfile_multistage(self):
         """Dockerfile should use multi-stage build"""
-        import os
         path = '/home/tardis/Documents/跨文明灵魂管理系统/backend/Dockerfile'
         with open(path) as f:
             content = f.read()
@@ -189,7 +184,6 @@ class TestBackendDockerfile:
 
     def test_dockerfile_exposes_port(self):
         """Dockerfile should EXPOSE the port"""
-        import os
         path = '/home/tardis/Documents/跨文明灵魂管理系统/backend/Dockerfile'
         with open(path) as f:
             content = f.read()
@@ -197,7 +191,6 @@ class TestBackendDockerfile:
 
     def test_dockerfile_no_sudo(self):
         """Dockerfile should not use sudo"""
-        import os
         path = '/home/tardis/Documents/跨文明灵魂管理系统/backend/Dockerfile'
         with open(path) as f:
             content = f.read()
@@ -216,7 +209,6 @@ class TestFrontendDockerfile:
 
     def test_dockerfile_multistage(self):
         """Dockerfile should use multi-stage build"""
-        import os
         path = '/home/tardis/Documents/跨文明灵魂管理系统/frontend/Dockerfile'
         with open(path) as f:
             content = f.read()
@@ -224,7 +216,6 @@ class TestFrontendDockerfile:
 
     def test_dockerfile_node_alpine(self):
         """Dockerfile should use alpine for small image"""
-        import os
         path = '/home/tardis/Documents/跨文明灵魂管理系统/frontend/Dockerfile'
         with open(path) as f:
             content = f.read()

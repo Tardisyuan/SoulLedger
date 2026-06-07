@@ -1,18 +1,16 @@
 """
 REST views for Soul app.
 """
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.souls.models import Soul, SoulState
-from apps.souls.serializers import (
-    SoulSerializer, SoulListSerializer, SoulTransitionSerializer, SoulRecordSerializer
-)
-from apps.souls.filters import SoulFilter
-from apps.karma.services import KarmaService
 from apps.core.permissions import TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
+from apps.karma.services import KarmaService
+from apps.souls.filters import SoulFilter
+from apps.souls.models import Soul, SoulState
+from apps.souls.serializers import SoulListSerializer, SoulRecordSerializer, SoulSerializer, SoulTransitionSerializer
 
 
 class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):

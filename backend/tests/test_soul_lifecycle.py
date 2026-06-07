@@ -2,13 +2,13 @@
 Integration tests for soul lifecycle: ALIVE -> JUDGING -> DISPOSED -> REINCARNATING -> ALIVE
 """
 import pytest
-from apps.souls.models import Soul, SoulState
-from apps.judgment.models import Judgment, Verdict
+
 from apps.disposition.models import Disposition
-from apps.reincarnation.models import Reincarnation
 from apps.disposition.services import DispositionService
-from apps.reincarnation.services import ReincarnationService
+from apps.judgment.models import Judgment, Verdict
 from apps.realms.models import Realm
+from apps.reincarnation.services import ReincarnationService
+from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
 
 

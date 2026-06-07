@@ -1,10 +1,10 @@
 """
 Auth serializers: register, login, user profile.
 """
-from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -31,7 +31,7 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
 
     def get_permissions(self, obj):
         """Get permissions based on rbac_role (preferred) or legacy role field."""
-        from apps.perm.models import RolePermission, ROLE_PERMISSIONS
+        from apps.perm.models import ROLE_PERMISSIONS, RolePermission
         # Prefer rbac_role FK if set
         if obj.rbac_role_id:
             return list(

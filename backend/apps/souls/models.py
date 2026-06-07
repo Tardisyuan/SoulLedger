@@ -2,10 +2,11 @@
 Soul core model + state machine.
 """
 import uuid
+
 from django.db import models
 from django.utils import timezone
+
 from apps.core.models import AuditUserFields
-from apps.tenants.managers import TenantManager
 from apps.souls.querysets import SoulManager
 
 
@@ -128,6 +129,7 @@ class Soul(AuditUserFields, models.Model):
         Returns True if successful.
         """
         from django.db import transaction
+
         from apps.events.services import log_soul_state_change
 
         with transaction.atomic():

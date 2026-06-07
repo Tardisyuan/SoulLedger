@@ -1,13 +1,14 @@
 """
 REST views for Reincarnation app.
 """
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from apps.reincarnation.models import Reincarnation
-from apps.reincarnation.serializers import ReincarnationSerializer
+
 from apps.core.permissions import TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
+from apps.reincarnation.models import Reincarnation
+from apps.reincarnation.serializers import ReincarnationSerializer
 
 
 class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ModelViewSet):
@@ -45,7 +46,7 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
             soul.current_state = SoulState.REINCARNATING
             soul.save()
 
-        updated = ReincarnationService.complete_rebirth(
+        ReincarnationService.complete_rebirth(
             soul=soul,
             disposition=disposition,
             new_identity=new_identity,
@@ -64,9 +65,9 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         POST /reincarnation/reborn/
         Body: { "soul_id": "...", "disposition_id": "...", "new_identity": "...", "rebirth_form": "HUMAN" }
         """
-        from apps.souls.models import Soul, SoulState
         from apps.disposition.models import Disposition
         from apps.reincarnation.services import ReincarnationService
+        from apps.souls.models import Soul, SoulState
 
         soul_id = request.data.get("soul_id")
         disposition_id = request.data.get("disposition_id")

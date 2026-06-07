@@ -1,8 +1,9 @@
 from rest_framework import viewsets
-from apps.tenants.models import Tenant
-from apps.tenants.serializers import TenantSerializer
+
 from apps.core.permissions import TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin
+from apps.tenants.models import Tenant
+from apps.tenants.serializers import TenantSerializer
 
 
 class TenantViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):

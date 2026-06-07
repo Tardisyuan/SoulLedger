@@ -2,6 +2,7 @@
 Celery tasks for death sync webhook delivery.
 """
 import logging
+
 from celery import shared_task
 from django.utils import timezone
 
@@ -76,6 +77,7 @@ def cleanup_old_requests(days=90, batch_size=1000):
     Runs weekly via Celery Beat.
     """
     import time
+
     from apps.death_sync.models import DeathRegistrationRequest
 
     cutoff = timezone.now() - timezone.timedelta(days=days)

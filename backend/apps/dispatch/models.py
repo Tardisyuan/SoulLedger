@@ -2,8 +2,10 @@
 Dispatch models — cross-tenant soul dispatching and joint judgment.
 """
 import uuid
+
 from django.db import models
 from django.db.models import Q, UniqueConstraint
+
 from apps.core.models import AuditUserFields
 from apps.tenants.managers import TenantManager
 

@@ -11,8 +11,8 @@ def recalculate_all_karma():
     Recalculate karma for all souls.
     Run daily to apply time decay to all records.
     """
-    from apps.souls.models import Soul
     from apps.karma.services import KarmaService
+    from apps.souls.models import Soul
 
     updated = 0
     for soul in Soul.objects.iterator(chunk_size=500):
@@ -27,8 +27,8 @@ def recalculate_soul_karma_task(soul_id: str):
     """
     Recalculate karma for a single soul by ID.
     """
-    from apps.souls.models import Soul
     from apps.karma.services import KarmaService
+    from apps.souls.models import Soul
 
     try:
         soul = Soul.objects.get(id=soul_id)

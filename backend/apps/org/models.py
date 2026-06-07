@@ -3,6 +3,7 @@ Organization models - 组织架构
 替代 civilization 作为多租户隔离的基础
 """
 from django.db import models
+
 from apps.core.models import AuditUserFields
 
 

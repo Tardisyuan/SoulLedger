@@ -21,7 +21,7 @@ class TenantMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest):
-        from apps.tenants.managers import set_current_tenant, clear_current_tenant
+        from apps.tenants.managers import clear_current_tenant, set_current_tenant
 
         tenant = self._resolve_tenant(request)
         request.tenant = tenant
@@ -68,10 +68,11 @@ def _extract_tenant_code_from_jwt(request: HttpRequest) -> str | None:
     token_str = auth_header.split(" ", 1)[1].strip()
 
     try:
-        from rest_framework_simplejwt.tokens import AccessToken
         from rest_framework_simplejwt.exceptions import (
-            TokenError, InvalidToken,
+            InvalidToken,
+            TokenError,
         )
+        from rest_framework_simplejwt.tokens import AccessToken
         token = AccessToken(token_str)
         return token.get("tenant_code")
     except (TokenError, InvalidToken):

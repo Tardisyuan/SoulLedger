@@ -2,8 +2,9 @@
 Tests for permission cache invalidation.
 """
 import pytest
+
 from apps.perm.cache import PermissionCache
-from apps.perm.models import Role, Permission, RolePermission
+from apps.perm.models import Permission, Role, RolePermission
 
 
 @pytest.mark.django_db
@@ -82,7 +83,7 @@ class TestPermissionCacheInvalidation:
         """invalidate_role() should clear cache for descendant roles too."""
         cache = PermissionCache()
         parent = Role.objects.create(name="PARENT", display_name="Parent")
-        child = Role.objects.create(name="CHILD", display_name="Child", parent=parent)
+        Role.objects.create(name="CHILD", display_name="Child", parent=parent)
         perm = Permission.objects.create(codename="test.inherit", name="Test Inherit")
 
         # Grant to parent

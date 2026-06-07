@@ -2,7 +2,7 @@
 Tests for Soul CRUD API endpoints.
 """
 import pytest
-from rest_framework.test import APIClient
+
 from apps.souls.models import Soul, SoulState
 
 

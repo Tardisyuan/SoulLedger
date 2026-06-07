@@ -2,8 +2,8 @@
 Serializers for the social domain.
 """
 from rest_framework import serializers
-from apps.social.models import Post, Comment, Reaction, Follow, UserProfile, ReactionType, Visibility
 
+from apps.social.models import Comment, Follow, Post, Reaction, ReactionType, UserProfile, Visibility
 
 # ---------------------------------------------------------------------------
 # Post serializers

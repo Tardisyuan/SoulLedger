@@ -2,6 +2,7 @@
 Management command to create API keys for external systems.
 """
 from django.core.management.base import BaseCommand
+
 from apps.death_sync.models import ExternalApiKey
 from apps.tenants.models import Tenant
 
@@ -19,8 +20,9 @@ class Command(BaseCommand):
                           help="Number of days until key expires (default: never)")
 
     def handle(self, *args, **options):
-        from django.utils import timezone
         from datetime import timedelta
+
+        from django.utils import timezone
 
         name = options["name"]
         tenant_code = options["tenant"]
@@ -43,7 +45,7 @@ class Command(BaseCommand):
             expires_at = timezone.now() + timedelta(days=expires_days)
 
         # Create the API key
-        api_key = ExternalApiKey.objects.create(
+        ExternalApiKey.objects.create(
             tenant=tenant,
             name=name,
             system_type=system_type,
@@ -53,7 +55,7 @@ class Command(BaseCommand):
         )
 
         # Display the raw key (only shown once!)
-        self.stdout.write(self.style.SUCCESS(f"\nAPI Key created successfully!"))
+        self.stdout.write(self.style.SUCCESS("\nAPI Key created successfully!"))
         self.stdout.write(f"  Name: {name}")
         self.stdout.write(f"  Tenant: {tenant_code}")
         self.stdout.write(f"  System Type: {system_type}")

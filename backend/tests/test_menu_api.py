@@ -2,6 +2,7 @@
 Tests for Menu and MenuButton API endpoints.
 """
 import pytest
+
 from apps.menus.models import Menu, MenuButton
 
 

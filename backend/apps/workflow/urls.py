@@ -1,9 +1,10 @@
 """
 URL configuration for workflow app.
 """
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from apps.workflow.views import ApprovalWorkflowViewSet, ApprovalNodeViewSet, WorkflowTemplateViewSet
+
+from apps.workflow.views import ApprovalNodeViewSet, ApprovalWorkflowViewSet, WorkflowTemplateViewSet
 
 router = DefaultRouter()
 router.register(r"workflows", ApprovalWorkflowViewSet, basename="approval-workflow")

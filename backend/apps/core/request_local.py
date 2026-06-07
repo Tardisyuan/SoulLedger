@@ -18,11 +18,10 @@ Usage:
     user = get_current_user()
 """
 import contextvars
-from typing import Optional
 
 # Context variables for request context (Celery-safe)
-_user_var: contextvars.ContextVar[Optional[object]] = contextvars.ContextVar('user', default=None)
-_request_var: contextvars.ContextVar[Optional[object]] = contextvars.ContextVar('request', default=None)
+_user_var: contextvars.ContextVar[object | None] = contextvars.ContextVar('user', default=None)
+_request_var: contextvars.ContextVar[object | None] = contextvars.ContextVar('request', default=None)
 
 
 def set_current_user(user):

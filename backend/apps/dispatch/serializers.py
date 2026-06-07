@@ -2,7 +2,8 @@
 Serializers for dispatch app.
 """
 from rest_framework import serializers
-from apps.dispatch.models import DispatchRecord, CrossTenantJudgment, CrossTenantJudgmentParticipant
+
+from apps.dispatch.models import CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchRecord
 
 
 class DispatchRecordSerializer(serializers.ModelSerializer):
@@ -75,12 +76,12 @@ class DispatchProposeSerializer(serializers.Serializer):
             try:
                 attrs['source_tenant'] = Tenant.objects.get(code=attrs['source_tenant_code']).id
             except Tenant.DoesNotExist:
-                raise serializers.ValidationError({"source_tenant_code": "Invalid tenant code"})
+                raise serializers.ValidationError({"source_tenant_code": "Invalid tenant code"}) from None
         if not attrs.get('target_tenant') and attrs.get('target_tenant_code'):
             try:
                 attrs['target_tenant'] = Tenant.objects.get(code=attrs['target_tenant_code']).id
             except Tenant.DoesNotExist:
-                raise serializers.ValidationError({"target_tenant_code": "Invalid tenant code"})
+                raise serializers.ValidationError({"target_tenant_code": "Invalid tenant code"}) from None
         if not attrs.get('source_tenant') or not attrs.get('target_tenant'):
             raise serializers.ValidationError("source_tenant and target_tenant are required (as id or code)")
         return attrs

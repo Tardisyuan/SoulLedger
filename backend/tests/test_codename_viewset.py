@@ -1,10 +1,11 @@
 """
 Tests for CodenameViewSetMixin + PermissionMiddleware integration.
 """
-import pytest
-from django.test import TestCase, RequestFactory
-from unittest.mock import patch, MagicMock
-from apps.core.viewsets import CodenameViewSetMixin, ACTION_PERM_MAP
+from unittest.mock import MagicMock, patch
+
+from django.test import RequestFactory, TestCase
+
+from apps.core.viewsets import CodenameViewSetMixin
 
 
 class TestCodenameViewSetMixin(TestCase):
@@ -92,7 +93,7 @@ class TestPermissionMiddlewareFallback(TestCase):
         middleware = PermissionMiddleware(lambda r: MagicMock(status_code=200))
 
         with patch.object(middleware, '_has_permission', return_value=True):
-            response = middleware(request)
+            middleware(request)
 
         # get_required_permissions should have been called
         mock_view.get_required_permissions.assert_called_once()
@@ -337,7 +338,6 @@ class TestHasPermissionFallback(TestCase):
     def test_granted_when_in_dict_and_not_in_db(self):
         """When Permission not in DB but ROLE_PERMISSIONS dict grants it, should grant."""
         from apps.perm.models import Permission
-        from apps.perm.models import ROLE_PERMISSIONS
         # Ensure codename does NOT exist in DB
         Permission.objects.filter(codename="soul.read").delete()
 

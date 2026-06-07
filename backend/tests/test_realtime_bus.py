@@ -11,7 +11,6 @@ Covers:
 import pytest
 from channels.db import database_sync_to_async
 
-
 # ------------------------------------------------------------------
 # Fixtures
 # ------------------------------------------------------------------
@@ -176,9 +175,9 @@ class TestEventServiceIntegration:
     @pytest.mark.asyncio
     async def test_workflow_created_uses_publisher(self, soul, cn_tenant):
         """log_workflow_created() creates audit + publishes via RealtimeEventPublisher."""
-        from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+        from apps.events.models import EventType, SoulEvent
         from apps.events.services import EventService
-        from apps.events.models import SoulEvent, EventType
+        from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
 
         workflow = await database_sync_to_async(ApprovalWorkflow.objects.create)(
             soul=soul,
@@ -200,8 +199,8 @@ class TestEventServiceIntegration:
     @pytest.mark.asyncio
     async def test_notify_user_uses_publisher(self, soul, cn_tenant):
         """notify_user() creates notification + publishes via RealtimeEventPublisher."""
-        from apps.notifications.models import notify_user, UserNotification
         from apps.authentication.models import User
+        from apps.notifications.models import UserNotification, notify_user
 
         user, _ = await database_sync_to_async(User.objects.get_or_create)(
             username="rt_test_user",

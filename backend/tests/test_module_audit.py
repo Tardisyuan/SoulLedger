@@ -7,12 +7,12 @@ TransactionTestCase allows on_commit callbacks to fire.
 """
 import pytest
 from django.test import TransactionTestCase
-from apps.audit.models import AuditLog, AuditAction
-from apps.souls.models import Soul, SoulState
+
+from apps.audit.models import AuditAction, AuditLog
+from apps.dispatch.models import DispatchRecord
 from apps.judgment.models import Judgment, JudgmentMethod
-from apps.karma.models import SoulRecord, RecordType
-from apps.reincarnation.models import Reincarnation
-from apps.dispatch.models import DispatchRecord, DispatchStatus
+from apps.karma.models import RecordType, SoulRecord
+from apps.souls.models import Soul
 
 
 @pytest.mark.django_db(transaction=True)
@@ -75,10 +75,11 @@ class TestKarmaAudit(TransactionTestCase):
     def test_create_soul_record_generates_audit(self):
         """SoulRecord now inherits AuditUserFields, so audit log IS created."""
         import uuid
+
         from apps.tenants.models import Tenant
         tenant = Tenant.objects.create(code=f"AUDIT_KARMA_{uuid.uuid4().hex[:8]}", display_name="Audit Karma")
         soul = Soul.objects.create(name="KarmaSoul", tenant=tenant)
-        record = SoulRecord.objects.create(
+        SoulRecord.objects.create(
             soul=soul, tenant=tenant,
             record_type=RecordType.MERIT,
             description="Good deed",
@@ -101,7 +102,7 @@ class TestDispatchAudit(TransactionTestCase):
         cn = Tenant.objects.create(code="AUDIT_CN", display_name="Audit CN")
         eu = Tenant.objects.create(code="AUDIT_EU", display_name="Audit EU")
         soul = Soul.objects.create(name="DispatchSoul", tenant=cn)
-        dispatch = DispatchRecord.objects.create(
+        DispatchRecord.objects.create(
             source_tenant=cn,
             target_tenant=eu,
             soul=soul,
@@ -121,8 +122,8 @@ class TestUserAudit(TransactionTestCase):
 
     def test_create_user_generates_audit(self):
         """Creating a user should generate an audit log."""
-        from apps.tenants.models import Tenant
         from apps.authentication.models import User
+        from apps.tenants.models import Tenant
         tenant = Tenant.objects.create(code="AUDIT_USER", display_name="Audit User")
         user = User.objects.create_user(
             username="audituser", password="test123",
@@ -194,15 +195,15 @@ class TestNotificationAudit(TransactionTestCase):
 
     def test_create_notification_generates_audit(self):
         """Creating a notification should generate an audit log."""
-        from apps.tenants.models import Tenant
-        from apps.notifications.models import UserNotification, NotificationType
         from apps.authentication.models import User
+        from apps.notifications.models import NotificationType, UserNotification
+        from apps.tenants.models import Tenant
         tenant = Tenant.objects.create(code="AUDIT_NOTIF", display_name="Audit Notif")
         user = User.objects.create_user(
             username="notifuser", password="test123",
             role="VIEWER", tenant=tenant,
         )
-        notification = UserNotification.objects.create(
+        UserNotification.objects.create(
             user=user,
             title="Test Notification",
             message="Test message",

@@ -4,9 +4,9 @@ Tests judgment creation, conclusion, retrieval, and permission controls.
 """
 import pytest
 from django.utils import timezone
-from rest_framework.test import APIClient
-from apps.judgment.models import Judgment, Verdict, JudgmentMethod
-from apps.souls.models import Soul, SoulState, Civilization
+
+from apps.judgment.models import Judgment, JudgmentMethod, Verdict
+from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
 
 

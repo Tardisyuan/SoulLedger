@@ -2,11 +2,12 @@
 REST views for Realms app.
 """
 from rest_framework import viewsets
-from apps.realms.models import Realm
-from apps.realms.serializers import RealmSerializer, RealmListSerializer, RealmLocalizedSerializer
-from apps.realms.filters import RealmFilter
+
 from apps.core.permissions import TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
+from apps.realms.filters import RealmFilter
+from apps.realms.models import Realm
+from apps.realms.serializers import RealmListSerializer, RealmLocalizedSerializer, RealmSerializer
 
 
 class RealmViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnlyModelViewSet):

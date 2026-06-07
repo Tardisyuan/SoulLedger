@@ -2,11 +2,11 @@
 API Key authentication for external death sync systems.
 """
 import hashlib
-import time
+
 from django.db import models
+from django.utils import timezone
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-from django.utils import timezone
 
 
 class APIKeyAuthentication(BaseAuthentication):
@@ -38,7 +38,7 @@ class APIKeyAuthentication(BaseAuthentication):
                 is_active=True,
             )
         except ExternalApiKey.DoesNotExist:
-            raise AuthenticationFailed("Invalid or inactive API key")
+            raise AuthenticationFailed("Invalid or inactive API key") from None
 
         if api_key.is_expired:
             raise AuthenticationFailed("API key has expired")

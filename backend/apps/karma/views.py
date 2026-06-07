@@ -2,19 +2,18 @@
 REST views for Karma app.
 """
 import csv
-import io
-from django.db.models import Count, Avg, Q, Case, When, F
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.http import HttpResponse
 
-from apps.souls.models import Soul, SoulState, Civilization
-from apps.tenants.models import Tenant
-from apps.karma.services import KarmaService
-from apps.core.permissions import TenantPermission
+from django.db.models import Count, F, Q
+from django.http import HttpResponse
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from apps.audit.models import AuditLog
+from apps.core.permissions import TenantPermission
 from apps.disposition.models import Disposition
+from apps.karma.services import KarmaService
+from apps.souls.models import Soul, SoulState
 
 
 class KarmaBalanceView(APIView):

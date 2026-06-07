@@ -2,6 +2,7 @@
 REST serializers for Events app (audit log).
 """
 from rest_framework import serializers
+
 from apps.events.models import SoulEvent
 
 

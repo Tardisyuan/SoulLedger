@@ -3,9 +3,8 @@ Tests for Role Hierarchy Inheritance
 验证角色层级继承功能
 """
 import pytest
-from django.test import TestCase
 
-from apps.perm.models import Role, Permission, RolePermission
+from apps.perm.models import Permission, Role, RolePermission
 
 
 @pytest.mark.django_db

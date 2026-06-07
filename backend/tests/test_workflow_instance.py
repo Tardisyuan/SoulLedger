@@ -5,17 +5,18 @@ Tests workflow creation from judgments, node approval, and workflow advancement.
 import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
+
+from apps.judgment.models import Judgment
+from apps.souls.models import Soul, SoulState
+from apps.tenants.models import Tenant
 from apps.workflow.models import (
-    ApprovalWorkflow,
     ApprovalNode,
+    ApprovalWorkflow,
     ApprovalWorkflowStatus,
-    NodeStatus,
     CaseType,
+    NodeStatus,
 )
 from apps.workflow.services import WorkflowService
-from apps.souls.models import Soul, SoulState, Civilization
-from apps.judgment.models import Judgment
-from apps.tenants.models import Tenant
 
 
 @pytest.mark.django_db
@@ -349,7 +350,7 @@ class TestApprovalWorkflowAPI:
             workflow=wf, node_name="节点1", node_order=1,
             node_type="TRIAL", status=NodeStatus.PENDING,
         )
-        node2 = ApprovalNode.objects.create(
+        ApprovalNode.objects.create(
             workflow=wf, node_name="节点2", node_order=2,
             node_type="TRIAL", status=NodeStatus.PENDING,
         )

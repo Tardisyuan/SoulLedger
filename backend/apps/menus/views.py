@@ -1,20 +1,21 @@
 """
 Menu views — tree structure with button resources.
 """
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Menu, MenuButton
-from .serializers import (
-    MenuSerializer,
-    MenuTreeSerializer,
-    MenuCreateUpdateSerializer,
-    MenuButtonSerializer,
-    MenuButtonCreateUpdateSerializer,
-)
 from apps.core.permissions import TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin
+
+from .models import Menu, MenuButton
+from .serializers import (
+    MenuButtonCreateUpdateSerializer,
+    MenuButtonSerializer,
+    MenuCreateUpdateSerializer,
+    MenuSerializer,
+    MenuTreeSerializer,
+)
 
 
 class MenuViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
