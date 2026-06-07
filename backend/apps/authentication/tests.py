@@ -1,8 +1,9 @@
 """
 Authentication and User model tests for M7 - User & Organization Refactoring
 """
-from django.test import TestCase
 from django.db import IntegrityError
+from django.test import TestCase
+
 from apps.authentication.models import User
 from apps.org.models import Organization
 
@@ -54,16 +55,17 @@ class UserModelTest(TestCase):
             )
 
     def test_user_organization_cascade_protection(self):
-        """测试用户与组织的关系保护"""
+        """软删除组织不触发级联，用户organization FK保留"""
         user = User.objects.create_user(
             username="testuser2",
             password="soul123456",
             organization=self.diyu,
         )
-        # 删除组织后，用户organization变为null
+        # 软删除组织：is_deleted=True，但数据库行保留，SET_NULL不触发
         self.diyu.delete()
         user.refresh_from_db()
-        self.assertIsNone(user.organization)
+        self.assertIsNotNone(user.organization)
+        self.assertTrue(self.diyu.is_deleted)
 
     def test_user_str_representation(self):
         """测试用户的字符串表示"""
