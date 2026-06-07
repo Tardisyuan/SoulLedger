@@ -5,13 +5,14 @@ Uses transaction=True so each test's DB writes are committed and visible
 to threads on separate connections.
 """
 import threading
+
 import pytest
-from django.db import connection
-from apps.tenants.models import Tenant
-from apps.souls.models import Soul, SoulState
+
+from apps.authentication.models import User
 from apps.dispatch.models import DispatchRecord, DispatchStatus
 from apps.dispatch.services import DispatchService
-from apps.authentication.models import User
+from apps.souls.models import Soul, SoulState
+from apps.tenants.models import Tenant
 
 
 @pytest.fixture

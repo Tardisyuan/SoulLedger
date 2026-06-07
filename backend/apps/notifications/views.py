@@ -1,13 +1,14 @@
 """
 Views for notifications.
 """
-from rest_framework import viewsets, status
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from apps.notifications.models import UserNotification
-from apps.notifications.serializers import UserNotificationSerializer, UserNotificationListSerializer
+
 from apps.core.permissions import TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin
+from apps.notifications.models import UserNotification
+from apps.notifications.serializers import UserNotificationListSerializer, UserNotificationSerializer
 
 
 class NotificationViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):

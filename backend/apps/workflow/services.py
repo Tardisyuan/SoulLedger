@@ -2,20 +2,20 @@
 Workflow service — creates ApprovalWorkflow instances from judgment verdicts.
 Routes to civilization-specific approval templates.
 """
-from typing import Optional
+
 from django.db import transaction
+
+from apps.judgment.models import Judgment
+from apps.souls.models import Civilization
 from apps.workflow.models import (
-    ApprovalWorkflow,
     ApprovalNode,
+    ApprovalWorkflow,
     ApprovalWorkflowStatus,
-    WorkflowTemplate,
+    CaseType,
     NodeStatus,
     NodeType,
-    CaseType,
+    WorkflowTemplate,
 )
-from apps.judgment.models import Judgment, Verdict
-from apps.souls.models import Soul, Civilization
-
 
 # Workflow templates by civilization and case type
 WORKFLOW_TEMPLATES = {
@@ -100,7 +100,7 @@ class WorkflowService:
     """
 
     @classmethod
-    def validate_civilization_case_type(cls, civilization: str, case_type: str) -> Optional[str]:
+    def validate_civilization_case_type(cls, civilization: str, case_type: str) -> str | None:
         """
         Validate that case_type is appropriate for the given civilization.
 
@@ -123,10 +123,10 @@ class WorkflowService:
     def create_from_judgment(
         cls,
         judgment: Judgment,
-        case_type: Optional[str] = None,
+        case_type: str | None = None,
         is_appeal: bool = False,
         priority: int = 0,
-    ) -> Optional[ApprovalWorkflow]:
+    ) -> ApprovalWorkflow | None:
         """
         Create an ApprovalWorkflow instance from a Judgment.
 

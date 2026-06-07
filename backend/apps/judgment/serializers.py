@@ -2,8 +2,9 @@
 REST serializers for Judgment app.
 """
 from rest_framework import serializers
-from apps.judgment.models import Judgment
+
 from apps.core.field_permissions import FieldPermissionMixin
+from apps.judgment.models import Judgment
 
 
 class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):

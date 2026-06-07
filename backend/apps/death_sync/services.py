@@ -2,10 +2,13 @@
 Death Sync Service — core business logic for external death registration.
 """
 import logging
+
 from django.db import transaction
 from django.utils import timezone
+
 from apps.death_sync.models import (
-    ExternalApiKey, DeathRegistrationRequest, DeathRegistrationStatus,
+    DeathRegistrationRequest,
+    DeathRegistrationStatus,
 )
 from apps.souls.models import Soul, SoulState
 

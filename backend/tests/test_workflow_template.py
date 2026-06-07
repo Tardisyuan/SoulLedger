@@ -3,8 +3,8 @@ Tests for WorkflowTemplate API endpoints.
 """
 import pytest
 from rest_framework.test import APIClient
+
 from apps.workflow.models import WorkflowTemplate
-from apps.tenants.models import Tenant
 
 
 @pytest.mark.django_db

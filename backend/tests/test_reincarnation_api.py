@@ -3,8 +3,9 @@ Tests for Reincarnation API endpoints.
 """
 import pytest
 from rest_framework_simplejwt.tokens import RefreshToken
-from apps.souls.models import Soul, SoulState, Civilization
+
 from apps.reincarnation.models import Reincarnation
+from apps.souls.models import Soul
 
 
 def _auth(api_client, user):

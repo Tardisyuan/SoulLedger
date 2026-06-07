@@ -1,12 +1,12 @@
 """
 Tests for Actor → User migration - M7
 """
+
 from django.test import TestCase
-from django.core.management import call_command
-from io import StringIO
+
+from apps.actors.models import Actor
 from apps.authentication.models import User
 from apps.org.models import Organization
-from apps.actors.models import Actor
 
 
 class MigrateActorsToUsersTest(TestCase):

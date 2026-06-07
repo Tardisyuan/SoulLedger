@@ -1,30 +1,27 @@
 """
 REST views for dispatch app.
 """
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from apps.dispatch.models import DispatchRecord, CrossTenantJudgment, CrossTenantJudgmentParticipant, DispatchStatus
-from apps.dispatch.serializers import (
-    DispatchRecordSerializer,
-    DispatchRecordListSerializer,
-    DispatchProposeSerializer,
-    DispatchApproveSerializer,
-    DispatchRejectSerializer,
-    DispatchExecuteSerializer,
-    CrossTenantJudgmentSerializer,
-    CrossTenantJudgmentListSerializer,
-    CrossTenantJudgmentCreateSerializer,
-    CrossTenantJudgmentParticipateSerializer,
-    CrossTenantJudgmentConcludeSerializer,
-)
-from apps.dispatch.services import DispatchService, CrossTenantJudgmentService
-from apps.dispatch.filters import DispatchFilter
-from apps.tenants.models import Tenant
+
 from apps.actors.models import Actor
-from apps.core.permissions import TenantPermission
 from apps.core.mixins import TenantCreateMixin
+from apps.core.permissions import TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
+from apps.dispatch.filters import DispatchFilter
+from apps.dispatch.models import CrossTenantJudgment, DispatchRecord, DispatchStatus
+from apps.dispatch.serializers import (
+    CrossTenantJudgmentConcludeSerializer,
+    CrossTenantJudgmentListSerializer,
+    CrossTenantJudgmentParticipateSerializer,
+    CrossTenantJudgmentSerializer,
+    DispatchRecordListSerializer,
+    DispatchRecordSerializer,
+    DispatchRejectSerializer,
+)
+from apps.dispatch.services import CrossTenantJudgmentService, DispatchService
+from apps.tenants.models import Tenant
 
 
 class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
@@ -219,7 +216,7 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
             actor = actor_qs.first()
 
         try:
-            participant = CrossTenantJudgmentService.add_participant(
+            CrossTenantJudgmentService.add_participant(
                 judgment, tenant, actor, role
             )
             # Activate judgment if it was proposed

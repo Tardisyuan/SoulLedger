@@ -3,9 +3,15 @@ Dispatch service — handles cross-tenant soul dispatching logic.
 """
 from django.db import transaction
 from django.utils import timezone
-from apps.dispatch.models import DispatchRecord, DispatchStatus, CrossTenantJudgment, CrossTenantJudgmentParticipant, JudgmentStatus
-from apps.souls.models import Soul, SoulState
-from apps.events.models import SoulEvent, EventType
+
+from apps.dispatch.models import (
+    CrossTenantJudgment,
+    CrossTenantJudgmentParticipant,
+    DispatchRecord,
+    DispatchStatus,
+    JudgmentStatus,
+)
+from apps.events.models import EventType, SoulEvent
 from apps.tenants.models import Notification
 
 

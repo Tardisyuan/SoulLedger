@@ -8,7 +8,8 @@ Signals are connected via Django's class_prepared signal when models are
 registered, so audit logging starts working before any model is saved.
 """
 import logging
-from django.db.models.signals import post_save, post_delete, pre_migrate, post_migrate
+
+from django.db.models.signals import post_delete, post_migrate, post_save, pre_migrate
 from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
@@ -21,9 +22,9 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
     """
     Invalidate permission cache and create audit log when Role or RolePermission changes.
     """
+    from apps.audit.models import AuditAction, AuditLog
+    from apps.core.request_local import get_current_request, get_current_user
     from apps.perm.cache import invalidate_role_permissions
-    from apps.audit.models import AuditLog, AuditAction
-    from apps.core.request_local import get_current_user, get_current_request
     from apps.tenants.managers import get_current_tenant
 
     # Get the role name based on the model type
@@ -275,7 +276,7 @@ def _create_audit_log(action, instance, changes=None):
     if _is_migration_context():
         return
 
-    from apps.audit.models import AuditLog, AuditAction
+    from apps.audit.models import AuditLog
 
     try:
         user = None
@@ -393,7 +394,7 @@ def create_batch_audit_log(action, instances, changes=None):
     if _is_migration_context():
         return
 
-    from apps.audit.models import AuditLog, AuditAction
+    from apps.audit.models import AuditLog
 
     try:
         user = None

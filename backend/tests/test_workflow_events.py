@@ -12,7 +12,6 @@ import pytest
 from channels.db import database_sync_to_async
 from channels.layers import get_channel_layer
 
-
 # ------------------------------------------------------------------
 # Fixtures
 # ------------------------------------------------------------------
@@ -64,9 +63,9 @@ class TestWorkflowEventService:
     @pytest.mark.asyncio
     async def test_log_workflow_created(self, soul, cn_tenant):
         """EventService.log_workflow_created() creates audit + publishes."""
-        from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+        from apps.events.models import EventType, SoulEvent
         from apps.events.services import EventService
-        from apps.events.models import SoulEvent, EventType
+        from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
 
         workflow = await database_sync_to_async(ApprovalWorkflow.objects.create)(
             soul=soul,
@@ -99,11 +98,15 @@ class TestWorkflowEventService:
     @pytest.mark.asyncio
     async def test_log_workflow_approved(self, soul, cn_tenant):
         """EventService.log_workflow_approved() creates audit entry."""
-        from apps.workflow.models import (
-            ApprovalWorkflow, ApprovalNode, ApprovalWorkflowStatus, NodeStatus, NodeType,
-        )
+        from apps.events.models import EventType, SoulEvent
         from apps.events.services import EventService
-        from apps.events.models import SoulEvent, EventType
+        from apps.workflow.models import (
+            ApprovalNode,
+            ApprovalWorkflow,
+            ApprovalWorkflowStatus,
+            NodeStatus,
+            NodeType,
+        )
 
         workflow = await database_sync_to_async(ApprovalWorkflow.objects.create)(
             soul=soul,
@@ -135,11 +138,15 @@ class TestWorkflowEventService:
     @pytest.mark.asyncio
     async def test_log_workflow_rejected(self, soul, cn_tenant):
         """EventService.log_workflow_rejected() creates audit entry."""
-        from apps.workflow.models import (
-            ApprovalWorkflow, ApprovalNode, ApprovalWorkflowStatus, NodeStatus, NodeType,
-        )
+        from apps.events.models import EventType, SoulEvent
         from apps.events.services import EventService
-        from apps.events.models import SoulEvent, EventType
+        from apps.workflow.models import (
+            ApprovalNode,
+            ApprovalWorkflow,
+            ApprovalWorkflowStatus,
+            NodeStatus,
+            NodeType,
+        )
 
         workflow = await database_sync_to_async(ApprovalWorkflow.objects.create)(
             soul=soul,
@@ -173,8 +180,8 @@ class TestWorkflowEventService:
     @pytest.mark.asyncio
     async def test_channel_layer_publish(self, soul, cn_tenant):
         """EventService publishes to channel layer."""
-        from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
         from apps.events.services import EventService
+        from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
 
         workflow = await database_sync_to_async(ApprovalWorkflow.objects.create)(
             soul=soul,

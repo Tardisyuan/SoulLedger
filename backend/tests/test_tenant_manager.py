@@ -2,14 +2,15 @@
 Tests for TenantManager (M3.3b) — automatic tenant filtering via thread-local.
 """
 import pytest
-from apps.tenants.models import Tenant
+
+from apps.souls.models import Soul
 from apps.tenants.managers import (
     TenantManager,
-    set_current_tenant,
-    get_current_tenant,
     clear_current_tenant,
+    get_current_tenant,
+    set_current_tenant,
 )
-from apps.souls.models import Soul, Civilization
+from apps.tenants.models import Tenant
 
 
 @pytest.mark.django_db

@@ -2,8 +2,8 @@
 Rate limiting for death sync API.
 Uses Redis INCR for atomic counter operations.
 """
-from rest_framework.throttling import BaseThrottle
 from django.core.cache import cache
+from rest_framework.throttling import BaseThrottle
 
 
 class ApiKeyRateThrottle(BaseThrottle):

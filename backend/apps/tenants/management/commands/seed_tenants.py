@@ -3,6 +3,7 @@ Management command to seed the three tenant records.
 Idempotent — uses get_or_create so it's safe to run multiple times.
 """
 from django.core.management.base import BaseCommand
+
 from apps.tenants.models import Tenant
 
 

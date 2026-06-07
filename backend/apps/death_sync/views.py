@@ -3,21 +3,27 @@ REST views for death_sync app.
 """
 import hashlib
 import json
+
 from django.db import IntegrityError
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from apps.death_sync.authentication import APIKeyAuthentication
 from apps.death_sync.models import (
-    ExternalApiKey, DeathRegistrationRequest, WebhookConfig,
-    WebhookDeliveryLog, DeathRegistrationStatus,
+    DeathRegistrationRequest,
+    DeathRegistrationStatus,
+    ExternalApiKey,
+    WebhookConfig,
+    WebhookDeliveryLog,
 )
 from apps.death_sync.serializers import (
-    ExternalApiKeySerializer, DeathRegistrationRequestSerializer,
-    WebhookConfigSerializer, WebhookDeliveryLogSerializer,
-    DeathRegistrationCreateSerializer, HealthSerializer,
+    DeathRegistrationCreateSerializer,
+    DeathRegistrationRequestSerializer,
+    ExternalApiKeySerializer,
+    WebhookConfigSerializer,
 )
-from apps.death_sync.authentication import APIKeyAuthentication
 
 
 class ExternalApiKeyViewSet(viewsets.ModelViewSet):
@@ -58,7 +64,6 @@ class DeathRegistrationViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """Register a death (single or batch)."""
         from apps.death_sync.services import DeathSyncService
-        from django.db import IntegrityError
 
         api_key = request.api_key
         tenant = request.tenant
@@ -197,11 +202,12 @@ class DeathSyncHealthView(APIView):
     authentication_classes = [APIKeyAuthentication]
 
     def get(self, request):
-        from django.utils import timezone
         from datetime import timedelta
 
+        from django.utils import timezone
+
         api_key = getattr(request, 'api_key', None)
-        tenant = getattr(request, 'tenant', None)
+        getattr(request, 'tenant', None)
 
         # Count pending/failed registrations in last 24h
         cutoff_24h = timezone.now() - timedelta(hours=24)
@@ -215,7 +221,7 @@ class DeathSyncHealthView(APIView):
         ).count()
 
         # Count failed webhooks in last 24h
-        from apps.death_sync.models import WebhookDeliveryLog, WebhookDeliveryStatus
+        from apps.death_sync.models import WebhookDeliveryStatus
         failed_webhooks = WebhookDeliveryLog.objects.filter(
             status=WebhookDeliveryStatus.FAILED,
             created_at__gte=cutoff_24h,

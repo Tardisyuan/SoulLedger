@@ -27,7 +27,6 @@ The registry is separate from EventBus to keep concerns decoupled:
 """
 import logging
 from collections import defaultdict
-from typing import Optional
 
 from apps.events.event_bus import DomainEventHandler, EventEnvelope
 
@@ -115,7 +114,7 @@ class DomainEventHandlerRegistry:
     # Lookup
     # ------------------------------------------------------------------
 
-    def get_handlers(self, event_type: str, domain: Optional[str] = None) -> list[DomainEventHandler]:
+    def get_handlers(self, event_type: str, domain: str | None = None) -> list[DomainEventHandler]:
         """
         Get all handlers that would process an event of this type.
 

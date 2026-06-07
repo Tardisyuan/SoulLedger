@@ -2,6 +2,7 @@
 Tests for notifications functionality.
 """
 import os
+
 import pytest
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -42,7 +43,6 @@ def judge_user(db, django_user_model, cn_tenant):
 @pytest.fixture
 def auth_client(api_client, admin_user):
     """APIClient authenticated as admin_user."""
-    import contextlib
     from apps.core import request_local as rl_module
 
     api_client.force_authenticate(user=admin_user)
@@ -57,7 +57,6 @@ def auth_client(api_client, admin_user):
 @pytest.fixture
 def judge_client(api_client, judge_user):
     """APIClient authenticated as judge_user."""
-    import contextlib
     from apps.core import request_local as rl_module
 
     api_client.force_authenticate(user=judge_user)
@@ -75,7 +74,7 @@ class TestNotificationModel:
 
     def test_create_notification(self, admin_user, cn_tenant):
         """Creating a notification should work."""
-        from apps.notifications.models import UserNotification, NotificationType
+        from apps.notifications.models import NotificationType, UserNotification
 
         notification = UserNotification.objects.create(
             user=admin_user,
@@ -92,10 +91,9 @@ class TestNotificationModel:
 
     def test_notify_user_helper(self, admin_user):
         """notify_user helper publishes to EventBus, creating notification via handler."""
-        from apps.notifications.models import notify_user, NotificationType, UserNotification
-
         # Ensure handlers are configured so the EventBus dispatches to NotificationHandler
         from apps.events.event_bus import configure_default_handlers
+        from apps.notifications.models import NotificationType, UserNotification, notify_user
         configure_default_handlers()
 
         notify_user(
@@ -126,7 +124,7 @@ class TestNotificationAPI:
 
     def test_list_notifications_authenticated(self, auth_client, admin_user):
         """GET /api/v1/notifications/ should return user's notifications."""
-        from apps.notifications.models import UserNotification, NotificationType
+        from apps.notifications.models import NotificationType, UserNotification
 
         # Create some notifications
         UserNotification.objects.create(
@@ -156,7 +154,7 @@ class TestNotificationAPI:
 
     def test_user_cannot_see_other_users_notifications(self, auth_client, judge_user, admin_user):
         """User should not see other users' notifications."""
-        from apps.notifications.models import UserNotification, NotificationType
+        from apps.notifications.models import NotificationType, UserNotification
 
         # Create notification for judge_user
         UserNotification.objects.create(
@@ -176,7 +174,7 @@ class TestNotificationAPI:
 
     def test_mark_notification_as_read(self, auth_client, admin_user):
         """POST /api/v1/notifications/{id}/mark_read/ should mark as read."""
-        from apps.notifications.models import UserNotification, NotificationType
+        from apps.notifications.models import NotificationType, UserNotification
 
         notification = UserNotification.objects.create(
             user=admin_user,
@@ -197,7 +195,7 @@ class TestNotificationAPI:
 
     def test_mark_all_notifications_as_read(self, auth_client, admin_user):
         """POST /api/v1/notifications/mark_all_read/ should mark all as read."""
-        from apps.notifications.models import UserNotification, NotificationType
+        from apps.notifications.models import NotificationType, UserNotification
 
         # Create multiple notifications
         for i in range(3):
@@ -219,7 +217,7 @@ class TestNotificationAPI:
 
     def test_notification_types(self, auth_client, admin_user):
         """All notification types should be creatable."""
-        from apps.notifications.models import UserNotification, NotificationType
+        from apps.notifications.models import NotificationType, UserNotification
 
         types = [
             NotificationType.WORKFLOW_ASSIGNED,
@@ -242,20 +240,20 @@ class TestNotificationAPI:
 
     def test_notification_ordering(self, auth_client, admin_user):
         """Notifications should be ordered by created_at descending."""
-        from apps.notifications.models import UserNotification, NotificationType
-        import time
-
-        from django.utils import timezone
         from datetime import timedelta
 
-        n1 = UserNotification.objects.create(
+        from django.utils import timezone
+
+        from apps.notifications.models import NotificationType, UserNotification
+
+        UserNotification.objects.create(
             user=admin_user,
             title="First",
             message="First",
             notification_type=NotificationType.SYSTEM,
             created_at=timezone.now() - timedelta(seconds=1),
         )
-        n2 = UserNotification.objects.create(
+        UserNotification.objects.create(
             user=admin_user,
             title="Second",
             message="Second",
@@ -283,7 +281,7 @@ class TestNotificationEdgeCases:
 
     def test_cannot_mark_other_users_notification_read(self, auth_client, judge_user, admin_user):
         """User cannot mark another user's notification as read via API."""
-        from apps.notifications.models import UserNotification, NotificationType
+        from apps.notifications.models import NotificationType, UserNotification
 
         notification = UserNotification.objects.create(
             user=judge_user,

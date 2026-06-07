@@ -2,9 +2,12 @@
 Serializers for death_sync app.
 """
 from rest_framework import serializers
+
 from apps.death_sync.models import (
-    ExternalApiKey, DeathRegistrationRequest, WebhookConfig,
-    WebhookDeliveryLog, DeathRegistrationStatus,
+    DeathRegistrationRequest,
+    ExternalApiKey,
+    WebhookConfig,
+    WebhookDeliveryLog,
 )
 
 

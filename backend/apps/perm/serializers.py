@@ -2,7 +2,8 @@
 Permission serializers
 """
 from rest_framework import serializers
-from .models import Permission, RolePermission, Role
+
+from .models import Permission, Role, RolePermission
 
 
 class PermissionSerializer(serializers.ModelSerializer):

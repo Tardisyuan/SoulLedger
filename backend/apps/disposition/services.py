@@ -2,10 +2,10 @@
 Disposition service — creates disposition from judgment verdict.
 Routes to the correct realm based on civilization and verdict.
 """
-from apps.judgment.models import Judgment, JudgmentMethod, Verdict
 from apps.disposition.models import Disposition
-from apps.realms.models import Realm, RealmType
-from apps.souls.models import Soul, Civilization
+from apps.judgment.models import Judgment, JudgmentMethod, Verdict
+from apps.realms.models import Realm
+from apps.souls.models import Civilization, Soul
 
 
 class DispositionService:
@@ -173,6 +173,7 @@ class DispositionService:
         Mark disposition as executed, trigger reincarnation.
         """
         from django.utils import timezone
+
         from apps.souls.models import SoulState
 
         disposition.is_executed = True

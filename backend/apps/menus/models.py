@@ -5,8 +5,8 @@ Tree structure with button resources — inspired by Snowy's resource system.
 Supports DIRECTORY (folder) → MENU (page) → BUTTON (action) hierarchy.
 """
 from django.db import models
+
 from apps.core.models import AuditUserFields
-from apps.tenants.managers import TenantManager
 
 
 class MenuType(models.TextChoices):

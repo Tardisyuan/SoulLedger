@@ -2,8 +2,9 @@
 REST serializers for Realms app.
 """
 from rest_framework import serializers
-from apps.realms.models import Realm
+
 from apps.core.field_permissions import FieldPermissionMixin
+from apps.realms.models import Realm
 
 
 class RealmSerializer(FieldPermissionMixin, serializers.ModelSerializer):

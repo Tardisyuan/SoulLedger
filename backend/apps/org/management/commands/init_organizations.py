@@ -3,8 +3,8 @@
 用法: python manage.py init_organizations
 """
 from django.core.management.base import BaseCommand
-from apps.org.models import Organization
 
+from apps.org.models import Organization
 
 # 预定义的组织架构数据
 INITIAL_ORGANIZATIONS = [

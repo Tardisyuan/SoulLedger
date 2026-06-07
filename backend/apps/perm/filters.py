@@ -1,7 +1,6 @@
 """
 Data scope filters for row-level permission enforcement.
 """
-from typing import Optional, List
 from django.db.models import Q
 from rest_framework.request import Request
 
@@ -63,7 +62,7 @@ class DataScopeFilter:
             return queryset.filter(combined_q)
         return queryset
 
-    def _build_q_for_scope(self, scope) -> Optional[Q]:
+    def _build_q_for_scope(self, scope) -> Q | None:
         """Build a Q object from a single RowLevelDataScope entry."""
         conditions = scope.filter_conditions or {}
         if not conditions:
@@ -86,7 +85,7 @@ class DataScopeFilter:
             result &= q
         return result
 
-    def _build_field_q(self, field_path: str, value, civilization: str = None) -> Optional[Q]:
+    def _build_field_q(self, field_path: str, value, civilization: str = None) -> Q | None:
         """
         Build a Q object for a single field condition.
 

@@ -20,8 +20,8 @@ Event Domains received:
 import json
 import logging
 
-from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+from channels.generic.websocket import AsyncWebsocketConsumer
 
 logger = logging.getLogger(__name__)
 
@@ -176,8 +176,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def _authenticate_token(self, token_str):
         """Validate JWT and return User, or None."""
+        from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
         from rest_framework_simplejwt.tokens import AccessToken
-        from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 
         try:
             token = AccessToken(token_str)

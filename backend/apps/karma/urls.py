@@ -1,11 +1,12 @@
 from django.urls import path
+
 from apps.karma.views import (
     KarmaBalanceView,
-    KarmaRecalculateView,
     KarmaEffectiveView,
+    KarmaExportStatsView,
     KarmaInheritanceView,
     KarmaOverviewStatsView,
-    KarmaExportStatsView,
+    KarmaRecalculateView,
 )
 
 urlpatterns = [

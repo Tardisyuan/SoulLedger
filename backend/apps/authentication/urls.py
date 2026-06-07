@@ -1,18 +1,19 @@
 """
 Auth URL routes.
 """
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
 from .views import (
+    LoginLogViewSet,
     LoginView,
     RefreshView,
-    logout_view,
-    register_view,
-    profile_view,
     change_password,
+    logout_view,
+    profile_view,
+    register_view,
     reset_password_request,
     set_new_password,
-    LoginLogViewSet,
 )
 
 router = DefaultRouter()

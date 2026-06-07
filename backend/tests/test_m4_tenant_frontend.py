@@ -6,7 +6,6 @@ karma stats endpoint, and settings endpoints.
 
 Uses fixtures from conftest.py to avoid rate limiting on login.
 """
-import pytest
 from apps.tenants.models import Tenant
 
 
@@ -123,7 +122,7 @@ class TestTenantHeaderInjection:
         assert eu_resp.status_code == 200
 
         cn_realms = cn_resp.json().get("results", [])
-        eu_realms = eu_resp.json().get("results", [])
+        eu_resp.json().get("results", [])
 
         # CN realms should have CHINESE civilization
         assert len(cn_realms) > 0, "No CN realms found"

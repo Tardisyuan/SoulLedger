@@ -8,13 +8,13 @@ from rest_framework.response import Response
 
 from apps.core.permissions import IsAdminPermission
 
-from .models import Permission, RolePermission, Role, DEFAULT_PERMISSIONS, ROLE_PERMISSIONS, DEFAULT_ROLES
+from .models import DEFAULT_PERMISSIONS, DEFAULT_ROLES, ROLE_PERMISSIONS, Permission, Role, RolePermission
 from .serializers import (
-    PermissionSerializer,
     PermissionCreateUpdateSerializer,
+    PermissionSerializer,
+    RoleCreateUpdateSerializer,
     RolePermissionAssignSerializer,
     RoleSerializer,
-    RoleCreateUpdateSerializer,
 )
 
 
@@ -286,7 +286,7 @@ def init_role_permissions(request):
     for role_name, perm_codenames in ROLE_PERMISSIONS.items():
         role = Role.objects.filter(name=role_name).first()
         if not role:
-            results[role_name] = f"Role not found"
+            results[role_name] = "Role not found"
             continue
 
         # Get permission objects

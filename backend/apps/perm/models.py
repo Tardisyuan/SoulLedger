@@ -2,7 +2,9 @@
 RBAC Permission models — 参考 Snowy SaToken 设计
 """
 import uuid
+
 from django.db import models
+
 from apps.core.models import AuditUserFields
 
 

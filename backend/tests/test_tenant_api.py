@@ -3,6 +3,7 @@ Tenant API tests — M3.4a
 """
 import pytest
 from rest_framework.test import APIClient
+
 from apps.tenants.models import Tenant
 
 

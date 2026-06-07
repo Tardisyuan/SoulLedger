@@ -2,7 +2,9 @@
 Actor models — deities, judges, guardians, executors across civilizations.
 """
 import uuid
+
 from django.db import models
+
 from apps.core.models import AuditUserFields
 from apps.souls.models import Civilization
 from apps.tenants.managers import TenantManager

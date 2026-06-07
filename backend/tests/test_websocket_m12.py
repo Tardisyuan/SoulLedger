@@ -6,13 +6,11 @@ Covers:
   - Auto-push on notification creation
   - Cross-user isolation
 """
-import json
 import pytest
-from channels.testing import WebsocketCommunicator
 from channels.db import database_sync_to_async
 from channels.layers import get_channel_layer
+from channels.testing import WebsocketCommunicator
 from rest_framework_simplejwt.tokens import RefreshToken
-
 
 # ------------------------------------------------------------------
 # Helpers
@@ -207,7 +205,7 @@ class TestAutoPush:
     @pytest.mark.asyncio
     async def test_notify_user_creates_db_record(self, admin_user, cn_tenant):
         """notify_user() creates DB record even if WS push fails."""
-        from apps.notifications.models import notify_user, UserNotification
+        from apps.notifications.models import UserNotification, notify_user
 
         count_before = await database_sync_to_async(
             lambda: UserNotification.objects.filter(user=admin_user).count()

@@ -7,12 +7,10 @@ Covers:
   - Permission validation (scope["permissions"] set)
   - NotificationConsumer lifecycle (connect/disconnect/heartbeat/permission refresh)
 """
-import json
 import pytest
-from channels.testing import WebsocketCommunicator
 from channels.db import database_sync_to_async
+from channels.testing import WebsocketCommunicator
 from rest_framework_simplejwt.tokens import RefreshToken
-
 
 # ------------------------------------------------------------------
 # Helpers
@@ -100,7 +98,7 @@ def judge_user(db, django_user_model, cn_tenant):
     user.set_password("test123")
     user.save()
     # Assign RBAC role with permissions
-    from apps.perm.models import Role, Permission, RolePermission
+    from apps.perm.models import Permission, Role, RolePermission
     role, _ = Role.objects.get_or_create(name="JUDGE", defaults={"display_name": "Judge"})
     # Assign judgment permissions
     for codename in ["judgment.read", "judgment.execute", "soul.read"]:
@@ -122,7 +120,7 @@ def viewer_user(db, django_user_model, cn_tenant):
     )
     user.set_password("test123")
     user.save()
-    from apps.perm.models import Role, Permission, RolePermission
+    from apps.perm.models import Permission, Role, RolePermission
     role, _ = Role.objects.get_or_create(name="VIEWER", defaults={"display_name": "Viewer"})
     # Assign read-only permissions
     for codename in ["soul.read", "karma.read", "dashboard.read"]:
@@ -199,15 +197,11 @@ class TestJWTAuthentication:
     @pytest.mark.asyncio
     async def test_expired_token_rejected(self, admin_user, cn_tenant):
         """Expired JWT → connection rejected."""
-        from django.utils import timezone
-        from datetime import timedelta
 
         # Create token then manually expire it
         token = await _make_token(admin_user, cn_tenant.code)
 
         # Verify token is valid first
-        from rest_framework_simplejwt.tokens import AccessToken
-        from rest_framework_simplejwt.exceptions import TokenError
 
         # For this test, we'll use a token with invalid signature
         # which is effectively "expired" in terms of rejection

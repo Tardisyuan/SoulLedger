@@ -3,6 +3,7 @@ Tests for tenant isolation in API endpoints.
 """
 import pytest
 from rest_framework.test import APIClient
+
 from apps.souls.models import Soul
 from apps.tenants.models import Tenant
 
@@ -81,7 +82,7 @@ class TestTenantIsolationAPI:
 
     def test_cross_tenant_karma_access_denied(self, django_user_model):
         """Karma endpoint denies access to soul from another tenant."""
-        cn_user = self._create_user("cn_karma_user", "ADMIN", self.cn, django_user_model)
+        self._create_user("cn_karma_user", "ADMIN", self.cn, django_user_model)
         eu_user = self._create_user("eu_karma_user", "ADMIN", self.eu, django_user_model)
 
         cn_soul = self._create_soul("CN Soul Karma", self.cn)

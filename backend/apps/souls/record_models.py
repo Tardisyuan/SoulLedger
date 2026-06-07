@@ -2,9 +2,11 @@
 Soul record model — merit/demerit/judgment evidence attached to a soul.
 """
 import uuid
+
 from django.db import models
-from apps.souls.models import Soul, Civilization
+
 from apps.core.models import AuditUserFields
+from apps.souls.models import Civilization, Soul
 from apps.tenants.managers import TenantManager
 
 
@@ -121,7 +123,6 @@ class SoulRecord(AuditUserFields, models.Model):
                 for item in items:
                     SoulRecord.objects.create(soul=soul, ...)
         """
-        import contextvars
 
         class BatchContext:
             def __enter__(self_batch):

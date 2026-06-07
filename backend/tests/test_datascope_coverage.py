@@ -4,12 +4,13 @@ Covers: Reincarnation, Realm, Actor, SoulEvent, WorkflowTemplate, ApprovalWorkfl
 """
 import pytest
 from rest_framework_simplejwt.tokens import RefreshToken
-from apps.souls.models import Soul, Civilization
-from apps.reincarnation.models import Reincarnation
-from apps.realms.models import Realm, RealmType
+
 from apps.actors.models import Actor, ActorRole
-from apps.events.models import SoulEvent, EventType
-from apps.workflow.models import WorkflowTemplate, ApprovalWorkflow, ApprovalWorkflowStatus
+from apps.events.models import EventType, SoulEvent
+from apps.realms.models import Realm, RealmType
+from apps.reincarnation.models import Reincarnation
+from apps.souls.models import Civilization, Soul
+from apps.workflow.models import WorkflowTemplate
 
 
 def _auth(api_client, user):
@@ -45,12 +46,12 @@ class TestRealmDataScope:
 
     def test_cn_user_sees_only_cn_realms(self, api_client, admin_user, cn_tenant, eu_tenant):
         """CN admin should only see CN realms."""
-        cn_realm = Realm.objects.create(
+        Realm.objects.create(
             realm_code="CN_REALM", civilization=Civilization.CHINESE,
             name_local="CN地域", name_en="CN Realm",
             realm_type=RealmType.HELL, tenant=cn_tenant,
         )
-        eu_realm = Realm.objects.create(
+        Realm.objects.create(
             realm_code="EU_REALM", civilization=Civilization.EUROPEAN,
             name_local="EU Realm", name_en="EU Realm",
             realm_type=RealmType.HELL, tenant=eu_tenant,
@@ -69,11 +70,11 @@ class TestActorDataScope:
 
     def test_cn_user_sees_only_cn_actors(self, api_client, admin_user, cn_tenant, eu_tenant):
         """CN admin should only see CN actors."""
-        cn_actor = Actor.objects.create(
+        Actor.objects.create(
             name="CN Actor", role=ActorRole.JUDGE,
             civilization=Civilization.CHINESE, tenant=cn_tenant,
         )
-        eu_actor = Actor.objects.create(
+        Actor.objects.create(
             name="EU Actor", role=ActorRole.JUDGE,
             civilization=Civilization.EUROPEAN, tenant=eu_tenant,
         )

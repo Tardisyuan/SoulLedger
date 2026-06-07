@@ -2,7 +2,9 @@
 Audit event log — immutable record of all soul state changes.
 """
 import uuid
+
 from django.db import models
+
 from apps.core.models import AuditUserFields
 from apps.tenants.managers import TenantManager
 

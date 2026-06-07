@@ -2,11 +2,9 @@
 Tests for karma stats endpoints.
 """
 import pytest
-from rest_framework.test import APIClient
 
+from apps.audit.models import AuditAction, AuditLog
 from apps.souls.models import Soul, SoulState
-from apps.audit.models import AuditLog, AuditAction
-from apps.tenants.models import Tenant
 
 
 @pytest.mark.django_db

@@ -4,11 +4,12 @@ REST views for Organization app.
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+
+from apps.core.mixins import TenantQuerySetMixin
+from apps.core.permissions import TenantPermission
+from apps.core.viewsets import AuditUserViewSetMixin
 from apps.org.models import Organization
 from apps.org.serializers import OrganizationSerializer
-from apps.core.permissions import TenantPermission
-from apps.core.mixins import TenantQuerySetMixin
-from apps.core.viewsets import AuditUserViewSetMixin
 
 
 class OrganizationViewSet(TenantQuerySetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):

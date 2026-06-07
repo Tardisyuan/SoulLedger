@@ -1,13 +1,14 @@
 """
 URL configuration for the social domain.
 """
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
 from apps.social.views import (
-    PostViewSet,
     CommentViewSet,
-    ReactionViewSet,
     FollowViewSet,
+    PostViewSet,
+    ReactionViewSet,
     UserProfileViewSet,
 )
 

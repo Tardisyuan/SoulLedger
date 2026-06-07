@@ -11,7 +11,6 @@ Tests:
 import pytest
 from channels.db import database_sync_to_async
 
-
 # ------------------------------------------------------------------
 # Fixtures
 # ------------------------------------------------------------------
@@ -57,7 +56,7 @@ class TestEventBusPublish:
 
     def test_publish_creates_envelope(self):
         """publish() constructs an EventEnvelope and dispatches."""
-        from apps.events.event_bus import EventBus, EventEnvelope
+        from apps.events.event_bus import EventBus
 
         received = []
 
@@ -244,7 +243,6 @@ class TestHandlerRegistration:
 
     def test_handler_count(self):
         """handler_count() returns correct counts on a fresh registry."""
-        from apps.events.event_bus import EventBus
         from apps.events.handlers.registry import DomainEventHandlerRegistry
 
         # Use a fresh registry to avoid side effects on the global one
@@ -304,9 +302,9 @@ class TestAuditHandlerIntegration:
     @pytest.mark.asyncio
     async def test_workflow_event_creates_audit_log(self, soul, cn_tenant):
         """publish_workflow() → AuditHandler → SoulEvent record."""
-        from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
         from apps.events.event_bus import event_bus
-        from apps.events.models import SoulEvent, EventType
+        from apps.events.models import EventType, SoulEvent
+        from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
 
         workflow = await database_sync_to_async(ApprovalWorkflow.objects.create)(
             soul=soul,
@@ -346,9 +344,9 @@ class TestEventServiceWorkflowIntegration:
     @pytest.mark.asyncio
     async def test_log_workflow_created(self, soul, cn_tenant):
         """EventService.log_workflow_created() creates audit + publishes."""
-        from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
+        from apps.events.models import EventType, SoulEvent
         from apps.events.services import EventService
-        from apps.events.models import SoulEvent, EventType
+        from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
 
         workflow = await database_sync_to_async(ApprovalWorkflow.objects.create)(
             soul=soul,
@@ -375,11 +373,15 @@ class TestEventServiceWorkflowIntegration:
     @pytest.mark.asyncio
     async def test_log_workflow_approved(self, soul, cn_tenant):
         """EventService.log_workflow_approved() creates audit entry."""
-        from apps.workflow.models import (
-            ApprovalWorkflow, ApprovalNode, ApprovalWorkflowStatus, NodeStatus, NodeType,
-        )
+        from apps.events.models import EventType, SoulEvent
         from apps.events.services import EventService
-        from apps.events.models import SoulEvent, EventType
+        from apps.workflow.models import (
+            ApprovalNode,
+            ApprovalWorkflow,
+            ApprovalWorkflowStatus,
+            NodeStatus,
+            NodeType,
+        )
 
         workflow = await database_sync_to_async(ApprovalWorkflow.objects.create)(
             soul=soul,
@@ -413,11 +415,15 @@ class TestEventServiceWorkflowIntegration:
     @pytest.mark.asyncio
     async def test_log_workflow_rejected(self, soul, cn_tenant):
         """EventService.log_workflow_rejected() creates audit entry."""
-        from apps.workflow.models import (
-            ApprovalWorkflow, ApprovalNode, ApprovalWorkflowStatus, NodeStatus, NodeType,
-        )
+        from apps.events.models import EventType, SoulEvent
         from apps.events.services import EventService
-        from apps.events.models import SoulEvent, EventType
+        from apps.workflow.models import (
+            ApprovalNode,
+            ApprovalWorkflow,
+            ApprovalWorkflowStatus,
+            NodeStatus,
+            NodeType,
+        )
 
         workflow = await database_sync_to_async(ApprovalWorkflow.objects.create)(
             soul=soul,
@@ -461,7 +467,6 @@ class TestChannelNamingIntegration:
 
     def test_tenant_group_consistent(self):
         from apps.events.realtime import ChannelNaming
-        from apps.events.handlers.websocket_handler import WebSocketHandler
 
         # ChannelNaming and WebSocketHandler use the same convention
         group = ChannelNaming.tenant_group("CN_DIYU")

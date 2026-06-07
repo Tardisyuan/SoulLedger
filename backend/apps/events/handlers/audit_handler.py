@@ -6,6 +6,7 @@ Replaces: EventService.log() and its convenience methods.
 Only handles events that carry a soul_id in their payload.
 """
 import logging
+
 from apps.events.event_bus import DomainEventHandler, EventEnvelope
 
 logger = logging.getLogger(__name__)

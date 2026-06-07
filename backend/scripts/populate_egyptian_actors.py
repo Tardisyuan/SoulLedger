@@ -2,6 +2,7 @@
 """Populate Egyptian underworld judicial actors."""
 import os
 import sys
+
 import django
 
 # Setup Django
@@ -12,6 +13,7 @@ django.setup()
 from apps.actors.models import Actor
 from apps.realms.models import Realm
 from apps.tenants.models import Tenant
+
 
 def main():
     # Get realm IDs
@@ -101,13 +103,13 @@ def main():
                 'name_zh': name_zh,
                 'name_en': name_en,
                 'name_egy': name_egy,
-                'title': f'Judge of the Hall of Two Truths',
+                'title': 'Judge of the Hall of Two Truths',
                 'title_zh': '真理大厅审判者',
                 'title_en': f'Judge #{i+1} of the Forty-Two',
                 'role': 'JUDGE',
                 'civilization': 'EGYPTIAN',
                 'realm': hall,
-                'description': f'One of the 42 Judges of the Hall of Two Truths who witness the weighing of hearts.',
+                'description': 'One of the 42 Judges of the Hall of Two Truths who witness the weighing of hearts.',
                 'tenant': tenant,
             }
         )

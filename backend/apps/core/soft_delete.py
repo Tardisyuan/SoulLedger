@@ -2,9 +2,9 @@
 Soft delete mixin for SoulLedger models.
 Provides safe deletion with audit trail.
 """
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from django.conf import settings
 
 
 class SoftDeleteMixin(models.Model):

@@ -12,12 +12,12 @@ Actor -> User 迁移脚本
 - 设置默认密码：PBKDF2(soul123456)
 - 根据 Actor.role 自动分配权限角色
 """
-from django.core.management.base import BaseCommand
 from django.contrib.auth.hashers import make_password
+from django.core.management.base import BaseCommand
+
 from apps.actors.models import Actor
 from apps.authentication.models import User, UserRole
 from apps.org.models import Organization
-
 
 # Actor.civilization -> Organization.code 映射
 CIVILIZATION_ORG_MAP = {

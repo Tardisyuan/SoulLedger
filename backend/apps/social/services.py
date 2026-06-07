@@ -4,7 +4,8 @@ Handles denormalized counters, follow/unfollow, and profile sync.
 """
 from django.db import transaction
 from django.db.models import F
-from apps.social.models import Post, Comment, Reaction, Follow, UserProfile
+
+from apps.social.models import Comment, Follow, Post, Reaction, UserProfile
 
 
 class PostService:

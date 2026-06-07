@@ -2,8 +2,8 @@
 Audit log models - 操作审计追溯
 """
 from django.db import models
+
 from apps.core.models import AuditUserFields
-from apps.tenants.managers import TenantManager
 
 
 class AuditAction(models.TextChoices):

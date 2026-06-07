@@ -5,7 +5,8 @@ Usage:
     python manage.py seed_field_permissions
 """
 from django.core.management.base import BaseCommand
-from apps.perm.models import Role, FieldPermission
+
+from apps.perm.models import FieldPermission, Role
 
 
 class Command(BaseCommand):

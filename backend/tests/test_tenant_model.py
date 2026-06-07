@@ -2,8 +2,8 @@
 Tenant model tests — M3.1a
 """
 import pytest
-from django.db import IntegrityError
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 
 
 @pytest.mark.django_db
@@ -47,7 +47,6 @@ class TestTenantModel:
     def test_code_max_length(self):
         """Code field is max 50 characters."""
         from apps.tenants.models import Tenant
-        from django.core.exceptions import ValidationError
 
         long_code = "X" * 51
         tenant = Tenant(code=long_code, display_name="Test")

@@ -26,8 +26,7 @@ Usage:
 """
 import logging
 from abc import ABC, abstractmethod
-from collections import defaultdict
-from typing import Any, Callable, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +59,9 @@ class EventEnvelope:
         event_type: str,
         payload: dict,
         domain: str,
-        tenant_code: Optional[str] = None,
-        user_ids: Optional[list[int]] = None,
-        permission: Optional[str] = None,
+        tenant_code: str | None = None,
+        user_ids: list[int] | None = None,
+        permission: str | None = None,
         actor: str = "system",
     ) -> None:
         self.event_type = event_type
@@ -174,9 +173,9 @@ class EventBus:
         event_type: str,
         payload: dict,
         domain: str,
-        tenant_code: Optional[str] = None,
-        user_ids: Optional[list[int]] = None,
-        permission: Optional[str] = None,
+        tenant_code: str | None = None,
+        user_ids: list[int] | None = None,
+        permission: str | None = None,
         actor: str = "system",
     ) -> None:
         """
@@ -215,8 +214,8 @@ class EventBus:
         self,
         user_id: int,
         notification_data: dict,
-        tenant_code: Optional[str] = None,
-        permission: Optional[str] = "notification.read",
+        tenant_code: str | None = None,
+        permission: str | None = "notification.read",
     ) -> None:
         """Publish a notification event to a specific user."""
         self.publish(
@@ -232,9 +231,9 @@ class EventBus:
         self,
         event_type: str,
         payload: dict,
-        tenant_code: Optional[str] = None,
-        user_ids: Optional[list[int]] = None,
-        permission: Optional[str] = "workflow.read",
+        tenant_code: str | None = None,
+        user_ids: list[int] | None = None,
+        permission: str | None = "workflow.read",
     ) -> None:
         """Publish a workflow event."""
         self.publish(
@@ -250,9 +249,9 @@ class EventBus:
         self,
         event_type: str,
         payload: dict,
-        tenant_code: Optional[str] = None,
-        user_ids: Optional[list[int]] = None,
-        permission: Optional[str] = "dispatch.read",
+        tenant_code: str | None = None,
+        user_ids: list[int] | None = None,
+        permission: str | None = "dispatch.read",
     ) -> None:
         """Publish a dispatch event."""
         self.publish(
@@ -268,8 +267,8 @@ class EventBus:
         self,
         event_type: str,
         payload: dict,
-        tenant_code: Optional[str] = None,
-        permission: Optional[str] = "audit.read",
+        tenant_code: str | None = None,
+        permission: str | None = "audit.read",
     ) -> None:
         """Publish a death sync event."""
         self.publish(
@@ -313,11 +312,11 @@ def configure_default_handlers() -> None:
         - notification:   NotificationHandler (UserNotification + WS)
         - all domains:    WebhookHandler (external delivery)
     """
-    from apps.events.handlers.registry import handler_registry
     from apps.events.handlers.audit_handler import AuditHandler
-    from apps.events.handlers.websocket_handler import WebSocketHandler
     from apps.events.handlers.notification_handler import NotificationHandler
+    from apps.events.handlers.registry import handler_registry
     from apps.events.handlers.webhook_handler import WebhookHandler
+    from apps.events.handlers.websocket_handler import WebSocketHandler
 
     counts = handler_registry.handler_count()
     if counts["total"] > 0:

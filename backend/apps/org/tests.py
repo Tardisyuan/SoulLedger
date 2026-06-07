@@ -1,8 +1,9 @@
 """
 Organization model tests for M7 - User & Organization Refactoring
 """
-from django.test import TestCase
 from django.db import IntegrityError
+from django.test import TestCase
+
 from apps.org.models import Organization
 
 
@@ -72,13 +73,13 @@ class OrganizationModelTest(TestCase):
 
     def test_organization_ordering(self):
         """测试组织排序"""
-        org1 = Organization.objects.create(
+        Organization.objects.create(
             name="第二殿",
             code="DIYU_02",
             category="CHINESE",
             level=1,
         )
-        org2 = Organization.objects.create(
+        Organization.objects.create(
             name="第一殿",
             code="DIYU_01",
             category="CHINESE",

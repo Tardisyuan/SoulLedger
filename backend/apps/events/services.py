@@ -4,8 +4,8 @@ Event logging service — delegates to EventBus.
 All methods maintain their original signatures for backward compatibility.
 New code should use ``event_bus.publish_soul_event()`` directly.
 """
-from apps.souls.models import Soul
 from apps.events.event_bus import event_bus
+from apps.souls.models import Soul
 
 
 class EventService:

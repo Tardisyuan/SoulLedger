@@ -37,8 +37,10 @@ Middleware Position:
         "apps.core.middleware.PermissionMiddleware",
 """
 from functools import wraps
+
 from django.http import JsonResponse
-from apps.core.request_local import set_current_user, set_current_request, clear_current_user
+
+from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 
 
 class PermissionMiddleware:
@@ -139,7 +141,6 @@ class PermissionMiddleware:
         if self._current_user:
             return check_permission(self._current_user, codename)
         # Fallback for direct role-based calls (e.g., tests)
-        from apps.core.permissions import user_has_permission
         from types import SimpleNamespace
         fake_user = SimpleNamespace(is_authenticated=True, role=role)
         return check_permission(fake_user, codename)

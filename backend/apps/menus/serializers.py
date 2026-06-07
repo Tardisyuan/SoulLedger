@@ -2,6 +2,7 @@
 Menu serializers — tree structure with button resources.
 """
 from rest_framework import serializers
+
 from .models import Menu, MenuButton
 
 

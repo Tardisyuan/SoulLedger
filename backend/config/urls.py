@@ -1,12 +1,13 @@
 """
 URL configuration for SoulLedger project.
 """
-from django.contrib import admin
-from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from rest_framework.routers import DefaultRouter
+from django.contrib import admin
+from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from rest_framework.routers import DefaultRouter
+
 from apps.authentication.views import UserViewSet
 from apps.core.health import HealthCheck, HealthCheckDetailed
 

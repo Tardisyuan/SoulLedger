@@ -4,8 +4,10 @@ Permission Export/Import utilities.
 Export role-permission configuration as JSON for backup/migration.
 """
 import json
+
 from django.http import HttpResponse
-from apps.perm.models import Role, RolePermission, Permission, FieldPermission, RowLevelDataScope
+
+from apps.perm.models import FieldPermission, Permission, Role, RolePermission, RowLevelDataScope
 
 
 def export_permissions():

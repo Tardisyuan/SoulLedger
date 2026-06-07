@@ -3,6 +3,7 @@ Realm FilterSet — filtering, search, and ordering for Realm API.
 """
 import django_filters as filters
 from django.db.models import Q
+
 from apps.realms.models import Realm, RealmType
 from apps.souls.models import Civilization
 

@@ -2,8 +2,9 @@
 Tests for Realm and Actor API endpoints.
 """
 import pytest
-from apps.realms.models import Realm, RealmType
+
 from apps.actors.models import Actor, ActorRole
+from apps.realms.models import Realm, RealmType
 from apps.souls.models import Civilization
 
 

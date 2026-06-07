@@ -1,4 +1,5 @@
 from rest_framework import routers
+
 from apps.reincarnation.views import ReincarnationViewSet
 
 router = routers.DefaultRouter()

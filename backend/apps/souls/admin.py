@@ -2,6 +2,7 @@
 Django admin registrations for Souls app.
 """
 from django.contrib import admin
+
 from apps.souls.models import Soul
 from apps.souls.record_models import SoulRecord
 

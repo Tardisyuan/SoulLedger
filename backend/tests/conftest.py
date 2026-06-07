@@ -2,9 +2,9 @@
 Pytest configuration + fixtures for SoulLedger API tests.
 """
 import os
+
 import pytest
 from rest_framework.test import APIClient
-
 
 # Ensure DJANGO_SETTINGS_MODULE is set
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")

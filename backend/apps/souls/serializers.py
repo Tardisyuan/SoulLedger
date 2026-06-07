@@ -2,6 +2,7 @@
 REST serializers for Soul app.
 """
 from rest_framework import serializers
+
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
 

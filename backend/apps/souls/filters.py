@@ -3,7 +3,8 @@ Soul FilterSet — filtering, search, and ordering for Soul API.
 """
 import django_filters as filters
 from django.db.models import Q
-from apps.souls.models import Soul, SoulState, Civilization
+
+from apps.souls.models import Civilization, Soul, SoulState
 
 
 class SoulFilter(filters.FilterSet):

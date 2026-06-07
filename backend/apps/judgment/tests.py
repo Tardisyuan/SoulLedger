@@ -1,11 +1,12 @@
 """
 Tests for judgment app - Soul judgment proceedings
 """
-from django.test import TestCase
 from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
+from django.test import TestCase
 from rest_framework import status
-from apps.souls.models import Soul, SoulState, Civilization
+from rest_framework.test import APIClient
+
+from apps.souls.models import Civilization, Soul, SoulState
 from apps.tenants.models import Tenant
 
 User = get_user_model()

@@ -1,8 +1,8 @@
 """
 Reincarnation service — executes rebirth cycles.
 """
-from apps.souls.models import Soul, SoulState
 from apps.disposition.models import Disposition
+from apps.souls.models import Soul, SoulState
 
 
 class ReincarnationService:
@@ -22,7 +22,6 @@ class ReincarnationService:
         )
         # Log domain event
         from apps.events.services import EventService
-        from apps.reincarnation.models import Reincarnation
         # The reincarnation record is created in complete_rebirth, log with disposition info
         EventService.log(disposition.soul, "REINCARNATION_TRIGGERED", {
             "disposition_id": str(disposition.id),
@@ -46,8 +45,9 @@ class ReincarnationService:
         4. Transition soul back to ALIVE with new identity
         """
         from django.db import transaction
-        from apps.reincarnation.models import Reincarnation
+
         from apps.events.services import EventService
+        from apps.reincarnation.models import Reincarnation
 
         # Determine target realm from disposition
         target_realm = ""

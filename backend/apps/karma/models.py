@@ -8,7 +8,7 @@ karma-domain interface.
 TODO (M8-2): Move SoulRecord physically to this file and create a proper
              app_label migration.
 """
-from apps.souls.record_models import SoulRecord, RecordType, RecordCategory
+from apps.souls.record_models import RecordCategory, RecordType, SoulRecord
 
 # Canonical alias for karma-domain usage
 KarmaRecord = SoulRecord

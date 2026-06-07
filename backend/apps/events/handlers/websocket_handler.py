@@ -8,6 +8,7 @@ Delivers to:
     - Per-user targeted delivery (rt_user_{id})
 """
 import logging
+
 from apps.events.event_bus import DomainEventHandler, EventEnvelope
 
 logger = logging.getLogger(__name__)
@@ -27,8 +28,9 @@ class WebSocketHandler(DomainEventHandler):
 
     def handle(self, envelope: EventEnvelope) -> None:
         try:
-            from channels.layers import get_channel_layer
             from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+
             from apps.events.realtime import ChannelNaming
 
             channel_layer = get_channel_layer()

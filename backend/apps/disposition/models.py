@@ -2,10 +2,12 @@
 Disposition model — where a soul goes after judgment.
 """
 import uuid
+
 from django.db import models
+
 from apps.core.models import AuditUserFields
-from apps.souls.models import Soul
 from apps.judgment.models import Judgment
+from apps.souls.models import Soul
 from apps.tenants.managers import TenantManager
 
 

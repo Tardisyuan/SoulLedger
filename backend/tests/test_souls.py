@@ -2,9 +2,6 @@
 Tests for Karma API endpoints.
 """
 import pytest
-from rest_framework.test import APIClient
-from apps.souls.models import Soul, SoulState
-from apps.tenants.models import Tenant
 
 
 @pytest.mark.django_db

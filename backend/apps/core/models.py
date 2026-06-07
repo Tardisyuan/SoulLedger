@@ -4,8 +4,8 @@ Core mixins for SoulLedger models.
 from django.db import models
 from django.utils import timezone
 
-from .soft_delete import SoftDeleteMixin
 from .request_local import get_current_user
+from .soft_delete import SoftDeleteMixin
 
 
 class AuditUserFields(SoftDeleteMixin, models.Model):

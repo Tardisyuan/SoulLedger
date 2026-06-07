@@ -4,9 +4,9 @@ Custom QuerySet and Manager for Soul model.
 Encapsulates karma-related filtering and annotation logic
 that was previously in SoulViewSet.get_queryset().
 """
-from django.db.models import QuerySet, F, ExpressionWrapper, IntegerField
-from apps.tenants.managers import TenantManager
+from django.db.models import ExpressionWrapper, F, IntegerField, QuerySet
 
+from apps.tenants.managers import TenantManager
 
 CIVILIZATION_TENANT_MAP = {
     'CHINESE': 'CN_DIYU',

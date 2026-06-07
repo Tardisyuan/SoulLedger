@@ -14,11 +14,11 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django_asgi_app = get_asgi_application()
 
 from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.auth import AuthMiddlewareStack
+
 from apps.core.ws_auth import JWTAuthMiddleware
-from apps.core.ws_tenant import TenantMiddleware
 from apps.core.ws_permissions import PermissionMiddleware
 from apps.core.ws_routing import websocket_urlpatterns
+from apps.core.ws_tenant import TenantMiddleware
 
 
 def _build_ws_middleware_chain():

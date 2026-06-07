@@ -1,4 +1,5 @@
 from rest_framework import routers
+
 from apps.events.views import SoulEventViewSet
 
 router = routers.DefaultRouter()

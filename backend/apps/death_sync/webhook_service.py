@@ -1,18 +1,20 @@
 """
 Webhook delivery service — handles webhook sending, signing, and retry logic.
 """
-import json
-import time
-import logging
 import ipaddress
+import json
+import logging
 import socket
+import time
 from urllib.parse import urlparse
+
 import requests
 from django.conf import settings
 from django.utils import timezone
+
 from apps.death_sync.models import (
-    WebhookConfig, WebhookDeliveryLog, WebhookDeliveryStatus,
-    DeathRegistrationRequest,
+    WebhookDeliveryLog,
+    WebhookDeliveryStatus,
 )
 from apps.death_sync.signing import sign_payload
 
@@ -55,9 +57,9 @@ def _validate_webhook_url(url):
     try:
         resolved = socket.getaddrinfo(hostname, None)
     except socket.gaierror:
-        raise ValueError(f"Could not resolve webhook hostname: {hostname}")
+        raise ValueError(f"Could not resolve webhook hostname: {hostname}") from None
 
-    for family, _, _, _, sockaddr in resolved:
+    for _family, _, _, _, sockaddr in resolved:
         ip = ipaddress.ip_address(sockaddr[0])
         for network in _BLOCKED_NETWORKS:
             if ip in network:

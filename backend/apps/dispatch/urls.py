@@ -1,9 +1,10 @@
 """
 URL configuration for dispatch app.
 """
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from apps.dispatch.views import DispatchRecordViewSet, CrossTenantJudgmentViewSet
+
+from apps.dispatch.views import CrossTenantJudgmentViewSet, DispatchRecordViewSet
 
 router = DefaultRouter()
 router.register(r"records", DispatchRecordViewSet, basename="dispatch")
