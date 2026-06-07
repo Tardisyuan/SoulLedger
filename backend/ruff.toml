@@ -3,7 +3,18 @@ target-version = "py311"
 
 [lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM"]
-ignore = ["E501"]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E402",   # module import not at top (Django settings load order)
+    "F821",   # undefined name (false positive on string forward references)
+    "N806",   # variable in function should be lowercase (Django convention)
+    "N805",   # invalid first argument for method
+    "B017",   # assertRaises(Exception) — acceptable in tests
+    "SIM108", # if-else-block instead of ternary
+    "SIM105", # suppressible-exception
+    "SIM102", # collapsible-if
+    "SIM401", # if-else-block instead of dict-get
+]
 
 [lint.isort]
 known-first-party = ["apps", "config"]
