@@ -18,11 +18,11 @@
 - permissions migration 修复
 - TypeScript 编译清理
 
-### M7 DDD Refactoring (2026-05-29)
+### M7 DDD 重构 (2026-05-29)
 - P1: 统一权限检查 (`apps/perm/checker.py`)
 - P2: SoulRecord 归位 (`karma/models.py`)
 - P3: DispatchRecord + CrossTenantJudgment 状态机
-- P4: Domain Events 补发 (JUDGMENT_CONCLUDED, KARMA_RECALCULATED, etc.)
+- P4: Domain Events 补发 (JUDGMENT_CONCLUDED, KARMA_RECALCULATED, 等)
 - P5: JudgmentConclusionService 拆分 God method
 - P6: WorkflowTemplate DB-first 查询
 
@@ -41,52 +41,60 @@
 - 架构一致性审查
 - 报告: ENGINEERING_EXCELLENCE_REPORT.md
 
+### M10 搜索与过滤系统 (2026-06-06)
+- 搜索 & 过滤 foundation
+- Actors & Realms search/filter integration
+- Karma module search/filter integration
+- Workflow & Dispatch search/filter integration
+- Search audit — fix 6 failures + performance report
+
+### M11 死亡同步 API (2026-06-06)
+- Death Sync Foundation Layer
+- Death Registration API + service + tests
+- Webhook System with HMAC signing, retry, Celery tasks
+- Reliability layer: throttle, health metrics, tests
+- M11 audit — deterministic idempotency, transaction, admin permission, SSRF
+
+### M12 WebSocket 重构 (2026-06-06)
+- WebSocket infrastructure — auth, permissions, routing, ASGI
+- EventBus + HandlerRegistry + notification consumer + realtime
+- WebSocket provider, SocialEventBus, responsive layout, WS client
+- Architecture Readiness Review Report
+
+### M13 社交功能 (2026-06-08)
+- Backend: Post, Comment, Reaction, Follow, UserProfile models + API
+- Backend: 133 tests (models, views, services, permissions)
+- Frontend: Social API module, TanStack Query hooks
+- Frontend: 5 components (PostCard, CommentThread, ReactionBar, FollowButton, ProfileCard)
+- Frontend: 4 pages (Feed, Post Detail, Profile, Follows)
+- Sidebar navigation entry (Social menu)
+- Data migration: 0007_add_social_menu
+
+### M14 Engineering Stabilization (2026-06-08)
+- Pre-commit hook fix (path handling bug)
+- CLAUDE.md aligned with CI pipeline
+- Documentation consolidation (4 docs → 1 claude-reference.md)
+- Context footprint reduction (11.6KB → 6.9KB, -41%)
+- MILESTONES.md reconciliation
+
 ---
 
 ## 待开发
 
-### M10 搜索与过滤系统
-**目标**: 所有列表页面统一搜索和过滤能力
+### M15 测试覆盖率提升
+**目标**: 后端测试覆盖率从 23% 提升至 40%+
 
-| 页面 | 当前状态 | 需要添加 |
-|------|----------|----------|
-| souls | ✅ 已有 | - |
-| judgment | ✅ 已有 | - |
-| users | ✅ 已有 | - |
-| **actors** | ❌ 无 | 搜索框 + 文明/角色类型过滤 |
-| **realms** | ❌ 无 | 搜索框 + 文明/realm类型/层级过滤 |
-| **karma** | ❌ 无 | 灵魂搜索 + 类别/时间范围过滤 |
-| **workflow** | ❌ 无 | 搜索框 + 状态/类型过滤 |
-| **dispatch** | ❌ 无 | 搜索框 + 状态过滤 |
+详见 `docs/coverage-roadmap.md`
 
-### M11 死亡同步 API
-**目标**: 外部系统接入灵魂同步
+### M16 i18n 与 UX 完善
+**目标**: 国际化翻译 + 社交功能完善
 
 | 任务 | 优先级 |
 |------|--------|
-| X-API-Key header 认证 | P0 |
-| 批次大小限制 ≤100 | P1 |
-| id_number 加密传输 | P1 |
-| source_id 幂等去重 | P1 |
-
-### M12 WebSocket 重构
-**目标**: 实时通知系统
-
-| 任务 | 优先级 |
-|------|--------|
-| JWT 改用 header 认证 | P0 |
-| 消息 ID 去重/ACK | P1 |
-| 指数退避重连 | P1 |
-| 离线消息队列 | P2 |
-
-### M13 社交功能
-**目标**: 朋友圈 + 聊天 + 举报
-
-| 任务 |
-|------|
-| 朋友圈发布/评论/点赞 |
-| 灵魂间实时聊天 |
-| 举报/拉黑机制 |
+| i18n 翻译文件 (中/英) | P1 |
+| Profile 编辑 UI | P1 |
+| Delete post/comment UI | P1 |
+| Social MenuButton permissions | P2 |
 
 ---
 
@@ -99,11 +107,14 @@
 | M7 | DDD 重构 | ✅ 完成 |
 | M8 | RC Closure | ✅ 完成 |
 | M9 | 工程质量 | ✅ 完成 |
-| M10 | 搜索与过滤 | 待开发 |
-| M11 | 死亡同步 API | 待开发 |
-| M12 | WebSocket 重构 | 待开发 |
-| M13 | 社交功能 | 待开发 |
+| M10 | 搜索与过滤 | ✅ 完成 |
+| M11 | 死亡同步 API | ✅ 完成 |
+| M12 | WebSocket 重构 | ✅ 完成 |
+| M13 | 社交功能 | ✅ 完成 |
+| M14 | 工程稳定化 | ✅ 完成 |
+| M15 | 测试覆盖率 | 待开发 |
+| M16 | i18n 与 UX | 待开发 |
 
 ---
 
-*更新日期: 2026-05-30*
+*更新日期: 2026-06-08*
