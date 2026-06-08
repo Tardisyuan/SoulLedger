@@ -70,23 +70,16 @@
 - Sidebar navigation entry (Social menu)
 - Data migration: 0007_add_social_menu
 
-### M14 Engineering Stabilization (2026-06-08)
-- Pre-commit hook fix (path handling bug)
-- CLAUDE.md aligned with CI pipeline
-- Documentation consolidation (4 docs → 1 claude-reference.md)
-- Context footprint reduction (11.6KB → 6.9KB, -41%)
-- MILESTONES.md reconciliation
-
 ---
 
 ## 待开发
 
-### M15 测试覆盖率提升
+### 测试覆盖率提升
 **目标**: 后端测试覆盖率从 23% 提升至 40%+
+**任务**: Task #291
+**详情**: `docs/coverage-roadmap.md`
 
-详见 `docs/coverage-roadmap.md`
-
-### M16 i18n 与 UX 完善
+### i18n 与 UX 完善
 **目标**: 国际化翻译 + 社交功能完善
 
 | 任务 | 优先级 |
@@ -111,9 +104,6 @@
 | M11 | 死亡同步 API | ✅ 完成 |
 | M12 | WebSocket 重构 | ✅ 完成 |
 | M13 | 社交功能 | ✅ 完成 |
-| M14 | 工程稳定化 | ✅ 完成 |
-| M15 | 测试覆盖率 | 待开发 |
-| M16 | i18n 与 UX | 待开发 |
 
 ---
 
