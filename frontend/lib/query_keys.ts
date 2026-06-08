@@ -47,3 +47,33 @@ export const notificationKeys = {
   all: ["notifications"] as const,
   list: (params?: Record<string, string>) => [...notificationKeys.all, "list", params] as const,
 };
+
+export const socialKeys = {
+  all: ["social"] as const,
+  posts: {
+    all: ["social", "posts"] as const,
+    list: (params?: Record<string, string | number | undefined>) =>
+      [...socialKeys.posts.all, "list", params] as const,
+    detail: (id: string) => [...socialKeys.posts.all, "detail", id] as const,
+    feed: (params?: Record<string, string | number | undefined>) =>
+      [...socialKeys.posts.all, "feed", params] as const,
+  },
+  comments: {
+    all: ["social", "comments"] as const,
+    list: (params?: Record<string, string | number | undefined>) =>
+      [...socialKeys.comments.all, "list", params] as const,
+  },
+  reactions: {
+    all: ["social", "reactions"] as const,
+  },
+  follows: {
+    all: ["social", "follows"] as const,
+    following: ["social", "follows", "following"] as const,
+    followers: ["social", "follows", "followers"] as const,
+  },
+  profiles: {
+    all: ["social", "profiles"] as const,
+    detail: (id: string) => [...socialKeys.profiles.all, "detail", id] as const,
+    me: ["social", "profiles", "me"] as const,
+  },
+};
