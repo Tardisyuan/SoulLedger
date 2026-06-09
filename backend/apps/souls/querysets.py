@@ -69,19 +69,15 @@ class SoulQuerySet(QuerySet):
 class SoulManager(TenantManager):
     """Custom Manager for Soul model combining TenantManager with SoulQuerySet.
 
-    Inherits tenant filtering from TenantManager (context-variable based).
-    Adds karma/civilization filtering via SoulQuerySet.
+    Tenant filtering is handled by ViewSet mixins (DataScopeViewSetMixin),
+    not by the manager. This avoids stale contextvar filters on class-level
+    queryset attributes.
     """
 
     def get_queryset(self):
         # Use SoulQuerySet instead of default QuerySet
-        qs = SoulQuerySet(self.model, using=self._db)
-        # Apply TenantManager's tenant filtering
-        from apps.tenants.managers import get_current_tenant
-        tenant = get_current_tenant()
-        if tenant is not None:
-            return qs.filter(tenant=tenant)
-        return qs
+        # Tenant filtering is handled by ViewSet mixins
+        return SoulQuerySet(self.model, using=self._db)
 
     def exclude_orphaned(self):
         return self.get_queryset().exclude_orphaned()

@@ -34,11 +34,24 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
 
     def get_queryset(self):
         """
-        Build queryset with filtering from query params.
-        Tenant isolation is handled by DataScopeViewSetMixin (via super()).
-        FilterSet handles search, filters, and ordering.
+        Build fresh queryset each call to avoid stale TenantManager contextvar filters.
+        Applies tenant isolation + DataScope filtering for non-ADMIN users.
         """
-        qs = super().get_queryset()
+        from apps.souls.querysets import SoulQuerySet
+        qs = SoulQuerySet(Soul).select_related("tenant").prefetch_related("records")
+        # Apply tenant isolation + DataScope filtering (equivalent to DataScopeViewSetMixin)
+        user = self.request.user
+        if not user.is_authenticated:
+            return qs.none()
+        if getattr(user, 'role', None) != 'ADMIN':
+            tenant = getattr(self.request, 'tenant', None)
+            if tenant:
+                qs = qs.filter(tenant=tenant)
+            else:
+                return qs.none()
+            # Apply DataScope filtering
+            from apps.perm.filters import DataScopeFilter
+            qs = DataScopeFilter.filter_queryset(self.request, qs, Soul)
         qs = qs.exclude_orphaned()
 
         # Karma ordering (applied here since DRF ordering runs after get_queryset)
