@@ -1,5 +1,10 @@
 """
-Tests for TenantManager (M3.3b) — automatic tenant filtering via thread-local.
+Tests for TenantManager — contextvar API and manager behavior.
+
+Tenant filtering is now handled by ViewSet mixins (DataScopeViewSetMixin,
+TenantQuerySetMixin), not by TenantManager.get_queryset().  The contextvar
+API (set/get/clear) is preserved for backward compatibility with WebSocket
+middleware and audit signals.
 """
 import pytest
 
@@ -15,14 +20,14 @@ from apps.tenants.models import Tenant
 
 @pytest.mark.django_db
 class TestTenantManager:
-    """M3.3b: TenantManager auto-filters querysets by thread-local tenant."""
+    """Test TenantManager contextvar API and manager behavior."""
 
     def setup_method(self):
-        """Ensure thread-local is cleared before each test."""
+        """Ensure contextvar is cleared before each test."""
         clear_current_tenant()
 
     def teardown_method(self):
-        """Ensure thread-local is cleared after each test."""
+        """Ensure contextvar is cleared after each test."""
         clear_current_tenant()
 
     def test_set_and_get_current_tenant(self):
@@ -33,54 +38,43 @@ class TestTenantManager:
         clear_current_tenant()
         assert get_current_tenant() is None
 
-    def test_tenant_manager_filters_by_tenant(self):
-        """When thread-local tenant is set, queryset is filtered to that tenant."""
+    def test_tenant_manager_does_not_filter_by_contextvar(self):
+        """TenantManager.get_queryset() no longer filters by contextvar.
+
+        Tenant filtering is handled by ViewSet mixins.  The manager returns
+        all rows regardless of contextvar state.
+        """
         cn_tenant = Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
         eu_tenant = Tenant.objects.create(code="EU_HEAVEN_HELL", display_name="European")
 
-        # These souls use default manager (standard Django manager)
-        # We'll test with the TenantManager directly
         Soul.objects.create(name="CN Soul", tenant=cn_tenant)
         Soul.objects.create(name="EU Soul", tenant=eu_tenant)
 
-        # Use TenantManager directly
         mgr = TenantManager()
         mgr.model = Soul
 
-        # Without tenant set — both should be visible
+        # Without contextvar — both visible
         assert mgr.count() == 2
 
-        # Set tenant to CN
+        # With contextvar set — still returns all (filtering moved to ViewSets)
         set_current_tenant(cn_tenant)
-        assert mgr.count() == 1
-        assert mgr.first().name == "CN Soul"
+        assert mgr.count() == 2
 
-        # Switch to EU
+        # Switch contextvar — still returns all
         set_current_tenant(eu_tenant)
-        assert mgr.count() == 1
-        assert mgr.first().name == "EU Soul"
+        assert mgr.count() == 2
 
-        # Clear
+        # Clear — still returns all
         clear_current_tenant()
         assert mgr.count() == 2
 
-    def test_tenant_manager_soul_objects_uses_tenant_manager(self):
-        """Soul.objects should use TenantManager after it's set on the model."""
+    def test_soul_objects_returns_all_without_contextvar(self):
+        """Soul.objects returns all souls when no contextvar is set."""
         cn_tenant = Tenant.objects.create(code="CN_DIYU", display_name="Chinese Diyu")
         eu_tenant = Tenant.objects.create(code="EU_HEAVEN_HELL", display_name="European")
 
         Soul.objects.create(name="CN Soul", tenant=cn_tenant)
         Soul.objects.create(name="EU Soul", tenant=eu_tenant)
 
-        # Verify both exist via default manager
+        # Soul.objects should return all souls (filtering is in ViewSets)
         assert Soul.objects.count() == 2
-
-        # Test TenantManager filtering directly
-        from apps.tenants.managers import TenantManager
-        mgr = TenantManager()
-        mgr.model = Soul
-
-        set_current_tenant(cn_tenant)
-        assert mgr.count() == 1
-        clear_current_tenant()
-        assert mgr.count() == 2

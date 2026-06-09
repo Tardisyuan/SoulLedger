@@ -34,13 +34,18 @@ def clear_current_tenant():
 
 class TenantManager(models.Manager):
     """
-    Manager that automatically filters querysets by the current context-variable tenant.
-    When no tenant is set, returns unfiltered queryset (admin/superuser bypass).
+    Manager for tenant-scoped models.
+
+    NOTE: Tenant filtering is now handled exclusively by ViewSet mixins
+    (DataScopeViewSetMixin, TenantQuerySetMixin) and service-layer code.
+    This manager no longer applies implicit contextvar-based filtering,
+    which caused stale state issues in pytest and class-level querysets.
+
+    The set_current_tenant() / get_current_tenant() API is preserved for
+    backward compatibility with WebSocket middleware and audit signals.
     """
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        tenant = get_current_tenant()
-        if tenant is not None:
-            return qs.filter(tenant=tenant)
-        return qs
+        # Tenant filtering is handled by ViewSet mixins, not by the manager.
+        # This avoids stale contextvar filters on class-level queryset attributes.
+        return super().get_queryset()

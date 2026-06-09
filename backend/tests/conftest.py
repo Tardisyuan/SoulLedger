@@ -10,6 +10,17 @@ from rest_framework.test import APIClient
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
 
+@pytest.fixture(autouse=True)
+def _clear_tenant_context():
+    """Reset TenantManager context variable before and after every test.
+
+    Prevents contextvar leakage between tests that causes stale tenant
+    filters on class-level querysets.  See docs/tenant-contextvar-investigation.md.
+    """
+    from apps.tenants.managers import clear_current_tenant
+    clear_current_tenant()
+    yield
+    clear_current_tenant()
 
 
 @pytest.fixture
