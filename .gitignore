@@ -7,6 +7,9 @@ __pycache__/
 .env.production
 .env.local
 db.sqlite3
+*.sqlite3
+.coverage
+backend/.coverage
 staticfiles/
 .pytest_cache/
 .eggs/
