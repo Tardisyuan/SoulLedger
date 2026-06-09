@@ -33,6 +33,21 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     ordering_fields = ["created_at", "name", "civilization"]
     pagination_class = None  # Templates are small, return full list
 
+    def get_queryset(self):
+        """Fresh queryset to avoid stale TenantManager contextvar filters.
+        Applies tenant filtering for non-ADMIN users."""
+        qs = WorkflowTemplate._base_manager.select_related("tenant").all()
+        user = self.request.user
+        if not user.is_authenticated:
+            return qs.none()
+        if getattr(user, 'role', None) != 'ADMIN':
+            tenant = getattr(self.request, 'tenant', None)
+            if tenant:
+                qs = qs.filter(tenant=tenant)
+            else:
+                return qs.none()
+        return qs
+
     def get_serializer_class(self):
         if self.action == "list":
             return WorkflowTemplateListSerializer
@@ -58,6 +73,23 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     search_fields = WorkflowFilter.search_fields
     ordering_fields = WorkflowFilter.ordering_fields
     serializer_class = ApprovalWorkflowSerializer
+
+    def get_queryset(self):
+        """Fresh queryset to avoid stale TenantManager contextvar filters.
+        Applies tenant filtering for non-ADMIN users."""
+        qs = ApprovalWorkflow._base_manager.select_related(
+            "soul", "soul__tenant", "tenant", "current_node", "coordinating_realm"
+        ).prefetch_related("nodes").all()
+        user = self.request.user
+        if not user.is_authenticated:
+            return qs.none()
+        if getattr(user, 'role', None) != 'ADMIN':
+            tenant = getattr(self.request, 'tenant', None)
+            if tenant:
+                qs = qs.filter(tenant=tenant)
+            else:
+                return qs.none()
+        return qs
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -168,12 +200,15 @@ class ApprovalNodeViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUser
     ordering_fields = ["node_order", "created_at"]
 
     def get_queryset(self):
-        # DataScopeViewSetMixin handles auth check, ADMIN bypass, and tenant
-        # isolation via qs.filter(tenant=tenant). ApprovalNode has no direct
-        # tenant field, so we additionally filter by workflow__tenant to ensure
-        # only nodes belonging to workflows in the current tenant are returned.
-        qs = super().get_queryset()
-        tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            return qs.filter(workflow__tenant=tenant)
-        return qs.none()
+        """Fresh queryset to avoid stale TenantManager contextvar filters.
+        Filters by workflow__tenant since ApprovalNode has no direct tenant field."""
+        qs = ApprovalNode._base_manager.select_related("workflow", "workflow__soul", "approver", "realm", "approver_actor").all()
+        user = self.request.user
+        if not user.is_authenticated:
+            return qs.none()
+        if getattr(user, 'role', None) != 'ADMIN':
+            tenant = getattr(self.request, 'tenant', None)
+            if tenant:
+                return qs.filter(workflow__tenant=tenant)
+            return qs.none()
+        return qs

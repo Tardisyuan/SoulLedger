@@ -43,7 +43,7 @@ class DispatchService:
             raise ValueError("Soul does not belong to the specified source tenant")
 
         # Check no active dispatch exists for this soul
-        active_dispatch = DispatchRecord.objects.filter(
+        active_dispatch = DispatchRecord._base_manager.filter(
             soul=soul,
             status__in=[DispatchStatus.PROPOSED, DispatchStatus.APPROVED]
         ).exists()
