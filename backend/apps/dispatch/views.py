@@ -45,6 +45,12 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     ordering_fields = DispatchFilter.ordering_fields
     serializer_class = DispatchRecordSerializer
 
+    def get_queryset(self):
+        """Fresh queryset each call — avoids TenantManager stale class-attr filter."""
+        return DispatchRecord._base_manager.select_related(
+            "source_tenant", "target_tenant", "soul", "dispatched_by"
+        ).all()
+
     def get_serializer_class(self):
         if self.action == "list":
             return DispatchRecordListSerializer
@@ -59,7 +65,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         if not tenant:
             return Response({"error": "No tenant context"}, status=status.HTTP_400_BAD_REQUEST)
 
-        proposals = DispatchRecord.objects.filter(
+        proposals = DispatchRecord._base_manager.filter(
             target_tenant=tenant,
             status=DispatchStatus.PROPOSED
         ).select_related("source_tenant", "soul", "dispatched_by")
@@ -76,7 +82,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         if not tenant:
             return Response({"error": "No tenant context"}, status=status.HTTP_400_BAD_REQUEST)
 
-        history = DispatchRecord.objects.filter(
+        history = DispatchRecord._base_manager.filter(
             source_tenant=tenant
         ).select_related("target_tenant", "soul").order_by("-proposed_at")
 
@@ -172,7 +178,10 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
         # current tenant is either the initiator or a participant. This is
         # intentional for cross-tenant records that need broader access.
         from django.db.models import Q
-        qs = super().get_queryset()
+        # Fresh queryset each call — avoids TenantManager stale class-attr filter.
+        qs = CrossTenantJudgment._base_manager.select_related(
+            "initiating_tenant"
+        ).prefetch_related("participants").all()
         tenant = getattr(self.request, "tenant", None)
         if tenant:
             return qs.filter(Q(initiating_tenant=tenant) | Q(participants__participant_tenant=tenant))
@@ -204,7 +213,7 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
         actor_id = serializer.validated_data.get("participant_actor")
         role = serializer.validated_data["role"]
 
-        tenant = Tenant.objects.filter(id=tenant_id).select_related("realm").first()
+        tenant = Tenant.objects.filter(id=tenant_id).first()
         if not tenant:
             return Response({"error": "Tenant not found"}, status=status.HTTP_404_NOT_FOUND)
 

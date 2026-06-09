@@ -32,9 +32,11 @@ class TenantCreateMixin:
         kwargs = {}
         # Set tenant from request
         tenant = getattr(self.request, "tenant", None)
-        if tenant and hasattr(serializer.instance, 'tenant'):
-            kwargs['tenant'] = tenant
+        # During create, serializer.instance is None, so check the model class
+        model = getattr(serializer.Meta, "model", None)
+        if tenant and model and hasattr(model, "tenant"):
+            kwargs["tenant"] = tenant
         # Set create_user from AuditMixin
-        if hasattr(serializer.instance, 'create_user'):
-            kwargs['create_user'] = self.request.user
+        if model and hasattr(model, "create_user"):
+            kwargs["create_user"] = self.request.user
         serializer.save(**kwargs)

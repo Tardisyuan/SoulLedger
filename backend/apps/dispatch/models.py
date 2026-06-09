@@ -115,7 +115,7 @@ class DispatchRecord(AuditUserFields, models.Model):
     def transition_to(self, new_status: str, **kwargs) -> bool:
         from django.db import transaction as db_transaction
         with db_transaction.atomic():
-            locked = DispatchRecord.objects.select_for_update().get(pk=self.pk)
+            locked = DispatchRecord._base_manager.select_for_update().get(pk=self.pk)
             if not locked.can_transition_to(new_status):
                 return False
             locked.status = new_status
@@ -191,7 +191,7 @@ class CrossTenantJudgment(AuditUserFields, models.Model):
     def transition_to(self, new_status: str, **kwargs) -> bool:
         from django.db import transaction as db_transaction
         with db_transaction.atomic():
-            locked = CrossTenantJudgment.objects.select_for_update().get(pk=self.pk)
+            locked = CrossTenantJudgment._base_manager.select_for_update().get(pk=self.pk)
             if not locked.can_transition_to(new_status):
                 return False
             locked.status = new_status
