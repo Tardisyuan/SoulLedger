@@ -74,10 +74,13 @@
 
 ## 待开发
 
-### 测试覆盖率提升
+### 测试覆盖率提升 (2026-06-09) ✅
 **目标**: 后端测试覆盖率从 23% 提升至 40%+
+**结果**: 70.24% (超额完成)
 **任务**: Task #291
-**详情**: `docs/coverage-roadmap.md`
+**新增测试**: 322 个 (apps/dispatch, workflow, karma, perm, menus, souls, audit)
+**修复**: TenantManager stale queryset filters (views.py, models.py, services.py)
+**详情**: `docs/coverage-roadmap.md`, `docs/post-coverage-audit-report.md`
 
 ### i18n 与 UX 完善
 **目标**: 国际化翻译 + 社交功能完善
