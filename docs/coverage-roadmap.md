@@ -1,15 +1,16 @@
 # Backend Test Coverage Roadmap
 
-## Current State
+## Current State (Updated: 2026-06-09)
 
 | Metric | Value |
 |--------|-------|
-| Total statements | 7,684 |
-| Missed statements | 5,689 |
-| **Coverage** | **22.75%** |
+| Total statements | 9,464 |
+| Missed statements | 2,341 |
+| **Coverage** | **70.24%** |
 | CI threshold | 40% |
-| Gap to close | **17.25%** (~1,325 statements) |
-| Tests collected | 887 |
+| Gap to close | **Achieved** ✅ |
+| Tests collected | 1,209 |
+| New tests (Task #291) | 322 |
 
 ## Coverage by App (Key Files)
 
