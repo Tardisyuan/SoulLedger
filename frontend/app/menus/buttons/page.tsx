@@ -120,7 +120,11 @@ export default function MenuButtonsPage() {
           ) : (
             <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
               {isLoading ? (
-                <TableSkeleton rows={5} cols={5} />
+                <table className="w-full text-sm">
+                  <tbody>
+                    <TableSkeleton rows={5} cols={5} />
+                  </tbody>
+                </table>
               ) : (
                 <table className="w-full text-sm">
                   <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
