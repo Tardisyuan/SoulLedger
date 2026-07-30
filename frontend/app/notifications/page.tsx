@@ -6,7 +6,7 @@ import {
   Bell, FileText, Scale, AlertCircle, RefreshCw, TrendingUp, User,
   type LucideIcon
 } from "lucide-react";
-import { notificationsApi, type Notification } from "@/lib/api";
+import { notificationsApi, type Notification, type PaginatedResponse } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { PageSection } from "@/components/ui/page-section";
@@ -25,7 +25,7 @@ export default function NotificationsPage() {
     queryFn: async () => {
       const params: Record<string, string> | undefined = filter === "unread" ? { is_read: "false" } : undefined;
       const res = await notificationsApi.list(params);
-      return res.data as import("@/lib/api").Notification[];
+      return (res.data as PaginatedResponse<Notification>).results;
     },
     refetchInterval: 30000, // Refresh every 30 seconds
   });
