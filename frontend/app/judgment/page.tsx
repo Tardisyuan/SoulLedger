@@ -100,10 +100,10 @@ export default function JudgmentQueuePage() {
                   </th>
                 </tr>
               </thead>
+              <tbody>
+                <TableSkeleton rows={5} cols={6} />
+              </tbody>
             </table>
-            <div className="p-4">
-              <TableSkeleton rows={5} cols={6} />
-            </div>
           </div>
         ) : judgmentError ? (
           <div className="text-center text-[hsl(0,84%,60%)] py-12">

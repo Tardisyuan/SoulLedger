@@ -182,9 +182,11 @@ export default function AuditPage() {
         {/* Audit table */}
         <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg overflow-hidden">
           {isLoading ? (
-            <div className="p-4">
-              <TableSkeleton rows={8} cols={6} />
-            </div>
+            <table className="w-full">
+              <tbody>
+                <TableSkeleton rows={8} cols={6} />
+              </tbody>
+            </table>
           ) : logs.length === 0 ? (
             <div className="py-12 text-center text-sm text-[hsl(var(--color-ink-muted))]">
               {t("audit.no_logs")}
