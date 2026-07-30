@@ -48,4 +48,7 @@ class TenantManager(models.Manager):
     def get_queryset(self):
         # Tenant filtering is handled by ViewSet mixins, not by the manager.
         # This avoids stale contextvar filters on class-level queryset attributes.
-        return super().get_queryset()
+        qs = super().get_queryset()
+        if hasattr(self.model, 'is_deleted'):
+            qs = qs.filter(is_deleted=False)
+        return qs

@@ -7,6 +7,21 @@ from django.db import models
 from django.utils import timezone
 
 
+class SoftDeleteQuerySet(models.QuerySet):
+    def alive(self):
+        return self.filter(is_deleted=False)
+
+    def dead(self):
+        return self.filter(is_deleted=True)
+
+
+class SoftDeleteManager(models.Manager):
+    """Default manager for soft-deletable models — excludes is_deleted=True."""
+
+    def get_queryset(self):
+        return SoftDeleteQuerySet(self.model, using=self._db).filter(is_deleted=False)
+
+
 class SoftDeleteMixin(models.Model):
     """
     Adds soft delete capability to models.
@@ -23,6 +38,14 @@ class SoftDeleteMixin(models.Model):
         editable=False,
     )
     delete_reason = models.CharField(max_length=500, blank=True)
+
+    # Declaration order matters: Django uses the FIRST manager declared as
+    # _base_manager (used internally for refresh_from_db(), etc). Keep the
+    # unfiltered manager first so those internal operations can still see
+    # soft-deleted rows; `.objects` (filtered) remains the one application
+    # code and DRF ViewSets use for normal queries.
+    all_objects = models.Manager()  # unfiltered — includes soft-deleted records
+    objects = SoftDeleteManager()
 
     class Meta:
         abstract = True

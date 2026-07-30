@@ -57,6 +57,7 @@ class Reincarnation(AuditUserFields, models.Model):
         verbose_name = "Reincarnation"
         verbose_name_plural = "Reincarnations"
 
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()
 
     def __str__(self):

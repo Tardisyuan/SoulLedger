@@ -134,6 +134,7 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         null=True,
     )
 
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()
 
     class Meta:
@@ -244,6 +245,7 @@ class WorkflowTemplate(AuditUserFields, models.Model):
         null=True,
     )
 
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()
 
     class Meta:

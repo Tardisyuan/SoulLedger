@@ -81,6 +81,7 @@ class Realm(AuditUserFields, models.Model):
             models.Index(fields=["realm_code"]),
         ]
 
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()
 
     def __str__(self):
