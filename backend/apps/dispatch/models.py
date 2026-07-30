@@ -76,6 +76,7 @@ class DispatchRecord(AuditUserFields, models.Model):
         null=True,
     )
 
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()
 
     class Meta:
@@ -162,6 +163,7 @@ class CrossTenantJudgment(AuditUserFields, models.Model):
         null=True,
     )
 
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()
 
     class Meta:

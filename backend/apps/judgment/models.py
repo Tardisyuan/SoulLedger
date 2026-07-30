@@ -79,6 +79,7 @@ class Judgment(AuditUserFields, models.Model):
             models.Index(fields=["is_final"]),
         ]
 
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()
 
     def __str__(self):

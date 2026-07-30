@@ -62,6 +62,7 @@ class Soul(AuditUserFields, models.Model):
             models.Index(fields=["current_state"]),
         ]
 
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = SoulManager()
 
     def save(self, *args, **kwargs):

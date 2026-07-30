@@ -163,7 +163,9 @@ class TestCommentService:
         CommentService.delete_comment(comment)
         comment.refresh_from_db()
         assert comment.is_deleted is True
-        assert Comment.objects.filter(pk=comment_id).exists()
+        # Soft-deleted rows are excluded from the default (filtered) manager;
+        # use all_objects to confirm the row still exists in the database.
+        assert Comment.all_objects.filter(pk=comment_id).exists()
 
     def test_delete_comment_does_not_go_negative(self):
         assert self.post.comment_count == 0

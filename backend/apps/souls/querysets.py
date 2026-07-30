@@ -77,7 +77,10 @@ class SoulManager(TenantManager):
     def get_queryset(self):
         # Use SoulQuerySet instead of default QuerySet
         # Tenant filtering is handled by ViewSet mixins
-        return SoulQuerySet(self.model, using=self._db)
+        qs = SoulQuerySet(self.model, using=self._db)
+        if hasattr(self.model, 'is_deleted'):
+            qs = qs.filter(is_deleted=False)
+        return qs
 
     def exclude_orphaned(self):
         return self.get_queryset().exclude_orphaned()

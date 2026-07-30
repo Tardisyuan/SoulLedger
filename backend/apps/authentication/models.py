@@ -1,10 +1,17 @@
 """
 Custom user model for SoulLedger.
 """
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 
 from apps.core.models import AuditUserFields
+
+
+class SoftDeleteUserManager(UserManager):
+    """UserManager (keeps create_user/create_superuser) that also excludes soft-deleted users."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
 
 
 class UserRole(models.TextChoices):
@@ -70,6 +77,12 @@ class User(AuditUserFields, AbstractUser):
         help_text="职位：如 第一殿殿主",
     )
     avatar = models.ImageField(upload_to='avatars/%Y/%m/', null=True, blank=True)
+
+    # Declared first so it becomes _base_manager (used by refresh_from_db(),
+    # etc) — keeps create_user/create_superuser and stays unfiltered so
+    # soft-deleted users can still be refreshed/looked up internally.
+    all_objects = UserManager()
+    objects = SoftDeleteUserManager()
 
     class Meta:
         verbose_name = "User"

@@ -282,7 +282,9 @@ class TestReactionCRUD:
         reaction_id = resp.data["id"]
         resp = self.client.delete(f"{BASE}/reactions/{reaction_id}/")
         assert resp.status_code == status.HTTP_204_NO_CONTENT
-        assert Reaction.objects.get(pk=reaction_id).is_deleted is True
+        # Soft-deleted rows are excluded from the default (filtered) manager;
+        # use all_objects to fetch it and confirm it's marked deleted.
+        assert Reaction.all_objects.get(pk=reaction_id).is_deleted is True
 
     def test_non_owner_cannot_delete_reaction(self):
         resp = _jwt_client(self.other, self.tenant).post(
