@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { organizationsApi, type Organization } from "@/lib/api";
+import { organizationsApi, type Organization, type PaginatedResponse } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
@@ -27,7 +27,7 @@ export default function OrganizationsPage() {
 
   const { data: organizations = [], isLoading, error } = useQuery({
     queryKey: ["organizations"],
-    queryFn: () => organizationsApi.list().then(r => r.data as Organization[]),
+    queryFn: () => organizationsApi.list().then(r => (r.data as PaginatedResponse<Organization>).results),
     enabled: !!user,
   });
 

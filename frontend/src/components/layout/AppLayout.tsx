@@ -12,7 +12,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { getIconByName, DEFAULT_ICON } from "../../lib/icons";
-import { menusApi, notificationsApi, type MenuItem, type Notification } from "@/lib/api";
+import { menusApi, notificationsApi, type MenuItem, type Notification, type PaginatedResponse } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useTheme } from "@/src/contexts/ThemeContext";
@@ -98,7 +98,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     queryKey: ["notifications-unread-count"],
     queryFn: async () => {
       const res = await notificationsApi.list({ is_read: "false" });
-      return res.data;
+      return (res.data as PaginatedResponse<Notification>).results;
     },
     staleTime: 30000, // 30 seconds
     enabled: !!user,
