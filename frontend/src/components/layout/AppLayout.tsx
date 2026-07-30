@@ -86,9 +86,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { data: menus = [] } = useQuery<MenuItem[]>({
     queryKey: ["menus-sidebar", user?.role, !!user],
     queryFn: async () => {
-      // Use all() for admin (returns unfiltered), list() for others (role-filtered)
-      const res = user?.role === "ADMIN" ? await menusApi.all() : await menusApi.list();
-      return res.data;
+      // Use all() for admin (returns unfiltered, bare array), list() for others
+      // (role-filtered, DRF-paginated — unwrap .results)
+      if (user?.role === "ADMIN") {
+        const res = await menusApi.all();
+        return res.data as MenuItem[];
+      }
+      const res = await menusApi.list();
+      return (res.data as PaginatedResponse<MenuItem>).results;
     },
     staleTime: 5 * 60 * 1000,
     enabled: !!user, // Only fetch when user is logged in
