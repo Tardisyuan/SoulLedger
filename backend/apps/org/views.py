@@ -24,8 +24,6 @@ class OrganizationViewSet(TenantQuerySetMixin, AuditUserViewSetMixin, viewsets.M
     @action(detail=False, methods=["get"])
     def tree(self, request):
         """Return organization hierarchy as a tree."""
-        tenant = getattr(request, "tenant", None)
-        orgs = Organization.objects.filter(tenant=tenant) if tenant else Organization.objects.all()
-        # Build tree structure
+        orgs = self.get_queryset()
         roots = orgs.filter(parent__isnull=True)
         return Response(OrganizationSerializer(roots, many=True).data)

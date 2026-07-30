@@ -9,4 +9,4 @@ from apps.org.models import Organization
 class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
-        fields = ["id", "name", "code", "category", "parent", "tenant"]
+        fields = ["id", "name", "code", "category", "parent"]
