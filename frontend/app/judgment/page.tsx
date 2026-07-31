@@ -9,10 +9,10 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/src/components/ui/Pagination";
 
 const VERDICT_COLORS: Record<string, string> = {
-  PASSED: "bg-[hsl(142,76%,36%,0.2)] text-[hsl(142,76%,36%)]",
-  FAILED: "bg-[hsl(0,84%,60%,0.2)] text-[hsl(0,84%,60%)]",
-  PURGATORY: "bg-[hsl(38,92%,50%,0.2)] text-[hsl(38,92%,50%)]",
-  RETRY: "bg-[hsl(217,91%,52%,0.2)] text-[hsl(217,91%,52%)]",
+  PASSED: "bg-[hsl(var(--color-verdict-passed)/0.2)] text-[hsl(var(--color-verdict-passed))]",
+  FAILED: "bg-[hsl(var(--color-verdict-failed)/0.2)] text-[hsl(var(--color-verdict-failed))]",
+  PURGATORY: "bg-[hsl(var(--color-verdict-purgatory)/0.2)] text-[hsl(var(--color-verdict-purgatory))]",
+  RETRY: "bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))]",
 };
 
 export default function JudgmentQueuePage() {

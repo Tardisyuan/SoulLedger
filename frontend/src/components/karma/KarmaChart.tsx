@@ -11,6 +11,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { CHART_CHROME } from "@/lib/chart-colors";
 
 export interface KarmaHistoryPoint {
   date: string;
@@ -34,8 +35,8 @@ const CustomTooltip = ({
 }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[#0f1011] border border-[#23252a] rounded-md p-2 text-xs">
-        <p className="text-[#8a8f98]">{label}</p>
+      <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-md p-2 text-xs">
+        <p className="text-[hsl(var(--color-ink-subtle))]">{label}</p>
         <p className="text-amber-400 font-medium">
           {payload[0].value >= 0 ? "+" : ""}
           {payload[0].value.toFixed(1)}
@@ -59,7 +60,7 @@ export function KarmaChart({
       {/* Summary Row */}
       <div className="flex gap-4 text-sm">
         <div className="flex-1">
-          <span className="text-[#8a8f98]">{t("karma.balance")}: </span>
+          <span className="text-[hsl(var(--color-ink-subtle))]">{t("karma.balance")}: </span>
           <span
             className={`font-bold ${
               karmicBalance >= 0 ? "text-green-400" : "text-red-400"
@@ -71,7 +72,7 @@ export function KarmaChart({
         </div>
         {hasDecay && (
           <div className="flex-1">
-            <span className="text-[#8a8f98]">{t("karma.effective")}: </span>
+            <span className="text-[hsl(var(--color-ink-subtle))]">{t("karma.effective")}: </span>
             <span
               className={`font-bold ${
                 effectiveKarma >= 0 ? "text-blue-400" : "text-red-400"
@@ -94,40 +95,40 @@ export function KarmaChart({
           >
             <defs>
               <linearGradient id="karmaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                <stop offset="5%" stopColor={CHART_CHROME.accent} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={CHART_CHROME.accent} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#23252a" />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_CHROME.grid} />
             <XAxis
               dataKey="date"
-              tick={{ fill: "#8a8f98", fontSize: 9 }}
+              tick={{ fill: CHART_CHROME.tick, fontSize: 9 }}
               tickFormatter={(v) => v.slice(5, 10)}
-              axisLine={{ stroke: "#23252a" }}
-              tickLine={{ stroke: "#23252a" }}
+              axisLine={{ stroke: CHART_CHROME.axis }}
+              tickLine={{ stroke: CHART_CHROME.axis }}
             />
             <YAxis
-              tick={{ fill: "#8a8f98", fontSize: 9 }}
+              tick={{ fill: CHART_CHROME.tick, fontSize: 9 }}
               width={35}
-              axisLine={{ stroke: "#23252a" }}
-              tickLine={{ stroke: "#23252a" }}
+              axisLine={{ stroke: CHART_CHROME.axis }}
+              tickLine={{ stroke: CHART_CHROME.axis }}
             />
             <Tooltip content={<CustomTooltip />} />
-            <ReferenceLine y={0} stroke="#3a3d42" strokeDasharray="2 2" />
+            <ReferenceLine y={0} stroke={CHART_CHROME.axis} strokeDasharray="2 2" />
             <Area
               type="monotone"
               dataKey="score"
-              stroke="#f59e0b"
+              stroke={CHART_CHROME.accent}
               strokeWidth={2}
               fill="url(#karmaGradient)"
               dot={false}
-              activeDot={{ r: 4, fill: "#f59e0b" }}
+              activeDot={{ r: 4, fill: CHART_CHROME.accent }}
             />
           </AreaChart>
         </ResponsiveContainer>
         </div>
       ) : (
-        <div className="h-[140px] flex items-center justify-center text-[#8a8f98] text-xs">
+        <div className="h-[140px] flex items-center justify-center text-[hsl(var(--color-ink-subtle))] text-xs">
           {t("karma.no_history")}
         </div>
       )}

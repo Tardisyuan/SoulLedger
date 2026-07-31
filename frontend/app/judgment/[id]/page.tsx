@@ -28,10 +28,26 @@ interface PageProps {
 }
 
 const VERDICT_CONFIG: Record<string, { bg: string; text: string; border: string }> = {
-  PASSED: { bg: "bg-amber-500/15", text: "text-amber-400", border: "border-amber-500/30" },
-  FAILED: { bg: "bg-red-600/15", text: "text-red-400", border: "border-red-600/30" },
-  PURGATORY: { bg: "bg-blue-500/15", text: "text-blue-400", border: "border-blue-500/30" },
-  RETRY: { bg: "bg-purple-500/15", text: "text-purple-400", border: "border-purple-500/30" },
+  PASSED: {
+    bg: "bg-[hsl(var(--color-verdict-passed)/0.15)]",
+    text: "text-[hsl(var(--color-verdict-passed))]",
+    border: "border-[hsl(var(--color-verdict-passed)/0.3)]",
+  },
+  FAILED: {
+    bg: "bg-[hsl(var(--color-verdict-failed)/0.15)]",
+    text: "text-[hsl(var(--color-verdict-failed))]",
+    border: "border-[hsl(var(--color-verdict-failed)/0.3)]",
+  },
+  PURGATORY: {
+    bg: "bg-[hsl(var(--color-verdict-purgatory)/0.15)]",
+    text: "text-[hsl(var(--color-verdict-purgatory))]",
+    border: "border-[hsl(var(--color-verdict-purgatory)/0.3)]",
+  },
+  RETRY: {
+    bg: "bg-[hsl(var(--color-verdict-retry)/0.15)]",
+    text: "text-[hsl(var(--color-verdict-retry))]",
+    border: "border-[hsl(var(--color-verdict-retry)/0.3)]",
+  },
 };
 
 const CIVILIZATION_ICONS: Record<string, string> = {

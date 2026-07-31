@@ -10,10 +10,10 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import type { Soul } from "@/lib/api";
 
 const STATE_COLORS: Record<string, string> = {
-  ALIVE: "bg-[hsl(38,92%,50%,0.2)] text-[hsl(38,92%,50%)]",
-  JUDGING: "bg-[hsl(38,92%,50%,0.2)] text-[hsl(38,92%,50%)]",
+  ALIVE: "bg-[hsl(var(--color-status-alive)/0.2)] text-[hsl(var(--color-status-alive))]",
+  JUDGING: "bg-[hsl(var(--color-status-judging)/0.2)] text-[hsl(var(--color-status-judging))]",
   DISPOSED: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
-  REINCARNATING: "bg-[hsl(217,91%,52%,0.2)] text-[hsl(217,91%,52%)]",
+  REINCARNATING: "bg-[hsl(var(--color-status-reincarnating)/0.2)] text-[hsl(var(--color-status-reincarnating))]",
   LOST: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
 };
 

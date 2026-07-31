@@ -13,11 +13,15 @@ interface ToastItem {
 
 // ── Pure DOM toast — no React state, no effects, no portals ──
 
+// Theme-aware surface. The previous literals (rgba(16,64,40,.98) with #d1fae5
+// text) were a dark card with pale text, which inverted badly under .light.
+// `accent` is the status hue; the toast body stays on an opaque surface token
+// so the floating card never shows the page through it.
 const COLOR = {
-  success: { bg: "rgba(16,64,40,0.98)", border: "hsl(142 76% 36%)", text: "#d1fae5", icon: "✓" },
-  error:   { bg: "rgba(64,16,16,0.98)", border: "hsl(0 84% 60%)", text: "#fecaca",  icon: "✕" },
-  info:    { bg: "rgba(20,50,120,0.98)", border: "hsl(217 91% 60%)", text: "#dbeafe",  icon: "ℹ" },
-};
+  success: { accent: "var(--color-status-success)", icon: "✓" },
+  error: { accent: "var(--color-status-error)", icon: "✕" },
+  info: { accent: "var(--color-status-info)", icon: "ℹ" },
+} as const;
 
 let toasts: ToastItem[] = [];
 let nextId = 0;
@@ -58,10 +62,10 @@ function buildToastEl(item: ToastItem): HTMLElement {
     "max-width:420px",
     "padding:14px 16px",
     "border-radius:6px",
-    `border:1px solid ${c.border}`,
-    `border-left:3px solid ${c.border}`,
-    `background:${c.bg}`,
-    `color:${c.text}`,
+    `border:1px solid hsl(${c.accent} / 0.4)`,
+    `border-left:3px solid hsl(${c.accent})`,
+    "background:hsl(var(--color-surface-2))",
+    "color:hsl(var(--color-ink))",
     "animation:toastIn 0.25s cubic-bezier(0.22,1,0.36,1)",
     "pointer-events:auto",
     "font-family:ui-sans-serif,system-ui,-apple-system,sans-serif",
@@ -71,7 +75,7 @@ function buildToastEl(item: ToastItem): HTMLElement {
 
   // Icon span
   const iconSpan = document.createElement("span");
-  iconSpan.style.cssText = `flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:${c.border}33;color:${c.border};font-size:11px;font-weight:bold;border:1px solid ${c.border}55;`;
+  iconSpan.style.cssText = `flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:hsl(${c.accent} / 0.2);color:hsl(${c.accent});font-size:11px;font-weight:bold;border:1px solid hsl(${c.accent} / 0.35);`;
   iconSpan.textContent = c.icon;
 
   // Message span — use textContent to prevent XSS
@@ -82,7 +86,7 @@ function buildToastEl(item: ToastItem): HTMLElement {
   // Close button
   const closeBtn = document.createElement("button");
   closeBtn.id = `toast-close-${item.id}`;
-  closeBtn.style.cssText = "flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:3px;background:transparent;border:none;cursor:pointer;color:" + c.text + ";opacity:0.5;font-size:16px;padding:0;line-height:1;";
+  closeBtn.style.cssText = "flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:3px;background:transparent;border:none;cursor:pointer;color:hsl(var(--color-ink));opacity:0.5;font-size:16px;padding:0;line-height:1;";
   closeBtn.textContent = "×";
 
   el.appendChild(iconSpan);
