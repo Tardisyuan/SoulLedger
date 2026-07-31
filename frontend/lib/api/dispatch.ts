@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { PaginatedResponse } from "./users";
 
 export interface DispatchRecord {
   id: string;
@@ -45,7 +46,7 @@ export interface CrossTenantJudgmentParticipant {
 }
 
 export const dispatchApi = {
-  list: (params?: Record<string, string>) => api.get<DispatchRecord[]>("/dispatch/records/", { params }),
+  list: (params?: Record<string, string>) => api.get<PaginatedResponse<DispatchRecord>>("/dispatch/records/", { params }),
   get: (id: string) => api.get<DispatchRecord>(`/dispatch/records/${id}/`),
   propose: (data: {
     source_tenant?: number;
@@ -58,12 +59,12 @@ export const dispatchApi = {
   approve: (id: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/approve/`),
   reject: (id: string, reason?: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/reject/`, { reason }),
   execute: (id: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/execute/`),
-  proposed: (params?: Record<string, string>) => api.get<DispatchRecord[]>("/dispatch/records/", { params: { ...params, status: "PROPOSED" } }),
-  history: (params?: Record<string, string>) => api.get<DispatchRecord[]>("/dispatch/records/", { params }),
+  proposed: (params?: Record<string, string>) => api.get<PaginatedResponse<DispatchRecord>>("/dispatch/records/", { params: { ...params, status: "PROPOSED" } }),
+  history: (params?: Record<string, string>) => api.get<PaginatedResponse<DispatchRecord>>("/dispatch/records/", { params }),
 };
 
 export const crossTenantJudgmentsApi = {
-  list: (params?: Record<string, string>) => api.get<CrossTenantJudgment[]>("/dispatch/cross-tenant-judgments/", { params }),
+  list: (params?: Record<string, string>) => api.get<PaginatedResponse<CrossTenantJudgment>>("/dispatch/cross-tenant-judgments/", { params }),
   get: (id: string) => api.get<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/`),
   create: (data: { title: string; description: string }) => api.post<CrossTenantJudgment>("/dispatch/cross-tenant-judgments/", data),
   participate: (id: string, data: { participant_tenant: number; participant_actor?: number; role?: string }) =>

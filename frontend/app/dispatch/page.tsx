@@ -13,13 +13,13 @@ export default function DispatchPage() {
 
   const { data: proposed = [], isLoading: loadingProposed } = useQuery({
     queryKey: ["dispatch", "proposed"],
-    queryFn: () => dispatchApi.proposed().then(r => r.data),
+    queryFn: () => dispatchApi.proposed().then(r => r.data.results),
     enabled: !!user,
   });
 
   const { data: history = [], isLoading: loadingHistory } = useQuery({
     queryKey: ["dispatch", "history"],
-    queryFn: () => dispatchApi.history().then(r => r.data),
+    queryFn: () => dispatchApi.history().then(r => r.data.results),
     enabled: !!user,
   });
 

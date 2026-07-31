@@ -55,8 +55,6 @@ export default function WelcomePage() {
     }
   }, [user, router]);
 
-  // Don't render anything while checking auth
-  if (!user) return null;
   const [stats, setStats] = useState<KarmaStatsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -97,6 +95,11 @@ export default function WelcomePage() {
     };
     fetchAgentStatus();
   }, []);
+
+  // Don't render anything while checking auth.
+  // Must come after every hook call — an early return above them changes the
+  // hook count between renders once `user` hydrates, which React rejects.
+  if (!user) return null;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
