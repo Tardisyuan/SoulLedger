@@ -1,6 +1,6 @@
 {
   "nav": {
-    "title": "灵魂账本",
+    "title": "SoulLedger",
     "subtitle": "Amset Netjer - Cross-Civilization Soul Management",
     "home": "Per Djew",
     "souls": "Aba Hemsu",
@@ -171,7 +171,8 @@
       "failed": "Ma Sethet",
       "passed": "Sethet",
       "purgatory": "Khet Her Tepy",
-      "confirm_judgment": "Sesen Sheemtet Seth?"
+      "confirm_judgment": "Sesen Sheemtet Seth?",
+      "no_karma": "No karma records"
     },
     "order_name_desc": "Name Z-A",
     "karma_range": "Karma Range",
@@ -197,7 +198,9 @@
     "submitting": "Em Send...",
     "create": "Seshem",
     "retry": "Khemu",
-    "confirm": "Sesen"
+    "confirm": "Sesen",
+    "back_to_list": "Back to list",
+    "error": "Something went wrong"
   },
   "pagination": {
     "info": "Per {{page}} / {{total}} ({{count}} medu)"
@@ -221,7 +224,9 @@
     "no_menus": "لم يتم العثور على قوائم",
     "all_menus": "جميع القوائم",
     "action": "Aha Seth",
-    "component_placeholder": "مثال: souls"
+    "component_placeholder": "مثال: souls",
+    "create_error": "Failed to create menu",
+    "delete_error": "Failed to delete menu"
   },
   "permissions": {
     "title": "إدارة الصلاحيات",
@@ -301,7 +306,8 @@
       "approver_placeholder": "e.g. JUDGE, OVERSEER",
       "new_node": "New Node",
       "saved": "Template saved",
-      "save_failed": "Save failed"
+      "save_failed": "Save failed",
+      "title": "Editor"
     },
     "templates": "Pet Sethety Wu",
     "select_template": "Sesh Pet Sethety Em Khemen",
@@ -391,7 +397,8 @@
     },
     "no_description": "No description",
     "view": "View",
-    "nodes_count": "{{count}} nodes"
+    "nodes_count": "{{count}} nodes",
+    "delete_error": "Failed to delete"
   },
   "dashboard": {
     "title": "Medew Aba Hemsu Seth",
@@ -479,7 +486,12 @@
       "conclude": "Wetep Seth",
       "notes_placeholder": "Shesep Medu Seth...",
       "no_evidence": "Ma Medu Sethet Em Khemen Seth"
-    }
+    },
+    "create_success": "Judgment created",
+    "create_error": "Failed to create judgment",
+    "conclude_success": "Judgment concluded",
+    "conclude_error": "Failed to conclude judgment",
+    "no_evidence": "No evidence on file"
   },
   "audit": {
     "title": "Medew Sethet",
@@ -551,7 +563,9 @@
     "mark_read": "Pedjet Maakheru Ankh",
     "empty": "Maakheru Mehi",
     "loading": "Smen...",
-    "view_all": "Pet Neteru Ankh"
+    "view_all": "Pet Neteru Ankh",
+    "mark_read_error": "Failed to mark as read",
+    "mark_all_error": "Failed to mark all as read"
   },
   "realms": {
     "title": "Mekher",
@@ -668,7 +682,31 @@
     "target_tenant": "Target Tenant",
     "submit_proposal": "Submit Proposal",
     "reason": "Reason",
-    "soul_prefix": "Soul #"
+    "soul_prefix": "Soul #",
+    "detail_title": "Dispatch detail",
+    "soul": "Soul",
+    "status": "Status",
+    "actions": "Actions",
+    "source_tenant": "Source tenant",
+    "proposed_by": "Proposed by",
+    "proposed_at": "Proposed at",
+    "decided_at": "Decided at",
+    "executed_at": "Executed at",
+    "approve": "Approve",
+    "reject": "Reject",
+    "execute": "Execute",
+    "reject_reason": "Rejection reason",
+    "reject_placeholder": "Explain why this is being rejected",
+    "confirm_execute": "Execute this dispatch?",
+    "confirm_reject": "Reject this dispatch?",
+    "execute_warning": "Executing transfers the soul to the target tenant and cannot be undone.",
+    "approved_success": "Approved",
+    "rejected_success": "Rejected",
+    "executed_success": "Executed",
+    "approve_error": "Failed to approve",
+    "reject_error": "Failed to reject",
+    "execute_error": "Failed to execute",
+    "propose_error": "Failed to propose dispatch"
   },
   "crossJudgments": {
     "title": "Sheemtet Seth Em Kehat",
@@ -731,7 +769,9 @@
     "create_success": "User created",
     "role_guardian": "Guardian",
     "role_judge": "Judge",
-    "edit_user": "Edit User"
+    "edit_user": "Edit User",
+    "delete_title": "Delete user",
+    "delete_confirm": "Delete this user?"
   },
   "settings": {
     "title": "Iri Sethety",
@@ -766,7 +806,9 @@
     "bind_menu": "Kheper Menu",
     "select_menu": "Sekhem Menu",
     "code_placeholder": "renu add, edit, delete, export",
-    "permission_placeholder": "renu soul.create, judgment.delete"
+    "permission_placeholder": "renu soul.create, judgment.delete",
+    "create_error": "Failed to create button",
+    "delete_error": "Failed to delete button"
   },
   "error": {
     "title": "Setesh Medjat",
@@ -861,5 +903,68 @@
     "yes": "Ken",
     "no": "Nen",
     "clear_all": "Khet Semau"
+  },
+  "death_sync": {
+    "title": "Death Sync",
+    "subtitle": "External death registrations and sync status",
+    "registrations": "Registrations",
+    "no_registrations": "No death registrations yet",
+    "requested": "Requested",
+    "duration": "Duration",
+    "reference": "Reference"
+  },
+  "disposition": {
+    "title": "Dispositions",
+    "subtitle": "Where souls go once judgment concludes",
+    "list": "Disposition list",
+    "no_dispositions": "No dispositions yet",
+    "realm": "Destination realm",
+    "eternal": "Eternal",
+    "executed": "Executed",
+    "execute": "Execute",
+    "confirm_execute": "Execute this disposition?",
+    "execute_warning": "Executing sends the soul to its destination realm and cannot be undone.",
+    "execute_success": "Disposition executed",
+    "executed_success": "Disposition executed",
+    "execute_error": "Failed to execute disposition"
+  },
+  "reincarnation": {
+    "reborn_success": "Reincarnation started",
+    "reborn_error": "Failed to start reincarnation"
+  },
+  "social": {
+    "title": "Social",
+    "feed": "Feed",
+    "posts": "Posts",
+    "post": "Post",
+    "post_detail": "Post",
+    "post_not_found": "Post not found",
+    "post_created": "Posted",
+    "post_error": "Failed to post",
+    "no_posts": "No posts yet",
+    "user_posts": "Their posts",
+    "view_all_posts": "View all posts",
+    "placeholder": "Say something…",
+    "send": "Send",
+    "comments": "Comments",
+    "add_comment": "Add a comment…",
+    "no_comments": "No comments yet",
+    "follow": "Follow",
+    "follows": "Follows",
+    "following": "Following",
+    "following_count": "Following",
+    "followers": "Followers",
+    "no_following": "Not following anyone yet",
+    "no_followers": "No followers yet",
+    "profile": "Profile",
+    "all": "All",
+    "back": "Back"
+  },
+  "tenants": {
+    "title": "Tenants",
+    "subtitle": "Tenant configuration per civilization",
+    "list": "Tenant list",
+    "no_tenants": "No tenants",
+    "code": "Code"
   }
 }
