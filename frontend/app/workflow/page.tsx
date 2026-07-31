@@ -130,7 +130,7 @@ export default function WorkflowPage() {
 
   const tabs = [
     { key: "existing", label: t("workflow.existing") },
-    { key: "editor", label: t("workflow.editor") },
+    { key: "editor", label: t("workflow.editor.title") },
     { key: "instances", label: t("workflow.instances") },
   ] as const;
   const [tab, setTab] = useState<"existing" | "editor" | "instances">("existing");

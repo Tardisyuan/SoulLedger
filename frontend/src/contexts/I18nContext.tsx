@@ -59,15 +59,21 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const t = useCallback(
     (key: string, params?: Record<string, string>): string => {
       const parts = key.split(".");
-      let value: unknown = messages[locale];
-      for (const part of parts) {
-        if (value && typeof value === "object" && part in (value as Record<string, unknown>)) {
-          value = (value as Record<string, unknown>)[part];
-        } else {
-          return key;
+      const lookup = (bundle: Record<string, unknown>): string | null => {
+        let value: unknown = bundle;
+        for (const part of parts) {
+          if (value && typeof value === "object" && part in (value as Record<string, unknown>)) {
+            value = (value as Record<string, unknown>)[part];
+          } else {
+            return null;
+          }
         }
-      }
-      if (typeof value !== "string") return key;
+        return typeof value === "string" ? value : null;
+      };
+      // Fall back to the default locale before giving up, so a bundle that is
+      // only partially translated shows real copy instead of a raw key.
+      const value = lookup(messages[locale]) ?? lookup(messages[DEFAULT_LOCALE]);
+      if (value === null) return key;
       if (!params) return value;
       return value.replace(/\{\{(\w+)\}\}|\{(\w+)\}/g, (_, p1, p2) => {
         const k = p1 ?? p2;

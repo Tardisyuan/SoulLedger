@@ -179,7 +179,8 @@
       "failed": "失败",
       "passed": "通过",
       "purgatory": "待定",
-      "confirm_judgment": "确认审判？"
+      "confirm_judgment": "确认审判？",
+      "no_karma": "暂无业力记录"
     }
   },
   "common": {
@@ -197,7 +198,9 @@
     "submitting": "提交中...",
     "create": "创建",
     "retry": "重试",
-    "confirm": "确认"
+    "confirm": "确认",
+    "back_to_list": "返回列表",
+    "error": "出错了"
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)"
@@ -221,7 +224,9 @@
     "no_menus": "未找到菜单",
     "all_menus": "所有菜单",
     "action": "操作",
-    "component_placeholder": "如：souls"
+    "component_placeholder": "如：souls",
+    "create_error": "创建菜单失败",
+    "delete_error": "删除菜单失败"
   },
   "permissions": {
     "title": "权限管理",
@@ -301,7 +306,8 @@
       "approver_placeholder": "例如: JUDGE, OVERSEER",
       "new_node": "新节点",
       "saved": "模板已保存",
-      "save_failed": "保存失败"
+      "save_failed": "保存失败",
+      "title": "流程编辑器"
     },
     "templates": "流程模板",
     "select_template": "选择模板进行编辑",
@@ -391,7 +397,8 @@
     "no_description": "无描述",
     "appeal_badge": "申诉",
     "template_detail": "模板详情",
-    "no_node_data": "暂无节点数据"
+    "no_node_data": "暂无节点数据",
+    "delete_error": "删除失败"
   },
   "dashboard": {
     "title": "灵魂账本统计",
@@ -479,7 +486,12 @@
       "conclude": "结案",
       "notes_placeholder": "输入备注...",
       "no_evidence": "暂无证据和供词记录"
-    }
+    },
+    "create_success": "已创建审判",
+    "create_error": "创建审判失败",
+    "conclude_success": "审判已结案",
+    "conclude_error": "结案失败",
+    "no_evidence": "暂无证据材料"
   },
   "audit": {
     "title": "审计日志",
@@ -551,7 +563,9 @@
     "mark_read": "标为已读",
     "empty": "暂无通知",
     "loading": "加载中...",
-    "view_all": "查看全部"
+    "view_all": "查看全部",
+    "mark_read_error": "标记已读失败",
+    "mark_all_error": "全部标记已读失败"
   },
   "realms": {
     "title": "地域",
@@ -668,7 +682,31 @@
     "reason_placeholder": "调度理由...",
     "submitting": "提交中...",
     "submit_proposal": "提交提案",
-    "soul_prefix": "灵魂 #"
+    "soul_prefix": "灵魂 #",
+    "detail_title": "调度详情",
+    "soul": "灵魂",
+    "status": "状态",
+    "actions": "操作",
+    "source_tenant": "来源租户",
+    "proposed_by": "发起人",
+    "proposed_at": "发起时间",
+    "decided_at": "裁决时间",
+    "executed_at": "执行时间",
+    "approve": "批准",
+    "reject": "驳回",
+    "execute": "执行",
+    "reject_reason": "驳回理由",
+    "reject_placeholder": "请说明驳回原因",
+    "confirm_execute": "确认执行这次调度?",
+    "confirm_reject": "确认驳回这次调度?",
+    "execute_warning": "执行后灵魂将转移到目标租户,该操作不可撤销。",
+    "approved_success": "已批准",
+    "rejected_success": "已驳回",
+    "executed_success": "已执行",
+    "approve_error": "批准失败",
+    "reject_error": "驳回失败",
+    "execute_error": "执行失败",
+    "propose_error": "发起调度失败"
   },
   "crossJudgments": {
     "title": "跨文明审判",
@@ -731,7 +769,9 @@
       "JUDGE": "审判者",
       "GUARDIAN": "守护者",
       "VIEWER": "查看者"
-    }
+    },
+    "delete_title": "删除用户",
+    "delete_confirm": "确认删除该用户?"
   },
   "settings": {
     "title": "设置",
@@ -830,7 +870,9 @@
     "bind_menu": "绑定菜单",
     "select_menu": "选择菜单",
     "code_placeholder": "如 add、edit、delete、export",
-    "permission_placeholder": "如 soul.create、judgment.delete"
+    "permission_placeholder": "如 soul.create、judgment.delete",
+    "create_error": "创建按钮失败",
+    "delete_error": "删除按钮失败"
   },
   "error": {
     "title": "服务器错误",
@@ -861,5 +903,68 @@
     "yes": "是",
     "no": "否",
     "clear_all": "清除全部"
+  },
+  "death_sync": {
+    "title": "死亡同步",
+    "subtitle": "外部死亡登记接入与同步状态",
+    "registrations": "登记记录",
+    "no_registrations": "暂无死亡登记记录",
+    "requested": "请求时间",
+    "duration": "耗时",
+    "reference": "外部编号"
+  },
+  "disposition": {
+    "title": "处置管理",
+    "subtitle": "审判结案后的灵魂去向安排",
+    "list": "处置列表",
+    "no_dispositions": "暂无处置记录",
+    "realm": "目标领域",
+    "eternal": "永久处置",
+    "executed": "已执行",
+    "execute": "执行处置",
+    "confirm_execute": "确认执行该处置?",
+    "execute_warning": "执行后灵魂将被送往目标领域,该操作不可撤销。",
+    "execute_success": "处置已执行",
+    "executed_success": "处置已执行",
+    "execute_error": "执行处置失败"
+  },
+  "reincarnation": {
+    "reborn_success": "轮回已启动",
+    "reborn_error": "启动轮回失败"
+  },
+  "social": {
+    "title": "动态",
+    "feed": "信息流",
+    "posts": "帖子",
+    "post": "发布",
+    "post_detail": "帖子详情",
+    "post_not_found": "帖子不存在",
+    "post_created": "已发布",
+    "post_error": "发布失败",
+    "no_posts": "暂无帖子",
+    "user_posts": "TA 的帖子",
+    "view_all_posts": "查看全部帖子",
+    "placeholder": "说点什么…",
+    "send": "发送",
+    "comments": "评论",
+    "add_comment": "写评论…",
+    "no_comments": "暂无评论",
+    "follow": "关注",
+    "follows": "关注关系",
+    "following": "正在关注",
+    "following_count": "关注数",
+    "followers": "粉丝",
+    "no_following": "还没有关注任何人",
+    "no_followers": "还没有粉丝",
+    "profile": "个人主页",
+    "all": "全部",
+    "back": "返回"
+  },
+  "tenants": {
+    "title": "租户管理",
+    "subtitle": "各文明体系的租户配置",
+    "list": "租户列表",
+    "no_tenants": "暂无租户",
+    "code": "编码"
   }
 }

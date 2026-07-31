@@ -176,15 +176,26 @@ describe('I18nContext', () => {
       expect(result.current.t('nav.title')).toBe('𓂀 Soul Book 𓂀');
     });
 
-    it('should return key when translation is missing in new locale', () => {
+    it('should fall back to the default locale when a key is missing', () => {
       const { result } = renderI18n();
 
       act(() => {
         result.current.setLocale('egy');
       });
 
-      // "auth.login" exists in zh-Hans and en but NOT in egy
-      expect(result.current.t('auth.login')).toBe('auth.login');
+      // "auth.login" exists in zh-Hans but NOT in egy — a partially translated
+      // bundle should show real copy from the default locale, not a raw key.
+      expect(result.current.t('auth.login')).toBe('登录');
+    });
+
+    it('should return the key when it is missing from every locale', () => {
+      const { result } = renderI18n();
+
+      act(() => {
+        result.current.setLocale('egy');
+      });
+
+      expect(result.current.t('auth.totally_absent')).toBe('auth.totally_absent');
     });
 
     it('should support switching back to zh-Hans', () => {

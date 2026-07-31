@@ -20,7 +20,11 @@ if [ -n "$STAGED_FILES" ]; then
     cd frontend
     # Strip frontend/ prefix for paths relative to frontend dir
     RELATIVE_FILES=$(echo "$STAGED_FILES" | sed 's|^frontend/||')
-    npx eslint $RELATIVE_FILES --max-warnings 0 2>&1 || {
+    # --no-warn-ignored: staged files the eslint config ignores (src/__tests__/**)
+    # otherwise emit an "ignored file" warning, which --max-warnings 0 turns into
+    # a failure — making test files impossible to commit. Real lint warnings are
+    # still reported and still fail the commit.
+    npx eslint $RELATIVE_FILES --max-warnings 0 --no-warn-ignored 2>&1 || {
         echo "ESLint failed. Fix errors before committing."
         exit 1
     }
