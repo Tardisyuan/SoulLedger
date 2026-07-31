@@ -13,7 +13,7 @@ export default function CrossJudgmentsPage() {
 
   const { data: judgments = [], isLoading, error } = useQuery({
     queryKey: ["cross-judgments"],
-    queryFn: () => crossTenantJudgmentsApi.list().then(r => r.data),
+    queryFn: () => crossTenantJudgmentsApi.list().then(r => r.data.results),
     enabled: !!user,
   });
 
