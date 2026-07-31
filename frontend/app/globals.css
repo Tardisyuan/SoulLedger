@@ -185,3 +185,24 @@
 .react-flow__background circle {
   fill: hsl(var(--color-hairline)) !important;
 }
+/* ── Keyboard focus ──────────────────────────────────────────────────────
+   Nothing in the app defined a focus style, while ~20 files cleared the
+   native one with `outline-none`, leaving keyboard users with no visible
+   caret at all. This restores a single consistent ring.
+
+   `:focus-visible` only matches keyboard/programmatic focus, so mouse
+   clicks stay clean. The `!important` overrides the Tailwind `outline-none`
+   utilities already scattered through the components. */
+:focus-visible {
+  outline: 2px solid hsl(var(--color-accent)) !important;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Inputs carry their own accent border on focus; a ring plus a border reads
+   as a double outline, so tighten the offset there. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-offset: 0;
+}

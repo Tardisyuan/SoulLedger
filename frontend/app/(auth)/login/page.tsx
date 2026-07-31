@@ -72,10 +72,13 @@ export default function LoginPage() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">
+              <label htmlFor="login-username" className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">
                 {t("auth.username")}
               </label>
               <input
+                id="login-username"
+                name="username"
+                autoComplete="username"
                 type="text"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
@@ -86,10 +89,13 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">
+              <label htmlFor="login-password" className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">
                 {t("auth.password")}
               </label>
               <input
+                id="login-password"
+                name="password"
+                autoComplete="current-password"
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}

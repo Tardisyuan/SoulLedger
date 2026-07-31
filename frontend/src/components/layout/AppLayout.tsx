@@ -186,6 +186,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 onClick={() => setCollapsed(!collapsed)}
                 className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
                 title={t("nav.expand_menu")}
+                aria-label={t("nav.expand_menu")}
+                aria-expanded={false}
               >
                 →
               </button>
@@ -198,6 +200,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   onClick={() => setCollapsed(!collapsed)}
                   className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
                   title={t("nav.collapse_menu")}
+                  aria-label={t("nav.collapse_menu")}
+                  aria-expanded={true}
                 >
                   ←
                 </button>
@@ -225,6 +229,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 rounded-md text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))]"
+            aria-label={mobileMenuOpen ? t("nav.collapse_menu") : t("nav.expand_menu")}
+            aria-expanded={mobileMenuOpen}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="3" y1="12" x2="21" y2="12" />
@@ -246,7 +252,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {/* Notification Bell with Popover */}
             {user && (
               <Popover className="relative">
-                <Popover.Button className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded outline-none">
+                <Popover.Button
+                  className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
+                  aria-label={
+                    notifications.length > 0
+                      ? `${t("notifications.title")} (${notifications.length})`
+                      : t("notifications.title")
+                  }
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
@@ -306,6 +319,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <button
               onClick={toggleTheme}
               title={theme === "dark" ? t("nav.theme_light") : t("nav.theme_dark")}
+              aria-label={theme === "dark" ? t("nav.theme_light") : t("nav.theme_dark")}
               className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
             >
               {theme === "dark" ? (
@@ -326,6 +340,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => setSettingsOpen(true)}
               title={t("nav.settings")}
+              aria-label={t("nav.settings")}
               className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
