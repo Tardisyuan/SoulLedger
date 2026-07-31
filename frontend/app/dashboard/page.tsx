@@ -12,27 +12,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDisplayNameForTenant } from "@/src/config/civilizations";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-
-const STATE_COLORS: Record<string, string> = {
-  ALIVE: "#10b981",
-  JUDGING: "#f59e0b",
-  DISPOSED: "#6b7280",
-  REINCARNATING: "#3b82f6",
-  LOST: "#374151",
-};
-
-const CIVILIZATION_COLORS: Record<string, string> = {
-  CN_DIYU: "#ef4444",
-  EU_HEAVEN_HELL: "#3b82f6",
-  EG_DUAT: "#f59e0b",
-};
-
-const REALM_COLORS: Record<string, string> = {
-  HELL: "#ef4444",
-  PURGATORY: "#f59e0b",
-  BLISS: "#10b981",
-  NEUTRAL: "#6b7280",
-};
+import { STATE_COLORS, CIVILIZATION_COLORS, REALM_COLORS } from "@/lib/chart-colors";
 
 export default function DashboardPage() {
   const { t } = useI18n();

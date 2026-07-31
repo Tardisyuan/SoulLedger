@@ -46,7 +46,9 @@
   --color-ink: 210 11% 96%;
   --color-ink-muted: 213 15% 80%;
   --color-ink-subtle: 215 8% 57%;
-  --color-ink-tertiary: 215 6% 41%;
+  /* 50% (was 41%) — 41% measured 3.37:1 on surface-1, below the WCAG AA 4.5:1
+     floor for body text. 50% lands at ~4.6:1 and is visually near-identical. */
+  --color-ink-tertiary: 215 6% 50%;
   --color-accent: 38 92% 50%;
   --color-accent-hover: 43 96% 58%;
 }
@@ -73,19 +75,30 @@
 :root {
   --color-status-alive: 160 84% 39%;
   --color-status-judging: 38 92% 50%;
-  --color-status-disposed: 220 80% 55%;
+  /* 62% (was 55%) — 55% only reached 4.09:1 on surface-1, below WCAG AA. */
+  --color-status-disposed: 220 80% 62%;
   --color-status-reincarnating: 217 91% 60%;
   --color-status-lost: 0 0% 50%;
   --color-karma-merit: 142 76% 36%;
   --color-karma-demerit: 0 84% 60%;
-  --color-verdict-passed: 38 92% 50%;
+  /* Green rather than the accent amber: a PASSED badge previously rendered in
+     the exact same colour as buttons and headings, so the accent no longer
+     signalled "interactive". Matches --color-karma-merit. */
+  --color-verdict-passed: 142 76% 36%;
   --color-verdict-failed: 0 84% 60%;
   --color-verdict-purgatory: 217 91% 60%;
-  --color-verdict-retry: 270 76% 55%;
+  /* 68% (was 55%) — 55% only reached 3.39:1 on surface-1, below WCAG AA. */
+  --color-verdict-retry: 270 76% 68%;
   --color-status-success: 142 76% 36%;
   --color-status-error: 0 84% 60%;
   --color-status-warning: 38 92% 50%;
   --color-status-info: 217 91% 60%;
+  /* Civilization identity. Previously each page picked its own: the dashboard
+     had CN red while organizations had CN amber, so one screen showed the same
+     civilization in two colours. Amber/blue/purple keeps the hues far apart. */
+  --color-civ-cn: 38 92% 50%;
+  --color-civ-eu: 217 91% 52%;
+  --color-civ-eg: 271 81% 56%;
 }
 
 .light {
@@ -96,7 +109,7 @@
   --color-status-lost: 0 0% 40%;
   --color-karma-merit: 142 76% 28%;
   --color-karma-demerit: 0 84% 50%;
-  --color-verdict-passed: 38 92% 40%;
+  --color-verdict-passed: 142 76% 28%;
   --color-verdict-failed: 0 84% 50%;
   --color-verdict-purgatory: 217 91% 50%;
   --color-verdict-retry: 270 76% 45%;
@@ -104,6 +117,9 @@
   --color-status-error: 0 84% 50%;
   --color-status-warning: 38 92% 40%;
   --color-status-info: 217 91% 50%;
+  --color-civ-cn: 38 92% 40%;
+  --color-civ-eu: 217 91% 45%;
+  --color-civ-eg: 271 81% 48%;
 }
 
 @layer base {
