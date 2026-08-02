@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSouls, useCreateSoul } from "@/src/hooks/useSouls";
-import { Pagination } from "@/src/components/ui/Pagination";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { DataTable, type SortState } from "@/components/ui/data-table";
 import type { Soul } from "@/lib/api";
 
 const STATE_COLORS: Record<string, string> = {
@@ -17,24 +17,35 @@ const STATE_COLORS: Record<string, string> = {
   LOST: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
 };
 
+/** Parses the `ordering` query param ("-name" etc.) into DataTable's sort shape. */
+function parseOrdering(ordering: string): SortState | null {
+  if (!ordering) return null;
+  const desc = ordering.startsWith("-");
+  return { key: desc ? ordering.slice(1) : ordering, direction: desc ? "desc" : "asc" };
+}
+
 export default function SoulsPage() {
   const { t } = useI18n();
   const [page, setPage] = useState(1);
   const [stateFilter, setStateFilter] = useState("");
   const [civilizationFilter, setCivilizationFilter] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [karmaMin, setKarmaMin] = useState("");
   const [karmaMax, setKarmaMax] = useState("");
   const [ordering, setOrdering] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+  // Debounce the search box so typing doesn't fire a request per keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   // Build query params from filter state
-  // Map civilization to tenant code for backend filtering
-  const civilizationToTenantCode: Record<string, string> = {
-    CHINESE: "CN_DIYU",
-    EUROPEAN: "EU_HEAVEN_HELL",
-    EGYPTIAN: "EG_DUAT",
-  };
   const params: Record<string, string | number | undefined> = { page };
   if (stateFilter) params.state = stateFilter;
   if (civilizationFilter) params.civilization = civilizationFilter;
@@ -43,8 +54,9 @@ export default function SoulsPage() {
   if (karmaMax) params.karma_max = parseInt(karmaMax, 10);
   if (ordering) params.ordering = ordering;
 
-  // TanStack Query — automatic caching, background refetch, loading/error states
-  const { data, isLoading, error, refetch } = useSouls(params);
+  // TanStack Query — automatic caching, background refetch, loading/error states.
+  // Params live in the queryKey, so filter/sort/page changes refetch on their own.
+  const { data, isLoading, isError, refetch } = useSouls(params);
   const souls = (data?.results ?? []) as Soul[];
   const totalPages = data ? Math.ceil(data.count / 20) : 0;
 
@@ -66,6 +78,18 @@ export default function SoulsPage() {
     { value: "EGYPTIAN", label: t("souls.civilizations.EGYPTIAN") },
   ];
 
+  const isFiltered = Boolean(search || stateFilter || civilizationFilter || karmaMin || karmaMax);
+
+  const resetFilters = () => {
+    setSearchInput("");
+    setSearch("");
+    setStateFilter("");
+    setCivilizationFilter("");
+    setKarmaMin("");
+    setKarmaMax("");
+    setPage(1);
+  };
+
   return (
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Page header */}
@@ -84,37 +108,18 @@ export default function SoulsPage() {
       <div className="max-w-5xl mx-auto px-6 py-6">
         {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-6 items-center">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setPage(1);
-              refetch();
-            }}
-            className="flex gap-2 flex-1"
-          >
-            <input
-              type="text"
-              placeholder={t("souls.search_placeholder")}
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] rounded-md text-sm transition-colors"
-            >
-              {t("souls.search")}
-            </button>
-          </form>
+          <input
+            type="text"
+            placeholder={t("souls.search_placeholder")}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+          />
           <select
             value={stateFilter}
             onChange={(e) => {
               setStateFilter(e.target.value);
               setPage(1);
-              refetch();
             }}
             className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           >
@@ -127,7 +132,6 @@ export default function SoulsPage() {
             onChange={(e) => {
               setCivilizationFilter(e.target.value);
               setPage(1);
-              refetch();
             }}
             className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           >
@@ -141,7 +145,7 @@ export default function SoulsPage() {
               placeholder={t("souls.karma_min")}
               value={karmaMin}
               onChange={(e) => setKarmaMin(e.target.value)}
-              onBlur={() => { setPage(1); refetch(); }}
+              onBlur={() => setPage(1)}
               className="w-20 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-2 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
             <span className="text-[hsl(var(--color-ink-muted))] text-sm">-</span>
@@ -150,116 +154,65 @@ export default function SoulsPage() {
               placeholder={t("souls.karma_max")}
               value={karmaMax}
               onChange={(e) => setKarmaMax(e.target.value)}
-              onBlur={() => { setPage(1); refetch(); }}
+              onBlur={() => setPage(1)}
               className="w-20 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-2 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
           </div>
-          <select
-            value={ordering}
-            onChange={(e) => {
-              setOrdering(e.target.value);
-              setPage(1);
-              refetch();
-            }}
-            className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-          >
-            <option value="">{t("souls.order_default")}</option>
-            <option value="name">{t("souls.order_name")}</option>
-            <option value="-name">{t("souls.order_name_desc")}</option>
-            <option value="karmic_balance">{t("souls.order_karma")}</option>
-            <option value="-karmic_balance">{t("souls.order_karma_desc")}</option>
-          </select>
         </div>
 
-        {/* Loading / Error / Empty / Table */}
-        {isLoading ? (
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden overflow-x-auto">
-            <table className="w-full text-sm min-w-[600px]">
-              <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium">{t("souls.name")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("souls.civilization")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("souls.state")}</th>
-                  <th className="text-right px-4 py-3 font-medium">{t("souls.karma")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("souls.death")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("souls.action")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    <td className="px-4 py-3"><div className="h-4 w-20 bg-[hsl(var(--color-surface-2))] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-16 bg-[hsl(var(--color-surface-2))] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-5 w-16 bg-[hsl(var(--color-surface-2))] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-12 bg-[hsl(var(--color-surface-2))] rounded ml-auto"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-20 bg-[hsl(var(--color-surface-2))] rounded"></div></td>
-                    <td className="px-4 py-3"><div className="h-4 w-12 bg-[hsl(var(--color-surface-2))] rounded"></div></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : error ? (
-          <div className="text-center text-red-400 py-12">
-            {String(error)}
-          </div>
-        ) : souls.length === 0 ? (
-          <div className="text-center text-[hsl(var(--color-ink-subtle))] py-12">{t("souls.no_souls")}</div>
-        ) : (
-          <>
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden overflow-x-auto">
-            <table className="w-full text-sm min-w-[600px]">
-              <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium">{t("souls.name")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("souls.civilization")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("souls.state")}</th>
-                  <th className="text-right px-4 py-3 font-medium">{t("souls.karma")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("souls.death")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("souls.action")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
-                {souls.map((soul) => (
-                  <tr key={soul.id} className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">{soul.name}</td>
-                    <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
-                      {t(`souls.civilizations.${soul.civilization}`)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul.current_state] ?? "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
-                        {t(`souls.states.${soul.current_state}`)}
-                      </span>
-                    </td>
-                    <td className={`px-4 py-3 text-right font-mono text-sm ${(soul.karmic_balance ?? 0) >= 0 ? "text-[hsl(var(--color-accent))]" : "text-red-400"}`}>
-                      {(soul.karmic_balance ?? 0) >= 0 ? "+" : ""}{soul.karmic_balance ?? 0}
-                    </td>
-                    <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs">{soul.death_date || "—"}</td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/souls/${soul.id}`}
-                        className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))] text-sm"
-                      >
-                        {t("souls.view")} →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {souls.length > 0 && (
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              count={data?.count ?? 0}
-              onPageChange={setPage}
-            />
+        <DataTable<Soul>
+          caption={t("souls.title")}
+          columns={[
+            { key: "name", header: t("souls.name"), sortable: true },
+            { key: "civilization", header: t("souls.civilization") },
+            { key: "state", header: t("souls.state") },
+            { key: "karmic_balance", header: t("souls.karma"), sortable: true, align: "right" },
+            { key: "death", header: t("souls.death") },
+            { key: "action", header: t("souls.action") },
+          ]}
+          data={souls}
+          isLoading={isLoading}
+          isError={isError}
+          onRetry={() => refetch()}
+          keyExtractor={(soul) => String(soul.id)}
+          renderRow={(soul) => (
+            <>
+              <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">{soul.name}</td>
+              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
+                {t(`souls.civilizations.${soul.civilization}`)}
+              </td>
+              <td className="px-4 py-3">
+                <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul.current_state] ?? "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
+                  {t(`souls.states.${soul.current_state}`)}
+                </span>
+              </td>
+              <td className={`px-4 py-3 text-right font-mono text-sm ${(soul.karmic_balance ?? 0) >= 0 ? "text-[hsl(var(--color-accent))]" : "text-[hsl(var(--color-status-error))]"}`}>
+                {(soul.karmic_balance ?? 0) >= 0 ? "+" : ""}{soul.karmic_balance ?? 0}
+              </td>
+              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs">{soul.death_date || "—"}</td>
+              <td className="px-4 py-3">
+                <Link
+                  href={`/souls/${soul.id}`}
+                  className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))] text-sm"
+                >
+                  {t("souls.view")} →
+                </Link>
+              </td>
+            </>
           )}
-          </>
-        )}
+          sort={parseOrdering(ordering)}
+          onSortChange={(next) => {
+            setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
+            setPage(1);
+          }}
+          isFiltered={isFiltered}
+          onClearFilters={resetFilters}
+          emptyMessage={t("souls.no_souls")}
+          page={page}
+          totalPages={totalPages}
+          totalCount={data?.count}
+          onPageChange={setPage}
+        />
       </div>
 
       <SoulCreateModal

@@ -1,14 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { auditApi, type PaginatedResponse } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { PageSection } from "@/components/ui/page-section";
-import { TableSkeleton } from "@/components/ui/skeleton";
-import { Pagination } from "@/src/components/ui/Pagination";
+import { DataTable, type SortState } from "@/components/ui/data-table";
 
 interface AuditLogEntry {
   id: number;
@@ -47,6 +44,13 @@ const RESOURCE_OPTIONS = [
   { value: "permission", label: "Permission" },
 ];
 
+/** Parses the `ordering` query param ("-timestamp" etc.) into DataTable's sort shape. */
+function parseOrdering(ordering: string): SortState | null {
+  if (!ordering) return null;
+  const desc = ordering.startsWith("-");
+  return { key: desc ? ordering.slice(1) : ordering, direction: desc ? "desc" : "asc" };
+}
+
 export default function AuditPage() {
   const { t } = useI18n();
   const { isAdmin } = useTenant();
@@ -56,9 +60,10 @@ export default function AuditPage() {
   const [resourceFilter, setResourceFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [ordering, setOrdering] = useState("");
 
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["audit", page, actionFilter, resourceFilter, dateFrom, dateTo],
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["audit", page, actionFilter, resourceFilter, dateFrom, dateTo, ordering],
     queryFn: async () => {
       const params: Record<string, string> = {
         page: String(page),
@@ -68,6 +73,7 @@ export default function AuditPage() {
       if (resourceFilter) params.resource = resourceFilter;
       if (dateFrom) params.start_date = dateFrom;
       if (dateTo) params.end_date = dateTo;
+      if (ordering) params.ordering = ordering;
 
       const res = await auditApi.list(params);
       return res.data as PaginatedResponse<AuditLogEntry>;
@@ -77,6 +83,14 @@ export default function AuditPage() {
 
   const logs = data?.results ?? [];
   const totalPages = data ? Math.ceil(data.count / 20) : 0;
+  const isFiltered = Boolean(actionFilter || resourceFilter || dateFrom || dateTo);
+  const clearFilters = () => {
+    setActionFilter("");
+    setResourceFilter("");
+    setDateFrom("");
+    setDateTo("");
+    setPage(1);
+  };
 
   // Access denied for non-admin
   if (!isAdmin) {
@@ -163,15 +177,9 @@ export default function AuditPage() {
             className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-amber-500 transition-colors"
           />
 
-          {(actionFilter || resourceFilter || dateFrom || dateTo) && (
+          {isFiltered && (
             <button
-              onClick={() => {
-                setActionFilter("");
-                setResourceFilter("");
-                setDateFrom("");
-                setDateTo("");
-                setPage(1);
-              }}
+              onClick={clearFilters}
               className="px-3 py-2 text-sm text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded transition-colors"
             >
               {t("audit.clear_filters")}
@@ -179,100 +187,73 @@ export default function AuditPage() {
           )}
         </div>
 
-        {/* Audit table */}
-        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg overflow-hidden">
-          {isLoading ? (
-            <table className="w-full">
-              <tbody>
-                <TableSkeleton rows={8} cols={6} />
-              </tbody>
-            </table>
-          ) : logs.length === 0 ? (
-            <div className="py-12 text-center text-sm text-[hsl(var(--color-ink-muted))]">
-              {t("audit.no_logs")}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-2))]">
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
-                      {t("audit.timestamp")}
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
-                      {t("audit.user")}
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
-                      {t("audit.action")}
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
-                      {t("audit.resource")}
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
-                      {t("audit.description")}
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
-                      {t("audit.ip_address")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
-                  {logs.map((log) => (
-                    <tr key={log.id} className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors">
-                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))] whitespace-nowrap">
-                        {new Date(log.timestamp).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))] font-medium">
-                        {log.user_display || log.user || "-"}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            log.action === "CREATE"
-                              ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]"
-                              : log.action === "UPDATE"
-                              ? "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))]"
-                              : log.action === "DELETE"
-                              ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]"
-                              : log.action === "LOGIN" || log.action === "LOGOUT"
-                              ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]"
-                              : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
-                          }`}
-                        >
-                          {t(`audit.actions.${log.action}`)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))]">
-                        {log.resource}
-                        {log.resource_id && (
-                          <span className="text-[hsl(var(--color-ink-subtle))] ml-1">#{log.resource_id}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))] max-w-xs truncate">
-                        {log.description || "-"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-subtle))] font-mono">
-                        {log.ip_address || "-"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        <DataTable<AuditLogEntry>
+          caption={t("audit.title")}
+          columns={[
+            { key: "timestamp", header: t("audit.timestamp"), sortable: true },
+            { key: "user", header: t("audit.user") },
+            { key: "action", header: t("audit.action"), sortable: true },
+            { key: "resource", header: t("audit.resource"), sortable: true },
+            { key: "description", header: t("audit.description") },
+            { key: "ip_address", header: t("audit.ip_address") },
+          ]}
+          data={logs}
+          isLoading={isLoading}
+          isError={isError}
+          onRetry={() => refetch()}
+          keyExtractor={(log) => String(log.id)}
+          renderRow={(log) => (
+            <>
+              <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))] whitespace-nowrap">
+                {new Date(log.timestamp).toLocaleString()}
+              </td>
+              <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))] font-medium">
+                {log.user_display || log.user || "-"}
+              </td>
+              <td className="px-4 py-3 text-sm">
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                    log.action === "CREATE"
+                      ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]"
+                      : log.action === "UPDATE"
+                      ? "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))]"
+                      : log.action === "DELETE"
+                      ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]"
+                      : log.action === "LOGIN" || log.action === "LOGOUT"
+                      ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]"
+                      : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
+                  }`}
+                >
+                  {t(`audit.actions.${log.action}`)}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))]">
+                {log.resource}
+                {log.resource_id && (
+                  <span className="text-[hsl(var(--color-ink-subtle))] ml-1">#{log.resource_id}</span>
+                )}
+              </td>
+              <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))] max-w-xs truncate">
+                {log.description || "-"}
+              </td>
+              <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-subtle))] font-mono">
+                {log.ip_address || "-"}
+              </td>
+            </>
           )}
-        </div>
-
-        {/* Pagination */}
-        {isLoading ? (
-          <div className="h-5 w-32 bg-muted animate-pulse rounded mt-4" />
-        ) : data && (
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            count={data.count || 0}
-            onPageChange={setPage}
-          />
-        )}
+          sort={parseOrdering(ordering)}
+          onSortChange={(next) => {
+            setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
+            setPage(1);
+          }}
+          isFiltered={isFiltered}
+          onClearFilters={clearFilters}
+          emptyMessage={t("audit.no_logs")}
+          page={page}
+          totalPages={totalPages}
+          totalCount={data?.count}
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );
