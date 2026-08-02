@@ -15,7 +15,7 @@ const VISIBILITY_COLORS: Record<string, string> = {
 };
 
 export function PostCard({ post }: { post: Post }) {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
 
   return (
     <div className="bg-[hsl(var(--color-surface))] border border-[hsl(var(--color-hairline))] rounded-xl p-4 hover:shadow-sm transition-shadow">
@@ -32,7 +32,7 @@ export function PostCard({ post }: { post: Post }) {
           {t(`social.visibility.${post.visibility}`) || post.visibility}
         </span>
         <span className="text-xs text-[hsl(var(--color-ink-muted))] ml-auto">
-          {new Date(post.create_time).toLocaleDateString()}
+          {formatDate(post.create_time)}
         </span>
       </div>
 

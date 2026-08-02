@@ -71,6 +71,14 @@ const CASE_TYPE_KEYS: Record<string, string> = {
 export default function WorkflowPage() {
   const { t } = useI18n();
   const { showToast } = useToast();
+
+  // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
+  const statusLabel = (status?: string | null) => {
+    if (!status) return status ?? "";
+    const key = `workflow.status.${status}`;
+    const label = t(key);
+    return label === key ? status : label;
+  };
   const router = useRouter();
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>("CHINESE_ROUTINE");
   const [workflowInstance, setWorkflowInstance] = useState<ApprovalWorkflow | null>(null);
@@ -467,7 +475,7 @@ export default function WorkflowPage() {
                             : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                         }`}
                       >
-                        {wf.status}
+                        {statusLabel(wf.status)}
                       </span>
                       {wf.is_appeal && (
                         <span className="px-2 py-0.5 rounded text-xs bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))]">

@@ -27,8 +27,15 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function DeathSyncPage() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { user } = useTenant();
+
+  // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
+  const statusLabel = (status: string) => {
+    const key = `death_sync.status.${status}`;
+    const label = t(key);
+    return label === key ? status : label;
+  };
 
   const { data: registrations = [], isLoading } = useQuery({
     queryKey: ["death-sync", "registrations"],
@@ -64,11 +71,11 @@ export default function DeathSyncPage() {
                     </p>
                   </div>
                   <span className={`px-2 py-1 rounded text-xs font-medium ${STATUS_COLORS[reg.status] || ""}`}>
-                    {reg.status}
+                    {statusLabel(reg.status)}
                   </span>
                 </div>
                 <div className="mt-2 flex gap-4 text-xs text-[hsl(var(--color-ink-muted))]">
-                  <span>{t("death_sync.requested") || "Requested"}: {new Date(reg.request_timestamp).toLocaleString()}</span>
+                  <span>{t("death_sync.requested") || "Requested"}: {formatDateTime(reg.request_timestamp)}</span>
                   {reg.processing_duration_ms && (
                     <span>{t("death_sync.duration") || "Duration"}: {reg.processing_duration_ms}ms</span>
                   )}

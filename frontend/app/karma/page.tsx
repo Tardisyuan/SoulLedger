@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LazyBarChart } from "@/src/components/charts/LazyDashboardCharts";
 
 export default function KarmaPage() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { user } = useTenant();
 
   const { data: stats, isLoading, error } = useQuery({
@@ -64,7 +64,7 @@ export default function KarmaPage() {
                     item.state === "REINCARNATING" ? "bg-[hsl(var(--color-status-reincarnating))]" :
                     "bg-[hsl(var(--color-status-error))]"
                   }`} />
-                  <span className="text-sm text-[hsl(var(--color-ink))]">{item.label}</span>
+                  <span className="text-sm text-[hsl(var(--color-ink))]">{t(`souls.states.${item.state}`) === `souls.states.${item.state}` ? item.label : t(`souls.states.${item.state}`)}</span>
                 </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-12" />
@@ -155,7 +155,7 @@ export default function KarmaPage() {
                       <span>{activity.resource}</span>
                       <span className="opacity-60">#{activity.resource_id}</span>
                       <span className="opacity-40">·</span>
-                      <span>{new Date(activity.timestamp).toLocaleString()}</span>
+                      <span>{formatDateTime(activity.timestamp)}</span>
                     </div>
                   </div>
                 </div>

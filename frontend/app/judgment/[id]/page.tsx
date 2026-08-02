@@ -59,7 +59,7 @@ const CIVILIZATION_ICONS: Record<string, string> = {
 export default function JudgmentDetailPage({ params }: PageProps) {
   const { id } = params;
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, formatDate, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const [selectedVerdict, setSelectedVerdict] = useState<string>("");
   const [notes, setNotes] = useState("");
@@ -147,7 +147,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           </span>
         )}
         <span className="text-xs text-[hsl(var(--color-ink-subtle))]">
-          {new Date(judgment.created_at).toLocaleDateString()}
+          {formatDate(judgment.created_at)}
         </span>
       </div>
 
@@ -195,7 +195,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               </div>
               {judgment.concluded_at && (
                 <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-2">
-                  {new Date(judgment.concluded_at).toLocaleString()}
+                  {formatDateTime(judgment.concluded_at)}
                 </div>
               )}
               {judgment.notes && (

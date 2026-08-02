@@ -81,6 +81,9 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
     EXECUTED: "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]",
     CANCELLED: "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]",
   };
+  // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
+  const statusKey = `dispatch.states.${dispatch.status}`;
+  const statusLabel = t(statusKey) === statusKey ? dispatch.status : t(statusKey);
 
   return (
     <Link href={`/dispatch/${dispatch.id}`} className="block">
@@ -93,7 +96,7 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
             </p>
           </div>
           <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[dispatch.status] || "bg-[hsl(var(--color-status-lost)/0.2)]"}`}>
-            {dispatch.status}
+            {statusLabel}
           </span>
         </div>
         {dispatch.reason && (

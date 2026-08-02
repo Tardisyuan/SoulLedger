@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 type FilterType = "all" | "unread";
 
 export default function NotificationsPage() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<FilterType>("all");
@@ -73,16 +73,7 @@ export default function NotificationsPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formatDate = (dateString: string) => formatDateTime(dateString);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 

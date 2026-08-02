@@ -36,8 +36,22 @@ const NODE_TYPE_KEYS: Record<string, string> = {
 export default function WorkflowDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
+
+  // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
+  const statusLabel = (status?: string | null) => {
+    if (!status) return status ?? "";
+    const key = `workflow.status.${status}`;
+    const label = t(key);
+    return label === key ? status : label;
+  };
+  const verdictLabel = (verdict?: string | null) => {
+    if (!verdict) return verdict ?? "";
+    const key = `workflow.verdicts.${verdict.toLowerCase()}`;
+    const label = t(key);
+    return label === key ? verdict : label;
+  };
 
   const [selectedVerdict, setSelectedVerdict] = useState<string>("");
   const [notes, setNotes] = useState("");
@@ -122,7 +136,7 @@ export default function WorkflowDetailPage() {
         </Link>
         <h1 className="text-lg font-bold text-[hsl(var(--color-ink))] flex-1">{workflow.workflow_name}</h1>
         <span className={`px-2 py-0.5 rounded text-xs font-bold border ${statusColor}`}>
-          {workflow.status}
+          {statusLabel(workflow.status)}
         </span>
         {workflow.is_appeal && (
           <span className="px-2 py-0.5 rounded text-xs bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))]">
@@ -160,11 +174,11 @@ export default function WorkflowDetailPage() {
             </div>
             <div>
               <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.created_at")}</dt>
-              <dd className="text-[hsl(var(--color-ink))]">{new Date(workflow.created_at).toLocaleString()}</dd>
+              <dd className="text-[hsl(var(--color-ink))]">{formatDateTime(workflow.created_at)}</dd>
             </div>
             <div>
               <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.completed_at")}</dt>
-              <dd className="text-[hsl(var(--color-ink))]">{workflow.completed_at ? new Date(workflow.completed_at).toLocaleString() : "—"}</dd>
+              <dd className="text-[hsl(var(--color-ink))]">{workflow.completed_at ? formatDateTime(workflow.completed_at) : "—"}</dd>
             </div>
           </dl>
         </div>
@@ -273,7 +287,7 @@ export default function WorkflowDetailPage() {
             </p>
             {workflow.completed_at && (
               <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-2">
-                {t("workflow.detail.completed_at")}: {new Date(workflow.completed_at).toLocaleString()}
+                {t("workflow.detail.completed_at")}: {formatDateTime(workflow.completed_at)}
               </p>
             )}
           </div>
@@ -310,6 +324,8 @@ export default function WorkflowDetailPage() {
               const isCurrent = workflow.current_node === node.id;
               const isPast = node.status !== "PENDING";
               const nodeColor = STATUS_COLORS[node.status] || STATUS_COLORS.PENDING;
+              const nodeStatusLabel = statusLabel(node.status);
+              const nodeVerdictLabel = verdictLabel(node.verdict);
 
               return (
                 <div
@@ -347,11 +363,11 @@ export default function WorkflowDetailPage() {
                         <div className="mt-3 pt-3 border-t border-[hsl(var(--color-hairline))]/50">
                           <div className="flex items-center gap-2 mb-2">
                             <span className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict ?? ""] || ""}`}>
-                              {node.verdict}
+                              {nodeVerdictLabel}
                             </span>
                             {node.decided_at && (
                               <span className="text-xs text-[hsl(var(--color-ink-subtle))]">
-                                {new Date(node.decided_at).toLocaleString()}
+                                {formatDateTime(node.decided_at)}
                               </span>
                             )}
                           </div>
@@ -369,7 +385,7 @@ export default function WorkflowDetailPage() {
 
                     {/* Status badge */}
                     <span className={`px-2 py-0.5 rounded text-xs font-medium border ${nodeColor}`}>
-                      {node.status}
+                      {nodeStatusLabel}
                     </span>
                   </div>
 
@@ -398,11 +414,11 @@ export default function WorkflowDetailPage() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</span>
                     <span className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict ?? ""] || ""}`}>
-                      {node.verdict}
+                      {verdictLabel(node.verdict)}
                     </span>
                   </div>
                   <div className="text-xs text-[hsl(var(--color-ink-muted))]">
-                    {t("workflow.detail.decided_at")}: {node.decided_at ? new Date(node.decided_at).toLocaleString() : "—"}
+                    {t("workflow.detail.decided_at")}: {node.decided_at ? formatDateTime(node.decided_at) : "—"}
                   </div>
                   {node.notes && (
                     <p className="text-sm text-[hsl(var(--color-ink-muted))] mt-2 italic">&ldquo;{node.notes}&rdquo;</p>

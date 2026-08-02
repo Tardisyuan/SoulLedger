@@ -52,7 +52,7 @@ function parseOrdering(ordering: string): SortState | null {
 }
 
 export default function AuditPage() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { isAdmin } = useTenant();
 
   const [page, setPage] = useState(1);
@@ -205,7 +205,7 @@ export default function AuditPage() {
           renderRow={(log) => (
             <>
               <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))] whitespace-nowrap">
-                {new Date(log.timestamp).toLocaleString()}
+                {formatDateTime(log.timestamp)}
               </td>
               <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))] font-medium">
                 {log.user_display || log.user || "-"}

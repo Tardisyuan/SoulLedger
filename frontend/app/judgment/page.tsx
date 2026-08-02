@@ -22,7 +22,7 @@ function parseOrdering(ordering: string): SortState | null {
 }
 
 export default function JudgmentQueuePage() {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const [tab, setTab] = useState<"pending" | "concluded">("pending");
   const [page, setPage] = useState(1);
   const [ordering, setOrdering] = useState("");
@@ -121,7 +121,7 @@ export default function JudgmentQueuePage() {
                 )}
               </td>
               <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs">
-                {new Date(judgment.created_at).toLocaleDateString()}
+                {formatDate(judgment.created_at)}
               </td>
               <td className="px-4 py-3">
                 <Link

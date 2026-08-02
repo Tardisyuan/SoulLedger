@@ -10,6 +10,7 @@ import type { Comment } from "@/lib/api";
 function CommentItem({ comment, postId, depth, onReply }: {
   comment: Comment; postId: string; depth: number; onReply: (id: string) => void;
 }) {
+  const { formatDate } = useI18n();
   return (
     <div className={depth > 0 ? "ml-6 border-l-2 border-[hsl(var(--color-hairline))]/50 pl-4" : ""}>
       <div className="py-2">
@@ -18,7 +19,7 @@ function CommentItem({ comment, postId, depth, onReply }: {
             {comment.author_name || comment.author_username}
           </Link>
           <span className="text-xs text-[hsl(var(--color-ink-muted))]">
-            {new Date(comment.create_time).toLocaleDateString()}
+            {formatDate(comment.create_time)}
           </span>
         </div>
         <p className="text-sm text-[hsl(var(--color-ink))] whitespace-pre-wrap">{comment.content}</p>
