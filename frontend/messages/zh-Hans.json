@@ -517,7 +517,9 @@
       "concluding": "结案处理中...",
       "conclude": "结案",
       "notes_placeholder": "输入备注...",
-      "no_evidence": "暂无证据和供词记录"
+      "no_evidence": "暂无证据和供词记录",
+      "create_workflow": "发起审批流程",
+      "create_workflow_hint": "勾选后,结案将按该文明与案件类型匹配的模板自动创建一条审批流程。"
     },
     "create_success": "已创建审判",
     "create_error": "创建审判失败",

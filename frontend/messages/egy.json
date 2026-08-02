@@ -517,7 +517,9 @@
       "concluding": "Em Wetep Seth...",
       "conclude": "Wetep Seth",
       "notes_placeholder": "Shesep Medu Seth...",
-      "no_evidence": "Ma Medu Sethet Em Khemen Seth"
+      "no_evidence": "Ma Medu Sethet Em Khemen Seth",
+      "create_workflow": "Shesep Sekhem Sethet",
+      "create_workflow_hint": "Sesen Seth, Wetep Seth Kheme Sekhem Sethet Her Aset Ahamet we Medu Sheemtet."
     },
     "create_success": "Sheemtet Kheme Wehem Abuf",
     "create_error": "Ma Shemsu Em Kheme Sheemtet",

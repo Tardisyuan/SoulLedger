@@ -517,7 +517,9 @@
       "concluding": "Concluding...",
       "conclude": "Conclude",
       "notes_placeholder": "Enter notes...",
-      "no_evidence": "No evidence or confession records"
+      "no_evidence": "No evidence or confession records",
+      "create_workflow": "Start approval workflow",
+      "create_workflow_hint": "If checked, concluding will create an approval workflow from the template matching this civilization and case type."
     },
     "create_success": "Judgment created",
     "create_error": "Failed to create judgment",
