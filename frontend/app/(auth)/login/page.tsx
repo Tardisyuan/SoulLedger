@@ -34,7 +34,7 @@ export default function LoginPage() {
       }
 
       showToast(t("auth.login_success"), "success");
-      window.location.href = "/souls";
+      window.location.href = "/dashboard";
       return;
     } catch (err: unknown) {
       const raw = (err as { response?: { data?: { detail?: string } } })

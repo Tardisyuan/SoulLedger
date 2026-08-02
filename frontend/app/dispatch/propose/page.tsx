@@ -41,14 +41,23 @@ export default function ProposeDispatchPage() {
     e.preventDefault();
     if (!user?.tenant?.code) return;
 
+    // Backend requires numeric source_tenant/target_tenant FK ids (tenant codes
+    // are read-only output fields on this endpoint), so resolve them from the
+    // tenant list we already fetched via karmaApi.statsOverview().
+    const sourceTenantCode = user.tenant.code;
+    const sourceTenant = tenants.find((tn) => tn.tenant_code ===sourceTenantCode);
+    const targetTenant = tenants.find((tn) => tn.tenant_code ===form.target_tenant_code);
+    if (!sourceTenant || !targetTenant) {
+      showToast(t("dispatch.propose_error"), "error");
+      return;
+    }
+
     setLoading(true);
     try {
-      // Note: Backend expects numeric IDs but frontend only has tenant codes
-      // Using tenant code directly - may need backend adjustment
       await dispatchApi.propose({
-        source_tenant_code: user.tenant.code,
-        target_tenant_code: form.target_tenant_code,
-        soul: parseInt(form.soul_id),
+        source_tenant: sourceTenant.tenant_id,
+        target_tenant: targetTenant.tenant_id,
+        soul: form.soul_id,
         reason: form.reason,
       });
       router.push("/dispatch");

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -56,9 +57,14 @@ export default function DispositionPage() {
               <div key={d.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-[hsl(var(--color-ink))]">Soul: {d.soul}</p>
+                    <p className="font-medium text-[hsl(var(--color-ink))]">
+                      {t("disposition.soul") || "Soul"}:{" "}
+                      <Link href={`/souls/${d.soul}`} className="text-[hsl(var(--color-accent))] hover:underline">
+                        {d.soul_name || d.soul}
+                      </Link>
+                    </p>
                     <p className="text-sm text-[hsl(var(--color-ink-subtle))]">
-                      {t("disposition.realm") || "Realm"}: {d.destination_realm || "—"}
+                      {t("disposition.realm") || "Realm"}: {d.realm_name || d.destination_realm || "—"}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
