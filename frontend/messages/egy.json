@@ -93,6 +93,21 @@
       "EUROPEAN": "Eremitee",
       "EGYPTIAN": "Kemet"
     },
+    "categories": {
+      "CHARITY": "Redi Awy",
+      "COMPASSION": "Ib Nefer",
+      "HONESTY": "Ma'at",
+      "COURAGE": "Qen",
+      "WISDOM": "Sia",
+      "PIETY": "Dua Netjer",
+      "CRUELTY": "Bin Ib",
+      "DECEPTION": "Gereg",
+      "COWARDICE": "Ma Qen",
+      "GREED": "Awn Ib",
+      "BLASPHEMY": "Sebi Netjer",
+      "MURDER": "Sma",
+      "OTHER": "Ky"
+    },
     "form": {
       "name_label": "Ren *",
       "name_required": "Ren Her Tepy",

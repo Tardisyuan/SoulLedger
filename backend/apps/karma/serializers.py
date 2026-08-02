@@ -25,6 +25,7 @@ class KarmaRecordSerializer(serializers.Serializer):
     civilization = serializers.CharField()
     recorded_at = serializers.DateTimeField()
     event_date = serializers.DateField(allow_null=True)
+    is_milestone = serializers.BooleanField()
 
 
 class KarmaSummarySerializer(serializers.Serializer):
