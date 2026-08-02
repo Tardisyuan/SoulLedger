@@ -16,7 +16,10 @@ const messages: Record<Locale, Record<string, unknown>> = {
 export const LOCALE_LABELS: Record<Locale, string> = {
   "zh-Hans": "简体中文",
   en: "English",
-  egy: "𓋴 العربية",
+  // Kemet ("the black land") is what ancient Egypt called itself. This label
+  // used to read "𓋴 العربية" — literally "Arabic" — which is a language that
+  // reached Egypt some 1400 years after the period this locale evokes.
+  egy: "𓋴 Kemet",
 };
 
 const LOCALE_COOKIE = "soulledger-locale";

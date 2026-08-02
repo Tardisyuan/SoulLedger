@@ -94,6 +94,22 @@
     ],
     "rows": [
       [
+        "2026年8月2日 21:17:47",
+        "System",
+        "创建",
+        "loginlog#191",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "2026年8月2日 21:17:47",
+        "System",
+        "创建",
+        "outstandingtoken#713",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
         "2026年8月2日 21:10:45",
         "System",
         "创建",
@@ -171,22 +187,6 @@
         "创建",
         "outstandingtoken#708",
         "CREATE Outstanding Token",
-        "192.168.2.200"
-      ],
-      [
-        "2026年8月2日 19:55:55",
-        "System",
-        "创建",
-        "loginlog#185",
-        "CREATE Login Log",
-        "192.168.2.200"
-      ],
-      [
-        "2026年8月2日 18:25:45",
-        "System",
-        "创建",
-        "loginlog#184",
-        "CREATE Login Log",
         "192.168.2.200"
       ]
     ]
@@ -286,6 +286,22 @@
     ],
     "rows": [
       [
+        "Aug 2, 2026, 9:17:47 PM",
+        "System",
+        "Created",
+        "loginlog#191",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 9:17:47 PM",
+        "System",
+        "Created",
+        "outstandingtoken#713",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
         "Aug 2, 2026, 9:10:45 PM",
         "System",
         "Created",
@@ -364,31 +380,15 @@
         "outstandingtoken#708",
         "CREATE Outstanding Token",
         "192.168.2.200"
-      ],
-      [
-        "Aug 2, 2026, 7:55:55 PM",
-        "System",
-        "Created",
-        "loginlog#185",
-        "CREATE Login Log",
-        "192.168.2.200"
-      ],
-      [
-        "Aug 2, 2026, 6:25:45 PM",
-        "System",
-        "Created",
-        "loginlog#184",
-        "CREATE Login Log",
-        "192.168.2.200"
       ]
     ]
   },
   "permissions/egy": {
     "kind": "table",
     "headers": [
-      "الرمز",
-      "الاسم",
-      "الفئة",
+      "Medu",
+      "Ren",
+      "Rekhet",
       "Aha Seth"
     ],
     "rows": [
@@ -396,73 +396,73 @@
         "actors.read",
         "查看角色",
         "actors",
-        "تعديل صلاحيةحذف صلاحية"
+        "Khemen SethetWehem Sethet"
       ],
       [
         "audit.read",
         "查看审计日志",
         "audit",
-        "تعديل صلاحيةحذف صلاحية"
+        "Khemen SethetWehem Sethet"
       ],
       [
         "cross_judgment.create",
         "创建跨域审判",
         "cross_judgment",
-        "تعديل صلاحيةحذف صلاحية"
+        "Khemen SethetWehem Sethet"
       ],
       [
         "cross_judgment.read",
         "查看跨域审判",
         "cross_judgment",
-        "تعديل صلاحيةحذف صلاحية"
+        "Khemen SethetWehem Sethet"
       ],
       [
         "dashboard.read",
         "查看仪表盘",
         "dashboard",
-        "تعديل صلاحيةحذف صلاحية"
+        "Khemen SethetWehem Sethet"
       ],
       [
         "dispatch.manage",
         "管理调度",
         "dispatch",
-        "تعديل صلاحيةحذف صلاحية"
+        "Khemen SethetWehem Sethet"
       ],
       [
         "dispatch.read",
         "查看调度",
         "dispatch",
-        "تعديل صلاحيةحذف صلاحية"
+        "Khemen SethetWehem Sethet"
       ],
       [
         "judgment.execute",
         "执行审判",
         "judgment",
-        "تعديل صلاحيةحذف صلاحية"
+        "Khemen SethetWehem Sethet"
       ],
       [
         "judgment.read",
         "查看审判",
         "judgment",
-        "تعديل صلاحيةحذف صلاحية"
+        "Khemen SethetWehem Sethet"
       ],
       [
         "karma.manage",
         "管理功德",
         "karma",
-        "تعديل صلاحيةحذف صلاحية"
+        "Khemen SethetWehem Sethet"
       ],
       [
         "karma.read",
         "查看功德",
         "karma",
-        "تعديل صلاحيةحذف صلاحية"
+        "Khemen SethetWehem Sethet"
       ],
       [
         "notification.read",
         "查看通知",
         "notification",
-        "تعديل صلاحيةحذف صلاحية"
+        "Khemen SethetWehem Sethet"
       ]
     ]
   },
@@ -478,6 +478,22 @@
     ],
     "rows": [
       [
+        "Aug 2, 2026, 9:17:47 PM",
+        "System",
+        "Kheme Seth",
+        "loginlog#191",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 9:17:47 PM",
+        "System",
+        "Kheme Seth",
+        "outstandingtoken#713",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
         "Aug 2, 2026, 9:10:45 PM",
         "System",
         "Kheme Seth",
@@ -555,22 +571,6 @@
         "Kheme Seth",
         "outstandingtoken#708",
         "CREATE Outstanding Token",
-        "192.168.2.200"
-      ],
-      [
-        "Aug 2, 2026, 7:55:55 PM",
-        "System",
-        "Kheme Seth",
-        "loginlog#185",
-        "CREATE Login Log",
-        "192.168.2.200"
-      ],
-      [
-        "Aug 2, 2026, 6:25:45 PM",
-        "System",
-        "Kheme Seth",
-        "loginlog#184",
-        "CREATE Login Log",
         "192.168.2.200"
       ]
     ]

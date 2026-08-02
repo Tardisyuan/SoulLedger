@@ -11,30 +11,24 @@ strings.json              headers + first 12 rows, verbatim
 
 ---
 
-## Correction to the brief
+## Note on a bidi problem that no longer exists
 
-**§5 of BRIEF.md describes `egy` as "a stylised transliterated Ancient Egyptian". That is
-only mostly true, and the exception matters for table design.**
+An earlier version of this file reported that 41 of the 886 `egy` strings were **Arabic**
+— right-to-left — sitting in the highest-traffic UI slots (`common.close`,
+`common.cancel`, `common.save`, `auth.login`, `nav.user_profile`, `menus.title`), and
+that the locale's own label read `𓋴 العربية`, literally "Arabic". The conclusion at the
+time was that the component set would have to survive right-to-left runs inside a
+left-to-right grid.
 
-41 of the 886 `egy` strings (4.6%) are **Arabic**, not transliteration — and they are
-concentrated in the highest-traffic UI strings:
+**That has been fixed rather than designed around.** Arabic reached Egypt roughly 1400
+years after the period this locale evokes, so it was simply wrong. All 41 strings are now
+transliterated Egyptian consistent with the rest of the bundle, and the locale label is
+`𓋴 Kemet` — what ancient Egypt called itself.
 
-| key | value |
-|---|---|
-| `common.close` | إغلاق |
-| `common.cancel` | إلغاء |
-| `common.save` | حفظ |
-| `auth.login` | تسجيل الدخول |
-| `nav.user_profile` | ملف المستخدم |
-| `menus.title` | إدارة القائمة |
-
-The locale's own display label is `𓋴 العربية` — hieroglyph plus the Arabic word for
-"Arabic". Three strings also carry hieroglyphic characters.
-
-So `egy` is not one script running long. It is **Latin transliteration, Arabic, and
-hieroglyphs in the same bundle**, and Arabic is right-to-left. Whether that is intended
-is an open question on our side, but it is what ships today, so the component set has to
-survive it.
+`egy` is now what §5 of the brief always claimed: Latin transliteration throughout, with
+three strings carrying hieroglyphs as ornament. **No RTL anywhere.** The captures in this
+directory are post-fix. If you already sketched around bidirectional text, you can drop
+it.
 
 ---
 
@@ -46,15 +40,12 @@ survive it.
 |---|---|---|
 | zh-Hans | 代码 \| 名称 \| 分类 \| 操作 | 8 |
 | en | Code \| Name \| Category \| Action | 22 |
-| egy | الرمز \| الاسم \| الفئة \| Aha Seth | 23 |
-
-Three of the four `egy` headers are Arabic; the fourth is transliteration. The action
-cells are Arabic too (`تعديل صلاحية` / `حذف صلاحية`).
+| egy | Medu \| Ren \| Rekhet \| Aha Seth | 21 |
 
 **The row data does not translate.** Permission names come from the database, not the
 message bundles, so `查看角色` and `创建跨域审判` stay Chinese in all three locales. An
-`egy` permissions table therefore renders **Arabic headers over Chinese data with Latin
-identifiers in column one** — three scripts and two directions in one grid.
+`egy` permissions table therefore renders **transliterated headers over Chinese data with
+Latin identifiers in column one** — still two scripts in one grid, just one direction now.
 
 Longest cell per column (characters):
 
@@ -62,7 +53,10 @@ Longest cell per column (characters):
 |---|---|---|---|---|
 | zh-Hans | 21 | 6 | 14 | 8 |
 | en | 21 | 6 | 14 | **32** |
-| egy | 21 | 6 | 14 | 22 |
+| egy | 21 | 6 | 14 | 25 |
+
+Note columns one to three are identical across all three locales — they are database
+content and identifiers. Only the action column moves, and it quadruples.
 
 ### audit — 6 columns, the widest table in the app
 

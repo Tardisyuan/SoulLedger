@@ -250,12 +250,13 @@ in every screenshot), English, and `egy` — the Egyptian civilization's theming
 layout assumptions** — Chinese strings are typically 40–60% the width of their English
 equivalents, and `egy` runs longer than both.
 
-`egy` is not one script. Most of it is transliterated Ancient Egyptian in Latin, but
-**41 strings (4.6%) are Arabic — right-to-left — and they are the high-traffic ones**:
-`common.close`, `common.cancel`, `common.save`, `auth.login`, `nav.user_profile`,
-`menus.title`. Three more carry hieroglyphs, and the locale's own label is `𓋴 العربية`.
-Components have to survive Latin, Chinese, Arabic and hieroglyphs in one view, in two
-directions. See `tables/README.md` for what this does to a real table.
+`egy` is transliterated Ancient Egyptian in Latin script throughout, with three strings
+carrying hieroglyphs as ornament and the locale labelled `𓋴 Kemet`. It is left-to-right
+everywhere; there is no bidirectional text in this app.
+
+What does mix is **script, not direction**: database content stays Chinese in every
+locale, so an `egy` table renders transliterated headers over Chinese rows with Latin
+identifiers. See `tables/README.md` for the measured widths.
 
 **Accessibility.** A baseline was just established and must not regress: every form
 control has an accessible name, validation errors are announced via `role="alert"`
