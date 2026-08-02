@@ -19,6 +19,7 @@
     "expand_menu": "展开菜单",
     "collapse_menu": "收起菜单",
     "settings": "设置",
+    "language": "界面语言",
     "theme_light": "切换到浅色模式",
     "theme_dark": "切换到深色模式"
   },
@@ -142,6 +143,7 @@
       "mark_dead": "标记死亡 → 开始审判",
       "processing": "处理中...",
       "render_judgment": "执行审判",
+      "start_judgment": "开始审判",
       "verdict_passed": "PASSED — 善行通过",
       "verdict_failed": "FAILED — 恶行失败",
       "verdict_purgatory": "PURGATORY — 待定",
@@ -290,6 +292,8 @@
     "existing": "现有流程",
     "editor": {
       "new_template_name": "新流程模板",
+      "civilization_select_label": "文明",
+      "case_type_select_label": "案件类型",
       "template_name_placeholder": "模板名称",
       "add_node": "添加节点",
       "delete_selected": "删除选中",
@@ -398,11 +402,24 @@
     "appeal_badge": "申诉",
     "template_detail": "模板详情",
     "no_node_data": "暂无节点数据",
-    "delete_error": "删除失败"
+    "delete_error": "删除失败",
+    "status": {
+      "PENDING": "待审批",
+      "IN_PROGRESS": "审批中",
+      "APPROVED": "已批准",
+      "REJECTED": "已拒绝",
+      "APPEAL": "申诉中",
+      "EXCEPTION": "异常处理",
+      "COMPLETED": "流程完成",
+      "SKIPPED": "已跳过",
+      "ESCALATED": "已升级"
+    }
   },
   "dashboard": {
     "title": "灵魂账本统计",
     "subtitle": "跨文明灵魂管理概览",
+    "tab_overview": "概览",
+    "chart_souls": "灵魂数",
     "total_souls": "灵魂总数",
     "alive": "存活",
     "under_judgment": "审判中",
@@ -706,7 +723,14 @@
     "approve_error": "批准失败",
     "reject_error": "驳回失败",
     "execute_error": "执行失败",
-    "propose_error": "发起调度失败"
+    "propose_error": "发起调度失败",
+    "states": {
+      "PROPOSED": "待审批",
+      "APPROVED": "已批准",
+      "REJECTED": "已拒绝",
+      "EXECUTED": "已执行",
+      "CANCELLED": "已取消"
+    }
   },
   "crossJudgments": {
     "title": "跨文明审判",
@@ -860,6 +884,7 @@
   },
   "menu_buttons": {
     "title": "菜单按钮",
+    "filter_by_menu": "按菜单筛选",
     "all_menus": "所有菜单",
     "create": "添加按钮",
     "edit": "编辑按钮",
@@ -911,11 +936,20 @@
     "no_registrations": "暂无死亡登记记录",
     "requested": "请求时间",
     "duration": "耗时",
-    "reference": "外部编号"
+    "reference": "外部编号",
+    "status": {
+      "PENDING": "待验证",
+      "ACCEPTED": "处理中",
+      "PROCESSED": "已处理",
+      "FAILED": "处理失败",
+      "DUPLICATE": "重复",
+      "PARTIAL": "部分处理"
+    }
   },
   "disposition": {
     "title": "处置管理",
     "subtitle": "审判结案后的灵魂去向安排",
+    "soul": "灵魂",
     "list": "处置列表",
     "no_dispositions": "暂无处置记录",
     "realm": "目标领域",

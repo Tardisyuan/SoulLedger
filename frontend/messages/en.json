@@ -19,6 +19,7 @@
     "collapse_menu": "Collapse menu",
     "settings": "Settings",
     "welcome": "Welcome",
+    "language": "Interface language",
     "theme_light": "Switch to light mode",
     "theme_dark": "Switch to dark mode"
   },
@@ -142,6 +143,7 @@
       "mark_dead": "Mark Dead → Begin Judgment",
       "processing": "Processing...",
       "render_judgment": "Render Judgment",
+      "start_judgment": "Start Judgment",
       "verdict_passed": "PASSED — Verdict Passed",
       "verdict_failed": "FAILED — Verdict Failed",
       "verdict_purgatory": "PURGATORY — Pending",
@@ -290,6 +292,8 @@
     "existing": "Existing Workflows",
     "editor": {
       "new_template_name": "New Template",
+      "civilization_select_label": "Civilization",
+      "case_type_select_label": "Case Type",
       "template_name_placeholder": "Template Name",
       "add_node": "Add Node",
       "delete_selected": "Delete Selected",
@@ -398,11 +402,24 @@
     "appeal_badge": "Appeal",
     "template_detail": "Template Detail",
     "no_node_data": "No node data",
-    "delete_error": "Failed to delete"
+    "delete_error": "Failed to delete",
+    "status": {
+      "PENDING": "Pending",
+      "IN_PROGRESS": "In Progress",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "APPEAL": "Under Appeal",
+      "EXCEPTION": "Exception",
+      "COMPLETED": "Completed",
+      "SKIPPED": "Skipped",
+      "ESCALATED": "Escalated"
+    }
   },
   "dashboard": {
     "title": "SoulLedger Statistics",
     "subtitle": "Cross-civilization soul management overview",
+    "tab_overview": "Overview",
+    "chart_souls": "Souls",
     "total_souls": "Total Souls",
     "alive": "Alive",
     "under_judgment": "Under Judgment",
@@ -706,7 +723,14 @@
     "approve_error": "Failed to approve",
     "reject_error": "Failed to reject",
     "execute_error": "Failed to execute",
-    "propose_error": "Failed to propose dispatch"
+    "propose_error": "Failed to propose dispatch",
+    "states": {
+      "PROPOSED": "Pending Approval",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "EXECUTED": "Executed",
+      "CANCELLED": "Cancelled"
+    }
   },
   "crossJudgments": {
     "title": "Cross-Tenant Judgments",
@@ -860,6 +884,7 @@
   },
   "menu_buttons": {
     "title": "Menu Buttons",
+    "filter_by_menu": "Filter by menu",
     "all_menus": "All Menus",
     "create": "Add Button",
     "edit": "Edit Button",
@@ -911,11 +936,20 @@
     "no_registrations": "No death registrations yet",
     "requested": "Requested",
     "duration": "Duration",
-    "reference": "Reference"
+    "reference": "Reference",
+    "status": {
+      "PENDING": "Pending",
+      "ACCEPTED": "Accepted",
+      "PROCESSED": "Processed",
+      "FAILED": "Failed",
+      "DUPLICATE": "Duplicate",
+      "PARTIAL": "Partial"
+    }
   },
   "disposition": {
     "title": "Dispositions",
     "subtitle": "Where souls go once judgment concludes",
+    "soul": "Soul",
     "list": "Disposition list",
     "no_dispositions": "No dispositions yet",
     "realm": "Destination realm",
