@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { judgmentApi, soulsApi, type Soul } from "@/lib/api";
@@ -63,6 +63,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const { showToast } = useToast();
   const [selectedVerdict, setSelectedVerdict] = useState<string>("");
   const [notes, setNotes] = useState("");
+  const [createWorkflow, setCreateWorkflow] = useState(false);
+  const createWorkflowId = useId();
 
   const { data: judgment, isLoading, error } = useQuery({
     queryKey: ["judgment", id],
@@ -76,7 +78,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   });
 
   const concludeMutation = useMutation({
-    mutationFn: (payload: { verdict: string; notes: string }) =>
+    mutationFn: (payload: { verdict: string; notes: string; create_workflow: boolean }) =>
       judgmentApi.conclude(id, payload),
     onSuccess: () => {
       showToast(t("judgment.detail.conclude_success"), "success");
@@ -101,7 +103,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       showToast(t("judgment.detail.select_verdict"), "error");
       return;
     }
-    concludeMutation.mutate({ verdict: selectedVerdict, notes });
+    concludeMutation.mutate({ verdict: selectedVerdict, notes, create_workflow: createWorkflow });
   }
 
   if (isLoading) {
@@ -320,6 +322,29 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                     className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg p-3 text-sm text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]/50 resize-none"
                     placeholder={t("judgment.detail.notes_placeholder")}
                   />
+                </div>
+
+                {/* Create workflow opt-in */}
+                <div className="flex items-start gap-2.5 rounded-lg border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-2))] p-3">
+                  <input
+                    id={createWorkflowId}
+                    type="checkbox"
+                    checked={createWorkflow}
+                    onChange={(e) => setCreateWorkflow(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[hsl(var(--color-accent))]"
+                  />
+                  <label htmlFor={createWorkflowId} className="text-sm text-[hsl(var(--color-ink))] cursor-pointer">
+                    <span className="font-medium">
+                      {t("judgment.detail.create_workflow") === "judgment.detail.create_workflow"
+                        ? "Start approval workflow"
+                        : t("judgment.detail.create_workflow")}
+                    </span>
+                    <p className="mt-0.5 text-xs text-[hsl(var(--color-ink-muted))]">
+                      {t("judgment.detail.create_workflow_hint") === "judgment.detail.create_workflow_hint"
+                        ? "If checked, an approval workflow will be created after conclusion, based on a matching template for this civilization and case type."
+                        : t("judgment.detail.create_workflow_hint")}
+                    </p>
+                  </label>
                 </div>
 
                 {/* Submit */}

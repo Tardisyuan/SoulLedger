@@ -18,9 +18,15 @@ export interface Judgment {
   confession?: string;
 }
 
+export interface ConcludeJudgmentPayload {
+  verdict: string;
+  notes?: string;
+  create_workflow?: boolean;
+}
+
 export const judgmentApi = {
   list: (params?: Record<string, string>) => api.get("/judgment/", { params }),
   create: (data: object) => api.post("/judgment/", data),
-  conclude: (id: string, data: object) => api.post(`/judgment/${id}/conclude/`, data),
+  conclude: (id: string, data: ConcludeJudgmentPayload | object) => api.post(`/judgment/${id}/conclude/`, data),
   get: (id: string) => api.get(`/judgment/${id}/`),
 };
