@@ -174,9 +174,9 @@ ORIGINAL_ORDERS = {
 }
 
 
-def _live(Menu):
+def _live(menu_model):
     """未被软删除的菜单。"""
-    return Menu.all_objects.filter(is_deleted=False)
+    return menu_model.all_objects.filter(is_deleted=False)
 
 
 def regroup(apps, schema_editor):
