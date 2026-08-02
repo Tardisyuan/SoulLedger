@@ -42,15 +42,15 @@ export const workflowApi = {
   advance: (id: string) => api.post(`/workflows/${id}/advance/`),
   approveNode: (workflowIdOrNodeId: string, nodeIdOrData: string | object, data?: object) => {
     if (typeof nodeIdOrData === "string") {
-      return api.post(`/workflows/nodes/${nodeIdOrData}/approve/`, data);
+      return api.post(`/nodes/${nodeIdOrData}/approve/`, data);
     }
-    return api.post(`/workflows/nodes/${workflowIdOrNodeId}/approve/`, nodeIdOrData);
+    return api.post(`/nodes/${workflowIdOrNodeId}/approve/`, nodeIdOrData);
   },
   templates: {
-    list: (params?: Record<string, string>) => api.get("/workflows/templates/", { params }),
-    get: (id: string) => api.get(`/workflows/templates/${id}/`),
-    create: (data: object) => api.post("/workflows/templates/", data),
-    update: (id: string, data: object) => api.patch(`/workflows/templates/${id}/`, data),
-    delete: (id: string) => api.delete(`/workflows/templates/${id}/`),
+    list: (params?: Record<string, string>) => api.get("/workflow/templates/", { params }),
+    get: (id: string) => api.get(`/workflow/templates/${id}/`),
+    create: (data: object) => api.post("/workflow/templates/", data),
+    update: (id: string, data: object) => api.patch(`/workflow/templates/${id}/`, data),
+    delete: (id: string) => api.delete(`/workflow/templates/${id}/`),
   },
 };

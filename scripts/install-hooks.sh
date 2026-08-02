@@ -13,7 +13,11 @@ cat > "$HOOKS_DIR/pre-commit" << 'EOF'
 #!/bin/bash
 # Pre-commit hook: Run ESLint on staged frontend files
 
-STAGED_FILES=$(git diff --cached --name-only | grep -E '\.(ts|tsx|js|jsx)$' | grep -E '^frontend/')
+# --diff-filter=d drops deleted paths. Without it a commit that removes a
+# frontend file hands eslint a path that no longer exists, and eslint exits
+# non-zero with "No files matching the pattern" — making deletions impossible
+# to commit.
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=d | grep -E '\.(ts|tsx|js|jsx)$' | grep -E '^frontend/')
 
 if [ -n "$STAGED_FILES" ]; then
     echo "Running ESLint on staged frontend files..."
