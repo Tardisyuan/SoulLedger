@@ -33,7 +33,17 @@ ruvector.db
 frontend/tsconfig.tsbuildinfo
 
 # Screenshots/docs
-docs/
+#
+# These three lines have to stay in this order. A global ignore
+# (~/.gitignore_global) excludes `docs` outright, and git never descends into an
+# excluded directory — so any `!docs/...` exception below it is unreachable.
+# Un-ignore the directory itself first, re-ignore its contents, then carve out
+# the one subtree we want tracked.
+!docs/
+docs/*
+# Design handoff: Claude Design reads this repo over GitHub, so the brief and
+# the captured screens must be committed for it to see them at all.
+!docs/design-handoff/
 .playwright-mcp/
 
 # Scripts
