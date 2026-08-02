@@ -183,6 +183,31 @@ class PermissionAPITest(TestCase):
         self.assertIn("soul.read", data["permissions"])
         self.assertNotIn("system.settings", data["permissions"])
 
+    # -- get_permissions_for_role (ADMIN reads any role) --
+
+    def test_get_permissions_for_role_admin_reads_other_role(self):
+        Role.objects.create(name="JUDGE", display_name="Judge")
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/v1/perm/roles/JUDGE/permissions/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data["role"], "JUDGE")
+        # Response shape matches get_role_permissions so the client can share a parser
+        self.assertIn("permissions", data)
+        self.assertIn("details", data)
+
+    def test_get_permissions_for_role_rejects_non_admin(self):
+        """The anti-enumeration guard still applies to everyone but ADMIN."""
+        Role.objects.create(name="JUDGE", display_name="Judge")
+        self.client.force_authenticate(user=self.viewer)
+        response = self.client.get("/api/v1/perm/roles/JUDGE/permissions/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_get_permissions_for_role_unknown_role(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/v1/perm/roles/NOPE/permissions/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     # -- assign_role_permissions --
 
     def test_assign_role_permissions(self):
