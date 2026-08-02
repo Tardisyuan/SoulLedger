@@ -109,6 +109,36 @@ def get_role_permissions(request):
     })
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsAdminPermission])
+def get_permissions_for_role(request, name):
+    """
+    GET /api/v1/perm/roles/<name>/permissions/
+    读取指定角色的权限（仅 ADMIN）。
+
+    get_role_permissions 只返回请求者自己的角色，用来防止普通用户枚举其他
+    角色的权限。但管理界面需要「选中某个角色 → 查看并编辑它的权限」，而
+    assign_role_permissions 本来就允许 ADMIN 改任意角色 —— 能写不能读讲不通，
+    所以这里给 ADMIN 开一个对应的读取入口，枚举防护对非 ADMIN 保持不变。
+
+    响应结构与 get_role_permissions 一致，前端两处可以共用同一个解析。
+    """
+    if not Role.objects.filter(name=name).exists():
+        return Response(
+            {"detail": f"Role '{name}' not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    permission_codenames = _get_role_permissions_from_db(name)
+    permissions = Permission.objects.filter(codename__in=permission_codenames)
+    serializer = PermissionSerializer(permissions, many=True)
+    return Response({
+        "role": name,
+        "permissions": permission_codenames,
+        "details": serializer.data,
+    })
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
 def assign_role_permissions(request):

@@ -29,15 +29,17 @@ export const permApi = {
     create: (data: Partial<Role>) => api.post("/perm/roles/", data),
     update: (id: number, data: Partial<Role>) => api.put(`/perm/roles/${id}/`, data),
     delete: (id: number) => api.delete(`/perm/roles/${id}/`),
-    getPermissions: (name: string) => api.get(`/perm/roles/${name}/permissions/`),
-    assignPermissions: (name: string, data: { permission_ids: number[] }) =>
-      api.post(`/perm/roles/${name}/assign/`, data),
   },
 
-  // Role-Permission assignment
+  // Role-Permission assignment.
+  // Read and write sit on different routes: the reader is ADMIN-only and keyed
+  // by role name in the path, while the writer takes the role in its body.
   rolePermissions: (roleName: string) => api.get(`/perm/roles/${roleName}/permissions/`),
   assign: (roleName: string, permissionIds: number[]) =>
-    api.post(`/perm/roles/${roleName}/assign/`, { permission_ids: permissionIds }),
+    api.post("/perm/role-permissions/assign/", {
+      role: roleName,
+      permission_ids: permissionIds,
+    }),
 
   // Export/Import
   export: () => api.get("/perm/export/", { responseType: "blob" }),
