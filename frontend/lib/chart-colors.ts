@@ -34,6 +34,17 @@ export const REALM_COLORS: Record<string, string> = {
   NEUTRAL: "hsl(0 0% 50%)",
 };
 
+/**
+ * Fills for series that carry no semantic meaning of their own (karma buckets,
+ * per-realm counts). Named by what they chart so call sites stop reaching for
+ * raw hex, and `neutral` covers the `STATE_COLORS[x] || …` fallbacks.
+ */
+export const CHART_SERIES = {
+  karma: "hsl(271 81% 56%)",
+  realm: "hsl(217 91% 60%)",
+  neutral: "hsl(220 6% 55%)",
+} as const;
+
 /** Chart chrome: grid lines, axis ticks, tooltip surfaces. */
 export const CHART_CHROME = {
   accent: "hsl(38 92% 50%)",
