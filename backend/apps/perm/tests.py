@@ -261,6 +261,136 @@ class PermissionAPITest(TestCase):
         self.assertIn("roles", response.json())
 
 
+class WorkflowPermissionMigrationTest(TestCase):
+    """
+    apps/perm/migrations/0013_add_workflow_permissions.py 的回归测试。
+
+    背景：apps/workflow/views.py 一直在检查 workflow.read/create/update/delete/
+    approve/advance 六个 codename，但 Permission 表里从来没有 workflow 这一族，
+    权限管理界面上看不到、也没法单独授予/收回。这条迁移把
+    apps.perm.models.ROLE_PERMISSIONS 字典里已经对 ADMIN/JUDGE 生效的分配落到
+    DB 里，不改变任何角色的实际权限。
+
+    这里重点盯防的回归：workflow.read 一旦被写进 Permission 表，
+    apps.perm.checker.check_permission 就会认为它是"已播种"的 codename，
+    尝试用 DB 判定（RolePermission 表）而不是继续 fallback 到 ROLE_PERMISSIONS
+    字典。如果 JUDGE 没有配套的 RolePermission 记录，JUDGE 现在能查看工作流
+    的权限就会被这次迁移静默收走。用 mirrors ROLE_PERMISSIONS 字典内容的方式
+    建 RolePermission，就是为了让这次迁移落库前后 check_permission() 的结果
+    完全不变。
+    """
+
+    WORKFLOW_CODENAMES = [
+        "workflow.read", "workflow.create", "workflow.update",
+        "workflow.delete", "workflow.approve", "workflow.advance",
+    ]
+
+    def setUp(self):
+        from apps.perm.cache import invalidate_all_permissions
+
+        self.admin_role = Role.objects.create(name="ADMIN", display_name="Administrator")
+        self.judge_role = Role.objects.create(name="JUDGE", display_name="Judge")
+        invalidate_all_permissions()
+        self.addCleanup(invalidate_all_permissions)
+
+    @staticmethod
+    def _migration():
+        import importlib
+        return importlib.import_module("apps.perm.migrations.0013_add_workflow_permissions")
+
+    def _forward(self):
+        from django.apps import apps as real_apps
+        self._migration().create_workflow_permissions(real_apps, None)
+
+    def _backward(self):
+        from django.apps import apps as real_apps
+        self._migration().remove_workflow_permissions(real_apps, None)
+
+    def test_forward_creates_six_permissions(self):
+        self._forward()
+        codenames = set(
+            Permission.objects.filter(category="workflow").values_list("codename", flat=True)
+        )
+        self.assertEqual(codenames, set(self.WORKFLOW_CODENAMES))
+
+    def test_forward_mirrors_role_permissions_dict_exactly(self):
+        self._forward()
+        admin_grants = set(
+            RolePermission.objects.filter(
+                role=self.admin_role, permission__codename__startswith="workflow."
+            ).values_list("permission__codename", flat=True)
+        )
+        judge_grants = set(
+            RolePermission.objects.filter(
+                role=self.judge_role, permission__codename__startswith="workflow."
+            ).values_list("permission__codename", flat=True)
+        )
+        self.assertEqual(admin_grants, set(self.WORKFLOW_CODENAMES))
+        self.assertEqual(judge_grants, {"workflow.read", "workflow.approve", "workflow.advance"})
+
+    def test_judge_keeps_workflow_access_after_seeding(self):
+        """The regression this migration must not introduce: JUDGE must still
+        pass check_permission() for workflow.read/approve/advance once those
+        codenames are seeded into the Permission table."""
+        from apps.perm.checker import check_permission
+
+        judge_user = User.objects.create_user(username="judge_wf_test", password="x", role="JUDGE")
+        self._forward()
+
+        for codename in ("workflow.read", "workflow.approve", "workflow.advance"):
+            self.assertTrue(
+                check_permission(judge_user, codename),
+                f"JUDGE lost access to {codename} after workflow permissions were seeded",
+            )
+        for codename in ("workflow.create", "workflow.update", "workflow.delete"):
+            self.assertFalse(check_permission(judge_user, codename))
+
+    def test_reverse_removes_permissions_and_role_permissions(self):
+        self._forward()
+        self._backward()
+        self.assertFalse(
+            Permission.objects.filter(codename__in=self.WORKFLOW_CODENAMES).exists()
+        )
+        self.assertFalse(
+            RolePermission.objects.filter(permission__codename__in=self.WORKFLOW_CODENAMES).exists()
+        )
+
+    def test_reverse_restores_dict_fallback_for_judge(self):
+        from apps.perm.cache import invalidate_all_permissions
+        from apps.perm.checker import check_permission
+
+        judge_user = User.objects.create_user(username="judge_wf_test2", password="x", role="JUDGE")
+        self._forward()
+        self._backward()
+        invalidate_all_permissions()
+
+        self.assertTrue(check_permission(judge_user, "workflow.read"))
+
+    def test_forward_is_idempotent(self):
+        self._forward()
+        self._forward()  # must not raise IntegrityError on the second pass
+        self.assertEqual(
+            Permission.objects.filter(codename__in=self.WORKFLOW_CODENAMES).count(),
+            len(self.WORKFLOW_CODENAMES),
+        )
+        self.assertEqual(
+            RolePermission.objects.filter(
+                role=self.admin_role, permission__codename__startswith="workflow."
+            ).count(),
+            6,
+        )
+
+    def test_forward_backward_forward_cycle(self):
+        """Mirrors the scratch-DB manual verification: forward -> backward -> forward."""
+        self._forward()
+        self._backward()
+        self._forward()
+        self.assertEqual(
+            Permission.objects.filter(codename__in=self.WORKFLOW_CODENAMES).count(),
+            len(self.WORKFLOW_CODENAMES),
+        )
+
+
 class RoleAPITest(TestCase):
     """Test Role CRUD API endpoints"""
 
