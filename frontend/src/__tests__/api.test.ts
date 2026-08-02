@@ -398,19 +398,23 @@ describe('API Client — lib/api.ts', () => {
       expect(mockInstance.post).toHaveBeenCalledWith('/workflows/wf-1/advance/');
     });
 
-    it('approveNode() should POST /workflows/nodes/:nodeId/approve/', () => {
+    // The router registers `nodes` and `workflow/templates` as siblings of
+    // `workflows`, not beneath it (apps/workflow/urls.py). These assertions
+    // previously encoded `/workflows/nodes/` and `/workflows/templates/`,
+    // which the live API answers with 404 — the mock never noticed.
+    it('approveNode() should POST /nodes/:nodeId/approve/', () => {
       mockInstance.post.mockResolvedValueOnce({ data: {} });
       workflowApi.approveNode('wf-1', 'node-5', { verdict: 'PASS', notes: 'LGTM' });
-      expect(mockInstance.post).toHaveBeenCalledWith('/workflows/nodes/node-5/approve/', {
+      expect(mockInstance.post).toHaveBeenCalledWith('/nodes/node-5/approve/', {
         verdict: 'PASS',
         notes: 'LGTM',
       });
     });
 
-    it('templates.list() should GET /workflows/templates/', () => {
+    it('templates.list() should GET /workflow/templates/', () => {
       mockInstance.get.mockResolvedValueOnce({ data: [] });
       workflowApi.templates.list();
-      expect(mockInstance.get).toHaveBeenCalledWith('/workflows/templates/', { params: undefined });
+      expect(mockInstance.get).toHaveBeenCalledWith('/workflow/templates/', { params: undefined });
     });
   });
 });
