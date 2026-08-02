@@ -1,22 +1,28 @@
 "use client";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { tenantsApi, type Tenant } from "@/lib/api";
-import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
+import { api, type Tenant, type PaginatedResponse } from "@/lib/api";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
+import { Pagination } from "@/src/components/ui/Pagination";
 
 export default function TenantsPage() {
   const { t } = useI18n();
   const { user } = useTenant();
+  const [page, setPage] = useState(1);
 
-  const { data: tenantsResponse, isLoading } = useQuery({
-    queryKey: ["tenants"],
-    queryFn: () => tenantsApi.list().then(r => r.data),
+  // tenantsApi.list() (lib/api/tenants.ts) doesn't forward a `page` param, so this
+  // calls the shared `api` client directly to reach `/tenants/?page=`.
+  const { data, isLoading } = useQuery({
+    queryKey: ["tenants", page],
+    queryFn: () => api.get("/tenants/", { params: { page } }).then(r => r.data as PaginatedResponse<Tenant>),
     enabled: !!user,
   });
 
-  const tenants = tenantsResponse?.results || tenantsResponse || [];
+  const tenants = data?.results ?? [];
+  const totalPages = data ? Math.ceil(data.count / 20) : 0;
 
   return (
     <div className="p-6 max-w-4xl">
@@ -52,6 +58,10 @@ export default function TenantsPage() {
           </div>
         )}
       </PageSection>
+
+      {!isLoading && tenants.length > 0 && (
+        <Pagination page={page} totalPages={totalPages} count={data?.count ?? 0} onPageChange={setPage} />
+      )}
     </div>
   );
 }
