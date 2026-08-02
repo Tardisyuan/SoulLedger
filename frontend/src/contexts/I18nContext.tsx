@@ -22,11 +22,66 @@ export const LOCALE_LABELS: Record<Locale, string> = {
 const LOCALE_COOKIE = "soulledger-locale";
 const DEFAULT_LOCALE: Locale = "zh-Hans";
 
+// `egy` is an internal-only pseudo-locale used for the Egyptian civilization
+// theme copy — it is not a valid BCP-47 language tag, so passing it straight
+// to Intl.DateTimeFormat/NumberFormat throws a RangeError. There is no real
+// "ancient Egyptian" ICU locale to map it to, so number/date formatting
+// falls back to "en" whenever the UI language is set to egy.
+const INTL_LOCALE: Record<Locale, string> = {
+  "zh-Hans": "zh-Hans",
+  en: "en",
+  egy: "en",
+};
+
+function toIntlLocale(locale: Locale): string {
+  return INTL_LOCALE[locale];
+}
+
+type DateInput = Date | string | number;
+
+function formatDateWith(locale: Locale, value: DateInput, options?: Intl.DateTimeFormatOptions): string {
+  const date = value instanceof Date ? value : new Date(value);
+  return new Intl.DateTimeFormat(toIntlLocale(locale), options).format(date);
+}
+
+// Intl rejects dateStyle/timeStyle mixed with individual component options
+// (year, hour, ...) — it throws RangeError rather than letting one win. So the
+// medium/medium default below has to be dropped entirely as soon as the caller
+// asks for components, instead of being spread under them.
+const DATE_COMPONENT_KEYS = [
+  "weekday", "era", "year", "month", "day",
+  "hour", "minute", "second", "dayPeriod",
+  "fractionalSecondDigits", "timeZoneName",
+] as const;
+
+function hasComponentOptions(options?: Intl.DateTimeFormatOptions): boolean {
+  if (!options) return false;
+  return DATE_COMPONENT_KEYS.some((k) => options[k] !== undefined);
+}
+
+function formatDateTimeWith(locale: Locale, value: DateInput, options?: Intl.DateTimeFormatOptions): string {
+  const date = value instanceof Date ? value : new Date(value);
+  const resolved: Intl.DateTimeFormatOptions = hasComponentOptions(options)
+    ? { ...options }
+    : { dateStyle: "medium", timeStyle: "medium", ...options };
+  return new Intl.DateTimeFormat(toIntlLocale(locale), resolved).format(date);
+}
+
+function formatNumberWith(locale: Locale, value: number, options?: Intl.NumberFormatOptions): string {
+  return new Intl.NumberFormat(toIntlLocale(locale), options).format(value);
+}
+
 interface I18nContextType {
   locale: Locale;
   setLocale: (locale: Locale) => void;
   t: (key: string, params?: Record<string, string>) => string;
   hydrated: boolean;
+  /** Locale-aware date formatting (maps `egy` -> `en` for Intl, see INTL_LOCALE above). */
+  formatDate: (value: DateInput, options?: Intl.DateTimeFormatOptions) => string;
+  /** Locale-aware date+time formatting; defaults to medium date + medium time style. */
+  formatDateTime: (value: DateInput, options?: Intl.DateTimeFormatOptions) => string;
+  /** Locale-aware number formatting. */
+  formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
 }
 
 const I18nContext = createContext<I18nContextType>({
@@ -34,6 +89,9 @@ const I18nContext = createContext<I18nContextType>({
   setLocale: () => {},
   t: (key) => key,
   hydrated: false,
+  formatDate: (value, options) => formatDateWith(DEFAULT_LOCALE, value, options),
+  formatDateTime: (value, options) => formatDateTimeWith(DEFAULT_LOCALE, value, options),
+  formatNumber: (value, options) => formatNumberWith(DEFAULT_LOCALE, value, options),
 });
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
@@ -83,8 +141,23 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     [locale]
   );
 
+  const formatDate = useCallback(
+    (value: DateInput, options?: Intl.DateTimeFormatOptions) => formatDateWith(locale, value, options),
+    [locale]
+  );
+
+  const formatDateTime = useCallback(
+    (value: DateInput, options?: Intl.DateTimeFormatOptions) => formatDateTimeWith(locale, value, options),
+    [locale]
+  );
+
+  const formatNumber = useCallback(
+    (value: number, options?: Intl.NumberFormatOptions) => formatNumberWith(locale, value, options),
+    [locale]
+  );
+
   return (
-    <I18nContext.Provider value={{ locale, setLocale, t, hydrated }}>
+    <I18nContext.Provider value={{ locale, setLocale, t, hydrated, formatDate, formatDateTime, formatNumber }}>
       {children}
     </I18nContext.Provider>
   );
