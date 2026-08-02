@@ -1,0 +1,191 @@
+{
+  "崔明远 → 沈砚秋": {
+    "soul_id": "4a4e298f-8928-48b9-8094-105f85945894",
+    "soul_name": "沈砚秋",
+    "merit_score": 38,
+    "demerit_score": 11,
+    "karmic_balance": 27,
+    "record_count": 7,
+    "records": [
+      {
+        "id": "e14cdad0-c48e-4640-bd1d-c4f2f0f6e5df",
+        "type": "MERIT",
+        "category": "PIETY",
+        "description": "每岁清明独往祭扫无主之坟，历二十载不辍。",
+        "original_weight": 6,
+        "effective_weight": 5.17,
+        "years_elapsed": 14.81,
+        "decay_factor": 0.8623,
+        "civilization": "CHINESE",
+        "recorded_at": "2026-08-02T13:26:45.355263+00:00",
+        "event_date": "2011-10-09"
+      },
+      {
+        "id": "164f4e6c-4c70-4c98-8c10-1e6ceb73afd2",
+        "type": "DEMERIT",
+        "category": "GREED",
+        "description": "受乡绅馈赠田契一纸，未即退还，逾年方归。",
+        "original_weight": 5,
+        "effective_weight": 3.42,
+        "years_elapsed": 38.09,
+        "decay_factor": 0.6833,
+        "civilization": "CHINESE",
+        "recorded_at": "2026-08-02T13:26:45.306699+00:00",
+        "event_date": "1988-06-30"
+      },
+      {
+        "id": "f9dd36b7-c152-4989-8673-4573b6659def",
+        "type": "MERIT",
+        "category": "COMPASSION",
+        "description": "收养亡故学生之遗孤二人，抚养至成年。",
+        "original_weight": 7,
+        "effective_weight": 5.54,
+        "years_elapsed": 23.46,
+        "decay_factor": 0.7909,
+        "civilization": "CHINESE",
+        "recorded_at": "2026-08-02T13:26:45.256525+00:00",
+        "event_date": "2003-02-17"
+      },
+      {
+        "id": "cbdcccbe-dc25-4d7d-8984-d2034c519254",
+        "type": "DEMERIT",
+        "category": "COWARDICE",
+        "description": "同窗遭构陷时缄默不言，事后三十年未曾辩白。",
+        "original_weight": 14,
+        "effective_weight": 7.94,
+        "years_elapsed": 56.73,
+        "decay_factor": 0.567,
+        "civilization": "CHINESE",
+        "recorded_at": "2026-08-02T13:26:45.204629+00:00",
+        "event_date": "1969-11-08"
+      },
+      {
+        "id": "ef5ba4ef-514f-4e97-808b-864eb88767ad",
+        "type": "MERIT",
+        "category": "HONESTY",
+        "description": "县志修撰中拒改先人劣迹，坚持据实录入。",
+        "original_weight": 9,
+        "effective_weight": 6.65,
+        "years_elapsed": 30.33,
+        "decay_factor": 0.7384,
+        "civilization": "CHINESE",
+        "recorded_at": "2026-08-02T13:26:45.156918+00:00",
+        "event_date": "1996-04-03"
+      },
+      {
+        "id": "5cd35795-b9ed-415c-80e0-6e65d4e952d8",
+        "type": "MERIT",
+        "category": "CHARITY",
+        "description": "水患之年变卖祖宅田产，尽数捐予邻里购粮。",
+        "original_weight": 12,
+        "effective_weight": 8.45,
+        "years_elapsed": 35.03,
+        "decay_factor": 0.7045,
+        "civilization": "CHINESE",
+        "recorded_at": "2026-08-02T13:26:45.108554+00:00",
+        "event_date": "1991-07-22"
+      },
+      {
+        "id": "45e7f34f-d3bf-459a-bb4a-0d1245e04686",
+        "type": "MERIT",
+        "category": "WISDOM",
+        "description": "于乡间创办免费蒙学，四十一年间授业逾八百人。",
+        "original_weight": 18,
+        "effective_weight": 11.84,
+        "years_elapsed": 41.92,
+        "decay_factor": 0.6576,
+        "civilization": "CHINESE",
+        "recorded_at": "2026-08-02T13:26:45.059284+00:00",
+        "event_date": "1984-09-01"
+      }
+    ]
+  },
+  "白鹤龄": {
+    "soul_id": "707d3e09-ab60-451d-b93f-3d3661db175b",
+    "soul_name": "白鹤龄",
+    "merit_score": 30,
+    "demerit_score": 17,
+    "karmic_balance": 13,
+    "record_count": 6,
+    "records": [
+      {
+        "id": "0ba2f971-e285-4da7-b1ce-10ea25668467",
+        "type": "MERIT",
+        "category": "COMPASSION",
+        "description": "岁末代付同乡丧葬之费。",
+        "original_weight": 5,
+        "effective_weight": 4.16,
+        "years_elapsed": 18.28,
+        "decay_factor": 0.833,
+        "civilization": "CHINESE",
+        "recorded_at": "2026-08-02T13:24:47.898694+00:00",
+        "event_date": "2008-04-22"
+      },
+      {
+        "id": "2efb40e4-a1b2-4db1-a740-6a558ebe164f",
+        "type": "DEMERIT",
+        "category": "GREED",
+        "description": "受营造商程仪银二十两。",
+        "original_weight": 9,
+        "effective_weight": 6.33,
+        "years_elapsed": 35.13,
+        "decay_factor": 0.7038,
+        "civilization": "CHINESE",
+        "recorded_at": "2026-08-02T13:24:47.856439+00:00",
+        "event_date": "1991-06-15"
+      },
+      {
+        "id": "65acca7d-9280-49ed-b40f-a34e4a082383",
+        "type": "MERIT",
+        "category": "CHARITY",
+        "description": "以私财补发欠饷，惠及丁夫四十七人。",
+        "original_weight": 8,
+        "effective_weight": 6.01,
+        "years_elapsed": 28.67,
+        "decay_factor": 0.7508,
+        "civilization": "CHINESE",
+        "recorded_at": "2026-08-02T13:24:47.811401+00:00",
+        "event_date": "1997-12-01"
+      },
+      {
+        "id": "e4313b53-f255-4bc0-846c-375b44eef0bd",
+        "type": "DEMERIT",
+        "category": "DECEPTION",
+        "description": "工料账目虚报石方，事发后归还，然案卷未销。",
+        "original_weight": 16,
+        "effective_weight": 11.12,
+        "years_elapsed": 36.37,
+        "decay_factor": 0.6951,
+        "civilization": "CHINESE",
+        "recorded_at": "2026-08-02T13:24:47.767718+00:00",
+        "event_date": "1990-03-19"
+      },
+      {
+        "id": "18edafba-c9e4-48ad-af0a-b799a9983cb6",
+        "type": "MERIT",
+        "category": "WISDOM",
+        "description": "改绘塘堰图式，后为四县所沿用。",
+        "original_weight": 11,
+        "effective_weight": 7.07,
+        "years_elapsed": 44.25,
+        "decay_factor": 0.6425,
+        "civilization": "CHINESE",
+        "recorded_at": "2026-08-02T13:24:47.721428+00:00",
+        "event_date": "1982-05-04"
+      },
+      {
+        "id": "eb1a355e-7531-4433-8f83-a454d3e9af11",
+        "type": "MERIT",
+        "category": "COURAGE",
+        "description": "钱塘江决口之夜率丁夫二百堵口，浸水中立十九时辰。",
+        "original_weight": 22,
+        "effective_weight": 13.21,
+        "years_elapsed": 50.98,
+        "decay_factor": 0.6006,
+        "civilization": "CHINESE",
+        "recorded_at": "2026-08-02T13:24:47.678679+00:00",
+        "event_date": "1975-08-11"
+      }
+    ]
+  }
+}
