@@ -1,12 +1,30 @@
 "use client";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { organizationsApi, type Organization, type PaginatedResponse } from "@/lib/api";
+import { api, type Organization, type PaginatedResponse } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
 import { CardSkeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
+
+// organizationsApi.list() (lib/api/organizations.ts) doesn't forward a `page` param and
+// this page renders a parent/child tree (buildTree/renderTree below), so a paged view would
+// split a node from its children onto different pages and break the tree. Fetch every page
+// up front instead — confirmed via curl that `/organizations/` is standard DRF pagination
+// (`{count,next,previous,results}`, page_size fixed at 20, `?page_size=` is ignored).
+async function fetchAllOrganizations(): Promise<Organization[]> {
+  const all: Organization[] = [];
+  let page = 1;
+  while (true) {
+    const res = await api.get("/organizations/", { params: { page } });
+    const data = res.data as PaginatedResponse<Organization>;
+    all.push(...data.results);
+    if (!data.next) break;
+    page += 1;
+  }
+  return all;
+}
 
 const CIVILIZATION_ICONS: Record<string, string> = {
   CHINESE: "🏯",
@@ -27,7 +45,7 @@ export default function OrganizationsPage() {
 
   const { data: organizations = [], isLoading, error } = useQuery({
     queryKey: ["organizations"],
-    queryFn: () => organizationsApi.list().then(r => (r.data as PaginatedResponse<Organization>).results),
+    queryFn: fetchAllOrganizations,
     enabled: !!user,
   });
 
