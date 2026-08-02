@@ -1,0 +1,93 @@
+<!-- @dsCard group="Current UI" -->
+<!doctype html>
+<meta charset="utf-8">
+<title>SoulLedger — current screens</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 32px;
+    background: hsl(240 15% 4%); color: hsl(210 11% 96%);
+    font: 14px/1.6 ui-sans-serif, system-ui, -apple-system, "PingFang SC", sans-serif;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; color: hsl(38 92% 50%); }
+  .sub { color: hsl(215 8% 57%); margin: 0 0 28px; }
+  h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .08em;
+    color: hsl(213 15% 80%); margin: 36px 0 12px;
+    border-bottom: 1px solid hsl(220 8% 18%); padding-bottom: 8px;
+  }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+  figure { margin: 0; }
+  img {
+    width: 100%; display: block; border: 1px solid hsl(220 8% 18%);
+    border-radius: 6px; background: hsl(240 13% 7%);
+  }
+  figcaption { margin-top: 8px; font-size: 12px; color: hsl(215 8% 57%); }
+  figcaption b { color: hsl(210 11% 96%); font-weight: 600; }
+  .note {
+    background: hsl(240 13% 7%); border: 1px solid hsl(220 8% 18%);
+    border-left: 3px solid hsl(38 92% 50%);
+    border-radius: 6px; padding: 14px 16px; margin: 0 0 24px;
+    color: hsl(213 15% 80%);
+  }
+</style>
+
+<h1>SoulLedger — current screens</h1>
+<p class="sub">Live application, captured 1440×900 @2×, full page, administrator login, Simplified Chinese, dark theme.</p>
+
+<div class="note">
+  Read <b>BRIEF.md</b> for the design ask and <b>tokens.md</b> for the existing token system.
+  Data is a development fixture — names like “Debug Soul” are test records, and the repeated
+  audit rows on the dashboard are real output, not a rendering fault.
+</div>
+
+<h2>Main pipeline — soul → judgment → disposition → reincarnation</h2>
+<div class="grid">
+  <figure><img src="screens/03-souls-list.png" alt="Souls list"><figcaption><b>03 · Souls list</b> — no multi-select, one action per row</figcaption></figure>
+  <figure><img src="screens/25-soul-detail.png" alt="Soul detail"><figcaption><b>25 · Soul detail</b> — three empty lifecycle boxes, 40% dead space</figcaption></figure>
+  <figure><img src="screens/04-judgment-list.png" alt="Judgment list"><figcaption><b>04 · Judgment list</b></figcaption></figure>
+  <figure><img src="screens/05-disposition-list.png" alt="Disposition list"><figcaption><b>05 · Disposition list</b></figcaption></figure>
+  <figure><img src="screens/06-karma-stats.png" alt="Karma stats"><figcaption><b>06 · Karma</b></figcaption></figure>
+</div>
+
+<h2>Cross-civilization</h2>
+<div class="grid">
+  <figure><img src="screens/07-dispatch-list.png" alt="Dispatch list"><figcaption><b>07 · Dispatch</b></figcaption></figure>
+  <figure><img src="screens/08-dispatch-propose.png" alt="Propose dispatch"><figcaption><b>08 · Propose dispatch</b></figcaption></figure>
+  <figure><img src="screens/09-cross-judgments.png" alt="Cross-tenant judgments"><figcaption><b>09 · Cross-tenant judgments</b></figcaption></figure>
+  <figure><img src="screens/10-workflow.png" alt="Workflow"><figcaption><b>10 · Workflow</b></figcaption></figure>
+  <figure><img src="screens/11-death-sync.png" alt="Death sync"><figcaption><b>11 · Death sync</b></figcaption></figure>
+</div>
+
+<h2>Overview — the dashboard collapses on sparse data</h2>
+<div class="grid">
+  <figure><img src="screens/01-dashboard-overview.png" alt="Dashboard"><figcaption><b>01 · Dashboard</b> — two blank tenant cards, a one-bar chart, an empty plot, ten identical audit rows</figcaption></figure>
+  <figure><img src="screens/02-dashboard-karma.png" alt="Dashboard karma tab"><figcaption><b>02 · Dashboard, karma tab</b></figcaption></figure>
+  <figure><img src="screens/26-dashboard-light.png" alt="Dashboard light theme"><figcaption><b>26 · Same screen, light theme</b> — sidebar stays dark, chart chrome stays dark, pie labels collide</figcaption></figure>
+</div>
+
+<h2>Reference data</h2>
+<div class="grid">
+  <figure><img src="screens/12-realms.png" alt="Realms"><figcaption><b>12 · Realms</b></figcaption></figure>
+  <figure><img src="screens/13-actors.png" alt="Actors"><figcaption><b>13 · Deities and judges</b></figcaption></figure>
+  <figure><img src="screens/14-organizations.png" alt="Organizations"><figcaption><b>14 · Organizations</b></figcaption></figure>
+  <figure><img src="screens/15-tenants.png" alt="Tenants"><figcaption><b>15 · Tenants (the three civilizations)</b></figcaption></figure>
+</div>
+
+<h2>Administration</h2>
+<div class="grid">
+  <figure><img src="screens/16-users.png" alt="Users"><figcaption><b>16 · Users</b></figcaption></figure>
+  <figure><img src="screens/17-permissions.png" alt="Permissions"><figcaption><b>17 · Permissions and roles</b></figcaption></figure>
+  <figure><img src="screens/18-menus.png" alt="Menus"><figcaption><b>18 · Menus</b></figcaption></figure>
+  <figure><img src="screens/19-menu-buttons.png" alt="Menu buttons"><figcaption><b>19 · Menu buttons</b></figcaption></figure>
+  <figure><img src="screens/20-audit.png" alt="Audit"><figcaption><b>20 · Audit log</b></figcaption></figure>
+</div>
+
+<h2>Peripheral</h2>
+<div class="grid">
+  <figure><img src="screens/00-login.png" alt="Login"><figcaption><b>00 · Login</b></figcaption></figure>
+  <figure><img src="screens/21-notifications.png" alt="Notifications"><figcaption><b>21 · Notifications</b></figcaption></figure>
+  <figure><img src="screens/22-social.png" alt="Social"><figcaption><b>22 · Social</b></figcaption></figure>
+  <figure><img src="screens/23-profile.png" alt="Profile"><figcaption><b>23 · Profile</b></figcaption></figure>
+  <figure><img src="screens/24-welcome.png" alt="Welcome"><figcaption><b>24 · Welcome</b></figcaption></figure>
+</div>
