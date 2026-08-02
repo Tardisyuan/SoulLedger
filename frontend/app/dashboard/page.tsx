@@ -29,7 +29,7 @@ function bucketMidpoint(label: string): number {
 }
 
 function DashboardContent() {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -125,10 +125,7 @@ function DashboardContent() {
     civilization: r.civilization,
   })) ?? [];
 
-  const formatTimestamp = (ts: string) => {
-    const date = new Date(ts);
-    return date.toLocaleString();
-  };
+  const formatTimestamp = (ts: string) => formatDateTime(ts);
 
   // Karma-tab-only derived data (admin/stats page's unique cards)
   const avgKarma = stats
