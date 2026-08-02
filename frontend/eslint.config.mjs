@@ -1,4 +1,5 @@
 import eslintParser from "@typescript-eslint/parser";
+import reactHooks from "eslint-plugin-react-hooks";
 
 const eslintConfig = [
   {
@@ -31,7 +32,9 @@ const eslintConfig = [
         React: "readonly",
       },
     },
+    plugins: { "react-hooks": reactHooks },
     rules: {
+      "react-hooks/rules-of-hooks": "error",
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "react/react-in-jsx-scope": "off",
