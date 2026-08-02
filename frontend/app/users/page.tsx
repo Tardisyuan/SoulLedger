@@ -9,10 +9,15 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { UserModal } from "@/src/components/users/UserModal";
 import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
 import { showToast } from "@/src/components/ui/Toast";
-import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-import { Pagination } from "@/src/components/ui/Pagination";
+import { DataTable, type SortState } from "@/components/ui/data-table";
 
+/** Parses the `ordering` query param ("-username" etc.) into DataTable's sort shape. */
+function parseOrdering(ordering: string): SortState | null {
+  if (!ordering) return null;
+  const desc = ordering.startsWith("-");
+  return { key: desc ? ordering.slice(1) : ordering, direction: desc ? "desc" : "asc" };
+}
 
 export default function UsersPage() {
   const { t } = useI18n();
@@ -21,15 +26,16 @@ export default function UsersPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [ordering, setOrdering] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
 
-  // Fetch users list
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: userKeys.list({ page, search, role: roleFilter }),
+  // Fetch users list — params live in the queryKey, so filter/sort/page changes refetch on their own.
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: userKeys.list({ page, search, role: roleFilter, ordering }),
     queryFn: async () => {
-      const res = await usersApi.list({ page, search, role: roleFilter || undefined });
+      const res = await usersApi.list({ page, search, role: roleFilter || undefined, ordering: ordering || undefined });
       return res.data as PaginatedResponse<User>;
     },
   });
@@ -111,126 +117,101 @@ export default function UsersPage() {
           </select>
         </div>
 
-        {/* Users table */}
-        <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-2))]">
-                <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
-                  {t("users.username")}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
-                  {t("users.email")}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
-                  {t("users.role")}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
-                  {t("users.tenant")}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
-                  {t("users.status")}
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[hsl(var(--color-ink-subtle))] uppercase tracking-wider">
-                  {t("users.actions")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
-              {isLoading ? (
-                <TableSkeleton rows={8} cols={6} />
-              ) : users.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-[hsl(var(--color-ink-muted))]">
-                    {t("users.no_users")}
-                  </td>
-                </tr>
-              ) : (
-                users.map((user) => (
-                  <tr key={user.id} className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))] font-medium">
-                      {user.username}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))]">
-                      {user.email}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                        user.role === "ADMIN"
-                          ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]"
-                          : user.role === "JUDGE"
-                          ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
-                          : user.role === "GUARDIAN"
-                          ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]"
-                          : "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]"
-                      }`}>
-                        {t(`users.roles.${user.role}`)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))]">
-                      {user.tenant?.display_name || user.tenant?.code || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className={user.is_active ? "text-[hsl(var(--color-status-success))]" : "text-[hsl(var(--color-status-error))]"}>
-                        {user.is_active ? t("users.active") : t("users.inactive")}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <RequirePermission permissions="user.update">
-                          <button
-                            onClick={() => setEditingUser(user)}
-                            className="px-2 py-1 text-xs bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
-                          >
-                            {t("common.edit")}
-                          </button>
-                        </RequirePermission>
-                        <RequirePermission permissions={["user.update", "user.activate"]}>
-                          <button
-                            onClick={() => toggleStatusMutation.mutate({
-                              id: String(user.id),
-                              isActive: !user.is_active,
-                            })}
-                            disabled={toggleStatusMutation.isPending}
-                            className="px-2 py-1 text-xs bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors disabled:opacity-50"
-                          >
-                            {user.is_active ? t("users.deactivate") : t("users.activate")}
-                          </button>
-                        </RequirePermission>
-                        <RequirePermission permissions="user.delete">
-                          <button
-                            onClick={() => setDeleteUser(user)}
-                            className="px-2 py-1 text-xs bg-[hsl(var(--color-status-error)/0.2)] hover:bg-[hsl(var(--color-status-error)/0.3)] border border-[hsl(var(--color-status-error)/0.3)] rounded text-[hsl(var(--color-status-error))] transition-colors"
-                          >
-                            {t("common.delete")}
-                          </button>
-                        </RequirePermission>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {isLoading ? (
-          <div className="flex items-center justify-between mt-4">
-            <Skeleton className="h-4 w-32" />
-            <div className="flex gap-2">
-              <Skeleton className="h-8 w-20" />
-              <Skeleton className="h-8 w-20" />
-            </div>
-          </div>
-        ) : data && (
-          <Pagination
-            page={page}
-            totalPages={Math.ceil((data.count || 0) / 20)}
-            count={data.count || 0}
-            onPageChange={setPage}
-          />
-        )}
+        <DataTable<User>
+          caption={t("users.title")}
+          columns={[
+            { key: "username", header: t("users.username"), sortable: true },
+            { key: "email", header: t("users.email"), sortable: true },
+            { key: "role", header: t("users.role"), sortable: true },
+            { key: "tenant", header: t("users.tenant") },
+            { key: "status", header: t("users.status") },
+            { key: "actions", header: t("users.actions"), align: "right" },
+          ]}
+          data={users}
+          isLoading={isLoading}
+          isError={isError}
+          onRetry={() => refetch()}
+          keyExtractor={(user) => String(user.id)}
+          renderRow={(user) => (
+            <>
+              <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))] font-medium">
+                {user.username}
+              </td>
+              <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))]">
+                {user.email}
+              </td>
+              <td className="px-4 py-3 text-sm">
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                  user.role === "ADMIN"
+                    ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]"
+                    : user.role === "JUDGE"
+                    ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
+                    : user.role === "GUARDIAN"
+                    ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]"
+                    : "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]"
+                }`}>
+                  {t(`users.roles.${user.role}`)}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))]">
+                {user.tenant?.display_name || user.tenant?.code || "-"}
+              </td>
+              <td className="px-4 py-3 text-sm">
+                <span className={user.is_active ? "text-[hsl(var(--color-status-success))]" : "text-[hsl(var(--color-status-error))]"}>
+                  {user.is_active ? t("users.active") : t("users.inactive")}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-sm text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <RequirePermission permissions="user.update">
+                    <button
+                      onClick={() => setEditingUser(user)}
+                      className="px-2 py-1 text-xs bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
+                    >
+                      {t("common.edit")}
+                    </button>
+                  </RequirePermission>
+                  <RequirePermission permissions={["user.update", "user.activate"]}>
+                    <button
+                      onClick={() => toggleStatusMutation.mutate({
+                        id: String(user.id),
+                        isActive: !user.is_active,
+                      })}
+                      disabled={toggleStatusMutation.isPending}
+                      className="px-2 py-1 text-xs bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors disabled:opacity-50"
+                    >
+                      {user.is_active ? t("users.deactivate") : t("users.activate")}
+                    </button>
+                  </RequirePermission>
+                  <RequirePermission permissions="user.delete">
+                    <button
+                      onClick={() => setDeleteUser(user)}
+                      className="px-2 py-1 text-xs bg-[hsl(var(--color-status-error)/0.2)] hover:bg-[hsl(var(--color-status-error)/0.3)] border border-[hsl(var(--color-status-error)/0.3)] rounded text-[hsl(var(--color-status-error))] transition-colors"
+                    >
+                      {t("common.delete")}
+                    </button>
+                  </RequirePermission>
+                </div>
+              </td>
+            </>
+          )}
+          sort={parseOrdering(ordering)}
+          onSortChange={(next) => {
+            setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
+            setPage(1);
+          }}
+          isFiltered={Boolean(search || roleFilter)}
+          onClearFilters={() => {
+            setSearch("");
+            setRoleFilter("");
+            setPage(1);
+          }}
+          emptyMessage={t("users.no_users")}
+          page={page}
+          totalPages={Math.ceil((data?.count || 0) / 20)}
+          totalCount={data?.count}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* Create/Edit Modal */}
