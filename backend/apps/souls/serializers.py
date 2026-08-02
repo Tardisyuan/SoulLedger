@@ -30,6 +30,11 @@ class SoulSerializer(serializers.ModelSerializer):
     tenant_code = serializers.CharField(source="tenant.code", read_only=True)
     records = SoulRecordSerializer(many=True, read_only=True)
     tenant = serializers.PrimaryKeyRelatedField(read_only=True)
+    # Soul.civilization is a property derived from the tenant code. The list
+    # serializer has always exposed it; the detail serializer did not, so
+    # clients that read a soul then POST a judgment (which requires
+    # `civilization`) got a 400 back.
+    civilization = serializers.CharField(read_only=True)
 
     # Field-level access control: VIEWER cannot see merit/demerit scores
     merit_score = serializers.SerializerMethodField()
@@ -38,7 +43,7 @@ class SoulSerializer(serializers.ModelSerializer):
     class Meta:
         model = Soul
         fields = [
-            "id", "name", "current_state", "tenant_code", "tenant",
+            "id", "name", "current_state", "tenant_code", "tenant", "civilization",
             "birth_date", "death_date", "origin_location", "birth_name",
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
