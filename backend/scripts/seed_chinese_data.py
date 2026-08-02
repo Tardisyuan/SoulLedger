@@ -268,8 +268,16 @@ def seed_actors():
     for item in all_actors:
         name, name_zh, name_en, name_egy, role, realm_code, title, title_zh, title_en, title_egy, desc = item
         realm = Realm.objects.filter(realm_code=realm_code).first()
+        # Infer civilization from the realm_code (which carries an explicit
+        # EG_/EU_ prefix — see EGYPTIAN_REALMS/EUROPEAN_REALMS above), not from
+        # the actor's bare name. Name-based guessing silently defaults any
+        # unmatched name to CHINESE, which mis-tagged actors like Ma'at, Pluto
+        # and Lethe and duplicated actors seeded elsewhere under the correct
+        # civilization. Fall back to name-based inference only for the (today
+        # nonexistent) case of an actor with no realm_code.
+        civilization = _infer_civilization(realm_code or name)
         defaults = {
-            "civilization": _infer_civilization(name),
+            "civilization": civilization,
             "name_zh": name_zh,
             "name_en": name_en,
             "name_egy": name_egy,
@@ -282,7 +290,7 @@ def seed_actors():
         }
         obj, created_flag = Actor.objects.update_or_create(
             name=name,
-            civilization=_infer_civilization(name),
+            civilization=civilization,
             defaults=defaults,
         )
         if created_flag:
