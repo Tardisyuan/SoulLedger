@@ -245,12 +245,17 @@ Note Recharts cannot read CSS variables, so any chart palette must also be expre
 as literal values.
 
 **Internationalisation.** Three locales: Simplified Chinese (primary, and the language
-in every screenshot), English, and `egy` — a stylised transliterated Ancient Egyptian
-used for the Egyptian civilization's theming. 886 keys per bundle. All copy is
-translated at runtime, so **no text may be baked into layout assumptions** — Chinese
-strings are typically 40–60% the width of their English equivalents, and `egy` strings
-run longer than both. Some `egy` strings include hieroglyphic characters (𓋴𓂀𓍯) and the
-locale label mixes scripts.
+in every screenshot), English, and `egy` — the Egyptian civilization's theming locale.
+886 keys per bundle. All copy is translated at runtime, so **no text may be baked into
+layout assumptions** — Chinese strings are typically 40–60% the width of their English
+equivalents, and `egy` runs longer than both.
+
+`egy` is not one script. Most of it is transliterated Ancient Egyptian in Latin, but
+**41 strings (4.6%) are Arabic — right-to-left — and they are the high-traffic ones**:
+`common.close`, `common.cancel`, `common.save`, `auth.login`, `nav.user_profile`,
+`menus.title`. Three more carry hieroglyphs, and the locale's own label is `𓋴 العربية`.
+Components have to survive Latin, Chinese, Arabic and hieroglyphs in one view, in two
+directions. See `tables/README.md` for what this does to a real table.
 
 **Accessibility.** A baseline was just established and must not regress: every form
 control has an accessible name, validation errors are announced via `role="alert"`
