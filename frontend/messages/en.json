@@ -159,9 +159,9 @@
       "processing": "Processing...",
       "render_judgment": "Render Judgment",
       "start_judgment": "Start Judgment",
-      "verdict_passed": "PASSED — Verdict Passed",
-      "verdict_failed": "FAILED — Verdict Failed",
-      "verdict_purgatory": "PURGATORY — Pending",
+      "verdict_passed": "Passed",
+      "verdict_failed": "Failed",
+      "verdict_purgatory": "Purgatory",
       "reincarnate": "Reincarnate →",
       "being_reborn": "Soul is being reborn...",
       "previous_reincarnations": "previous reincarnation(s)",
@@ -197,7 +197,14 @@
       "passed": "Passed",
       "purgatory": "Purgatory",
       "confirm_judgment": "Confirm judgment?",
-      "no_karma": "No karma records"
+      "no_karma": "No karma records",
+      "generation": "Life {{n}}",
+      "previous_identity": "Formerly {{name}}",
+      "birth_of": "Birth ({{name}})",
+      "copy_id_aria": "Copy soul ID",
+      "copied": "Copied ✓",
+      "id_copied": "ID copied to clipboard",
+      "id_copy_failed": "Copy failed"
     }
   },
   "common": {

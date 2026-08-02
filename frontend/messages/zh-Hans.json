@@ -159,9 +159,9 @@
       "processing": "处理中...",
       "render_judgment": "执行审判",
       "start_judgment": "开始审判",
-      "verdict_passed": "PASSED — 善行通过",
-      "verdict_failed": "FAILED — 恶行失败",
-      "verdict_purgatory": "PURGATORY — 待定",
+      "verdict_passed": "善行通过",
+      "verdict_failed": "恶行失败",
+      "verdict_purgatory": "待定",
       "reincarnate": "轮回 →",
       "being_reborn": "灵魂正在轮回中...",
       "previous_reincarnations": "次前世的轮回记录",
@@ -197,7 +197,14 @@
       "passed": "通过",
       "purgatory": "待定",
       "confirm_judgment": "确认审判？",
-      "no_karma": "暂无业力记录"
+      "no_karma": "暂无业力记录",
+      "generation": "第 {{n}} 世",
+      "previous_identity": "前世 {{name}}",
+      "birth_of": "出生({{name}})",
+      "copy_id_aria": "复制灵魂 ID",
+      "copied": "已复制 ✓",
+      "id_copied": "ID 已复制到剪贴板",
+      "id_copy_failed": "复制失败"
     }
   },
   "common": {

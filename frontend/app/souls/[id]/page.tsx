@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
+import type { ToastType } from "@/src/components/ui/Toast";
 import { LazySoulLineChart } from "@/src/components/charts/LazyDashboardCharts";
 import {
   soulsApi,
@@ -38,8 +39,23 @@ export default function SoulDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const { showToast } = useToast();
+  // messages/*.json is out of scope for this change (see task boundary) — new
+  // copy ships as a code-level fallback until an i18n pass adds the real keys.
+  // t() returns the key itself (a truthy string) when a key is missing, so
+  // `t(key) || fallback` never falls through; compare against the key instead.
+  const tf = useCallback(
+    (key: string, fallback: string, params?: Record<string, string>) => {
+      if (t(key) === key) {
+        return params
+          ? Object.entries(params).reduce((s, [k, v]) => s.replaceAll(`{{${k}}}`, v), fallback)
+          : fallback;
+      }
+      return t(key, params);
+    },
+    [t]
+  );
   const [soul, setSoul] = useState<Soul | null>(null);
   const [karma, setKarma] = useState<KarmaSummary | null>(null);
   const [records, setRecords] = useState<SoulRecord[]>([]);
@@ -180,6 +196,30 @@ export default function SoulDetailPage() {
     );
   }
 
+  // Generation badge: cycle_count on a reincarnation record is "how many
+  // times this soul has already been reborn" (0-indexed relative to the
+  // original life), so the soul's current life number is the highest one
+  // plus one. A soul that has never reincarnated has no reincarnation
+  // records at all — showing "Life 1" on every never-reincarnated soul
+  // (the overwhelming majority) would just be noise, so the badge is
+  // omitted rather than defaulting to 1.
+  const generation = reincarnations.length > 0
+    ? Math.max(...reincarnations.map((r) => r.cycle_count)) + 1
+    : null;
+
+  // birth_date is the soul's original birth (the identity in birth_name),
+  // not the current life's — a reincarnated soul has no recorded birth date
+  // for its current identity. death_date is the most recent life's death
+  // (null while alive), so a single trailing "—" reads as "ongoing" rather
+  // than as a second empty placeholder.
+  const birthDisplay = soul?.birth_date ? formatDate(soul.birth_date) : null;
+  const deathDisplay = soul?.death_date ? formatDate(soul.death_date) : null;
+  const dateRangeText = birthDisplay
+    ? deathDisplay
+      ? `${birthDisplay} — ${deathDisplay}`
+      : `${birthDisplay} —`
+    : null;
+
   return (
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Header - always render, show skeleton if loading */}
@@ -187,20 +227,55 @@ export default function SoulDetailPage() {
         <div className="flex items-center gap-4">
           <a href="/souls" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">← {t("souls.detail.back_to_list")}</a>
           {loading ? (
-            <Skeleton className="h-6 w-32" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-3 w-48" />
+            </div>
           ) : (
-            <>
-              <h1 className="text-xl font-bold text-[hsl(var(--color-accent))]">{soul?.name}</h1>
-              <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul?.current_state || "ALIVE"]}`}>
-                {soul?.current_state} — {t(`souls.states.${soul?.current_state}`) || soul?.current_state}
-              </span>
-            </>
+            <div className="flex flex-col gap-1">
+              {/* Title line: current-life name is what the soul is called
+                  today, so it stays the headline. State and generation are
+                  both translated badges — no raw enum text next to them. */}
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-[hsl(var(--color-accent))]">{soul?.name}</h1>
+                <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul?.current_state || "ALIVE"]}`}>
+                  {t(`souls.states.${soul?.current_state}`)}
+                </span>
+                {generation !== null && (
+                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-[hsl(var(--color-status-reincarnating)/0.2)] text-[hsl(var(--color-status-reincarnating))]">
+                    {tf("souls.detail.generation", "Life {{n}}", { n: String(generation) })}
+                  </span>
+                )}
+              </div>
+              {/* Subtitle: civilization, the prior-life name this soul was
+                  born under (only when it differs from the headline — same
+                  name would just be noise), the birth/death span that
+                  belongs to that same origin identity, and a copyable ID. */}
+              <div className="flex items-center gap-2 text-xs text-[hsl(var(--color-ink-muted))] flex-wrap">
+                <span>{t(`souls.civilizations.${soul?.civilization}`)}</span>
+                {soul?.birth_name && soul.birth_name !== soul.name && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>{tf("souls.detail.previous_identity", "Formerly {{name}}", { name: soul.birth_name })}</span>
+                  </>
+                )}
+                {dateRangeText && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>{dateRangeText}</span>
+                  </>
+                )}
+                {soul?.id && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <IdChip id={soul.id} tf={tf} showToast={showToast} />
+                  </>
+                )}
+              </div>
+            </div>
           )}
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[hsl(var(--color-ink-muted))] text-sm">
-            {loading ? <Skeleton className="h-4 w-40" /> : `${soul?.civilization} · ${soul?.birth_date || "?"} — ${soul?.death_date || "—"}`}
-          </span>
           {!loading && soul && (
             <>
               <RequirePermission permissions="soul.update">
@@ -241,21 +316,28 @@ export default function SoulDetailPage() {
               </div>
             ) : (
               <dl className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.id")}</dt>
-                  <dd className="text-[hsl(var(--color-ink))] font-mono text-xs">{soul?.id?.slice(0, 8)}...</dd>
-                </div>
+                {/* Soul ID now lives in the header as a copyable chip —
+                    a second, non-interactive, truncated copy here was
+                    redundant and couldn't be pasted into anything. */}
                 <div className="flex justify-between">
                   <dt className="text-[hsl(var(--color-ink-muted))]">{t("souls.civilization")}</dt>
-                  <dd className="text-[hsl(var(--color-ink))]">{soul?.civilization}</dd>
+                  <dd className="text-[hsl(var(--color-ink))]">{t(`souls.civilizations.${soul?.civilization}`)}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <dt className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.birth")}</dt>
-                  <dd className="text-[hsl(var(--color-ink))]">{soul?.birth_date || "—"}</dd>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-[hsl(var(--color-ink-muted))] shrink-0">
+                    {/* birth_date belongs to the soul's original identity
+                        (birth_name), not necessarily the name in the header
+                        above — label it explicitly whenever the two differ
+                        so the date isn't misread as the current life's. */}
+                    {soul?.birth_name && soul.birth_name !== soul.name
+                      ? tf("souls.detail.birth_of", "Birth ({{name}})", { name: soul.birth_name })
+                      : t("souls.detail.birth")}
+                  </dt>
+                  <dd className="text-[hsl(var(--color-ink))] text-right">{birthDisplay || "—"}</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.death")}</dt>
-                  <dd className="text-[hsl(var(--color-ink))]">{soul?.death_date || "—"}</dd>
+                  <dd className="text-[hsl(var(--color-ink))]">{deathDisplay || "—"}</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.location_label")}</dt>
@@ -427,12 +509,13 @@ export default function SoulDetailPage() {
                         j.verdict === "FAILED" ? "bg-[hsl(var(--color-verdict-failed)/0.2)] text-[hsl(var(--color-verdict-failed))]" :
                         "bg-[hsl(var(--color-verdict-purgatory)/0.2)] text-[hsl(var(--color-verdict-purgatory))]"
                       }`}>
-                        {t(`souls.detail.verdict_${j.verdict.toLowerCase()}`) || j.verdict}
+                        {tf(`souls.detail.verdict_${j.verdict.toLowerCase()}`, j.verdict)}
                       </span>
                     )}
                   </div>
                   <div className="text-xs text-[hsl(var(--color-ink-muted))]">
-                    {j.is_final ? t("souls.detail.final") : t("souls.detail.pending")} · {j.civilization}
+                    {j.is_final ? t("souls.detail.final") : t("souls.detail.pending")}
+                    {j.civilization ? ` · ${tf(`souls.civilizations.${j.civilization}`, j.civilization)}` : ""}
                   </div>
                 </div>
               ))
@@ -622,4 +705,40 @@ function Section({ title, count, children }: { title: string; count: number; chi
 
 function EmptyState({ children }: { children: string }) {
   return <div className="text-[hsl(var(--color-ink-subtle))] text-sm text-center py-4">{children}</div>;
+}
+
+interface IdChipProps {
+  id: string;
+  tf: (key: string, fallback: string, params?: Record<string, string>) => string;
+  showToast: (msg: string, type?: ToastType, dur?: number) => string;
+}
+
+// Truncated-and-unselectable IDs are useless to anyone who needs to paste one
+// into a ticket. This renders the short form but copies the full UUID, with
+// on-click feedback so it doesn't look like a no-op.
+function IdChip({ id, tf, showToast }: IdChipProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopied(true);
+      showToast(tf("souls.detail.id_copied", "ID copied to clipboard"), "success");
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      showToast(tf("souls.detail.id_copy_failed", "Copy failed"), "error");
+    }
+  }, [id, showToast, tf]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title={id}
+      aria-label={tf("souls.detail.copy_id_aria", "Copy soul ID")}
+      className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
+    >
+      {copied ? tf("souls.detail.copied", "Copied ✓") : `${id.slice(0, 8)} ⧉`}
+    </button>
+  );
 }
