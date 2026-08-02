@@ -117,6 +117,10 @@ class KarmaService:
                 "civilization": r.civilization,
                 "recorded_at": r.recorded_at.isoformat(),
                 "event_date": r.event_date.isoformat() if r.event_date else None,
+                # The deed that defines the life. Stored per record but absent
+                # from this payload, so the only consumer of karma records had
+                # no way to tell a defining deed from an ordinary one.
+                "is_milestone": r.is_milestone,
             })
 
         total_merit = round(merit)

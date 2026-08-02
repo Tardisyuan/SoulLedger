@@ -101,6 +101,21 @@
       "EUROPEAN": "欧洲",
       "EGYPTIAN": "埃及"
     },
+    "categories": {
+      "CHARITY": "布施",
+      "COMPASSION": "慈悲",
+      "HONESTY": "诚信",
+      "COURAGE": "勇毅",
+      "WISDOM": "智慧",
+      "PIETY": "虔敬",
+      "CRUELTY": "残暴",
+      "DECEPTION": "欺诈",
+      "COWARDICE": "怯懦",
+      "GREED": "贪婪",
+      "BLASPHEMY": "亵渎",
+      "MURDER": "杀业",
+      "OTHER": "其他"
+    },
     "form": {
       "name_label": "名称 *",
       "name_placeholder": "灵魂名称",
