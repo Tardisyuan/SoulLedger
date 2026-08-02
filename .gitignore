@@ -39,11 +39,15 @@ frontend/tsconfig.tsbuildinfo
 # excluded directory — so any `!docs/...` exception below it is unreachable.
 # Un-ignore the directory itself first, re-ignore its contents, then carve out
 # the one subtree we want tracked.
-!docs/
-docs/*
+#
+# All three are anchored with a leading slash. Without it these match a `docs`
+# directory at any depth, so `!docs/` also exposed backend/docs/ — which the
+# global rule had been hiding.
+!/docs/
+/docs/*
 # Design handoff: Claude Design reads this repo over GitHub, so the brief and
 # the captured screens must be committed for it to see them at all.
-!docs/design-handoff/
+!/docs/design-handoff/
 .playwright-mcp/
 
 # Scripts
