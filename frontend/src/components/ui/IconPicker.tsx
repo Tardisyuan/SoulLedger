@@ -277,6 +277,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("icon_picker.search")}
+            aria-label={t("icon_picker.search")}
             className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
 
@@ -312,6 +313,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                     setSearch("");
                   }}
                   title={icon.displayName ?? ""}
+                  aria-label={icon.displayName ?? t("icon_picker.select")}
                   className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
                     isSelected
                       ? "bg-amber-500/20 text-amber-400 ring-1 ring-amber-500"

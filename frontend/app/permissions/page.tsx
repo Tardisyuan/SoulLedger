@@ -212,6 +212,7 @@ export default function PermissionsPage() {
                 <button
                   key={role.name}
                   onClick={() => setSelectedRoleName(role.name)}
+                  aria-pressed={selectedRoleName === role.name}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     selectedRoleName === role.name
                       ? "bg-[hsl(var(--color-accent))] text-black"
@@ -261,8 +262,8 @@ export default function PermissionsPage() {
                   {CATEGORIES.map((cat) =>
                     permsByCategory[cat]?.length > 0 ? (
                       <div key={cat}>
-                        <p className="text-xs text-[hsl(var(--color-ink-muted))] uppercase mb-2">{cat}</p>
-                        <div className="flex flex-wrap gap-2">
+                        <p id={`perm-cat-${cat}`} className="text-xs text-[hsl(var(--color-ink-muted))] uppercase mb-2">{cat}</p>
+                        <div role="group" aria-labelledby={`perm-cat-${cat}`} className="flex flex-wrap gap-2">
                           {permsByCategory[cat].map((perm) => {
                             const checked = selectedPermIds.includes(perm.id);
                             return (
@@ -301,10 +302,10 @@ export default function PermissionsPage() {
               ) : null}
 
               {assignMutation.isSuccess && (
-                <p className="mt-2 text-sm text-[hsl(var(--color-status-success))]">{t("permissions.assign_success")}</p>
+                <p role="status" className="mt-2 text-sm text-[hsl(var(--color-status-success))]">{t("permissions.assign_success")}</p>
               )}
               {assignMutation.isError && (
-                <p className="mt-2 text-sm text-[hsl(var(--color-status-error))]">{t("permissions.assign_error")}</p>
+                <p role="alert" className="mt-2 text-sm text-[hsl(var(--color-status-error))]">{t("permissions.assign_error")}</p>
               )}
             </div>
           ) : (

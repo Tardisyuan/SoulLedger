@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -23,6 +23,15 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const { showToast } = useToast();
   const updateMutation = useUpdateSoul();
   const { validate, getError, clearFieldError } = useFormValidation(soulUpdateSchema);
+
+  // Unique prefix so field/error ids never collide across multiple
+  // SoulEditModal instances mounted at once.
+  const formId = useId();
+  const nameId = `${formId}-name`;
+  const nameErrorId = `${formId}-name-error`;
+  const birthDateId = `${formId}-birth-date`;
+  const locationId = `${formId}-location`;
+  const stateId = `${formId}-state`;
 
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -111,8 +120,9 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
       <form id="soul-edit-form" onSubmit={handleSubmit} className="space-y-4">
         {/* Name */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.name_label")}</label>
+          <label htmlFor={nameId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.name_label")}</label>
           <input
+            id={nameId}
             type="text"
             autoFocus
             value={name}
@@ -121,20 +131,23 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
               clearFieldError('name')
             }}
             disabled={updateMutation.isPending}
+            aria-invalid={!!getError('name')}
+            aria-describedby={getError('name') ? nameErrorId : undefined}
             className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none disabled:opacity-50 transition-colors ${
               getError('name') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
             placeholder={t("souls.form.name_placeholder")}
           />
           {getError('name') && (
-            <span className="text-xs text-red-500">{getError('name')}</span>
+            <span id={nameErrorId} role="alert" className="text-xs text-red-500">{getError('name')}</span>
           )}
         </div>
 
         {/* Birth Date */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.birth_date_label")}</label>
+          <label htmlFor={birthDateId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.birth_date_label")}</label>
           <input
+            id={birthDateId}
             type="date"
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
@@ -145,8 +158,9 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
 
         {/* Origin Location */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.location_edit_label")}</label>
+          <label htmlFor={locationId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.location_edit_label")}</label>
           <input
+            id={locationId}
             type="text"
             value={originLocation}
             onChange={(e) => setOriginLocation(e.target.value)}
@@ -158,8 +172,9 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
 
         {/* Current State */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.state_label")}</label>
+          <label htmlFor={stateId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.state_label")}</label>
           <select
+            id={stateId}
             value={currentState}
             onChange={(e) => setCurrentState(e.target.value as Soul["current_state"])}
             disabled={updateMutation.isPending}

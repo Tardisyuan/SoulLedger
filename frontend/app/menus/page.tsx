@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import * as LucideIcons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -21,6 +21,16 @@ export default function MenusPage() {
   const { t } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+
+  // Unique prefix so field ids never collide across multiple Modal instances.
+  const formId = useId();
+  const nameId = `${formId}-name`;
+  const pathId = `${formId}-path`;
+  const iconLabelId = `${formId}-icon-label`;
+  const orderId = `${formId}-order`;
+  const componentId = `${formId}-component`;
+  const rolesLabelId = `${formId}-roles-label`;
+  const isActiveId = `${formId}-is-active`;
 
   const { data: menus = [], isLoading, error } = useQuery<MenuItem[]>({
     queryKey: ["menus"],
@@ -192,8 +202,9 @@ export default function MenusPage() {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.name")}</label>
+            <label htmlFor={nameId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.name")}</label>
             <input
+              id={nameId}
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
@@ -201,8 +212,9 @@ export default function MenusPage() {
             />
           </div>
           <div>
-            <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.path")}</label>
+            <label htmlFor={pathId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.path")}</label>
             <input
+              id={pathId}
               value={form.path}
               onChange={(e) => setForm({ ...form, path: e.target.value })}
               required
@@ -211,15 +223,19 @@ export default function MenusPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.icon")}</label>
+              {/* IconPicker (src/components/ui/IconPicker.tsx) renders its own trigger button
+                  and is out of scope for this pass, so this label can't be wired via htmlFor —
+                  it stays a visual label only. */}
+              <span id={iconLabelId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.icon")}</span>
               <IconPicker
                 value={form.icon}
                 onChange={(icon) => setForm({ ...form, icon })}
               />
             </div>
             <div>
-              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.order")}</label>
+              <label htmlFor={orderId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.order")}</label>
               <input
+                id={orderId}
                 type="number"
                 value={form.order}
                 onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
@@ -228,8 +244,9 @@ export default function MenusPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.component")}</label>
+            <label htmlFor={componentId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.component")}</label>
             <input
+              id={componentId}
               value={form.component}
               onChange={(e) => setForm({ ...form, component: e.target.value })}
               placeholder={t("menus.component_placeholder")}
@@ -237,12 +254,13 @@ export default function MenusPage() {
             />
           </div>
           <div>
-            <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.roles")}</label>
-            <div className="flex flex-wrap gap-2">
+            <span id={rolesLabelId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.roles")}</span>
+            <div role="group" aria-labelledby={rolesLabelId} className="flex flex-wrap gap-2">
               {ROLE_OPTIONS.map((role) => (
                 <button
                   key={role}
                   type="button"
+                  aria-pressed={form.roles.includes(role)}
                   onClick={() => toggleRole(role)}
                   className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
                     form.roles.includes(role)
@@ -258,11 +276,11 @@ export default function MenusPage() {
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
-              id="is_active"
+              id={isActiveId}
               checked={form.is_active}
               onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
             />
-            <label htmlFor="is_active" className="text-sm text-[hsl(var(--color-ink))]">{t("menus.active")}</label>
+            <label htmlFor={isActiveId} className="text-sm text-[hsl(var(--color-ink))]">{t("menus.active")}</label>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect, useMemo, useRef } from "react";
+import { useCallback, useState, useEffect, useId, useMemo, useRef } from "react";
 import {
   ReactFlow,
   Node,
@@ -119,6 +119,15 @@ export default function WorkflowEditor({
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+
+  // Unique prefix so field ids never collide across multiple
+  // WorkflowEditor instances mounted at once.
+  const formId = useId();
+  const nodeNameId = `${formId}-node-name`;
+  const nodeTypeId = `${formId}-node-type`;
+  const courtCodeId = `${formId}-court-code`;
+  const approverTypeId = `${formId}-approver-type`;
+  const approverRoleId = `${formId}-approver-role`;
 
   // State
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -434,11 +443,13 @@ export default function WorkflowEditor({
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
             placeholder={t("workflow.editor.template_name_placeholder")}
+            aria-label={t("workflow.editor.template_name_placeholder")}
             className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink))] placeholder:[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
           <select
             value={templateCiv}
             onChange={(e) => setTemplateCiv(e.target.value as typeof templateCiv)}
+            aria-label={t("workflow.editor.civilization_select_label") === "workflow.editor.civilization_select_label" ? "Civilization" : t("workflow.editor.civilization_select_label")}
             className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           >
             <option value="CHINESE">{t("workflow.civilizations.CHINESE")}</option>
@@ -448,6 +459,7 @@ export default function WorkflowEditor({
           <select
             value={templateCaseType}
             onChange={(e) => setTemplateCaseType(e.target.value)}
+            aria-label={t("workflow.editor.case_type_select_label") === "workflow.editor.case_type_select_label" ? "Case Type" : t("workflow.editor.case_type_select_label")}
             className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           >
             <option value="ROUTINE">{t("workflow.case_types.ROUTINE")}</option>
@@ -521,8 +533,9 @@ export default function WorkflowEditor({
         {editData && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.node_name")}</label>
+              <label htmlFor={nodeNameId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.node_name")}</label>
               <input
+                id={nodeNameId}
                 type="text"
                 value={editData.node_name}
                 onChange={(e) =>
@@ -532,8 +545,9 @@ export default function WorkflowEditor({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.node_type")}</label>
+              <label htmlFor={nodeTypeId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.node_type")}</label>
               <select
+                id={nodeTypeId}
                 value={editData.node_type}
                 onChange={(e) =>
                   setEditData({
@@ -551,8 +565,9 @@ export default function WorkflowEditor({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.court_code")}</label>
+              <label htmlFor={courtCodeId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.court_code")}</label>
               <input
+                id={courtCodeId}
                 type="text"
                 value={editData.court_code}
                 onChange={(e) =>
@@ -563,8 +578,9 @@ export default function WorkflowEditor({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.approver_type")}</label>
+              <label htmlFor={approverTypeId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.approver_type")}</label>
               <select
+                id={approverTypeId}
                 value={editData.approver_type}
                 onChange={(e) =>
                   setEditData({
@@ -582,8 +598,9 @@ export default function WorkflowEditor({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.approver_role")}</label>
+              <label htmlFor={approverRoleId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.approver_role")}</label>
               <input
+                id={approverRoleId}
                 type="text"
                 value={editData.approver_role}
                 onChange={(e) =>

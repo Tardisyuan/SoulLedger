@@ -108,15 +108,20 @@ export default function SoulsPage() {
       <div className="max-w-5xl mx-auto px-6 py-6">
         {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-6 items-center">
+          {/* Filter bar: visible labels would crowd the row, so each control
+              carries an aria-label instead — a placeholder is not an
+              accessible name and disappears once the user types. */}
           <input
             type="text"
             placeholder={t("souls.search_placeholder")}
+            aria-label={t("souls.search_placeholder")}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
           <select
             value={stateFilter}
+            aria-label={t("souls.filter_state")}
             onChange={(e) => {
               setStateFilter(e.target.value);
               setPage(1);
@@ -129,6 +134,7 @@ export default function SoulsPage() {
           </select>
           <select
             value={civilizationFilter}
+            aria-label={t("souls.filter_civilization")}
             onChange={(e) => {
               setCivilizationFilter(e.target.value);
               setPage(1);
@@ -143,6 +149,7 @@ export default function SoulsPage() {
             <input
               type="number"
               placeholder={t("souls.karma_min")}
+              aria-label={`${t("souls.karma_range")} — ${t("souls.karma_min")}`}
               value={karmaMin}
               onChange={(e) => setKarmaMin(e.target.value)}
               onBlur={() => setPage(1)}
@@ -152,6 +159,7 @@ export default function SoulsPage() {
             <input
               type="number"
               placeholder={t("souls.karma_max")}
+              aria-label={`${t("souls.karma_range")} — ${t("souls.karma_max")}`}
               value={karmaMax}
               onChange={(e) => setKarmaMax(e.target.value)}
               onBlur={() => setPage(1)}
