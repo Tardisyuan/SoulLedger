@@ -9,6 +9,7 @@ import {
   LazyDashboardPieChart,
   LazyAdminBarChart,
 } from "@/src/components/charts/LazyDashboardCharts";
+import { DataTable } from "@/components/ui/data-table";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "#10b981",
@@ -31,14 +32,11 @@ export default function AdminStatsPage() {
   const { t } = useI18n();
   const { isAdmin } = useTenant();
 
-  if (!isAdmin) {
-    return <PermissionDenied />;
-  }
-
   const { data: stats, isLoading, error } = useQuery({
     queryKey: ["karma-stats"],
     queryFn: () => karmaApi.statsOverview().then(res => res.data),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: isAdmin,
   });
 
   async function handleExport() {
@@ -54,6 +52,14 @@ export default function AdminStatsPage() {
     } catch (e) {
       console.error("Export failed:", e);
     }
+  }
+
+  // Must come after every hook call. `isAdmin` derives from useTenant(), which
+  // hydrates from localStorage in an effect, so it is false on the first render
+  // and true on the next — an early return above the useQuery would change the
+  // hook count between those renders, which React rejects.
+  if (!isAdmin) {
+    return <PermissionDenied />;
   }
 
   if (isLoading) {
@@ -172,33 +178,24 @@ export default function AdminStatsPage() {
           <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
             {t("admin.top_karma")}
           </h2>
-          {stats.souls_by_realm && stats.souls_by_realm.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-[hsl(var(--color-ink-muted))] border-b border-[hsl(var(--color-hairline))]">
-                    <th className="pb-2 font-medium">{t("admin.realm")}</th>
-                    <th className="pb-2 font-medium">{t("admin.civilization")}</th>
-                    <th className="pb-2 font-medium text-right">{t("admin.soul_count")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.souls_by_realm.slice(0, 10).map((realm, idx) => (
-                    <tr
-                      key={`${realm.realm_code}-${idx}`}
-                      className="border-b border-[hsl(var(--color-hairline))]/50"
-                    >
-                      <td className="py-2 text-[hsl(var(--color-ink))]">{realm.realm_name || realm.realm_code}</td>
-                      <td className="py-2 text-[hsl(var(--color-ink-muted))]">{realm.civilization}</td>
-                      <td className="py-2 text-right font-medium">{realm.count}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center text-[hsl(var(--color-ink-muted))] py-8">{t("admin.no_realm_data")}</div>
-          )}
+          <DataTable<KarmaStatsOverview["souls_by_realm"][number]>
+            caption={t("admin.top_karma")}
+            columns={[
+              { key: "realm_name", header: t("admin.realm") },
+              { key: "civilization", header: t("admin.civilization") },
+              { key: "count", header: t("admin.soul_count"), align: "right" },
+            ]}
+            data={stats.souls_by_realm?.slice(0, 10) ?? []}
+            keyExtractor={(realm, idx) => `${realm.realm_code}-${idx}`}
+            renderRow={(realm) => (
+              <>
+                <td className="px-4 py-3 text-[hsl(var(--color-ink))]">{realm.realm_name || realm.realm_code}</td>
+                <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{realm.civilization}</td>
+                <td className="px-4 py-3 text-right font-medium">{realm.count}</td>
+              </>
+            )}
+            emptyMessage={t("admin.no_realm_data")}
+          />
         </div>
 
         {/* Tenant Breakdown */}

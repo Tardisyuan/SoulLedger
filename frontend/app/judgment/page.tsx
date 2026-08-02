@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { judgmentApi, type Judgment } from "@/lib/api";
-import { TableSkeleton } from "@/components/ui/skeleton";
-import { Pagination } from "@/src/components/ui/Pagination";
+import { DataTable, type SortState } from "@/components/ui/data-table";
 
 const VERDICT_COLORS: Record<string, string> = {
   PASSED: "bg-[hsl(var(--color-verdict-passed)/0.2)] text-[hsl(var(--color-verdict-passed))]",
@@ -15,25 +14,31 @@ const VERDICT_COLORS: Record<string, string> = {
   RETRY: "bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))]",
 };
 
+/** Parses the `ordering` query param ("-created_at" etc.) into DataTable's sort shape. */
+function parseOrdering(ordering: string): SortState | null {
+  if (!ordering) return null;
+  const desc = ordering.startsWith("-");
+  return { key: desc ? ordering.slice(1) : ordering, direction: desc ? "desc" : "asc" };
+}
+
 export default function JudgmentQueuePage() {
   const { t } = useI18n();
   const [tab, setTab] = useState<"pending" | "concluded">("pending");
   const [page, setPage] = useState(1);
+  const [ordering, setOrdering] = useState("");
 
-  // Fetch judgments with filter based on tab
+  // Fetch judgments with filter based on tab.
+  // Params live in the queryKey, so tab/page/ordering changes refetch on their own.
   const {
     data: judgmentData,
     isLoading: judgmentLoading,
-    error: judgmentError,
+    isError: judgmentIsError,
   } = useQuery({
-    queryKey: ["judgments", tab, page],
+    queryKey: ["judgments", tab, page, ordering],
     queryFn: async () => {
       const params: Record<string, string> = { page: String(page) };
-      if (tab === "pending") {
-        params.has_verdict = "false";
-      } else {
-        params.has_verdict = "true";
-      }
+      params.has_verdict = tab === "pending" ? "false" : "true";
+      if (ordering) params.ordering = ordering;
       const res = await judgmentApi.list(params);
       return res.data;
     },
@@ -74,132 +79,71 @@ export default function JudgmentQueuePage() {
           ))}
         </div>
 
-        {/* Loading / Error / Empty / Table */}
-        {judgmentLoading ? (
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium">
-                    {t("judgment.soul_name")}
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    {t("judgment.civilization")}
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    {t("judgment.court")}
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    {t("judgment.verdict")}
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    {t("judgment.created")}
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    {t("judgment.action")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <TableSkeleton rows={5} cols={6} />
-              </tbody>
-            </table>
-          </div>
-        ) : judgmentError ? (
-          <div className="text-center text-[hsl(0,84%,60%)] py-12">
-            {String(judgmentError)}
-          </div>
-        ) : judgments.length === 0 ? (
-          <div className="text-center text-[hsl(var(--color-ink-subtle))] py-12">
-            {t("judgment.no_judgments")}
-          </div>
-        ) : (
-          <>
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium">
-                    {t("judgment.soul_name")}
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    {t("judgment.civilization")}
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    {t("judgment.court")}
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    {t("judgment.verdict")}
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    {t("judgment.created")}
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    {t("judgment.action")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
-                {judgments.map((judgment) => (
-                  <tr
-                    key={judgment.id}
-                    className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors"
+        <DataTable<Judgment>
+          caption={t("judgment.title")}
+          columns={[
+            { key: "soul_name", header: t("judgment.soul_name") },
+            { key: "civilization", header: t("judgment.civilization") },
+            { key: "court", header: t("judgment.court") },
+            { key: "verdict", header: t("judgment.verdict") },
+            { key: "created_at", header: t("judgment.created"), sortable: true },
+            { key: "action", header: t("judgment.action") },
+          ]}
+          data={judgments}
+          isLoading={judgmentLoading}
+          isError={judgmentIsError}
+          keyExtractor={(judgment) => String(judgment.id)}
+          renderRow={(judgment) => (
+            <>
+              <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">
+                {judgment.soul_name || judgment.soul}
+              </td>
+              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
+                {t(`souls.civilizations.${judgment.civilization}`)}
+              </td>
+              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
+                {judgment.court}
+              </td>
+              <td className="px-4 py-3">
+                {judgment.verdict ? (
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs font-bold ${
+                      VERDICT_COLORS[judgment.verdict] ??
+                      "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
+                    }`}
                   >
-                    <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">
-                      {judgment.soul_name || judgment.soul}
-                    </td>
-                    <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
-                      {t(`souls.civilizations.${judgment.civilization}`)}
-                    </td>
-                    <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
-                      {judgment.court}
-                    </td>
-                    <td className="px-4 py-3">
-                      {judgment.verdict ? (
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs font-bold ${
-                            VERDICT_COLORS[judgment.verdict] ??
-                            "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
-                          }`}
-                        >
-                          {t(`judgment.verdicts.${judgment.verdict}`)}
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-[hsl(38,92%,50%,0.2)] text-[hsl(38,92%,50%)]">
-                          {t("judgment.pending")}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs">
-                      {new Date(judgment.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/judgment/${judgment.id}`}
-                        className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))] text-sm"
-                      >
-                        {t("judgment.view")} →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {judgments.length > 0 && (
-            <div className="px-2">
-              <Pagination
-                page={page}
-                totalPages={totalPages}
-                count={judgmentData?.count ?? 0}
-                onPageChange={setPage}
-              />
-            </div>
+                    {t(`judgment.verdicts.${judgment.verdict}`)}
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-[hsl(var(--color-status-judging)/0.2)] text-[hsl(var(--color-status-judging))]">
+                    {t("judgment.pending")}
+                  </span>
+                )}
+              </td>
+              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs">
+                {new Date(judgment.created_at).toLocaleDateString()}
+              </td>
+              <td className="px-4 py-3">
+                <Link
+                  href={`/judgment/${judgment.id}`}
+                  className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))] text-sm"
+                >
+                  {t("judgment.view")} →
+                </Link>
+              </td>
+            </>
           )}
-          </>
-        )}
+          sort={parseOrdering(ordering)}
+          onSortChange={(next) => {
+            setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
+            setPage(1);
+          }}
+          emptyMessage={t("judgment.no_judgments")}
+          page={page}
+          totalPages={totalPages}
+          totalCount={judgmentData?.count}
+          onPageChange={setPage}
+        />
       </div>
     </div>
   );

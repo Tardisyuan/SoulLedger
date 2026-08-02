@@ -7,9 +7,8 @@ import { menuButtonsApi, menusApi, type MenuButton, type MenuItem, type Paginate
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Modal } from "@/src/components/ui/Modal";
-import { TableSkeleton } from "@/components/ui/skeleton";
-import { PageSection } from "@/components/ui/page-section";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { DataTable } from "@/components/ui/data-table";
 
 export default function MenuButtonsPage() {
   const { t } = useI18n();
@@ -25,13 +24,17 @@ export default function MenuButtonsPage() {
     },
   });
 
-  const { data: buttons = [], isLoading, error } = useQuery<MenuButton[]>({
+  // `/menus/buttons/` is a paginated endpoint, but menuButtonsApi.list() (lib/api/menus.ts) doesn't
+  // forward a `page` param — out of this migration's file boundary, so this only shows page 1
+  // for now, same as before. See report for the follow-up needed to add real pagination.
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["menu-buttons", selectedMenuId],
     queryFn: async () => {
       const res = await menuButtonsApi.list(selectedMenuId);
-      return (res.data as PaginatedResponse<MenuButton>).results;
+      return res.data as PaginatedResponse<MenuButton>;
     },
   });
+  const buttons = data?.results ?? [];
 
   const createMutation = useMutation({
     mutationFn: (data: Partial<MenuButton>) => menuButtonsApi.create(data),
@@ -110,71 +113,53 @@ export default function MenuButtonsPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-6">
-        <PageSection
-          title={t("menu_buttons.title")}
+        <DataTable<MenuButton>
+          caption={t("menu_buttons.title")}
+          columns={[
+            { key: "name", header: t("menu_buttons.name") },
+            { key: "code", header: t("menu_buttons.code") },
+            { key: "permission", header: t("menu_buttons.permission") },
+            { key: "order", header: t("menus.order") },
+            { key: "status", header: t("menus.status") },
+            { key: "action", header: t("menus.action"), align: "right" },
+          ]}
+          data={buttons}
           isLoading={isLoading}
-          error={error ? String(error) : undefined}
-        >
-          {buttons.length === 0 && !isLoading ? (
-            <div className="text-center text-[hsl(var(--color-ink-subtle))] py-12">{t("menu_buttons.no_buttons")}</div>
-          ) : (
-            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
-              {isLoading ? (
-                <table className="w-full text-sm">
-                  <tbody>
-                    <TableSkeleton rows={5} cols={5} />
-                  </tbody>
-                </table>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
-                    <tr>
-                      <th className="text-left px-4 py-3 font-medium">{t("menu_buttons.name")}</th>
-                      <th className="text-left px-4 py-3 font-medium">{t("menu_buttons.code")}</th>
-                      <th className="text-left px-4 py-3 font-medium">{t("menu_buttons.permission")}</th>
-                      <th className="text-left px-4 py-3 font-medium">{t("menus.order")}</th>
-                      <th className="text-left px-4 py-3 font-medium">{t("menus.status")}</th>
-                      <th className="text-right px-4 py-3 font-medium">{t("menus.action")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
-                    {buttons.map((btn) => (
-                      <tr key={btn.id} className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">{btn.name}</td>
-                        <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs font-mono">{btn.code}</td>
-                        <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs font-mono">{btn.permission}</td>
-                        <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{btn.order}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${btn.is_active ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
-                            {btn.is_active ? t("menus.active") : t("menus.inactive")}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <RequirePermission permissions="menu.update">
-                            <button
-                              onClick={() => openEdit(btn)}
-                              className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-sm mr-3"
-                            >
-                              {t("menus.edit")}
-                            </button>
-                          </RequirePermission>
-                          <RequirePermission permissions="menu.delete">
-                            <button
-                              onClick={() => deleteMutation.mutate(btn.id)}
-                              className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-sm"
-                            >
-                              {t("menus.delete")}
-                            </button>
-                          </RequirePermission>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+          isError={isError}
+          keyExtractor={(btn) => String(btn.id)}
+          renderRow={(btn) => (
+            <>
+              <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">{btn.name}</td>
+              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs font-mono">{btn.code}</td>
+              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs font-mono">{btn.permission}</td>
+              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{btn.order}</td>
+              <td className="px-4 py-3">
+                <span className={`px-2 py-0.5 rounded text-xs font-bold ${btn.is_active ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
+                  {btn.is_active ? t("menus.active") : t("menus.inactive")}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-right">
+                <RequirePermission permissions="menu.update">
+                  <button
+                    onClick={() => openEdit(btn)}
+                    className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-sm mr-3"
+                  >
+                    {t("menus.edit")}
+                  </button>
+                </RequirePermission>
+                <RequirePermission permissions="menu.delete">
+                  <button
+                    onClick={() => deleteMutation.mutate(btn.id)}
+                    className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-sm"
+                  >
+                    {t("menus.delete")}
+                  </button>
+                </RequirePermission>
+              </td>
+            </>
           )}
-        </PageSection>
+          emptyMessage={t("menu_buttons.no_buttons")}
+        />
       </div>
 
       <Modal
