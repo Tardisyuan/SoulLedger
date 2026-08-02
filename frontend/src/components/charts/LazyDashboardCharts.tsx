@@ -327,6 +327,17 @@ const LazySoulLineChart = dynamic(
         data: ChartDataPoint[];
         height?: number;
       }) {
+        // A soul's karma spans its whole life — decades, once event dates are
+        // real. Slicing every label to MM-DD dropped the year, so a series
+        // running 1969→2011 read as one year and the labels looked unsorted.
+        // Below two years the year is the redundant part, so switch on span.
+        const years = data
+          .map((d) => Number(String(d.date).slice(0, 4)))
+          .filter((y) => !Number.isNaN(y));
+        const spansYears = years.length > 0 && Math.max(...years) - Math.min(...years) >= 2;
+        const formatTick = (v: string) =>
+          spansYears ? String(v).slice(0, 4) : String(v).slice(5, 10);
+
         return (
           <ResponsiveContainer width="100%" height={height}>
             <LineChart data={data}>
@@ -340,7 +351,7 @@ const LazySoulLineChart = dynamic(
                   fill: "hsl(var(--color-ink-muted))",
                   fontSize: 9,
                 }}
-                tickFormatter={(v: string) => v.slice(5, 10)}
+                tickFormatter={formatTick}
               />
               <YAxis
                 tick={{
