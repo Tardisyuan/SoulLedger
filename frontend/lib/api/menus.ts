@@ -34,7 +34,13 @@ export const menusApi = {
 };
 
 export const menuButtonsApi = {
-  list: (menuId?: number) => api.get("/menus/buttons/", { params: menuId ? { menu: menuId } : {} }),
+  list: (menuId?: number, page?: number) =>
+    api.get("/menus/buttons/", {
+      params: {
+        ...(menuId ? { menu: menuId } : {}),
+        ...(page ? { page } : {}),
+      },
+    }),
   create: (data: Partial<MenuButton>) => api.post("/menus/buttons/", data),
   update: (id: number, data: Partial<MenuButton>) => api.patch(`/menus/buttons/${id}/`, data),
   delete: (id: number) => api.delete(`/menus/buttons/${id}/`),

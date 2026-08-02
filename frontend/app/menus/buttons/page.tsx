@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { menuButtonsApi, menusApi, type MenuButton, type MenuItem, type PaginatedResponse } from "@/lib/api";
@@ -15,6 +15,17 @@ export default function MenuButtonsPage() {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [selectedMenuId, setSelectedMenuId] = useState<number | undefined>();
+  const [page, setPage] = useState(1);
+
+  // Unique prefix so field ids never collide across multiple Modal instances.
+  const formId = useId();
+  const menuFilterId = `${formId}-menu-filter`;
+  const nameId = `${formId}-name`;
+  const codeId = `${formId}-code`;
+  const permissionId = `${formId}-permission`;
+  const bindMenuId = `${formId}-bind-menu`;
+  const orderId = `${formId}-order`;
+  const isActiveId = `${formId}-is-active`;
 
   const { data: menus = [] } = useQuery<MenuItem[]>({
     queryKey: ["menus-all"],
@@ -24,17 +35,15 @@ export default function MenuButtonsPage() {
     },
   });
 
-  // `/menus/buttons/` is a paginated endpoint, but menuButtonsApi.list() (lib/api/menus.ts) doesn't
-  // forward a `page` param — out of this migration's file boundary, so this only shows page 1
-  // for now, same as before. See report for the follow-up needed to add real pagination.
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["menu-buttons", selectedMenuId],
+    queryKey: ["menu-buttons", selectedMenuId, page],
     queryFn: async () => {
-      const res = await menuButtonsApi.list(selectedMenuId);
+      const res = await menuButtonsApi.list(selectedMenuId, page);
       return res.data as PaginatedResponse<MenuButton>;
     },
   });
   const buttons = data?.results ?? [];
+  const totalPages = data ? Math.ceil(data.count / 20) : 0;
 
   const createMutation = useMutation({
     mutationFn: (data: Partial<MenuButton>) => menuButtonsApi.create(data),
@@ -93,8 +102,13 @@ export default function MenuButtonsPage() {
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">{t("menu_buttons.title")}</h1>
         <select
+          id={menuFilterId}
           value={selectedMenuId ?? ""}
-          onChange={(e) => setSelectedMenuId(e.target.value ? Number(e.target.value) : undefined)}
+          onChange={(e) => {
+            setSelectedMenuId(e.target.value ? Number(e.target.value) : undefined);
+            setPage(1);
+          }}
+          aria-label={t("menu_buttons.filter_by_menu") === "menu_buttons.filter_by_menu" ? "Filter by menu" : t("menu_buttons.filter_by_menu")}
           className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-1.5 text-sm text-[hsl(var(--color-ink))]"
         >
           <option value="">{t("menu_buttons.all_menus")}</option>
@@ -159,6 +173,10 @@ export default function MenuButtonsPage() {
             </>
           )}
           emptyMessage={t("menu_buttons.no_buttons")}
+          page={page}
+          totalPages={totalPages}
+          totalCount={data?.count}
+          onPageChange={setPage}
         />
       </div>
 
@@ -169,8 +187,9 @@ export default function MenuButtonsPage() {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menu_buttons.name")}</label>
+            <label htmlFor={nameId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menu_buttons.name")}</label>
             <input
+              id={nameId}
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
@@ -178,8 +197,9 @@ export default function MenuButtonsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menu_buttons.code")}</label>
+            <label htmlFor={codeId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menu_buttons.code")}</label>
             <input
+              id={codeId}
               value={form.code}
               onChange={(e) => setForm({ ...form, code: e.target.value })}
               required
@@ -188,8 +208,9 @@ export default function MenuButtonsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menu_buttons.permission")}</label>
+            <label htmlFor={permissionId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menu_buttons.permission")}</label>
             <input
+              id={permissionId}
               value={form.permission}
               onChange={(e) => setForm({ ...form, permission: e.target.value })}
               required
@@ -199,8 +220,9 @@ export default function MenuButtonsPage() {
           </div>
           {!editingButton && (
             <div>
-              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menu_buttons.bind_menu")}</label>
+              <label htmlFor={bindMenuId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menu_buttons.bind_menu")}</label>
               <select
+                id={bindMenuId}
                 value={form.menu ?? ""}
                 onChange={(e) => setForm({ ...form, menu: e.target.value ? Number(e.target.value) : null })}
                 required
@@ -214,8 +236,9 @@ export default function MenuButtonsPage() {
             </div>
           )}
           <div>
-            <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.order")}</label>
+            <label htmlFor={orderId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.order")}</label>
             <input
+              id={orderId}
               type="number"
               value={form.order}
               onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
@@ -225,11 +248,11 @@ export default function MenuButtonsPage() {
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
-              id="btn_is_active"
+              id={isActiveId}
               checked={form.is_active}
               onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
             />
-            <label htmlFor="btn_is_active" className="text-sm text-[hsl(var(--color-ink))]">{t("menus.active")}</label>
+            <label htmlFor={isActiveId} className="text-sm text-[hsl(var(--color-ink))]">{t("menus.active")}</label>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button
