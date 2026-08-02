@@ -966,5 +966,21 @@
     "list": "Tenant list",
     "no_tenants": "No tenants",
     "code": "Code"
+  },
+  "table": {
+    "empty": "No data",
+    "no_results": "No matching records"
+  },
+  "breadcrumb": {
+    "aria_label": "Breadcrumb",
+    "home": "Dashboard",
+    "detail": "Detail",
+    "buttons": "Buttons",
+    "propose": "Propose",
+    "follows": "Follows",
+    "stats": "Stats",
+    "welcome": "Welcome",
+    "profile": "Profile",
+    "notifications": "Notifications"
   }
 }
