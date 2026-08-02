@@ -111,13 +111,12 @@ export default function SoulDetailPage() {
     setIsConfirmOpen(true);
   }
 
-  async function handleJudgment(verdict: string) {
+  async function handleStartJudgment() {
     if (!soul) return;
-    setActionLoading(`judge-${verdict}`);
+    setActionLoading("judge");
     try {
       const jRes = await judgmentApi.create({ soul: soul.id, civilization: soul.civilization });
-      await judgmentApi.conclude(jRes.data.id, { verdict, notes: `Auto-judged. Karma: ${karma?.karmic_balance}` });
-      await loadSoulData();
+      router.push(`/judgment/${jRes.data.id}`);
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: string } }; message?: string };
       showToast(err?.response?.data?.error || err?.message || "Failed", "error");
@@ -173,12 +172,6 @@ export default function SoulDetailPage() {
       </div>
     );
   }
-
-  const verdictOptions = [
-    { key: "PASSED", color: "bg-[hsl(var(--color-verdict-passed))] hover:bg-[hsl(var(--color-verdict-passed)/0.8)]" },
-    { key: "FAILED", color: "bg-[hsl(var(--color-verdict-failed))] hover:bg-[hsl(var(--color-verdict-failed)/0.8)]" },
-    { key: "PURGATORY", color: "bg-[hsl(var(--color-verdict-purgatory))] hover:bg-[hsl(var(--color-verdict-purgatory)/0.8)]" },
-  ];
 
   return (
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
@@ -358,16 +351,13 @@ export default function SoulDetailPage() {
                   <div className="space-y-2">
                     <p className="text-xs text-[hsl(var(--color-ink-muted))] text-center">{t("souls.detail.render_judgment")}</p>
                     <RequirePermission permissions="judgment.create">
-                      {verdictOptions.map((opt) => (
-                        <button
-                          key={opt.key}
-                          onClick={() => handleJudgment(opt.key)}
-                          disabled={!!actionLoading}
-                          className={`w-full py-2 px-4 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 ${opt.color}`}
-                        >
-                          {actionLoading === `judge-${opt.key}` ? t("souls.detail.processing") : t(`souls.detail.verdict_${opt.key.toLowerCase()}`)}
-                        </button>
-                      ))}
+                      <button
+                        onClick={handleStartJudgment}
+                        disabled={!!actionLoading}
+                        className="w-full py-2 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent)/0.8)] disabled:opacity-50 text-black text-sm font-medium rounded-md transition-colors"
+                      >
+                        {actionLoading === "judge" ? t("souls.detail.processing") : t("souls.detail.start_judgment")}
+                      </button>
                     </RequirePermission>
                   </div>
                 )}

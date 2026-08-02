@@ -53,7 +53,9 @@ export const dispatchApi = {
     target_tenant?: number;
     source_tenant_code?: string;
     target_tenant_code?: string;
-    soul: number;
+    // Soul PKs are UUIDs (see DispatchRecord.soul above); this was typed as
+    // `number` and callers were doing parseInt() on a UUID, which sent NaN.
+    soul: string;
     reason: string;
   }) => api.post<DispatchRecord>("/dispatch/records/", data),
   approve: (id: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/approve/`),
