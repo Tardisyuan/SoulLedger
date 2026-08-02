@@ -153,22 +153,26 @@ export default function MenuButtonsPage() {
                 </span>
               </td>
               <td className="px-4 py-3 text-right">
-                <RequirePermission permissions="menu.update">
-                  <button
-                    onClick={() => openEdit(btn)}
-                    className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-sm mr-3"
-                  >
-                    {t("menus.edit")}
-                  </button>
-                </RequirePermission>
-                <RequirePermission permissions="menu.delete">
-                  <button
-                    onClick={() => deleteMutation.mutate(btn.id)}
-                    className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-sm"
-                  >
-                    {t("menus.delete")}
-                  </button>
-                </RequirePermission>
+                {/* See app/permissions/page.tsx: inline siblings concatenate
+                    their labels in the accessibility tree and on copy. */}
+                <div className="flex justify-end gap-3">
+                  <RequirePermission permissions="menu.update">
+                    <button
+                      onClick={() => openEdit(btn)}
+                      className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-sm"
+                    >
+                      {t("menus.edit")}
+                    </button>
+                  </RequirePermission>
+                  <RequirePermission permissions="menu.delete">
+                    <button
+                      onClick={() => deleteMutation.mutate(btn.id)}
+                      className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-sm"
+                    >
+                      {t("menus.delete")}
+                    </button>
+                  </RequirePermission>
+                </div>
               </td>
             </>
           )}
