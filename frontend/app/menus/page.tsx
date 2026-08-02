@@ -10,9 +10,8 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Modal } from "@/src/components/ui/Modal";
 import { IconPicker } from "@/src/components/ui/IconPicker";
-import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
-import { PageSection } from "@/components/ui/page-section";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { DataTable } from "@/components/ui/data-table";
 
 type LucideIconName = keyof typeof LucideIcons;
 
@@ -116,91 +115,73 @@ export default function MenusPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-6">
-        <PageSection
-          title={t("menus.title")}
+        <DataTable<MenuItem>
+          caption={t("menus.title")}
+          columns={[
+            { key: "name", header: t("menus.name") },
+            { key: "path", header: t("menus.path") },
+            { key: "roles", header: t("menus.roles") },
+            { key: "order", header: t("menus.order") },
+            { key: "status", header: t("menus.status") },
+            { key: "action", header: t("menus.action"), align: "right" },
+          ]}
+          data={menus}
           isLoading={isLoading}
-          error={error ? String(error) : undefined}
-        >
-          {menus.length === 0 && !isLoading ? (
-            <div className="text-center text-[hsl(var(--color-ink-subtle))] py-12">{t("menus.no_menus")}</div>
-          ) : (
-            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden overflow-x-auto">
-              {isLoading ? (
-                <table className="w-full text-sm">
-                  <tbody>
-                    <TableSkeleton rows={5} cols={6} />
-                  </tbody>
-                </table>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
-                    <tr>
-                      <th className="text-left px-4 py-3 font-medium">{t("menus.name")}</th>
-                      <th className="text-left px-4 py-3 font-medium">{t("menus.path")}</th>
-                      <th className="text-left px-4 py-3 font-medium">{t("menus.roles")}</th>
-                      <th className="text-left px-4 py-3 font-medium">{t("menus.order")}</th>
-                      <th className="text-left px-4 py-3 font-medium">{t("menus.status")}</th>
-                      <th className="text-right px-4 py-3 font-medium">{t("menus.action")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
-                    {menus.map((menu) => {
-                      const MenuIcon = menu.icon
-                        ? (LucideIcons[menu.icon as LucideIconName] as unknown as LucideIcon)
-                        : null;
-                      return (
-                      <tr key={menu.id} className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            {MenuIcon ? (
-                              <MenuIcon className="w-4 h-4 text-[hsl(var(--color-accent))]" />
-                            ) : null}
-                            <span className="font-medium text-[hsl(var(--color-ink))]">{menu.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs font-mono">{menu.path}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {menu.roles.map((role) => (
-                              <span key={role} className="px-1.5 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] rounded text-xs">
-                                {t(`users.roles.${role}` as any)}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{menu.order}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${menu.is_active ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
-                            {menu.is_active ? t("menus.active") : t("menus.inactive")}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <RequirePermission permissions="menu.update">
-                            <button
-                              onClick={() => openEdit(menu)}
-                              className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-sm mr-3"
-                            >
-                              {t("menus.edit")}
-                            </button>
-                          </RequirePermission>
-                          <RequirePermission permissions="menu.delete">
-                            <button
-                              onClick={() => deleteMutation.mutate(menu.id)}
-                              className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-sm"
-                            >
-                              {t("menus.delete")}
-                            </button>
-                          </RequirePermission>
-                        </td>
-                      </tr>
-                    );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-        </PageSection>
+          isError={Boolean(error)}
+          keyExtractor={(menu) => String(menu.id)}
+          renderRow={(menu) => {
+            const MenuIcon = menu.icon
+              ? (LucideIcons[menu.icon as LucideIconName] as unknown as LucideIcon)
+              : null;
+            return (
+              <>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    {MenuIcon ? (
+                      <MenuIcon className="w-4 h-4 text-[hsl(var(--color-accent))]" />
+                    ) : null}
+                    <span className="font-medium text-[hsl(var(--color-ink))]">{menu.name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs font-mono">{menu.path}</td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {menu.roles.map((role) => (
+                      <span key={role} className="px-1.5 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] rounded text-xs">
+                        {t(`users.roles.${role}` as any)}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{menu.order}</td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${menu.is_active ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
+                    {menu.is_active ? t("menus.active") : t("menus.inactive")}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <RequirePermission permissions="menu.update">
+                    <button
+                      onClick={() => openEdit(menu)}
+                      className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-sm mr-3"
+                    >
+                      {t("menus.edit")}
+                    </button>
+                  </RequirePermission>
+                  <RequirePermission permissions="menu.delete">
+                    <button
+                      onClick={() => deleteMutation.mutate(menu.id)}
+                      className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-sm"
+                    >
+                      {t("menus.delete")}
+                    </button>
+                  </RequirePermission>
+                </td>
+              </>
+            );
+          }}
+          emptyMessage={t("menus.no_menus")}
+        />
       </div>
 
       {/* Create/Edit Modal */}

@@ -8,10 +8,11 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
 import { PermissionFormModal } from "@/src/components/permissions/PermissionFormModal";
 import { RoleFormModal } from "@/src/components/permissions/RoleFormModal";
+import { DataTable } from "@/components/ui/data-table";
 
 const CATEGORIES = ["soul", "judgment", "karma", "reincarnation", "system"];
 
@@ -37,7 +38,7 @@ export default function PermissionsPage() {
   const [deletingRole, setDeletingRole] = useState<Role | null>(null);
 
   // Fetch all permissions
-  const { data: allPerms = [], isLoading: isPermsLoading } = useQuery({
+  const { data: allPerms = [], isLoading: isPermsLoading, isError: isPermsError } = useQuery({
     queryKey: ["permissions"],
     queryFn: async () => {
       const res = await permApi.list();
@@ -345,57 +346,46 @@ export default function PermissionsPage() {
             ) : undefined
           }
         >
-          {isPermsLoading ? (
-            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">
-              <table className="w-full text-sm">
-                <tbody>
-                  <TableSkeleton rows={8} cols={4} />
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-medium">{t("permissions.codename")}</th>
-                    <th className="text-left px-4 py-3 font-medium">{t("permissions.name")}</th>
-                    <th className="text-left px-4 py-3 font-medium">{t("permissions.category")}</th>
-                    <th className="text-right px-4 py-3 font-medium">{t("souls.action")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[hsl(var(--color-hairline))]">
-                  {allPerms.map((perm) => (
-                    <tr key={perm.id} className="hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors">
-                      <td className="px-4 py-3 font-mono text-[hsl(var(--color-accent))] text-xs">{perm.codename}</td>
-                      <td className="px-4 py-3 text-[hsl(var(--color-ink))]">{perm.name}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
-                          {perm.category}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <RequirePermission permissions="system.settings">
-                          <button
-                            onClick={() => { setEditingPerm(perm); setIsEditOpen(true); }}
-                            className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-xs mr-3"
-                          >
-                            {t("permissions.edit")}
-                          </button>
-                          <button
-                            onClick={() => { setDeletingPerm(perm); setIsDeleteOpen(true); }}
-                            className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-xs"
-                          >
-                            {t("permissions.delete")}
-                          </button>
-                        </RequirePermission>
-                        </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable<Permission>
+            caption={t("permissions.all_permissions")}
+            columns={[
+              { key: "codename", header: t("permissions.codename") },
+              { key: "name", header: t("permissions.name") },
+              { key: "category", header: t("permissions.category") },
+              { key: "action", header: t("souls.action"), align: "right" },
+            ]}
+            data={allPerms}
+            isLoading={isPermsLoading}
+            isError={isPermsError}
+            keyExtractor={(perm) => String(perm.id)}
+            renderRow={(perm) => (
+              <>
+                <td className="px-4 py-3 font-mono text-[hsl(var(--color-accent))] text-xs">{perm.codename}</td>
+                <td className="px-4 py-3 text-[hsl(var(--color-ink))]">{perm.name}</td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
+                    {perm.category}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <RequirePermission permissions="system.settings">
+                    <button
+                      onClick={() => { setEditingPerm(perm); setIsEditOpen(true); }}
+                      className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-xs mr-3"
+                    >
+                      {t("permissions.edit")}
+                    </button>
+                    <button
+                      onClick={() => { setDeletingPerm(perm); setIsDeleteOpen(true); }}
+                      className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-xs"
+                    >
+                      {t("permissions.delete")}
+                    </button>
+                  </RequirePermission>
+                </td>
+              </>
+            )}
+          />
         </PageSection>
 
         {/* ── Roles Grid ── */}
