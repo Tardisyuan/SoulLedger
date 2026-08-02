@@ -115,8 +115,15 @@ export default function SoulDetailPage() {
     if (!soul) return;
     setActionLoading("judge");
     try {
-      const jRes = await judgmentApi.create({ soul: soul.id, civilization: soul.civilization });
-      router.push(`/judgment/${jRes.data.id}`);
+      // Soul.die() already opens a judgment when it moves the soul to JUDGING
+      // (apps/souls/models.py), so creating one here unconditionally left every
+      // soul with a duplicate pending judgment alongside the real one. Reuse
+      // the open judgment if there is one.
+      const open = judgments.find((j) => !j.is_final);
+      const id = open
+        ? open.id
+        : (await judgmentApi.create({ soul: soul.id, civilization: soul.civilization })).data.id;
+      router.push(`/judgment/${id}`);
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: string } }; message?: string };
       showToast(err?.response?.data?.error || err?.message || "Failed", "error");
@@ -573,10 +580,13 @@ export default function SoulDetailPage() {
 function getKarmaChartData(records: KarmaRecord[]) {
   if (!records || records.length === 0) return [];
 
-  // Sort by date ascending, compute cumulative balance
-  const sorted = [...records].sort(
-    (a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
-  );
+  // Sort by when the deed happened, not when the row was written. Ordering by
+  // recorded_at puts a life in data-entry order, which for an imported life is
+  // arbitrary — and the labels below already use event_date, so the two
+  // disagreed.
+  const when = (r: { event_date?: string | null; recorded_at: string }) =>
+    new Date(r.event_date || r.recorded_at).getTime();
+  const sorted = [...records].sort((a, b) => when(a) - when(b));
 
   let cumulative = 0;
   return sorted.map((r) => {

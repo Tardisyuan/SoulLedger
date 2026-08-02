@@ -19,8 +19,12 @@ class SoulRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = SoulRecord
         fields = [
-            "id", "record_type", "civilization", "description",
-            "weight", "evidence_json", "recorded_at",
+            # category/event_date/is_milestone are accepted on write but were
+            # not returned, so the karma timeline had no real dates to plot and
+            # fell back to recorded_at — collapsing every point in a life onto
+            # the day the rows were inserted.
+            "id", "record_type", "category", "civilization", "description",
+            "weight", "event_date", "is_milestone", "evidence_json", "recorded_at",
         ]
         read_only_fields = ["id", "recorded_at"]
 
