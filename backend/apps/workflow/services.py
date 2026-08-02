@@ -161,15 +161,27 @@ class WorkflowService:
         if validation_error:
             raise ValueError(validation_error)
 
-        # Look up template: DB first, then hardcoded fallback
+        # Look up template: DB first, then hardcoded fallback.
+        #
+        # A DB template only wins if it actually defines nodes. Without that
+        # check an active template with nodes_json=[] shadows the hardcoded
+        # default and yields a workflow with no steps — which is exactly what
+        # happened: seven empty templates left over from testing sat on
+        # CHINESE/ROUTINE, so every Chinese routine judgment silently got an
+        # empty shell instead of 十殿审判流程. An unconfigured template should
+        # fall through to something that works, not override it.
         template = None
         try:
-            db_template = WorkflowTemplate.objects.filter(
-                civilization=civilization,
-                case_type=case_type,
-                is_active=True,
-            ).first()
-            if db_template:
+            db_template = (
+                WorkflowTemplate.objects.filter(
+                    civilization=civilization,
+                    case_type=case_type,
+                    is_active=True,
+                )
+                .exclude(nodes_json=[])
+                .first()
+            )
+            if db_template and db_template.nodes_json:
                 template = {
                     "name": db_template.name,
                     "nodes": db_template.nodes_json,
