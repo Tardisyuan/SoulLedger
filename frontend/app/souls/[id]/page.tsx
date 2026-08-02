@@ -345,10 +345,15 @@ export default function SoulDetailPage() {
               <div className="space-y-2">
                 {soul?.current_state === "ALIVE" && (
                   <RequirePermission permissions="soul.die">
+                    {/* Accent, not status-error. Recording a death is the
+                        central verb of this product, not a failure — and the
+                        error token is what genuinely destructive actions
+                        (删除, below) use, so spending it here drains the
+                        signal from both. */}
                     <button
                       onClick={handleDie}
                       disabled={!!actionLoading}
-                      className="w-full py-2 px-4 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
+                      className="w-full py-2 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
                     >
                       {actionLoading === "die" ? t("souls.detail.processing") : t("souls.detail.mark_dead")}
                     </button>
@@ -377,7 +382,7 @@ export default function SoulDetailPage() {
                         disabled={!!actionLoading}
                         className="w-full py-2 px-4 bg-[hsl(var(--color-status-info))] hover:bg-[hsl(var(--color-status-info)/0.8)] disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
                       >
-                        {actionLoading === "reincarnate" ? t("souls.detail.processing") : `${t("souls.detail.reincarnate")} ${disp.destination_realm || t("souls.detail.destination")}`}
+                        {actionLoading === "reincarnate" ? t("souls.detail.processing") : `${t("souls.detail.reincarnate")} ${disp.realm_name || disp.realm_code || t("souls.detail.destination")}`}
                       </button>
                     ))}
                   </RequirePermission>
@@ -449,7 +454,10 @@ export default function SoulDetailPage() {
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="text-sm font-medium text-[hsl(var(--color-ink))]">
-                        → {d.destination_realm || t("souls.detail.destination")}
+                        {/* realm_name/realm_code come from the serializer;
+                            destination_realm is the raw FK, so leading with it
+                            put a UUID where the destination should be. */}
+                        → {d.realm_name || d.realm_code || t("souls.detail.destination")}
                       </div>
                       <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
                         {t("souls.detail.memory_reset")}: {d.memory_reset} · {d.is_eternal ? t("souls.detail.eternal") : `${d.memory_reset} ${t("souls.detail.memory_reset")}`}
