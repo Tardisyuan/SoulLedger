@@ -1,0 +1,134 @@
+[
+  {
+    "action": "civilization_fix",
+    "before": {
+      "id": "2b03b6f6-f04f-44b6-b5c0-b5e5ef6b5838",
+      "name": "Ma'at",
+      "civilization": "CHINESE",
+      "role": "JUDGE",
+      "realm_code": "EG_HALL_TWO_TRUTHS",
+      "tenant_id": 1,
+      "is_deleted": false,
+      "created_at": "2026-05-08T09:35:24.806930+00:00",
+      "references": 1
+    }
+  },
+  {
+    "action": "civilization_fix",
+    "before": {
+      "id": "67b81102-a180-4cc8-a8d5-81f68281a6cd",
+      "name": "Pluto",
+      "civilization": "CHINESE",
+      "role": "OVERSEER",
+      "realm_code": "EU_HELL_1ST",
+      "tenant_id": 2,
+      "is_deleted": false,
+      "created_at": "2026-05-08T09:35:24.783108+00:00",
+      "references": 1
+    }
+  },
+  {
+    "action": "civilization_fix",
+    "before": {
+      "id": "0348461f-1b16-441d-acf2-04332898209a",
+      "name": "Lethe",
+      "civilization": "CHINESE",
+      "role": "CONDUIT",
+      "realm_code": "EU_PURGATORY",
+      "tenant_id": 2,
+      "is_deleted": false,
+      "created_at": "2026-05-08T09:35:24.787929+00:00",
+      "references": 1
+    }
+  },
+  {
+    "action": "soft_delete_duplicate",
+    "before": {
+      "id": "670c557c-faf6-4340-aaa7-b161ae612786",
+      "name": "Isis",
+      "civilization": "EGYPTIAN",
+      "role": "CONDUIT",
+      "realm_code": "EG_AARU",
+      "tenant_id": 1,
+      "is_deleted": false,
+      "created_at": "2026-05-08T09:35:24.821860+00:00",
+      "references": 0
+    },
+    "kept_id": "79d9fd6e-d625-4120-93a3-304a6d43654c"
+  },
+  {
+    "action": "soft_delete_duplicate",
+    "before": {
+      "id": "ac5106e7-5a99-4c3d-ba88-07c4b4b5b089",
+      "name": "Nephthys",
+      "civilization": "EGYPTIAN",
+      "role": "CONDUIT",
+      "realm_code": "EG_AARU",
+      "tenant_id": 1,
+      "is_deleted": false,
+      "created_at": "2026-05-08T09:35:24.826748+00:00",
+      "references": 0
+    },
+    "kept_id": "373ec0cf-e23d-4e7e-aa0d-00b513f2ca51"
+  },
+  {
+    "action": "soft_delete_duplicate",
+    "before": {
+      "id": "9cee3ef3-993c-47e1-bf0c-72bc17b45e96",
+      "name": "Ammit",
+      "civilization": "EGYPTIAN",
+      "role": "EXECUTOR",
+      "realm_code": "EG_DEVOURER",
+      "tenant_id": 1,
+      "is_deleted": false,
+      "created_at": "2026-05-08T09:35:24.811561+00:00",
+      "references": 0
+    },
+    "kept_id": "eeafea3a-0e9a-4824-abf4-7b8f63086151"
+  },
+  {
+    "action": "soft_delete_duplicate",
+    "before": {
+      "id": "f5190993-3a31-48ec-8262-1211db515462",
+      "name": "Charon",
+      "civilization": "EUROPEAN",
+      "role": "CONDUIT",
+      "realm_code": "EU_PURGATORY",
+      "tenant_id": 1,
+      "is_deleted": false,
+      "created_at": "2026-05-08T09:35:24.768555+00:00",
+      "references": 0
+    },
+    "kept_id": "509fb3a8-d8fa-4476-9e05-b79f683c3d48"
+  },
+  {
+    "action": "soft_delete_duplicate",
+    "before": {
+      "id": "26c62bb7-d96c-439e-914c-46da83cac159",
+      "name": "Gabriel",
+      "civilization": "EUROPEAN",
+      "role": "CONDUIT",
+      "realm_code": "EU_HEAVEN",
+      "tenant_id": 1,
+      "is_deleted": false,
+      "created_at": "2026-05-08T09:35:24.758956+00:00",
+      "references": 0
+    },
+    "kept_id": "73a85cde-89a5-43a2-b883-04b0840e3fee"
+  },
+  {
+    "action": "soft_delete_duplicate",
+    "before": {
+      "id": "5fee1b2d-7ff7-4c64-a973-c75a7562ceb7",
+      "name": "Ra",
+      "civilization": "EGYPTIAN",
+      "role": "OVERSEER",
+      "realm_code": "EG_AARU",
+      "tenant_id": 1,
+      "is_deleted": false,
+      "created_at": "2026-05-08T09:35:24.831525+00:00",
+      "references": 0
+    },
+    "kept_id": "c4e54122-6c11-4d33-a8b2-32a48b650504"
+  }
+]
