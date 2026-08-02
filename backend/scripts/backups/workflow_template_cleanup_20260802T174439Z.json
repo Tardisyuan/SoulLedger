@@ -1,0 +1,56 @@
+[
+  {
+    "id": "db3817ec-3adc-444c-9406-5a0baa1ecfb2",
+    "name": "DebugTpl",
+    "civilization": "CHINESE",
+    "case_type": "ROUTINE",
+    "is_active": true,
+    "tenant_id": 29,
+    "nodes_json": []
+  },
+  {
+    "id": "c977f99b-5eea-4036-9a51-84387a5358e4",
+    "name": "New",
+    "civilization": "CHINESE",
+    "case_type": "ROUTINE",
+    "is_active": true,
+    "tenant_id": 28,
+    "nodes_json": []
+  },
+  {
+    "id": "6f811087-2b89-431b-abf7-579647ab5ad5",
+    "name": "ORM Created",
+    "civilization": "CHINESE",
+    "case_type": "ROUTINE",
+    "is_active": true,
+    "tenant_id": 30,
+    "nodes_json": []
+  },
+  {
+    "id": "46020485-475e-42d8-85e8-28a72a4f1a87",
+    "name": "Test",
+    "civilization": "CHINESE",
+    "case_type": "ROUTINE",
+    "is_active": true,
+    "tenant_id": null,
+    "nodes_json": []
+  },
+  {
+    "id": "ef839144-de2a-4b27-bc6a-ad7e88b79db1",
+    "name": "Test",
+    "civilization": "CHINESE",
+    "case_type": "ROUTINE",
+    "is_active": true,
+    "tenant_id": 37,
+    "nodes_json": []
+  },
+  {
+    "id": "a8608699-18ed-4e85-9db7-165833544a71",
+    "name": "测试模板",
+    "civilization": "CHINESE",
+    "case_type": "ROUTINE",
+    "is_active": true,
+    "tenant_id": 1,
+    "nodes_json": []
+  }
+]
