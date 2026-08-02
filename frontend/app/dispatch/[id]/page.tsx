@@ -28,7 +28,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function DispatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const { user } = useTenant();
   const { showToast } = useToast();
   const router = useRouter();
@@ -95,6 +95,9 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
 
   const isProposed = dispatch.status === "PROPOSED";
   const isApproved = dispatch.status === "APPROVED";
+  // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
+  const statusKey = `dispatch.states.${dispatch.status}`;
+  const statusLabel = t(statusKey) === statusKey ? (STATUS_LABELS[dispatch.status] || dispatch.status) : t(statusKey);
 
   return (
     <div className="p-6 max-w-3xl">
@@ -110,7 +113,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
           {t("dispatch.detail_title")}
         </h1>
         <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[dispatch.status] || ""}`}>
-          {STATUS_LABELS[dispatch.status] || dispatch.status}
+          {statusLabel}
         </span>
       </div>
 
@@ -123,7 +126,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
           </div>
           <div>
             <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.status")}</p>
-            <p className="font-medium text-[hsl(var(--color-ink))]">{STATUS_LABELS[dispatch.status]}</p>
+            <p className="font-medium text-[hsl(var(--color-ink))]">{statusLabel}</p>
           </div>
           <div>
             <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.source_tenant")}</p>
@@ -139,18 +142,18 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
           </div>
           <div>
             <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.proposed_at")}</p>
-            <p className="font-medium text-[hsl(var(--color-ink))]">{new Date(dispatch.proposed_at).toLocaleString()}</p>
+            <p className="font-medium text-[hsl(var(--color-ink))]">{formatDateTime(dispatch.proposed_at)}</p>
           </div>
           {dispatch.decided_at && (
             <div>
               <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.decided_at")}</p>
-              <p className="font-medium text-[hsl(var(--color-ink))]">{new Date(dispatch.decided_at).toLocaleString()}</p>
+              <p className="font-medium text-[hsl(var(--color-ink))]">{formatDateTime(dispatch.decided_at)}</p>
             </div>
           )}
           {dispatch.executed_at && (
             <div>
               <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.executed_at")}</p>
-              <p className="font-medium text-[hsl(var(--color-ink))]">{new Date(dispatch.executed_at).toLocaleString()}</p>
+              <p className="font-medium text-[hsl(var(--color-ink))]">{formatDateTime(dispatch.executed_at)}</p>
             </div>
           )}
         </div>

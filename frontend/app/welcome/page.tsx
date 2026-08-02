@@ -43,7 +43,7 @@ interface AgentStatus {
 }
 
 export default function WelcomePage() {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const { user } = useTenant();
 
   // No auth guard here on purpose. middleware.ts lists /welcome as a public
@@ -146,7 +146,7 @@ export default function WelcomePage() {
     if (minutes < 60) return t("welcome.minutes_ago", { n: String(minutes) });
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return t("welcome.hours_ago", { n: String(hours) });
-    return date.toLocaleDateString("zh-CN");
+    return formatDate(date);
   };
 
   return (
@@ -162,7 +162,7 @@ export default function WelcomePage() {
               </h1>
             </div>
             <p className="text-[hsl(var(--color-ink-muted))]">
-              {t("home.hero_subtitle")} · {new Date().toLocaleDateString("zh-CN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+              {t("home.hero_subtitle")} · {formatDate(new Date(), { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
             </p>
           </div>
           {/* Decorative background */}

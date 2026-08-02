@@ -60,7 +60,7 @@ function normalizeMenus(items: SidebarMenu[]): SidebarMenu[] {
 }
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
   const [navMode, setNavMode] = useState<"classic" | "compact">("classic");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -335,7 +335,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                             <div key={n.id} className="p-2 rounded hover:bg-[hsl(var(--color-surface-2))] cursor-pointer">
                               <p className="text-sm text-[hsl(var(--color-ink))]">{n.message || n.title}</p>
                               <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
-                                {new Date(n.created_at).toLocaleString()}
+                                {formatDateTime(n.created_at)}
                               </p>
                             </div>
                           ))}
