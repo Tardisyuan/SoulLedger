@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { karmaApi, type KarmaStatsOverview } from "@/lib/api";
@@ -45,16 +44,14 @@ interface AgentStatus {
 
 export default function WelcomePage() {
   const { t } = useI18n();
-  const router = useRouter();
   const { user } = useTenant();
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!user) {
-      router.replace("/login");
-    }
-  }, [user, router]);
-
+  // No auth guard here on purpose. middleware.ts lists /welcome as a public
+  // path, and route protection is its job everywhere else in the app. The
+  // guard this replaced redirected on `!user`, which is also the state during
+  // the first render — `user` hydrates from localStorage in an effect — so a
+  // signed-in visitor got bounced to /login before hydration ever ran. Every
+  // read of `user` below is optional-chained with a fallback.
   const [stats, setStats] = useState<KarmaStatsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -95,11 +92,6 @@ export default function WelcomePage() {
     };
     fetchAgentStatus();
   }, []);
-
-  // Don't render anything while checking auth.
-  // Must come after every hook call — an early return above them changes the
-  // hook count between renders once `user` hydrates, which React rejects.
-  if (!user) return null;
 
   const getGreeting = () => {
     const hour = new Date().getHours();

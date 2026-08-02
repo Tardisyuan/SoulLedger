@@ -6,7 +6,7 @@
     "welcome": "欢迎页",
     "souls": "灵魂",
     "realms": "地域",
-    "actors": "角色",
+    "actors": "神祇名录",
     "about": "关于",
     "dashboard": "控制台",
     "journal": "运行日志",
@@ -966,5 +966,21 @@
     "list": "租户列表",
     "no_tenants": "暂无租户",
     "code": "编码"
+  },
+  "table": {
+    "empty": "暂无数据",
+    "no_results": "没有符合条件的记录"
+  },
+  "breadcrumb": {
+    "aria_label": "面包屑导航",
+    "home": "仪表盘",
+    "detail": "详情",
+    "buttons": "按钮管理",
+    "propose": "发起调度",
+    "follows": "关注",
+    "stats": "统计",
+    "welcome": "欢迎页",
+    "profile": "个人资料",
+    "notifications": "通知中心"
   }
 }

@@ -23,6 +23,42 @@ import { ConnectionStatus } from "@/src/components/connection-status";
 
 const NAV_MODE_KEY = "soulledger_nav_mode";
 
+/**
+ * MenuItem 加上两个后端已经在返回、但 lib/api 的类型里还没登记的字段。
+ * menus 序列化器（MenuSerializer / MenuTreeSerializer）的 fields 里都有它们。
+ */
+type SidebarMenu = MenuItem & {
+  menu_type?: "DIRECTORY" | "MENU" | "BUTTON";
+  visible?: boolean;
+};
+
+/** 目录（分组）本身不是页面，没有可跳转的 path。 */
+const isDirectory = (menu: SidebarMenu) =>
+  menu.menu_type === "DIRECTORY" || !menu.path;
+
+/**
+ * 侧边栏数据归一化。
+ *
+ * 两件事：
+ * 1. 只保留一级项。ADMIN 走 /menus/list-public/（本来就只返回一级），
+ *    但非 ADMIN 走 /menus/，那个接口返回的是拉平的全量菜单 —— 子菜单
+ *    既嵌在 parent 的 children 里、又作为独立条目出现在顶层。不过滤的话
+ *    分组后每个子项都会重复渲染一次。
+ * 2. 去掉 visible=false 的项（欢迎页 / 个人资料 / 通知中心），这三处
+ *    在顶栏或右上角已有入口。后端没有对该字段做过滤，只能在这里处理。
+ */
+function normalizeMenus(items: SidebarMenu[]): SidebarMenu[] {
+  const prune = (nodes: SidebarMenu[]): SidebarMenu[] =>
+    nodes
+      .filter((m) => m.visible !== false)
+      .map((m) => ({
+        ...m,
+        children: m.children ? prune(m.children as SidebarMenu[]) : undefined,
+      }));
+
+  return prune(items.filter((m) => m.parent == null));
+}
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
@@ -83,17 +119,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     router.push("/");
   };
 
-  const { data: menus = [] } = useQuery<MenuItem[]>({
+  const { data: menus = [] } = useQuery<SidebarMenu[]>({
     queryKey: ["menus-sidebar", user?.role, !!user],
     queryFn: async () => {
       // Use all() for admin (returns unfiltered, bare array), list() for others
       // (role-filtered, DRF-paginated — unwrap .results)
       if (user?.role === "ADMIN") {
         const res = await menusApi.all();
-        return res.data as MenuItem[];
+        return normalizeMenus(res.data as SidebarMenu[]);
       }
       const res = await menusApi.list();
-      return (res.data as PaginatedResponse<MenuItem>).results;
+      return normalizeMenus(
+        (res.data as PaginatedResponse<SidebarMenu>).results
+      );
     },
     staleTime: 5 * 60 * 1000,
     enabled: !!user, // Only fetch when user is logged in
@@ -240,7 +278,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
 
           {/* Breadcrumb / Page title area */}
-          <div className="flex-1" />
+          <Breadcrumb menus={menus} />
 
           {/* Right controls */}
           <div className="flex items-center gap-2 md:gap-3">
@@ -447,6 +485,143 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </Dialog>
       </Transition>
     </div>
+  );
+}
+
+/** 形如 42 或 uuid 的路径段，面包屑里显示为「详情」而不是原始 id。 */
+const ID_SEGMENT = /^(\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-)/i;
+
+/**
+ * 在菜单树里找出与当前路径最匹配的一条链路（从分组到叶子）。
+ * 取 path 最长的匹配项，这样 /social/follows 命中「关注」而不是「动态」。
+ */
+function matchTrail(items: SidebarMenu[], pathname: string): SidebarMenu[] {
+  let best: SidebarMenu[] = [];
+  let bestLen = -1;
+
+  const walk = (nodes: SidebarMenu[], trail: SidebarMenu[]) => {
+    for (const node of nodes) {
+      const next = [...trail, node];
+      const p = node.path;
+      if (p && (pathname === p || pathname.startsWith(p + "/"))) {
+        if (p.length > bestLen) {
+          best = next;
+          bestLen = p.length;
+        }
+      }
+      const kids = node.children as SidebarMenu[] | undefined;
+      if (kids?.length) walk(kids, next);
+    }
+  };
+
+  walk(items, []);
+  return best;
+}
+
+type Crumb = { label: string; href?: string };
+
+function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
+  const pathname = usePathname();
+  const { t } = useI18n();
+
+  // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
+  const label = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
+
+  const segmentLabel = (segment: string) =>
+    ID_SEGMENT.test(segment)
+      ? label("breadcrumb.detail", "详情")
+      : label(`breadcrumb.${segment}`, segment);
+
+  const trail = matchTrail(menus, pathname);
+  const crumbs: Crumb[] = [];
+
+  if (trail.length > 0) {
+    for (const node of trail) {
+      crumbs.push({
+        // 分组目录没有页面，不给链接
+        label: node.name,
+        href: isDirectory(node) ? undefined : node.path,
+      });
+    }
+    // 菜单里没有登记的更深层路由（/menus/buttons、/dispatch/propose、
+    // /souls/<id> …）按剩余的路径段补上，避免"进去了看不出自己在哪"。
+    const matched = trail[trail.length - 1];
+    if (matched.path && pathname !== matched.path) {
+      const rest = pathname.slice(matched.path.length).split("/").filter(Boolean);
+      rest.forEach((segment, i) => {
+        crumbs.push({
+          label: segmentLabel(segment),
+          href:
+            i < rest.length - 1
+              ? `${matched.path}/${rest.slice(0, i + 1).join("/")}`
+              : undefined,
+        });
+      });
+    }
+  } else {
+    // 菜单树里完全没有的路径（例如已移出侧边栏的 /profile、/notifications）
+    pathname
+      .split("/")
+      .filter(Boolean)
+      .forEach((segment, i, all) => {
+        crumbs.push({
+          label: segmentLabel(segment),
+          href: i < all.length - 1 ? `/${all.slice(0, i + 1).join("/")}` : undefined,
+        });
+      });
+  }
+
+  if (crumbs.length === 0) return <div className="flex-1" />;
+
+  return (
+    <nav
+      aria-label={label("breadcrumb.aria_label", "面包屑导航")}
+      className="flex-1 min-w-0"
+    >
+      <ol className="flex items-center gap-1 text-sm min-w-0 overflow-hidden">
+        <li className="shrink-0">
+          <Link
+            href="/dashboard"
+            prefetch={true}
+            className="flex items-center text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors"
+            title={label("breadcrumb.home", "仪表盘")}
+          >
+            <Home className="w-4 h-4" />
+          </Link>
+        </li>
+        {crumbs.map((crumb, i) => {
+          const isLast = i === crumbs.length - 1;
+          return (
+            <li key={`${crumb.label}-${i}`} className="flex items-center gap-1 min-w-0">
+              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-[hsl(var(--color-ink-subtle))]" />
+              {crumb.href && !isLast ? (
+                <Link
+                  href={crumb.href}
+                  prefetch={true}
+                  className="truncate text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] transition-colors"
+                >
+                  {crumb.label}
+                </Link>
+              ) : (
+                <span
+                  className={`truncate ${
+                    isLast
+                      ? "text-[hsl(var(--color-ink))] font-medium"
+                      : "text-[hsl(var(--color-ink-subtle))]"
+                  }`}
+                  aria-current={isLast ? "page" : undefined}
+                >
+                  {crumb.label}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }
 
