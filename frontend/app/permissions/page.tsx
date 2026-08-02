@@ -369,19 +369,25 @@ export default function PermissionsPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
+                  {/* flex rather than a margin on the first button: as inline
+                      elements the two labels concatenate in the accessibility
+                      tree and on copy — "编辑权限删除权限". Flex items are
+                      blockified, so they stay separate to a screen reader. */}
                   <RequirePermission permissions="system.settings">
-                    <button
-                      onClick={() => { setEditingPerm(perm); setIsEditOpen(true); }}
-                      className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-xs mr-3"
-                    >
-                      {t("permissions.edit")}
-                    </button>
-                    <button
-                      onClick={() => { setDeletingPerm(perm); setIsDeleteOpen(true); }}
-                      className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-xs"
-                    >
-                      {t("permissions.delete")}
-                    </button>
+                    <div className="flex justify-end gap-3">
+                      <button
+                        onClick={() => { setEditingPerm(perm); setIsEditOpen(true); }}
+                        className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-xs"
+                      >
+                        {t("permissions.edit")}
+                      </button>
+                      <button
+                        onClick={() => { setDeletingPerm(perm); setIsDeleteOpen(true); }}
+                        className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-xs"
+                      >
+                        {t("permissions.delete")}
+                      </button>
+                    </div>
                   </RequirePermission>
                 </td>
               </>
