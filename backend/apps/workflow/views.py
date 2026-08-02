@@ -36,7 +36,13 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     def get_queryset(self):
         """Fresh queryset to avoid stale TenantManager contextvar filters.
         Applies tenant filtering for non-ADMIN users."""
-        qs = WorkflowTemplate._base_manager.select_related("tenant").all()
+        # _base_manager is the *unfiltered* manager (all_objects is declared
+        # first on this model precisely so it takes that role), so reaching for
+        # it to dodge the tenant contextvar also dropped the soft-delete
+        # filter — deleted templates kept appearing in the list. Exclude them
+        # explicitly rather than going back to `objects`, which would
+        # reintroduce the contextvar problem this override exists to solve.
+        qs = WorkflowTemplate._base_manager.filter(is_deleted=False).select_related("tenant")
         user = self.request.user
         if not user.is_authenticated:
             return qs.none()
