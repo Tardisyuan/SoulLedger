@@ -1,0 +1,578 @@
+{
+  "permissions/zh-Hans": {
+    "kind": "table",
+    "headers": [
+      "代码",
+      "名称",
+      "分类",
+      "操作"
+    ],
+    "rows": [
+      [
+        "actors.read",
+        "查看角色",
+        "actors",
+        "编辑权限删除权限"
+      ],
+      [
+        "audit.read",
+        "查看审计日志",
+        "audit",
+        "编辑权限删除权限"
+      ],
+      [
+        "cross_judgment.create",
+        "创建跨域审判",
+        "cross_judgment",
+        "编辑权限删除权限"
+      ],
+      [
+        "cross_judgment.read",
+        "查看跨域审判",
+        "cross_judgment",
+        "编辑权限删除权限"
+      ],
+      [
+        "dashboard.read",
+        "查看仪表盘",
+        "dashboard",
+        "编辑权限删除权限"
+      ],
+      [
+        "dispatch.manage",
+        "管理调度",
+        "dispatch",
+        "编辑权限删除权限"
+      ],
+      [
+        "dispatch.read",
+        "查看调度",
+        "dispatch",
+        "编辑权限删除权限"
+      ],
+      [
+        "judgment.execute",
+        "执行审判",
+        "judgment",
+        "编辑权限删除权限"
+      ],
+      [
+        "judgment.read",
+        "查看审判",
+        "judgment",
+        "编辑权限删除权限"
+      ],
+      [
+        "karma.manage",
+        "管理功德",
+        "karma",
+        "编辑权限删除权限"
+      ],
+      [
+        "karma.read",
+        "查看功德",
+        "karma",
+        "编辑权限删除权限"
+      ],
+      [
+        "notification.read",
+        "查看通知",
+        "notification",
+        "编辑权限删除权限"
+      ]
+    ]
+  },
+  "audit/zh-Hans": {
+    "kind": "table",
+    "headers": [
+      "时间",
+      "用户",
+      "操作",
+      "资源",
+      "描述",
+      "IP"
+    ],
+    "rows": [
+      [
+        "2026年8月2日 21:10:45",
+        "System",
+        "创建",
+        "loginlog#190",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "2026年8月2日 21:10:45",
+        "System",
+        "创建",
+        "outstandingtoken#712",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "2026年8月2日 20:37:07",
+        "System",
+        "创建",
+        "loginlog#189",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "2026年8月2日 20:37:07",
+        "System",
+        "创建",
+        "outstandingtoken#711",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "2026年8月2日 20:17:10",
+        "System",
+        "创建",
+        "loginlog#188",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "2026年8月2日 20:17:10",
+        "System",
+        "创建",
+        "outstandingtoken#710",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "2026年8月2日 20:15:44",
+        "System",
+        "创建",
+        "loginlog#187",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "2026年8月2日 20:15:44",
+        "System",
+        "创建",
+        "outstandingtoken#709",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "2026年8月2日 20:14:10",
+        "System",
+        "创建",
+        "loginlog#186",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "2026年8月2日 20:14:10",
+        "System",
+        "创建",
+        "outstandingtoken#708",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "2026年8月2日 19:55:55",
+        "System",
+        "创建",
+        "loginlog#185",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "2026年8月2日 18:25:45",
+        "System",
+        "创建",
+        "loginlog#184",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ]
+    ]
+  },
+  "permissions/en": {
+    "kind": "table",
+    "headers": [
+      "Code",
+      "Name",
+      "Category",
+      "Action"
+    ],
+    "rows": [
+      [
+        "actors.read",
+        "查看角色",
+        "actors",
+        "Edit PermissionDelete Permission"
+      ],
+      [
+        "audit.read",
+        "查看审计日志",
+        "audit",
+        "Edit PermissionDelete Permission"
+      ],
+      [
+        "cross_judgment.create",
+        "创建跨域审判",
+        "cross_judgment",
+        "Edit PermissionDelete Permission"
+      ],
+      [
+        "cross_judgment.read",
+        "查看跨域审判",
+        "cross_judgment",
+        "Edit PermissionDelete Permission"
+      ],
+      [
+        "dashboard.read",
+        "查看仪表盘",
+        "dashboard",
+        "Edit PermissionDelete Permission"
+      ],
+      [
+        "dispatch.manage",
+        "管理调度",
+        "dispatch",
+        "Edit PermissionDelete Permission"
+      ],
+      [
+        "dispatch.read",
+        "查看调度",
+        "dispatch",
+        "Edit PermissionDelete Permission"
+      ],
+      [
+        "judgment.execute",
+        "执行审判",
+        "judgment",
+        "Edit PermissionDelete Permission"
+      ],
+      [
+        "judgment.read",
+        "查看审判",
+        "judgment",
+        "Edit PermissionDelete Permission"
+      ],
+      [
+        "karma.manage",
+        "管理功德",
+        "karma",
+        "Edit PermissionDelete Permission"
+      ],
+      [
+        "karma.read",
+        "查看功德",
+        "karma",
+        "Edit PermissionDelete Permission"
+      ],
+      [
+        "notification.read",
+        "查看通知",
+        "notification",
+        "Edit PermissionDelete Permission"
+      ]
+    ]
+  },
+  "audit/en": {
+    "kind": "table",
+    "headers": [
+      "Timestamp",
+      "User",
+      "Action",
+      "Resource",
+      "Description",
+      "IP"
+    ],
+    "rows": [
+      [
+        "Aug 2, 2026, 9:10:45 PM",
+        "System",
+        "Created",
+        "loginlog#190",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 9:10:45 PM",
+        "System",
+        "Created",
+        "outstandingtoken#712",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:37:07 PM",
+        "System",
+        "Created",
+        "loginlog#189",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:37:07 PM",
+        "System",
+        "Created",
+        "outstandingtoken#711",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:17:10 PM",
+        "System",
+        "Created",
+        "loginlog#188",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:17:10 PM",
+        "System",
+        "Created",
+        "outstandingtoken#710",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:15:44 PM",
+        "System",
+        "Created",
+        "loginlog#187",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:15:44 PM",
+        "System",
+        "Created",
+        "outstandingtoken#709",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:14:10 PM",
+        "System",
+        "Created",
+        "loginlog#186",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:14:10 PM",
+        "System",
+        "Created",
+        "outstandingtoken#708",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 7:55:55 PM",
+        "System",
+        "Created",
+        "loginlog#185",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 6:25:45 PM",
+        "System",
+        "Created",
+        "loginlog#184",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ]
+    ]
+  },
+  "permissions/egy": {
+    "kind": "table",
+    "headers": [
+      "الرمز",
+      "الاسم",
+      "الفئة",
+      "Aha Seth"
+    ],
+    "rows": [
+      [
+        "actors.read",
+        "查看角色",
+        "actors",
+        "تعديل صلاحيةحذف صلاحية"
+      ],
+      [
+        "audit.read",
+        "查看审计日志",
+        "audit",
+        "تعديل صلاحيةحذف صلاحية"
+      ],
+      [
+        "cross_judgment.create",
+        "创建跨域审判",
+        "cross_judgment",
+        "تعديل صلاحيةحذف صلاحية"
+      ],
+      [
+        "cross_judgment.read",
+        "查看跨域审判",
+        "cross_judgment",
+        "تعديل صلاحيةحذف صلاحية"
+      ],
+      [
+        "dashboard.read",
+        "查看仪表盘",
+        "dashboard",
+        "تعديل صلاحيةحذف صلاحية"
+      ],
+      [
+        "dispatch.manage",
+        "管理调度",
+        "dispatch",
+        "تعديل صلاحيةحذف صلاحية"
+      ],
+      [
+        "dispatch.read",
+        "查看调度",
+        "dispatch",
+        "تعديل صلاحيةحذف صلاحية"
+      ],
+      [
+        "judgment.execute",
+        "执行审判",
+        "judgment",
+        "تعديل صلاحيةحذف صلاحية"
+      ],
+      [
+        "judgment.read",
+        "查看审判",
+        "judgment",
+        "تعديل صلاحيةحذف صلاحية"
+      ],
+      [
+        "karma.manage",
+        "管理功德",
+        "karma",
+        "تعديل صلاحيةحذف صلاحية"
+      ],
+      [
+        "karma.read",
+        "查看功德",
+        "karma",
+        "تعديل صلاحيةحذف صلاحية"
+      ],
+      [
+        "notification.read",
+        "查看通知",
+        "notification",
+        "تعديل صلاحيةحذف صلاحية"
+      ]
+    ]
+  },
+  "audit/egy": {
+    "kind": "table",
+    "headers": [
+      "Seped Sethet",
+      "Netjer",
+      "Aha Seth",
+      "Sethet Wu",
+      "Medu Seth",
+      "IP"
+    ],
+    "rows": [
+      [
+        "Aug 2, 2026, 9:10:45 PM",
+        "System",
+        "Kheme Seth",
+        "loginlog#190",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 9:10:45 PM",
+        "System",
+        "Kheme Seth",
+        "outstandingtoken#712",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:37:07 PM",
+        "System",
+        "Kheme Seth",
+        "loginlog#189",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:37:07 PM",
+        "System",
+        "Kheme Seth",
+        "outstandingtoken#711",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:17:10 PM",
+        "System",
+        "Kheme Seth",
+        "loginlog#188",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:17:10 PM",
+        "System",
+        "Kheme Seth",
+        "outstandingtoken#710",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:15:44 PM",
+        "System",
+        "Kheme Seth",
+        "loginlog#187",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:15:44 PM",
+        "System",
+        "Kheme Seth",
+        "outstandingtoken#709",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:14:10 PM",
+        "System",
+        "Kheme Seth",
+        "loginlog#186",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 8:14:10 PM",
+        "System",
+        "Kheme Seth",
+        "outstandingtoken#708",
+        "CREATE Outstanding Token",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 7:55:55 PM",
+        "System",
+        "Kheme Seth",
+        "loginlog#185",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ],
+      [
+        "Aug 2, 2026, 6:25:45 PM",
+        "System",
+        "Kheme Seth",
+        "loginlog#184",
+        "CREATE Login Log",
+        "192.168.2.200"
+      ]
+    ]
+  }
+}
