@@ -256,6 +256,23 @@ ROLE_PERMISSIONS = {
         "dispatch.read", "dispatch.manage",
         "realms.read", "actors.read",
     ],
+    # Realm lead: configures the approval flows for their own civilization.
+    #
+    # Scoping comes from the tenant, not the role — every user belongs to
+    # exactly one tenant and non-ADMIN querysets are filtered to it, so one
+    # role covers all three civilizations without any of its holders seeing
+    # each other's. That is also why this must never be ADMIN: ADMIN bypasses
+    # tenant isolation outright, so a "lead of Diyu" given ADMIN would quietly
+    # be a lead of everywhere.
+    #
+    # Deliberately no workflow.approve / workflow.advance. Designing a process
+    # and executing it are different jobs; those two stay with JUDGE, who
+    # exercises them on an actual case.
+    "MODERATOR": [
+        "workflow.read", "workflow.create", "workflow.update", "workflow.delete",
+        "soul.read", "judgment.read", "realms.read", "actors.read",
+        "dashboard.read",
+    ],
     "VIEWER": [
         "soul.read", "reincarnation.read",
         "karma.read", "dashboard.read",

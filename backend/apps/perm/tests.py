@@ -7,7 +7,13 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.org.models import Organization
-from apps.perm.models import DEFAULT_PERMISSIONS, Permission, Role, RolePermission
+from apps.perm.models import (
+    DEFAULT_PERMISSIONS,
+    ROLE_PERMISSIONS,
+    Permission,
+    Role,
+    RolePermission,
+)
 
 User = get_user_model()
 
@@ -388,6 +394,134 @@ class WorkflowPermissionMigrationTest(TestCase):
         self.assertEqual(
             Permission.objects.filter(codename__in=self.WORKFLOW_CODENAMES).count(),
             len(self.WORKFLOW_CODENAMES),
+        )
+
+
+class ModeratorRealmLeadTest(TestCase):
+    """Regression tests for 0014_grant_moderator_workflow_permissions.
+
+    MODERATOR is the realm-lead role: it configures the approval flows for its
+    own civilization. Two properties matter more than the grant itself, and
+    neither is obvious from reading the migration:
+
+    1. It must NOT be able to approve or advance a workflow. Designing a
+       process and executing it are separate jobs; approve/advance belong to
+       JUDGE, who exercises them on a real case.
+    2. It must NOT be ADMIN. Scoping to a realm comes from the tenant, and
+       apps/core/permissions.py lets ADMIN bypass tenant isolation outright —
+       so a realm lead promoted to ADMIN silently becomes a lead of every
+       realm. That is the failure this role exists to avoid.
+    """
+
+    CONFIGURE = ("workflow.read", "workflow.create", "workflow.update", "workflow.delete")
+    EXECUTE = ("workflow.approve", "workflow.advance")
+
+    def setUp(self):
+        from apps.perm.cache import invalidate_all_permissions
+
+        self.moderator_role = Role.objects.create(name="MODERATOR", display_name="Moderator")
+        self.judge_role = Role.objects.create(name="JUDGE", display_name="Judge")
+        self.admin_role = Role.objects.create(name="ADMIN", display_name="Administrator")
+        invalidate_all_permissions()
+        self.addCleanup(invalidate_all_permissions)
+
+    @staticmethod
+    def _seed_workflow_permissions():
+        import importlib
+
+        from django.apps import apps as real_apps
+
+        mod = importlib.import_module("apps.perm.migrations.0013_add_workflow_permissions")
+        mod.create_workflow_permissions(real_apps, None)
+
+    @staticmethod
+    def _migration():
+        import importlib
+        return importlib.import_module(
+            "apps.perm.migrations.0014_grant_moderator_workflow_permissions"
+        )
+
+    def _forward(self):
+        from django.apps import apps as real_apps
+        self._migration().grant(real_apps, None)
+
+    def _backward(self):
+        from django.apps import apps as real_apps
+        self._migration().revoke(real_apps, None)
+
+    def test_moderator_can_configure_workflows(self):
+        from apps.perm.checker import check_permission
+
+        user = User.objects.create_user(username="mod_cfg", password="x", role="MODERATOR")
+        self._seed_workflow_permissions()
+        self._forward()
+
+        for codename in self.CONFIGURE:
+            self.assertTrue(
+                check_permission(user, codename),
+                f"MODERATOR should be able to {codename}",
+            )
+
+    def test_moderator_cannot_approve_or_advance(self):
+        """The separation of duties this role is built around."""
+        from apps.perm.checker import check_permission
+
+        user = User.objects.create_user(username="mod_exec", password="x", role="MODERATOR")
+        self._seed_workflow_permissions()
+        self._forward()
+
+        for codename in self.EXECUTE:
+            self.assertFalse(
+                check_permission(user, codename),
+                f"MODERATOR must not hold {codename} — that belongs to JUDGE",
+            )
+
+    def test_judge_keeps_execute_and_gains_nothing(self):
+        """0014 must not disturb what 0013 established for JUDGE."""
+        from apps.perm.checker import check_permission
+
+        judge = User.objects.create_user(username="judge_unaffected", password="x", role="JUDGE")
+        self._seed_workflow_permissions()
+        self._forward()
+
+        for codename in self.EXECUTE:
+            self.assertTrue(check_permission(judge, codename))
+        for codename in ("workflow.create", "workflow.update", "workflow.delete"):
+            self.assertFalse(check_permission(judge, codename))
+
+    def test_moderator_is_not_admin(self):
+        """A realm lead must stay inside its tenant, so it cannot be ADMIN —
+        ADMIN is what bypasses tenant isolation."""
+        user = User.objects.create_user(username="mod_scope", password="x", role="MODERATOR")
+        self.assertNotEqual(user.role, "ADMIN")
+        self.assertNotIn("system.settings", ROLE_PERMISSIONS.get("MODERATOR", []))
+
+    def test_reverse_removes_only_moderator_grants(self):
+        from apps.perm.checker import check_permission
+
+        judge = User.objects.create_user(username="judge_after_revoke", password="x", role="JUDGE")
+        self._seed_workflow_permissions()
+        self._forward()
+        self._backward()
+
+        self.assertFalse(
+            RolePermission.objects.filter(role=self.moderator_role).exists(),
+            "reverse should drop every grant this migration made",
+        )
+        self.assertTrue(
+            check_permission(judge, "workflow.approve"),
+            "reverse must not disturb JUDGE's grants from 0013",
+        )
+
+    def test_forward_is_idempotent(self):
+        self._seed_workflow_permissions()
+        self._forward()
+        self._forward()  # must not raise IntegrityError
+        self.assertEqual(
+            RolePermission.objects.filter(
+                role=self.moderator_role, permission__codename__startswith="workflow."
+            ).count(),
+            len(self.CONFIGURE),
         )
 
 
