@@ -3,11 +3,19 @@
 import { useI18n, LOCALE_LABELS, Locale } from "@/src/contexts/I18nContext";
 
 export function LanguageSwitcher() {
-  const { locale, setLocale, hydrated } = useI18n();
+  const { locale, setLocale, hydrated, t } = useI18n();
 
   if (!hydrated) {
+    // Placeholder for the pre-hydration render. Disabled so it can't be
+    // operated before setLocale is wired up, and hidden from assistive tech
+    // since the real control replaces it a tick later.
     return (
-      <select className="bg-surface-2 text-ink-muted text-sm rounded-md px-3 py-1.5 border border-hairline cursor-pointer">
+      <select
+        disabled
+        aria-hidden="true"
+        tabIndex={-1}
+        className="bg-surface-2 text-ink-muted text-sm rounded-md px-3 py-1.5 border border-hairline cursor-pointer"
+      >
         <option>—</option>
       </select>
     );
@@ -17,7 +25,8 @@ export function LanguageSwitcher() {
     <select
       value={locale}
       onChange={(e) => setLocale(e.target.value as Locale)}
-      className="bg-surface-2 text-ink-muted text-sm rounded-md px-3 py-1.5 border border-hairline cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500 hover:border-hairline transition-colors"
+      aria-label={t("nav.language")}
+      className="bg-surface-2 text-ink-muted text-sm rounded-md px-3 py-1.5 border border-hairline cursor-pointer hover:border-hairline transition-colors"
     >
       {(Object.keys(LOCALE_LABELS) as Locale[]).map((loc) => (
         <option key={loc} value={loc}>

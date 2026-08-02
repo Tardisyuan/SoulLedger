@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi, type User, type CreateUserInput, type UpdateUserInput } from "@/lib/api";
 import { userKeys } from "@/lib/query_keys";
@@ -18,6 +18,16 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const isEditing = !!user;
+
+  // Unique prefix so field ids never collide across multiple UserModal
+  // instances mounted at once.
+  const formId = useId();
+  const usernameId = `${formId}-username`;
+  const emailId = `${formId}-email`;
+  const passwordId = `${formId}-password`;
+  const roleId = `${formId}-role`;
+  const firstNameId = `${formId}-first-name`;
+  const lastNameId = `${formId}-last-name`;
 
   const [formData, setFormData] = useState<CreateUserInput>({
     username: "",
@@ -150,8 +160,9 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
     >
       <form id="user-form" onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.username") || "用户名"}</label>
+          <label htmlFor={usernameId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.username") || "用户名"}</label>
           <input
+            id={usernameId}
             type="text"
             required
             autoFocus
@@ -164,8 +175,9 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.email") || "邮箱"}</label>
+          <label htmlFor={emailId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.email") || "邮箱"}</label>
           <input
+            id={emailId}
             type="email"
             required
             value={formData.email}
@@ -177,11 +189,12 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">
+          <label htmlFor={passwordId} className="text-xs text-[hsl(var(--color-ink-subtle))]">
             {t("users.password") || "密码"}
             {isEditing && <span className="text-[hsl(var(--color-ink-muted))]"> ({t("users.optional") || "可选"})</span>}
           </label>
           <input
+            id={passwordId}
             type="password"
             required={!isEditing}
             value={formData.password}
@@ -193,8 +206,9 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.role") || "角色"}</label>
+          <label htmlFor={roleId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.role") || "角色"}</label>
           <select
+            id={roleId}
             value={formData.role}
             onChange={(e) => setFormData({ ...formData, role: e.target.value as CreateUserInput["role"] })}
             disabled={createMutation.isPending || updateMutation.isPending}
@@ -209,8 +223,9 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
 
         <div className="flex gap-3">
           <div className="flex flex-col gap-1 flex-1">
-            <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.first_name") || "名"}</label>
+            <label htmlFor={firstNameId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.first_name") || "名"}</label>
             <input
+              id={firstNameId}
               type="text"
               value={formData.first_name}
               onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
@@ -220,8 +235,9 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
             />
           </div>
           <div className="flex flex-col gap-1 flex-1">
-            <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.last_name") || "姓"}</label>
+            <label htmlFor={lastNameId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.last_name") || "姓"}</label>
             <input
+              id={lastNameId}
               type="text"
               value={formData.last_name}
               onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}

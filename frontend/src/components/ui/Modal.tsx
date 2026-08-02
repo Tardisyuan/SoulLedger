@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from "@headlessui/react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -75,6 +75,16 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
   const { t } = useI18n();
   const { showToast } = useToast();
   const { validate, getError, clearFieldError } = useFormValidation(soulCreateSchema);
+
+  // Unique prefix so field/error ids never collide across multiple Modal
+  // instances mounted at once (e.g. list + create modal on the same page).
+  const formId = useId();
+  const nameId = `${formId}-name`;
+  const nameErrorId = `${formId}-name-error`;
+  const civilizationId = `${formId}-civilization`;
+  const civilizationErrorId = `${formId}-civilization-error`;
+  const birthDateId = `${formId}-birth-date`;
+  const locationId = `${formId}-location`;
 
   const [name, setName] = useState("");
   const [civilization, setCivilization] = useState<"CHINESE" | "EUROPEAN" | "EGYPTIAN">("CHINESE");
@@ -163,8 +173,9 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
     >
       <form id="soul-create-form" onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.name_label")}</label>
+          <label htmlFor={nameId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.name_label")}</label>
           <input
+            id={nameId}
             type="text"
             autoFocus
             value={name}
@@ -173,24 +184,29 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
               clearFieldError('name')
             }}
             disabled={loading}
+            aria-invalid={!!getError('name')}
+            aria-describedby={getError('name') ? nameErrorId : undefined}
             className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none disabled:opacity-50 transition-colors ${
               getError('name') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
             placeholder={t("souls.form.name_placeholder")}
           />
           {getError('name') && (
-            <span className="text-xs text-red-500">{getError('name')}</span>
+            <span id={nameErrorId} role="alert" className="text-xs text-red-500">{getError('name')}</span>
           )}
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.civilization_label")}</label>
+          <label htmlFor={civilizationId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.civilization_label")}</label>
           <select
+            id={civilizationId}
             value={civilization}
             onChange={(e) => {
               setCivilization(e.target.value as typeof civilization)
               clearFieldError('civilization')
             }}
             disabled={loading}
+            aria-invalid={!!getError('civilization')}
+            aria-describedby={getError('civilization') ? civilizationErrorId : undefined}
             className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none disabled:opacity-50 transition-colors ${
               getError('civilization') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
@@ -200,12 +216,13 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             <option value="EGYPTIAN">{t("souls.civilizations.EGYPTIAN")}</option>
           </select>
           {getError('civilization') && (
-            <span className="text-xs text-red-500">{getError('civilization')}</span>
+            <span id={civilizationErrorId} role="alert" className="text-xs text-red-500">{getError('civilization')}</span>
           )}
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.birth_date_label")}</label>
+          <label htmlFor={birthDateId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.birth_date_label")}</label>
           <input
+            id={birthDateId}
             type="date"
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
@@ -214,8 +231,9 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.location_label")}</label>
+          <label htmlFor={locationId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.location_label")}</label>
           <input
+            id={locationId}
             type="text"
             value={originLocation}
             onChange={(e) => setOriginLocation(e.target.value)}

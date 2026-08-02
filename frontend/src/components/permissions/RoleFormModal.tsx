@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import type { Role } from "@/lib/api";
@@ -23,6 +23,12 @@ export function RoleFormModal({
   initialData?: Role;
 }) {
   const { t } = useI18n();
+  // Unique prefix so field/error ids never collide across multiple
+  // RoleFormModal instances mounted at once.
+  const formId = useId();
+  const nameId = `${formId}-name`;
+  const displayNameId = `${formId}-display-name`;
+  const errorId = `${formId}-error`;
   const [name, setName] = useState("");
   const [displayName, setDisplayName] = useState("");
 
@@ -73,24 +79,30 @@ export function RoleFormModal({
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p id={errorId} role="alert" className="text-red-400 text-sm">{error}</p>}
         <div>
-          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.role_name_label")}</label>
+          <label htmlFor={nameId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.role_name_label")}</label>
           <input
+            id={nameId}
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("permissions.role_name_placeholder")}
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : undefined}
             className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
         </div>
         <div>
-          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.display_name_label")}</label>
+          <label htmlFor={displayNameId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.display_name_label")}</label>
           <input
+            id={displayNameId}
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder={t("permissions.display_name_placeholder")}
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : undefined}
             className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
         </div>

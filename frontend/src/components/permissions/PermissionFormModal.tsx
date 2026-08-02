@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import type { Permission } from "@/lib/api";
@@ -25,6 +25,13 @@ export function PermissionFormModal({
   initialData?: Permission;
 }) {
   const { t } = useI18n();
+  // Unique prefix so field/error ids never collide across multiple
+  // PermissionFormModal instances mounted at once.
+  const formId = useId();
+  const codenameId = `${formId}-codename`;
+  const nameId = `${formId}-name`;
+  const categoryId = `${formId}-category`;
+  const errorId = `${formId}-error`;
   const [codename, setCodename] = useState("");
   const [name, setName] = useState("");
   const [category, setCategory] = useState("soul");
@@ -78,30 +85,37 @@ export function PermissionFormModal({
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p id={errorId} role="alert" className="text-red-400 text-sm">{error}</p>}
         <div>
-          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.codename_label")}</label>
+          <label htmlFor={codenameId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.codename_label")}</label>
           <input
+            id={codenameId}
             type="text"
             value={codename}
             onChange={(e) => setCodename(e.target.value)}
             placeholder={t("permissions.codename_placeholder")}
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : undefined}
             className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
         </div>
         <div>
-          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.name_label")}</label>
+          <label htmlFor={nameId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.name_label")}</label>
           <input
+            id={nameId}
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("permissions.name_placeholder")}
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : undefined}
             className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
         </div>
         <div>
-          <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.category_label")}</label>
+          <label htmlFor={categoryId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.category_label")}</label>
           <select
+            id={categoryId}
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="w-full px-3 py-2 bg-surface-2 border border-hairline rounded text-[hsl(var(--color-ink))] text-sm focus:outline-none focus:border-[hsl(var(--color-accent))]"
