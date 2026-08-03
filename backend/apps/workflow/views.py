@@ -68,6 +68,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     permission_codename = "workflow"
     extra_permissions = {
         'advance': ['workflow.advance'],
+        'escalate': ['workflow.escalate'],
         'approve_node': ['workflow.approve'],
         'stats': ['workflow.read'],
         'create_from_judgment': ['workflow.create'],
@@ -114,6 +115,60 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             {"error": "No next node available or workflow already completed"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+    @action(detail=True, methods=["post"])
+    def escalate(self, request, pk=None):
+        """
+        越级推进 — force a stuck workflow past its current node.
+
+        A realm lead (MODERATOR) configures the flow but deliberately holds
+        neither workflow.approve nor workflow.advance: the ten courts exist to
+        divide the decision, and a lead who could both design the flow and
+        approve at any stage of it would make that division decorative.
+
+        A flow can still stall — an approver unavailable, a node misconfigured
+        — so this is the sanctioned way out. It is not `advance` under another
+        name: it demands a written reason and always leaves an audit record
+        naming who overrode which node and why. The cost of using it is that
+        it is visible.
+        """
+        workflow = self.get_object()
+
+        reason = (request.data.get("reason") or "").strip()
+        if not reason:
+            return Response(
+                {"error": "reason is required", "detail": "越级推进必须说明理由"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        node = workflow.current_node
+        if not workflow.advance_to_next():
+            return Response(
+                {"error": "No next node available or workflow already completed"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from apps.audit.models import AuditAction, AuditLog
+
+        AuditLog.objects.create(
+            tenant=getattr(workflow, "tenant", None),
+            user=request.user if request.user.is_authenticated else None,
+            action=AuditAction.EXECUTE,
+            resource="workflow.escalate",
+            resource_id=str(workflow.id),
+            description=f"越级推进：{getattr(node, 'node_name', '-')} — {reason}"[:500],
+            changes={
+                "skipped_node": str(getattr(node, "id", "")) or None,
+                "skipped_node_name": getattr(node, "node_name", None),
+                "skipped_court": getattr(node, "court_code", None),
+                "reason": reason,
+                "advanced_to": str(getattr(workflow.current_node, "id", "")) or None,
+            },
+            ip_address=request.META.get("REMOTE_ADDR"),
+            user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+        )
+
+        return Response(ApprovalWorkflowSerializer(workflow).data)
 
     @action(detail=True, methods=["post"])
     def approve_node(self, request, pk=None):

@@ -265,13 +265,33 @@ ROLE_PERMISSIONS = {
     # tenant isolation outright, so a "lead of Diyu" given ADMIN would quietly
     # be a lead of everywhere.
     #
-    # Deliberately no workflow.approve / workflow.advance. Designing a process
-    # and executing it are different jobs; those two stay with JUDGE, who
-    # exercises them on an actual case.
+    # Deliberately no workflow.approve / workflow.advance. The ten courts exist
+    # to divide the decision; a lead who both designs the flow and approves at
+    # any stage of it makes that division decorative. workflow.escalate is the
+    # sanctioned way past a stalled flow instead — it demands a written reason
+    # and always leaves an audit record naming who overrode which node.
+    #
+    # Also no user.manage: UserViewSet carries no tenant mixin, so that
+    # codename grants edit access to every user in every tenant with no bound
+    # on the role being assigned — a realm lead holding it could promote
+    # themselves to ADMIN and step straight out of the isolation that defines
+    # this role. No system.settings or menu.manage either: those are platform
+    # concerns, not realm ones. And no soul.delete while deletion semantics are
+    # still unsettled.
     "MODERATOR": [
         "workflow.read", "workflow.create", "workflow.update", "workflow.delete",
-        "soul.read", "judgment.read", "realms.read", "actors.read",
-        "dashboard.read",
+        "workflow.escalate",
+        "soul.read", "soul.create", "soul.update", "soul.die", "soul.transition",
+        "judgment.read", "judgment.create", "judgment.execute",
+        "disposition.read", "disposition.execute",
+        "reincarnation.read", "reincarnation.manage",
+        "reincarnation.reborn", "reincarnation.complete",
+        "karma.read", "karma.manage",
+        "dispatch.read", "dispatch.manage",
+        "dispatch.approve", "dispatch.reject", "dispatch.execute",
+        "cross_judgment.read", "cross_judgment.create",
+        "realms.read", "actors.read", "dashboard.read",
+        "audit.read", "notification.read",
     ],
     "VIEWER": [
         "soul.read", "reincarnation.read",
