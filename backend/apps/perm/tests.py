@@ -317,7 +317,12 @@ class WorkflowPermissionMigrationTest(TestCase):
         codenames = set(
             Permission.objects.filter(category="workflow").values_list("codename", flat=True)
         )
-        self.assertEqual(codenames, set(self.WORKFLOW_CODENAMES))
+        # Superset rather than equality: 0015 adds workflow.escalate to the same
+        # category, and this test is about what 0013 contributes.
+        self.assertTrue(
+            set(self.WORKFLOW_CODENAMES).issubset(codenames),
+            f"missing: {set(self.WORKFLOW_CODENAMES) - codenames}",
+        )
 
     def test_forward_mirrors_role_permissions_dict_exactly(self):
         self._forward()
@@ -488,6 +493,37 @@ class ModeratorRealmLeadTest(TestCase):
             self.assertTrue(check_permission(judge, codename))
         for codename in ("workflow.create", "workflow.update", "workflow.delete"):
             self.assertFalse(check_permission(judge, codename))
+
+    def test_moderator_can_escalate_but_not_approve(self):
+        """The escape hatch that replaces approve/advance for a realm lead.
+
+        A stalled flow still needs a way forward; the answer is an action that
+        demands a reason and writes an audit record, not the approval right
+        the ten courts exist to divide.
+        """
+        self.assertIn("workflow.escalate", ROLE_PERMISSIONS["MODERATOR"])
+        for codename in self.EXECUTE:
+            self.assertNotIn(codename, ROLE_PERMISSIONS["MODERATOR"])
+
+    def test_moderator_cannot_manage_users(self):
+        """UserViewSet has no tenant mixin, so user.manage would let a realm
+        lead edit any user in any tenant — including promoting themselves to
+        ADMIN, which is exactly the isolation this role depends on."""
+        self.assertNotIn("user.manage", ROLE_PERMISSIONS["MODERATOR"])
+        self.assertNotIn("system.settings", ROLE_PERMISSIONS["MODERATOR"])
+        self.assertNotIn("menu.manage", ROLE_PERMISSIONS["MODERATOR"])
+        self.assertNotIn("soul.delete", ROLE_PERMISSIONS["MODERATOR"])
+
+    def test_moderator_outranks_judge_on_realm_operations(self):
+        """A realm lead should not hold fewer operational rights than the
+        judges working under them — the shape 0014 shipped with."""
+        moderator = set(ROLE_PERMISSIONS["MODERATOR"])
+        judge = set(ROLE_PERMISSIONS["JUDGE"])
+        self.assertGreater(len(moderator), len(judge))
+        # Everything a judge does on souls and judgments, a lead can do too,
+        # apart from the approval rights held back on purpose.
+        missing = (judge - moderator) - set(self.EXECUTE)
+        self.assertEqual(missing, set(), f"lead is missing judge rights: {missing}")
 
     def test_moderator_is_not_admin(self):
         """A realm lead must stay inside its tenant, so it cannot be ADMIN —
