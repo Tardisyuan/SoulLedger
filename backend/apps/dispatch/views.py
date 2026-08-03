@@ -46,10 +46,16 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     serializer_class = DispatchRecordSerializer
 
     def get_queryset(self):
-        """Fresh queryset each call — avoids TenantManager stale class-attr filter."""
-        return DispatchRecord._base_manager.select_related(
+        """Fresh queryset each call — avoids TenantManager stale class-attr filter.
+        _base_manager is the *unfiltered* manager (all_objects is declared first
+        on this model precisely so it takes that role), so reaching for it to
+        dodge the contextvar issue also drops the soft-delete filter — deleted
+        dispatch records kept appearing in the list. Exclude them explicitly
+        rather than going back to `objects`, which would reintroduce the
+        contextvar problem this override exists to solve."""
+        return DispatchRecord._base_manager.filter(is_deleted=False).select_related(
             "source_tenant", "target_tenant", "soul", "dispatched_by"
-        ).all()
+        )
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -65,9 +71,12 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         if not tenant:
             return Response({"error": "No tenant context"}, status=status.HTTP_400_BAD_REQUEST)
 
+        # _base_manager (unfiltered) dodges the contextvar issue but also
+        # drops the soft-delete filter — exclude deleted records explicitly.
         proposals = DispatchRecord._base_manager.filter(
             target_tenant=tenant,
-            status=DispatchStatus.PROPOSED
+            status=DispatchStatus.PROPOSED,
+            is_deleted=False,
         ).select_related("source_tenant", "soul", "dispatched_by")
 
         serializer = DispatchRecordListSerializer(proposals, many=True)
@@ -82,8 +91,11 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         if not tenant:
             return Response({"error": "No tenant context"}, status=status.HTTP_400_BAD_REQUEST)
 
+        # _base_manager (unfiltered) dodges the contextvar issue but also
+        # drops the soft-delete filter — exclude deleted records explicitly.
         history = DispatchRecord._base_manager.filter(
-            source_tenant=tenant
+            source_tenant=tenant,
+            is_deleted=False,
         ).select_related("target_tenant", "soul").order_by("-proposed_at")
 
         serializer = DispatchRecordListSerializer(history, many=True)
@@ -179,9 +191,15 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
         # intentional for cross-tenant records that need broader access.
         from django.db.models import Q
         # Fresh queryset each call — avoids TenantManager stale class-attr filter.
-        qs = CrossTenantJudgment._base_manager.select_related(
+        # _base_manager is the *unfiltered* manager (all_objects is declared
+        # first on this model precisely so it takes that role), so reaching
+        # for it to dodge the contextvar issue also drops the soft-delete
+        # filter — exclude deleted records explicitly rather than going back
+        # to `objects`, which would reintroduce the contextvar problem this
+        # override exists to solve.
+        qs = CrossTenantJudgment._base_manager.filter(is_deleted=False).select_related(
             "initiating_tenant"
-        ).prefetch_related("participants").all()
+        ).prefetch_related("participants")
         tenant = getattr(self.request, "tenant", None)
         if tenant:
             return qs.filter(Q(initiating_tenant=tenant) | Q(participants__participant_tenant=tenant))
