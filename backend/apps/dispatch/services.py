@@ -42,10 +42,17 @@ class DispatchService:
         if str(soul.tenant_id) != str(source_tenant.id):
             raise ValueError("Soul does not belong to the specified source tenant")
 
-        # Check no active dispatch exists for this soul
+        # Check no active dispatch exists for this soul.
+        # _base_manager is the unfiltered manager, used here (not objects) so this
+        # check works regardless of tenant contextvar state. A soft-deleted
+        # dispatch should not count as active: the DB's own uniqueness guard
+        # (unique_active_dispatch, see models.py) already scopes "active" to
+        # is_deleted=False & status in [PROPOSED, APPROVED] — mirror that here
+        # so this pre-check can't reject a create the DB constraint would allow.
         active_dispatch = DispatchRecord._base_manager.filter(
             soul=soul,
-            status__in=[DispatchStatus.PROPOSED, DispatchStatus.APPROVED]
+            status__in=[DispatchStatus.PROPOSED, DispatchStatus.APPROVED],
+            is_deleted=False,
         ).exists()
         if active_dispatch:
             raise ValueError("An active dispatch already exists for this soul")
