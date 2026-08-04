@@ -53,7 +53,24 @@ class EffectiveKarmaSerializer(serializers.Serializer):
 
 
 class ReincarnationInheritanceSerializer(serializers.Serializer):
+    """200 body of GET /karma/inheritance/{soul_id}/.
+
+    Only rebirth-capable civilizations get this shape; a terminal cosmology
+    answers 409 with RebirthNotApplicableSerializer instead.
+    """
     soul_id = serializers.UUIDField()
     inherited_merit = serializers.IntegerField()
     inherited_demerit = serializers.IntegerField()
     inheritance_note = serializers.CharField()
+
+
+class RebirthNotApplicableSerializer(serializers.Serializer):
+    """409 body of GET /karma/inheritance/{soul_id}/ for a terminal cosmology.
+
+    Egyptian and European souls have no next life, so there is nothing to
+    inherit into and no number that would be honest to return. ``code`` is the
+    machine-readable part; ``detail`` is prose for a human and is not stable.
+    """
+    code = serializers.CharField()  # always "REBIRTH_NOT_APPLICABLE"
+    civilization = serializers.CharField()
+    detail = serializers.CharField()

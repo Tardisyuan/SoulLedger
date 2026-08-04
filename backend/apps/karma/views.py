@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 from apps.audit.models import AuditLog
 from apps.core.permissions import TenantPermission
 from apps.disposition.models import Disposition
-from apps.karma.services import KarmaService
+from apps.karma.services import KarmaService, RebirthNotApplicable
 from apps.souls.models import Soul, SoulState
 
 
@@ -111,7 +111,11 @@ class KarmaInheritanceView(APIView):
     """
     GET /karma/{soul_id}/inheritance/
 
-    Returns reincarnation inheritance karma (20% of effective).
+    Returns the karma a soul carries into its next life: merit at
+    KarmaService.INHERITANCE_MERIT, demerit at INHERITANCE_DEMERIT.
+
+    409 REBIRTH_NOT_APPLICABLE for a soul whose cosmology is terminal
+    (EGYPTIAN, EUROPEAN) — there is no next life to inherit into.
     """
     permission_classes = [TenantPermission]
 
@@ -128,7 +132,15 @@ class KarmaInheritanceView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        result = KarmaService.get_reincarnation_inheritance(soul)
+        # RebirthNotApplicable is an APIException, so DRF would render it
+        # correctly on its own. Caught here anyway so the 409 body is written
+        # where the endpoint's other error shapes are, and so it stays a
+        # machine-readable {code, civilization, detail} rather than whatever
+        # the default renderer happens to do with it.
+        try:
+            result = KarmaService.get_reincarnation_inheritance(soul)
+        except RebirthNotApplicable as exc:
+            return Response(exc.detail, status=exc.status_code)
         return Response(result)
 
 
