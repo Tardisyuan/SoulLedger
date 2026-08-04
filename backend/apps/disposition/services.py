@@ -209,22 +209,24 @@ class DispositionService:
                 return cls.EG_AARU
             if verdict == Verdict.FAILED:
                 return cls.EG_DEVOURER
-            # PURGATORY/RETRY: unlike Chinese/European, an inconclusive
-            # Egyptian verdict is *not* simply parked — Egyptian judgment is
-            # a threshold test ("heart not heavier than the feather"), not
-            # a severity score, so a near-zero karmic balance genuinely
-            # means the heart balanced against the feather, a doctrinally
-            # meaningful tie rather than "low severity". So karma is used
-            # here to resolve the inconclusive verdict: a decisive karma
-            # reading (>= 50 / <= -50) settles it one way or the other, and
-            # only the genuine tie band still waits in Duat. This band is
-            # therefore correct as-is, not a bug — it was only ever wrong
-            # because it could previously be reached with a FAILED verdict,
-            # which is now excluded above.
+            # PURGATORY/RETRY: the verdict is inconclusive, so karma must not
+            # be allowed to reach for the Devourer. Being eaten by Ammit is
+            # the second death — annihilation, with no appeal and nothing left
+            # to appeal for — and an undecided judgment has no business
+            # triggering it however heavy the heart reads. A soul the court
+            # has not finished judging waits in the Duat.
+            #
+            # The positive side is deliberately not symmetric. A decisive
+            # karma reading still admits to Aaru, because Egyptian judgment is
+            # a threshold ("not heavier than the feather") rather than a
+            # severity score, so a clearly light heart is the weighing itself
+            # speaking rather than an arithmetic tie-break. Admission is also
+            # not destructive in the way the Devourer is: the asymmetry is
+            # between an outcome that is merely final and one that is
+            # annihilating, which is the same reason the rest of this codebase
+            # treats irreversible operations as needing a higher bar.
             if karma >= 50:
                 return cls.EG_AARU
-            if karma <= -50:
-                return cls.EG_DEVOURER
             return cls.EG_DUAT_ENTRY
 
     @staticmethod

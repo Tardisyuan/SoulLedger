@@ -155,11 +155,26 @@ class EgyptianStandardRoutingTest(TestCase):
                     DispositionService.EG_DEVOURER,
                 )
 
-    def test_purgatory_and_retry_use_karma_threshold(self):
-        """Unlike Chinese/European, an inconclusive Egyptian verdict is
-        doctrinally resolved by the karma threshold (a real "heart balanced
-        against the feather" tie), so this band is intentional and is left
-        unchanged — only its reachability from FAILED was the bug."""
+    def test_inconclusive_verdict_never_reaches_the_devourer(self):
+        """An undecided judgment must not annihilate a soul, however heavy
+        its heart reads. Being devoured by Ammit is the second death; there
+        is no appeal from it and nothing left to appeal for, so it may only
+        follow a verdict that has actually concluded."""
+        for verdict in (Verdict.PURGATORY, Verdict.RETRY):
+            for karma in (-50, -100, -1000):
+                with self.subTest(verdict=verdict, karma=karma):
+                    self.assertEqual(
+                        DispositionService._route_egyptian(
+                            None, verdict, JudgmentMethod.STANDARD, karma
+                        ),
+                        DispositionService.EG_DUAT_ENTRY,
+                    )
+
+    def test_purgatory_and_retry_still_admit_on_a_light_heart(self):
+        """The positive side stays asymmetric on purpose: Egyptian judgment
+        is a threshold, so a decisively light heart is the weighing speaking
+        rather than an arithmetic tie-break, and admission is final without
+        being annihilating. See _route_egyptian for the reasoning."""
         for verdict in (Verdict.PURGATORY, Verdict.RETRY):
             with self.subTest(verdict=verdict):
                 self.assertEqual(
@@ -173,12 +188,6 @@ class EgyptianStandardRoutingTest(TestCase):
                         None, verdict, JudgmentMethod.STANDARD, 0
                     ),
                     DispositionService.EG_DUAT_ENTRY,
-                )
-                self.assertEqual(
-                    DispositionService._route_egyptian(
-                        None, verdict, JudgmentMethod.STANDARD, -50
-                    ),
-                    DispositionService.EG_DEVOURER,
                 )
 
 
