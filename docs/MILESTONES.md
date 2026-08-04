@@ -70,27 +70,69 @@
 - Sidebar navigation entry (Social menu)
 - Data migration: 0007_add_social_menu
 
+### M14 测试覆盖率 + 租户修复 (2026-06-09) ✅
+- 后端测试覆盖率 23% → 83% (Task #291)
+- TenantManager contextvar 隔离修复 (Task #292)
+- TenantCreateMixin.perform_create 修复
+- DataScopeViewSetMixin + ViewSet 层租户隔离
+- 1023 tests passed, 16 skipped, 8 xpassed
+- 详见: `docs/coverage-roadmap.md`, `docs/post-coverage-audit-report.md`
+
 ---
 
 ## 待开发
 
-### 测试覆盖率提升 (2026-06-09) ✅
-**目标**: 后端测试覆盖率从 23% 提升至 40%+
-**结果**: 70.24% (超额完成)
-**任务**: Task #291
-**新增测试**: 322 个 (apps/dispatch, workflow, karma, perm, menus, souls, audit)
-**修复**: TenantManager stale queryset filters (views.py, models.py, services.py)
-**详情**: `docs/coverage-roadmap.md`, `docs/post-coverage-audit-report.md`
+### M15 多租户安全加固 (2026-06-09) 📋
+**目标**: 审计并加固跨服务层、后台任务、异步执行路径的租户隔离
+**工作量**: 5-7 天
+**详情**: `docs/MILESTONE_M15.md`
 
-### i18n 与 UX 完善
+#### Phase 1: Celery 基础设施 + CRITICAL 修复 (Day 1-3)
+| 任务 | Task | 优先级 | 状态 |
+|------|------|--------|------|
+| Celery task_prerun/postrun 信号处理器 | #294 | P1 | ⏳ |
+| karma.recalculate_all per-tenant 分发 | #295 | P1 | ⏳ |
+| karma.recalculate_single tenant 验证 | #295 | P1 | ⏳ |
+| judgment.auto_conclude_stale per-tenant | #295 | P1 | ⏳ |
+| death_sync.cleanup_old_requests 租户过滤 | #295 | P1 | ⏳ |
+| death_sync.retry_failed_webhooks per-tenant | #295 | P1 | ⏳ |
+| death_sync.deliver_webhook tenant 验证 | #295 | P2 | ⏳ |
+
+#### Phase 2: 服务层 + HIGH 修复 (Day 4-5)
+| 任务 | Task | 优先级 | 状态 |
+|------|------|--------|------|
+| DispositionService tenant 传递 | #296 | P1 | ⏳ |
+| WorkflowService.find_template tenant 过滤 | #296 | P1 | ⏳ |
+| ReincarnationService tenant 传递 | #296 | P1 | ⏳ |
+| PostService 计数器租户验证 | #296 | P1 | ⏳ |
+| DispatchService _base_manager 修复 | #296 | P2 | ⏳ |
+| UserProfileViewSet 租户过滤 | #297 | P1 | ⏳ |
+| PostViewSet.perform_create tenant 设置 | #297 | P1 | ⏳ |
+| DispatchRecordViewSet.get_queryset 修复 | #297 | P1 | ⏳ |
+
+#### Phase 3: API 加固 + 文档 (Day 6-7)
+| 任务 | Task | 优先级 | 状态 |
+|------|------|--------|------|
+| UserCreateSerializer 租户强制 | #297 | P2 | ⏳ |
+| TokenRefreshView tenant_code | #298 | P2 | ⏳ |
+| ExternalApiKeyViewSet 权限类修复 | #297 | P2 | ⏳ |
+| DeathSyncHealthView 租户过滤 | #297 | P2 | ⏳ |
+| OrgViewSet.tree 空值处理 | #297 | P2 | ⏳ |
+| TenantMiddleware 用户-租户验证 | #298 | P2 | ⏳ |
+| perm 端点 TenantPermission | #298 | P2 | ⏳ |
+| MenuViewSet 文档或租户过滤 | #297 | P2 | ⏳ |
+| 审计报告 | #299 | P1 | ⏳ |
+| 跨租户访问测试 | #299 | P1 | ⏳ |
+
+### M16 i18n 与 UX 完善
 **目标**: 国际化翻译 + 社交功能完善
 
-| 任务 | 优先级 |
-|------|--------|
-| i18n 翻译文件 (中/英) | P1 |
-| Profile 编辑 UI | P1 |
-| Delete post/comment UI | P1 |
-| Social MenuButton permissions | P2 |
+| 任务 | 优先级 | 状态 |
+|------|--------|------|
+| i18n 翻译文件 (中/英) | P1 | ⏳ |
+| Profile 编辑 UI | P1 | ⏳ |
+| Delete post/comment UI | P1 | ⏳ |
+| Social MenuButton permissions | P2 | ⏳ |
 
 ---
 
@@ -107,7 +149,10 @@
 | M11 | 死亡同步 API | ✅ 完成 |
 | M12 | WebSocket 重构 | ✅ 完成 |
 | M13 | 社交功能 | ✅ 完成 |
+| M14 | 测试覆盖率 + 租户修复 | ✅ 完成 |
+| M15 | 多租户安全加固 | 📋 规划中 |
+| M16 | i18n 与 UX 完善 | 📋 规划中 |
 
 ---
 
-*更新日期: 2026-06-08*
+*更新日期: 2026-06-09*
