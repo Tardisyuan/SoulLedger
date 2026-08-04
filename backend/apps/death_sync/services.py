@@ -10,6 +10,7 @@ from apps.death_sync.models import (
     DeathRegistrationRequest,
     DeathRegistrationStatus,
 )
+from apps.souls.dates import parse_historical_date
 from apps.souls.models import Soul, SoulState
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,19 @@ class DeathSyncService:
         queryset = Soul.objects.filter(name=name, tenant=tenant)
         birth_date = lookup_data.get("birth_date")
         if birth_date:
-            queryset = queryset.filter(birth_date=birth_date)
+            # Soul.birth_date is no longer a queryable DateField — it's
+            # decomposed into birth_year/birth_month/birth_day (BCE-capable,
+            # see apps.souls.dates). Still accepts the same "YYYY-MM-DD"
+            # string external systems have always sent here.
+            year, month, day = parse_historical_date(birth_date)
+            date_filters = {}
+            if year is not None:
+                date_filters["birth_year"] = year
+            if month is not None:
+                date_filters["birth_month"] = month
+            if day is not None:
+                date_filters["birth_day"] = day
+            queryset = queryset.filter(**date_filters)
 
         return queryset.first()
 

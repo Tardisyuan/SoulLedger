@@ -3,6 +3,7 @@ REST serializers for Soul app.
 """
 from rest_framework import serializers
 
+from apps.souls.fields import HistoricalDateField
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
 
@@ -16,6 +17,10 @@ def _is_viewer(context) -> bool:
 
 
 class SoulRecordSerializer(serializers.ModelSerializer):
+    # Backed by event_year/event_month/event_day (BCE-capable) rather than a
+    # single DateField — see apps.souls.fields.HistoricalDateField.
+    event_date = HistoricalDateField(prefix="event")
+
     class Meta:
         model = SoulRecord
         fields = [
@@ -34,6 +39,12 @@ class SoulSerializer(serializers.ModelSerializer):
     tenant_code = serializers.CharField(source="tenant.code", read_only=True)
     records = SoulRecordSerializer(many=True, read_only=True)
     tenant = serializers.PrimaryKeyRelatedField(read_only=True)
+    # Backed by birth_year/birth_month/birth_day and death_year/death_month/
+    # death_day (BCE-capable) rather than DateFields — see
+    # apps.souls.fields.HistoricalDateField. Still accepts plain
+    # "YYYY-MM-DD" strings on write for backward compatibility.
+    birth_date = HistoricalDateField(prefix="birth")
+    death_date = HistoricalDateField(prefix="death")
     # Soul.civilization is a property derived from the tenant code. The list
     # serializer has always exposed it; the detail serializer did not, so
     # clients that read a soul then POST a judgment (which requires
@@ -80,6 +91,8 @@ class SoulListSerializer(serializers.ModelSerializer):
     karmic_balance = serializers.SerializerMethodField()
     tenant_code = serializers.CharField(source="tenant.code", read_only=True)
     civilization = serializers.CharField(read_only=True)
+    birth_date = HistoricalDateField(prefix="birth")
+    death_date = HistoricalDateField(prefix="death")
 
     class Meta:
         model = Soul

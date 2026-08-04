@@ -1,12 +1,14 @@
 """
 Karma calculation service with time decay and Redis caching.
 """
+import datetime
 import math
 
 from django.core.cache import cache
 from django.utils import timezone
 
 from apps.karma.models import SoulRecord  # noqa: F401 — re-exported from souls for BC
+from apps.souls.dates import year_span
 from apps.souls.models import Soul
 
 KARMA_CACHE_TTL = 60 * 5  # 5 minutes
@@ -20,13 +22,38 @@ class KarmaService:
     """
 
     @staticmethod
-    def _get_record_age_years(event_date, recorded_at) -> float:
-        """Calculate age in years since event_date or recorded_at."""
-        if event_date:
-            reference_date = event_date
-        else:
-            reference_date = recorded_at.date() if hasattr(recorded_at, 'date') else recorded_at
+    def _day_of_year(month, day) -> int:
+        """Ordinal day-of-year for a (possibly partial) month/day.
+
+        Uses a fixed non-leap reference year (2001) — this is only used to
+        estimate the sub-year fraction of a decay calculation, not to
+        validate the date, so leap-day correctness doesn't matter here.
+        Falls back to day 183 (~mid-year) when there's no month/day
+        precision at all, which is the least-biased guess for a
+        year-only historical record.
+        """
+        if month is None:
+            return 183
+        return datetime.date(2001, month, day or 15).timetuple().tm_yday
+
+    @staticmethod
+    def _get_record_age_years(event_year, event_month, event_day, recorded_at) -> float:
+        """
+        Calculate age in years since the record's event date, or
+        recorded_at if no event date was given.
+
+        event_year/month/day follow the historical (no year 0) convention
+        from apps.souls.dates — a negative year is BCE. The whole-year part
+        of the span accounts for the missing year 0 (e.g. 612 BCE to 2026 CE
+        is 2637 years, not 2638); the fractional part is estimated from
+        day-of-year so decay still moves smoothly day-to-day.
+        """
         today = timezone.now().date()
+        if event_year is not None:
+            whole_years = year_span(event_year, today.year)
+            fraction = (today.timetuple().tm_yday - KarmaService._day_of_year(event_month, event_day)) / 365.25
+            return whole_years + fraction
+        reference_date = recorded_at.date() if hasattr(recorded_at, 'date') else recorded_at
         delta = today - reference_date
         return delta.days / 365.25
 
@@ -51,7 +78,7 @@ class KarmaService:
         demerit = 0
 
         for r in records:
-            years = cls._get_record_age_years(r.event_date, r.recorded_at)
+            years = cls._get_record_age_years(r.event_year, r.event_month, r.event_day, r.recorded_at)
             effective_weight = cls._decay_weight(r.weight, years)
 
             if r.record_type == "MERIT":
@@ -96,7 +123,7 @@ class KarmaService:
         record_summaries = []
 
         for r in records:
-            years = cls._get_record_age_years(r.event_date, r.recorded_at)
+            years = cls._get_record_age_years(r.event_year, r.event_month, r.event_day, r.recorded_at)
             effective_weight = cls._decay_weight(r.weight, years)
             effective_weight = round(effective_weight, 2)
 
@@ -116,7 +143,13 @@ class KarmaService:
                 "decay_factor": round(math.exp(-DECAY_RATE * years), 4),
                 "civilization": r.civilization,
                 "recorded_at": r.recorded_at.isoformat(),
-                "event_date": r.event_date.isoformat() if r.event_date else None,
+                # Structured {year, month, day} rather than an ISO string —
+                # event_year can be negative (BCE) and month/day are often
+                # unknown for ancient records. See apps.souls.dates.
+                "event_date": (
+                    {"year": r.event_year, "month": r.event_month, "day": r.event_day}
+                    if r.event_year is not None else None
+                ),
                 # The deed that defines the life. Stored per record but absent
                 # from this payload, so the only consumer of karma records had
                 # no way to tell a defining deed from an ordinary one.

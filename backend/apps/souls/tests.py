@@ -192,3 +192,86 @@ class TestSoulRecordsAction:
     def test_records_soul_not_found(self):
         resp = self.client.get(f"{BASE}/00000000-0000-0000-0000-000000000000/records/")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+class TestSoulHistoricalDates:
+    """BC-capable birth_date/death_date/event_date — see apps.souls.dates."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="SOUL_T5", defaults={"display_name": "Soul BC Tenant"}
+        )[0]
+        self.admin = User.objects.create_user(
+            username="bc_admin", password="test123", role="ADMIN", tenant=self.tenant
+        )
+        self.client = _jwt_client(self.admin, self.tenant)
+
+    def test_create_soul_with_bce_birth_year(self):
+        """A structured {"year": -612} input records 612 BCE."""
+        resp = self.client.post(f"{BASE}/", {
+            "name": "Ancient Egyptian Soul", "birth_date": {"year": -612},
+        }, format="json")
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["birth_date"] == {"year": -612, "month": None, "day": None}
+        soul = Soul.objects.get(pk=resp.data["id"])
+        assert soul.birth_year == -612
+        assert soul.birth_month is None
+        # Legacy DateField-shaped accessor can't represent BCE — must not
+        # silently pretend it's some CE date.
+        assert soul.birth_date is None
+
+    def test_create_soul_with_full_bce_date(self):
+        resp = self.client.post(f"{BASE}/", {
+            "name": "Egyptian Pharaoh", "birth_date": {"year": -612, "month": 3, "day": 15},
+        }, format="json")
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["birth_date"] == {"year": -612, "month": 3, "day": 15}
+
+    def test_legacy_string_date_still_accepted(self):
+        """Existing clients posting a plain "YYYY-MM-DD" string keep working."""
+        resp = self.client.post(f"{BASE}/", {
+            "name": "Modern Soul", "birth_date": "1990-01-15",
+        }, format="json")
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["birth_date"] == {"year": 1990, "month": 1, "day": 15}
+
+    def test_year_zero_rejected(self):
+        resp = self.client.post(f"{BASE}/", {
+            "name": "Invalid Soul", "birth_date": {"year": 0},
+        }, format="json")
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_die_action_accepts_bce_death_date(self):
+        soul = Soul.objects.create(name="Dying Ancient", tenant=self.tenant, current_state=SoulState.ALIVE)
+        resp = self.client.post(f"{BASE}/{soul.pk}/die/", {
+            "death_date": {"year": -30},  # death of Cleopatra, roughly
+        }, format="json")
+        assert resp.status_code == status.HTTP_200_OK
+        soul.refresh_from_db()
+        assert soul.death_year == -30
+
+    def test_add_record_with_bce_event_date(self):
+        soul = Soul.objects.create(name="Record Soul BCE", tenant=self.tenant)
+        resp = self.client.post(f"{BASE}/{soul.pk}/add_record/", {
+            "record_type": "MERIT",
+            "civilization": "EGYPTIAN",
+            "description": "Built a temple",
+            "weight": 10,
+            "event_date": {"year": -1200},
+        }, format="json")
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["event_date"] == {"year": -1200, "month": None, "day": None}
+        record = SoulRecord.objects.get(pk=resp.data["id"])
+        assert record.event_year == -1200
+        assert record.event_date is None  # legacy accessor: can't express BCE
+
+    def test_soul_created_via_orm_with_legacy_birth_date_kwarg(self):
+        """Soul.objects.create(birth_date=...) (as used throughout the test
+        suite) keeps working via the birth_date property setter."""
+        soul = Soul.objects.create(name="ORM Soul", tenant=self.tenant, birth_date="1985-06-15")
+        assert soul.birth_year == 1985
+        assert soul.birth_month == 6
+        assert soul.birth_day == 15
+        assert soul.birth_date is not None

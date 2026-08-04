@@ -3,9 +3,11 @@ Soul record model — merit/demerit/judgment evidence attached to a soul.
 """
 import uuid
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.core.models import AuditUserFields
+from apps.souls.dates import parse_historical_date, to_legacy_date
 from apps.souls.models import Civilization, Soul
 from apps.tenants.managers import TenantManager
 
@@ -82,10 +84,16 @@ class SoulRecord(AuditUserFields, models.Model):
         default=1,
         help_text="Significance weight (1-100). Affects karma calculation.",
     )
-    event_date = models.DateField(
-        null=True,
-        blank=True,
-        help_text="Date the event occurred (for time-decay calculation)",
+    # Historical (possibly BCE) event date — see apps.souls.dates.
+    # `event_date` below is a compatibility property, not a real column.
+    event_year = models.IntegerField(
+        null=True, blank=True, help_text="Signed year the event occurred, e.g. -612 = 612 BCE",
+    )
+    event_month = models.SmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(12)]
+    )
+    event_day = models.SmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(31)]
     )
     is_milestone = models.BooleanField(
         default=False,
@@ -112,6 +120,17 @@ class SoulRecord(AuditUserFields, models.Model):
 
     def __str__(self):
         return f"{self.record_type}: {self.description[:50]}"
+
+    @property
+    def event_date(self):
+        """Legacy DateField-shaped accessor. Not a stored column — see
+        event_year/event_month/event_day. Returns None for BCE or
+        year-only events (they can't be represented as datetime.date)."""
+        return to_legacy_date(self.event_year, self.event_month, self.event_day)
+
+    @event_date.setter
+    def event_date(self, value):
+        self.event_year, self.event_month, self.event_day = parse_historical_date(value)
 
     @classmethod
     def batch(cls):
