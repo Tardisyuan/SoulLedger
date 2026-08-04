@@ -3,10 +3,12 @@ Soul core model + state machine.
 """
 import uuid
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
 from apps.core.models import AuditUserFields
+from apps.souls.dates import parse_historical_date, to_legacy_date
 from apps.souls.querysets import SoulManager
 
 
@@ -36,8 +38,24 @@ class Soul(AuditUserFields, models.Model):
         choices=SoulState.choices,
         default=SoulState.ALIVE,
     )
-    birth_date = models.DateField(null=True, blank=True)
-    death_date = models.DateField(null=True, blank=True)
+    # Historical (possibly BCE) dates, stored as signed year + optional
+    # month/day rather than a DateField — see apps.souls.dates for the
+    # year-0 convention. `birth_date`/`death_date` below are compatibility
+    # properties, not real columns.
+    birth_year = models.IntegerField(null=True, blank=True)
+    birth_month = models.SmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(12)]
+    )
+    birth_day = models.SmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(31)]
+    )
+    death_year = models.IntegerField(null=True, blank=True)
+    death_month = models.SmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(12)]
+    )
+    death_day = models.SmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(31)]
+    )
     origin_location = models.CharField(max_length=255, blank=True)
     birth_name = models.CharField(max_length=255, blank=True)  # name at birth
     description = models.TextField(blank=True)
@@ -111,6 +129,32 @@ class Soul(AuditUserFields, models.Model):
     def karmic_balance(self) -> int:
         return self.merit_score - self.demerit_score
 
+    # ------------------------------------------------------------------
+    # Legacy DateField-shaped accessors, kept for callers outside this
+    # app (death_sync webhook payloads, reincarnation reset, event
+    # logging, and most of the existing test suite) that still read or
+    # assign `soul.birth_date` / `soul.death_date` as a plain date.
+    # These are NOT stored columns — birth_year/month/day are the only
+    # source of truth. The getter can only represent CE dates with full
+    # month/day precision; BCE or year-only records read back as None
+    # here (use birth_year/birth_month/birth_day directly for those).
+    # ------------------------------------------------------------------
+    @property
+    def birth_date(self):
+        return to_legacy_date(self.birth_year, self.birth_month, self.birth_day)
+
+    @birth_date.setter
+    def birth_date(self, value):
+        self.birth_year, self.birth_month, self.birth_day = parse_historical_date(value)
+
+    @property
+    def death_date(self):
+        return to_legacy_date(self.death_year, self.death_month, self.death_day)
+
+    @death_date.setter
+    def death_date(self, value):
+        self.death_year, self.death_month, self.death_day = parse_historical_date(value)
+
     def can_transition_to(self, new_state: str) -> bool:
         """
         State machine guard. Returns True if the transition is valid.
@@ -155,9 +199,14 @@ class Soul(AuditUserFields, models.Model):
 
         # Log outside the transaction to avoid holding locks during external calls
         log_soul_state_change(locked_soul, old_state, new_state, reason)
-        # Sync back to self instance
+        # Sync back to self instance. Copy the raw year/month/day (not via
+        # the birth_date/death_date properties) so a BCE death date isn't
+        # silently dropped — the legacy property getter returns None for
+        # anything it can't express as a datetime.date.
         self.current_state = locked_soul.current_state
-        self.death_date = locked_soul.death_date
+        self.death_year = locked_soul.death_year
+        self.death_month = locked_soul.death_month
+        self.death_day = locked_soul.death_day
         return True
 
     def die(self, death_date=None, location: str = "") -> "Judgment | None":

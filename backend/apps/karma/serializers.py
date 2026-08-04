@@ -13,6 +13,13 @@ class KarmaBalanceSerializer(serializers.Serializer):
     record_count = serializers.IntegerField()
 
 
+class HistoricalDateSummarySerializer(serializers.Serializer):
+    """Structured (possibly BCE) date, e.g. {"year": -612, "month": 3, "day": None}."""
+    year = serializers.IntegerField()
+    month = serializers.IntegerField(allow_null=True)
+    day = serializers.IntegerField(allow_null=True)
+
+
 class KarmaRecordSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     type = serializers.CharField()
@@ -24,7 +31,7 @@ class KarmaRecordSerializer(serializers.Serializer):
     decay_factor = serializers.FloatField()
     civilization = serializers.CharField()
     recorded_at = serializers.DateTimeField()
-    event_date = serializers.DateField(allow_null=True)
+    event_date = HistoricalDateSummarySerializer(allow_null=True)
     is_milestone = serializers.BooleanField()
 
 

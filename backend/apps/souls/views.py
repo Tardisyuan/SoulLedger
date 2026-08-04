@@ -88,7 +88,12 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             )
         location = request.data.get("location", "")
         death_date = request.data.get("death_date")
-        success = soul.die(death_date=death_date, location=location)
+        try:
+            success = soul.die(death_date=death_date, location=location)
+        except ValueError as exc:
+            # Malformed death_date (e.g. bad string, year 0, out-of-range
+            # month/day) — see apps.souls.dates.parse_historical_date.
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         if success:
             return Response(SoulSerializer(soul).data)
         return Response({"error": "Transition failed"}, status=status.HTTP_400_BAD_REQUEST)

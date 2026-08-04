@@ -2,7 +2,8 @@
 Soul FilterSet — filtering, search, and ordering for Soul API.
 """
 import django_filters as filters
-from django.db.models import Q
+from django.db.models import ExpressionWrapper, F, IntegerField, Q
+from django.db.models.functions import Coalesce
 
 from apps.souls.models import Civilization, Soul, SoulState
 
@@ -26,8 +27,15 @@ class SoulFilter(filters.FilterSet):
     # Date range filters
     created_after = filters.DateTimeFilter(field_name="create_time", lookup_expr="gte")
     created_before = filters.DateTimeFilter(field_name="create_time", lookup_expr="lte")
-    death_date_after = filters.DateFilter(field_name="death_date", lookup_expr="gte")
-    death_date_before = filters.DateFilter(field_name="death_date", lookup_expr="lte")
+    # death_date is no longer a single DateField (see apps.souls.dates —
+    # death_year/month/day support BCE years), so these compare a
+    # calendar-sortable composite of the three columns instead of using a
+    # plain field_name lookup. Only meaningful for CE comparisons, which is
+    # all a plain DateFilter (?death_date_after=2020-01-01) can express
+    # anyway; BCE souls simply never match (death_year is always negative,
+    # well below any date the filter could ask for).
+    death_date_after = filters.DateFilter(method="filter_death_date_after")
+    death_date_before = filters.DateFilter(method="filter_death_date_before")
 
     # Karma range filters (aliases for backward compatibility)
     karmic_balance_min = filters.NumberFilter(method="filter_karmic_min")
@@ -40,8 +48,36 @@ class SoulFilter(filters.FilterSet):
         fields = ["current_state", "tenant__code"]
 
     search_fields = ["name", "birth_name", "origin_location", "description"]
-    ordering_fields = ["name", "create_time", "death_date", "merit_score", "demerit_score"]
+    # death_date was dropped as a real field in favour of death_year/month/day
+    # (see apps.souls.dates); death_year alone is still a meaningful,
+    # directly sortable ordering key.
+    ordering_fields = ["name", "create_time", "death_year", "merit_score", "demerit_score"]
     ordering_blacklist = ["karmic_balance"]
+
+    def _death_sort_key(self, queryset):
+        """Annotate a single sortable/comparable value from death_year/month/day.
+
+        Missing month/day (year-only precision) fall back to Jan 1 for
+        comparison purposes.
+        """
+        return queryset.annotate(
+            _death_sort=ExpressionWrapper(
+                F("death_year") * 10000 + Coalesce(F("death_month"), 1) * 100 + Coalesce(F("death_day"), 1),
+                output_field=IntegerField(),
+            )
+        )
+
+    def filter_death_date_after(self, queryset, name, value):
+        if not value:
+            return queryset
+        threshold = value.year * 10000 + value.month * 100 + value.day
+        return self._death_sort_key(queryset).filter(death_year__isnull=False, _death_sort__gte=threshold)
+
+    def filter_death_date_before(self, queryset, name, value):
+        if not value:
+            return queryset
+        threshold = value.year * 10000 + value.month * 100 + value.day
+        return self._death_sort_key(queryset).filter(death_year__isnull=False, _death_sort__lte=threshold)
 
     def filter_search(self, queryset, name, value):
         """Search across multiple fields."""

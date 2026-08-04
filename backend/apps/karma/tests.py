@@ -9,7 +9,9 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from apps.karma.services import KarmaService
 from apps.souls.models import Soul, SoulState
+from apps.souls.record_models import SoulRecord
 from apps.tenants.models import Tenant
 
 User = get_user_model()
@@ -353,3 +355,51 @@ class TestKarmaTenantIsolation:
     def test_inheritance_tenant_isolation(self):
         resp = self.client_a.get(f"{BASE}/inheritance/{self.soul_b.id}/")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+class TestKarmaDecayWithBCEDates:
+    """Time-decay calculation for records with a BCE event_year.
+
+    See apps.souls.dates.year_span and KarmaService._get_record_age_years:
+    there is no year 0, so 612 BCE (-612) to 2026 CE is 2637 years, not
+    2638.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="KBC_T1", defaults={"display_name": "Karma BCE Tenant"}
+        )[0]
+        self.soul = Soul.objects.create(
+            name="Ancient Egyptian Soul",
+            current_state=SoulState.JUDGING,
+            tenant=self.tenant,
+        )
+
+    def test_bce_event_date_decays_correctly(self):
+        SoulRecord.objects.create(
+            soul=self.soul, record_type="MERIT", civilization="EGYPTIAN",
+            description="Built a temple", weight=100, event_year=-612,
+        )
+        summary = KarmaService.get_karmic_summary(self.soul)
+        assert len(summary["records"]) == 1
+        record = summary["records"][0]
+        assert record["event_date"] == {"year": -612, "month": None, "day": None}
+        # Whole-year part must land on 2637 (not 2638) for a "today" in 2026.
+        assert 2637 <= record["years_elapsed"] < 2638
+
+    def test_bce_and_ce_records_both_decay(self):
+        SoulRecord.objects.create(
+            soul=self.soul, record_type="MERIT", civilization="EGYPTIAN",
+            description="Ancient deed", weight=50, event_year=-100,
+        )
+        SoulRecord.objects.create(
+            soul=self.soul, record_type="DEMERIT", civilization="EGYPTIAN",
+            description="Recent deed", weight=50, event_year=2020, event_month=1, event_day=1,
+        )
+        result = KarmaService.recalculate_soul_karma(self.soul)
+        # Both records decay to a small positive effective weight; nothing
+        # should blow up crossing the BCE/CE boundary.
+        assert result["merit_score"] >= 0
+        assert result["demerit_score"] >= 0
