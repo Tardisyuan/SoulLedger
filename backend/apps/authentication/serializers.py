@@ -9,6 +9,32 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 User = get_user_model()
 
 
+# ---------------------------------------------------------------------------
+# Role privilege ranking — guards role assignment in the user-management API
+# (UserCreateSerializer, UserUpdateSerializer, UserViewSet.assign_roles).
+#
+# Lower rank = more privileged. Mirrors the breadth of
+# apps.perm.models.ROLE_PERMISSIONS (MODERATOR is tenant/realm-scoped but
+# nearly as broad as ADMIN within its own tenant, so it ranks just under
+# ADMIN). A role missing from this dict — including one not yet wired into
+# UserRole.choices — ranks below VIEWER so an unrecognized caller role can
+# never be used to escalate anything.
+# ---------------------------------------------------------------------------
+ROLE_HIERARCHY = {
+    "ADMIN": 0,
+    "MODERATOR": 10,
+    "JUDGE": 20,
+    "GUARDIAN": 30,
+    "VIEWER": 40,
+}
+_UNRANKED_ROLE = 999
+
+
+def role_rank(role):
+    """Return the privilege rank for `role` (lower = more privileged)."""
+    return ROLE_HIERARCHY.get(role, _UNRANKED_ROLE)
+
+
 class TenantInfoSerializer(serializers.Serializer):
     """Nested tenant info in login response."""
     code = serializers.CharField()
@@ -131,23 +157,73 @@ class UserManagementSerializer(serializers.ModelSerializer):
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
-    """User serializer for creation with password handling."""
+    """User serializer for creation with password handling.
+
+    Non-ADMIN callers are constrained two ways (see ROLE_HIERARCHY above):
+    - `tenant` is forced to the caller's own tenant — a client-supplied
+      value for another tenant is rejected rather than silently honored.
+    - `role` can never be more privileged than the caller's own role, which
+      is what blocks a non-ADMIN from creating an ADMIN account (themselves
+      or anyone else).
+    ADMIN keeps its existing unrestricted behavior (any tenant, any role).
+    """
     password = serializers.CharField(write_only=True, min_length=8)
 
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'password', 'role', 'tenant', 'organization', 'position', 'is_active']
 
+    def validate(self, attrs):
+        request = self.context.get('request')
+        caller = getattr(request, 'user', None) if request is not None else None
+        caller_role = getattr(caller, 'role', None)
+
+        if caller_role != 'ADMIN':
+            caller_tenant = getattr(request, 'tenant', None) if request is not None else None
+            target_tenant = attrs.get('tenant')
+            if target_tenant is None:
+                if caller_tenant is None:
+                    raise serializers.ValidationError(
+                        {'tenant': 'No tenant context available for this request.'}
+                    )
+                attrs['tenant'] = caller_tenant
+            elif target_tenant != caller_tenant:
+                raise serializers.ValidationError(
+                    {'tenant': 'Cannot create a user in another tenant.'}
+                )
+
+            target_role = attrs.get('role', 'VIEWER')
+            if role_rank(caller_role) > role_rank(target_role):
+                raise serializers.ValidationError(
+                    {'role': 'Cannot assign a role more privileged than your own.'}
+                )
+
+        return attrs
+
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
-    """User serializer for updates (email, role, is_active, organization, position)."""
+    """User serializer for updates (email, role, is_active, organization, position).
+
+    `tenant` is deliberately not in `fields` — a user's tenant can't be
+    changed through this path at all, by ADMIN or otherwise.
+    """
 
     class Meta:
         model = User
         fields = ['email', 'role', 'is_active', 'organization', 'position']
+
+    def validate_role(self, value):
+        request = self.context.get('request')
+        caller = getattr(request, 'user', None) if request is not None else None
+        caller_role = getattr(caller, 'role', None)
+        if caller_role != 'ADMIN' and role_rank(caller_role) > role_rank(value):
+            raise serializers.ValidationError(
+                'Cannot assign a role more privileged than your own.'
+            )
+        return value
 
 
 class ChangePasswordSerializer(serializers.Serializer):
