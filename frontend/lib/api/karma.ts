@@ -51,10 +51,29 @@ export interface KarmaSummary {
   records: KarmaRecord[];
 }
 
+// 200 body of GET /karma/inheritance/{soul_id}/.
+export interface KarmaInheritance {
+  soul_id: string;
+  inherited_merit: number;
+  inherited_demerit: number;
+  inheritance_note: string;
+}
+
+// 409 body — the soul's cosmology is terminal (e.g. Egyptian judgment ending
+// at Aaru/Ammit, or European judgment ending at Heaven/Hell/Purgatory-then-
+// Heaven), so there is no next life to inherit into.
+export interface KarmaInheritanceNotApplicable {
+  code: string;
+  civilization: string;
+  detail: string;
+}
+
 export const karmaApi = {
   balance: (soulId: number) => api.get(`/karma/balance/${soulId}/`),
   effective: (soulId: number) => api.get(`/karma/effective/${soulId}/`),
   recalculate: (soulId: number) => api.post(`/karma/calculate/${soulId}/`),
+  // Note the ordering: inheritance/ comes before the soul id in the URLconf.
+  inheritance: (soulId: string) => api.get<KarmaInheritance>(`/karma/inheritance/${soulId}/`),
   statsOverview: () => api.get<KarmaStatsOverview>("/karma/stats/overview/"),
   exportStats: (params?: Record<string, string>) => api.get("/karma/stats/export/", { params, responseType: "blob" }),
 };
