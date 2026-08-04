@@ -32,7 +32,7 @@ from apps.judgment.models import Judgment
 from apps.perm.cache import PermissionCache, get_permission_cache
 from apps.perm.checker import check_permission, check_permissions
 from apps.realms.models import Realm, RealmType
-from apps.souls.models import Civilization, Soul, SoulState
+from apps.souls.models import UNKNOWN_CIVILIZATION, Civilization, Soul, SoulState
 from apps.souls.record_models import RecordCategory, RecordType, SoulRecord
 from apps.tenants.models import Tenant
 from apps.workflow.models import (
@@ -157,17 +157,21 @@ class TestWorkflowServiceCivilizations:
         assert error is not None
         assert "not valid" in error
 
-    def test_unknown_civilization_fallback(self, db):
-        """Unknown civilization defaults to CHINESE (per soul.civilization property)."""
+    def test_unrecognised_tenant_code_has_no_civilization(self, db):
+        """An unrecognised tenant code used to resolve to CHINESE, which put a
+        soul from a misconfigured tenant through 十殿审判 and — because Diyu is
+        the one rebirth-capable cosmology here — quietly granted it a next
+        life. It now reports UNKNOWN, and a workflow cannot be built for a
+        cosmology whose courts we do not know."""
         t, _ = Tenant.objects.get_or_create(
             code="UNKNOWN_CIV", defaults={"display_name": "Unknown"}
         )
         soul = self._make_soul(t, "Unknown Soul")
-        assert soul.civilization == Civilization.CHINESE
+        assert soul.civilization == UNKNOWN_CIVILIZATION
+        assert soul.civilization != Civilization.CHINESE
         j = self._make_judgment(soul, t)
-        wf = WorkflowService.create_from_judgment(j)
-        assert wf is not None
-        assert wf.workflow_name == "十殿审判流程"
+        with pytest.raises(ValueError, match="not valid for civilization"):
+            WorkflowService.create_from_judgment(j)
 
     def test_create_appeal_workflow(self, cn_tenant_obj):
         """create_appeal_workflow creates appeal from existing workflow.

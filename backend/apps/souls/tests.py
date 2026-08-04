@@ -8,7 +8,12 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.souls.models import Soul, SoulState
+from apps.souls.models import (
+    UNKNOWN_CIVILIZATION,
+    Civilization,
+    Soul,
+    SoulState,
+)
 from apps.souls.record_models import SoulRecord
 from apps.tenants.models import Tenant
 
@@ -275,3 +280,100 @@ class TestSoulHistoricalDates:
         assert soul.birth_month == 6
         assert soul.birth_day == 15
         assert soul.birth_date is not None
+
+
+@pytest.mark.django_db
+class TestSettledIsTerminal:
+    """SETTLED is where souls whose cosmology has no next life stop.
+
+    See SoulState.SETTLED and Soul.can_transition_to for why nothing — not
+    even LOST — leads out of it.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="SOUL_T6", defaults={"display_name": "Soul Settled Tenant"}
+        )[0]
+
+    def _soul(self, state):
+        return Soul.objects.create(name=f"{state} Soul", tenant=self.tenant, current_state=state)
+
+    def test_disposed_can_settle(self):
+        assert self._soul(SoulState.DISPOSED).can_transition_to(SoulState.SETTLED)
+
+    def test_disposed_keeps_its_other_two_exits(self):
+        soul = self._soul(SoulState.DISPOSED)
+        assert soul.can_transition_to(SoulState.REINCARNATING)
+        assert soul.can_transition_to(SoulState.LOST)
+
+    def test_nothing_leaves_settled(self):
+        soul = self._soul(SoulState.SETTLED)
+        for state in SoulState.values:
+            assert not soul.can_transition_to(state), state
+
+    def test_settled_is_not_reachable_from_anywhere_but_disposed(self):
+        for state in SoulState.values:
+            if state == SoulState.DISPOSED:
+                continue
+            assert not self._soul(state).can_transition_to(SoulState.SETTLED), state
+
+    def test_transition_to_refuses_to_move_a_settled_soul(self):
+        """Guarding can_transition_to is not enough on its own — the write
+        path has to refuse too, because ReincarnationService.execute still
+        asks every disposed soul to become REINCARNATING."""
+        soul = self._soul(SoulState.SETTLED)
+        assert soul.transition_to(SoulState.REINCARNATING, "should not happen") is False
+        soul.refresh_from_db()
+        assert soul.current_state == SoulState.SETTLED
+
+
+@pytest.mark.django_db
+class TestCivilizationGateDoesNotFailOpen:
+    """An unrecognised tenant code must not resolve to a cosmology.
+
+    It used to resolve to CHINESE — the default argument of a dict lookup,
+    not a decision — and CHINESE is the one rebirth-capable cosmology
+    modelled here, so *unknown* silently meant *reborn*.
+    """
+
+    KNOWN = {
+        "CN_DIYU": Civilization.CHINESE,
+        "EU_HEAVEN_HELL": Civilization.EUROPEAN,
+        "EG_DUAT": Civilization.EGYPTIAN,
+    }
+
+    def _soul_in(self, code):
+        tenant = Tenant.objects.get_or_create(
+            code=code, defaults={"display_name": code}
+        )[0]
+        return Soul.objects.create(name=f"{code} Soul", tenant=tenant)
+
+    @pytest.mark.parametrize("code,expected", list(KNOWN.items()))
+    def test_configured_tenant_codes_still_map(self, db, code, expected):
+        assert self._soul_in(code).civilization == expected
+
+    def test_unrecognised_tenant_code_is_unknown_not_chinese(self, db):
+        soul = self._soul_in("GR_HADES_NOT_WIRED_UP_YET")
+        assert soul.civilization == UNKNOWN_CIVILIZATION
+        assert soul.civilization != Civilization.CHINESE
+
+    def test_unknown_is_not_one_of_the_civilization_choices(self, db):
+        """"Unknown" is the absence of an answer, not a fourth afterlife. If it
+        ever becomes a Civilization member it will appear in every dropdown
+        and chart legend built from Civilization.choices."""
+        assert UNKNOWN_CIVILIZATION not in Civilization.values
+
+    def test_unknown_civilization_is_not_rebirth_capable(self, db):
+        """The point of the whole fix. A soul whose cosmology nobody has
+        configured must not be handed a next life on the strength of a typo."""
+        from apps.karma.services import REBIRTH_CAPABLE_CIVILIZATIONS
+
+        assert self._soul_in("MISCONFIGURED").civilization not in REBIRTH_CAPABLE_CIVILIZATIONS
+
+    def test_tenantless_soul_is_unknown_too(self, db):
+        """Soul.save() refuses to create one, but legacy rows exist and the
+        property must not invent a cosmology for them either."""
+        soul = self._soul_in("CN_DIYU")
+        soul.tenant = None
+        assert soul.civilization == UNKNOWN_CIVILIZATION

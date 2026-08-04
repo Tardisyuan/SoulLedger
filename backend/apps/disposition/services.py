@@ -4,6 +4,7 @@ Routes to the correct realm based on civilization and verdict.
 """
 from apps.disposition.models import Disposition
 from apps.judgment.models import Judgment, JudgmentMethod, Verdict
+from apps.karma.services import REBIRTH_CAPABLE_CIVILIZATIONS
 from apps.realms.models import Realm
 from apps.souls.models import Civilization, Soul
 
@@ -102,8 +103,24 @@ class DispositionService:
         elif civilization == Civilization.EGYPTIAN:
             return cls._route_egyptian(soul, verdict, judgment_method, karma)
         else:
-            # Fallback: purgatory
-            return cls.CHINESE_PURGATORY
+            # No cosmology, so no realm. This branch is reached when the
+            # soul's tenant code is not in TENANT_CIVILIZATION — see
+            # UNKNOWN_CIVILIZATION in apps/souls/models.py.
+            #
+            # It used to return CHINESE_PURGATORY, which was the same mistake
+            # the civilization fallback itself was making, one layer down: a
+            # soul nobody could place was quietly filed into a Chinese realm.
+            # Diyu's purgatory is a specific place in a specific afterlife,
+            # not a waiting room for administrative errors, and a soul put
+            # there is not "pending" — it has been assigned somewhere, and the
+            # record will read as if that were deliberate.
+            #
+            # An empty realm code matches no Realm, so the disposition is
+            # created with destination_realm=None. That record is visibly
+            # incomplete, which is what it is: the judgment happened, and
+            # where the soul goes is not answerable until someone configures
+            # the tenant.
+            return ""
 
     @classmethod
     def _route_chinese(cls, soul: Soul, verdict: str, karma: int) -> str:
@@ -232,7 +249,8 @@ class DispositionService:
     @staticmethod
     def execute(disposition: Disposition) -> bool:
         """
-        Mark disposition as executed, trigger reincarnation.
+        Mark disposition as executed and move the soul to whatever comes after
+        its realm — a next life, or nothing at all.
         """
         from django.utils import timezone
 
@@ -242,5 +260,28 @@ class DispositionService:
         disposition.executed_at = timezone.now()
         disposition.save()
 
-        disposition.soul.transition_to(SoulState.REINCARNATING, "Disposition executed")
+        # Not every soul has a next life to be waiting for. This used to send
+        # every executed disposition to REINCARNATING, which put an Egyptian
+        # soul admitted to the Field of Reeds in a state that says it is
+        # queued for rebirth — an outcome its cosmology does not contain. The
+        # rebirth itself was already blocked downstream by
+        # `assert_rebirth_capable`, so nothing was ever actually reborn out of
+        # Aaru; the soul just sat under a label that described someone else's
+        # afterlife.
+        #
+        # The capability question is answered by the same frozenset the karma
+        # gate uses rather than by a second `if civ == CHINESE` here, so that
+        # adding a rebirth-capable civilization stays a one-line change in
+        # apps/karma/services.py and cannot leave the state machine and the
+        # rebirth gate disagreeing about the same soul. GREEK will need
+        # exactly that when it lands — Plato's souls do choose a new life at
+        # the Spindle of Necessity.
+        soul = disposition.soul
+        if soul.civilization in REBIRTH_CAPABLE_CIVILIZATIONS:
+            soul.transition_to(SoulState.REINCARNATING, "Disposition executed")
+        else:
+            soul.transition_to(
+                SoulState.SETTLED,
+                "Disposition executed; this cosmology has no next life",
+            )
         return True
