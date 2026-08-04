@@ -1,0 +1,23 @@
+{
+  "retired_actor": {
+    "id": "67b81102-a180-4cc8-a8d5-81f68281a6cd",
+    "name": "Pluto",
+    "role": "OVERSEER",
+    "civilization": "EUROPEAN",
+    "realm": "EU_HELL_1ST",
+    "title_zh": "冥王普鲁托",
+    "is_deleted": false
+  },
+  "kept_actor": {
+    "id": "4c105d3e-c21f-4a63-ab97-bd70a9fe9286",
+    "name": "Hades",
+    "realm": "EU_HELL_9TH"
+  },
+  "deactivated_user": {
+    "id": 27,
+    "username": "Pluto",
+    "role": "ADMIN",
+    "is_active": true,
+    "actor_id": "67b81102-a180-4cc8-a8d5-81f68281a6cd"
+  }
+}

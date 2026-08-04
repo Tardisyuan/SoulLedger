@@ -1,0 +1,62 @@
+[
+  {
+    "action": "norse_demotion",
+    "before": {
+      "id": "c79ae092-73fc-4174-af0a-2ef92973aa94",
+      "name": "Odin",
+      "civilization": "EUROPEAN",
+      "role": "OVERSEER",
+      "realm_code": "EU_HEAVEN",
+      "tenant_id": 2,
+      "is_deleted": false,
+      "created_at": "2026-05-10T16:07:17.010648+00:00",
+      "references": 1
+    },
+    "after_role": "GUARDIAN"
+  },
+  {
+    "action": "norse_demotion",
+    "before": {
+      "id": "dea8e02d-44fa-467b-aef3-cb48d968aa79",
+      "name": "Freya",
+      "civilization": "EUROPEAN",
+      "role": "JUDGE",
+      "realm_code": "EU_HEAVEN",
+      "tenant_id": 2,
+      "is_deleted": false,
+      "created_at": "2026-05-10T16:07:17.014887+00:00",
+      "references": 1
+    },
+    "after_role": "GUARDIAN"
+  },
+  {
+    "action": "norse_demotion",
+    "before": {
+      "id": "630f6d27-ed21-4504-ae4d-8367b33f5e61",
+      "name": "Hel",
+      "civilization": "EUROPEAN",
+      "role": "OVERSEER",
+      "realm_code": "EU_HELL_9TH",
+      "tenant_id": 2,
+      "is_deleted": false,
+      "created_at": "2026-05-10T16:07:17.019629+00:00",
+      "references": 1
+    },
+    "after_role": "GUARDIAN"
+  },
+  {
+    "action": "norse_demotion",
+    "before": {
+      "id": "cad5c405-82a1-49a6-bb7c-73b42f04207e",
+      "name": "Valkyries",
+      "civilization": "EUROPEAN",
+      "role": "CONDUIT",
+      "realm_code": "EU_HEAVEN",
+      "tenant_id": 2,
+      "is_deleted": false,
+      "created_at": "2026-05-10T16:07:17.023636+00:00",
+      "references": 1
+    },
+    "after_role": "CONDUIT"
+  }
+]
