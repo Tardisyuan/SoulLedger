@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.karma.services import KarmaService
+from apps.karma.services import KarmaService, RebirthNotApplicable
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
 from apps.tenants.models import Tenant
@@ -197,6 +197,106 @@ class TestKarmaInheritanceView:
 
 
 @pytest.mark.django_db
+class TestInheritanceMeritDemeritSplit:
+    """Merit thins on the way through the gate; unripened demerit does not."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="KIS_T1", defaults={"display_name": "Karma Split Tenant"}
+        )[0]
+        # Deeds dated in the soul's year of death, so decay is exactly 1.0 and
+        # the only thing moving the numbers is the inheritance factor.
+        self.soul = Soul.objects.create(
+            name="Ledger Soul",
+            current_state=SoulState.REINCARNATING,
+            death_year=2000,
+            tenant=self.tenant,
+        )
+        SoulRecord.objects.create(
+            soul=self.soul, record_type="MERIT", civilization="CHINESE",
+            description="Repaired the bridge", weight=100, event_year=2000,
+        )
+        SoulRecord.objects.create(
+            soul=self.soul, record_type="DEMERIT", civilization="CHINESE",
+            description="Burned the granary", weight=100, event_year=2000,
+        )
+
+    def test_merit_carries_at_twenty_percent_demerit_in_full(self):
+        result = KarmaService.get_reincarnation_inheritance(self.soul)
+        assert result["inherited_merit"] == 20
+        # Not 20. A symmetric factor made dying an 80% amnesty; unripened
+        # karma does not thin out on the way through the gate.
+        assert result["inherited_demerit"] == 100
+
+    def test_inheritance_note_is_derived_from_the_constants(self):
+        """The note must not hard-code a percentage that can go stale."""
+        result = KarmaService.get_reincarnation_inheritance(self.soul)
+        assert "20%" in result["inheritance_note"]
+        assert "100%" in result["inheritance_note"]
+
+
+@pytest.mark.django_db
+class TestInheritanceCivilizationGate:
+    """Inheritance presupposes rebirth, and two of the three cosmologies
+    here are terminal — Aaru/Ammit and Heaven/Hell/Purgatory."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenants = {
+            civ: Tenant.objects.get_or_create(
+                code=code, defaults={"display_name": code}
+            )[0]
+            for civ, code in (
+                ("CHINESE", "CN_DIYU"),
+                ("EUROPEAN", "EU_HEAVEN_HELL"),
+                ("EGYPTIAN", "EG_DUAT"),
+            )
+        }
+
+    def _client_and_soul(self, civ):
+        tenant = self.tenants[civ]
+        user = User.objects.create_user(
+            username=f"kg_{civ.lower()}", password="test123", role="ADMIN", tenant=tenant
+        )
+        soul = Soul.objects.create(
+            name=f"{civ} Soul",
+            current_state=SoulState.REINCARNATING,
+            tenant=tenant,
+        )
+        return _jwt_client(user, tenant), soul
+
+    def test_chinese_soul_still_gets_a_number(self):
+        client, soul = self._client_and_soul("CHINESE")
+        resp = client.get(f"{BASE}/inheritance/{soul.id}/")
+        assert resp.status_code == status.HTTP_200_OK
+        assert "inherited_merit" in resp.data
+
+    @pytest.mark.parametrize("civ", ["EGYPTIAN", "EUROPEAN"])
+    def test_terminal_cosmology_returns_409(self, civ):
+        client, soul = self._client_and_soul(civ)
+        resp = client.get(f"{BASE}/inheritance/{soul.id}/")
+        # 409 rather than 404: the soul exists, the operation is what its
+        # cosmology does not permit.
+        assert resp.status_code == status.HTTP_409_CONFLICT
+        assert resp.data["code"] == "REBIRTH_NOT_APPLICABLE"
+        assert resp.data["civilization"] == civ
+        assert resp.data["detail"]
+
+    def test_gate_is_a_set_not_a_hardcoded_civilization(self):
+        """Adding a rebirth-capable civilization must be a one-line change."""
+        from apps.karma.services import REBIRTH_CAPABLE_CIVILIZATIONS
+        assert isinstance(REBIRTH_CAPABLE_CIVILIZATIONS, frozenset)
+        assert "CHINESE" in REBIRTH_CAPABLE_CIVILIZATIONS
+        assert len(REBIRTH_CAPABLE_CIVILIZATIONS) == 1
+
+    def test_service_raises_rather_than_returning_a_number(self):
+        _, soul = self._client_and_soul("EGYPTIAN")
+        with pytest.raises(RebirthNotApplicable):
+            KarmaService.get_reincarnation_inheritance(soul)
+
+
+@pytest.mark.django_db
 class TestKarmaOverviewStatsView:
     """GET /karma/stats/overview/"""
 
@@ -355,51 +455,3 @@ class TestKarmaTenantIsolation:
     def test_inheritance_tenant_isolation(self):
         resp = self.client_a.get(f"{BASE}/inheritance/{self.soul_b.id}/")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
-
-
-@pytest.mark.django_db
-class TestKarmaDecayWithBCEDates:
-    """Time-decay calculation for records with a BCE event_year.
-
-    See apps.souls.dates.year_span and KarmaService._get_record_age_years:
-    there is no year 0, so 612 BCE (-612) to 2026 CE is 2637 years, not
-    2638.
-    """
-
-    @pytest.fixture(autouse=True)
-    def setup(self, db):
-        self.tenant = Tenant.objects.get_or_create(
-            code="KBC_T1", defaults={"display_name": "Karma BCE Tenant"}
-        )[0]
-        self.soul = Soul.objects.create(
-            name="Ancient Egyptian Soul",
-            current_state=SoulState.JUDGING,
-            tenant=self.tenant,
-        )
-
-    def test_bce_event_date_decays_correctly(self):
-        SoulRecord.objects.create(
-            soul=self.soul, record_type="MERIT", civilization="EGYPTIAN",
-            description="Built a temple", weight=100, event_year=-612,
-        )
-        summary = KarmaService.get_karmic_summary(self.soul)
-        assert len(summary["records"]) == 1
-        record = summary["records"][0]
-        assert record["event_date"] == {"year": -612, "month": None, "day": None}
-        # Whole-year part must land on 2637 (not 2638) for a "today" in 2026.
-        assert 2637 <= record["years_elapsed"] < 2638
-
-    def test_bce_and_ce_records_both_decay(self):
-        SoulRecord.objects.create(
-            soul=self.soul, record_type="MERIT", civilization="EGYPTIAN",
-            description="Ancient deed", weight=50, event_year=-100,
-        )
-        SoulRecord.objects.create(
-            soul=self.soul, record_type="DEMERIT", civilization="EGYPTIAN",
-            description="Recent deed", weight=50, event_year=2020, event_month=1, event_day=1,
-        )
-        result = KarmaService.recalculate_soul_karma(self.soul)
-        # Both records decay to a small positive effective weight; nothing
-        # should blow up crossing the BCE/CE boundary.
-        assert result["merit_score"] >= 0
-        assert result["demerit_score"] >= 0

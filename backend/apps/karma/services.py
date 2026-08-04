@@ -6,14 +6,88 @@ import math
 
 from django.core.cache import cache
 from django.utils import timezone
+from rest_framework import status
+from rest_framework.exceptions import APIException
 
 from apps.karma.models import SoulRecord  # noqa: F401 — re-exported from souls for BC
 from apps.souls.dates import year_span
-from apps.souls.models import Soul
+from apps.souls.models import Civilization, Soul
 
 KARMA_CACHE_TTL = 60 * 5  # 5 minutes
-INHERITANCE_FACTOR = 0.2
 DECAY_RATE = 0.01  # per year
+
+# Fraction of a life's ledger that follows the soul through the gate.
+#
+# Merit thins. That number is product-invented — no tradition surveyed puts a
+# coefficient on carryover — and it is kept at 0.2 because a rebirth needs to
+# feel like a fresh start to be worth playing for.
+INHERITANCE_MERIT = 0.2
+# Demerit does not thin. Unripened karma carries at full strength: this is not
+# a game-balance number, it is the one point Buddhism is unambiguous about —
+# kamma that has not yet ripened does not weaken on the way through the gate,
+# and *aparāpariya-vedanīya* kamma (effective in any subsequent life) is
+# explicitly stated never to lapse while saṃsāra continues.
+#
+# The symmetric 0.2 this replaces made reincarnation an 80% amnesty on
+# everything: a mass murderer's ledger was cut by four fifths by the mere fact
+# of dying, and it compounded across cycles (0.2 → 0.04 → 0.008), so three
+# lives erased anything at all.
+INHERITANCE_DEMERIT = 1.0
+
+# Inheritance presupposes rebirth, and only one of the three cosmologies here
+# has one. Egyptian judgment ends at Aaru or Ammit; European (Dante) judgment
+# ends at Heaven, Hell, or Purgatory-then-Heaven, and Purgatorio empties
+# upward, never back into a new life. Held as a set rather than an
+# `if civ == CHINESE` so that adding a rebirth-capable civilization is one
+# line — GREEK is planned, and Plato's souls do choose a new life at the
+# Spindle of Necessity (Republic X, 617d-620d).
+REBIRTH_CAPABLE_CIVILIZATIONS = frozenset({Civilization.CHINESE})
+
+# TODO(i18n): the reasons below and `inheritance_note` in
+# get_reincarnation_inheritance are user-facing copy hard-coded in the service
+# layer, which is the wrong place for it — it cannot be localised, and the
+# frontend message catalogues already carry their own (already stale) copies of
+# the same sentences. This belongs in the i18n catalogues; a later pass owns
+# the copy.
+TERMINAL_COSMOLOGY_REASON = {
+    Civilization.EGYPTIAN: (
+        "Egyptian judgment is terminal: the heart is weighed once and the soul "
+        "either enters Aaru or is devoured by Ammit. There is no next life to "
+        "inherit into."
+    ),
+    Civilization.EUROPEAN: (
+        "European (Dante) judgment is terminal: Heaven, Hell, or Purgatory and "
+        "then Heaven. There is no next life to inherit into."
+    ),
+}
+
+
+class RebirthNotApplicable(APIException):
+    """The soul's cosmology has no next life, so inheritance is meaningless.
+
+    409 rather than 404: the soul exists and reads back perfectly well, it is
+    the *operation* that its cosmology does not permit. Returning a number here
+    would be a well-formed answer to a question the cosmology forbids asking.
+
+    Subclasses DRF's APIException so that any DRF view raising it — including
+    the reincarnation viewset, which has no handler of its own — answers 409
+    rather than 500.
+    """
+
+    status_code = status.HTTP_409_CONFLICT
+    default_code = "REBIRTH_NOT_APPLICABLE"
+
+    def __init__(self, soul: Soul):
+        civilization = str(soul.civilization)
+        super().__init__({
+            "code": self.default_code,
+            "civilization": civilization,
+            "detail": TERMINAL_COSMOLOGY_REASON.get(
+                soul.civilization,
+                f"{civilization} judgment is terminal; there is no next life "
+                f"to inherit into.",
+            ),
+        })
 
 
 class KarmaService:
@@ -37,25 +111,75 @@ class KarmaService:
         return datetime.date(2001, month, day or 15).timetuple().tm_yday
 
     @staticmethod
-    def _get_record_age_years(event_year, event_month, event_day, recorded_at) -> float:
+    def _get_decay_anchor(soul: Soul) -> tuple:
+        """The date this soul's ledger stops moving — what decay measures *to*.
+
+        A life's deeds are weighed against each other from the vantage point of
+        that life's end, not of the observer's calendar. Measuring to today
+        made decay a function of how long ago the *civilization* was rather
+        than of anything the soul did: at DECAY_RATE = 0.01 a 612 BCE deed
+        retains 3.5e-12 of its weight, so every ancient soul scored 0 merit and
+        0 demerit, and disposition/services.py's `karma >= 0` then routed it
+        straight to heaven. Decay did not make old souls weightless, it made
+        them saints.
+
+        Anchored to death, the same rate expresses the only thing decay was
+        ever for — recency *within* a life — and a soul who lived seventy years
+        gets the identical gradient whether it died in 612 BCE or 2020 CE.
+        Scores also stop drifting under the nightly recalculate task, so a
+        verdict rendered in 2020 can still be re-derived in 2026.
+
+        Living souls (death_year is None) keep measuring to today. That is
+        correct for them: their story is still running.
+
+        A soul whose current_state says dead but which carries no death year
+        lands in the same branch and measures to today. That fallback is
+        deliberate, not incidental — we have no anchor, and inventing one (the
+        judgment date, the record's own timestamp) would bake a fabricated date
+        into every score derived from it. Today is at least the old, known
+        behaviour.
         """
-        Calculate age in years since the record's event date, or
-        recorded_at if no event date was given.
+        if soul.death_year is not None:
+            return soul.death_year, soul.death_month, soul.death_day
+        today = timezone.now().date()
+        return today.year, today.month, today.day
+
+    @staticmethod
+    def _get_record_age_years(event_year, event_month, event_day, recorded_at, anchor) -> float:
+        """
+        Years from the record's event date — or recorded_at, if no event date
+        was given — to ``anchor``. See _get_decay_anchor for what the anchor is.
 
         event_year/month/day follow the historical (no year 0) convention
         from apps.souls.dates — a negative year is BCE. The whole-year part
-        of the span accounts for the missing year 0 (e.g. 612 BCE to 2026 CE
-        is 2637 years, not 2638); the fractional part is estimated from
-        day-of-year so decay still moves smoothly day-to-day.
+        of the span accounts for the missing year 0 (e.g. 612 BCE to 2 CE is
+        613 years, not 614); the fractional part is estimated from day-of-year
+        so decay still moves smoothly day-to-day for a living soul.
+
+        Never returns a negative span. A deed dated after the anchor is either
+        a data error or a posthumous record, and e^(-r·y) with a negative y
+        *amplifies* a weight instead of decaying it — a deed 50 years after
+        death would count 1.65× its original. Decay may reduce a deed's weight;
+        it must never inflate it, so the span is clamped at 0 and the decay
+        factor can never exceed 1.0.
         """
-        today = timezone.now().date()
-        if event_year is not None:
-            whole_years = year_span(event_year, today.year)
-            fraction = (today.timetuple().tm_yday - KarmaService._day_of_year(event_month, event_day)) / 365.25
-            return whole_years + fraction
-        reference_date = recorded_at.date() if hasattr(recorded_at, 'date') else recorded_at
-        delta = today - reference_date
-        return delta.days / 365.25
+        anchor_year, anchor_month, anchor_day = anchor
+
+        if event_year is None:
+            # No event date on the record — fall back to when it was written
+            # down, as before. recorded_at is always a CE timestamp, but the
+            # anchor may well be BCE, so route it through the same year_span
+            # path rather than subtracting two datetime.dates (which cannot
+            # represent a BCE anchor at all).
+            reference = recorded_at.date() if hasattr(recorded_at, 'date') else recorded_at
+            event_year, event_month, event_day = reference.year, reference.month, reference.day
+
+        whole_years = year_span(event_year, anchor_year)
+        fraction = (
+            KarmaService._day_of_year(anchor_month, anchor_day)
+            - KarmaService._day_of_year(event_month, event_day)
+        ) / 365.25
+        return max(0.0, whole_years + fraction)
 
     @staticmethod
     def _decay_weight(original_weight: int, years: float) -> float:
@@ -73,12 +197,15 @@ class KarmaService:
         old_merit = soul.merit_score
 
         records = soul.records.all()
+        anchor = cls._get_decay_anchor(soul)
 
         merit = 0
         demerit = 0
 
         for r in records:
-            years = cls._get_record_age_years(r.event_year, r.event_month, r.event_day, r.recorded_at)
+            years = cls._get_record_age_years(
+                r.event_year, r.event_month, r.event_day, r.recorded_at, anchor
+            )
             effective_weight = cls._decay_weight(r.weight, years)
 
             if r.record_type == "MERIT":
@@ -117,13 +244,16 @@ class KarmaService:
             return cached
 
         records = soul.records.all().order_by("-recorded_at")
+        anchor = cls._get_decay_anchor(soul)
 
         merit = 0
         demerit = 0
         record_summaries = []
 
         for r in records:
-            years = cls._get_record_age_years(r.event_year, r.event_month, r.event_day, r.recorded_at)
+            years = cls._get_record_age_years(
+                r.event_year, r.event_month, r.event_day, r.recorded_at, anchor
+            )
             effective_weight = cls._decay_weight(r.weight, years)
             effective_weight = round(effective_weight, 2)
 
@@ -193,15 +323,37 @@ class KarmaService:
         }
 
     @classmethod
+    def assert_rebirth_capable(cls, soul: Soul) -> None:
+        """Raise RebirthNotApplicable unless this soul's cosmology has a next life.
+
+        The single gate for both the reporting endpoint and the reincarnation
+        service, so the API cannot answer "no rebirth here" while the rebirth
+        machinery quietly goes ahead anyway.
+        """
+        if soul.civilization not in REBIRTH_CAPABLE_CIVILIZATIONS:
+            raise RebirthNotApplicable(soul)
+
+    @classmethod
     def get_reincarnation_inheritance(cls, soul: Soul) -> dict:
         """
-        Calculate what karma is passed to next life.
-        Per spec: merit_score × 0.2, demerit_score × 0.2
+        Calculate what karma is passed to the next life:
+        merit × INHERITANCE_MERIT, demerit × INHERITANCE_DEMERIT.
+
+        Raises RebirthNotApplicable (409) for a terminal cosmology.
         """
+        cls.assert_rebirth_capable(soul)
         effective = cls.get_effective_karma(soul)
         return {
             "soul_id": str(soul.id),
-            "inherited_merit": round(effective["effective_merit"] * INHERITANCE_FACTOR),
-            "inherited_demerit": round(effective["effective_demerit"] * INHERITANCE_FACTOR),
-            "inheritance_note": "20% of effective karma passes to next incarnation",
+            "inherited_merit": round(effective["effective_merit"] * INHERITANCE_MERIT),
+            "inherited_demerit": round(effective["effective_demerit"] * INHERITANCE_DEMERIT),
+            # TODO(i18n): user-facing copy does not belong in the service
+            # layer — see TERMINAL_COSMOLOGY_REASON above. Derived from the
+            # constants rather than hard-coding "20%" so it can't go stale
+            # against them the way the frontend catalogues already have.
+            "inheritance_note": (
+                f"{INHERITANCE_MERIT:.0%} of effective merit passes to the next "
+                f"incarnation; unripened demerit carries in full "
+                f"({INHERITANCE_DEMERIT:.0%})."
+            ),
         }
