@@ -168,8 +168,13 @@ class TestKarmaInheritanceView:
 
     @pytest.fixture(autouse=True)
     def setup(self, db):
+        # CN_DIYU, not an invented code: inheritance only means anything for a
+        # cosmology that has a next life, and the tenant code is what says
+        # which cosmology this is. An unrecognised code used to fall through
+        # to CHINESE, so this fixture passed by accident — see
+        # UNKNOWN_CIVILIZATION in apps/souls/models.py.
         self.tenant = Tenant.objects.get_or_create(
-            code="KI_T1", defaults={"display_name": "Karma Inherit Tenant"}
+            code="CN_DIYU", defaults={"display_name": "Chinese Diyu"}
         )[0]
         self.user = User.objects.create_user(
             username="ki_user", password="test123", role="ADMIN", tenant=self.tenant
@@ -202,8 +207,11 @@ class TestInheritanceMeritDemeritSplit:
 
     @pytest.fixture(autouse=True)
     def setup(self, db):
+        # CN_DIYU for the same reason as TestKarmaInheritanceView above: a
+        # merit/demerit carryover split is only defined where there is
+        # something to carry into.
         self.tenant = Tenant.objects.get_or_create(
-            code="KIS_T1", defaults={"display_name": "Karma Split Tenant"}
+            code="CN_DIYU", defaults={"display_name": "Chinese Diyu"}
         )[0]
         # Deeds dated in the soul's year of death, so decay is exactly 1.0 and
         # the only thing moving the numbers is the inheritance factor.

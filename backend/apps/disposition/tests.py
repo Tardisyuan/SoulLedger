@@ -10,8 +10,11 @@ to zero.
 """
 from django.test import TestCase
 
+from apps.disposition.models import Disposition
 from apps.disposition.services import DispositionService
 from apps.judgment.models import JudgmentMethod, Verdict
+from apps.souls.models import Civilization, Soul, SoulState
+from apps.tenants.models import Tenant
 
 
 class ChineseRoutingTest(TestCase):
@@ -216,3 +219,99 @@ class EgyptianHeartWeighingRoutingTest(TestCase):
                     ),
                     DispositionService.EG_DUAT_ENTRY,
                 )
+
+
+class ExecuteTerminalStateTest(TestCase):
+    """Executing a disposition must not claim a rebirth the cosmology lacks.
+
+    `execute` used to send every soul to REINCARNATING. For the two terminal
+    cosmologies that was a label describing an afterlife the soul was never
+    going to have — the rebirth was already blocked downstream, so the state
+    was the only thing saying otherwise.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.tenants = {
+            Civilization.CHINESE: Tenant.objects.create(
+                code="CN_DIYU", display_name="Chinese Diyu"
+            ),
+            Civilization.EUROPEAN: Tenant.objects.create(
+                code="EU_HEAVEN_HELL", display_name="European Heaven/Hell"
+            ),
+            Civilization.EGYPTIAN: Tenant.objects.create(
+                code="EG_DUAT", display_name="Egyptian Duat"
+            ),
+        }
+
+    def _disposed_soul(self, civilization):
+        return Soul.objects.create(
+            name=f"{civilization} soul",
+            tenant=self.tenants[civilization],
+            current_state=SoulState.DISPOSED,
+        )
+
+    def _execute_for(self, civilization):
+        soul = self._disposed_soul(civilization)
+        DispositionService.execute(Disposition.objects.create(soul=soul, tenant=soul.tenant))
+        soul.refresh_from_db()
+        return soul
+
+    def test_chinese_soul_still_goes_to_reincarnating(self):
+        """Diyu is the one cosmology here that has a next life."""
+        self.assertEqual(
+            self._execute_for(Civilization.CHINESE).current_state,
+            SoulState.REINCARNATING,
+        )
+
+    def test_terminal_cosmologies_settle_instead_of_reincarnating(self):
+        for civilization in (Civilization.EUROPEAN, Civilization.EGYPTIAN):
+            with self.subTest(civilization=civilization):
+                self.assertEqual(
+                    self._execute_for(civilization).current_state,
+                    SoulState.SETTLED,
+                )
+
+    def test_disposition_is_still_marked_executed_for_terminal_souls(self):
+        """The soul's route changed; the disposition bookkeeping did not."""
+        soul = self._disposed_soul(Civilization.EGYPTIAN)
+        disposition = Disposition.objects.create(soul=soul, tenant=soul.tenant)
+        self.assertTrue(DispositionService.execute(disposition))
+        disposition.refresh_from_db()
+        self.assertTrue(disposition.is_executed)
+        self.assertIsNotNone(disposition.executed_at)
+
+    def test_soul_with_no_known_cosmology_does_not_reincarnate(self):
+        """An unrecognised tenant code used to resolve to CHINESE and so
+        earned the soul a next life. SETTLED is the wrong answer too, strictly
+        — we do not know that this soul's cosmology is terminal — but of the
+        two available states it is the one that does not hand out an afterlife
+        nobody has established. The real fix is configuring the tenant."""
+        tenant = Tenant.objects.create(code="GR_HADES_TBD", display_name="Not wired up")
+        soul = Soul.objects.create(
+            name="Unplaced", tenant=tenant, current_state=SoulState.DISPOSED
+        )
+        DispositionService.execute(Disposition.objects.create(soul=soul, tenant=tenant))
+        soul.refresh_from_db()
+        self.assertEqual(soul.current_state, SoulState.SETTLED)
+
+
+class UnknownCivilizationRoutingTest(TestCase):
+    """A soul whose tenant code names no cosmology gets no realm."""
+
+    def test_unknown_civilization_routes_to_no_realm(self):
+        tenant = Tenant.objects.create(code="NOT_A_COSMOLOGY", display_name="?")
+        soul = Soul.objects.create(name="Unplaced", tenant=tenant)
+        for verdict in (Verdict.PASSED, Verdict.FAILED, Verdict.PURGATORY, Verdict.RETRY):
+            with self.subTest(verdict=verdict):
+                self.assertEqual(DispositionService._route_to_realm(soul, verdict), "")
+
+    def test_unknown_civilization_is_not_filed_into_a_chinese_realm(self):
+        """The regression: the fallback used to be CHINESE_PURGATORY, which
+        assigned an unplaceable soul to a real place in someone's afterlife."""
+        tenant = Tenant.objects.create(code="NOT_A_COSMOLOGY_2", display_name="?")
+        soul = Soul.objects.create(name="Unplaced", tenant=tenant)
+        self.assertNotEqual(
+            DispositionService._route_to_realm(soul, Verdict.PURGATORY),
+            DispositionService.CHINESE_PURGATORY,
+        )
