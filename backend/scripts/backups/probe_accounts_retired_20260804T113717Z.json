@@ -1,0 +1,20 @@
+[
+  {
+    "id": 104,
+    "username": "__probe_eu_user__",
+    "role": "MODERATOR",
+    "tenant": "EU_HEAVEN_HELL",
+    "is_active": true,
+    "souls_created": 5,
+    "note": "temporary account for seeding EU/EG souls through the tenant-scoped API"
+  },
+  {
+    "id": 105,
+    "username": "__probe_eg_user__",
+    "role": "MODERATOR",
+    "tenant": "EG_DUAT",
+    "is_active": true,
+    "souls_created": 4,
+    "note": "temporary account for seeding EU/EG souls through the tenant-scoped API"
+  }
+]
