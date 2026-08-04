@@ -32,7 +32,7 @@ def _format_death_date(soul: Soul) -> str:
 
 class KarmaBalanceView(APIView):
     """
-    GET /karma/{soul_id}/balance/
+    GET /karma/balance/{soul_id}/
 
     Returns karmic summary with time-decay for a soul. Cached 5min.
     Tenant-isolated via TenantManager.
@@ -58,7 +58,7 @@ class KarmaBalanceView(APIView):
 
 class KarmaRecalculateView(APIView):
     """
-    POST /karma/{soul_id}/recalculate/
+    POST /karma/calculate/{soul_id}/
 
     Recalculates and persists karmic scores for a soul. Tenant-isolated.
     """
@@ -83,7 +83,7 @@ class KarmaRecalculateView(APIView):
 
 class KarmaEffectiveView(APIView):
     """
-    GET /karma/{soul_id}/effective/
+    GET /karma/effective/{soul_id}/
 
     Returns effective karma with time decay applied.
     Used for disposition decisions.
@@ -109,7 +109,7 @@ class KarmaEffectiveView(APIView):
 
 class KarmaInheritanceView(APIView):
     """
-    GET /karma/{soul_id}/inheritance/
+    GET /karma/inheritance/{soul_id}/
 
     Returns the karma a soul carries into its next life: merit at
     KarmaService.INHERITANCE_MERIT, demerit at INHERITANCE_DEMERIT.

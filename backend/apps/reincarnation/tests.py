@@ -6,9 +6,10 @@ tests live in tests/test_reincarnation_api.py.
 """
 import pytest
 
-from apps.karma.services import RebirthNotApplicable
+from apps.karma.services import KarmaService, RebirthNotApplicable
 from apps.reincarnation.services import ReincarnationService
 from apps.souls.models import Soul, SoulState
+from apps.souls.record_models import SoulRecord
 from apps.tenants.models import Tenant
 
 
@@ -26,12 +27,39 @@ def _soul_ready_for_rebirth(tenant, merit, demerit):
     )
 
 
+def _soul_with_karma_records(tenant, merit_weight, demerit_weight, death_year=2000):
+    """A dead soul whose effective karma comes from real SoulRecords dated
+    at death (decay_factor exactly 1.0), not from a merit_score/demerit_score
+    set by hand — complete_rebirth now carries over what the records say,
+    not the denormalised fields, so tests that want an exact carryover
+    number have to earn it the same way. Mirrors
+    apps.karma.tests.TestInheritanceMeritDemeritSplit's setup.
+    """
+    soul = Soul.objects.create(
+        name="Carryover Soul",
+        current_state=SoulState.REINCARNATING,
+        death_year=death_year,
+        tenant=tenant,
+    )
+    if merit_weight:
+        SoulRecord.objects.create(
+            soul=soul, record_type="MERIT", civilization="CHINESE",
+            description="Merit deed", weight=merit_weight, event_year=death_year,
+        )
+    if demerit_weight:
+        SoulRecord.objects.create(
+            soul=soul, record_type="DEMERIT", civilization="CHINESE",
+            description="Demerit deed", weight=demerit_weight, event_year=death_year,
+        )
+    return soul
+
+
 @pytest.mark.django_db
 class TestKarmaCarryover:
-    """The rebirth math and the reporting endpoint must share one constant."""
+    """The rebirth math and the reporting endpoint must share one basis."""
 
     def test_merit_thins_and_demerit_carries_in_full(self):
-        soul = _soul_ready_for_rebirth(_tenant("CN_DIYU"), merit=100, demerit=100)
+        soul = _soul_with_karma_records(_tenant("CN_DIYU"), merit_weight=100, demerit_weight=100)
         ReincarnationService.complete_rebirth(soul=soul, new_identity="Reborn")
         soul.refresh_from_db()
         assert soul.merit_score == 20
@@ -41,19 +69,64 @@ class TestKarmaCarryover:
     def test_demerit_does_not_erode_across_cycles(self):
         """0.2 → 0.04 → 0.008 used to let three lives erase anything."""
         tenant = _tenant("CN_DIYU")
-        soul = _soul_ready_for_rebirth(tenant, merit=0, demerit=1000)
+        soul = _soul_with_karma_records(tenant, merit_weight=0, demerit_weight=1000)
         for cycle in range(3):
             soul.current_state = SoulState.REINCARNATING
+            # complete_rebirth clears death_year on the way out (rebirth
+            # resets the soul to ALIVE); put it back before each cycle so
+            # the demerit record's decay_factor stays 1.0 and this loop is
+            # only ever exercising INHERITANCE_DEMERIT, not the unrelated
+            # (and, for a soul with no death date, calendar-drifting) decay
+            # measured against today.
+            soul.death_year = 2000
             soul.save()
             ReincarnationService.complete_rebirth(soul=soul, new_identity=f"Life {cycle}")
             soul.refresh_from_db()
         assert soul.demerit_score == 1000
 
-    def test_uses_the_karma_service_constants_not_local_literals(self):
-        from apps.karma.services import INHERITANCE_DEMERIT, INHERITANCE_MERIT
-        from apps.reincarnation import services as reincarnation_services
-        assert reincarnation_services.INHERITANCE_MERIT is INHERITANCE_MERIT
-        assert reincarnation_services.INHERITANCE_DEMERIT is INHERITANCE_DEMERIT
+    def test_rebirth_applies_exactly_what_the_inheritance_endpoint_reports(self):
+        """The invariant the two used to violate: same soul, same moment,
+        same number — whether you ask for it or whether it gets applied.
+
+        Denormalised merit_score/demerit_score are forced out of sync with
+        the records here (bypassing Soul.save(), the same way a soft-deleted
+        or edited record — which doesn't re-trigger SoulRecord's own
+        recalculation hook — or a stale nightly karma.recalculate_all run
+        would leave them) specifically because that drift is what the old
+        complete_rebirth read from. Against the pre-fix code this test fails:
+        it multiplied the stale 9999/9999 by INHERITANCE_MERIT/DEMERIT
+        instead of going through get_reincarnation_inheritance, landing on
+        2000/9999 instead of 20/50.
+        """
+        tenant = _tenant("CN_DIYU")
+        soul = Soul.objects.create(
+            name="Drifted Soul",
+            current_state=SoulState.REINCARNATING,
+            death_year=2000,
+            tenant=tenant,
+        )
+        SoulRecord.objects.create(
+            soul=soul, record_type="MERIT", civilization="CHINESE",
+            description="Repaired the bridge", weight=100, event_year=2000,
+        )
+        SoulRecord.objects.create(
+            soul=soul, record_type="DEMERIT", civilization="CHINESE",
+            description="Burned the granary", weight=50, event_year=2000,
+        )
+        Soul.objects.filter(pk=soul.pk).update(merit_score=9999, demerit_score=9999)
+        soul.refresh_from_db()
+        assert soul.merit_score == 9999
+        assert soul.demerit_score == 9999
+
+        reported = KarmaService.get_reincarnation_inheritance(soul)
+        assert reported["inherited_merit"] == 20
+        assert reported["inherited_demerit"] == 50
+
+        ReincarnationService.complete_rebirth(soul=soul, new_identity="Reborn Again")
+        soul.refresh_from_db()
+
+        assert soul.merit_score == reported["inherited_merit"] == 20
+        assert soul.demerit_score == reported["inherited_demerit"] == 50
 
 
 @pytest.mark.django_db
