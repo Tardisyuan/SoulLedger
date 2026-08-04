@@ -2,7 +2,7 @@
 Reincarnation service — executes rebirth cycles.
 """
 from apps.disposition.models import Disposition
-from apps.karma.services import INHERITANCE_DEMERIT, INHERITANCE_MERIT, KarmaService
+from apps.karma.services import KarmaService
 from apps.souls.models import Soul, SoulState
 
 
@@ -87,14 +87,28 @@ class ReincarnationService:
                 # Partial reset: keep birth_name, clear description
                 soul.description = ""
 
-            # Apply karma carryover. These were hard-coded 0.2 literals with no
-            # import, so the constants moved the *reported* inheritance while
-            # the actual rebirth math stayed where it was; they now share one
-            # source of truth with KarmaService.get_reincarnation_inheritance.
-            # round() rather than the old int(): truncating here while the
-            # endpoint rounded meant the two disagreed by one on odd scores.
-            soul.merit_score = round(soul.merit_score * INHERITANCE_MERIT)
-            soul.demerit_score = round(soul.demerit_score * INHERITANCE_DEMERIT)
+            # Apply karma carryover. This used to multiply soul.merit_score /
+            # soul.demerit_score directly — the *denormalised* fields that
+            # only recalculate_soul_karma writes, refreshed live on every new
+            # SoulRecord but otherwise only by the nightly
+            # karma.recalculate_all task. GET /karma/inheritance/<soul_id>/
+            # (get_reincarnation_inheritance) never reads those fields at
+            # all; it recomputes from the soul's records every time. The two
+            # bases agreed only when the denormalised fields happened to be
+            # fresh, so the endpoint could report one carryover number while
+            # rebirth quietly applied another.
+            #
+            # Calling get_reincarnation_inheritance() here instead of
+            # re-deriving the same arithmetic makes this the same call the
+            # endpoint makes — not just the same inputs, the same function —
+            # so there is no way for the two to drift again, including
+            # through get_karmic_summary's 5-minute Redis cache: whichever
+            # value (fresh or cached) the endpoint would hand back right now
+            # is exactly the value applied here. A soul with no records at
+            # all inherits 0/0, same as the endpoint would report for it.
+            inheritance = KarmaService.get_reincarnation_inheritance(soul)
+            soul.merit_score = inheritance["inherited_merit"]
+            soul.demerit_score = inheritance["inherited_demerit"]
 
             # Reset soul to ALIVE with new identity
             soul.name = new_identity or soul.name
