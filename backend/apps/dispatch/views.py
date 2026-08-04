@@ -1,13 +1,14 @@
 """
 REST views for dispatch app.
 """
+from django.db import IntegrityError
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.actors.models import Actor
-from apps.core.mixins import TenantCreateMixin
 from apps.core.permissions import TenantPermission
+from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.dispatch.filters import DispatchFilter
 from apps.dispatch.models import CrossTenantJudgment, DispatchRecord, DispatchStatus
@@ -24,7 +25,7 @@ from apps.dispatch.services import CrossTenantJudgmentService, DispatchService
 from apps.tenants.models import Tenant
 
 
-class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
+class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     DispatchRecord CRUD + actions.
     """
@@ -61,6 +62,53 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         if self.action == "list":
             return DispatchRecordListSerializer
         return DispatchRecordSerializer
+
+    def create(self, request, *args, **kwargs):
+        """
+        Route creation through DispatchService.propose() instead of the
+        default ModelViewSet.create() -> serializer.save() path, so the
+        business checks it runs (soul belongs to source_tenant, no active
+        dispatch for the soul) are enforced before hitting the DB, and its
+        side effects (dispatched_by/status/tenant set correctly, target-tenant
+        notification, SoulEvent log) actually happen. dispatched_by and status
+        are ignored if present in the request body — propose() always sets
+        dispatched_by=request.user and status=PROPOSED, so they can't be
+        spoofed via payload.
+
+        The app-level "no active dispatch" check in propose() can't fully
+        replace the DB's unique_active_dispatch constraint (models.py:86-91):
+        two concurrent requests for the same soul can both pass the app-level
+        check before either commits, so the DB constraint is still the source
+        of truth. IntegrityError from that race is caught here and turned
+        into the same 400 response as the ordinary duplicate case.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated = serializer.validated_data
+
+        set_current_user(request.user)
+        set_current_request(request)
+        try:
+            dispatch_record = DispatchService.propose(
+                validated.get("source_tenant"),
+                validated.get("target_tenant"),
+                validated.get("soul"),
+                request.user,
+                validated.get("reason", ""),
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except IntegrityError:
+            return Response(
+                {"error": "An active dispatch already exists for this soul"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        finally:
+            clear_current_user()
+
+        output_serializer = DispatchRecordSerializer(dispatch_record)
+        headers = self.get_success_headers(output_serializer.data)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(detail=False, methods=["get"])
     def proposed(self, request):
