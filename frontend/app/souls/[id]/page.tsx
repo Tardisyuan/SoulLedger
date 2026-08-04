@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -21,6 +22,7 @@ import {
   KarmaRecord,
   SoulRecord,
 } from "@/lib/api";
+import { karmaApi, type KarmaInheritance } from "@/lib/api/karma";
 import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
@@ -74,6 +76,29 @@ export default function SoulDetailPage() {
 
   const updateSoulMutation = useUpdateSoul();
   const deleteSoulMutation = useDeleteSoul();
+
+  // 409 REBIRTH_NOT_APPLICABLE means this soul's cosmology is terminal
+  // (Egyptian judgment ending at Aaru/Ammit, European ending at
+  // Heaven/Hell/Purgatory-then-Heaven) — there is no next life, so that's
+  // treated as a normal "no data" result (null) rather than a query error.
+  // That keeps it out of retry and error-toast paths entirely.
+  const inheritanceQuery = useQuery({
+    queryKey: ["souls", "inheritance", id],
+    queryFn: async (): Promise<KarmaInheritance | null> => {
+      try {
+        const res = await karmaApi.inheritance(id);
+        return res.data;
+      } catch (e: unknown) {
+        const err = e as { response?: { status?: number } };
+        if (err?.response?.status === 409) {
+          return null;
+        }
+        throw e;
+      }
+    },
+    enabled: !!id,
+    staleTime: 30_000,
+  });
 
   const loadSoulData = useCallback(async () => {
     setLoading(true);
@@ -390,23 +415,12 @@ export default function SoulDetailPage() {
                     <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-2">{t("karma.timeline")} ({t("karma.time_decay")})</p>
                     <LazySoulLineChart data={getKarmaChartData(karma.records)} />
 
-                    {/* Reincarnation Inheritance Preview */}
-                    {karma.karmic_balance !== 0 && (
-                      <div className="mt-3 pt-2 border-t border-[hsl(var(--color-hairline))]">
-                        <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-1">{t("karma.next_life_inheritance")}</p>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-[hsl(var(--color-karma-merit))]">{t("souls.detail.merit")}: +{Math.round(karma.merit_score * 0.2)}</span>
-                          <span className="text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.demerit")}: -{Math.round(karma.demerit_score * 0.2)}</span>
-                        </div>
-                        <div className="flex justify-between text-xs mt-1">
-                          <span className="text-[hsl(var(--color-ink-subtle))]">{t("souls.detail.balance")}: </span>
-                          <span className={karma.karmic_balance >= 0 ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"}>
-                            {karma.karmic_balance >= 0 ? "+" : ""}{Math.round(karma.karmic_balance * 0.2)}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-[hsl(var(--color-ink-subtle))] mt-1">{t("karma.inheritance_note")}</p>
-                      </div>
-                    )}
+                    {/* Reincarnation Inheritance Preview — sourced from
+                        GET /karma/inheritance/{soul_id}/, never recomputed
+                        client-side. A 409 (terminal cosmology, no next life)
+                        resolves the query to null, so this simply renders
+                        nothing rather than an error or empty state. */}
+                    {inheritanceQuery.data && <InheritancePanel data={inheritanceQuery.data} t={t} />}
                   </div>
                 )}
               </div>
@@ -689,6 +703,31 @@ function getKarmaChartData(records: KarmaRecord[]) {
       cumulative,
     };
   });
+}
+
+// Balance is derived here, inside the branch where `data` is already known
+// non-null (the caller only renders this when inheritanceQuery.data is
+// truthy) — that lets TypeScript narrow it via the parameter type instead of
+// through a nullable variable carried in from outside, which would need a
+// `?? 0` that can never actually fire.
+function InheritancePanel({ data, t }: { data: KarmaInheritance; t: (key: string) => string }) {
+  const balance = data.inherited_merit - data.inherited_demerit;
+  return (
+    <div className="mt-3 pt-2 border-t border-[hsl(var(--color-hairline))]">
+      <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-1">{t("karma.next_life_inheritance")}</p>
+      <div className="flex justify-between text-xs">
+        <span className="text-[hsl(var(--color-karma-merit))]">{t("souls.detail.merit")}: +{data.inherited_merit}</span>
+        <span className="text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.demerit")}: -{data.inherited_demerit}</span>
+      </div>
+      <div className="flex justify-between text-xs mt-1">
+        <span className="text-[hsl(var(--color-ink-subtle))]">{t("souls.detail.balance")}: </span>
+        <span className={balance >= 0 ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"}>
+          {balance >= 0 ? "+" : ""}{balance}
+        </span>
+      </div>
+      <p className="text-[10px] text-[hsl(var(--color-ink-subtle))] mt-1">{t("karma.inheritance_note")}</p>
+    </div>
+  );
 }
 
 function Section({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
