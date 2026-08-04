@@ -107,31 +107,65 @@ class DispositionService:
 
     @classmethod
     def _route_chinese(cls, soul: Soul, verdict: str, karma: int) -> str:
-        """Route Chinese soul based on verdict and karma."""
-        if verdict == Verdict.PASSED or karma >= 0:
+        """
+        Route Chinese soul based on verdict and karma.
+
+        The verdict is the court's authoritative judicial decision; karma is
+        only the severity input used to pick a tier *within* the outcome the
+        verdict already determined. This used to be checked as
+        `verdict == PASSED or karma >= 0`, a disjunction that let a
+        nonnegative karmic balance send a FAILED/PURGATORY/RETRY soul to
+        heaven anyway. Because merit and demerit both decay toward zero for
+        old souls, karmic_balance == 0 for every sufficiently ancient soul
+        regardless of what it actually did in life — so a soul a court had
+        explicitly condemned was being routed to heaven purely because its
+        karma had decayed away to a tie. An explicit verdict must never be
+        overridden by an arithmetic tie, so verdict is checked first, not
+        disjunctively with karma.
+        """
+        if verdict == Verdict.PASSED:
+            # PASSED is final and authoritative — heaven regardless of karma.
             return cls.CHINESE_HEAVEN
-        if verdict == Verdict.PURGATORY:
-            return cls.CHINESE_PURGATORY
-        if verdict == Verdict.RETRY:
-            return cls.CHINESE_PURGATORY
-        # FAILED: determine hell tier by severity
-        # karma is negative; abs(karma) / 10 → tier 3-10
-        tier = min(10, max(3, (abs(karma) // 10) + 1))
-        return cls.CHINESE_HELL_TIERS.get(tier, cls.CHINESE_HELL_TIERS[10])
+        if verdict == Verdict.FAILED:
+            # FAILED is final and authoritative too — hell, regardless of
+            # karma's sign. Karma only picks *how bad*: a FAILED soul with
+            # karma == 0 still goes to hell, not purgatory. Purgatory is
+            # reserved below for verdicts that are themselves inconclusive
+            # (PURGATORY/RETRY); this soul's guilt is not inconclusive, so
+            # conflating the two would blur a real distinction. The tier
+            # formula already floors at tier 3 via max(3, ...) for any
+            # hell-bound soul, so karma == 0 needs no special case — it
+            # lands at the mildest hell tier, which is the correct floor
+            # for "guilty, but no recorded severity", not a free pass.
+            tier = min(10, max(3, (abs(karma) // 10) + 1))
+            return cls.CHINESE_HELL_TIERS.get(tier, cls.CHINESE_HELL_TIERS[10])
+        # PURGATORY and RETRY are themselves non-final/inconclusive verdicts
+        # — the soul waits, regardless of what karma says. A nonnegative
+        # karma balance is not a reason to short-circuit an appeal straight
+        # to heaven.
+        return cls.CHINESE_PURGATORY
 
     @classmethod
     def _route_european(cls, soul: Soul, verdict: str, karma: int) -> str:
-        """Route European soul based on verdict and karma (Dante's Inferno circles)."""
-        if verdict == Verdict.PASSED or karma >= 0:
+        """
+        Route European soul based on verdict and karma (Dante's Inferno circles).
+
+        Same precedence rule as `_route_chinese`: verdict is checked first
+        and is authoritative, karma only selects circle depth once FAILED
+        is already established. See `_route_chinese` for why the previous
+        `verdict == PASSED or karma >= 0` disjunction was wrong.
+        """
+        if verdict == Verdict.PASSED:
             return cls.EU_HEAVEN
-        if verdict == Verdict.PURGATORY:
-            return cls.EU_PURGATORY
-        if verdict == Verdict.RETRY:
-            return cls.EU_PURGATORY
-        # FAILED: determine circle by severity
-        # abs(karma) / 15 → circle 1-9 (Dante's structure: outer circles = less severe)
-        circle = min(9, max(1, (abs(karma) // 15) + 1))
-        return cls.EU_HELL_CIRCLES.get(circle, cls.EU_HELL_CIRCLES[9])
+        if verdict == Verdict.FAILED:
+            # abs(karma) / 15 → circle 1-9 (Dante's structure: outer circles
+            # are less severe). karma == 0 floors at circle 1, same
+            # reasoning as the Chinese tier-3 floor above.
+            circle = min(9, max(1, (abs(karma) // 15) + 1))
+            return cls.EU_HELL_CIRCLES.get(circle, cls.EU_HELL_CIRCLES[9])
+        # PURGATORY and RETRY: inconclusive verdict, soul waits regardless
+        # of karma.
+        return cls.EU_PURGATORY
 
     @classmethod
     def _route_egyptian(
@@ -160,12 +194,38 @@ class DispositionService:
                 # PURGATORY/RETRY: soul waits in Duat entry
                 return cls.EG_DUAT_ENTRY
         else:
-            # STANDARD judgment for Egyptian souls: use karma
-            if verdict == Verdict.PASSED or karma >= 50:
+            # STANDARD judgment for Egyptian souls: same precedence rule as
+            # Chinese/European (see `_route_chinese`) — verdict is the
+            # court's authoritative decision and is checked first, not
+            # disjunctively with karma. The previous
+            # `verdict == PASSED or karma >= 50` / `verdict == PURGATORY or
+            # -50 < karma < 50` let a decayed-to-zero karma balance override
+            # an explicit FAILED verdict: FAILED with karma == 0 fell into
+            # the tie band and was parked in EG_DUAT_ENTRY indefinitely
+            # instead of going to the Devourer — the same class of bug as
+            # the Chinese/European heaven override, just landing in
+            # purgatory instead of heaven.
+            if verdict == Verdict.PASSED:
                 return cls.EG_AARU
-            if verdict == Verdict.PURGATORY or -50 < karma < 50:
-                return cls.EG_DUAT_ENTRY
-            return cls.EG_DEVOURER
+            if verdict == Verdict.FAILED:
+                return cls.EG_DEVOURER
+            # PURGATORY/RETRY: unlike Chinese/European, an inconclusive
+            # Egyptian verdict is *not* simply parked — Egyptian judgment is
+            # a threshold test ("heart not heavier than the feather"), not
+            # a severity score, so a near-zero karmic balance genuinely
+            # means the heart balanced against the feather, a doctrinally
+            # meaningful tie rather than "low severity". So karma is used
+            # here to resolve the inconclusive verdict: a decisive karma
+            # reading (>= 50 / <= -50) settles it one way or the other, and
+            # only the genuine tie band still waits in Duat. This band is
+            # therefore correct as-is, not a bug — it was only ever wrong
+            # because it could previously be reached with a FAILED verdict,
+            # which is now excluded above.
+            if karma >= 50:
+                return cls.EG_AARU
+            if karma <= -50:
+                return cls.EG_DEVOURER
+            return cls.EG_DUAT_ENTRY
 
     @staticmethod
     def execute(disposition: Disposition) -> bool:
