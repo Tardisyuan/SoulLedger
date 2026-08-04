@@ -29,6 +29,7 @@ from .serializers import (
     UserManagementSerializer,
     UserSerializer,
     UserUpdateSerializer,
+    role_rank,
 )
 
 # ---------------------------------------------------------------------------
@@ -76,15 +77,27 @@ class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         qs = User.objects.select_related('tenant').all()
         user = self.request.user
-        # Non-ADMIN users cannot access user management (handled by IsAdminPermission)
+
+        # ADMIN is the only global-scope role (apps/perm/models.py Role.scope);
+        # every other role is tenant-scoped and must never see another
+        # tenant's users. This mirrors the ADMIN bypass used by
+        # TenantQuerySetMixin/DataScopeViewSetMixin everywhere else in the
+        # codebase — previously this method filtered ADMIN by tenant too
+        # (unlike every other viewset) while UserCreateSerializer let ADMIN
+        # create a user in ANY tenant, so an ADMIN-created user outside the
+        # creator's own tenant became invisible and unmanageable through
+        # this API ("can create, can't manage"). Bypassing tenant filtering
+        # for ADMIN here removes that asymmetry.
+        #
+        # Access for non-ADMIN roles is gated today at the HTTP layer by
+        # IsAdminPermission, so in practice only ADMIN reaches this method —
+        # but the filter below is a second line of defense for whenever
+        # that gate is loosened to a permission-codename check instead.
         if getattr(user, 'role', None) != 'ADMIN':
-            return qs.none()
-        # ADMIN users see all users in their tenant
-        tenant = getattr(self.request, 'tenant', None)
-        if tenant:
+            tenant = getattr(self.request, 'tenant', None)
+            if tenant is None:
+                return qs.none()
             qs = qs.filter(tenant=tenant)
-        else:
-            return qs.none()
 
         # Apply query params if present
         params = self.request.query_params
@@ -175,11 +188,11 @@ class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
                 {'error': f'Invalid role. Must be one of: {valid_roles}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        # Prevent privilege escalation: assigning user's role must be >= target role
-        ROLE_HIERARCHY = {'ADMIN': 10, 'JUDGE': 20, 'GUARDIAN': 30, 'VIEWER': 40}
-        caller_level = ROLE_HIERARCHY.get(request.user.role, 50)
-        target_level = ROLE_HIERARCHY.get(new_role, 50)
-        if caller_level > target_level:
+        # Prevent privilege escalation: assigning user's role must be >= target role.
+        # Shares apps/authentication/serializers.py's ROLE_HIERARCHY so this
+        # stays in sync with the same check applied on create/update.
+        caller_role = getattr(request.user, 'role', None)
+        if caller_role != 'ADMIN' and role_rank(caller_role) > role_rank(new_role):
             return Response(
                 {'error': 'Cannot assign a role more privileged than your own'},
                 status=status.HTTP_403_FORBIDDEN,
