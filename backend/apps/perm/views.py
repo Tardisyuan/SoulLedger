@@ -19,16 +19,35 @@ from .serializers import (
 
 
 def _get_role_permissions_from_db(role_name):
-    """Fetch permission codenames for a role from DB, fallback to hardcoded dict."""
-    role_perms = list(
+    """Codenames this role effectively holds, resolved exactly as check_permission resolves them.
+
+    Per codename, not per role: the DB decides any codename that has a
+    Permission row, and ROLE_PERMISSIONS answers the rest. That is the contract
+    apps/perm/checker.py implements, and this endpoint feeds the frontend's
+    permission list — the two must not disagree about the same user.
+
+    The previous version was all-or-nothing: any single RolePermission row
+    switched the dict fallback off for the whole role. That was harmless only
+    while every role had either all its grants or none. Once perm migration
+    0017 gave every role at least one grant, a partially-seeded database — a
+    migrate-only one, which is what CI builds — reported VIEWER as holding just
+    ["menu.read"] while its effective access was still the full dict. The UI
+    would have hidden almost everything from a user the server was still
+    letting through.
+
+    Still divergent, deliberately left for the enforcement work: check_permission
+    short-circuits ADMIN to True for every codename, which this does not model.
+    ADMIN is reported here as what it is actually granted plus its unseeded dict
+    entries, not as "everything".
+    """
+    granted = set(
         RolePermission.objects.filter(role__name=role_name)
         .select_related("permission")
         .values_list("permission__codename", flat=True)
     )
-    # Use DB entries if any exist for this role, otherwise fallback to hardcoded
-    if role_perms:
-        return role_perms
-    return ROLE_PERMISSIONS.get(role_name, [])
+    seeded = set(Permission.objects.values_list("codename", flat=True))
+    from_dict = {c for c in ROLE_PERMISSIONS.get(role_name, []) if c not in seeded}
+    return sorted(granted | from_dict)
 
 
 @api_view(["GET"])
