@@ -5,7 +5,7 @@ import django_filters as filters
 from django.db.models import ExpressionWrapper, F, IntegerField, Q
 from django.db.models.functions import Coalesce
 
-from apps.souls.models import Civilization, Soul, SoulState
+from apps.souls.models import CIVILIZATION_TENANT, Civilization, Soul, SoulState
 
 
 class SoulFilter(filters.FilterSet):
@@ -89,15 +89,16 @@ class SoulFilter(filters.FilterSet):
         return queryset.filter(q)
 
     def filter_civilization(self, queryset, name, value):
-        """Filter by civilization (mapped from tenant code)."""
+        """Filter by civilization (mapped from tenant code).
+
+        Uses the reverse of apps.souls.models.TENANT_CIVILIZATION, which is
+        what Soul.civilization reads forwards. A hand-written copy lived here
+        until it was one of four; a filter that disagreed with the property
+        would answer ?civilization=X with souls whose civilization is not X.
+        """
         if not value:
             return queryset
-        civ_map = {
-            Civilization.CHINESE: "CN_DIYU",
-            Civilization.EUROPEAN: "EU_HEAVEN_HELL",
-            Civilization.EGYPTIAN: "EG_DUAT",
-        }
-        tenant_code = civ_map.get(value)
+        tenant_code = CIVILIZATION_TENANT.get(value)
         if tenant_code:
             return queryset.filter(tenant__code=tenant_code)
         return queryset.none()

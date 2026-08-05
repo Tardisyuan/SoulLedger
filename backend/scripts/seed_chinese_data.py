@@ -13,6 +13,7 @@ django.setup()
 
 from apps.actors.models import Actor, ActorRole
 from apps.realms.models import Civilization, Realm, RealmType
+from apps.souls.models import CIVILIZATION_TENANT
 from apps.tenants.models import Tenant
 
 
@@ -33,13 +34,29 @@ def _get_or_create_tenants():
 
 
 def _infer_tenant(civ_code):
-    """Map civilization code to tenant code."""
-    mapping = {
-        "CHINESE": "CN_DIYU",
-        "EUROPEAN": "EU_HEAVEN_HELL",
-        "EGYPTIAN": "EG_DUAT",
-    }
-    return mapping.get(civ_code, "CN_DIYU")
+    """Map civilization code to tenant code. Raises on an unknown civilization.
+
+    The mapping is apps.souls.models.CIVILIZATION_TENANT rather than a fourth
+    hand-written copy of the same three pairs.
+
+    It raises where it used to fall back to "CN_DIYU" — the same fail-open that
+    Soul.civilization was just fixed for, pointing the other way. An
+    unrecognised civilization does not mean Chinese; it means nobody has said
+    which tenant owns this cosmology, and answering "the Chinese one" files
+    rows under a tenant that has no claim on them. Wrongly-tenanted rows are
+    invisible to the people who would notice (tenant isolation hides them from
+    the tenant that should have them) and have to be found by hand afterwards.
+    A seed script that stops is a five-minute problem; a seed script that
+    guesses is an archaeology problem.
+    """
+    try:
+        return CIVILIZATION_TENANT[civ_code]
+    except KeyError:
+        raise ValueError(
+            f"No tenant is configured for civilization {civ_code!r}. "
+            f"Known: {sorted(str(c) for c in CIVILIZATION_TENANT)}. Add it to "
+            f"TENANT_CIVILIZATION in apps/souls/models.py before seeding."
+        ) from None
 
 
 # =============================================================================

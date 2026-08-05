@@ -29,6 +29,24 @@ TENANT_CIVILIZATION = {
     "EG_DUAT": Civilization.EGYPTIAN,
 }
 
+# The same fact read backwards: which tenant speaks for a given cosmology.
+# Derived rather than written out a second time, because the copies are what
+# went wrong — this mapping existed in three more places (the Soul filterset,
+# the multitenant backfill command, the seed script), each free to drift from
+# the one above and from each other, and one of them defaulted an unrecognised
+# civilization to the Chinese tenant. Callers that need this direction (a
+# filter turning ?civilization=EGYPTIAN into a tenant lookup, a seeder deciding
+# where a row belongs) import it instead of writing their own.
+#
+# Inverting assumes one tenant per cosmology, which is what this deployment
+# configures. A second CHINESE tenant would silently lose to whichever came
+# last in TENANT_CIVILIZATION — a reason to revisit the shape of both maps if
+# that ever becomes a real configuration, not a reason to keep hand-written
+# copies around.
+CIVILIZATION_TENANT = {
+    civilization: code for code, civilization in TENANT_CIVILIZATION.items()
+}
+
 # What a soul's cosmology is when nothing in the configuration says.
 #
 # This used to be Civilization.CHINESE — an unrecognised tenant code fell
