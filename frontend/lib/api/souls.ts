@@ -1,6 +1,7 @@
 import { api } from "./client";
 import type { PaginatedResponse } from "./users";
 import type { LedgerSummary } from "./ledger";
+import type { HistoricalDate } from "@/lib/utils";
 
 export interface SoulInput {
   name: string;
@@ -26,15 +27,10 @@ interface SoulBase {
   // anyone makes.
   civilization: "CHINESE" | "EUROPEAN" | "EGYPTIAN" | "UNKNOWN";
   current_state: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST" | "SETTLED";
-  /**
-   * KNOWN-WRONG, left as-is deliberately — see the note on
-   * LedgerRecord.event_date. Both date fields are HistoricalDateField and
-   * arrive as `{year, month, day} | null`, not as ISO strings. Typing them
-   * honestly breaks four call sites that call .split()/formatDate()/render
-   * them directly; that is a runtime bug of its own, not a typing change.
-   */
-  birth_date: string | null;
-  death_date: string | null;
+  /** HistoricalDateField: {year, month, day} | null */
+  birth_date: HistoricalDate | null;
+  /** HistoricalDateField: {year, month, day} | null */
+  death_date: HistoricalDate | null;
   merit_score?: number;
   demerit_score?: number;
   karmic_balance?: number;
@@ -70,8 +66,8 @@ export interface SoulRecordEntry {
   civilization: string;
   description: string;
   weight: number;
-  /** `{year, month, day} | null` on the wire — see Soul.birth_date. */
-  event_date: string | null;
+  /** HistoricalDateField: {year, month, day} | null */
+  event_date: HistoricalDate | null;
   is_milestone: boolean;
   evidence_json?: Record<string, unknown>;
   recorded_at: string;

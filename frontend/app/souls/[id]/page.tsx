@@ -28,6 +28,7 @@ import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { formatHistoricalDate } from "@/lib/utils";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "bg-[hsl(var(--color-status-alive)/0.2)] text-[hsl(var(--color-status-alive))]",
@@ -251,8 +252,8 @@ export default function SoulDetailPage() {
   // for its current identity. death_date is the most recent life's death
   // (null while alive), so a single trailing "—" reads as "ongoing" rather
   // than as a second empty placeholder.
-  const birthDisplay = soul?.birth_date ? formatDate(soul.birth_date) : null;
-  const deathDisplay = soul?.death_date ? formatDate(soul.death_date) : null;
+  const birthDisplay = formatHistoricalDate(soul?.birth_date);
+  const deathDisplay = formatHistoricalDate(soul?.death_date);
   const dateRangeText = birthDisplay
     ? deathDisplay
       ? `${birthDisplay} — ${deathDisplay}`
@@ -699,19 +700,36 @@ export default function SoulDetailPage() {
 function getLedgerChartData(records: LedgerRecord[]) {
   if (!records || records.length === 0) return [];
 
+  // Convert HistoricalDate to a sortable timestamp or use recorded_at as fallback
+  const historicalDateToTimestamp = (date: ReturnType<typeof formatHistoricalDate> | null): number => {
+    if (!date) return 0;
+    // date is a formatted string like "44 BCE", "1066 CE", etc.
+    // For sorting, we need a comparable value. Parse it back to a numeric year.
+    const isBCE = date.includes("BCE");
+    const yearStr = date.split(" ")[0];
+    const year = isBCE ? -parseInt(yearStr, 10) : parseInt(yearStr, 10);
+    // Return a sortable timestamp (year as milliseconds, biased to positive range)
+    return (year + 10000) * 365.25 * 24 * 60 * 60 * 1000;
+  };
+
   // Sort by when the deed happened, not when the row was written. Ordering by
   // recorded_at puts a life in data-entry order, which for an imported life is
   // arbitrary — and the labels below already use event_date, so the two
   // disagreed.
-  const when = (r: { event_date?: string | null; recorded_at: string }) =>
-    new Date(r.event_date || r.recorded_at).getTime();
+  const when = (r: LedgerRecord) => {
+    if (r.event_date) {
+      const formatted = formatHistoricalDate(r.event_date);
+      return historicalDateToTimestamp(formatted);
+    }
+    return new Date(r.recorded_at).getTime();
+  };
   const sorted = [...records].sort((a, b) => when(a) - when(b));
 
   let cumulative = 0;
   return sorted.map((r) => {
     cumulative += r.type === "MERIT" ? r.effective_weight : -r.effective_weight;
     return {
-      date: r.event_date || r.recorded_at.slice(0, 10),
+      date: formatHistoricalDate(r.event_date) || r.recorded_at.slice(0, 10),
       merit: r.type === "MERIT" ? r.effective_weight : 0,
       demerit: r.type === "DEMERIT" ? r.effective_weight : 0,
       cumulative,
