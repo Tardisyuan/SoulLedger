@@ -324,22 +324,33 @@ export default function WorkflowPage() {
                           </div>
                           <p className="text-sm text-[hsl(var(--color-ink-muted))] mb-4">{tmpl.description || t("workflow.no_description")}</p>
                           <div className="text-xs text-[hsl(var(--color-ink-subtle))] mb-3">
-                            {t("workflow.nodes_count", { count: String((tmpl.nodes_json || []).length) })}
+                            {t("workflow.nodes_count", { count: String(tmpl.node_count ?? (tmpl.nodes_json || []).length) })}
                           </div>
-                          <div className="space-y-2 max-h-80 overflow-y-auto">
-                            {(tmpl.nodes_json || []).map((node: FlowNode, idx: number) => (
-                              <div key={idx} className="flex items-center gap-3 p-2 bg-[hsl(var(--color-surface-2))] rounded">
-                                <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] flex items-center justify-center text-xs font-bold shrink-0">
-                                  {idx + 1}
-                                </span>
-                                <span className="text-sm text-[hsl(var(--color-ink))]">{node.node_name}</span>
-                                <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-                                <span className="text-xs text-[hsl(var(--color-ink-muted))]">{node.court_code}</span>
-                                <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-                                <span className="text-xs text-[hsl(var(--color-ink-muted))]">{node.node_type}</span>
-                              </div>
-                            ))}
-                          </div>
+                          {tmpl.nodes_json ? (
+                            <div className="space-y-2 max-h-80 overflow-y-auto">
+                              {tmpl.nodes_json.map((node: FlowNode, idx: number) => (
+                                <div key={idx} className="flex items-center gap-3 p-2 bg-[hsl(var(--color-surface-2))] rounded">
+                                  <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] flex items-center justify-center text-xs font-bold shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="text-sm text-[hsl(var(--color-ink))]">{node.node_name}</span>
+                                  <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
+                                  <span className="text-xs text-[hsl(var(--color-ink-muted))]">{node.court_code}</span>
+                                  <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
+                                  <span className="text-xs text-[hsl(var(--color-ink-muted))]">{node.node_type}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            // Saved backend templates arrive from WorkflowTemplateListSerializer,
+                            // which carries node_count but not the node graph itself — a per-list-row
+                            // node breakdown would mean shipping every template's full graph on one
+                            // list request. Predefined (not-yet-saved) templates still come with
+                            // nodes_json inline and keep the detail list above.
+                            <p className="text-xs text-[hsl(var(--color-ink-subtle))]">
+                              {t("workflow.view_to_see_nodes")}
+                            </p>
+                          )}
                         </>
                       );
                     })()}
@@ -526,7 +537,10 @@ export default function WorkflowPage() {
               <div>
                 <span className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("workflow.detail.nodes")}</span>
                 <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
-                  {(viewingTemplate.nodes_json || []).map((node: FlowNode, idx: number) => (
+                  {/* Backend templates arrive here via WorkflowTemplateSerializer's
+                      `nodes` (source='nodes_json'); predefined templates are
+                      built locally with a `nodes_json` key. Read both. */}
+                  {((viewingTemplate.nodes_json || viewingTemplate.nodes || []) as FlowNode[]).map((node: FlowNode, idx: number) => (
                     <div key={idx} className="bg-[hsl(var(--color-surface-3))] rounded p-2 text-sm">
                       <div className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</div>
                       <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
@@ -540,7 +554,7 @@ export default function WorkflowPage() {
                       )}
                     </div>
                   ))}
-                  {(viewingTemplate.nodes_json || []).length === 0 && (
+                  {(viewingTemplate.nodes_json || viewingTemplate.nodes || []).length === 0 && (
                     <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("workflow.no_node_data")}</p>
                   )}
                 </div>

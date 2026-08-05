@@ -83,13 +83,16 @@ export interface WorkflowTemplateListItem {
   case_type: string;
   is_active: boolean;
   created_at: string;
+  /** How many nodes this template has — `len(nodes_json)` on the backend. */
+  node_count: number;
   /**
-   * `nodes_json` is the model's field name, never a wire key — the detail
-   * serializer renames it to `nodes` (source='nodes_json') and the list
-   * serializer omits the node data entirely. Declared, and optional, only
-   * because app/workflow/page.tsx and WorkflowEditor still read it. It is
-   * always undefined, so every node list and node count derived from it
-   * renders empty.
+   * Present only on a locally-built preview object for a not-yet-saved
+   * predefined template (see app/workflow/page.tsx). A template fetched from
+   * `GET /workflow/templates/` (this list endpoint) never carries it — the
+   * list serializer omits the full node graph on purpose, so a per-row node
+   * breakdown in the list is only available for predefined templates that
+   * haven't round-tripped through the backend yet. `node_count` above is the
+   * one fact every row — saved or predefined — actually has.
    */
   nodes_json?: WorkflowTemplateNode[];
 }
@@ -111,12 +114,15 @@ export const workflowApi = {
   get: (id: string) => api.get<ApprovalWorkflow>(`/workflows/${id}/`),
   create: (data: object) => api.post<ApprovalWorkflow>("/workflows/", data),
   advance: (id: string) => api.post<ApprovalWorkflow>(`/workflows/${id}/advance/`),
-  approveNode: (workflowIdOrNodeId: string, nodeIdOrData: string | object, data?: object) => {
-    if (typeof nodeIdOrData === "string") {
-      return api.post<ApprovalWorkflow>(`/nodes/${nodeIdOrData}/approve/`, data);
-    }
-    return api.post<ApprovalWorkflow>(`/nodes/${workflowIdOrNodeId}/approve/`, nodeIdOrData);
-  },
+  /**
+   * ApprovalWorkflowViewSet.approve_node (backend/apps/workflow/views.py:190)
+   * — a detail action on the *workflow*, not a route on ApprovalNodeViewSet.
+   * The node being decided is identified by `node_id` in the POST body
+   * (WorkflowNodeActionSerializer only validates `verdict`/`notes`; `node_id`
+   * is read separately from `request.data`), not by a URL segment.
+   */
+  approveNode: (workflowId: string, nodeId: string, data: { verdict: string; notes?: string }) =>
+    api.post<ApprovalWorkflow>(`/workflows/${workflowId}/approve_node/`, { node_id: nodeId, ...data }),
   templates: {
     // WorkflowTemplateViewSet is the one view in the project that sets
     // pagination_class = None (backend/apps/workflow/views.py:45), so this

@@ -425,6 +425,7 @@
     "no_description": "Ma Rekhyu Medu Seth",
     "view": "Smen",
     "nodes_count": "{{count}} Mekher",
+    "view_to_see_nodes": "Wenu er Ma Mekheru",
     "delete_error": "Ma Wehem Seth",
     "status": {
       "PENDING": "Em Set Medu",

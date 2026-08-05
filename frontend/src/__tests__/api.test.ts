@@ -398,14 +398,15 @@ describe('API Client — lib/api.ts', () => {
       expect(mockInstance.post).toHaveBeenCalledWith('/workflows/wf-1/advance/');
     });
 
-    // The router registers `nodes` and `workflow/templates` as siblings of
-    // `workflows`, not beneath it (apps/workflow/urls.py). These assertions
-    // previously encoded `/workflows/nodes/` and `/workflows/templates/`,
-    // which the live API answers with 404 — the mock never noticed.
-    it('approveNode() should POST /nodes/:nodeId/approve/', () => {
+    // approve_node is a detail action on ApprovalWorkflowViewSet
+    // (apps/workflow/views.py:190), not a route on ApprovalNodeViewSet — the
+    // node being decided is identified by `node_id` in the POST body, not by
+    // a URL segment.
+    it('approveNode() should POST /workflows/:id/approve_node/ with node_id in the body', () => {
       mockInstance.post.mockResolvedValueOnce({ data: {} });
       workflowApi.approveNode('wf-1', 'node-5', { verdict: 'PASS', notes: 'LGTM' });
-      expect(mockInstance.post).toHaveBeenCalledWith('/nodes/node-5/approve/', {
+      expect(mockInstance.post).toHaveBeenCalledWith('/workflows/wf-1/approve_node/', {
+        node_id: 'node-5',
         verdict: 'PASS',
         notes: 'LGTM',
       });

@@ -421,6 +421,7 @@
     },
     "view": "查看",
     "nodes_count": "{{count}} 个节点",
+    "view_to_see_nodes": "打开查看节点详情",
     "no_description": "无描述",
     "appeal_badge": "申诉",
     "template_detail": "模板详情",

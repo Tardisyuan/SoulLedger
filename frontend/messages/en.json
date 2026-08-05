@@ -421,6 +421,7 @@
     },
     "view": "View",
     "nodes_count": "{{count}} nodes",
+    "view_to_see_nodes": "Open to view node details",
     "no_description": "No description",
     "appeal_badge": "Appeal",
     "template_detail": "Template Detail",
