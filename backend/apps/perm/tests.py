@@ -561,6 +561,120 @@ class ModeratorRealmLeadTest(TestCase):
         )
 
 
+class LedgerPermissionRenameMigrationTest(TestCase):
+    """
+    apps/perm/migrations/0016_rename_karma_permissions_to_ledger.py 的回归测试。
+
+    codename 是存在 DB 里的值，改名只能靠数据迁移。这里盯防的唯一回归是
+    **授权丢失**：RolePermission 用外键指向 Permission 的主键，所以必须原地
+    UPDATE 那一行。先删后建会换主键，级联带走所有 RolePermission —— 那就是
+    一次静默的权限收回。断言主键不变，等价于断言授权不变。
+    """
+
+    PAIRS = [("karma.read", "ledger.read"), ("karma.manage", "ledger.manage")]
+
+    def setUp(self):
+        from apps.perm.cache import invalidate_all_permissions
+
+        self.judge_role = Role.objects.create(name="JUDGE", display_name="Judge")
+        invalidate_all_permissions()
+        self.addCleanup(invalidate_all_permissions)
+
+    @staticmethod
+    def _migration():
+        import importlib
+        return importlib.import_module(
+            "apps.perm.migrations.0016_rename_karma_permissions_to_ledger"
+        )
+
+    def _run(self, forward=True):
+        mod = self._migration()
+        pairs = mod.RENAMES if forward else [
+            (new, old, name, "karma") for old, new, name, _ in mod.RENAMES
+        ]
+        mod._rename(Permission, RolePermission, pairs)
+
+    def _seed_karma(self):
+        """种下改名前的世界：两条 Permission + JUDGE 对 karma.read 的授权。"""
+        perms = {
+            old: Permission.objects.create(codename=old, name=old, category="karma")
+            for old, _ in self.PAIRS
+        }
+        grant = RolePermission.objects.create(
+            role=self.judge_role, permission=perms["karma.read"]
+        )
+        return {old: p.pk for old, p in perms.items()}, grant.pk
+
+    def test_forward_renames_in_place_and_keeps_the_grant(self):
+        perm_pks, grant_pk = self._seed_karma()
+        self._run(forward=True)
+
+        self.assertFalse(Permission.objects.filter(codename__startswith="karma.").exists())
+        for old, new in self.PAIRS:
+            row = Permission.objects.get(codename=new)
+            self.assertEqual(row.pk, perm_pks[old], "renamed in place — pk must not change")
+            self.assertEqual(row.category, "ledger")
+
+        grant = RolePermission.objects.get(pk=grant_pk)
+        self.assertEqual(grant.permission.codename, "ledger.read")
+        self.assertEqual(grant.role_id, self.judge_role.pk)
+
+    def test_round_trip_restores_the_original_rows(self):
+        perm_pks, grant_pk = self._seed_karma()
+        self._run(forward=True)
+        self._run(forward=False)
+
+        for old, _ in self.PAIRS:
+            row = Permission.objects.get(codename=old)
+            self.assertEqual(row.pk, perm_pks[old])
+            self.assertEqual(row.category, "karma")
+        self.assertEqual(
+            RolePermission.objects.get(pk=grant_pk).permission.codename, "karma.read"
+        )
+
+    def test_collision_moves_the_grant_instead_of_dropping_it(self):
+        """两个 codename 同时存在时无法直接改名（唯一约束）。授权数量不能减少。"""
+        _, grant_pk = self._seed_karma()
+        Permission.objects.create(codename="ledger.read", name="x", category="ledger")
+
+        self._run(forward=True)
+
+        self.assertFalse(Permission.objects.filter(codename="karma.read").exists())
+        self.assertTrue(
+            RolePermission.objects.filter(
+                role=self.judge_role, permission__codename="ledger.read"
+            ).exists(),
+            "collision branch must carry the grant over, not drop it",
+        )
+        self.assertFalse(RolePermission.objects.filter(pk=grant_pk).exists())
+
+    def test_role_permissions_dict_no_longer_mentions_karma(self):
+        """字典才是 checker 实际判定的依据，改名必须两边同步。"""
+        for role, codenames in ROLE_PERMISSIONS.items():
+            stale = [c for c in codenames if c.startswith("karma.")]
+            self.assertEqual(stale, [], f"{role} still holds {stale}")
+        self.assertIn("ledger.read", ROLE_PERMISSIONS["VIEWER"])
+        self.assertIn("ledger.manage", ROLE_PERMISSIONS["ADMIN"])
+        self.assertNotIn("ledger.manage", ROLE_PERMISSIONS["VIEWER"])
+        self.assertNotIn("ledger.manage", ROLE_PERMISSIONS["JUDGE"])
+        self.assertNotIn("ledger.manage", ROLE_PERMISSIONS["GUARDIAN"])
+
+    def test_default_permissions_defines_every_codename_the_views_require(self):
+        """karma.update 曾经是个谁也没定义过的 codename，别再来一次。"""
+        from apps.ledger import views as ledger_views
+
+        defined = {codename for codename, _, _ in DEFAULT_PERMISSIONS}
+        checked = 0
+        for name in dir(ledger_views):
+            view = getattr(ledger_views, name)
+            if not isinstance(view, type) or not hasattr(view, "get_required_permissions"):
+                continue
+            for codename in view().get_required_permissions():
+                checked += 1
+                self.assertIn(codename, defined, f"{name} requires undefined {codename}")
+        self.assertGreater(checked, 0, "found no ledger views to check")
+
+
 class RoleAPITest(TestCase):
     """Test Role CRUD API endpoints"""
 
