@@ -26,6 +26,9 @@ export const changePasswordSchema = z.object({
 
 export const soulCreateSchema = z.object({
   name: z.string().min(1, '请输入灵魂名称').max(100, '名称最多100位'),
+  // No UNKNOWN here — this is a pick-list for a human creating a soul, and
+  // UNKNOWN is a symptom of a misconfigured tenant, not a cosmology anyone
+  // would deliberately choose.
   civilization: z.enum(['CHINESE', 'EUROPEAN', 'EGYPTIAN'], {
     error: '请选择文明',
   }),
@@ -37,10 +40,17 @@ export const soulUpdateSchema = z.object({
   name: z.string().min(1, '请输入灵魂名称').max(100, '名称最多100位'),
   birth_date: z.string().optional().nullable(),
   origin_location: z.string().max(200, '地点最多200位').optional(),
-  current_state: z.enum(['ALIVE', 'JUDGING', 'DISPOSED', 'REINCARNATING', 'LOST']).optional(),
+  // Includes SETTLED even though nothing lets an operator pick it (see
+  // soulTransitionSchema below): this schema validates the edit form, which
+  // round-trips whatever state the soul already has. A soul already at
+  // SETTLED must still pass validation so the rest of the form stays usable.
+  current_state: z.enum(['ALIVE', 'JUDGING', 'DISPOSED', 'REINCARNATING', 'LOST', 'SETTLED']).optional(),
 })
 
 export const soulTransitionSchema = z.object({
+  // SETTLED is deliberately absent — it's a terminal state the backend
+  // assigns when a terminal disposition executes, never a manual transition
+  // target.
   target_state: z.enum(['ALIVE', 'JUDGING', 'DISPOSED', 'REINCARNATING', 'LOST'], {
     error: '请选择有效目标状态',
   }),
@@ -52,6 +62,7 @@ export const soulTransitionSchema = z.object({
 export const judgmentCreateSchema = z.object({
   soul_id: z.string().uuid('无效的灵魂ID'),
   court: z.string().min(1, '请选择审判庭'),
+  // Same reasoning as soulCreateSchema.civilization — no UNKNOWN.
   civilization: z.enum(['CHINESE', 'EUROPEAN', 'EGYPTIAN'], {
     error: '请选择文明',
   }),

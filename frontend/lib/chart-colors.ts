@@ -17,6 +17,7 @@ export const STATE_COLORS: Record<string, string> = {
   DISPOSED: "hsl(220 80% 62%)",
   REINCARNATING: "hsl(217 91% 60%)",
   LOST: "hsl(0 0% 50%)",
+  SETTLED: "hsl(178 55% 40%)",
 };
 
 /** Civilizations — mirrors --color-civ-*. */

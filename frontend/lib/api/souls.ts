@@ -5,15 +5,18 @@ export interface SoulInput {
   civilization: "CHINESE" | "EUROPEAN" | "EGYPTIAN";
   birth_date: string | null;
   origin_location: string;
-  current_state?: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST";
+  current_state?: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST" | "SETTLED";
 }
 
 export interface Soul {
   id: string;
   name: string;
   birth_name?: string;
-  civilization: "CHINESE" | "EUROPEAN" | "EGYPTIAN";
-  current_state: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST";
+  // "UNKNOWN" is not a real civilization — it is what the backend returns
+  // for a tenant code it doesn't recognise (misconfiguration), not a choice
+  // anyone makes.
+  civilization: "CHINESE" | "EUROPEAN" | "EGYPTIAN" | "UNKNOWN";
+  current_state: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST" | "SETTLED";
   birth_date: string | null;
   death_date: string | null;
   origin_location: string;
