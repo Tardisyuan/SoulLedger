@@ -7,23 +7,28 @@ authorization hole: they assert that a VIEWER can open a judgment against a
 soul, and create or destroy the approval workflow that judges it — because
 that is what a real JWT through the real URLconf produces right now.
 
-**Five apps are no longer a snapshot of the defect: `ledger`, `souls`,
-`judgment`, `disposition` and `workflow`.**
+**Six apps are no longer a snapshot of the defect: `ledger`, `souls`,
+`judgment`, `disposition`, `workflow` and `menus`.**
 Step 4 of the staged plan moved enforcement out of ``PermissionMiddleware``
 and into a DRF permission class (``apps.core.permissions.CodenamePermission``).
 Tranche 1 attached it to ``SoulViewSet`` and the six ledger ``APIView``s;
 tranche 2 attached it to ``JudgmentViewSet``, ``DispositionViewSet``,
 ``WorkflowTemplateViewSet``, ``ApprovalWorkflowViewSet`` and
-``ApprovalNodeViewSet``. Their rows below are now *policy*: each expected
-code is derived from whether the role holds the codename the view declares,
-and each departure from the old snapshot carries the grant that justifies it.
+``ApprovalNodeViewSet``. Step 5 attached it to ``MenuViewSet`` and
+``MenuButtonViewSet``, retiring the hardcoded ``role != 'ADMIN'`` checks that
+used to live in their ``perform_create``/``perform_update``/``perform_destroy``
+— those had been the real gate ever since ``menu.read`` was seeded (perm
+migration 0017) but ``CodenamePermission`` itself was not yet attached to the
+app. Their rows below are now *policy*: each expected code is derived from
+whether the role holds the codename the view declares, and each departure
+from the old snapshot carries the grant that justifies it.
 Every other app in this file is still frozen defect and still reads as such —
 which is the point of rolling out per app rather than flipping a flag.
 
-Tranche 2 stops there, and the reason is this file. `social`, `menus` and the
-ten apps with no non-ADMIN HTTP-write coverage at all come after, but nothing
-in the suite would react to them: the snapshot is the only instrument the
-rollout has, and these are the last three apps it can see.
+Step 5 stops there, and the reason is this file. `social` and the ten apps
+with no non-ADMIN HTTP-write coverage at all come after, but nothing in the
+suite would react to them: the snapshot is the only instrument the rollout
+has, and these are the last apps it can see.
 
 Provenance
 ----------
@@ -113,16 +118,18 @@ DISPOSITION_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 20
 WORKFLOW_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
 # The one tranche 3 introduces.
 #
-# `dispatch.read` — ADMIN, MODERATOR, GUARDIAN. Not JUDGE, not VIEWER, and the
-# JUDGE half is worth pausing on: it is the only read shape in this file where
-# JUDGE is refused and GUARDIAN admitted. That is not an oversight to be tidied
-# up. JUDGE holds no `dispatch.*` codename whatsoever, while the unused
-# `cross_judgment.read` family — held by ADMIN, JUDGE and MODERATOR — looks
-# written for exactly the cross-tenant-judgments route below. Adopting it would
-# flip these two rows: JUDGE would gain the read and GUARDIAN would lose it.
-# That is a policy change and belongs to the lead; apps/dispatch/views.py flags
-# it as an open decision and this pass keeps the family the view declares.
+# `dispatch.read` — ADMIN, MODERATOR, GUARDIAN. Not JUDGE, not VIEWER: JUDGE
+# holds no `dispatch.*` codename at all, since dispatch is GUARDIAN's
+# operational business, not JUDGE's.
 DISPATCH_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 200, "VIEWER": 403}
+
+# `cross_judgment.read` — ADMIN, MODERATOR, JUDGE. DECIDED: cross-tenant
+# judgment moved off `dispatch.read` onto its own family (apps/dispatch/views.py)
+# because it is a judgment activity, not an operational dispatch one — the same
+# civilization that hears a soul's own case now hears its cross-tenant one.
+# The inverse split of DISPATCH_READ above: GUARDIAN loses this row, JUDGE
+# gains it.
+CROSS_JUDGMENT_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
 
 
 # ---------------------------------------------------------------------------
@@ -162,21 +169,24 @@ READ_MATRIX = {
     # system granting, not the absence of a check, and those look identical
     # from the outside.
     "/api/v1/reincarnation/": OPEN_TO_ALL,
-    # ENFORCED (tranche 3): both declare `dispatch.read`. Held by ADMIN,
-    # MODERATOR and GUARDIAN; JUDGE and VIEWER hold no `dispatch.*` codename at
-    # all. Both were OPEN_TO_ALL — these four codes are the only READ moves in
-    # tranche 3, and they are the four the write-side instrument could not
-    # predict because it enumerates write endpoints only. See DISPATCH_READ.
+    # ENFORCED (tranche 3): declares `dispatch.read`. Held by ADMIN, MODERATOR
+    # and GUARDIAN; JUDGE and VIEWER hold no `dispatch.*` codename at all. Was
+    # OPEN_TO_ALL — one of the four READ moves tranche 3 made that its
+    # write-side instrument could not predict, since it enumerates write
+    # endpoints only. See DISPATCH_READ.
     "/api/v1/dispatch/records/": DISPATCH_READ,
-    "/api/v1/dispatch/cross-tenant-judgments/": DISPATCH_READ,
+    # Declares `cross_judgment.read`, not `dispatch.read` — see
+    # CROSS_JUDGMENT_READ above for why this one moved to a different family
+    # than its sibling route just above.
+    "/api/v1/dispatch/cross-tenant-judgments/": CROSS_JUDGMENT_READ,
     # ENFORCED (tranche 2): both declare `workflow.read`, held by ADMIN,
     # MODERATOR and JUDGE. GUARDIAN and VIEWER hold nothing in the `workflow.*`
     # family. Was OPEN_TO_ALL for both.
     "/api/v1/workflows/": WORKFLOW_READ,
     "/api/v1/nodes/": WORKFLOW_READ,
-    # realm.read / actor.read / tenant.read / event.read / menu.read are four
-    # of the 71 codenames no role holds. They are open anyway, because nothing
-    # consults them.
+    # realm.read / actor.read / tenant.read / event.read are four of the 71
+    # codenames no role holds. They are open anyway, because nothing consults
+    # them.
     "/api/v1/realms/": OPEN_TO_ALL,
     "/api/v1/actors/": OPEN_TO_ALL,
     # 200 for everyone, but NOT a cross-tenant leak: TenantViewSet.get_queryset
@@ -192,6 +202,12 @@ READ_MATRIX = {
     # move, and proving it does not move is the reason the app was enforced
     # rather than skipped.
     "/api/v1/notifications/": OPEN_TO_ALL,
+    # ENFORCED (step 5): list/retrieve resolve to `menu.read` (default
+    # ACTION_PERM_MAP suffix), held by all five roles in ROLE_PERMISSIONS.
+    # Does not move — `menu.read` was seeded and granted to every role by perm
+    # migration 0017 specifically so binding the navigation reads to it would
+    # not lock anyone out once `CodenamePermission` was attached, which step 5
+    # is what finally does.
     "/api/v1/menus/": OPEN_TO_ALL,
     "/api/v1/social/posts/": OPEN_TO_ALL,
     # IsAdminPermission — a real gate, just not a codename one
@@ -313,8 +329,14 @@ DISPOSITION_CREATE = {"ADMIN": 201, "MODERATOR": 201, "JUDGE": 403, "GUARDIAN": 
 WORKFLOW_TEMPLATE_CREATE = {"ADMIN": 201, "MODERATOR": 201, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 WORKFLOW_TEMPLATE_DELETE = {"ADMIN": 204, "MODERATOR": 204, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 POST_CREATE = dict.fromkeys(ROLES, 201)
-# the three that do hold, all by hardcoded role string
+# ENFORCED (step 5). POST /menus/ declares `menu.manage` (via extra_permissions
+# on MenuViewSet). ADMIN alone holds `menu.manage` in ROLE_PERMISSIONS — every
+# other role's `menu.*` grant stops at `menu.read`. Does not move: this is the
+# same shape the hardcoded `role != 'ADMIN'` check in perform_create used to
+# produce, which is exactly why the check could be retired rather than
+# reworked — `menu.manage` already drew the line in the same place.
 MENU_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
+# the two that do hold, both by hardcoded role string / IsAdminPermission
 USER_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 PERM_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 # ADMIN clears IsAdminPermission; the other four never get that far. That split
@@ -742,7 +764,8 @@ def test_social_post_create_snapshot(role_clients, snapshot_tenant, role):
 @pytest.mark.django_db
 @pytest.mark.parametrize("role", ROLES)
 def test_menu_create_snapshot(role_clients, snapshot_tenant, role):
-    """403 here is real — but it comes from `role != "ADMIN"` in perform_create, not menu.create."""
+    """ENFORCED (step 5): 403 now comes from `menu.manage`, held by ADMIN alone —
+    not from the `role != "ADMIN"` check in perform_create, which step 5 retired."""
     response = role_clients[role].post(
         "/api/v1/menus/", {"name": f"snapshot-menu-{role}", "path": f"/snapshot-{role}"}, format="json"
     )

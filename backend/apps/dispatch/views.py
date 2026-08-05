@@ -256,40 +256,39 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
     """
     CrossTenantJudgment CRUD + actions.
     """
-    # CodenamePermission, same as DispatchRecordViewSet. Every action here —
-    # the three CRUD writes plus participate and conclude — maps to the single
-    # codename dispatch.manage, so the five roles split the same way on all
-    # five: ADMIN, MODERATOR and GUARDIAN through, JUDGE and VIEWER refused.
+    # CodenamePermission, on the cross_judgment family rather than dispatch.
     #
-    # Because those holder sets are identical rather than nested, this viewset
-    # cannot exhibit the narrow-action/wide-CRUD bypass its sibling does — the
-    # same accident that made judgment and disposition immune in tranche 2. It
-    # is an accident: CrossTenantJudgmentSerializer does leave `status` and
-    # `conclusion_type` writable, so PATCH reaches the same row `conclude`
-    # writes. Today that costs nothing because no codename separates them. The
-    # moment cross_judgment.* is adopted (see below) or conclude is given its
-    # own codename, it becomes the same hole, and the serializer is where it
-    # would have to be closed.
+    # DECIDED (was an open decision through tranche 3): cross-tenant judgment
+    # is a judgment activity — the same civilization that hears a soul's own
+    # case should hear its cross-tenant one — so it moves to JUDGE rather than
+    # staying with GUARDIAN's operational dispatch role. cross_judgment.read
+    # and cross_judgment.create are held by the same three roles (ADMIN,
+    # MODERATOR, JUDGE — see apps/perm/models.py), so this is a clean binary
+    # swap: GUARDIAN loses cross-tenant judgments entirely, JUDGE gains full
+    # access (view, participate, conclude), matching how it already reads and
+    # decides on ordinary judgments. Both reads and writes moved together —
+    # deliberately not split — because participate/conclude are the judgment
+    # itself, not an administrative action layered on top of one.
+    #
+    # There is no cross_judgment.update/delete/participate/conclude codename,
+    # only read/create, so every write action maps to create — the same shape
+    # DispatchRecordViewSet uses for dispatch.manage. Because read and every
+    # write share one codename here (as they did on dispatch.manage before),
+    # this viewset still cannot exhibit the narrow-action/wide-CRUD bypass
+    # found on its sibling: there is no narrower codename for PATCH to route
+    # around. CrossTenantJudgmentSerializer does leave `status` and
+    # `conclusion_type` writable, but since `conclude` and PATCH require the
+    # same codename, reaching the same row via PATCH costs nothing beyond what
+    # `conclude` already permits.
     permission_classes = [TenantPermission, CodenamePermission]
-    # Stays on the `dispatch` family, binary read / manage as above.
-    # dispatch.participate and dispatch.conclude existed nowhere and were held
-    # by nobody, so they fold into dispatch.manage along with the CRUD writes.
-    #
-    # OPEN DECISION for the lead, deliberately not taken here: the dict has an
-    # unused cross_judgment.read / cross_judgment.create family that looks
-    # written for this viewset. Moving to it is not a rename — cross_judgment.*
-    # is held by ADMIN, JUDGE and MODERATOR while dispatch.read is held by
-    # ADMIN, GUARDIAN and MODERATOR, so GUARDIAN would lose cross-tenant
-    # judgment reads and JUDGE would gain them. That is a policy change, so
-    # this pass keeps the family the view already declared.
-    permission_codename = "dispatch"
+    permission_codename = "cross_judgment"
     extra_permissions = {
-        'participate': ['dispatch.manage'],
-        'conclude': ['dispatch.manage'],
-        'create': ['dispatch.manage'],
-        'update': ['dispatch.manage'],
-        'partial_update': ['dispatch.manage'],
-        'destroy': ['dispatch.manage'],
+        'participate': ['cross_judgment.create'],
+        'conclude': ['cross_judgment.create'],
+        'create': ['cross_judgment.create'],
+        'update': ['cross_judgment.create'],
+        'partial_update': ['cross_judgment.create'],
+        'destroy': ['cross_judgment.create'],
     }
     queryset = CrossTenantJudgment.objects.select_related(
         "initiating_tenant"

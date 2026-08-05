@@ -210,21 +210,27 @@ class TestDispatchRecordViewSetCodename(TestCase):
 
 class TestCrossTenantJudgmentViewSetCodename(TestCase):
     def test_cross_tenant_viewset_has_codename(self):
+        """Moved off `dispatch` onto its own family — a decision, not a rename.
+
+        Cross-tenant judgment is a judgment activity, not an operational
+        dispatch one: the same civilization that hears a soul's own case now
+        hears its cross-tenant one. See apps/dispatch/views.py.
+        """
         from apps.dispatch.views import CrossTenantJudgmentViewSet
-        self.assertEqual(CrossTenantJudgmentViewSet.permission_codename, "dispatch")
+        self.assertEqual(CrossTenantJudgmentViewSet.permission_codename, "cross_judgment")
 
     def test_cross_tenant_viewset_extra_permissions(self):
-        """participate/conclude fold into dispatch.manage — see the viewset.
+        """participate/conclude fold into cross_judgment.create — see the viewset.
 
-        These used to assert `dispatch.participate` and `dispatch.conclude`,
-        neither of which exists in DEFAULT_PERMISSIONS nor is held by any
-        role. dispatch.manage is this module's defined write codename.
+        There is no cross_judgment.update/delete/participate/conclude, only
+        read/create, so every write action maps to create — the same shape
+        DispatchRecordViewSet uses for dispatch.manage.
         """
         from apps.dispatch.views import CrossTenantJudgmentViewSet
         self.assertIn("participate", CrossTenantJudgmentViewSet.extra_permissions)
-        self.assertEqual(CrossTenantJudgmentViewSet.extra_permissions["participate"], ["dispatch.manage"])
+        self.assertEqual(CrossTenantJudgmentViewSet.extra_permissions["participate"], ["cross_judgment.create"])
         self.assertIn("conclude", CrossTenantJudgmentViewSet.extra_permissions)
-        self.assertEqual(CrossTenantJudgmentViewSet.extra_permissions["conclude"], ["dispatch.manage"])
+        self.assertEqual(CrossTenantJudgmentViewSet.extra_permissions["conclude"], ["cross_judgment.create"])
 
     def test_cross_tenant_viewset_inherits_mixin(self):
         from apps.dispatch.views import CrossTenantJudgmentViewSet
