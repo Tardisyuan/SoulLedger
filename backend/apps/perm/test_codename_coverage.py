@@ -57,10 +57,9 @@ EXEMPT_VIEWS = {
     # scoped by tenant through their querysets.
     "apps.tenants.views.TenantViewSet": "no tenant.* codename exists; queryset-scoped",
     "apps.events.views.SoulEventViewSet": "no event.* codename exists",
-    # `menu.manage` is ADMIN-only but these serve navigation reads to every
-    # role. Needs a seeded `menu.read`; blocking for Step 4.
-    "apps.menus.views.MenuViewSet": "menu.read missing; menu.manage is ADMIN-only",
-    "apps.menus.views.MenuButtonViewSet": "menu.read missing; menu.manage is ADMIN-only",
+    # (The two menu viewsets were exempt here until perm migration 0017 seeded
+    # `menu.read` and granted it to all five roles. They now declare `menu`
+    # again, reads on menu.read and writes on menu.manage.)
     # No `login_log.*` codename, and no adjacent one it could honestly borrow.
     "apps.authentication.views.LoginLogViewSet": "no login_log.* codename exists",
     # Whole social module: five viewsets, ~23 codenames, none defined or held.
