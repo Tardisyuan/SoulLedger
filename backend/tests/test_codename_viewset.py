@@ -409,20 +409,38 @@ class TestHasPermissionFallback(TestCase):
 
 
 class TestMenuViewSetCodename(TestCase):
-    def test_menu_viewset_is_deliberately_exempt(self):
-        """Menus declare no codename — see the comment on the viewset.
+    def test_menu_viewset_has_codename(self):
+        """Menus are no longer exempt: reads are menu.read, writes menu.manage.
 
-        This used to assert `permission_codename == "menu"` and an
-        extra_permissions family of menu.read / menu.create. `menu.manage` is
-        the only menu codename that exists and only ADMIN holds it, while this
-        viewset serves navigation reads to every role, so neither shape fits
-        until a `menu.read` codename is seeded and granted. The exemption is
-        registered in apps/perm/test_codename_coverage.py::EXEMPT_VIEWS, which
-        is what keeps it from being a silent hole.
+        The exemption existed because `menu.manage` was the only menu codename
+        and only ADMIN held it, so binding this viewset to it would have denied
+        `list` — and with it the whole navigation tree — to every other role.
+        perm migration 0017 seeds `menu.read` and grants it to all five roles,
+        which is what makes the split declarable.
         """
         from apps.menus.views import MenuViewSet
-        self.assertIsNone(MenuViewSet.permission_codename)
-        self.assertEqual(MenuViewSet().get_required_permissions(), [])
+        self.assertEqual(MenuViewSet.permission_codename, "menu")
+
+    def test_menu_viewset_reads_are_open_to_every_role(self):
+        """The navigation reads must resolve to menu.read, never menu.manage."""
+        from apps.menus.views import MenuViewSet
+
+        for action in ("list", "retrieve", "all", "tree", "list_public"):
+            vs = MenuViewSet()
+            vs.action = action
+            self.assertEqual(
+                vs.get_required_permissions(),
+                ["menu.read"],
+                f"{action} must not require the ADMIN-only menu.manage",
+            )
+
+    def test_menu_viewset_writes_require_manage(self):
+        from apps.menus.views import MenuViewSet
+
+        for action in ("create", "update", "partial_update", "destroy"):
+            vs = MenuViewSet()
+            vs.action = action
+            self.assertEqual(vs.get_required_permissions(), ["menu.manage"])
 
     def test_menu_viewset_inherits_mixin(self):
         from apps.menus.views import MenuViewSet
