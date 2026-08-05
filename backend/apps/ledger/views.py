@@ -36,6 +36,15 @@ class LedgerBalanceView(APIView):
 
     Returns the ledger summary with time-decay for a soul. Cached 5min.
     Tenant-isolated via TenantManager.
+
+    The body carries both `karmic_balance` (merit minus demerit, which is the
+    Chinese instrument and is what the rest of the system routes on) and
+    `reading` — the instrument this soul's own cosmology uses. Clients that
+    show a user a number should show `reading`; see apps/ledger/readings.py.
+
+    Decay is per-civilization: EUROPEAN deeds do not decay at all, because the
+    published European heading promises reduction by contrition and act rather
+    than by elapsed time. See CIVILIZATION_DECAY_RATE.
     """
     permission_classes = [TenantPermission]
 
