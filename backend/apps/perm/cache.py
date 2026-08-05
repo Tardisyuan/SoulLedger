@@ -6,6 +6,7 @@ Designed to gracefully fall back when Redis is unavailable.
 Supports role hierarchy inheritance.
 """
 import logging
+import time
 
 from django.conf import settings
 
@@ -17,12 +18,28 @@ class PermissionCache:
     Redis-based permission cache with fallback to memory cache.
 
     TTL is configurable via CACHE_PERMISSION_TTL setting (default: 300s).
+
+    When Redis is unreachable, reconnect attempts are throttled by
+    CACHE_REDIS_RETRY_COOLDOWN (default: 5s) instead of being retried on
+    every cache miss. A single permission check can fan out into dozens of
+    codename lookups (see apps/perm/views.py and CodenamePermission in
+    apps/core/permissions.py), and without the cooldown every one of those
+    misses paid for its own doomed TCP connect attempt to Redis.
     """
+
+    # Class-level defaults so an instance built via ``__new__`` (bypassing
+    # ``__init__`` — existing tests in tests/test_coverage_boost.py do this
+    # to force a pure memory-fallback cache) still has somewhere safe to read
+    # these from, instead of raising AttributeError on the first miss.
+    _retry_cooldown = 5
+    _last_connect_failure: float | None = None
 
     def __init__(self):
         self._redis_client = None
         self._fallback_cache: dict[tuple[str, str], tuple[bool, float]] = {}
         self._ttl = getattr(settings, 'CACHE_PERMISSION_TTL', 300)
+        self._retry_cooldown = getattr(settings, 'CACHE_REDIS_RETRY_COOLDOWN', 5)
+        self._last_connect_failure: float | None = None
         self._connect_redis()
 
     def _connect_redis(self):
@@ -36,9 +53,17 @@ class PermissionCache:
             # Test connection
             self._redis_client.ping()
             logger.info("PermissionCache: Redis connection established")
+            self._last_connect_failure = None
         except Exception as e:
             logger.warning(f"PermissionCache: Redis unavailable, using memory fallback: {e}")
             self._redis_client = None
+            self._last_connect_failure = time.monotonic()
+
+    def _should_attempt_reconnect(self) -> bool:
+        """Whether the retry cooldown since the last failed connect has elapsed."""
+        if self._last_connect_failure is None:
+            return True
+        return (time.monotonic() - self._last_connect_failure) >= self._retry_cooldown
 
     def _make_key(self, role: str, codename: str) -> str:
         """Generate Redis key for role+codename pair."""
@@ -51,10 +76,8 @@ class PermissionCache:
         Returns:
             True if permission granted, False if denied, None if not cached.
         """
-        import time
-
-        # Try Redis first (with reconnection attempt)
-        if self._redis_client is None:
+        # Try Redis first (with reconnection attempt, throttled by cooldown)
+        if self._redis_client is None and self._should_attempt_reconnect():
             self._connect_redis()  # Attempt reconnection
         if self._redis_client is not None:
             try:
@@ -65,6 +88,7 @@ class PermissionCache:
             except Exception as e:
                 logger.warning(f"PermissionCache: Redis get failed, falling back: {e}")
                 self._redis_client = None
+                self._last_connect_failure = time.monotonic()
 
         # Fallback to memory cache with TTL check
         cache_key = (role, codename)
@@ -79,8 +103,6 @@ class PermissionCache:
 
     def set(self, role: str, codename: str, has_permission: bool) -> None:
         """Cache permission result with TTL."""
-        import time
-
         # Update Redis if available
         if self._redis_client is not None:
             try:
@@ -94,6 +116,7 @@ class PermissionCache:
             except Exception as e:
                 logger.warning(f"PermissionCache: Redis set failed, falling back: {e}")
                 self._redis_client = None
+                self._last_connect_failure = time.monotonic()
 
         # Fallback to memory cache with timestamp
         self._fallback_cache[(role, codename)] = (has_permission, time.time())

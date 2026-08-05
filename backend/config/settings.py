@@ -228,6 +228,10 @@ SIMPLE_JWT = {
 # Permission Cache TTL (seconds)
 CACHE_PERMISSION_TTL = int(os.getenv("CACHE_PERMISSION_TTL", "300"))  # 5 minutes
 
+# How long PermissionCache waits after a failed Redis connect attempt before
+# retrying, instead of reconnecting on every cache miss. See apps/perm/cache.py.
+CACHE_REDIS_RETRY_COOLDOWN = int(os.getenv("CACHE_REDIS_RETRY_COOLDOWN", "5"))  # seconds
+
 # Cache (Redis)
 CACHES = {
     "default": {
