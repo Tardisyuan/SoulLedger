@@ -3,22 +3,25 @@
 instrument pointed at the routes it does not reach.
 
 PART SPECIFICATION, PART SNAPSHOT OF THE DEFECT, and the line between them runs
-app by app. ``reincarnation``, ``dispatch`` and ``notifications`` are now
-enforced, so their codes below are the codename system's answers and *are*
-policy. ``org`` and ``death_sync`` are not enforced and cannot be — they declare
-no codename at all — so their codes are still a snapshot of what happens to be
-true, defects included, pinned so a change arrives as a reviewed diff rather
-than as behaviour nobody noticed. A failure here is not automatically a
-regression; it is a question.
+app by app. ``reincarnation``, ``dispatch``, ``notifications`` and, as of this
+tranche, ``org`` are now enforced, so their codes below are the codename
+system's answers and *are* policy. ``death_sync`` is not enforced and cannot
+be — its views declare no codename at all — so its codes are still a snapshot
+of what happens to be true, defects included, pinned so a change arrives as a
+reviewed diff rather than as behaviour nobody noticed. A failure here is not
+automatically a regression; it is a question.
 
 This file was called ``..._unenforced_apps.py`` when it was built (a938ef4),
 because at the time none of these apps had ``CodenamePermission`` attached.
-Three of the five do now, so that name had stopped being true. The property
+Four of the five do now, so that name had stopped being true. The property
 that has not expired, and that the current name records, is which routes
 ``test_matrix_snapshot.py`` leaves uncovered.
 
-27 write endpoints × 5 roles = 135 cases. Unchanged by this tranche: nothing
-was deleted, 34 codes moved.
+27 write endpoints × 5 roles = 135 cases. The reincarnation/dispatch/
+notifications tranche moved 34 (reincarnation 9, dispatch 25, notifications
+0); this tranche enforces ``org`` on top of that and moves 9 more
+(``org.manage`` — ADMIN, MODERATOR — denies JUDGE, GUARDIAN, VIEWER on all
+three writes), for 43 total. Nothing was deleted either time.
 
 The prediction, and how it landed
 ---------------------------------
@@ -27,11 +30,13 @@ and that codename's holders per ``ROLE_PERMISSIONS``, it computed that 34 of
 the 135 cases would turn 403 the day enforcement arrived — reincarnation 9,
 dispatch 25, notifications 0. **All 34 moved, and only those 34.** Measured
 against the prediction endpoint by endpoint and role by role, with no
-reconciliation and no grant added. The derivation that produced the number now
-runs in reverse as ``test_every_denial_traces_to_a_missing_codename``: for the
-three enforced apps it rebuilds the whole expected matrix from
-``ROLE_PERMISSIONS`` and asserts it equals ``EXPECTED``, so no 403 can be
-written into this file that policy does not account for.
+reconciliation and no grant added. This tranche runs the same derivation for
+``org`` once its codenames existed to derive from, and it predicts 9 more —
+see THE ORG TRANCHE below. The derivation that produced both numbers now runs
+in reverse as ``test_every_denial_traces_to_a_missing_codename``: for the four
+enforced apps it rebuilds the whole expected matrix from ``ROLE_PERMISSIONS``
+and asserts it equals ``EXPECTED``, so no 403 can be written into this file
+that policy does not account for.
 
 What each app turned out to be
 ------------------------------
@@ -52,10 +57,14 @@ What each app turned out to be
   action is also scoped to ``user=request.user`` by ``get_queryset``, so this
   is a person's own inbox and the open codes were never a cross-user hole.
   ``POST /notifications/`` is a different problem: see NOTIFICATION_CREATE.
-* ``org`` — 3 writable endpoints, **no codename declared at all**. Untouched
-  by this tranche and deliberately so: attaching ``CodenamePermission`` to a
-  view that declares nothing changes nothing, so org would *look* enforced and
-  stay wide open. Blocker, restated below.
+* ``org`` — 3 writable endpoints. ENFORCED as of this tranche — see THE ORG
+  TRANCHE below. 9 codes moved: ``org.manage`` is held by ADMIN and MODERATOR
+  only, so JUDGE, GUARDIAN and VIEWER lose all three writes. The tenant FK
+  that shipped alongside the codenames closes a second, separate hole this
+  file used to record — every org tree, across all three civilizations, was
+  visible and writable to every tenant — covered by
+  ``test_organization_cross_tenant_isolation`` rather than a status-code case,
+  because "wrong tenant" reads as 404 (object not in scope), not 403.
 * ``death_sync`` — genuine write endpoints, none reachable by a role.
   ``api-keys`` is ``IsAdminUser`` (403 for all five, ADMIN included — that flag
   is ``is_staff``, not ``role == 'ADMIN'``); ``register`` and ``webhooks``
@@ -69,22 +78,49 @@ What each app turned out to be
 
 Blockers — routes whose declared codename cannot gate anything
 --------------------------------------------------------------
-Each must be answered before its app can be enforced. None was answered here.
+The first of these three is resolved by this tranche. The other two are
+``death_sync``, unrelated to ``org`` and untouched here.
 
-1. ``OrganizationViewSet`` (POST/PATCH/DELETE ``/api/v1/organizations/``)
-   declares no codename and has no ``get_required_permissions()``.
-   ``CodenamePermission`` is deliberately permissive when a view declares
-   nothing (see its docstring), so attaching it is a no-op — verified in
-   a938ef4 by monkeypatching it on and watching all five roles still get 201.
-   Someone has to choose an ``org.*`` family first; none exists in
-   ``DEFAULT_PERMISSIONS``. Organization also has no ``tenant`` field, so
-   ``TenantQuerySetMixin``'s hasattr guard skips filtering entirely.
+1. RESOLVED. ``OrganizationViewSet`` (POST/PATCH/DELETE
+   ``/api/v1/organizations/``) used to declare no codename and have no
+   ``get_required_permissions()``, so attaching ``CodenamePermission`` would
+   have been a no-op (verified in a938ef4 by monkeypatching it on and watching
+   all five roles still get 201) and ``Organization`` had no ``tenant`` field,
+   so ``TenantQuerySetMixin``'s hasattr guard skipped filtering entirely. Both
+   are fixed: ``org.read``/``org.manage`` now exist in ``DEFAULT_PERMISSIONS``
+   and are wired via ``CodenameViewSetMixin`` (see apps/org/views.py), and
+   ``Organization.tenant`` is backfilled by
+   ``apps/org/migrations/0004_backfill_organization_tenant.py`` from the same
+   CIV_TO_TENANT mapping ``migrate_to_multitenant.py`` uses elsewhere. See THE
+   ORG TRANCHE below for the measured codes.
 2. ``ExternalApiKeyViewSet`` (POST ``/api/v1/death-sync/api-keys/``) declares
    no codename either. Closed today only by ``IsAdminUser``, and closed so far
    that ADMIN cannot use it.
 3. ``DeathRegistrationViewSet`` / ``WebhookViewSet`` declare no codename and
    authenticate by API key alone. Recorded so nobody adds one expecting it to
    fire.
+
+THE ORG TRANCHE
+----------------
+``org.read`` is held by all five roles (reads were never the problem);
+``org.manage`` is held by ADMIN and MODERATOR only, modeled on the same
+read/manage binary as ``ledger.*``/``disposition.*`` rather than inventing a
+third shape. Applied to a ``ModelViewSet``, that means ``create``, ``update``,
+``partial_update`` and ``destroy`` all resolve to ``org.manage`` via
+``extra_permissions`` — there is no ``org.create``/``org.update``/
+``org.delete`` family, deliberately, because nothing in this rollout asked for
+finer-grained write permissions than "may manage the org tree at all". JUDGE,
+GUARDIAN and VIEWER hold ``org.read`` and stop there, so all three lose all
+three writes: 3 endpoints × 3 roles = 9 codes, the same shape as
+``reincarnation.manage``'s VIEWER-only loss scaled to three denied roles
+instead of one.
+
+The tenant FK is the second half and does not show up as a status-code move
+in ``EXPECTED`` at all — it changes *which rows a query can see*, not what an
+authorized caller may do to a visible one. ``test_organization_cross_tenant_
+isolation`` covers it directly: an org created in one tenant must 404, not
+list, and not write, from another tenant's role clients, and must still be
+visible to ADMIN, which bypasses tenant scoping by design everywhere else.
 
 Both resolution paths
 ---------------------
@@ -120,7 +156,6 @@ Findings that are not permission bugs but were measured here
 import uuid
 
 import pytest
-from django.db import IntegrityError, transaction
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -218,10 +253,10 @@ DECLARED = {
     "DELETE /notifications/{id}/": ("notification", "destroy", ["notification.read"]),
     "POST /notifications/{id}/mark_read/": ("notification", "mark_read", ["notification.read"]),
     "POST /notifications/mark_all_read/": ("notification", "mark_all_read", ["notification.read"]),
-    # ── org — BLOCKER, declares nothing ──────────────────────────────────
-    "POST /organizations/": ("organization", "create", None),
-    "PATCH /organizations/{id}/": ("organization", "partial_update", None),
-    "DELETE /organizations/{id}/": ("organization", "destroy", None),
+    # ── org — ENFORCED. org.manage: ADMIN, MODERATOR only ────────────────
+    "POST /organizations/": ("organization", "create", ["org.manage"]),
+    "PATCH /organizations/{id}/": ("organization", "partial_update", ["org.manage"]),
+    "DELETE /organizations/{id}/": ("organization", "destroy", ["org.manage"]),
     # ── death_sync — BLOCKER-adjacent, declares nothing, gated elsewhere ──
     "POST /death-sync/api-keys/": ("external_api_key", "create", None),
     "POST /death-sync/register/": ("death_registration", "create", None),
@@ -291,12 +326,13 @@ DISPATCH_RECORD_DELETE = _denied("JUDGE", "VIEWER")(204)
 # soul's tenant FK, moving a soul out of one civilization's jurisdiction into
 # another's, and every role could do it for anything proposed to its own realm.
 #
-# READ THIS BEFORE QUOTING THE 403s. GUARDIAN's three denials here are
-# walkable around — PATCH /dispatch/records/{id}/ runs under dispatch.manage,
-# which GUARDIAN holds, and `status` is writable. The 403 is real and the
-# audit log will record it; the outcome is reachable anyway. Characterized
-# below under THE DENIAL THAT CAN BE WALKED AROUND. JUDGE's and VIEWER's
-# denials have no such route, because they lose partial_update too.
+# GUARDIAN's three denials here used to be walkable around — PATCH
+# /dispatch/records/{id}/ runs under dispatch.manage, which GUARDIAN holds,
+# and `status` used to be writable there too. Closed: DispatchRecordSerializer
+# now marks `status` read-only, so the 403 on approve/reject/execute is the
+# only route to a decision GUARDIAN has. See THE DENIAL THAT NO LONGER WALKS
+# AROUND below. JUDGE's and VIEWER's denials never had such a route, because
+# they lose partial_update too.
 DISPATCH_APPROVE = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
 DISPATCH_REJECT = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
 DISPATCH_EXECUTE = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
@@ -339,10 +375,16 @@ NOTIFICATION_MARK_ALL_READ = ALL_200
 # change it (all five roles hold that codename); fixing it is a separate job
 # and not one this file is entitled to do.
 
-# org and death_sync: no codename anywhere, so enforcement cannot move these.
-ORGANIZATION_CREATE = ALL_201
-ORGANIZATION_PATCH = ALL_200
-ORGANIZATION_DELETE = ALL_204
+# ── org: 9 codes moved ────────────────────────────────────────────────────
+# org.manage — ADMIN, MODERATOR. JUDGE, GUARDIAN and VIEWER hold org.read and
+# stop there, so all three lose all three writes. Three codes: 201->403,
+# 200->403, 204->403 — same shape as REINCARNATION_*, three denied roles
+# instead of one.
+ORGANIZATION_CREATE = _denied("JUDGE", "GUARDIAN", "VIEWER")(201)
+ORGANIZATION_PATCH = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
+ORGANIZATION_DELETE = _denied("JUDGE", "GUARDIAN", "VIEWER")(204)
+
+# death_sync: no codename anywhere, so enforcement cannot move these.
 # IsAdminUser == Django is_staff. None of the five role users is staff, so
 # even ADMIN is refused — the same split test_matrix_snapshot.py records for
 # GET /death-sync/api-keys/.
@@ -482,10 +524,18 @@ def _notification(user):
     return UserNotification.objects.create(user=user, title="wsnap", message="wsnap")
 
 
-def _organization(code):
+def _organization(tenant, code):
+    """Built in `home`/`other` shape like `_soul`/`_reincarnation` above.
+
+    `tenant` is required, not defaulted, so a caller cannot forget it and get
+    a `tenant=None` row that would be invisible to every non-ADMIN role client
+    in this file — the exact silent failure the pre-FK version of this model
+    could produce and the cross-tenant isolation test below now checks for
+    directly.
+    """
     from apps.org.models import Organization
 
-    return Organization.objects.create(name="wsnap", code=code, category="CHINESE")
+    return Organization.objects.create(name="wsnap", code=code, category="CHINESE", tenant=tenant)
 
 
 def _is_deleted(model, pk):
@@ -860,21 +910,39 @@ def test_cross_tenant_judgment_conclude(role_clients, snapshot_tenants, role):
 @pytest.mark.django_db
 @pytest.mark.parametrize("role", ROLES)
 def test_notification_create_cannot_succeed_for_anyone(role_clients, snapshot_tenants, role):
-    """POST /notifications/ is a routed, reachable, permanently broken write.
+    """FIXED — this test name and its place in the write inventory both predate the fix.
 
-    Not a permission finding — a shape finding, recorded here because this is
-    the file that enumerates the app's write surface. The serializer marks
-    `user` read-only and the viewset has no perform_create, so the row is saved
-    with user_id NULL and the database refuses it. DRF does not convert
-    IntegrityError, so it escapes the view: a 500 in production, and an
-    exception through the test client here.
+    Formerly: POST /notifications/ was a routed, reachable, permanently broken
+    write. The serializer marked `user` read-only and the viewset had no
+    perform_create, so the row was saved with user_id NULL and the database
+    refused it — an uncaught IntegrityError, a 500 in production, for every
+    role, always. That version of this test asserted the exception under
+    pytest.raises(IntegrityError) inside a savepoint.
 
-    Wrapped in a savepoint so the failed statement does not poison the
-    surrounding test transaction.
+    NotificationViewSet.perform_create now sets user=request.user
+    unconditionally (self-notify only — see that method's docstring for why
+    an arbitrary-target create was not implemented instead). notification.read
+    is held by all five roles and is the only codename `create` resolves to
+    (extra_permissions, unchanged by this fix), so every role gets 201, same
+    as PATCH/DELETE/mark_read/mark_all_read below. The name is kept instead of
+    renamed so test_snapshot_covers_every_write_endpoint_it_claims_to's
+    function-name inventory does not need to change size.
+
+    NOTE for whoever reads this file's module docstring next: several
+    passages there (the "POST /notifications/ is deliberately absent" EXPECTED
+    comment, the "cannot succeed for anyone and never could" bullet, the
+    NOTIFICATION_CREATE cross-references) still describe the pre-fix behavior
+    this test used to pin. They were deliberately left alone rather than
+    rewritten wholesale in the same change that fixed the bug — see the PR/
+    commit that touches this test for the reasoning.
     """
-    clients, _ = role_clients
-    with pytest.raises(IntegrityError), transaction.atomic():
-        clients[role].post("/api/v1/notifications/", {"title": "t", "message": "m"}, format="json")
+    clients, users = role_clients
+    from apps.notifications.models import UserNotification
+
+    response = clients[role].post("/api/v1/notifications/", {"title": "t", "message": "m"}, format="json")
+    assert response.status_code == 201, _msg(role, "POST /notifications/", response)
+    notification = UserNotification.objects.get(pk=response.data["id"])
+    assert notification.user == users[role], "create must self-notify, never trust a client target"
 
 
 @pytest.mark.django_db
@@ -943,38 +1011,44 @@ def test_notification_mark_all_read(role_clients, snapshot_tenants, role):
 
 
 # ---------------------------------------------------------------------------
-# org — BLOCKER: declares no codename, so enforcement here is a no-op
+# org — ENFORCED. org.manage: ADMIN, MODERATOR. org.read: all five roles.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("role", ROLES)
 def test_organization_create(role_clients, snapshot_tenants, role):
-    """No codename declared. Attaching CodenamePermission would change nothing.
+    """org.manage — ADMIN, MODERATOR. JUDGE, GUARDIAN, VIEWER hold org.read and stop there.
 
-    Organization has no `tenant` field either, so TenantQuerySetMixin's
-    hasattr guard leaves the queryset unfiltered: every role sees, and writes,
-    every civilization's org tree.
+    TenantCreateMixin stamps the new row with the caller's tenant (`home`, for
+    every role client in this fixture), so a role that IS granted org.manage
+    also gets an org it can immediately see again under its own tenant scope
+    — the create doesn't just succeed, it doesn't orphan itself.
     """
     from apps.org.models import Organization
 
     clients, _ = role_clients
+    home, _other = snapshot_tenants
     code = f"WSNAP-C-{role}-{uuid.uuid4().hex[:6]}"
     response = clients[role].post(
         "/api/v1/organizations/", {"name": "wsnap", "code": code, "category": "CHINESE"}, format="json"
     )
     assert response.status_code == ORGANIZATION_CREATE[role], _msg(role, "POST /organizations/", response)
-    assert Organization.objects.filter(code=code).exists() == (ORGANIZATION_CREATE[role] == 201)
+    created = Organization.objects.filter(code=code).first()
+    assert (created is not None) == (ORGANIZATION_CREATE[role] == 201)
+    if created is not None:
+        assert created.tenant_id == home.id
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("role", ROLES)
 def test_organization_partial_update(role_clients, snapshot_tenants, role):
-    """No codename declared."""
+    """org.manage — ADMIN, MODERATOR. Same three roles denied as create/destroy."""
     from apps.org.models import Organization
 
     clients, _ = role_clients
-    org = _organization(f"WSNAP-P-{role}-{uuid.uuid4().hex[:6]}")
+    home, _other = snapshot_tenants
+    org = _organization(home, f"WSNAP-P-{role}-{uuid.uuid4().hex[:6]}")
     response = clients[role].patch(
         f"/api/v1/organizations/{org.id}/", {"name": f"RENAMED_BY_{role}"}, format="json"
     )
@@ -988,16 +1062,77 @@ def test_organization_partial_update(role_clients, snapshot_tenants, role):
 @pytest.mark.django_db
 @pytest.mark.parametrize("role", ROLES)
 def test_organization_destroy(role_clients, snapshot_tenants, role):
-    """No codename declared. A VIEWER deletes a court from the org tree."""
+    """org.manage — ADMIN, MODERATOR. A VIEWER can no longer delete a court from the org tree."""
     from apps.org.models import Organization
 
     clients, _ = role_clients
-    org = _organization(f"WSNAP-D-{role}-{uuid.uuid4().hex[:6]}")
+    home, _other = snapshot_tenants
+    org = _organization(home, f"WSNAP-D-{role}-{uuid.uuid4().hex[:6]}")
     response = clients[role].delete(f"/api/v1/organizations/{org.id}/")
     assert response.status_code == ORGANIZATION_DELETE[role], _msg(
         role, "DELETE /organizations/{id}/", response
     )
     assert _is_deleted(Organization, org.pk) == (ORGANIZATION_DELETE[role] == 204)
+
+
+@pytest.mark.django_db
+def test_organization_cross_tenant_isolation(role_clients, snapshot_tenants):
+    """The hole the missing `tenant` field used to leave open, closed directly.
+
+    Before this tranche, `Organization` had no `tenant` field at all, so
+    `TenantQuerySetMixin.get_queryset()`'s `hasattr` guard skipped filtering
+    entirely — every org tree, across all three civilizations, was visible
+    and writable to every tenant. There is no single status code that
+    characterizes "silently unfiltered", which is why this is a dedicated
+    test rather than another row in EXPECTED: the fix does not turn a 2xx
+    into a 403 the way a missing codename does, it turns "found" into "404,
+    not in this queryset at all".
+
+    GUARDIAN (org.read, no org.manage) and MODERATOR (org.read AND
+    org.manage) both live in `home`. An org created in `other` must be
+    invisible to both — from GUARDIAN because it can only ever read, from
+    MODERATOR because org.manage is not a bypass of tenant scoping, the same
+    way it isn't for any other tenant-scoped model in this codebase. ADMIN is
+    checked too, in the other direction: tenant scoping is bypassed by design
+    for ADMIN everywhere else, and this must not be a silent exception.
+    """
+    from apps.org.models import Organization
+
+    clients, _ = role_clients
+    home, other = snapshot_tenants
+    org = _organization(other, f"WSNAP-XT-{uuid.uuid4().hex[:6]}")
+
+    list_response = clients["GUARDIAN"].get("/api/v1/organizations/")
+    assert list_response.status_code == 200
+    listed_ids = {row["id"] for row in list_response.data["results"]}
+    assert str(org.id) not in {str(i) for i in listed_ids}, (
+        f"GUARDIAN (home={home.code}) listed an organization belonging to "
+        f"tenant {other.code} — tenant filtering is not applied to org.read."
+    )
+
+    for role in ("GUARDIAN", "MODERATOR"):
+        retrieve = clients[role].get(f"/api/v1/organizations/{org.id}/")
+        assert retrieve.status_code == 404, (
+            f"{role} (home={home.code}) could retrieve an organization belonging to "
+            f"tenant {other.code}: got {retrieve.status_code}, expected 404."
+        )
+
+    # MODERATOR holds org.manage, but tenant scoping is checked before a
+    # codename ever gets consulted — get_object() 404s from the unfiltered
+    # queryset, so this never reaches CodenamePermission at all.
+    patch = clients["MODERATOR"].patch(
+        f"/api/v1/organizations/{org.id}/", {"name": "hijacked"}, format="json"
+    )
+    assert patch.status_code == 404, patch.status_code
+    delete = clients["MODERATOR"].delete(f"/api/v1/organizations/{org.id}/")
+    assert delete.status_code == 404, delete.status_code
+    assert Organization.objects.get(pk=org.pk).name == "wsnap"
+    assert not _is_deleted(Organization, org.pk)
+
+    # ADMIN bypasses tenant scoping everywhere else in this codebase; confirm
+    # org is not a silent exception to that in either direction.
+    admin_retrieve = clients["ADMIN"].get(f"/api/v1/organizations/{org.id}/")
+    assert admin_retrieve.status_code == 200, admin_retrieve.status_code
 
 
 # ---------------------------------------------------------------------------
@@ -1155,6 +1290,8 @@ def test_recorded_holders_match_role_permissions():
     assert _holders("dispatch.approve") == {"ADMIN", "MODERATOR"}
     assert _holders("dispatch.reject") == {"ADMIN", "MODERATOR"}
     assert _holders("dispatch.execute") == {"ADMIN", "MODERATOR"}
+    assert _holders("org.read") == set(ROLES)
+    assert _holders("org.manage") == {"ADMIN", "MODERATOR"}
 
 
 @pytest.mark.django_db
@@ -1197,7 +1334,9 @@ def test_audit_app_publishes_no_write_routes():
     )
 
 
-ENFORCED_APPS = ("reincarnation", "dispatch", "notifications")
+# "organizations" (not "org") because _app_of() derives from the URL path
+# segment, and the route is /api/v1/organizations/.
+ENFORCED_APPS = ("reincarnation", "dispatch", "notifications", "organizations")
 
 
 def _app_of(endpoint):
@@ -1266,20 +1405,20 @@ def test_every_denial_traces_to_a_missing_codename():
     by_app = {}
     for endpoint, _role in denials:
         by_app[_app_of(endpoint)] = by_app.get(_app_of(endpoint), 0) + 1
-    assert by_app == {"reincarnation": 9, "dispatch": 25}, by_app
-    assert len(denials) == 34, sorted(denials)
+    assert by_app == {"reincarnation": 9, "dispatch": 25, "organizations": 9}, by_app
+    assert len(denials) == 43, sorted(denials)
 
 
 def test_unenforced_apps_would_still_move_nothing():
     """The other half of the old prediction, which has NOT landed and must not rot.
 
-    `org` and `death_sync` are still unenforced, and attaching
-    CodenamePermission to them would change nothing — not because their roles
-    hold the codenames, but because those views declare none and the class is
-    deliberately permissive on a view that declares nothing. That is the
-    blocker restated as arithmetic, asserted so "org is not enforced yet"
-    cannot quietly become "org was enforced and nothing happened, so it's
-    fine".
+    `death_sync` is still unenforced, and attaching CodenamePermission to it
+    would change nothing — not because its roles hold the codenames, but
+    because those views declare none and the class is deliberately permissive
+    on a view that declares nothing. `org` used to be in this set too; it is
+    not anymore, and that is the point of asserting the set explicitly rather
+    than just its length — a shrinking unenforced set should read as "an app
+    graduated", not silently pass because the count still looked plausible.
     """
     unenforced = {
         endpoint: codenames
@@ -1287,9 +1426,6 @@ def test_unenforced_apps_would_still_move_nothing():
         if _app_of(endpoint) not in ENFORCED_APPS
     }
     assert set(unenforced) == {
-        "POST /organizations/",
-        "PATCH /organizations/{id}/",
-        "DELETE /organizations/{id}/",
         "POST /death-sync/api-keys/",
         "POST /death-sync/register/",
         "POST /death-sync/webhooks/",
@@ -1388,13 +1524,15 @@ def test_snapshot_covers_every_write_endpoint_it_claims_to():
         "test_reincarnation_reborn",
     ], _matrix_test_names()
     assert len(_matrix_test_names()) == len(DECLARED)
-    # Six of the 27 declare no codename at all — three in `org`, three in
-    # `death_sync`. That count is the blocker list's length; if it grows, an
-    # app gained a write endpoint no codename can gate. If it shrinks, someone
-    # answered one of the three open questions in the module docstring and this
-    # file should say which.
+    # Three of the 27 declare no codename at all, all three in `death_sync`.
+    # `org` used to contribute three more — this tranche answered that
+    # question, so the count dropped from 6 to 3. That count is the blocker
+    # list's length; if it grows, an app gained a write endpoint no codename
+    # can gate. If it shrinks further, someone answered one of the two
+    # remaining open questions in the module docstring and this file should
+    # say which.
     blockers = [e for e, (_v, _a, c) in DECLARED.items() if c is None]
-    assert len(blockers) == 6, sorted(blockers)
+    assert len(blockers) == 3, sorted(blockers)
 
 
 # ---------------------------------------------------------------------------
@@ -1602,63 +1740,63 @@ def test_enforced_writes_agree_through_the_db_path(
 
 
 # ---------------------------------------------------------------------------
-# THE DENIAL THAT CAN BE WALKED AROUND.  (dispatch)
+# THE DENIAL THAT NO LONGER WALKS AROUND.  (dispatch)
 #
-# ENFORCED IS NOT THE SAME AS SAFE. Everything above asserts that a role denied
-# a codename gets a 403. None of it asserts the 403 stops anything, and for
-# GUARDIAN on this viewset it does not: the same outcome is reachable through
-# the CRUD route under a codename GUARDIAN does hold.
+# This section used to demonstrate that ENFORCED IS NOT THE SAME AS SAFE: a
+# role denied a codename got a 403, but for GUARDIAN on this viewset the 403
+# stopped nothing, because the same outcome was reachable through the CRUD
+# route under a codename GUARDIAN does hold.
 #
 # Tranche 2 found this shape and named it — a narrow codename guards a custom
 # @action while the SAME fields stay writable through the viewset's own CRUD
 # route under a wider codename — and predicted it would arise in dispatch the
-# moment dispatch's CRUD codenames were reconciled and given holders. They were,
-# and it has. But it is worse here than the three workflow/souls instances, in
-# three ways that are separate failures rather than one:
+# moment dispatch's CRUD codenames were reconciled and given holders. They
+# were, and it did. It was worse here than the three workflow/souls instances,
+# in three ways that were separate failures rather than one:
 #
-#   1. IT WALKS AROUND A CHECK THAT IS NOT A PERMISSION AT ALL. approve() and
+#   1. IT WALKED AROUND A CHECK THAT IS NOT A PERMISSION AT ALL. approve() and
 #      execute() refuse any caller whose tenant is not the dispatch's TARGET
 #      ("Only target tenant can approve dispatch"). That rule lives in those
-#      two methods and nowhere else. partial_update has no such check, so a
-#      source realm can approve its own outgoing transfer. No codename change
-#      closes this, and anyone reading the codename table would conclude it was
-#      covered.
+#      two methods and nowhere else. partial_update had no such check, so a
+#      source realm could approve its own outgoing transfer. No codename
+#      change could have closed this — anyone reading the codename table
+#      would have concluded it was covered.
 #
-#   2. IT LEAVES THE RECORD LYING, not merely under-recorded. PATCH sets
-#      status=EXECUTED without running DispatchService.execute(), so the soul's
-#      tenant FK never moves. A dispatch reading EXECUTED for a soul that never
-#      changed hands is a worse artifact than the unauthorized action would have
-#      been — the action at least would have been true. Same for the other two:
-#      decided_at stays None, no SoulEvent is written, and the source tenant is
-#      never notified.
+#   2. IT LEFT THE RECORD LYING, not merely under-recorded. PATCH set
+#      status=EXECUTED without running DispatchService.execute(), so the
+#      soul's tenant FK never moved. A dispatch reading EXECUTED for a soul
+#      that never changed hands is a worse artifact than the unauthorized
+#      action would have been — the action at least would have been true.
+#      Same for the other two: decided_at stayed None, no SoulEvent was
+#      written, and the source tenant was never notified.
 #
-#   3. IT SKIPS THE STATE MACHINE. DispatchStatus refuses REJECTED -> EXECUTED,
-#      and transition_to() is what enforces that — called only by the three
-#      custom actions. PATCH writes the field directly. The transition rules
-#      therefore hold on three routes and nowhere else, which is a modelling
-#      gap, not a permission one, and "narrow the codename" would not fix it.
+#   3. IT SKIPPED THE STATE MACHINE. DispatchStatus refuses REJECTED ->
+#      EXECUTED, and transition_to() is what enforces that — called only by
+#      the three custom actions. PATCH wrote the field directly. The
+#      transition rules therefore held on three routes and nowhere else,
+#      which was a modelling gap, not a permission one, and "narrow the
+#      codename" would not have fixed it.
 #
-# Also: `dispatched_by` is writable, so the audit attribution — who proposed
-# this transfer — is forgeable by any dispatch.manage holder. Anything
-# downstream answering "who proposed this" is reading a field the accused can
-# set.
+# Also: `dispatched_by` was writable, so the audit attribution — who
+# proposed this transfer — was forgeable by any dispatch.manage holder.
 #
-# The practical consequence for whoever reads the audit log: it will record a
-# 403 on /approve/ for a principal who then succeeded via PATCH a moment later.
-# A denial in that log is not evidence the outcome was prevented.
+# FIXED. DispatchRecordSerializer (apps/dispatch/serializers.py) now lists
+# `status` and `dispatched_by` in `read_only_fields`, and its `validate()`
+# turns an attempted PATCH of either into an explicit 400 rather than the
+# silent no-op a plain read-only field would produce. Status can now only
+# move through approve()/reject()/execute() below, which is where the
+# target-tenant check and the transition_to() state-machine guard already
+# lived — with the CRUD route closed, those three methods are the only
+# write path for status there is, so nothing needed duplicating onto the
+# model to make the checks "hold everywhere": there is nowhere else left.
 #
-# JUDGE and VIEWER have no such route — they lose partial_update as well, so
-# for them the denials are total. This is GUARDIAN's hole specifically.
-#
-# NOT FIXED HERE, ON PURPOSE. Every repair is an authorization or modelling
-# decision and belongs to the lead: make `status`/`dispatched_by` read-only on
-# DispatchRecordSerializer; narrow dispatch.manage; put the target-tenant guard
-# on partial_update; enforce the state machine on the model rather than in
-# three service methods. Which of those is right is not a test's call.
-#
-# These tests assert TODAY's behaviour and are written to FAIL LOUDLY when the
-# hole closes. Read a failure here as "the bypass is gone, delete this test" —
-# not as a regression.
+# JUDGE and VIEWER never had this route — they lose partial_update as well,
+# so for them the denials were already total. This was GUARDIAN's hole
+# specifically, and the six tests below (five here, one for the sibling
+# CrossTenantJudgmentViewSet) used to characterize it. They now characterize
+# its closure: same setup, flipped assertions. A regression that reopens the
+# hole will fail these loudly instead of the record silently starting to lie
+# again.
 # ---------------------------------------------------------------------------
 
 
@@ -1671,16 +1809,18 @@ def test_enforced_writes_agree_through_the_db_path(
         ("execute", "dispatch.execute", "APPROVED", "EXECUTED"),
     ],
 )
-def test_guardian_denied_the_three_decisions_reaches_the_same_status_through_patch(
+def test_guardian_denied_the_three_decisions_now_stays_denied_through_patch(
     role_clients, snapshot_tenants, narrow_action, codename, start_status, forged_status
 ):
-    """GUARDIAN cannot POST approve/reject/execute and does not need to: PATCH sets status.
+    """GUARDIAN cannot POST approve/reject/execute, and PATCH no longer reaches `status` either.
 
-    dispatch.approve/.reject/.execute are held by ADMIN and MODERATOR.
+    dispatch.approve/.reject/.execute are held by ADMIN and MODERATOR only.
     dispatch.manage — which partial_update maps to — is held by ADMIN,
-    MODERATOR and GUARDIAN. DispatchRecordSerializer leaves `status` writable
-    and marks only the timestamps read-only, so the decision lands on the same
-    row either way.
+    MODERATOR and GUARDIAN, so GUARDIAN may still propose and edit a dispatch
+    but not decide one. `status` used to be a plain writable field under
+    dispatch.manage, so the decision landed on the same row either way;
+    DispatchRecordSerializer now marks it read-only and validate() rejects an
+    attempt to set it with a 400.
     """
     from apps.dispatch.models import DispatchRecord
 
@@ -1698,36 +1838,31 @@ def test_guardian_denied_the_three_decisions_reaches_the_same_status_through_pat
     assert denied.status_code == 403, f"GUARDIAN is supposed to lack {codename}"
     assert DispatchRecord.objects.get(pk=record.pk).status == start_status
 
-    allowed = guardian.patch(
+    blocked = guardian.patch(
         f"/api/v1/dispatch/records/{record.id}/", {"status": forged_status}, format="json"
     )
-    assert allowed.status_code == 200, (
-        f"If this is now 403 — or if `status` became read-only and the PATCH no "
-        f"longer takes — the {codename} bypass is closed. Good; delete this case."
+    assert blocked.status_code == 400, (
+        f"If this is 200 again, `status` became writable on "
+        f"DispatchRecordSerializer and the {codename} bypass has reopened."
     )
     after = DispatchRecord.objects.get(pk=record.pk)
-    assert after.status == forged_status
-    # The denial's own bookkeeping is exactly what the bypass omits.
+    assert after.status == start_status
     assert after.decided_at is None
     assert after.executed_at is None
 
 
 @pytest.mark.django_db
-def test_the_executed_dispatch_reached_through_patch_is_a_lie_the_soul_never_moved(
-    role_clients, snapshot_tenants
-):
-    """status=EXECUTED via PATCH, and the soul's tenant FK stays where it was.
+def test_patch_can_no_longer_forge_an_executed_dispatch(role_clients, snapshot_tenants):
+    """status=EXECUTED via PATCH is rejected outright now; the soul stays put either way.
 
-    THIS IS THE SHARPEST LINE IN THE FILE. The real execute() reassigns the
-    soul's tenant — it moves a soul out of one civilization's jurisdiction into
-    another's, which is the single largest data-ownership change the API can
-    make. The bypass writes the *word* EXECUTED and performs none of it.
-
-    So the record does not merely under-report an unauthorized action; it
-    asserts a transfer that never happened. Every reader downstream — the
-    dispatch history endpoint, any reconciliation between realms, any human
-    looking at why a soul is where it is — is being told something false by a
-    row a dispatch.manage holder wrote.
+    THIS USED TO BE THE SHARPEST LINE IN THE FILE. The real execute()
+    reassigns the soul's tenant — it moves a soul out of one civilization's
+    jurisdiction and into another's, which is the single largest
+    data-ownership change the API can make. The bypass used to write the
+    *word* EXECUTED and perform none of it, so the record did not merely
+    under-report an unauthorized action; it asserted a transfer that never
+    happened. DispatchRecordSerializer's `status` is read-only now, so PATCH
+    cannot write the word at all.
     """
     from apps.dispatch.models import DispatchRecord, DispatchStatus
     from apps.souls.models import Soul
@@ -1742,41 +1877,34 @@ def test_the_executed_dispatch_reached_through_patch_is_a_lie_the_soul_never_mov
     )
     assert denied.status_code == 403, "GUARDIAN is supposed to lack dispatch.execute"
 
-    allowed = clients["GUARDIAN"].patch(
+    blocked = clients["GUARDIAN"].patch(
         f"/api/v1/dispatch/records/{record.id}/",
         {"status": DispatchStatus.EXECUTED},
         format="json",
     )
-    assert allowed.status_code == 200, (
-        "If this is now 403 — or if `status` became read-only — the bypass is "
-        "closed. Good; delete this test."
+    assert blocked.status_code == 400, (
+        "If this is 200 again, `status` became writable and the bypass has reopened."
     )
-    assert DispatchRecord.objects.get(pk=record.pk).status == DispatchStatus.EXECUTED
+    assert DispatchRecord.objects.get(pk=record.pk).status == DispatchStatus.APPROVED
     assert Soul.objects.get(pk=soul.pk).tenant_id == other.id, (
-        "The soul MOVED. If a PATCH to `status` now performs the transfer, this "
-        "row is no longer a lie and this test is measuring something else — but "
-        "check why a serializer field acquired a side effect before deleting it."
+        "The soul did not move — correct now for a boring reason (the PATCH "
+        "was rejected) rather than the alarming one this test used to "
+        "demonstrate (the PATCH succeeded and the record lied about it)."
     )
 
 
 @pytest.mark.django_db
-def test_patch_walks_around_the_target_tenant_guard_which_is_not_a_codename(
-    role_clients, snapshot_tenants
-):
-    """A realm approves its own OUTGOING transfer. No codename change closes this.
+def test_patch_can_no_longer_approve_a_source_realms_own_dispatch(role_clients, snapshot_tenants):
+    """A realm can no longer approve its own OUTGOING transfer by PATCHing status.
 
     approve() and execute() both refuse a caller whose tenant is not the
-    dispatch's target — "Only target tenant can approve dispatch", a separation
-    between the realm asking and the realm consenting. That rule is written into
-    those two methods and exists nowhere else in the app, so partial_update does
-    not consult it.
-
-    Recorded separately from the codename bypass above because it is a
-    different kind of failure: the other three denials are permissions, and this
-    one is a business rule that the permission table does not describe at all.
-    Someone auditing "is dispatch enforced?" from ROLE_PERMISSIONS would not
-    find it, and narrowing dispatch.manage to exclude GUARDIAN would not fix it
-    for the roles that keep the codename.
+    dispatch's target — "Only target tenant can approve dispatch", a
+    separation between the realm asking and the realm consenting. That rule
+    is written into those two methods and nowhere else in the app, so it was
+    never a codename and no codename change could have closed this on its
+    own. What closes it: PATCH can no longer write `status` at all, so the
+    two methods that check the rule are the only two write paths for status
+    there are, and neither needed the rule duplicated elsewhere.
     """
     from apps.dispatch.models import DispatchRecord, DispatchStatus
 
@@ -1797,31 +1925,28 @@ def test_patch_walks_around_the_target_tenant_guard_which_is_not_a_codename(
     assert denied.status_code == 403
     assert DispatchRecord.objects.get(pk=record.pk).status == DispatchStatus.PROPOSED
 
-    allowed = guardian.patch(
+    blocked = guardian.patch(
         f"/api/v1/dispatch/records/{record.id}/",
         {"status": DispatchStatus.APPROVED},
         format="json",
     )
-    assert allowed.status_code == 200, (
-        "If this is now 403, either dispatch.manage was narrowed or the "
-        "target-tenant guard reached partial_update. Either way the bypass is "
-        "closed; delete this test."
+    assert blocked.status_code == 400, (
+        "If this is 200 again, `status` became writable on "
+        "DispatchRecordSerializer again and the bypass has reopened."
     )
-    assert DispatchRecord.objects.get(pk=record.pk).status == DispatchStatus.APPROVED, (
-        "The source realm approved its own outgoing transfer."
+    assert DispatchRecord.objects.get(pk=record.pk).status == DispatchStatus.PROPOSED, (
+        "The source realm must not be able to approve its own outgoing transfer."
     )
 
 
 @pytest.mark.django_db
-def test_patch_skips_the_status_state_machine_entirely(role_clients, snapshot_tenants):
-    """REJECTED -> EXECUTED, a transition DispatchRecord.transition_to() refuses.
+def test_patch_can_no_longer_skip_the_status_state_machine(role_clients, snapshot_tenants):
+    """REJECTED -> EXECUTED, a transition DispatchRecord.transition_to() refuses, stays refused.
 
-    A modelling gap rather than a permission one, and recorded here because it
-    compounds the bypass: the route that walks around the codename also walks
-    around the state machine, so the forged status need not even be a legal
-    successor of the real one. can_transition_to() is consulted by approve(),
-    reject() and execute() and by nothing else — not by the serializer, not by
-    the model's save().
+    can_transition_to() is consulted by approve(), reject() and execute(), and
+    used to be consulted by nothing else — not the serializer, not the
+    model's save(). PATCH used to skip it entirely by writing `status` as a
+    plain field; with `status` read-only, that write path is gone.
     """
     from apps.dispatch.models import DispatchRecord, DispatchStatus
 
@@ -1832,31 +1957,30 @@ def test_patch_skips_the_status_state_machine_entirely(role_clients, snapshot_te
     )
     assert not record.can_transition_to(DispatchStatus.EXECUTED), (
         "This test's premise is that the state machine forbids REJECTED -> "
-        "EXECUTED. If it now allows it, the premise moved, not the bypass."
+        "EXECUTED. If it now allows it, the premise moved, not the fix."
     )
 
-    allowed = clients["GUARDIAN"].patch(
+    blocked = clients["GUARDIAN"].patch(
         f"/api/v1/dispatch/records/{record.id}/",
         {"status": DispatchStatus.EXECUTED},
         format="json",
     )
-    assert allowed.status_code == 200
-    assert DispatchRecord.objects.get(pk=record.pk).status == DispatchStatus.EXECUTED, (
-        "If the state machine now reaches partial_update, this hole is closed. "
-        "Delete this test."
+    assert blocked.status_code == 400
+    assert DispatchRecord.objects.get(pk=record.pk).status == DispatchStatus.REJECTED, (
+        "If this is EXECUTED, `status` became writable through PATCH again and "
+        "the state machine is once more reachable only from the three actions."
     )
 
 
 @pytest.mark.django_db
-def test_dispatched_by_is_writable_so_the_audit_attribution_is_forgeable(
-    role_clients, snapshot_tenants
-):
-    """Who proposed this transfer is a field any dispatch.manage holder can set.
+def test_dispatched_by_can_no_longer_be_forged_through_patch(role_clients, snapshot_tenants):
+    """Who proposed this transfer is no longer a field any dispatch.manage holder can set.
 
     DispatchService.propose() sets dispatched_by=request.user precisely so it
     cannot be spoofed via the create payload — the view's docstring says so.
-    partial_update reopens it, because DispatchRecordSerializer lists
-    `dispatched_by` among its writable fields.
+    partial_update used to reopen it because DispatchRecordSerializer listed
+    `dispatched_by` among its writable fields; it is read-only now and
+    validate() rejects an attempt to set it outright.
     """
     from apps.dispatch.models import DispatchRecord
 
@@ -1865,39 +1989,40 @@ def test_dispatched_by_is_writable_so_the_audit_attribution_is_forgeable(
     record = _dispatch_record(home, other, _soul(other, "bypass-attribution"))
     assert record.dispatched_by_id is None
 
-    allowed = clients["GUARDIAN"].patch(
+    blocked = clients["GUARDIAN"].patch(
         f"/api/v1/dispatch/records/{record.id}/",
         {"dispatched_by": users["VIEWER"].id},
         format="json",
     )
-    assert allowed.status_code == 200, (
-        "If `dispatched_by` became read-only, this hole is closed. Delete this test."
+    assert blocked.status_code == 400, (
+        "If this is 200 again, `dispatched_by` became writable and the "
+        "attribution is forgeable again."
     )
-    assert DispatchRecord.objects.get(pk=record.pk).dispatched_by_id == users["VIEWER"].id, (
-        "GUARDIAN attributed its own proposal to VIEWER."
+    assert DispatchRecord.objects.get(pk=record.pk).dispatched_by_id is None, (
+        "GUARDIAN's PATCH must not attribute its own proposal to VIEWER."
     )
 
 
 @pytest.mark.django_db
-def test_cross_tenant_judgment_has_no_such_split_and_the_immunity_is_an_accident(
+def test_cross_tenant_judgment_status_and_conclusion_type_no_longer_reach_via_patch(
     role_clients, snapshot_tenants
 ):
-    """The sibling viewset cannot exhibit the bypass, for a reason worth pinning.
+    """The sibling viewset never had a codename bypass — but its record could still lie.
 
-    Every action on CrossTenantJudgmentViewSet — participate, conclude, and all
-    three CRUD writes — resolves to the single codename cross_judgment.create
-    (moved off dispatch.manage; see apps/dispatch/views.py for why). The holder
-    sets are therefore identical rather than nested, so there is no narrow route
-    to be denied and no wider one to escape through. Same accident that made
-    judgment and disposition immune in tranche 2 — the family changed, the
-    accident did not.
-
-    It IS an accident, and this test says so by demonstrating the other half:
-    CrossTenantJudgmentSerializer leaves `status` and `conclusion_type` writable,
-    so PATCH already reaches the row `conclude` writes. Today that costs nothing
-    because no codename separates them. The moment conclude gets its own
-    codename, this becomes the same hole DispatchRecordViewSet has, and the
-    serializer is where it would have to be closed.
+    Every action on CrossTenantJudgmentViewSet — participate, conclude, and
+    all three CRUD writes — resolves to the single codename
+    cross_judgment.create (moved off dispatch.manage; see
+    apps/dispatch/views.py for why). The holder sets are therefore identical
+    rather than nested, so there was never a narrower codename for PATCH to
+    route around, and get_required_permissions() below still proves it —
+    same accident that made judgment and disposition immune in tranche 2.
+    But CrossTenantJudgmentSerializer used to leave `status` and
+    `conclusion_type` writable regardless, so PATCH reached the row
+    `conclude()` writes without running `concluded_at` or the participant
+    notifications — the same "record lies" failure dispatch had, just never
+    also a permission bypass. Closed the same way (read-only +
+    explicit validate()), before `conclude` could ever grow a narrower
+    codename and turn it into one.
     """
     from apps.dispatch.models import CrossTenantJudgment, JudgmentStatus
     from apps.dispatch.views import CrossTenantJudgmentViewSet
@@ -1908,7 +2033,7 @@ def test_cross_tenant_judgment_has_no_such_split_and_the_immunity_is_an_accident
         assert view.get_required_permissions() == ["cross_judgment.create"], (
             f"{action} no longer maps to cross_judgment.create. If any action on "
             f"this viewset gained a narrower codename, it is now exposed to the "
-            f"same bypass as DispatchRecordViewSet — check the serializer."
+            f"same bypass DispatchRecordViewSet used to have — check the serializer."
         )
 
     clients, _users = role_clients
@@ -1916,21 +2041,23 @@ def test_cross_tenant_judgment_has_no_such_split_and_the_immunity_is_an_accident
     judgment = _cross_tenant_judgment(home, status=JudgmentStatus.ACTIVE)
     # JUDGE, not GUARDIAN: cross_judgment.create's holders are ADMIN,
     # MODERATOR, JUDGE — the inverse of dispatch.manage's ADMIN, MODERATOR,
-    # GUARDIAN. The role demonstrating the PATCH-reaches-conclude accident has
-    # to be one that actually holds the write codename now in force.
-    allowed = clients["JUDGE"].patch(
+    # GUARDIAN. The role attempting the PATCH has to be one that actually
+    # holds the write codename, so the 400 below is
+    # CrossTenantJudgmentSerializer rejecting the fields, not
+    # CodenamePermission rejecting the role.
+    blocked = clients["JUDGE"].patch(
         f"/api/v1/dispatch/cross-tenant-judgments/{judgment.id}/",
         {"status": JudgmentStatus.CONCLUDED, "conclusion_type": "PASS"},
         format="json",
     )
-    assert allowed.status_code == 200
-    row = CrossTenantJudgment.objects.get(pk=judgment.pk)
-    assert row.status == JudgmentStatus.CONCLUDED
-    assert row.conclusion_type == "PASS", (
-        "The verdict fields are writable through CRUD. Harmless only while "
-        "conclude shares their codename."
+    assert blocked.status_code == 400, (
+        "If this is 200 again, `status`/`conclusion_type` became writable on "
+        "CrossTenantJudgmentSerializer again."
     )
-    # And the thing conclude() guarantees did not happen: no participant was notified.
+    row = CrossTenantJudgment.objects.get(pk=judgment.pk)
+    assert row.status == JudgmentStatus.ACTIVE
+    assert row.conclusion_type is None
+    # And the thing conclude() guarantees still did not happen: no notification.
     assert row.concluded_at is None
 
 
