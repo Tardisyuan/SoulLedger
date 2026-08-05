@@ -16,6 +16,15 @@ class TenantQuerySetMixin:
             return qs.none()
         if user.role == "ADMIN":
             return qs
+        # Some models this mixin is applied to (e.g. Organization) have no
+        # `tenant` field at all — they're global reference/hierarchy data,
+        # not per-tenant rows. Filtering unconditionally on `tenant=` used
+        # to raise FieldError for every non-ADMIN request against them.
+        # Mirror the hasattr(model, "tenant") guard TenantCreateMixin
+        # already uses below, so a model without the field is simply left
+        # unscoped rather than blowing up the request.
+        if not hasattr(qs.model, "tenant"):
+            return qs
         tenant = getattr(self.request, "tenant", None)
         if tenant:
             return qs.filter(tenant=tenant)
