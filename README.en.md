@@ -2,46 +2,49 @@
 
 **English** | [中文](README.md)
 
-Cross-Civilization Soul Management System — A full-stack web application for soul judgment and reincarnation across three civilizations (Chinese / European / Egyptian)
+SoulLedger is a working full-stack web application — Django + Next.js — that tracks
+souls through an afterlife pipeline in three different mythologies at once: the
+Chinese Diyu, the Christian/Greek/Norse afterlives grouped here as "European," and
+the Egyptian Duat. It is an application, not a documentation repository: the
+`docs/` folder holds the domain research that the code was built from, and the
+research is genuinely load-bearing.
+
+The interesting part is that the three cosmologies are not one data model in three
+colour schemes. They compute structurally different quantities, and the code
+refuses to average them.
 
 ---
 
-## Civilization Coverage
+## Why the three civilizations are not the same system
 
-| Realm | Judgment | Memory Reset | Afterlife |
-|-------|----------|--------------|-----------|
-| **Chinese Underworld** | Ten Courts of Hell | Meng Po's Soup | Six Paths of Reincarnation |
-| **European Heaven & Hell** | Original Sin + Dante's Nine Circles | River Lethe | Purgatory / Paradise / Hell |
-| **Egyptian Duat** | Heart Weighing vs. Ma'at's Feather | Spell Recitation | Field of Reeds / Atum |
+Most "multi-culture" demos pick one mechanic and restyle it. This one does not.
+See [`backend/apps/ledger/readings.py`](backend/apps/ledger/readings.py):
+
+| Civilization | What its ledger actually says | Shape of the answer |
+|---|---|---|
+| **Chinese** | A cumulative account (功過格). Merit and demerit offset each other; the running total *is* the verdict. | One signed number |
+| **Egyptian** | A threshold test. The heart is weighed once against Ma'at's feather and must be "not heavier than" it. Merit does not appear — there is no offsetting step. | Pass/fail against a fixed counterweight |
+| **European** | Two unrelated facts. *Culpa* (guilt) and *poena* (penalty remaining after absolution) do not reduce each other, and this system holds no data from which poena could honestly be derived. | Two independent quantities, one of them explicitly unavailable |
+
+A soul whose tenant is not mapped to a cosmology gets no reading at all — an
+explicit refusal rather than a fallback to somebody else's arithmetic.
+
+The same principle runs through the ledger's decay rule
+(`backend/apps/ledger/services.py`): karma decays at 1%/year for Chinese and
+Egyptian souls and **not at all** for European ones, because the published
+European label denies decay outright. Decay is anchored to the soul's death date,
+not to today, so a 612 BCE deed is not eroded to nothing by the mere passage of
+civilizational time.
 
 ---
 
-## Architecture
+## Quick start
 
-```
-Frontend (Next.js 16)     →  http://localhost:3333
-Backend  (Django 5 + DRF) →  http://localhost:8000/api/v1/
-WebSocket (channels)      →  ws://localhost:8000/ws/notifications/
-PostgreSQL 16              →  localhost:5432 (Docker)
-Redis 7                    →  localhost:6379 (Channel Layer + Celery)
-```
+**Prerequisites:** Python 3.11+, Node.js 20+, and Docker if you want PostgreSQL
+and Redis locally.
 
----
+### Backend
 
-## Quick Start
-
-### Prerequisites
-- Python 3.11+
-- Node.js 20+
-- Docker (for PostgreSQL + Redis)
-
-### 1. Start Infrastructure
-```bash
-cd infrastructure
-docker compose up -d
-```
-
-### 2. Start Backend
 ```bash
 cd backend
 cp .env.example .env
@@ -50,214 +53,294 @@ python manage.py migrate
 python manage.py runserver 0.0.0.0:8000
 ```
 
-### 3. Start Frontend
+With no `DATABASE_URL` set, Django falls back to SQLite at `backend/db.sqlite3`,
+so this works with nothing else running. (SQLite is rejected outright when
+`DEBUG=False`.) Redis is only needed for WebSockets and Celery — the REST API
+runs without it.
+
+### Frontend
+
 ```bash
 cd frontend
 npm install
-PORT=3333 npm run dev
+npm run dev          # already pins PORT=3333
 ```
 
-### Or Use Scripts (from project root)
+### PostgreSQL + Redis (optional, matches CI)
+
 ```bash
-bash scripts/start-backend.sh     # Django on :8000
-bash scripts/start-frontend.sh   # Next.js on :3333
-bash scripts/stop-all.sh         # Stop both
-bash scripts/status.sh           # Check status
-bash scripts/restart-backend.sh  # Restart backend
-bash scripts/restart-frontend.sh # Restart frontend
+cd infrastructure
+docker compose up -d   # postgres:16-alpine on :5432, redis:7-alpine on :6379
+```
+
+Then point the backend at it, e.g.
+`DATABASE_URL=postgres://soulledger:devpassword@localhost:5432/soulledger`.
+
+### Whole stack in Docker
+
+```bash
+docker compose up    # root docker-compose.yml: db, redis, backend, celery, celery-beat, frontend
+```
+
+Requires `DB_PASSWORD` and `SECRET_KEY` in the environment. This path runs
+migrations and seeds Chinese data on boot.
+
+### Seed data
+
+The root compose file's boot sequence is `python manage.py migrate` then
+`python scripts/seed_chinese_data.py`, which loads realms and actors for all
+three civilizations. Further seeding lives in Django management commands:
+
+```bash
+python manage.py seed_tenants               # CN_DIYU, EU_HEAVEN_HELL, EG_DUAT
+python manage.py populate_chinese_actors
+python manage.py consolidate_eu_pantheon
+python manage.py seed_workflow_templates
+python manage.py seed_field_permissions
+python manage.py init_organizations
+python manage.py create_api_key             # for the Death Sync external API
+```
+
+### Convenience scripts
+
+```bash
+bash scripts/start-all.sh      # backend + frontend, backgrounded, logs in scripts/logs/
+bash scripts/status.sh
+bash scripts/stop-all.sh
+bash scripts/install-hooks.sh  # pre-commit hook: ESLint on staged frontend files
+```
+
+Note: `start-all.sh` prints the frontend URL as `:3000`; the dev server actually
+listens on `:3333`.
+
+---
+
+## Architecture
+
+```
+Frontend (Next.js 16, App Router)  →  http://localhost:3333
+Backend  (Django 5 + DRF)          →  http://localhost:8000/api/v1/
+API docs (drf-spectacular)         →  http://localhost:8000/api/docs/
+Health                             →  http://localhost:8000/health/  and /health/detailed/
+WebSocket (channels + daphne)      →  ws://localhost:8000/ws/notifications/
+PostgreSQL 16                      →  :5432   (SQLite fallback for local dev)
+Redis 7                            →  :6379   (channel layer + Celery broker)
+```
+
+**Multi-tenancy.** A `Tenant` is an administrative record; a civilization is a
+claim about what happens to the dead. The mapping between them lives in exactly
+one place, `TENANT_CIVILIZATION` in `backend/apps/souls/models.py`. Row-level
+isolation is enforced by a `TenantManager` backed by `contextvars` (not
+`threading.local`, so it survives Celery workers and async code).
+
+**Permissions.** Four roles (ADMIN / JUDGE / GUARDIAN / VIEWER) over
+codename-based permissions, plus `DataScope` for row visibility and
+`FieldPermission` for per-field visibility. API enforcement is via
+`CodenameViewSetMixin`; the frontend mirrors it with `RequirePermission` /
+`RequireButton` for UI gating. The frontend gate is cosmetic — the backend check
+is the real one.
+
+**Events and realtime.**
+
+```
+Service → EventBus → HandlerRegistry → ChannelLayer (Redis) → Consumer → Frontend cache invalidation
+```
+
+Handlers can subscribe by event type, by domain, or globally; dispatch is O(1)
+through the registry. Domains currently emitting: soul, workflow, notification,
+dispatch, deathsync, social.
+
+**Soul state machine** (`SoulState` in `backend/apps/souls/models.py`):
+
+```
+ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE (next cycle)
+                     ├──→ SETTLED   (absorbing — eternal disposition)
+                     └──→ LOST      (suspended)
+```
+
+`SETTLED` is deliberately absorbing: unlike `DISPOSED`, it does not keep `LOST`
+reachable.
+
+---
+
+## API surface
+
+Everything is under `/api/v1/`. Tenant-scoped endpoints expect an `X-Tenant-ID`
+header; authenticated ones expect `Authorization: Bearer <access>`.
+
+| Prefix | App |
+|---|---|
+| `auth/`, `users/` | JWT login/refresh, user management |
+| `souls/` | Soul CRUD plus state transitions |
+| `ledger/` | Merit/demerit records, balance, decay, per-civilization reading |
+| `judgment/`, `disposition/`, `reincarnation/` | The judgment pipeline |
+| `realms/`, `actors/` | Afterlife geography and its personnel |
+| `dispatch/` | Cross-realm soul transfer, with approval |
+| `workflows/`, `nodes/`, `workflow/templates/` | Approval workflow engine |
+| `perm/`, `menus/`, `organizations/`, `tenants/` | RBAC, navigation, org chart, tenants |
+| `audit-logs/`, `events/`, `notifications/` | Audit trail, event log, notifications |
+| `death-sync/` | External death-registration API (API key + HMAC-signed webhooks) |
+| `social/` | Posts, comments, reactions, follows, profiles |
+
+The ledger reading described above is served from
+`GET /api/v1/ledger/balance/{soul_id}/`. The response carries both
+`karmic_balance` (the raw net total, which the rest of the system routes on) and
+`reading` (the instrument this soul's own cosmology uses). **Anything shown to a
+user should use `reading`.**
+
+The generated OpenAPI schema at `/api/schema/` and the Swagger UI at `/api/docs/`
+are authoritative; the table above is a map, not a contract.
+
+---
+
+## Testing and CI
+
+`.github/workflows/ci.yml` runs three jobs on push to `main`/`develop` and on PRs
+into `main`:
+
+| Job | Steps |
+|---|---|
+| **backend** | `makemigrations --check --dry-run`, `migrate`, `pytest`, `ruff check`, `pip-audit` |
+| **frontend** | `tsc --noEmit`, `eslint`, `next build`, `jest`, `npm audit` |
+| **e2e** | Playwright, `--project=chromium`, artifacts uploaded |
+
+Backend CI runs against real PostgreSQL 16 and Redis 7 service containers.
+
+Both `pip-audit` and `npm audit` are currently `continue-on-error: true` — they
+report but do not block. The reasons are written into the workflow file next to
+each step; if you are hardening this, read those comments first.
+
+Locally:
+
+```bash
+cd backend && python -m pytest --tb=short -q     # pytest.ini: --cov=apps, --cov-fail-under=40
+cd backend && ruff check .
+cd frontend && npx tsc --noEmit && npm run lint && npm test
+cd frontend && npx playwright test --project=chromium
+```
+
+**Backend tests live in two places** — `backend/tests/` and `test_*.py` / `tests.py`
+inside each app under `backend/apps/`. `pytest.ini` sets `testpaths = backend`, so
+running from the repo root collects both. Pointing pytest at only one of them
+gives you a green run that proves less than it looks like it does.
+
+Coverage is measured as `--cov=apps` (the importable package name, not a path) so
+that it reports the same numbers whether you run from the repo root or from
+`backend/`.
+
+---
+
+## Repository map
+
+```
+backend/
+  apps/
+    souls/          Soul model, state machine, tenant→civilization map
+    ledger/         Merit/demerit records, time decay, per-cosmology readings
+    judgment/       Judgment records and verdicts
+    disposition/    Verdict → destination realm
+    reincarnation/  Rebirth records
+    actors/         Judges, guardians, psychopomps
+    realms/         Afterlife geography
+    dispatch/       Cross-realm transfers
+    permissions/    Cross-tenant judgment authorization
+    perm/           RBAC: Permission, Role, DataScope, FieldPermission
+    tenants/        Tenant model, contextvar-backed TenantManager
+    authentication/ JWT auth, User model, roles
+    workflow/       Approval workflow engine
+    menus/          Tree navigation + MenuButton
+    events/         EventBus, EventEnvelope, HandlerRegistry
+    notifications/  Notifications + WebSocket consumer
+    death_sync/     External death-registration API and webhooks
+    social/         Posts, comments, reactions, follows, profiles
+    org/            Organization chart
+    audit/          Audit log with trace_id
+    core/           Middleware, shared viewsets/mixins, WebSocket auth, health
+  config/           Settings, URLs, ASGI, Celery
+  tests/            Cross-app pytest suite
+frontend/
+  app/              Next.js App Router pages
+  lib/api/          One typed client per backend app
+  src/hooks/        TanStack Query hooks
+  src/components/   UI, including the RBAC gating components
+  messages/         i18n: zh-Hans, en, egy
+  e2e/              Playwright specs
+infrastructure/     docker-compose for PostgreSQL + Redis
+scripts/            start/stop/restart/status, DB backup/restore, git hooks
+docs/               Domain research, engineering docs, design handoff — see docs/README.md
 ```
 
 ---
 
-## Project Structure
+## Documentation
 
-```
-SoulLedger/
-├── backend/
-│   ├── apps/
-│   │   ├── souls/            # Soul models, state machine, karma
-│   │   ├── karma/            # Karma calculation (time decay, inheritance)
-│   │   ├── judgment/         # Judgment system
-│   │   ├── disposition/      # Disposition plans
-│   │   ├── reincarnation/    # Reincarnation system
-│   │   ├── actors/           # Actor roles (judges, guardians, etc.)
-│   │   ├── realms/           # Realm system (Underworld, Heaven, Duat)
-│   │   ├── dispatch/         # Soul dispatch records
-│   │   ├── permissions/      # Cross-realm judgment authorization
-│   │   ├── audit/            # Audit logs (with trace_id)
-│   │   ├── tenants/          # Multi-tenant: Tenant model, TenantManager
-│   │   ├── authentication/   # JWT authentication
-│   │   ├── workflow/         # Approval workflow system
-│   │   ├── menus/            # Tree menus + MenuButton
-│   │   ├── perm/             # RBAC: Permission, Role, DataScope, FieldPermission
-│   │   ├── core/             # Shared: middleware, viewsets, mixins, WebSocket auth
-│   │   ├── events/           # EventBus: EventEnvelope, DomainEventHandler, HandlerRegistry
-│   │   ├── notifications/    # Notification system + WebSocket Consumer
-│   │   ├── death_sync/       # Death Sync API
-│   │   ├── social/           # Social: Post, Comment, Reaction, Follow, UserProfile
-│   │   └── org/              # Organization
-│   ├── config/               # Django config, URLs, ASGI (WebSocket routing)
-│   └── tests/                # pytest tests (108 tests)
-│
-├── frontend/
-│   ├── app/                  # Next.js 16 App Router pages
-│   │   ├── souls/            # Soul list & detail
-│   │   ├── karma/            # Karma management
-│   │   ├── dispatch/         # Dispatch management
-│   │   ├── workflow/         # Workflow visualization
-│   │   ├── users/            # User management
-│   │   ├── menus/            # Menu management
-│   │   ├── permissions/      # Permission management
-│   │   ├── admin/stats/      # Admin dashboard
-│   │   └── (auth)/login/     # Login page
-│   ├── lib/
-│   │   ├── api/              # Type-safe API client
-│   │   ├── social/           # Social domain hooks + queryKeys
-│   │   └── ws/               # WebSocket client (WSClient)
-│   ├── hooks/                # TanStack Query hooks + SocialEventBus
-│   ├── src/components/       # UI components (AppLayout, RequireButton, ConnectionStatus)
-│   ├── messages/             # i18n translations (zh-Hans, en, egy)
-│   └── middleware.ts         # Route guard
-│
-├── infrastructure/
-│   └── docker-compose.yml    # PostgreSQL + Redis
-│
-├── scripts/                  # Start/stop/restart/status scripts
-├── docs/                     # Documentation + mythology research
-├── DESIGN.md                 # Linear design system spec
-└── SPEC.md                   # Full project spec
-```
+Start at [`docs/README.md`](docs/README.md), which indexes the whole folder. The
+short version:
+
+- **Domain research (Chinese-language).** ~20 files on the three afterlife
+  systems — the Ten Courts of Diyu, Dante's circles and the Norse and Greek
+  underworlds, the twelve gates of the Duat and the weighing of the heart. This
+  is the source material the domain model was derived from, and it is why
+  `readings.py` looks the way it does. Mirrored at the repo root under
+  `地府结构研究/`, `欧洲天堂地狱/` and `埃及冥界/`.
+- **Engineering docs.** Architecture, conventions, API notes, milestones, and a
+  set of dated review/audit reports.
+- **[`docs/design-handoff/`](docs/design-handoff/)** — a design brief package sent
+  to an external designer, with 29 full-page screenshots of the live UI, a design
+  token inventory, and localized table samples. `ADDENDUM.md` records what changed
+  after the package was assembled and should be read alongside `BRIEF.md`. This
+  package is referenced externally; treat it as frozen.
+
+Top level: [`SPEC.md`](SPEC.md) is the full project specification,
+[`DESIGN.md`](DESIGN.md) the design system, [`CONTRIBUTING.md`](CONTRIBUTING.md)
+the workflow, [`SECURITY.md`](SECURITY.md) the disclosure policy.
 
 ---
 
-## Features
-
-### Milestones
-- **M1-M5**: Core system (Soul CRUD + multi-tenant + JWT + actors/realms + workflow)
-- **M6**: Karma system (time decay + karmic inheritance)
-- **M7**: DDD refactoring + RBAC permissions (DataScope, FieldPermission, Audit Trail)
-- **M8-M9**: Engineering quality + bug fixes
-- **M10**: Search system
-- **M11**: Death Sync API + WebSocket infrastructure
-- **M12**: Realtime system (EventBus + HandlerRegistry + Social domain + Frontend closure) ✅ **FINAL_CLOSE**
-
-### Pages
-| Page | Description | Access |
-|------|-------------|--------|
-| `/souls` | Soul list & detail | ALL |
-| `/karma` | Karma time-decay calculation | JUDGE+ |
-| `/dispatch` | Soul dispatch records | ADMIN |
-| `/workflow` | Workflow visualization | JUDGE+ |
-| `/users` | User management | ADMIN |
-| `/menus` | Menu management | ADMIN |
-| `/permissions` | Permission management | ADMIN |
-| `/admin/stats` | Admin dashboard | ADMIN |
-
----
-
-## Key APIs
-
-```
-Authentication
-POST /api/v1/auth/login/         # Login (returns JWT)
-POST /api/v1/auth/refresh/       # Refresh token
-
-Souls (requires X-Tenant-ID header)
-GET    /api/v1/souls/                     # List
-POST   /api/v1/souls/                     # Create
-GET    /api/v1/souls/{id}/               # Detail
-PATCH  /api/v1/souls/{id}/               # Update
-DELETE /api/v1/souls/{id}/               # Delete
-POST   /api/v1/souls/{id}/transition/    # State transition
-
-Karma
-GET    /api/v1/karma/balance/{soul_id}/     # Karmic balance
-POST   /api/v1/karma/calculate/{soul_id}/  # Recalculate karma
-
-Actors & Realms
-GET /api/v1/actors/   # Actor list
-GET /api/v1/realms/   # Realm list
-
-Dispatch
-GET  /api/v1/dispatch/records/      # Dispatch records
-POST /api/v1/dispatch/records/      # Create dispatch
-GET  /api/v1/dispatch/proposed/     # Pending approval
-
-Workflow
-GET    /api/v1/workflows/                    # Workflow list
-GET    /api/v1/nodes/                        # Node list
-POST   /api/v1/workflow/templates/           # Create template
-```
-
----
-
-## State Machine
-
-```
-ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE (new life)
-```
-
----
-
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 16, React 18, Tailwind CSS, TanStack Query v5, TypeScript |
-| Backend | Django 5, Django REST Framework, channels, contextvars TenantManager |
-| Database | PostgreSQL 16 (production/Docker), SQLite (local dev) |
-| Realtime | WebSocket (channels + RedisChannelLayer) |
-| Event Bus | EventBus (EventEnvelope + DomainEventHandler + HandlerRegistry) |
-| Task Queue | Celery 5, Redis 7 |
-| Container | Docker Compose |
-| Tests | 108 backend tests, 277 frontend tests |
+|---|---|
+| Frontend | Next.js 16, React 18, TypeScript 5, Tailwind CSS 3, TanStack Query v5, @xyflow/react (workflow canvas), Recharts |
+| Backend | Django 5, Django REST Framework, drf-spectacular, channels + daphne |
+| Database | PostgreSQL 16 (Docker/production), SQLite (local default) |
+| Realtime | WebSocket via channels with channels-redis |
+| Async | Celery 5 + django-celery-beat, Redis broker |
+| Auth | djangorestframework-simplejwt, plus API keys for Death Sync |
+| Testing | pytest + pytest-django + pytest-cov + factory-boy; Jest + React Testing Library; Playwright |
+| Tooling | ruff, ESLint, TypeScript, Sentry, structlog |
 
 ---
 
-## Seed Data
+## Security posture
 
-Pre-filled realms and roles for all three civilizations:
+Implemented: JWT and API-key authentication, RBAC with data and field scoping,
+Fernet encryption for webhook secrets and PII payloads, atomic Redis rate
+limiting, SSRF validation on webhook URLs, CSP/HSTS/X-Frame-Options, and an audit
+trail on mutations.
 
-### Chinese Underworld (CN_DIYU)
-- **11 Realms**: Celestial Court, City of Wrongful Death, Ten Courts of Hell, etc.
-- **33 Actors**: Ten Kings of Hell, Wei Zheng, Lord Cui, Ksitigarbha, Ox-Head & Horse-Face, Black & White Impermanence, etc.
-
-### European Heaven & Hell (EU_HEAVEN_HELL)
-- **15 Actors**: Michael, Gabriel, Lucifer, Hades, Three Greek Judges, Odin, Freya, Hel, etc.
-
-### Egyptian Duat (EG_DUAT)
-- **43 Actors**: Osiris, Anubis, Thoth, Horus + 42 Judges + Ammit, etc.
+That list describes what the code does, not a security guarantee. See
+[`SECURITY.md`](SECURITY.md) for how to report a problem.
 
 ---
 
-## Security
+## Scope and status
 
-- JWT + API Key authentication
-- RBAC 4-tier roles (ADMIN/JUDGE/GUARDIAN/VIEWER) + DataScope + FieldPermission
-- Fernet encryption (webhook secrets, PII payloads)
-- Redis INCR atomic rate limiting
-- SSRF protection (webhook URL validation)
-- CSP / HSTS / X-Frame-Options
+This is a personal project built for its own sake — a place to work out what it
+takes to model three incompatible moral accounting systems in one schema without
+quietly flattening them into one. It has never been deployed anywhere real, has
+no users, and carries no uptime, support, or backward-compatibility promise. The
+production Docker Compose file, health checks, and CI exist because doing them
+properly was part of the exercise, not because anything is in production.
 
-## Realtime Architecture
-
-```
-EventService → EventBus → Handlers → ChannelLayer → Consumer → Frontend
-                                     (Redis)         (WebSocket)
-```
-
-- EventBus: Unified event bus with EventEnvelope + DomainEventHandler
-- HandlerRegistry: O(1) dispatch, supports event_type/domain/global handlers
-- 6 domains: soul, workflow, notification, dispatch, deathsync, social
-- ChannelNaming: `rt_tenant_{code}`, `rt_user_{user_id}`
+Milestone history is in [`docs/MILESTONES.md`](docs/MILESTONES.md), and it lags
+the code. `git log` is the accurate record.
 
 ---
 
-## Design Reference
+## Credits
 
-Menu and permission system inspired by [Snowy](https://github.com/xiaonuobase/Snowy) (Apache-2.0).
+The menu and permission system design draws on
+[Snowy](https://github.com/xiaonuobase/Snowy) (Apache-2.0).
 
----
-
-*Maintainer: Tardisyuan*
-*GitHub: https://github.com/Tardisyuan/SoulLedger*
+Maintainer: Tardisyuan · <https://github.com/Tardisyuan/SoulLedger>
