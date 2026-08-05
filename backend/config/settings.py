@@ -56,7 +56,7 @@ INSTALLED_APPS = [
     "apps.souls",
     "apps.judgment",
     "apps.disposition",
-    "apps.karma",
+    "apps.ledger",
     "apps.reincarnation",
     "apps.workflow",
     "apps.actors",

@@ -1,5 +1,14 @@
 """
-Karma calculation service with time decay and Redis caching.
+Ledger calculation service with time decay and Redis caching.
+
+Named "ledger", not "karma", because that is what the mechanic actually is:
+every deed carries a signed point value and the totals net off against each
+other. That is the Ming-Qing 功过格 — the ledgers of merit and demerit behind
+袁黃《了凡四訓》 — and it is specifically *not* karma in the Buddhist sense,
+where good and bad deeds do not cancel but ripen separately. "Karma" also
+misdescribed the decay applied below: karma is the one concept in the survey
+that emphatically does not fade with time, whereas a merit ledger scored
+against the vantage point of a life's end plainly does.
 """
 import datetime
 import math
@@ -9,11 +18,11 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
-from apps.karma.models import SoulRecord  # noqa: F401 — re-exported from souls for BC
+from apps.ledger.models import SoulRecord  # noqa: F401 — re-exported from souls for BC
 from apps.souls.dates import year_span
 from apps.souls.models import Civilization, Soul
 
-KARMA_CACHE_TTL = 60 * 5  # 5 minutes
+LEDGER_CACHE_TTL = 60 * 5  # 5 minutes
 DECAY_RATE = 0.01  # per year
 
 # Fraction of a life's ledger that follows the soul through the gate.
@@ -90,9 +99,9 @@ class RebirthNotApplicable(APIException):
         })
 
 
-class KarmaService:
+class LedgerService:
     """
-    All karma-related business logic with time decay.
+    All ledger-related business logic with time decay.
     """
 
     @staticmethod
@@ -176,8 +185,8 @@ class KarmaService:
 
         whole_years = year_span(event_year, anchor_year)
         fraction = (
-            KarmaService._day_of_year(anchor_month, anchor_day)
-            - KarmaService._day_of_year(event_month, event_day)
+            LedgerService._day_of_year(anchor_month, anchor_day)
+            - LedgerService._day_of_year(event_month, event_day)
         ) / 365.25
         return max(0.0, whole_years + fraction)
 
@@ -189,7 +198,7 @@ class KarmaService:
         return original_weight * math.exp(-DECAY_RATE * years)
 
     @classmethod
-    def recalculate_soul_karma(cls, soul: Soul) -> dict:
+    def recalculate_soul_ledger(cls, soul: Soul) -> dict:
         """
         Recalculate merit/demerit totals with time decay from all records.
         Updates soul's denormalised merit/demerit scores.
@@ -232,13 +241,17 @@ class KarmaService:
         }
 
     @classmethod
-    def get_karmic_summary(cls, soul: Soul) -> dict:
+    def get_ledger_summary(cls, soul: Soul) -> dict:
         """
-        Return full karma summary with time decay for a soul.
-        Cached in Redis for KARMA_CACHE_TTL seconds.
+        Return full ledger summary with time decay for a soul.
+        Cached in Redis for LEDGER_CACHE_TTL seconds.
         """
         tenant_code = soul.tenant.code if soul.tenant else "global"
-        cache_key = f"karma:summary:{tenant_code}:{soul.id}"
+        # Renamed from "karma:summary:..." along with the rest of the app. No
+        # invalidation pass is needed for the old keys: nothing reads or writes
+        # them any more, and LEDGER_CACHE_TTL is five minutes, so they are
+        # orphaned for one TTL and then gone.
+        cache_key = f"ledger:summary:{tenant_code}:{soul.id}"
         cached = cache.get(cache_key)
         if cached is not None:
             return cached
@@ -281,7 +294,7 @@ class KarmaService:
                     if r.event_year is not None else None
                 ),
                 # The deed that defines the life. Stored per record but absent
-                # from this payload, so the only consumer of karma records had
+                # from this payload, so the only consumer of ledger records had
                 # no way to tell a defining deed from an ordinary one.
                 "is_milestone": r.is_milestone,
             })
@@ -298,23 +311,23 @@ class KarmaService:
             "records": record_summaries,
         }
 
-        cache.set(cache_key, result, KARMA_CACHE_TTL)
+        cache.set(cache_key, result, LEDGER_CACHE_TTL)
         return result
 
     @classmethod
     def _invalidate_cache(cls, soul: Soul):
-        """Invalidate karma cache for a soul (tenant-namespaced)."""
+        """Invalidate ledger cache for a soul (tenant-namespaced)."""
         tenant_code = soul.tenant.code if soul.tenant else "global"
-        cache_key = f"karma:summary:{tenant_code}:{soul.id}"
+        cache_key = f"ledger:summary:{tenant_code}:{soul.id}"
         cache.delete(cache_key)
 
     @classmethod
-    def get_effective_karma(cls, soul: Soul) -> dict:
+    def get_effective_ledger(cls, soul: Soul) -> dict:
         """
-        Returns effective karma with time decay applied.
+        Returns the effective ledger with time decay applied.
         Used for reincarnation inheritance calculation.
         """
-        summary = cls.get_karmic_summary(soul)
+        summary = cls.get_ledger_summary(soul)
         return {
             "soul_id": str(soul.id),
             "effective_merit": summary["merit_score"],
@@ -336,13 +349,13 @@ class KarmaService:
     @classmethod
     def get_reincarnation_inheritance(cls, soul: Soul) -> dict:
         """
-        Calculate what karma is passed to the next life:
+        Calculate what the ledger passes to the next life:
         merit × INHERITANCE_MERIT, demerit × INHERITANCE_DEMERIT.
 
         Raises RebirthNotApplicable (409) for a terminal cosmology.
         """
         cls.assert_rebirth_capable(soul)
-        effective = cls.get_effective_karma(soul)
+        effective = cls.get_effective_ledger(soul)
         return {
             "soul_id": str(soul.id),
             "inherited_merit": round(effective["effective_merit"] * INHERITANCE_MERIT),

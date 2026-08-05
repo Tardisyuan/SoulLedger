@@ -4,7 +4,7 @@ Routes to the correct realm based on civilization and verdict.
 """
 from apps.disposition.models import Disposition
 from apps.judgment.models import Judgment, JudgmentMethod, Verdict
-from apps.karma.services import REBIRTH_CAPABLE_CIVILIZATIONS
+from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS
 from apps.realms.models import Realm
 from apps.souls.models import Civilization, Soul
 
@@ -269,10 +269,10 @@ class DispositionService:
         # Aaru; the soul just sat under a label that described someone else's
         # afterlife.
         #
-        # The capability question is answered by the same frozenset the karma
+        # The capability question is answered by the same frozenset the ledger
         # gate uses rather than by a second `if civ == CHINESE` here, so that
         # adding a rebirth-capable civilization stays a one-line change in
-        # apps/karma/services.py and cannot leave the state machine and the
+        # apps/ledger/services.py and cannot leave the state machine and the
         # rebirth gate disagreeing about the same soul. GREEK will need
         # exactly that when it lands — Plato's souls do choose a new life at
         # the Spindle of Necessity.

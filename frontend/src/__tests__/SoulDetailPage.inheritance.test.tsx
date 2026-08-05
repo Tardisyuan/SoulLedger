@@ -2,12 +2,12 @@
  * Tests for the reincarnation-inheritance panel on app/souls/[id]/page.tsx.
  *
  * This panel used to recompute merit/demerit carryover client-side from a
- * single percentage. It now calls GET /karma/inheritance/{soul_id}/ and:
+ * single percentage. It now calls GET /ledger/inheritance/{soul_id}/ and:
  *   - renders nothing on 409 (terminal cosmology, no next life) rather than
  *     an error or empty state, and does so without retrying the request;
  *   - displays inherited_merit / inherited_demerit straight from the
  *     response, with the balance derived as their difference — not a
- *     percentage of the soul's current karma;
+ *     percentage of the soul's current balance;
  *   - still treats any other failure (e.g. 500) as a real query error
  *     instead of folding it into the same "render nothing" path as 409.
  */
@@ -59,18 +59,18 @@ jest.mock("@/src/components/souls/SoulEditModal", () => ({
 }));
 
 const mockInheritance = jest.fn();
-jest.mock("@/lib/api/karma", () => ({
-  karmaApi: {
+jest.mock("@/lib/api/ledger", () => ({
+  ledgerApi: {
     inheritance: (...args: unknown[]) => mockInheritance(...args),
   },
 }));
 
 const mockSoulsGet = jest.fn();
-const mockSoulsKarma = jest.fn();
+const mockSoulsLedger = jest.fn();
 jest.mock("@/lib/api", () => ({
   soulsApi: {
     get: (...args: unknown[]) => mockSoulsGet(...args),
-    karma: (...args: unknown[]) => mockSoulsKarma(...args),
+    karma: (...args: unknown[]) => mockSoulsLedger(...args),
     records: jest.fn().mockResolvedValue({ data: { results: [] } }),
   },
   judgmentApi: { list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
@@ -92,9 +92,9 @@ const mockSoul = {
 
 // merit_score === demerit_score === 100 is the exact case the old
 // client-side formula got wrong: karmic_balance is 0, so the old
-// `Math.round(karma.karmic_balance * 0.2)` line rendered "+0" regardless of
+// `Math.round(ledger.karmic_balance * 0.2)` line rendered "+0" regardless of
 // what the backend's real inheritance figures were.
-function mockKarmaWithOneRecord(meritScore: number, demeritScore: number) {
+function mockLedgerWithOneRecord(meritScore: number, demeritScore: number) {
   return {
     soul_id: SOUL_ID,
     merit_score: meritScore,
@@ -133,7 +133,7 @@ function renderPage() {
 beforeEach(() => {
   jest.clearAllMocks();
   mockSoulsGet.mockResolvedValue({ data: mockSoul });
-  mockSoulsKarma.mockResolvedValue({ data: mockKarmaWithOneRecord(100, 100) });
+  mockSoulsLedger.mockResolvedValue({ data: mockLedgerWithOneRecord(100, 100) });
 });
 
 describe("SoulDetailPage — inheritance panel", () => {
@@ -147,9 +147,9 @@ describe("SoulDetailPage — inheritance panel", () => {
 
     const { queryClient } = renderPage();
 
-    // Wait for the karma card (and its chart section, which the panel is
+    // Wait for the ledger card (and its chart section, which the panel is
     // nested inside) to finish loading.
-    await screen.findByText(/karma\.timeline/);
+    await screen.findByText(/ledger\.timeline/);
 
     await waitFor(() => {
       expect(queryClient.getQueryState(INHERITANCE_KEY)?.status).toBe("success");
@@ -159,8 +159,8 @@ describe("SoulDetailPage — inheritance panel", () => {
     expect(queryClient.getQueryState(INHERITANCE_KEY)?.data).toBeNull();
     expect(mockInheritance).toHaveBeenCalledTimes(1);
 
-    expect(screen.queryByText("karma.next_life_inheritance")).not.toBeInTheDocument();
-    expect(screen.queryByText("karma.inheritance_note")).not.toBeInTheDocument();
+    expect(screen.queryByText("ledger.next_life_inheritance")).not.toBeInTheDocument();
+    expect(screen.queryByText("ledger.inheritance_note")).not.toBeInTheDocument();
     expect(screen.queryByText(/inherit/i)).not.toBeInTheDocument();
   });
 
@@ -176,7 +176,7 @@ describe("SoulDetailPage — inheritance panel", () => {
 
     renderPage();
 
-    await screen.findByText("karma.next_life_inheritance");
+    await screen.findByText("ledger.next_life_inheritance");
 
     expect(
       screen.getByText((_, el) => el?.textContent === "souls.detail.merit: +20")
@@ -195,7 +195,7 @@ describe("SoulDetailPage — inheritance panel", () => {
 
     const { queryClient } = renderPage();
 
-    await screen.findByText(/karma\.timeline/);
+    await screen.findByText(/ledger\.timeline/);
 
     await waitFor(() => {
       expect(queryClient.getQueryState(INHERITANCE_KEY)?.status).toBe("error");
@@ -204,6 +204,6 @@ describe("SoulDetailPage — inheritance panel", () => {
     // Same visual outcome as 409 (nothing shown, since this is a decorative
     // panel with no dedicated error UI) — but the assertion above is what
     // proves it got there via the error path, not the 409 special case.
-    expect(screen.queryByText("karma.next_life_inheritance")).not.toBeInTheDocument();
+    expect(screen.queryByText("ledger.next_life_inheritance")).not.toBeInTheDocument();
   });
 });

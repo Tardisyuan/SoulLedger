@@ -3,10 +3,10 @@
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// ── Lazy KarmaChart ──────────────────────────────────────────────
-const LazyKarmaChart = dynamic(
+// ── Lazy LedgerChart ─────────────────────────────────────────────
+const LazyLedgerChart = dynamic(
   () =>
-    import("@/src/components/karma/KarmaChart").then((mod) => mod.KarmaChart),
+    import("@/src/components/ledger/LedgerChart").then((mod) => mod.LedgerChart),
   {
     ssr: false,
     loading: () => (
@@ -21,4 +21,4 @@ const LazyKarmaChart = dynamic(
   }
 );
 
-export { LazyKarmaChart };
+export { LazyLedgerChart };

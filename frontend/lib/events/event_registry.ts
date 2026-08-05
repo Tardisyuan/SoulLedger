@@ -124,7 +124,7 @@ const EVENT_LABELS: Record<string, string> = {
   JUDGMENT_CONCLUDED: "Judgment concluded",
   DISPOSITION_CREATED: "Disposition created",
   REINCARNATION_TRIGGERED: "Reincarnation triggered",
-  KARMA_RECALCULATED: "Karma recalculated",
+  KARMA_RECALCULATED: "Balance recalculated",
 
   // Workflow events
   WORKFLOW_CREATED: "New workflow created",

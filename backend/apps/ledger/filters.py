@@ -1,5 +1,5 @@
 """
-Karma Record FilterSet — filtering, search, and ordering for Karma API.
+Ledger Record FilterSet — filtering, search, and ordering for the Ledger API.
 """
 import django_filters as filters
 from django.db.models import ExpressionWrapper, F, IntegerField, Q

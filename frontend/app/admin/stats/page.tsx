@@ -4,17 +4,17 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 /**
- * /admin/stats has been merged into /dashboard as the "karma" tab (the two
- * pages rendered near-identical cards off the same karmaApi.statsOverview()
+ * /admin/stats has been merged into /dashboard as the "ledger" tab (the two
+ * pages rendered near-identical cards off the same ledgerApi.statsOverview()
  * call). This route stays alive as a redirect so existing menu entries and
  * bookmarks keep working; the ADMIN-only gate now lives on the dashboard
- * page itself (RequirePermission around the karma tab content).
+ * page itself (RequirePermission around the ledger tab content).
  */
 export default function AdminStatsRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/dashboard?tab=karma");
+    router.replace("/dashboard?tab=ledger");
   }, [router]);
 
   return (

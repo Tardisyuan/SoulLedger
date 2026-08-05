@@ -25,7 +25,7 @@ urlpatterns = [
     path("api/v1/souls/", include("apps.souls.urls")),
     path("api/v1/judgment/", include("apps.judgment.urls")),
     path("api/v1/disposition/", include("apps.disposition.urls")),
-    path("api/v1/karma/", include("apps.karma.urls")),
+    path("api/v1/ledger/", include("apps.ledger.urls")),
     path("api/v1/reincarnation/", include("apps.reincarnation.urls")),
     path("api/v1/realms/", include("apps.realms.urls")),
     path("api/v1/actors/", include("apps.actors.urls")),

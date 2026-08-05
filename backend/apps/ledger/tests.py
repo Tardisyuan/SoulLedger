@@ -1,5 +1,5 @@
 """
-Tests for karma domain API views.
+Tests for ledger domain API views.
 Uses JWT auth with tenant_code so TenantMiddleware sets request.tenant.
 """
 import uuid
@@ -9,13 +9,13 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.karma.services import KarmaService, RebirthNotApplicable
+from apps.ledger.services import LedgerService, RebirthNotApplicable
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
 from apps.tenants.models import Tenant
 
 User = get_user_model()
-BASE = "/api/v1/karma"
+BASE = "/api/v1/ledger"
 
 
 def _jwt_client(user, tenant):
@@ -29,13 +29,13 @@ def _jwt_client(user, tenant):
 
 
 @pytest.mark.django_db
-class TestKarmaBalanceView:
-    """GET /karma/balance/<soul_id>/"""
+class TestLedgerBalanceView:
+    """GET /ledger/balance/<soul_id>/"""
 
     @pytest.fixture(autouse=True)
     def setup(self, db):
         self.tenant = Tenant.objects.get_or_create(
-            code="KB_T1", defaults={"display_name": "Karma Balance Tenant"}
+            code="KB_T1", defaults={"display_name": "Ledger Balance Tenant"}
         )[0]
         self.user = User.objects.create_user(
             username="kb_user", password="test123", role="ADMIN", tenant=self.tenant
@@ -49,7 +49,7 @@ class TestKarmaBalanceView:
         )
         self.client = _jwt_client(self.user, self.tenant)
 
-    def test_balance_returns_karmic_summary(self):
+    def test_balance_returns_ledger_summary(self):
         resp = self.client.get(f"{BASE}/balance/{self.soul.id}/")
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["soul_id"] == str(self.soul.id)
@@ -83,13 +83,13 @@ class TestKarmaBalanceView:
 
 
 @pytest.mark.django_db
-class TestKarmaRecalculateView:
-    """POST /karma/calculate/<soul_id>/"""
+class TestLedgerRecalculateView:
+    """POST /ledger/calculate/<soul_id>/"""
 
     @pytest.fixture(autouse=True)
     def setup(self, db):
         self.tenant = Tenant.objects.get_or_create(
-            code="KR_T1", defaults={"display_name": "Karma Recalc Tenant"}
+            code="KR_T1", defaults={"display_name": "Ledger Recalc Tenant"}
         )[0]
         self.user = User.objects.create_user(
             username="kr_user", password="test123", role="ADMIN", tenant=self.tenant
@@ -129,13 +129,13 @@ class TestKarmaRecalculateView:
 
 
 @pytest.mark.django_db
-class TestKarmaEffectiveView:
-    """GET /karma/effective/<soul_id>/"""
+class TestLedgerEffectiveView:
+    """GET /ledger/effective/<soul_id>/"""
 
     @pytest.fixture(autouse=True)
     def setup(self, db):
         self.tenant = Tenant.objects.get_or_create(
-            code="KE_T1", defaults={"display_name": "Karma Effective Tenant"}
+            code="KE_T1", defaults={"display_name": "Ledger Effective Tenant"}
         )[0]
         self.user = User.objects.create_user(
             username="ke_user", password="test123", role="ADMIN", tenant=self.tenant
@@ -149,7 +149,7 @@ class TestKarmaEffectiveView:
         )
         self.client = _jwt_client(self.user, self.tenant)
 
-    def test_effective_returns_effective_karma(self):
+    def test_effective_returns_effective_ledger(self):
         resp = self.client.get(f"{BASE}/effective/{self.soul.id}/")
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["soul_id"] == str(self.soul.id)
@@ -163,8 +163,8 @@ class TestKarmaEffectiveView:
 
 
 @pytest.mark.django_db
-class TestKarmaInheritanceView:
-    """GET /karma/inheritance/<soul_id>/"""
+class TestLedgerInheritanceView:
+    """GET /ledger/inheritance/<soul_id>/"""
 
     @pytest.fixture(autouse=True)
     def setup(self, db):
@@ -188,7 +188,7 @@ class TestKarmaInheritanceView:
         )
         self.client = _jwt_client(self.user, self.tenant)
 
-    def test_inheritance_returns_inherited_karma(self):
+    def test_inheritance_returns_inherited_ledger(self):
         resp = self.client.get(f"{BASE}/inheritance/{self.soul.id}/")
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["soul_id"] == str(self.soul.id)
@@ -207,7 +207,7 @@ class TestInheritanceMeritDemeritSplit:
 
     @pytest.fixture(autouse=True)
     def setup(self, db):
-        # CN_DIYU for the same reason as TestKarmaInheritanceView above: a
+        # CN_DIYU for the same reason as TestLedgerInheritanceView above: a
         # merit/demerit carryover split is only defined where there is
         # something to carry into.
         self.tenant = Tenant.objects.get_or_create(
@@ -231,15 +231,17 @@ class TestInheritanceMeritDemeritSplit:
         )
 
     def test_merit_carries_at_twenty_percent_demerit_in_full(self):
-        result = KarmaService.get_reincarnation_inheritance(self.soul)
+        result = LedgerService.get_reincarnation_inheritance(self.soul)
         assert result["inherited_merit"] == 20
         # Not 20. A symmetric factor made dying an 80% amnesty; unripened
-        # karma does not thin out on the way through the gate.
+        # karma does not thin out on the way through the gate — the one place
+        # the Buddhist word is the right one, and the reason demerit is the
+        # one side of this ledger that does not net down.
         assert result["inherited_demerit"] == 100
 
     def test_inheritance_note_is_derived_from_the_constants(self):
         """The note must not hard-code a percentage that can go stale."""
-        result = KarmaService.get_reincarnation_inheritance(self.soul)
+        result = LedgerService.get_reincarnation_inheritance(self.soul)
         assert "20%" in result["inheritance_note"]
         assert "100%" in result["inheritance_note"]
 
@@ -293,7 +295,7 @@ class TestInheritanceCivilizationGate:
 
     def test_gate_is_a_set_not_a_hardcoded_civilization(self):
         """Adding a rebirth-capable civilization must be a one-line change."""
-        from apps.karma.services import REBIRTH_CAPABLE_CIVILIZATIONS
+        from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS
         assert isinstance(REBIRTH_CAPABLE_CIVILIZATIONS, frozenset)
         assert "CHINESE" in REBIRTH_CAPABLE_CIVILIZATIONS
         assert len(REBIRTH_CAPABLE_CIVILIZATIONS) == 1
@@ -301,17 +303,17 @@ class TestInheritanceCivilizationGate:
     def test_service_raises_rather_than_returning_a_number(self):
         _, soul = self._client_and_soul("EGYPTIAN")
         with pytest.raises(RebirthNotApplicable):
-            KarmaService.get_reincarnation_inheritance(soul)
+            LedgerService.get_reincarnation_inheritance(soul)
 
 
 @pytest.mark.django_db
-class TestKarmaOverviewStatsView:
-    """GET /karma/stats/overview/"""
+class TestLedgerOverviewStatsView:
+    """GET /ledger/stats/overview/"""
 
     @pytest.fixture(autouse=True)
     def setup(self, db):
         self.tenant = Tenant.objects.get_or_create(
-            code="KO_T1", defaults={"display_name": "Karma Stats Tenant"}
+            code="KO_T1", defaults={"display_name": "Ledger Stats Tenant"}
         )[0]
         self.admin = User.objects.create_user(
             username="ko_admin", password="test123", role="ADMIN", tenant=self.tenant
@@ -357,13 +359,13 @@ class TestKarmaOverviewStatsView:
 
 
 @pytest.mark.django_db
-class TestKarmaExportStatsView:
-    """GET /karma/stats/export/"""
+class TestLedgerExportStatsView:
+    """GET /ledger/stats/export/"""
 
     @pytest.fixture(autouse=True)
     def setup(self, db):
         self.tenant = Tenant.objects.get_or_create(
-            code="KX_T1", defaults={"display_name": "Karma Export Tenant"}
+            code="KX_T1", defaults={"display_name": "Ledger Export Tenant"}
         )[0]
         self.admin = User.objects.create_user(
             username="kx_admin", password="test123", role="ADMIN", tenant=self.tenant
@@ -409,8 +411,8 @@ class TestKarmaExportStatsView:
 
 
 @pytest.mark.django_db
-class TestKarmaTenantIsolation:
-    """Cross-tenant soul visibility across karma endpoints."""
+class TestLedgerTenantIsolation:
+    """Cross-tenant soul visibility across ledger endpoints."""
 
     @pytest.fixture(autouse=True)
     def setup(self, db):

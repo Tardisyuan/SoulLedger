@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { karmaApi, type KarmaStatsOverview } from "@/lib/api";
+import { ledgerApi, type LedgerStatsOverview } from "@/lib/api";
 import {
   Users,
   Scale,
@@ -52,14 +52,14 @@ export default function WelcomePage() {
   // the first render — `user` hydrates from localStorage in an effect — so a
   // signed-in visitor got bounced to /login before hydration ever ran. Every
   // read of `user` below is optional-chained with a fallback.
-  const [stats, setStats] = useState<KarmaStatsOverview | null>(null);
+  const [stats, setStats] = useState<LedgerStatsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [agents, setAgents] = useState<AgentStatus[]>([]);
 
   useEffect(() => {
     // Load dashboard stats
-    karmaApi.statsOverview()
+    ledgerApi.statsOverview()
       .then((res) => {
         setStats(res.data);
         setLoading(false);
@@ -83,7 +83,7 @@ export default function WelcomePage() {
         // In production, this would call the MCP tools
         setAgents([
           { name: "soul-indexer", status: "active", task: "索引新灵魂" },
-          { name: "karma-decay", status: "idle" },
+          { name: "ledger-decay", status: "idle" },
           { name: "judgment-assistant", status: "active", task: "辅助审判" },
         ]);
       } catch {
@@ -134,7 +134,7 @@ export default function WelcomePage() {
     { label: t("souls.create"), href: "/souls", icon: <Users className="w-5 h-5" />, color: "bg-blue-500/20 text-blue-400" },
     { label: t("workflow.title"), href: "/workflow", icon: <ScrollText className="w-5 h-5" />, color: "bg-purple-500/20 text-purple-400" },
     { label: t("judgment.title"), href: "/judgment", icon: <Scale className="w-5 h-5" />, color: "bg-amber-500/20 text-amber-400" },
-    { label: t("karma.title"), href: "/karma", icon: <TrendingUp className="w-5 h-5" />, color: "bg-emerald-500/20 text-emerald-400" },
+    { label: t("ledger.title"), href: "/ledger", icon: <TrendingUp className="w-5 h-5" />, color: "bg-emerald-500/20 text-emerald-400" },
   ];
 
   const formatTimestamp = (ts: string) => {

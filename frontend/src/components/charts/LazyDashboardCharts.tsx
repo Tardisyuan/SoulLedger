@@ -327,7 +327,7 @@ const LazySoulLineChart = dynamic(
         data: ChartDataPoint[];
         height?: number;
       }) {
-        // A soul's karma spans its whole life — decades, once event dates are
+        // A soul's ledger spans its whole life — decades, once event dates are
         // real. Slicing every label to MM-DD dropped the year, so a series
         // running 1969→2011 read as one year and the labels looked unsorted.
         // Below two years the year is the redundant part, so switch on span.

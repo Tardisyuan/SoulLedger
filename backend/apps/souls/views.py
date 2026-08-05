@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 from apps.core.permissions import TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
-from apps.karma.services import KarmaService
+from apps.ledger.services import LedgerService
 from apps.souls.filters import SoulFilter
 from apps.souls.models import Soul, SoulState
 from apps.souls.serializers import SoulListSerializer, SoulRecordSerializer, SoulSerializer, SoulTransitionSerializer
@@ -119,7 +119,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     def karma(self, request, pk=None):
         """Get full karma summary for a soul."""
         soul = self.get_object()
-        summary = KarmaService.get_karmic_summary(soul)
+        summary = LedgerService.get_ledger_summary(soul)
         return Response(summary)
 
     @action(detail=True, methods=["post"])

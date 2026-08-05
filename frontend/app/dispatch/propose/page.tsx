@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { dispatchApi, soulsApi, karmaApi, type Soul } from "@/lib/api";
+import { dispatchApi, soulsApi, ledgerApi, type Soul } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -31,7 +31,7 @@ export default function ProposeDispatchPage() {
 
   const { data: statsData, isLoading: tenantsLoading } = useQuery({
     queryKey: ["dispatch", "tenants"],
-    queryFn: () => karmaApi.statsOverview(),
+    queryFn: () => ledgerApi.statsOverview(),
     enabled: !!user,
   });
 
@@ -43,7 +43,7 @@ export default function ProposeDispatchPage() {
 
     // Backend requires numeric source_tenant/target_tenant FK ids (tenant codes
     // are read-only output fields on this endpoint), so resolve them from the
-    // tenant list we already fetched via karmaApi.statsOverview().
+    // tenant list we already fetched via ledgerApi.statsOverview().
     const sourceTenantCode = user.tenant.code;
     const sourceTenant = tenants.find((tn) => tn.tenant_code ===sourceTenantCode);
     const targetTenant = tenants.find((tn) => tn.tenant_code ===form.target_tenant_code);

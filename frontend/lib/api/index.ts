@@ -19,8 +19,8 @@ export { usersApi, type User, type CreateUserInput, type UpdateUserInput, type U
 // Judgment
 export { judgmentApi, type Judgment } from "./judgment";
 
-// Karma
-export { karmaApi, type KarmaStatsOverview, type KarmaRecord, type KarmaSummary } from "./karma";
+// Ledger
+export { ledgerApi, type LedgerStatsOverview, type LedgerRecord, type LedgerSummary } from "./ledger";
 
 // Realms
 export { realmsApi, type Realm } from "./realms";

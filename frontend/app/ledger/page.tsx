@@ -1,60 +1,60 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { karmaApi, type KarmaStatsOverview } from "@/lib/api";
+import { ledgerApi, type LedgerStatsOverview } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LazyBarChart } from "@/src/components/charts/LazyDashboardCharts";
 
-export default function KarmaPage() {
+export default function LedgerPage() {
   const { t, formatDateTime } = useI18n();
   const { user } = useTenant();
 
   const { data: stats, isLoading, error } = useQuery({
-    queryKey: ["karma", "stats", "overview"],
-    queryFn: () => karmaApi.statsOverview().then(r => r.data),
+    queryKey: ["ledger", "stats", "overview"],
+    queryFn: () => ledgerApi.statsOverview().then(r => r.data),
     enabled: !!user,
   });
 
-  const karmaStats = stats as KarmaStatsOverview | undefined;
+  const ledgerStats = stats as LedgerStatsOverview | undefined;
 
   return (
     <div className="p-6 space-y-6">
       {/* Page Header - renders immediately */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))]">{t("karma.title")}</h1>
-        <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("karma.subtitle")}</p>
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))]">{t("ledger.title")}</h1>
+        <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("ledger.subtitle")}</p>
       </div>
 
       {/* Overview Cards - each section loads independently */}
       <div className="grid gap-4 md:grid-cols-3">
         <OverviewCard
-          label={t("karma.total_souls")}
-          value={karmaStats?.total_souls}
+          label={t("ledger.total_souls")}
+          value={ledgerStats?.total_souls}
           isLoading={isLoading}
           color="text-[hsl(var(--color-accent))]"
         />
         <OverviewCard
-          label={t("karma.active_souls")}
-          value={karmaStats?.state_distribution.find(s => s.state === "ALIVE")?.count}
+          label={t("ledger.active_souls")}
+          value={ledgerStats?.state_distribution.find(s => s.state === "ALIVE")?.count}
           isLoading={isLoading}
           color="text-[hsl(var(--color-status-success))]"
         />
         <OverviewCard
-          label={t("karma.judging_souls")}
-          value={karmaStats?.state_distribution.find(s => s.state === "JUDGING")?.count}
+          label={t("ledger.judging_souls")}
+          value={ledgerStats?.state_distribution.find(s => s.state === "JUDGING")?.count}
           isLoading={isLoading}
           color="text-[hsl(var(--color-accent))]"
         />
       </div>
 
       {/* State Distribution */}
-      <SectionCard title={t("karma.state_distribution")} isLoading={isLoading} error={error}>
+      <SectionCard title={t("ledger.state_distribution")} isLoading={isLoading} error={error}>
         {error ? (
           <div className="text-[hsl(var(--color-status-error))] text-sm">{t("common.error")}</div>
         ) : (
           <div className="space-y-2">
-            {karmaStats?.state_distribution.map((item) => (
+            {ledgerStats?.state_distribution.map((item) => (
               <div key={item.state} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className={`w-3 h-3 rounded-full ${
@@ -78,8 +78,8 @@ export default function KarmaPage() {
         )}
       </SectionCard>
 
-      {/* Karma Distribution */}
-      <SectionCard title={t("karma.karma_distribution")} isLoading={isLoading} error={error}>
+      {/* Balance Distribution */}
+      <SectionCard title={t("ledger.balance_distribution")} isLoading={isLoading} error={error}>
         {error ? (
           <div className="text-[hsl(var(--color-status-error))] text-sm">{t("common.error")}</div>
         ) : isLoading ? (
@@ -87,7 +87,7 @@ export default function KarmaPage() {
         ) : (
           <div className="h-48 min-h-[192px]">
             <LazyBarChart
-              data={karmaStats?.karma_distribution ?? []}
+              data={ledgerStats?.karma_distribution ?? []}
               dataKey="count"
               fill="hsl(var(--color-accent))"
               height={192}
@@ -98,13 +98,13 @@ export default function KarmaPage() {
       </SectionCard>
 
       {/* Souls by Realm */}
-      {karmaStats?.souls_by_realm && karmaStats.souls_by_realm.length > 0 && (
-        <SectionCard title={t("karma.souls_by_realm")} isLoading={isLoading} error={error}>
+      {ledgerStats?.souls_by_realm && ledgerStats.souls_by_realm.length > 0 && (
+        <SectionCard title={t("ledger.souls_by_realm")} isLoading={isLoading} error={error}>
           {error ? (
             <div className="text-[hsl(var(--color-status-error))] text-sm">{t("common.error")}</div>
           ) : (
             <div className="space-y-2">
-              {karmaStats.souls_by_realm.map((item) => (
+              {ledgerStats.souls_by_realm.map((item) => (
                 <div key={item.realm_code} className="flex items-center justify-between">
                   <div>
                     <span className="text-sm text-[hsl(var(--color-ink))]">{item.realm_name}</span>
@@ -123,13 +123,13 @@ export default function KarmaPage() {
       )}
 
       {/* Recent Activity */}
-      {karmaStats?.recent_activity && karmaStats.recent_activity.length > 0 && (
-        <SectionCard title={t("karma.recent_activity")} isLoading={isLoading} error={error}>
+      {ledgerStats?.recent_activity && ledgerStats.recent_activity.length > 0 && (
+        <SectionCard title={t("ledger.recent_activity")} isLoading={isLoading} error={error}>
           {error ? (
             <div className="text-[hsl(var(--color-status-error))] text-sm">{t("common.error")}</div>
           ) : (
             <div className="space-y-2">
-              {karmaStats.recent_activity.slice(0, 10).map((activity) => (
+              {ledgerStats.recent_activity.slice(0, 10).map((activity) => (
                 <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg bg-[hsl(var(--color-surface-2))]/50 hover:bg-[hsl(var(--color-surface-2))] transition-colors">
                   {/* Action badge */}
                   <div className="flex-shrink-0 mt-0.5">

@@ -1,5 +1,5 @@
 """
-Tests for karma stats endpoints.
+Tests for ledger stats endpoints.
 """
 import pytest
 
@@ -8,8 +8,8 @@ from apps.souls.models import Soul, SoulState
 
 
 @pytest.mark.django_db
-class TestKarmaStatsOverview:
-    """Test GET /api/v1/karma/stats/overview/"""
+class TestLedgerStatsOverview:
+    """Test GET /api/v1/ledger/stats/overview/"""
 
     @pytest.fixture(autouse=True)
     def setup(self, api_client, admin_user, cn_tenant):
@@ -21,12 +21,12 @@ class TestKarmaStatsOverview:
     def test_overview_requires_admin(self, api_client, judge_user):
         """Non-admin users should get 403."""
         api_client.force_authenticate(user=judge_user)
-        response = api_client.get("/api/v1/karma/stats/overview/")
+        response = api_client.get("/api/v1/ledger/stats/overview/")
         assert response.status_code == 403
 
     def test_overview_returns_structure(self):
         """Overview returns expected fields."""
-        response = self.client.get("/api/v1/karma/stats/overview/")
+        response = self.client.get("/api/v1/ledger/stats/overview/")
         assert response.status_code == 200
         data = response.json()
         assert "total_souls" in data
@@ -47,7 +47,7 @@ class TestKarmaStatsOverview:
             resource_id="test-123",
             description="Test audit entry",
         )
-        response = self.client.get("/api/v1/karma/stats/overview/")
+        response = self.client.get("/api/v1/ledger/stats/overview/")
         assert response.status_code == 200
         data = response.json()
         assert len(data["recent_activity"]) >= 1
@@ -55,7 +55,7 @@ class TestKarmaStatsOverview:
 
     def test_overview_includes_souls_by_realm(self):
         """Overview includes souls grouped by realm disposition."""
-        response = self.client.get("/api/v1/karma/stats/overview/")
+        response = self.client.get("/api/v1/ledger/stats/overview/")
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data["souls_by_realm"], list)
@@ -77,7 +77,7 @@ class TestKarmaStatsOverview:
             merit_score=5,
             demerit_score=50,
         )
-        response = self.client.get("/api/v1/karma/stats/overview/")
+        response = self.client.get("/api/v1/ledger/stats/overview/")
         assert response.status_code == 200
         data = response.json()
         karma_dist = data["karma_distribution"]
@@ -86,8 +86,8 @@ class TestKarmaStatsOverview:
 
 
 @pytest.mark.django_db
-class TestKarmaStatsExport:
-    """Test GET /api/v1/karma/stats/export/"""
+class TestLedgerStatsExport:
+    """Test GET /api/v1/ledger/stats/export/"""
 
     @pytest.fixture(autouse=True)
     def setup(self, api_client, admin_user, cn_tenant):
@@ -99,19 +99,19 @@ class TestKarmaStatsExport:
     def test_export_requires_admin(self, api_client, judge_user):
         """Non-admin users should get 403."""
         api_client.force_authenticate(user=judge_user)
-        response = api_client.get("/api/v1/karma/stats/export/")
+        response = api_client.get("/api/v1/ledger/stats/export/")
         assert response.status_code == 403
 
     def test_export_returns_csv(self):
         """Export returns CSV content type."""
-        response = self.client.get("/api/v1/karma/stats/export/")
+        response = self.client.get("/api/v1/ledger/stats/export/")
         assert response.status_code == 200
         assert response["Content-Type"] == "text/csv"
         assert "attachment" in response["Content-Disposition"]
 
     def test_export_csv_headers(self):
         """CSV has correct headers."""
-        response = self.client.get("/api/v1/karma/stats/export/")
+        response = self.client.get("/api/v1/ledger/stats/export/")
         content = response.content.decode("utf-8")
         lines = content.strip().split("\n")
         headers = lines[0]
@@ -121,7 +121,7 @@ class TestKarmaStatsExport:
         assert "Karmic Balance" in headers
 
     def test_export_includes_all_souls(self):
-        """CSV includes all souls with their karma data."""
+        """CSV includes all souls with their ledger data."""
         Soul.objects.create(
             name="Test Soul 1",
             tenant=self.tenant,
@@ -136,7 +136,7 @@ class TestKarmaStatsExport:
             merit_score=20,
             demerit_score=30,
         )
-        response = self.client.get("/api/v1/karma/stats/export/")
+        response = self.client.get("/api/v1/ledger/stats/export/")
         content = response.content.decode("utf-8")
         lines = content.strip().split("\n")
         # Header + 2 souls = 3 lines

@@ -363,21 +363,21 @@ describe('API Client — lib/api.ts', () => {
     });
   });
 
-  // ── karmaApi ─────────────────────────────────────────────────────────────
-  describe('karmaApi', () => {
+  // ── ledgerApi ────────────────────────────────────────────────────────────
+  describe('ledgerApi', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { karmaApi } = require('../../lib/api');
+    const { ledgerApi } = require('../../lib/api');
 
-    it('balance() should GET /karma/balance/:id/', () => {
+    it('balance() should GET /ledger/balance/:id/', () => {
       mockInstance.get.mockResolvedValueOnce({ data: {} });
-      karmaApi.balance(42);
-      expect(mockInstance.get).toHaveBeenCalledWith('/karma/balance/42/');
+      ledgerApi.balance(42);
+      expect(mockInstance.get).toHaveBeenCalledWith('/ledger/balance/42/');
     });
 
-    it('recalculate() should POST /karma/calculate/:id/', () => {
+    it('recalculate() should POST /ledger/calculate/:id/', () => {
       mockInstance.post.mockResolvedValueOnce({ data: {} });
-      karmaApi.recalculate(7);
-      expect(mockInstance.post).toHaveBeenCalledWith('/karma/calculate/7/');
+      ledgerApi.recalculate(7);
+      expect(mockInstance.post).toHaveBeenCalledWith('/ledger/calculate/7/');
     });
   });
 

@@ -108,9 +108,9 @@ export const dispositionExecuteSchema = z.object({
   notes: z.string().max(500, '备注最多500位').optional(),
 })
 
-// ── Karma Record ─────────────────────────────────────
+// ── Ledger Record ────────────────────────────────────
 
-export const karmaRecordSchema = z.object({
+export const ledgerRecordSchema = z.object({
   soul_id: z.string().uuid('无效的灵魂ID'),
   record_type: z.enum(['MERIT', 'DEMERIT'], {
     error: '请选择记录类型',
@@ -135,4 +135,4 @@ export type WorkflowAdvanceInput = z.infer<typeof workflowAdvanceSchema>
 export type WorkflowApproveInput = z.infer<typeof workflowApproveSchema>
 export type ReincarnationRebornInput = z.infer<typeof reincarnationRebornSchema>
 export type DispositionExecuteInput = z.infer<typeof dispositionExecuteSchema>
-export type KarmaRecordInput = z.infer<typeof karmaRecordSchema>
+export type LedgerRecordInput = z.infer<typeof ledgerRecordSchema>

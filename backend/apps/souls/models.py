@@ -76,7 +76,7 @@ class SoulState(models.TextChoices):
     # disposition used to move its soul to REINCARNATING regardless, so a soul
     # admitted to the Field of Reeds was labelled as queued for a rebirth its
     # cosmology does not have. The rebirth *machinery* already refused those
-    # souls (REBIRTH_CAPABLE_CIVILIZATIONS in apps/karma/services.py); it was
+    # souls (REBIRTH_CAPABLE_CIVILIZATIONS in apps/ledger/services.py); it was
     # only the label that lied, and a label that lies is what the dashboards
     # and the state filters read.
     #
