@@ -62,17 +62,20 @@ export const permApi = {
   myRolePermissions: () => api.get<RolePermissions>("/perm/role-permissions/"),
 
   // Permission CRUD (flat structure for backward compatibility).
-  // Both list routes are plain @api_view(["GET"]) functions, so they answer
-  // with a bare array rather than a pagination envelope.
+  // The list route is a plain @api_view(["GET"]) function, so it answers
+  // with a bare array rather than a pagination envelope. Create is a
+  // separate @api_view(["POST"]) route — /perm/permissions/ itself is
+  // GET-only and 405s on POST (backend/apps/perm/urls.py).
   list: () => api.get<Permission[]>("/perm/permissions/"),
-  create: (data: Partial<Permission>) => api.post<Permission>("/perm/permissions/", data),
+  create: (data: Partial<Permission>) => api.post<Permission>("/perm/permissions/create/", data),
   update: (id: number, data: Partial<Permission>) => api.put<Permission>(`/perm/permissions/${id}/`, data),
   delete: (id: number) => api.delete<void>(`/perm/permissions/${id}/`),
 
   // Role CRUD
   roles: {
     list: () => api.get<Role[]>("/perm/roles/"),
-    create: (data: Partial<Role>) => api.post<Role>("/perm/roles/", data),
+    // Same story as permissions.create — /perm/roles/ is GET-only.
+    create: (data: Partial<Role>) => api.post<Role>("/perm/roles/create/", data),
     update: (id: number, data: Partial<Role>) => api.put<Role>(`/perm/roles/${id}/`, data),
     delete: (id: number) => api.delete<void>(`/perm/roles/${id}/`),
   },
