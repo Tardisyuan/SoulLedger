@@ -1027,15 +1027,20 @@ def test_removing_those_rows_actually_moved_workflow_onto_the_dict_path(
 # dispatch and reincarnation routes are covered. Recorded here so this comment
 # stays the index of the pattern rather than a partial list:
 #
-#   4. GUARDIAN, denied dispatch.approve/.reject/.execute, reaches all three
-#      statuses through PATCH /dispatch/records/{id}/ under dispatch.manage.
-#      This is the instance tranche 2 predicted would appear "the moment those
-#      are reconciled and given holders", and it is the worst one found so far:
-#      it also walks around the target-tenant rule (which is not a codename at
-#      all, so no codename change closes it), skips the status state machine,
-#      and leaves the row asserting an EXECUTED transfer whose soul never
-#      moved. `dispatched_by` is writable too, so the audit attribution is
-#      forgeable. Characterized in that file, not fixed.
+#   4. GUARDIAN, denied dispatch.approve/.reject/.execute, used to reach all
+#      three statuses through PATCH /dispatch/records/{id}/ under
+#      dispatch.manage. This was the instance tranche 2 predicted would
+#      appear "the moment those are reconciled and given holders", and the
+#      worst one found: it also walked around the target-tenant rule (which
+#      is not a codename at all, so no codename change could have closed it),
+#      skipped the status state machine, and left the row asserting an
+#      EXECUTED transfer whose soul never moved, with `dispatched_by`
+#      forgeable on top. FIXED in that file: DispatchRecordSerializer now
+#      marks `status` and `dispatched_by` read-only and its `validate()`
+#      turns an attempted PATCH of either into an explicit 400. The same
+#      "record lies" failure existed, without a permission bypass, on
+#      CrossTenantJudgmentSerializer's `status`/`conclusion_type` — closed
+#      there too, for the same reason.
 #
 #   5. NOT AN INSTANCE, and worth recording as such: reincarnation has the
 #      precondition — reincarnation.complete/.reborn are ADMIN/MODERATOR while

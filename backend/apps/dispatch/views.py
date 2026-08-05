@@ -48,21 +48,25 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     # cross_judgment.* family, flagged as an open decision on the viewset
     # below, would reverse the JUDGE half of both read rows.
     #
-    # KNOWN, MEASURED, AND NOT CLOSED BY THIS CHANGE: those three denials are
-    # walkable around. `status` is writable on DispatchRecordSerializer and
-    # partial_update maps to dispatch.manage, so GUARDIAN reaches APPROVED,
-    # REJECTED and EXECUTED through PATCH, and the record it leaves is FALSE
-    # rather than merely unauthorized: the soul's tenant FK never moves, so a
-    # dispatch can read EXECUTED for a soul that never changed hands. PATCH
-    # also skips the "only the target tenant may decide" guard, which is not a
-    # codename at all, and skips the status state machine entirely.
+    # CLOSED: those three denials WERE walkable around. `status` used to be
+    # writable on DispatchRecordSerializer and partial_update maps to
+    # dispatch.manage, so GUARDIAN could reach APPROVED, REJECTED and EXECUTED
+    # through PATCH, and the record it left was FALSE rather than merely
+    # unauthorized: the soul's tenant FK never moved, so a dispatch could read
+    # EXECUTED for a soul that never changed hands. PATCH also skipped the
+    # "only the target tenant may decide" guard below, which is not a
+    # codename at all, and skipped the status state machine entirely.
     #
-    # See the characterization tests in
-    # backend/tests/test_perm_write_snapshot_outside_matrix.py. Closing any of
-    # it — read-only `status`/`dispatched_by`, a narrower dispatch.manage, the
-    # tenant guard on partial_update, the state machine on the model — is an
-    # authorization or modelling decision and not this change's to take.
-    # Enforced is not the same as safe here, and the tests say so out loud.
+    # DispatchRecordSerializer now marks `status` and `dispatched_by`
+    # read-only and its validate() turns an attempted PATCH of either into an
+    # explicit 400 — see its docstring. Status can now only move through
+    # approve()/reject()/execute() below, so the target-tenant and
+    # transition_to() checks in those three methods are the only write path
+    # for status there is; nothing has to duplicate them onto the model.
+    #
+    # See backend/tests/test_perm_write_snapshot_outside_matrix.py, "THE
+    # DENIAL THAT CAN BE WALKED AROUND (dispatch)", for how this was
+    # characterized before the fix, and its replacement assertions after.
     permission_classes = [TenantPermission, CodenamePermission]
     # BINARY read / manage, plus the three named approval actions. The dict
     # defines dispatch.read and dispatch.manage as the pair, then
@@ -274,12 +278,15 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
     # only read/create, so every write action maps to create — the same shape
     # DispatchRecordViewSet uses for dispatch.manage. Because read and every
     # write share one codename here (as they did on dispatch.manage before),
-    # this viewset still cannot exhibit the narrow-action/wide-CRUD bypass
-    # found on its sibling: there is no narrower codename for PATCH to route
-    # around. CrossTenantJudgmentSerializer does leave `status` and
-    # `conclusion_type` writable, but since `conclude` and PATCH require the
-    # same codename, reaching the same row via PATCH costs nothing beyond what
-    # `conclude` already permits.
+    # this viewset cannot exhibit the narrow-action/wide-CRUD PERMISSION
+    # bypass found on its sibling — there is no narrower codename for PATCH to
+    # route around today. But CrossTenantJudgmentSerializer used to leave
+    # `status` and `conclusion_type` writable too, and a PATCH reaching them
+    # skipped `concluded_at` and the participant notifications `conclude()`
+    # sends — the same "record lies" failure dispatch had, just not (yet)
+    # also a permission bypass. Closed the same way (read-only + explicit
+    # validate()), so it can't become one the moment `conclude` gets its own
+    # narrower codename. See CrossTenantJudgmentSerializer's docstring.
     permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "cross_judgment"
     extra_permissions = {
