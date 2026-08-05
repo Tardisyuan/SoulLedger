@@ -15,6 +15,18 @@ class Organization(AuditUserFields):
     - 自引用树形结构实现层级
     - category 区分文明体系
     - code 用于权限计算
+
+    `tenant` FK, added alongside `org.read`/`org.manage` (see
+    OrganizationViewSet in apps/org/views.py). Nullable, same pattern as
+    Soul/Realm/Actor/Judgment, and backfilled by this app's own data migration
+    using the same CIV_TO_TENANT mapping (CHINESE -> CN_DIYU, EUROPEAN ->
+    EU_HEAVEN_HELL, EGYPTIAN -> EG_DUAT) that
+    apps/tenants/management/commands/migrate_to_multitenant.py uses for the
+    other models — that command itself never listed Organization, so the
+    backfill lives in the migration here instead of being folded into it.
+    With the field present, TenantQuerySetMixin's `hasattr(model, "tenant")`
+    guard stops skipping this model and non-ADMIN roles are scoped to their
+    own tenant's org tree.
     """
     name = models.CharField(
         max_length=100,
@@ -60,6 +72,14 @@ class Organization(AuditUserFields):
         blank=True,
         help_text="扩展信息JSON"
     )
+    tenant = models.ForeignKey(
+        'tenants.Tenant',
+        on_delete=models.CASCADE,
+        related_name='organizations',
+        null=True,
+        blank=True,
+        help_text="所属租户，由 category 通过 CIV_TO_TENANT 回填",
+    )
 
     class Meta:
         db_table = 'organizations'
@@ -69,6 +89,7 @@ class Organization(AuditUserFields):
         indexes = [
             models.Index(fields=['category']),
             models.Index(fields=['parent', 'sort']),
+            models.Index(fields=['tenant', 'category']),
         ]
 
     def __str__(self):
