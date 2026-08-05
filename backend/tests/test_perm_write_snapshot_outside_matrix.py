@@ -196,21 +196,18 @@ DECLARED = {
     "POST /dispatch/records/{id}/reject/": ("dispatch_record", "reject", ["dispatch.reject"]),
     "POST /dispatch/records/{id}/execute/": ("dispatch_record", "execute", ["dispatch.execute"]),
     # ── dispatch: CrossTenantJudgmentViewSet ─────────────────────────────
-    # Same `dispatch` family. The unused cross_judgment.* family in
-    # DEFAULT_PERMISSIONS looks written for this viewset but is declared by no
-    # view; moving to it would take cross-tenant judgment reads away from
-    # GUARDIAN and hand them to JUDGE, which is a policy change and not this
-    # file's business. Recorded as-declared.
-    "POST /dispatch/cross-tenant-judgments/": ("cross_tenant_judgment", "create", ["dispatch.manage"]),
+    # Moved to the `cross_judgment` family — a decision, not a rename. See
+    # apps/dispatch/views.py and CTJ_CREATE above for why.
+    "POST /dispatch/cross-tenant-judgments/": ("cross_tenant_judgment", "create", ["cross_judgment.create"]),
     "PATCH /dispatch/cross-tenant-judgments/{id}/": (
-        "cross_tenant_judgment", "partial_update", ["dispatch.manage"],
+        "cross_tenant_judgment", "partial_update", ["cross_judgment.create"],
     ),
-    "DELETE /dispatch/cross-tenant-judgments/{id}/": ("cross_tenant_judgment", "destroy", ["dispatch.manage"]),
+    "DELETE /dispatch/cross-tenant-judgments/{id}/": ("cross_tenant_judgment", "destroy", ["cross_judgment.create"]),
     "POST /dispatch/cross-tenant-judgments/{id}/participate/": (
-        "cross_tenant_judgment", "participate", ["dispatch.manage"],
+        "cross_tenant_judgment", "participate", ["cross_judgment.create"],
     ),
     "POST /dispatch/cross-tenant-judgments/{id}/conclude/": (
-        "cross_tenant_judgment", "conclude", ["dispatch.manage"],
+        "cross_tenant_judgment", "conclude", ["cross_judgment.create"],
     ),
     # ── notifications ────────────────────────────────────────────────────
     # notification.read is held by all five roles, so enforcing this app moves
@@ -304,15 +301,20 @@ DISPATCH_APPROVE = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
 DISPATCH_REJECT = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
 DISPATCH_EXECUTE = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
 
-# dispatch.manage again, via CrossTenantJudgmentViewSet — every action on that
-# viewset, CRUD and custom alike, resolves to this single codename. Same two
-# roles denied, ten codes. Because the holder sets are identical rather than
-# nested, this viewset cannot exhibit the bypass its sibling does.
-CTJ_CREATE = _denied("JUDGE", "VIEWER")(201)
-CTJ_PATCH = _denied("JUDGE", "VIEWER")(200)
-CTJ_DELETE = _denied("JUDGE", "VIEWER")(204)
-CTJ_PARTICIPATE = _denied("JUDGE", "VIEWER")(200)
-CTJ_CONCLUDE = _denied("JUDGE", "VIEWER")(200)
+# cross_judgment.create, via CrossTenantJudgmentViewSet — every action on that
+# viewset, CRUD and custom alike, resolves to this single codename. DECIDED:
+# cross-tenant judgment moved from dispatch.manage to the cross_judgment
+# family (see apps/dispatch/views.py) because it is a judgment activity, not
+# an operational dispatch one — the same civilization that hears a soul's own
+# case now hears its cross-tenant one. GUARDIAN and VIEWER denied, ADMIN,
+# MODERATOR and JUDGE admitted — the inverse of dispatch.manage's split.
+# Because read and every write still share one codename, this viewset still
+# cannot exhibit the bypass its sibling does.
+CTJ_CREATE = _denied("GUARDIAN", "VIEWER")(201)
+CTJ_PATCH = _denied("GUARDIAN", "VIEWER")(200)
+CTJ_DELETE = _denied("GUARDIAN", "VIEWER")(204)
+CTJ_PARTICIPATE = _denied("GUARDIAN", "VIEWER")(200)
+CTJ_CONCLUDE = _denied("GUARDIAN", "VIEWER")(200)
 
 # ── notifications: 0 codes moved ─────────────────────────────────────────────
 # notification.read is held by every role and is the only codename any action
@@ -1883,18 +1885,19 @@ def test_cross_tenant_judgment_has_no_such_split_and_the_immunity_is_an_accident
     """The sibling viewset cannot exhibit the bypass, for a reason worth pinning.
 
     Every action on CrossTenantJudgmentViewSet — participate, conclude, and all
-    three CRUD writes — resolves to the single codename dispatch.manage. The
-    holder sets are therefore identical rather than nested, so there is no
-    narrow route to be denied and no wider one to escape through. Same accident
-    that made judgment and disposition immune in tranche 2.
+    three CRUD writes — resolves to the single codename cross_judgment.create
+    (moved off dispatch.manage; see apps/dispatch/views.py for why). The holder
+    sets are therefore identical rather than nested, so there is no narrow route
+    to be denied and no wider one to escape through. Same accident that made
+    judgment and disposition immune in tranche 2 — the family changed, the
+    accident did not.
 
     It IS an accident, and this test says so by demonstrating the other half:
     CrossTenantJudgmentSerializer leaves `status` and `conclusion_type` writable,
     so PATCH already reaches the row `conclude` writes. Today that costs nothing
     because no codename separates them. The moment conclude gets its own
-    codename — or the unused cross_judgment.* family is adopted for this viewset,
-    which the view's own comment flags as an open decision — this becomes the
-    same hole, and the serializer is where it would have to be closed.
+    codename, this becomes the same hole DispatchRecordViewSet has, and the
+    serializer is where it would have to be closed.
     """
     from apps.dispatch.models import CrossTenantJudgment, JudgmentStatus
     from apps.dispatch.views import CrossTenantJudgmentViewSet
@@ -1902,16 +1905,20 @@ def test_cross_tenant_judgment_has_no_such_split_and_the_immunity_is_an_accident
     view = CrossTenantJudgmentViewSet()
     for action in ("create", "update", "partial_update", "destroy", "participate", "conclude"):
         view.action = action
-        assert view.get_required_permissions() == ["dispatch.manage"], (
-            f"{action} no longer maps to dispatch.manage. If any action on this "
-            f"viewset gained a narrower codename, it is now exposed to the same "
-            f"bypass as DispatchRecordViewSet — check the serializer."
+        assert view.get_required_permissions() == ["cross_judgment.create"], (
+            f"{action} no longer maps to cross_judgment.create. If any action on "
+            f"this viewset gained a narrower codename, it is now exposed to the "
+            f"same bypass as DispatchRecordViewSet — check the serializer."
         )
 
     clients, _users = role_clients
     home, _other = snapshot_tenants
     judgment = _cross_tenant_judgment(home, status=JudgmentStatus.ACTIVE)
-    allowed = clients["GUARDIAN"].patch(
+    # JUDGE, not GUARDIAN: cross_judgment.create's holders are ADMIN,
+    # MODERATOR, JUDGE — the inverse of dispatch.manage's ADMIN, MODERATOR,
+    # GUARDIAN. The role demonstrating the PATCH-reaches-conclude accident has
+    # to be one that actually holds the write codename now in force.
+    allowed = clients["JUDGE"].patch(
         f"/api/v1/dispatch/cross-tenant-judgments/{judgment.id}/",
         {"status": JudgmentStatus.CONCLUDED, "conclusion_type": "PASS"},
         format="json",
