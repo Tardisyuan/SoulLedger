@@ -40,7 +40,7 @@ const RESOURCE_OPTIONS = [
   { value: "user", label: "User" },
   { value: "workflow", label: "Workflow" },
   { value: "judgment", label: "Judgment" },
-  { value: "karma", label: "Karma" },
+  { value: "soulrecord", label: "Soul Record" },
   { value: "permission", label: "Permission" },
 ];
 
