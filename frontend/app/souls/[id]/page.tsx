@@ -35,6 +35,7 @@ const STATE_COLORS: Record<string, string> = {
   DISPOSED: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
   REINCARNATING: "bg-[hsl(var(--color-status-reincarnating)/0.2)] text-[hsl(var(--color-status-reincarnating))]",
   LOST: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
+  SETTLED: "bg-[hsl(var(--color-status-settled)/0.2)] text-[hsl(var(--color-status-settled))]",
 };
 
 export default function SoulDetailPage() {

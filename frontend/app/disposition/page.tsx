@@ -103,7 +103,7 @@ export default function DispositionPage() {
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-6 w-full max-w-md border border-[hsl(var(--color-hairline))]">
             <h3 className="font-semibold text-[hsl(var(--color-ink))] mb-2">{t("disposition.confirm_execute") || "Confirm Execution"}</h3>
             <p className="text-sm text-[hsl(var(--color-ink-muted))] mb-4">
-              {t("disposition.execute_warning") || "This will execute the disposition and transition the soul to REINCARNATING state."}
+              {t("disposition.execute_warning")}
             </p>
             <div className="flex gap-3 justify-end">
               <button

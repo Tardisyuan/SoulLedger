@@ -79,6 +79,10 @@
   --color-status-disposed: 220 80% 62%;
   --color-status-reincarnating: 217 91% 60%;
   --color-status-lost: 0 0% 50%;
+  /* Teal reads as "concluded" without borrowing REINCARNATING's blue or
+     LOST's grey, and stays neutral on outcome — SETTLED covers both Aaru
+     and Ammit, Heaven and Hell alike. */
+  --color-status-settled: 178 55% 40%;
   --color-karma-merit: 142 76% 36%;
   --color-karma-demerit: 0 84% 60%;
   /* Green rather than the accent amber: a PASSED badge previously rendered in
@@ -107,6 +111,7 @@
   --color-status-disposed: 220 80% 45%;
   --color-status-reincarnating: 217 91% 50%;
   --color-status-lost: 0 0% 40%;
+  --color-status-settled: 178 55% 30%;
   --color-karma-merit: 142 76% 28%;
   --color-karma-demerit: 0 84% 50%;
   --color-verdict-passed: 142 76% 28%;

@@ -94,7 +94,8 @@
       "JUDGING": "Judging",
       "DISPOSED": "Disposed",
       "REINCARNATING": "Reincarnating",
-      "LOST": "Lost"
+      "LOST": "Lost",
+      "SETTLED": "Settled (Final)"
     },
     "civilizations": {
       "CHINESE": "Chinese",

@@ -15,6 +15,7 @@ const STATE_COLORS: Record<string, string> = {
   DISPOSED: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
   REINCARNATING: "bg-[hsl(var(--color-status-reincarnating)/0.2)] text-[hsl(var(--color-status-reincarnating))]",
   LOST: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
+  SETTLED: "bg-[hsl(var(--color-status-settled)/0.2)] text-[hsl(var(--color-status-settled))]",
 };
 
 /** Parses the `ordering` query param ("-name" etc.) into DataTable's sort shape. */
@@ -69,6 +70,7 @@ export default function SoulsPage() {
     { value: "JUDGING", label: t("souls.states.JUDGING") },
     { value: "DISPOSED", label: t("souls.states.DISPOSED") },
     { value: "REINCARNATING", label: t("souls.states.REINCARNATING") },
+    { value: "SETTLED", label: t("souls.states.SETTLED") },
   ];
 
   const civilizations = [

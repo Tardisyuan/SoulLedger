@@ -62,6 +62,7 @@ export default function KarmaPage() {
                     item.state === "JUDGING" ? "bg-[hsl(var(--color-status-judging))]" :
                     item.state === "DISPOSED" ? "bg-[hsl(var(--color-status-lost))]" :
                     item.state === "REINCARNATING" ? "bg-[hsl(var(--color-status-reincarnating))]" :
+                    item.state === "SETTLED" ? "bg-[hsl(var(--color-status-settled))]" :
                     "bg-[hsl(var(--color-status-error))]"
                   }`} />
                   <span className="text-sm text-[hsl(var(--color-ink))]">{t(`souls.states.${item.state}`) === `souls.states.${item.state}` ? item.label : t(`souls.states.${item.state}`)}</span>

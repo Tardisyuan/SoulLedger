@@ -38,6 +38,12 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   const [originLocation, setOriginLocation] = useState("");
   const [currentState, setCurrentState] = useState<Soul["current_state"]>("ALIVE");
 
+  // SETTLED is terminal — nothing transitions out of it, not even LOST — so
+  // an operator must not be able to pick it manually. The control is
+  // disabled rather than removed: `currentState` still holds "SETTLED" and
+  // round-trips on submit instead of silently reverting to the default.
+  const isSettled = soul.current_state === "SETTLED";
+
   // Populate form when soul changes or modal opens
   useEffect(() => {
     if (isOpen && soul) {
@@ -177,14 +183,18 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
             id={stateId}
             value={currentState}
             onChange={(e) => setCurrentState(e.target.value as Soul["current_state"])}
-            disabled={updateMutation.isPending}
+            disabled={updateMutation.isPending || isSettled}
             className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
           >
-            {STATE_OPTION_VALUES.map((val) => (
-              <option key={val} value={val}>
-                {t(`souls.states.${val}`)}
-              </option>
-            ))}
+            {isSettled ? (
+              <option value="SETTLED">{t("souls.states.SETTLED")}</option>
+            ) : (
+              STATE_OPTION_VALUES.map((val) => (
+                <option key={val} value={val}>
+                  {t(`souls.states.${val}`)}
+                </option>
+              ))
+            )}
           </select>
         </div>
       </form>

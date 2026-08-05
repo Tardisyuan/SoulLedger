@@ -94,7 +94,8 @@
       "JUDGING": "审判中",
       "DISPOSED": "已处置",
       "REINCARNATING": "轮回中",
-      "LOST": "迷失"
+      "LOST": "迷失",
+      "SETTLED": "已终结"
     },
     "civilizations": {
       "CHINESE": "中国",
