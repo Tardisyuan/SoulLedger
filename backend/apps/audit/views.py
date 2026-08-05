@@ -28,11 +28,23 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         GET /api/v1/audit-logs/?start_date=2024-01-01&end_date=2024-12-31
     """
     permission_classes = [TenantPermission]
+    # BINARY on `audit.read`, which is what the module already is: a
+    # ReadOnlyModelViewSet, so every routed action is a read and there is no
+    # write codename to want. `audit.read` is seeded and held by ADMIN and
+    # MODERATOR.
+    #
+    # by_trace and timeline are listed here because they were not: they are
+    # @action reads, and without an entry the mixin fell through to
+    # `audit.by_trace` / `audit.timeline`, two codenames that exist nowhere.
+    # (The audit report missed these two and instead listed
+    # audit.create/update/delete, which this viewset cannot generate at all.)
     permission_codename = "audit"
     extra_permissions = {
         'actions': ['audit.read'],
         'resources': ['audit.read'],
         'stats': ['audit.read'],
+        'by_trace': ['audit.read'],
+        'timeline': ['audit.read'],
     }
     serializer_class = AuditLogSerializer
     filterset_fields = ["user", "action", "resource", "resource_id"]

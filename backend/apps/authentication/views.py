@@ -54,17 +54,44 @@ class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         POST   /api/v1/users/{id}/reset_password/ - 重置密码
     """
     permission_classes = [TenantPermission, IsAdminPermission]
+    # BINARY, not CRUD. `user.manage` is the only user codename that exists —
+    # it is in DEFAULT_PERMISSIONS and held by ADMIN — and this viewset already
+    # behaves that way: IsAdminPermission above gates reads and writes alike,
+    # so ADMIN can do everything here and nobody else can do anything.
+    #
+    # The declarations this replaces (user.read, user.create, user.update,
+    # user.delete, user.activate, user.deactivate, user.reset_password,
+    # user.assign_roles) were eight codenames that existed nowhere and were
+    # held by nobody — a CRUD shape asserted against a policy that never had
+    # one. Splitting user.manage into eight real codenames means a seeding
+    # migration and eight grant decisions; binding to the codename that exists
+    # reproduces today's ADMIN-only reality exactly and defers that split.
+    #
+    # Every action is listed explicitly, standard CRUD included, because the
+    # mixin would otherwise fall back to ACTION_PERM_MAP and resurrect
+    # user.read / user.create / user.update / user.delete.
+    #
+    # NOTE for whoever splits this later: migration 0015's docstring records
+    # why MODERATOR is withheld user.manage — this viewset carries no tenant
+    # mixin, so the codename spans every tenant and puts no bound on the role
+    # being assigned. Any finer-grained family has to solve that first.
     permission_codename = "user"
     extra_permissions = {
-        'activate': ['user.activate'],
-        'deactivate': ['user.deactivate'],
-        'reset_password': ['user.reset_password'],
-        'batch_activate': ['user.activate'],
-        'batch_deactivate': ['user.deactivate'],
-        'own_roles': ['user.read'],
-        'assign_roles': ['user.assign_roles'],
-        'export_csv': ['user.read'],
-        'import_csv': ['user.create'],
+        'list': ['user.manage'],
+        'retrieve': ['user.manage'],
+        'create': ['user.manage'],
+        'update': ['user.manage'],
+        'partial_update': ['user.manage'],
+        'destroy': ['user.manage'],
+        'activate': ['user.manage'],
+        'deactivate': ['user.manage'],
+        'reset_password': ['user.manage'],
+        'batch_activate': ['user.manage'],
+        'batch_deactivate': ['user.manage'],
+        'own_roles': ['user.manage'],
+        'assign_roles': ['user.manage'],
+        'export_csv': ['user.manage'],
+        'import_csv': ['user.manage'],
     }
 
     def get_serializer_class(self):
@@ -315,7 +342,16 @@ class LoginLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         GET /api/v1/login-logs/{id}/   - 获取登录日志详情
     """
     permission_classes = [TenantPermission, IsAdminPermission]
-    permission_codename = "login_log"
+    # EXEMPT. No `login_log.*` codename exists in DEFAULT_PERMISSIONS or
+    # ROLE_PERMISSIONS, and none was ever seeded; the old "login_log"
+    # declaration produced `login_log.read`, held by nobody. Unlike users,
+    # there is no adjacent codename to fold this into — `user.manage` is about
+    # editing users, not reading their sign-in history, and reusing it would
+    # quietly make "may administer users" mean "may read the audit trail".
+    # A real `login_log.read` needs seeding and granting; queued, not invented.
+    # ADMIN-only access is unaffected: IsAdminPermission above is what actually
+    # returns 403 here today, and it keeps doing so.
+    permission_codename = None
     serializer_class = LoginLogSerializer
 
     def get_queryset(self):

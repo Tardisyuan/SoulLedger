@@ -16,7 +16,11 @@ class ActorViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnl
     Use '?localized=true' query param to get display_name resolved by Accept-Language.
     """
     permission_classes = [TenantPermission]
-    permission_codename = "actor"
+    # Plural, matching the seeded `actors.read` in DEFAULT_PERMISSIONS — same
+    # singular/plural mismatch as realms had. Renaming the view is free;
+    # renaming the Permission rows would need another data migration.
+    # Read-only viewset: `actors.read` is the whole family, no write codename.
+    permission_codename = "actors"
     queryset = Actor.objects.filter(is_active=True)
     filterset_class = ActorFilter
     search_fields = ActorFilter.search_fields

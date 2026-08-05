@@ -30,6 +30,13 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     DispatchRecord CRUD + actions.
     """
     permission_classes = [TenantPermission]
+    # BINARY read / manage, plus the three named approval actions. The dict
+    # defines dispatch.read and dispatch.manage as the pair, then
+    # dispatch.approve / .reject / .execute on top; it has never had a
+    # create/update/delete family, so those three generated codenames existed
+    # nowhere. They map to dispatch.manage — the codename that was defined to
+    # mean "may alter dispatch records" — leaving approve/reject/execute as
+    # the separate privileges they were meant to be.
     permission_codename = "dispatch"
     extra_permissions = {
         'proposed': ['dispatch.read'],
@@ -37,6 +44,10 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         'approve': ['dispatch.approve'],
         'reject': ['dispatch.reject'],
         'execute': ['dispatch.execute'],
+        'create': ['dispatch.manage'],
+        'update': ['dispatch.manage'],
+        'partial_update': ['dispatch.manage'],
+        'destroy': ['dispatch.manage'],
     }
     queryset = DispatchRecord.objects.select_related(
         "source_tenant", "target_tenant", "soul", "dispatched_by"
@@ -212,10 +223,25 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
     CrossTenantJudgment CRUD + actions.
     """
     permission_classes = [TenantPermission]
+    # Stays on the `dispatch` family, binary read / manage as above.
+    # dispatch.participate and dispatch.conclude existed nowhere and were held
+    # by nobody, so they fold into dispatch.manage along with the CRUD writes.
+    #
+    # OPEN DECISION for the lead, deliberately not taken here: the dict has an
+    # unused cross_judgment.read / cross_judgment.create family that looks
+    # written for this viewset. Moving to it is not a rename — cross_judgment.*
+    # is held by ADMIN, JUDGE and MODERATOR while dispatch.read is held by
+    # ADMIN, GUARDIAN and MODERATOR, so GUARDIAN would lose cross-tenant
+    # judgment reads and JUDGE would gain them. That is a policy change, so
+    # this pass keeps the family the view already declared.
     permission_codename = "dispatch"
     extra_permissions = {
-        'participate': ['dispatch.participate'],
-        'conclude': ['dispatch.conclude'],
+        'participate': ['dispatch.manage'],
+        'conclude': ['dispatch.manage'],
+        'create': ['dispatch.manage'],
+        'update': ['dispatch.manage'],
+        'partial_update': ['dispatch.manage'],
+        'destroy': ['dispatch.manage'],
     }
     queryset = CrossTenantJudgment.objects.select_related(
         "initiating_tenant"

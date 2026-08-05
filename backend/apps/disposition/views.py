@@ -19,9 +19,23 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
     Tenant-isolated via TenantPermission.
     """
     permission_classes = [TenantPermission]
+    # BINARY: read / execute. ROLE_PERMISSIONS defines exactly those two —
+    # read for ADMIN, JUDGE, GUARDIAN and MODERATOR; execute for ADMIN and
+    # MODERATOR — and there is no disposition.manage. The viewset is a
+    # ModelViewSet, so the mixin was also generating disposition.create,
+    # .update and .delete, which exist nowhere and are held by nobody.
+    #
+    # Those three writes map to disposition.execute, this module's only write
+    # verb. Carrying out a disposition and authoring one are the same
+    # privilege here in practice, and no third codename can be introduced
+    # without seeding and granting it.
     permission_codename = "disposition"
     extra_permissions = {
         'execute': ['disposition.execute'],
+        'create': ['disposition.execute'],
+        'update': ['disposition.execute'],
+        'partial_update': ['disposition.execute'],
+        'destroy': ['disposition.execute'],
     }
     queryset = Disposition.objects.select_related(
         "soul", "soul__tenant", "destination_realm", "tenant"
