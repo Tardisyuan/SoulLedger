@@ -1,7 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { crossTenantJudgmentsApi, type CrossTenantJudgment } from "@/lib/api";
+import { crossTenantJudgmentsApi, type CrossTenantJudgmentListItem } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
@@ -47,7 +47,7 @@ export default function CrossJudgmentsPage() {
           </p>
         ) : (
           <div className="space-y-4">
-            {judgments.map((j: CrossTenantJudgment) => (
+            {judgments.map((j: CrossTenantJudgmentListItem) => (
               <Link
                 key={j.id}
                 href={`/cross-judgments/${j.id}`}
@@ -57,21 +57,13 @@ export default function CrossJudgmentsPage() {
                   <div>
                     <h3 className="font-semibold text-[hsl(var(--color-ink))]">{j.title}</h3>
                     <p className="text-sm text-[hsl(var(--color-ink-subtle))]">
-                      {t("crossJudgments.initiated_by") || "Initiated by"}: {j.initiating_tenant}
+                      {t("crossJudgments.initiated_by") || "Initiated by"}: {j.initiating_tenant_code}
                     </p>
                   </div>
                   <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[j.status] || "bg-gray-500/20"}`}>
                     {j.status}
                   </span>
                 </div>
-                {j.description && (
-                  <p className="mt-2 text-sm text-[hsl(var(--color-ink-muted))] line-clamp-2">{j.description}</p>
-                )}
-                {j.participants.length > 0 && (
-                  <p className="mt-2 text-xs text-[hsl(var(--color-ink-muted))]">
-                    {j.participants.length} {t("crossJudgments.participants") || "participants"}
-                  </p>
-                )}
               </Link>
             ))}
           </div>

@@ -21,26 +21,27 @@ export interface DispatchRecord {
 }
 
 /**
- * CrossTenantJudgmentSerializer — the DETAIL shape
- * (backend/apps/dispatch/serializers.py:125).
- *
- * `list` below is typed with it too, and that is not accurate: the list route
- * uses CrossTenantJudgmentListSerializer (serializers.py:148), which omits
- * `description`, `participants`, `create_time` and `update_time`. Left as one
- * type because narrowing it would make app/cross-judgments/page.tsx stop
- * compiling at `j.participants.length` — a line that throws today for exactly
- * this reason. See the report accompanying this change; the fix is a
- * behaviour change and belongs in its own commit.
+ * CrossTenantJudgmentListSerializer (backend/apps/dispatch/serializers.py:148) —
+ * the element type of GET /dispatch/cross-tenant-judgments/. It carries six
+ * fields and no more: `description`, `participants`, `create_time` and
+ * `update_time` are detail-only.
  */
-export interface CrossTenantJudgment {
+export interface CrossTenantJudgmentListItem {
   id: string;
   title: string;
-  description: string;
   initiating_tenant: number;
   initiating_tenant_code: string;
   status: string;
   concluded_at: string | null;
   conclusion_type: string | null;
+}
+
+/**
+ * CrossTenantJudgmentSerializer — the DETAIL shape
+ * (backend/apps/dispatch/serializers.py:125).
+ */
+export interface CrossTenantJudgment extends CrossTenantJudgmentListItem {
+  description: string;
   participants: CrossTenantJudgmentParticipant[];
   create_time: string;
   update_time: string;
@@ -78,7 +79,7 @@ export const dispatchApi = {
 };
 
 export const crossTenantJudgmentsApi = {
-  list: (params?: Record<string, string>) => api.get<PaginatedResponse<CrossTenantJudgment>>("/dispatch/cross-tenant-judgments/", { params }),
+  list: (params?: Record<string, string>) => api.get<PaginatedResponse<CrossTenantJudgmentListItem>>("/dispatch/cross-tenant-judgments/", { params }),
   get: (id: string) => api.get<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/`),
   create: (data: { title: string; description: string }) => api.post<CrossTenantJudgment>("/dispatch/cross-tenant-judgments/", data),
   participate: (id: string, data: { participant_tenant: number; participant_actor?: number; role?: string }) =>
