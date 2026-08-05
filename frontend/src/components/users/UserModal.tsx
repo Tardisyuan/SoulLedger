@@ -36,7 +36,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
     role: "VIEWER",
     first_name: "",
     last_name: "",
-    tenant_id: undefined,
+    tenant: undefined,
   });
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
           role: user.role,
           first_name: user.first_name || "",
           last_name: user.last_name || "",
-          tenant_id: user.tenant?.id,
+          tenant: user.tenant?.id,
         });
       } else {
         setFormData({
@@ -59,7 +59,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
           role: "VIEWER",
           first_name: "",
           last_name: "",
-          tenant_id: undefined,
+          tenant: undefined,
         });
       }
     }
@@ -111,7 +111,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
         role: formData.role,
         first_name: formData.first_name,
         last_name: formData.last_name,
-        tenant_id: formData.tenant_id,
+        tenant: formData.tenant,
       };
       if (formData.password) {
         updateData.password = formData.password;

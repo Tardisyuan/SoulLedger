@@ -7,9 +7,12 @@ import { api } from "./client";
  * `tenant` and `organization` are both SerializerMethodFields returning an
  * object or null, not FK ids. `organization` was declared here as `number`.
  *
- * first_name/last_name/display_name/permissions/tenant_id are NOT in the
- * serializer's field list and never arrive; they are kept optional only
- * because UserModal still reads first_name/last_name.
+ * first_name/last_name are now in the serializer's field list (fixed
+ * alongside UserCreateSerializer/UserUpdateSerializer — all three admin-
+ * management serializers were missing them; the self-profile serializer in
+ * the same file always had them). display_name/permissions/tenant_id are
+ * still NOT in the field list and never arrive; kept optional for that
+ * reason only.
  */
 export interface User {
   id: number;
