@@ -198,3 +198,79 @@ class TestDecayAnchoredToDeath:
         first = LedgerService.recalculate_soul_ledger(soul)
         second = LedgerService.recalculate_soul_ledger(soul)
         assert first["merit_score"] == second["merit_score"] == 156
+
+
+@pytest.mark.django_db
+class TestSummaryAndRecalculateAgree:
+    """One soul, one score, whichever function you ask.
+
+    recalculate_soul_ledger writes soul.merit_score by accumulating the
+    unrounded decayed weight and rounding the total once. get_ledger_summary
+    used to round each record to 2dp *before* accumulating, so for the same
+    records it could report an integer one point away from the denormalised
+    field the rest of the system reads — and the summary is what /ledger/
+    serves and what the rebirth carryover applies, via
+    get_reincarnation_inheritance.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="LSA_T1", defaults={"display_name": "Ledger Agreement Tenant"}
+        )[0]
+
+    def _soul_with_n_identical_deeds(self, count, weight, years):
+        # Full month/day precision on both ends so the span is exactly
+        # `years` — a year-only anchor is estimated at day 183 (see
+        # _day_of_year) and would smear the decay factors these cases turn on.
+        soul = Soul.objects.create(
+            name=f"{count}×{weight} at {years}y", current_state=SoulState.JUDGING,
+            death_year=1900, death_month=1, death_day=1, tenant=self.tenant,
+        )
+        for i in range(count):
+            SoulRecord.objects.create(
+                soul=soul, record_type="MERIT", civilization="CHINESE",
+                description=f"deed {i}", weight=weight,
+                event_year=1900 - years, event_month=1, event_day=1,
+            )
+        return soul
+
+    def test_one_record_is_already_enough_to_split_the_two(self):
+        """It is not an accumulation problem — one rounded part is enough.
+
+        A single deed of weight 25, two years before death: 25·e^(-0.02) is
+        24.50496…, which rounds to 25. Displayed at 2dp it is 24.5, which
+        rounds to 24 (ties-to-even). Same records, same instant, two scores.
+        """
+        soul = self._soul_with_n_identical_deeds(count=1, weight=25, years=2)
+
+        summary = LedgerService.get_ledger_summary(soul)
+        recalculated = LedgerService.recalculate_soul_ledger(soul)
+
+        # The record still *displays* at two decimal places, unchanged.
+        assert summary["records"][0]["effective_weight"] == 24.5
+        # ...but the total is the exact one, not the displayed one rounded.
+        assert summary["merit_score"] == 25
+        assert recalculated["merit_score"] == 25
+
+    def test_display_rounding_does_not_accumulate_across_records(self):
+        """Five deeds of weight 1, ten years back: 5·e^(-0.1) is 4.5242 → 5,
+        five displayed 0.9s sum to exactly 4.5 → 4."""
+        soul = self._soul_with_n_identical_deeds(count=5, weight=1, years=10)
+
+        summary = LedgerService.get_ledger_summary(soul)
+        recalculated = LedgerService.recalculate_soul_ledger(soul)
+
+        assert summary["records"][0]["effective_weight"] == 0.9
+        assert summary["merit_score"] == 5
+        assert recalculated["merit_score"] == 5
+
+    def test_summary_matches_the_denormalised_field_it_is_compared_against(self):
+        soul = self._soul_with_n_identical_deeds(count=1, weight=25, years=2)
+        LedgerService.recalculate_soul_ledger(soul)
+        soul.refresh_from_db()
+
+        summary = LedgerService.get_ledger_summary(soul)
+        assert summary["merit_score"] == soul.merit_score
+        assert summary["demerit_score"] == soul.demerit_score
+        assert summary["karmic_balance"] == soul.karmic_balance
