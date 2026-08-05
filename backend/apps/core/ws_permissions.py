@@ -52,21 +52,45 @@ class PermissionMiddleware(BaseMiddleware):
 
     @database_sync_to_async
     def _resolve_permissions(self, user):
-        """Get permission codenames for the user's RBAC role."""
+        """Get the permission codenames the user's role holds.
+
+        Delegates to ``apps.perm.services.get_role_permission_codenames``,
+        which asks ``apps.perm.checker.check_permission`` — the same
+        function that decides every enforcement decision, the
+        role-permissions endpoint, and the login response — per codename.
+
+        This used to read ``user.rbac_role.get_inherited_permissions()``
+        instead: a separate FK, resolved by walking ``Role.parent``, that
+        never consulted the ``ROLE_PERMISSIONS`` dict fallback. Any codename
+        without a seeded ``Permission`` row was therefore invisible here even
+        though ``check_permission`` granted it — and any user whose
+        ``rbac_role`` was NULL (unset on this branch for anyone created
+        before migration 0010, and unset entirely on a fresh signup) got an
+        empty permission set regardless of ``role``. ADMIN happened to look
+        right only because it short-circuited to ``DEFAULT_PERMISSIONS``
+        here, which coincidentally matches what the checker now grants
+        ADMIN; every other role under-reported.
+
+        ``Role.parent`` inheritance is not reproduced by this call. It is
+        not load-bearing: nothing in migrations, fixtures, `apps/perm/export.py`
+        import/export, or any management command ever sets a non-NULL
+        `parent` on a `Role` row — the field and `get_inherited_permissions`
+        are exercised only by `apps/perm/tests.py`'s direct model tests, never
+        by seeded data. If a hierarchy is wanted for real, it needs to be
+        modelled inside `check_permission` itself so every caller (this one
+        included) gets it consistently, rather than resolved a second way
+        here.
+        """
         if not user or not getattr(user, "is_authenticated", False):
             return set()
 
-        # ADMIN bypass — all permissions
-        if hasattr(user, "role") and user.role == "ADMIN":
-            from apps.perm.models import DEFAULT_PERMISSIONS
-            return {codename for codename, _, _ in DEFAULT_PERMISSIONS}
-
-        rbac_role = getattr(user, "rbac_role", None)
-        if not rbac_role:
+        role = getattr(user, "role", None)
+        if not role:
             return set()
 
         try:
-            return rbac_role.get_inherited_permissions()
+            from apps.perm.services import get_role_permission_codenames
+            return set(get_role_permission_codenames(role))
         except Exception:
             logger.exception("PermissionMiddleware: error resolving permissions")
             return set()
