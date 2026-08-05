@@ -20,6 +20,9 @@ class UserNotificationSerializer(serializers.ModelSerializer):
             "related_id",
             "created_at",
         ]
+        # `user` stays read-only from the client's perspective: it is always
+        # forced to request.user by NotificationViewSet.perform_create, never
+        # taken from the payload. See that method for why self-notify only.
         read_only_fields = ["id", "user", "created_at"]
 
 
