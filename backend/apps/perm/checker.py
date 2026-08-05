@@ -44,27 +44,39 @@ def check_permission(user, codename):
     if cached is not None:
         return cached
 
-    # Check if permission exists in DB (seeded)
-    try:
-        from apps.perm.models import Permission
-        perm_exists = Permission.objects.filter(codename=codename).exists()
-    except Exception:
-        perm_exists = False
+    # Imported here rather than at module scope: this module is pulled in from
+    # middleware and DRF permission classes, and apps.perm.models must not be
+    # touched before the app registry is ready.
+    from apps.perm.models import ROLE_PERMISSIONS, Permission, RolePermission
 
-    if perm_exists:
-        # DB is authoritative for seeded codenames
-        try:
-            from apps.perm.models import RolePermission
-            has_perm = RolePermission.objects.filter(
-                role=role,
-                permission__codename=codename
-            ).exists()
-        except Exception:
-            from apps.perm.models import ROLE_PERMISSIONS
-            has_perm = codename in ROLE_PERMISSIONS.get(role, [])
+    if Permission.objects.filter(codename=codename).exists():
+        # DB is authoritative for seeded codenames.
+        #
+        # `role` is the role NAME string carried on the user (User.role), not a
+        # Role instance, so the join has to go through Role.name. Filtering
+        # `role=role` fed a string into the FK's id column, which raised
+        # ValueError("Field 'id' expected a number but got 'VIEWER'") on every
+        # single call — and the bare `except Exception` that used to sit here
+        # caught it and answered from ROLE_PERMISSIONS instead. The effect was
+        # that this branch never decided anything: no row in RolePermission has
+        # ever granted a permission, and no revocation has ever taken one away.
+        #
+        # Nothing is caught here on purpose. Neither .exists() call can raise a
+        # model DoesNotExist — that only comes from .get() — so anything they do
+        # raise is a database or programming fault, and answering a permission
+        # question from a stale dict while the database is unreachable is how
+        # this stayed invisible for months. Let it surface.
+        #
+        # Note the consequence for a role with no Role row at all: it matches
+        # nothing and is denied every seeded codename, whatever the dict says.
+        # That is the correct DB answer, but it means the grant tables must be
+        # seeded for a role before this can be relied on.
+        has_perm = RolePermission.objects.filter(
+            role__name=role,
+            permission__codename=codename,
+        ).exists()
     else:
         # Fallback to ROLE_PERMISSIONS dict (unseeded codenames)
-        from apps.perm.models import ROLE_PERMISSIONS
         has_perm = codename in ROLE_PERMISSIONS.get(role, [])
 
     # Cache the result
