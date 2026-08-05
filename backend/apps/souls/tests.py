@@ -8,7 +8,10 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.souls.filters import SoulFilter
 from apps.souls.models import (
+    CIVILIZATION_TENANT,
+    TENANT_CIVILIZATION,
     UNKNOWN_CIVILIZATION,
     Civilization,
     Soul,
@@ -377,3 +380,45 @@ class TestCivilizationGateDoesNotFailOpen:
         soul = self._soul_in("CN_DIYU")
         soul.tenant = None
         assert soul.civilization == UNKNOWN_CIVILIZATION
+
+
+@pytest.mark.django_db
+class TestOneTenantCivilizationMap:
+    """The tenant↔cosmology mapping is one table, read in both directions.
+
+    It used to be four tables of the same three pairs: TENANT_CIVILIZATION
+    here, a reverse copy in the Soul filterset, another in the multitenant
+    backfill command, and a fourth in the seed script — each free to drift
+    from the others. The filterset copy is the one that mattered day to day:
+    a reverse map that disagreed with Soul.civilization would answer
+    ?civilization=X with souls whose civilization is not X, which is a wrong
+    answer that looks like a right one.
+    """
+
+    @pytest.fixture
+    def one_soul_per_tenant(self, db):
+        souls = {}
+        for code in TENANT_CIVILIZATION:
+            tenant = Tenant.objects.get_or_create(
+                code=code, defaults={"display_name": code}
+            )[0]
+            souls[code] = Soul.objects.create(name=f"{code} Soul", tenant=tenant)
+        return souls
+
+    def test_the_reverse_map_round_trips_through_the_forward_one(self):
+        for code, civilization in TENANT_CIVILIZATION.items():
+            assert CIVILIZATION_TENANT[civilization] == code
+        assert len(CIVILIZATION_TENANT) == len(TENANT_CIVILIZATION)
+
+    @pytest.mark.parametrize("code", list(TENANT_CIVILIZATION))
+    def test_the_filter_returns_exactly_what_the_property_names(
+        self, one_soul_per_tenant, code
+    ):
+        civilization = TENANT_CIVILIZATION[code]
+        matched = list(
+            SoulFilter(
+                {"civilization": civilization}, queryset=Soul.all_objects.all()
+            ).qs
+        )
+        assert one_soul_per_tenant[code] in matched
+        assert {soul.civilization for soul in matched} == {civilization}
