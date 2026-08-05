@@ -61,13 +61,13 @@ export default function OrganizationsPage() {
   const buildTree = (orgs: Organization[]): Record<string, Organization[]> => {
     const tree: Record<string, Organization[]> = {};
     orgs.forEach(org => {
-      const parentKey = String(org.parent_id ?? "root");
+      const parentKey = String(org.parent ?? "root");
       if (!tree[parentKey]) tree[parentKey] = [];
       tree[parentKey].push(org);
     });
     // Sort by level and sort
     Object.keys(tree).forEach(key => {
-      tree[key].sort((a, b) => (a.sort ?? a.level ?? 0) - (b.sort ?? b.level ?? 0));
+      tree[key].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
     });
     return tree;
   };

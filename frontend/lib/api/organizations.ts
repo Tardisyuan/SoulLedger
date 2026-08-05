@@ -2,13 +2,12 @@ import { api } from "./client";
 import type { PaginatedResponse } from "./users";
 
 /**
- * OrganizationSerializer (backend/apps/org/serializers.py:9) sends exactly
- * five keys: id, name, code, category, parent.
+ * OrganizationSerializer (backend/apps/org/serializers.py:9) sends:
+ * id, name, code, category, parent, level, sort.
  *
- * `tenant` was declared required here and is not serialized at all.
- * `parent_id`, `level` and `sort` are likewise absent — they are kept, and
- * kept optional, only because app/organizations/page.tsx still reads all
- * three. They are always undefined at runtime; see the note there.
+ * `parent` is the parent organization's ID (or null for root nodes).
+ * `level` is auto-computed on the backend based on parent hierarchy.
+ * `sort` is a manual ordering field for organizations at the same level.
  */
 export interface Organization {
   id: number;
@@ -16,12 +15,8 @@ export interface Organization {
   code: string;
   category?: string;
   parent: number | null;
-  /** Not serialized — the FK arrives as `parent`. Always undefined. */
-  parent_id?: number | null;
-  /** Not serialized. Always undefined. */
-  level?: number;
-  /** Not serialized. Always undefined. */
-  sort?: number;
+  level: number;
+  sort: number;
   /** Assembled client-side by buildTree; never sent by the API. */
   children?: Organization[];
 }
