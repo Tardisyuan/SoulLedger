@@ -8,6 +8,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { permApi } from "@/lib/api";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -81,8 +82,24 @@ export function TenantProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem(USER_KEY);
           return;
         }
-        // Restore basic user info, but permissions must be refetched from server
+        // Restore basic user info immediately so the UI isn't blocked on the
+        // network, then refetch permissions from the server. We deliberately
+        // do NOT cache permissions ourselves (in localStorage or otherwise)
+        // and re-fetch on every rehydration instead: a cached list would go
+        // stale the moment an admin changes this user's role in another tab,
+        // and a stale "yes" is worse than a momentary "no". If the fetch
+        // fails, permissions stay empty rather than guessed.
         setUserState({ ...envelope.user, permissions: [] });
+        permApi
+          .myRolePermissions()
+          .then(({ data }) => {
+            setUserState((prev) =>
+              prev ? { ...prev, permissions: data?.permissions ?? [] } : prev
+            );
+          })
+          .catch(() => {
+            // Leave permissions empty — gates stay closed, not guessed open.
+          });
       }
     } catch {
       // ignore
