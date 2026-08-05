@@ -35,14 +35,57 @@ class LedgerRecordSerializer(serializers.Serializer):
     is_milestone = serializers.BooleanField()
 
 
+class CivilizationReadingSerializer(serializers.Serializer):
+    """The reading this soul's cosmology takes off the ledger.
+
+    Four shapes behind one `kind` discriminator, because the cosmologies are
+    mechanically different and not one algorithm in three colours — see
+    apps/ledger/readings.py. Every field but `kind` and `civilization` is
+    optional, and which ones are present is decided by `kind`:
+
+      BALANCE (CHINESE)             balance, merit, demerit
+      THRESHOLD (EGYPTIAN)          heart_weight, counterweight,
+                                    heavier_than_feather
+      GUILT_AND_PENALTY (EUROPEAN)  culpa, culpa_record_count, poena,
+                                    poena_unavailable
+      UNAVAILABLE (unmapped tenant) reason
+
+    `poena` is always null today and carries `poena_unavailable` explaining
+    why: the penalty remaining after absolution is not derivable from anything
+    SoulRecord stores. A client must render the absence, not a zero.
+    """
+    kind = serializers.CharField()
+    civilization = serializers.CharField()
+    # BALANCE
+    balance = serializers.IntegerField(required=False)
+    merit = serializers.IntegerField(required=False)
+    demerit = serializers.IntegerField(required=False)
+    # THRESHOLD
+    heart_weight = serializers.IntegerField(required=False)
+    counterweight = serializers.IntegerField(required=False)
+    heavier_than_feather = serializers.BooleanField(required=False)
+    # GUILT_AND_PENALTY
+    culpa = serializers.IntegerField(required=False)
+    culpa_record_count = serializers.IntegerField(required=False)
+    poena = serializers.IntegerField(required=False, allow_null=True)
+    poena_unavailable = serializers.CharField(required=False)
+    # UNAVAILABLE
+    reason = serializers.CharField(required=False)
+
+
 class LedgerSummarySerializer(serializers.Serializer):
     soul_id = serializers.UUIDField()
     soul_name = serializers.CharField()
     merit_score = serializers.IntegerField()
     demerit_score = serializers.IntegerField()
+    # Merit minus demerit: the Chinese instrument, served to every soul. Kept
+    # because the rest of the system reads it (Soul.karmic_balance, disposition
+    # routing, queryset ordering); `reading` below is what a client should show
+    # a user, and it is the only one of the two that knows whose ledger it is.
     karmic_balance = serializers.IntegerField()
     record_count = serializers.IntegerField()
     records = LedgerRecordSerializer(many=True)
+    reading = CivilizationReadingSerializer()
 
 
 class EffectiveLedgerSerializer(serializers.Serializer):

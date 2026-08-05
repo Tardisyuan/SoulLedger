@@ -19,11 +19,44 @@ from rest_framework import status
 from rest_framework.exceptions import APIException
 
 from apps.ledger.models import SoulRecord  # noqa: F401 — re-exported from souls for BC
+from apps.ledger.readings import get_civilization_reading
 from apps.souls.dates import year_span
 from apps.souls.models import Civilization, Soul
 
 LEDGER_CACHE_TTL = 60 * 5  # 5 minutes
-DECAY_RATE = 0.01  # per year
+DECAY_RATE = 0.01  # per year — the rate for any cosmology not listed below.
+
+# How fast a deed fades, per cosmology.
+#
+# Be clear about what this table is. Strictly, *no* tradition surveyed here
+# attenuates a deed by elapsed time: 功過格 is cumulative and its entries do not
+# expire, Buddhist kamma is the one concept in the survey that explicitly does
+# not weaken with the years, Plato's is a sentence served rather than a stain
+# that fades, and the Catholic practice of denominating indulgences in days was
+# abolished in 1967 (Indulgentiarum Doctrina) precisely because the units misled
+# people into reading remission as a quantity of time. Decay survives everywhere
+# else in this table as a *product* choice — intra-life recency, anchored to the
+# soul's death, so that what a person did at 65 weighs more at judgment than
+# what they did at 20 (see _get_decay_anchor). That is a defensible thing for
+# this system to want. It is not a thing any of these cosmologies asserts.
+#
+# EUROPEAN is 0.0 not because Dante is uniquely exempt on doctrine, but because
+# European is the one place we published a label that denies decay outright. The
+# civilization heading now reads 审判与补赎 — judgment and satisfaction, where
+# reduction comes from contrition and the act performed, never from elapsed time
+# — and it shipped in the same push as a global decay rate that erodes every
+# deed by elapsed time and had no civilization branch at all. A label that
+# contradicts the arithmetic under it is worse than either alone, and of the two
+# it is the arithmetic that was never argued for.
+#
+# A dict rather than `if civ == EUROPEAN`, for the reason GREEK is about to
+# make concrete: a thousand-year circuit repaid tenfold is a sentence with a
+# clock, and whatever number that wants, it will not be this one.
+CIVILIZATION_DECAY_RATE = {
+    Civilization.CHINESE: DECAY_RATE,
+    Civilization.EGYPTIAN: DECAY_RATE,
+    Civilization.EUROPEAN: 0.0,
+}
 
 # Fraction of a life's ledger that follows the soul through the gate.
 #
@@ -191,11 +224,27 @@ class LedgerService:
         return max(0.0, whole_years + fraction)
 
     @staticmethod
-    def _decay_weight(original_weight: int, years: float) -> float:
+    def _decay_rate_for(soul: Soul) -> float:
+        """This soul's per-year decay rate. See CIVILIZATION_DECAY_RATE.
+
+        An unmapped cosmology — including UNKNOWN_CIVILIZATION, which
+        `Soul.civilization` returns for a misconfigured tenant — keeps the
+        shared DECAY_RATE. Unlike the *reading* of a ledger, which is a claim
+        about what a cosmology says and so must not be guessed at, the decay
+        rate is a house rule about recency that applies to any ledger. Leaving
+        it at the default is not attributing a doctrine to anyone.
         """
-        Apply exponential time decay: effective = original × e^(-0.01×years)
+        return CIVILIZATION_DECAY_RATE.get(soul.civilization, DECAY_RATE)
+
+    @staticmethod
+    def _decay_weight(original_weight: int, years: float, rate: float = DECAY_RATE) -> float:
         """
-        return original_weight * math.exp(-DECAY_RATE * years)
+        Apply exponential time decay: effective = original × e^(-rate×years).
+
+        rate comes from _decay_rate_for. At rate 0.0 the factor is exactly 1.0
+        and a deed keeps its original weight for good.
+        """
+        return original_weight * math.exp(-rate * years)
 
     @classmethod
     def recalculate_soul_ledger(cls, soul: Soul) -> dict:
@@ -207,6 +256,7 @@ class LedgerService:
 
         records = soul.records.all()
         anchor = cls._get_decay_anchor(soul)
+        rate = cls._decay_rate_for(soul)
 
         merit = 0
         demerit = 0
@@ -215,7 +265,7 @@ class LedgerService:
             years = cls._get_record_age_years(
                 r.event_year, r.event_month, r.event_day, r.recorded_at, anchor
             )
-            effective_weight = cls._decay_weight(r.weight, years)
+            effective_weight = cls._decay_weight(r.weight, years, rate)
 
             if r.record_type == "MERIT":
                 merit += effective_weight
@@ -258,16 +308,18 @@ class LedgerService:
 
         records = soul.records.all().order_by("-recorded_at")
         anchor = cls._get_decay_anchor(soul)
+        rate = cls._decay_rate_for(soul)
 
         merit = 0
         demerit = 0
+        demerit_count = 0
         record_summaries = []
 
         for r in records:
             years = cls._get_record_age_years(
                 r.event_year, r.event_month, r.event_day, r.recorded_at, anchor
             )
-            effective_weight = cls._decay_weight(r.weight, years)
+            effective_weight = cls._decay_weight(r.weight, years, rate)
             # Round for display only, and accumulate the unrounded value.
             #
             # Two decimal places is the right precision to *show* a decayed
@@ -291,6 +343,7 @@ class LedgerService:
                 merit += effective_weight
             elif r.record_type == "DEMERIT":
                 demerit += effective_weight
+                demerit_count += 1
 
             record_summaries.append({
                 "id": str(r.id),
@@ -300,7 +353,7 @@ class LedgerService:
                 "original_weight": r.weight,
                 "effective_weight": displayed_weight,
                 "years_elapsed": round(years, 2),
-                "decay_factor": round(math.exp(-DECAY_RATE * years), 4),
+                "decay_factor": round(math.exp(-rate * years), 4),
                 "civilization": r.civilization,
                 "recorded_at": r.recorded_at.isoformat(),
                 # Structured {year, month, day} rather than an ISO string —
@@ -323,9 +376,23 @@ class LedgerService:
             "soul_name": soul.name,
             "merit_score": total_merit,
             "demerit_score": total_demerit,
+            # Unchanged, and deliberately so. It is the Chinese reading served
+            # to everyone, but it is also a Soul property the souls app owns,
+            # what disposition/services.py routes on at seven sites, and what
+            # querysets filter and order by. `reading` below adds the
+            # instrument each cosmology actually uses; retiring this one is a
+            # separate and much larger change.
             "karmic_balance": total_merit - total_demerit,
             "record_count": records.count(),
             "records": record_summaries,
+            # What this soul's own cosmology reads off the ledger above — a
+            # balance, a threshold, a guilt-and-penalty pair, or an explicit
+            # refusal for an unmapped tenant. Clients switch on `kind`; see
+            # apps/ledger/readings.py for why one shape for all of them was
+            # wrong.
+            "reading": get_civilization_reading(
+                soul.civilization, total_merit, total_demerit, demerit_count
+            ),
         }
 
         cache.set(cache_key, result, LEDGER_CACHE_TTL)

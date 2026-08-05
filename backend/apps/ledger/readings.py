@@ -1,0 +1,182 @@
+"""What each cosmology actually reads off a ledger.
+
+`karmic_balance` — merit minus demerit — is the Chinese instrument, not a
+shared primitive. 功過格 is a cumulative account: deeds do not expire, they net
+off against each other, and the account is cleared by a deliberate act of
+dedication (回向). A single net total is the right reading *there* and nowhere
+else in the survey:
+
+  * EGYPTIAN judgment is not a score, it is a threshold. The heart is weighed
+    once against the feather of Maat and must be "not heavier than" it — a
+    comparison against a fixed counterweight, not a magnitude, and emphatically
+    not one where good deeds subtract from bad.
+  * EUROPEAN (Dante) judgment is not an account at all. Purgatorio works off
+    *poena* after *culpa* has already been forgiven; guilt and penalty come
+    apart, which is exactly the thing a netting total cannot represent.
+  * GREEK, when it lands, is a sentence served — Plato's thousand-year circuit,
+    repaid tenfold (Republic X, 615a-b). Elapsed time, not a balance. It is not
+    in the Civilization enum yet and must not be added here first.
+
+So four cosmologies want four differently-shaped answers: a balance, a
+comparison, two unrelated numbers, and a duration. Serving all of them one
+shape built around a net total does not simplify the model, it silently applies
+the Chinese one to everybody — and it is not harmless. Run against real data, a
+net balance passes an Egyptian soul on a mechanic his tradition does not have.
+
+Held as a dict of builders rather than an if/elif chain for the same reason
+REBIRTH_CAPABLE_CIVILIZATIONS in services.py is a frozenset: adding GREEK
+should be one entry, next to the others, where it is obvious that a fourth
+answer was needed and what it is.
+
+This module *adds* a reading. It does not replace `karmic_balance`, which is a
+Soul property the souls app owns, which disposition/services.py routes on, and
+which querysets filter and order by. Removing it is a separate, larger change.
+
+TODO(i18n): the prose in `poena_unavailable` and `reason` below is user-facing
+copy hard-coded in a service module, which is the wrong place for it — see the
+same TODO on TERMINAL_COSMOLOGY_REASON in services.py. A later pass owns the
+copy.
+"""
+from apps.souls.models import Civilization
+
+# What the heart is weighed against, in SoulRecord.weight units.
+#
+# This number is a product decision, not a sourced one, and is labelled as such
+# deliberately. No Egyptian source gives the feather a magnitude — it could not,
+# because the weighing is not a unit conversion. The heart (ib) is an organ
+# carrying the moral record of a life; the feather (šwt of Maat) is rightness
+# itself. The sources assert exactly one quantitative thing about the pairing:
+# that the feather is *light*, and therefore that the bar is close to absolute.
+# The 42 declarations of the Papyrus of Ani are denials of specific wrongs —
+# "I have not stolen", "I have not killed" — not a claim to have done enough
+# good to outweigh them.
+#
+# 1 is the smallest weight a SoulRecord can carry (the field's default, and the
+# floor of its documented 1-100 range), so it is the lightest thing this system
+# is able to put on a scale. Choosing it says: a heart with any recorded
+# wrongdoing beyond a single minimal deed is heavier than the feather. That is a
+# harsh instrument, and it is meant to be — it is the one property the sources
+# actually assert, and softening it to a comfortable allowance (10, 20) would be
+# inventing an Egyptian doctrine of tolerable sin in order to make the reading
+# friendlier. If the product later wants a more forgiving bar that is a fine
+# thing to want, but it should be changed here, on purpose, and not arrived at
+# by picking whichever number made the dashboard look better.
+MAAT_FEATHER_WEIGHT = 1
+
+
+def _chinese_reading(merit: int, demerit: int, demerit_count: int) -> dict:
+    """A cumulative account. Merit and demerit net off; the total is the answer.
+
+    The one place the existing `karmic_balance` is the native instrument rather
+    than a borrowed one, so this reading is deliberately just that number.
+    """
+    return {
+        "kind": "BALANCE",
+        "civilization": Civilization.CHINESE.value,
+        "balance": merit - demerit,
+        "merit": merit,
+        "demerit": demerit,
+    }
+
+
+def _egyptian_reading(merit: int, demerit: int, demerit_count: int) -> dict:
+    """A threshold. The heart against a fixed counterweight — pass or fail.
+
+    The heart's weight is the demerit total *alone*. Merit does not appear, and
+    its absence is the whole point of this reading: the weighing has no
+    offsetting step. A life of recorded charity does not make a heart lighter in
+    the Hall of Two Truths, because what the scale measures is the wrongdoing
+    the heart is carrying, and Ammit is not waiting on a subtraction.
+
+    Netting is what the shared summary did, and against this deployment's own
+    data it passed a soul it should not have: a heart carrying 18 points of
+    recorded wrongdoing read as +6 once 24 points of merit were subtracted from
+    it, and +6 is on the passing side of every threshold anyone would pick.
+    """
+    return {
+        "kind": "THRESHOLD",
+        "civilization": Civilization.EGYPTIAN.value,
+        "heart_weight": demerit,
+        "counterweight": MAAT_FEATHER_WEIGHT,
+        # "Not heavier than" — equality passes. The formula in the Book of the
+        # Dead is balance, not surplus, and a heart level with the feather is
+        # the ideal outcome rather than a near miss.
+        "heavier_than_feather": demerit > MAAT_FEATHER_WEIGHT,
+    }
+
+
+def _european_reading(merit: int, demerit: int, demerit_count: int) -> dict:
+    """Two unrelated numbers, because guilt and penalty are two facts here.
+
+    *Culpa* is guilt: that a wrong was done, and how grave. It maps onto the
+    DEMERIT records and nothing else. Merit is deliberately absent — in this
+    cosmology a good deed does not retire a sin, absolution does, and letting
+    merit reduce culpa would rebuild the Chinese netting account under a Latin
+    name. The record count travels with the total because "one grave sin" and
+    "eight small ones" are different guilts and the same number.
+
+    *Poena* is the penalty that remains after culpa has been forgiven — the
+    thing Purgatorio is actually about, and the reason the published European
+    label reads 审判与补赎. We cannot compute it, and this reading says so
+    rather than substituting a proxy.
+
+    The gap is not a lookup we have not written; it is data we do not hold.
+    Poena presupposes three facts, and SoulRecord stores none of them: that
+    absolution has occurred (nothing records contrition or confession), how much
+    satisfaction is owed for a forgiven sin (weight measures the gravity of the
+    deed, which is culpa, and Dante's terraces are not sorted by it), and how
+    much penance has already been performed (there is no record type for an act
+    of expiation — MERIT is a good deed done in life, not satisfaction rendered
+    after death). Deriving poena from the demerit total would just be culpa
+    printed twice under a second heading, which is precisely the collapse this
+    reading exists to stop making.
+    """
+    return {
+        "kind": "GUILT_AND_PENALTY",
+        "civilization": Civilization.EUROPEAN.value,
+        "culpa": demerit,
+        "culpa_record_count": demerit_count,
+        "poena": None,
+        "poena_unavailable": (
+            "Poena is what remains after culpa is absolved. Nothing in this "
+            "ledger records absolution, satisfaction owed, or penance "
+            "performed, so there is no honest number to report here."
+        ),
+    }
+
+
+CIVILIZATION_READING = {
+    Civilization.CHINESE: _chinese_reading,
+    Civilization.EGYPTIAN: _egyptian_reading,
+    Civilization.EUROPEAN: _european_reading,
+}
+
+
+def get_civilization_reading(civilization: str, merit: int, demerit: int,
+                             demerit_count: int) -> dict:
+    """The reading this soul's cosmology uses, or an explicit refusal.
+
+    `civilization` may be UNKNOWN_CIVILIZATION — a real value the API returns
+    for a soul whose tenant code is not in TENANT_CIVILIZATION. It gets no
+    reading at all, and that is the point. Falling through to the Chinese
+    balance is the exact fail-open that was just removed from
+    `Soul.civilization`, where an unrecognised tenant silently meant Diyu and
+    therefore silently meant reborn. A ledger has no interpretation until
+    someone says whose ledger it is, so an unconfigured tenant gets a refusal
+    with a reason, not somebody else's arithmetic.
+
+    `merit`, `demerit` and the top-level `karmic_balance` are still in the
+    payload for these souls. They are raw sums, true of any ledger and
+    committing to no cosmology; it is the *reading* that would be a claim.
+    """
+    builder = CIVILIZATION_READING.get(civilization)
+    if builder is None:
+        return {
+            "kind": "UNAVAILABLE",
+            "civilization": str(civilization),
+            "reason": (
+                "This soul's tenant is not mapped to a cosmology, so there is "
+                "no rule for what its ledger means. Configure the tenant."
+            ),
+        }
+    return builder(merit, demerit, demerit_count)

@@ -7,8 +7,8 @@ both files under the 500-line limit.
 import pytest
 from django.utils import timezone
 
-from apps.ledger.services import LedgerService
-from apps.souls.models import Soul, SoulState
+from apps.ledger.services import CIVILIZATION_DECAY_RATE, DECAY_RATE, LedgerService
+from apps.souls.models import Civilization, Soul, SoulState
 from apps.souls.record_models import SoulRecord
 from apps.tenants.models import Tenant
 
@@ -274,3 +274,94 @@ class TestSummaryAndRecalculateAgree:
         assert summary["merit_score"] == soul.merit_score
         assert summary["demerit_score"] == soul.demerit_score
         assert summary["karmic_balance"] == soul.karmic_balance
+
+
+@pytest.mark.django_db
+class TestDecayIsPerCivilization:
+    """European deeds do not fade; everyone else's still do.
+
+    The published European heading is 审判与补赎 — judgment and satisfaction,
+    where reduction comes from contrition and the act performed, never from
+    elapsed time. It shipped on top of a global DECAY_RATE with no civilization
+    branch, so the label and the arithmetic under it said opposite things.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenants = {
+            civ: Tenant.objects.get_or_create(
+                code=code, defaults={"display_name": code}
+            )[0]
+            for civ, code in (
+                (Civilization.CHINESE, "CN_DIYU"),
+                (Civilization.EUROPEAN, "EU_HEAVEN_HELL"),
+                (Civilization.EGYPTIAN, "EG_DUAT"),
+            )
+        }
+
+    def _soul_with_an_old_deed(self, tenant, record_type="MERIT"):
+        """One deed of weight 100, fifty years before a 1900 death."""
+        soul = Soul.objects.create(
+            name=f"{tenant.code} soul", current_state=SoulState.JUDGING,
+            death_year=1900, death_month=1, death_day=1, tenant=tenant,
+        )
+        SoulRecord.objects.create(
+            soul=soul, record_type=record_type, description="deed at 20",
+            weight=100, event_year=1850, event_month=1, event_day=1,
+        )
+        return soul
+
+    def test_european_deed_keeps_its_original_weight_forever(self):
+        soul = self._soul_with_an_old_deed(self.tenants[Civilization.EUROPEAN])
+        record = LedgerService.get_ledger_summary(soul)["records"][0]
+        # The span is still reported — fifty years did pass, and that is a fact
+        # about the deed. It just no longer costs the deed anything.
+        assert record["years_elapsed"] == 50.0
+        assert record["decay_factor"] == 1.0
+        assert record["effective_weight"] == 100.0
+
+    @pytest.mark.parametrize("civ", [Civilization.CHINESE, Civilization.EGYPTIAN])
+    def test_every_other_cosmology_still_decays_at_one_percent(self, civ):
+        soul = self._soul_with_an_old_deed(self.tenants[civ])
+        record = LedgerService.get_ledger_summary(soul)["records"][0]
+        # e^(-0.01 × 50), unchanged.
+        assert record["decay_factor"] == 0.6065
+        assert record["effective_weight"] == 60.65
+
+    def test_the_same_life_scores_differently_under_the_two_rules(self):
+        """The behaviour change, stated as a number: 61 becomes 100."""
+        european = self._soul_with_an_old_deed(self.tenants[Civilization.EUROPEAN])
+        chinese = self._soul_with_an_old_deed(self.tenants[Civilization.CHINESE])
+        assert LedgerService.recalculate_soul_ledger(european)["merit_score"] == 100
+        assert LedgerService.recalculate_soul_ledger(chinese)["merit_score"] == 61
+
+    def test_a_european_demerit_does_not_fade_either(self):
+        """Not an amnesty in one direction only — guilt keeps its weight too."""
+        soul = self._soul_with_an_old_deed(
+            self.tenants[Civilization.EUROPEAN], record_type="DEMERIT"
+        )
+        result = LedgerService.recalculate_soul_ledger(soul)
+        assert result["demerit_score"] == 100
+        assert result["karmic_balance"] == -100
+
+    def test_an_unmapped_tenant_keeps_the_default_rate(self):
+        """Decay is a house rule about recency, not a claim about a doctrine.
+
+        Unlike the *reading* of a ledger, which refuses to guess, an unmapped
+        cosmology can safely keep DECAY_RATE — leaving it there attributes
+        nothing to anyone.
+        """
+        tenant = Tenant.objects.get_or_create(
+            code="DPC_UNMAPPED", defaults={"display_name": "Unmapped"}
+        )[0]
+        soul = self._soul_with_an_old_deed(tenant)
+        assert soul.civilization == "UNKNOWN"
+        assert LedgerService._decay_rate_for(soul) == DECAY_RATE
+        assert LedgerService.get_ledger_summary(soul)["records"][0]["decay_factor"] == 0.6065
+
+    def test_rate_is_configuration_not_a_hardcoded_civilization(self):
+        """GREEK arrives soon with its own answer; it must be one entry."""
+        assert isinstance(CIVILIZATION_DECAY_RATE, dict)
+        assert CIVILIZATION_DECAY_RATE[Civilization.EUROPEAN] == 0.0
+        assert CIVILIZATION_DECAY_RATE[Civilization.CHINESE] == DECAY_RATE
+        assert CIVILIZATION_DECAY_RATE[Civilization.EGYPTIAN] == DECAY_RATE
