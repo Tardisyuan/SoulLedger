@@ -65,6 +65,31 @@ class NotificationViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
             return UserNotificationListSerializer
         return UserNotificationSerializer
 
+    def perform_create(self, serializer):
+        """Force `user` to the caller — POST /notifications/ never had this and 500'd.
+
+        `UserNotificationSerializer` marks `user` read-only and this viewset had
+        no perform_create, so the default ModelViewSet.create() called
+        serializer.save() with no `user` kwarg, writing user_id NULL and letting
+        the database's NOT NULL constraint raise an uncaught IntegrityError — a
+        500 for every role, always. See
+        backend/tests/test_perm_write_snapshot_outside_matrix.py,
+        test_notification_create_cannot_succeed_for_anyone (pre-fix version).
+
+        Fixed as self-notify only: request.user, never a client-supplied
+        target. The alternative — letting a caller name an arbitrary
+        recipient — would be gated by `notification.read` per the
+        extra_permissions mapping below, and that codename is held by all
+        five roles, so it would let anyone spam anyone else's inbox. That is
+        a privilege decision nothing in this file's history establishes, so
+        it was not made here. Self-notify matches the codename's own meaning
+        as documented in this class's `permission_codename` comment above:
+        "may use my notification inbox" already covers creating in it, and
+        get_queryset() already scopes every other action on this viewset to
+        the caller's own rows.
+        """
+        serializer.save(user=self.request.user)
+
     def get_queryset(self):
         """Return only the current user's notifications, tenant-scoped."""
         if not self.request.user.is_authenticated:
