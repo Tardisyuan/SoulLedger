@@ -40,7 +40,7 @@ class LedgerBalanceView(APIView):
     permission_classes = [TenantPermission]
 
     def get_required_permissions(self):
-        return ['karma.read']
+        return ['ledger.read']
 
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
@@ -65,7 +65,12 @@ class LedgerRecalculateView(APIView):
     permission_classes = [TenantPermission]
 
     def get_required_permissions(self):
-        return ['karma.update']
+        # Was 'karma.update' — a codename that exists nowhere: not in
+        # DEFAULT_PERMISSIONS, not in any ROLE_PERMISSIONS list. An undefined
+        # codename resolves to False for every non-ADMIN role, so declaring it
+        # meant "ADMIN only". Recalculating is a write to the ledger, and the
+        # write codename this app defines is ledger.manage, so use that.
+        return ['ledger.manage']
 
     def post(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
@@ -91,7 +96,7 @@ class LedgerEffectiveView(APIView):
     permission_classes = [TenantPermission]
 
     def get_required_permissions(self):
-        return ['karma.read']
+        return ['ledger.read']
 
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
@@ -120,7 +125,7 @@ class LedgerInheritanceView(APIView):
     permission_classes = [TenantPermission]
 
     def get_required_permissions(self):
-        return ['karma.read']
+        return ['ledger.read']
 
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
@@ -155,7 +160,7 @@ class LedgerOverviewStatsView(APIView):
     permission_classes = [TenantPermission]
 
     def get_required_permissions(self):
-        return ['karma.read']
+        return ['ledger.read']
 
     def get(self, request):
         user = request.user
@@ -285,11 +290,19 @@ class LedgerExportStatsView(APIView):
     GET /ledger/stats/export/
 
     Admin-only CSV export of all souls with their ledger data.
+
+    The `role != 'ADMIN'` check below is the real gate, not
+    get_required_permissions(). Deliberately not replaced by a `ledger.export`
+    codename: PermissionMiddleware only consults get_required_permissions()
+    when `request.view` is set, and nothing in the request pipeline sets it, so
+    moving the gate onto a codename would open this endpoint to every
+    authenticated user with a tenant. Until that is fixed, a codename here
+    would be decoration over a check that never runs.
     """
     permission_classes = [TenantPermission]
 
     def get_required_permissions(self):
-        return ['karma.read']
+        return ['ledger.read']
 
     def get(self, request):
         user = request.user

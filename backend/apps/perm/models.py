@@ -14,7 +14,7 @@ class Permission(AuditUserFields):
     """
     codename = models.CharField(max_length=100, unique=True)
     name = models.CharField(max_length=200)
-    category = models.CharField(max_length=50)  # soul, karma, judgment, system
+    category = models.CharField(max_length=50)  # soul, ledger, judgment, system
 
     class Meta:
         verbose_name = "Permission"
@@ -194,9 +194,10 @@ DEFAULT_PERMISSIONS = [
     # judgment 权限
     ("judgment.read", "查看审判", "judgment"),
     ("judgment.execute", "执行审判", "judgment"),
-    # karma 权限
-    ("karma.read", "查看功德", "karma"),
-    ("karma.manage", "管理功德", "karma"),
+    # ledger 权限（原 karma.*，随 apps.karma → apps.ledger 一并改名，
+    # 迁移 0016 负责把已入库的 Permission 行改名而非重建，以保住授权）
+    ("ledger.read", "查看功德", "ledger"),
+    ("ledger.manage", "管理功德", "ledger"),
     # reincarnation 权限
     ("reincarnation.read", "查看轮回", "reincarnation"),
     ("reincarnation.manage", "管理轮回", "reincarnation"),
@@ -228,7 +229,7 @@ ROLE_PERMISSIONS = {
     "ADMIN": [
         "soul.read", "soul.create", "soul.update", "soul.delete", "soul.die", "soul.transition",
         "judgment.read", "judgment.create", "judgment.execute",
-        "karma.read", "karma.manage",
+        "ledger.read", "ledger.manage",
         "reincarnation.read", "reincarnation.manage", "reincarnation.complete", "reincarnation.reborn",
         "disposition.read", "disposition.execute",
         "dashboard.read", "audit.read", "notification.read",
@@ -242,7 +243,7 @@ ROLE_PERMISSIONS = {
         "soul.read", "soul.die", "soul.transition",
         "judgment.read", "judgment.create", "judgment.execute",
         "reincarnation.read", "reincarnation.manage",
-        "karma.read", "dashboard.read",
+        "ledger.read", "dashboard.read",
         "disposition.read",
         "cross_judgment.read", "cross_judgment.create",
         "realms.read", "actors.read",
@@ -251,7 +252,7 @@ ROLE_PERMISSIONS = {
     "GUARDIAN": [
         "soul.read", "soul.update", "soul.transition",
         "reincarnation.read", "reincarnation.manage",
-        "karma.read", "dashboard.read",
+        "ledger.read", "dashboard.read",
         "disposition.read",
         "dispatch.read", "dispatch.manage",
         "realms.read", "actors.read",
@@ -286,7 +287,7 @@ ROLE_PERMISSIONS = {
         "disposition.read", "disposition.execute",
         "reincarnation.read", "reincarnation.manage",
         "reincarnation.reborn", "reincarnation.complete",
-        "karma.read", "karma.manage",
+        "ledger.read", "ledger.manage",
         "dispatch.read", "dispatch.manage",
         "dispatch.approve", "dispatch.reject", "dispatch.execute",
         "cross_judgment.read", "cross_judgment.create",
@@ -295,7 +296,7 @@ ROLE_PERMISSIONS = {
     ],
     "VIEWER": [
         "soul.read", "reincarnation.read",
-        "karma.read", "dashboard.read",
+        "ledger.read", "dashboard.read",
         "realms.read", "actors.read",
     ],
 }
