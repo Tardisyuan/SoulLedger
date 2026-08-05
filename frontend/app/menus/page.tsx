@@ -158,7 +158,7 @@ export default function MenusPage() {
                   <div className="flex flex-wrap gap-1">
                     {menu.roles.map((role) => (
                       <span key={role} className="px-1.5 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] rounded text-xs">
-                        {t(`users.roles.${role}` as any)}
+                        {t(`users.roles.${role}`)}
                       </span>
                     ))}
                   </div>
@@ -272,7 +272,7 @@ export default function MenusPage() {
                       : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] border border-hairline hover:border-[hsl(var(--color-accent))]"
                   }`}
                 >
-                  {t(`users.roles.${role}` as any)}
+                  {t(`users.roles.${role}`)}
                 </button>
               ))}
             </div>

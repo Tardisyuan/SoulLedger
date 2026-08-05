@@ -14,6 +14,17 @@ export interface SortState {
   direction: SortDirection
 }
 
+/**
+ * Parses DRF's `ordering` query param ("-created_at", "name") into the sort
+ * shape DataTable expects. The leading "-" is DRF's descending marker, so this
+ * has to stay in step with whatever the backend accepts.
+ */
+export function parseOrdering(ordering: string): SortState | null {
+  if (!ordering) return null
+  const desc = ordering.startsWith('-')
+  return { key: desc ? ordering.slice(1) : ordering, direction: desc ? 'desc' : 'asc' }
+}
+
 export interface DataTableColumn {
   /**
    * Stable identifier for the column. When `sortable` is set this is also the

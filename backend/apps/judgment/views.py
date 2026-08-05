@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.judgment.models import Judgment
 from apps.judgment.serializers import JudgmentConcludeSerializer, JudgmentSerializer
@@ -29,7 +29,15 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
     Judgment CRUD + conclude action.
     Tenant-isolated via TenantPermission.
     """
-    permission_classes = [TenantPermission]
+    # CodenamePermission is what finally enforces the codenames below. Until it
+    # was added they were declarative only: PermissionMiddleware never saw
+    # self.action, so any role reaching this viewset with a tenant could open a
+    # judgment proceeding against a soul — and perform_create then walks that
+    # soul ALIVE -> JUDGING, so the write landed on two tables. GUARDIAN and
+    # VIEWER hold no judgment.* codename at all and are now refused both the
+    # list and the create. See apps/core/permissions.py for why middleware
+    # could not do this.
+    permission_classes = [TenantPermission, CodenamePermission]
     # The judgment family is read / create / execute — those three exist and
     # are granted; there is no judgment.update or judgment.delete anywhere, yet
     # this is a ModelViewSet and the mixin was generating both.

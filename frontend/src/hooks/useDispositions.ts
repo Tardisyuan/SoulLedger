@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { dispositionApi, type Disposition } from "@/lib/api";
+import { dispositionApi } from "@/lib/api";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { dispositionKeys } from "@/lib/query_keys";
@@ -11,7 +11,7 @@ export function useDispositions(params?: Record<string, string>) {
     queryKey: dispositionKeys.list(params),
     queryFn: async () => {
       const res = await dispositionApi.list(params);
-      return res.data as Disposition[];
+      return res.data;
     },
     staleTime: 30_000,
   });

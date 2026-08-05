@@ -16,7 +16,7 @@ export default function LedgerPage() {
     enabled: !!user,
   });
 
-  const ledgerStats = stats as LedgerStatsOverview | undefined;
+  const ledgerStats = stats;
 
   return (
     <div className="p-6 space-y-6">

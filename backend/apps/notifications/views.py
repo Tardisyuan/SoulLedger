@@ -5,7 +5,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.notifications.models import UserNotification
 from apps.notifications.serializers import UserNotificationListSerializer, UserNotificationSerializer
@@ -19,7 +19,17 @@ class NotificationViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     mark_read: POST /api/v1/notifications/{id}/mark_read/ - Mark single notification as read
     mark_all_read: POST /api/v1/notifications/mark_all_read/ - Mark all notifications as read
     """
-    permission_classes = [TenantPermission]
+    # CodenamePermission is what finally enforces the codename below; before
+    # it, PermissionMiddleware never saw self.action and it gated nothing.
+    #
+    # ZERO codes move. All five roles hold notification.read and it is the only
+    # codename any action here resolves to, so every case that succeeded before
+    # succeeds after. That is worth attaching anyway rather than skipping: an
+    # app left off the enforced list is indistinguishable from one nobody got
+    # to, and the next reader would have to re-derive that this one is a no-op.
+    # Proved rather than claimed, in both directions, by
+    # backend/tests/test_perm_write_snapshot_outside_matrix.py.
+    permission_classes = [TenantPermission, CodenamePermission]
     # BINARY on `notification.read`, the only notification codename that
     # exists. Not a CRUD family, and deliberately so: get_queryset() below
     # filters to `user=request.user`, so every action on this viewset — listing,
@@ -31,10 +41,13 @@ class NotificationViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     # and were held by nobody, so mark_read was gated on a codename that could
     # only answer no.
     #
-    # Follow-up for the lead, not fixed here: only ADMIN and MODERATOR hold
-    # notification.read, so under enforcement JUDGE, GUARDIAN and VIEWER lose
-    # their own inbox. That is already true of `list` today and this change
-    # neither causes it nor widens it — but it is a grant that looks missing.
+    # A previous version of this comment said only ADMIN and MODERATOR hold
+    # notification.read, and that under enforcement JUDGE, GUARDIAN and VIEWER
+    # would lose their own inbox. That was never true of ROLE_PERMISSIONS: all
+    # five roles hold it. Corrected rather than deleted because the false
+    # version read as a reason to add grants before enforcing this app, and no
+    # grant is needed. Enforcement is now attached and moved nothing.
+    # test_notification_read_is_held_by_every_role pins the fact.
     permission_codename = "notification"
     extra_permissions = {
         'mark_read': ['notification.read'],

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { api, type Tenant, type PaginatedResponse } from "@/lib/api";
+import { api, PAGE_SIZE, type Tenant, type PaginatedResponse } from "@/lib/api";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
 import { Pagination } from "@/src/components/ui/Pagination";
@@ -17,12 +17,12 @@ export default function TenantsPage() {
   // calls the shared `api` client directly to reach `/tenants/?page=`.
   const { data, isLoading } = useQuery({
     queryKey: ["tenants", page],
-    queryFn: () => api.get("/tenants/", { params: { page } }).then(r => r.data as PaginatedResponse<Tenant>),
+    queryFn: () => api.get<PaginatedResponse<Tenant>>("/tenants/", { params: { page } }).then(r => r.data),
     enabled: !!user,
   });
 
   const tenants = data?.results ?? [];
-  const totalPages = data ? Math.ceil(data.count / 20) : 0;
+  const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
 
   return (
     <div className="p-6 max-w-4xl">

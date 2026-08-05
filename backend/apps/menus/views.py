@@ -5,7 +5,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin
 
 from .models import Menu, MenuButton
@@ -22,14 +22,15 @@ class MenuViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     """
     Menu CRUD ViewSet — supports tree structure with button resources.
     """
-    permission_classes = [TenantPermission]
+    permission_classes = [TenantPermission, CodenamePermission]
     # Reads and writes split deliberately, because this viewset is not
     # ADMIN-only: reads serve the navigation tree to every authenticated role
-    # (get_queryset merely hides inactive menus from non-ADMIN), while only the
-    # writes carry the hardcoded ADMIN check in perform_create/update/destroy
-    # below. Binding everything to the ADMIN-only menu.manage would, once
-    # enforcement lands, deny `list` to every non-ADMIN and take the whole
-    # navigation with it.
+    # (get_queryset merely hides inactive menus from non-ADMIN), while only
+    # ADMIN holds menu.manage below — CodenamePermission is now the real gate
+    # on create/update/destroy, replacing the hardcoded `role != 'ADMIN'`
+    # checks that used to live in perform_create/update/destroy. Binding
+    # everything to the ADMIN-only menu.manage would deny `list` to every
+    # non-ADMIN and take the whole navigation with it.
     #
     # menu.read is seeded and granted to all five roles by perm migration 0017;
     # menu.manage keeps the writes. The three read-only custom actions are
@@ -60,24 +61,6 @@ class MenuViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         if getattr(user, 'role', None) == 'ADMIN':
             return Menu.objects.all()
         return Menu.objects.filter(is_active=True)
-
-    def perform_create(self, serializer):
-        if getattr(self.request.user, 'role', None) != 'ADMIN':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only ADMIN can create menus")
-        serializer.save()
-
-    def perform_update(self, serializer):
-        if getattr(self.request.user, 'role', None) != 'ADMIN':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only ADMIN can modify menus")
-        serializer.save()
-
-    def perform_destroy(self, instance):
-        if getattr(self.request.user, 'role', None) != 'ADMIN':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only ADMIN can delete menus")
-        instance.delete()
 
     @action(detail=False, methods=["get"])
     def all(self, request):
@@ -168,9 +151,12 @@ class MenuButtonViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
 
     绑定到 Menu 上的操作按钮，每个按钮关联一个 permission codename。
     """
-    permission_classes = [TenantPermission]
+    permission_classes = [TenantPermission, CodenamePermission]
     # Same split as MenuViewSet above: every role needs to read the button
-    # resources to render its navigation, only ADMIN should edit them.
+    # resources to render its navigation, only ADMIN holds menu.manage, so
+    # CodenamePermission is now the real gate on create/update/destroy —
+    # replacing the hardcoded `role != 'ADMIN'` checks that used to live in
+    # perform_create/update/destroy.
     permission_codename = "menu"
     extra_permissions = {
         "create": ["menu.manage"],
@@ -204,20 +190,3 @@ class MenuButtonViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
             qs = qs.filter(menu_id=menu_id)
         return qs
 
-    def perform_create(self, serializer):
-        if getattr(self.request.user, 'role', None) != 'ADMIN':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only ADMIN can create menu buttons")
-        serializer.save()
-
-    def perform_update(self, serializer):
-        if getattr(self.request.user, 'role', None) != 'ADMIN':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only ADMIN can modify menu buttons")
-        serializer.save()
-
-    def perform_destroy(self, instance):
-        if getattr(self.request.user, 'role', None) != 'ADMIN':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only ADMIN can delete menu buttons")
-        instance.delete()

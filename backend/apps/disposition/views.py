@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.mixins import TenantQuerySetMixin
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.disposition.models import Disposition
 from apps.disposition.serializers import DispositionExecuteSerializer, DispositionSerializer
@@ -18,7 +18,13 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
     Disposition CRUD + execute action.
     Tenant-isolated via TenantPermission.
     """
-    permission_classes = [TenantPermission]
+    # CodenamePermission is what finally enforces the codenames below; before
+    # it, PermissionMiddleware never saw self.action and they gated nothing.
+    # The binary shape below is what makes the change here uneven: `read` is
+    # held by four of five roles so only VIEWER loses the list, while `execute`
+    # is held by two, so JUDGE and GUARDIAN lose the writes they had. That is
+    # the declared policy, not a side effect of attaching this class.
+    permission_classes = [TenantPermission, CodenamePermission]
     # BINARY: read / execute. ROLE_PERMISSIONS defines exactly those two —
     # read for ADMIN, JUDGE, GUARDIAN and MODERATOR; execute for ADMIN and
     # MODERATOR — and there is no disposition.manage. The viewset is a

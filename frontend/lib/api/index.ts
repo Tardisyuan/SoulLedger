@@ -5,22 +5,22 @@
  *   import { soulsApi, type Soul } from "@/lib/api";
  *   import { api } from "@/lib/api/client";  // direct Axios instance
  */
-export { api, API_BASE } from "./client";
+export { api, API_BASE, PAGE_SIZE } from "./client";
 
 // Auth
-export { authApi } from "./auth";
+export { authApi, type UserRole, type LoginUser, type LoginResponse, type AuthProfile } from "./auth";
 
 // Souls
-export { soulsApi, type SoulInput, type Soul, type SoulRecord } from "./souls";
+export { soulsApi, type SoulInput, type Soul, type SoulListItem, type SoulRecord, type SoulRecordEntry } from "./souls";
 
 // Users
-export { usersApi, type User, type CreateUserInput, type UpdateUserInput, type UserFilters, type PaginatedResponse } from "./users";
+export { usersApi, type User, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type PaginatedResponse } from "./users";
 
 // Judgment
-export { judgmentApi, type Judgment } from "./judgment";
+export { judgmentApi, type Judgment, type ConcludeJudgmentPayload } from "./judgment";
 
 // Ledger
-export { ledgerApi, type LedgerStatsOverview, type LedgerRecord, type LedgerSummary } from "./ledger";
+export { ledgerApi, type LedgerStatsOverview, type LedgerRecord, type LedgerSummary, type LedgerReading, type LedgerRecalculation, type LedgerInheritance, type LedgerInheritanceNotApplicable } from "./ledger";
 
 // Realms
 export { realmsApi, type Realm } from "./realms";
@@ -29,7 +29,7 @@ export { realmsApi, type Realm } from "./realms";
 export { actorsApi, type Actor } from "./actors";
 
 // Workflow
-export { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "./workflow";
+export { workflowApi, type ApprovalWorkflow, type ApprovalWorkflowListItem, type ApprovalNode, type WorkflowTemplate, type WorkflowTemplateListItem, type WorkflowTemplateNode } from "./workflow";
 
 // Disposition
 export { dispositionApi, type Disposition } from "./disposition";
@@ -41,13 +41,13 @@ export { reincarnationApi, type Reincarnation } from "./reincarnation";
 export { eventsApi, type SoulEvent } from "./events";
 
 // Permissions
-export { permApi, type Permission, type Role } from "./perm";
+export { permApi, type Permission, type Role, type RolePermissions, type PermissionAssignResult, type PermissionImportResult } from "./perm";
 
 // Menus
 export { menusApi, menuButtonsApi, type MenuItem, type MenuButton } from "./menus";
 
 // Audit
-export { auditApi } from "./audit";
+export { auditApi, type AuditLogEntry } from "./audit";
 
 // Tenants
 export { tenantsApi, type Tenant } from "./tenants";

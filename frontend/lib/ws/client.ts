@@ -117,14 +117,14 @@ export class WSClient {
             this.options.onNotification(data.notification as Record<string, unknown>);
             break;
           case "workflow":
-            this.options.onWorkflowEvent(data as unknown as Record<string, unknown>);
+            this.options.onWorkflowEvent(data);
             break;
           case "error":
             console.warn("[WS] Server error:", data.message);
             break;
           default:
             if (data.domain && data.event) {
-              this.options.onGenericEvent(data as unknown as Record<string, unknown>);
+              this.options.onGenericEvent(data);
             }
             break;
         }

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@/lib/api";
+import { workflowApi, type ApprovalWorkflow, type ApprovalNode, type WorkflowTemplateNode } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import Link from "next/link";
@@ -17,7 +17,9 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 // Node that can be rendered in React Flow - unified shape
 interface FlowNode {
-  id: string | number;
+  // Optional: WorkflowTemplateNode.id is `required=False` on the serializer,
+  // so a node persisted without one comes back without the key.
+  id?: string | number;
   node_name: string;
   status?: string;
   node_type?: string;
@@ -25,7 +27,10 @@ interface FlowNode {
   approver_role?: string;
 }
 
-// Backend template from workflow API
+// Backend template from workflow API.
+// NOTE: `nodes_json` is the WorkflowTemplate *model* field name. The API
+// exposes that data as `nodes` (source='nodes_json'), so `nodes_json` is
+// always undefined here and every node list rendered off it is empty.
 interface BackendTemplate {
   id: string | number;
   name: string;
@@ -53,7 +58,9 @@ interface TemplatePreviewData {
   case_type?: string;
   caseType?: string;
   nodes_json?: FlowNode[];
-  nodes?: FrontendNode[];
+  // Either shape: the preset templates in WORKFLOW_TEMPLATES use FrontendNode,
+  // while a template fetched from the API uses the serializer's node shape.
+  nodes?: FrontendNode[] | WorkflowTemplateNode[];
 }
 
 const CASE_TYPE_KEYS: Record<string, string> = {
@@ -106,8 +113,10 @@ export default function WorkflowPage() {
     },
   });
 
-  const workflows = (workflowsData?.results ?? workflowsData ?? []) as ApprovalWorkflow[];
-  const templates = (templatesData?.results ?? templatesData ?? []) as BackendTemplate[];
+  const workflows = workflowsData?.results ?? [];
+  // WorkflowTemplateViewSet sets pagination_class = None, so this list is a
+  // bare array — there was never a `.results` on it to unwrap.
+  const templates = templatesData ?? [];
   const queryClient = useQueryClient();
 
   // Delete template mutation

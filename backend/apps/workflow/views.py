@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.workflow.filters import WorkflowFilter
 from apps.workflow.models import ApprovalNode, ApprovalWorkflow, NodeStatus, WorkflowTemplate
@@ -25,7 +25,18 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     """
     WorkflowTemplate CRUD.
     """
-    permission_classes = [TenantPermission]
+    # CodenamePermission is what finally enforces `workflow.*` here. Until it
+    # was added, PermissionMiddleware never saw self.action and the audit
+    # measured a VIEWER designing an approval template and then deleting it.
+    #
+    # This app is the one place in the rollout where the codenames are already
+    # SEEDED on a migrate-only database — migrations 0013/0015 create the seven
+    # Permission rows, 0017 grants them — so check_permission answers these
+    # from RolePermission, not from ROLE_PERMISSIONS. The two agree today
+    # (0017's frozen matrix was copied from the dict), but they are two
+    # sources, and a database behind 0013 answers from the dict instead. Both
+    # directions are pinned in apps/perm/test_matrix_snapshot.py.
+    permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "workflow"
     queryset = WorkflowTemplate.objects.select_related("tenant").all()
     serializer_class = WorkflowTemplateSerializer
@@ -64,7 +75,13 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     """
     ApprovalWorkflow CRUD + node actions.
     """
-    permission_classes = [TenantPermission]
+    # Enforced from here on — see WorkflowTemplateViewSet above. The
+    # extra_permissions below are the reason this viewset matters most of the
+    # three: `escalate` is MODERATOR-and-ADMIN, `approve_node`/`advance` are
+    # JUDGE-and-ADMIN, and that split is the separation of duties the
+    # MODERATOR entry in ROLE_PERMISSIONS is written around. It had never once
+    # been applied to a request.
+    permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "workflow"
     extra_permissions = {
         'advance': ['workflow.advance'],
@@ -253,7 +270,12 @@ class ApprovalNodeViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUser
     """
     ApprovalNode CRUD.
     """
-    permission_classes = [TenantPermission]
+    # Enforced from here on — see WorkflowTemplateViewSet above. Nodes are the
+    # rows an approval decision is written into, and they were reachable
+    # directly, so leaving this viewset unenforced while enforcing
+    # ApprovalWorkflowViewSet would have left `approve_node`'s gate walk-around
+    # in place: POST /nodes/ and PATCH /nodes/{id}/ edit the same records.
+    permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "workflow"
     queryset = ApprovalNode.objects.select_related("workflow", "workflow__soul", "approver", "realm", "approver_actor").all()
     serializer_class = ApprovalNodeSerializer

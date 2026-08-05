@@ -56,23 +56,39 @@ class UserWithTenantSerializer(serializers.ModelSerializer):
         return None
 
     def get_permissions(self, obj):
-        """Get permissions based on rbac_role (preferred) or legacy role field."""
-        from apps.perm.models import ROLE_PERMISSIONS, RolePermission
-        # Prefer rbac_role FK if set
-        if obj.rbac_role_id:
-            return list(
-                RolePermission.objects.filter(role=obj.rbac_role)
-                .select_related("permission")
-                .values_list("permission__codename", flat=True)
-            )
-        # Fallback: query by role name
-        if RolePermission.objects.exists():
-            return list(
-                RolePermission.objects.filter(role__name=obj.role)
-                .select_related("permission")
-                .values_list("permission__codename", flat=True)
-            )
-        return ROLE_PERMISSIONS.get(obj.role, [])
+        """What the server will actually allow this user, asked of the checker.
+
+        This list is the login payload's `user.permissions`. It lands in
+        `usePermissions`, so every codename here is a control the UI offers and
+        every one missing is a control it hides.
+
+        It used to resolve the question itself, and it resolved it differently
+        from `apps/perm/checker.py`, which is what decides the answer the
+        server gives. Any RolePermission row at all switched the
+        ROLE_PERMISSIONS fallback off for the whole role, so on a
+        partially-seeded database — a migrate-only one, which is what CI builds
+        — it reported ADMIN 7 codenames against the checker's 40, GUARDIAN 1
+        against 14, VIEWER 1 against 8. Users were shown almost nothing while
+        the server went on permitting them everything. That is the permission
+        audit's §2 finding; this serializer is its "login list" column.
+
+        It survived a fix to the same defect in `apps/perm/views.py` because
+        the two were separate copies of one rule, and because the rehydrate
+        fetch in `frontend/src/contexts/TenantContext.tsx` replaces this list
+        on the next page load — which bounded the damage to the first render
+        after login, but bounded it with a frontend behaviour rather than
+        anything in the permission layer. Trusting the login payload again
+        would have restored the divergence at full size.
+
+        `rbac_role` is deliberately no longer consulted. `check_permission`
+        resolves off `obj.role` and never reads the FK, so preferring the FK
+        here made the reported list depend on which of two role fields happened
+        to be populated — a divergence in its own right. The FK still drives
+        the WebSocket permission set (`apps/core/ws_permissions.py`), which is
+        a fourth answer to this same question and is not reconciled yet.
+        """
+        from apps.perm.services import get_role_permission_codenames
+        return get_role_permission_codenames(obj.role)
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

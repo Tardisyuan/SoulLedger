@@ -3,21 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi, type User, type PaginatedResponse } from "@/lib/api";
+import { usersApi, PAGE_SIZE, type User, type PaginatedResponse } from "@/lib/api";
 import { userKeys } from "@/lib/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { UserModal } from "@/src/components/users/UserModal";
 import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
 import { showToast } from "@/src/components/ui/Toast";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-import { DataTable, type SortState } from "@/components/ui/data-table";
-
-/** Parses the `ordering` query param ("-username" etc.) into DataTable's sort shape. */
-function parseOrdering(ordering: string): SortState | null {
-  if (!ordering) return null;
-  const desc = ordering.startsWith("-");
-  return { key: desc ? ordering.slice(1) : ordering, direction: desc ? "desc" : "asc" };
-}
+import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
 
 export default function UsersPage() {
   const { t } = useI18n();
@@ -36,7 +29,7 @@ export default function UsersPage() {
     queryKey: userKeys.list({ page, search, role: roleFilter, ordering }),
     queryFn: async () => {
       const res = await usersApi.list({ page, search, role: roleFilter || undefined, ordering: ordering || undefined });
-      return res.data as PaginatedResponse<User>;
+      return res.data;
     },
   });
 
@@ -208,7 +201,7 @@ export default function UsersPage() {
           }}
           emptyMessage={t("users.no_users")}
           page={page}
-          totalPages={Math.ceil((data?.count || 0) / 20)}
+          totalPages={Math.ceil((data?.count || 0) / PAGE_SIZE)}
           totalCount={data?.count}
           onPageChange={setPage}
         />

@@ -28,7 +28,7 @@ let nextId = 0;
 
 function getContainer(): HTMLElement | null {
   if (typeof document === "undefined") return null;
-  let el = document.getElementById("toast-container") as HTMLElement;
+  let el = document.getElementById("toast-container");
   if (!el) {
     el = document.createElement("div");
     el.id = "toast-container";
