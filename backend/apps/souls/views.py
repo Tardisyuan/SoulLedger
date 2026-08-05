@@ -5,7 +5,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.ledger.services import LedgerService
 from apps.souls.dates import ERROR, check_soul_dates, parse_historical_date
@@ -19,7 +19,12 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
     Soul CRUD + state transitions + record management.
     Tenant-isolated via TenantPermission + select_related for N+1 elimination.
     """
-    permission_classes = [TenantPermission]
+    # CodenamePermission is what finally enforces the codenames below. Until it
+    # was added they were declarative only: PermissionMiddleware never saw
+    # self.action, so every role reaching this viewset with a tenant could
+    # create, rename, kill and delete souls regardless of what it held. See
+    # apps/core/permissions.py for why middleware could not do this.
+    permission_classes = [TenantPermission, CodenamePermission]
     permission_codename = "soul"
     extra_permissions = {
         'die': ['soul.die'],

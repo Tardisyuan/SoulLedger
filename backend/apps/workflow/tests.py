@@ -207,12 +207,22 @@ class TestApprovalWorkflowCRUD:
             {"workflow_name": "Other WF", "soul": str(other_soul.pk), "case_type": "ROUTINE"},
             format="json",
         )
-        # Use a non-ADMIN user from our tenant to verify isolation
-        viewer = User.objects.create_user(
-            username="awviewer", password="test123", role="VIEWER", tenant=self.tenant,
+        # Use a non-ADMIN user from our tenant to verify isolation. JUDGE, not
+        # VIEWER: this test is about the tenant filter, and any role that
+        # skips ADMIN's bypass proves it equally — but since
+        # CodenamePermission started enforcing workflow.read, VIEWER (which
+        # holds no workflow.* codename at all) is refused the list outright and
+        # the isolation assertion below never runs. JUDGE holds workflow.read,
+        # is equally non-ADMIN, and so still goes through get_queryset's tenant
+        # filter. Nothing was granted to make this pass.
+        judge = User.objects.create_user(
+            username="awjudge", password="test123", role="JUDGE", tenant=self.tenant,
         )
-        viewer_client = _jwt_client(viewer, self.tenant)
-        resp = viewer_client.get(f"{WORKFLOWS}/")
+        judge_client = _jwt_client(judge, self.tenant)
+        resp = judge_client.get(f"{WORKFLOWS}/")
+        # Asserted explicitly. Without it a 403 walks into `results["count"]`
+        # and surfaces as a KeyError, which is how this failure first read.
+        assert resp.status_code == status.HTTP_200_OK
         results = resp.data.get("results", resp.data)
         if isinstance(results, list):
             assert all(r.get("tenant") == self.tenant.pk or r.get("tenant", {}).get("id") == self.tenant.pk for r in results)
@@ -523,12 +533,18 @@ class TestApprovalNodeCRUD:
             {"workflow": other_wf_resp.data["id"], "node_name": "Foreign", "node_order": 1},
             format="json",
         )
-        # Use a VIEWER user to verify tenant isolation (ADMIN bypasses)
-        viewer = User.objects.create_user(
-            username="an2viewer", password="test123", role="VIEWER", tenant=self.tenant,
+        # Use a non-ADMIN user to verify tenant isolation (ADMIN bypasses).
+        # JUDGE rather than VIEWER for the reason given in
+        # TestApprovalWorkflowCRUD.test_tenant_isolation: VIEWER holds no
+        # workflow.* codename, so since CodenamePermission was attached to
+        # ApprovalNodeViewSet it cannot read this list at all and the isolation
+        # assertion below is unreachable. JUDGE holds workflow.read and is
+        # still subject to the tenant filter, which is what is under test.
+        judge = User.objects.create_user(
+            username="an2judge", password="test123", role="JUDGE", tenant=self.tenant,
         )
-        viewer_client = _jwt_client(viewer, self.tenant)
-        resp = viewer_client.get(f"{NODES}/")
+        judge_client = _jwt_client(judge, self.tenant)
+        resp = judge_client.get(f"{NODES}/")
         assert resp.status_code == status.HTTP_200_OK
         results = resp.data.get("results", resp.data)
         if isinstance(results, list):

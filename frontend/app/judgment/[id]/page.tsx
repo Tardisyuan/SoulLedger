@@ -8,21 +8,6 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
-interface JudgmentDetail {
-  id: string;
-  soul: string;
-  soul_name: string;
-  civilization: string;
-  court: string;
-  evidence_json: Record<string, unknown> | null;
-  confession: string | null;
-  verdict: "PASSED" | "FAILED" | "PURGATORY" | "RETRY" | null;
-  notes: string | null;
-  is_final: boolean;
-  created_at: string;
-  concluded_at: string | null;
-}
-
 interface PageProps {
   params: { id: string };
 }
@@ -68,12 +53,12 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   const { data: judgment, isLoading, error } = useQuery({
     queryKey: ["judgment", id],
-    queryFn: () => judgmentApi.get(id).then((res) => res.data as JudgmentDetail),
+    queryFn: () => judgmentApi.get(id).then((res) => res.data),
   });
 
   const { data: soulData } = useQuery({
     queryKey: ["soul", judgment?.soul],
-    queryFn: () => soulsApi.get(judgment!.soul).then((res) => res.data as Soul),
+    queryFn: () => soulsApi.get(judgment!.soul).then((res) => res.data),
     enabled: !!judgment?.soul,
   });
 
@@ -84,8 +69,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       showToast(t("judgment.detail.conclude_success"), "success");
       router.push("/judgment");
     },
-    onError: (err: any) => {
-      showToast(err?.response?.data?.error || t("judgment.detail.conclude_error"), "error");
+    onError: (err: unknown) => {
+      const e = err as { response?: { data?: { error?: string } } };
+      showToast(e?.response?.data?.error || t("judgment.detail.conclude_error"), "error");
     },
   });
 

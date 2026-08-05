@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.actors.models import Actor
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.dispatch.filters import DispatchFilter
@@ -29,7 +29,41 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     """
     DispatchRecord CRUD + actions.
     """
-    permission_classes = [TenantPermission]
+    # CodenamePermission is what finally enforces the codenames below; before
+    # it, PermissionMiddleware never saw self.action and they gated nothing.
+    #
+    # This is the largest move in the tranche, and it is JUDGE that carries it.
+    # JUDGE holds no dispatch codename at all — not read, not manage, not any
+    # of the three approval actions — so both viewsets close to it entirely,
+    # the list included. VIEWER likewise. dispatch.manage is held by ADMIN,
+    # MODERATOR and GUARDIAN; dispatch.approve/.reject/.execute by ADMIN and
+    # MODERATOR only, so GUARDIAN keeps proposing and editing and loses the
+    # three decisions.
+    #
+    # The two read moves (GET on this viewset and on CrossTenantJudgmentViewSet,
+    # 200 -> 403 for JUDGE and VIEWER) are recorded in
+    # apps/perm/test_matrix_snapshot.py::READ_MATRIX, not in the write
+    # instrument — which is why the write instrument's prediction of 34 was
+    # exact and still not the whole tranche. Note that adopting the unused
+    # cross_judgment.* family, flagged as an open decision on the viewset
+    # below, would reverse the JUDGE half of both read rows.
+    #
+    # KNOWN, MEASURED, AND NOT CLOSED BY THIS CHANGE: those three denials are
+    # walkable around. `status` is writable on DispatchRecordSerializer and
+    # partial_update maps to dispatch.manage, so GUARDIAN reaches APPROVED,
+    # REJECTED and EXECUTED through PATCH, and the record it leaves is FALSE
+    # rather than merely unauthorized: the soul's tenant FK never moves, so a
+    # dispatch can read EXECUTED for a soul that never changed hands. PATCH
+    # also skips the "only the target tenant may decide" guard, which is not a
+    # codename at all, and skips the status state machine entirely.
+    #
+    # See the characterization tests in
+    # backend/tests/test_perm_write_snapshot_outside_matrix.py. Closing any of
+    # it — read-only `status`/`dispatched_by`, a narrower dispatch.manage, the
+    # tenant guard on partial_update, the state machine on the model — is an
+    # authorization or modelling decision and not this change's to take.
+    # Enforced is not the same as safe here, and the tests say so out loud.
+    permission_classes = [TenantPermission, CodenamePermission]
     # BINARY read / manage, plus the three named approval actions. The dict
     # defines dispatch.read and dispatch.manage as the pair, then
     # dispatch.approve / .reject / .execute on top; it has never had a
@@ -222,26 +256,39 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
     """
     CrossTenantJudgment CRUD + actions.
     """
-    permission_classes = [TenantPermission]
-    # Stays on the `dispatch` family, binary read / manage as above.
-    # dispatch.participate and dispatch.conclude existed nowhere and were held
-    # by nobody, so they fold into dispatch.manage along with the CRUD writes.
+    # CodenamePermission, on the cross_judgment family rather than dispatch.
     #
-    # OPEN DECISION for the lead, deliberately not taken here: the dict has an
-    # unused cross_judgment.read / cross_judgment.create family that looks
-    # written for this viewset. Moving to it is not a rename — cross_judgment.*
-    # is held by ADMIN, JUDGE and MODERATOR while dispatch.read is held by
-    # ADMIN, GUARDIAN and MODERATOR, so GUARDIAN would lose cross-tenant
-    # judgment reads and JUDGE would gain them. That is a policy change, so
-    # this pass keeps the family the view already declared.
-    permission_codename = "dispatch"
+    # DECIDED (was an open decision through tranche 3): cross-tenant judgment
+    # is a judgment activity — the same civilization that hears a soul's own
+    # case should hear its cross-tenant one — so it moves to JUDGE rather than
+    # staying with GUARDIAN's operational dispatch role. cross_judgment.read
+    # and cross_judgment.create are held by the same three roles (ADMIN,
+    # MODERATOR, JUDGE — see apps/perm/models.py), so this is a clean binary
+    # swap: GUARDIAN loses cross-tenant judgments entirely, JUDGE gains full
+    # access (view, participate, conclude), matching how it already reads and
+    # decides on ordinary judgments. Both reads and writes moved together —
+    # deliberately not split — because participate/conclude are the judgment
+    # itself, not an administrative action layered on top of one.
+    #
+    # There is no cross_judgment.update/delete/participate/conclude codename,
+    # only read/create, so every write action maps to create — the same shape
+    # DispatchRecordViewSet uses for dispatch.manage. Because read and every
+    # write share one codename here (as they did on dispatch.manage before),
+    # this viewset still cannot exhibit the narrow-action/wide-CRUD bypass
+    # found on its sibling: there is no narrower codename for PATCH to route
+    # around. CrossTenantJudgmentSerializer does leave `status` and
+    # `conclusion_type` writable, but since `conclude` and PATCH require the
+    # same codename, reaching the same row via PATCH costs nothing beyond what
+    # `conclude` already permits.
+    permission_classes = [TenantPermission, CodenamePermission]
+    permission_codename = "cross_judgment"
     extra_permissions = {
-        'participate': ['dispatch.manage'],
-        'conclude': ['dispatch.manage'],
-        'create': ['dispatch.manage'],
-        'update': ['dispatch.manage'],
-        'partial_update': ['dispatch.manage'],
-        'destroy': ['dispatch.manage'],
+        'participate': ['cross_judgment.create'],
+        'conclude': ['cross_judgment.create'],
+        'create': ['cross_judgment.create'],
+        'update': ['cross_judgment.create'],
+        'partial_update': ['cross_judgment.create'],
+        'destroy': ['cross_judgment.create'],
     }
     queryset = CrossTenantJudgment.objects.select_related(
         "initiating_tenant"

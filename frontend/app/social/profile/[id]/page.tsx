@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
+import { PAGE_SIZE } from "@/lib/api";
 import { useProfile, usePosts } from "@/src/hooks/useSocial";
 import { ProfileCard } from "@/src/components/social/ProfileCard";
 import { PostCard } from "@/src/components/social/PostCard";
@@ -19,7 +20,7 @@ export default function UserProfilePage() {
   const { data: postsData, isLoading: postsLoading } = usePosts({ author: userId, page });
 
   const posts = postsData?.results ?? [];
-  const totalPages = postsData ? Math.ceil(postsData.count / 20) : 0;
+  const totalPages = postsData ? Math.ceil(postsData.count / PAGE_SIZE) : 0;
 
   return (
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">

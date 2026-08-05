@@ -91,9 +91,9 @@ describe("RoleFormModal", () => {
       id: 1,
       name: "ADMIN",
       display_name: "管理员",
-      parent: null,
       scope: "global",
       organization: null,
+      organization_name: null,
     };
     render(<RoleFormModal {...defaultProps} initialData={initialData} />);
     expect(screen.getByDisplayValue("ADMIN")).toBeInTheDocument();

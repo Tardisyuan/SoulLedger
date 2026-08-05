@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { PaginatedResponse } from "./users";
 
 export interface Disposition {
   id: string;
@@ -15,11 +16,14 @@ export interface Disposition {
   is_executed: boolean;
   executed_at: string | null;
   memory_reset: string;
+  sentence_years?: number | null;
   notes: string;
   created_at: string;
 }
 
 export const dispositionApi = {
-  list: (params?: Record<string, string>) => api.get("/disposition/", { params }),
-  execute: (id: string, data?: object) => api.post(`/disposition/${id}/execute/`, data),
+  // DispositionViewSet is a plain ModelViewSet, so `list` goes through the
+  // project-wide PageNumberPagination — the envelope, not a bare array.
+  list: (params?: Record<string, string>) => api.get<PaginatedResponse<Disposition>>("/disposition/", { params }),
+  execute: (id: string, data?: object) => api.post<Disposition>(`/disposition/${id}/execute/`, data),
 };

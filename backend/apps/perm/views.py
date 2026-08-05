@@ -7,6 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.core.permissions import IsAdminPermission
+from apps.perm.cache import invalidate_all_permissions, invalidate_role_permissions
+from apps.perm.services import get_role_permission_codenames
 
 from .models import DEFAULT_PERMISSIONS, DEFAULT_ROLES, ROLE_PERMISSIONS, Permission, Role, RolePermission
 from .serializers import (
@@ -17,37 +19,11 @@ from .serializers import (
     RoleSerializer,
 )
 
-
-def _get_role_permissions_from_db(role_name):
-    """Codenames this role effectively holds, resolved exactly as check_permission resolves them.
-
-    Per codename, not per role: the DB decides any codename that has a
-    Permission row, and ROLE_PERMISSIONS answers the rest. That is the contract
-    apps/perm/checker.py implements, and this endpoint feeds the frontend's
-    permission list — the two must not disagree about the same user.
-
-    The previous version was all-or-nothing: any single RolePermission row
-    switched the dict fallback off for the whole role. That was harmless only
-    while every role had either all its grants or none. Once perm migration
-    0017 gave every role at least one grant, a partially-seeded database — a
-    migrate-only one, which is what CI builds — reported VIEWER as holding just
-    ["menu.read"] while its effective access was still the full dict. The UI
-    would have hidden almost everything from a user the server was still
-    letting through.
-
-    Still divergent, deliberately left for the enforcement work: check_permission
-    short-circuits ADMIN to True for every codename, which this does not model.
-    ADMIN is reported here as what it is actually granted plus its unseeded dict
-    entries, not as "everything".
-    """
-    granted = set(
-        RolePermission.objects.filter(role__name=role_name)
-        .select_related("permission")
-        .values_list("permission__codename", flat=True)
-    )
-    seeded = set(Permission.objects.values_list("codename", flat=True))
-    from_dict = {c for c in ROLE_PERMISSIONS.get(role_name, []) if c not in seeded}
-    return sorted(granted | from_dict)
+# The resolution itself lives in apps/perm/services.py, because the login
+# serializer needs the same answer and a serializer should not be importing a
+# private helper out of a views module. Kept as a name here so the two
+# endpoints below read the same as they did.
+_get_role_permissions_from_db = get_role_permission_codenames
 
 
 @api_view(["GET"])
@@ -78,6 +54,11 @@ def create_permission(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         permission = serializer.save()
+        # Creating a Permission row moves its codename from the dict branch of
+        # check_permission to the DB branch — the answer changes without any
+        # Role or RolePermission being touched, so the signal in
+        # apps/audit/signals.py does not fire. See assign_role_permissions.
+        invalidate_all_permissions()
         return Response(PermissionSerializer(permission).data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -99,6 +80,9 @@ def update_delete_permission(request, pk):
         serializer = PermissionCreateUpdateSerializer(permission, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            # A renamed codename is a new codename to check_permission, and the
+            # old one falls back to the dict again. See assign_role_permissions.
+            invalidate_all_permissions()
             return Response(PermissionSerializer(permission).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -106,6 +90,8 @@ def update_delete_permission(request, pk):
         # Also remove all RolePermission links
         RolePermission.objects.filter(permission=permission).delete()
         permission.delete()
+        # Deleting the Permission row hands the codename back to the dict.
+        invalidate_all_permissions()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -195,6 +181,17 @@ def assign_role_permissions(request):
     to_create = [RolePermission(role=role, permission_id=pid) for pid in permission_ids]
     created = RolePermission.objects.bulk_create(to_create)
 
+    # bulk_create sends no post_save, so _invalidate_permission_cache in
+    # apps/audit/signals.py — which is what normally keeps check_permission
+    # honest after a grant changes — never runs for the rows created here. The
+    # .delete() above does fire post_delete and would have covered the common
+    # case by accident, but not for a role that had no grants yet: its cache
+    # would keep denying the codenames just granted for the rest of the 300s
+    # TTL. That was invisible while _get_role_permissions_from_db read the
+    # database directly; now that it reads through check_permission, the
+    # admin's own role editor would show the stale answer straight back.
+    invalidate_role_permissions(role_name)
+
     return Response({
         "role": role_name,
         "assigned_count": len(created),
@@ -218,6 +215,9 @@ def init_permissions(request):
         )
         if created:
             created_count += 1
+
+    # Every codename seeded here just moved to check_permission's DB branch.
+    invalidate_all_permissions()
 
     return Response({
         "message": f"Initialized {created_count} permissions",
@@ -349,6 +349,10 @@ def init_role_permissions(request):
 
         results[role_name] = f"Assigned {len(created)} permissions"
 
+    # Seeds Permission rows and bulk_creates grants — neither reaches the
+    # invalidation signal. See assign_role_permissions.
+    invalidate_all_permissions()
+
     return Response({
         "message": "Role permissions initialized",
         "permissions_added": perm_count_after - perm_count_before,
@@ -390,6 +394,9 @@ def import_permissions(request):
 
     overwrite = request.data.get('overwrite', False)
     stats = do_import(data, overwrite=overwrite)
+
+    # An import rewrites permissions and grants wholesale.
+    invalidate_all_permissions()
 
     return Response({
         "message": "Permissions imported successfully",

@@ -1,14 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  socialApi,
-  type Post,
-  type Comment,
-  type Reaction,
-  type Follow,
-  type UserProfile,
-} from "@/lib/api";
+import { socialApi, type UserProfile } from "@/lib/api";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { socialKeys } from "@/lib/query_keys";
@@ -20,7 +13,7 @@ export function usePosts(params?: Record<string, string | number | undefined>) {
     queryKey: socialKeys.posts.list(params),
     queryFn: async () => {
       const res = await socialApi.listPosts(params);
-      return res.data as { results: Post[]; count: number };
+      return res.data;
     },
     staleTime: 30_000,
   });
@@ -31,7 +24,7 @@ export function usePost(id: string) {
     queryKey: socialKeys.posts.detail(id),
     queryFn: async () => {
       const res = await socialApi.getPost(id);
-      return res.data as Post;
+      return res.data;
     },
     enabled: !!id,
     staleTime: 30_000,
@@ -43,7 +36,7 @@ export function useFeed(params?: Record<string, string | number | undefined>) {
     queryKey: socialKeys.posts.feed(params),
     queryFn: async () => {
       const res = await socialApi.feed(params);
-      return res.data as { results: Post[]; count: number } | Post[];
+      return res.data;
     },
     staleTime: 30_000,
   });
@@ -87,7 +80,7 @@ export function useComments(postId: string) {
     queryKey: socialKeys.comments.list({ post: postId }),
     queryFn: async () => {
       const res = await socialApi.listComments({ post: postId });
-      return res.data as { results: Comment[]; count: number };
+      return res.data;
     },
     enabled: !!postId,
     staleTime: 30_000,
@@ -131,7 +124,7 @@ export function useReactions(params?: Record<string, string | number | undefined
     queryKey: [...socialKeys.reactions.all, params] as const,
     queryFn: async () => {
       const res = await socialApi.listReactions(params);
-      return res.data as { results: Reaction[]; count: number };
+      return res.data;
     },
     staleTime: 30_000,
   });
@@ -167,7 +160,7 @@ export function useFollowing() {
     queryKey: socialKeys.follows.following,
     queryFn: async () => {
       const res = await socialApi.following();
-      return res.data as Follow[];
+      return res.data;
     },
     staleTime: 30_000,
   });
@@ -178,7 +171,7 @@ export function useFollowers() {
     queryKey: socialKeys.follows.followers,
     queryFn: async () => {
       const res = await socialApi.followers();
-      return res.data as Follow[];
+      return res.data;
     },
     staleTime: 30_000,
   });
@@ -191,7 +184,7 @@ export function useProfile(userId: string) {
     queryKey: socialKeys.profiles.detail(userId),
     queryFn: async () => {
       const res = await socialApi.getProfile(userId);
-      return res.data as UserProfile;
+      return res.data;
     },
     enabled: !!userId,
     staleTime: 30_000,
@@ -203,7 +196,7 @@ export function useMyProfile() {
     queryKey: socialKeys.profiles.me,
     queryFn: async () => {
       const res = await socialApi.myProfile();
-      return res.data as UserProfile;
+      return res.data;
     },
     staleTime: 30_000,
   });

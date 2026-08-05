@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { menuButtonsApi, menusApi, type MenuButton, type MenuItem, type PaginatedResponse } from "@/lib/api";
+import { menuButtonsApi, menusApi, PAGE_SIZE, type MenuButton, type MenuItem, type PaginatedResponse } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Modal } from "@/src/components/ui/Modal";
@@ -39,11 +39,11 @@ export default function MenuButtonsPage() {
     queryKey: ["menu-buttons", selectedMenuId, page],
     queryFn: async () => {
       const res = await menuButtonsApi.list(selectedMenuId, page);
-      return res.data as PaginatedResponse<MenuButton>;
+      return res.data;
     },
   });
   const buttons = data?.results ?? [];
-  const totalPages = data ? Math.ceil(data.count / 20) : 0;
+  const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
 
   const createMutation = useMutation({
     mutationFn: (data: Partial<MenuButton>) => menuButtonsApi.create(data),

@@ -13,7 +13,14 @@ import { permApi } from "@/lib/api";
 // ── Types ────────────────────────────────────────────────────────────
 
 export interface TenantInfo {
-  id: number;
+  /**
+   * Optional: the login response's `user.tenant` is built by
+   * UserWithTenantSerializer.get_tenant (backend/apps/authentication/
+   * serializers.py:53) and carries only `code` and `display_name`. Nothing
+   * reads the id off an AuthUser; the /users/ payload, which does include it,
+   * is a different type (lib/api/users.ts).
+   */
+  id?: number;
   code: string;
   display_name: string;
 }

@@ -23,7 +23,10 @@ export default function DispositionPage() {
     enabled: !!user,
   });
 
-  const dispositions = dispositionsResponse?.results || dispositionsResponse || [];
+  // /disposition/ is a paginated ModelViewSet list, so `results` is always
+  // present (an empty array included) and the old `|| dispositionsResponse`
+  // fallback could never be reached.
+  const dispositions = dispositionsResponse?.results ?? [];
 
   const executeMutation = useMutation({
     mutationFn: (id: string) => dispositionApi.execute(id),

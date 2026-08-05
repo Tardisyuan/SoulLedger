@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { judgmentApi, type Judgment } from "@/lib/api";
-import { DataTable, type SortState } from "@/components/ui/data-table";
+import { judgmentApi, PAGE_SIZE, type Judgment } from "@/lib/api";
+import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
 
 const VERDICT_COLORS: Record<string, string> = {
   PASSED: "bg-[hsl(var(--color-verdict-passed)/0.2)] text-[hsl(var(--color-verdict-passed))]",
@@ -13,13 +13,6 @@ const VERDICT_COLORS: Record<string, string> = {
   PURGATORY: "bg-[hsl(var(--color-verdict-purgatory)/0.2)] text-[hsl(var(--color-verdict-purgatory))]",
   RETRY: "bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))]",
 };
-
-/** Parses the `ordering` query param ("-created_at" etc.) into DataTable's sort shape. */
-function parseOrdering(ordering: string): SortState | null {
-  if (!ordering) return null;
-  const desc = ordering.startsWith("-");
-  return { key: desc ? ordering.slice(1) : ordering, direction: desc ? "desc" : "asc" };
-}
 
 export default function JudgmentQueuePage() {
   const { t, formatDate } = useI18n();
@@ -44,8 +37,10 @@ export default function JudgmentQueuePage() {
     },
   });
 
-  const judgments = (judgmentData?.results ?? judgmentData ?? []) as Judgment[];
-  const totalPages = judgmentData ? Math.ceil(judgmentData.count / 20) : 0;
+  // Paginated list — `results` is always present, so the `?? judgmentData`
+  // fallback the expression used to carry was unreachable.
+  const judgments = judgmentData?.results ?? [];
+  const totalPages = judgmentData ? Math.ceil(judgmentData.count / PAGE_SIZE) : 0;
 
   const tabs = [
     { key: "pending", label: t("judgment.pending") },

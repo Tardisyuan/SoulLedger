@@ -305,7 +305,10 @@ export default function ProfilePage() {
               <Skeleton className="h-4 w-32" />
             ) : (
               <span className="text-sm text-[hsl(var(--color-ink))]">
-                {profile?.tenant?.display_name || profile?.tenant?.code || user?.tenant?.display_name || user?.tenant?.code || "-"}
+                {/* /auth/profile/ is UserSerializer, which has no `tenant`
+                    field at all — the two leading branches this expression
+                    used to start with were dead. */}
+                {user?.tenant?.display_name || user?.tenant?.code || "-"}
               </span>
             )}
           </div>

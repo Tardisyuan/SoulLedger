@@ -1,6 +1,12 @@
 import { api } from "./client";
+import type { PaginatedResponse } from "./users";
 
-// Types matching backend models exactly
+/**
+ * PostSerializer / PostListSerializer (backend/apps/social/serializers.py:12
+ * and :56). The list serializer omits `tenant` and `update_time`, so both are
+ * optional here — they were declared required and are absent from every
+ * element of GET /social/posts/ and GET /social/posts/feed/.
+ */
 export interface Post {
   id: string;
   author: string;
@@ -10,11 +16,12 @@ export interface Post {
   visibility: "PUBLIC" | "TENANT" | "FOLLOWERS" | "PRIVATE";
   comment_count: number;
   reaction_count: number;
-  tenant: number;
+  tenant?: number;
   create_time: string;
-  update_time: string;
+  update_time?: string;
 }
 
+/** CommentSerializer / CommentListSerializer (serializers.py:81 and :111). */
 export interface Comment {
   id: string;
   post: string;
@@ -23,9 +30,9 @@ export interface Comment {
   author_username: string;
   parent: string | null;
   content: string;
-  tenant: number;
+  tenant?: number;
   create_time: string;
-  update_time: string;
+  update_time?: string;
 }
 
 export interface Reaction {
@@ -63,44 +70,51 @@ export interface UserProfile {
 export const socialApi = {
   // Posts
   listPosts: (params?: Record<string, string | number | undefined>) =>
-    api.get("/social/posts/", { params }),
-  getPost: (id: string) => api.get(`/social/posts/${id}/`),
+    api.get<PaginatedResponse<Post>>("/social/posts/", { params }),
+  getPost: (id: string) => api.get<Post>(`/social/posts/${id}/`),
   createPost: (data: { content: string; visibility?: string }) =>
-    api.post("/social/posts/", data),
+    api.post<Post>("/social/posts/", data),
   updatePost: (id: string, data: Partial<Post>) =>
-    api.patch(`/social/posts/${id}/`, data),
-  deletePost: (id: string) => api.delete(`/social/posts/${id}/`),
+    api.patch<Post>(`/social/posts/${id}/`, data),
+  deletePost: (id: string) => api.delete<void>(`/social/posts/${id}/`),
+  /**
+   * Bimodal, and deliberately typed as such: the action paginates normally
+   * (backend/apps/social/views.py:108) but short-circuits to a bare `[]` when
+   * the request carries no tenant (views.py:112).
+   */
   feed: (params?: Record<string, string | number | undefined>) =>
-    api.get("/social/posts/feed/", { params }),
+    api.get<PaginatedResponse<Post> | Post[]>("/social/posts/feed/", { params }),
 
   // Comments
   listComments: (params?: Record<string, string | number | undefined>) =>
-    api.get("/social/comments/", { params }),
+    api.get<PaginatedResponse<Comment>>("/social/comments/", { params }),
   createComment: (data: { post: string; content: string; parent?: string }) =>
-    api.post("/social/comments/", data),
-  deleteComment: (id: string) => api.delete(`/social/comments/${id}/`),
+    api.post<Comment>("/social/comments/", data),
+  deleteComment: (id: string) => api.delete<void>(`/social/comments/${id}/`),
 
   // Reactions
   listReactions: (params?: Record<string, string | number | undefined>) =>
-    api.get("/social/reactions/", { params }),
+    api.get<PaginatedResponse<Reaction>>("/social/reactions/", { params }),
   addReaction: (data: { post?: string; comment?: string; reaction_type: string }) =>
-    api.post("/social/reactions/", data),
-  deleteReaction: (id: string) => api.delete(`/social/reactions/${id}/`),
+    api.post<Reaction>("/social/reactions/", data),
+  deleteReaction: (id: string) => api.delete<void>(`/social/reactions/${id}/`),
 
   // Follows
   listFollows: (params?: Record<string, string | number | undefined>) =>
-    api.get("/social/follows/", { params }),
+    api.get<PaginatedResponse<Follow>>("/social/follows/", { params }),
   follow: (data: { following: string }) =>
-    api.post("/social/follows/", data),
-  unfollow: (id: string) => api.delete(`/social/follows/${id}/`),
+    api.post<Follow>("/social/follows/", data),
+  unfollow: (id: string) => api.delete<void>(`/social/follows/${id}/`),
   toggleFollow: (followingId: string) =>
-    api.post("/social/follows/toggle/", { following: followingId }),
-  following: () => api.get("/social/follows/following/"),
-  followers: () => api.get("/social/follows/followers/"),
+    api.post<{ following: boolean }>("/social/follows/toggle/", { following: followingId }),
+  // Bare arrays — both @actions serialize and return directly
+  // (backend/apps/social/views.py:271 and :281), unlike the viewset's list.
+  following: () => api.get<Follow[]>("/social/follows/following/"),
+  followers: () => api.get<Follow[]>("/social/follows/followers/"),
 
   // Profiles
-  getProfile: (id: string) => api.get(`/social/profiles/${id}/`),
+  getProfile: (id: string) => api.get<UserProfile>(`/social/profiles/${id}/`),
   updateProfile: (id: string, data: Partial<UserProfile>) =>
-    api.patch(`/social/profiles/${id}/`, data),
-  myProfile: () => api.get("/social/profiles/me/"),
+    api.patch<UserProfile>(`/social/profiles/${id}/`, data),
+  myProfile: () => api.get<UserProfile>("/social/profiles/me/"),
 };
