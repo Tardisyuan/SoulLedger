@@ -214,11 +214,17 @@ class TestCrossTenantJudgmentViewSetCodename(TestCase):
         self.assertEqual(CrossTenantJudgmentViewSet.permission_codename, "dispatch")
 
     def test_cross_tenant_viewset_extra_permissions(self):
+        """participate/conclude fold into dispatch.manage — see the viewset.
+
+        These used to assert `dispatch.participate` and `dispatch.conclude`,
+        neither of which exists in DEFAULT_PERMISSIONS nor is held by any
+        role. dispatch.manage is this module's defined write codename.
+        """
         from apps.dispatch.views import CrossTenantJudgmentViewSet
         self.assertIn("participate", CrossTenantJudgmentViewSet.extra_permissions)
-        self.assertEqual(CrossTenantJudgmentViewSet.extra_permissions["participate"], ["dispatch.participate"])
+        self.assertEqual(CrossTenantJudgmentViewSet.extra_permissions["participate"], ["dispatch.manage"])
         self.assertIn("conclude", CrossTenantJudgmentViewSet.extra_permissions)
-        self.assertEqual(CrossTenantJudgmentViewSet.extra_permissions["conclude"], ["dispatch.conclude"])
+        self.assertEqual(CrossTenantJudgmentViewSet.extra_permissions["conclude"], ["dispatch.manage"])
 
     def test_cross_tenant_viewset_inherits_mixin(self):
         from apps.dispatch.views import CrossTenantJudgmentViewSet
@@ -276,11 +282,17 @@ class TestNotificationViewSetCodename(TestCase):
         self.assertEqual(NotificationViewSet.permission_codename, "notification")
 
     def test_notification_viewset_extra_permissions(self):
+        """Binary on notification.read — see the comment on the viewset.
+
+        These used to assert `notification.update`, a codename that is in
+        neither DEFAULT_PERMISSIONS nor any role's list, so mark_read was
+        gated on something that could only ever answer no.
+        """
         from apps.notifications.views import NotificationViewSet
         self.assertIn("mark_read", NotificationViewSet.extra_permissions)
-        self.assertEqual(NotificationViewSet.extra_permissions["mark_read"], ["notification.update"])
+        self.assertEqual(NotificationViewSet.extra_permissions["mark_read"], ["notification.read"])
         self.assertIn("mark_all_read", NotificationViewSet.extra_permissions)
-        self.assertEqual(NotificationViewSet.extra_permissions["mark_all_read"], ["notification.update"])
+        self.assertEqual(NotificationViewSet.extra_permissions["mark_all_read"], ["notification.read"])
 
     def test_notification_viewset_inherits_mixin(self):
         from apps.notifications.views import NotificationViewSet
@@ -293,25 +305,24 @@ class TestUserViewSetCodename(TestCase):
         self.assertEqual(UserViewSet.permission_codename, "user")
 
     def test_user_viewset_extra_permissions(self):
+        """Every action maps to user.manage — see the comment on the viewset.
+
+        These used to assert a user.activate / user.deactivate /
+        user.reset_password / user.read / user.create / user.assign_roles
+        family. None of those six codenames exists in DEFAULT_PERMISSIONS or
+        is held by any role; `user.manage` is the only user codename there is,
+        and IsAdminPermission already makes this viewset ADMIN-only for reads
+        and writes alike.
+        """
         from apps.authentication.views import UserViewSet
-        self.assertIn("activate", UserViewSet.extra_permissions)
-        self.assertEqual(UserViewSet.extra_permissions["activate"], ["user.activate"])
-        self.assertIn("deactivate", UserViewSet.extra_permissions)
-        self.assertEqual(UserViewSet.extra_permissions["deactivate"], ["user.deactivate"])
-        self.assertIn("reset_password", UserViewSet.extra_permissions)
-        self.assertEqual(UserViewSet.extra_permissions["reset_password"], ["user.reset_password"])
-        self.assertIn("batch_activate", UserViewSet.extra_permissions)
-        self.assertEqual(UserViewSet.extra_permissions["batch_activate"], ["user.activate"])
-        self.assertIn("batch_deactivate", UserViewSet.extra_permissions)
-        self.assertEqual(UserViewSet.extra_permissions["batch_deactivate"], ["user.deactivate"])
-        self.assertIn("own_roles", UserViewSet.extra_permissions)
-        self.assertEqual(UserViewSet.extra_permissions["own_roles"], ["user.read"])
-        self.assertIn("assign_roles", UserViewSet.extra_permissions)
-        self.assertEqual(UserViewSet.extra_permissions["assign_roles"], ["user.assign_roles"])
-        self.assertIn("export_csv", UserViewSet.extra_permissions)
-        self.assertEqual(UserViewSet.extra_permissions["export_csv"], ["user.read"])
-        self.assertIn("import_csv", UserViewSet.extra_permissions)
-        self.assertEqual(UserViewSet.extra_permissions["import_csv"], ["user.create"])
+        for action in (
+            "list", "retrieve", "create", "update", "partial_update", "destroy",
+            "activate", "deactivate", "reset_password",
+            "batch_activate", "batch_deactivate",
+            "own_roles", "assign_roles", "export_csv", "import_csv",
+        ):
+            self.assertIn(action, UserViewSet.extra_permissions)
+            self.assertEqual(UserViewSet.extra_permissions[action], ["user.manage"])
 
     def test_user_viewset_inherits_mixin(self):
         from apps.authentication.views import UserViewSet
@@ -398,16 +409,20 @@ class TestHasPermissionFallback(TestCase):
 
 
 class TestMenuViewSetCodename(TestCase):
-    def test_menu_viewset_has_codename(self):
-        from apps.menus.views import MenuViewSet
-        self.assertEqual(MenuViewSet.permission_codename, "menu")
+    def test_menu_viewset_is_deliberately_exempt(self):
+        """Menus declare no codename — see the comment on the viewset.
 
-    def test_menu_viewset_extra_permissions(self):
+        This used to assert `permission_codename == "menu"` and an
+        extra_permissions family of menu.read / menu.create. `menu.manage` is
+        the only menu codename that exists and only ADMIN holds it, while this
+        viewset serves navigation reads to every role, so neither shape fits
+        until a `menu.read` codename is seeded and granted. The exemption is
+        registered in apps/perm/test_codename_coverage.py::EXEMPT_VIEWS, which
+        is what keeps it from being a silent hole.
+        """
         from apps.menus.views import MenuViewSet
-        self.assertIn("all", MenuViewSet.extra_permissions)
-        self.assertEqual(MenuViewSet.extra_permissions["all"], ["menu.read"])
-        self.assertIn("create_menu", MenuViewSet.extra_permissions)
-        self.assertEqual(MenuViewSet.extra_permissions["create_menu"], ["menu.create"])
+        self.assertIsNone(MenuViewSet.permission_codename)
+        self.assertEqual(MenuViewSet().get_required_permissions(), [])
 
     def test_menu_viewset_inherits_mixin(self):
         from apps.menus.views import MenuViewSet

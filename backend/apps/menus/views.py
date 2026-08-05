@@ -23,12 +23,23 @@ class MenuViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     Menu CRUD ViewSet — supports tree structure with button resources.
     """
     permission_classes = [TenantPermission]
-    permission_codename = "menu"
-    extra_permissions = {
-        'all': ['menu.read'],
-        'tree': ['menu.read'],
-        'create_menu': ['menu.create'],
-    }
+    # EXEMPT, and flagged as an open decision rather than settled.
+    #
+    # The only menu codename that exists is `menu.manage`, and only ADMIN holds
+    # it. But this viewset is not ADMIN-only: reads are open to every
+    # authenticated role (get_queryset just hides inactive menus from
+    # non-ADMIN) and only the writes carry the hardcoded ADMIN check in
+    # perform_create/update/destroy below. So neither shape fits — binding
+    # everything to menu.manage would, once enforcement lands, deny `list` to
+    # every non-ADMIN and take the whole navigation tree with it, and the old
+    # "menu" declaration generated menu.read/create/update/delete/list_public,
+    # none of which exist or are held by anyone.
+    #
+    # The fix is a seeded `menu.read` granted to all five roles, paired with
+    # menu.manage for writes. That is a new codename plus grants, which is not
+    # this pass's to invent — so the module is exempt and queued, and the
+    # hardcoded ADMIN checks below remain the real gate in the meantime.
+    permission_codename = None
     queryset = Menu.objects.all()
     serializer_class = MenuSerializer
 
@@ -153,7 +164,11 @@ class MenuButtonViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
     绑定到 Menu 上的操作按钮，每个按钮关联一个 permission codename。
     """
     permission_classes = [TenantPermission]
-    permission_codename = "menu"
+    # EXEMPT for the same reason as MenuViewSet above — `menu.manage` is the
+    # only menu codename and it is ADMIN-only, while this viewset serves the
+    # button resources the navigation UI needs to render for every role.
+    # Same open decision, same follow-up.
+    permission_codename = None
     queryset = MenuButton.objects.select_related("menu").all()
     serializer_class = MenuButtonSerializer
 

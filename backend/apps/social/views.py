@@ -1,5 +1,29 @@
 """
 Views for the social domain.
+
+Permission codenames: EXEMPT, deliberately, for all five viewsets below.
+
+The whole module was written with `permission_codename` set to "post",
+"comment", "reaction", "follow" and "profile", which made
+CodenameViewSetMixin generate twenty-odd codenames — post.read,
+comment.create, follow.toggle, profile.me and the rest. Not one of them
+exists in DEFAULT_PERMISSIONS, and not one is granted by any role in
+ROLE_PERMISSIONS. They were never seeded by a migration either. So every
+one of them was a codename that could only ever answer "no" — switching
+enforcement on would have closed the entire social module to all five
+roles at once, ADMIN aside.
+
+Setting them to None says that out loud instead of leaving a name that
+looks governed and is not. Giving social a real permission family is a
+product decision (who may post, who may follow whom, does a VIEWER get to
+comment) plus a seeding migration plus grants to five roles — none of
+which belongs in a codename-reconciliation pass. It is queued as
+follow-up work.
+
+Access is not unguarded in the meantime: every viewset here keeps its
+TenantPermission plus an object-level owner check
+(IsAuthorOrReadOnly / IsReactionOwnerOrReadOnly / IsFollowOwnerOrReadOnly /
+IsProfileOwnerOrReadOnly), so authorship still governs writes.
 """
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -44,7 +68,9 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
     feed:       GET    /api/v1/social/posts/feed/ — posts from followed users
     """
     permission_classes = [TenantPermission, IsAuthorOrReadOnly]
-    permission_codename = "post"
+    # EXEMPT — see the module note at the top of this file. "post" generated
+    # post.read/create/update/delete/feed, none of which exist or are held.
+    permission_codename = None
     queryset = Post.objects.select_related("author").all()
 
     def get_serializer_class(self):
@@ -110,7 +136,8 @@ class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Model
     destroy:    DELETE /api/v1/social/comments/{id}/
     """
     permission_classes = [TenantPermission, IsAuthorOrReadOnly]
-    permission_codename = "comment"
+    # EXEMPT — see the module note at the top of this file.
+    permission_codename = None
     queryset = Comment.objects.select_related("author", "post").all()
 
     def get_serializer_class(self):
@@ -157,7 +184,8 @@ class ReactionViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Mode
     destroy:    DELETE /api/v1/social/reactions/{id}/
     """
     permission_classes = [TenantPermission, IsReactionOwnerOrReadOnly]
-    permission_codename = "reaction"
+    # EXEMPT — see the module note at the top of this file.
+    permission_codename = None
     queryset = Reaction.objects.select_related("user").all()
     http_method_names = ["get", "post", "delete", "head", "options"]
 
@@ -210,7 +238,8 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
     toggle:     POST   /api/v1/social/follows/toggle/ — toggle follow
     """
     permission_classes = [TenantPermission, IsFollowOwnerOrReadOnly]
-    permission_codename = "follow"
+    # EXEMPT — see the module note at the top of this file.
+    permission_codename = None
     queryset = Follow.objects.select_related("follower", "following").all()
     http_method_names = ["get", "post", "delete", "head", "options"]
 
@@ -298,7 +327,8 @@ class UserProfileViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.M
     me:         GET    /api/v1/social/profiles/me/ — current user's profile
     """
     permission_classes = [TenantPermission, IsProfileOwnerOrReadOnly]
-    permission_codename = "profile"
+    # EXEMPT — see the module note at the top of this file.
+    permission_codename = None
     queryset = UserProfile.objects.select_related("user").all()
     http_method_names = ["get", "put", "patch", "head", "options"]
 

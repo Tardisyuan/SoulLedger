@@ -43,10 +43,21 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
     queryset = Reincarnation.objects.select_related("soul", "disposition", "tenant").all()
     serializer_class = ReincarnationSerializer
     permission_classes = [TenantPermission]
+    # BINARY: read / manage, plus the two named actions. The dict spells the
+    # pair out — reincarnation.read and reincarnation.manage — with no
+    # create/update/delete family, so the CRUD codenames the mixin was
+    # generating (reincarnation.create/.update/.delete) existed nowhere and
+    # were held by nobody. They map to reincarnation.manage, which is exactly
+    # what "manage" was defined to cover and is already granted to every role
+    # that holds read except VIEWER.
     permission_codename = "reincarnation"
     extra_permissions = {
         'complete': ['reincarnation.complete'],
         'reborn': ['reincarnation.reborn'],
+        'create': ['reincarnation.manage'],
+        'update': ['reincarnation.manage'],
+        'partial_update': ['reincarnation.manage'],
+        'destroy': ['reincarnation.manage'],
     }
     filterset_fields = ["soul", "rebirth_form", "cycle_count"]
     ordering_fields = ["reincarnated_at", "cycle_count"]

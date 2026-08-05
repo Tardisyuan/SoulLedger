@@ -30,9 +30,21 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
     Tenant-isolated via TenantPermission.
     """
     permission_classes = [TenantPermission]
+    # The judgment family is read / create / execute — those three exist and
+    # are granted; there is no judgment.update or judgment.delete anywhere, yet
+    # this is a ModelViewSet and the mixin was generating both.
+    #
+    # They map to judgment.execute. The choice between judgment.execute and
+    # judgment.create is not a guess and cannot go wrong: both are held by
+    # exactly {ADMIN, JUDGE, MODERATOR}, so no role's access differs between
+    # them. execute is the closer fit — amending or withdrawing a filed
+    # judgment is an act on the case, and conclude already maps here.
     permission_codename = "judgment"
     extra_permissions = {
         'conclude': ['judgment.execute'],
+        'update': ['judgment.execute'],
+        'partial_update': ['judgment.execute'],
+        'destroy': ['judgment.execute'],
     }
     queryset = Judgment.objects.select_related("soul", "soul__tenant", "tenant").all()
     serializer_class = JudgmentSerializer
