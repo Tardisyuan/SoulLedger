@@ -45,7 +45,15 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
 
 
 class WorkflowTemplateListSerializer(serializers.ModelSerializer):
-    """Lightweight serializer for listing templates."""
+    """Lightweight serializer for listing templates.
+
+    Deliberately omits `nodes` (the full node graph, source=`nodes_json` on
+    the detail serializer below) — a list of every template's full node graph
+    is the payload this serializer exists to avoid. `node_count` gives the
+    one fact a list screen needs (how big is this template) without it.
+    """
+
+    node_count = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkflowTemplate
@@ -57,7 +65,11 @@ class WorkflowTemplateListSerializer(serializers.ModelSerializer):
             "case_type",
             "is_active",
             "created_at",
+            "node_count",
         ]
+
+    def get_node_count(self, obj):
+        return len(obj.nodes_json or [])
 
 
 class ApprovalNodeSerializer(serializers.ModelSerializer):
