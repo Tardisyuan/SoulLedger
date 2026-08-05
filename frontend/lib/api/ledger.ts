@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { HistoricalDate } from "@/lib/utils";
 
 export interface LedgerStatsOverview {
   total_souls: number;
@@ -57,15 +58,8 @@ export interface LedgerRecord {
   decay_factor: number;
   civilization: string;
   recorded_at: string;
-  /**
-   * KNOWN-WRONG, left as-is deliberately. The backend sends
-   * `{year, month, day} | null` (HistoricalDateField, backend/apps/souls/
-   * fields.py:36 → backend/apps/souls/dates.py:118), not an ISO string.
-   * Correcting this type breaks getLedgerChartData in
-   * app/souls/[id]/page.tsx, which feeds the value straight to `new Date()`
-   * — a runtime bug that predates this commit and needs its own fix.
-   */
-  event_date: string | null;
+  /** HistoricalDateField: {year, month, day} | null */
+  event_date: HistoricalDate | null;
   is_milestone: boolean;
 }
 

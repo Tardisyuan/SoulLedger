@@ -8,6 +8,7 @@ import { SoulCreateModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
 import { PAGE_SIZE, type SoulListItem } from "@/lib/api";
+import { formatHistoricalDate } from "@/lib/utils";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "bg-[hsl(var(--color-status-alive)/0.2)] text-[hsl(var(--color-status-alive))]",
@@ -192,7 +193,7 @@ export default function SoulsPage() {
               <td className={`px-4 py-3 text-right font-mono text-sm ${(soul.karmic_balance ?? 0) >= 0 ? "text-[hsl(var(--color-accent))]" : "text-[hsl(var(--color-status-error))]"}`}>
                 {(soul.karmic_balance ?? 0) >= 0 ? "+" : ""}{soul.karmic_balance ?? 0}
               </td>
-              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs">{soul.death_date || "—"}</td>
+              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs">{formatHistoricalDate(soul.death_date) || "—"}</td>
               <td className="px-4 py-3">
                 <Link
                   href={`/souls/${soul.id}`}

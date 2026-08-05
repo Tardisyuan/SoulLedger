@@ -8,6 +8,7 @@ import { useUpdateSoul } from "@/src/hooks/useSouls";
 import type { Soul } from "@/lib/api";
 import { soulUpdateSchema } from "@/lib/validations/schemas";
 import { useFormValidation } from "@/lib/validations/useFormValidation";
+import { type HistoricalDate } from "@/lib/utils";
 
 interface SoulEditModalProps {
   isOpen: boolean;
@@ -44,11 +45,20 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
   // round-trips on submit instead of silently reverting to the default.
   const isSettled = soul.current_state === "SETTLED";
 
+  // Convert HistoricalDate to HTML date input format (YYYY-MM-DD)
+  const historicalDateToInputValue = (date: HistoricalDate | null | undefined): string => {
+    if (!date || !date.month || !date.day) return "";
+    const year = Math.abs(date.year).toString().padStart(4, "0");
+    const month = date.month.toString().padStart(2, "0");
+    const day = date.day.toString().padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   // Populate form when soul changes or modal opens
   useEffect(() => {
     if (isOpen && soul) {
       setName(soul.name || "");
-      setBirthDate(soul.birth_date ? soul.birth_date.split("T")[0] : "");
+      setBirthDate(historicalDateToInputValue(soul.birth_date));
       setOriginLocation(soul.origin_location || "");
       setCurrentState(soul.current_state || "ALIVE");
     }
