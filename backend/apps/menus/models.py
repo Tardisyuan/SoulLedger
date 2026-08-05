@@ -61,15 +61,30 @@ class Menu(AuditUserFields, models.Model):
         return f"[{self.menu_type}] {self.name}"
 
     def get_codename(self):
-        """获取菜单对应的权限 codename"""
+        """获取菜单对应的权限 codename.
+
+        Dead code today — access control runs through `roles` and `permission`
+        directly (see migration 0011's docstring), so this has no live caller.
+        Kept correct anyway, because a method a future caller will trust on
+        sight is worse dead than wrong: the path-derivation branch used to
+        return `f"{parts[0]}.read"` unconditionally — plural URL segments
+        (`/souls`, `/menus`) don't match the singular codenames they were
+        guessing at (`soul.read`, `menu.read`), and nothing caught the
+        mismatch. There is no reliable string transform for this — codename
+        prefixes are singular for some modules (`soul`, `menu`) and plural for
+        others (`realms`, `actors`) — so the fix is to check the guess against
+        what actually exists rather than trust it. Found by the Stage 7
+        design review.
+        """
         if self.permission:
             return self.permission
         path = self.path.strip("/")
         if not path:
             return None
-        parts = path.split("/")
-        if len(parts) >= 1:
-            return f"{parts[0].lower()}.read"
+        guess = f"{path.split('/')[0].lower()}.read"
+        from apps.perm.models import Permission
+        if Permission.objects.filter(codename=guess).exists():
+            return guess
         return None
 
 
