@@ -268,7 +268,24 @@ class LedgerService:
                 r.event_year, r.event_month, r.event_day, r.recorded_at, anchor
             )
             effective_weight = cls._decay_weight(r.weight, years)
-            effective_weight = round(effective_weight, 2)
+            # Round for display only, and accumulate the unrounded value.
+            #
+            # Two decimal places is the right precision to *show* a decayed
+            # weight; it is the wrong precision to add up. Rounding each
+            # record before accumulating buries a ±0.005 error per record in
+            # the total, and this endpoint's total is compared against
+            # soul.merit_score, which recalculate_soul_ledger derives by
+            # accumulating unrounded and rounding once. Twenty-five deeds of
+            # weight 1 at two years' decay is 24.5050 accumulated exactly and
+            # 24.5000 accumulated from rounded parts — 25 and 24 after the
+            # final round. The same soul's score, one point apart, depending
+            # on which function you asked.
+            #
+            # A total is not the sum of the displayed parts, so the displayed
+            # parts do not get to define it. The per-record figure below is
+            # unchanged; only the total moves, onto the same definition the
+            # denormalised field already uses.
+            displayed_weight = round(effective_weight, 2)
 
             if r.record_type == "MERIT":
                 merit += effective_weight
@@ -281,7 +298,7 @@ class LedgerService:
                 "category": r.category,
                 "description": r.description,
                 "original_weight": r.weight,
-                "effective_weight": effective_weight,
+                "effective_weight": displayed_weight,
                 "years_elapsed": round(years, 2),
                 "decay_factor": round(math.exp(-DECAY_RATE * years), 4),
                 "civilization": r.civilization,
