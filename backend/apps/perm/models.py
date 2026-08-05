@@ -255,6 +255,9 @@ DEFAULT_PERMISSIONS = [
     ("realms.read", "查看领域", "realms"),
     # actors 权限
     ("actors.read", "查看角色", "actors"),
+    # org 权限（read/manage 二元，同 ledger.*/disposition.* 的形状）
+    ("org.read", "查看组织", "org"),
+    ("org.manage", "管理组织", "org"),
     # system 权限
     ("system.settings", "系统设置", "system"),
     ("user.manage", "用户管理", "system"),
@@ -278,8 +281,17 @@ ROLE_PERMISSIONS = {
         "dispatch.read", "dispatch.manage", "dispatch.approve", "dispatch.reject", "dispatch.execute",
         "cross_judgment.read", "cross_judgment.create",
         "realms.read", "actors.read",
+        "org.read", "org.manage",
         "system.settings", "user.manage", "menu.read", "menu.manage",
         "workflow.read", "workflow.create", "workflow.update", "workflow.delete", "workflow.approve", "workflow.advance",
+        # Migration 0015 grants this to ADMIN in the database (ADMIN_GRANTS =
+        # ["workflow.escalate"]) — this static list had drifted from that intent
+        # and omitted it. The drift was live: apps/core/ws_permissions.py reads
+        # DEFAULT_PERMISSIONS (which does list workflow.escalate) as ADMIN's
+        # WebSocket permission set, while REST enforcement falls back to this
+        # dict for any unseeded codename — so ADMIN held escalate over the
+        # socket and was denied it over REST. Found by the Stage 7 design review.
+        "workflow.escalate",
     ],
     "JUDGE": [
         "soul.read", "soul.die", "soul.transition",
@@ -289,6 +301,7 @@ ROLE_PERMISSIONS = {
         "disposition.read",
         "cross_judgment.read", "cross_judgment.create",
         "realms.read", "actors.read",
+        "org.read",
         "notification.read", "menu.read",
         "workflow.read", "workflow.approve", "workflow.advance",
     ],
@@ -299,6 +312,7 @@ ROLE_PERMISSIONS = {
         "disposition.read",
         "dispatch.read", "dispatch.manage",
         "realms.read", "actors.read",
+        "org.read",
         "notification.read", "menu.read",
     ],
     # Realm lead: configures the approval flows for their own civilization.
@@ -336,12 +350,14 @@ ROLE_PERMISSIONS = {
         "dispatch.approve", "dispatch.reject", "dispatch.execute",
         "cross_judgment.read", "cross_judgment.create",
         "realms.read", "actors.read", "dashboard.read",
+        "org.read", "org.manage",
         "audit.read", "notification.read", "menu.read",
     ],
     "VIEWER": [
         "soul.read", "reincarnation.read",
         "ledger.read", "dashboard.read",
         "realms.read", "actors.read",
+        "org.read",
         "notification.read", "menu.read",
     ],
 }
