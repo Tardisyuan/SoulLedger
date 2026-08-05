@@ -62,3 +62,17 @@ export function ListSkeleton({ count = 3 }: { count?: number }) {
     </div>
   )
 }
+
+// 面板骨架屏 - 比 CardSkeleton 更重的样式,用于详情页面板
+export function SkeletonCard({ className }: SkeletonProps) {
+  return (
+    <div className={cn('bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]', className)}>
+      <Skeleton className="h-4 w-24 mb-4" />
+      <div className="space-y-2">
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-3/4" />
+      </div>
+    </div>
+  )
+}
