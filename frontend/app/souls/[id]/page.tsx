@@ -18,11 +18,11 @@ import {
   Disposition,
   Reincarnation,
   SoulEvent,
-  KarmaSummary,
-  KarmaRecord,
+  LedgerSummary,
+  LedgerRecord,
   SoulRecord,
 } from "@/lib/api";
-import { karmaApi, type KarmaInheritance } from "@/lib/api/karma";
+import { ledgerApi, type LedgerInheritance } from "@/lib/api/ledger";
 import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
@@ -60,7 +60,7 @@ export default function SoulDetailPage() {
     [t]
   );
   const [soul, setSoul] = useState<Soul | null>(null);
-  const [karma, setKarma] = useState<KarmaSummary | null>(null);
+  const [ledger, setLedger] = useState<LedgerSummary | null>(null);
   const [records, setRecords] = useState<SoulRecord[]>([]);
   const [judgments, setJudgments] = useState<Judgment[]>([]);
   const [dispositions, setDispositions] = useState<Disposition[]>([]);
@@ -78,6 +78,13 @@ export default function SoulDetailPage() {
   const updateSoulMutation = useUpdateSoul();
   const deleteSoulMutation = useDeleteSoul();
 
+  // The three cosmologies do not share a mechanic, so this card cannot share a
+  // name: CHINESE nets merit against demerit in a standing account, EGYPTIAN
+  // weighs the heart once against a threshold, EUROPEAN judges then absolves.
+  // `civilization` is UNKNOWN for a misconfigured tenant and undefined until
+  // the soul loads; both land on the neutral label.
+  const ledgerLabel = tf(`ledger.civ.${soul?.civilization}`, t("ledger.civ.UNKNOWN"));
+
   // 409 REBIRTH_NOT_APPLICABLE means this soul's cosmology is terminal
   // (Egyptian judgment ending at Aaru/Ammit, European ending at
   // Heaven/Hell/Purgatory-then-Heaven) — there is no next life, so that's
@@ -85,9 +92,9 @@ export default function SoulDetailPage() {
   // That keeps it out of retry and error-toast paths entirely.
   const inheritanceQuery = useQuery({
     queryKey: ["souls", "inheritance", id],
-    queryFn: async (): Promise<KarmaInheritance | null> => {
+    queryFn: async (): Promise<LedgerInheritance | null> => {
       try {
-        const res = await karmaApi.inheritance(id);
+        const res = await ledgerApi.inheritance(id);
         return res.data;
       } catch (e: unknown) {
         const err = e as { response?: { status?: number } };
@@ -105,7 +112,7 @@ export default function SoulDetailPage() {
     setLoading(true);
     setError("");
     try {
-      const [soulRes, karmaRes, recordsRes, judgmentRes, dispRes, reincRes, evtsRes] =
+      const [soulRes, ledgerRes, recordsRes, judgmentRes, dispRes, reincRes, evtsRes] =
         await Promise.all([
           soulsApi.get(id),
           soulsApi.karma(id),
@@ -116,7 +123,7 @@ export default function SoulDetailPage() {
           eventsApi.list({ soul: id }),
         ]);
       setSoul(soulRes.data);
-      setKarma(karmaRes.data);
+      setLedger(ledgerRes.data);
       setRecords(recordsRes.data.results || recordsRes.data);
       setJudgments(judgmentRes.data.results || judgmentRes.data);
       setDispositions(dispRes.data.results || dispRes.data);
@@ -326,7 +333,7 @@ export default function SoulDetailPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column: Soul info + Karma */}
+        {/* Left column: Soul info + ledger */}
         <div className="lg:col-span-1 space-y-6">
           {/* Soul Card */}
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
@@ -373,9 +380,9 @@ export default function SoulDetailPage() {
             )}
           </div>
 
-          {/* Karma Card */}
+          {/* Ledger Card */}
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{t("souls.karma")}</h2>
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
             {loading ? (
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
@@ -392,32 +399,32 @@ export default function SoulDetailPage() {
                 </div>
                 <Skeleton className="h-3 w-full" />
               </div>
-            ) : karma ? (
+            ) : ledger ? (
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-[hsl(var(--color-karma-merit))]">{t("souls.detail.merit")}</span>
-                  <span className="text-lg font-bold text-[hsl(var(--color-karma-merit))]">+{karma.merit_score}</span>
+                  <span className="text-sm text-[hsl(var(--color-merit))]">{t("souls.detail.merit")}</span>
+                  <span className="text-lg font-bold text-[hsl(var(--color-merit))]">+{ledger.merit_score}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.demerit")}</span>
-                  <span className="text-lg font-bold text-[hsl(var(--color-karma-demerit))]">-{karma.demerit_score}</span>
+                  <span className="text-sm text-[hsl(var(--color-demerit))]">{t("souls.detail.demerit")}</span>
+                  <span className="text-lg font-bold text-[hsl(var(--color-demerit))]">-{ledger.demerit_score}</span>
                 </div>
                 <div className="border-t border-[hsl(var(--color-hairline))] pt-2 flex justify-between items-center">
                   <span className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
-                  <span className={`text-xl font-bold ${karma.karmic_balance >= 0 ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"}`}>
-                    {karma.karmic_balance >= 0 ? "+" : ""}{karma.karmic_balance}
+                  <span className={`text-xl font-bold ${ledger.karmic_balance >= 0 ? "text-[hsl(var(--color-merit))]" : "text-[hsl(var(--color-demerit))]"}`}>
+                    {ledger.karmic_balance >= 0 ? "+" : ""}{ledger.karmic_balance}
                   </span>
                 </div>
-                <div className="text-xs text-[hsl(var(--color-ink-subtle))] text-right">{karma.record_count} {t("souls.detail.records")}</div>
+                <div className="text-xs text-[hsl(var(--color-ink-subtle))] text-right">{ledger.record_count} {t("souls.detail.records")}</div>
 
-                {/* Karma Timeline Chart */}
-                {karma.records && karma.records.length > 0 && (
+                {/* Ledger Timeline Chart */}
+                {ledger.records && ledger.records.length > 0 && (
                   <div className="mt-4">
-                    <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-2">{t("karma.timeline")} ({t("karma.time_decay")})</p>
-                    <LazySoulLineChart data={getKarmaChartData(karma.records)} />
+                    <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-2">{t("ledger.timeline")} ({t("ledger.time_decay")})</p>
+                    <LazySoulLineChart data={getLedgerChartData(ledger.records)} />
 
                     {/* Reincarnation Inheritance Preview — sourced from
-                        GET /karma/inheritance/{soul_id}/, never recomputed
+                        GET /ledger/inheritance/{soul_id}/, never recomputed
                         client-side. A 409 (terminal cosmology, no next life)
                         resolves the query to null, so this simply renders
                         nothing rather than an error or empty state. */}
@@ -426,7 +433,7 @@ export default function SoulDetailPage() {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.no_karma")}</p>
+              <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
             )}
           </div>
 
@@ -683,7 +690,7 @@ export default function SoulDetailPage() {
   );
 }
 
-function getKarmaChartData(records: KarmaRecord[]) {
+function getLedgerChartData(records: LedgerRecord[]) {
   if (!records || records.length === 0) return [];
 
   // Sort by when the deed happened, not when the row was written. Ordering by
@@ -711,22 +718,22 @@ function getKarmaChartData(records: KarmaRecord[]) {
 // truthy) — that lets TypeScript narrow it via the parameter type instead of
 // through a nullable variable carried in from outside, which would need a
 // `?? 0` that can never actually fire.
-function InheritancePanel({ data, t }: { data: KarmaInheritance; t: (key: string) => string }) {
+function InheritancePanel({ data, t }: { data: LedgerInheritance; t: (key: string) => string }) {
   const balance = data.inherited_merit - data.inherited_demerit;
   return (
     <div className="mt-3 pt-2 border-t border-[hsl(var(--color-hairline))]">
-      <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-1">{t("karma.next_life_inheritance")}</p>
+      <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-1">{t("ledger.next_life_inheritance")}</p>
       <div className="flex justify-between text-xs">
-        <span className="text-[hsl(var(--color-karma-merit))]">{t("souls.detail.merit")}: +{data.inherited_merit}</span>
-        <span className="text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.demerit")}: -{data.inherited_demerit}</span>
+        <span className="text-[hsl(var(--color-merit))]">{t("souls.detail.merit")}: +{data.inherited_merit}</span>
+        <span className="text-[hsl(var(--color-demerit))]">{t("souls.detail.demerit")}: -{data.inherited_demerit}</span>
       </div>
       <div className="flex justify-between text-xs mt-1">
         <span className="text-[hsl(var(--color-ink-subtle))]">{t("souls.detail.balance")}: </span>
-        <span className={balance >= 0 ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"}>
+        <span className={balance >= 0 ? "text-[hsl(var(--color-merit))]" : "text-[hsl(var(--color-demerit))]"}>
           {balance >= 0 ? "+" : ""}{balance}
         </span>
       </div>
-      <p className="text-[10px] text-[hsl(var(--color-ink-subtle))] mt-1">{t("karma.inheritance_note")}</p>
+      <p className="text-[10px] text-[hsl(var(--color-ink-subtle))] mt-1">{t("ledger.inheritance_note")}</p>
     </div>
   );
 }

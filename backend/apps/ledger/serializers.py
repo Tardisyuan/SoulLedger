@@ -1,10 +1,10 @@
 """
-REST serializers for Karma app.
+REST serializers for Ledger app.
 """
 from rest_framework import serializers
 
 
-class KarmaBalanceSerializer(serializers.Serializer):
+class LedgerBalanceSerializer(serializers.Serializer):
     soul_id = serializers.UUIDField()
     soul_name = serializers.CharField()
     merit_score = serializers.IntegerField()
@@ -20,7 +20,7 @@ class HistoricalDateSummarySerializer(serializers.Serializer):
     day = serializers.IntegerField(allow_null=True)
 
 
-class KarmaRecordSerializer(serializers.Serializer):
+class LedgerRecordSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     type = serializers.CharField()
     category = serializers.CharField()
@@ -35,17 +35,17 @@ class KarmaRecordSerializer(serializers.Serializer):
     is_milestone = serializers.BooleanField()
 
 
-class KarmaSummarySerializer(serializers.Serializer):
+class LedgerSummarySerializer(serializers.Serializer):
     soul_id = serializers.UUIDField()
     soul_name = serializers.CharField()
     merit_score = serializers.IntegerField()
     demerit_score = serializers.IntegerField()
     karmic_balance = serializers.IntegerField()
     record_count = serializers.IntegerField()
-    records = KarmaRecordSerializer(many=True)
+    records = LedgerRecordSerializer(many=True)
 
 
-class EffectiveKarmaSerializer(serializers.Serializer):
+class EffectiveLedgerSerializer(serializers.Serializer):
     soul_id = serializers.UUIDField()
     effective_merit = serializers.IntegerField()
     effective_demerit = serializers.IntegerField()
@@ -53,7 +53,7 @@ class EffectiveKarmaSerializer(serializers.Serializer):
 
 
 class ReincarnationInheritanceSerializer(serializers.Serializer):
-    """200 body of GET /karma/inheritance/{soul_id}/.
+    """200 body of GET /ledger/inheritance/{soul_id}/.
 
     Only rebirth-capable civilizations get this shape; a terminal cosmology
     answers 409 with RebirthNotApplicableSerializer instead.
@@ -65,7 +65,7 @@ class ReincarnationInheritanceSerializer(serializers.Serializer):
 
 
 class RebirthNotApplicableSerializer(serializers.Serializer):
-    """409 body of GET /karma/inheritance/{soul_id}/ for a terminal cosmology.
+    """409 body of GET /ledger/inheritance/{soul_id}/ for a terminal cosmology.
 
     Egyptian and European souls have no next life, so there is nothing to
     inherit into and no number that would be honest to return. ``code`` is the

@@ -2,7 +2,7 @@
 M4: Tenant-aware Frontend Integration Tests
 
 Tests tenant isolation, login response with tenant info,
-karma stats endpoint, and settings endpoints.
+ledger stats endpoint, and settings endpoints.
 
 Uses fixtures from conftest.py to avoid rate limiting on login.
 """
@@ -130,18 +130,18 @@ class TestTenantHeaderInjection:
         assert "CHINESE" in cn_civilizations
 
 
-class TestKarmaStatsEndpoint:
-    """Test karma stats endpoint requires auth and returns data."""
+class TestLedgerStatsEndpoint:
+    """Test ledger stats endpoint requires auth and returns data."""
 
-    def test_karma_stats_requires_auth(self, api_client, db):
-        """Karma stats endpoint should require authentication."""
-        resp = api_client.get("/api/v1/karma/stats/overview/")
+    def test_ledger_stats_requires_auth(self, api_client, db):
+        """Ledger stats endpoint should require authentication."""
+        resp = api_client.get("/api/v1/ledger/stats/overview/")
         assert resp.status_code == 401, f"Expected 401, got {resp.status_code}"
 
-    def test_karma_stats_with_valid_token(self, api_client, db, auth_headers):
-        """Karma stats endpoint should work with valid token."""
+    def test_ledger_stats_with_valid_token(self, api_client, db, auth_headers):
+        """Ledger stats endpoint should work with valid token."""
         resp = api_client.get(
-            "/api/v1/karma/stats/overview/",
+            "/api/v1/ledger/stats/overview/",
             HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
         )
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
@@ -149,10 +149,10 @@ class TestKarmaStatsEndpoint:
         # Should have stats data
         assert "total_souls" in data, f"Missing 'total_souls' in response: {data.keys()}"
 
-    def test_karma_stats_includes_tenant_breakdown(self, api_client, db, auth_headers):
-        """Karma stats should include per-tenant breakdown."""
+    def test_ledger_stats_includes_tenant_breakdown(self, api_client, db, auth_headers):
+        """Ledger stats should include per-tenant breakdown."""
         resp = api_client.get(
-            "/api/v1/karma/stats/overview/",
+            "/api/v1/ledger/stats/overview/",
             HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
         )
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
@@ -202,8 +202,8 @@ class TestTenantIsolation:
 class TestSettingsEndpoints:
     """Test that settings-related endpoints exist."""
 
-    def test_karma_balance_endpoint_exists(self, api_client, db, auth_headers):
-        """Karma balance endpoint should be accessible."""
+    def test_ledger_balance_endpoint_exists(self, api_client, db, auth_headers):
+        """Ledger balance endpoint should be accessible."""
         # Get first soul
         resp = api_client.get(
             "/api/v1/souls/",
@@ -214,7 +214,7 @@ class TestSettingsEndpoints:
             if souls:
                 soul_id = souls[0].get("id")
                 balance_resp = api_client.get(
-                    f"/api/v1/karma/balance/{soul_id}/",
+                    f"/api/v1/ledger/balance/{soul_id}/",
                     HTTP_AUTHORIZATION=auth_headers["HTTP_AUTHORIZATION"],
                 )
                 assert balance_resp.status_code in [200, 404]

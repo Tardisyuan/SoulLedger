@@ -1,12 +1,12 @@
 """
-Tests for ReincarnationService — karma carryover and the rebirth gate.
+Tests for ReincarnationService — ledger carryover and the rebirth gate.
 
 These cover the service, not the API surface; /api/v1/reincarnation/ view
 tests live in tests/test_reincarnation_api.py.
 """
 import pytest
 
-from apps.karma.services import KarmaService, RebirthNotApplicable
+from apps.ledger.services import LedgerService, RebirthNotApplicable
 from apps.reincarnation.services import ReincarnationService
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
@@ -27,13 +27,13 @@ def _soul_ready_for_rebirth(tenant, merit, demerit):
     )
 
 
-def _soul_with_karma_records(tenant, merit_weight, demerit_weight, death_year=2000):
-    """A dead soul whose effective karma comes from real SoulRecords dated
+def _soul_with_ledger_records(tenant, merit_weight, demerit_weight, death_year=2000):
+    """A dead soul whose effective ledger comes from real SoulRecords dated
     at death (decay_factor exactly 1.0), not from a merit_score/demerit_score
     set by hand — complete_rebirth now carries over what the records say,
     not the denormalised fields, so tests that want an exact carryover
     number have to earn it the same way. Mirrors
-    apps.karma.tests.TestInheritanceMeritDemeritSplit's setup.
+    apps.ledger.tests.TestInheritanceMeritDemeritSplit's setup.
     """
     soul = Soul.objects.create(
         name="Carryover Soul",
@@ -55,11 +55,11 @@ def _soul_with_karma_records(tenant, merit_weight, demerit_weight, death_year=20
 
 
 @pytest.mark.django_db
-class TestKarmaCarryover:
+class TestLedgerCarryover:
     """The rebirth math and the reporting endpoint must share one basis."""
 
     def test_merit_thins_and_demerit_carries_in_full(self):
-        soul = _soul_with_karma_records(_tenant("CN_DIYU"), merit_weight=100, demerit_weight=100)
+        soul = _soul_with_ledger_records(_tenant("CN_DIYU"), merit_weight=100, demerit_weight=100)
         ReincarnationService.complete_rebirth(soul=soul, new_identity="Reborn")
         soul.refresh_from_db()
         assert soul.merit_score == 20
@@ -69,7 +69,7 @@ class TestKarmaCarryover:
     def test_demerit_does_not_erode_across_cycles(self):
         """0.2 → 0.04 → 0.008 used to let three lives erase anything."""
         tenant = _tenant("CN_DIYU")
-        soul = _soul_with_karma_records(tenant, merit_weight=0, demerit_weight=1000)
+        soul = _soul_with_ledger_records(tenant, merit_weight=0, demerit_weight=1000)
         for cycle in range(3):
             soul.current_state = SoulState.REINCARNATING
             # complete_rebirth clears death_year on the way out (rebirth
@@ -91,7 +91,7 @@ class TestKarmaCarryover:
         Denormalised merit_score/demerit_score are forced out of sync with
         the records here (bypassing Soul.save(), the same way a soft-deleted
         or edited record — which doesn't re-trigger SoulRecord's own
-        recalculation hook — or a stale nightly karma.recalculate_all run
+        recalculation hook — or a stale nightly ledger.recalculate_all run
         would leave them) specifically because that drift is what the old
         complete_rebirth read from. Against the pre-fix code this test fails:
         it multiplied the stale 9999/9999 by INHERITANCE_MERIT/DEMERIT
@@ -118,7 +118,7 @@ class TestKarmaCarryover:
         assert soul.merit_score == 9999
         assert soul.demerit_score == 9999
 
-        reported = KarmaService.get_reincarnation_inheritance(soul)
+        reported = LedgerService.get_reincarnation_inheritance(soul)
         assert reported["inherited_merit"] == 20
         assert reported["inherited_demerit"] == 50
 
@@ -149,7 +149,7 @@ class TestRebirthGate:
         assert excinfo.value.detail["code"] == "REBIRTH_NOT_APPLICABLE"
 
     def test_gate_fires_before_anything_is_written(self):
-        """No Reincarnation row, no karma change, no state change."""
+        """No Reincarnation row, no ledger change, no state change."""
         from apps.reincarnation.models import Reincarnation
 
         soul = _soul_ready_for_rebirth(_tenant("EG_DUAT"), merit=10, demerit=50)

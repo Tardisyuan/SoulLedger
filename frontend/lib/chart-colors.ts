@@ -36,12 +36,13 @@ export const REALM_COLORS: Record<string, string> = {
 };
 
 /**
- * Fills for series that carry no semantic meaning of their own (karma buckets,
- * per-realm counts). Named by what they chart so call sites stop reaching for
- * raw hex, and `neutral` covers the `STATE_COLORS[x] || …` fallbacks.
+ * Fills for series that carry no semantic meaning of their own (balance
+ * buckets, per-realm counts). Named by what they chart so call sites stop
+ * reaching for raw hex, and `neutral` covers the `STATE_COLORS[x] || …`
+ * fallbacks.
  */
 export const CHART_SERIES = {
-  karma: "hsl(271 81% 56%)",
+  balance: "hsl(271 81% 56%)",
   realm: "hsl(217 91% 60%)",
   neutral: "hsl(220 6% 55%)",
 } as const;

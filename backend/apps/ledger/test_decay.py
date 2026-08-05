@@ -1,23 +1,23 @@
 """
-Time-decay tests for KarmaService.
+Time-decay tests for LedgerService.
 
-Split out of apps/karma/tests.py (which covers the REST endpoints) to keep
+Split out of apps/ledger/tests.py (which covers the REST endpoints) to keep
 both files under the 500-line limit.
 """
 import pytest
 from django.utils import timezone
 
-from apps.karma.services import KarmaService
+from apps.ledger.services import LedgerService
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
 from apps.tenants.models import Tenant
 
 
 @pytest.mark.django_db
-class TestKarmaDecayWithBCEDates:
+class TestLedgerDecayWithBCEDates:
     """Time-decay calculation for records with a BCE event_year.
 
-    See apps.souls.dates.year_span and KarmaService._get_record_age_years:
+    See apps.souls.dates.year_span and LedgerService._get_record_age_years:
     there is no year 0, so a deed in 612 BCE (-612) and a death in 580 BCE
     are 32 years apart, and 612 BCE to 2 CE is 613 years, not 614.
     """
@@ -25,7 +25,7 @@ class TestKarmaDecayWithBCEDates:
     @pytest.fixture(autouse=True)
     def setup(self, db):
         self.tenant = Tenant.objects.get_or_create(
-            code="KBC_T1", defaults={"display_name": "Karma BCE Tenant"}
+            code="KBC_T1", defaults={"display_name": "Ledger BCE Tenant"}
         )[0]
         self.soul = Soul.objects.create(
             name="Ancient Egyptian Soul",
@@ -39,7 +39,7 @@ class TestKarmaDecayWithBCEDates:
             soul=self.soul, record_type="MERIT", civilization="EGYPTIAN",
             description="Built a temple", weight=100, event_year=-612,
         )
-        summary = KarmaService.get_karmic_summary(self.soul)
+        summary = LedgerService.get_ledger_summary(self.soul)
         assert len(summary["records"]) == 1
         record = summary["records"][0]
         assert record["event_date"] == {"year": -612, "month": None, "day": None}
@@ -57,7 +57,7 @@ class TestKarmaDecayWithBCEDates:
             soul=soul, record_type="MERIT", civilization="EGYPTIAN",
             description="Long-lived deed", weight=100, event_year=-612,
         )
-        summary = KarmaService.get_karmic_summary(soul)
+        summary = LedgerService.get_ledger_summary(soul)
         assert summary["records"][0]["years_elapsed"] == 613.0
 
     def test_bce_and_ce_records_both_decay(self):
@@ -69,7 +69,7 @@ class TestKarmaDecayWithBCEDates:
             soul=self.soul, record_type="DEMERIT", civilization="EGYPTIAN",
             description="Recent deed", weight=50, event_year=2020, event_month=1, event_day=1,
         )
-        result = KarmaService.recalculate_soul_karma(self.soul)
+        result = LedgerService.recalculate_soul_ledger(self.soul)
         # Nothing should blow up crossing the BCE/CE boundary. The 2020 CE
         # record post-dates this soul's death by two and a half millennia and
         # is clamped to a span of 0, so it keeps its full weight rather than
@@ -91,7 +91,7 @@ class TestDecayAnchoredToDeath:
     @pytest.fixture(autouse=True)
     def setup(self, db):
         self.tenant = Tenant.objects.get_or_create(
-            code="KDA_T1", defaults={"display_name": "Karma Anchor Tenant"}
+            code="KDA_T1", defaults={"display_name": "Ledger Anchor Tenant"}
         )[0]
 
     def _soul_who_lived_seventy_years(self, death_year):
@@ -116,7 +116,7 @@ class TestDecayAnchoredToDeath:
     def test_same_life_same_ledger_in_every_era(self, death_year):
         """612 BCE, 1500 CE and 2020 CE must produce identical decay."""
         soul = self._soul_who_lived_seventy_years(death_year)
-        summary = KarmaService.get_karmic_summary(soul)
+        summary = LedgerService.get_ledger_summary(soul)
         by_deed = {r["description"]: r for r in summary["records"]}
 
         early, late = by_deed["deed at 20"], by_deed["deed at 65"]
@@ -141,7 +141,7 @@ class TestDecayAnchoredToDeath:
             soul=soul, record_type="MERIT", civilization="CHINESE",
             description="Ten years back", weight=100, event_year=this_year - 10,
         )
-        record = KarmaService.get_karmic_summary(soul)["records"][0]
+        record = LedgerService.get_ledger_summary(soul)["records"][0]
         assert 9.0 <= record["years_elapsed"] <= 11.0
         assert 0.89 <= record["decay_factor"] <= 0.92
 
@@ -155,7 +155,7 @@ class TestDecayAnchoredToDeath:
             soul=soul, record_type="DEMERIT", civilization="CHINESE",
             description="Recorded 50 years too late", weight=100, event_year=1950,
         )
-        record = KarmaService.get_karmic_summary(soul)["records"][0]
+        record = LedgerService.get_ledger_summary(soul)["records"][0]
         assert record["years_elapsed"] == 0.0
         assert record["decay_factor"] == 1.0
         # Un-clamped this would have been 100 × e^(0.5) ≈ 164.87.
@@ -172,7 +172,7 @@ class TestDecayAnchoredToDeath:
             soul=soul, record_type="MERIT", civilization="CHINESE",
             description="Twenty years back", weight=100, event_year=this_year - 20,
         )
-        record = KarmaService.get_karmic_summary(soul)["records"][0]
+        record = LedgerService.get_ledger_summary(soul)["records"][0]
         assert 19.0 <= record["years_elapsed"] <= 21.0
 
     def test_record_without_an_event_year_respects_the_death_anchor(self):
@@ -185,7 +185,7 @@ class TestDecayAnchoredToDeath:
             soul=soul, record_type="MERIT", civilization="CHINESE",
             description="Undated deed", weight=100,
         )
-        record = KarmaService.get_karmic_summary(soul)["records"][0]
+        record = LedgerService.get_ledger_summary(soul)["records"][0]
         assert record["event_date"] is None
         # recorded_at is now(), long after an 1850 death, so the span clamps
         # to 0 rather than running the clock from today back to the deed.
@@ -195,6 +195,6 @@ class TestDecayAnchoredToDeath:
     def test_dead_souls_scores_do_not_drift_with_the_calendar(self):
         """Judgments must be reproducible: the same soul, the same number."""
         soul = self._soul_who_lived_seventy_years(1500)
-        first = KarmaService.recalculate_soul_karma(soul)
-        second = KarmaService.recalculate_soul_karma(soul)
+        first = LedgerService.recalculate_soul_ledger(soul)
+        second = LedgerService.recalculate_soul_ledger(soul)
         assert first["merit_score"] == second["merit_score"] == 156

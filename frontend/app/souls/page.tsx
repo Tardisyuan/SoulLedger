@@ -32,8 +32,8 @@ export default function SoulsPage() {
   const [civilizationFilter, setCivilizationFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [karmaMin, setKarmaMin] = useState("");
-  const [karmaMax, setKarmaMax] = useState("");
+  const [balanceMin, setBalanceMin] = useState("");
+  const [balanceMax, setBalanceMax] = useState("");
   const [ordering, setOrdering] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -51,8 +51,8 @@ export default function SoulsPage() {
   if (stateFilter) params.state = stateFilter;
   if (civilizationFilter) params.civilization = civilizationFilter;
   if (search) params.search = search;
-  if (karmaMin) params.karma_min = parseInt(karmaMin, 10);
-  if (karmaMax) params.karma_max = parseInt(karmaMax, 10);
+  if (balanceMin) params.karma_min = parseInt(balanceMin, 10);
+  if (balanceMax) params.karma_max = parseInt(balanceMax, 10);
   if (ordering) params.ordering = ordering;
 
   // TanStack Query — automatic caching, background refetch, loading/error states.
@@ -80,15 +80,15 @@ export default function SoulsPage() {
     { value: "EGYPTIAN", label: t("souls.civilizations.EGYPTIAN") },
   ];
 
-  const isFiltered = Boolean(search || stateFilter || civilizationFilter || karmaMin || karmaMax);
+  const isFiltered = Boolean(search || stateFilter || civilizationFilter || balanceMin || balanceMax);
 
   const resetFilters = () => {
     setSearchInput("");
     setSearch("");
     setStateFilter("");
     setCivilizationFilter("");
-    setKarmaMin("");
-    setKarmaMax("");
+    setBalanceMin("");
+    setBalanceMax("");
     setPage(1);
   };
 
@@ -150,20 +150,20 @@ export default function SoulsPage() {
           <div className="flex items-center gap-1">
             <input
               type="number"
-              placeholder={t("souls.karma_min")}
-              aria-label={`${t("souls.karma_range")} — ${t("souls.karma_min")}`}
-              value={karmaMin}
-              onChange={(e) => setKarmaMin(e.target.value)}
+              placeholder={t("souls.balance_min")}
+              aria-label={`${t("souls.balance_range")} — ${t("souls.balance_min")}`}
+              value={balanceMin}
+              onChange={(e) => setBalanceMin(e.target.value)}
               onBlur={() => setPage(1)}
               className="w-20 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-2 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
             <span className="text-[hsl(var(--color-ink-muted))] text-sm">-</span>
             <input
               type="number"
-              placeholder={t("souls.karma_max")}
-              aria-label={`${t("souls.karma_range")} — ${t("souls.karma_max")}`}
-              value={karmaMax}
-              onChange={(e) => setKarmaMax(e.target.value)}
+              placeholder={t("souls.balance_max")}
+              aria-label={`${t("souls.balance_range")} — ${t("souls.balance_max")}`}
+              value={balanceMax}
+              onChange={(e) => setBalanceMax(e.target.value)}
               onBlur={() => setPage(1)}
               className="w-20 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-2 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
@@ -176,7 +176,7 @@ export default function SoulsPage() {
             { key: "name", header: t("souls.name"), sortable: true },
             { key: "civilization", header: t("souls.civilization") },
             { key: "state", header: t("souls.state") },
-            { key: "karmic_balance", header: t("souls.karma"), sortable: true, align: "right" },
+            { key: "karmic_balance", header: t("souls.balance"), sortable: true, align: "right" },
             { key: "death", header: t("souls.death") },
             { key: "action", header: t("souls.action") },
           ]}

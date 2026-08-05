@@ -9,7 +9,7 @@ import {
   type Soul,
   type SoulInput,
   type Judgment,
-  type KarmaSummary,
+  type LedgerSummary,
 } from "@/lib/api";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -40,12 +40,12 @@ export function useSoul(id: string) {
   });
 }
 
-export function useSoulKarma(id: string) {
+export function useSoulLedger(id: string) {
   return useQuery({
-    queryKey: soulKeys.karma(id),
+    queryKey: soulKeys.ledger(id),
     queryFn: async () => {
       const res = await soulsApi.karma(id);
-      return res.data as KarmaSummary;
+      return res.data as LedgerSummary;
     },
     enabled: !!id,
     staleTime: 30_000,
@@ -113,7 +113,7 @@ export function useAddSoulRecord() {
       soulsApi.addRecord(id, data),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: soulKeys.detail(vars.id) });
-      qc.invalidateQueries({ queryKey: soulKeys.karma(vars.id) });
+      qc.invalidateQueries({ queryKey: soulKeys.ledger(vars.id) });
     },
     onError: () => {
       showToast(t("souls.detail.failed") || "Operation failed", "error");

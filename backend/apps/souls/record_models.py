@@ -161,11 +161,11 @@ class SoulRecord(AuditUserFields, models.Model):
     @classmethod
     def _flush_karma_recalculations(cls):
         """Run karma recalculation once per unique soul."""
-        from apps.karma.services import KarmaService
+        from apps.ledger.services import LedgerService
         for soul_id in cls._deferred_souls:
             try:
                 soul = Soul.objects.get(pk=soul_id)
-                KarmaService.recalculate_soul_karma(soul)
+                LedgerService.recalculate_soul_ledger(soul)
             except Soul.DoesNotExist:
                 pass
 
@@ -184,5 +184,5 @@ class SoulRecord(AuditUserFields, models.Model):
 
     def _update_soul_karma(self):
         """Recalculate karma. Uses cache debounce only for bulk operations."""
-        from apps.karma.services import KarmaService
-        KarmaService.recalculate_soul_karma(self.soul)
+        from apps.ledger.services import LedgerService
+        LedgerService.recalculate_soul_ledger(self.soul)

@@ -11,7 +11,7 @@ from django.test import TransactionTestCase
 from apps.audit.models import AuditAction, AuditLog
 from apps.dispatch.models import DispatchRecord
 from apps.judgment.models import Judgment, JudgmentMethod
-from apps.karma.models import RecordType, SoulRecord
+from apps.ledger.models import RecordType, SoulRecord
 from apps.souls.models import Soul
 
 
@@ -69,16 +69,16 @@ class TestJudgmentAudit(TransactionTestCase):
 
 
 @pytest.mark.django_db(transaction=True)
-class TestKarmaAudit(TransactionTestCase):
-    """Test audit logs for Karma operations."""
+class TestLedgerAudit(TransactionTestCase):
+    """Test audit logs for Ledger operations."""
 
     def test_create_soul_record_generates_audit(self):
         """SoulRecord now inherits AuditUserFields, so audit log IS created."""
         import uuid
 
         from apps.tenants.models import Tenant
-        tenant = Tenant.objects.create(code=f"AUDIT_KARMA_{uuid.uuid4().hex[:8]}", display_name="Audit Karma")
-        soul = Soul.objects.create(name="KarmaSoul", tenant=tenant)
+        tenant = Tenant.objects.create(code=f"AUDIT_LEDGER_{uuid.uuid4().hex[:8]}", display_name="Audit Ledger")
+        soul = Soul.objects.create(name="LedgerSoul", tenant=tenant)
         SoulRecord.objects.create(
             soul=soul, tenant=tenant,
             record_type=RecordType.MERIT,

@@ -2,7 +2,7 @@
 Reincarnation service — executes rebirth cycles.
 """
 from apps.disposition.models import Disposition
-from apps.karma.services import KarmaService
+from apps.ledger.services import LedgerService
 from apps.souls.models import Soul, SoulState
 
 
@@ -41,11 +41,11 @@ class ReincarnationService:
         """
         Complete a reincarnation cycle:
         1. Create Reincarnation record
-        2. Apply karma carryover to the soul
+        2. Apply ledger carryover to the soul
         3. If memory reset: clear name/description
         4. Transition soul back to ALIVE with new identity
 
-        Raises KarmaService.RebirthNotApplicable (409) for a soul whose
+        Raises LedgerService.RebirthNotApplicable (409) for a soul whose
         cosmology is terminal.
         """
         from django.db import transaction
@@ -54,10 +54,10 @@ class ReincarnationService:
         from apps.reincarnation.models import Reincarnation
 
         # Gate the machinery, not only the reporting endpoint. An Egyptian
-        # soul that /karma/inheritance/ correctly refuses to answer for must
+        # soul that /ledger/inheritance/ correctly refuses to answer for must
         # not still be reincarnatable through this door — Aaru and Ammit are
         # both ends of the road, and so are Heaven and Hell.
-        KarmaService.assert_rebirth_capable(soul)
+        LedgerService.assert_rebirth_capable(soul)
 
         # Determine target realm from disposition
         target_realm = ""
@@ -87,11 +87,11 @@ class ReincarnationService:
                 # Partial reset: keep birth_name, clear description
                 soul.description = ""
 
-            # Apply karma carryover. This used to multiply soul.merit_score /
+            # Apply ledger carryover. This used to multiply soul.merit_score /
             # soul.demerit_score directly — the *denormalised* fields that
-            # only recalculate_soul_karma writes, refreshed live on every new
+            # only recalculate_soul_ledger writes, refreshed live on every new
             # SoulRecord but otherwise only by the nightly
-            # karma.recalculate_all task. GET /karma/inheritance/<soul_id>/
+            # ledger.recalculate_all task. GET /ledger/inheritance/<soul_id>/
             # (get_reincarnation_inheritance) never reads those fields at
             # all; it recomputes from the soul's records every time. The two
             # bases agreed only when the denormalised fields happened to be
@@ -102,11 +102,11 @@ class ReincarnationService:
             # re-deriving the same arithmetic makes this the same call the
             # endpoint makes — not just the same inputs, the same function —
             # so there is no way for the two to drift again, including
-            # through get_karmic_summary's 5-minute Redis cache: whichever
+            # through get_ledger_summary's 5-minute Redis cache: whichever
             # value (fresh or cached) the endpoint would hand back right now
             # is exactly the value applied here. A soul with no records at
             # all inherits 0/0, same as the endpoint would report for it.
-            inheritance = KarmaService.get_reincarnation_inheritance(soul)
+            inheritance = LedgerService.get_reincarnation_inheritance(soul)
             soul.merit_score = inheritance["inherited_merit"]
             soul.demerit_score = inheritance["inherited_demerit"]
 

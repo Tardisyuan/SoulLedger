@@ -34,10 +34,10 @@ class TestGuardianRoleEnforcement:
         }, format="json")
         assert response.status_code == 201  # Current broken state: should be 403
 
-    def test_guardian_can_read_karma(self, api_client, guardian_user, cn_tenant):
+    def test_guardian_can_read_ledger(self, api_client, guardian_user, cn_tenant):
         """Overview stats endpoint has hardcoded ADMIN check; GUARDIAN gets 403."""
         client = _get_auth_client(api_client, guardian_user)
-        response = client.get("/api/v1/karma/stats/overview/")
+        response = client.get("/api/v1/ledger/stats/overview/")
         assert response.status_code == 403
 
     def test_guardian_can_read_dispatch(self, api_client, guardian_user, cn_tenant):

@@ -10,7 +10,7 @@ export const soulKeys = {
   all: ["souls"] as const,
   list: (params?: Record<string, string | number | undefined>) => [...soulKeys.all, "list", params] as const,
   detail: (id: string) => [...soulKeys.all, "detail", id] as const,
-  karma: (id: string) => [...soulKeys.all, "karma", id] as const,
+  ledger: (id: string) => [...soulKeys.all, "ledger", id] as const,
 };
 
 export const judgmentKeys = {

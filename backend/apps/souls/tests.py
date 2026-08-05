@@ -367,7 +367,7 @@ class TestCivilizationGateDoesNotFailOpen:
     def test_unknown_civilization_is_not_rebirth_capable(self, db):
         """The point of the whole fix. A soul whose cosmology nobody has
         configured must not be handed a next life on the strength of a typo."""
-        from apps.karma.services import REBIRTH_CAPABLE_CIVILIZATIONS
+        from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS
 
         assert self._soul_in("MISCONFIGURED").civilization not in REBIRTH_CAPABLE_CIVILIZATIONS
 

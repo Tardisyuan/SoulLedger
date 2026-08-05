@@ -1,6 +1,6 @@
 import { api } from "./client";
 
-export interface KarmaStatsOverview {
+export interface LedgerStatsOverview {
   total_souls: number;
   state_distribution: { state: string; label: string; count: number }[];
   tenants: {
@@ -28,7 +28,7 @@ export interface KarmaStatsOverview {
   }[];
 }
 
-export interface KarmaRecord {
+export interface LedgerRecord {
   id: string;
   soul: string;
   type?: string;
@@ -42,17 +42,17 @@ export interface KarmaRecord {
   create_time?: string;
 }
 
-export interface KarmaSummary {
+export interface LedgerSummary {
   soul_id: string;
   merit_score: number;
   demerit_score: number;
   karmic_balance: number;
   record_count?: number;
-  records: KarmaRecord[];
+  records: LedgerRecord[];
 }
 
-// 200 body of GET /karma/inheritance/{soul_id}/.
-export interface KarmaInheritance {
+// 200 body of GET /ledger/inheritance/{soul_id}/.
+export interface LedgerInheritance {
   soul_id: string;
   inherited_merit: number;
   inherited_demerit: number;
@@ -62,18 +62,18 @@ export interface KarmaInheritance {
 // 409 body — the soul's cosmology is terminal (e.g. Egyptian judgment ending
 // at Aaru/Ammit, or European judgment ending at Heaven/Hell/Purgatory-then-
 // Heaven), so there is no next life to inherit into.
-export interface KarmaInheritanceNotApplicable {
+export interface LedgerInheritanceNotApplicable {
   code: string;
   civilization: string;
   detail: string;
 }
 
-export const karmaApi = {
-  balance: (soulId: number) => api.get(`/karma/balance/${soulId}/`),
-  effective: (soulId: number) => api.get(`/karma/effective/${soulId}/`),
-  recalculate: (soulId: number) => api.post(`/karma/calculate/${soulId}/`),
+export const ledgerApi = {
+  balance: (soulId: number) => api.get(`/ledger/balance/${soulId}/`),
+  effective: (soulId: number) => api.get(`/ledger/effective/${soulId}/`),
+  recalculate: (soulId: number) => api.post(`/ledger/calculate/${soulId}/`),
   // Note the ordering: inheritance/ comes before the soul id in the URLconf.
-  inheritance: (soulId: string) => api.get<KarmaInheritance>(`/karma/inheritance/${soulId}/`),
-  statsOverview: () => api.get<KarmaStatsOverview>("/karma/stats/overview/"),
-  exportStats: (params?: Record<string, string>) => api.get("/karma/stats/export/", { params, responseType: "blob" }),
+  inheritance: (soulId: string) => api.get<LedgerInheritance>(`/ledger/inheritance/${soulId}/`),
+  statsOverview: () => api.get<LedgerStatsOverview>("/ledger/stats/overview/"),
+  exportStats: (params?: Record<string, string>) => api.get("/ledger/stats/export/", { params, responseType: "blob" }),
 };

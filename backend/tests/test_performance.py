@@ -4,7 +4,7 @@ Verifies query counts and response times for critical endpoints.
 """
 import pytest
 
-from apps.karma.models import RecordType, SoulRecord
+from apps.ledger.models import RecordType, SoulRecord
 from apps.souls.models import Soul, SoulState
 
 

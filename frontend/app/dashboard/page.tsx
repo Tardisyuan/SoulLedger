@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { karmaApi, KarmaStatsOverview } from "@/lib/api";
+import { ledgerApi, LedgerStatsOverview } from "@/lib/api";
 import {
   LazyDashboardPieChart,
   LazyBarChart,
@@ -17,7 +17,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { STATE_COLORS, CIVILIZATION_COLORS, REALM_COLORS, CHART_SERIES } from "@/lib/chart-colors";
 
-type DashboardTab = "overview" | "karma";
+type DashboardTab = "overview" | "ledger";
 
 /** Parses karma_distribution bucket labels ("< -50", "-5 to 5", "> 50", ...) into a midpoint. */
 function bucketMidpoint(label: string): number {
@@ -33,12 +33,12 @@ function DashboardContent() {
   const { showToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab: DashboardTab = searchParams.get("tab") === "karma" ? "karma" : "overview";
+  const activeTab: DashboardTab = searchParams.get("tab") === "ledger" ? "ledger" : "overview";
 
-  const { data: stats, isLoading: loading, error: queryError } = useQuery<KarmaStatsOverview>({
+  const { data: stats, isLoading: loading, error: queryError } = useQuery<LedgerStatsOverview>({
     queryKey: ["dashboard", "stats"],
     queryFn: async () => {
-      const res = await karmaApi.statsOverview();
+      const res = await ledgerApi.statsOverview();
       return res.data;
     },
     staleTime: 60_000,
@@ -61,11 +61,11 @@ function DashboardContent() {
 
   const handleExport = async () => {
     try {
-      const response = await karmaApi.exportStats();
+      const response = await ledgerApi.exportStats();
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "souls_karma_export.csv");
+      link.setAttribute("download", "souls_ledger_export.csv");
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -94,7 +94,7 @@ function DashboardContent() {
 
   const tabs: { key: DashboardTab; label: string }[] = [
     { key: "overview", label: t("dashboard.tab_overview") },
-    { key: "karma", label: t("admin.karma_stats") },
+    { key: "ledger", label: t("admin.ledger_stats") },
   ];
 
   // The API hands back an English `label` per state ("Alive", "Judging", ...).
@@ -127,8 +127,8 @@ function DashboardContent() {
 
   const formatTimestamp = (ts: string) => formatDateTime(ts);
 
-  // Karma-tab-only derived data (admin/stats page's unique cards)
-  const avgKarma = stats
+  // Ledger-tab-only derived data (admin/stats page's unique cards)
+  const avgBalance = stats
     ? stats.karma_distribution.reduce((sum, k) => sum + bucketMidpoint(k.label) * k.count, 0) /
       (stats.total_souls || 1)
     : 0;
@@ -155,8 +155,8 @@ function DashboardContent() {
                 {tabItem.label}
               </button>
             );
-            // The karma tab surfaces admin-only stats — hide the tab itself from non-admins.
-            return tabItem.key === "karma" ? (
+            // The ledger tab surfaces admin-only stats — hide the tab itself from non-admins.
+            return tabItem.key === "ledger" ? (
               <RequirePermission key={tabItem.key} permissions="ADMIN">
                 {button}
               </RequirePermission>
@@ -258,17 +258,17 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* Karma distribution and Souls by Realm */}
+            {/* Balance distribution and Souls by Realm */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Karma distribution */}
+              {/* Balance distribution */}
               <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-                <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">{t("dashboard.karma_distribution")}</h2>
+                <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">{t("dashboard.balance_distribution")}</h2>
                 {loading ? (
                   <div className="h-[180px] flex items-center justify-center">
                     <Skeleton className="h-full w-full" />
                   </div>
                 ) : (
-                  <LazyBarChart data={stats?.karma_distribution ?? []} dataKey="count" fill={CHART_SERIES.karma} height={180} name={t("dashboard.chart_souls")} />
+                  <LazyBarChart data={stats?.karma_distribution ?? []} dataKey="count" fill={CHART_SERIES.balance} height={180} name={t("dashboard.chart_souls")} />
                 )}
               </div>
 
@@ -357,14 +357,14 @@ function DashboardContent() {
           </>
         ) : (
           <RequirePermission permissions="ADMIN" fallback={<PermissionDenied />}>
-            {/* Karma-only cards that don't already appear on the Overview tab */}
+            {/* Ledger-only cards that don't already appear on the Overview tab */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-                <div className="text-sm text-[hsl(var(--color-ink-muted))] uppercase tracking-wide">{t("admin.avg_karma")}</div>
+                <div className="text-sm text-[hsl(var(--color-ink-muted))] uppercase tracking-wide">{t("admin.avg_balance")}</div>
                 {loading ? (
                   <Skeleton className="h-8 w-24 mt-2" />
                 ) : (
-                  <div className="text-3xl font-bold text-[hsl(var(--color-accent))] mt-2">{avgKarma.toFixed(2)}</div>
+                  <div className="text-3xl font-bold text-[hsl(var(--color-accent))] mt-2">{avgBalance.toFixed(2)}</div>
                 )}
               </div>
               <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
@@ -388,13 +388,13 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* Top Karma Souls Table */}
+            {/* Top Souls by Balance Table */}
             <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
               <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-4">
-                {t("admin.top_karma")}
+                {t("admin.top_balance")}
               </h2>
-              <DataTable<KarmaStatsOverview["souls_by_realm"][number]>
-                caption={t("admin.top_karma")}
+              <DataTable<LedgerStatsOverview["souls_by_realm"][number]>
+                caption={t("admin.top_balance")}
                 columns={[
                   { key: "realm_name", header: t("admin.realm") },
                   { key: "civilization", header: t("admin.civilization") },

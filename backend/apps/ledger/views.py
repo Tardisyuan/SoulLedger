@@ -1,5 +1,5 @@
 """
-REST views for Karma app.
+REST views for Ledger app.
 """
 import csv
 
@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 from apps.audit.models import AuditLog
 from apps.core.permissions import TenantPermission
 from apps.disposition.models import Disposition
-from apps.karma.services import KarmaService, RebirthNotApplicable
+from apps.ledger.services import LedgerService, RebirthNotApplicable
 from apps.souls.models import Soul, SoulState
 
 
@@ -30,11 +30,11 @@ def _format_death_date(soul: Soul) -> str:
     return "-".join(parts)
 
 
-class KarmaBalanceView(APIView):
+class LedgerBalanceView(APIView):
     """
-    GET /karma/balance/{soul_id}/
+    GET /ledger/balance/{soul_id}/
 
-    Returns karmic summary with time-decay for a soul. Cached 5min.
+    Returns the ledger summary with time-decay for a soul. Cached 5min.
     Tenant-isolated via TenantManager.
     """
     permission_classes = [TenantPermission]
@@ -52,15 +52,15 @@ class KarmaBalanceView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        summary = KarmaService.get_karmic_summary(soul)
+        summary = LedgerService.get_ledger_summary(soul)
         return Response(summary)
 
 
-class KarmaRecalculateView(APIView):
+class LedgerRecalculateView(APIView):
     """
-    POST /karma/calculate/{soul_id}/
+    POST /ledger/calculate/{soul_id}/
 
-    Recalculates and persists karmic scores for a soul. Tenant-isolated.
+    Recalculates and persists ledger scores for a soul. Tenant-isolated.
     """
     permission_classes = [TenantPermission]
 
@@ -77,15 +77,15 @@ class KarmaRecalculateView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        result = KarmaService.recalculate_soul_karma(soul)
+        result = LedgerService.recalculate_soul_ledger(soul)
         return Response(result)
 
 
-class KarmaEffectiveView(APIView):
+class LedgerEffectiveView(APIView):
     """
-    GET /karma/effective/{soul_id}/
+    GET /ledger/effective/{soul_id}/
 
-    Returns effective karma with time decay applied.
+    Returns the effective ledger with time decay applied.
     Used for disposition decisions.
     """
     permission_classes = [TenantPermission]
@@ -103,16 +103,16 @@ class KarmaEffectiveView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        result = KarmaService.get_effective_karma(soul)
+        result = LedgerService.get_effective_ledger(soul)
         return Response(result)
 
 
-class KarmaInheritanceView(APIView):
+class LedgerInheritanceView(APIView):
     """
-    GET /karma/inheritance/{soul_id}/
+    GET /ledger/inheritance/{soul_id}/
 
-    Returns the karma a soul carries into its next life: merit at
-    KarmaService.INHERITANCE_MERIT, demerit at INHERITANCE_DEMERIT.
+    Returns the ledger a soul carries into its next life: merit at
+    LedgerService.INHERITANCE_MERIT, demerit at INHERITANCE_DEMERIT.
 
     409 REBIRTH_NOT_APPLICABLE for a soul whose cosmology is terminal
     (EGYPTIAN, EUROPEAN) — there is no next life to inherit into.
@@ -138,18 +138,18 @@ class KarmaInheritanceView(APIView):
         # machine-readable {code, civilization, detail} rather than whatever
         # the default renderer happens to do with it.
         try:
-            result = KarmaService.get_reincarnation_inheritance(soul)
+            result = LedgerService.get_reincarnation_inheritance(soul)
         except RebirthNotApplicable as exc:
             return Response(exc.detail, status=exc.status_code)
         return Response(result)
 
 
-class KarmaOverviewStatsView(APIView):
+class LedgerOverviewStatsView(APIView):
     """
-    GET /karma/stats/overview/
+    GET /ledger/stats/overview/
 
     Admin-only overview statistics across all tenants.
-    Returns: total souls, state distribution, tenant totals, karma range stats,
+    Returns: total souls, state distribution, tenant totals, ledger range stats,
     recent activity, and souls by realm.
     """
     permission_classes = [TenantPermission]
@@ -280,11 +280,11 @@ class KarmaOverviewStatsView(APIView):
         })
 
 
-class KarmaExportStatsView(APIView):
+class LedgerExportStatsView(APIView):
     """
-    GET /karma/stats/export/
+    GET /ledger/stats/export/
 
-    Admin-only CSV export of all souls with their karma data.
+    Admin-only CSV export of all souls with their ledger data.
     """
     permission_classes = [TenantPermission]
 
@@ -300,7 +300,11 @@ class KarmaExportStatsView(APIView):
             )
 
         response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = "attachment; filename=souls_karma_export.csv"
+        # Matches the name the dashboard's blob download writes. The anchor's
+        # download attribute wins over this header for the in-app path, so the
+        # two disagreeing would only show up for someone calling the endpoint
+        # directly — which is exactly the case nobody would notice.
+        response["Content-Disposition"] = "attachment; filename=souls_ledger_export.csv"
 
         writer = csv.writer(response)
         writer.writerow([

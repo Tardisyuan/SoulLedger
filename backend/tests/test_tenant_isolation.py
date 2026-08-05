@@ -80,19 +80,19 @@ class TestTenantIsolationAPI:
         resp = cn_client.get(f"/api/v1/souls/{eu_soul.id}/", **cn_headers)
         assert resp.status_code == 404
 
-    def test_cross_tenant_karma_access_denied(self, django_user_model):
-        """Karma endpoint denies access to soul from another tenant."""
-        self._create_user("cn_karma_user", "ADMIN", self.cn, django_user_model)
-        eu_user = self._create_user("eu_karma_user", "ADMIN", self.eu, django_user_model)
+    def test_cross_tenant_ledger_access_denied(self, django_user_model):
+        """Ledger endpoint denies access to soul from another tenant."""
+        self._create_user("cn_ledger_user", "ADMIN", self.cn, django_user_model)
+        eu_user = self._create_user("eu_ledger_user", "ADMIN", self.eu, django_user_model)
 
-        cn_soul = self._create_soul("CN Soul Karma", self.cn)
+        cn_soul = self._create_soul("CN Soul Ledger", self.cn)
 
-        # EU client trying to access CN soul karma
+        # EU client trying to access CN soul ledger
         eu_client = APIClient()
         eu_headers = self._get_auth_headers(eu_client, eu_user)
 
         # Soul is hidden due to tenant isolation - returns 404 (not 403)
-        resp = eu_client.get(f"/api/v1/karma/balance/{cn_soul.id}/", **eu_headers)
+        resp = eu_client.get(f"/api/v1/ledger/balance/{cn_soul.id}/", **eu_headers)
         assert resp.status_code == 404
 
     def test_admin_can_access_own_tenant_souls(self, django_user_model):

@@ -13,15 +13,15 @@ import {
 import { useI18n } from "@/src/contexts/I18nContext";
 import { CHART_CHROME } from "@/lib/chart-colors";
 
-export interface KarmaHistoryPoint {
+export interface LedgerHistoryPoint {
   date: string;
   score: number;
 }
 
-interface KarmaChartProps {
+interface LedgerChartProps {
   karmicBalance: number;
-  effectiveKarma: number;
-  history: KarmaHistoryPoint[];
+  effectiveBalance: number;
+  history: LedgerHistoryPoint[];
 }
 
 const CustomTooltip = ({
@@ -47,20 +47,20 @@ const CustomTooltip = ({
   return null;
 };
 
-export function KarmaChart({
+export function LedgerChart({
   karmicBalance,
-  effectiveKarma,
+  effectiveBalance,
   history,
-}: Omit<KarmaChartProps, "soulId">) {
+}: Omit<LedgerChartProps, "soulId">) {
   const { t } = useI18n();
-  const hasDecay = Math.abs(karmicBalance - effectiveKarma) > 0.01;
+  const hasDecay = Math.abs(karmicBalance - effectiveBalance) > 0.01;
 
   return (
     <div className="space-y-3">
       {/* Summary Row */}
       <div className="flex gap-4 text-sm">
         <div className="flex-1">
-          <span className="text-[hsl(var(--color-ink-subtle))]">{t("karma.balance")}: </span>
+          <span className="text-[hsl(var(--color-ink-subtle))]">{t("ledger.balance")}: </span>
           <span
             className={`font-bold ${
               karmicBalance >= 0 ? "text-green-400" : "text-red-400"
@@ -72,14 +72,14 @@ export function KarmaChart({
         </div>
         {hasDecay && (
           <div className="flex-1">
-            <span className="text-[hsl(var(--color-ink-subtle))]">{t("karma.effective")}: </span>
+            <span className="text-[hsl(var(--color-ink-subtle))]">{t("ledger.effective")}: </span>
             <span
               className={`font-bold ${
-                effectiveKarma >= 0 ? "text-blue-400" : "text-red-400"
+                effectiveBalance >= 0 ? "text-blue-400" : "text-red-400"
               }`}
             >
-              {effectiveKarma >= 0 ? "+" : ""}
-              {effectiveKarma.toFixed(1)}
+              {effectiveBalance >= 0 ? "+" : ""}
+              {effectiveBalance.toFixed(1)}
             </span>
           </div>
         )}
@@ -94,7 +94,7 @@ export function KarmaChart({
             margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
           >
             <defs>
-              <linearGradient id="karmaGradient" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="ledgerGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={CHART_CHROME.accent} stopOpacity={0.3} />
                 <stop offset="95%" stopColor={CHART_CHROME.accent} stopOpacity={0} />
               </linearGradient>
@@ -120,7 +120,7 @@ export function KarmaChart({
               dataKey="score"
               stroke={CHART_CHROME.accent}
               strokeWidth={2}
-              fill="url(#karmaGradient)"
+              fill="url(#ledgerGradient)"
               dot={false}
               activeDot={{ r: 4, fill: CHART_CHROME.accent }}
             />
@@ -129,7 +129,7 @@ export function KarmaChart({
         </div>
       ) : (
         <div className="h-[140px] flex items-center justify-center text-[hsl(var(--color-ink-subtle))] text-xs">
-          {t("karma.no_history")}
+          {t("ledger.no_history")}
         </div>
       )}
     </div>
