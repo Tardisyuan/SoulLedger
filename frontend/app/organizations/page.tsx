@@ -17,8 +17,8 @@ async function fetchAllOrganizations(): Promise<Organization[]> {
   const all: Organization[] = [];
   let page = 1;
   while (true) {
-    const res = await api.get("/organizations/", { params: { page } });
-    const data = res.data as PaginatedResponse<Organization>;
+    const res = await api.get<PaginatedResponse<Organization>>("/organizations/", { params: { page } });
+    const data = res.data;
     all.push(...data.results);
     if (!data.next) break;
     page += 1;

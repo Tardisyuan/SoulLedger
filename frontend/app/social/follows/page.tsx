@@ -13,8 +13,8 @@ export default function FollowsPage() {
   const { data: followingData, isLoading: followingLoading } = useFollowing();
   const { data: followersData, isLoading: followersLoading } = useFollowers();
 
-  const followingList = (followingData ?? []) as Follow[];
-  const followersList = (followersData ?? []) as Follow[];
+  const followingList = followingData ?? [];
+  const followersList = followersData ?? [];
   const isLoading = tab === "following" ? followingLoading : followersLoading;
   const list = tab === "following" ? followingList : followersList;
 

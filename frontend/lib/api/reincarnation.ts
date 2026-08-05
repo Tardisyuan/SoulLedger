@@ -1,8 +1,10 @@
 import { api } from "./client";
+import type { PaginatedResponse } from "./users";
 
 export interface Reincarnation {
   id: string;
   soul: string;
+  soul_name?: string;
   disposition: string | null;
   target_realm: string;
   rebirth_form: string;
@@ -14,6 +16,6 @@ export interface Reincarnation {
 }
 
 export const reincarnationApi = {
-  list: (params?: Record<string, string>) => api.get("/reincarnation/", { params }),
-  reborn: (data: object) => api.post("/reincarnation/reborn/", data),
+  list: (params?: Record<string, string>) => api.get<PaginatedResponse<Reincarnation>>("/reincarnation/", { params }),
+  reborn: (data: object) => api.post<Reincarnation>("/reincarnation/reborn/", data),
 };

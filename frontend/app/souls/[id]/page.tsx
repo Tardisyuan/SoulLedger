@@ -20,7 +20,7 @@ import {
   SoulEvent,
   LedgerSummary,
   LedgerRecord,
-  SoulRecord,
+  SoulRecordEntry,
 } from "@/lib/api";
 import { ledgerApi, type LedgerInheritance } from "@/lib/api/ledger";
 import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
@@ -61,7 +61,9 @@ export default function SoulDetailPage() {
   );
   const [soul, setSoul] = useState<Soul | null>(null);
   const [ledger, setLedger] = useState<LedgerSummary | null>(null);
-  const [records, setRecords] = useState<SoulRecord[]>([]);
+  // SoulRecordEntry, not SoulRecord — the latter is an alias for Soul itself,
+  // which is not what /souls/{id}/records/ returns.
+  const [records, setRecords] = useState<SoulRecordEntry[]>([]);
   const [judgments, setJudgments] = useState<Judgment[]>([]);
   const [dispositions, setDispositions] = useState<Disposition[]>([]);
   const [reincarnations, setReincarnations] = useState<Reincarnation[]>([]);
@@ -124,11 +126,15 @@ export default function SoulDetailPage() {
         ]);
       setSoul(soulRes.data);
       setLedger(ledgerRes.data);
-      setRecords(recordsRes.data.results || recordsRes.data);
-      setJudgments(judgmentRes.data.results || judgmentRes.data);
-      setDispositions(dispRes.data.results || dispRes.data);
-      setReincarnations(reincRes.data.results || reincRes.data);
-      setEvents(evtsRes.data.results || evtsRes.data);
+      // /souls/{id}/records/ answers with a bare array (the @action returns
+      // serializer.data directly), so there was never a `.results` to read and
+      // the fallback was the only branch that ever ran. The four list
+      // endpoints below are paginated, so for those it is the other way round.
+      setRecords(recordsRes.data);
+      setJudgments(judgmentRes.data.results);
+      setDispositions(dispRes.data.results);
+      setReincarnations(reincRes.data.results);
+      setEvents(evtsRes.data.results);
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } }; message?: string };
       setError(err?.response?.data?.detail || err?.message || t("souls.detail.loading"));

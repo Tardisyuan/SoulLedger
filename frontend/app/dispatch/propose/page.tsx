@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { dispatchApi, soulsApi, ledgerApi, type Soul } from "@/lib/api";
+import { dispatchApi, soulsApi, ledgerApi } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -27,7 +27,9 @@ export default function ProposeDispatchPage() {
     enabled: !!user,
   });
 
-  const souls = soulsResponse?.data?.results || soulsResponse?.data || [];
+  // Paginated list — `results` is always present, so the old
+  // `|| soulsResponse?.data` fallback was unreachable.
+  const souls = soulsResponse?.data?.results ?? [];
 
   const { data: statsData, isLoading: tenantsLoading } = useQuery({
     queryKey: ["dispatch", "tenants"],
@@ -85,7 +87,7 @@ export default function ProposeDispatchPage() {
               required
             >
               <option value="">{t("dispatch.select_soul")}</option>
-              {souls.map((s: Soul) => (
+              {souls.map((s) => (
                 <option key={s.id} value={s.id}>
                   #{s.id} - {s.name} ({s.current_state})
                 </option>

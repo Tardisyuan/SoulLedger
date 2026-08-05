@@ -1,16 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  soulsApi,
-  judgmentApi,
-  dispositionApi,
-  reincarnationApi,
-  type Soul,
-  type SoulInput,
-  type Judgment,
-  type LedgerSummary,
-} from "@/lib/api";
+import { soulsApi, type SoulInput } from "@/lib/api";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { soulKeys } from "@/lib/query_keys";
@@ -22,7 +13,7 @@ export function useSouls(params?: Record<string, string | number | undefined>) {
     queryKey: soulKeys.list(params),
     queryFn: async () => {
       const res = await soulsApi.list(params);
-      return res.data as { results: Soul[]; count: number };
+      return res.data;
     },
     staleTime: 30_000, // 30s — reduce redundant API calls
   });
@@ -33,7 +24,7 @@ export function useSoul(id: string) {
     queryKey: soulKeys.detail(id),
     queryFn: async () => {
       const res = await soulsApi.get(id);
-      return res.data as Soul;
+      return res.data;
     },
     enabled: !!id,
     staleTime: 30_000,
@@ -45,7 +36,7 @@ export function useSoulLedger(id: string) {
     queryKey: soulKeys.ledger(id),
     queryFn: async () => {
       const res = await soulsApi.karma(id);
-      return res.data as LedgerSummary;
+      return res.data;
     },
     enabled: !!id,
     staleTime: 30_000,

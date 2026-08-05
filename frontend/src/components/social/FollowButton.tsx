@@ -7,7 +7,7 @@ export function FollowButton({ userId }: { userId: string }) {
   const { t } = useI18n();
   const toggleFollow = useToggleFollow();
   const { data } = useFollowing();
-  const followingList = (data ?? []) as Array<{ following: string }>;
+  const followingList = data ?? [];
 
   const isFollowing = followingList.some(
     (f) => String(f.following) === String(userId),

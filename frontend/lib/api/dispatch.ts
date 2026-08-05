@@ -20,6 +20,18 @@ export interface DispatchRecord {
   update_time: string;
 }
 
+/**
+ * CrossTenantJudgmentSerializer — the DETAIL shape
+ * (backend/apps/dispatch/serializers.py:125).
+ *
+ * `list` below is typed with it too, and that is not accurate: the list route
+ * uses CrossTenantJudgmentListSerializer (serializers.py:148), which omits
+ * `description`, `participants`, `create_time` and `update_time`. Left as one
+ * type because narrowing it would make app/cross-judgments/page.tsx stop
+ * compiling at `j.participants.length` — a line that throws today for exactly
+ * this reason. See the report accompanying this change; the fix is a
+ * behaviour change and belongs in its own commit.
+ */
 export interface CrossTenantJudgment {
   id: string;
   title: string;
@@ -70,8 +82,11 @@ export const crossTenantJudgmentsApi = {
   get: (id: string) => api.get<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/`),
   create: (data: { title: string; description: string }) => api.post<CrossTenantJudgment>("/dispatch/cross-tenant-judgments/", data),
   participate: (id: string, data: { participant_tenant: number; participant_actor?: number; role?: string }) =>
-    api.post(`/dispatch/cross-tenant-judgments/${id}/participate/`, data),
+    api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/participate/`, data),
+  // No response type: CrossTenantJudgmentViewSet declares only `participate`
+  // and `conclude` (backend/apps/dispatch/views.py:333 and :380). There is no
+  // `activate` route, so this call 404s. It has no callers.
   activate: (id: string) => api.post(`/dispatch/cross-tenant-judgments/${id}/activate/`),
   conclude: (id: string, data: { conclusion_type: string }) =>
-    api.post(`/dispatch/cross-tenant-judgments/${id}/conclude/`, data),
+    api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/conclude/`, data),
 };

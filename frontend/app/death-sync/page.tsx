@@ -39,6 +39,13 @@ export default function DeathSyncPage() {
 
   const { data: registrations = [], isLoading } = useQuery({
     queryKey: ["death-sync", "registrations"],
+    // Deliberately left untyped. Two things would have to be true for a type
+    // here to be honest, and neither is: the route is registered as
+    // `register`, not `registrations` (backend/apps/death_sync/urls.py:16), so
+    // this 404s; and DeathRegistrationViewSet is a paginated ModelViewSet, so
+    // even at the right path `r.data` would be the envelope and the
+    // `registrations.map(...)` below would throw. Both are runtime bugs, not
+    // typing ones.
     queryFn: () => api.get("/death-sync/registrations/").then(r => r.data),
     enabled: !!user,
   });

@@ -25,7 +25,7 @@ export default function NotificationsPage() {
     queryFn: async () => {
       const params: Record<string, string> | undefined = filter === "unread" ? { is_read: "false" } : undefined;
       const res = await notificationsApi.list(params);
-      return (res.data as PaginatedResponse<Notification>).results;
+      return res.data.results;
     },
     refetchInterval: 30000, // Refresh every 30 seconds
   });

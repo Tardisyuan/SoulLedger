@@ -28,27 +28,57 @@ export interface LedgerStatsOverview {
   }[];
 }
 
+/**
+ * What each cosmology reads off the ledger. Discriminated on `kind` —
+ * apps/ledger/readings.py deliberately does not force one shape on all four.
+ */
+export type LedgerReading =
+  | { kind: "BALANCE"; civilization: string; balance: number; merit: number; demerit: number }
+  | { kind: "THRESHOLD"; civilization: string; heart_weight: number; counterweight: number; heavier_than_feather: boolean }
+  | { kind: "GUILT_AND_PENALTY"; civilization: string; culpa: number; culpa_record_count: number; poena: null; poena_unavailable: string }
+  | { kind: "UNAVAILABLE"; civilization: string; reason: string };
+
+/**
+ * One entry of `LedgerSummary.records`, built by hand in
+ * LedgerService.get_ledger_summary (backend/apps/ledger/services.py:350-372) —
+ * NOT SoulRecordSerializer. The two differ: this payload renames record_type
+ * to `type` and weight to `original_weight`, and adds the decay figures.
+ * `soul`, `record_type`, `weight` and `create_time` were declared here and
+ * are not in the response at all.
+ */
 export interface LedgerRecord {
   id: string;
-  soul: string;
-  type?: string;
-  record_type: string;
+  type: string;
   category: string;
   description: string;
-  weight: number;
+  original_weight: number;
   effective_weight: number;
-  event_date: string | null;
+  years_elapsed: number;
+  decay_factor: number;
+  civilization: string;
   recorded_at: string;
-  create_time?: string;
+  /**
+   * KNOWN-WRONG, left as-is deliberately. The backend sends
+   * `{year, month, day} | null` (HistoricalDateField, backend/apps/souls/
+   * fields.py:36 → backend/apps/souls/dates.py:118), not an ISO string.
+   * Correcting this type breaks getLedgerChartData in
+   * app/souls/[id]/page.tsx, which feeds the value straight to `new Date()`
+   * — a runtime bug that predates this commit and needs its own fix.
+   */
+  event_date: string | null;
+  is_milestone: boolean;
 }
 
+/** 200 body of GET /souls/{id}/karma/ and GET /ledger/balance/{soul_id}/. */
 export interface LedgerSummary {
   soul_id: string;
+  soul_name: string;
   merit_score: number;
   demerit_score: number;
   karmic_balance: number;
-  record_count?: number;
+  record_count: number;
   records: LedgerRecord[];
+  reading: LedgerReading;
 }
 
 // 200 body of GET /ledger/inheritance/{soul_id}/.
@@ -68,11 +98,22 @@ export interface LedgerInheritanceNotApplicable {
   detail: string;
 }
 
+/** 200 body of POST /ledger/calculate/{soul_id}/. */
+export interface LedgerRecalculation {
+  soul_id: string;
+  merit_score: number;
+  demerit_score: number;
+  karmic_balance: number;
+}
+
 export const ledgerApi = {
-  balance: (soulId: number) => api.get(`/ledger/balance/${soulId}/`),
-  recalculate: (soulId: number) => api.post(`/ledger/calculate/${soulId}/`),
+  // soulId is a UUID: both routes are `<uuid:soul_id>` in
+  // backend/apps/ledger/urls.py. These took `number`, which cannot address
+  // a soul at all.
+  balance: (soulId: string) => api.get<LedgerSummary>(`/ledger/balance/${soulId}/`),
+  recalculate: (soulId: string) => api.post<LedgerRecalculation>(`/ledger/calculate/${soulId}/`),
   // Note the ordering: inheritance/ comes before the soul id in the URLconf.
   inheritance: (soulId: string) => api.get<LedgerInheritance>(`/ledger/inheritance/${soulId}/`),
   statsOverview: () => api.get<LedgerStatsOverview>("/ledger/stats/overview/"),
-  exportStats: (params?: Record<string, string>) => api.get("/ledger/stats/export/", { params, responseType: "blob" }),
+  exportStats: (params?: Record<string, string>) => api.get<Blob>("/ledger/stats/export/", { params, responseType: "blob" }),
 };

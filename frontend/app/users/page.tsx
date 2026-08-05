@@ -29,7 +29,7 @@ export default function UsersPage() {
     queryKey: userKeys.list({ page, search, role: roleFilter, ordering }),
     queryFn: async () => {
       const res = await usersApi.list({ page, search, role: roleFilter || undefined, ordering: ordering || undefined });
-      return res.data as PaginatedResponse<User>;
+      return res.data;
     },
   });
 
