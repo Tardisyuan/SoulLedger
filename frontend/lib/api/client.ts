@@ -64,11 +64,15 @@ api.interceptors.response.use(
       const refresh = getCookie("soulledger_refresh");
       if (refresh) {
         try {
-          // SIMPLE_JWT has ROTATE_REFRESH_TOKENS=True, so the body carries a
-          // fresh `refresh` alongside `access`. Only `access` is consumed below.
+          // SIMPLE_JWT has ROTATE_REFRESH_TOKENS=True and BLACKLIST_AFTER_ROTATION=True,
+          // so the server blacklists the refresh token we just sent and issues a new
+          // one in `data.refresh`. It MUST be persisted (same cookie the login flow
+          // writes to) or the next refresh will present an already-blacklisted token
+          // and the user gets silently booted to /login.
           const { data } = await axios.post<TokenRefreshResponse>(`${API_BASE_URL}/auth/refresh/`, { refresh });
           if (typeof document !== "undefined") {
             document.cookie = `soulledger_access=${data.access}; path=/; max-age=86400; SameSite=Lax`;
+            document.cookie = `soulledger_refresh=${data.refresh}; path=/; max-age=604800; SameSite=Lax`;
           }
           if (typeof sessionStorage !== "undefined") {
             sessionStorage.setItem("soulledger_access", data.access);

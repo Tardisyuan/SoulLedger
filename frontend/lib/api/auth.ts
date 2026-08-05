@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, getCookie } from "./client";
 
 /** User.role choices (backend/apps/authentication/models.py:17). */
 export type UserRole = "ADMIN" | "JUDGE" | "GUARDIAN" | "VIEWER";
@@ -52,7 +52,10 @@ export const authApi = {
   // SIMPLE_JWT rotates refresh tokens, so the body carries a new `refresh`
   // as well as `access`.
   refresh: (data: { refresh: string }) => api.post<{ access: string; refresh: string }>("/auth/refresh/", data),
-  logout: () => api.post<{ detail: string }>("/auth/logout/"),
+  // logout_view (backend/apps/authentication/views.py) blacklists whatever
+  // refresh token is in the body; without one it silently no-ops and the
+  // token stays valid. Read it from the same cookie the login flow writes to.
+  logout: () => api.post<{ detail: string }>("/auth/logout/", { refresh: getCookie("soulledger_refresh") }),
   profile: () => api.get<AuthProfile>("/auth/profile/"),
   updateProfile: (data: object) => api.patch<AuthProfile>("/auth/profile/", data),
   changePassword: (oldPasswordOrData: string | { old_password: string; new_password: string }, newPassword?: string) => {
