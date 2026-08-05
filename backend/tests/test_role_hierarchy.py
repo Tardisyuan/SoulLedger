@@ -36,10 +36,20 @@ class TestRoleHierarchy:
             category='test'
         )
 
-        # Create role hierarchy: ADMIN -> MANAGER -> STAFF -> JUNIOR
+        # Create role hierarchy: TEST_ADMIN -> MANAGER -> STAFF -> JUNIOR
+        #
+        # The top of this chain used to be called plain 'ADMIN'. perm migration
+        # 0017 seeds the five real Role rows, so that name now collides on
+        # perm_role.name — and reusing the seeded row instead would drag its
+        # real grants (workflow.*, menu.read) down the whole chain, turning the
+        # exact inherited-permission counts below into whatever 0017 happens to
+        # grant. Every role here is synthetic (MANAGER/STAFF/JUNIOR are not real
+        # roles either) and carries only synthetic test.* permissions, so the
+        # name is just a label for "top of the chain" — keep it out of the real
+        # role namespace.
         self.role_admin = Role.objects.create(
-            name='ADMIN',
-            display_name='Administrator'
+            name='TEST_ADMIN',
+            display_name='Test Administrator'
         )
         self.role_manager = Role.objects.create(
             name='MANAGER',
@@ -203,10 +213,10 @@ class TestRoleHierarchy:
         cache = get_permission_cache()
         cache.invalidate_all()
 
-        # ADMIN has test.read
-        assert cache.has_permission('ADMIN', 'test.read') is True
-        # ADMIN does not have nonexistent permission
-        assert cache.has_permission('ADMIN', 'nonexistent') is False
+        # TEST_ADMIN has test.read
+        assert cache.has_permission('TEST_ADMIN', 'test.read') is True
+        # TEST_ADMIN does not have nonexistent permission
+        assert cache.has_permission('TEST_ADMIN', 'nonexistent') is False
 
         # MANAGER inherits test.delete and test.admin from ADMIN
         assert cache.has_permission('MANAGER', 'test.delete') is True

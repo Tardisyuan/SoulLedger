@@ -258,6 +258,10 @@ DEFAULT_PERMISSIONS = [
     # system 权限
     ("system.settings", "系统设置", "system"),
     ("user.manage", "用户管理", "system"),
+    # menu.read 是导航本身，不是菜单管理。它授予全部五个角色：能登录就得
+    # 看得见左侧导航，否则 apps/menus/views.py 的 list/tree/list-public 一旦
+    # 进入拦截就会把每个非 ADMIN 关在一棵空树前面。写操作仍归 menu.manage。
+    ("menu.read", "查看菜单", "system"),
     ("menu.manage", "菜单管理", "system"),
 ]
 
@@ -274,7 +278,7 @@ ROLE_PERMISSIONS = {
         "dispatch.read", "dispatch.manage", "dispatch.approve", "dispatch.reject", "dispatch.execute",
         "cross_judgment.read", "cross_judgment.create",
         "realms.read", "actors.read",
-        "system.settings", "user.manage", "menu.manage",
+        "system.settings", "user.manage", "menu.read", "menu.manage",
         "workflow.read", "workflow.create", "workflow.update", "workflow.delete", "workflow.approve", "workflow.advance",
     ],
     "JUDGE": [
@@ -285,6 +289,7 @@ ROLE_PERMISSIONS = {
         "disposition.read",
         "cross_judgment.read", "cross_judgment.create",
         "realms.read", "actors.read",
+        "notification.read", "menu.read",
         "workflow.read", "workflow.approve", "workflow.advance",
     ],
     "GUARDIAN": [
@@ -294,6 +299,7 @@ ROLE_PERMISSIONS = {
         "disposition.read",
         "dispatch.read", "dispatch.manage",
         "realms.read", "actors.read",
+        "notification.read", "menu.read",
     ],
     # Realm lead: configures the approval flows for their own civilization.
     #
@@ -330,18 +336,25 @@ ROLE_PERMISSIONS = {
         "dispatch.approve", "dispatch.reject", "dispatch.execute",
         "cross_judgment.read", "cross_judgment.create",
         "realms.read", "actors.read", "dashboard.read",
-        "audit.read", "notification.read",
+        "audit.read", "notification.read", "menu.read",
     ],
     "VIEWER": [
         "soul.read", "reincarnation.read",
         "ledger.read", "dashboard.read",
         "realms.read", "actors.read",
+        "notification.read", "menu.read",
     ],
 }
 
 # 默认角色列表
+# 这份清单必须和 ROLE_PERMISSIONS 的键一一对应，由
+# apps/perm/test_checker_grants.py 断言。MODERATOR 曾经只存在于
+# ROLE_PERMISSIONS 和迁移 0014/0015 里而不在这份种子数据中，于是任何从零
+# 建立的库都没有它的 Role 行，0014/0015 的授权便在 "role is None" 上整段
+# 跳过——地区主宰在新装环境里是个有权限矩阵却没有实体的角色。
 DEFAULT_ROLES = [
     ("ADMIN", "Administrator"),
+    ("MODERATOR", "Realm Lead"),
     ("JUDGE", "Judge"),
     ("GUARDIAN", "Guardian"),
     ("VIEWER", "Viewer"),

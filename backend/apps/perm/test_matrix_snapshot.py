@@ -141,10 +141,18 @@ POST_CREATE = dict.fromkeys(ROLES, 201)
 MENU_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 USER_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 PERM_CREATE = {"ADMIN": 201, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
-# ADMIN clears IsAdminPermission and then 404s on a Role row that no migration
-# has seeded into the test database. The 404 is the point: ADMIN got *past* the
-# gate that stopped the other four.
-PERM_ASSIGN = {"ADMIN": 404, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
+# ADMIN clears IsAdminPermission; the other four never get that far. That split
+# across two layers is the finding, and it is unchanged.
+#
+# ADMIN's own code moved 404 -> 200 when perm migration 0017 started seeding the
+# Role rows. It is not an access change: ADMIN always got past the gate, it just
+# used to land on a VIEWER row no migration had created. Now the row exists and
+# the call completes — and completing it means what the endpoint's docstring
+# says, "替换该角色的所有权限": posting permission_ids=[] wipes every grant VIEWER
+# has. The test is transactional so it rolls back, but read that 200 as "ADMIN
+# just cleared a role's entire permission set with an empty list and got no
+# confirmation step", which is the more interesting version of the finding.
+PERM_ASSIGN = {"ADMIN": 200, "MODERATOR": 403, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 
 
 @pytest.fixture
@@ -381,7 +389,7 @@ def test_perm_permission_create_snapshot(role_clients, snapshot_tenant, role):
 @pytest.mark.django_db
 @pytest.mark.parametrize("role", ROLES)
 def test_perm_assign_snapshot(role_clients, snapshot_tenant, role):
-    """ADMIN's 404 and the others' 403 come from two different layers — that is the finding."""
+    """ADMIN's outcome and the others' 403 come from two different layers — that is the finding."""
     response = role_clients[role].post(
         "/api/v1/perm/role-permissions/assign/",
         {"role": "VIEWER", "permission_ids": []},
