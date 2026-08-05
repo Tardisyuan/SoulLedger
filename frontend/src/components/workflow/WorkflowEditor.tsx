@@ -192,7 +192,7 @@ export default function WorkflowEditor({
       const flowEdges = (existingTemplate.nodes_json || [])
         .filter((_: unknown, idx: number) => idx > 0)
         .map((n: TemplateNode, idx: number) => {
-          const prevNode = existingTemplate.nodes_json[idx];
+          const prevNode = (existingTemplate.nodes_json || [])[idx];
           return {
             id: `e${prevNode.id}-${n.id}`,
             source: prevNode.id || `node-${idx}`,

@@ -17,7 +17,7 @@ export default function TenantsPage() {
   // calls the shared `api` client directly to reach `/tenants/?page=`.
   const { data, isLoading } = useQuery({
     queryKey: ["tenants", page],
-    queryFn: () => api.get("/tenants/", { params: { page } }).then(r => r.data as PaginatedResponse<Tenant>),
+    queryFn: () => api.get<PaginatedResponse<Tenant>>("/tenants/", { params: { page } }).then(r => r.data),
     enabled: !!user,
   });
 

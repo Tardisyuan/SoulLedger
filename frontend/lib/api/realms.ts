@@ -23,5 +23,5 @@ export const realmsApi = {
     const data = await fetchAllPages<Realm>("/realms/", params);
     return { data: { results: data, count: data.length } };
   },
-  get: (code: string) => api.get(`/realms/${code}/`),
+  get: (code: string) => api.get<Realm>(`/realms/${code}/`),
 };

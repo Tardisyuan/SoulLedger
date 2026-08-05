@@ -2,22 +2,10 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { auditApi, PAGE_SIZE, type PaginatedResponse } from "@/lib/api";
+import { auditApi, PAGE_SIZE, type AuditLogEntry } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
-
-interface AuditLogEntry {
-  id: number;
-  user: number | null;
-  user_display?: string;
-  action: string;
-  resource: string;
-  resource_id: string;
-  description: string;
-  ip_address: string | null;
-  timestamp: string;
-}
 
 const ACTION_OPTIONS = [
   { value: "", label: "all_actions" },
@@ -69,7 +57,7 @@ export default function AuditPage() {
       if (ordering) params.ordering = ordering;
 
       const res = await auditApi.list(params);
-      return res.data as PaginatedResponse<AuditLogEntry>;
+      return res.data;
     },
     enabled: isAdmin,
   });

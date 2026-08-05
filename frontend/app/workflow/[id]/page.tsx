@@ -60,7 +60,7 @@ export default function WorkflowDetailPage() {
   // Fetch workflow detail
   const { data: workflow, isLoading, error, refetch } = useQuery({
     queryKey: ["workflow", id],
-    queryFn: () => workflowApi.get(id).then((res) => res.data as ApprovalWorkflow),
+    queryFn: () => workflowApi.get(id).then((res) => res.data),
   });
 
   // Approve node mutation

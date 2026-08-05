@@ -1,4 +1,7 @@
 import axios from "axios";
+// Type-only import: erased at compile time, so this does not create a runtime
+// import cycle with users.ts (which imports `api` from here as a value).
+import type { PaginatedResponse } from "./users";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 export const API_BASE = API_BASE_URL;
@@ -21,6 +24,12 @@ function getCookie(name: string): string | null {
 function getTenantId(): string {
   if (typeof window === "undefined") return "";
   return localStorage.getItem("tenant_id") || getCookie("tenant_id") || "";
+}
+
+/** 200 body of POST /auth/refresh/ (SimpleJWT TokenRefreshView). */
+interface TokenRefreshResponse {
+  access: string;
+  refresh: string;
 }
 
 export const api = axios.create({
@@ -55,7 +64,9 @@ api.interceptors.response.use(
       const refresh = getCookie("soulledger_refresh");
       if (refresh) {
         try {
-          const { data } = await axios.post(`${API_BASE_URL}/auth/refresh/`, { refresh });
+          // SIMPLE_JWT has ROTATE_REFRESH_TOKENS=True, so the body carries a
+          // fresh `refresh` alongside `access`. Only `access` is consumed below.
+          const { data } = await axios.post<TokenRefreshResponse>(`${API_BASE_URL}/auth/refresh/`, { refresh });
           if (typeof document !== "undefined") {
             document.cookie = `soulledger_access=${data.access}; path=/; max-age=86400; SameSite=Lax`;
           }
@@ -93,7 +104,7 @@ export async function fetchAllPages<T>(url: string, params: Record<string, strin
     const searchParams: Record<string, string> = {};
     parsed.searchParams.forEach((v: string, k: string) => { searchParams[k] = v; });
     const relativePath: string = nextUrl.replace(API_BASE, "");
-    const resp = await api.get(relativePath, { params: searchParams });
+    const resp = await api.get<PaginatedResponse<T>>(relativePath, { params: searchParams });
     results.push(...resp.data.results);
     nextUrl = resp.data.next ? (resp.data.next.startsWith("http") ? resp.data.next : `${API_BASE}${resp.data.next}`) : null;
   }

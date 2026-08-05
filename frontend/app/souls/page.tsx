@@ -7,7 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
-import { PAGE_SIZE, type Soul } from "@/lib/api";
+import { PAGE_SIZE, type SoulListItem } from "@/lib/api";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "bg-[hsl(var(--color-status-alive)/0.2)] text-[hsl(var(--color-status-alive))]",
@@ -51,7 +51,7 @@ export default function SoulsPage() {
   // TanStack Query — automatic caching, background refetch, loading/error states.
   // Params live in the queryKey, so filter/sort/page changes refetch on their own.
   const { data, isLoading, isError, refetch } = useSouls(params);
-  const souls = (data?.results ?? []) as Soul[];
+  const souls = data?.results ?? [];
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
 
   // Create mutation with auto-invalidation
@@ -163,7 +163,7 @@ export default function SoulsPage() {
           </div>
         </div>
 
-        <DataTable<Soul>
+        <DataTable<SoulListItem>
           caption={t("souls.title")}
           columns={[
             { key: "name", header: t("souls.name"), sortable: true },

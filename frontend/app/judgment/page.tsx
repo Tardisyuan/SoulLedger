@@ -37,7 +37,9 @@ export default function JudgmentQueuePage() {
     },
   });
 
-  const judgments = (judgmentData?.results ?? judgmentData ?? []) as Judgment[];
+  // Paginated list — `results` is always present, so the `?? judgmentData`
+  // fallback the expression used to carry was unreachable.
+  const judgments = judgmentData?.results ?? [];
   const totalPages = judgmentData ? Math.ceil(judgmentData.count / PAGE_SIZE) : 0;
 
   const tabs = [

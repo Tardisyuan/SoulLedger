@@ -26,5 +26,5 @@ export const actorsApi = {
     const data = await fetchAllPages<Actor>("/actors/", params);
     return { data: { results: data, count: data.length } };
   },
-  get: (id: string) => api.get(`/actors/${id}/`),
+  get: (id: string) => api.get<Actor>(`/actors/${id}/`),
 };

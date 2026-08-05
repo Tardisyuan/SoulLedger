@@ -126,12 +126,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       // (role-filtered, DRF-paginated — unwrap .results)
       if (user?.role === "ADMIN") {
         const res = await menusApi.all();
-        return normalizeMenus(res.data as SidebarMenu[]);
+        return normalizeMenus(res.data);
       }
       const res = await menusApi.list();
-      return normalizeMenus(
-        (res.data as PaginatedResponse<SidebarMenu>).results
-      );
+      return normalizeMenus(res.data.results);
     },
     staleTime: 5 * 60 * 1000,
     enabled: !!user, // Only fetch when user is logged in
@@ -141,7 +139,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     queryKey: ["notifications-unread-count"],
     queryFn: async () => {
       const res = await notificationsApi.list({ is_read: "false" });
-      return (res.data as PaginatedResponse<Notification>).results;
+      return res.data.results;
     },
     staleTime: 30000, // 30 seconds
     enabled: !!user,

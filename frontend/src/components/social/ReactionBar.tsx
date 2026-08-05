@@ -22,10 +22,7 @@ export function ReactionBar({ postId, commentId }: ReactionBarProps) {
   const { data } = useReactions(
     postId ? { post: postId } : commentId ? { comment: commentId } : undefined,
   );
-  const reactions = (data?.results ?? []) as Array<{
-    reaction_type: string;
-    user: string;
-  }>;
+  const reactions = data?.results ?? [];
 
   const myReaction = reactions.find(
     (r) => String(r.user) === String(user?.id),

@@ -62,7 +62,7 @@ export function CommentThread({ postId }: { postId: string }) {
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const { data, isLoading } = useComments(postId);
   const createComment = useCreateComment();
-  const comments = (data?.results ?? []) as Comment[];
+  const comments = data?.results ?? [];
   const tree = buildTree(comments);
 
   const handleSubmit = (e: React.FormEvent) => {

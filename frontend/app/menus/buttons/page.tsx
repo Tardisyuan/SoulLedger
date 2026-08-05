@@ -39,7 +39,7 @@ export default function MenuButtonsPage() {
     queryKey: ["menu-buttons", selectedMenuId, page],
     queryFn: async () => {
       const res = await menuButtonsApi.list(selectedMenuId, page);
-      return res.data as PaginatedResponse<MenuButton>;
+      return res.data;
     },
   });
   const buttons = data?.results ?? [];

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { judgmentApi, type Judgment } from "@/lib/api";
+import { judgmentApi } from "@/lib/api";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { judgmentKeys } from "@/lib/query_keys";
@@ -13,7 +13,7 @@ export function useJudgments(params?: Record<string, string>) {
     queryKey: judgmentKeys.list(params),
     queryFn: async () => {
       const res = await judgmentApi.list(params);
-      return res.data as { results: Judgment[]; count: number };
+      return res.data;
     },
     staleTime: 30_000,
   });
@@ -24,7 +24,7 @@ export function useJudgment(id: string) {
     queryKey: judgmentKeys.detail(id),
     queryFn: async () => {
       const res = await judgmentApi.get(id);
-      return res.data as Judgment;
+      return res.data;
     },
     enabled: !!id,
     staleTime: 30_000,

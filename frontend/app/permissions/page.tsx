@@ -42,7 +42,7 @@ export default function PermissionsPage() {
     queryKey: ["permissions"],
     queryFn: async () => {
       const res = await permApi.list();
-      return res.data as Permission[];
+      return res.data;
     },
   });
 
@@ -51,7 +51,7 @@ export default function PermissionsPage() {
     queryKey: ["roles"],
     queryFn: async () => {
       const res = await permApi.roles.list();
-      return res.data as Role[];
+      return res.data;
     },
   });
 
@@ -60,7 +60,7 @@ export default function PermissionsPage() {
     queryKey: ["role-permissions", selectedRoleName],
     queryFn: async () => {
       const res = await permApi.rolePermissions(selectedRoleName);
-      return res.data as { role: string; permissions: string[]; details: Permission[] };
+      return res.data;
     },
     enabled: !!selectedRoleName,
   });

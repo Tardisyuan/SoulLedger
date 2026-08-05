@@ -1,18 +1,29 @@
 import { api } from "./client";
 
+/**
+ * UserManagementSerializer (backend/apps/authentication/serializers.py:154) —
+ * the read shape for every /users/ route.
+ *
+ * `tenant` and `organization` are both SerializerMethodFields returning an
+ * object or null, not FK ids. `organization` was declared here as `number`.
+ *
+ * first_name/last_name/display_name/permissions/tenant_id are NOT in the
+ * serializer's field list and never arrive; they are kept optional only
+ * because UserModal still reads first_name/last_name.
+ */
 export interface User {
   id: number;
   username: string;
   email: string;
   role: string;
-  tenant?: { id?: number; code: string; display_name: string };
+  tenant?: { id?: number; code: string; display_name: string } | null;
   tenant_id?: number;
   display_name?: string;
   permissions?: string[];
   first_name?: string;
   last_name?: string;
   is_active?: boolean;
-  organization?: number;
+  organization?: { id: number; code: string; name: string } | null;
   position?: string;
   avatar?: string;
   create_time?: string;
@@ -60,16 +71,22 @@ export interface PaginatedResponse<T> {
   results: T[];
 }
 
+/** 200 body of POST /users/import_csv/. */
+export interface UserImportResult {
+  created: number;
+  errors: string[];
+}
+
 export const usersApi = {
-  list: (params?: Record<string, string | number | undefined>) => api.get("/users/", { params }),
-  get: (id: string) => api.get(`/users/${id}/`),
-  create: (data: CreateUserInput) => api.post("/users/", data),
-  update: (id: string, data: UpdateUserInput) => api.patch(`/users/${id}/`, data),
-  delete: (id: string) => api.delete(`/users/${id}/`),
-  activate: (id: string) => api.post(`/users/${id}/activate/`),
-  deactivate: (id: string) => api.post(`/users/${id}/deactivate/`),
-  export: () => api.get("/users/export_csv/", { responseType: "blob" }),
-  import: (data: FormData) => api.post("/users/import_csv/", data, {
+  list: (params?: Record<string, string | number | undefined>) => api.get<PaginatedResponse<User>>("/users/", { params }),
+  get: (id: string) => api.get<User>(`/users/${id}/`),
+  create: (data: CreateUserInput) => api.post<User>("/users/", data),
+  update: (id: string, data: UpdateUserInput) => api.patch<User>(`/users/${id}/`, data),
+  delete: (id: string) => api.delete<void>(`/users/${id}/`),
+  activate: (id: string) => api.post<User>(`/users/${id}/activate/`),
+  deactivate: (id: string) => api.post<User>(`/users/${id}/deactivate/`),
+  export: () => api.get<Blob>("/users/export_csv/", { responseType: "blob" }),
+  import: (data: FormData) => api.post<UserImportResult>("/users/import_csv/", data, {
     headers: { "Content-Type": "multipart/form-data" },
   }),
 };
