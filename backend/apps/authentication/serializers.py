@@ -158,7 +158,7 @@ class UserManagementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'role', 'tenant', 'organization', 'position', 'is_active', 'create_time', 'avatar']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active', 'create_time', 'avatar']
         read_only_fields = ['id', 'create_time']
 
     def get_tenant(self, obj):
@@ -187,7 +187,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password', 'role', 'tenant', 'organization', 'position', 'is_active']
+        fields = ['id', 'username', 'email', 'password', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active']
 
     def validate(self, attrs):
         request = self.context.get('request')
@@ -229,7 +229,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'role', 'is_active', 'organization', 'position']
+        fields = ['email', 'first_name', 'last_name', 'role', 'is_active', 'organization', 'position']
 
     def validate_role(self, value):
         request = self.context.get('request')
