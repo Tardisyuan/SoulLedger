@@ -41,7 +41,13 @@ class RoleModelTest(TestCase):
         )
 
     def test_role_global_scope(self):
-        role = Role.objects.create(name="ADMIN", display_name="Administrator", scope="GLOBAL")
+        # 0017 seeds ADMIN (at the model's default scope, ORG), so this can no
+        # longer create the row — update_or_create still pins scope explicitly,
+        # which is what the assertion is about.
+        role, _ = Role.objects.update_or_create(
+            name="ADMIN",
+            defaults={"display_name": "Administrator", "scope": "GLOBAL"},
+        )
         self.assertEqual(role.scope, "GLOBAL")
         self.assertIsNone(role.organization)
 
@@ -72,7 +78,9 @@ class RoleModelTest(TestCase):
         self.assertEqual(ancestors[1], parent)
 
     def test_role_str_representation(self):
-        role = Role.objects.create(name="ADMIN", display_name="Administrator")
+        role, _ = Role.objects.update_or_create(
+            name="ADMIN", defaults={"display_name": "Administrator"}
+        )
         self.assertEqual(str(role), "ADMIN (Administrator)")
 
 
@@ -81,13 +89,17 @@ class RolePermissionModelTest(TestCase):
 
     def test_role_permission_str(self):
         perm = Permission.objects.create(codename="soul.read", name="View Soul", category="soul")
-        role = Role.objects.create(name="ADMIN", display_name="Administrator")
+        role, _ = Role.objects.get_or_create(
+            name="ADMIN", defaults={"display_name": "Administrator"}
+        )
         rp = RolePermission.objects.create(role=role, permission=perm)
         self.assertEqual(str(rp), "ADMIN -> soul.read")
 
     def test_unique_together(self):
         perm = Permission.objects.create(codename="soul.create", name="Create Soul", category="soul")
-        role = Role.objects.create(name="ADMIN", display_name="Administrator")
+        role, _ = Role.objects.get_or_create(
+            name="ADMIN", defaults={"display_name": "Administrator"}
+        )
         RolePermission.objects.create(role=role, permission=perm)
         from django.db import IntegrityError
         with self.assertRaises(IntegrityError):
@@ -106,6 +118,25 @@ class PermissionAPITest(TestCase):
         self.viewer = User.objects.create_user(username="viewer", password="viewer123", role="VIEWER")
         for codename, name, category in DEFAULT_PERMISSIONS:
             Permission.objects.get_or_create(codename=codename, defaults={"name": name, "category": category})
+
+        # Seeding Permission rows without the matching RolePermission rows
+        # recreates precisely the state 0017 exists to remove: a codename that
+        # is "seeded but ungranted", which the DB-authoritative checker reads as
+        # a denial. It also makes _get_role_permissions_from_db answer from the
+        # DB (any grant at all disables its dict fallback), so a half-seeded
+        # fixture would have every role report a truncated permission list.
+        # Grant what ROLE_PERMISSIONS promises so the fixture is a coherent
+        # deployment rather than half of one.
+        roles = {r.name: r for r in Role.objects.filter(name__in=list(ROLE_PERMISSIONS))}
+        perms = {p.codename: p for p in Permission.objects.all()}
+        for role_name, codenames in ROLE_PERMISSIONS.items():
+            role = roles.get(role_name)
+            if role is None:
+                continue
+            for codename in codenames:
+                perm = perms.get(codename)
+                if perm is not None:
+                    RolePermission.objects.get_or_create(role=role, permission=perm)
 
     # -- list_permissions --
 
@@ -192,7 +223,7 @@ class PermissionAPITest(TestCase):
     # -- get_permissions_for_role (ADMIN reads any role) --
 
     def test_get_permissions_for_role_admin_reads_other_role(self):
-        Role.objects.create(name="JUDGE", display_name="Judge")
+        Role.objects.get_or_create(name="JUDGE", defaults={"display_name": "Judge"})
         self.client.force_authenticate(user=self.admin)
         response = self.client.get("/api/v1/perm/roles/JUDGE/permissions/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -204,7 +235,7 @@ class PermissionAPITest(TestCase):
 
     def test_get_permissions_for_role_rejects_non_admin(self):
         """The anti-enumeration guard still applies to everyone but ADMIN."""
-        Role.objects.create(name="JUDGE", display_name="Judge")
+        Role.objects.get_or_create(name="JUDGE", defaults={"display_name": "Judge"})
         self.client.force_authenticate(user=self.viewer)
         response = self.client.get("/api/v1/perm/roles/JUDGE/permissions/")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -294,8 +325,19 @@ class WorkflowPermissionMigrationTest(TestCase):
     def setUp(self):
         from apps.perm.cache import invalidate_all_permissions
 
-        self.admin_role = Role.objects.create(name="ADMIN", display_name="Administrator")
-        self.judge_role = Role.objects.create(name="JUDGE", display_name="Judge")
+        # 0017 now seeds the five Role rows, so these can only be fetched.
+        self.admin_role, _ = Role.objects.get_or_create(
+            name="ADMIN", defaults={"display_name": "Administrator"}
+        )
+        self.judge_role, _ = Role.objects.get_or_create(
+            name="JUDGE", defaults={"display_name": "Judge"}
+        )
+        # 0017 also replays 0013's own effects into the test database (it grants
+        # the workflow codenames it finds already seeded). This class is about
+        # what 0013 contributes, so rewind its six codenames first — otherwise
+        # "forward created these grants" would hold whether or not 0013 does
+        # anything. 0013's own reverse function is the exact inverse to use.
+        self._backward()
         invalidate_all_permissions()
         self.addCleanup(invalidate_all_permissions)
 
@@ -424,9 +466,22 @@ class ModeratorRealmLeadTest(TestCase):
     def setUp(self):
         from apps.perm.cache import invalidate_all_permissions
 
-        self.moderator_role = Role.objects.create(name="MODERATOR", display_name="Moderator")
-        self.judge_role = Role.objects.create(name="JUDGE", display_name="Judge")
-        self.admin_role = Role.objects.create(name="ADMIN", display_name="Administrator")
+        # 0017 now seeds the five Role rows, so these can only be fetched.
+        self.moderator_role, _ = Role.objects.get_or_create(
+            name="MODERATOR", defaults={"display_name": "Moderator"}
+        )
+        self.judge_role, _ = Role.objects.get_or_create(
+            name="JUDGE", defaults={"display_name": "Judge"}
+        )
+        self.admin_role, _ = Role.objects.get_or_create(
+            name="ADMIN", defaults={"display_name": "Administrator"}
+        )
+        # Rewind the whole workflow family — 0013's six, plus 0015's escalate —
+        # along with every grant that cascades off them. 0017 replays all of
+        # those into the test database, and this class has to observe 0014
+        # acting on a world where they are absent, or its before/after
+        # comparisons say nothing about 0014.
+        Permission.objects.filter(codename__startswith="workflow.").delete()
         invalidate_all_permissions()
         self.addCleanup(invalidate_all_permissions)
 
@@ -537,12 +592,32 @@ class ModeratorRealmLeadTest(TestCase):
 
         judge = User.objects.create_user(username="judge_after_revoke", password="x", role="JUDGE")
         self._seed_workflow_permissions()
-        self._forward()
-        self._backward()
 
-        self.assertFalse(
-            RolePermission.objects.filter(role=self.moderator_role).exists(),
-            "reverse should drop every grant this migration made",
+        # "Every grant this migration made" used to be spelled as "MODERATOR
+        # holds no grant at all", which was only the same sentence while 0014
+        # was the sole thing granting MODERATOR anything. 0017 now grants it the
+        # rest of ROLE_PERMISSIONS, so compare against the grants held before
+        # forward instead — that is the claim the blanket check was standing in
+        # for, and it additionally catches a reverse that removes too much.
+        def moderator_grants():
+            return set(
+                RolePermission.objects.filter(role=self.moderator_role).values_list(
+                    "permission__codename", flat=True
+                )
+            )
+
+        before = moderator_grants()
+        self._forward()
+        granted = moderator_grants() - before
+        self.assertEqual(
+            granted, set(self.CONFIGURE), "forward must grant exactly what 0014 promises"
+        )
+
+        self._backward()
+        self.assertEqual(
+            moderator_grants(),
+            before,
+            "reverse should drop every grant this migration made, and only those",
         )
         self.assertTrue(
             check_permission(judge, "workflow.approve"),
@@ -576,7 +651,14 @@ class LedgerPermissionRenameMigrationTest(TestCase):
     def setUp(self):
         from apps.perm.cache import invalidate_all_permissions
 
-        self.judge_role = Role.objects.create(name="JUDGE", display_name="Judge")
+        # 0017 now seeds the five Role rows, so this can only be fetched.
+        # The karma/ledger rows themselves are untouched by 0017: it creates
+        # only menu.read, and 0016 renames karma rows that a migrate-only
+        # database never had — so _seed_karma still builds the pre-rename world
+        # from scratch.
+        self.judge_role, _ = Role.objects.get_or_create(
+            name="JUDGE", defaults={"display_name": "Judge"}
+        )
         invalidate_all_permissions()
         self.addCleanup(invalidate_all_permissions)
 
@@ -698,7 +780,9 @@ class RoleAPITest(TestCase):
 
     def test_create_role_duplicate(self):
         self.client.force_authenticate(user=self.admin)
-        Role.objects.create(name="ADMIN", display_name="Admin")
+        # ADMIN is seeded by 0017; get_or_create keeps the precondition explicit
+        # instead of relying on the migration having run.
+        Role.objects.get_or_create(name="ADMIN", defaults={"display_name": "Admin"})
         response = self.client.post("/api/v1/perm/roles/create/", {
             "name": "ADMIN", "display_name": "Admin Dup"
         }, format="json")

@@ -30,7 +30,7 @@ from django.test import TestCase
 
 from apps.perm.cache import invalidate_all_permissions
 from apps.perm.checker import check_permission
-from apps.perm.models import ROLE_PERMISSIONS, Permission, Role, RolePermission
+from apps.perm.models import DEFAULT_ROLES, ROLE_PERMISSIONS, Permission, Role, RolePermission
 
 User = get_user_model()
 
@@ -42,7 +42,11 @@ GRANTED_BY_DICT = "soul.read"
 
 class CheckerHonoursDatabaseGrantsTest(TestCase):
     def setUp(self):
-        self.role = Role.objects.create(name="VIEWER", display_name="Viewer")
+        # get_or_create, not create: perm migration 0017 seeds all five Role rows
+        # at migrate time, so these already exist in the test database.
+        self.role, _ = Role.objects.get_or_create(
+            name="VIEWER", defaults={"display_name": "Viewer"}
+        )
         self.user = User.objects.create_user(
             username="viewer_grants", password="x", role="VIEWER"
         )
@@ -98,8 +102,18 @@ class CheckerHonoursDatabaseGrantsTest(TestCase):
 
     def test_a_seeded_codename_with_no_grant_is_denied_even_though_the_dict_allows_it(self):
         """The DB is authoritative for seeded codenames — that is the documented
-        contract. Before the fix this returned the dict's True."""
-        self._seed(GRANTED_BY_DICT)
+        contract. Before the fix this returned the dict's True.
+
+        The revoke is not redundant. Migration 0017 grants VIEWER whichever of
+        its dict codenames already have a Permission row at migrate time; today
+        soul.read has none, so no grant exists and the revoke is a no-op. But
+        that is a fact about the current seed data, not about this test's
+        subject. Stating the precondition outright means the test keeps testing
+        "seeded and ungranted is denied" if 0017 (or a later seeder) ever starts
+        creating that row, instead of silently inverting into its own opposite.
+        """
+        perm = self._seed(GRANTED_BY_DICT)
+        self._revoke(perm)
 
         self.assertFalse(
             check_permission(self.user, GRANTED_BY_DICT),
@@ -111,7 +125,9 @@ class CheckerHonoursDatabaseGrantsTest(TestCase):
         """Pins the join to the right role. `filter(role=<name string>)` raised;
         a lookup that matched on nothing — or on everything — would also satisfy
         test_a_grant_grants on its own."""
-        judge_role = Role.objects.create(name="JUDGE", display_name="Judge")
+        judge_role, _ = Role.objects.get_or_create(
+            name="JUDGE", defaults={"display_name": "Judge"}
+        )
         perm = self._seed(DENIED_BY_DICT)
         self._grant(perm, role=judge_role)
 
@@ -150,42 +166,35 @@ JUDGE_WORKFLOW = ("workflow.read", "workflow.approve", "workflow.advance")
 
 
 @pytest.mark.django_db
-@pytest.mark.xfail(strict=True, reason="workflow.* is seeded but ungranted on a migrate-only DB")
 def test_workflow_codenames_survive_on_a_migrate_only_database():
-    """A migrate-only database silently revokes workflow.* from MODERATOR and JUDGE.
+    """A migrate-only database must not silently revoke workflow.* from MODERATOR and JUDGE.
 
-    This asserts the CORRECT behaviour and currently fails. Measured against a
-    fresh `manage.py migrate` database — which is exactly what pytest builds,
-    and what CI runs against:
+    This began life as an `xfail(strict=True)` recording a defect the checker fix
+    exposed. On a fresh `manage.py migrate` database — exactly what pytest builds
+    and what CI runs against — the measurement was:
 
-        MODERATOR  33 -> 28   loses workflow.read/create/update/delete/escalate
-        JUDGE      18 -> 15   loses workflow.read/approve/advance
+        MODERATOR  33 -> 28   lost workflow.read/create/update/delete/escalate
+        JUDGE      18 -> 15   lost workflow.read/approve/advance
 
-    Cause: nothing seeds DEFAULT_ROLES in a migration — the Role rows are
-    created by the init endpoints in apps/perm/views.py, which a fresh database
-    has never called. Migrations 0013 and 0015 create the seven workflow.*
-    Permission rows unconditionally, but every grant in 0013/0014/0015 bails out
-    with "role is None" and is skipped. That leaves those seven codenames seeded
-    but ungranted, and since checker.py treats the DB as authoritative for any
-    seeded codename, they are now answered from an empty RolePermission table
-    and denied. Before the checker fix the ValueError-plus-bare-except path
-    returned the dict's answer and hid this.
+    Cause: no migration seeded DEFAULT_ROLES. Role rows were created only by the
+    init endpoints in apps/perm/views.py, which a fresh database has never
+    called, and DEFAULT_ROLES did not even list MODERATOR. Migrations 0013/0015
+    created the seven workflow.* Permission rows unconditionally while every
+    grant bailed out on "role is None". That left the codenames seeded but
+    ungranted, and since checker.py treats the DB as authoritative for a seeded
+    codename, they were answered from an empty RolePermission table and denied.
+    Before the checker fix the ValueError-plus-bare-except path returned the
+    dict's answer and hid all of it.
 
-    Not fixed here on purpose: the repair is to seed the roles (or stop seeding
-    Permission rows without them), and that is a decision the user has not taken.
-    Turning CI red to force it would be the wrong way to ask.
+    Migration 0017 closes it by seeding roles, permissions and grants in one
+    operation, so the assertion now holds and the xfail is retired — which is
+    exactly what strict=True was there to force. Had it been left non-strict it
+    would have flipped to a silent XPASS and told nobody, the failure mode the
+    seven non-strict xfails elsewhere in this suite still demonstrate.
 
-    Why strict=True. A non-strict xfail that starts passing is reported as XPASS
-    and changes nothing, so the news never reaches anyone — which is precisely
-    what the seven non-strict xfails step0-snapshot found have been doing while
-    quietly passing. strict=True inverts that: the moment someone seeds the Role
-    rows, this XPASSes, XPASS is a FAILURE, and the suite announces that the
-    defect is gone and this guard should be retired. The contrast is the point.
-
-    Deliberately asserts only the positive behaviour. It does not assert that
-    the Role table is empty, because under an xfail any failed assertion counts
-    as the expected failure — a premise check would absorb the very change this
-    test exists to announce.
+    Keep this as a live test. It is the only thing asserting a role's effective
+    permissions against a migrate-only database, and re-introducing a Permission
+    row without its grant would make it fail again.
     """
     invalidate_all_permissions()
 
@@ -200,4 +209,25 @@ def test_workflow_codenames_survive_on_a_migrate_only_database():
         f"Permission rows for workflow.*: "
         f"{sorted(Permission.objects.filter(codename__startswith='workflow.').values_list('codename', flat=True))}; "
         f"Role rows: {sorted(Role.objects.values_list('name', flat=True))}"
+    )
+
+
+def test_every_role_with_a_permission_matrix_is_also_seeded():
+    """DEFAULT_ROLES and ROLE_PERMISSIONS must name the same five roles.
+
+    MODERATOR held a 33-codename matrix in ROLE_PERMISSIONS while being absent
+    from DEFAULT_ROLES, so no environment built from the seed data ever had a
+    Role row for it and migrations 0014/0015 skipped its every grant. A role
+    that exists in one list and not the other is a role whose permissions are
+    written down and never take effect.
+
+    Static assertion on purpose — no database. The point is that the two
+    declarations agree at import time, before anything gets seeded anywhere.
+    """
+    seeded = {name for name, _ in DEFAULT_ROLES}
+    with_matrix = set(ROLE_PERMISSIONS)
+
+    assert seeded == with_matrix, (
+        f"in ROLE_PERMISSIONS but never seeded: {sorted(with_matrix - seeded)}; "
+        f"seeded but holding no permissions: {sorted(seeded - with_matrix)}"
     )
