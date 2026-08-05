@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.actors.models import Actor
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.dispatch.filters import DispatchFilter
@@ -29,7 +29,41 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     """
     DispatchRecord CRUD + actions.
     """
-    permission_classes = [TenantPermission]
+    # CodenamePermission is what finally enforces the codenames below; before
+    # it, PermissionMiddleware never saw self.action and they gated nothing.
+    #
+    # This is the largest move in the tranche, and it is JUDGE that carries it.
+    # JUDGE holds no dispatch codename at all — not read, not manage, not any
+    # of the three approval actions — so both viewsets close to it entirely,
+    # the list included. VIEWER likewise. dispatch.manage is held by ADMIN,
+    # MODERATOR and GUARDIAN; dispatch.approve/.reject/.execute by ADMIN and
+    # MODERATOR only, so GUARDIAN keeps proposing and editing and loses the
+    # three decisions.
+    #
+    # The two read moves (GET on this viewset and on CrossTenantJudgmentViewSet,
+    # 200 -> 403 for JUDGE and VIEWER) are recorded in
+    # apps/perm/test_matrix_snapshot.py::READ_MATRIX, not in the write
+    # instrument — which is why the write instrument's prediction of 34 was
+    # exact and still not the whole tranche. Note that adopting the unused
+    # cross_judgment.* family, flagged as an open decision on the viewset
+    # below, would reverse the JUDGE half of both read rows.
+    #
+    # KNOWN, MEASURED, AND NOT CLOSED BY THIS CHANGE: those three denials are
+    # walkable around. `status` is writable on DispatchRecordSerializer and
+    # partial_update maps to dispatch.manage, so GUARDIAN reaches APPROVED,
+    # REJECTED and EXECUTED through PATCH, and the record it leaves is FALSE
+    # rather than merely unauthorized: the soul's tenant FK never moves, so a
+    # dispatch can read EXECUTED for a soul that never changed hands. PATCH
+    # also skips the "only the target tenant may decide" guard, which is not a
+    # codename at all, and skips the status state machine entirely.
+    #
+    # See the characterization tests in
+    # backend/tests/test_perm_write_snapshot_outside_matrix.py. Closing any of
+    # it — read-only `status`/`dispatched_by`, a narrower dispatch.manage, the
+    # tenant guard on partial_update, the state machine on the model — is an
+    # authorization or modelling decision and not this change's to take.
+    # Enforced is not the same as safe here, and the tests say so out loud.
+    permission_classes = [TenantPermission, CodenamePermission]
     # BINARY read / manage, plus the three named approval actions. The dict
     # defines dispatch.read and dispatch.manage as the pair, then
     # dispatch.approve / .reject / .execute on top; it has never had a
@@ -222,7 +256,21 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
     """
     CrossTenantJudgment CRUD + actions.
     """
-    permission_classes = [TenantPermission]
+    # CodenamePermission, same as DispatchRecordViewSet. Every action here —
+    # the three CRUD writes plus participate and conclude — maps to the single
+    # codename dispatch.manage, so the five roles split the same way on all
+    # five: ADMIN, MODERATOR and GUARDIAN through, JUDGE and VIEWER refused.
+    #
+    # Because those holder sets are identical rather than nested, this viewset
+    # cannot exhibit the narrow-action/wide-CRUD bypass its sibling does — the
+    # same accident that made judgment and disposition immune in tranche 2. It
+    # is an accident: CrossTenantJudgmentSerializer does leave `status` and
+    # `conclusion_type` writable, so PATCH reaches the same row `conclude`
+    # writes. Today that costs nothing because no codename separates them. The
+    # moment cross_judgment.* is adopted (see below) or conclude is given its
+    # own codename, it becomes the same hole, and the serializer is where it
+    # would have to be closed.
+    permission_classes = [TenantPermission, CodenamePermission]
     # Stays on the `dispatch` family, binary read / manage as above.
     # dispatch.participate and dispatch.conclude existed nowhere and were held
     # by nobody, so they fold into dispatch.manage along with the CRUD writes.

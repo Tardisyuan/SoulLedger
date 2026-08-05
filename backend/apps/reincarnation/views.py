@@ -5,7 +5,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.reincarnation.models import Reincarnation
 from apps.reincarnation.serializers import ReincarnationSerializer
@@ -42,7 +42,35 @@ def _state_conflict(soul, target_state):
 class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ModelViewSet):
     queryset = Reincarnation.objects.select_related("soul", "disposition", "tenant").all()
     serializer_class = ReincarnationSerializer
-    permission_classes = [TenantPermission]
+    # CodenamePermission is what finally enforces the codenames below; before
+    # it, PermissionMiddleware never saw self.action and they gated nothing.
+    #
+    # Nine codes move here, all on the two named actions. reincarnation.manage
+    # is held by ADMIN, MODERATOR, JUDGE and GUARDIAN, so create/partial_update/
+    # destroy lose only VIEWER — three codes. reincarnation.complete and
+    # .reborn are held by ADMIN and MODERATOR alone, so JUDGE, GUARDIAN and
+    # VIEWER lose both — six more. That split is the declared policy and the
+    # reason this app was worth enforcing: `complete` and `reborn` walk a soul
+    # DISPOSED -> REINCARNATING -> ALIVE, rewrite its name, and reset its
+    # merit/demerit from the ledger. Editing the record of a rebirth and
+    # performing one are separated on purpose, and until now they were not.
+    #
+    # CHECKED AND ABSENT: this viewset has the precondition for the bypass
+    # tranche 2 found — a narrow codename on a custom action while a strictly
+    # WIDER one covers the CRUD route — and the bypass does not exist anyway.
+    # Everything complete/reborn do to the soul lives in
+    # ReincarnationService.complete_rebirth, and Reincarnation has no signals
+    # and no save() override, so the CRUD route reaches none of it. Driven and
+    # asserted, not inferred: the soul is untouched after a successful PATCH.
+    # The pattern needs the same FIELDS reachable, not merely the same app.
+    #
+    # Separately, and NOT the same finding: ReincarnationSerializer declares no
+    # read_only_fields, so cycle_count (which complete_rebirth derives) and the
+    # `soul` FK itself are writable under reincarnation.manage. That is record
+    # integrity, not authorization — do not "fix" it by narrowing a codename.
+    # Both are characterized in
+    # backend/tests/test_perm_write_snapshot_outside_matrix.py.
+    permission_classes = [TenantPermission, CodenamePermission]
     # BINARY: read / manage, plus the two named actions. The dict spells the
     # pair out — reincarnation.read and reincarnation.manage — with no
     # create/update/delete family, so the CRUD codenames the mixin was
