@@ -4,8 +4,10 @@
 Everything below landed after that and is not reflected in either. Read the
 brief first; this only adds.
 
-Three items. The first two give you material the brief asked you to invent; the
-third corrects an assumption the brief invites you to make.
+Four items. The first two give you material the brief asked you to invent; the
+third corrects an assumption the brief invites you to make; the fourth is new
+scope — the brief's `17-permissions`/`18-menus`/`19-menu-buttons` screens,
+which this section grounds in the system as it now actually behaves.
 
 ---
 
@@ -81,14 +83,56 @@ of the three (see `tables/README.md` for measured widths).
 
 ---
 
-## Heads-up, not yet a design task
+## 4. Permission enforcement is now real — design `17-permissions`, `18-menus`, `19-menu-buttons` against the actual system
 
-Permission enforcement is being switched on across the backend. Today the server
-permits essentially everything to everyone regardless of role, which is why the
-screenshots taken as different roles look so similar. As that lands, **what a
-given role sees will genuinely start to differ** — navigation included, since
-menu visibility becomes permission-gated.
+The previous version of this section said "nothing to design against yet;
+policy is still being settled." That is no longer true. Enforcement shipped
+across seven apps including `menus` this week, and the model below is what
+production actually checks — not a proposal.
 
-Nothing to design against yet; the policy per role is still being settled. But
-if you are choosing between a navigation design that degrades gracefully when
-half its entries are absent and one that assumes a fixed set, choose the former.
+**The shape.** Three tables: `Role` (name, display_name, an optional `parent`
+for hierarchy, a `scope` of GLOBAL or ORG, and — for ORG-scoped roles — an
+`organization`), `Permission` (a dotted `codename` like `menu.read`, a `name`,
+a `category` used only for grouping), `RolePermission` (the grant, joining the
+two). **40 codenames across 16 categories** exist today:
+`actors, audit, cross_judgment, dashboard, dispatch, disposition, judgment,
+ledger, menu, notification, realms, reincarnation, soul, system, user,
+workflow`. `17-permissions` is the screen that manages this join table
+directly — think a two-pane matrix (roles × codenames), not a form.
+
+**Five roles, and they are not a simple ladder.** ADMIN, MODERATOR, JUDGE,
+GUARDIAN, VIEWER. MODERATOR is a late addition — a "realm lead" scoped to one
+tenant/civilization rather than global, which is why `Role.scope` and
+`Role.organization` exist. It sits ABOVE JUDGE on operational codenames
+(`workflow.escalate`, `dispatch.approve`) but deliberately below it on nothing
+— design the role list as five peers with different territories, not a strict
+vertical hierarchy with ADMIN on top and VIEWER on the bottom rung of one
+ladder.
+
+**Menus, specifically.** `menu.read` is held by all five roles (see it or the
+app has no navigation); `menu.manage` — create/update/delete a menu entry or
+button — is ADMIN-only, no exceptions. So `18-menus` and `19-menu-buttons` are
+asymmetric by design: every role can see the tree, only one can edit it. Two
+`Menu` fields matter beyond the name: `icon` is free-text, blank-defaulting,
+and not unique per parent — in `en`/`egy` locales it is the only reliably
+readable channel once the label itself is Chinese (§3 above), so a blank icon
+is currently an unidentifiable nav item and worth a required-field treatment
+in the edit form even though the database doesn't enforce it. `roles` is a
+field on `Menu` controlling which roles see an entry at all — that's a second,
+coarser gate above the `menu.read`/`menu.manage` codename split, and the admin
+editor needs a control for it distinct from the codename picker.
+
+**One finding for the `17-permissions` bulk-assign flow specifically.** The
+assign endpoint (`POST /perm/role-permissions/assign/`) is a full REPLACE, not
+a diff — submitting an empty selection for a role wipes every permission it
+holds, in one call, with no confirmation step today. Whatever `17-permissions`
+designs for "edit this role's grants" should treat an empty-or-shrinking
+selection as a destructive action requiring confirmation, the same category as
+a delete, not as an ordinary form save.
+
+Not yet decided on our side, so don't design a final answer, but worth
+building room for: `cross_judgment.*` was reassigned this week from GUARDIAN
+to JUDGE (cross-tenant judgment is a judgment activity), which is the kind of
+per-codename reassignment `17-permissions` will need to make routine rather
+than exceptional — expect this table to keep changing shape as policy
+settles, not just as data changes.
