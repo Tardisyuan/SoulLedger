@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PAGE_SIZE } from "@/lib/api";
 import { useFeed, usePosts, useCreatePost } from "@/src/hooks/useSocial";
 import { PostCard } from "@/src/components/social/PostCard";
 import { Pagination } from "@/src/components/ui/Pagination";
@@ -26,7 +27,7 @@ export default function SocialFeedPage() {
   const posts = Array.isArray(data) ? data : (data?.results ?? []);
   const isLoading = tab === "feed" ? feedLoading : allLoading;
   const totalPages =
-    data && !Array.isArray(data) ? Math.ceil(data.count / 20) : 0;
+    data && !Array.isArray(data) ? Math.ceil(data.count / PAGE_SIZE) : 0;
 
   const handleCreate = () => {
     if (!content.trim()) return;

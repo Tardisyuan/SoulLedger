@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { auditApi, type PaginatedResponse } from "@/lib/api";
+import { auditApi, PAGE_SIZE, type PaginatedResponse } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { DataTable, type SortState } from "@/components/ui/data-table";
+import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
 
 interface AuditLogEntry {
   id: number;
@@ -44,13 +44,6 @@ const RESOURCE_OPTIONS = [
   { value: "permission", label: "Permission" },
 ];
 
-/** Parses the `ordering` query param ("-timestamp" etc.) into DataTable's sort shape. */
-function parseOrdering(ordering: string): SortState | null {
-  if (!ordering) return null;
-  const desc = ordering.startsWith("-");
-  return { key: desc ? ordering.slice(1) : ordering, direction: desc ? "desc" : "asc" };
-}
-
 export default function AuditPage() {
   const { t, formatDateTime } = useI18n();
   const { isAdmin } = useTenant();
@@ -67,7 +60,7 @@ export default function AuditPage() {
     queryFn: async () => {
       const params: Record<string, string> = {
         page: String(page),
-        page_size: "20",
+        page_size: String(PAGE_SIZE),
       };
       if (actionFilter) params.action = actionFilter;
       if (resourceFilter) params.resource = resourceFilter;
@@ -82,7 +75,7 @@ export default function AuditPage() {
   });
 
   const logs = data?.results ?? [];
-  const totalPages = data ? Math.ceil(data.count / 20) : 0;
+  const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
   const isFiltered = Boolean(actionFilter || resourceFilter || dateFrom || dateTo);
   const clearFilters = () => {
     setActionFilter("");

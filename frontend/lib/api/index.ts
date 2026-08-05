@@ -5,7 +5,7 @@
  *   import { soulsApi, type Soul } from "@/lib/api";
  *   import { api } from "@/lib/api/client";  // direct Axios instance
  */
-export { api, API_BASE } from "./client";
+export { api, API_BASE, PAGE_SIZE } from "./client";
 
 // Auth
 export { authApi } from "./auth";

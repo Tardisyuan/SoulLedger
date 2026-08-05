@@ -26,7 +26,7 @@ import { ledgerApi, type LedgerInheritance } from "@/lib/api/ledger";
 import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
-import { Skeleton, SkeletonCard } from "@/src/components/ui/skeleton";
+import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 const STATE_COLORS: Record<string, string> = {

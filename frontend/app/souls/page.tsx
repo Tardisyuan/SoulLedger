@@ -6,8 +6,8 @@ import { useSouls, useCreateSoul } from "@/src/hooks/useSouls";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-import { DataTable, type SortState } from "@/components/ui/data-table";
-import type { Soul } from "@/lib/api";
+import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
+import { PAGE_SIZE, type Soul } from "@/lib/api";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "bg-[hsl(var(--color-status-alive)/0.2)] text-[hsl(var(--color-status-alive))]",
@@ -17,13 +17,6 @@ const STATE_COLORS: Record<string, string> = {
   LOST: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
   SETTLED: "bg-[hsl(var(--color-status-settled)/0.2)] text-[hsl(var(--color-status-settled))]",
 };
-
-/** Parses the `ordering` query param ("-name" etc.) into DataTable's sort shape. */
-function parseOrdering(ordering: string): SortState | null {
-  if (!ordering) return null;
-  const desc = ordering.startsWith("-");
-  return { key: desc ? ordering.slice(1) : ordering, direction: desc ? "desc" : "asc" };
-}
 
 export default function SoulsPage() {
   const { t } = useI18n();
@@ -59,7 +52,7 @@ export default function SoulsPage() {
   // Params live in the queryKey, so filter/sort/page changes refetch on their own.
   const { data, isLoading, isError, refetch } = useSouls(params);
   const souls = (data?.results ?? []) as Soul[];
-  const totalPages = data ? Math.ceil(data.count / 20) : 0;
+  const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
 
   // Create mutation with auto-invalidation
   const createMutation = useCreateSoul();

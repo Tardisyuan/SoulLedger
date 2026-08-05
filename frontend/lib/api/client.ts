@@ -3,6 +3,13 @@ import axios from "axios";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 export const API_BASE = API_BASE_URL;
 
+/**
+ * Rows per page. Must match DRF's REST_FRAMEWORK["PAGE_SIZE"] in
+ * backend/config/settings.py — the server decides how many results a page
+ * holds, and this is only how the client derives the page count from `count`.
+ */
+export const PAGE_SIZE = 20;
+
 function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const value = `; ${document.cookie}`;
@@ -72,5 +79,25 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/**
+ * Walk every page of a DRF-paginated list endpoint and return the flattened
+ * results. Callers that need the whole collection (realms, actors) rather than
+ * one page use this instead of `api.get`.
+ */
+export async function fetchAllPages<T>(url: string, params: Record<string, string> = {}): Promise<T[]> {
+  const results: T[] = [];
+  let nextUrl: string | null = `${API_BASE}${url}?${new URLSearchParams(params)}`;
+  while (nextUrl) {
+    const parsed: URL = new URL(nextUrl);
+    const searchParams: Record<string, string> = {};
+    parsed.searchParams.forEach((v: string, k: string) => { searchParams[k] = v; });
+    const relativePath: string = nextUrl.replace(API_BASE, "");
+    const resp = await api.get(relativePath, { params: searchParams });
+    results.push(...resp.data.results);
+    nextUrl = resp.data.next ? (resp.data.next.startsWith("http") ? resp.data.next : `${API_BASE}${resp.data.next}`) : null;
+  }
+  return results;
+}
 
 export { getCookie, getTenantId };
