@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.audit.models import AuditLog
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.disposition.models import Disposition
 from apps.ledger.services import LedgerService, RebirthNotApplicable
 from apps.souls.models import Soul, SoulState
@@ -46,7 +46,7 @@ class LedgerBalanceView(APIView):
     published European heading promises reduction by contrition and act rather
     than by elapsed time. See CIVILIZATION_DECAY_RATE.
     """
-    permission_classes = [TenantPermission]
+    permission_classes = [TenantPermission, CodenamePermission]
 
     def get_required_permissions(self):
         return ['ledger.read']
@@ -71,7 +71,7 @@ class LedgerRecalculateView(APIView):
 
     Recalculates and persists ledger scores for a soul. Tenant-isolated.
     """
-    permission_classes = [TenantPermission]
+    permission_classes = [TenantPermission, CodenamePermission]
 
     def get_required_permissions(self):
         # Was 'karma.update' — a codename that exists nowhere: not in
@@ -102,7 +102,7 @@ class LedgerEffectiveView(APIView):
     Returns the effective ledger with time decay applied.
     Used for disposition decisions.
     """
-    permission_classes = [TenantPermission]
+    permission_classes = [TenantPermission, CodenamePermission]
 
     def get_required_permissions(self):
         return ['ledger.read']
@@ -131,7 +131,7 @@ class LedgerInheritanceView(APIView):
     409 REBIRTH_NOT_APPLICABLE for a soul whose cosmology is terminal
     (EGYPTIAN, EUROPEAN) — there is no next life to inherit into.
     """
-    permission_classes = [TenantPermission]
+    permission_classes = [TenantPermission, CodenamePermission]
 
     def get_required_permissions(self):
         return ['ledger.read']
@@ -166,7 +166,7 @@ class LedgerOverviewStatsView(APIView):
     Returns: total souls, state distribution, tenant totals, ledger range stats,
     recent activity, and souls by realm.
     """
-    permission_classes = [TenantPermission]
+    permission_classes = [TenantPermission, CodenamePermission]
 
     def get_required_permissions(self):
         return ['ledger.read']
@@ -300,15 +300,14 @@ class LedgerExportStatsView(APIView):
 
     Admin-only CSV export of all souls with their ledger data.
 
-    The `role != 'ADMIN'` check below is the real gate, not
-    get_required_permissions(). Deliberately not replaced by a `ledger.export`
-    codename: PermissionMiddleware only consults get_required_permissions()
-    when `request.view` is set, and nothing in the request pipeline sets it, so
-    moving the gate onto a codename would open this endpoint to every
-    authenticated user with a tenant. Until that is fixed, a codename here
-    would be decoration over a check that never runs.
+    The `role != 'ADMIN'` check below is still the gate that makes this
+    admin-only. `ledger.read` is now genuinely enforced by CodenamePermission,
+    but every one of the five roles holds it, so the codename alone would let
+    a VIEWER export every soul in the tenant. Replacing the hardcoded check
+    needs a codename that says "export" — that is a policy decision and a new
+    grant, not part of moving enforcement into DRF.
     """
-    permission_classes = [TenantPermission]
+    permission_classes = [TenantPermission, CodenamePermission]
 
     def get_required_permissions(self):
         return ['ledger.read']
