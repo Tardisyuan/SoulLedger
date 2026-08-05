@@ -185,15 +185,33 @@ class RolePermission(AuditUserFields):
 
 
 # 默认权限矩阵
+#
+# 这份清单是 codename 的**目录**：视图声明的每个 codename 都必须在这里出现，
+# 且必须至少被 ROLE_PERMISSIONS 里的一个角色持有。两条约束由
+# apps/perm/test_codename_coverage.py 对全项目每个路由视图逐条断言。
+#
+# 曾经有 17 个 codename 只写在下面的 ROLE_PERMISSIONS 里而没进这份目录
+# （soul.die、judgment.create、workflow.* 等）。后果不是"少一行文档"：
+# apps/core/ws_permissions.py:62 和 apps/notifications/consumers.py:204 直接
+# 把这份清单当作 ADMIN 的 WebSocket 权限集，缺一条 ADMIN 就收不到对应的
+# 事件；apps/perm/views.py 的初始化/导入接口也只按这份清单建 Permission 行，
+# 缺一条权限管理界面上就看不见、也没法单独授予或收回。补齐即可，
+# 不需要迁移——迁移 0013/0015 早已把 workflow.* 落进 Permission 表。
 DEFAULT_PERMISSIONS = [
-    # soul 权限
+    # soul 权限（CRUD + 两个自定义动作，ROLE_PERMISSIONS 一直在授予它们）
     ("soul.read", "查看灵魂", "soul"),
     ("soul.create", "创建灵魂", "soul"),
     ("soul.update", "编辑灵魂", "soul"),
     ("soul.delete", "删除灵魂", "soul"),
+    ("soul.die", "宣告死亡", "soul"),
+    ("soul.transition", "状态流转", "soul"),
     # judgment 权限
     ("judgment.read", "查看审判", "judgment"),
+    ("judgment.create", "创建审判", "judgment"),
     ("judgment.execute", "执行审判", "judgment"),
+    # disposition 权限（read + execute 二元，没有 disposition.manage）
+    ("disposition.read", "查看处置", "disposition"),
+    ("disposition.execute", "执行处置", "disposition"),
     # ledger 权限（原 karma.*，随 apps.karma → apps.ledger 一并改名，
     # 迁移 0016 负责把已入库的 Permission 行改名而非重建，以保住授权）
     ("ledger.read", "查看功德", "ledger"),
@@ -201,16 +219,36 @@ DEFAULT_PERMISSIONS = [
     # reincarnation 权限
     ("reincarnation.read", "查看轮回", "reincarnation"),
     ("reincarnation.manage", "管理轮回", "reincarnation"),
+    ("reincarnation.complete", "完成轮回", "reincarnation"),
+    ("reincarnation.reborn", "执行转生", "reincarnation"),
     # dashboard 权限
     ("dashboard.read", "查看仪表盘", "dashboard"),
     # audit 权限
     ("audit.read", "查看审计日志", "audit"),
     # notification 权限
     ("notification.read", "查看通知", "notification"),
-    # dispatch 权限
+    # dispatch 权限（read/manage 二元，外加三个审批动作）
     ("dispatch.read", "查看调度", "dispatch"),
     ("dispatch.manage", "管理调度", "dispatch"),
+    ("dispatch.approve", "批准调度", "dispatch"),
+    ("dispatch.reject", "驳回调度", "dispatch"),
+    ("dispatch.execute", "执行调度", "dispatch"),
+    # workflow 权限（迁移 0013 建了前六条、0015 建了 escalate，
+    # 这份目录当时漏了它们，补上以对齐 DB）
+    ("workflow.read", "查看工作流", "workflow"),
+    ("workflow.create", "创建工作流", "workflow"),
+    ("workflow.update", "编辑工作流", "workflow"),
+    ("workflow.delete", "删除工作流", "workflow"),
+    ("workflow.approve", "审批工作流", "workflow"),
+    ("workflow.advance", "推进工作流", "workflow"),
+    ("workflow.escalate", "越级推进工作流", "workflow"),
     # cross-tenant judgment 权限
+    # 注意：这一族目前**没有任何视图声明它**。看名字它显然是为
+    # apps/dispatch/views.py 的 CrossTenantJudgmentViewSet 写的，但那个视图
+    # 声明的是 dispatch.*。两族的持有者不同——cross_judgment.* 是
+    # ADMIN/JUDGE/MODERATOR，dispatch.read 是 ADMIN/GUARDIAN/MODERATOR——
+    # 所以改挂过去会让 GUARDIAN 丢掉跨域审判的读权限、JUDGE 凭空获得，
+    # 属于策略变更而非改名，留给负责人定夺。
     ("cross_judgment.read", "查看跨域审判", "cross_judgment"),
     ("cross_judgment.create", "创建跨域审判", "cross_judgment"),
     # realms 权限
