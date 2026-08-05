@@ -260,7 +260,7 @@ class TestPermissionChangeAuditLog:
 
         log = AuditLog.objects.filter(
             action=AuditAction.PERMISSION_CHANGE,
-            resource="RolePermission"
+            resource="rolepermission"
         ).order_by("-timestamp").first()
         assert log is not None, "Should have a PERMISSION_CHANGE audit log for RolePermission"
         assert log.changes is not None
@@ -289,7 +289,7 @@ class TestPermissionChangeAuditLog:
 
         log = AuditLog.objects.filter(
             action=AuditAction.PERMISSION_CHANGE,
-            resource="RolePermission"
+            resource="rolepermission"
         ).order_by("-timestamp").first()
         assert log is not None, "Should have a PERMISSION_CHANGE audit log for RolePermission deletion"
         assert log.changes is not None
@@ -310,7 +310,7 @@ class TestPermissionChangeAuditLog:
 
         log = AuditLog.objects.filter(
             action=AuditAction.PERMISSION_CHANGE,
-            resource="RolePermission"
+            resource="rolepermission"
         ).order_by("-timestamp").first()
 
         assert log is not None
