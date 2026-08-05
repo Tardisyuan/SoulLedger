@@ -194,21 +194,26 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _resolve_permissions(self):
-        """Re-resolve RBAC permissions for the current user."""
+        """Re-resolve the current user's permission codenames.
+
+        See ``apps/core/ws_permissions.py::PermissionMiddleware._resolve_permissions``
+        for why this goes through ``apps.perm.services.get_role_permission_codenames``
+        rather than ``user.rbac_role.get_inherited_permissions()``: the two
+        disagreed for every role except ADMIN, and any user with no
+        ``rbac_role`` set got nothing back regardless of what their ``role``
+        actually granted.
+        """
         user = self.user
         if not user or not getattr(user, "is_authenticated", False):
             return set()
 
-        if hasattr(user, "role") and user.role == "ADMIN":
-            from apps.perm.models import DEFAULT_PERMISSIONS
-            return {codename for codename, _, _ in DEFAULT_PERMISSIONS}
-
-        rbac_role = getattr(user, "rbac_role", None)
-        if not rbac_role:
+        role = getattr(user, "role", None)
+        if not role:
             return set()
 
         try:
-            return rbac_role.get_inherited_permissions()
+            from apps.perm.services import get_role_permission_codenames
+            return set(get_role_permission_codenames(role))
         except Exception:
             logger.exception("NotificationConsumer: error resolving permissions")
             return set()
