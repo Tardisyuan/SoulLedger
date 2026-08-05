@@ -464,9 +464,6 @@
   "ledger": {
     "title": "功德统计",
     "subtitle": "灵魂功德概览",
-    "balance": "余额",
-    "effective": "有效",
-    "no_history": "暂无功过历史",
     "no_data": "暂无数据",
     "total_souls": "总灵魂数",
     "active_souls": "活跃灵魂",
