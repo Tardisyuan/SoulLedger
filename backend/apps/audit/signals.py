@@ -171,7 +171,12 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
                 tenant=tenant,
                 user=user,
                 action=AuditAction.PERMISSION_CHANGE,
-                resource=model_name,
+                # model_name is the CamelCase class name ('Role', 'RolePermission'),
+                # kept as-is above for the comparisons. Every other write path derives
+                # `resource` from _meta.label_lower, which lowercases it — lowercase
+                # here too so this doesn't split the same resource into two spellings
+                # (e.g. 'rolepermission' vs 'RolePermission') in the audit log.
+                resource=model_name.lower(),
                 resource_id=resource_id,
                 changes=changes,
                 ip_address=ip_address,
