@@ -70,7 +70,6 @@ export interface LedgerInheritanceNotApplicable {
 
 export const ledgerApi = {
   balance: (soulId: number) => api.get(`/ledger/balance/${soulId}/`),
-  effective: (soulId: number) => api.get(`/ledger/effective/${soulId}/`),
   recalculate: (soulId: number) => api.post(`/ledger/calculate/${soulId}/`),
   // Note the ordering: inheritance/ comes before the soul id in the URLconf.
   inheritance: (soulId: string) => api.get<LedgerInheritance>(`/ledger/inheritance/${soulId}/`),

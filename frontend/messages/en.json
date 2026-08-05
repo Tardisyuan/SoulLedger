@@ -464,9 +464,6 @@
   "ledger": {
     "title": "Deed Statistics",
     "subtitle": "Overview of recorded deeds",
-    "balance": "Balance",
-    "effective": "Effective",
-    "no_history": "No deed history available",
     "no_data": "No data available",
     "total_souls": "Total Souls",
     "active_souls": "Active Souls",
