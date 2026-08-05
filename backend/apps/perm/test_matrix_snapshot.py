@@ -111,6 +111,18 @@ JUDGMENT_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 403, 
 DISPOSITION_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 200, "VIEWER": 403}
 # `workflow.read` — ADMIN, MODERATOR, JUDGE. Not GUARDIAN, not VIEWER.
 WORKFLOW_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
+# The one tranche 3 introduces.
+#
+# `dispatch.read` — ADMIN, MODERATOR, GUARDIAN. Not JUDGE, not VIEWER, and the
+# JUDGE half is worth pausing on: it is the only read shape in this file where
+# JUDGE is refused and GUARDIAN admitted. That is not an oversight to be tidied
+# up. JUDGE holds no `dispatch.*` codename whatsoever, while the unused
+# `cross_judgment.read` family — held by ADMIN, JUDGE and MODERATOR — looks
+# written for exactly the cross-tenant-judgments route below. Adopting it would
+# flip these two rows: JUDGE would gain the read and GUARDIAN would lose it.
+# That is a policy change and belongs to the lead; apps/dispatch/views.py flags
+# it as an open decision and this pass keeps the family the view declares.
+DISPATCH_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 200, "VIEWER": 403}
 
 
 # ---------------------------------------------------------------------------
@@ -144,9 +156,19 @@ READ_MATRIX = {
     # MODERATOR, JUDGE and GUARDIAN — four of five. VIEWER is the only role
     # without it, and the only code that moves here. Was OPEN_TO_ALL.
     "/api/v1/disposition/": DISPOSITION_READ,
+    # ENFORCED (tranche 3): declares `reincarnation.read`, held by all five
+    # roles, so this row does not move. Kept as OPEN_TO_ALL deliberately rather
+    # than left uncommented — after enforcement a 200 here is the codename
+    # system granting, not the absence of a check, and those look identical
+    # from the outside.
     "/api/v1/reincarnation/": OPEN_TO_ALL,
-    "/api/v1/dispatch/records/": OPEN_TO_ALL,
-    "/api/v1/dispatch/cross-tenant-judgments/": OPEN_TO_ALL,
+    # ENFORCED (tranche 3): both declare `dispatch.read`. Held by ADMIN,
+    # MODERATOR and GUARDIAN; JUDGE and VIEWER hold no `dispatch.*` codename at
+    # all. Both were OPEN_TO_ALL — these four codes are the only READ moves in
+    # tranche 3, and they are the four the write-side instrument could not
+    # predict because it enumerates write endpoints only. See DISPATCH_READ.
+    "/api/v1/dispatch/records/": DISPATCH_READ,
+    "/api/v1/dispatch/cross-tenant-judgments/": DISPATCH_READ,
     # ENFORCED (tranche 2): both declare `workflow.read`, held by ADMIN,
     # MODERATOR and JUDGE. GUARDIAN and VIEWER hold nothing in the `workflow.*`
     # family. Was OPEN_TO_ALL for both.
@@ -165,6 +187,10 @@ READ_MATRIX = {
     "/api/v1/audit-logs/": OPEN_TO_ALL,
     # apps/audit/views.py:136, hardcoded
     "/api/v1/audit-logs/stats/": ADMIN_ONLY,
+    # ENFORCED (tranche 3): declares `notification.read`, held by all five
+    # roles and the only codename NotificationViewSet resolves to. Does not
+    # move, and proving it does not move is the reason the app was enforced
+    # rather than skipped.
     "/api/v1/notifications/": OPEN_TO_ALL,
     "/api/v1/menus/": OPEN_TO_ALL,
     "/api/v1/social/posts/": OPEN_TO_ALL,
@@ -972,6 +998,32 @@ def test_removing_those_rows_actually_moved_workflow_onto_the_dict_path(
 # so they move only through approve_node; mark ApprovalWorkflowSerializer's
 # `current_node`/`status` read-only so they move only through advance/escalate.
 # Which of those is right is not a test's call.
+#
+# THE CATALOGUE CONTINUES ELSEWHERE — three instances live here, a fourth in
+# backend/tests/test_perm_write_snapshot_outside_matrix.py, which is where the
+# dispatch and reincarnation routes are covered. Recorded here so this comment
+# stays the index of the pattern rather than a partial list:
+#
+#   4. GUARDIAN, denied dispatch.approve/.reject/.execute, reaches all three
+#      statuses through PATCH /dispatch/records/{id}/ under dispatch.manage.
+#      This is the instance tranche 2 predicted would appear "the moment those
+#      are reconciled and given holders", and it is the worst one found so far:
+#      it also walks around the target-tenant rule (which is not a codename at
+#      all, so no codename change closes it), skips the status state machine,
+#      and leaves the row asserting an EXECUTED transfer whose soul never
+#      moved. `dispatched_by` is writable too, so the audit attribution is
+#      forgeable. Characterized in that file, not fixed.
+#
+#   5. NOT AN INSTANCE, and worth recording as such: reincarnation has the
+#      precondition — reincarnation.complete/.reborn are ADMIN/MODERATOR while
+#      reincarnation.manage is strictly wider — and the bypass is still absent.
+#      The soul-side effects live entirely in
+#      ReincarnationService.complete_rebirth, and Reincarnation has no signals
+#      and no save() override, so the CRUD route reaches none of them. Measured
+#      and asserted rather than inferred. The gate question this comment poses
+#      ("does any custom action's codename have a strictly narrower holder set
+#      than the CRUD codename covering the same fields?") needs its second half
+#      read as seriously as its first: same FIELDS, not merely same model.
 # ---------------------------------------------------------------------------
 
 
