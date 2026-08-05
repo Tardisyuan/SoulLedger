@@ -17,6 +17,12 @@ export interface Role {
 }
 
 export const permApi = {
+  // Current user's own role permissions (self only — see backend docstring
+  // on get_role_permissions for the enumeration guard). Used to refetch the
+  // permission list after session rehydration, since it's deliberately not
+  // persisted to localStorage.
+  myRolePermissions: () => api.get("/perm/role-permissions/"),
+
   // Permission CRUD (flat structure for backward compatibility)
   list: () => api.get("/perm/permissions/"),
   create: (data: Partial<Permission>) => api.post("/perm/permissions/", data),
