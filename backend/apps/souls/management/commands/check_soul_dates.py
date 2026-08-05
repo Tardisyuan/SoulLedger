@@ -14,9 +14,70 @@ it. See the note on the same subject in apps.souls.dates.
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Prefetch, Q
 
-from apps.souls.dates import ERROR, WARNING, check_record_date, check_soul_dates
+from apps.souls.dates import (
+    ERROR,
+    WARNING,
+    check_record_date,
+    check_soul_dates,
+    format_historical_date,
+)
 from apps.souls.models import Soul
 from apps.souls.record_models import SoulRecord
+
+
+def _range_key(triple):
+    """Sort key for a (year, month, day) with unknown parts.
+
+    Unknown month/day sort to the start of their period. That is a choice
+    rather than a truth — "some time in 1516" is not January — but it is
+    deterministic and these values are only ever used to pick the ends of a
+    range, where a year's worth of slack does not change what the range says.
+    """
+    year, month, day = triple
+    return (year, month or 0, day or 0)
+
+
+def _context_line(soul, records) -> str:
+    """Where this soul's deeds actually sit in time.
+
+    The one piece of disambiguating evidence in the data. Every rule here
+    can say that a pair of dates disagree; none can say which end is wrong,
+    because a soul shifted whole into the wrong era is internally consistent
+    in every other respect. Records are what breaks that tie: a soul dated
+    1487-1998 whose deeds all fall in 1516-1541 has a death in the wrong
+    century, not a birth.
+
+    Printed as the range and never as that conclusion. The rule cannot know
+    which end is wrong, and a report that starts guessing is a report people
+    stop checking — so this hands over the evidence and leaves the inference
+    to the person who can go and look at the sources.
+
+    "no dated records" is informative in its own right: it says the tie
+    cannot be broken here, so nobody should go hunting for a signal that is
+    not there. Undated records are counted rather than dropped, because a
+    range over 3 of 11 records looks like a range over all 11.
+    """
+    dated = [
+        (r.event_year, r.event_month, r.event_day)
+        for r in records
+        if r.event_year is not None
+    ]
+    undated = len(records) - len(dated)
+
+    if not dated:
+        span = "no dated records"
+        if undated:
+            span += f" ({undated} undated)"
+    else:
+        earliest = format_historical_date(*min(dated, key=_range_key))
+        latest = format_historical_date(*max(dated, key=_range_key))
+        span = f"{len(dated)} record(s) dated {earliest}..{latest}"
+        if undated:
+            span += f", {undated} undated"
+
+    birth = format_historical_date(soul.birth_year, soul.birth_month, soul.birth_day)
+    death = format_historical_date(soul.death_year, soul.death_month, soul.death_day)
+    return f"  birth {birth} · death {death} · {span}"
 
 
 class Command(BaseCommand):
@@ -138,6 +199,7 @@ class Command(BaseCommand):
             # other way round, and what to do about a problem depends on which.
             deleted = "  [soft-deleted]" if soul.is_deleted else ""
             self.stdout.write(f"{tenant_code}  {soul.name}  {soul.id}{deleted}")
+            self.stdout.write(_context_line(soul, soul.checked_records))
             for record, problem in problems:
                 style = self.style.ERROR if problem.severity == ERROR else self.style.WARNING
                 where = ""

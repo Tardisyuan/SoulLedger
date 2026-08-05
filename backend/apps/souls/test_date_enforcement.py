@@ -1,19 +1,13 @@
-"""Tests for date-sanity enforcement — the serializers and the report command.
+"""Tests for date-sanity enforcement on write — the API boundary.
 
-The rules themselves are tested in test_dates.py, without a database. This
-file is about the boundary: bad dates must not get in through the API, and
-rows that were already there must be findable.
+Bad dates must not get in, through either door: the serializers, and the
+`die/` action, which writes a death date without going near one.
 
-Split from test_dates.py to stay under the 500-line limit, along the seam
-that was already there — a rule and the place it is applied are different
-things, and only one of them needs Postgres.
+The rules themselves are in test_dates.py, without a database. Finding rows
+that were already bad is test_check_soul_dates.py.
 """
-from io import StringIO
-
 import pytest
 from django.contrib.auth import get_user_model
-from django.core.management import call_command
-from django.core.management.base import CommandError
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -268,148 +262,3 @@ class TestRecordDateEnforcement:
         }, format="json")
         assert resp.status_code == status.HTTP_201_CREATED
 
-
-@pytest.mark.django_db
-class TestCheckSoulDatesCommand:
-    """`manage.py check_soul_dates` — finds what the serializers cannot,
-    because it was already there before they existed."""
-
-    @pytest.fixture(autouse=True)
-    def setup(self, db):
-        self.tenant = Tenant.objects.get_or_create(
-            code="CMD_DATES", defaults={"display_name": "Command Dates Tenant"}
-        )[0]
-
-    def _run(self, *args):
-        out = StringIO()
-        call_command("check_soul_dates", "--tenant", self.tenant.code, *args, stdout=out)
-        return out.getvalue()
-
-    def test_clean_data_reports_nothing_flagged(self):
-        Soul.objects.create(
-            name="Fine", tenant=self.tenant, birth_year=-612, death_year=-580
-        )
-        output = self._run()
-        assert "0 soul(s) flagged" in output
-
-    def test_a_soul_written_around_the_serializer_is_found(self):
-        Soul.objects.create(
-            name="Backwards", tenant=self.tenant, birth_year=2019, death_year=1943
-        )
-        output = self._run()
-        assert "death_before_birth" in output
-        assert "Backwards" in output
-        assert "1 soul(s) flagged: 1 error(s)" in output
-
-    def test_an_implausible_lifespan_is_found(self):
-        Soul.objects.create(
-            name="Ancient Mariner", tenant=self.tenant, birth_year=1487, death_year=1998
-        )
-        assert "implausible_lifespan" in self._run()
-
-    def test_a_record_outside_the_life_is_found(self):
-        soul = Soul.objects.create(
-            name="Ancient", tenant=self.tenant, birth_year=-612, death_year=-580
-        )
-        SoulRecord.objects.create(
-            soul=soul, record_type="MERIT", civilization="EGYPTIAN",
-            description="Impossibly early", weight=1, event_year=-700,
-        )
-        output = self._run()
-        assert "event_before_birth" in output
-        assert str(soul.id) in output
-
-    def test_posthumous_records_are_reported_as_warnings_and_can_be_hidden(self):
-        soul = Soul.objects.create(
-            name="Ancient", tenant=self.tenant, birth_year=-612, death_year=-580
-        )
-        SoulRecord.objects.create(
-            soul=soul, record_type="MERIT", civilization="EGYPTIAN",
-            description="Remembered later", weight=1, event_year=-500,
-        )
-        assert "event_after_death" in self._run()
-        assert "event_after_death" not in self._run("--errors-only")
-
-    def test_the_command_changes_nothing(self):
-        """It reports. What to do about a soul born after it died is a
-        judgement, not something a script gets to make."""
-        soul = Soul.objects.create(
-            name="Backwards", tenant=self.tenant, birth_year=2019, death_year=1943
-        )
-        self._run()
-        soul.refresh_from_db()
-        assert (soul.birth_year, soul.death_year) == (2019, 1943)
-
-    def test_strict_exits_non_zero_when_errors_are_found(self):
-        Soul.objects.create(
-            name="Backwards", tenant=self.tenant, birth_year=2019, death_year=1943
-        )
-        with pytest.raises(CommandError):
-            self._run("--strict")
-
-    def test_strict_is_quiet_when_only_warnings_are_found(self):
-        soul = Soul.objects.create(
-            name="Ancient", tenant=self.tenant, birth_year=-612, death_year=-580
-        )
-        SoulRecord.objects.create(
-            soul=soul, record_type="MERIT", civilization="EGYPTIAN",
-            description="Remembered later", weight=1, event_year=-500,
-        )
-        assert "0 error(s)" in self._run("--strict")
-
-    def test_the_report_says_which_population_it_examined(self):
-        """A report that silently omits soft-deleted rows gets read as a
-        report on everything."""
-        soul = Soul.objects.create(
-            name="Gone", tenant=self.tenant, birth_year=2019, death_year=1943
-        )
-        soul.is_deleted = True
-        soul.save()
-        SoulRecord.objects.create(
-            soul=soul, record_type="MERIT", civilization="CHINESE",
-            description="Attached to a deleted soul", weight=1, event_year=1900,
-        )
-        output = self._run()
-        assert "Checking live rows only" in output
-        # The record is live; it is skipped because its soul is not, and
-        # counting only is_deleted records would report 0 and be wrong.
-        assert "1 soul(s) and 1 record(s) were not examined" in output
-        assert "Gone" not in output
-
-    def test_include_deleted_examines_the_soft_deleted_originals(self):
-        """A soft-deleted row is not necessarily junk — it may be the
-        original a live row was rewritten from, and restoring it makes its
-        dates live again."""
-        soul = Soul.objects.create(
-            name="Gone", tenant=self.tenant, birth_year=2019, death_year=1943
-        )
-        soul.is_deleted = True
-        soul.save()
-        output = self._run("--include-deleted")
-        assert "Checking live and soft-deleted rows." in output
-        assert "Gone" in output
-        assert "[soft-deleted]" in output
-        assert "death_before_birth" in output
-
-    def test_a_deleted_record_on_a_live_soul_is_marked_too(self):
-        soul = Soul.objects.create(
-            name="Ancient", tenant=self.tenant, birth_year=-612, death_year=-580
-        )
-        record = SoulRecord.objects.create(
-            soul=soul, record_type="MERIT", civilization="EGYPTIAN",
-            description="Impossibly early", weight=1, event_year=-700,
-        )
-        record.is_deleted = True
-        record.save()
-        assert "event_before_birth" not in self._run()
-        output = self._run("--include-deleted")
-        assert f"record {record.id} [soft-deleted]" in output
-
-    def test_the_tenant_filter_scopes_the_report(self):
-        other = Tenant.objects.get_or_create(
-            code="CMD_DATES_OTHER", defaults={"display_name": "Other"}
-        )[0]
-        Soul.objects.create(
-            name="Elsewhere", tenant=other, birth_year=2019, death_year=1943
-        )
-        assert "Elsewhere" not in self._run()
