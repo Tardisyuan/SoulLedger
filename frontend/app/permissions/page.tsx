@@ -768,6 +768,7 @@ export default function PermissionsPage() {
           isPending={createMutation.isPending}
           error={createMutation.isError ? t("permissions.create_error") : null}
           title={t("permissions.create")}
+          existingCategories={categories.map((c) => c.category)}
         />
         <PermissionFormModal
           isOpen={isEditOpen}
@@ -777,6 +778,7 @@ export default function PermissionsPage() {
           error={editMutation.isError ? t("permissions.edit_error") : null}
           title={t("permissions.edit")}
           initialData={editingPerm ?? undefined}
+          existingCategories={categories.map((c) => c.category)}
         />
 
         {/* ── Delete Permission Modal ── */}

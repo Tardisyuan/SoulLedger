@@ -312,6 +312,8 @@
     "name_placeholder": "renu Smen Aba Hemsu",
     "name_required": "Ren Sethet Her Tepy",
     "category_label": "Rekhet",
+    "category_placeholder": "Mi soul (im wehem sesheta)",
+    "category_hint": "Setep Rekhet Kheperu, im Djed Rekhet Maau",
     "submit": "Kheme Seth",
     "submitting": "Em Kheme Seth...",
     "create_success": "Aha Sethety Kheme Wehem Abuf",
