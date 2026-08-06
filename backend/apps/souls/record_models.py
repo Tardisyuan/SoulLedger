@@ -102,6 +102,49 @@ class SoulRecord(AuditUserFields, models.Model):
     evidence_json = models.JSONField(default=dict, blank=True)
     recorded_at = models.DateTimeField(auto_now_add=True)
 
+    # Acknowledgment of the `event_after_death` DateProblem WARNING — see
+    # apps.souls.dates. There is no persistent "problem" row anywhere in
+    # this system; DateProblems are computed fresh on every request. So
+    # "acknowledged" cannot be a bare boolean: if it were, editing the
+    # soul's death_date (or this record's event_date) later would silently
+    # keep hiding a warning that is now about a *different* pair of dates
+    # than the one an operator actually reviewed. These three fields
+    # record who/when, plus a fingerprint of exactly the two values the
+    # warning depends on, so a later mismatch makes the acknowledgment
+    # stop applying instead of lying. See
+    # apps.souls.dates.date_warning_fingerprint and
+    # SoulViewSet.acknowledge_record_date_warning.
+    date_warning_acknowledged_by = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="acknowledged_soul_record_date_warnings",
+        help_text=(
+            "Who acknowledged this record's event_after_death warning, if "
+            "anyone. Always set from the acknowledging request's "
+            "authenticated user, never from client-supplied data."
+        ),
+    )
+    date_warning_acknowledged_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the event_after_death warning was acknowledged.",
+    )
+    date_warning_ack_fingerprint = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text=(
+            "Snapshot of (event_date, soul.death_date) at acknowledgment "
+            "time — see apps.souls.dates.date_warning_fingerprint. If "
+            "either date has since changed, this no longer matches the "
+            "live fingerprint: the acknowledgment stops applying and the "
+            "warning reappears. Not cleared automatically — see the "
+            "acknowledge endpoint's docstring for why."
+        ),
+    )
+
     # Batch mode flags (class-level, not instance)
     _batch_mode = False
     _deferred_souls = set()
