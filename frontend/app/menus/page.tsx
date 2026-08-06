@@ -13,6 +13,7 @@ import { Modal } from "@/src/components/ui/Modal";
 import { IconPicker } from "@/src/components/ui/IconPicker";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable } from "@/components/ui/data-table";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 type LucideIconName = keyof typeof LucideIcons;
 
@@ -233,7 +234,10 @@ export default function MenusPage() {
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">{t("menus.title")}</h1>
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
+          {t("menus.title")}
+          <MenuGloss path="/menus" />
+        </h1>
         <Link
           href="/menus/buttons"
           className="px-4 py-1.5 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] rounded-md text-sm text-[hsl(var(--color-ink-muted))] transition-colors"

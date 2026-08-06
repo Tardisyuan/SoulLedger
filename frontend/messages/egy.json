@@ -1155,6 +1155,34 @@
     "stats": "Medew Seth",
     "welcome": "Per Djew",
     "profile": "Aha Pepi",
-    "notifications": "Mes Neteru"
+    "notifications": "Mes Neteru",
+    "menu": {
+      "dashboard": "Wetep Khet",
+      "admin_stats": "Medew Ka",
+      "souls": "Iri Aba Hemsu",
+      "judgment": "Sheemtet Wu",
+      "cross_judgments": "Sheemtet Mekher",
+      "karma": "Iri Ka",
+      "disposition": "Iri Kheperu",
+      "workflow": "Em Her Sethet",
+      "dispatch": "Iri Pert Abuf",
+      "death_sync": "Wepet Ru Kehat",
+      "realms": "Iri Mekher",
+      "actors": "Ren Netjeru",
+      "social": "Sesh Kheper",
+      "social_follows": "Shemsu Wu",
+      "users": "Iri Remetj",
+      "permissions": "Sethem Iri",
+      "menus": "Iri Menu",
+      "audit": "Medew Sethet",
+      "tenants": "Iri Per Hemes",
+      "organizations": "Kher Shemsu",
+      "group_overview": "Nau Khet",
+      "group_soul_ops": "Sethet Aba Hemsu",
+      "group_workflow": "Em Her Shemsu",
+      "group_org_realm": "Shemsu Mekher",
+      "group_social": "Sesh Sethet",
+      "group_settings": "Sethet Aat"
+    }
   }
 }

@@ -7,6 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 const CIVILIZATION_ICONS: Record<string, string> = {
   CHINESE: "🏯",
@@ -41,7 +42,10 @@ export default function ActorsPage() {
     <div className="p-6">
       {/* Page header - realms style */}
       <div className="mb-6">
-        <h1 className="text-2xl lg:text-3xl font-bold text-[hsl(var(--color-accent))]">{t("actors.title")}</h1>
+        <h1 className="text-2xl lg:text-3xl font-bold text-[hsl(var(--color-accent))]">
+          {t("actors.title")}
+          <MenuGloss path="/actors" />
+        </h1>
         <p className="text-sm sm:text-base text-[hsl(var(--color-ink-subtle))] mt-1 hidden sm:block">{t("actors.subtitle")}</p>
       </div>
 

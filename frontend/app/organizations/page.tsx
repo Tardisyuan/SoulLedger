@@ -7,6 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
 import { CardSkeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 // organizationsApi.list() (lib/api/organizations.ts) doesn't forward a `page` param and
 // this page renders a parent/child tree (buildTree/renderTree below), so a paged view would
@@ -110,7 +111,10 @@ export default function OrganizationsPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">{t("organization.title")}</h1>
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
+          {t("organization.title")}
+          <MenuGloss path="/organizations" />
+        </h1>
         <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("organization.subtitle")}</p>
       </div>
 

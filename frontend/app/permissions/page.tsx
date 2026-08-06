@@ -13,6 +13,7 @@ import { PageSection } from "@/components/ui/page-section";
 import { PermissionFormModal } from "@/src/components/permissions/PermissionFormModal";
 import { RoleFormModal } from "@/src/components/permissions/RoleFormModal";
 import { DataTable } from "@/components/ui/data-table";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Pure helpers — no React/DOM dependency, exported so
@@ -496,7 +497,10 @@ export default function PermissionsPage() {
   return (
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       <div className="px-6 pt-6 pb-4">
-        <h1 className="text-2xl lg:text-3xl font-bold text-[hsl(var(--color-accent))]">{t("permissions.title")}</h1>
+        <h1 className="text-2xl lg:text-3xl font-bold text-[hsl(var(--color-accent))]">
+          {t("permissions.title")}
+          <MenuGloss path="/permissions" />
+        </h1>
         <p className="text-sm sm:text-base text-[hsl(var(--color-ink-subtle))] mt-1 hidden sm:block">{t("permissions.subtitle")}</p>
       </div>
 

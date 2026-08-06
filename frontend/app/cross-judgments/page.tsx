@@ -6,6 +6,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
 import { ListSkeleton, Skeleton } from "@/components/ui/skeleton";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 export default function CrossJudgmentsPage() {
   const { t } = useI18n();
@@ -29,6 +30,7 @@ export default function CrossJudgmentsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
           {t("crossJudgments.title")}
+          <MenuGloss path="/cross-judgments" />
         </h1>
         <p className="text-[hsl(var(--color-ink-subtle))] mt-1">
           {t("crossJudgments.subtitle")}

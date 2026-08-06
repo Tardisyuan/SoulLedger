@@ -6,6 +6,7 @@ import { auditApi, PAGE_SIZE, type AuditLogEntry } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 const ACTION_OPTIONS = [
   { value: "", label: "all_actions" },
@@ -80,6 +81,7 @@ export default function AuditPage() {
         <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
           <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
             {t("audit.title")}
+            <MenuGloss path="/audit" />
           </h1>
         </div>
         <div className="flex items-center justify-center h-64">
@@ -100,6 +102,7 @@ export default function AuditPage() {
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
           {t("audit.title")}
+          <MenuGloss path="/audit" />
         </h1>
       </div>
 

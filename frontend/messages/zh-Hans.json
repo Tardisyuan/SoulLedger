@@ -1155,6 +1155,34 @@
     "stats": "统计",
     "welcome": "欢迎页",
     "profile": "个人资料",
-    "notifications": "通知中心"
+    "notifications": "通知中心",
+    "menu": {
+      "dashboard": "仪表盘",
+      "admin_stats": "业力统计",
+      "souls": "灵魂管理",
+      "judgment": "审判队列",
+      "cross_judgments": "跨域审判",
+      "karma": "功德管理",
+      "disposition": "轮回处置",
+      "workflow": "审批流程",
+      "dispatch": "调度管理",
+      "death_sync": "死亡同步",
+      "realms": "领域管理",
+      "actors": "神祇名录",
+      "social": "动态",
+      "social_follows": "关注",
+      "users": "用户管理",
+      "permissions": "权限与角色",
+      "menus": "菜单管理",
+      "audit": "审计日志",
+      "tenants": "租户管理",
+      "organizations": "组织架构",
+      "group_overview": "概览",
+      "group_soul_ops": "灵魂业务",
+      "group_workflow": "流程协作",
+      "group_org_realm": "组织与领域",
+      "group_social": "社交",
+      "group_settings": "系统设置"
+    }
   }
 }

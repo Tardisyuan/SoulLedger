@@ -7,6 +7,7 @@ import { api, PAGE_SIZE, type Tenant, type PaginatedResponse } from "@/lib/api";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
 import { Pagination } from "@/src/components/ui/Pagination";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 export default function TenantsPage() {
   const { t } = useI18n();
@@ -27,7 +28,10 @@ export default function TenantsPage() {
   return (
     <div className="p-6 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">{t("tenants.title") || "Tenants"}</h1>
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
+          {t("tenants.title") || "Tenants"}
+          <MenuGloss path="/tenants" />
+        </h1>
         <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("tenants.subtitle") || "Tenant management"}</p>
       </div>
 

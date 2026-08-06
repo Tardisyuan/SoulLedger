@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { judgmentApi, PAGE_SIZE, type Judgment } from "@/lib/api";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 const VERDICT_COLORS: Record<string, string> = {
   PASSED: "bg-[hsl(var(--color-verdict-passed)/0.2)] text-[hsl(var(--color-verdict-passed))]",
@@ -53,6 +54,7 @@ export default function JudgmentQueuePage() {
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
           {t("judgment.title")}
+          <MenuGloss path="/judgment" />
         </h1>
       </div>
 

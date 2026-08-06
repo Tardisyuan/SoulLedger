@@ -12,6 +12,7 @@ import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { WORKFLOW_TEMPLATES, type TemplateKey } from "@/src/config/workflow-templates";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 // ── Types for template data ──────────────────────────────────────
 
@@ -158,6 +159,7 @@ export default function WorkflowPage() {
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
           {t("workflow.title")}
+          <MenuGloss path="/workflow" />
         </h1>
       </div>
 
