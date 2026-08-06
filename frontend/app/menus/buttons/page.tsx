@@ -1,9 +1,9 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { menuButtonsApi, menusApi, PAGE_SIZE, type MenuButton, type MenuItem, type PaginatedResponse } from "@/lib/api";
+import { menuButtonsApi, menusApi, permApi, PAGE_SIZE, type MenuButton, type MenuItem, type PaginatedResponse, type Permission } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Modal } from "@/src/components/ui/Modal";
@@ -44,6 +44,21 @@ export default function MenuButtonsPage() {
   });
   const buttons = data?.results ?? [];
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
+
+  // GET /perm/permissions/ — a MenuButton's `permission` is required and, unlike
+  // Menu.permission, is already live: MenuTreeSerializer/MenuSerializer.get_buttons()
+  // filters buttons through user_has_permission(user, button.permission) for every
+  // non-ADMIN request. A codename that doesn't exist doesn't error — it just makes
+  // user_has_permission return False for everyone, silently hiding the button from
+  // every non-ADMIN role. Checked here so that failure mode is visible at edit time.
+  const { data: allPermissions = [], isSuccess: permissionsLoaded } = useQuery<Permission[]>({
+    queryKey: ["permissions-for-menu-button-codename-check"],
+    queryFn: async () => (await permApi.list()).data,
+  });
+  const realCodenames = useMemo(
+    () => new Set(allPermissions.map((p) => p.codename)),
+    [allPermissions]
+  );
 
   const createMutation = useMutation({
     mutationFn: (data: Partial<MenuButton>) => menuButtonsApi.create(data),
@@ -127,6 +142,16 @@ export default function MenuButtonsPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-6">
+        {/* MenuButton only carries one of the menu editor's five visibility
+            gates (is_active) — roles, `visible`, the permission/derivation
+            ambiguity, and menu_type all live on the parent Menu, not here.
+            See the reference table on /menus for what each of those does. */}
+        <p className="text-xs text-[hsl(var(--color-ink-subtle))] mb-4">
+          {t("menu_buttons.gates_note")}{" "}
+          <Link href="/menus" className="text-[hsl(var(--color-accent))] hover:underline">
+            {t("menus.title")}
+          </Link>
+        </p>
         <DataTable<MenuButton>
           caption={t("menu_buttons.title")}
           columns={[
@@ -221,6 +246,11 @@ export default function MenuButtonsPage() {
               placeholder={t("menu_buttons.permission_placeholder")}
               className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
+            {permissionsLoaded && form.permission.trim() && !realCodenames.has(form.permission.trim()) && (
+              <p className="text-xs text-[hsl(var(--color-status-warning))] mt-1">
+                {t("menu_buttons.permission_mismatch_warning", { codename: form.permission.trim() })}
+              </p>
+            )}
           </div>
           {!editingButton && (
             <div>
