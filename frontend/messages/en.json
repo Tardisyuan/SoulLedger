@@ -205,7 +205,41 @@
       "copy_id_aria": "Copy soul ID",
       "copied": "Copied ✓",
       "id_copied": "ID copied to clipboard",
-      "id_copy_failed": "Copy failed"
+      "id_copy_failed": "Copy failed",
+      "reading": {
+        "threshold_hint": "Heart weighs {{weight}}× the feather (feather = {{counterweight}})",
+        "threshold_pass": "Not heavier than the feather",
+        "threshold_fail": "Heavier than the feather",
+        "culpa_label": "Culpa (guilt)",
+        "culpa_records": "{{count}} record(s)",
+        "poena_label": "Poena (penance)",
+        "poena_unavailable_heading": "Cannot be computed",
+        "poena_missing_absolution": "Whether absolution has occurred",
+        "poena_missing_satisfaction": "How much satisfaction is owed",
+        "poena_missing_penance": "How much penance has been performed",
+        "unavailable_explanation": "This soul's tenant is not mapped to a cosmology, so there is no verdict to render — only the raw ledger below.",
+        "unavailable_raw_data": "Raw ledger (not a reading)",
+        "unavailable_cta": "Configure this tenant's civilization mapping to enable a reading."
+      },
+      "date_problems": {
+        "title": "Date Problems",
+        "ack_error": "Action failed",
+        "acknowledge": "Mark reviewed",
+        "revoke": "Revoke",
+        "acknowledged_by": "Marked reviewed by {{user}} on {{date}}",
+        "codes": {
+          "death_before_birth": "Death before birth",
+          "implausible_lifespan": "Implausible lifespan",
+          "event_before_birth": "Event before birth",
+          "event_after_death": "Event after death"
+        }
+      }
+    },
+    "date_problem_filter": "Problems only",
+    "balance_not_applicable": "Not applicable — see soul detail",
+    "date_problem_marker": {
+      "error": "Date error — see soul detail",
+      "warning": "Date warning — see soul detail"
     }
   },
   "common": {

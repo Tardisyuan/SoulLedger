@@ -71,7 +71,11 @@ jest.mock("@/lib/api", () => ({
   soulsApi: {
     get: (...args: unknown[]) => mockSoulsGet(...args),
     karma: (...args: unknown[]) => mockSoulsLedger(...args),
-    records: jest.fn().mockResolvedValue({ data: { results: [] } }),
+    // Bare array, not a pagination envelope — see soulsApi.records's own
+    // comment (lib/api/souls.ts). DateProblemsPanel now actually reads this
+    // (it didn't before), so a mock shaped like a paginated response would
+    // make it call `.flatMap` on a plain object and throw.
+    records: jest.fn().mockResolvedValue({ data: [] }),
   },
   judgmentApi: { list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
   dispositionApi: { list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
@@ -88,6 +92,7 @@ const mockSoul = {
   death_date: null,
   birth_name: null,
   origin_location: null,
+  date_problems: [],
 };
 
 // merit_score === demerit_score === 100 is the exact case the old
@@ -115,6 +120,16 @@ function mockLedgerWithOneRecord(meritScore: number, demeritScore: number) {
         recorded_at: "2020-01-01T00:00:00Z",
       },
     ],
+    // mockSoul below is CHINESE, so this soul reads as BALANCE
+    // (apps/ledger/readings.py) — see SoulReadingPanel, which renders off
+    // `reading`, not the top-level merit/demerit/karmic_balance above.
+    reading: {
+      kind: "BALANCE" as const,
+      civilization: "CHINESE",
+      balance: meritScore - demeritScore,
+      merit: meritScore,
+      demerit: demeritScore,
+    },
   };
 }
 

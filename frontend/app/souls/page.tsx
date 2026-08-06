@@ -2,13 +2,41 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { useSouls, useCreateSoul } from "@/src/hooks/useSouls";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
-import { PAGE_SIZE, type SoulListItem } from "@/lib/api";
+import { PAGE_SIZE, soulsApi, type SoulListItem } from "@/lib/api";
 import { formatHistoricalDate } from "@/lib/utils";
+
+/**
+ * ⊘ (red) for any ERROR-severity date problem — the soul's own dates
+ * against each other (death_before_birth, implausible_lifespan), from
+ * `soul.date_problems`. △ (amber) for a record's unacknowledged
+ * event_after_death WARNING when there's no ERROR, from
+ * `soul.has_date_warning`. Both fields are computed server-side
+ * (SoulListSerializer) from data already loaded per row — no extra
+ * per-soul request here. See backend/apps/souls/serializers.py.
+ */
+function dateProblemMarker(soul: SoulListItem): { glyph: string; className: string; labelKey: string } | null {
+  if (soul.date_problems.some((p) => p.severity === "error")) {
+    return {
+      glyph: "⊘",
+      className: "text-[hsl(var(--color-status-error))]",
+      labelKey: "souls.date_problem_marker.error",
+    };
+  }
+  if (soul.has_date_warning) {
+    return {
+      glyph: "△",
+      className: "text-[hsl(var(--color-status-warning))]",
+      labelKey: "souls.date_problem_marker.warning",
+    };
+  }
+  return null;
+}
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "bg-[hsl(var(--color-status-alive)/0.2)] text-[hsl(var(--color-status-alive))]",
@@ -30,6 +58,7 @@ export default function SoulsPage() {
   const [balanceMax, setBalanceMax] = useState("");
   const [ordering, setOrdering] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [problemsOnly, setProblemsOnly] = useState(false);
 
   // Debounce the search box so typing doesn't fire a request per keystroke.
   useEffect(() => {
@@ -48,12 +77,23 @@ export default function SoulsPage() {
   if (balanceMin) params.karma_min = parseInt(balanceMin, 10);
   if (balanceMax) params.karma_max = parseInt(balanceMax, 10);
   if (ordering) params.ordering = ordering;
+  if (problemsOnly) params.has_date_problem = "true";
 
   // TanStack Query — automatic caching, background refetch, loading/error states.
   // Params live in the queryKey, so filter/sort/page changes refetch on their own.
   const { data, isLoading, isError, refetch } = useSouls(params);
   const souls = data?.results ?? [];
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
+
+  // Independent of `problemsOnly` — this is the toggle's own badge count, so
+  // it has to be visible before the toggle is switched on. A single extra
+  // list request (page_size irrelevant, only `.count` is read), not one per
+  // row — the thing item 4 said not to do.
+  const problemCountQuery = useQuery({
+    queryKey: ["souls", "date-problem-count"],
+    queryFn: async () => (await soulsApi.list({ has_date_problem: "true", page: 1 })).data.count,
+    staleTime: 30_000,
+  });
 
   // Create mutation with auto-invalidation
   const createMutation = useCreateSoul();
@@ -74,7 +114,7 @@ export default function SoulsPage() {
     { value: "EGYPTIAN", label: t("souls.civilizations.EGYPTIAN") },
   ];
 
-  const isFiltered = Boolean(search || stateFilter || civilizationFilter || balanceMin || balanceMax);
+  const isFiltered = Boolean(search || stateFilter || civilizationFilter || balanceMin || balanceMax || problemsOnly);
 
   const resetFilters = () => {
     setSearchInput("");
@@ -83,6 +123,7 @@ export default function SoulsPage() {
     setCivilizationFilter("");
     setBalanceMin("");
     setBalanceMax("");
+    setProblemsOnly(false);
     setPage(1);
   };
 
@@ -162,6 +203,30 @@ export default function SoulsPage() {
               className="w-20 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-2 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
           </div>
+          {/* Server-side filter (SoulFilter.has_date_problem), not a
+              client-side slice of the current page — the badge count and
+              the toggle's own result set both come from the same query
+              param, so they agree even across pages. */}
+          <button
+            type="button"
+            onClick={() => {
+              setProblemsOnly((v) => !v);
+              setPage(1);
+            }}
+            aria-pressed={problemsOnly}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm border transition-colors ${
+              problemsOnly
+                ? "bg-[hsl(var(--color-status-warning)/0.2)] border-[hsl(var(--color-status-warning)/0.4)] text-[hsl(var(--color-status-warning))]"
+                : "bg-[hsl(var(--color-surface-2))] border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
+            }`}
+          >
+            {t("souls.date_problem_filter")}
+            {typeof problemCountQuery.data === "number" && (
+              <span className="bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink))] text-xs px-1.5 py-0.5 rounded">
+                {problemCountQuery.data}
+              </span>
+            )}
+          </button>
         </div>
 
         <DataTable<SoulListItem>
@@ -179,9 +244,30 @@ export default function SoulsPage() {
           isError={isError}
           onRetry={() => refetch()}
           keyExtractor={(soul) => String(soul.id)}
-          renderRow={(soul) => (
+          renderRow={(soul) => {
+            const marker = dateProblemMarker(soul);
+            // karmic_balance (merit − demerit) is the CHINESE/BALANCE
+            // instrument specifically — see SoulReadingPanel and
+            // backend/apps/ledger/readings.py. Showing it for every
+            // civilization used to put a netted number next to an
+            // Egyptian or European soul that reads on a completely
+            // different mechanic; this column now only claims a balance
+            // for the one civilization where that claim is true, and
+            // points elsewhere for the rest rather than guessing at their
+            // headline figure without the actual reading in hand.
+            const showsBalance = soul.civilization === "CHINESE";
+            return (
             <>
-              <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">{soul.name}</td>
+              <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">
+                <span className="flex items-center gap-1.5">
+                  {marker && (
+                    <span className={marker.className} aria-hidden="true" title={t(marker.labelKey)}>
+                      {marker.glyph}
+                    </span>
+                  )}
+                  {soul.name}
+                </span>
+              </td>
               <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
                 {t(`souls.civilizations.${soul.civilization}`)}
               </td>
@@ -190,8 +276,10 @@ export default function SoulsPage() {
                   {t(`souls.states.${soul.current_state}`)}
                 </span>
               </td>
-              <td className={`px-4 py-3 text-right font-mono text-sm ${(soul.karmic_balance ?? 0) >= 0 ? "text-[hsl(var(--color-accent))]" : "text-[hsl(var(--color-status-error))]"}`}>
-                {(soul.karmic_balance ?? 0) >= 0 ? "+" : ""}{soul.karmic_balance ?? 0}
+              <td className={`px-4 py-3 text-right font-mono text-sm ${showsBalance ? ((soul.karmic_balance ?? 0) >= 0 ? "text-[hsl(var(--color-accent))]" : "text-[hsl(var(--color-status-error))]") : "text-[hsl(var(--color-ink-subtle))]"}`}>
+                {showsBalance
+                  ? `${(soul.karmic_balance ?? 0) >= 0 ? "+" : ""}${soul.karmic_balance ?? 0}`
+                  : <span title={t("souls.balance_not_applicable")}>—</span>}
               </td>
               <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs">{formatHistoricalDate(soul.death_date) || "—"}</td>
               <td className="px-4 py-3">
@@ -203,7 +291,8 @@ export default function SoulsPage() {
                 </Link>
               </td>
             </>
-          )}
+            );
+          }}
           sort={parseOrdering(ordering)}
           onSortChange={(next) => {
             setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");

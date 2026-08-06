@@ -38,6 +38,7 @@ const settledSoul: Soul = {
   description: "",
   merit_score: 0,
   demerit_score: 0,
+  date_problems: [],
 };
 
 const aliveSoul: Soul = { ...settledSoul, id: "soul-2", current_state: "ALIVE" };
