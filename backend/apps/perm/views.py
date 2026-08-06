@@ -1,6 +1,7 @@
 """
 Permission views — full CRUD for permissions and role-permission assignment
 """
+from django.db import transaction
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -157,45 +158,73 @@ def assign_role_permissions(request):
 
     role_name = serializer.validated_data["role"]
     permission_ids = serializer.validated_data["permission_ids"]
+    expected_version = serializer.validated_data.get("expected_version")
 
-    # Look up the Role object
-    try:
-        role = Role.objects.get(name=role_name)
-    except Role.DoesNotExist:
-        return Response(
-            {"error": f"Role '{role_name}' not found"},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+    # select_for_update: the version check below and the replace-write it
+    # guards have to be one atomic unit, or two concurrent requests that both
+    # read the same version race each other into the check and both pass it.
+    # A plain .get() would leave that window open even with expected_version
+    # present.
+    with transaction.atomic():
+        try:
+            role = Role.objects.select_for_update().get(name=role_name)
+        except Role.DoesNotExist:
+            return Response(
+                {"error": f"Role '{role_name}' not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
-    # Validate permission IDs exist
-    valid_ids = set(Permission.objects.filter(id__in=permission_ids).values_list("id", flat=True))
-    invalid_ids = set(permission_ids) - valid_ids
-    if invalid_ids:
-        return Response(
-            {"error": f"Permission IDs not found: {invalid_ids}"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        if expected_version is not None and role.version != expected_version:
+            # 409, not 400: the request itself is well-formed, it's the
+            # server's state that has moved since the client loaded it —
+            # someone else's assign call landed first. Return the current
+            # version so the client can reload and show the operator what
+            # changed rather than just retrying blind.
+            return Response(
+                {
+                    "error": "Role has been modified since it was loaded.",
+                    "expected_version": expected_version,
+                    "current_version": role.version,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
 
-    # Replace all permissions for this role
-    RolePermission.objects.filter(role=role).delete()
-    to_create = [RolePermission(role=role, permission_id=pid) for pid in permission_ids]
-    created = RolePermission.objects.bulk_create(to_create)
+        # Validate permission IDs exist
+        valid_ids = set(Permission.objects.filter(id__in=permission_ids).values_list("id", flat=True))
+        invalid_ids = set(permission_ids) - valid_ids
+        if invalid_ids:
+            return Response(
+                {"error": f"Permission IDs not found: {invalid_ids}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-    # bulk_create sends no post_save, so _invalidate_permission_cache in
-    # apps/audit/signals.py — which is what normally keeps check_permission
-    # honest after a grant changes — never runs for the rows created here. The
-    # .delete() above does fire post_delete and would have covered the common
-    # case by accident, but not for a role that had no grants yet: its cache
-    # would keep denying the codenames just granted for the rest of the 300s
-    # TTL. That was invisible while _get_role_permissions_from_db read the
-    # database directly; now that it reads through check_permission, the
-    # admin's own role editor would show the stale answer straight back.
-    invalidate_role_permissions(role_name)
+        # Replace all permissions for this role
+        RolePermission.objects.filter(role=role).delete()
+        to_create = [RolePermission(role=role, permission_id=pid) for pid in permission_ids]
+        created = RolePermission.objects.bulk_create(to_create)
+
+        # bulk_create sends no post_save, so _invalidate_permission_cache in
+        # apps/audit/signals.py — which is what normally keeps check_permission
+        # honest after a grant changes — never runs for the rows created here. The
+        # .delete() above does fire post_delete and would have covered the common
+        # case by accident, but not for a role that had no grants yet: its cache
+        # would keep denying the codenames just granted for the rest of the 300s
+        # TTL. That was invisible while _get_role_permissions_from_db read the
+        # database directly; now that it reads through check_permission, the
+        # admin's own role editor would show the stale answer straight back.
+        invalidate_role_permissions(role_name)
+
+        # save() (apps/core/models.py::AuditUserFields) increments `version`
+        # on every update — this call is what advances it, so the response
+        # below reports the version the client should send next, not the one
+        # it just checked against.
+        role.save()
 
     return Response({
         "role": role_name,
         "assigned_count": len(created),
         "permission_ids": list(valid_ids),
+        "version": role.version,
     })
 
 
