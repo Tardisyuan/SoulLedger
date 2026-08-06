@@ -819,3 +819,87 @@ class RoleAPITest(TestCase):
             "name": "X", "display_name": "X"
         }, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class RoleUserCountAndStaleWriteGuardTest(TestCase):
+    """RoleSerializer.user_count/version and assign_role_permissions' expected_version.
+
+    Both exist for the Stage 7 permissions-matrix screen's save-confirmation
+    guard: user_count turns an abstract grant/removal into "N users affected",
+    and expected_version is what lets the client detect that another admin's
+    assign call landed first, rather than silently reverting it — the replace-
+    not-diff semantics of this endpoint make a lost update invisible otherwise.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = User.objects.create_user(username="admin3", password="x", role="ADMIN")
+        self.role = Role.objects.create(name="COUNTED", display_name="Counted")
+        self.perm, _ = Permission.objects.get_or_create(
+            codename="soul.read", defaults={"name": "查看灵魂", "category": "soul"}
+        )
+
+    def test_user_count_reflects_active_users_with_this_role_name(self):
+        User.objects.create_user(username="held1", password="x", role="COUNTED")
+        User.objects.create_user(username="held2", password="x", role="COUNTED")
+        # role is a plain CharField on User, not a FK — matching by name is
+        # the whole mechanism, so a differently-named role must not be counted.
+        User.objects.create_user(username="other", password="x", role="VIEWER")
+
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/v1/perm/roles/")
+        counted = next(r for r in response.data if r["name"] == "COUNTED")
+        self.assertEqual(counted["user_count"], 2)
+
+    def test_version_starts_at_zero_and_is_exposed(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/v1/perm/roles/")
+        counted = next(r for r in response.data if r["name"] == "COUNTED")
+        self.assertEqual(counted["version"], 0)
+
+    def test_assign_without_expected_version_still_works(self):
+        """expected_version is optional — every caller before this screen existed must keep working."""
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post("/api/v1/perm/role-permissions/assign/", {
+            "role": "COUNTED", "permission_ids": [self.perm.id],
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["version"], 1)
+
+    def test_assign_with_correct_expected_version_succeeds_and_advances_it(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post("/api/v1/perm/role-permissions/assign/", {
+            "role": "COUNTED", "permission_ids": [self.perm.id], "expected_version": 0,
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["version"], 1)
+
+    def test_assign_with_stale_expected_version_is_rejected_and_does_not_write(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post("/api/v1/perm/role-permissions/assign/", {
+            "role": "COUNTED", "permission_ids": [self.perm.id], "expected_version": 7,
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data["current_version"], 0)
+        # The rejected call must not have written anything.
+        self.assertEqual(RolePermission.objects.filter(role=self.role).count(), 0)
+
+    def test_two_sequential_assigns_each_need_the_latest_version(self):
+        """The scenario the guard exists for: a second admin's stale load."""
+        self.client.force_authenticate(user=self.admin)
+        first = self.client.post("/api/v1/perm/role-permissions/assign/", {
+            "role": "COUNTED", "permission_ids": [self.perm.id], "expected_version": 0,
+        }, format="json")
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+
+        # A second admin who loaded the screen before `first` landed still
+        # holds expected_version=0 — replaying it must now 409, not silently
+        # revert the grant `first` just made.
+        second = self.client.post("/api/v1/perm/role-permissions/assign/", {
+            "role": "COUNTED", "permission_ids": [], "expected_version": 0,
+        }, format="json")
+        self.assertEqual(second.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(
+            RolePermission.objects.filter(role=self.role).count(), 1,
+            "the stale second call must not have wiped the grant the first call made",
+        )
