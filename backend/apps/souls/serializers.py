@@ -116,6 +116,16 @@ class SoulRecordSerializer(serializers.ModelSerializer):
                 "code": p.code,
                 "message": p.message,
                 "acknowledged": p.acknowledged,
+                "acknowledged_by": (
+                    obj.date_warning_acknowledged_by.username
+                    if p.acknowledged and obj.date_warning_acknowledged_by_id
+                    else None
+                ),
+                "acknowledged_at": (
+                    obj.date_warning_acknowledged_at.isoformat()
+                    if p.acknowledged and obj.date_warning_acknowledged_at
+                    else None
+                ),
             }
             for p in problems
         ]

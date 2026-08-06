@@ -45,6 +45,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         # gated the same way add_record is, rather than inventing a new
         # codename for one action. See acknowledge_record_date_warning.
         'acknowledge_record_date_warning': ['soul.update'],
+        'unacknowledge_record_date_warning': ['soul.update'],
     }
     queryset = Soul.objects.select_related("tenant").prefetch_related("records").all()
     filterset_class = SoulFilter
@@ -260,5 +261,33 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         record.date_warning_acknowledged_by = request.user
         record.date_warning_acknowledged_at = timezone.now()
         record.date_warning_ack_fingerprint = date_warning_fingerprint(event, death)
+        record.save()
+        return Response(SoulRecordSerializer(record).data)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path=r"records/(?P<record_id>[^/.]+)/unacknowledge-date-warning",
+    )
+    def unacknowledge_record_date_warning(self, request, pk=None, record_id=None):
+        """Undo a prior acknowledgment of a record's `event_after_death` warning.
+
+        Clears all three ack fields regardless of whether the fingerprint
+        still matches — an operator revoking a stale (already-inert) ack is
+        harmless, and refusing it over a mismatch that made it inert anyway
+        would just be a confusing error for no protective benefit.
+        """
+        soul = self.get_object()
+        try:
+            record = soul.records.get(pk=record_id)
+        except SoulRecord.DoesNotExist:
+            return Response(
+                {"error": "Record not found on this soul."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        record.date_warning_acknowledged_by = None
+        record.date_warning_acknowledged_at = None
+        record.date_warning_ack_fingerprint = ""
         record.save()
         return Response(SoulRecordSerializer(record).data)
