@@ -1,6 +1,7 @@
 """
 REST views for Soul app.
 """
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -8,9 +9,16 @@ from rest_framework.response import Response
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.ledger.services import LedgerService
-from apps.souls.dates import ERROR, check_soul_dates, parse_historical_date
+from apps.souls.dates import (
+    ERROR,
+    check_record_date,
+    check_soul_dates,
+    date_warning_fingerprint,
+    parse_historical_date,
+)
 from apps.souls.filters import SoulFilter
 from apps.souls.models import Soul, SoulState
+from apps.souls.record_models import SoulRecord
 from apps.souls.serializers import SoulListSerializer, SoulRecordSerializer, SoulSerializer, SoulTransitionSerializer
 
 
@@ -32,6 +40,11 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         'karma': ['soul.read'],
         'add_record': ['soul.update'],
         'records': ['soul.read'],
+        # Acknowledging a warning mutates the record (three new columns),
+        # the same way add_record mutates the soul's records — so it is
+        # gated the same way add_record is, rather than inventing a new
+        # codename for one action. See acknowledge_record_date_warning.
+        'acknowledge_record_date_warning': ['soul.update'],
     }
     queryset = Soul.objects.select_related("tenant").prefetch_related("records").all()
     filterset_class = SoulFilter
@@ -200,3 +213,52 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         records = soul.records.all()
         serializer = SoulRecordSerializer(records, many=True)
         return Response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path=r"records/(?P<record_id>[^/.]+)/acknowledge-date-warning",
+    )
+    def acknowledge_record_date_warning(self, request, pk=None, record_id=None):
+        """Acknowledge a record's `event_after_death` DateProblem WARNING.
+
+        `self.get_object()` runs TenantPermission's object check on the
+        soul, same as every other detail action here — an operator who can
+        reach this soul at all can acknowledge warnings on its records; no
+        separate codename, following the precedent `add_record` already
+        set for soul.update covering record-level writes.
+
+        The acting user comes from `request.user` only. Nothing in the
+        request body is trusted for who — a client-supplied "acknowledged_by"
+        would let one operator's action be attributed to another.
+
+        Only `event_after_death` is acknowledgeable. The other DateProblems
+        (`death_before_birth`, `implausible_lifespan`, `event_before_birth`)
+        are ERRORs: the write that would have created them is refused
+        before it lands, so there is never a persisted row carrying one to
+        acknowledge.
+        """
+        soul = self.get_object()
+        try:
+            record = soul.records.get(pk=record_id)
+        except SoulRecord.DoesNotExist:
+            return Response(
+                {"error": "Record not found on this soul."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        event = (record.event_year, record.event_month, record.event_day)
+        birth = (soul.birth_year, soul.birth_month, soul.birth_day)
+        death = (soul.death_year, soul.death_month, soul.death_day)
+        problems = check_record_date(event, birth, death)
+        if not any(p.code == "event_after_death" for p in problems):
+            return Response(
+                {"error": "This record has no event_after_death warning to acknowledge."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        record.date_warning_acknowledged_by = request.user
+        record.date_warning_acknowledged_at = timezone.now()
+        record.date_warning_ack_fingerprint = date_warning_fingerprint(event, death)
+        record.save()
+        return Response(SoulRecordSerializer(record).data)

@@ -81,6 +81,12 @@ class SoulRecordSerializer(serializers.ModelSerializer):
     # Backed by event_year/event_month/event_day (BCE-capable) rather than a
     # single DateField — see apps.souls.fields.HistoricalDateField.
     event_date = HistoricalDateField(prefix="event")
+    # DateProblem is a NamedTuple, not a model row — there is no persistent
+    # "problem" to serialize, so this is computed fresh from the record's
+    # own dates against its soul's on every read. Includes `acknowledged`,
+    # which is only ever True when the stored fingerprint still matches —
+    # see apps.souls.dates.check_record_date / date_warning_fingerprint.
+    date_problems = serializers.SerializerMethodField()
 
     class Meta:
         model = SoulRecord
@@ -91,8 +97,28 @@ class SoulRecordSerializer(serializers.ModelSerializer):
             # the day the rows were inserted.
             "id", "record_type", "category", "civilization", "description",
             "weight", "event_date", "is_milestone", "evidence_json", "recorded_at",
+            "date_problems",
         ]
         read_only_fields = ["id", "recorded_at"]
+
+    def get_date_problems(self, obj):
+        soul = obj.soul
+        event = (obj.event_year, obj.event_month, obj.event_day)
+        birth = (soul.birth_year, soul.birth_month, soul.birth_day)
+        death = (soul.death_year, soul.death_month, soul.death_day)
+        problems = check_record_date(
+            event, birth, death,
+            ack_fingerprint=obj.date_warning_ack_fingerprint or None,
+        )
+        return [
+            {
+                "severity": p.severity,
+                "code": p.code,
+                "message": p.message,
+                "acknowledged": p.acknowledged,
+            }
+            for p in problems
+        ]
 
     def validate(self, attrs):
         """Check the event date against the soul, when the soul is known here.

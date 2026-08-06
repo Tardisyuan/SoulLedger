@@ -213,11 +213,19 @@ class DateProblem(NamedTuple):
     or WARNING (unusual but legitimately possible, report it and let it
     through). ``code`` is stable and machine-readable; ``message`` is aimed
     at whoever has to go and look at the record.
+
+    ``acknowledged`` is only ever True for a WARNING an operator has
+    reviewed and dismissed for the *current* pair of dates — see
+    ``date_warning_fingerprint`` below. It defaults False, so every caller
+    that builds a ``DateProblem`` without knowing about acknowledgment
+    (the management command, the reject-on-write path, every existing
+    test) keeps working unchanged.
     """
 
     severity: str
     code: str
     message: str
+    acknowledged: bool = False
 
 
 # The longest life this system will accept without complaint.
@@ -346,7 +354,28 @@ def check_soul_dates(birth, death) -> list[DateProblem]:
     return problems
 
 
-def check_record_date(event, birth, death) -> list[DateProblem]:
+def date_warning_fingerprint(event, death) -> str:
+    """Stable fingerprint of the two values that decide ``event_after_death``.
+
+    That warning is a pure function of exactly two things: this record's
+    event date and its soul's death date. Nothing else can make it appear
+    or disappear. So a fingerprint of just those two triples is enough to
+    tell, later, whether an acknowledgment still applies — if either date
+    has moved since, the fingerprint changes and the old acknowledgment no
+    longer describes the pair of dates in front of it.
+
+    Not a cryptographic hash on purpose: a plain delimited encoding is
+    just as collision-free here (the inputs are small bounded integers,
+    not attacker-controlled blobs) and it stays legible in a database
+    shell, which matters more for a field whose whole job is "does this
+    still match".
+    """
+    ey, em, ed = event
+    dy, dm, dd = death
+    return f"{ey}-{em}-{ed}|{dy}-{dm}-{dd}"
+
+
+def check_record_date(event, birth, death, *, ack_fingerprint: str | None = None) -> list[DateProblem]:
     """Sanity-check a record's event date against the soul it belongs to.
 
     ``event`` may be all None — a record with no event date at all is
@@ -366,6 +395,16 @@ def check_record_date(event, birth, death) -> list[DateProblem]:
     contradiction, not a tightening. It is still worth surfacing: a deed
     dated after its doer's death is *sometimes* posthumous and *sometimes*
     a typo, and only a person looking at the record can tell which.
+
+    ``ack_fingerprint`` is the caller's stored
+    ``SoulRecord.date_warning_ack_fingerprint`` (or None if never
+    acknowledged). When it matches ``date_warning_fingerprint(event,
+    death)`` for *this* check, the ``event_after_death`` problem — if any —
+    comes back with ``acknowledged=True``. It is still returned, not
+    dropped: suppressing it here would let a caller that does not
+    understand acknowledgment (the management command, older code) draw
+    the wrong conclusion. The caller decides what "acknowledged" should
+    mean for its audience.
     """
     problems = []
     if event[0] is None:
@@ -382,11 +421,16 @@ def check_record_date(event, birth, death) -> list[DateProblem]:
 
     if death[0] is not None and compare_historical_dates(event, death) > 0:
         years = year_span(death[0], event[0])
+        acknowledged = (
+            ack_fingerprint is not None
+            and ack_fingerprint == date_warning_fingerprint(event, death)
+        )
         problems.append(DateProblem(
             WARNING,
             "event_after_death",
             f"event date {format_historical_date(*event)} is {years} year(s) after the "
             f"soul's death ({format_historical_date(*death)}). Legitimate for a "
             f"posthumous record; check it is not a mis-typed year.",
+            acknowledged=acknowledged,
         ))
     return problems
