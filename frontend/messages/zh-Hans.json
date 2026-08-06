@@ -313,6 +313,8 @@
     "name_placeholder": "如: 查看灵魂",
     "name_required": "权限名称不能为空",
     "category_label": "分类",
+    "category_placeholder": "如：soul（或输入新分类）",
+    "category_hint": "从现有分类中选择，或输入一个新分类",
     "submit": "保存",
     "submitting": "保存中...",
     "create_success": "权限创建成功",

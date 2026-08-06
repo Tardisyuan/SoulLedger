@@ -313,6 +313,8 @@
     "name_placeholder": "e.g. View Souls",
     "name_required": "Permission name is required",
     "category_label": "Category",
+    "category_placeholder": "e.g. soul (or type a new one)",
+    "category_hint": "Pick an existing category, or type a new one",
     "submit": "Save",
     "submitting": "Saving...",
     "create_success": "Permission created",

@@ -17,6 +17,8 @@ jest.mock("@/src/contexts/I18nContext", () => ({
         "permissions.name_label": "权限名称",
         "permissions.name_placeholder": "请输入权限名称",
         "permissions.category_label": "分类",
+        "permissions.category_placeholder": "如：soul（或输入新分类）",
+        "permissions.category_hint": "从现有分类中选择，或输入一个新分类",
       };
       return map[key] ?? key;
     },
@@ -25,6 +27,13 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   }),
 }));
 
+// The real, current categories (apps/perm/models.py::DEFAULT_PERMISSIONS has
+// 14 today) — not the 5-entry hardcoded list this component used to ship
+// with, one of which ("karma") stopped existing when that app was renamed to
+// "ledger". These tests exist specifically to keep that regression from
+// coming back, so the fixture deliberately does NOT include "karma".
+const EXISTING_CATEGORIES = ["soul", "judgment", "ledger", "reincarnation", "system", "dispatch"];
+
 const defaultProps = {
   isOpen: true,
   onClose: jest.fn(),
@@ -32,6 +41,7 @@ const defaultProps = {
   isPending: false,
   error: null,
   title: "新建权限",
+  existingCategories: EXISTING_CATEGORIES,
 };
 
 describe("PermissionFormModal", () => {
@@ -100,15 +110,37 @@ describe("PermissionFormModal", () => {
     expect(screen.getByDisplayValue("查看灵魂")).toBeInTheDocument();
   });
 
-  it("renders category dropdown with all categories", () => {
+  it("defaults the category field to the first live category, and offers the rest as suggestions", () => {
     render(<PermissionFormModal {...defaultProps} />);
-    const select = screen.getByDisplayValue("soul");
-    expect(select).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "soul" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "judgment" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "karma" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "reincarnation" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "system" })).toBeInTheDocument();
+    const categoryInput = screen.getByDisplayValue("soul");
+    expect(categoryInput).toBeInTheDocument();
+    expect(categoryInput).toHaveAttribute("list");
+    // <option> elements inside a <datalist> are suggestions for a free-text
+    // <input>, not a closed set like <select> options — jsdom/testing-library
+    // don't expose them via getByRole("option"), so query the DOM directly.
+    // BaseModal renders through a portal into document.body, outside
+    // render()'s `container` — query the document, not the container.
+    const suggestionValues = Array.from(document.querySelectorAll("datalist option")).map(
+      (o) => o.getAttribute("value")
+    );
+    expect(suggestionValues.sort()).toEqual([...EXISTING_CATEGORIES].sort());
+  });
+
+  it("does not offer 'karma' as a category — that app was renamed to 'ledger'", () => {
+    render(<PermissionFormModal {...defaultProps} />);
+    // BaseModal renders through a portal into document.body, outside
+    // render()'s `container` — query the document, not the container.
+    const suggestionValues = Array.from(document.querySelectorAll("datalist option")).map(
+      (o) => o.getAttribute("value")
+    );
+    expect(suggestionValues).not.toContain("karma");
+  });
+
+  it("accepts a category not in the suggestion list — creating the first codename in a new category must be possible", () => {
+    render(<PermissionFormModal {...defaultProps} />);
+    const categoryInput = screen.getByDisplayValue("soul");
+    fireEvent.change(categoryInput, { target: { value: "org" } });
+    expect(categoryInput).toHaveValue("org");
   });
 
   it("updates input values when user types", () => {
@@ -121,14 +153,6 @@ describe("PermissionFormModal", () => {
 
     expect(codenameInput).toHaveValue("soul.create");
     expect(nameInput).toHaveValue("创建灵魂");
-  });
-
-  it("updates category when select changes", () => {
-    render(<PermissionFormModal {...defaultProps} />);
-    const select = screen.getByDisplayValue("soul");
-
-    fireEvent.change(select, { target: { value: "judgment" } });
-    expect(select).toHaveValue("judgment");
   });
 
   it("resets form fields when modal closes and reopens", () => {
