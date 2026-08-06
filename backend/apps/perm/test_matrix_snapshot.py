@@ -282,13 +282,24 @@ SOUL_ADD_RECORD = {"ADMIN": 201, "MODERATOR": 201, "JUDGE": 403, "GUARDIAN": 201
 
 # ENFORCED. POST /souls/{id}/transition/ declares `soul.transition` (via
 # extra_permissions). Held by ADMIN, MODERATOR, JUDGE and GUARDIAN — four of
-# five. VIEWER alone is denied, which is the whole of the change here and the
-# thinnest of tranche 1's three blind spots. Note it is a strictly wider grant
-# than `soul.die`: GUARDIAN cannot POST /die/ but can drive ALIVE -> JUDGING
-# through this endpoint, so the two are not interchangeable gates on the same
-# act and `soul.die` is not the belt-and-braces it looks like. Flagged, not
-# fixed — narrowing `soul.transition` is an authorization decision.
-SOUL_TRANSITION = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 200, "VIEWER": 403}
+# five. VIEWER is denied outright, which was the whole of tranche 1's change
+# here and the thinnest of its three blind spots.
+#
+# The row below probes new_state=JUDGING specifically (see ENFORCED_WRITE_PROBES
+# and test_soul_transition_snapshot), which used to make `soul.transition` a
+# strictly wider grant than `soul.die`: GUARDIAN cannot POST /die/ but could
+# drive the identical ALIVE -> JUDGING change through this endpoint, so the two
+# were not interchangeable gates on the same act. CLOSED: the `transition`
+# action (apps/souls/views.py) now checks `soul.die` itself before accepting a
+# request whose new_state is JUDGING — the only state that transition can
+# reach from ALIVE, and the exact transition die() performs — so GUARDIAN's
+# denial on soul.die is no longer walked around here. GUARDIAN's other three
+# codes (ADMIN/MODERATOR/JUDGE all hold soul.die, so JUDGING is unaffected for
+# them) are untouched; only GUARDIAN's moves, 200 -> 403. See
+# apps/perm/test_matrix_snapshot.py,
+# test_guardian_denied_soul_die_now_stays_denied_through_transition, for the
+# characterization this closes.
+SOUL_TRANSITION = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
 
 # ENFORCED. DELETE /souls/{id}/ declares `soul.delete`. ADMIN alone holds it.
 # MODERATOR's exclusion is deliberate and documented at the ROLE_PERMISSIONS
@@ -994,33 +1005,60 @@ def test_removing_those_rows_actually_moved_workflow_onto_the_dict_path(
 
 
 # ---------------------------------------------------------------------------
-# THE DENIALS THAT CAN BE WALKED AROUND.
+# THE DENIALS THAT USED TO BE WALKABLE AROUND.
 #
-# Everything above asserts that a role denied a codename gets a 403. None of it
-# asserts that the 403 stops anything, because a 403 on one route stops nothing
-# if a second route reaches the same write under a codename the role does hold.
-# Three such pairs exist across the five enforced apps, and they share one
-# shape:
+# Everything above asserts that a role denied a codename gets a 403. That does
+# not by itself assert that the 403 stops anything, because a 403 on one route
+# stops nothing if a second route reaches the same write under a codename the
+# role does hold. Three such pairs existed across the five enforced apps, and
+# they shared one shape:
 #
 #   a narrow codename guards a custom @action, while the SAME fields stay
 #   writable through the viewset's own CRUD route under a wider codename.
 #
 # a9f3556 shipped the first of them describing it as "exact mirrors, both
 # declared policy" — GUARDIAN may edit but not kill, JUDGE may kill but not
-# edit. Half of that mirror has a way round it.
+# edit. Half of that mirror had a way round it.
 #
-# These tests assert TODAY's behaviour, in the same spirit as the snapshot: they
-# record holes. Each one is written to fail loudly when the hole closes, so that
-# whoever narrows a codename gets a named test telling them what they fixed,
-# rather than a silent pass. Read a failure here as "the bypass is gone, delete
-# this test" — not as a regression.
+# These tests used to assert TODAY's behaviour, in the same spirit as the
+# snapshot: they recorded holes, each written to fail loudly when the hole
+# closed. All three below have now closed, so each test is renamed and its
+# assertions flipped to confirm the closure rather than characterize the
+# defect — read a failure here as "the bypass has reopened", a regression.
 #
-# NOT FIXED HERE ON PURPOSE. Every repair is an authorization decision: narrow
-# `soul.transition`, or make `current_state` unreachable from it; mark
-# ApprovalNodeSerializer's `status`/`verdict`/`approver`/`decided_at` read-only
-# so they move only through approve_node; mark ApprovalWorkflowSerializer's
-# `current_node`/`status` read-only so they move only through advance/escalate.
-# Which of those is right is not a test's call.
+# FIXED, all three:
+#
+#   1. GUARDIAN, denied soul.die, used to reach the identical ALIVE ->
+#      JUDGING change through POST /souls/{id}/transition/ under
+#      soul.transition, which it also holds. Closed in apps/souls/views.py:
+#      the `transition` action now checks soul.die itself before accepting a
+#      request whose new_state is JUDGING — the only state JUDGING is
+#      reachable from in Soul.can_transition_to, and exactly the transition
+#      die() performs. No other target state is affected, and no codename was
+#      granted or narrowed: soul.transition's holder set in ROLE_PERMISSIONS
+#      is unchanged, only which target states it reaches for a caller lacking
+#      soul.die. See test_guardian_denied_soul_die_now_stays_denied_through_transition
+#      and the SOUL_TRANSITION comment above.
+#
+#   2. MODERATOR, denied workflow.approve, used to reach the same node
+#      decision through PATCH /nodes/{id}/ under workflow.update, which it
+#      also holds — ApprovalNodeSerializer left `status`/`verdict`/
+#      `approver`/`decided_at` writable. Closed in
+#      apps/workflow/serializers.py: validate() now rejects an attempted PATCH
+#      of any of the four with an explicit 400 once the node exists (creation
+#      is untouched — see ApprovalNodeSerializer's docstring for why these
+#      fields could not simply move to read_only_fields the way dispatch's
+#      did). See test_moderator_denied_workflow_approve_now_stays_denied_through_patch_nodes.
+#
+#   3. MODERATOR, denied workflow.advance, used to reach the same current_node
+#      move through PATCH /workflows/{id}/ under workflow.update, which it
+#      also holds — ApprovalWorkflowSerializer left `status`/`current_node`
+#      writable, so the flow moved with none of escalate's mandatory reason or
+#      audit trail. Closed in apps/workflow/serializers.py:
+#      ApprovalWorkflowSerializer now marks both fields read-only (safe here —
+#      nothing sets either at create time) with the same validate()-raises-400
+#      shape as DispatchRecordSerializer. See
+#      test_moderator_denied_workflow_advance_now_stays_denied_through_patch_workflow.
 #
 # THE CATALOGUE CONTINUES ELSEWHERE — three instances live here, a fourth in
 # backend/tests/test_perm_write_snapshot_outside_matrix.py, which is where the
@@ -1076,17 +1114,24 @@ def _workflow_with_two_nodes(tenant, soul):
 
 
 @pytest.mark.django_db
-def test_guardian_denied_soul_die_reaches_the_same_state_through_transition(
+def test_guardian_denied_soul_die_now_stays_denied_through_transition(
     role_clients, snapshot_tenant
 ):
-    """GUARDIAN cannot POST /die/ and does not need to: /transition/ does the same thing.
+    """GUARDIAN cannot POST /die/, and /transition/ no longer reaches JUDGING either.
 
     `soul.die` is held by ADMIN, MODERATOR and JUDGE; `soul.transition` by those
-    three AND GUARDIAN. Both endpoints reach Soul.transition_to(JUDGING), and
-    that method sets death_date itself when the soul has none
-    (apps/souls/models.py, in transition_to). So the denial on /die/ withholds
-    the `location` argument and nothing else: the state moves, the death date
-    lands, and a Judgment is the only thing GUARDIAN does not get.
+    three AND GUARDIAN. Both endpoints used to reach Soul.transition_to(JUDGING)
+    — die() additionally sets death_date via its own argument and creates a
+    Judgment, but transition_to() sets death_date itself too when the soul has
+    none (apps/souls/models.py), so the state change alone was already the
+    whole of what soul.die was supposed to withhold from GUARDIAN.
+
+    Closed in apps/souls/views.py: the `transition` action now checks
+    `soul.die` itself before accepting a request whose new_state is JUDGING —
+    the only state JUDGING is reachable from in Soul.can_transition_to, so
+    this covers every route to it through this action, not just the one this
+    test drives. No other new_state is affected; ADMIN/MODERATOR/JUDGE (who
+    all hold soul.die) are unaffected too.
     """
     from apps.souls.models import Soul, SoulState
 
@@ -1097,39 +1142,40 @@ def test_guardian_denied_soul_die_reaches_the_same_state_through_transition(
     assert denied.status_code == 403, "GUARDIAN is supposed to lack soul.die"
     assert Soul.objects.get(pk=soul.pk).current_state == SoulState.ALIVE
 
-    allowed = guardian.post(
+    blocked = guardian.post(
         f"/api/v1/souls/{soul.id}/transition/",
         {"new_state": SoulState.JUDGING, "reason": "walked around soul.die"},
         format="json",
     )
-    assert allowed.status_code == 200, (
-        "If this is now 403, soul.transition has been narrowed and the bypass is "
-        "closed. Good — delete this test."
+    assert blocked.status_code == 403, (
+        "If this is 200 again, soul.transition stopped checking soul.die for a "
+        "JUDGING target and the bypass has reopened."
     )
     after = Soul.objects.get(pk=soul.pk)
-    assert after.current_state == SoulState.JUDGING
-    # The state change is real, not a 200 over a no-op.
-    assert after.death_date is not None
+    assert after.current_state == SoulState.ALIVE
+    assert after.death_date is None
 
 
 @pytest.mark.django_db
-def test_moderator_denied_workflow_approve_reaches_the_same_row_through_patch_nodes(
+def test_moderator_denied_workflow_approve_now_stays_denied_through_patch_nodes(
     role_clients, snapshot_tenant
 ):
-    """MODERATOR cannot call approve_node and does not need to: PATCH /nodes/ writes the verdict.
+    """MODERATOR cannot call approve_node, and PATCH /nodes/ no longer writes the verdict either.
 
-    This is the sharpest of the three, because the denial it walks around is the
-    one ROLE_PERMISSIONS argues for at length: MODERATOR is deliberately given
-    workflow.create/update/delete and deliberately refused workflow.approve, so
-    that "a lead who both designs the flow and approves at any stage of it"
-    cannot exist. But ApprovalNodeViewSet maps `partial_update` to
-    workflow.update — which MODERATOR holds — and ApprovalNodeSerializer leaves
-    `status`, `verdict`, `approver` and `decided_at` writable. The approval is
-    recorded on the same row either way.
+    This was the sharpest of the three, because the denial it walked around is
+    the one ROLE_PERMISSIONS argues for at length: MODERATOR is deliberately
+    given workflow.create/update/delete and deliberately refused
+    workflow.approve, so that "a lead who both designs the flow and approves at
+    any stage of it" cannot exist. ApprovalNodeViewSet maps `partial_update` to
+    workflow.update — which MODERATOR holds — and ApprovalNodeSerializer used
+    to leave `status`, `verdict`, `approver` and `decided_at` writable, so the
+    approval landed on the same row either way.
 
-    What the bypass does NOT get is workflow.complete_node's side effects: the
-    workflow does not advance and completed_at is not set. It is a forged node
-    decision, not a completed stage — which is arguably worse than either.
+    Closed in apps/workflow/serializers.py: ApprovalNodeSerializer.validate()
+    now rejects an attempted PATCH of any of those four fields with an
+    explicit 400 once the node exists. Node *creation* is deliberately
+    untouched (see that serializer's docstring) — this test only exercises the
+    PATCH path the fix targets.
     """
     from apps.workflow.models import ApprovalNode, NodeStatus
 
@@ -1145,25 +1191,25 @@ def test_moderator_denied_workflow_approve_reaches_the_same_row_through_patch_no
     assert denied.status_code == 403, "MODERATOR is supposed to lack workflow.approve"
     assert ApprovalNode.objects.get(pk=first.pk).status == NodeStatus.PENDING
 
-    allowed = moderator.patch(
+    blocked = moderator.patch(
         f"/api/v1/nodes/{first.id}/",
         {"status": NodeStatus.APPROVED, "verdict": "PASSED", "notes": "walked around workflow.approve"},
         format="json",
     )
-    assert allowed.status_code == 200, (
-        "If this is now 403 — or if status/verdict became read-only and the PATCH "
-        "no longer takes — the bypass is closed. Good; delete this test."
+    assert blocked.status_code == 400, (
+        "If this is 200 again, status/verdict became writable on "
+        "ApprovalNodeSerializer's validate() and the bypass has reopened."
     )
     after = ApprovalNode.objects.get(pk=first.pk)
-    assert after.status == NodeStatus.APPROVED
-    assert after.verdict == "PASSED"
+    assert after.status == NodeStatus.PENDING
+    assert after.verdict == ""
 
 
 @pytest.mark.django_db
-def test_moderator_denied_workflow_advance_reaches_the_same_row_through_patch_workflow(
+def test_moderator_denied_workflow_advance_now_stays_denied_through_patch_workflow(
     role_clients, snapshot_tenant
 ):
-    """MODERATOR cannot call advance and does not need to: PATCH /workflows/ moves current_node.
+    """MODERATOR cannot call advance, and PATCH /workflows/ no longer moves current_node either.
 
     workflow.advance is ADMIN and JUDGE. MODERATOR holds workflow.escalate
     instead, and that IS a designed alternative — escalate calls the very same
@@ -1171,10 +1217,14 @@ def test_moderator_denied_workflow_advance_reaches_the_same_row_through_patch_wo
     AuditLog naming who overrode which node. The cost of using it is that it is
     visible, and the view's docstring says so.
 
-    That design is undone here. ApprovalWorkflowSerializer leaves `current_node`
-    and `status` writable, and `partial_update` maps to workflow.update, which
-    MODERATOR holds — so the flow can be moved with no reason, no audit record,
-    and no 403. escalate is the visible door standing next to an open window.
+    That design used to be undone here. ApprovalWorkflowSerializer left
+    `current_node` and `status` writable, and `partial_update` maps to
+    workflow.update, which MODERATOR holds — so the flow could be moved with no
+    reason, no audit record, and no 403.
+
+    Closed in apps/workflow/serializers.py: both fields are now read-only and
+    validate() rejects an attempted PATCH of either with an explicit 400 —
+    escalate is the only door left standing.
     """
     from apps.audit.models import AuditLog
     from apps.workflow.models import ApprovalWorkflow
@@ -1187,17 +1237,17 @@ def test_moderator_denied_workflow_advance_reaches_the_same_row_through_patch_wo
     assert denied.status_code == 403, "MODERATOR is supposed to lack workflow.advance"
     assert ApprovalWorkflow.objects.get(pk=workflow.pk).current_node_id == first.pk
 
-    allowed = moderator.patch(
+    blocked = moderator.patch(
         f"/api/v1/workflows/{workflow.id}/",
         {"current_node": str(second.id)},
         format="json",
     )
-    assert allowed.status_code == 200, (
-        "If this is now 403 — or if current_node became read-only — the bypass is "
-        "closed. Good; delete this test."
+    assert blocked.status_code == 400, (
+        "If this is 200 again, current_node became writable on "
+        "ApprovalWorkflowSerializer and the bypass has reopened."
     )
-    assert ApprovalWorkflow.objects.get(pk=workflow.pk).current_node_id == second.pk
-    # And the thing escalate exists to guarantee did not happen.
+    assert ApprovalWorkflow.objects.get(pk=workflow.pk).current_node_id == first.pk
+    # And the thing escalate exists to guarantee still did not happen.
     assert not AuditLog.objects.filter(resource="workflow.escalate").exists()
 
 

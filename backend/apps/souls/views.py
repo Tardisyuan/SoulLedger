@@ -136,6 +136,39 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         new_state = serializer.validated_data["new_state"]
         reason = serializer.validated_data.get("reason", "")
 
+        # JUDGING is only reachable from ALIVE (Soul.can_transition_to), which
+        # is exactly the transition die() performs — so a request landing here
+        # with new_state=JUDGING is requesting the same outcome /die/ produces,
+        # through a codename (soul.transition) that GUARDIAN holds and soul.die
+        # does not extend to it. Investigated before adding this: every OTHER
+        # transition_to() call site in the codebase is gated by its own
+        # narrower codename that does not run through this action at all —
+        # JUDGING->DISPOSED moves through judgment.execute
+        # (apps/judgment/services.py), DISPOSED->{REINCARNATING,SETTLED,LOST}
+        # through disposition.execute (apps/disposition/services.py), and
+        # REINCARNATING->ALIVE through reincarnation.manage/.complete/.reborn
+        # (apps/reincarnation/services.py, apps/reincarnation/views.py), none
+        # of which call this action either. So this endpoint has no
+        # discovered legitimate use for GUARDIAN today, and scoping only the
+        # JUDGING target closes the die bypass without narrowing anything
+        # `transition` is otherwise doing. See
+        # apps/perm/test_matrix_snapshot.py,
+        # test_guardian_denied_soul_die_now_stays_denied_through_transition,
+        # for the characterization this closes.
+        if new_state == SoulState.JUDGING:
+            from apps.perm.checker import check_permission
+            if not check_permission(request.user, "soul.die"):
+                return Response(
+                    {
+                        "error": (
+                            "Not authorized to transition to JUDGING. This is the "
+                            "state change /die/ performs; use that action, which "
+                            "requires soul.die."
+                        )
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
         if not soul.can_transition_to(new_state):
             return Response(
                 {"error": f"Invalid transition from {soul.current_state} to {new_state}"},
