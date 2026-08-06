@@ -1155,6 +1155,34 @@
     "stats": "Stats",
     "welcome": "Welcome",
     "profile": "Profile",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "menu": {
+      "dashboard": "Dashboard",
+      "admin_stats": "Karma Statistics",
+      "souls": "Soul Management",
+      "judgment": "Judgment Queue",
+      "cross_judgments": "Cross-Realm Judgment",
+      "karma": "Karma Management",
+      "disposition": "Reincarnation Disposition",
+      "workflow": "Approval Workflow",
+      "dispatch": "Dispatch Management",
+      "death_sync": "Death Sync",
+      "realms": "Realm Management",
+      "actors": "Deity Roster",
+      "social": "Feed",
+      "social_follows": "Follows",
+      "users": "User Management",
+      "permissions": "Permissions & Roles",
+      "menus": "Menu Management",
+      "audit": "Audit Log",
+      "tenants": "Tenant Management",
+      "organizations": "Organization Structure",
+      "group_overview": "Overview",
+      "group_soul_ops": "Soul Affairs",
+      "group_workflow": "Process & Collaboration",
+      "group_org_realm": "Organizations & Realms",
+      "group_social": "Social",
+      "group_settings": "System Settings"
+    }
   }
 }

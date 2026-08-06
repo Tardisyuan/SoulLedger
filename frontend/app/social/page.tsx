@@ -6,6 +6,7 @@ import { useFeed, usePosts, useCreatePost } from "@/src/hooks/useSocial";
 import { PostCard } from "@/src/components/social/PostCard";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 export default function SocialFeedPage() {
   const { t } = useI18n();
@@ -42,6 +43,7 @@ export default function SocialFeedPage() {
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
           {t("social.title") || "Social"}
+          <MenuGloss path="/social" />
         </h1>
       </div>
 

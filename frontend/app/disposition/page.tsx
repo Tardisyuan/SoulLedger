@@ -9,6 +9,7 @@ import { dispositionApi, type Disposition } from "@/lib/api";
 import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 export default function DispositionPage() {
   const { t } = useI18n();
@@ -42,7 +43,10 @@ export default function DispositionPage() {
     <div className="p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">{t("disposition.title") || "Dispositions"}</h1>
+          <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
+            {t("disposition.title") || "Dispositions"}
+            <MenuGloss path="/disposition" />
+          </h1>
           <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("disposition.subtitle") || "Soul disposition management"}</p>
         </div>
       </div>

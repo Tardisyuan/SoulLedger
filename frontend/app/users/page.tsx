@@ -11,6 +11,7 @@ import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
 import { showToast } from "@/src/components/ui/Toast";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 export default function UsersPage() {
   const { t } = useI18n();
@@ -70,6 +71,7 @@ export default function UsersPage() {
         </Link>
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
           {t("users.title")}
+          <MenuGloss path="/users" />
         </h1>
         <RequirePermission permissions="user.create">
           <button

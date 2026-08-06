@@ -7,6 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
 import { CardSkeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Castle, Cloud, Flame, CircleDot } from "lucide-react";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 const CIVILIZATION_CONFIG: Record<string, { nameKey: string; icon: React.ReactNode }> = {
   CHINESE: { nameKey: "realms.civilizations.CHINESE", icon: <Castle className="w-6 h-6" /> },
@@ -47,7 +48,10 @@ export default function RealmsPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">{t("realms.title")}</h1>
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
+          {t("realms.title")}
+          <MenuGloss path="/realms" />
+        </h1>
         <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("realms.subtitle")}</p>
       </div>
 

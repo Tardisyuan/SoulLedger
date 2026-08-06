@@ -5,6 +5,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { api } from "@/lib/api";
 import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 interface DeathRegistration {
   id: string;
@@ -48,7 +49,10 @@ export default function DeathSyncPage() {
     <div className="p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">{t("death_sync.title") || "Death Registration"}</h1>
+          <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
+            {t("death_sync.title") || "Death Registration"}
+            <MenuGloss path="/death-sync" />
+          </h1>
           <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("death_sync.subtitle") || "External death registration sync"}</p>
         </div>
       </div>

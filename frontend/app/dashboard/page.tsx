@@ -16,6 +16,7 @@ import { getDisplayNameForTenant } from "@/src/config/civilizations";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { STATE_COLORS, CIVILIZATION_COLORS, REALM_COLORS, CHART_SERIES } from "@/lib/chart-colors";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 type DashboardTab = "overview" | "ledger";
 
@@ -78,7 +79,10 @@ function DashboardContent() {
   const pageHeader = (
     <div className="border-b border-[hsl(var(--color-hairline))] pb-4 flex justify-between items-start">
       <div>
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">{t("dashboard.title")}</h1>
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
+          {t("dashboard.title")}
+          <MenuGloss path="/dashboard" />
+        </h1>
         <p className="text-[hsl(var(--color-ink-muted))] text-sm mt-1">{t("dashboard.subtitle")}</p>
       </div>
       <RequirePermission permissions="karma.export">

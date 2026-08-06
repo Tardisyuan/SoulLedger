@@ -6,6 +6,7 @@ import { useFollowing, useFollowers } from "@/src/hooks/useSocial";
 import { FollowButton } from "@/src/components/social/FollowButton";
 import { useI18n } from "@/src/contexts/I18nContext";
 import type { Follow } from "@/lib/api";
+import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 export default function FollowsPage() {
   const { t } = useI18n();
@@ -29,6 +30,7 @@ export default function FollowsPage() {
         </Link>
         <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
           {t("social.follows") || "Follows"}
+          <MenuGloss path="/social/follows" />
         </h1>
       </div>
 
