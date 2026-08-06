@@ -22,6 +22,21 @@ export interface Role {
   scope: string;
   organization: number | null;
   organization_name: string | null;
+  /**
+   * Users currently assigned this role name (active only — User.role is a
+   * plain CharField, not a FK, see RoleSerializer.get_user_count). Added for
+   * the permissions-matrix screen's save-confirmation guard: turns a
+   * grant/removal from an abstract diff into "N users affected".
+   */
+  user_count: number;
+  /**
+   * Optimistic-lock counter, bumped by AuditUserFields on every save. Send
+   * the value the matrix loaded back as `expected_version` on
+   * assign_role_permissions — a mismatch means another admin's save landed
+   * first, and the endpoint answers 409 instead of silently reverting it.
+   */
+  version: number;
+  update_time: string;
 }
 
 /**
@@ -40,6 +55,19 @@ export interface PermissionAssignResult {
   role: string;
   assigned_count: number;
   permission_ids: number[];
+  /** The NEW version after this save — persist it for the next assign call. */
+  version: number;
+}
+
+/**
+ * 409 body of POST /perm/role-permissions/assign/ when `expected_version`
+ * doesn't match the role's current version (views.py: assign_role_permissions).
+ * Thrown as an axios error; `err.response.data` has this shape.
+ */
+export interface RolePermissionConflict {
+  error: string;
+  expected_version: number;
+  current_version: number;
 }
 
 /** 200 body of POST /perm/import/ (views.py:401, stats from export.py:87). */
@@ -84,10 +112,15 @@ export const permApi = {
   // Read and write sit on different routes: the reader is ADMIN-only and keyed
   // by role name in the path, while the writer takes the role in its body.
   rolePermissions: (roleName: string) => api.get<RolePermissions>(`/perm/roles/${roleName}/permissions/`),
-  assign: (roleName: string, permissionIds: number[]) =>
+  // `expectedVersion` is optional so existing callers keep working, but the
+  // matrix screen always sends it — it's the stale-write guard (see
+  // RolePermissionConflict above). Omitted entirely (not sent as undefined)
+  // when not provided, matching RolePermissionAssignSerializer's optional field.
+  assign: (roleName: string, permissionIds: number[], expectedVersion?: number) =>
     api.post<PermissionAssignResult>("/perm/role-permissions/assign/", {
       role: roleName,
       permission_ids: permissionIds,
+      ...(expectedVersion !== undefined ? { expected_version: expectedVersion } : {}),
     }),
 
   // Export/Import

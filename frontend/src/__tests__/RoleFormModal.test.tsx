@@ -94,6 +94,9 @@ describe("RoleFormModal", () => {
       scope: "global",
       organization: null,
       organization_name: null,
+      user_count: 0,
+      version: 1,
+      update_time: "2026-01-01T00:00:00Z",
     };
     render(<RoleFormModal {...defaultProps} initialData={initialData} />);
     expect(screen.getByDisplayValue("ADMIN")).toBeInTheDocument();

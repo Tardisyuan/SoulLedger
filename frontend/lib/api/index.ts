@@ -41,7 +41,7 @@ export { reincarnationApi, type Reincarnation } from "./reincarnation";
 export { eventsApi, type SoulEvent } from "./events";
 
 // Permissions
-export { permApi, type Permission, type Role, type RolePermissions, type PermissionAssignResult, type PermissionImportResult } from "./perm";
+export { permApi, type Permission, type Role, type RolePermissions, type PermissionAssignResult, type RolePermissionConflict, type PermissionImportResult } from "./perm";
 
 // Menus
 export { menusApi, menuButtonsApi, type MenuItem, type MenuButton } from "./menus";
