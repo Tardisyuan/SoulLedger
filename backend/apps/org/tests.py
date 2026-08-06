@@ -102,10 +102,22 @@ class OrganizationAPITest(TestCase):
     """
     组织架构 API 测试.
 
-    Organization has no `tenant` field — it's org-tree reference data shared
-    across civilizations (see category), not per-tenant rows. Any non-ADMIN
-    role must still be able to list it without TenantQuerySetMixin blowing
-    up trying to filter on a field the model doesn't have.
+    Stale as of 0ea97ff, corrected here: `Organization` DOES now carry a
+    `tenant` FK, and reads/writes are gated by `org.read`/`org.manage` via
+    `CodenameViewSetMixin` + `CodenamePermission`. Before that fix,
+    `TenantQuerySetMixin` filtered on `tenant` unconditionally against a model
+    that had no such field, which raised `FieldError` for every non-ADMIN
+    caller — `test_list_organizations_non_admin_does_not_500` below is what
+    caught that, and still guards it (a regression back to "no tenant field"
+    would 500 here again, not just fail the isolation check).
+
+    Full cross-tenant isolation (an org in tenant A absent from tenant B's
+    list, 404 on direct retrieve/patch/delete, ADMIN still seeing everything)
+    is exercised in
+    backend/tests/test_perm_write_snapshot_outside_matrix.py::test_organization_cross_tenant_isolation
+    — that test already covers the isolation half; this class stays focused
+    on the narrower "does the list endpoint even work" question it was
+    written for, now with content asserted instead of only a status code.
     """
 
     def setUp(self):
@@ -117,7 +129,13 @@ class OrganizationAPITest(TestCase):
             role="VIEWER",
             tenant=self.tenant,
         )
-        Organization.objects.create(name="中国地府", code="DIYU", category="CHINESE")
+        # Tenant-scoped, not left null: an untenanted org would be invisible
+        # to every non-ADMIN role under the isolation this class documents,
+        # which would make the assertion below pass for the wrong reason —
+        # an empty result looks identical to a 200 with no filtering bug.
+        self.org = Organization.objects.create(
+            name="中国地府", code="DIYU", category="CHINESE", tenant=self.tenant
+        )
 
     def _authenticate(self, user):
         """Authenticate the way the application does, with a real token.
@@ -135,13 +153,23 @@ class OrganizationAPITest(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
 
     def test_list_organizations_non_admin_does_not_500(self):
-        """A non-ADMIN role listing organizations should not 500.
+        """A non-ADMIN role listing organizations should not 500, and should see its own tenant's rows.
 
-        TenantQuerySetMixin used to filter on `tenant` unconditionally, and
-        Organization has no such field, so this raised FieldError for every
-        non-ADMIN caller.
+        TenantQuerySetMixin used to filter on `tenant` unconditionally before
+        the field existed, raising FieldError for every non-ADMIN caller.
+        VIEWER holds `org.read` (all five roles do), so this also confirms
+        the codename gate added in 0ea97ff doesn't itself block an ordinary
+        read — a regression there would 403, not 500, which the old
+        status-code-only assertion would not have distinguished from success.
         """
         self._authenticate(self.viewer_user)
         response = self.client.get("/api/v1/organizations/")
         self.assertNotEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Paginated: {count, next, previous, results}, not a bare list.
+        codes = [org["code"] for org in response.data["results"]]
+        self.assertIn(
+            self.org.code, codes,
+            "the viewer's own tenant's organization must actually be in the response, "
+            "not just a 200 with an empty/wrong result",
+        )
