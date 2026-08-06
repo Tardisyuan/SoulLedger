@@ -267,3 +267,96 @@ class TestAcknowledgeRecordDateWarningEndpoint:
         self._ack(self.client)
         self.record.refresh_from_db()
         assert self.record.date_warning_acknowledged_at > first_at
+
+    def test_acknowledged_response_names_who_and_when(self):
+        """The UI needs to render "acknowledged by X at Y" — confirm the
+        serializer actually carries that, not just the boolean."""
+        resp = self._ack(self.client)
+        problem = resp.data["date_problems"][0]
+        assert problem["acknowledged_by"] == self.admin.username
+        assert problem["acknowledged_at"] is not None
+
+    def test_unacknowledged_response_has_no_who_or_when(self):
+        problem = self._record_problems()[0]
+        assert problem["acknowledged_by"] is None
+        assert problem["acknowledged_at"] is None
+
+
+@pytest.mark.django_db
+class TestUnacknowledgeRecordDateWarningEndpoint:
+    """POST /souls/<id>/records/<record_id>/unacknowledge-date-warning/"""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="UNACK_DATES", defaults={"display_name": "Unack Dates Tenant"}
+        )[0]
+        self.admin = User.objects.create_user(
+            username="unack_admin", password="test123", role="ADMIN", tenant=self.tenant
+        )
+        self.client = _jwt_client(self.admin, self.tenant)
+        self.soul = Soul.objects.create(
+            name="Posthumous", tenant=self.tenant, birth_year=-612, death_year=-580
+        )
+        self.record = SoulRecord.objects.create(
+            soul=self.soul, record_type="MERIT", civilization="EGYPTIAN",
+            description="Remembered later", weight=1, event_year=-570,
+        )
+
+    def _ack(self):
+        return self.client.post(
+            f"{BASE}/{self.soul.pk}/records/{self.record.pk}/acknowledge-date-warning/",
+            {}, format="json",
+        )
+
+    def _unack(self, client=None):
+        client = client or self.client
+        return client.post(
+            f"{BASE}/{self.soul.pk}/records/{self.record.pk}/unacknowledge-date-warning/",
+            {}, format="json",
+        )
+
+    def test_unacknowledging_clears_the_ack_fields(self):
+        self._ack()
+        resp = self._unack()
+        assert resp.status_code == status.HTTP_200_OK
+        self.record.refresh_from_db()
+        assert self.record.date_warning_acknowledged_by_id is None
+        assert self.record.date_warning_acknowledged_at is None
+        assert self.record.date_warning_ack_fingerprint == ""
+
+    def test_unacknowledging_makes_the_warning_reappear_as_unacknowledged(self):
+        self._ack()
+        self._unack()
+        resp = self.client.get(f"{BASE}/{self.soul.pk}/records/")
+        record_data = next(r for r in resp.data if r["id"] == str(self.record.pk))
+        assert record_data["date_problems"][0]["acknowledged"] is False
+
+    def test_unacknowledging_an_already_stale_ack_is_not_an_error(self):
+        """A revoke on an ack that already stopped applying (fingerprint
+        mismatch) is still allowed — it is harmless and there is no
+        protective reason to refuse it."""
+        self._ack()
+        self.soul.death_year = -900
+        self.soul.save()
+        resp = self._unack()
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_unacknowledging_requires_authentication(self):
+        anon = APIClient()
+        resp = anon.post(
+            f"{BASE}/{self.soul.pk}/records/{self.record.pk}/unacknowledge-date-warning/",
+            {}, format="json",
+        )
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_a_role_without_soul_update_is_forbidden(self):
+        self._ack()
+        viewer = User.objects.create_user(
+            username="unack_viewer", password="test123", role="VIEWER", tenant=self.tenant
+        )
+        client = _jwt_client(viewer, self.tenant)
+        resp = self._unack(client)
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        self.record.refresh_from_db()
+        assert self.record.date_warning_acknowledged_by_id == self.admin.id
