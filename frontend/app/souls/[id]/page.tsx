@@ -25,6 +25,8 @@ import {
 import { ledgerApi, type LedgerInheritance } from "@/lib/api/ledger";
 import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
+import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
+import { DateProblemsPanel } from "@/src/components/souls/DateProblemsPanel";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -408,20 +410,12 @@ export default function SoulDetailPage() {
               </div>
             ) : ledger ? (
               <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-[hsl(var(--color-merit))]">{t("souls.detail.merit")}</span>
-                  <span className="text-lg font-bold text-[hsl(var(--color-merit))]">+{ledger.merit_score}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-[hsl(var(--color-demerit))]">{t("souls.detail.demerit")}</span>
-                  <span className="text-lg font-bold text-[hsl(var(--color-demerit))]">-{ledger.demerit_score}</span>
-                </div>
-                <div className="border-t border-[hsl(var(--color-hairline))] pt-2 flex justify-between items-center">
-                  <span className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
-                  <span className={`text-xl font-bold ${ledger.karmic_balance >= 0 ? "text-[hsl(var(--color-merit))]" : "text-[hsl(var(--color-demerit))]"}`}>
-                    {ledger.karmic_balance >= 0 ? "+" : ""}{ledger.karmic_balance}
-                  </span>
-                </div>
+                <SoulReadingPanel
+                  reading={ledger.reading}
+                  meritScore={ledger.merit_score}
+                  demeritScore={ledger.demerit_score}
+                  karmicBalance={ledger.karmic_balance}
+                />
                 <div className="text-xs text-[hsl(var(--color-ink-subtle))] text-right">{ledger.record_count} {t("souls.detail.records")}</div>
 
                 {/* Ledger Timeline Chart */}
@@ -515,6 +509,19 @@ export default function SoulDetailPage() {
 
         {/* Right column: Timeline */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Date Problems — renders nothing when there are none, see
+              DateProblemsPanel. Placed first: a bad date undermines every
+              reading and record below it, so it's the thing worth seeing
+              before anything else on this soul. */}
+          {!loading && soul && (
+            <DateProblemsPanel
+              soulId={soul.id}
+              soulProblems={soul.date_problems}
+              records={records}
+              onChanged={loadSoulData}
+            />
+          )}
+
           {/* Judgment Records */}
           <Section title={t("souls.detail.judgments")} count={loading ? 0 : judgments.length}>
             {loading ? (

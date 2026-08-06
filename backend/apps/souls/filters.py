@@ -5,6 +5,7 @@ import django_filters as filters
 from django.db.models import ExpressionWrapper, F, IntegerField, Q
 from django.db.models.functions import Coalesce
 
+from apps.souls.dates import ERROR, WARNING, check_record_date, check_soul_dates
 from apps.souls.models import CIVILIZATION_TENANT, Civilization, Soul, SoulState
 
 
@@ -42,6 +43,15 @@ class SoulFilter(filters.FilterSet):
     karmic_balance_max = filters.NumberFilter(method="filter_karmic_max")
     karma_min = filters.NumberFilter(method="filter_karmic_min")
     karma_max = filters.NumberFilter(method="filter_karmic_max")
+
+    # Same signal as the souls list page's ⊘/△ marker and the detail page's
+    # DateProblemsPanel — any unresolved apps.souls.dates.DateProblem on this
+    # soul or one of its records. "Unresolved" excludes an acknowledged
+    # event_after_death WARNING on purpose, the same way the list marker and
+    # SoulListSerializer.get_has_date_warning do: acknowledging one is the
+    # whole point of the acknowledge endpoint, and a filter (or a marker)
+    # that kept surfacing it forever would make acknowledging pointless.
+    has_date_problem = filters.BooleanFilter(method="filter_has_date_problem")
 
     class Meta:
         model = Soul
@@ -112,3 +122,44 @@ class SoulFilter(filters.FilterSet):
         """Filter souls with karmic_balance <= value (karmic_balance = merit - demerit)."""
         from django.db.models import F
         return queryset.filter(merit_score__lte=value + F("demerit_score"))
+
+    def filter_has_date_problem(self, queryset, name, value):
+        """?has_date_problem=true|false — souls with an unresolved DateProblem.
+
+        DateProblem is computed, not stored, so this can't be expressed as a
+        column lookup the way the other filters above are. It walks the
+        (already tenant/DataScope-scoped) queryset in Python once, the same
+        computation SoulListSerializer does per row, and turns the result
+        into a plain `pk__in` filter so pagination, ordering and count()
+        downstream all keep working normally.
+
+        `.prefetch_related("records")` here is not a second fetch on top of
+        what SoulViewSet.get_queryset already attaches — Django keys its
+        prefetch cache by the relation name, so a queryset that already
+        carries a "records" prefetch (which this one, reached through the
+        viewset, always does) reuses it rather than issuing another query.
+        Declaring it again here is what makes that true independent of the
+        caller, rather than this method silently depending on the viewset
+        never changing its prefetch list.
+        """
+        if value is None:
+            return queryset
+        scoped = queryset.prefetch_related("records")
+        matching_ids = []
+        for soul in scoped:
+            birth = (soul.birth_year, soul.birth_month, soul.birth_day)
+            death = (soul.death_year, soul.death_month, soul.death_day)
+            if check_soul_dates(birth, death):
+                matching_ids.append(soul.pk)
+                continue
+            for record in soul.records.all():
+                event = (record.event_year, record.event_month, record.event_day)
+                problems = check_record_date(
+                    event, birth, death,
+                    ack_fingerprint=record.date_warning_ack_fingerprint or None,
+                )
+                if any(p.severity == ERROR or (p.severity == WARNING and not p.acknowledged) for p in problems):
+                    matching_ids.append(soul.pk)
+                    break
+        matched = queryset.filter(pk__in=matching_ids)
+        return matched if value else queryset.exclude(pk__in=matching_ids)

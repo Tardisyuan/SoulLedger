@@ -12,6 +12,42 @@ export interface SoulInput {
 }
 
 /**
+ * One entry of a DateProblem list (apps/souls/dates.py `DateProblem`),
+ * shared shape for both the soul-level and record-level flavours below.
+ * `severity` values are the lowercase strings ERROR/WARNING resolve to in
+ * apps/souls/dates.py, not the uppercase convention used elsewhere in this
+ * codebase (e.g. Soul.current_state) — verified against dates.py directly.
+ */
+interface DateProblemBase {
+  severity: "error" | "warning";
+  code: string;
+  message: string;
+}
+
+/**
+ * Soul-level date problem — the soul's own birth/death against each other
+ * (`death_before_birth`, `implausible_lifespan`), from
+ * `check_soul_dates`/`_soul_level_date_problems`
+ * (backend/apps/souls/serializers.py). Both codes are ERROR-severity and
+ * the write that would create one is refused before it lands (see
+ * `_reject_errors`), so there is nothing here to acknowledge — unlike
+ * `SoulRecordDateProblem` below, this shape carries no ack fields.
+ */
+export type SoulDateProblem = DateProblemBase;
+
+/**
+ * One record's date problem against its soul (`event_before_birth`,
+ * `event_after_death`), from `SoulRecordSerializer.get_date_problems`
+ * (backend/apps/souls/serializers.py). Only `event_after_death` is ever
+ * acknowledgeable — see SoulViewSet.acknowledge_record_date_warning.
+ */
+export interface SoulRecordDateProblem extends DateProblemBase {
+  acknowledged: boolean;
+  acknowledged_by: string | null;
+  acknowledged_at: string | null;
+}
+
+/**
  * Fields shared by SoulSerializer and SoulListSerializer
  * (backend/apps/souls/serializers.py:133 and :207).
  *
@@ -36,10 +72,19 @@ interface SoulBase {
   karmic_balance?: number;
   tenant_code?: string;
   create_time?: string;
+  /** Soul's own dates against each other — see SoulDateProblem. */
+  date_problems: SoulDateProblem[];
 }
 
-/** Element of GET /souls/ — SoulListSerializer, a strict subset of Soul. */
-export type SoulListItem = SoulBase;
+/**
+ * Element of GET /souls/ — SoulListSerializer, a strict subset of Soul.
+ * `has_date_warning` is list-only (backend/apps/souls/serializers.py
+ * SoulListSerializer.get_has_date_warning): whether any of this soul's
+ * records carries an unacknowledged `event_after_death` warning, collapsed
+ * to a bool because a list row has no room for the per-record breakdown
+ * the detail page shows.
+ */
+export type SoulListItem = SoulBase & { has_date_warning: boolean };
 
 /** 200 body of GET /souls/{id}/ — SoulSerializer. */
 export interface Soul extends SoulBase {
@@ -71,6 +116,8 @@ export interface SoulRecordEntry {
   is_milestone: boolean;
   evidence_json?: Record<string, unknown>;
   recorded_at: string;
+  /** This record's event date against its soul's — see SoulRecordDateProblem. */
+  date_problems: SoulRecordDateProblem[];
 }
 
 // Backward-compatible alias. NOTE: this is an alias for the *soul*, not for a
@@ -86,6 +133,12 @@ export const soulsApi = {
     karma_min?: number;
     karma_max?: number;
     ordering?: string;
+    // String, not boolean — this travels through useSouls's
+    // Record<string, string | number | undefined> params bag the same way
+    // every other filter here does. "true" — souls.filters.SoulFilter's
+    // has_date_problem is a django-filter BooleanFilter, which parses the
+    // string the same as it would a real query-string value.
+    has_date_problem?: string;
   }) => api.get<PaginatedResponse<SoulListItem>>("/souls/", { params }),
   get: (id: string) => api.get<Soul>(`/souls/${id}/`),
   create: (data: object) => api.post<Soul>("/souls/", data),
@@ -98,4 +151,10 @@ export const soulsApi = {
   // Bare array — the action returns `Response(serializer.data)` directly
   // (backend/apps/souls/views.py:164), not a pagination envelope.
   records: (id: string) => api.get<SoulRecordEntry[]>(`/souls/${id}/records/`),
+  // Both require soul.update (backend/apps/souls/views.py extra_permissions)
+  // and act on the authenticated user only — no body to send.
+  acknowledgeDateWarning: (soulId: string, recordId: string) =>
+    api.post<SoulRecordEntry>(`/souls/${soulId}/records/${recordId}/acknowledge-date-warning/`),
+  unacknowledgeDateWarning: (soulId: string, recordId: string) =>
+    api.post<SoulRecordEntry>(`/souls/${soulId}/records/${recordId}/unacknowledge-date-warning/`),
 };

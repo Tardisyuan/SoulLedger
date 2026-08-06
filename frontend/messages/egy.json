@@ -197,7 +197,35 @@
       "copy_id_aria": "Sesh Medu Aba",
       "copied": "Sesh Abuf ✓",
       "id_copied": "Medu Sesh Abuf",
-      "id_copy_failed": "Ma Sesh Seth"
+      "id_copy_failed": "Ma Sesh Seth",
+      "reading": {
+        "threshold_hint": "Ib Aba {{weight}}× Shu (Shu = {{counterweight}})",
+        "threshold_pass": "Ma Aba Aa Shu",
+        "threshold_fail": "Aba Aa Shu",
+        "culpa_label": "Culpa (Ma Sethet)",
+        "culpa_records": "{{count}} Medu Seth",
+        "poena_label": "Poena (Wehem Seth)",
+        "poena_unavailable_heading": "Ma Kheme Seth",
+        "poena_missing_absolution": "Ma Rekhyu Wehem Netjer",
+        "poena_missing_satisfaction": "Ma Rekhyu Aha Wehem",
+        "poena_missing_penance": "Ma Rekhyu Iri Wehem",
+        "unavailable_explanation": "Aset Ahamet Ma Rekhyu Aba Hemsu — Aba Unemu Tepy Her Tepy.",
+        "unavailable_raw_data": "Unemu Tepy (Ma Aba Hemsu)",
+        "unavailable_cta": "Khemen Aset Ahamet Em Aba Hemsu."
+      },
+      "date_problems": {
+        "title": "Ma Sethet Hru Wu",
+        "ack_error": "Ma Sethet Aha",
+        "acknowledge": "Wehem Rekh",
+        "revoke": "Iri Wehem",
+        "acknowledged_by": "Wehem Rekh Ren {{user}} Hru {{date}}",
+        "codes": {
+          "death_before_birth": "Wepet Ru Her Tepy Wepet Her Tepy",
+          "implausible_lifespan": "Ankh Ma Sethet",
+          "event_before_birth": "Medew Her Tepy Wepet Her Tepy",
+          "event_after_death": "Medew Kher Wepet Ru"
+        }
+      }
     },
     "order_name_desc": "Ren Z-A",
     "balance_range": "Redu Unemu",
@@ -206,7 +234,13 @@
     "balance_min": "Neken",
     "order_name": "Ren A-Z",
     "order_default": "Setep Tepy",
-    "order_balance": "Unemu Neken-Aa"
+    "order_balance": "Unemu Neken-Aa",
+    "date_problem_filter": "Aba Ma Sethet Wu",
+    "balance_not_applicable": "Ma Unemu — Nau Aba Hemsu",
+    "date_problem_marker": {
+      "error": "Ma Sethet Hru — Nau Aba Hemsu",
+      "warning": "Khet Hru — Nau Aba Hemsu"
+    }
   },
   "common": {
     "close": "Khetem",

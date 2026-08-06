@@ -3,7 +3,7 @@ REST serializers for Soul app.
 """
 from rest_framework import serializers
 
-from apps.souls.dates import ERROR, check_record_date, check_soul_dates
+from apps.souls.dates import ERROR, WARNING, check_record_date, check_soul_dates
 from apps.souls.fields import HistoricalDateField
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
@@ -56,6 +56,28 @@ def _touches_dates(attrs, instance, *prefixes) -> bool:
     if instance is None:
         return True
     return any(f"{prefix}_year" in attrs for prefix in prefixes)
+
+
+def _soul_level_date_problems(obj) -> list[dict]:
+    """The soul's own two dates against each other — death_before_birth,
+    implausible_lifespan — in get_date_problems's shape, minus the
+    acknowledged/acknowledged_by/acknowledged_at trio: both codes here are
+    ERROR-severity, and _reject_errors refuses the write that would create
+    one before it ever lands (SoulSerializer.validate, SoulViewSet.die), so
+    there is never a persisted problem of this kind to acknowledge. One
+    can still exist on legacy data written before that check existed —
+    `manage.py check_soul_dates` is the audit for exactly that — which is
+    why this is worth exposing here rather than assuming it can't happen.
+
+    Cheap on every call site: birth/death are plain columns already loaded
+    on any fetched Soul row, so this touches no extra query, list or detail.
+    """
+    birth = (obj.birth_year, obj.birth_month, obj.birth_day)
+    death = (obj.death_year, obj.death_month, obj.death_day)
+    return [
+        {"severity": p.severity, "code": p.code, "message": p.message}
+        for p in check_soul_dates(birth, death)
+    ]
 
 
 def _reject_errors(problems) -> None:
@@ -186,6 +208,13 @@ class SoulSerializer(serializers.ModelSerializer):
     # Field-level access control: VIEWER cannot see merit/demerit scores
     merit_score = serializers.SerializerMethodField()
     demerit_score = serializers.SerializerMethodField()
+    # Soul-level date problems (death_before_birth, implausible_lifespan) —
+    # see _soul_level_date_problems. Distinct from each record's own
+    # date_problems in `records` below, which is about that record's event
+    # date against this soul, not the soul's two dates against each other.
+    # A client rendering "everything wrong with this soul's dates" needs
+    # both lists.
+    date_problems = serializers.SerializerMethodField()
 
     class Meta:
         model = Soul
@@ -194,6 +223,7 @@ class SoulSerializer(serializers.ModelSerializer):
             "birth_date", "death_date", "origin_location", "birth_name",
             "description", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "update_time", "records",
+            "date_problems",
         ]
         read_only_fields = ["id", "current_state", "merit_score", "demerit_score", "create_time", "update_time"]
 
@@ -229,6 +259,9 @@ class SoulSerializer(serializers.ModelSerializer):
             return None  # VIEWER cannot see demerit score
         return obj.demerit_score
 
+    def get_date_problems(self, obj):
+        return _soul_level_date_problems(obj)
+
     def to_representation(self, instance):
         # Remove karmic_balance from output for VIEWER (use the computed field name)
         data = super().to_representation(instance)
@@ -247,19 +280,45 @@ class SoulListSerializer(serializers.ModelSerializer):
     civilization = serializers.CharField(read_only=True)
     birth_date = HistoricalDateField(prefix="birth")
     death_date = HistoricalDateField(prefix="death")
+    # Same shape and same cost-free reasoning as SoulSerializer.date_problems
+    # above — see _soul_level_date_problems. This is what lets the list page
+    # mark a soul without an extra per-row request.
+    date_problems = serializers.SerializerMethodField()
+    # Record-level (`event_after_death`) rather than soul-level, and
+    # collapsed to a bool because a list row has no room for a per-record
+    # breakdown. Also free: SoulViewSet.get_queryset prefetch_related's
+    # "records" for every action, list included, so `obj.records.all()`
+    # here hits the prefetch cache rather than issuing a query per soul.
+    has_date_warning = serializers.SerializerMethodField()
 
     class Meta:
         model = Soul
         fields = [
             "id", "name", "current_state", "tenant_code", "civilization",
             "birth_date", "death_date", "merit_score", "demerit_score",
-            "karmic_balance", "create_time",
+            "karmic_balance", "create_time", "date_problems", "has_date_warning",
         ]
 
     def get_karmic_balance(self, obj):
         if _is_viewer(self.context):
             return None
         return obj.karmic_balance
+
+    def get_date_problems(self, obj):
+        return _soul_level_date_problems(obj)
+
+    def get_has_date_warning(self, obj):
+        birth = (obj.birth_year, obj.birth_month, obj.birth_day)
+        death = (obj.death_year, obj.death_month, obj.death_day)
+        for record in obj.records.all():
+            event = (record.event_year, record.event_month, record.event_day)
+            problems = check_record_date(
+                event, birth, death,
+                ack_fingerprint=record.date_warning_ack_fingerprint or None,
+            )
+            if any(p.severity == WARNING and not p.acknowledged for p in problems):
+                return True
+        return False
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

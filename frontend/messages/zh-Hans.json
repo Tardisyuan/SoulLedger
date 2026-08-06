@@ -205,7 +205,41 @@
       "copy_id_aria": "复制灵魂 ID",
       "copied": "已复制 ✓",
       "id_copied": "ID 已复制到剪贴板",
-      "id_copy_failed": "复制失败"
+      "id_copy_failed": "复制失败",
+      "reading": {
+        "threshold_hint": "心重为费斯之羽的 {{weight}} 倍（羽重 = {{counterweight}}）",
+        "threshold_pass": "未重于费斯之羽",
+        "threshold_fail": "重于费斯之羽",
+        "culpa_label": "罪责（Culpa）",
+        "culpa_records": "{{count}} 项记录",
+        "poena_label": "补赎（Poena）",
+        "poena_unavailable_heading": "无法计算",
+        "poena_missing_absolution": "是否已获赦免",
+        "poena_missing_satisfaction": "应偿补赎多少",
+        "poena_missing_penance": "已行补赎多少",
+        "unavailable_explanation": "该灵魂所属租户尚未映射到任何文明宇宙观，因此没有可呈现的解读——仅显示下方原始账目。",
+        "unavailable_raw_data": "原始账目（非解读）",
+        "unavailable_cta": "请为该租户配置文明映射以启用解读。"
+      },
+      "date_problems": {
+        "title": "日期问题",
+        "ack_error": "操作失败",
+        "acknowledge": "标记为已核实",
+        "revoke": "撤销标记",
+        "acknowledged_by": "已由 {{user}} 于 {{date}} 标记为已核实",
+        "codes": {
+          "death_before_birth": "死亡早于出生",
+          "implausible_lifespan": "寿命不合理",
+          "event_before_birth": "事件早于出生",
+          "event_after_death": "事件晚于死亡"
+        }
+      }
+    },
+    "date_problem_filter": "仅看有问题的",
+    "balance_not_applicable": "不适用 — 详见灵魂详情",
+    "date_problem_marker": {
+      "error": "日期错误 — 详见灵魂详情",
+      "warning": "日期警告 — 详见灵魂详情"
     }
   },
   "common": {
