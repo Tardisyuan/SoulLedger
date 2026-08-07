@@ -647,3 +647,93 @@ class TestCrossTenantJudgmentConclude:
             {"conclusion_type": "PASS"}, format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+
+# ---------------------------------------------------------------------------
+# C4 — DispatchRecordViewSet.get_queryset() tenant isolation
+#
+# Pre-fix, get_queryset() was `DispatchRecord._base_manager.filter(is_deleted=
+# False)` with no caller-based restriction at all — a plain GET here returned
+# every tenant's dispatch records to any non-ADMIN with dispatch.read (GUARDIAN
+# included). Object-level retrieval of a record from an unrelated tenant was
+# already blocked by TenantPermission.has_object_permission (which compares
+# `obj.tenant`, set to source_tenant at creation, against request.tenant), so
+# the hole was specifically in list — nothing here calls has_object_permission
+# for a list action. That is exactly what these tests pin.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.django_db
+class TestDispatchRecordTenantIsolation:
+    """DispatchRecord list must only show records where the caller's tenant
+    is the source or the target — not every tenant's records (C4)."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant_a = Tenant.objects.get_or_create(
+            code="DTI_A", defaults={"display_name": "Dispatch Isolation A"}
+        )[0]
+        self.tenant_b = Tenant.objects.get_or_create(
+            code="DTI_B", defaults={"display_name": "Dispatch Isolation B"}
+        )[0]
+        self.tenant_c = Tenant.objects.get_or_create(
+            code="DTI_C", defaults={"display_name": "Dispatch Isolation C"}
+        )[0]
+        self.tenant_d = Tenant.objects.get_or_create(
+            code="DTI_D", defaults={"display_name": "Dispatch Isolation D"}
+        )[0]
+
+        self.guardian_a = User.objects.create_user(
+            username="dtiguardiana", password="test123", role="GUARDIAN", tenant=self.tenant_a,
+        )
+        self.guardian_b = User.objects.create_user(
+            username="dtiguardianb", password="test123", role="GUARDIAN", tenant=self.tenant_b,
+        )
+        self.admin_a = User.objects.create_user(
+            username="dtiadmina", password="test123", role="ADMIN", tenant=self.tenant_a,
+        )
+
+        self.soul_a = Soul.objects.create(name="DTI Soul A", current_state=SoulState.ALIVE, tenant=self.tenant_a)
+        self.soul_c = Soul.objects.create(name="DTI Soul C", current_state=SoulState.ALIVE, tenant=self.tenant_c)
+
+        # Involves tenant_a (source) and tenant_b (target).
+        self.record_ab = DispatchRecord.objects.create(
+            source_tenant=self.tenant_a, target_tenant=self.tenant_b,
+            soul=self.soul_a, dispatched_by=self.guardian_a, reason="A to B", tenant=self.tenant_a,
+        )
+        # Involves neither tenant_a nor tenant_b.
+        self.record_cd = DispatchRecord.objects.create(
+            source_tenant=self.tenant_c, target_tenant=self.tenant_d,
+            soul=self.soul_c, dispatched_by=self.admin_a, reason="C to D", tenant=self.tenant_c,
+        )
+
+        self.client_a = _jwt_client(self.guardian_a, self.tenant_a)
+        self.client_b = _jwt_client(self.guardian_b, self.tenant_b)
+        self.admin_client = _jwt_client(self.admin_a, self.tenant_a)
+
+    def test_source_tenant_sees_own_record_not_unrelated_one(self):
+        resp = self.client_a.get(f"{BASE}/records/")
+        assert resp.status_code == status.HTTP_200_OK
+        ids = {row["id"] for row in resp.data["results"]}
+        assert str(self.record_ab.pk) in ids
+        assert str(self.record_cd.pk) not in ids, (
+            "GUARDIAN at tenant A listed a dispatch record between tenants C "
+            "and D — neither side of which is tenant A."
+        )
+
+    def test_target_tenant_also_sees_the_record(self):
+        """A dispatch is inherently cross-tenant; the target side must see it too."""
+        resp = self.client_b.get(f"{BASE}/records/")
+        assert resp.status_code == status.HTTP_200_OK
+        ids = {row["id"] for row in resp.data["results"]}
+        assert str(self.record_ab.pk) in ids
+
+    def test_uninvolved_tenant_cannot_retrieve_the_record(self):
+        resp = self.client_a.get(f"{BASE}/records/{self.record_cd.pk}/")
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_admin_sees_records_across_all_tenants(self):
+        resp = self.admin_client.get(f"{BASE}/records/")
+        assert resp.status_code == status.HTTP_200_OK
+        ids = {row["id"] for row in resp.data["results"]}
+        assert str(self.record_ab.pk) in ids
+        assert str(self.record_cd.pk) in ids

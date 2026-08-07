@@ -6,10 +6,11 @@ import json
 
 from django.db import IntegrityError
 from rest_framework import status, viewsets
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.death_sync.authentication import APIKeyAuthentication
 from apps.death_sync.models import (
     DeathRegistrationRequest,
@@ -30,9 +31,31 @@ class ExternalApiKeyViewSet(viewsets.ModelViewSet):
     """
     CRUD for external API keys (admin only).
     """
-    permission_classes = [IsAdminUser]
+    # Was IsAdminUser (Django is_staff) — the wrong admin concept for this
+    # codebase, and refused even role='ADMIN' users. IsAdminPermission is the
+    # same role-based gate every other admin-only endpoint here uses; paired
+    # with TenantPermission for consistency with the rest of the app, though
+    # ADMIN bypasses tenant filtering there too.
+    permission_classes = [IsAuthenticated, IsAdminPermission, TenantPermission]
     queryset = ExternalApiKey.objects.all()
     serializer_class = ExternalApiKeySerializer
+
+    def get_queryset(self):
+        # ADMIN is this codebase's one intentionally-global role (see
+        # TenantPermission/DataScopeViewSetMixin) and this endpoint is already
+        # ADMIN-only, so scoping by tenant is moot for today's only caller.
+        # Added anyway, matching the DataScopeViewSetMixin idiom used
+        # elsewhere: it costs nothing for ADMIN (still sees every key) and
+        # means this queryset fails safe rather than open if a future change
+        # ever grants a non-ADMIN role access to this viewset.
+        qs = super().get_queryset()
+        user = self.request.user
+        if getattr(user, "role", None) == "ADMIN":
+            return qs
+        tenant = getattr(self.request, "tenant", None)
+        if tenant:
+            return qs.filter(tenant=tenant)
+        return qs.none()
 
     def perform_create(self, serializer):
         from apps.death_sync.models import ExternalApiKey
@@ -207,24 +230,37 @@ class DeathSyncHealthView(APIView):
         from django.utils import timezone
 
         api_key = getattr(request, 'api_key', None)
-        getattr(request, 'tenant', None)
+        # APIKeyAuthentication sets request.tenant from the key's tenant (it
+        # doesn't go through TenantMiddleware's JWT path), but fall back to
+        # api_key.tenant directly in case that ever changes — either way,
+        # these counts must not aggregate across tenants: any valid API key
+        # holder used to see every tenant's pending/failed volume.
+        tenant = getattr(request, 'tenant', None) or (api_key.tenant if api_key else None)
 
         # Count pending/failed registrations in last 24h
         cutoff_24h = timezone.now() - timedelta(hours=24)
         pending_count = DeathRegistrationRequest.objects.filter(
+            tenant=tenant,
             status=DeathRegistrationStatus.PENDING,
             request_timestamp__gte=cutoff_24h,
         ).count()
         failed_count = DeathRegistrationRequest.objects.filter(
+            tenant=tenant,
             status=DeathRegistrationStatus.FAILED,
             request_timestamp__gte=cutoff_24h,
         ).count()
 
-        # Count failed webhooks in last 24h
+        # Count failed webhooks in last 24h. WebhookDeliveryLog has no direct
+        # tenant field, only transitively via webhook__tenant — same pattern
+        # as retry_failed_webhooks_for_tenant (apps/death_sync/tasks.py).
+        # Also fixes a pre-existing FieldError here: WebhookDeliveryLog (via
+        # AuditUserFields) has create_time, not created_at — this query
+        # raised a 500 on every call before either fix, tenant filter or not.
         from apps.death_sync.models import WebhookDeliveryStatus
         failed_webhooks = WebhookDeliveryLog.objects.filter(
+            webhook__tenant=tenant,
             status=WebhookDeliveryStatus.FAILED,
-            created_at__gte=cutoff_24h,
+            create_time__gte=cutoff_24h,
         ).count()
 
         return Response({
