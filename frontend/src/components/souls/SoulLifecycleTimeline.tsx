@@ -76,11 +76,18 @@ interface RowShellProps {
   hideConnector?: boolean;
   highlight?: boolean;
   tint?: boolean;
+  /** SETTLED-only spine terminal (see §3 of the Stage 5 design doc): "filled"
+   * is a larger ringed dot — someone is still there (Aaru, Heaven, eternal
+   * Hell). "flush" drops the dot for a bare line-end — annihilation, so
+   * there is nobody left for a further entry to be about. Both render on the
+   * row for the soul's terminal disposition; the badge and destination text
+   * stay outcome-neutral, this is the one channel that carries the fate. */
+  terminalVariant?: "filled" | "flush";
   children: React.ReactNode;
   right?: React.ReactNode;
 }
 
-function RowShell({ date, dotClassName, dashed, hideConnector, highlight, tint, children, right }: RowShellProps) {
+function RowShell({ date, dotClassName, dashed, hideConnector, highlight, tint, terminalVariant, children, right }: RowShellProps) {
   return (
     <div
       className={`flex items-stretch gap-3 ${tint ? "bg-[hsl(var(--color-accent)/0.06)] rounded-md" : ""} ${
@@ -89,7 +96,18 @@ function RowShell({ date, dotClassName, dashed, hideConnector, highlight, tint, 
     >
       <div className="w-16 shrink-0 text-[11px] text-[hsl(var(--color-ink-subtle))] text-right pt-2">{date ?? "—"}</div>
       <div className="flex flex-col items-center shrink-0">
-        <span className={`w-2.5 h-2.5 rounded-full mt-2 ${dotClassName}`} aria-hidden="true" />
+        {terminalVariant === "flush" ? (
+          <span className="w-2.5 h-px mt-3 bg-[hsl(var(--color-hairline-strong))]" aria-hidden="true" />
+        ) : (
+          <span
+            className={
+              terminalVariant === "filled"
+                ? `w-3.5 h-3.5 rounded-full mt-1.5 ring-2 ring-[hsl(var(--color-status-settled)/0.35)] ${dotClassName}`
+                : `w-2.5 h-2.5 rounded-full mt-2 ${dotClassName}`
+            }
+            aria-hidden="true"
+          />
+        )}
         {!hideConnector && (
           <span
             className={`flex-1 w-0 mt-0.5 ${dashed ? "border-l border-dashed border-[hsl(var(--color-hairline-strong))]" : "border-l border-[hsl(var(--color-hairline))]"}`}
@@ -136,6 +154,28 @@ export function SoulLifecycleTimeline({
 
   const hasReincarnated = reincarnations.length > 0;
   const currentPos = currentStepPosition(soul.current_state, hasReincarnated);
+  const isSettled = soul.current_state === "SETTLED";
+
+  // The row for the disposition that actually closed the account — the
+  // "spine terminal" (see RowShell.terminalVariant above). Only SETTLED
+  // souls get one; a SETTLED soul has one closing disposition, so the most
+  // recently executed one is it.
+  const terminalDisposition = useMemo(() => {
+    if (!isSettled) return null;
+    const executed = dispositions.filter((d) => d.is_executed);
+    if (executed.length === 0) return null;
+    return executed.reduce((latest, d) =>
+      new Date(d.executed_at ?? d.created_at).getTime() > new Date(latest.executed_at ?? latest.created_at).getTime() ? d : latest
+    );
+  }, [isSettled, dispositions]);
+
+  // EG_DEVOURER is the one realm_code DispositionService routes a failed
+  // Egyptian soul to (backend/apps/disposition/services.py) — Ammit's realm,
+  // annihilation rather than a destination. Neither Disposition nor Realm
+  // carries a dedicated "nobody survives this" flag today, so this reads the
+  // one concrete signal that exists rather than inventing a new field for a
+  // purely presentational distinction.
+  const isAnnihilated = terminalDisposition?.realm_code === "EG_DEVOURER";
 
   const openJudgment = useMemo(() => judgments.find((j) => !j.is_final), [judgments]);
 
@@ -333,10 +373,26 @@ export function SoulLifecycleTimeline({
             }
 
             if (row.kind === "marker") {
+              const isTerminalRow = isSettled && terminalDisposition !== null && row.id === `disposition-${terminalDisposition.id}`;
               return (
-                <RowShell key={row.id} date={row.dateLabel} hideConnector={isLast} dotClassName={TONE_DOT[row.tone]}>
+                <RowShell
+                  key={row.id}
+                  date={row.dateLabel}
+                  hideConnector={isLast}
+                  dotClassName={isTerminalRow ? "bg-[hsl(var(--color-status-settled))]" : TONE_DOT[row.tone]}
+                  terminalVariant={isTerminalRow ? (isAnnihilated ? "flush" : "filled") : undefined}
+                >
                   <div className="text-sm text-[hsl(var(--color-ink))] truncate">{row.title}</div>
                   {row.metadata && <div className="text-xs text-[hsl(var(--color-ink-muted))] truncate">{row.metadata}</div>}
+                  {isTerminalRow && (
+                    <div
+                      className={`text-[10px] font-mono mt-0.5 ${isAnnihilated ? "text-[hsl(var(--color-ink-tertiary))]" : "text-[hsl(var(--color-ink-muted))]"}`}
+                    >
+                      {isAnnihilated
+                        ? tf("souls.detail.timeline.terminal_flush", "── 其人已无")
+                        : tf("souls.detail.timeline.terminal_filled", "◉ 尚有其人")}
+                    </div>
+                  )}
                   {row.idChip && (
                     <span className="inline-block mt-0.5 font-mono text-[10px] px-1 py-0.5 rounded bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-subtle))]">
                       {row.idChip.slice(0, 8)}
