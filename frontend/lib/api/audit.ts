@@ -23,6 +23,13 @@ export interface AuditLogEntry {
   username: string | null;
   tenant_code: string | null;
   user_display: string;
+  /**
+   * Request-scoped correlation id (AuditLog.trace_id, backend/apps/audit/models.py:52).
+   * Blank on rows written outside a request context, or on anything created
+   * before this field was serialized — see lib/auditGrouping.ts, which treats
+   * a blank trace_id as "groups with nobody" rather than "groups with everyone".
+   */
+  trace_id: string;
   /** Not serialized. Always undefined. */
   user?: number | null;
 }
