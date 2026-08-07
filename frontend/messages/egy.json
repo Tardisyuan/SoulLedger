@@ -325,7 +325,39 @@
     "gate_roles_nonadmin": "Kheme Menu Sesen Sekhem Hem Ahet.",
     "gate_menu_type_effect": "Per Seth / Menu / Aha. Iri Renu Wat Ankh Ma Ankh.",
     "gate_menu_type_nonadmin": "Kheme Menu Sesen Sekhem Hem Ahet.",
-    "gates_footnote": "Aha Sekhem Seth Sesen Sekhem Hem Ahet Kheme."
+    "gates_footnote": "Aha Sekhem Seth Sesen Sekhem Hem Ahet Kheme.",
+    "show_deleted": "Maa Wehem Seth",
+    "deleted_badge": "Wehem Seth",
+    "delete_confirm_title": "Nehem Ma Per Wehem?",
+    "delete_confirm_message": "\"{{name}}\" Nehem Ma Per Wehem. Sesen Kheme Wehem {{days}} Hru; Em Metu Set, Hem Ahet Wehem Djet.",
+    "delete_confirm_action": "Nehem Ma Per Wehem"
+  },
+  "recycle_bin": {
+    "title": "Per Wehem Seth",
+    "intro": "Renenu Wehem Seth, Sesen Kher Seth, Em Wa Ahet — It Seth Wa Renu we Djewet Kheme, Ma Djewet Renu Wat.",
+    "no_access": "Ma Sekhem Maa Per Wehem Seth.",
+    "col_type": "Kher Seth",
+    "col_item": "Seth",
+    "col_dependents": "Djewet",
+    "col_deleted": "Wehem Set",
+    "col_action": "Aha Seth",
+    "restore": "Kheme Wehem",
+    "restore_success": "Kheme Wehem Iri",
+    "restore_error": "Ma Kheme Wehem",
+    "hard_delete": "Wehem Djet",
+    "hard_delete_success": "Wehem Djet Iri",
+    "hard_delete_error": "Ma Wehem Djet",
+    "hard_delete_not_yet_eligible": "Sesen Kheme {{days}} Hru Her Wehem Djet",
+    "hard_delete_confirm_title": "Wehem Djet?",
+    "hard_delete_confirm_message": "\"{{name}}\" Wehem Djet — Ma Kheme Wehem.",
+    "dependent_count": "{{type}} {{name}} · Djewet {{count}}",
+    "deleted_by": "Wehem Iri {{user}}",
+    "empty": "Per Wehem Seth Ma Ahet",
+    "manage_from_bin": "Iri Em Per Wehem Seth",
+    "entity_types": {
+      "soul": "Ka",
+      "menu": "Menu"
+    }
   },
   "permissions": {
     "title": "Iri Sethet",

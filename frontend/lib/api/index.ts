@@ -63,3 +63,6 @@ export { dispatchApi, crossTenantJudgmentsApi, type DispatchRecord, type CrossTe
 
 // Social
 export { socialApi, type Post, type Comment, type Reaction, type Follow, type UserProfile } from "./social";
+
+// Recycle bin
+export { recycleBinApi, type RecycleBinEntry, type RecycleBinListResponse, type RestoreResponse } from "./recycle-bin";

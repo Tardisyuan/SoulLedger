@@ -325,7 +325,39 @@
     "gate_roles_nonadmin": "编辑此菜单需要 menu.manage 权限——目前仅管理员拥有。",
     "gate_menu_type_effect": "目录 / 菜单 / 按钮。决定其余字段中哪些有意义——目录没有页面。",
     "gate_menu_type_nonadmin": "编辑此菜单需要 menu.manage 权限——目前仅管理员拥有。",
-    "gates_footnote": "这五项的编辑权限都需要 menu.manage——在当前的角色配置下仅管理员拥有。"
+    "gates_footnote": "这五项的编辑权限都需要 menu.manage——在当前的角色配置下仅管理员拥有。",
+    "show_deleted": "显示已删除",
+    "deleted_badge": "已删除",
+    "delete_confirm_title": "移至回收站？",
+    "delete_confirm_message": "「{{name}}」将移至回收站，{{days}} 天内可从回收站恢复；超过此期限后，管理员可将其永久删除。",
+    "delete_confirm_action": "移至回收站"
+  },
+  "recycle_bin": {
+    "title": "回收站",
+    "intro": "跨所有实体类型的已删除项，集中在这一个页面——每个父项作为一行，附带其关联项数量，而不是把每个关联项单独列出。",
+    "no_access": "你没有权限查看回收站。",
+    "col_type": "类型",
+    "col_item": "项目",
+    "col_dependents": "关联项",
+    "col_deleted": "删除时间",
+    "col_action": "操作",
+    "restore": "恢复",
+    "restore_success": "已恢复",
+    "restore_error": "恢复失败",
+    "hard_delete": "永久删除",
+    "hard_delete_success": "已永久删除",
+    "hard_delete_error": "永久删除失败",
+    "hard_delete_not_yet_eligible": "距可永久删除还需等待，保留期为 {{days}} 天",
+    "hard_delete_confirm_title": "永久删除？",
+    "hard_delete_confirm_message": "「{{name}}」将被永久删除，此操作无法撤销。",
+    "dependent_count": "{{type}} {{name}} · 含 {{count}} 项关联",
+    "deleted_by": "由 {{user}} 删除",
+    "empty": "回收站是空的",
+    "manage_from_bin": "在回收站中管理",
+    "entity_types": {
+      "soul": "灵魂",
+      "menu": "菜单"
+    }
   },
   "permissions": {
     "title": "权限管理",

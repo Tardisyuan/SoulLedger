@@ -9,7 +9,7 @@ import { menusApi, permApi, PAGE_SIZE, type MenuItem, type Permission } from "@/
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { Modal } from "@/src/components/ui/Modal";
+import { Modal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { IconPicker } from "@/src/components/ui/IconPicker";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable } from "@/components/ui/data-table";
@@ -33,6 +33,11 @@ type MenuItemFull = MenuItem & {
   menu_type?: MenuTypeOption;
   visible?: boolean;
   permission?: string;
+  // Recycle bin (Stage 4 §4.7) — same "extend locally" move as above.
+  // MenuSerializer now includes these three (backend/apps/menus/serializers.py).
+  is_deleted?: boolean;
+  deleted_at?: string | null;
+  delete_reason?: string;
 };
 
 /**
@@ -88,9 +93,14 @@ export default function MenusPage() {
   const parentSelectId = `${formId}-parent`;
 
   const [page, setPage] = useState(1);
+  // Recycle bin (Stage 4 §4.7): absent by default, opt-in via this toggle —
+  // matches the design doc's rule that a deleted row is never shown unless
+  // asked for. Mirrors SoulViewSet's ?show_deleted= convention.
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<MenuItemFull | null>(null);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["menus", page],
+    queryKey: ["menus", page, showDeleted],
     queryFn: async () => {
       // menusApi.all() (GET /menus/list-public/) only ever returns top-level,
       // is_active=True, role-filtered menus — an editor built on that source
@@ -99,7 +109,10 @@ export default function MenusPage() {
       // ModelViewSet directly: ADMIN's get_queryset() returns Menu.objects.all(),
       // which is what an editor whose job is "say which gate is in force"
       // needs to see.
-      const res = await menusApi.list({ page: String(page) });
+      const res = await menusApi.list({
+        page: String(page),
+        ...(showDeleted ? { show_deleted: "true" } : {}),
+      });
       return res.data;
     },
   });
@@ -127,8 +140,14 @@ export default function MenusPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => menusApi.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menus"] }),
-    onError: () => showToast(t("menus.delete_error") || "Failed to delete menu", "error"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["menus"] });
+      setPendingDelete(null);
+    },
+    onError: () => {
+      showToast(t("menus.delete_error") || "Failed to delete menu", "error");
+      setPendingDelete(null);
+    },
   });
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -309,6 +328,22 @@ export default function MenusPage() {
           </div>
         </details>
 
+        {/* Recycle bin (Stage 4 §4.7): absent by default — a deleted row
+            only ever renders when this is on. See /recycle-bin for the
+            cross-entity-type view; this toggle is the per-list pattern
+            example the design doc asks for. */}
+        <div className="flex items-center gap-2 mb-3">
+          <input
+            type="checkbox"
+            id="menus-show-deleted"
+            checked={showDeleted}
+            onChange={(e) => setShowDeleted(e.target.checked)}
+          />
+          <label htmlFor="menus-show-deleted" className="text-sm text-[hsl(var(--color-ink-muted))]">
+            {t("menus.show_deleted")}
+          </label>
+        </div>
+
         <DataTable<MenuItemFull>
           caption={t("menus.title")}
           columns={[
@@ -328,14 +363,26 @@ export default function MenusPage() {
             const MenuIcon = menu.icon
               ? (LucideIcons[menu.icon as LucideIconName] as unknown as LucideIcon)
               : null;
+            // Deleted-row state (Stage 4 §4.7): ink-subtle text, strikethrough
+            // on the name only, plus a "已删除" badge — never hidden data,
+            // just de-emphasized. Only reachable when showDeleted is on,
+            // since the backend only returns these rows with ?show_deleted=true.
+            const isDeleted = Boolean(menu.is_deleted);
             return (
               <>
-                <td className="px-4 py-3">
+                <td className={`px-4 py-3 ${isDeleted ? "text-[hsl(var(--color-ink-subtle))]" : ""}`}>
                   <div className="flex items-center gap-2">
                     {MenuIcon ? (
                       <MenuIcon className="w-4 h-4 text-[hsl(var(--color-accent-ink))]" />
                     ) : null}
-                    <span className="font-medium text-[hsl(var(--color-ink))]">{menu.name}</span>
+                    <span className={`font-medium ${isDeleted ? "line-through text-[hsl(var(--color-ink-subtle))]" : "text-[hsl(var(--color-ink))]"}`}>
+                      {menu.name}
+                    </span>
+                    {isDeleted && (
+                      <span className="px-1.5 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-subtle))] rounded text-xs shrink-0">
+                        {t("menus.deleted_badge")}
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs font-mono">{menu.path}</td>
@@ -368,22 +415,31 @@ export default function MenusPage() {
                   {/* See app/permissions/page.tsx: inline siblings concatenate
                       their labels in the accessibility tree and on copy. */}
                   <div className="flex justify-end gap-3">
-                    <RequirePermission permissions="menu.update">
-                      <button
-                        onClick={() => openEdit(menu)}
-                        className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-hover))] text-sm"
-                      >
-                        {t("menus.edit")}
-                      </button>
-                    </RequirePermission>
-                    <RequirePermission permissions="menu.delete">
-                      <button
-                        onClick={() => deleteMutation.mutate(menu.id)}
-                        className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-sm"
-                      >
-                        {t("menus.delete")}
-                      </button>
-                    </RequirePermission>
+                    {!isDeleted && (
+                      <>
+                        <RequirePermission permissions="menu.update">
+                          <button
+                            onClick={() => openEdit(menu)}
+                            className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-hover))] text-sm"
+                          >
+                            {t("menus.edit")}
+                          </button>
+                        </RequirePermission>
+                        <RequirePermission permissions="menu.delete">
+                          <button
+                            onClick={() => setPendingDelete(menu)}
+                            className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-sm"
+                          >
+                            {t("menus.delete")}
+                          </button>
+                        </RequirePermission>
+                      </>
+                    )}
+                    {isDeleted && (
+                      <span className="text-xs text-[hsl(var(--color-ink-subtle))]">
+                        {t("recycle_bin.manage_from_bin")}
+                      </span>
+                    )}
                   </div>
                 </td>
               </>
@@ -615,6 +671,25 @@ export default function MenusPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Delete confirmation (Stage 4 §4.7): the verb is "移至回收站"
+          (move to recycle bin), never "删除" — it names what the backend
+          actually does (soft delete), and states the retention window
+          because reversibility that expires isn't reversibility unless the
+          user knows the window. */}
+      <ConfirmDialog
+        isOpen={pendingDelete !== null}
+        title={t("menus.delete_confirm_title")}
+        message={t("menus.delete_confirm_message", {
+          name: pendingDelete?.name ?? "",
+          days: "30",
+        })}
+        confirmText={t("menus.delete_confirm_action")}
+        cancelText={t("common.cancel")}
+        variant="danger"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => pendingDelete && deleteMutation.mutate(pendingDelete.id)}
+      />
     </div>
   );
 }
