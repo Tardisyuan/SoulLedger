@@ -205,6 +205,10 @@ DEFAULT_PERMISSIONS = [
     ("soul.delete", "删除灵魂", "soul"),
     ("soul.die", "宣告死亡", "soul"),
     ("soul.transition", "状态流转", "soul"),
+    # SETTLED 没有任何合法的正向流转（见 SoulState.SETTLED 的
+    # valid_transitions），撤销它因此从来不是"流转"，而是一次需要单独授权、
+    # 单独审计的更正——ADMIN-only,同 recycle_bin.* 的定位。
+    ("soul.correct_settlement", "更正已结案状态", "soul"),
     # judgment 权限
     ("judgment.read", "查看审判", "judgment"),
     ("judgment.create", "创建审判", "judgment"),
@@ -281,6 +285,7 @@ DEFAULT_PERMISSIONS = [
 ROLE_PERMISSIONS = {
     "ADMIN": [
         "soul.read", "soul.create", "soul.update", "soul.delete", "soul.die", "soul.transition",
+        "soul.correct_settlement",
         "judgment.read", "judgment.create", "judgment.execute",
         "ledger.read", "ledger.manage",
         "reincarnation.read", "reincarnation.manage", "reincarnation.complete", "reincarnation.reborn",

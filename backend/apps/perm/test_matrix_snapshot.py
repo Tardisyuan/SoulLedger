@@ -929,7 +929,7 @@ def test_seeding_actually_moved_those_codenames_onto_the_db_path(unseeded_famili
     """
     from apps.perm.models import Permission
 
-    assert len(unseeded_families_seeded_in_db) == 13, unseeded_families_seeded_in_db
+    assert len(unseeded_families_seeded_in_db) == 14, unseeded_families_seeded_in_db
     for codename in unseeded_families_seeded_in_db:
         assert Permission.objects.filter(codename=codename).exists(), codename
 

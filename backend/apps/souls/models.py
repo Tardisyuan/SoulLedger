@@ -357,6 +357,44 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         self.death_day = locked_soul.death_day
         return True
 
+    def correct_settlement(self, user=None, reason: str = "") -> bool:
+        """Revert a SETTLED soul to DISPOSED to fix a data-entry error.
+
+        Deliberately does not go through transition_to/can_transition_to —
+        SoulState.SETTLED has no valid_transitions by design (see the
+        comment there on why re-opening a cosmologically closed case must
+        never look like an ordinary transition). This is a correction, not
+        a transition: ADMIN-only (enforced by the view's permission
+        codename, not here), requires a reason, and is logged as its own
+        SETTLEMENT_CORRECTED event so the lifecycle timeline never renders
+        it as if the soul walked DISPOSED->SETTLED backwards. Reverts to
+        DISPOSED rather than clearing to ALIVE/JUDGING, since only the
+        settlement itself was in error — the judgment and disposition that
+        led to it are untouched, and normal machinery can re-run from
+        DISPOSED once the record is fixed.
+        """
+        from django.db import transaction
+
+        if not reason:
+            raise ValueError("A reason is required to correct a settlement.")
+
+        with transaction.atomic():
+            locked_soul = Soul.objects.select_for_update().get(pk=self.pk)
+            if locked_soul.current_state != SoulState.SETTLED:
+                raise ValueError("Only a SETTLED soul can have its settlement corrected.")
+
+            old_state = locked_soul.current_state
+            locked_soul.current_state = SoulState.DISPOSED
+            locked_soul.save()
+
+        from apps.events.services import EventService
+        EventService.log_settlement_corrected(
+            locked_soul, old_state, SoulState.DISPOSED, reason,
+            actor=getattr(user, "username", "system") if user else "system",
+        )
+        self.current_state = locked_soul.current_state
+        return True
+
     def die(self, death_date=None, location: str = "") -> "Judgment | None":
         """Mark soul as dead, transition to JUDGING, and create a Judgment record."""
         from django.db import transaction

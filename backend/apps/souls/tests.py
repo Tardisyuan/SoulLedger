@@ -332,6 +332,95 @@ class TestSettledIsTerminal:
 
 
 @pytest.mark.django_db
+class TestCorrectSettlement:
+    """SETTLED has no forward transitions (TestSettledIsTerminal above), so
+    undoing it can never be transition_to — it's a separate ADMIN-only,
+    reason-required correction. See Soul.correct_settlement."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="SOUL_T7", defaults={"display_name": "Soul Correction Tenant"}
+        )[0]
+        self.admin = User.objects.create_user(
+            username="correction_admin", password="test123", role="ADMIN", tenant=self.tenant
+        )
+        self.judge = User.objects.create_user(
+            username="correction_judge", password="test123", role="JUDGE", tenant=self.tenant
+        )
+        self.admin_client = _jwt_client(self.admin, self.tenant)
+        self.judge_client = _jwt_client(self.judge, self.tenant)
+
+    def _settled_soul(self):
+        return Soul.objects.create(name="Settled Soul", tenant=self.tenant, current_state=SoulState.SETTLED)
+
+    def test_model_reverts_settled_to_disposed(self):
+        soul = self._settled_soul()
+        assert soul.correct_settlement(user=self.admin, reason="Wrong soul marked settled") is True
+        soul.refresh_from_db()
+        assert soul.current_state == SoulState.DISPOSED
+
+    def test_model_requires_a_reason(self):
+        soul = self._settled_soul()
+        with pytest.raises(ValueError):
+            soul.correct_settlement(user=self.admin, reason="")
+
+    def test_model_refuses_a_non_settled_soul(self):
+        soul = Soul.objects.create(name="Disposed Soul", tenant=self.tenant, current_state=SoulState.DISPOSED)
+        with pytest.raises(ValueError):
+            soul.correct_settlement(user=self.admin, reason="Should not work")
+
+    def test_model_logs_a_settlement_corrected_event_not_state_changed(self):
+        soul = self._settled_soul()
+        soul.correct_settlement(user=self.admin, reason="Data entry error")
+        events = list(soul.events.order_by("-create_time"))
+        assert events[0].event_type == "SETTLEMENT_CORRECTED"
+        assert events[0].payload["old_state"] == SoulState.SETTLED
+        assert events[0].payload["new_state"] == SoulState.DISPOSED
+        assert events[0].payload["reason"] == "Data entry error"
+        assert not any(e.event_type == "STATE_CHANGED" for e in events)
+
+    def test_api_admin_can_correct(self):
+        soul = self._settled_soul()
+        resp = self.admin_client.post(
+            f"{BASE}/{soul.pk}/correct_settlement/", {"reason": "Wrong record"}, format="json"
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        soul.refresh_from_db()
+        assert soul.current_state == SoulState.DISPOSED
+
+    def test_api_requires_reason(self):
+        soul = self._settled_soul()
+        resp = self.admin_client.post(f"{BASE}/{soul.pk}/correct_settlement/", {}, format="json")
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        soul.refresh_from_db()
+        assert soul.current_state == SoulState.SETTLED
+
+    def test_api_refuses_non_settled_soul(self):
+        soul = Soul.objects.create(name="Alive Soul", tenant=self.tenant, current_state=SoulState.ALIVE)
+        resp = self.admin_client.post(
+            f"{BASE}/{soul.pk}/correct_settlement/", {"reason": "Should not work"}, format="json"
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_api_non_admin_forbidden(self):
+        soul = self._settled_soul()
+        resp = self.judge_client.post(
+            f"{BASE}/{soul.pk}/correct_settlement/", {"reason": "Nice try"}, format="json"
+        )
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        soul.refresh_from_db()
+        assert soul.current_state == SoulState.SETTLED
+
+    def test_correction_does_not_reopen_settled_via_transition_to(self):
+        """The escape hatch is the dedicated method, not a loosened state
+        machine — can_transition_to(SETTLED, ...) must stay exactly as
+        locked down as TestSettledIsTerminal asserts."""
+        soul = self._settled_soul()
+        assert soul.can_transition_to(SoulState.DISPOSED) is False
+
+
+@pytest.mark.django_db
 class TestCivilizationGateDoesNotFailOpen:
     """An unrecognised tenant code must not resolve to a cosmology.
 
