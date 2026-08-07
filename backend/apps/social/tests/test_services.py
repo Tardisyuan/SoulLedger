@@ -370,3 +370,153 @@ class TestFollowService:
 
         profile2 = UserProfile.objects.get(user=self.user2)
         assert profile2.followers_count == 1
+
+
+@pytest.mark.django_db
+class TestPostServiceTenantScoping:
+    """
+    M15/A5 regression coverage: `PostService.increment_comment_count` /
+    `decrement_comment_count` / `increment_reaction_count` /
+    `decrement_reaction_count` used to do `Post.objects.filter(pk=post_id)`
+    with no tenant check at all — any caller that could produce a post_id
+    (correct or not) could move another tenant's counter. `tenant` is now an
+    optional kwarg: omitted, behavior is unchanged (existing callers with no
+    tenant in scope keep working); supplied and mismatched, the update is a
+    silent no-op — mirroring the explicit tenant_id check in
+    apps.ledger.tasks.recalculate_soul_ledger_task.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant_a = Tenant.objects.get_or_create(
+            code="PSTS_TA", defaults={"display_name": "Tenant A"}
+        )[0]
+        self.tenant_b = Tenant.objects.get_or_create(
+            code="PSTS_TB", defaults={"display_name": "Tenant B"}
+        )[0]
+        self.user = User.objects.create_user(username="pstsauthor", password="test123")
+        self.post = Post.objects.create(
+            author=self.user, content="Tenant A's post", tenant=self.tenant_a
+        )
+
+    def test_increment_comment_count_with_matching_tenant_updates(self):
+        PostService.increment_comment_count(self.post.pk, tenant=self.tenant_a)
+        self.post.refresh_from_db()
+        assert self.post.comment_count == 1
+
+    def test_increment_comment_count_with_mismatched_tenant_is_noop(self):
+        """The cross-tenant case: tenant B has no business moving a counter
+        on tenant A's post, even if it somehow gets hold of the post_id."""
+        PostService.increment_comment_count(self.post.pk, tenant=self.tenant_b)
+        self.post.refresh_from_db()
+        assert self.post.comment_count == 0
+
+    def test_decrement_comment_count_with_mismatched_tenant_is_noop(self):
+        Post.objects.filter(pk=self.post.pk).update(comment_count=3)
+        PostService.decrement_comment_count(self.post.pk, tenant=self.tenant_b)
+        self.post.refresh_from_db()
+        assert self.post.comment_count == 3
+
+    def test_increment_reaction_count_with_mismatched_tenant_is_noop(self):
+        PostService.increment_reaction_count(self.post.pk, tenant=self.tenant_b)
+        self.post.refresh_from_db()
+        assert self.post.reaction_count == 0
+
+    def test_decrement_reaction_count_with_mismatched_tenant_is_noop(self):
+        Post.objects.filter(pk=self.post.pk).update(reaction_count=5)
+        PostService.decrement_reaction_count(self.post.pk, tenant=self.tenant_b)
+        self.post.refresh_from_db()
+        assert self.post.reaction_count == 5
+
+    def test_no_tenant_argument_keeps_old_untenanted_behavior(self):
+        """Callers with no tenant in scope (e.g. background/maintenance
+        code) must keep working exactly as before this fix."""
+        PostService.increment_comment_count(self.post.pk)
+        self.post.refresh_from_db()
+        assert self.post.comment_count == 1
+
+
+@pytest.mark.django_db
+class TestCommentServiceTenantScoping:
+    """CommentService always updates the post's own tenant's counter, even
+    if a caller passes a mismatched `tenant=` override for the Comment
+    itself — the counter update targets `post.tenant`, not whatever the
+    caller claims."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant_a = Tenant.objects.get_or_create(
+            code="CSTS_TA", defaults={"display_name": "Tenant A"}
+        )[0]
+        self.tenant_b = Tenant.objects.get_or_create(
+            code="CSTS_TB", defaults={"display_name": "Tenant B"}
+        )[0]
+        self.user = User.objects.create_user(username="cstsauthor", password="test123")
+        self.post = Post.objects.create(
+            author=self.user, content="Tenant A's post", tenant=self.tenant_a
+        )
+
+    def test_create_comment_updates_posts_own_tenant_counter(self):
+        CommentService.create_comment(
+            author=self.user, post=self.post, content="Hi", tenant=self.tenant_a,
+        )
+        self.post.refresh_from_db()
+        assert self.post.comment_count == 1
+
+    def test_delete_comment_decrements_using_comment_tenant(self):
+        comment = CommentService.create_comment(
+            author=self.user, post=self.post, content="Bye", tenant=self.tenant_a,
+        )
+        self.post.refresh_from_db()
+        assert self.post.comment_count == 1
+        CommentService.delete_comment(comment)
+        self.post.refresh_from_db()
+        assert self.post.comment_count == 0
+
+
+@pytest.mark.django_db
+class TestReactionServiceTenantScoping:
+    """ReactionService threads the resolved tenant through to the post
+    counter update instead of leaving it to an unfiltered pk lookup."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant_a = Tenant.objects.get_or_create(
+            code="RSTS_TA", defaults={"display_name": "Tenant A"}
+        )[0]
+        self.user = User.objects.create_user(username="rstsauthor", password="test123")
+        self.post = Post.objects.create(
+            author=self.user, content="React target", tenant=self.tenant_a
+        )
+
+    def test_add_reaction_increments_using_resolved_tenant(self):
+        reaction, created = ReactionService.add_reaction(
+            user=self.user, reaction_type=ReactionType.LIKE,
+            post=self.post, tenant=self.tenant_a,
+        )
+        assert created is True
+        self.post.refresh_from_db()
+        assert self.post.reaction_count == 1
+
+    def test_add_reaction_falls_back_to_target_tenant_when_omitted(self):
+        """No explicit tenant passed — falls back to post.tenant, still
+        updates the counter correctly."""
+        reaction, created = ReactionService.add_reaction(
+            user=self.user, reaction_type=ReactionType.LIKE, post=self.post,
+        )
+        assert created is True
+        assert reaction.tenant_id == self.tenant_a.id
+        self.post.refresh_from_db()
+        assert self.post.reaction_count == 1
+
+    def test_remove_reaction_decrements_using_reaction_tenant(self):
+        ReactionService.add_reaction(
+            user=self.user, reaction_type=ReactionType.LIKE,
+            post=self.post, tenant=self.tenant_a,
+        )
+        self.post.refresh_from_db()
+        assert self.post.reaction_count == 1
+        removed = ReactionService.remove_reaction(user=self.user, post=self.post)
+        assert removed is True
+        self.post.refresh_from_db()
+        assert self.post.reaction_count == 0

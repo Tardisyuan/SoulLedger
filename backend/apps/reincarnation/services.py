@@ -80,6 +80,7 @@ class ReincarnationService:
                 previous_realm=previous_realm,
                 new_identity=new_identity or soul.name,
                 notes=notes,
+                tenant=soul.tenant,
             )
 
             # Memory reset

@@ -75,6 +75,7 @@ class DispositionService:
                 destination_realm=realm,
                 is_eternal=(realm.is_eternal if realm else False),
                 notes=f"Auto-created from {civilization} judgment {judgment.id}",
+                tenant=soul.tenant,
             )
 
         from apps.events.services import log_disposition_created
