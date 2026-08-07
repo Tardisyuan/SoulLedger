@@ -16,10 +16,10 @@ export default function HomePage() {
       {/* Header with logo */}
       <header className="h-16 border-b border-[hsl(var(--color-hairline))] flex items-center px-6">
         <div className="flex items-center gap-2">
-          <svg className="w-7 h-7 text-[hsl(var(--color-accent))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg className="w-7 h-7 text-[hsl(var(--color-accent-ink))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5M5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM19 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM5 16a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM19 16a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
           </svg>
-          <span className="text-[hsl(var(--color-accent))] font-bold">SoulLedger</span>
+          <span className="text-[hsl(var(--color-accent-ink))] font-bold">SoulLedger</span>
         </div>
 
         <div className="ml-auto flex items-center gap-3">
@@ -31,7 +31,7 @@ export default function HomePage() {
           <button
             onClick={toggleTheme}
             title={theme === "dark" ? t("nav.theme_light") : t("nav.theme_dark")}
-            className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
+            className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent-ink))] transition-colors p-1 rounded"
           >
             {theme === "dark" ? (
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -71,10 +71,10 @@ export default function HomePage() {
       {/* Main content */}
       <main className="container mx-auto px-4 py-12 md:py-16 lg:py-24">
         <header className="text-center mb-12 md:mb-16 lg:mb-24">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 text-[hsl(var(--color-accent))]">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 text-[hsl(var(--color-accent-ink))]">
             {t("home.hero_title")}
           </h1>
-          <p className="text-[hsl(var(--color-accent))]/80 text-base md:text-lg lg:text-xl mb-2">{t("home.hero_subtitle")}</p>
+          <p className="text-[hsl(var(--color-accent-ink))]/80 text-base md:text-lg lg:text-xl mb-2">{t("home.hero_subtitle")}</p>
           <p className="text-[hsl(var(--color-ink-subtle))] text-sm md:text-base max-w-2xl mx-auto">
             {t("home.hero_description")}
           </p>
@@ -118,7 +118,7 @@ export default function HomePage() {
           )}
           {locale === "egy" && (
             <p
-              className="text-[hsl(var(--color-accent))] text-xs"
+              className="text-[hsl(var(--color-accent-ink))] text-xs"
               style={{ fontFamily: "'Noto Sans Egyptian Hieroglyphs', sans-serif" }}
             >
               𓇳 𓋹 𓎛 𓃭

@@ -32,7 +32,7 @@ export default function LedgerPage() {
           label={t("ledger.total_souls")}
           value={ledgerStats?.total_souls}
           isLoading={isLoading}
-          color="text-[hsl(var(--color-accent))]"
+          color="text-[hsl(var(--color-accent-ink))]"
         />
         <OverviewCard
           label={t("ledger.active_souls")}
@@ -44,7 +44,7 @@ export default function LedgerPage() {
           label={t("ledger.judging_souls")}
           value={ledgerStats?.state_distribution.find(s => s.state === "JUDGING")?.count}
           isLoading={isLoading}
-          color="text-[hsl(var(--color-accent))]"
+          color="text-[hsl(var(--color-accent-ink))]"
         />
       </div>
 
@@ -134,11 +134,11 @@ export default function LedgerPage() {
                   {/* Action badge */}
                   <div className="flex-shrink-0 mt-0.5">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                      activity.action === "CREATE" ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]" :
-                      activity.action === "UPDATE" ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]" :
-                      activity.action === "DELETE" ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]" :
-                      activity.action === "EXECUTE" ? "bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))]" :
-                      "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
+                      activity.action === "CREATE" ? "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]" :
+                      activity.action === "UPDATE" ? "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]" :
+                      activity.action === "DELETE" ? "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]" :
+                      activity.action === "EXECUTE" ? "bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]" :
+                      "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
                     }`}>
                       {t(`audit.actions.${activity.action}`)}
                     </span>

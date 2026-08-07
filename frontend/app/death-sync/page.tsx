@@ -19,12 +19,12 @@ interface DeathRegistration {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))]",
-  ACCEPTED: "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]",
-  PROCESSED: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]",
-  FAILED: "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]",
-  DUPLICATE: "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]",
-  PARTIAL: "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))]",
+  PENDING: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))]",
+  ACCEPTED: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]",
+  PROCESSED: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]",
+  FAILED: "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]",
+  DUPLICATE: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]",
+  PARTIAL: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))]",
 };
 
 export default function DeathSyncPage() {
@@ -49,7 +49,7 @@ export default function DeathSyncPage() {
     <div className="p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
+          <h1 className="text-2xl font-bold text-[hsl(var(--color-accent-ink))]">
             {t("death_sync.title") || "Death Registration"}
             <MenuGloss path="/death-sync" />
           </h1>

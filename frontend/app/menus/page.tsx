@@ -234,7 +234,7 @@ export default function MenusPage() {
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
           {t("menus.title")}
           <MenuGloss path="/menus" />
         </h1>
@@ -333,7 +333,7 @@ export default function MenusPage() {
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     {MenuIcon ? (
-                      <MenuIcon className="w-4 h-4 text-[hsl(var(--color-accent))]" />
+                      <MenuIcon className="w-4 h-4 text-[hsl(var(--color-accent-ink))]" />
                     ) : null}
                     <span className="font-medium text-[hsl(var(--color-ink))]">{menu.name}</span>
                   </div>
@@ -347,7 +347,7 @@ export default function MenusPage() {
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {menu.roles.map((role) => (
-                      <span key={role} className="px-1.5 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] rounded text-xs">
+                      <span key={role} className="px-1.5 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] rounded text-xs">
                         {t(`users.roles.${role}`)}
                       </span>
                     ))}
@@ -356,7 +356,7 @@ export default function MenusPage() {
                 <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{menu.order}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-col gap-1">
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold w-fit ${menu.is_active ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold w-fit ${menu.is_active ? "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
                       {menu.is_active ? t("menus.active") : t("menus.inactive")}
                     </span>
                     <span className={`px-2 py-0.5 rounded text-xs w-fit ${menu.visible !== false ? "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-subtle))]"}`}>
@@ -371,7 +371,7 @@ export default function MenusPage() {
                     <RequirePermission permissions="menu.update">
                       <button
                         onClick={() => openEdit(menu)}
-                        className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-sm"
+                        className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-hover))] text-sm"
                       >
                         {t("menus.edit")}
                       </button>

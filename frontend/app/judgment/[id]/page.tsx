@@ -14,22 +14,22 @@ interface PageProps {
 
 const VERDICT_CONFIG: Record<string, { bg: string; text: string; border: string }> = {
   PASSED: {
-    bg: "bg-[hsl(var(--color-verdict-passed)/0.15)]",
+    bg: "bg-[hsl(var(--color-verdict-passed)/0.1)]",
     text: "text-[hsl(var(--color-verdict-passed))]",
     border: "border-[hsl(var(--color-verdict-passed)/0.3)]",
   },
   FAILED: {
-    bg: "bg-[hsl(var(--color-verdict-failed)/0.15)]",
+    bg: "bg-[hsl(var(--color-verdict-failed)/0.1)]",
     text: "text-[hsl(var(--color-verdict-failed))]",
     border: "border-[hsl(var(--color-verdict-failed)/0.3)]",
   },
   PURGATORY: {
-    bg: "bg-[hsl(var(--color-verdict-purgatory)/0.15)]",
+    bg: "bg-[hsl(var(--color-verdict-purgatory)/0.1)]",
     text: "text-[hsl(var(--color-verdict-purgatory))]",
     border: "border-[hsl(var(--color-verdict-purgatory)/0.3)]",
   },
   RETRY: {
-    bg: "bg-[hsl(var(--color-verdict-retry)/0.15)]",
+    bg: "bg-[hsl(var(--color-verdict-retry)/0.1)]",
     text: "text-[hsl(var(--color-verdict-retry))]",
     border: "border-[hsl(var(--color-verdict-retry)/0.3)]",
   },
@@ -104,7 +104,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
         <div className="text-red-400 text-lg">{t("judgment.detail.not_found")}</div>
-        <a href="/judgment" className="text-[hsl(var(--color-accent))] hover:underline text-sm">
+        <a href="/judgment" className="text-[hsl(var(--color-accent-ink))] hover:underline text-sm">
           {t("judgment.detail.back_to_list")}
         </a>
       </div>
@@ -126,7 +126,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
       {/* Title row */}
       <div className="flex items-center gap-4">
-        <h1 className="text-xl font-bold text-[hsl(var(--color-accent))] flex-1">
+        <h1 className="text-xl font-bold text-[hsl(var(--color-accent-ink))] flex-1">
           {t("judgment.title")}
         </h1>
         {judgment.is_final && (

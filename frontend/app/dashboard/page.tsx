@@ -79,7 +79,7 @@ function DashboardContent() {
   const pageHeader = (
     <div className="border-b border-[hsl(var(--color-hairline))] pb-4 flex justify-between items-start">
       <div>
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent-ink))]">
           {t("dashboard.title")}
           <MenuGloss path="/dashboard" />
         </h1>
@@ -152,7 +152,7 @@ function DashboardContent() {
                 onClick={() => setTab(tabItem.key)}
                 className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
                   activeTab === tabItem.key
-                    ? "text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent))]"
+                    ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
                     : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
                 }`}
               >
@@ -185,7 +185,7 @@ function DashboardContent() {
                 label={t("dashboard.under_judgment")}
                 value={stats?.state_distribution.find(s => s.state === "JUDGING")?.count}
                 isLoading={loading}
-                color="text-[hsl(var(--color-accent))]"
+                color="text-[hsl(var(--color-accent-ink))]"
               />
               <StatCard
                 label={t("dashboard.disposed")}
@@ -246,7 +246,7 @@ function DashboardContent() {
                           />
                           <span className="font-medium text-[hsl(var(--color-ink))]">{stats.tenants[i].tenant_name || stats.tenants[i].tenant_code}</span>
                         </div>
-                        <div className="text-2xl font-bold text-[hsl(var(--color-accent))] mb-3">{stats.tenants[i].total_souls}</div>
+                        <div className="text-2xl font-bold text-[hsl(var(--color-accent-ink))] mb-3">{stats.tenants[i].total_souls}</div>
                         <div className="space-y-1">
                           {Object.entries(stats.tenants[i].state_breakdown).map(([state, count]) => (
                             <div key={state} className="flex justify-between text-xs">
@@ -315,13 +315,13 @@ function DashboardContent() {
                   });
 
                   const actionColors: Record<string, string> = {
-                    CREATE: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.3)]",
-                    UPDATE: "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))] border-[hsl(var(--color-status-info)/0.3)]",
-                    DELETE: "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.3)]",
-                    LOGIN: "bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))] border-[hsl(var(--color-verdict-retry)/0.3)]",
-                    LOGOUT: "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))] border-[hsl(var(--color-status-lost)/0.3)]",
-                    TRANSFER: "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.3)]",
-                    JUDGMENT: "bg-[hsl(var(--color-accent)/0.2)] text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent)/0.3)]",
+                    CREATE: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.3)]",
+                    UPDATE: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))] border-[hsl(var(--color-status-info)/0.3)]",
+                    DELETE: "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.3)]",
+                    LOGIN: "bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))] border-[hsl(var(--color-verdict-retry)/0.3)]",
+                    LOGOUT: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))] border-[hsl(var(--color-status-lost)/0.3)]",
+                    TRANSFER: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.3)]",
+                    JUDGMENT: "bg-[hsl(var(--color-accent)/0.2)] text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent)/0.3)]",
                     OTHER: "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] border-[hsl(var(--color-hairline))]",
                   };
 
@@ -368,7 +368,7 @@ function DashboardContent() {
                 {loading ? (
                   <Skeleton className="h-8 w-24 mt-2" />
                 ) : (
-                  <div className="text-3xl font-bold text-[hsl(var(--color-accent))] mt-2">{avgBalance.toFixed(2)}</div>
+                  <div className="text-3xl font-bold text-[hsl(var(--color-accent-ink))] mt-2">{avgBalance.toFixed(2)}</div>
                 )}
               </div>
               <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">

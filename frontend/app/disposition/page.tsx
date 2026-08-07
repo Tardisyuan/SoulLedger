@@ -43,7 +43,7 @@ export default function DispositionPage() {
     <div className="p-6 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
+          <h1 className="text-2xl font-bold text-[hsl(var(--color-accent-ink))]">
             {t("disposition.title") || "Dispositions"}
             <MenuGloss path="/disposition" />
           </h1>
@@ -66,7 +66,7 @@ export default function DispositionPage() {
                   <div>
                     <p className="font-medium text-[hsl(var(--color-ink))]">
                       {t("disposition.soul") || "Soul"}:{" "}
-                      <Link href={`/souls/${d.soul}`} className="text-[hsl(var(--color-accent))] hover:underline">
+                      <Link href={`/souls/${d.soul}`} className="text-[hsl(var(--color-accent-ink))] hover:underline">
                         {d.soul_name || d.soul}
                       </Link>
                     </p>
@@ -76,11 +76,11 @@ export default function DispositionPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {d.is_executed ? (
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]">
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]">
                         {t("disposition.executed") || "Executed"}
                       </span>
                     ) : d.is_eternal ? (
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]">
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]">
                         {t("disposition.eternal") || "Eternal"}
                       </span>
                     ) : (

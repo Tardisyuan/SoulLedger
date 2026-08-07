@@ -79,7 +79,7 @@ export default function AuditPage() {
     return (
       <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
         <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-          <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
+          <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
             {t("audit.title")}
             <MenuGloss path="/audit" />
           </h1>
@@ -100,7 +100,7 @@ export default function AuditPage() {
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
           {t("audit.title")}
           <MenuGloss path="/audit" />
         </h1>
@@ -198,13 +198,13 @@ export default function AuditPage() {
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                     log.action === "CREATE"
-                      ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]"
+                      ? "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]"
                       : log.action === "UPDATE"
-                      ? "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))]"
+                      ? "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))]"
                       : log.action === "DELETE"
-                      ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]"
+                      ? "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]"
                       : log.action === "LOGIN" || log.action === "LOGOUT"
-                      ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]"
+                      ? "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]"
                       : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                   }`}
                 >
