@@ -116,7 +116,7 @@ export default function LoginPage() {
         </form>
 
         <p className="text-center text-[hsl(var(--color-ink-subtle))] text-sm mt-6">
-          <Link href="/" className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))]">
+          <Link href="/" className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-ink))]">
             {t("nav.home")}
           </Link>
         </p>

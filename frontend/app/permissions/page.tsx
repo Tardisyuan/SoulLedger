@@ -179,7 +179,7 @@ function MatrixCell({
       }`}
     >
       {granted ? (
-        <svg viewBox="0 0 20 20" className="w-4 h-4 text-[hsl(var(--color-accent))]" fill="currentColor" aria-hidden="true">
+        <svg viewBox="0 0 20 20" className="w-4 h-4 text-[hsl(var(--color-accent-ink))]" fill="currentColor" aria-hidden="true">
           <path
             fillRule="evenodd"
             d="M16.704 5.29a1 1 0 01.006 1.415l-7.4 7.5a1 1 0 01-1.42.005l-3.6-3.6a1 1 0 111.414-1.414l2.897 2.897 6.69-6.782a1 1 0 011.413-.021z"
@@ -497,7 +497,7 @@ export default function PermissionsPage() {
   return (
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       <div className="px-6 pt-6 pb-4">
-        <h1 className="text-2xl lg:text-3xl font-bold text-[hsl(var(--color-accent))]">
+        <h1 className="text-2xl lg:text-3xl font-bold text-[hsl(var(--color-accent-ink))]">
           {t("permissions.title")}
           <MenuGloss path="/permissions" />
         </h1>
@@ -678,7 +678,7 @@ export default function PermissionsPage() {
               keyExtractor={(perm) => String(perm.id)}
               renderRow={(perm) => (
                 <>
-                  <td className="px-4 py-3 font-mono text-[hsl(var(--color-accent))] text-xs">{perm.codename}</td>
+                  <td className="px-4 py-3 font-mono text-[hsl(var(--color-accent-ink))] text-xs">{perm.codename}</td>
                   <td className="px-4 py-3 text-[hsl(var(--color-ink))]">{perm.name}</td>
                   <td className="px-4 py-3">
                     <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
@@ -690,7 +690,7 @@ export default function PermissionsPage() {
                       <div className="flex justify-end gap-3">
                         <button
                           onClick={() => { setEditingPerm(perm); setIsEditOpen(true); }}
-                          className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-xs"
+                          className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-hover))] text-xs"
                         >
                           {t("permissions.edit")}
                         </button>
@@ -745,7 +745,7 @@ export default function PermissionsPage() {
                       <div className="flex gap-2 mt-2">
                         <button
                           onClick={() => { setEditingRole(role); setIsRoleEditOpen(true); }}
-                          className="flex-1 px-2 py-1 text-xs text-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))]/10 rounded transition-colors border border-[hsl(var(--color-accent))]/30"
+                          className="flex-1 px-2 py-1 text-xs text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-accent))]/10 rounded transition-colors border border-[hsl(var(--color-accent))]/30"
                         >
                           {t("permissions.edit_role")}
                         </button>

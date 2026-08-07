@@ -41,7 +41,7 @@ export default function CrossJudgmentDetailPage() {
       <div className="p-6">
         <button
           onClick={() => router.back()}
-          className="mb-4 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] text-sm"
+          className="mb-4 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] text-sm"
         >
           {t("common.back")}
         </button>
@@ -51,17 +51,17 @@ export default function CrossJudgmentDetailPage() {
   }
 
   const statusColors: Record<string, string> = {
-    PROPOSED: "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))]",
-    ACTIVE: "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]",
-    CONCLUDED: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]",
-    CANCELLED: "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]",
+    PROPOSED: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))]",
+    ACTIVE: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]",
+    CONCLUDED: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]",
+    CANCELLED: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]",
   };
 
   return (
     <div className="p-6">
       <button
         onClick={() => router.back()}
-        className="mb-4 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] text-sm"
+        className="mb-4 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] text-sm"
       >
         {t("common.back")}
       </button>
@@ -86,7 +86,7 @@ export default function CrossJudgmentDetailPage() {
           {loading ? (
             <Skeleton className="h-6 w-20" />
           ) : (
-            <span className={`px-3 py-1 rounded text-sm font-medium ${statusColors[judgment?.status ?? ""] || "bg-[hsl(var(--color-status-lost)/0.2)]"}`}>
+            <span className={`px-3 py-1 rounded text-sm font-medium ${statusColors[judgment?.status ?? ""] || "bg-[hsl(var(--color-status-lost)/0.1)]"}`}>
               {judgment?.status}
             </span>
           )}

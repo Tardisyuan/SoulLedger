@@ -83,7 +83,7 @@ export default function NotificationsPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Bell className="w-6 h-6 text-[hsl(var(--color-accent))]" />
+            <Bell className="w-6 h-6 text-[hsl(var(--color-accent-ink))]" />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-[hsl(var(--color-accent))] text-black text-xs font-bold rounded-full min-w-[18px] text-center">
                 {unreadCount > 99 ? "99+" : unreadCount}
@@ -109,7 +109,7 @@ export default function NotificationsPage() {
           onClick={() => setFilter("all")}
           className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
             filter === "all"
-              ? "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent))]"
+              ? "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent-ink))]"
               : "border-transparent text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
           }`}
         >
@@ -119,7 +119,7 @@ export default function NotificationsPage() {
           onClick={() => setFilter("unread")}
           className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-2 ${
             filter === "unread"
-              ? "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent))]"
+              ? "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent-ink))]"
               : "border-transparent text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
           }`}
         >
@@ -181,7 +181,7 @@ export default function NotificationsPage() {
                   const IconComponent = getNotificationIcon(notification.notification_type ?? "");
                   return (
                     <div className="w-10 h-10 rounded-lg bg-[hsl(var(--color-accent))]/10 flex items-center justify-center shrink-0">
-                      <IconComponent className="w-5 h-5 text-[hsl(var(--color-accent))]" />
+                      <IconComponent className="w-5 h-5 text-[hsl(var(--color-accent-ink))]" />
                     </div>
                   );
                 })()}
@@ -213,7 +213,7 @@ export default function NotificationsPage() {
                     <button
                       onClick={() => handleMarkRead(notification.id)}
                       disabled={markReadMutation.isPending}
-                      className="mt-2 text-sm text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))] transition-colors disabled:opacity-50"
+                      className="mt-2 text-sm text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-ink))] transition-colors disabled:opacity-50"
                     >
                       {t("notifications.mark_read")}
                     </button>

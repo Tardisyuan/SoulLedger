@@ -115,7 +115,7 @@ export default function MenuButtonsPage() {
   return (
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">{t("menu_buttons.title")}</h1>
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">{t("menu_buttons.title")}</h1>
         <select
           id={menuFilterId}
           value={selectedMenuId ?? ""}
@@ -148,7 +148,7 @@ export default function MenuButtonsPage() {
             See the reference table on /menus for what each of those does. */}
         <p className="text-xs text-[hsl(var(--color-ink-subtle))] mb-4">
           {t("menu_buttons.gates_note")}{" "}
-          <Link href="/menus" className="text-[hsl(var(--color-accent))] hover:underline">
+          <Link href="/menus" className="text-[hsl(var(--color-accent-ink))] hover:underline">
             {t("menus.title")}
           </Link>
         </p>
@@ -173,7 +173,7 @@ export default function MenuButtonsPage() {
               <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs font-mono">{btn.permission}</td>
               <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{btn.order}</td>
               <td className="px-4 py-3">
-                <span className={`px-2 py-0.5 rounded text-xs font-bold ${btn.is_active ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
+                <span className={`px-2 py-0.5 rounded text-xs font-bold ${btn.is_active ? "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
                   {btn.is_active ? t("menus.active") : t("menus.inactive")}
                 </span>
               </td>
@@ -184,7 +184,7 @@ export default function MenuButtonsPage() {
                   <RequirePermission permissions="menu.update">
                     <button
                       onClick={() => openEdit(btn)}
-                      className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))] text-sm"
+                      className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-hover))] text-sm"
                     >
                       {t("menus.edit")}
                     </button>

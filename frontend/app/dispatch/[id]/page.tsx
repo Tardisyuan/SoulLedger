@@ -11,11 +11,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 const STATUS_COLORS: Record<string, string> = {
-  PROPOSED: "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))]",
-  APPROVED: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]",
-  REJECTED: "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]",
-  EXECUTED: "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]",
-  CANCELLED: "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]",
+  PROPOSED: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))]",
+  APPROVED: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]",
+  REJECTED: "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]",
+  EXECUTED: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]",
+  CANCELLED: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -86,7 +86,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     return (
       <div className="p-6 max-w-3xl">
         <p className="text-[hsl(var(--color-ink-muted))]">Dispatch not found.</p>
-        <Link href="/dispatch" className="text-[hsl(var(--color-accent))] hover:underline mt-2 inline-block">
+        <Link href="/dispatch" className="text-[hsl(var(--color-accent-ink))] hover:underline mt-2 inline-block">
           {t("common.back_to_list")}
         </Link>
       </div>
@@ -103,7 +103,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     <div className="p-6 max-w-3xl">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <Link href="/dispatch" className="text-[hsl(var(--color-accent))] hover:underline">
+        <Link href="/dispatch" className="text-[hsl(var(--color-accent-ink))] hover:underline">
           ← {t("common.back_to_list")}
         </Link>
       </div>
@@ -112,7 +112,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
         <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))]">
           {t("dispatch.detail_title")}
         </h1>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[dispatch.status] || ""}`}>
+        <span className={`px-3 py-1 rounded text-sm font-medium ${STATUS_COLORS[dispatch.status] || ""}`}>
           {statusLabel}
         </span>
       </div>

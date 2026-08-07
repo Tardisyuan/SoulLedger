@@ -95,7 +95,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
           {t("profile.title")}
         </h1>
       </div>
@@ -163,7 +163,7 @@ export default function ProfilePage() {
                       setEditingField("email");
                       setEditValue(profile?.email || user?.email || "");
                     }}
-                    className="ml-auto text-xs text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))]"
+                    className="ml-auto text-xs text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-hover))]"
                   >
                     {t("common.edit")}
                   </button>
@@ -214,7 +214,7 @@ export default function ProfilePage() {
                       setEditingField("first_name");
                       setEditValue(profile?.first_name || "");
                     }}
-                    className="ml-auto text-xs text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))]"
+                    className="ml-auto text-xs text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-hover))]"
                   >
                     {t("common.edit")}
                   </button>
@@ -265,7 +265,7 @@ export default function ProfilePage() {
                       setEditingField("last_name");
                       setEditValue(profile?.last_name || "");
                     }}
-                    className="ml-auto text-xs text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))]"
+                    className="ml-auto text-xs text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-hover))]"
                   >
                     {t("common.edit")}
                   </button>
@@ -284,12 +284,12 @@ export default function ProfilePage() {
             ) : (
               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                 profile?.role === "ADMIN"
-                  ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]"
+                  ? "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]"
                   : profile?.role === "JUDGE"
-                  ? "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))]"
+                  ? "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))]"
                   : profile?.role === "GUARDIAN"
-                  ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]"
-                  : "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]"
+                  ? "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]"
+                  : "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]"
               }`}>
                 {t(`users.roles.${profile?.role || user?.role || ""}`) || profile?.role || user?.role}
               </span>

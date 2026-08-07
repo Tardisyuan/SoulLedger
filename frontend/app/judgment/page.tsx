@@ -9,10 +9,10 @@ import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-t
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 const VERDICT_COLORS: Record<string, string> = {
-  PASSED: "bg-[hsl(var(--color-verdict-passed)/0.2)] text-[hsl(var(--color-verdict-passed))]",
-  FAILED: "bg-[hsl(var(--color-verdict-failed)/0.2)] text-[hsl(var(--color-verdict-failed))]",
-  PURGATORY: "bg-[hsl(var(--color-verdict-purgatory)/0.2)] text-[hsl(var(--color-verdict-purgatory))]",
-  RETRY: "bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))]",
+  PASSED: "bg-[hsl(var(--color-verdict-passed)/0.1)] text-[hsl(var(--color-verdict-passed))]",
+  FAILED: "bg-[hsl(var(--color-verdict-failed)/0.1)] text-[hsl(var(--color-verdict-failed))]",
+  PURGATORY: "bg-[hsl(var(--color-verdict-purgatory)/0.1)] text-[hsl(var(--color-verdict-purgatory))]",
+  RETRY: "bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]",
 };
 
 export default function JudgmentQueuePage() {
@@ -52,7 +52,7 @@ export default function JudgmentQueuePage() {
     <div className="text-[hsl(var(--color-ink))]">
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
           {t("judgment.title")}
           <MenuGloss path="/judgment" />
         </h1>
@@ -67,7 +67,7 @@ export default function JudgmentQueuePage() {
               onClick={() => { setTab(tabItem.key); setPage(1); }}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
                 tab === tabItem.key
-                  ? "text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent))]"
+                  ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
                   : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
               }`}
             >
@@ -112,7 +112,7 @@ export default function JudgmentQueuePage() {
                     {t(`judgment.verdicts.${judgment.verdict}`)}
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-[hsl(var(--color-status-judging)/0.2)] text-[hsl(var(--color-status-judging))]">
+                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-[hsl(var(--color-status-judging)/0.1)] text-[hsl(var(--color-status-judging))]">
                     {t("judgment.pending")}
                   </span>
                 )}
@@ -123,7 +123,7 @@ export default function JudgmentQueuePage() {
               <td className="px-4 py-3">
                 <Link
                   href={`/judgment/${judgment.id}`}
-                  className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))] text-sm"
+                  className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-ink))] text-sm"
                 >
                   {t("judgment.view")} →
                 </Link>

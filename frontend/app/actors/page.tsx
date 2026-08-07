@@ -42,7 +42,7 @@ export default function ActorsPage() {
     <div className="p-6">
       {/* Page header - realms style */}
       <div className="mb-6">
-        <h1 className="text-2xl lg:text-3xl font-bold text-[hsl(var(--color-accent))]">
+        <h1 className="text-2xl lg:text-3xl font-bold text-[hsl(var(--color-accent-ink))]">
           {t("actors.title")}
           <MenuGloss path="/actors" />
         </h1>
@@ -100,7 +100,7 @@ export default function ActorsPage() {
                               <p className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">{actor.title || actor.role}</p>
                             </div>
                             <span className={`px-2 py-1 rounded text-xs shrink-0 ${
-                              actor.role === 'JUDGE' ? 'bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]' :
+                              actor.role === 'JUDGE' ? 'bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]' :
                               actor.role === 'GUARDIAN' ? 'bg-blue-500/20 text-blue-400' :
                               'bg-gray-500/20 text-gray-400'
                             }`}>

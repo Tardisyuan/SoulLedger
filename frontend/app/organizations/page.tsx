@@ -111,7 +111,7 @@ export default function OrganizationsPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent-ink))]">
           {t("organization.title")}
           <MenuGloss path="/organizations" />
         </h1>

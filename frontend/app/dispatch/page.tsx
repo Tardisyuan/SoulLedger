@@ -29,7 +29,7 @@ export default function DispatchPage() {
       {/* Page Header - rendered immediately */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
+          <h1 className="text-2xl font-bold text-[hsl(var(--color-accent-ink))]">
             {t("dispatch.title")}
             <MenuGloss path="/dispatch" />
           </h1>
@@ -79,11 +79,11 @@ export default function DispatchPage() {
 function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
   const { t } = useI18n();
   const statusColors: Record<string, string> = {
-    PROPOSED: "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))]",
-    APPROVED: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]",
-    REJECTED: "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]",
-    EXECUTED: "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]",
-    CANCELLED: "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]",
+    PROPOSED: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))]",
+    APPROVED: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]",
+    REJECTED: "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]",
+    EXECUTED: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]",
+    CANCELLED: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]",
   };
   // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
   const statusKey = `dispatch.states.${dispatch.status}`;
@@ -99,7 +99,7 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
               {dispatch.source_tenant_code} → {dispatch.target_tenant_code}
             </p>
           </div>
-          <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[dispatch.status] || "bg-[hsl(var(--color-status-lost)/0.2)]"}`}>
+          <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[dispatch.status] || "bg-[hsl(var(--color-status-lost)/0.1)]"}`}>
             {statusLabel}
           </span>
         </div>
