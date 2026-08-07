@@ -60,18 +60,18 @@ function BalanceReading({
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center">
-        <span className="text-sm text-[hsl(var(--color-merit))]">{t("souls.detail.merit")}</span>
-        <span className="text-lg font-bold text-[hsl(var(--color-merit))]">+{reading.merit}</span>
+        <span className="text-sm text-[hsl(var(--color-karma-merit))]">{t("souls.detail.merit")}</span>
+        <span className="text-lg font-bold text-[hsl(var(--color-karma-merit))]">+{reading.merit}</span>
       </div>
       <div className="flex justify-between items-center">
-        <span className="text-sm text-[hsl(var(--color-demerit))]">{t("souls.detail.demerit")}</span>
-        <span className="text-lg font-bold text-[hsl(var(--color-demerit))]">-{reading.demerit}</span>
+        <span className="text-sm text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.demerit")}</span>
+        <span className="text-lg font-bold text-[hsl(var(--color-karma-demerit))]">-{reading.demerit}</span>
       </div>
       <div className="border-t border-[hsl(var(--color-hairline))] pt-2 flex justify-between items-center">
         <span className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
         <span
           className={`text-xl font-bold ${
-            reading.balance >= 0 ? "text-[hsl(var(--color-merit))]" : "text-[hsl(var(--color-demerit))]"
+            reading.balance >= 0 ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"
           }`}
         >
           {reading.balance >= 0 ? "+" : ""}
@@ -103,7 +103,7 @@ function ThresholdReading({
       <div className="flex flex-col items-center py-1">
         <span
           className={`text-3xl font-bold tabular-nums ${
-            failed ? "text-[hsl(var(--color-status-error))]" : "text-[hsl(var(--color-merit))]"
+            failed ? "text-[hsl(var(--color-status-error))]" : "text-[hsl(var(--color-karma-merit))]"
           }`}
         >
           {ratioText}
@@ -120,7 +120,7 @@ function ThresholdReading({
           className={`px-2 py-0.5 rounded text-xs font-bold ${
             failed
               ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]"
-              : "bg-[hsl(var(--color-merit)/0.2)] text-[hsl(var(--color-merit))]"
+              : "bg-[hsl(var(--color-karma-merit)/0.2)] text-[hsl(var(--color-karma-merit))]"
           }`}
         >
           {failed ? t("souls.detail.reading.threshold_fail") : t("souls.detail.reading.threshold_pass")}
@@ -142,8 +142,8 @@ function GuiltAndPenaltyReading({
     <div className="space-y-4">
       <div>
         <div className="flex justify-between items-center">
-          <span className="text-sm text-[hsl(var(--color-demerit))]">{t("souls.detail.reading.culpa_label")}</span>
-          <span className="text-xl font-bold text-[hsl(var(--color-demerit))]">{reading.culpa}</span>
+          <span className="text-sm text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.reading.culpa_label")}</span>
+          <span className="text-xl font-bold text-[hsl(var(--color-karma-demerit))]">{reading.culpa}</span>
         </div>
         <div className="text-xs text-[hsl(var(--color-ink-subtle))] text-right mt-0.5">
           {t("souls.detail.reading.culpa_records", { count: String(reading.culpa_record_count) })}
