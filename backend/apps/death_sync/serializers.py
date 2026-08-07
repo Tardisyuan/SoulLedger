@@ -59,23 +59,33 @@ class DeathRegistrationCreateSerializer(serializers.Serializer):
 
 
 class WebhookConfigSerializer(serializers.ModelSerializer):
-    """Serializer for WebhookConfig (hides signing_secret)."""
+    """Serializer for WebhookConfig (hides signing_secret).
+
+    ``create_time``, not ``created_at`` — WebhookConfig gets its audit
+    timestamp from AuditUserFields, which names the field ``create_time``.
+    Referencing a nonexistent field name here raised ImproperlyConfigured
+    as soon as DRF built the field list, which happens for every action
+    (list/retrieve/create/update) — this endpoint has never successfully
+    served a single request, so there's no wire-format compatibility to
+    preserve by keeping ``created_at`` as the JSON key via ``source=``.
+    """
     class Meta:
         model = WebhookConfig
         fields = [
             'id', 'url', 'is_active', 'events', 'max_retries',
-            'timeout_seconds', 'created_at',
+            'timeout_seconds', 'create_time',
         ]
-        read_only_fields = ['created_at']
+        read_only_fields = ['create_time']
 
 
 class WebhookDeliveryLogSerializer(serializers.ModelSerializer):
-    """Serializer for WebhookDeliveryLog."""
+    """Serializer for WebhookDeliveryLog. Same create_time/created_at note
+    as WebhookConfigSerializer above — this one crashed identically."""
     class Meta:
         model = WebhookDeliveryLog
         fields = [
             'id', 'status', 'attempt', 'http_status_code',
-            'error_message', 'duration_ms', 'next_retry_at', 'created_at',
+            'error_message', 'duration_ms', 'next_retry_at', 'create_time',
         ]
         read_only_fields = fields
 

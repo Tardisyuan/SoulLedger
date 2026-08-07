@@ -203,18 +203,20 @@ class TestWebhookViewSetPermissionFix:
     apps.core.permissions.HasValidApiKey for the full mechanism). Fixed the
     same way as the other two views.
 
-    A positive "valid key gets 201" case for POST /webhooks/ isn't usable
-    here: WebhookConfigSerializer.Meta.fields lists 'created_at', but
-    WebhookConfig (via AuditUserFields) has 'create_time', not 'created_at'
-    — apps/death_sync/views.py's own DeathSyncHealthView docstring already
-    flags this exact created_at/create_time mismatch on
-    WebhookDeliveryLog. That breaks every action that touches
-    WebhookConfigSerializer (list, retrieve, create alike) with
-    ImproperlyConfigured, regardless of this permission fix. That's a
-    separate, already-flagged bug, out of scope here. DELETE (destroy)
-    never builds a serializer — DRF's destroy() only needs get_object() and
-    instance.delete() — so it's used below to prove the permission gate
-    itself opened up without being confounded by that unrelated bug.
+    A positive "valid key gets 201" case for POST /webhooks/ wasn't usable
+    here at the time this class was written: WebhookConfigSerializer.Meta.
+    fields listed 'created_at', but WebhookConfig (via AuditUserFields) has
+    'create_time', not 'created_at' — that broke every action touching the
+    serializer (list, retrieve, create alike) with ImproperlyConfigured,
+    regardless of this permission fix, and was out of scope for it. DELETE
+    (destroy) never builds a serializer — DRF's destroy() only needs
+    get_object() and instance.delete() — so it's used below to prove the
+    permission gate itself opened up without being confounded by that
+    unrelated bug. That serializer bug is now fixed (see
+    TestWebhookConfigSerializerFieldName below), so list/retrieve/create
+    are also directly testable now — this class is kept as-is (DELETE
+    still proves the permission fix in isolation either way) rather than
+    rewritten to use the now-available positive create case.
     """
 
     @pytest.fixture(autouse=True)
@@ -256,3 +258,61 @@ class TestWebhookViewSetPermissionFix:
         resp = _api_key_client(self.raw_key).delete(f"/api/v1/death-sync/webhooks/{self.webhook.pk}/")
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
         assert WebhookConfig.objects.filter(pk=self.webhook.pk).exists()
+
+
+@pytest.mark.django_db
+class TestWebhookConfigSerializerFieldName:
+    """WebhookConfigSerializer.Meta.fields referenced 'created_at', but
+    WebhookConfig (via AuditUserFields) has 'create_time' — the mismatch
+    TestWebhookViewSetPermissionFix's docstring routed around with DELETE.
+    A nonexistent field name in Meta.fields raises ImproperlyConfigured as
+    soon as DRF builds the serializer's field list, which happens for
+    every action, so list/retrieve/create were all broken independent of
+    the permission fix above. Fixed by renaming to 'create_time' in both
+    WebhookConfigSerializer and WebhookDeliveryLogSerializer — no
+    source= alias to keep 'created_at' on the wire, since these endpoints
+    never successfully served a request before this fix, so there is no
+    real external caller depending on that JSON key.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db, cn_tenant):
+        raw_key, key_hash, key_prefix = ExternalApiKey.generate_key()
+        self.key = ExternalApiKey.objects.create(
+            tenant=cn_tenant, name="Serializer Fix Key", system_type="HOSPITAL",
+            key_hash=key_hash, key_prefix=key_prefix,
+        )
+        self.raw_key = raw_key
+        self.webhook = WebhookConfig.objects.create(
+            tenant=cn_tenant,
+            api_key=self.key,
+            url="https://example.com/webhook",
+            signing_secret="fieldname_fix_secret",
+        )
+
+    def test_list_no_longer_raises_improperly_configured(self):
+        resp = _api_key_client(self.raw_key).get("/api/v1/death-sync/webhooks/")
+        assert resp.status_code == status.HTTP_200_OK
+        results = resp.data.get("results", resp.data)
+        assert any(row["id"] == str(self.webhook.pk) for row in results)
+
+    def test_list_response_carries_create_time_not_created_at(self):
+        resp = _api_key_client(self.raw_key).get("/api/v1/death-sync/webhooks/")
+        results = resp.data.get("results", resp.data)
+        row = next(r for r in results if r["id"] == str(self.webhook.pk))
+        assert "create_time" in row
+        assert "created_at" not in row
+
+    def test_retrieve_no_longer_raises_improperly_configured(self):
+        resp = _api_key_client(self.raw_key).get(f"/api/v1/death-sync/webhooks/{self.webhook.pk}/")
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["id"] == str(self.webhook.pk)
+
+    def test_create_no_longer_raises_improperly_configured(self):
+        resp = _api_key_client(self.raw_key).post(
+            "/api/v1/death-sync/webhooks/",
+            {"url": "https://example.com/new-webhook", "events": []},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert WebhookConfig.objects.filter(url="https://example.com/new-webhook", tenant=self.key.tenant).exists()
