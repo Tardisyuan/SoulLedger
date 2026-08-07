@@ -142,7 +142,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <circle cx="5" cy="16" r="2" fill="currentColor" stroke="none"/>
                   <circle cx="19" cy="16" r="2" fill="currentColor" stroke="none"/>
                 </svg>
-                <span className="text-[hsl(var(--color-accent))] font-bold tracking-wide truncate">
+                <span className="text-[hsl(var(--color-accent-ink))] font-bold tracking-wide truncate">
                   SoulLedger
                 </span>
               </>
@@ -173,7 +173,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="w-full flex justify-center">
               <button
                 onClick={() => setCollapsed(!collapsed)}
-                className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
                 title={t("nav.expand_menu")}
                 aria-label={t("nav.expand_menu")}
                 aria-expanded={false}
@@ -187,7 +187,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="w-1/4 flex justify-center">
                 <button
                   onClick={() => setCollapsed(!collapsed)}
-                  className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
                   title={t("nav.collapse_menu")}
                   aria-label={t("nav.collapse_menu")}
                   aria-expanded={true}
@@ -272,7 +272,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-[hsl(var(--color-ink))]">{t("notifications.title")}</h3>
-                        <Link href="/notifications" className="text-xs text-[hsl(var(--color-accent))] hover:underline">
+                        <Link href="/notifications" className="text-xs text-[hsl(var(--color-accent-ink))] hover:underline">
                           {t("notifications.view_all")}
                         </Link>
                       </div>
@@ -344,7 +344,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <>
                 <Link
                   href="/profile"
-                  className="text-[hsl(var(--color-ink-muted))] text-sm hover:text-[hsl(var(--color-accent))] transition-colors"
+                  className="text-[hsl(var(--color-ink-muted))] text-sm hover:text-[hsl(var(--color-accent-ink))] transition-colors"
                 >
                   {t("nav.greeting", { username: user.display_name || user.username })}
                 </Link>
@@ -424,7 +424,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </button>
                     <button
                       onClick={handleLogout}
-                      className="px-4 py-2 rounded-md bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))] text-sm hover:bg-[hsl(var(--color-status-error)/0.3)] transition-colors"
+                      className="px-4 py-2 rounded-md bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] text-sm hover:bg-[hsl(var(--color-status-error)/0.3)] transition-colors"
                     >
                       {t("auth.confirm_logout_btn")}
                     </button>
@@ -557,7 +557,7 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
                 <Link
                   href={crumb.href}
                   prefetch={true}
-                  className="truncate text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] transition-colors"
+                  className="truncate text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] transition-colors"
                 >
                   {crumb.label}
                   {crumb.gloss && (
@@ -612,7 +612,7 @@ function SidebarMenuItemInner({
           onClick={() => setExpanded(!expanded)}
           className={`w-full flex items-center ${collapsed ? "justify-center px-0" : "gap-3 px-3"} h-12 rounded-lg transition-colors ${
             active
-              ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
+              ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
               : "text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]"
           }`}
         >
@@ -655,7 +655,7 @@ function SidebarMenuItemInner({
       prefetch={true}
       className={`flex items-center ${collapsed ? "justify-center w-full px-0" : "gap-3 px-3"} h-12 rounded-lg transition-colors ${indent} ${
         active
-          ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
+          ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
           : "text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]"
       }`}
     >

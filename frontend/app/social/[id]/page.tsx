@@ -18,11 +18,11 @@ export default function PostDetailPage() {
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <Link
           href="/social"
-          className="text-[hsl(var(--color-accent))] hover:underline text-sm"
+          className="text-[hsl(var(--color-accent-ink))] hover:underline text-sm"
         >
           ← {t("social.back") || "Back"}
         </Link>
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
           {t("social.post_detail") || "Post"}
         </h1>
       </div>

@@ -157,7 +157,7 @@ export default function WorkflowPage() {
     <div className="text-[hsl(var(--color-ink))]">
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
           {t("workflow.title")}
           <MenuGloss path="/workflow" />
         </h1>
@@ -172,7 +172,7 @@ export default function WorkflowPage() {
               onClick={() => setTab(tabItem.key)}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
                 tab === tabItem.key
-                  ? "text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent))]"
+                  ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
                   : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
               }`}
             >
@@ -238,7 +238,7 @@ export default function WorkflowPage() {
                   <div className="text-xs font-semibold text-[hsl(var(--color-ink-muted))] px-2">{t("workflow.predefined_templates")}</div>
                   {Object.entries(templatesByCiv).map(([civ, civTemplates]) => (
                     <div key={civ} className="space-y-1">
-                      <div className="text-xs text-[hsl(var(--color-accent))] px-2 py-1 font-medium">
+                      <div className="text-xs text-[hsl(var(--color-accent-ink))] px-2 py-1 font-medium">
                         {t(`workflow.civilizations.${civ}`)}
                       </div>
                       {civTemplates.map((tmpl) => (
@@ -276,7 +276,7 @@ export default function WorkflowPage() {
                             <div>
                               <h3 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{tmpl.name}</h3>
                               <div className="flex gap-2 mt-1">
-                                <span className="px-2 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] rounded text-xs">
+                                <span className="px-2 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] rounded text-xs">
                                   {tmpl.civilization}
                                 </span>
                                 <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
@@ -317,7 +317,7 @@ export default function WorkflowPage() {
                                     setConfirmingTemplate(tmpl);
                                     setConfirmModalOpen(true);
                                   }}
-                                  className="px-3 py-1.5 bg-[hsl(var(--color-status-error)/0.2)] hover:bg-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))] border border-[hsl(var(--color-status-error)/0.3)] rounded text-sm font-medium"
+                                  className="px-3 py-1.5 bg-[hsl(var(--color-status-error)/0.1)] hover:bg-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))] border border-[hsl(var(--color-status-error)/0.3)] rounded text-sm font-medium"
                                 >
                                   {t("common.delete")}
                                 </button>
@@ -332,7 +332,7 @@ export default function WorkflowPage() {
                             <div className="space-y-2 max-h-80 overflow-y-auto">
                               {tmpl.nodes_json.map((node: FlowNode, idx: number) => (
                                 <div key={idx} className="flex items-center gap-3 p-2 bg-[hsl(var(--color-surface-2))] rounded">
-                                  <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] flex items-center justify-center text-xs font-bold shrink-0">
+                                  <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] flex items-center justify-center text-xs font-bold shrink-0">
                                     {idx + 1}
                                   </span>
                                   <span className="text-sm text-[hsl(var(--color-ink))]">{node.node_name}</span>
@@ -364,7 +364,7 @@ export default function WorkflowPage() {
                           <div>
                             <h3 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{currentTemplate.name}</h3>
                             <div className="flex gap-2 mt-1">
-                              <span className="px-2 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] rounded text-xs">
+                              <span className="px-2 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] rounded text-xs">
                                 {currentTemplate.civilization}
                               </span>
                               <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
@@ -421,7 +421,7 @@ export default function WorkflowPage() {
                         <div className="space-y-2 max-h-80 overflow-y-auto">
                           {currentTemplate.nodes.map((node: FrontendNode, idx: number) => (
                             <div key={idx} className="flex items-center gap-3 p-2 bg-[hsl(var(--color-surface-2))] rounded">
-                              <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] flex items-center justify-center text-xs font-bold shrink-0">
+                              <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] flex items-center justify-center text-xs font-bold shrink-0">
                                 {idx + 1}
                               </span>
                               <span className="text-sm text-[hsl(var(--color-ink))]">{node.name}</span>
@@ -491,16 +491,16 @@ export default function WorkflowPage() {
                       <span
                         className={`px-2 py-0.5 rounded text-xs font-bold ${
                           wf.status === "COMPLETED"
-                            ? "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]"
+                            ? "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]"
                             : wf.status === "IN_PROGRESS"
-                            ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
+                            ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
                             : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                         }`}
                       >
                         {statusLabel(wf.status)}
                       </span>
                       {wf.is_appeal && (
-                        <span className="px-2 py-0.5 rounded text-xs bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))]">
+                        <span className="px-2 py-0.5 rounded text-xs bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]">
                           {t("workflow.appeal_badge")}
                         </span>
                       )}

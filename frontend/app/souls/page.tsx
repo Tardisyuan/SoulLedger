@@ -40,12 +40,12 @@ function dateProblemMarker(soul: SoulListItem): { glyph: string; className: stri
 }
 
 const STATE_COLORS: Record<string, string> = {
-  ALIVE: "bg-[hsl(var(--color-status-alive)/0.2)] text-[hsl(var(--color-status-alive))]",
-  JUDGING: "bg-[hsl(var(--color-status-judging)/0.2)] text-[hsl(var(--color-status-judging))]",
+  ALIVE: "bg-[hsl(var(--color-status-alive)/0.1)] text-[hsl(var(--color-status-alive))]",
+  JUDGING: "bg-[hsl(var(--color-status-judging)/0.1)] text-[hsl(var(--color-status-judging))]",
   DISPOSED: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
-  REINCARNATING: "bg-[hsl(var(--color-status-reincarnating)/0.2)] text-[hsl(var(--color-status-reincarnating))]",
+  REINCARNATING: "bg-[hsl(var(--color-status-reincarnating)/0.1)] text-[hsl(var(--color-status-reincarnating))]",
   LOST: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
-  SETTLED: "bg-[hsl(var(--color-status-settled)/0.2)] text-[hsl(var(--color-status-settled))]",
+  SETTLED: "bg-[hsl(var(--color-status-settled)/0.1)] text-[hsl(var(--color-status-settled))]",
 };
 
 export default function SoulsPage() {
@@ -132,7 +132,7 @@ export default function SoulsPage() {
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       {/* Page header */}
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">{t("souls.title")}</h1>
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">{t("souls.title")}</h1>
         <RequirePermission permissions="soul.create">
           <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -217,7 +217,7 @@ export default function SoulsPage() {
             aria-pressed={problemsOnly}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm border transition-colors ${
               problemsOnly
-                ? "bg-[hsl(var(--color-status-warning)/0.2)] border-[hsl(var(--color-status-warning)/0.4)] text-[hsl(var(--color-status-warning))]"
+                ? "bg-[hsl(var(--color-status-warning)/0.1)] border-[hsl(var(--color-status-warning)/0.4)] text-[hsl(var(--color-status-warning))]"
                 : "bg-[hsl(var(--color-surface-2))] border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
             }`}
           >
@@ -277,7 +277,7 @@ export default function SoulsPage() {
                   {t(`souls.states.${soul.current_state}`)}
                 </span>
               </td>
-              <td className={`px-4 py-3 text-right font-mono text-sm ${showsBalance ? ((soul.karmic_balance ?? 0) >= 0 ? "text-[hsl(var(--color-accent))]" : "text-[hsl(var(--color-status-error))]") : "text-[hsl(var(--color-ink-subtle))]"}`}>
+              <td className={`px-4 py-3 text-right font-mono text-sm ${showsBalance ? ((soul.karmic_balance ?? 0) >= 0 ? "text-[hsl(var(--color-accent-ink))]" : "text-[hsl(var(--color-status-error))]") : "text-[hsl(var(--color-ink-subtle))]"}`}>
                 {showsBalance
                   ? `${(soul.karmic_balance ?? 0) >= 0 ? "+" : ""}${soul.karmic_balance ?? 0}`
                   : <span title={t("souls.balance_not_applicable")}>—</span>}
@@ -286,7 +286,7 @@ export default function SoulsPage() {
               <td className="px-4 py-3">
                 <Link
                   href={`/souls/${soul.id}`}
-                  className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))] text-sm"
+                  className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-ink))] text-sm"
                 >
                   {t("souls.view")} →
                 </Link>

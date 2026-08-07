@@ -41,7 +41,7 @@ export default function SocialFeedPage() {
   return (
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
           {t("social.title") || "Social"}
           <MenuGloss path="/social" />
         </h1>
@@ -88,7 +88,7 @@ export default function SocialFeedPage() {
               onClick={() => { setTab(key); setPage(1); }}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 tab === key
-                  ? "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent))]"
+                  ? "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent-ink))]"
                   : "border-transparent text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
               }`}
             >

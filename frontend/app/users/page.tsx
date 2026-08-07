@@ -69,7 +69,7 @@ export default function UsersPage() {
         <Link href="/" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
           ← {t("nav.home")}
         </Link>
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
           {t("users.title")}
           <MenuGloss path="/users" />
         </h1>
@@ -138,12 +138,12 @@ export default function UsersPage() {
               <td className="px-4 py-3 text-sm">
                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                   user.role === "ADMIN"
-                    ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]"
+                    ? "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]"
                     : user.role === "JUDGE"
-                    ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))]"
+                    ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
                     : user.role === "GUARDIAN"
-                    ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]"
-                    : "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]"
+                    ? "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]"
+                    : "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]"
                 }`}>
                   {t(`users.roles.${user.role}`)}
                 </span>
@@ -181,7 +181,7 @@ export default function UsersPage() {
                   <RequirePermission permissions="user.delete">
                     <button
                       onClick={() => setDeleteUser(user)}
-                      className="px-2 py-1 text-xs bg-[hsl(var(--color-status-error)/0.2)] hover:bg-[hsl(var(--color-status-error)/0.3)] border border-[hsl(var(--color-status-error)/0.3)] rounded text-[hsl(var(--color-status-error))] transition-colors"
+                      className="px-2 py-1 text-xs bg-[hsl(var(--color-status-error)/0.1)] hover:bg-[hsl(var(--color-status-error)/0.3)] border border-[hsl(var(--color-status-error)/0.3)] rounded text-[hsl(var(--color-status-error))] transition-colors"
                     >
                       {t("common.delete")}
                     </button>

@@ -184,7 +184,7 @@ export function DataTable<T>({
                           'hover:text-[hsl(var(--color-ink))] transition-colors',
                           // Focus ring comes from the global :focus-visible rule
                           // in globals.css; a local one would double up on it.
-                          sort?.key === column.key && 'text-[hsl(var(--color-accent))]',
+                          sort?.key === column.key && 'text-[hsl(var(--color-accent-ink))]',
                           column.align === 'right' && 'justify-end',
                           column.align === 'center' && 'justify-center'
                         )}
@@ -221,7 +221,7 @@ export function DataTable<T>({
                     <button
                       type="button"
                       onClick={onRetry}
-                      className="mt-3 text-sm text-[hsl(var(--color-accent))] hover:underline"
+                      className="mt-3 text-sm text-[hsl(var(--color-accent-ink))] hover:underline"
                     >
                       {t('common.retry')}
                     </button>
@@ -245,7 +245,7 @@ export function DataTable<T>({
                         <button
                           type="button"
                           onClick={onClearFilters}
-                          className="mt-3 text-sm text-[hsl(var(--color-accent))] hover:underline"
+                          className="mt-3 text-sm text-[hsl(var(--color-accent-ink))] hover:underline"
                         >
                           {t('filter.clear_all')}
                         </button>
