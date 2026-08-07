@@ -100,7 +100,25 @@ class TenantPermission(permissions.BasePermission):
             return True
 
         # Must have a tenant on the request (set by TenantMiddleware)
-        return getattr(request, 'tenant', None) is not None
+        tenant = getattr(request, 'tenant', None)
+        if tenant is None:
+            return False
+
+        # request.tenant comes from the access token's tenant_code claim
+        # (apps.tenants.middleware, which runs before authentication and
+        # so cannot itself see request.user). This runs later, in
+        # check_permissions() — request.user is now the authenticated
+        # user, so cross-check the token's claim against that user's
+        # actual current tenant. Without this, a token minted before an
+        # admin moved the user to a different tenant keeps granting
+        # access under the old tenant_code until it expires: nothing else
+        # in the request pipeline re-derives tenant from the user record.
+        # user_tenant_id is None counts as a mismatch (fail closed) rather
+        # than "no opinion" — every non-ADMIN user is assigned a tenant on
+        # creation (see UserCreateSerializer), so a null tenant here means
+        # something already went wrong upstream.
+        user_tenant_id = getattr(request.user, 'tenant_id', None)
+        return user_tenant_id is not None and str(user_tenant_id) == str(tenant.pk)
 
     def has_object_permission(self, request, view, obj):
         if not request.user or not request.user.is_authenticated:
