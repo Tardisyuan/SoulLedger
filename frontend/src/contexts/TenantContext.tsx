@@ -76,6 +76,24 @@ const TenantContext = createContext<TenantContextValue>({
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<AuthUser | null>(null);
+  const tenantCode = user?.tenant?.code ?? null;
+
+  // Surface-first civilization identity (globals.css §4.9 / Stage 5 §2):
+  // stamp [data-civ] on <html> so the [data-civ="cn"|"eu"|"eg"] rules there
+  // can point --civ-hue at this tenant's hue and retint surface-1..4.
+  // Tenant codes are CN_DIYU / EU_HEAVEN_HELL / EG_DUAT (backend
+  // TENANT_CIVILIZATION, apps/souls/models.py) — the prefix before the first
+  // underscore is exactly the [data-civ] suffix. An unmapped or absent
+  // tenant clears the attribute, which leaves --civ-hue at its neutral
+  // :root/.light fallback rather than guessing a civilization.
+  useEffect(() => {
+    const civ = tenantCode?.split("_")[0]?.toLowerCase();
+    if (civ === "cn" || civ === "eu" || civ === "eg") {
+      document.documentElement.dataset.civ = civ;
+    } else {
+      delete document.documentElement.dataset.civ;
+    }
+  }, [tenantCode]);
 
   // Hydrate from localStorage on mount (client-only)
   // Permissions are NOT loaded from localStorage for security - they must be fetched from server
@@ -137,7 +155,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     <TenantContext.Provider
       value={{
         user,
-        tenantCode: user?.tenant?.code ?? null,
+        tenantCode,
         isAdmin: user?.role === "ADMIN",
         isJudge: user?.role === "JUDGE",
         isGuardian: user?.role === "GUARDIAN",

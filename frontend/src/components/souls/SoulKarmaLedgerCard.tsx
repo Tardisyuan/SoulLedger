@@ -185,6 +185,47 @@ export function SoulKarmaLedgerCard({
           <p className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
             {t("ledger.next_life_inheritance")}
           </p>
+
+          {/* Dual ratio bars — Chinese-specific, per Stage 5 §5: reincarnation
+              with partial-merit/full-demerit carryover is that cosmology's
+              mechanic, not a universal one (see SoulReadingPanel's `kind`
+              switch for the same civilization-conditional pattern). A single
+              number can't distinguish a 20% carry from a 100% one; two bars
+              at a glance can. `inheritance` is already only non-null where
+              the backend has a forward preview (today: Chinese only), but
+              this checks the civilization explicitly so a future
+              rebirth-capable cosmology with a different mechanic (Greek,
+              self-chosen at the Spindle — see the doc's §5 note) doesn't
+              silently inherit this rendering. */}
+          {reading.civilization === "CHINESE" && (
+            <div className="space-y-2.5 mb-3">
+              <div>
+                <div className="flex justify-between text-[11px] font-mono text-[hsl(var(--color-karma-merit))] mb-1">
+                  <span>{t("souls.detail.merit")} {meritScore}</span>
+                  <span>→ {inheritance.inherited_merit}</span>
+                </div>
+                <div className="h-2 rounded-full bg-[hsl(var(--color-karma-merit)/0.18)] overflow-hidden">
+                  <span
+                    className="block h-full rounded-full bg-[hsl(var(--color-karma-merit))]"
+                    style={{ width: `${INHERITANCE_MERIT_PCT}%` }}
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-[11px] font-mono text-[hsl(var(--color-karma-demerit))] mb-1">
+                  <span>{t("souls.detail.demerit")} {demeritScore}</span>
+                  <span>→ {inheritance.inherited_demerit}</span>
+                </div>
+                <div className="h-2 rounded-full bg-[hsl(var(--color-karma-demerit)/0.18)] overflow-hidden">
+                  <span
+                    className="block h-full rounded-full bg-[hsl(var(--color-karma-demerit))]"
+                    style={{ width: `${INHERITANCE_DEMERIT_PCT}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-between text-xs">
             <span className="text-[hsl(var(--color-karma-merit))]">{t("souls.detail.merit")}: +{inheritance.inherited_merit}</span>
             <span className="text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.demerit")}: -{inheritance.inherited_demerit}</span>
