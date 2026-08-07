@@ -347,9 +347,21 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
         # filter — exclude deleted records explicitly rather than going back
         # to `objects`, which would reintroduce the contextvar problem this
         # override exists to solve.
+        #
+        # Using _base_manager also means this bypasses DataScopeViewSetMixin's
+        # tenant filtering entirely (this viewset only lists DataScopeViewSetMixin
+        # among its bases for the mixin's other behavior — get_queryset is fully
+        # overridden here), so the ADMIN bypass has to be reapplied explicitly
+        # too — matching DispatchRecordViewSet.get_queryset above and every
+        # other ADMIN-bypass in this codebase. Without it, ADMIN was being
+        # scoped down to only judgments touching ADMIN's own tenant, same as
+        # every non-ADMIN caller.
         qs = CrossTenantJudgment._base_manager.filter(is_deleted=False).select_related(
             "initiating_tenant"
         ).prefetch_related("participants")
+        user = self.request.user
+        if getattr(user, "role", None) == "ADMIN":
+            return qs
         tenant = getattr(self.request, "tenant", None)
         if tenant:
             return qs.filter(Q(initiating_tenant=tenant) | Q(participants__participant_tenant=tenant))

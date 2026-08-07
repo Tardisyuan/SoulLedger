@@ -82,11 +82,18 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
 
     def get_queryset(self):
         qs = super().get_queryset()
-        tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            qs = qs.filter(tenant=tenant)
-        # Filter by visibility
+        # Same ADMIN-bypass / fail-closed idiom as UserProfileViewSet below:
+        # without the `else qs.none()`, a non-ADMIN caller with no resolved
+        # request.tenant fell through to the unfiltered queryset — every
+        # tenant's posts, not just their own.
         user = self.request.user
+        tenant = getattr(self.request, "tenant", None)
+        if getattr(user, "role", None) != "ADMIN":
+            if tenant:
+                qs = qs.filter(tenant=tenant)
+            else:
+                return qs.none()
+        # Filter by visibility
         if user.is_authenticated:
             from django.db.models import Q
             following_ids = Follow.objects.filter(
@@ -149,9 +156,16 @@ class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Model
 
     def get_queryset(self):
         qs = super().get_queryset()
-        tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            qs = qs.filter(tenant=tenant)
+        # Same ADMIN-bypass / fail-closed idiom as UserProfileViewSet below —
+        # a non-ADMIN caller with no resolved request.tenant must get
+        # qs.none(), not every tenant's comments.
+        user = self.request.user
+        if getattr(user, "role", None) != "ADMIN":
+            tenant = getattr(self.request, "tenant", None)
+            if tenant:
+                qs = qs.filter(tenant=tenant)
+            else:
+                return qs.none()
         # Allow filtering by post
         post_id = self.request.query_params.get("post")
         if post_id:
@@ -196,9 +210,16 @@ class ReactionViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Mode
 
     def get_queryset(self):
         qs = super().get_queryset()
-        tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            qs = qs.filter(tenant=tenant)
+        # Same ADMIN-bypass / fail-closed idiom as UserProfileViewSet below —
+        # a non-ADMIN caller with no resolved request.tenant must get
+        # qs.none(), not every tenant's reactions.
+        user = self.request.user
+        if getattr(user, "role", None) != "ADMIN":
+            tenant = getattr(self.request, "tenant", None)
+            if tenant:
+                qs = qs.filter(tenant=tenant)
+            else:
+                return qs.none()
         # Allow filtering by post or comment
         post_id = self.request.query_params.get("post")
         comment_id = self.request.query_params.get("comment")
@@ -250,9 +271,27 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
 
     def get_queryset(self):
         qs = super().get_queryset()
-        tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            qs = qs.filter(tenant=tenant)
+        # Follow is tenant-scoped, not deliberately cross-tenant the way
+        # DispatchRecord/CrossTenantJudgment are: Follow.tenant is stamped
+        # from the acting user's own request.tenant on save() (see
+        # apps/social/models.py Follow.save()), FollowCreateSerializer never
+        # accepts a tenant, and nothing in FollowService or the serializers
+        # validates or expects `follower`/`following` to live in different
+        # tenants — there is no cross-tenant-follow product feature, unlike
+        # dispatch's inherently cross-tenant transfers. So this gets the same
+        # single-tenant idiom as Post/Comment/Reaction/UserProfile, not
+        # dispatch's OR-across-two-tenants shape.
+        #
+        # Same ADMIN-bypass / fail-closed idiom as UserProfileViewSet below —
+        # a non-ADMIN caller with no resolved request.tenant must get
+        # qs.none(), not every tenant's follow graph.
+        user = self.request.user
+        if getattr(user, "role", None) != "ADMIN":
+            tenant = getattr(self.request, "tenant", None)
+            if tenant:
+                qs = qs.filter(tenant=tenant)
+            else:
+                return qs.none()
         # Allow filtering by user
         user_id = self.request.query_params.get("user")
         if user_id:
