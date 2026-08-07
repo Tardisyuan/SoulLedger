@@ -86,6 +86,12 @@ def retry_failed_webhooks_for_tenant(tenant_id: str):
     from apps.tenants.models import Tenant
 
     tenant = Tenant.objects.get(id=tenant_id)
+    # Not load-bearing for the query below — that's the explicit
+    # webhook__tenant_id= filter two lines down. TenantManager no longer
+    # consumes this contextvar for filtering (see
+    # apps/tenants/managers.py); it's set here purely so
+    # apps.audit.signals can attribute any rows this run touches to this
+    # tenant instead of leaving them tenant-less.
     set_current_tenant(tenant)
     try:
         now = timezone.now()
@@ -138,6 +144,11 @@ def cleanup_old_requests_for_tenant(tenant_id: str, days=90, batch_size=1000):
     from apps.tenants.models import Tenant
 
     tenant = Tenant.objects.get(id=tenant_id)
+    # Not load-bearing for the query below — that's the explicit tenant_id=
+    # filter two lines down. TenantManager no longer consumes this
+    # contextvar for filtering (see apps/tenants/managers.py); it's set
+    # here purely so apps.audit.signals can attribute the deletions below
+    # to this tenant instead of leaving them tenant-less.
     set_current_tenant(tenant)
     try:
         cutoff = timezone.now() - timezone.timedelta(days=days)

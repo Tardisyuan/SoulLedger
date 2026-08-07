@@ -41,6 +41,12 @@ def auto_conclude_stale_judgments_for_tenant(tenant_id: str, days_threshold: int
     from apps.tenants.models import Tenant
 
     tenant = Tenant.objects.get(id=tenant_id)
+    # Not load-bearing for the query below — that's the explicit tenant_id=
+    # filter two lines down. TenantManager no longer consumes this
+    # contextvar for filtering (see apps/tenants/managers.py); it's set
+    # here purely so apps.audit.signals can attribute the notes.save()
+    # below to this tenant instead of leaving it tenant-less, the same way
+    # apps.tenants.middleware does per-request for HTTP.
     set_current_tenant(tenant)
     try:
         threshold = timezone.now() - timedelta(days=days_threshold)
