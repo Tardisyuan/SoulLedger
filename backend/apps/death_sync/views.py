@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.core.permissions import IsAdminPermission, TenantPermission
+from apps.core.permissions import HasValidApiKey, IsAdminPermission, TenantPermission
 from apps.death_sync.authentication import APIKeyAuthentication
 from apps.death_sync.models import (
     DeathRegistrationRequest,
@@ -74,6 +74,11 @@ class DeathRegistrationViewSet(viewsets.ModelViewSet):
     Death registration endpoints (API key authenticated).
     """
     authentication_classes = [APIKeyAuthentication]
+    # Default IsAuthenticated always rejects: APIKeyAuthentication returns
+    # AnonymousUser on success (see its docstring), so request.user is never
+    # "authenticated" here. HasValidApiKey checks request.api_key instead —
+    # see apps/core/permissions.py for the full rationale.
+    permission_classes = [HasValidApiKey]
     queryset = DeathRegistrationRequest.objects.all()
     serializer_class = DeathRegistrationRequestSerializer
 
@@ -198,6 +203,9 @@ class WebhookViewSet(viewsets.ModelViewSet):
     CRUD for webhook configurations (API key authenticated).
     """
     authentication_classes = [APIKeyAuthentication]
+    # See DeathRegistrationViewSet above / apps/core/permissions.py for why
+    # the default IsAuthenticated cannot be used here.
+    permission_classes = [HasValidApiKey]
     queryset = WebhookConfig.objects.all()
     serializer_class = WebhookConfigSerializer
 
@@ -223,6 +231,9 @@ class DeathSyncHealthView(APIView):
     Health check for death sync API with monitoring metrics.
     """
     authentication_classes = [APIKeyAuthentication]
+    # See DeathRegistrationViewSet above / apps/core/permissions.py for why
+    # the default IsAuthenticated cannot be used here.
+    permission_classes = [HasValidApiKey]
 
     def get(self, request):
         from datetime import timedelta
