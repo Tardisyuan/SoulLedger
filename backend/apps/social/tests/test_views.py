@@ -496,6 +496,123 @@ class TestVisibilityAndTenantIsolation:
 
 
 @pytest.mark.django_db
+class TestCrossTenantWriteIsolation:
+    """
+    `CommentCreateSerializer`/`ReactionCreateSerializer` used to accept a
+    `post`/`comment`/`parent` ID belonging to *any* tenant — DRF's default
+    PrimaryKeyRelatedField only checks that the row exists, and the
+    ViewSet's tenant filtering only narrows `get_queryset()` for reads.
+    These tests pin the write-time fix: a cross-tenant target is rejected
+    with 400, and same-tenant writes are unaffected.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="XW_T1", defaults={"display_name": "Cross-Write Tenant A"}
+        )[0]
+        self.tenant_b = Tenant.objects.get_or_create(
+            code="XW_T2", defaults={"display_name": "Cross-Write Tenant B"}
+        )[0]
+        self.user = User.objects.create_user(
+            username="xwuser1", password="test123", role="VIEWER", tenant=self.tenant
+        )
+        self.foreign = User.objects.create_user(
+            username="xwforeign", password="test123", role="VIEWER", tenant=self.tenant_b,
+        )
+        self.post_a = Post.objects.create(author=self.user, content="A", tenant=self.tenant)
+        self.post_b = Post.objects.create(author=self.foreign, content="B", tenant=self.tenant_b)
+        self.comment_b = Comment.objects.create(
+            author=self.foreign, post=self.post_b, content="CB", tenant=self.tenant_b,
+        )
+        self.client = _jwt_client(self.user, self.tenant)
+
+    # -- comments: cross-tenant `post` -----------------------------------
+
+    def test_create_comment_on_foreign_post_rejected(self):
+        resp = self.client.post(
+            f"{BASE}/comments/",
+            {"post": str(self.post_b.pk), "content": "sneaky"}, format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert not Comment.objects.filter(post=self.post_b, author=self.user).exists()
+
+    def test_create_comment_on_own_tenant_post_still_works(self):
+        resp = self.client.post(
+            f"{BASE}/comments/",
+            {"post": str(self.post_a.pk), "content": "fine"}, format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert Comment.objects.filter(post=self.post_a, author=self.user).exists()
+
+    # -- comments: cross-tenant `parent` ----------------------------------
+
+    def test_reply_to_foreign_comment_rejected(self):
+        resp = self.client.post(
+            f"{BASE}/comments/",
+            {
+                "post": str(self.post_a.pk),
+                "parent": str(self.comment_b.pk),
+                "content": "sneaky reply",
+            },
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert not Comment.objects.filter(parent=self.comment_b).exists()
+
+    def test_reply_to_own_tenant_comment_still_works(self):
+        parent = Comment.objects.create(
+            author=self.user, post=self.post_a, content="parent", tenant=self.tenant,
+        )
+        resp = self.client.post(
+            f"{BASE}/comments/",
+            {"post": str(self.post_a.pk), "parent": str(parent.pk), "content": "reply"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert Comment.objects.filter(parent=parent).exists()
+
+    # -- reactions: cross-tenant `post` -----------------------------------
+
+    def test_react_to_foreign_post_rejected(self):
+        resp = self.client.post(
+            f"{BASE}/reactions/",
+            {"post": str(self.post_b.pk), "reaction_type": "LIKE"}, format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert not Reaction.objects.filter(post=self.post_b, user=self.user).exists()
+
+    def test_react_to_own_tenant_post_still_works(self):
+        resp = self.client.post(
+            f"{BASE}/reactions/",
+            {"post": str(self.post_a.pk), "reaction_type": "LIKE"}, format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert Reaction.objects.filter(post=self.post_a, user=self.user).exists()
+
+    # -- reactions: cross-tenant `comment` ---------------------------------
+
+    def test_react_to_foreign_comment_rejected(self):
+        resp = self.client.post(
+            f"{BASE}/reactions/",
+            {"comment": str(self.comment_b.pk), "reaction_type": "LIKE"}, format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert not Reaction.objects.filter(comment=self.comment_b, user=self.user).exists()
+
+    def test_react_to_own_tenant_comment_still_works(self):
+        comment = Comment.objects.create(
+            author=self.user, post=self.post_a, content="c", tenant=self.tenant,
+        )
+        resp = self.client.post(
+            f"{BASE}/reactions/",
+            {"comment": str(comment.pk), "reaction_type": "LIKE"}, format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert Reaction.objects.filter(comment=comment, user=self.user).exists()
+
+
+@pytest.mark.django_db
 class TestUserProfileTenantIsolation:
     """UserProfileViewSet.get_queryset() must scope profiles by tenant (C1).
 
