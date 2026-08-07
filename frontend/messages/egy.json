@@ -1134,7 +1134,15 @@
     "no_followers": "Ma Rekhyu Shemsu Khet",
     "profile": "Aha Pepi",
     "all": "Wetu",
-    "back": "Khet"
+    "back": "Khet",
+    "delete_post_confirm": "Sesen Wehem Sesh Seth? Ma Kheperu Em Khet.",
+    "delete_comment_confirm": "Sesen Wehem Djed Seth? Ma Kheperu Em Khet.",
+    "edit_profile": "Khemen Aha Pepi",
+    "bio_label": "Medu Aha",
+    "bio_placeholder": "Djed Aha Netjer...",
+    "avatar_url_label": "Wenut Twt",
+    "profile_updated": "Aha Pepi Kheme Seth",
+    "profile_update_error": "Ma Kheme Aha Pepi Seth"
   },
   "tenants": {
     "title": "Per Hemes",

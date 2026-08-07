@@ -1,7 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { useDeletePost } from "@/src/hooks/useSocial";
+import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { ReactionBar } from "./ReactionBar";
 import type { Post } from "@/lib/api";
 
@@ -16,6 +20,15 @@ const VISIBILITY_COLORS: Record<string, string> = {
 
 export function PostCard({ post }: { post: Post }) {
   const { t, formatDate } = useI18n();
+  const { user } = useTenant();
+  const deletePost = useDeletePost();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const isAuthor = !!user && String(user.id) === String(post.author);
+
+  const handleDelete = () => {
+    if (deletePost.isPending) return;
+    deletePost.mutate(post.id, { onSuccess: () => setShowDeleteConfirm(false) });
+  };
 
   return (
     <div className="bg-[hsl(var(--color-surface))] border border-[hsl(var(--color-hairline))] rounded-xl p-4 hover:shadow-sm transition-shadow">
@@ -34,6 +47,16 @@ export function PostCard({ post }: { post: Post }) {
         <span className="text-xs text-[hsl(var(--color-ink-muted))] ml-auto">
           {formatDate(post.create_time)}
         </span>
+        {isAuthor && (
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            aria-label={t("common.delete") || "Delete"}
+            className="text-xs text-[hsl(var(--color-ink-subtle))] hover:text-red-500 transition-colors"
+          >
+            {t("common.delete") || "Delete"}
+          </button>
+        )}
       </div>
 
       <Link href={`/social/${post.id}`} className="block">
@@ -52,6 +75,18 @@ export function PostCard({ post }: { post: Post }) {
       </div>
 
       <ReactionBar postId={post.id} />
+
+      {isAuthor && (
+        <ConfirmDialog
+          isOpen={showDeleteConfirm}
+          title={t("common.confirm_delete") || "Confirm Delete"}
+          message={t("social.delete_post_confirm") || "Are you sure you want to delete this post? This cannot be undone."}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+          confirmText={deletePost.isPending ? (t("common.deleting") || "Deleting...") : (t("common.delete") || "Delete")}
+          variant="danger"
+        />
+      )}
     </div>
   );
 }
