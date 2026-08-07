@@ -543,6 +543,66 @@ class TestDeathRegistrationPermissionFix:
 
 
 @pytest.mark.django_db
+class TestDeathRegistrationEncryptedJSONFieldDateFix:
+    """The unrelated bug TestDeathRegistrationPermissionFix's docstring
+    flagged and routed around: DeathRegistrationCreateSerializer.death_date
+    is a DateField, so serializer.validated_data["death_date"] is a real
+    python `date` object by the time DeathRegistrationViewSet.create()
+    passes it through as source_payload. EncryptedJSONField.get_prep_value()
+    used plain stdlib json.dumps() with no DjangoJSONEncoder, so saving that
+    payload raised TypeError — every *valid* single registration 500'd,
+    regardless of the permission fix. TestDeathSyncService.
+    test_register_death_success (above) never caught this because it calls
+    DeathSyncService.register_death() directly with a string death_date,
+    bypassing the serializer's DateField conversion entirely — this class
+    goes through the real HTTP endpoint instead, the only path that
+    actually produces a date object in the payload.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db, cn_tenant, soul):
+        self.tenant = cn_tenant
+        self.soul = soul
+        raw_key, key_hash, key_prefix = ExternalApiKey.generate_key()
+        self.key = ExternalApiKey.objects.create(
+            tenant=cn_tenant, name="Date Fix Key", system_type="HOSPITAL",
+            key_hash=key_hash, key_prefix=key_prefix, can_register_death=True,
+        )
+        self.raw_key = raw_key
+
+    def test_a_valid_registration_succeeds_over_http_not_500(self):
+        resp = _api_key_client(self.raw_key).post(
+            "/api/v1/death-sync/register/",
+            {"soul_lookup": {"soul_id": str(self.soul.id)}, "death_date": "2026-06-01"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["status"] == "accepted"
+
+    def test_the_saved_request_record_is_processed_and_soul_is_dead(self):
+        """Confirms the fix isn't just "doesn't crash" — the write actually
+        completes and the domain transition happens, not just a 201 with a
+        half-saved row.
+
+        Deliberately not asserting on source_payload's decoded shape here:
+        EncryptedJSONField.from_db_value round-trips it back to a string
+        rather than a dict under this test's SQLite override (a separate,
+        pre-existing wrinkle in how this custom field composes with
+        SQLite's own JSONField handling — unrelated to the date-encoding
+        TypeError this test class exists to cover, and out of scope here).
+        """
+        resp = _api_key_client(self.raw_key).post(
+            "/api/v1/death-sync/register/",
+            {"soul_lookup": {"soul_id": str(self.soul.id)}, "death_date": "2026-06-01"},
+            format="json",
+        )
+        record = DeathRegistrationRequest.objects.get(id=resp.data["registration_id"])
+        assert record.status == DeathRegistrationStatus.PROCESSED
+        self.soul.refresh_from_db()
+        assert self.soul.current_state != SoulState.ALIVE
+
+
+@pytest.mark.django_db
 class TestDeathSyncHealthPermissionFix:
     """C11 (same fix, third view): DeathSyncHealthView over real HTTP, not
     the direct view.get() call TestDeathSyncHealthTenantIsolation above uses
