@@ -51,6 +51,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         # destroy() below) — gated on the same codename as the delete it
         # stands in for, not a new one.
         'archive': ['soul.delete'],
+        'correct_settlement': ['soul.correct_settlement'],
     }
     queryset = Soul.objects.select_related("tenant").prefetch_related("records").all()
     filterset_class = SoulFilter
@@ -153,6 +154,27 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             )
         reason = request.data.get("reason", "")
         soul.archive(user=request.user, reason=reason)
+        return Response(SoulSerializer(soul).data)
+
+    @action(detail=True, methods=["post"])
+    def correct_settlement(self, request, pk=None):
+        """Revert a SETTLED soul to DISPOSED to fix a data-entry error.
+
+        Not a state transition (SoulState.SETTLED has no valid_transitions,
+        deliberately) — an ADMIN-only, reason-required, separately audited
+        correction. See Soul.correct_settlement.
+        """
+        soul = self.get_object()
+        reason = request.data.get("reason", "")
+        if not reason:
+            return Response(
+                {"error": "A reason is required to correct a settlement."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            soul.correct_settlement(user=request.user, reason=reason)
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(SoulSerializer(soul).data)
 
     @action(detail=True, methods=["post"])

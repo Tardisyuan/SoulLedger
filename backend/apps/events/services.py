@@ -40,6 +40,16 @@ class EventService:
         }, actor)
 
     @staticmethod
+    def log_settlement_corrected(
+        soul: Soul, old_state: str, new_state: str, reason: str, actor: str = "system"
+    ) -> None:
+        EventService.log(soul, "SETTLEMENT_CORRECTED", {
+            "old_state": old_state,
+            "new_state": new_state,
+            "reason": reason,
+        }, actor)
+
+    @staticmethod
     def log_disposition_created(disposition, actor: str = "system") -> None:
         EventService.log(disposition.soul, "DISPOSITION_CREATED", {
             "disposition_id": str(disposition.id),
