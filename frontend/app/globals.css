@@ -45,11 +45,23 @@
   --color-hairline-tertiary: 220 6% 26%;
   --color-ink: 210 11% 96%;
   --color-ink-muted: 213 15% 80%;
+  /* Floor for surface-2 and lighter (table headers, nested cards, input rest
+     state) — ink-tertiary drops to 4.48:1 there, below AA. See the
+     "per-surface floors" card in Stage 1: a token is not AA, a token on a
+     surface is. */
   --color-ink-subtle: 215 8% 57%;
-  /* 50% (was 41%) — 41% measured 3.37:1 on surface-1, below the WCAG AA 4.5:1
-     floor for body text. 50% lands at ~4.6:1 and is visually near-identical. */
-  --color-ink-tertiary: 215 6% 50%;
+  /* 52% (was 50%, was 41% before that) — this is the surface-1 figure only
+     (4.91:1); raising surface-1 from 7% to 8% for the elevation ramp cost
+     ~0.1 of a ratio point, and 50% would have landed at 4.58:1. Nothing
+     dimmer than this exists — use ink-subtle above surface-1. */
+  --color-ink-tertiary: 215 6% 52%;
   --color-accent: 38 92% 50%;
+  /* Text/links only. --color-accent (identical in both themes) measures
+     2.14:1 for text against light-mode white — every amber heading and link
+     in light mode fails AA today. Buttons, fills, active-nav and the focus
+     ring keep using --color-accent; anything rendering the brand colour AS
+     TEXT must use this instead. */
+  --color-accent-ink: 38 92% 50%;
   --color-accent-hover: 43 96% 58%;
 }
 
@@ -68,63 +80,95 @@
   --color-ink-subtle: 220 8% 50%;
   --color-ink-tertiary: 220 6% 60%;
   --color-accent: 38 92% 50%;
+  /* 32% lightness: 4.83:1 against light-mode white, vs 2.14:1 for
+     --color-accent at the same hue. */
+  --color-accent-ink: 32 92% 34%;
   --color-accent-hover: 43 96% 58%;
 }
 
-/* Semantic status colors (theme-aware) */
+/* Semantic status colors (theme-aware).
+
+   Stage 1 re-tuned this whole block: a hue journey along the pipeline
+   rather than unrelated colours, so every badge is separable by hue alone
+   (each still pairs with a glyph too — colour is never the only channel).
+   JUDGING moved off the accent amber (it collided with buttons/links);
+   DISPOSED moved off blue so PURGATORY could take the blue it vacated;
+   RETRY moved to rose (330°) since its old 270° sat 15° from the new
+   DISPOSED. All ratios below are measured against surface-1 — see the
+   "per-surface floors" card: on surface-4/dialogs these need their own
+   lightness, not the value here (e.g. --bad-equivalent tones fall to
+   ~3.7:1 there and need to run closer to 74% lightness). */
 :root {
-  --color-status-alive: 160 84% 39%;
-  --color-status-judging: 38 92% 50%;
-  /* 62% (was 55%) — 55% only reached 4.09:1 on surface-1, below WCAG AA. */
-  --color-status-disposed: 220 80% 62%;
-  --color-status-reincarnating: 217 91% 60%;
-  --color-status-lost: 0 0% 50%;
+  --color-status-alive: 150 62% 46%;         /* ALIVE 存活 · ◆ · was 160 84% 39% */
+  --color-status-judging: 20 88% 58%;        /* JUDGING 审判中 · ◑ · off the accent amber */
+  --color-status-disposed: 285 55% 66%;      /* DISPOSED 已处置 · ■ · was a second blue */
+  --color-status-reincarnating: 195 88% 55%; /* REINCARNATING 轮回中 · ↻ */
+  --color-status-lost: 225 10% 58%;          /* LOST 迷失 · ✕ · slate, not grey — grey reads as disabled */
   /* Teal reads as "concluded" without borrowing REINCARNATING's blue or
      LOST's grey, and stays neutral on outcome — SETTLED covers both Aaru
-     and Ammit, Heaven and Hell alike. */
+     and Ammit, Heaven and Hell alike. Not part of Stage 1's lifecycle table
+     (which only names five states) — left as-is rather than guessed at. */
   --color-status-settled: 178 55% 40%;
-  --color-merit: 142 76% 36%;
-  --color-demerit: 0 84% 60%;
-  /* Green rather than the accent amber: a PASSED badge previously rendered in
-     the exact same colour as buttons and headings, so the accent no longer
-     signalled "interactive". Matches --color-merit. */
-  --color-verdict-passed: 142 76% 36%;
-  --color-verdict-failed: 0 84% 60%;
-  --color-verdict-purgatory: 217 91% 60%;
-  /* 68% (was 55%) — 55% only reached 3.39:1 on surface-1, below WCAG AA. */
-  --color-verdict-retry: 270 76% 68%;
-  --color-status-success: 142 76% 36%;
-  --color-status-error: 0 84% 60%;
-  --color-status-warning: 38 92% 50%;
-  --color-status-info: 217 91% 60%;
-  /* Civilization identity. Previously each page picked its own: the dashboard
-     had CN red while organizations had CN amber, so one screen showed the same
-     civilization in two colours. Amber/blue/purple keeps the hues far apart. */
-  --color-civ-cn: 38 92% 50%;
-  --color-civ-eu: 217 91% 52%;
-  --color-civ-eg: 271 81% 56%;
+  /* 功德/罪业. Renamed from --color-merit/--color-demerit: this pair now has
+     its own semantic identity distinct from the verdict palette that
+     aliases it below, matching Stage 1's colorGroups split ("Verdict &
+     karma" vs "Lifecycle state" are different layers even where a hue is
+     shared). merit raised from 142 76% 36% for 11px CJK legibility. */
+  --color-karma-merit: 150 62% 46%;
+  --color-karma-demerit: 0 84% 62%;
+  /* PASSED/FAILED alias karma-merit/feedback-error deliberately — two reds
+     30° apart would read as one colour applied inconsistently, not two
+     meanings. Green, not accent amber, so a passed verdict stops rendering
+     in the same colour as every button and heading. */
+  --color-verdict-passed: 150 62% 46%;
+  --color-verdict-failed: 0 84% 62%;
+  --color-verdict-purgatory: 215 80% 62%;    /* takes the blue DISPOSED vacated */
+  --color-verdict-retry: 330 62% 68%;        /* rose — sends work backwards. Was 270°, 15° from the new DISPOSED */
+  /* System-layer feedback: transient chrome only (toast, inline validation,
+     banner), always beside an icon — never a row, a badge or a chart. A
+     separate palette from the domain layer above even where values match,
+     because role+form is what keeps two same-hued reds distinguishable. */
+  --color-status-success: 150 62% 46%;
+  --color-status-error: 0 84% 62%;
+  --color-status-warning: 38 88% 60%;
+  --color-status-info: 215 80% 62%;
+  /* Civilization identity — surface-first per Stage 1 §4.9: each tenant
+     tints its own surface ramp at 10-16% saturation (not implemented yet;
+     these tokens are unused directly by any component today, so renaming
+     ahead of that work is safe). The *-mark variant is the deliberate
+     fallback for the one place a flat colour is still needed: a 3px rule
+     in a mixed-civilization list and the chart legend. */
+  --color-civ-hue-cn: 12 55% 58%;
+  --color-civ-mark-cn: 12 55% 58%;
+  --color-civ-hue-eu: 232 42% 64%;
+  --color-civ-mark-eu: 232 42% 64%;
+  --color-civ-hue-eg: 44 45% 55%;
+  --color-civ-mark-eg: 44 45% 55%;
 }
 
 .light {
-  --color-status-alive: 160 84% 30%;
-  --color-status-judging: 38 92% 40%;
-  --color-status-disposed: 220 80% 45%;
-  --color-status-reincarnating: 217 91% 50%;
-  --color-status-lost: 0 0% 40%;
+  --color-status-alive: 150 62% 32%;
+  --color-status-judging: 20 82% 42%;
+  --color-status-disposed: 285 52% 44%;
+  --color-status-reincarnating: 195 85% 34%;
+  --color-status-lost: 225 10% 42%;
   --color-status-settled: 178 55% 30%;
-  --color-merit: 142 76% 28%;
-  --color-demerit: 0 84% 50%;
-  --color-verdict-passed: 142 76% 28%;
-  --color-verdict-failed: 0 84% 50%;
-  --color-verdict-purgatory: 217 91% 50%;
-  --color-verdict-retry: 270 76% 45%;
-  --color-status-success: 142 76% 28%;
-  --color-status-error: 0 84% 50%;
-  --color-status-warning: 38 92% 40%;
-  --color-status-info: 217 91% 50%;
-  --color-civ-cn: 38 92% 40%;
-  --color-civ-eu: 217 91% 45%;
-  --color-civ-eg: 271 81% 48%;
+  --color-karma-merit: 150 62% 32%;
+  --color-karma-demerit: 0 78% 44%;
+  --color-verdict-passed: 150 62% 32%;
+  --color-verdict-failed: 0 78% 44%;
+  --color-verdict-purgatory: 215 78% 42%;
+  --color-verdict-retry: 330 60% 42%;
+  --color-status-success: 150 62% 32%;
+  --color-status-error: 0 78% 44%;
+  --color-status-warning: 32 88% 38%;
+  --color-status-info: 215 78% 42%;
+  --color-civ-hue-cn: 12 58% 38%;
+  --color-civ-mark-cn: 12 58% 38%;
+  --color-civ-hue-eu: 232 45% 44%;
+  --color-civ-mark-eu: 232 45% 44%;
+  --color-civ-hue-eg: 44 52% 34%;
+  --color-civ-mark-eg: 44 52% 34%;
 }
 
 @layer base {

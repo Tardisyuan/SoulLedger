@@ -755,12 +755,12 @@ function InheritancePanel({ data, t }: { data: LedgerInheritance; t: (key: strin
     <div className="mt-3 pt-2 border-t border-[hsl(var(--color-hairline))]">
       <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-1">{t("ledger.next_life_inheritance")}</p>
       <div className="flex justify-between text-xs">
-        <span className="text-[hsl(var(--color-merit))]">{t("souls.detail.merit")}: +{data.inherited_merit}</span>
-        <span className="text-[hsl(var(--color-demerit))]">{t("souls.detail.demerit")}: -{data.inherited_demerit}</span>
+        <span className="text-[hsl(var(--color-karma-merit))]">{t("souls.detail.merit")}: +{data.inherited_merit}</span>
+        <span className="text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.demerit")}: -{data.inherited_demerit}</span>
       </div>
       <div className="flex justify-between text-xs mt-1">
         <span className="text-[hsl(var(--color-ink-subtle))]">{t("souls.detail.balance")}: </span>
-        <span className={balance >= 0 ? "text-[hsl(var(--color-merit))]" : "text-[hsl(var(--color-demerit))]"}>
+        <span className={balance >= 0 ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"}>
           {balance >= 0 ? "+" : ""}{balance}
         </span>
       </div>
