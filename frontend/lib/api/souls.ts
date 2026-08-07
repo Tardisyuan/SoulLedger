@@ -78,13 +78,13 @@ interface SoulBase {
 
 /**
  * Element of GET /souls/ — SoulListSerializer, a strict subset of Soul.
- * `has_date_warning` is list-only (backend/apps/souls/serializers.py
- * SoulListSerializer.get_has_date_warning): whether any of this soul's
- * records carries an unacknowledged `event_after_death` warning, collapsed
- * to a bool because a list row has no room for the per-record breakdown
- * the detail page shows.
+ * `has_date_warning` and `has_record_error` are list-only
+ * (backend/apps/souls/serializers.py SoulListSerializer): whether any of
+ * this soul's records carries an unacknowledged `event_after_death`
+ * warning, or an `event_before_birth` error, collapsed to a bool because a
+ * list row has no room for the per-record breakdown the detail page shows.
  */
-export type SoulListItem = SoulBase & { has_date_warning: boolean };
+export type SoulListItem = SoulBase & { has_date_warning: boolean; has_record_error: boolean };
 
 /** 200 body of GET /souls/{id}/ — SoulSerializer. */
 export interface Soul extends SoulBase {

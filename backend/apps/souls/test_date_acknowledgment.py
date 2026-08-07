@@ -360,3 +360,80 @@ class TestUnacknowledgeRecordDateWarningEndpoint:
         assert resp.status_code == status.HTTP_403_FORBIDDEN
         self.record.refresh_from_db()
         assert self.record.date_warning_acknowledged_by_id == self.admin.id
+
+
+@pytest.mark.django_db
+class TestSoulListDateProblemFlags:
+    """GET /souls/ — SoulListSerializer.has_date_warning / has_record_error.
+
+    Both are list-only booleans standing in for a per-record breakdown a
+    list row has no room for. has_date_warning covers the WARNING case
+    (event_after_death); has_record_error covers the ERROR case
+    (event_before_birth) — the gap the list ⊘/△ marker used to miss,
+    since only soul-level ERRORs (date_problems) and record-level WARNING
+    were exposed before this test was written.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="LIST_FLAGS", defaults={"display_name": "List Flags Tenant"}
+        )[0]
+        self.admin = User.objects.create_user(
+            username="list_flags_admin", password="test123", role="ADMIN", tenant=self.tenant
+        )
+        self.client = _jwt_client(self.admin, self.tenant)
+
+    def _list_row(self, soul):
+        resp = self.client.get(f"{BASE}/")
+        return next(r for r in resp.data["results"] if r["id"] == str(soul.pk))
+
+    def test_a_clean_soul_has_neither_flag(self):
+        soul = Soul.objects.create(name="Clean", tenant=self.tenant, birth_year=1900, death_year=1950)
+        SoulRecord.objects.create(
+            soul=soul, record_type="MERIT", civilization="EUROPEAN",
+            description="Ordinary", weight=1, event_year=1920,
+        )
+        row = self._list_row(soul)
+        assert row["has_date_warning"] is False
+        assert row["has_record_error"] is False
+
+    def test_an_unacknowledged_posthumous_record_sets_has_date_warning_only(self):
+        soul = Soul.objects.create(name="Posthumous", tenant=self.tenant, birth_year=1900, death_year=1950)
+        SoulRecord.objects.create(
+            soul=soul, record_type="MERIT", civilization="EUROPEAN",
+            description="After death", weight=1, event_year=1960,
+        )
+        row = self._list_row(soul)
+        assert row["has_date_warning"] is True
+        assert row["has_record_error"] is False
+
+    def test_an_acknowledged_posthumous_record_clears_has_date_warning(self):
+        soul = Soul.objects.create(name="Reviewed", tenant=self.tenant, birth_year=1900, death_year=1950)
+        record = SoulRecord.objects.create(
+            soul=soul, record_type="MERIT", civilization="EUROPEAN",
+            description="After death, reviewed", weight=1, event_year=1960,
+        )
+        self.client.post(f"{BASE}/{soul.pk}/records/{record.pk}/acknowledge-date-warning/", {}, format="json")
+        row = self._list_row(soul)
+        assert row["has_date_warning"] is False
+
+    def test_a_record_before_the_souls_birth_sets_has_record_error(self):
+        """event_before_birth is refused on write via the ordinary API, so
+        this bypasses it the same way legacy/pre-validation data would —
+        directly through the model, not through SoulRecordSerializer."""
+        soul = Soul.objects.create(name="Legacy import", tenant=self.tenant, birth_year=1900, death_year=1950)
+        SoulRecord.objects.create(
+            soul=soul, record_type="MERIT", civilization="EUROPEAN",
+            description="Predates birth", weight=1, event_year=1850,
+        )
+        row = self._list_row(soul)
+        assert row["has_record_error"] is True
+        assert row["date_problems"] == []
+
+    def test_an_implausible_lifespan_sets_the_soul_level_date_problems_not_the_record_flags(self):
+        soul = Soul.objects.create(name="Implausible", tenant=self.tenant, birth_year=1400, death_year=1950)
+        row = self._list_row(soul)
+        assert any(p["code"] == "implausible_lifespan" for p in row["date_problems"])
+        assert row["has_date_warning"] is False
+        assert row["has_record_error"] is False
