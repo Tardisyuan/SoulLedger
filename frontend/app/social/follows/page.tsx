@@ -24,11 +24,11 @@ export default function FollowsPage() {
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
         <Link
           href="/social"
-          className="text-[hsl(var(--color-accent))] hover:underline text-sm"
+          className="text-[hsl(var(--color-accent-ink))] hover:underline text-sm"
         >
           ← {t("social.back") || "Back"}
         </Link>
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent))] flex-1">
+        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
           {t("social.follows") || "Follows"}
           <MenuGloss path="/social/follows" />
         </h1>
@@ -43,7 +43,7 @@ export default function FollowsPage() {
               onClick={() => setTab(key)}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 tab === key
-                  ? "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent))]"
+                  ? "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent-ink))]"
                   : "border-transparent text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
               }`}
             >
@@ -81,7 +81,7 @@ export default function FollowsPage() {
                   key={item.id}
                   className="flex items-center gap-3 p-3 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg hover:bg-[hsl(var(--color-surface-2))]/50 transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-full bg-[hsl(var(--color-surface-2))] flex items-center justify-center text-sm font-bold text-[hsl(var(--color-accent))] flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-[hsl(var(--color-surface-2))] flex items-center justify-center text-sm font-bold text-[hsl(var(--color-accent-ink))] flex-shrink-0">
                     {userName?.charAt(0)?.toUpperCase() || "?"}
                   </div>
                   <Link

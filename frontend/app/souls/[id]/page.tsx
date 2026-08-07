@@ -33,12 +33,12 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { formatHistoricalDate } from "@/lib/utils";
 
 const STATE_COLORS: Record<string, string> = {
-  ALIVE: "bg-[hsl(var(--color-status-alive)/0.2)] text-[hsl(var(--color-status-alive))]",
-  JUDGING: "bg-[hsl(var(--color-status-judging)/0.2)] text-[hsl(var(--color-status-judging))]",
+  ALIVE: "bg-[hsl(var(--color-status-alive)/0.1)] text-[hsl(var(--color-status-alive))]",
+  JUDGING: "bg-[hsl(var(--color-status-judging)/0.1)] text-[hsl(var(--color-status-judging))]",
   DISPOSED: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
-  REINCARNATING: "bg-[hsl(var(--color-status-reincarnating)/0.2)] text-[hsl(var(--color-status-reincarnating))]",
+  REINCARNATING: "bg-[hsl(var(--color-status-reincarnating)/0.1)] text-[hsl(var(--color-status-reincarnating))]",
   LOST: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
-  SETTLED: "bg-[hsl(var(--color-status-settled)/0.2)] text-[hsl(var(--color-status-settled))]",
+  SETTLED: "bg-[hsl(var(--color-status-settled)/0.1)] text-[hsl(var(--color-status-settled))]",
 };
 
 export default function SoulDetailPage() {
@@ -233,7 +233,7 @@ export default function SoulDetailPage() {
     return (
       <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4">
         <div className="text-[hsl(var(--color-status-error))]">{error || t("souls.detail.not_found")}</div>
-        <a href="/souls/" className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent))]">{t("souls.detail.back_to_list")}</a>
+        <a href="/souls/" className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-ink))]">{t("souls.detail.back_to_list")}</a>
       </div>
     );
   }
@@ -279,12 +279,12 @@ export default function SoulDetailPage() {
                   today, so it stays the headline. State and generation are
                   both translated badges — no raw enum text next to them. */}
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-[hsl(var(--color-accent))]">{soul?.name}</h1>
+                <h1 className="text-xl font-bold text-[hsl(var(--color-accent-ink))]">{soul?.name}</h1>
                 <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul?.current_state || "ALIVE"]}`}>
                   {t(`souls.states.${soul?.current_state}`)}
                 </span>
                 {generation !== null && (
-                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-[hsl(var(--color-status-reincarnating)/0.2)] text-[hsl(var(--color-status-reincarnating))]">
+                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-[hsl(var(--color-status-reincarnating)/0.1)] text-[hsl(var(--color-status-reincarnating))]">
                     {tf("souls.detail.generation", "Life {{n}}", { n: String(generation) })}
                   </span>
                 )}
@@ -331,7 +331,7 @@ export default function SoulDetailPage() {
               <RequirePermission permissions="soul.delete">
                 <button
                   onClick={handleDeleteConfirm}
-                  className="px-3 py-1.5 bg-[hsl(var(--color-status-error)/0.2)] border border-[hsl(var(--color-status-error)/0.3)] hover:bg-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))] rounded-md text-sm transition-colors"
+                  className="px-3 py-1.5 bg-[hsl(var(--color-status-error)/0.1)] border border-[hsl(var(--color-status-error)/0.3)] hover:bg-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))] rounded-md text-sm transition-colors"
                 >
                   {t("souls.detail.delete")}
                 </button>
@@ -541,9 +541,9 @@ export default function SoulDetailPage() {
                     </div>
                     {j.verdict && (
                       <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                        j.verdict === "PASSED" ? "bg-[hsl(var(--color-verdict-passed)/0.2)] text-[hsl(var(--color-verdict-passed))]" :
-                        j.verdict === "FAILED" ? "bg-[hsl(var(--color-verdict-failed)/0.2)] text-[hsl(var(--color-verdict-failed))]" :
-                        "bg-[hsl(var(--color-verdict-purgatory)/0.2)] text-[hsl(var(--color-verdict-purgatory))]"
+                        j.verdict === "PASSED" ? "bg-[hsl(var(--color-verdict-passed)/0.1)] text-[hsl(var(--color-verdict-passed))]" :
+                        j.verdict === "FAILED" ? "bg-[hsl(var(--color-verdict-failed)/0.1)] text-[hsl(var(--color-verdict-failed))]" :
+                        "bg-[hsl(var(--color-verdict-purgatory)/0.1)] text-[hsl(var(--color-verdict-purgatory))]"
                       }`}>
                         {tf(`souls.detail.verdict_${j.verdict.toLowerCase()}`, j.verdict)}
                       </span>
@@ -583,7 +583,7 @@ export default function SoulDetailPage() {
                       </div>
                     </div>
                     <span className={`px-2 py-0.5 rounded text-xs ${
-                      d.is_executed ? "bg-[hsl(var(--color-status-info)/0.2)] text-[hsl(var(--color-status-info))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
+                      d.is_executed ? "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                     }`}>
                       {d.is_executed ? t("souls.detail.executed") : t("souls.detail.pending")}
                     </span>

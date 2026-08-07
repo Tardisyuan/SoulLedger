@@ -10,19 +10,19 @@ import Link from "next/link";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: "bg-[hsl(var(--color-status-warning)/0.2)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.5)]",
-  APPROVED: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.5)]",
-  REJECTED: "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.5)]",
-  SKIPPED: "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))] border-[hsl(var(--color-status-lost)/0.5)]",
-  ESCALATED: "bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))] border-[hsl(var(--color-verdict-retry)/0.5)]",
+  PENDING: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.5)]",
+  APPROVED: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.5)]",
+  REJECTED: "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.5)]",
+  SKIPPED: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))] border-[hsl(var(--color-status-lost)/0.5)]",
+  ESCALATED: "bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))] border-[hsl(var(--color-verdict-retry)/0.5)]",
 };
 
 const VERDICT_COLORS: Record<string, string> = {
-  PASSED: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]",
-  FAILED: "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]",
-  CONFIRMED: "bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]",
-  REJECTED: "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]",
-  SKIPPED: "bg-[hsl(var(--color-status-lost)/0.2)] text-[hsl(var(--color-status-lost))]",
+  PASSED: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]",
+  FAILED: "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]",
+  CONFIRMED: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]",
+  REJECTED: "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]",
+  SKIPPED: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]",
 };
 
 const NODE_TYPE_KEYS: Record<string, string> = {
@@ -118,7 +118,7 @@ export default function WorkflowDetailPage() {
     return (
       <div className="text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4 py-12">
         <div className="text-[hsl(var(--color-status-error))]">{t("workflow.detail.not_found")}</div>
-        <Link href="/workflow" className="text-[hsl(var(--color-accent))] hover:text-[hsl(var(--color-accent-hover))]">
+        <Link href="/workflow" className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-hover))]">
           {t("workflow.detail.back_to_list")}
         </Link>
       </div>
@@ -139,7 +139,7 @@ export default function WorkflowDetailPage() {
           {statusLabel(workflow.status)}
         </span>
         {workflow.is_appeal && (
-          <span className="px-2 py-0.5 rounded text-xs bg-[hsl(var(--color-verdict-retry)/0.2)] text-[hsl(var(--color-verdict-retry))]">
+          <span className="px-2 py-0.5 rounded text-xs bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]">
             {t("workflow.detail.appeal")}
           </span>
         )}
@@ -186,7 +186,7 @@ export default function WorkflowDetailPage() {
         {/* Current Node Action Card */}
         {currentNode && workflow.status !== "COMPLETED" && (
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-accent))] uppercase mb-3">
+            <h2 className="text-sm font-semibold text-[hsl(var(--color-accent-ink))] uppercase mb-3">
               {t("workflow.detail.current_node")}
             </h2>
             <div className="mb-4 p-3 bg-[hsl(var(--color-surface-2))] rounded border border-[hsl(var(--color-hairline))]">
@@ -299,7 +299,7 @@ export default function WorkflowDetailPage() {
             onClick={() => setActiveTab("nodes")}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
               activeTab === "nodes"
-                ? "text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent))]"
+                ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
                 : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
             }`}
           >
@@ -309,7 +309,7 @@ export default function WorkflowDetailPage() {
             onClick={() => setActiveTab("history")}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
               activeTab === "history"
-                ? "text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent))]"
+                ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
                 : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
             }`}
           >
@@ -349,7 +349,7 @@ export default function WorkflowDetailPage() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</span>
                         {isCurrent && (
-                          <span className="px-1.5 py-0.5 rounded text-xs bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent))] border border-[hsl(var(--color-accent))]/30">
+                          <span className="px-1.5 py-0.5 rounded text-xs bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] border border-[hsl(var(--color-accent))]/30">
                             {t("workflow.detail.current")}
                           </span>
                         )}

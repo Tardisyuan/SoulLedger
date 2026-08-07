@@ -15,7 +15,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
     <div className="bg-[hsl(var(--color-surface))] border border-[hsl(var(--color-hairline))] rounded-xl p-6">
       <div className="flex items-start gap-4">
         {/* Avatar */}
-        <div className="w-16 h-16 rounded-full bg-[hsl(var(--color-surface-2))] flex items-center justify-center text-xl font-bold text-[hsl(var(--color-accent))] overflow-hidden flex-shrink-0">
+        <div className="w-16 h-16 rounded-full bg-[hsl(var(--color-surface-2))] flex items-center justify-center text-xl font-bold text-[hsl(var(--color-accent-ink))] overflow-hidden flex-shrink-0">
           {profile.avatar_url ? (
             <img
               src={profile.avatar_url}
@@ -62,7 +62,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
       <div className="mt-4 pt-3 border-t border-[hsl(var(--color-hairline))]/50">
         <Link
           href={`/social/profile/${profile.user}`}
-          className="text-sm text-[hsl(var(--color-accent))] hover:underline"
+          className="text-sm text-[hsl(var(--color-accent-ink))] hover:underline"
         >
           {t("social.view_all_posts") || "View all posts"} →
         </Link>

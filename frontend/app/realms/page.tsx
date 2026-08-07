@@ -19,7 +19,7 @@ const REALM_TYPE_CONFIG: Record<string, { icon: React.ReactNode; className: stri
   HELL: { icon: <Flame className="w-4 h-4" />, className: 'bg-[hsl(var(--color-status-error)/0.1)] border-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))]' },
   PURGATORY: { icon: <Cloud className="w-4 h-4" />, className: 'bg-[hsl(var(--color-status-info)/0.1)] border-[hsl(var(--color-status-info)/0.3)] text-[hsl(var(--color-status-info))]' },
   BLISS: { icon: <CircleDot className="w-4 h-4" />, className: 'bg-[hsl(var(--color-status-success)/0.1)] border-[hsl(var(--color-status-success)/0.3)] text-[hsl(var(--color-status-success))]' },
-  NEUTRAL: { icon: <Castle className="w-4 h-4" />, className: 'bg-[hsl(var(--color-accent))]/10 border-[hsl(var(--color-accent))]/30 text-[hsl(var(--color-accent))]' },
+  NEUTRAL: { icon: <Castle className="w-4 h-4" />, className: 'bg-[hsl(var(--color-accent))]/10 border-[hsl(var(--color-accent))]/30 text-[hsl(var(--color-accent-ink))]' },
 };
 
 export default function RealmsPage() {
@@ -48,7 +48,7 @@ export default function RealmsPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent-ink))]">
           {t("realms.title")}
           <MenuGloss path="/realms" />
         </h1>

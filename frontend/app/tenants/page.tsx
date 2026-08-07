@@ -28,7 +28,7 @@ export default function TenantsPage() {
   return (
     <div className="p-6 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent))]">
+        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent-ink))]">
           {t("tenants.title") || "Tenants"}
           <MenuGloss path="/tenants" />
         </h1>
@@ -53,7 +53,7 @@ export default function TenantsPage() {
                       {t("tenants.code") || "Code"}: {tenant.code}
                     </p>
                   </div>
-                  <span className="px-2 py-1 rounded text-xs font-medium bg-[hsl(var(--color-status-success)/0.2)] text-[hsl(var(--color-status-success))]">
+                  <span className="px-2 py-1 rounded text-xs font-medium bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]">
                     Active
                   </span>
                 </div>

@@ -157,7 +157,7 @@ export default function WelcomePage() {
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-2">
               <span className="text-3xl">{greeting.icon}</span>
-              <h1 className="text-2xl md:text-3xl font-bold text-[hsl(var(--color-accent))]">
+              <h1 className="text-2xl md:text-3xl font-bold text-[hsl(var(--color-accent-ink))]">
                 {greeting.text}, {user?.display_name || user?.username || "Admin"}
               </h1>
             </div>
@@ -252,7 +252,7 @@ export default function WelcomePage() {
             <div className="mt-4 pt-4 border-t border-[hsl(var(--color-hairline))]">
               <Link
                 href="/settings"
-                className="text-sm text-[hsl(var(--color-accent))] hover:underline flex items-center gap-1"
+                className="text-sm text-[hsl(var(--color-accent-ink))] hover:underline flex items-center gap-1"
               >
                 <Sparkles className="w-4 h-4" />
                 {t("welcome.manage_agents")}
@@ -294,7 +294,7 @@ export default function WelcomePage() {
           </div>
           <Link
             href="/audit"
-            className="mt-4 text-sm text-[hsl(var(--color-accent))] hover:underline flex items-center gap-1"
+            className="mt-4 text-sm text-[hsl(var(--color-accent-ink))] hover:underline flex items-center gap-1"
           >
             {t("welcome.view_all_activity")}
             <ArrowRight className="w-4 h-4" />

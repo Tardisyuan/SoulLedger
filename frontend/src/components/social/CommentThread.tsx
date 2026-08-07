@@ -24,7 +24,7 @@ function CommentItem({ comment, postId, depth, onReply }: {
         </div>
         <p className="text-sm text-[hsl(var(--color-ink))] whitespace-pre-wrap">{comment.content}</p>
         <div className="flex items-center gap-3 mt-1">
-          <button onClick={() => onReply(comment.id)} className="text-xs text-[hsl(var(--color-accent))] hover:underline">
+          <button onClick={() => onReply(comment.id)} className="text-xs text-[hsl(var(--color-accent-ink))] hover:underline">
             Reply
           </button>
           <ReactionBar commentId={comment.id} />
@@ -80,7 +80,7 @@ export function CommentThread({ postId }: { postId: string }) {
         {replyTo && (
           <div className="flex items-center gap-2 mb-2 text-xs text-[hsl(var(--color-ink-muted))]">
             <span>Replying to comment</span>
-            <button type="button" onClick={() => setReplyTo(null)} className="text-[hsl(var(--color-accent))] hover:underline">Cancel</button>
+            <button type="button" onClick={() => setReplyTo(null)} className="text-[hsl(var(--color-accent-ink))] hover:underline">Cancel</button>
           </div>
         )}
         <div className="flex gap-2">

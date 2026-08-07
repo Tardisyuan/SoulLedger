@@ -119,8 +119,8 @@ function ThresholdReading({
         <span
           className={`px-2 py-0.5 rounded text-xs font-bold ${
             failed
-              ? "bg-[hsl(var(--color-status-error)/0.2)] text-[hsl(var(--color-status-error))]"
-              : "bg-[hsl(var(--color-karma-merit)/0.2)] text-[hsl(var(--color-karma-merit))]"
+              ? "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]"
+              : "bg-[hsl(var(--color-karma-merit)/0.1)] text-[hsl(var(--color-karma-merit))]"
           }`}
         >
           {failed ? t("souls.detail.reading.threshold_fail") : t("souls.detail.reading.threshold_pass")}
