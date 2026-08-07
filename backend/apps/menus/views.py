@@ -58,9 +58,26 @@ class MenuViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         user = self.request.user
         if not user.is_authenticated:
             return Menu.objects.none()
+        # ?show_deleted=true — the recycle bin's "show deleted" toggle
+        # convention (Stage 4 §4.7). ADMIN-only: a non-ADMIN caller only
+        # ever sees is_active menus regardless, so there's nothing for the
+        # toggle to reveal there and Menu.all_objects is not exposed to it.
+        show_deleted = self.request.query_params.get('show_deleted', '').lower() in ('1', 'true', 'yes')
         if getattr(user, 'role', None) == 'ADMIN':
-            return Menu.objects.all()
+            return Menu.all_objects.all() if show_deleted else Menu.objects.all()
         return Menu.objects.filter(is_active=True)
+
+    def destroy(self, request, *args, **kwargs):
+        """Soft-delete, recording who and why. The default ModelViewSet
+        path (instance.delete() -> SoftDeleteMixin.delete()) calls
+        soft_delete() with no arguments, so deleted_by/delete_reason are
+        never set — fine for a model nothing reads those on, but this is
+        the recycle bin's reference-data example (Stage 4 §4.7) and the bin
+        listing shows both."""
+        menu = self.get_object()
+        reason = request.data.get("reason", "") if hasattr(request, "data") else ""
+        menu.soft_delete(user=request.user, reason=reason)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=["get"])
     def all(self, request):

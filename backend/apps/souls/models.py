@@ -7,6 +7,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
+from apps.core.archive import ArchivableMixin
 from apps.core.models import AuditUserFields
 from apps.souls.dates import parse_historical_date, to_legacy_date
 from apps.souls.querysets import SoulManager
@@ -106,10 +107,17 @@ class SoulState(models.TextChoices):
     LOST = "LOST", "Lost/Suspended"
 
 
-class Soul(AuditUserFields, models.Model):
+class Soul(ArchivableMixin, AuditUserFields, models.Model):
     """
     Core soul entity. All other records link back to a Soul.
     Civilization is now derived from tenant FK.
+
+    Deletion (Stage 4 §4.7): a soul with no concluded judgment can still be
+    soft-deleted, cascading to its karma/demerit records (SoulRecord) and any
+    pending (verdict-less) judgments under one delete_cascade_id — see
+    delete_with_cascade() and apps.core.recycle_bin. Once any judgment on
+    this soul has a verdict, the soul is archivable instead: see
+    has_concluded_judgment and ArchivableMixin.archive().
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
@@ -209,6 +217,47 @@ class Soul(AuditUserFields, models.Model):
     @property
     def karmic_balance(self) -> int:
         return self.merit_score - self.demerit_score
+
+    @property
+    def has_concluded_judgment(self) -> bool:
+        """True once any judgment on this soul carries a verdict.
+
+        Stage 4 §4.7: this is the gate between "soft-deletable" and
+        "archivable instead" for a soul — not current_state, and not
+        is_final, because a verdict can exist before a judgment is marked
+        final. A soul with only pending (verdict-less) judgments is still
+        an ordinary soft delete.
+        """
+        return self.judgments.filter(verdict__isnull=False).exists()
+
+    def delete_with_cascade(self, user=None, reason=""):
+        """Soft-delete this soul and cascade to its dependent karma/demerit
+        records and pending judgments, all under one delete_cascade_id —
+        see apps.core.recycle_bin.cascade_soft_delete. Refuses (raises
+        DeletionNotAllowedError) once the soul has a concluded judgment; call
+        archive() instead in that case.
+
+        Only SoulRecord and pending Judgment rows are cascaded — the two
+        dependent types the design doc names explicitly. Other soul-linked
+        records (dispatch history, workflow approvals, ...) are not cascaded
+        here; they would need the same treatment in a later pass.
+        """
+        from apps.core.archive import DeletionNotAllowedError
+        from apps.core.recycle_bin import cascade_soft_delete
+        from apps.judgment.models import Judgment
+        from apps.souls.record_models import SoulRecord
+
+        if self.has_concluded_judgment:
+            raise DeletionNotAllowedError(
+                "This soul has a concluded judgment and cannot be deleted. "
+                "Archive it instead.",
+                archivable=True,
+            )
+
+        dependents = list(SoulRecord.objects.filter(soul=self)) + list(
+            Judgment.objects.filter(soul=self, verdict__isnull=True)
+        )
+        return cascade_soft_delete(self, dependents, user=user, reason=reason)
 
     # ------------------------------------------------------------------
     # Legacy DateField-shaped accessors, kept for callers outside this
