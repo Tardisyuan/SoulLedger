@@ -1,10 +1,33 @@
 "use client";
 
+import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { socialApi, type UserProfile } from "@/lib/api";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { socialKeys } from "@/lib/query_keys";
+
+/**
+ * DRF renders a plain `serializers.ValidationError("...")` raised from
+ * `validate()` (no field name) as `{ non_field_errors: ["..."] }` — see
+ * `ReactionCreateSerializer.validate` / `CommentCreateSerializer.validate`
+ * in backend/apps/social/serializers.py, both of which reject cross-tenant
+ * targets this way. Pull the first message out of that shape when present;
+ * fall back to a translated generic message for anything else (network
+ * error, 500, unexpected payload) so we never show raw JSON or "undefined".
+ */
+function extractErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const data: unknown = error.response?.data;
+    if (data && typeof data === "object" && "non_field_errors" in data) {
+      const nonFieldErrors = (data as { non_field_errors?: unknown }).non_field_errors;
+      if (Array.isArray(nonFieldErrors) && typeof nonFieldErrors[0] === "string") {
+        return nonFieldErrors[0];
+      }
+    }
+  }
+  return fallback;
+}
 
 // ── Posts ────────────────────────────────────────────────────────────
 
@@ -89,6 +112,7 @@ export function useComments(postId: string) {
 
 export function useCreateComment() {
   const qc = useQueryClient();
+  const { t } = useI18n();
   const { showToast } = useToast();
   return useMutation({
     mutationFn: (data: { post: string; content: string; parent?: string }) =>
@@ -97,8 +121,8 @@ export function useCreateComment() {
       qc.invalidateQueries({ queryKey: socialKeys.comments.all });
       qc.invalidateQueries({ queryKey: socialKeys.posts.detail(vars.post) });
     },
-    onError: () => {
-      showToast("Failed to add comment", "error");
+    onError: (error) => {
+      showToast(extractErrorMessage(error, t("social.comment_error") || "Failed to add comment"), "error");
     },
   });
 }
@@ -132,12 +156,17 @@ export function useReactions(params?: Record<string, string | number | undefined
 
 export function useToggleReaction() {
   const qc = useQueryClient();
+  const { t } = useI18n();
+  const { showToast } = useToast();
   return useMutation({
     mutationFn: (data: { post?: string; comment?: string; reaction_type: string }) =>
       socialApi.addReaction(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.reactions.all });
       qc.invalidateQueries({ queryKey: socialKeys.posts.all });
+    },
+    onError: (error) => {
+      showToast(extractErrorMessage(error, t("social.reaction_error") || "Failed to react"), "error");
     },
   });
 }
