@@ -290,6 +290,14 @@ class SoulListSerializer(serializers.ModelSerializer):
     # "records" for every action, list included, so `obj.records.all()`
     # here hits the prefetch cache rather than issuing a query per soul.
     has_date_warning = serializers.SerializerMethodField()
+    # Record-level ERROR (`event_before_birth`) — the counterpart gap to
+    # has_date_warning above. Rare for the same reason _soul_level_date_
+    # problems documents (the write that would create one is refused
+    # before it lands), but "rare" is not "impossible": legacy data
+    # written before that check existed can still carry one, and the list
+    # marker should not silently miss it just because the common case
+    # doesn't produce it.
+    has_record_error = serializers.SerializerMethodField()
 
     class Meta:
         model = Soul
@@ -297,6 +305,7 @@ class SoulListSerializer(serializers.ModelSerializer):
             "id", "name", "current_state", "tenant_code", "civilization",
             "birth_date", "death_date", "merit_score", "demerit_score",
             "karmic_balance", "create_time", "date_problems", "has_date_warning",
+            "has_record_error",
         ]
 
     def get_karmic_balance(self, obj):
@@ -317,6 +326,19 @@ class SoulListSerializer(serializers.ModelSerializer):
                 ack_fingerprint=record.date_warning_ack_fingerprint or None,
             )
             if any(p.severity == WARNING and not p.acknowledged for p in problems):
+                return True
+        return False
+
+    def get_has_record_error(self, obj):
+        birth = (obj.birth_year, obj.birth_month, obj.birth_day)
+        death = (obj.death_year, obj.death_month, obj.death_day)
+        for record in obj.records.all():
+            event = (record.event_year, record.event_month, record.event_day)
+            problems = check_record_date(
+                event, birth, death,
+                ack_fingerprint=record.date_warning_ack_fingerprint or None,
+            )
+            if any(p.severity == ERROR for p in problems):
                 return True
         return False
 

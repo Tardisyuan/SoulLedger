@@ -12,16 +12,17 @@ import { PAGE_SIZE, soulsApi, type SoulListItem } from "@/lib/api";
 import { formatHistoricalDate } from "@/lib/utils";
 
 /**
- * ⊘ (red) for any ERROR-severity date problem — the soul's own dates
- * against each other (death_before_birth, implausible_lifespan), from
- * `soul.date_problems`. △ (amber) for a record's unacknowledged
+ * ⊘ (red) for any ERROR-severity date problem — either the soul's own
+ * dates against each other (death_before_birth, implausible_lifespan, from
+ * `soul.date_problems`) or a record's event_before_birth (from
+ * `soul.has_record_error`). △ (amber) for a record's unacknowledged
  * event_after_death WARNING when there's no ERROR, from
- * `soul.has_date_warning`. Both fields are computed server-side
+ * `soul.has_date_warning`. All three fields are computed server-side
  * (SoulListSerializer) from data already loaded per row — no extra
  * per-soul request here. See backend/apps/souls/serializers.py.
  */
 function dateProblemMarker(soul: SoulListItem): { glyph: string; className: string; labelKey: string } | null {
-  if (soul.date_problems.some((p) => p.severity === "error")) {
+  if (soul.date_problems.some((p) => p.severity === "error") || soul.has_record_error) {
     return {
       glyph: "⊘",
       className: "text-[hsl(var(--color-status-error))]",
