@@ -75,7 +75,11 @@ function buildToastEl(item: ToastItem): HTMLElement {
 
   // Icon span
   const iconSpan = document.createElement("span");
-  iconSpan.style.cssText = `flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:hsl(${c.accent} / 0.2);color:hsl(${c.accent});font-size:11px;font-weight:bold;border:1px solid hsl(${c.accent} / 0.35);`;
+  // 10%, not 20% — the same badge-fill AA floor as the className-based
+  // badges elsewhere (a 16% tint of --bad measured 4.37:1, below AA).
+  // Stays circular: this is an 18px icon indicator, not a text-bearing
+  // pill, so radius-full's dot/avatar/count-bubble carve-out applies.
+  iconSpan.style.cssText = `flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:hsl(${c.accent} / 0.1);color:hsl(${c.accent});font-size:11px;font-weight:bold;border:1px solid hsl(${c.accent} / 0.35);`;
   iconSpan.textContent = c.icon;
 
   // Message span — use textContent to prevent XSS
