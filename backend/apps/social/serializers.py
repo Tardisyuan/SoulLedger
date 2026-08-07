@@ -107,6 +107,39 @@ class CommentCreateSerializer(serializers.ModelSerializer):
         fields = ["id", "post", "parent", "content"]
         read_only_fields = ["id"]
 
+    def validate(self, attrs):
+        """`post` and `parent` are plain PrimaryKeyRelatedFields — DRF's
+        field-level validation only confirms the row exists, not that it
+        belongs to the caller's tenant. Left unchecked, a user in tenant A
+        could comment on (or reply into) tenant B's content by ID: the
+        ViewSet's tenant filtering only narrows `get_queryset()` for reads,
+        it never touches this write-time field validation, and
+        `CommentService.create_comment` stamps the new row with the
+        *caller's* tenant regardless of which tenant `post`/`parent`
+        actually belong to — so the hole is a comment whose `tenant` FK
+        disagrees with its `post`/`parent` FK, not just a permission gap.
+
+        No ADMIN carve-out here: unlike the read-side tenant bypasses
+        elsewhere (e.g. `UserProfileViewSet.get_queryset`), there is no
+        existing precedent in this codebase for ADMIN writing content that
+        references another tenant's objects, so this defaults to the
+        strict check for every role.
+        """
+        request = self.context.get("request")
+        tenant = getattr(request, "tenant", None) if request else None
+        if tenant is not None:
+            post = attrs.get("post")
+            if post is not None and str(post.tenant_id) != str(tenant.pk):
+                raise serializers.ValidationError(
+                    "Cannot comment on a post from another tenant."
+                )
+            parent = attrs.get("parent")
+            if parent is not None and str(parent.tenant_id) != str(tenant.pk):
+                raise serializers.ValidationError(
+                    "Cannot reply to a comment from another tenant."
+                )
+        return attrs
+
 
 class CommentListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing comments."""
@@ -171,6 +204,32 @@ class ReactionCreateSerializer(serializers.ModelSerializer):
         model = Reaction
         fields = ["id", "post", "comment", "reaction_type"]
         read_only_fields = ["id"]
+
+    def validate(self, attrs):
+        """Same hole as `CommentCreateSerializer.validate` above, one model
+        over: `post`/`comment` are unscoped PrimaryKeyRelatedFields, and
+        `ReactionService.add_reaction` stamps the new row with the caller's
+        tenant regardless of which tenant the target actually belongs to.
+        Both `Post` and `Comment` carry their own `tenant` FK directly, so
+        whichever target is supplied is checked straight off that field —
+        no need to go through `comment.post.tenant`.
+
+        No ADMIN carve-out — see the note in CommentCreateSerializer.validate.
+        """
+        request = self.context.get("request")
+        tenant = getattr(request, "tenant", None) if request else None
+        if tenant is not None:
+            post = attrs.get("post")
+            if post is not None and str(post.tenant_id) != str(tenant.pk):
+                raise serializers.ValidationError(
+                    "Cannot react to a post from another tenant."
+                )
+            comment = attrs.get("comment")
+            if comment is not None and str(comment.tenant_id) != str(tenant.pk):
+                raise serializers.ValidationError(
+                    "Cannot react to a comment from another tenant."
+                )
+        return attrs
 
 
 # ---------------------------------------------------------------------------
