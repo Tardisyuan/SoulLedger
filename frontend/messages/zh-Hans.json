@@ -1134,7 +1134,15 @@
     "no_followers": "还没有粉丝",
     "profile": "个人主页",
     "all": "全部",
-    "back": "返回"
+    "back": "返回",
+    "delete_post_confirm": "确定要删除这条帖子吗？此操作无法撤销。",
+    "delete_comment_confirm": "确定要删除这条评论吗？此操作无法撤销。",
+    "edit_profile": "编辑资料",
+    "bio_label": "简介",
+    "bio_placeholder": "介绍一下自己…",
+    "avatar_url_label": "头像链接",
+    "profile_updated": "资料已更新",
+    "profile_update_error": "资料更新失败"
   },
   "tenants": {
     "title": "租户管理",

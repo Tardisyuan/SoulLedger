@@ -1,15 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { FollowButton } from "./FollowButton";
+import { ProfileEditModal } from "./ProfileEditModal";
 import type { UserProfile } from "@/lib/api";
 
 export function ProfileCard({ profile }: { profile: UserProfile }) {
   const { t } = useI18n();
   const { user } = useTenant();
   const isOwnProfile = user && String(user.id) === String(profile.user);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   return (
     <div className="bg-[hsl(var(--color-surface))] border border-[hsl(var(--color-hairline))] rounded-xl p-6">
@@ -33,7 +36,15 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
             <h2 className="text-lg font-bold text-[hsl(var(--color-ink))] truncate">
               {profile.username}
             </h2>
-            {!isOwnProfile && (
+            {isOwnProfile ? (
+              <button
+                type="button"
+                onClick={() => setIsEditOpen(true)}
+                className="px-4 py-1.5 rounded-md text-sm font-medium border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))] transition-colors"
+              >
+                {t("social.edit_profile") || "Edit profile"}
+              </button>
+            ) : (
               <FollowButton userId={profile.user} />
             )}
           </div>
@@ -67,6 +78,14 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
           {t("social.view_all_posts") || "View all posts"} →
         </Link>
       </div>
+
+      {isOwnProfile && (
+        <ProfileEditModal
+          isOpen={isEditOpen}
+          onClose={() => setIsEditOpen(false)}
+          profile={profile}
+        />
+      )}
     </div>
   );
 }

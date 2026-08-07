@@ -233,16 +233,17 @@ export function useMyProfile() {
 
 export function useUpdateProfile() {
   const qc = useQueryClient();
+  const { t } = useI18n();
   const { showToast } = useToast();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<UserProfile> }) =>
       socialApi.updateProfile(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.profiles.all });
-      showToast("Profile updated", "success");
+      showToast(t("social.profile_updated") || "Profile updated", "success");
     },
-    onError: () => {
-      showToast("Failed to update profile", "error");
+    onError: (error) => {
+      showToast(extractErrorMessage(error, t("social.profile_update_error") || "Failed to update profile"), "error");
     },
   });
 }

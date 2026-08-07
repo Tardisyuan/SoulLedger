@@ -2,15 +2,27 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useComments, useCreateComment } from "@/src/hooks/useSocial";
+import { useComments, useCreateComment, useDeleteComment } from "@/src/hooks/useSocial";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useTenant } from "@/src/contexts/TenantContext";
+import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { ReactionBar } from "./ReactionBar";
 import type { Comment } from "@/lib/api";
 
 function CommentItem({ comment, postId, depth, onReply }: {
   comment: Comment; postId: string; depth: number; onReply: (id: string) => void;
 }) {
-  const { formatDate } = useI18n();
+  const { t, formatDate } = useI18n();
+  const { user } = useTenant();
+  const deleteComment = useDeleteComment();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const isAuthor = !!user && String(user.id) === String(comment.author);
+
+  const handleDelete = () => {
+    if (deleteComment.isPending) return;
+    deleteComment.mutate(comment.id, { onSuccess: () => setShowDeleteConfirm(false) });
+  };
+
   return (
     <div className={depth > 0 ? "ml-6 border-l-2 border-[hsl(var(--color-hairline))]/50 pl-4" : ""}>
       <div className="py-2">
@@ -28,8 +40,30 @@ function CommentItem({ comment, postId, depth, onReply }: {
             Reply
           </button>
           <ReactionBar commentId={comment.id} />
+          {isAuthor && (
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              aria-label={t("common.delete") || "Delete"}
+              className="text-xs text-[hsl(var(--color-ink-subtle))] hover:text-red-500 transition-colors"
+            >
+              {t("common.delete") || "Delete"}
+            </button>
+          )}
         </div>
       </div>
+
+      {isAuthor && (
+        <ConfirmDialog
+          isOpen={showDeleteConfirm}
+          title={t("common.confirm_delete") || "Confirm Delete"}
+          message={t("social.delete_comment_confirm") || "Are you sure you want to delete this comment? This cannot be undone."}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+          confirmText={deleteComment.isPending ? (t("common.deleting") || "Deleting...") : (t("common.delete") || "Delete")}
+          variant="danger"
+        />
+      )}
     </div>
   );
 }

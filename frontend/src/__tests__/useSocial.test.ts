@@ -9,7 +9,7 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useToggleReaction, useCreateComment } from "@/src/hooks/useSocial";
+import { useToggleReaction, useCreateComment, useUpdateProfile } from "@/src/hooks/useSocial";
 import { socialApi } from "@/lib/api";
 
 const mockShowToast = jest.fn();
@@ -18,6 +18,7 @@ jest.mock("@/lib/api", () => ({
   socialApi: {
     addReaction: jest.fn().mockResolvedValue({ data: {} }),
     createComment: jest.fn().mockResolvedValue({ data: {} }),
+    updateProfile: jest.fn().mockResolvedValue({ data: {} }),
   },
 }));
 
@@ -132,5 +133,47 @@ describe("useCreateComment behavior", () => {
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(mockShowToast).toHaveBeenCalledWith("social.comment_error", "error");
+  });
+});
+
+describe("useUpdateProfile behavior", () => {
+  it("invalidates profile queries and shows a success toast on success", async () => {
+    const { queryClient, wrapper } = createWrapper();
+    const { result } = renderHook(() => useUpdateProfile(), { wrapper });
+    await act(async () => {
+      result.current.mutate({ id: "profile-1", data: { bio: "hi" } });
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["social", "profiles"] })
+    );
+    expect(mockShowToast).toHaveBeenCalledWith("social.profile_updated", "success");
+  });
+
+  it("surfaces the backend's actual message on a validation 400", async () => {
+    (socialApi.updateProfile as jest.Mock).mockRejectedValueOnce(
+      nonFieldValidationError("Cannot edit another user's profile.")
+    );
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useUpdateProfile(), { wrapper });
+    await act(async () => {
+      result.current.mutate({ id: "profile-1", data: { bio: "hi" } });
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockShowToast).toHaveBeenCalledWith(
+      "Cannot edit another user's profile.",
+      "error"
+    );
+  });
+
+  it("falls back to a translated generic message when the error has no usable shape", async () => {
+    (socialApi.updateProfile as jest.Mock).mockRejectedValueOnce(networkError());
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useUpdateProfile(), { wrapper });
+    await act(async () => {
+      result.current.mutate({ id: "profile-1", data: { bio: "hi" } });
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockShowToast).toHaveBeenCalledWith("social.profile_update_error", "error");
   });
 });
