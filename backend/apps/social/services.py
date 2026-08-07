@@ -12,28 +12,47 @@ class PostService:
     """Service for post-related business logic."""
 
     @staticmethod
-    def increment_comment_count(post_id):
-        """Increment the denormalized comment count on a post."""
-        Post.objects.filter(pk=post_id).update(comment_count=F("comment_count") + 1)
+    def increment_comment_count(post_id, tenant=None):
+        """
+        Increment the denormalized comment count on a post.
+
+        `tenant` is optional but should be supplied by any caller that has
+        one in scope — when present, a post_id belonging to a different
+        tenant is silently skipped (the filter simply matches nothing)
+        rather than updated, mirroring the explicit tenant_id check in
+        apps.ledger.tasks.recalculate_soul_ledger_task. Optional because
+        some callers (e.g. tests exercising the counter directly) have no
+        tenant in scope and the old untenanted behavior must keep working
+        for them.
+        """
+        qs = Post.objects.filter(pk=post_id)
+        if tenant is not None:
+            qs = qs.filter(tenant=tenant)
+        qs.update(comment_count=F("comment_count") + 1)
 
     @staticmethod
-    def decrement_comment_count(post_id):
+    def decrement_comment_count(post_id, tenant=None):
         """Decrement the denormalized comment count on a post."""
-        Post.objects.filter(pk=post_id, comment_count__gt=0).update(
-            comment_count=F("comment_count") - 1
-        )
+        qs = Post.objects.filter(pk=post_id, comment_count__gt=0)
+        if tenant is not None:
+            qs = qs.filter(tenant=tenant)
+        qs.update(comment_count=F("comment_count") - 1)
 
     @staticmethod
-    def increment_reaction_count(post_id):
+    def increment_reaction_count(post_id, tenant=None):
         """Increment the denormalized reaction count on a post."""
-        Post.objects.filter(pk=post_id).update(reaction_count=F("reaction_count") + 1)
+        qs = Post.objects.filter(pk=post_id)
+        if tenant is not None:
+            qs = qs.filter(tenant=tenant)
+        qs.update(reaction_count=F("reaction_count") + 1)
 
     @staticmethod
-    def decrement_reaction_count(post_id):
+    def decrement_reaction_count(post_id, tenant=None):
         """Decrement the denormalized reaction count on a post."""
-        Post.objects.filter(pk=post_id, reaction_count__gt=0).update(
-            reaction_count=F("reaction_count") - 1
-        )
+        qs = Post.objects.filter(pk=post_id, reaction_count__gt=0)
+        if tenant is not None:
+            qs = qs.filter(tenant=tenant)
+        qs.update(reaction_count=F("reaction_count") - 1)
 
     @staticmethod
     def increment_post_count(user_id):
@@ -59,7 +78,7 @@ class CommentService:
             parent=parent,
             tenant=tenant or post.tenant,
         )
-        PostService.increment_comment_count(post.pk)
+        PostService.increment_comment_count(post.pk, tenant=post.tenant)
         return comment
 
     @staticmethod
@@ -69,8 +88,9 @@ class CommentService:
         Delete a comment and decrement the post's comment count.
         """
         post_id = comment.post_id
+        post_tenant = comment.tenant
         comment.delete()
-        PostService.decrement_comment_count(post_id)
+        PostService.decrement_comment_count(post_id, tenant=post_tenant)
 
 
 class ReactionService:
@@ -81,6 +101,14 @@ class ReactionService:
     def add_reaction(user, reaction_type, post=None, comment=None, tenant=None):
         """
         Add or update a reaction. Returns (reaction, created).
+
+        `target_kwargs` pins the lookup/create to a specific already-resolved
+        post or comment row, so a bare user+target filter cannot cross a
+        tenant boundary on its own — the target itself is the tenant
+        boundary. `tenant` (falling back to the target's own tenant) is
+        still threaded through to the counter updates below so that a
+        mismatched/stale tenant value never causes a *different* post's
+        counter to move.
         """
         target_kwargs = {}
         if post:
@@ -90,13 +118,16 @@ class ReactionService:
             target_kwargs["comment"] = comment
             post_id = None
 
+        target = post or comment
+        effective_tenant = tenant or target.tenant
+
         existing = Reaction.objects.filter(user=user, **target_kwargs).first()
         if existing:
             if existing.reaction_type == reaction_type:
                 # Same reaction — remove (toggle off)
                 existing.delete()
                 if post_id:
-                    PostService.decrement_reaction_count(post_id)
+                    PostService.decrement_reaction_count(post_id, tenant=effective_tenant)
                 return existing, False
             # Different reaction — update
             existing.reaction_type = reaction_type
@@ -104,19 +135,18 @@ class ReactionService:
             return existing, False
 
         # New reaction
-        target = post or comment
         reaction = Reaction.objects.create(
             user=user,
             reaction_type=reaction_type,
-            tenant=tenant or target.tenant,
+            tenant=effective_tenant,
             **target_kwargs,
         )
         if post_id:
-            PostService.increment_reaction_count(post_id)
+            PostService.increment_reaction_count(post_id, tenant=effective_tenant)
         return reaction, True
 
     @staticmethod
-    def remove_reaction(user, post=None, comment=None):
+    def remove_reaction(user, post=None, comment=None, tenant=None):
         """Remove a user's reaction from a post or comment."""
         kwargs = {"user": user}
         if post:
@@ -127,9 +157,10 @@ class ReactionService:
         reaction = Reaction.objects.filter(**kwargs).first()
         if reaction:
             post_id = reaction.post_id
+            reaction_tenant = tenant or reaction.tenant
             reaction.delete()
             if post_id:
-                PostService.decrement_reaction_count(post_id)
+                PostService.decrement_reaction_count(post_id, tenant=reaction_tenant)
             return True
         return False
 

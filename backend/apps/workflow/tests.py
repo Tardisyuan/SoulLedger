@@ -573,3 +573,96 @@ class TestUnauthenticatedAccess:
         client = APIClient()
         resp = client.get(f"{NODES}/")
         assert resp.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
+
+
+# -- WorkflowService.create_from_judgment tenant scoping ---------------------
+@pytest.mark.django_db
+class TestCreateFromJudgmentTemplateTenantScoping:
+    """
+    M15/A2 regression coverage: the DB template lookup inside
+    `WorkflowService.create_from_judgment` used to filter only by
+    `civilization` and `case_type`, with no `tenant` filter — so a judgment
+    in one tenant could pick up an active template that actually belonged to
+    a different tenant. `WorkflowTemplate` is genuinely per-tenant (its own
+    ViewSet enforces DataScope + tenant on every other path, and it used to
+    carry a tenant+name uniqueness constraint), unlike shared/global
+    resources such as Menu or the RBAC Permission/Role tables, so this is a
+    real gap, not a "shared by design" case.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        clear_current_tenant()
+        from apps.workflow.models import CaseType
+
+        self.case_type = CaseType.ROUTINE
+        self.tenant_a = Tenant.objects.get_or_create(
+            code="CN_DIYU", defaults={"display_name": "Chinese Diyu"}
+        )[0]
+        self.tenant_b = Tenant.objects.get_or_create(
+            code="WF_TENANT_B", defaults={"display_name": "Other Tenant"}
+        )[0]
+        self.soul = Soul.objects.create(name="Judged Soul", tenant=self.tenant_a)
+
+    def _judgment(self, tenant, soul):
+        from apps.judgment.models import Judgment
+        from apps.souls.models import Civilization
+
+        return Judgment.objects.create(
+            soul=soul,
+            civilization=Civilization.CHINESE,
+            court="第一殿",
+            verdict="PASSED",
+            is_final=True,
+            tenant=tenant,
+        )
+
+    def test_own_tenant_template_is_used(self):
+        """Normal case: a template that belongs to the judgment's own tenant
+        is picked up, exactly as before this fix."""
+        from apps.souls.models import Civilization
+        from apps.workflow.models import WorkflowTemplate
+        from apps.workflow.services import WorkflowService
+
+        WorkflowTemplate.objects.create(
+            name="本租户模板",
+            civilization=Civilization.CHINESE,
+            case_type=self.case_type,
+            is_active=True,
+            nodes_json=[
+                {"name": "唯一节点", "court": "本殿", "type": "TRIAL", "order": 1},
+            ],
+            tenant=self.tenant_a,
+        )
+        judgment = self._judgment(self.tenant_a, self.soul)
+        workflow = WorkflowService.create_from_judgment(judgment)
+        assert workflow.workflow_name == "本租户模板"
+        assert workflow.tenant_id == self.tenant_a.id
+
+    def test_other_tenant_template_is_not_picked_up(self):
+        """The regression: a template belonging to tenant B for the same
+        (civilization, case_type) pair must not leak into tenant A's
+        workflow creation. Tenant A has no template of its own, so it must
+        fall through to the hardcoded WORKFLOW_TEMPLATES default instead of
+        silently adopting tenant B's."""
+        from apps.souls.models import Civilization
+        from apps.workflow.models import WorkflowTemplate
+        from apps.workflow.services import WORKFLOW_TEMPLATES, WorkflowService
+
+        WorkflowTemplate.objects.create(
+            name="租户B的模板",
+            civilization=Civilization.CHINESE,
+            case_type=self.case_type,
+            is_active=True,
+            nodes_json=[
+                {"name": "外部节点", "court": "外殿", "type": "TRIAL", "order": 1},
+            ],
+            tenant=self.tenant_b,
+        )
+        judgment = self._judgment(self.tenant_a, self.soul)
+        workflow = WorkflowService.create_from_judgment(judgment)
+
+        expected_default_name = WORKFLOW_TEMPLATES[(Civilization.CHINESE, self.case_type)]["name"]
+        assert workflow.workflow_name != "租户B的模板"
+        assert workflow.workflow_name == expected_default_name
+        assert workflow.tenant_id == self.tenant_a.id

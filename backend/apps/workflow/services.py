@@ -170,6 +170,16 @@ class WorkflowService:
         # CHINESE/ROUTINE, so every Chinese routine judgment silently got an
         # empty shell instead of 十殿审判流程. An unconfigured template should
         # fall through to something that works, not override it.
+        #
+        # The query is also scoped to judgment.tenant. WorkflowTemplate is a
+        # genuinely per-tenant resource (WorkflowTemplateViewSet enforces
+        # DataScope + tenant on every other path, and the model even used to
+        # carry a unique_workflow_template_tenant_name constraint) — it is
+        # not a shared/global resource the way Menu or the RBAC
+        # Permission/Role tables turned out to be. Without this filter, a
+        # tenant with no custom template for (civilization, case_type) could
+        # silently pick up another tenant's active template instead of
+        # falling through to the hardcoded WORKFLOW_TEMPLATES default.
         template = None
         try:
             db_template = (
@@ -177,6 +187,7 @@ class WorkflowService:
                     civilization=civilization,
                     case_type=case_type,
                     is_active=True,
+                    tenant=judgment.tenant,
                 )
                 .exclude(nodes_json=[])
                 .first()

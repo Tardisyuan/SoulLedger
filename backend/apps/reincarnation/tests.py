@@ -160,3 +160,34 @@ class TestRebirthGate:
         assert soul.merit_score == 10
         assert soul.demerit_score == 50
         assert soul.current_state == SoulState.REINCARNATING
+
+
+@pytest.mark.django_db
+class TestReincarnationTenant:
+    """
+    M15/A4 regression coverage: `complete_rebirth` used to call
+    `Reincarnation.objects.create(...)` without a `tenant=` kwarg, leaving
+    the row with `tenant=NULL` even though `Reincarnation` already ships an
+    `all_objects = models.Manager()` alongside the tenant-aware `objects`
+    manager — infrastructure for tenant scoping that this call site never
+    actually used.
+    """
+
+    def test_reincarnation_record_inherits_soul_tenant(self):
+        tenant = _tenant("CN_DIYU")
+        soul = _soul_ready_for_rebirth(tenant, merit=10, demerit=0)
+        reincarnation = ReincarnationService.complete_rebirth(soul=soul, new_identity="Again")
+        assert reincarnation.tenant_id == tenant.id
+
+    def test_reincarnation_record_is_visible_under_a_tenant_scoped_query(self):
+        """Regression guard: with tenant=NULL this row would not show up
+        under a tenant-scoped filter, and would leak into every other
+        tenant's unfiltered-by-mistake query instead."""
+        from apps.reincarnation.models import Reincarnation
+
+        tenant = _tenant("CN_DIYU")
+        other_tenant = _tenant("EU_HEAVEN_HELL")
+        soul = _soul_ready_for_rebirth(tenant, merit=10, demerit=0)
+        reincarnation = ReincarnationService.complete_rebirth(soul=soul, new_identity="Again")
+        assert Reincarnation.objects.filter(pk=reincarnation.pk, tenant=tenant).exists()
+        assert not Reincarnation.objects.filter(pk=reincarnation.pk, tenant=other_tenant).exists()

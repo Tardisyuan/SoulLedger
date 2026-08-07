@@ -12,7 +12,7 @@ from django.test import TestCase
 
 from apps.disposition.models import Disposition
 from apps.disposition.services import DispositionService
-from apps.judgment.models import JudgmentMethod, Verdict
+from apps.judgment.models import Judgment, JudgmentMethod, Verdict
 from apps.souls.models import Civilization, Soul, SoulState
 from apps.tenants.models import Tenant
 
@@ -314,4 +314,50 @@ class UnknownCivilizationRoutingTest(TestCase):
         self.assertNotEqual(
             DispositionService._route_to_realm(soul, Verdict.PURGATORY),
             DispositionService.CHINESE_PURGATORY,
+        )
+
+
+class CreateFromJudgmentTenantTest(TestCase):
+    """
+    M15/A1 regression coverage: `create_from_judgment` used to call
+    `Disposition.objects.create(...)` without a `tenant=` kwarg, leaving the
+    row with `tenant=NULL` even though the soul it was created for belonged
+    to a real tenant. A tenant-scoped query (e.g. any DataScope-filtered
+    ViewSet, or a service-layer `.filter(tenant=...)`) would silently lose
+    that disposition.
+    """
+
+    def setUp(self):
+        self.tenant = Tenant.objects.create(code="CFJ_T1", display_name="Tenant One")
+        self.other_tenant = Tenant.objects.create(code="CFJ_T2", display_name="Tenant Two")
+        self.soul = Soul.objects.create(
+            name="Judged Soul",
+            current_state=SoulState.ALIVE,
+            tenant=self.tenant,
+        )
+        self.judgment = Judgment.objects.create(
+            soul=self.soul,
+            civilization=Civilization.CHINESE,
+            court="第一殿",
+            verdict=Verdict.PASSED,
+            tenant=self.tenant,
+        )
+
+    def test_disposition_inherits_soul_tenant(self):
+        """Normal single-tenant case: the created disposition carries the
+        soul's tenant instead of being left tenant-less."""
+        disposition = DispositionService.create_from_judgment(self.judgment)
+        self.assertEqual(disposition.tenant_id, self.tenant.id)
+
+    def test_disposition_is_visible_under_a_tenant_scoped_query(self):
+        """Regression guard: with tenant=NULL, this disposition would not
+        show up under a tenant-scoped filter, and would show up under every
+        other tenant's unfiltered-by-mistake query. Confirm it now lands
+        under its own tenant and nowhere else."""
+        disposition = DispositionService.create_from_judgment(self.judgment)
+        self.assertTrue(
+            Disposition.objects.filter(pk=disposition.pk, tenant=self.tenant).exists()
+        )
+        self.assertFalse(
+            Disposition.objects.filter(pk=disposition.pk, tenant=self.other_tenant).exists()
         )
