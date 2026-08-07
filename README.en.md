@@ -36,6 +36,27 @@ European label denies decay outright. Decay is anchored to the soul's death date
 not to today, so a 612 BCE deed is not eroded to nothing by the mere passage of
 civilizational time.
 
+This distinction is not backend-only. The soul detail page's `SoulReadingPanel`
+([`frontend/src/components/souls/SoulReadingPanel.tsx`](frontend/src/components/souls/SoulReadingPanel.tsx))
+switches on `reading.kind` and renders each shape differently: Chinese gets a net
+figure with a trend, Egyptian renders "not heavier than" as a ratio rather than a
+badge that would read "fail" for nearly every soul forever, European keeps culpa
+and poena visually separate and, when poena is unavailable, shows why rather than
+a 0. The souls list's Balance column follows the same rule — only Chinese souls
+get a net number; every other civilization gets an em dash rather than a
+borrowed reading.
+
+Dates carry two severities. `death_before_birth`, `implausible_lifespan` and
+`event_before_birth` are ERRORs — the write is refused outright.
+`event_after_death` (a record entered after the soul's death — legitimately
+common: posthumous judgments, deeds recorded after the fact) is a WARNING: it's
+let through and stays visible in the detail page's `DateProblemsPanel`, where an
+operator can mark it reviewed. That mark is bound to a fingerprint of the exact
+pair of dates it was reviewed against — if either date is edited afterward, the
+mark stops applying and the warning reappears, rather than a plain boolean
+silently hiding a warning that is now about different dates. The souls list marks
+affected rows with ⊘/△ and offers a one-click filter for them.
+
 ---
 
 ## Quick start
@@ -138,7 +159,21 @@ codename-based permissions, plus `DataScope` for row visibility and
 `FieldPermission` for per-field visibility. API enforcement is via
 `CodenameViewSetMixin`; the frontend mirrors it with `RequirePermission` /
 `RequireButton` for UI gating. The frontend gate is cosmetic — the backend check
-is the real one.
+is the real one. `/permissions` is a role×codename matrix rather than a
+per-role picker, with a three-tier save guard (privilege escalation, and a
+paradoxical count/grant mismatch, among the checks) before a save is allowed
+through. Each role carries a `user_count` and an optimistic-lock `version`; of
+two concurrent saves, the one that lands second is rejected on a version
+conflict instead of silently clobbering the first.
+
+**Bilingual chrome.** Menu names, breadcrumbs and role names are free-text
+database content with no translation field, so they stay in Chinese regardless
+of the active locale (`en`/`egy`) — deliberately, not a missed translation.
+Instead, the breadcrumb trail and each page's H1 pair the translated label with
+the Chinese original when the locale differs
+(see [`frontend/src/lib/menuI18n.ts`](frontend/src/lib/menuI18n.ts)), and sidebar
+icons are required to be unique within their parent, since the icon is the only
+identification channel available in a locale that can't read the Chinese label.
 
 **Events and realtime.**
 

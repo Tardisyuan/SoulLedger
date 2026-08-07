@@ -39,6 +39,20 @@ SoulLedger 是一个可运行的全栈 Web 应用（Django + Next.js），在同
 灵魂的死亡日期为锚，而非以今天为锚——否则公元前 612 年的一桩善行会仅仅因为年代久远
 就被磨到零。
 
+这不是只活在后端里的区分。灵魂详情页的 `SoulReadingPanel`
+（[`frontend/src/components/souls/SoulReadingPanel.tsx`](frontend/src/components/souls/SoulReadingPanel.tsx)）
+按 `reading.kind` 切换渲染：中国是带趋势的净额，埃及把「不重于」画成倍数而非一个
+永远显示「不通过」的徽章，欧洲把 culpa 与 poena 分开摆放、poena 缺失时展示的是
+「为什么算不出来」而不是 0。灵魂列表的「余额」列同理——只有中国灵魂显示净额，其余
+文明显示「—」，不借用一个不属于自己的读数。
+
+日期本身也分两种严重度：`death_before_birth`、`implausible_lifespan`、
+`event_before_birth` 是 ERROR，写入直接被拒绝；`event_after_death`（身后录入的记录）
+是 WARNING，放行但会在详情页的 `DateProblemsPanel` 里常驻显示，操作者可以「标记为
+已核」——标记绑定的是当时那一对日期的指纹，之后若死亡日期或事发日期又被改动，标记
+自动失效、警告重新出现，而不是被悄悄清空的布尔值捂住。列表页用 ⊘/△ 标出有问题的
+灵魂并可一键筛选。
+
 ---
 
 ## 快速启动
@@ -135,7 +149,16 @@ Celery worker 与异步代码中依然有效。
 **权限**：四种角色（ADMIN / JUDGE / GUARDIAN / VIEWER）叠加 codename 权限，再加
 `DataScope`（行可见性）与 `FieldPermission`（字段可见性）。API 侧由
 `CodenameViewSetMixin` 强制；前端用 `RequirePermission` / `RequireButton` 做 UI 门控。
-前端门控只是外观，真正的检查在后端。
+前端门控只是外观，真正的检查在后端。`/permissions` 页面是一张角色×codename 矩阵而非
+逐角色选择器，保存前会做三层校验（越权、悖论式的人数/授权不一致等），每个角色带
+`user_count` 与乐观锁 `version`——两次并发保存里，后到的一次会因版本冲突被拒绝，而
+不是静默覆盖先到的那次。
+
+**双语外壳**：菜单名、面包屑、角色名是数据库里的自由文本，没有翻译字段，所以在
+`en`/`egy` 语言下永远保持中文原文——这是有意为之，不是漏翻。取而代之的是面包屑与
+页面 H1 在非中文语言下把翻译后的标签与中文原名并排显示（见
+[`frontend/src/lib/menuI18n.ts`](frontend/src/lib/menuI18n.ts)），侧栏图标则要求
+在同一父级下互不重复，因为在读不懂中文标签的语言下，图标是唯一的辨认通道。
 
 **事件与实时**：
 
