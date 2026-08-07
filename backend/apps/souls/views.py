@@ -6,6 +6,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.core.archive import DeletionNotAllowedError
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.ledger.services import LedgerService
@@ -46,6 +47,10 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         # codename for one action. See acknowledge_record_date_warning.
         'acknowledge_record_date_warning': ['soul.update'],
         'unacknowledge_record_date_warning': ['soul.update'],
+        # Archiving is the redirect a blocked delete points to (see
+        # destroy() below) — gated on the same codename as the delete it
+        # stands in for, not a new one.
+        'archive': ['soul.delete'],
     }
     queryset = Soul.objects.select_related("tenant").prefetch_related("records").all()
     filterset_class = SoulFilter
@@ -59,6 +64,27 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         """
         from apps.souls.querysets import SoulQuerySet
         qs = SoulQuerySet(Soul).select_related("tenant").prefetch_related("records")
+        # SoulQuerySet(Soul) instantiates the raw queryset directly rather
+        # than going through SoulManager.get_queryset(), so — unlike almost
+        # every other viewset in this codebase — it does NOT pick up the
+        # is_deleted=False filter SoulManager applies. Soft-deleted souls
+        # were showing up in the ordinary list for every caller, ADMIN
+        # included. Found while wiring the Stage 4 recycle bin (a soul that
+        # never left its own list would make the bin's "already gone from
+        # everywhere else" claim false); filtered explicitly here rather
+        # than switching to Soul.objects, which would reintroduce the
+        # class-level contextvar staleness this method's docstring already
+        # warns about.
+        #
+        # ?show_deleted=true opts back in, matching the "show deleted"
+        # toggle convention this feature introduces. Archived souls
+        # (has_concluded_judgment souls that were archived instead of
+        # deleted) never come back through this toggle — archiving means
+        # permanently off the list, not reversible the way a soft delete is.
+        show_deleted = self.request.query_params.get('show_deleted', '').lower() in ('1', 'true', 'yes')
+        if not show_deleted:
+            qs = qs.filter(is_deleted=False)
+        qs = qs.filter(is_archived=False)
         # Apply tenant isolation + DataScope filtering (equivalent to DataScopeViewSetMixin)
         user = self.request.user
         if not user.is_authenticated:
@@ -96,6 +122,38 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         if self.action == "list":
             return SoulListSerializer
         return SoulSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        """Move a soul to the recycle bin — cascading to its karma/demerit
+        records and pending judgments (Soul.delete_with_cascade) — or refuse
+        with a clear reason if it has a concluded judgment (Stage 4 §4.7:
+        archivable instead of deletable once a verdict exists).
+        """
+        soul = self.get_object()
+        reason = request.data.get("reason", "") if hasattr(request, "data") else ""
+        try:
+            soul.delete_with_cascade(user=request.user, reason=reason)
+        except DeletionNotAllowedError as exc:
+            return Response(
+                {"error": str(exc), "archivable": exc.archivable},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["post"])
+    def archive(self, request, pk=None):
+        """Archive a soul that has a concluded judgment and so cannot be
+        deleted — removes it from normal lists without pretending the
+        judicial history can be unwound. See Soul.has_concluded_judgment."""
+        soul = self.get_object()
+        if not soul.has_concluded_judgment:
+            return Response(
+                {"error": "This soul has no concluded judgment; delete it instead of archiving."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        reason = request.data.get("reason", "")
+        soul.archive(user=request.user, reason=reason)
+        return Response(SoulSerializer(soul).data)
 
     @action(detail=True, methods=["post"])
     def die(self, request, pk=None):

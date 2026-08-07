@@ -5,6 +5,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.core.archive import DeletionNotAllowedError
 from apps.core.mixins import TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
@@ -42,6 +43,7 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         'update': ['disposition.execute'],
         'partial_update': ['disposition.execute'],
         'destroy': ['disposition.execute'],
+        'archive': ['disposition.execute'],
     }
     queryset = Disposition.objects.select_related(
         "soul", "soul__tenant", "destination_realm", "tenant"
@@ -69,4 +71,34 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         from apps.reincarnation.services import ReincarnationService
         ReincarnationService.execute(disposition)
 
+        return Response(DispositionSerializer(disposition).data)
+
+    def destroy(self, request, *args, **kwargs):
+        """Soft-delete a disposition, or refuse with a clear reason when
+        it's tied to a concluded verdict (Stage 4 §4.7: archivable instead —
+        in practice this is true of every Disposition, since one is only
+        ever created once its Judgment has concluded)."""
+        disposition = self.get_object()
+        reason = request.data.get("reason", "") if hasattr(request, "data") else ""
+        try:
+            disposition.delete_or_raise(user=request.user, reason=reason)
+        except DeletionNotAllowedError as exc:
+            return Response(
+                {"error": str(exc), "archivable": exc.archivable},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["post"])
+    def archive(self, request, pk=None):
+        """Archive a disposition tied to a concluded verdict. See
+        Disposition.can_delete."""
+        disposition = self.get_object()
+        if disposition.can_delete:
+            return Response(
+                {"error": "This disposition has no concluded verdict; delete it instead of archiving."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        reason = request.data.get("reason", "")
+        disposition.archive(user=request.user, reason=reason)
         return Response(DispositionSerializer(disposition).data)

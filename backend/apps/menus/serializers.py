@@ -67,6 +67,11 @@ class MenuSerializer(serializers.ModelSerializer):
             "id", "name", "path", "icon", "order", "parent",
             "menu_type", "permission", "roles", "is_active",
             "visible", "cache", "component", "children", "buttons",
+            # Recycle bin (Stage 4 §4.7): the "show deleted" toggle on the
+            # menus list page renders a deleted row via these three —
+            # ink-subtle + strikethrough-on-name + "已删除" badge — rather
+            # than hiding it outright.
+            "is_deleted", "deleted_at", "delete_reason",
         ]
 
     def get_children(self, obj):

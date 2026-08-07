@@ -5,6 +5,7 @@ import uuid
 
 from django.db import models
 
+from apps.core.archive import ArchivableMixin
 from apps.core.models import AuditUserFields
 from apps.judgment.models import Judgment
 from apps.souls.models import Soul
@@ -18,9 +19,14 @@ class MemoryResetMechanism(models.TextChoices):
     NONE = "NONE", "No Reset"
 
 
-class Disposition(AuditUserFields, models.Model):
+class Disposition(ArchivableMixin, AuditUserFields, models.Model):
     """
     The destination and sentence given to a soul after judgment.
+
+    Deletion (Stage 4 §4.7): a Disposition only ever exists once its
+    Judgment has concluded with a verdict (see JudgmentConclusionService),
+    so in practice every Disposition is archivable-only, never deletable —
+    see can_delete/delete_or_raise below.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     soul = models.ForeignKey(
@@ -79,3 +85,24 @@ class Disposition(AuditUserFields, models.Model):
     def __str__(self):
         realm = self.destination_realm.realm_code if self.destination_realm else "UNKNOWN"
         return f"{self.soul.name} → {realm}"
+
+    @property
+    def can_delete(self) -> bool:
+        """False whenever this disposition is tied to a concluded verdict
+        (the ordinary case — see class docstring). A disposition whose
+        judgment link was cleared (judgment FK is on_delete=SET_NULL) has
+        no verdict left to check and falls back to deletable."""
+        return self.judgment is None or self.judgment.verdict is None
+
+    def delete_or_raise(self, user=None, reason=""):
+        """Soft-delete this disposition, or raise DeletionNotAllowedError
+        (archivable=True) when it's tied to a concluded verdict."""
+        from apps.core.archive import DeletionNotAllowedError
+
+        if not self.can_delete:
+            raise DeletionNotAllowedError(
+                "This disposition is tied to a concluded judgment and cannot "
+                "be deleted. Archive it instead.",
+                archivable=True,
+            )
+        self.soft_delete(user=user, reason=reason)

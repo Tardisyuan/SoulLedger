@@ -10,10 +10,17 @@ from rest_framework.routers import DefaultRouter
 
 from apps.authentication.views import UserViewSet
 from apps.core.health import HealthCheck, HealthCheckDetailed
+from apps.core.recycle_bin_views import RecycleBinViewSet
 
 # User management router (registered at api/v1/users/ via path)
 user_router = DefaultRouter()
 user_router.register(r'', UserViewSet, basename='user')
+
+# Global recycle bin router (registered at api/v1/recycle-bin/ via path) —
+# not model-backed, so it's routed the same standalone way as UserViewSet
+# rather than through an app-local urls.py. See apps/core/recycle_bin_views.py.
+recycle_bin_router = DefaultRouter()
+recycle_bin_router.register(r'', RecycleBinViewSet, basename='recycle-bin')
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -21,6 +28,7 @@ urlpatterns = [
     path("health/detailed/", HealthCheckDetailed.as_view(), name="health_detailed"),
     path("api/v1/auth/", include("apps.authentication.urls")),
     path("api/v1/users/", include(user_router.urls)),
+    path("api/v1/recycle-bin/", include(recycle_bin_router.urls)),
     path("api/v1/tenants/", include("apps.tenants.urls")),
     path("api/v1/souls/", include("apps.souls.urls")),
     path("api/v1/judgment/", include("apps.judgment.urls")),

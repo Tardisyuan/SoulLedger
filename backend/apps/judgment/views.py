@@ -6,6 +6,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.core.archive import DeletionNotAllowedError
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
@@ -53,6 +54,7 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         'update': ['judgment.execute'],
         'partial_update': ['judgment.execute'],
         'destroy': ['judgment.execute'],
+        'archive': ['judgment.execute'],
     }
     queryset = Judgment.objects.select_related("soul", "soul__tenant", "tenant").all()
     serializer_class = JudgmentSerializer
@@ -64,6 +66,34 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         soul = judgment.soul
         if soul.current_state == SoulState.ALIVE:
             soul.transition_to(SoulState.JUDGING, f"Judgment {judgment.id} initiated")
+
+    def destroy(self, request, *args, **kwargs):
+        """Soft-delete a pending judgment, or refuse with a clear reason
+        once it carries a verdict (Stage 4 §4.7: archivable instead)."""
+        judgment = self.get_object()
+        reason = request.data.get("reason", "") if hasattr(request, "data") else ""
+        try:
+            judgment.delete_or_raise(user=request.user, reason=reason)
+        except DeletionNotAllowedError as exc:
+            return Response(
+                {"error": str(exc), "archivable": exc.archivable},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["post"])
+    def archive(self, request, pk=None):
+        """Archive a judgment that carries a verdict and so cannot be
+        deleted. See Judgment.can_delete."""
+        judgment = self.get_object()
+        if judgment.can_delete:
+            return Response(
+                {"error": "This judgment has no verdict; delete it instead of archiving."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        reason = request.data.get("reason", "")
+        judgment.archive(user=request.user, reason=reason)
+        return Response(JudgmentSerializer(judgment).data)
 
     @action(detail=True, methods=["post"])
     def conclude(self, request, pk=None):

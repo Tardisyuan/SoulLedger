@@ -266,6 +266,14 @@ DEFAULT_PERMISSIONS = [
     # 进入拦截就会把每个非 ADMIN 关在一棵空树前面。写操作仍归 menu.manage。
     ("menu.read", "查看菜单", "system"),
     ("menu.manage", "菜单管理", "system"),
+    # recycle_bin 权限 — Stage 4 §4.7 global recycle bin. ADMIN-only (see
+    # RecycleBinViewSet's docstring): restoring or permanently destroying
+    # records other parts of the app believe are gone belongs with the
+    # other ADMIN-only administrative actions (menu.manage, user.manage),
+    # not scoped per-tenant like ordinary CRUD.
+    ("recycle_bin.read", "查看回收站", "system"),
+    ("recycle_bin.restore", "恢复已删除项", "system"),
+    ("recycle_bin.hard_delete", "永久删除", "system"),
 ]
 
 
@@ -283,6 +291,7 @@ ROLE_PERMISSIONS = {
         "realms.read", "actors.read",
         "org.read", "org.manage",
         "system.settings", "user.manage", "menu.read", "menu.manage",
+        "recycle_bin.read", "recycle_bin.restore", "recycle_bin.hard_delete",
         "workflow.read", "workflow.create", "workflow.update", "workflow.delete", "workflow.approve", "workflow.advance",
         # Migration 0015 grants this to ADMIN in the database (ADMIN_GRANTS =
         # ["workflow.escalate"]) — this static list had drifted from that intent
