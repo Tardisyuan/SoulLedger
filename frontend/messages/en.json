@@ -1123,6 +1123,8 @@
     "comments": "Comments",
     "add_comment": "Add a comment…",
     "no_comments": "No comments yet",
+    "comment_error": "Failed to add comment",
+    "reaction_error": "Failed to react",
     "follow": "Follow",
     "follows": "Follows",
     "following": "Following",

@@ -1123,6 +1123,8 @@
     "comments": "评论",
     "add_comment": "写评论…",
     "no_comments": "暂无评论",
+    "comment_error": "评论发布失败",
+    "reaction_error": "回应失败",
     "follow": "关注",
     "follows": "关注关系",
     "following": "正在关注",
