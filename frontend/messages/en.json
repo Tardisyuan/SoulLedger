@@ -325,7 +325,39 @@
     "gate_roles_nonadmin": "Editing this menu at all requires menu.manage — ADMIN-only today.",
     "gate_menu_type_effect": "DIRECTORY / MENU / BUTTON. Decides which of the other fields are meaningful — a DIRECTORY has no page.",
     "gate_menu_type_nonadmin": "Editing this menu at all requires menu.manage — ADMIN-only today.",
-    "gates_footnote": "All five require menu.manage to edit at all — ADMIN-only in the current role setup."
+    "gates_footnote": "All five require menu.manage to edit at all — ADMIN-only in the current role setup.",
+    "show_deleted": "Show deleted",
+    "deleted_badge": "Deleted",
+    "delete_confirm_title": "Move to recycle bin?",
+    "delete_confirm_message": "\"{{name}}\" will move to the recycle bin. It can be restored for {{days}} days; after that, an administrator can permanently delete it.",
+    "delete_confirm_action": "Move to recycle bin"
+  },
+  "recycle_bin": {
+    "title": "Recycle Bin",
+    "intro": "Everything soft-deleted, across every entity type, on one screen — each parent as one row with its dependent count, not its dependents listed separately.",
+    "no_access": "You don't have permission to view the recycle bin.",
+    "col_type": "Type",
+    "col_item": "Item",
+    "col_dependents": "Dependents",
+    "col_deleted": "Deleted",
+    "col_action": "Action",
+    "restore": "Restore",
+    "restore_success": "Restored",
+    "restore_error": "Restore failed",
+    "hard_delete": "Delete permanently",
+    "hard_delete_success": "Permanently deleted",
+    "hard_delete_error": "Permanent delete failed",
+    "hard_delete_not_yet_eligible": "Still inside its {{days}}-day retention window",
+    "hard_delete_confirm_title": "Delete permanently?",
+    "hard_delete_confirm_message": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
+    "dependent_count": "{{type}} {{name}} · {{count}} linked items",
+    "deleted_by": "Deleted by {{user}}",
+    "empty": "The recycle bin is empty",
+    "manage_from_bin": "Manage from the recycle bin",
+    "entity_types": {
+      "soul": "Soul",
+      "menu": "Menu"
+    }
   },
   "permissions": {
     "title": "Permission Management",
