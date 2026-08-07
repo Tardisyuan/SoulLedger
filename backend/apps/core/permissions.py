@@ -155,6 +155,46 @@ class IsAdminPermission(permissions.BasePermission):
         return getattr(request.user, 'role', None) == 'ADMIN'
 
 
+class HasValidApiKey(permissions.BasePermission):
+    """
+    Permission class for endpoints authenticated by
+    ``apps.death_sync.authentication.APIKeyAuthentication`` instead of Django
+    session/JWT auth.
+
+    ``APIKeyAuthentication.authenticate()`` returns ``(AnonymousUser(),
+    api_key)`` on success — ``AnonymousUser`` because there is no real Django
+    user in play, by design, for an external-system credential. That makes
+    ``request.user.is_authenticated`` permanently ``False`` for these views no
+    matter how valid the key is, so the project-wide default
+    (``IsAuthenticated``) rejects every request before the view runs. This
+    class checks the thing ``APIKeyAuthentication`` actually sets on success —
+    ``request.api_key`` — instead of ``request.user``.
+
+    Deliberately not ``AllowAny``: when no ``Authorization: ApiKey ...``
+    header is present at all, ``APIKeyAuthentication.authenticate()`` returns
+    ``None`` (this authenticator "does not apply," not "auth failed"), so
+    ``request.api_key`` is never set. ``AllowAny`` would let that request
+    reach the view anyway, and these views read ``request.api_key``
+    unconditionally in places (e.g. ``DeathRegistrationViewSet.create()``),
+    which would crash with ``AttributeError`` (500) instead of cleanly
+    denying (401/403). Requiring ``request.api_key`` to be set closes that
+    gap: no key or an invalid/expired/inactive key never reaches the view,
+    because ``APIKeyAuthentication`` either leaves it unset or raises
+    ``AuthenticationFailed`` itself before this class ever runs.
+    """
+
+    def has_permission(self, request, view):
+        return getattr(request, "api_key", None) is not None
+
+    def has_object_permission(self, request, view, obj):
+        # These views scope their querysets to request.api_key already
+        # (see DeathRegistrationViewSet.get_queryset / WebhookViewSet.get_
+        # queryset), so an object reachable via get_object() already belongs
+        # to the authenticated key. No separate object-level check is needed
+        # here — this mirrors has_permission for defense in depth.
+        return getattr(request, "api_key", None) is not None
+
+
 def admin_required(view_func):
     """
     Decorator for function-based views that requires ADMIN role.

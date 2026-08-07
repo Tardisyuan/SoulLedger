@@ -15,7 +15,7 @@ import pytest
 from django.test import RequestFactory
 
 from apps.authentication.models import User
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import HasValidApiKey, TenantPermission
 from apps.tenants.models import Tenant
 
 
@@ -71,3 +71,64 @@ class TestTenantPermissionCrossCheck:
 
         request = self._request(AnonymousUser(), self.tenant_a)
         assert self.permission.has_permission(request, None) is False
+
+
+class TestHasValidApiKey:
+    """HasValidApiKey backs the three apps.death_sync views authenticated by
+    APIKeyAuthentication instead of Django session/JWT auth (see
+    apps.death_sync.views: DeathRegistrationViewSet, WebhookViewSet,
+    DeathSyncHealthView).
+
+    Those views used to inherit the project-wide default
+    (IsAuthenticated), which checks request.user.is_authenticated.
+    APIKeyAuthentication.authenticate() returns (AnonymousUser(), api_key)
+    on a *successful* authentication — AnonymousUser.is_authenticated is
+    always False by definition — so IsAuthenticated rejected every request
+    with a perfectly valid API key with 403, before the view ever ran.
+    There was no way to reach these views over real HTTP.
+
+    HasValidApiKey checks request.api_key instead, which
+    APIKeyAuthentication sets if and only if it authenticated the request
+    successfully. These are unit tests against has_permission directly,
+    the same pattern as TestTenantPermissionCrossCheck above — no DB or
+    view machinery is needed to exercise this method.
+    """
+
+    def setup_method(self):
+        self.permission = HasValidApiKey()
+        self.factory = RequestFactory()
+
+    def _request(self, api_key):
+        request = self.factory.get("/api/v1/death-sync/register/")
+        if api_key is not None:
+            request.api_key = api_key
+        return request
+
+    def test_request_with_api_key_set_is_allowed(self):
+        """api_key can be any truthy sentinel here — has_permission only
+        checks for presence, not validity (validity is APIKeyAuthentication's
+        job, upstream)."""
+        request = self._request(api_key=object())
+        assert self.permission.has_permission(request, None) is True
+
+    def test_request_with_no_api_key_attribute_is_refused(self):
+        """No Authorization: ApiKey header at all: APIKeyAuthentication.
+        authenticate() returns None (this authenticator does not apply), so
+        request.api_key is never set. This must be refused rather than
+        allowed — AllowAny would let it through, and the views read
+        request.api_key unconditionally (e.g.
+        DeathRegistrationViewSet.create()), which would crash with
+        AttributeError instead of cleanly denying."""
+        request = self._request(api_key=None)
+        assert self.permission.has_permission(request, None) is False
+
+    def test_request_with_api_key_none_explicitly_is_refused(self):
+        request = self.factory.get("/api/v1/death-sync/register/")
+        request.api_key = None
+        assert self.permission.has_permission(request, None) is False
+
+    def test_object_permission_mirrors_has_permission(self):
+        allowed_request = self._request(api_key=object())
+        denied_request = self._request(api_key=None)
+        assert self.permission.has_object_permission(allowed_request, None, object()) is True
+        assert self.permission.has_object_permission(denied_request, None, object()) is False

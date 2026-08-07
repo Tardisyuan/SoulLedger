@@ -3,6 +3,8 @@ Tests for Webhook system.
 """
 
 import pytest
+from rest_framework import status
+from rest_framework.test import APIClient
 
 from apps.death_sync.models import (
     DeathRegistrationRequest,
@@ -16,6 +18,13 @@ from apps.death_sync.signing import is_timestamp_fresh, sign_payload, verify_sig
 from apps.death_sync.webhook_service import WebhookService
 from apps.souls.models import Soul
 from apps.tenants.models import Tenant
+
+
+def _api_key_client(raw_key):
+    """Return APIClient authenticated via APIKeyAuthentication's ApiKey scheme."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"ApiKey {raw_key}")
+    return client
 
 
 @pytest.fixture
@@ -181,3 +190,69 @@ class TestHealthCheck:
         response = view(request)
         # Without auth, should return 401
         assert response.status_code == 401
+
+
+# ── C11: WebhookViewSet — the "every valid API key gets 403" bug ───────
+
+@pytest.mark.django_db
+class TestWebhookViewSetPermissionFix:
+    """C11: like DeathRegistrationViewSet and DeathSyncHealthView,
+    WebhookViewSet declared authentication_classes = [APIKeyAuthentication]
+    with no permission_classes override, so it inherited the project-wide
+    IsAuthenticated default and rejected every valid API key with 403 (see
+    apps.core.permissions.HasValidApiKey for the full mechanism). Fixed the
+    same way as the other two views.
+
+    A positive "valid key gets 201" case for POST /webhooks/ isn't usable
+    here: WebhookConfigSerializer.Meta.fields lists 'created_at', but
+    WebhookConfig (via AuditUserFields) has 'create_time', not 'created_at'
+    — apps/death_sync/views.py's own DeathSyncHealthView docstring already
+    flags this exact created_at/create_time mismatch on
+    WebhookDeliveryLog. That breaks every action that touches
+    WebhookConfigSerializer (list, retrieve, create alike) with
+    ImproperlyConfigured, regardless of this permission fix. That's a
+    separate, already-flagged bug, out of scope here. DELETE (destroy)
+    never builds a serializer — DRF's destroy() only needs get_object() and
+    instance.delete() — so it's used below to prove the permission gate
+    itself opened up without being confounded by that unrelated bug.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db, cn_tenant):
+        raw_key, key_hash, key_prefix = ExternalApiKey.generate_key()
+        self.key = ExternalApiKey.objects.create(
+            tenant=cn_tenant, name="C11 Webhook Key", system_type="HOSPITAL",
+            key_hash=key_hash, key_prefix=key_prefix,
+        )
+        self.raw_key = raw_key
+        self.webhook = WebhookConfig.objects.create(
+            tenant=cn_tenant,
+            api_key=self.key,
+            url="https://example.com/webhook",
+            signing_secret="c11_secret",
+        )
+
+    def test_valid_key_delete_is_not_403(self):
+        resp = _api_key_client(self.raw_key).delete(f"/api/v1/death-sync/webhooks/{self.webhook.pk}/")
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        assert not WebhookConfig.objects.filter(pk=self.webhook.pk).exists()
+
+    def test_no_key_is_401_not_500(self):
+        """No Authorization header: request.api_key never gets set.
+        HasValidApiKey must deny this cleanly (AllowAny would have let it
+        through with no request.api_key, and perform_create() reads
+        self.request.api_key unconditionally)."""
+        resp = APIClient().delete(f"/api/v1/death-sync/webhooks/{self.webhook.pk}/")
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+        assert WebhookConfig.objects.filter(pk=self.webhook.pk).exists()
+
+    def test_invalid_key_is_401(self):
+        resp = _api_key_client("not-a-real-key").delete(f"/api/v1/death-sync/webhooks/{self.webhook.pk}/")
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_inactive_key_is_401(self):
+        self.key.is_active = False
+        self.key.save()
+        resp = _api_key_client(self.raw_key).delete(f"/api/v1/death-sync/webhooks/{self.webhook.pk}/")
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+        assert WebhookConfig.objects.filter(pk=self.webhook.pk).exists()

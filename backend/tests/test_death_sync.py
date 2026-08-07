@@ -30,6 +30,13 @@ def _jwt_client(user, tenant):
     return client
 
 
+def _api_key_client(raw_key):
+    """Return APIClient authenticated via APIKeyAuthentication's ApiKey scheme."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"ApiKey {raw_key}")
+    return client
+
+
 @pytest.fixture
 def cn_tenant(db):
     return Tenant.objects.get_or_create(code="CN_DIYU", defaults={"display_name": "Chinese Diyu"})[0]
@@ -448,3 +455,121 @@ class TestDeathSyncHealthTenantIsolation:
         assert response.data["system"]["pending_registrations_24h"] == 1
         assert response.data["system"]["failed_registrations_24h"] == 1
         assert response.data["system"]["failed_webhooks_24h"] == 1
+
+
+# ── C11: HasValidApiKey — the "every valid API key gets 403" bug ───────
+
+@pytest.mark.django_db
+class TestDeathRegistrationPermissionFix:
+    """C11: DeathRegistrationViewSet declared authentication_classes =
+    [APIKeyAuthentication] but never overrode permission_classes, so it
+    inherited the project-wide default (IsAuthenticated). APIKeyAuthentication
+    authenticates a valid key successfully by returning AnonymousUser as
+    request.user (see its docstring — there is no real Django user for an
+    external system's credential); AnonymousUser.is_authenticated is always
+    False, so IsAuthenticated rejected every request bearing a perfectly
+    valid API key with 403 before the view ever ran. There was no way to
+    reach this endpoint over real HTTP. Fixed by
+    apps.core.permissions.HasValidApiKey (checks request.api_key, which
+    APIKeyAuthentication sets only on success, instead of request.user).
+
+    Two of the paths this bug touches (POST with a fully valid payload,
+    i.e. a real 201) run into an unrelated, pre-existing bug:
+    apps/death_sync/encrypted_json.py's EncryptedJSONField.get_prep_value()
+    calls plain stdlib json.dumps() (no DjangoJSONEncoder) on
+    source_payload, which contains a python `date` object once
+    DeathRegistrationCreateSerializer validates death_date — so a *valid*
+    single registration 500s over HTTP regardless of this permission fix.
+    That is a separate, already-flagged bug and out of scope here. This
+    class proves the permission gate itself using paths that do not depend
+    on it: GET list (200), and a POST payload that fails serializer
+    validation before source_payload is ever built (400) — both prove the
+    request reached the view, which is what the permission fix owns.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db, cn_tenant):
+        self.tenant = cn_tenant
+        raw_key, key_hash, key_prefix = ExternalApiKey.generate_key()
+        self.key = ExternalApiKey.objects.create(
+            tenant=cn_tenant, name="C11 Key", system_type="HOSPITAL",
+            key_hash=key_hash, key_prefix=key_prefix, can_register_death=True,
+        )
+        self.raw_key = raw_key
+
+    def test_valid_key_list_is_not_403(self):
+        resp = _api_key_client(self.raw_key).get("/api/v1/death-sync/register/")
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_valid_key_invalid_payload_is_400_not_403(self):
+        """Missing the required death_date fails serializer validation
+        inside the view — a 403 here would mean the request never got that
+        far, i.e. the pre-fix bug is back."""
+        resp = _api_key_client(self.raw_key).post(
+            "/api/v1/death-sync/register/", {"soul_lookup": {"name": "x"}}, format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_no_key_is_401_not_500(self):
+        """No Authorization header at all: APIKeyAuthentication.authenticate()
+        returns None (this authenticator does not apply — distinct from
+        rejecting a bad key), so request.api_key is never set. HasValidApiKey
+        must still deny this: AllowAny would have let it through with no
+        request.api_key set, and create() reads request.api_key
+        unconditionally — an AttributeError (500) instead of a clean denial."""
+        resp = APIClient().get("/api/v1/death-sync/register/")
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_invalid_key_is_401(self):
+        """Confirms the permission change doesn't weaken
+        APIKeyAuthentication's own AuthenticationFailed handling."""
+        resp = _api_key_client("not-a-real-key").get("/api/v1/death-sync/register/")
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_inactive_key_is_401(self):
+        self.key.is_active = False
+        self.key.save()
+        resp = _api_key_client(self.raw_key).get("/api/v1/death-sync/register/")
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_expired_key_is_401(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+        self.key.expires_at = timezone.now() - timedelta(days=1)
+        self.key.save()
+        resp = _api_key_client(self.raw_key).get("/api/v1/death-sync/register/")
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.django_db
+class TestDeathSyncHealthPermissionFix:
+    """C11 (same fix, third view): DeathSyncHealthView over real HTTP, not
+    the direct view.get() call TestDeathSyncHealthTenantIsolation above uses
+    to sidestep this exact bug. This class is the full round trip: it fails
+    with 403 pre-fix and succeeds post-fix, unlike the registration/webhook
+    views this view has no unrelated serializer/encryption bug blocking it,
+    so it is verified end to end with a real 200.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db, cn_tenant):
+        raw_key, key_hash, key_prefix = ExternalApiKey.generate_key()
+        self.key = ExternalApiKey.objects.create(
+            tenant=cn_tenant, name="C11 Health Key", system_type="HOSPITAL",
+            key_hash=key_hash, key_prefix=key_prefix,
+        )
+        self.raw_key = raw_key
+
+    def test_valid_key_gets_real_response(self):
+        resp = _api_key_client(self.raw_key).get("/api/v1/death-sync/health/")
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["api_key"]["is_active"] is True
+
+    def test_no_key_is_401(self):
+        resp = APIClient().get("/api/v1/death-sync/health/")
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_invalid_key_is_401(self):
+        resp = _api_key_client("not-a-real-key").get("/api/v1/death-sync/health/")
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
