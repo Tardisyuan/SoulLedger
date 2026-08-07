@@ -7,7 +7,7 @@ import uuid
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework import status
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APIRequestFactory
 
 from apps.social.models import (
     Comment,
@@ -17,6 +17,7 @@ from apps.social.models import (
     UserProfile,
     Visibility,
 )
+from apps.social.views import CommentViewSet, FollowViewSet, PostViewSet, ReactionViewSet
 from apps.tenants.models import Tenant
 
 User = get_user_model()
@@ -439,14 +440,21 @@ class TestVisibilityAndTenantIsolation:
         self.tenant_b = Tenant.objects.get_or_create(
             code="VV_T2", defaults={"display_name": "Other Tenant"}
         )[0]
+        # VIEWER, not ADMIN: this class pins tenant-scoped list/visibility
+        # behavior, and ADMIN now bypasses tenant scoping entirely in
+        # PostViewSet.get_queryset() (same idiom as UserProfileViewSet), so
+        # an ADMIN-role user here would see across tenants and defeat the
+        # isolation this class checks. permission_codename is None for every
+        # social viewset (see module docstring), so role otherwise has no
+        # bearing on what these tests exercise.
         self.user = User.objects.create_user(
-            username="vvuser1", password="test123", role="ADMIN", tenant=self.tenant
+            username="vvuser1", password="test123", role="VIEWER", tenant=self.tenant
         )
         self.other = User.objects.create_user(
             username="vvuser1b", password="test123", role="VIEWER", tenant=self.tenant
         )
         self.foreign = User.objects.create_user(
-            username="vvforeign", password="test123", role="ADMIN", tenant=self.tenant_b,
+            username="vvforeign", password="test123", role="VIEWER", tenant=self.tenant_b,
         )
         self.client = _jwt_client(self.user, self.tenant)
         self.other_client = _jwt_client(self.other, self.tenant)
@@ -672,3 +680,87 @@ class TestUserProfileTenantIsolation:
         ids = {row["id"] for row in resp.data["results"]}
         assert str(self.profile.pk) in ids
         assert str(self.foreign_profile.pk) in ids
+
+
+# ---------------------------------------------------------------------------
+# Gap 2 — Post/Comment/Reaction/FollowViewSet.get_queryset() must fail closed
+#
+# Pre-fix, all four did `if tenant: qs = qs.filter(tenant=tenant)` with no
+# `else` branch — a non-ADMIN caller whose request.tenant resolved to None
+# fell through to the *unfiltered* queryset (every tenant's posts/comments/
+# reactions/follows), not an empty one. TenantPermission.has_permission
+# already denies such a request at the permission layer before dispatch()
+# ever calls get_queryset() (a non-ADMIN with no request.tenant gets 403),
+# so this can't be reproduced through a real HTTP call — these tests call
+# get_queryset() directly, bypassing permission_classes entirely, to pin the
+# method's own behavior as defense in depth: if anything upstream ever
+# changed and let a tenant-less request through, the queryset itself must
+# still come back empty for a non-ADMIN caller rather than leaking
+# everyone's data. Same shape as UserProfileViewSet.get_queryset(), fixed
+# earlier for the identical gap.
+# ---------------------------------------------------------------------------
+
+def _get_queryset_bare(view_cls, user, tenant, action="list"):
+    """Instantiate view_cls and call get_queryset() directly against a bare
+    request carrying only `.user` and `.tenant` — no dispatch(), no
+    permission_classes, no authentication middleware."""
+    request = APIRequestFactory().get("/")
+    request.user = user
+    request.tenant = tenant
+    view = view_cls()
+    view.request = request
+    view.action = action
+    view.format_kwarg = None
+    return view.get_queryset()
+
+
+@pytest.mark.django_db
+class TestSocialViewSetsFailClosedWithoutTenant:
+    """Post/Comment/Reaction/FollowViewSet.get_queryset() must return
+    qs.none() for a non-ADMIN caller when request.tenant is falsy — not the
+    unfiltered queryset."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="FC_T1", defaults={"display_name": "Fail Closed Tenant"}
+        )[0]
+        self.other_tenant = Tenant.objects.get_or_create(
+            code="FC_T2", defaults={"display_name": "Fail Closed Tenant 2"}
+        )[0]
+        self.user = User.objects.create_user(
+            username="fcuser1", password="test123", role="VIEWER", tenant=self.tenant,
+        )
+        self.other_user = User.objects.create_user(
+            username="fcuser2", password="test123", role="VIEWER", tenant=self.other_tenant,
+        )
+        # Data across two tenants, so a fall-through-to-unfiltered bug would
+        # show up as a non-zero count instead of 0.
+        self.post = Post.objects.create(author=self.user, content="P", tenant=self.tenant)
+        Post.objects.create(author=self.other_user, content="OP", tenant=self.other_tenant)
+        Comment.objects.create(author=self.user, post=self.post, content="C", tenant=self.tenant)
+        Reaction.objects.create(user=self.user, post=self.post, tenant=self.tenant)
+        Follow.objects.create(follower=self.user, following=self.other_user, tenant=self.tenant)
+
+    def test_post_queryset_none_without_tenant(self):
+        qs = _get_queryset_bare(PostViewSet, self.user, None)
+        assert qs.count() == 0
+
+    def test_comment_queryset_none_without_tenant(self):
+        qs = _get_queryset_bare(CommentViewSet, self.user, None)
+        assert qs.count() == 0
+
+    def test_reaction_queryset_none_without_tenant(self):
+        qs = _get_queryset_bare(ReactionViewSet, self.user, None)
+        assert qs.count() == 0
+
+    def test_follow_queryset_none_without_tenant(self):
+        qs = _get_queryset_bare(FollowViewSet, self.user, None)
+        assert qs.count() == 0
+
+    def test_post_queryset_still_scoped_normally_when_tenant_present(self):
+        """Sanity check: the fix narrows the no-tenant case only — a request
+        with a real tenant still gets that tenant's (visible) posts, not an
+        unconditional qs.none()."""
+        qs = _get_queryset_bare(PostViewSet, self.user, self.tenant)
+        assert list(qs) == [self.post]

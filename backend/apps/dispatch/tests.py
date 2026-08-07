@@ -432,11 +432,18 @@ class TestCrossTenantJudgmentCRUD:
         self.tenant_b = Tenant.objects.get_or_create(
             code="CJ_T2", defaults={"display_name": "Jug Tenant B"}
         )[0]
+        # JUDGE, not ADMIN: this class pins tenant-scoped list behavior, and
+        # ADMIN now bypasses tenant scoping entirely (get_queryset ADMIN
+        # branch added alongside DispatchRecordViewSet's), so an ADMIN-role
+        # user here would see across tenants and defeat the isolation this
+        # class checks. JUDGE holds cross_judgment.read/create like ADMIN
+        # does, without the bypass — same convention as GUARDIAN in
+        # TestDispatchRecordTenantIsolation below.
         self.user_a = User.objects.create_user(
-            username="cjuser1", password="test123", role="ADMIN", tenant=self.tenant_a,
+            username="cjuser1", password="test123", role="JUDGE", tenant=self.tenant_a,
         )
         self.user_b = User.objects.create_user(
-            username="cjuser2", password="test123", role="ADMIN", tenant=self.tenant_b,
+            username="cjuser2", password="test123", role="JUDGE", tenant=self.tenant_b,
         )
         self.client_a = _jwt_client(self.user_a, self.tenant_a)
         self.client_b = _jwt_client(self.user_b, self.tenant_b)
@@ -479,6 +486,27 @@ class TestCrossTenantJudgmentCRUD:
         self._create_judgment(self.tenant_a)
         resp = self.client_b.get(f"{BASE}/cross-tenant-judgments/")
         assert resp.data["count"] == 0
+
+    def test_admin_sees_judgments_not_involving_own_tenant(self):
+        """Gap 1 regression: CrossTenantJudgmentViewSet.get_queryset() had no
+        ADMIN branch (unlike DispatchRecordViewSet's, directly above it in
+        views.py), so ADMIN was scoped down to Q(initiating_tenant=tenant) |
+        Q(participants__participant_tenant=tenant) like every other caller —
+        it could only see judgments touching its own tenant. After the fix,
+        ADMIN bypasses that filter entirely and sees a judgment where
+        neither side is its own tenant.
+        """
+        tenant_c = Tenant.objects.get_or_create(
+            code="CJ_T5", defaults={"display_name": "Jug Tenant C (uninvolved)"}
+        )[0]
+        admin = User.objects.create_user(
+            username="cjadmin1", password="test123", role="ADMIN", tenant=self.tenant_a,
+        )
+        admin_client = _jwt_client(admin, self.tenant_a)
+        self._create_judgment(tenant_c)  # neither initiating tenant nor a participant is tenant_a
+        resp = admin_client.get(f"{BASE}/cross-tenant-judgments/")
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["count"] == 1
 
 
 @pytest.mark.django_db
