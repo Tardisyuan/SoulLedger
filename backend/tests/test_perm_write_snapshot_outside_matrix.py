@@ -65,12 +65,15 @@ What each app turned out to be
   visible and writable to every tenant — covered by
   ``test_organization_cross_tenant_isolation`` rather than a status-code case,
   because "wrong tenant" reads as 404 (object not in scope), not 403.
-* ``death_sync`` — genuine write endpoints, none reachable by a role.
-  ``api-keys`` is ``IsAdminUser`` (403 for all five, ADMIN included — that flag
-  is ``is_staff``, not ``role == 'ADMIN'``); ``register`` and ``webhooks``
-  accept only ``APIKeyAuthentication``, so a Bearer JWT is not a credential
-  there and every role gets 401. Codenames are the wrong tool; covered so the
-  fact is pinned, not because enforcement could move it.
+* ``death_sync`` — genuine write endpoints, mostly still unreachable by a
+  role. ``api-keys`` was ``IsAdminUser`` (403 for all five, ADMIN included —
+  that flag is ``is_staff``, not ``role == 'ADMIN'``); FIXED (C9) to
+  ``IsAdminPermission``, so ADMIN now succeeds and the other four roles stay
+  denied. ``register`` and ``webhooks`` still accept only
+  ``APIKeyAuthentication``, so a Bearer JWT is not a credential there and
+  every role still gets 401. Codenames are the wrong tool for any of the
+  three; covered so the fact is pinned, not because enforcement could move
+  it.
 * ``audit`` — **nothing to cover.** ``AuditLogViewSet`` is a
   ``ReadOnlyModelViewSet``; the router publishes no create/update/destroy
   route. Asserted by ``test_audit_app_publishes_no_write_routes`` rather than
@@ -94,8 +97,11 @@ The first of these three is resolved by this tranche. The other two are
    CIV_TO_TENANT mapping ``migrate_to_multitenant.py`` uses elsewhere. See THE
    ORG TRANCHE below for the measured codes.
 2. ``ExternalApiKeyViewSet`` (POST ``/api/v1/death-sync/api-keys/``) declares
-   no codename either. Closed today only by ``IsAdminUser``, and closed so far
-   that ADMIN cannot use it.
+   no codename either. RESOLVED (C9): was closed by ``IsAdminUser`` so far
+   that even ADMIN could not use it; now ``IsAdminPermission``, so ADMIN can.
+   Still a blocker in the sense that there is no codename to derive a matrix
+   row from — the gate is a hardcoded role check, same as ``IsAdminPermission``
+   everywhere else in this file's "blocker" list.
 3. ``DeathRegistrationViewSet`` / ``WebhookViewSet`` declare no codename and
    authenticate by API key alone. Recorded so nobody adds one expecting it to
    fire.
@@ -385,10 +391,13 @@ ORGANIZATION_PATCH = _denied("JUDGE", "GUARDIAN", "VIEWER")(200)
 ORGANIZATION_DELETE = _denied("JUDGE", "GUARDIAN", "VIEWER")(204)
 
 # death_sync: no codename anywhere, so enforcement cannot move these.
-# IsAdminUser == Django is_staff. None of the five role users is staff, so
-# even ADMIN is refused — the same split test_matrix_snapshot.py records for
-# GET /death-sync/api-keys/.
-DEATH_SYNC_API_KEY_CREATE = ALL_403
+# FIXED (C9, permission-layer audit follow-up): was `IsAdminUser` (Django
+# is_staff). None of the five role users is staff, so even ADMIN used to be
+# refused — the same split test_matrix_snapshot.py used to record for
+# GET /death-sync/api-keys/. Now `IsAdminPermission` (role == 'ADMIN'), the
+# same gate every other admin-only endpoint in this codebase uses: ADMIN
+# succeeds, the other four roles are still denied.
+DEATH_SYNC_API_KEY_CREATE = _denied("MODERATOR", "JUDGE", "GUARDIAN", "VIEWER")(201)
 # APIKeyAuthentication is the only authenticator on these two, so a Bearer JWT
 # is not a credential at all and DRF answers 401 before any permission runs.
 DEATH_SYNC_REGISTER = ALL_401
@@ -1143,7 +1152,7 @@ def test_organization_cross_tenant_isolation(role_clients, snapshot_tenants):
 @pytest.mark.django_db
 @pytest.mark.parametrize("role", ROLES)
 def test_death_sync_api_key_create(role_clients, snapshot_tenants, role):
-    """IsAdminUser == Django is_staff, so ADMIN is refused too. No codename declared."""
+    """C9 fix: IsAdminPermission (role == 'ADMIN'), not is_staff. No codename declared."""
     from apps.death_sync.models import ExternalApiKey
 
     clients, _ = role_clients
@@ -1153,7 +1162,10 @@ def test_death_sync_api_key_create(role_clients, snapshot_tenants, role):
     assert response.status_code == DEATH_SYNC_API_KEY_CREATE[role], _msg(
         role, "POST /death-sync/api-keys/", response
     )
-    assert not ExternalApiKey.objects.filter(name=f"wsnap-{role}").exists()
+    if role == "ADMIN":
+        assert ExternalApiKey.objects.filter(name=f"wsnap-{role}").exists()
+    else:
+        assert not ExternalApiKey.objects.filter(name=f"wsnap-{role}").exists()
 
 
 @pytest.mark.django_db

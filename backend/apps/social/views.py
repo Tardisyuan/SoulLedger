@@ -339,6 +339,17 @@ class UserProfileViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.M
 
     def get_queryset(self):
         qs = super().get_queryset()
+        # UserProfile has no direct tenant FK, only via user__tenant. Same
+        # ADMIN-bypass idiom as DataScopeViewSetMixin (apps/core/viewsets.py)
+        # — without this, GET /profiles/ let any authenticated user enumerate
+        # every tenant's profiles.
+        user = self.request.user
+        if getattr(user, "role", None) != "ADMIN":
+            tenant = getattr(self.request, "tenant", None)
+            if tenant:
+                qs = qs.filter(user__tenant=tenant)
+            else:
+                qs = qs.none()
         # Allow filtering by user
         user_id = self.request.query_params.get("user")
         if user_id:

@@ -102,10 +102,32 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         dodge the contextvar issue also drops the soft-delete filter — deleted
         dispatch records kept appearing in the list. Exclude them explicitly
         rather than going back to `objects`, which would reintroduce the
-        contextvar problem this override exists to solve."""
-        return DispatchRecord._base_manager.filter(is_deleted=False).select_related(
+        contextvar problem this override exists to solve.
+
+        Using _base_manager also means this bypasses DataScopeViewSetMixin's
+        tenant filtering entirely (this viewset only lists DataScopeViewSetMixin
+        among its bases for the mixin's other behavior — get_queryset is fully
+        overridden here), so tenant scoping has to be reapplied explicitly: a
+        non-ADMIN could otherwise list every tenant's dispatch records via plain
+        GET. A DispatchRecord is inherently cross-tenant (a soul mid-transfer),
+        so "the caller's tenant is involved" means either side of the transfer —
+        source or target — matching the "only source/target tenant" checks the
+        approve/reject/execute actions below already enforce at the object
+        level. ADMIN keeps the unfiltered view, consistent with every other
+        list in this codebase.
+        """
+        from django.db.models import Q
+
+        qs = DispatchRecord._base_manager.filter(is_deleted=False).select_related(
             "source_tenant", "target_tenant", "soul", "dispatched_by"
         )
+        user = self.request.user
+        if getattr(user, "role", None) == "ADMIN":
+            return qs
+        tenant = getattr(self.request, "tenant", None)
+        if tenant:
+            return qs.filter(Q(source_tenant=tenant) | Q(target_tenant=tenant))
+        return qs.none()
 
     def get_serializer_class(self):
         if self.action == "list":

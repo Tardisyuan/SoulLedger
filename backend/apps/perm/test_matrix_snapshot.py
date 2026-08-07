@@ -66,9 +66,11 @@ Two rows are load-bearing history rather than plain measurement:
   ``tenant=`` on ``Organization``, which has no such field → ``FieldError``).
   That bug was fixed in ``apps/core/mixins.py`` by a ``hasattr(qs.model,
   "tenant")`` guard between the audit and this snapshot. 200 is the truth now.
-* ``GET /api/v1/death-sync/api-keys/`` is 403 for **ADMIN** too. That endpoint
-  uses ``IsAdminUser``, which tests Django's ``is_staff`` flag — not
-  ``role == 'ADMIN'``. The two admin concepts are unrelated here.
+* ``GET /api/v1/death-sync/api-keys/`` used to be 403 for **ADMIN** too — that
+  endpoint used ``IsAdminUser``, which tests Django's ``is_staff`` flag, not
+  ``role == 'ADMIN'``. FIXED (C9, permission-layer audit follow-up):
+  ``IsAdminPermission`` is the real gate now, so ADMIN gets 200 and the other
+  four roles stay at 403.
 
 Scope
 -----
@@ -219,8 +221,10 @@ READ_MATRIX = {
     "/api/v1/perm/roles/": OPEN_TO_ALL,
     # see the module docstring: audit measured 500, the FieldError is now fixed
     "/api/v1/organizations/": OPEN_TO_ALL,
-    # IsAdminUser == Django is_staff, so ADMIN is refused too
-    "/api/v1/death-sync/api-keys/": dict.fromkeys(ROLES, 403),
+    # FIXED (C9): was IsAdminUser (Django is_staff), which refused ADMIN too.
+    # Now IsAdminPermission (role == 'ADMIN'), same shape as every other
+    # admin-only row in this table.
+    "/api/v1/death-sync/api-keys/": ADMIN_ONLY,
 }
 
 # ---------------------------------------------------------------------------

@@ -493,3 +493,65 @@ class TestVisibilityAndTenantIsolation:
         resp = self.foreign_client.get(f"{BASE}/comments/", {"post": str(post_a.pk)})
         results = resp.data.get("results", resp.data)
         assert len(results) == 0
+
+
+@pytest.mark.django_db
+class TestUserProfileTenantIsolation:
+    """UserProfileViewSet.get_queryset() must scope profiles by tenant (C1).
+
+    Pre-fix, get_queryset() was `UserProfile.objects.select_related("user").
+    all()` filtered only by the optional `?user=` query param — no tenant
+    filter at all, so GET /profiles/ (and GET /profiles/{id}/, since retrieve
+    uses the same get_queryset()) let any authenticated user enumerate and
+    read every tenant's profiles. Writes were already safe
+    (IsProfileOwnerOrReadOnly), so this covers the read leak specifically.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="UPI_T1", defaults={"display_name": "Profile Isolation A"}
+        )[0]
+        self.tenant_b = Tenant.objects.get_or_create(
+            code="UPI_T2", defaults={"display_name": "Profile Isolation B"}
+        )[0]
+        self.user = User.objects.create_user(
+            username="upiuser1", password="test123", role="VIEWER", tenant=self.tenant,
+        )
+        self.foreign = User.objects.create_user(
+            username="upiforeign", password="test123", role="VIEWER", tenant=self.tenant_b,
+        )
+        self.admin = User.objects.create_user(
+            username="upiadmin", password="test123", role="ADMIN", tenant=self.tenant,
+        )
+        self.profile = UserProfile.objects.create(user=self.user, bio="Home bio")
+        self.foreign_profile = UserProfile.objects.create(user=self.foreign, bio="Foreign bio")
+        self.client = _jwt_client(self.user, self.tenant)
+        self.admin_client = _jwt_client(self.admin, self.tenant)
+
+    def test_list_excludes_other_tenant_profiles(self):
+        resp = self.client.get(f"{BASE}/profiles/")
+        assert resp.status_code == status.HTTP_200_OK
+        ids = {row["id"] for row in resp.data["results"]}
+        assert str(self.profile.pk) in ids
+        assert str(self.foreign_profile.pk) not in ids, (
+            "A VIEWER listed a profile belonging to another tenant."
+        )
+
+    def test_list_user_filter_cannot_bypass_tenant_scope(self):
+        """The `?user=` filter narrows within the tenant scope, it does not widen it."""
+        resp = self.client.get(f"{BASE}/profiles/", {"user": str(self.foreign.pk)})
+        assert resp.status_code == status.HTTP_200_OK
+        results = resp.data.get("results", resp.data)
+        assert len(results) == 0
+
+    def test_retrieve_other_tenant_profile_404s(self):
+        resp = self.client.get(f"{BASE}/profiles/{self.foreign_profile.pk}/")
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_admin_sees_profiles_across_all_tenants(self):
+        resp = self.admin_client.get(f"{BASE}/profiles/")
+        assert resp.status_code == status.HTTP_200_OK
+        ids = {row["id"] for row in resp.data["results"]}
+        assert str(self.profile.pk) in ids
+        assert str(self.foreign_profile.pk) in ids

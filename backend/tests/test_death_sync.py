@@ -3,6 +3,9 @@ Tests for Death Sync API.
 """
 
 import pytest
+from django.contrib.auth import get_user_model
+from rest_framework import status
+from rest_framework.test import APIClient
 
 from apps.death_sync.authentication import APIKeyAuthentication
 from apps.death_sync.models import (
@@ -13,6 +16,18 @@ from apps.death_sync.models import (
 from apps.death_sync.services import DeathSyncService
 from apps.souls.models import Soul, SoulState
 from apps.tenants.models import Tenant
+
+User = get_user_model()
+
+
+def _jwt_client(user, tenant):
+    """Return APIClient authenticated via JWT with tenant_code claim."""
+    client = APIClient()
+    from rest_framework_simplejwt.tokens import RefreshToken
+    token = RefreshToken.for_user(user)
+    token["tenant_code"] = tenant.code
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+    return client
 
 
 @pytest.fixture
@@ -240,3 +255,196 @@ class TestIdempotency:
                 payload={"soul_lookup": {"soul_id": str(soul.id)}, "death_date": "2026-06-01"},
                 idempotency_key="idempotent-test-1",
             )
+
+
+# ── C9: ExternalApiKeyViewSet permission gate ──────────────────────────
+
+@pytest.mark.django_db
+class TestExternalApiKeyPermissions:
+    """C9: ExternalApiKeyViewSet must gate by role == 'ADMIN', not Django
+    is_staff.
+
+    Pre-fix (`permission_classes = [IsAdminUser]`), every role — role='ADMIN'
+    included — got 403, because IsAdminUser checks Django's `is_staff` flag,
+    which SoulLedger's user model never sets for role='ADMIN' (see
+    apps/perm/test_matrix_snapshot.py's "GET .../api-keys/ is 403 for ADMIN
+    too" note, and tests/test_perm_write_snapshot_outside_matrix.py's
+    DEATH_SYNC_API_KEY_CREATE = ALL_403, both of which this fix intentionally
+    moves). Post-fix, role='ADMIN' succeeds and every other role is still
+    denied — the same shape as every other admin-gated endpoint in this
+    codebase (IsAdminPermission).
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="EAK_T1", defaults={"display_name": "API Key Perm Tenant"}
+        )[0]
+        self.admin = User.objects.create_user(
+            username="eakadmin", password="test123", role="ADMIN", tenant=self.tenant,
+        )
+        self.viewer = User.objects.create_user(
+            username="eakviewer", password="test123", role="VIEWER", tenant=self.tenant,
+        )
+        self.admin_client = _jwt_client(self.admin, self.tenant)
+        self.viewer_client = _jwt_client(self.viewer, self.tenant)
+
+    def test_admin_role_can_list(self):
+        resp = self.admin_client.get("/api/v1/death-sync/api-keys/")
+        assert resp.status_code == status.HTTP_200_OK
+
+    def test_admin_role_can_create(self):
+        resp = self.admin_client.post(
+            "/api/v1/death-sync/api-keys/",
+            {"name": "New Key", "system_type": "HOSPITAL"}, format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert ExternalApiKey.objects.filter(name="New Key", tenant=self.tenant).exists()
+
+    def test_non_admin_role_forbidden(self):
+        resp = self.viewer_client.get("/api/v1/death-sync/api-keys/")
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_unauthenticated_rejected(self):
+        resp = APIClient().get("/api/v1/death-sync/api-keys/")
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+@pytest.mark.django_db
+class TestExternalApiKeyQuerysetScoping:
+    """C9 (defense-in-depth): get_queryset() scopes non-ADMIN callers by
+    tenant, even though IsAdminPermission means role='ADMIN' is the only role
+    that can reach this view via HTTP today. ADMIN is this codebase's one
+    intentionally-global role (TenantPermission/DataScopeViewSetMixin bypass
+    it everywhere), and this endpoint is already ADMIN-only after the C9
+    permission fix, so tenant-scoping the queryset changes nothing for
+    today's only caller. It is added anyway, matching the
+    DataScopeViewSetMixin idiom used throughout this codebase, so the
+    queryset fails safe rather than open if a future change ever grants a
+    non-ADMIN role access to this viewset. Exercised directly against
+    get_queryset() rather than through HTTP, since HTTP cannot reach the
+    non-ADMIN branch today.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db, cn_tenant, eu_tenant):
+        self.cn_tenant = cn_tenant
+        self.eu_tenant = eu_tenant
+        _, cn_hash, cn_prefix = ExternalApiKey.generate_key()
+        self.cn_key = ExternalApiKey.objects.create(
+            tenant=cn_tenant, name="CN Key", system_type="HOSPITAL",
+            key_hash=cn_hash, key_prefix=cn_prefix,
+        )
+        _, eu_hash, eu_prefix = ExternalApiKey.generate_key()
+        self.eu_key = ExternalApiKey.objects.create(
+            tenant=eu_tenant, name="EU Key", system_type="HOSPITAL",
+            key_hash=eu_hash, key_prefix=eu_prefix,
+        )
+
+    def _queryset_for(self, role, tenant):
+        from types import SimpleNamespace
+
+        from apps.death_sync.views import ExternalApiKeyViewSet
+
+        view = ExternalApiKeyViewSet()
+        view.request = SimpleNamespace(user=SimpleNamespace(role=role), tenant=tenant)
+        return view.get_queryset()
+
+    def test_non_admin_queryset_excludes_other_tenant_key(self):
+        qs = self._queryset_for("VIEWER", self.cn_tenant)
+        assert list(qs) == [self.cn_key]
+
+    def test_admin_queryset_sees_every_tenant(self):
+        qs = self._queryset_for("ADMIN", self.cn_tenant)
+        assert set(qs) == {self.cn_key, self.eu_key}
+
+
+# ── C10: DeathSyncHealthView tenant-scoped counts ──────────────────────
+
+@pytest.mark.django_db
+class TestDeathSyncHealthTenantIsolation:
+    """DeathSyncHealthView's three counts must be scoped to the caller's
+    tenant (C10).
+
+    Pre-fix, all three queries (`pending_count`, `failed_count`,
+    `failed_webhooks`) ran with no tenant filter at all — `getattr(request,
+    'tenant', None)` was computed and immediately discarded — so any valid
+    API key saw pending/failed volumes aggregated across every tenant.
+
+    The view's permission wiring is unrelated to this fix and, independently
+    of it, currently rejects every request made through the real URL:
+    APIKeyAuthentication authenticates successfully but returns AnonymousUser
+    as request.user (see apps/death_sync/authentication.py), so the view's
+    inherited default IsAuthenticated denies every valid key with a 403. That
+    is a separate, pre-existing bug outside the four findings this pass
+    fixes — flagged separately rather than folded in here. To test the
+    tenant-scoping logic itself without being blocked by that unrelated bug,
+    this drives APIKeyAuthentication directly (exactly as
+    TestAPIKeyAuthentication above does) and then calls the view's get()
+    method directly, bypassing only the permission layer.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db, cn_tenant, eu_tenant):
+        from apps.death_sync.models import WebhookConfig, WebhookDeliveryLog, WebhookDeliveryStatus
+
+        self.cn_tenant = cn_tenant
+        self.eu_tenant = eu_tenant
+
+        raw_cn, cn_hash, cn_prefix = ExternalApiKey.generate_key()
+        self.cn_key = ExternalApiKey.objects.create(
+            tenant=cn_tenant, name="CN Key", system_type="HOSPITAL",
+            key_hash=cn_hash, key_prefix=cn_prefix,
+        )
+        self.raw_cn_key = raw_cn
+
+        raw_eu, eu_hash, eu_prefix = ExternalApiKey.generate_key()
+        self.eu_key = ExternalApiKey.objects.create(
+            tenant=eu_tenant, name="EU Key", system_type="HOSPITAL",
+            key_hash=eu_hash, key_prefix=eu_prefix,
+        )
+        self.raw_eu_key = raw_eu
+
+        # CN tenant has no registrations or failed webhooks of its own.
+        # EU tenant has one pending, one failed, and one failed webhook.
+        DeathRegistrationRequest.objects.create(
+            tenant=eu_tenant, api_key=self.eu_key, idempotency_key="eu-pending",
+            source_system="HOSPITAL", source_payload={}, status=DeathRegistrationStatus.PENDING,
+        )
+        DeathRegistrationRequest.objects.create(
+            tenant=eu_tenant, api_key=self.eu_key, idempotency_key="eu-failed",
+            source_system="HOSPITAL", source_payload={}, status=DeathRegistrationStatus.FAILED,
+        )
+        eu_webhook = WebhookConfig.objects.create(
+            tenant=eu_tenant, api_key=self.eu_key, url="https://example.com/eu",
+            signing_secret="eu_secret",
+        )
+        eu_registration = DeathRegistrationRequest.objects.create(
+            tenant=eu_tenant, api_key=self.eu_key, idempotency_key="eu-webhook-src",
+            source_system="HOSPITAL", source_payload={}, status=DeathRegistrationStatus.PROCESSED,
+        )
+        WebhookDeliveryLog.objects.create(
+            webhook=eu_webhook, registration=eu_registration, status=WebhookDeliveryStatus.FAILED,
+        )
+
+    def _call_health_view(self, raw_key):
+        from rest_framework.test import APIRequestFactory
+
+        from apps.death_sync.views import DeathSyncHealthView
+
+        factory = APIRequestFactory()
+        request = factory.get("/api/v1/death-sync/health/", HTTP_AUTHORIZATION=f"ApiKey {raw_key}")
+        APIKeyAuthentication().authenticate(request)  # sets request.api_key / request.tenant
+        return DeathSyncHealthView().get(request)
+
+    def test_cn_caller_does_not_see_eu_tenant_counts(self):
+        response = self._call_health_view(self.raw_cn_key)
+        assert response.data["system"]["pending_registrations_24h"] == 0
+        assert response.data["system"]["failed_registrations_24h"] == 0
+        assert response.data["system"]["failed_webhooks_24h"] == 0
+
+    def test_eu_caller_sees_only_its_own_counts(self):
+        response = self._call_health_view(self.raw_eu_key)
+        assert response.data["system"]["pending_registrations_24h"] == 1
+        assert response.data["system"]["failed_registrations_24h"] == 1
+        assert response.data["system"]["failed_webhooks_24h"] == 1
