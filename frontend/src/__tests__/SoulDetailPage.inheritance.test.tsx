@@ -52,6 +52,7 @@ jest.mock("@/src/components/rbac/RequirePermission", () => ({
 // significant source of unrelated flake in jsdom — stub it out.
 jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
   LazySoulLineChart: () => null,
+  LazyLifespanBarChart: () => null,
 }));
 
 jest.mock("@/src/components/souls/SoulEditModal", () => ({
@@ -114,10 +115,16 @@ function mockLedgerWithOneRecord(meritScore: number, demeritScore: number) {
         record_type: "MERIT",
         category: "test",
         description: "test",
-        weight: 1,
+        // LedgerRecord (apps/ledger/services.py get_ledger_summary) renames
+        // weight -> original_weight and adds the decay figures — this used
+        // to mock the pre-rename SoulRecordEntry shape instead.
+        original_weight: 1,
         effective_weight: 1,
-        event_date: "2020-01-01",
+        decay_factor: 1,
+        years_elapsed: 0,
+        event_date: { year: 2020, month: 1, day: 1 },
         recorded_at: "2020-01-01T00:00:00Z",
+        is_milestone: false,
       },
     ],
     // mockSoul below is CHINESE, so this soul reads as BALANCE

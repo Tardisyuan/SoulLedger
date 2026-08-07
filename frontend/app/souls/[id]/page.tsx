@@ -6,7 +6,6 @@ import { useRouter, useParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import type { ToastType } from "@/src/components/ui/Toast";
-import { LazySoulLineChart } from "@/src/components/charts/LazyDashboardCharts";
 import {
   soulsApi,
   judgmentApi,
@@ -19,16 +18,16 @@ import {
   Reincarnation,
   SoulEvent,
   LedgerSummary,
-  LedgerRecord,
   SoulRecordEntry,
 } from "@/lib/api";
 import { ledgerApi, type LedgerInheritance } from "@/lib/api/ledger";
 import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
-import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
+import { SoulKarmaLedgerCard } from "@/src/components/souls/SoulKarmaLedgerCard";
+import { SoulLifecycleTimeline } from "@/src/components/souls/SoulLifecycleTimeline";
 import { DateProblemsPanel } from "@/src/components/souls/DateProblemsPanel";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
-import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { formatHistoricalDate } from "@/lib/utils";
 
@@ -76,6 +75,7 @@ export default function SoulDetailPage() {
   const [actionLoading, setActionLoading] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState("");
   const [confirmCallback, setConfirmCallback] = useState<(() => void) | null>(null);
@@ -295,13 +295,23 @@ export default function SoulDetailPage() {
                   belongs to that same origin identity, and a copyable ID. */}
               <div className="flex items-center gap-2 text-xs text-[hsl(var(--color-ink-muted))] flex-wrap">
                 <span>{t(`souls.civilizations.${soul?.civilization}`)}</span>
+                {/* previous_identity and dateRangeText are merged into one
+                    clause (defect #4, Stage 3 doc) — birth/death dates
+                    belong to birth_name's life, not the current headline
+                    name, and showing them as two independent trailing
+                    segments made that ownership ambiguous. The per-life
+                    cycle-band rows on the lifecycle spine below carry the
+                    full multi-life breakdown; this stays a compact summary. */}
                 {soul?.birth_name && soul.birth_name !== soul.name && (
                   <>
                     <span aria-hidden="true">·</span>
-                    <span>{tf("souls.detail.previous_identity", "Formerly {{name}}", { name: soul.birth_name })}</span>
+                    <span>
+                      {tf("souls.detail.previous_identity", "Formerly {{name}}", { name: soul.birth_name })}
+                      {dateRangeText ? ` (${dateRangeText})` : ""}
+                    </span>
                   </>
                 )}
-                {dateRangeText && (
+                {(!soul?.birth_name || soul.birth_name === soul.name) && dateRangeText && (
                   <>
                     <span aria-hidden="true">·</span>
                     <span>{dateRangeText}</span>
@@ -328,13 +338,50 @@ export default function SoulDetailPage() {
                   {t("souls.detail.edit")}
                 </button>
               </RequirePermission>
+              {/* The destructive action lives behind an overflow menu rather
+                  than as a full-strength red button next to Edit (defect #3,
+                  Stage 3 doc) — delete is rare and consequential; it
+                  shouldn't share visual weight with the routine edit action. */}
               <RequirePermission permissions="soul.delete">
-                <button
-                  onClick={handleDeleteConfirm}
-                  className="px-3 py-1.5 bg-[hsl(var(--color-status-error)/0.1)] border border-[hsl(var(--color-status-error)/0.3)] hover:bg-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))] rounded-md text-sm transition-colors"
-                >
-                  {t("souls.detail.delete")}
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsOverflowMenuOpen((v) => !v)}
+                    aria-haspopup="menu"
+                    aria-expanded={isOverflowMenuOpen}
+                    aria-label={tf("souls.detail.more_actions", "更多操作")}
+                    className="px-2.5 py-1.5 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] rounded-md text-sm transition-colors"
+                  >
+                    ⋯
+                  </button>
+                  {isOverflowMenuOpen && (
+                    <>
+                      <button
+                        type="button"
+                        aria-hidden="true"
+                        tabIndex={-1}
+                        className="fixed inset-0 z-10 cursor-default"
+                        onClick={() => setIsOverflowMenuOpen(false)}
+                      />
+                      <div
+                        role="menu"
+                        className="absolute right-0 mt-1 w-40 z-20 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-md shadow-lg py-1"
+                      >
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setIsOverflowMenuOpen(false);
+                            handleDeleteConfirm();
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-sm text-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.1)] transition-colors"
+                        >
+                          {t("souls.detail.delete")}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </RequirePermission>
             </>
           )}
@@ -389,54 +436,43 @@ export default function SoulDetailPage() {
             )}
           </div>
 
-          {/* Ledger Card */}
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
-            {loading ? (
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <Skeleton className="h-4 w-12" />
-                  <Skeleton className="h-6 w-12" />
-                </div>
-                <div className="flex justify-between items-center">
-                  <Skeleton className="h-4 w-12" />
-                  <Skeleton className="h-6 w-12" />
-                </div>
-                <div className="border-t border-[hsl(var(--color-hairline))] pt-2 flex justify-between items-center">
-                  <Skeleton className="h-4 w-12" />
-                  <Skeleton className="h-6 w-12" />
-                </div>
-                <Skeleton className="h-3 w-full" />
+          {/* 业力总账 — Stage 3 doc's left-column ledger card: the existing
+              SoulReadingPanel (unchanged) plus the raw-vs-decayed breakdown,
+              lifespan chart, and next-life inheritance preview, all moved
+              out of this ad hoc box into their own component. */}
+          {loading ? (
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))] space-y-3">
+              <div className="flex justify-between items-center">
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-6 w-12" />
               </div>
-            ) : ledger ? (
-              <div className="space-y-3">
-                <SoulReadingPanel
-                  reading={ledger.reading}
-                  meritScore={ledger.merit_score}
-                  demeritScore={ledger.demerit_score}
-                  karmicBalance={ledger.karmic_balance}
-                />
-                <div className="text-xs text-[hsl(var(--color-ink-subtle))] text-right">{ledger.record_count} {t("souls.detail.records")}</div>
-
-                {/* Ledger Timeline Chart */}
-                {ledger.records && ledger.records.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-2">{t("ledger.timeline")} ({t("ledger.time_decay")})</p>
-                    <LazySoulLineChart data={getLedgerChartData(ledger.records)} />
-
-                    {/* Reincarnation Inheritance Preview — sourced from
-                        GET /ledger/inheritance/{soul_id}/, never recomputed
-                        client-side. A 409 (terminal cosmology, no next life)
-                        resolves the query to null, so this simply renders
-                        nothing rather than an error or empty state. */}
-                    {inheritanceQuery.data && <InheritancePanel data={inheritanceQuery.data} t={t} />}
-                  </div>
-                )}
+              <div className="flex justify-between items-center">
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-6 w-12" />
               </div>
-            ) : (
+              <div className="border-t border-[hsl(var(--color-hairline))] pt-2 flex justify-between items-center">
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-6 w-12" />
+              </div>
+              <Skeleton className="h-3 w-full" />
+            </div>
+          ) : ledger ? (
+            <SoulKarmaLedgerCard
+              ledgerLabel={ledgerLabel}
+              reading={ledger.reading}
+              meritScore={ledger.merit_score}
+              demeritScore={ledger.demerit_score}
+              karmicBalance={ledger.karmic_balance}
+              recordCount={ledger.record_count}
+              records={ledger.records}
+              inheritance={inheritanceQuery.data ?? null}
+            />
+          ) : (
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+              <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
               <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
@@ -522,130 +558,34 @@ export default function SoulDetailPage() {
             />
           )}
 
-          {/* Judgment Records */}
-          <Section title={t("souls.detail.judgments")} count={loading ? 0 : judgments.length}>
-            {loading ? (
-              <>
-                <SkeletonCard />
-                <SkeletonCard />
-              </>
-            ) : judgments.length === 0 ? (
-              <EmptyState>{t("souls.detail.no_judgments")}</EmptyState>
-            ) : (
-              judgments.map((j) => (
-                <div key={j.id} className="bg-[hsl(var(--color-surface-2))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <div className="text-sm font-medium text-[hsl(var(--color-ink))]">{j.court || t("souls.detail.court")}</div>
-                      <div className="text-xs text-[hsl(var(--color-ink-muted))]">{j.created_at?.slice(0, 19).replace("T", " ")}</div>
-                    </div>
-                    {j.verdict && (
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                        j.verdict === "PASSED" ? "bg-[hsl(var(--color-verdict-passed)/0.1)] text-[hsl(var(--color-verdict-passed))]" :
-                        j.verdict === "FAILED" ? "bg-[hsl(var(--color-verdict-failed)/0.1)] text-[hsl(var(--color-verdict-failed))]" :
-                        "bg-[hsl(var(--color-verdict-purgatory)/0.1)] text-[hsl(var(--color-verdict-purgatory))]"
-                      }`}>
-                        {tf(`souls.detail.verdict_${j.verdict.toLowerCase()}`, j.verdict)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-[hsl(var(--color-ink-muted))]">
-                    {j.is_final ? t("souls.detail.final") : t("souls.detail.pending")}
-                    {j.civilization ? ` · ${tf(`souls.civilizations.${j.civilization}`, j.civilization)}` : ""}
-                  </div>
-                </div>
-              ))
-            )}
-          </Section>
-
-          {/* Disposition Records */}
-          <Section title={t("souls.detail.dispositions")} count={loading ? 0 : dispositions.length}>
-            {loading ? (
-              <>
-                <SkeletonCard />
-                <SkeletonCard />
-              </>
-            ) : dispositions.length === 0 ? (
-              <EmptyState>{t("souls.detail.no_dispositions")}</EmptyState>
-            ) : (
-              dispositions.map((d) => (
-                <div key={d.id} className="bg-[hsl(var(--color-surface-2))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="text-sm font-medium text-[hsl(var(--color-ink))]">
-                        {/* realm_name/realm_code come from the serializer;
-                            destination_realm is the raw FK, so leading with it
-                            put a UUID where the destination should be. */}
-                        → {d.realm_name || d.realm_code || t("souls.detail.destination")}
-                      </div>
-                      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
-                        {t("souls.detail.memory_reset")}: {d.memory_reset} · {d.is_eternal ? t("souls.detail.eternal") : `${d.memory_reset} ${t("souls.detail.memory_reset")}`}
-                      </div>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded text-xs ${
-                      d.is_executed ? "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
-                    }`}>
-                      {d.is_executed ? t("souls.detail.executed") : t("souls.detail.pending")}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </Section>
-
-          {/* Reincarnation Records */}
-          <Section title={t("souls.detail.reincarnations")} count={loading ? 0 : reincarnations.length}>
-            {loading ? (
-              <>
-                <SkeletonCard />
-                <SkeletonCard />
-              </>
-            ) : reincarnations.length === 0 ? (
-              <EmptyState>{t("souls.detail.no_reincarnations")}</EmptyState>
-            ) : (
-              reincarnations.map((r) => (
-                <div key={r.id} className="bg-[hsl(var(--color-surface-2))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="text-sm font-medium text-[hsl(var(--color-ink))]">
-                        → {r.new_identity} ({r.rebirth_form})
-                      </div>
-                      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
-                        {t("souls.detail.cycle")} {r.cycle_count} · {r.target_realm}
-                      </div>
-                    </div>
-                    <span className="text-xs text-[hsl(var(--color-ink-subtle))]">
-                      {r.reincarnated_at?.slice(0, 19).replace("T", " ")}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </Section>
-
-          {/* Event Log */}
-          <Section title={t("souls.detail.event_log")} count={loading ? 0 : events.length}>
-            {loading ? (
-              <>
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </>
-            ) : events.length === 0 ? (
-              <EmptyState>{t("souls.detail.no_events")}</EmptyState>
-            ) : (
-              events.map((e) => (
-                <div key={e.id} className="bg-[hsl(var(--color-surface-2))] rounded-lg p-3 border border-[hsl(var(--color-hairline))] text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-[hsl(var(--color-ink))] font-mono">{e.event_type}</span>
-                    <span className="text-[hsl(var(--color-ink-subtle))]">{e.create_time?.slice(0, 19).replace("T", " ")}</span>
-                  </div>
-                  {e.actor && e.actor !== "system" && (
-                    <div className="text-[hsl(var(--color-ink-subtle))] mt-0.5">Actor: {e.actor}</div>
-                  )}
-                </div>
-              ))
-            )}
-          </Section>
+          {/* Soul lifecycle spine — replaces the four judgment/disposition/
+              reincarnation/event-log boxes that used to stack here, each with
+              its own "暂无记录" empty state (docs/design-handoff/BRIEF.md
+              §4.1, "clearest layout defect" per the Stage 3 design doc). One
+              reverse-chronological timeline instead: karma entries, judgment/
+              disposition/reincarnation transition markers, and (behind an
+              opt-in toggle) the raw system event feed, plus dashed
+              placeholder rows for stages the soul hasn't reached yet. */}
+          {loading ? (
+            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))] space-y-3">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : (
+            soul && (
+              <SoulLifecycleTimeline
+                soul={soul}
+                judgments={judgments}
+                dispositions={dispositions}
+                reincarnations={reincarnations}
+                events={events}
+                ledgerRecords={ledger?.records ?? []}
+                onOpenJudgmentQueue={(judgmentId) => router.push(`/judgment/${judgmentId}`)}
+              />
+            )
+          )}
         </div>
       </div>
 
@@ -702,87 +642,6 @@ export default function SoulDetailPage() {
       />
     </div>
   );
-}
-
-function getLedgerChartData(records: LedgerRecord[]) {
-  if (!records || records.length === 0) return [];
-
-  // Convert HistoricalDate to a sortable timestamp or use recorded_at as fallback
-  const historicalDateToTimestamp = (date: ReturnType<typeof formatHistoricalDate> | null): number => {
-    if (!date) return 0;
-    // date is a formatted string like "44 BCE", "1066 CE", etc.
-    // For sorting, we need a comparable value. Parse it back to a numeric year.
-    const isBCE = date.includes("BCE");
-    const yearStr = date.split(" ")[0];
-    const year = isBCE ? -parseInt(yearStr, 10) : parseInt(yearStr, 10);
-    // Return a sortable timestamp (year as milliseconds, biased to positive range)
-    return (year + 10000) * 365.25 * 24 * 60 * 60 * 1000;
-  };
-
-  // Sort by when the deed happened, not when the row was written. Ordering by
-  // recorded_at puts a life in data-entry order, which for an imported life is
-  // arbitrary — and the labels below already use event_date, so the two
-  // disagreed.
-  const when = (r: LedgerRecord) => {
-    if (r.event_date) {
-      const formatted = formatHistoricalDate(r.event_date);
-      return historicalDateToTimestamp(formatted);
-    }
-    return new Date(r.recorded_at).getTime();
-  };
-  const sorted = [...records].sort((a, b) => when(a) - when(b));
-
-  let cumulative = 0;
-  return sorted.map((r) => {
-    cumulative += r.type === "MERIT" ? r.effective_weight : -r.effective_weight;
-    return {
-      date: formatHistoricalDate(r.event_date) || r.recorded_at.slice(0, 10),
-      merit: r.type === "MERIT" ? r.effective_weight : 0,
-      demerit: r.type === "DEMERIT" ? r.effective_weight : 0,
-      cumulative,
-    };
-  });
-}
-
-// Balance is derived here, inside the branch where `data` is already known
-// non-null (the caller only renders this when inheritanceQuery.data is
-// truthy) — that lets TypeScript narrow it via the parameter type instead of
-// through a nullable variable carried in from outside, which would need a
-// `?? 0` that can never actually fire.
-function InheritancePanel({ data, t }: { data: LedgerInheritance; t: (key: string) => string }) {
-  const balance = data.inherited_merit - data.inherited_demerit;
-  return (
-    <div className="mt-3 pt-2 border-t border-[hsl(var(--color-hairline))]">
-      <p className="text-xs text-[hsl(var(--color-ink-muted))] mb-1">{t("ledger.next_life_inheritance")}</p>
-      <div className="flex justify-between text-xs">
-        <span className="text-[hsl(var(--color-karma-merit))]">{t("souls.detail.merit")}: +{data.inherited_merit}</span>
-        <span className="text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.demerit")}: -{data.inherited_demerit}</span>
-      </div>
-      <div className="flex justify-between text-xs mt-1">
-        <span className="text-[hsl(var(--color-ink-subtle))]">{t("souls.detail.balance")}: </span>
-        <span className={balance >= 0 ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"}>
-          {balance >= 0 ? "+" : ""}{balance}
-        </span>
-      </div>
-      <p className="text-[10px] text-[hsl(var(--color-ink-subtle))] mt-1">{t("ledger.inheritance_note")}</p>
-    </div>
-  );
-}
-
-function Section({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
-  return (
-    <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-      <div className="flex items-center gap-2 mb-4">
-        <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase">{title}</h2>
-        <span className="bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink))] text-xs px-1.5 py-0.5 rounded">{count}</span>
-      </div>
-      <div className="space-y-3">{children}</div>
-    </div>
-  );
-}
-
-function EmptyState({ children }: { children: string }) {
-  return <div className="text-[hsl(var(--color-ink-subtle))] text-sm text-center py-4">{children}</div>;
 }
 
 interface IdChipProps {

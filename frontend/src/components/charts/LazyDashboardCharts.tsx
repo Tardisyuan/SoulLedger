@@ -392,11 +392,95 @@ const LazySoulLineChart = dynamic(
   }
 );
 
+// ── Soul Lifecycle Lifespan Bar Chart (Stage 3) ──────────────────
+// One bar per ledger record, labeled by year. `effective` (the decayed
+// weight, still signed +merit/-demerit) draws solid; `decayedAway` (the
+// magnitude decay stripped off — always the same sign as `effective`, since
+// decay only shrinks toward zero, never flips merit into demerit) stacks on
+// top of it in the same hue at low opacity, so the full bar height reads as
+// "what this deed originally weighed" and the solid base reads as "what
+// still counts today". A record with no decay yet (rate 0, or age ~0) has
+// decayedAway ~0 and the bar is solid all the way up.
+const LazyLifespanBarChart = dynamic(
+  () =>
+    import("recharts").then((mod) => {
+      const {
+        BarChart,
+        Bar,
+        XAxis,
+        YAxis,
+        CartesianGrid,
+        Tooltip,
+        ResponsiveContainer,
+        ReferenceLine,
+      } = mod;
+      return function WrappedLifespanBarChart({
+        data,
+        height = 140,
+      }: {
+        data: {
+          key: string;
+          label: string;
+          effective: number;
+          decayedAway: number;
+          color: string;
+        }[];
+        height?: number;
+      }) {
+        return (
+          <ResponsiveContainer width="100%" height={height}>
+            <BarChart data={data}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="hsl(var(--color-hairline))"
+              />
+              <XAxis
+                dataKey="label"
+                tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 9 }}
+                axisLine={{ stroke: "hsl(var(--color-hairline))" }}
+                tickLine={{ stroke: "hsl(var(--color-hairline))" }}
+              />
+              <YAxis
+                tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 9 }}
+                width={30}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "hsl(var(--color-surface-2))",
+                  border: "1px solid hsl(var(--color-hairline))",
+                  borderRadius: "6px",
+                  fontSize: 11,
+                }}
+                labelStyle={{ color: "hsl(var(--color-ink-muted))" }}
+              />
+              <ReferenceLine y={0} stroke="hsl(var(--color-hairline))" />
+              <Bar dataKey="effective" stackId="w" radius={[2, 2, 0, 0]}>
+                {data.map((d) => (
+                  <mod.Cell key={`eff-${d.key}`} fill={d.color} fillOpacity={0.85} />
+                ))}
+              </Bar>
+              <Bar dataKey="decayedAway" stackId="w">
+                {data.map((d) => (
+                  <mod.Cell key={`decay-${d.key}`} fill={d.color} fillOpacity={0.25} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        );
+      };
+    }),
+  {
+    ssr: false,
+    loading: () => <ChartSkeleton height={140} />,
+  }
+);
+
 export {
   LazyPieChart,
   LazyBarChart,
   LazyDashboardPieChart,
   LazyAdminBarChart,
   LazySoulLineChart,
+  LazyLifespanBarChart,
   ChartSkeleton,
 };
