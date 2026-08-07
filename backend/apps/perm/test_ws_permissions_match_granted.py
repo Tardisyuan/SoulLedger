@@ -43,7 +43,7 @@ change behaviour any seeded deployment exercises. See the docstrings on
 """
 from asgiref.sync import async_to_sync
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TransactionTestCase
 
 from apps.core.ws_permissions import PermissionMiddleware
 from apps.notifications.consumers import NotificationConsumer
@@ -69,8 +69,35 @@ def _consumer_permissions(user):
     return async_to_sync(consumer._resolve_permissions)()
 
 
-class WebSocketPermissionsMatchTheCheckerTest(TestCase):
-    """Every role, every declared codename: the WS-resolved set == what check_permission grants."""
+class WebSocketPermissionsMatchTheCheckerTest(TransactionTestCase):
+    """Every role, every declared codename: the WS-resolved set == what check_permission grants.
+
+    TransactionTestCase, not TestCase: every test method here calls
+    ``async_to_sync(...)`` around a ``channels.db.database_sync_to_async``
+    function, which runs in its own thread and calls Django's
+    ``close_old_connections()`` before and after. TestCase wraps the whole
+    test in one outer transaction on a single shared connection — a
+    worker thread closing "old" connections from underneath that setup
+    reliably poisons it (`django.db.utils.InterfaceError: connection
+    already closed`, both for the rest of that test and every subsequent
+    test in the class). This reproduces deterministically against a real
+    Postgres connection; SQLite's far more forgiving connection semantics
+    let it slide, which is why this stayed invisible outside CI.
+    TransactionTestCase gives each test its own real
+    commit/truncate-based lifecycle instead of a shared savepoint, which
+    is what this cross-thread pattern actually needs.
+
+    ``serialized_rollback = True`` because the ``Role`` catalogue
+    (ADMIN/JUDGE/GUARDIAN/VIEWER/...) is seeded by a data migration
+    (``apps/perm/migrations/0017_seed_roles_and_grants.py``), not by this
+    class's own ``setUp``. Plain ``TransactionTestCase`` truncates every
+    table after each test method and does not re-run migrations, so
+    without this flag the second test method onward finds an empty
+    ``Role`` table — Django serializes DB state right after migrations
+    apply and restores it before each test method specifically to cover
+    this case.
+    """
+    serialized_rollback = True
 
     def setUp(self):
         invalidate_all_permissions()
