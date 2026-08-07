@@ -8,11 +8,12 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
 import { PermissionFormModal } from "@/src/components/permissions/PermissionFormModal";
 import { RoleFormModal } from "@/src/components/permissions/RoleFormModal";
-import { DataTable } from "@/components/ui/data-table";
+import { DataGrid, type DataGridColumn } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -195,6 +196,8 @@ export default function PermissionsPage() {
   const { t } = useI18n();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canManagePermissions = hasPermission("system.settings");
 
   // ── Permission CRUD state (unchanged from the previous per-role picker) ──
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -494,6 +497,45 @@ export default function PermissionsPage() {
   const tier3Diffs = pendingDiffs.filter((d) => d.tier === 3);
   const canConfirmSave = tier3Diffs.every((d) => (typedRoleNames[d.role] ?? "").trim() === d.role);
 
+  // Codename/name/category are identifier/text/enum per §1's taxonomy; the
+  // actions column collapses to the overflow spec (design doc open item #3)
+  // instead of the two bare "编辑/删除" links that used to run together with
+  // no separator.
+  const permissionColumns: DataGridColumn<Permission>[] = [
+    { type: "identifier", key: "codename", header: t("permissions.codename"), width: "220px", value: (perm) => perm.codename },
+    { type: "text", key: "name", header: t("permissions.name"), value: (perm) => perm.name },
+    {
+      type: "enum",
+      key: "category",
+      header: t("permissions.category"),
+      width: "160px",
+      value: (perm) => ({ tone: "neutral", label: perm.category }),
+    },
+    {
+      type: "actions",
+      key: "actions",
+      header: t("souls.action"),
+      width: "112px",
+      menuLabel: t("common.row_actions"),
+      // Edit inline as the one primary verb; delete stays behind the
+      // overflow trigger, separated from the safe action — §3's resolution
+      // to "两个动作链接连在一起，其中一个是破坏性的".
+      primary: (perm) =>
+        canManagePermissions ? { label: t("permissions.edit"), onSelect: () => { setEditingPerm(perm); setIsEditOpen(true); } } : null,
+      items: (perm) =>
+        canManagePermissions
+          ? [
+              {
+                key: "delete",
+                label: t("permissions.delete"),
+                tone: "danger",
+                onSelect: () => { setDeletingPerm(perm); setIsDeleteOpen(true); },
+              },
+            ]
+          : [],
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
       <div className="px-6 pt-6 pb-4">
@@ -664,47 +706,13 @@ export default function PermissionsPage() {
               ) : undefined
             }
           >
-            <DataTable<Permission>
+            <DataGrid<Permission>
               caption={t("permissions.all_permissions")}
-              columns={[
-                { key: "codename", header: t("permissions.codename") },
-                { key: "name", header: t("permissions.name") },
-                { key: "category", header: t("permissions.category") },
-                { key: "action", header: t("souls.action"), align: "right" },
-              ]}
+              columns={permissionColumns}
               data={permsQuery.data ?? []}
               isLoading={permsQuery.isLoading}
               isError={permsQuery.isError}
               keyExtractor={(perm) => String(perm.id)}
-              renderRow={(perm) => (
-                <>
-                  <td className="px-4 py-3 font-mono text-[hsl(var(--color-accent-ink))] text-xs">{perm.codename}</td>
-                  <td className="px-4 py-3 text-[hsl(var(--color-ink))]">{perm.name}</td>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
-                      {perm.category}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <RequirePermission permissions="system.settings">
-                      <div className="flex justify-end gap-3">
-                        <button
-                          onClick={() => { setEditingPerm(perm); setIsEditOpen(true); }}
-                          className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-hover))] text-xs"
-                        >
-                          {t("permissions.edit")}
-                        </button>
-                        <button
-                          onClick={() => { setDeletingPerm(perm); setIsDeleteOpen(true); }}
-                          className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-xs"
-                        >
-                          {t("permissions.delete")}
-                        </button>
-                      </div>
-                    </RequirePermission>
-                  </td>
-                </>
-              )}
             />
           </PageSection>
 

@@ -259,7 +259,8 @@
     "retry": "Khemu",
     "confirm": "Sesen",
     "back_to_list": "← Smen Wu",
-    "error": "Ma Iri Sethet"
+    "error": "Ma Iri Sethet",
+    "row_actions": "Aha Seth Wu"
   },
   "pagination": {
     "info": "Per {{page}} / {{total}} ({{count}} medu)"
@@ -701,6 +702,13 @@
     "page_info": "Per {{page}} Wu {{total}} ({{count}} Abuf)",
     "access_denied": "Ma Pert Sethet Wu",
     "admin_only": "Netjer Em Kheme Seth",
+    "affected": "Sethet Wu",
+    "search_placeholder": "Sekhem Sethet Wu Medu Seth…",
+    "date_all": "Wetu Seped",
+    "date_7d": "Per 7 Sepedu",
+    "date_30d": "Per 30 Sepedu",
+    "compact": "Nedjes",
+    "events_from_writes": "{{count}} Kheme Em Wu Aha",
     "actions": {
       "CREATE": "Kheme Seth",
       "UPDATE": "Khemen Seth",

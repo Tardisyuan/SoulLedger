@@ -42,6 +42,13 @@ export interface DataTableColumn {
    * where a visible label would just be noise.
    */
   srOnlyHeader?: boolean
+  /**
+   * Fixed or minimum width for this column's `<col>`, e.g. `"24ch"` or
+   * `"132px"`. Declaring these against the widest locale is what keeps a
+   * language switch from reflowing the grid — see DataGrid's column types.
+   * Omit for the one column that should absorb remaining space.
+   */
+  width?: string
 }
 
 export interface DataTableProps<T> {
@@ -158,6 +165,13 @@ export function DataTable<T>({
       <div className="overflow-x-auto rounded-lg border border-[hsl(var(--color-hairline))]">
         <table className="w-full text-sm" aria-busy={isLoading || undefined}>
           <caption className="sr-only">{caption}</caption>
+          {columns.some((c) => c.width) && (
+            <colgroup>
+              {columns.map((column) => (
+                <col key={column.key} style={column.width ? { width: column.width } : undefined} />
+              ))}
+            </colgroup>
+          )}
           <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
             <tr className="border-b border-[hsl(var(--color-hairline))]">
               {columns.map((column) => {

@@ -259,7 +259,8 @@
     "retry": "Retry",
     "confirm": "Confirm",
     "back_to_list": "Back to list",
-    "error": "Something went wrong"
+    "error": "Something went wrong",
+    "row_actions": "Row actions"
   },
   "pagination": {
     "info": "Page {{page}} / {{total}} ({{count}} records)"
@@ -701,6 +702,13 @@
     "page_info": "Page {{page}} of {{total}} ({{count}} records)",
     "access_denied": "Access Denied",
     "admin_only": "Only administrators can view audit logs",
+    "affected": "Affected",
+    "search_placeholder": "Search resource or description…",
+    "date_all": "All time",
+    "date_7d": "Last 7 days",
+    "date_30d": "Last 30 days",
+    "compact": "Compact",
+    "events_from_writes": "{{count}} writes in this event",
     "actions": {
       "CREATE": "Created",
       "UPDATE": "Updated",

@@ -259,7 +259,8 @@
     "retry": "重试",
     "confirm": "确认",
     "back_to_list": "返回列表",
-    "error": "出错了"
+    "error": "出错了",
+    "row_actions": "行操作"
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)"
@@ -701,6 +702,13 @@
     "page_info": "第 {{page}} 页，共 {{total}} 页 ({{count}} 条记录)",
     "access_denied": "访问被拒绝",
     "admin_only": "仅管理员可查看审计日志",
+    "affected": "影响对象",
+    "search_placeholder": "搜索资源或描述…",
+    "date_all": "全部时间",
+    "date_7d": "近 7 天",
+    "date_30d": "近 30 天",
+    "compact": "紧凑",
+    "events_from_writes": "本事件包含 {{count}} 条写入",
     "actions": {
       "CREATE": "创建",
       "UPDATE": "更新",
