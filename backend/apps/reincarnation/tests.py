@@ -7,6 +7,12 @@ tests live in tests/test_reincarnation_api.py.
 import pytest
 
 from apps.ledger.services import LedgerService, RebirthNotApplicable
+from apps.reincarnation.models import (
+    SIX_PATHS,
+    THREE_EVIL_PATHS,
+    THREE_GOOD_PATHS,
+    RebirthForm,
+)
 from apps.reincarnation.services import ReincarnationService
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
@@ -52,6 +58,94 @@ def _soul_with_ledger_records(tenant, merit_weight, demerit_weight, death_year=2
             description="Demerit deed", weight=demerit_weight, event_year=death_year,
         )
     return soul
+
+
+class TestSixPaths:
+    """六道轮回 — docs/07_六道轮回详解.md §一 lists six paths; the enum used to
+    offer four, so the product shipped a UI advertising 六道轮回 over a model
+    that could not record half of them.
+    """
+
+    def test_all_six_paths_exist(self):
+        assert set(SIX_PATHS) == {
+            RebirthForm.DIVINE,
+            RebirthForm.HUMAN,
+            RebirthForm.ASURA,
+            RebirthForm.ANIMAL,
+            RebirthForm.HUNGRY_GHOST,
+            RebirthForm.HELL_BEING,
+        }
+
+    def test_choices_are_in_doctrinal_order_with_other_last(self):
+        """三善道 best-to-worst, then 三恶道 worst-to-worst, then the legacy
+        escape hatch. Order is what the admin dropdown and any generated
+        client enum render in, so it is worth pinning."""
+        assert [value for value, _label in RebirthForm.choices] == [
+            "DIVINE", "HUMAN", "ASURA", "ANIMAL", "HUNGRY_GHOST", "HELL_BEING", "OTHER",
+        ]
+
+    def test_labels(self):
+        assert dict(RebirthForm.choices) == {
+            "DIVINE": "Deva (Heaven Path)",
+            "HUMAN": "Human (Human Path)",
+            "ASURA": "Asura (Demigod Path)",
+            "ANIMAL": "Animal (Beast Path)",
+            "HUNGRY_GHOST": "Hungry Ghost",
+            "HELL_BEING": "Hell Being",
+            "OTHER": "Other (Unclassified)",
+        }
+
+    def test_good_and_evil_paths_partition_the_six(self):
+        assert len(THREE_GOOD_PATHS) == len(THREE_EVIL_PATHS) == 3
+        assert not set(THREE_GOOD_PATHS) & set(THREE_EVIL_PATHS)
+
+    def test_other_is_not_one_of_the_six(self):
+        """OTHER survives only so pre-existing rows stay readable. If it ever
+        drifts back into SIX_PATHS the六道 count silently becomes seven."""
+        assert RebirthForm.OTHER not in SIX_PATHS
+        assert len(RebirthForm.choices) == len(SIX_PATHS) + 1
+
+    def test_longest_value_fits_the_column(self):
+        from apps.reincarnation.models import Reincarnation
+
+        max_length = Reincarnation._meta.get_field("rebirth_form").max_length
+        assert max(len(v) for v in RebirthForm.values) <= max_length
+
+
+@pytest.mark.django_db
+class TestRebirthIntoEachPath:
+    """Every path must survive a real rebirth, not just exist in the enum.
+
+    complete_rebirth writes rebirth_form straight through — there is no
+    if/elif over the form anywhere in the backend (routing is done on realm
+    codes in DispositionService), so nothing can quietly drop a new value
+    into a fallback branch. This pins that.
+    """
+
+    @pytest.mark.parametrize("form", list(SIX_PATHS))
+    def test_soul_can_be_reborn_into_any_of_the_six(self, form):
+        soul = _soul_ready_for_rebirth(_tenant("CN_DIYU"), merit=10, demerit=0)
+        reincarnation = ReincarnationService.complete_rebirth(
+            soul=soul, new_identity="Again", rebirth_form=form.value,
+        )
+        reincarnation.refresh_from_db()
+        assert reincarnation.rebirth_form == form.value
+        assert reincarnation.get_rebirth_form_display() == form.label
+        soul.refresh_from_db()
+        assert soul.current_state == SoulState.ALIVE
+
+    def test_full_clean_accepts_the_new_paths(self):
+        """Model-level validation (and therefore DRF's ModelSerializer, which
+        derives its ChoiceField from the same choices) must take them."""
+        from apps.reincarnation.models import Reincarnation
+
+        soul = _soul_ready_for_rebirth(_tenant("CN_DIYU"), merit=0, demerit=0)
+        for form in (RebirthForm.ASURA, RebirthForm.HUNGRY_GHOST, RebirthForm.HELL_BEING):
+            record = Reincarnation(
+                soul=soul, target_realm="DY_10_YAMA", rebirth_form=form.value,
+                cycle_count=1, tenant=soul.tenant,
+            )
+            record.full_clean(exclude=["disposition"])
 
 
 @pytest.mark.django_db

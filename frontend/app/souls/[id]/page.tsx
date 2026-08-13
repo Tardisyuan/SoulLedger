@@ -25,6 +25,11 @@ import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { SoulKarmaLedgerCard } from "@/src/components/souls/SoulKarmaLedgerCard";
 import { SoulLifecycleTimeline } from "@/src/components/souls/SoulLifecycleTimeline";
+import {
+  RebirthFormSelect,
+  DEFAULT_REBIRTH_FORM,
+  type RebirthFormValue,
+} from "@/src/components/souls/RebirthFormSelect";
 import { DateProblemsPanel } from "@/src/components/souls/DateProblemsPanel";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,6 +82,11 @@ export default function SoulDetailPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isOverflowMenuOpen, setIsOverflowMenuOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  // The rebirth destination. Was not state at all: handleReincarnate posted a
+  // literal "HUMAN", so every soul this app ever reincarnated went into 人道
+  // no matter what the six-path enum offered. HUMAN stays the default — 人道
+  // is 苦乐参半 and the ordinary case — but it is now a default, not a fact.
+  const [rebirthForm, setRebirthForm] = useState<RebirthFormValue>(DEFAULT_REBIRTH_FORM);
   const [confirmMessage, setConfirmMessage] = useState("");
   const [confirmCallback, setConfirmCallback] = useState<(() => void) | null>(null);
 
@@ -197,7 +207,7 @@ export default function SoulDetailPage() {
         soul_id: soul?.id,
         disposition_id: dispositionId,
         new_identity: `${soul?.name} (rebirth)`,
-        rebirth_form: "HUMAN",
+        rebirth_form: rebirthForm,
       });
       await loadSoulData();
     } catch (e: unknown) {
@@ -516,6 +526,22 @@ export default function SoulDetailPage() {
                 )}
                 {soul?.current_state === "DISPOSED" && (
                   <RequirePermission permissions="reincarnation.reborn">
+                    {/* The form is chosen before the destination realm, not
+                        after: each button below commits the rebirth
+                        immediately, so there is no later screen on which to
+                        pick 道. Rendered only when there is something to
+                        commit — a soul with no pending disposition has no
+                        rebirth to configure. */}
+                    {dispositions.some(d => !d.is_executed) && (
+                      <div className="pb-3 mb-3 border-b border-[hsl(var(--color-hairline))]">
+                        <RebirthFormSelect
+                          value={rebirthForm}
+                          onChange={setRebirthForm}
+                          disabled={!!actionLoading}
+                          tf={tf}
+                        />
+                      </div>
+                    )}
                     {dispositions.filter(d => !d.is_executed).map((disp) => (
                       <button
                         key={disp.id}
@@ -582,7 +608,12 @@ export default function SoulDetailPage() {
                 reincarnations={reincarnations}
                 events={events}
                 ledgerRecords={ledger?.records ?? []}
-                onOpenJudgmentQueue={(judgmentId) => router.push(`/judgment/${judgmentId}`)}
+                // The label says "open in the judgment queue", and until the
+                // queue existed this went to the read-only detail page
+                // instead. `?at=` enters the real queue on this case; the
+                // backend falls through to the head of the queue if it has
+                // since been concluded, so a stale link is never a dead end.
+                onOpenJudgmentQueue={(judgmentId) => router.push(`/judgment/queue?at=${judgmentId}`)}
               />
             )
           )}

@@ -4,7 +4,7 @@ Tests for Reincarnation API endpoints.
 import pytest
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.reincarnation.models import Reincarnation
+from apps.reincarnation.models import SIX_PATHS, RebirthForm, Reincarnation
 from apps.souls.models import Soul, SoulState
 
 
@@ -155,3 +155,158 @@ class TestRebirthEndpointsRespectTheStateMachine:
         soul.refresh_from_db()
         assert soul.current_state == SoulState.ALIVE
         assert Reincarnation.objects.filter(soul=soul).count() == 1
+
+
+@pytest.mark.django_db
+class TestRebirthFormIsValidated:
+    """/complete/ and /reborn/ are the only writes in this app that skip a
+    serializer: they read request.data directly and hand the strings to
+    ReincarnationService.complete_rebirth, which calls objects.create().
+    Django checks `choices` only in full_clean(), which the ORM never calls,
+    so *any* string reached the column.
+
+    Measured before the fix, not assumed: POST /reincarnation/reborn/ with
+    rebirth_form="PASTA_MONSTER" answered 201 and the row came back holding
+    "PASTA_MONSTER". These now pin the refusal, and — the part that matters
+    for a guard nobody ever sees fire — pin that it fires before anything is
+    written, soul state included.
+    """
+
+    def test_reborn_refuses_a_rebirth_form_outside_the_enum(
+        self, api_client, admin_user, cn_tenant
+    ):
+        soul = Soul.objects.create(
+            name="Garbage Form", current_state=SoulState.DISPOSED, tenant=cn_tenant,
+        )
+        client = _auth(api_client, admin_user)
+
+        response = client.post(
+            "/api/v1/reincarnation/reborn/",
+            {"soul_id": str(soul.id), "rebirth_form": "PASTA_MONSTER"},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "rebirth_form" in response.data
+        # Nothing written: no record, and the soul never left DISPOSED. A 400
+        # that arrived after the state transition would leave the soul stuck
+        # in REINCARNATING, which is the stranding SoulState.SETTLED exists
+        # to prevent.
+        assert Reincarnation.all_objects.filter(soul=soul).count() == 0
+        soul.refresh_from_db()
+        assert soul.current_state == SoulState.DISPOSED
+
+    def test_complete_refuses_a_rebirth_form_outside_the_enum(
+        self, api_client, admin_user, cn_tenant
+    ):
+        soul = Soul.objects.create(
+            name="Garbage Form Complete", current_state=SoulState.DISPOSED, tenant=cn_tenant,
+        )
+        reincarnation = Reincarnation.objects.create(
+            soul=soul, tenant=cn_tenant, cycle_count=1, rebirth_form=RebirthForm.HUMAN,
+        )
+        client = _auth(api_client, admin_user)
+
+        response = client.post(
+            f"/api/v1/reincarnation/{reincarnation.id}/complete/",
+            {"rebirth_form": "PASTA_MONSTER"},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "rebirth_form" in response.data
+        soul.refresh_from_db()
+        assert soul.current_state == SoulState.DISPOSED
+        reincarnation.refresh_from_db()
+        assert reincarnation.rebirth_form == RebirthForm.HUMAN
+
+    @pytest.mark.parametrize("form", list(SIX_PATHS))
+    def test_reborn_accepts_every_one_of_the_six_paths(
+        self, api_client, admin_user, cn_tenant, form
+    ):
+        """The guard must refuse garbage without also refusing the doctrine:
+        all six paths go through and land in the column verbatim."""
+        soul = Soul.objects.create(
+            name=f"Reborn as {form.value}", current_state=SoulState.DISPOSED, tenant=cn_tenant,
+        )
+        client = _auth(api_client, admin_user)
+
+        response = client.post(
+            "/api/v1/reincarnation/reborn/",
+            {"soul_id": str(soul.id), "rebirth_form": form.value},
+            format="json",
+        )
+
+        assert response.status_code == 201
+        assert response.data["rebirth_form"] == form.value
+        assert Reincarnation.all_objects.get(soul=soul).rebirth_form == form.value
+
+    def test_reborn_refuses_other_with_its_own_reason(
+        self, api_client, admin_user, cn_tenant
+    ):
+        """OTHER is a legal *stored* value (legacy rows carry it) but not a
+        seventh path, so it is refused one layer past the ChoiceField — which
+        is the only reason validate_rebirth_form is reachable at all. Without
+        this case that method would be dead code that always says no to
+        nothing."""
+        soul = Soul.objects.create(
+            name="Legacy Escape Hatch", current_state=SoulState.DISPOSED, tenant=cn_tenant,
+        )
+        client = _auth(api_client, admin_user)
+
+        response = client.post(
+            "/api/v1/reincarnation/reborn/",
+            {"soul_id": str(soul.id), "rebirth_form": RebirthForm.OTHER.value},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "six paths" in str(response.data["rebirth_form"][0])
+        assert Reincarnation.all_objects.filter(soul=soul).count() == 0
+
+    def test_complete_still_honours_a_legacy_other_row_when_the_field_is_omitted(
+        self, api_client, admin_user, cn_tenant
+    ):
+        """Refusing to *write* OTHER must not make rows that already hold it
+        uncompletable. An omitted rebirth_form falls back to the record's own
+        value and is not re-validated."""
+        soul = Soul.objects.create(
+            name="Old Record", current_state=SoulState.DISPOSED, tenant=cn_tenant,
+        )
+        reincarnation = Reincarnation.objects.create(
+            soul=soul, tenant=cn_tenant, cycle_count=1, rebirth_form=RebirthForm.OTHER,
+        )
+        client = _auth(api_client, admin_user)
+
+        response = client.post(
+            f"/api/v1/reincarnation/{reincarnation.id}/complete/", {}, format="json"
+        )
+
+        assert response.status_code == 200
+        soul.refresh_from_db()
+        assert soul.current_state == SoulState.ALIVE
+        assert (
+            Reincarnation.all_objects.filter(soul=soul, rebirth_form=RebirthForm.OTHER).count()
+            == 2
+        )
+
+    def test_new_identity_longer_than_the_column_is_refused(
+        self, api_client, admin_user, cn_tenant
+    ):
+        """Same unvalidated path, second field: new_identity is written to a
+        CharField(max_length=255) *and* copied onto Soul.name. SQLite would
+        have stored the overlong string silently."""
+        soul = Soul.objects.create(
+            name="Long Name", current_state=SoulState.DISPOSED, tenant=cn_tenant,
+        )
+        client = _auth(api_client, admin_user)
+
+        response = client.post(
+            "/api/v1/reincarnation/reborn/",
+            {"soul_id": str(soul.id), "new_identity": "x" * 256},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "new_identity" in response.data
+        assert Reincarnation.all_objects.filter(soul=soul).count() == 0
