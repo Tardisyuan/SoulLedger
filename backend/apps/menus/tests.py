@@ -187,6 +187,38 @@ class TestMenuButtonCRUD:
         resp = self.admin_client.get(f"{BASE}/buttons/")
         assert resp.status_code == status.HTTP_200_OK
 
+    def test_list_buttons_non_admin(self):
+        """Non-ADMIN roles must reach the button list, not a 500.
+
+        Every other button test here authenticates as ADMIN, so the
+        non-ADMIN branch of MenuButtonViewSet.get_queryset() was never
+        executed by the suite — it filtered on `menu__tenant`, a field
+        Menu does not have, and raised FieldError (500) for all four
+        non-ADMIN roles. Menus and their buttons are global navigation
+        metadata shared across tenants, so a non-ADMIN sees the same
+        buttons ADMIN does.
+        """
+        resp = self.viewer_client.get(f"{BASE}/buttons/")
+        assert resp.status_code == status.HTTP_200_OK
+        results = resp.data["results"] if isinstance(resp.data, dict) else resp.data
+        assert self.button.pk in [b["id"] for b in results]
+
+    def test_list_buttons_non_admin_filtered_by_menu_id(self):
+        """?menu_id= still narrows the list for a non-ADMIN caller."""
+        other_menu = Menu.objects.create(name="Other Menu", path="/other", order=2)
+        MenuButton.objects.create(
+            menu=other_menu, name="Export", code="export", permission="soul.read", order=1
+        )
+        resp = self.viewer_client.get(f"{BASE}/buttons/?menu_id={self.menu.pk}")
+        assert resp.status_code == status.HTTP_200_OK
+        results = resp.data["results"] if isinstance(resp.data, dict) else resp.data
+        assert [b["id"] for b in results] == [self.button.pk]
+
+    def test_retrieve_button_non_admin(self):
+        resp = self.viewer_client.get(f"{BASE}/buttons/{self.button.pk}/")
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["name"] == "Add"
+
     def test_retrieve_button(self):
         resp = self.admin_client.get(f"{BASE}/buttons/{self.button.pk}/")
         assert resp.status_code == status.HTTP_200_OK
