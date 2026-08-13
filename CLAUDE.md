@@ -46,6 +46,20 @@ cd frontend && npx playwright test --project=chromium
 - CI runs `npm audit --audit-level=high` (local can skip)
 - CI runs E2E separately (local can run on demand)
 
+## Verification & Root Cause
+
+- NEVER claim `fixed`, `verified`, or `production ready` without execution evidence
+- Claiming a suite passed requires the command, its exit code, and the passed count
+- A green run from before the change is not evidence — re-run after editing
+- Before fixing a bug, write it out first: symptom → root cause → proposed fix
+- If the root cause is unknown, say so — do not ship a patch that only hides the symptom
+- After fixing, check whether the same root cause exists elsewhere in the codebase
+
+*Why:* `docs/PRODUCTION_READINESS_REPORT.md` claimed "Production Ready / Security 8.5" on
+2026-05-30; the 2026-08-07 M15 audit found 4 CRITICAL tenant-isolation gaps in that same code.
+Many of the 61 fix commits in 2026-08 patch what the previous fix missed — e.g. `d879960`
+"close the last two tenant-scoping gaps the M15 pass missed".
+
 ## Setup
 
 ```bash
