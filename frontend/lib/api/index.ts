@@ -17,7 +17,18 @@ export { soulsApi, type SoulInput, type Soul, type SoulListItem, type SoulRecord
 export { usersApi, type User, type CreateUserInput, type UpdateUserInput, type UserFilters, type UserImportResult, type PaginatedResponse } from "./users";
 
 // Judgment
-export { judgmentApi, type Judgment, type ConcludeJudgmentPayload } from "./judgment";
+export {
+  judgmentApi,
+  type Judgment,
+  type ConcludeJudgmentPayload,
+  type JudgmentQueueCursor,
+  type JudgmentQueueParams,
+  type QueueSoul,
+  type QueueLedger,
+  type QueueLedgerRecord,
+  type QueuePriorCycle,
+  type QueueRealm,
+} from "./judgment";
 
 // Ledger
 export { ledgerApi, type LedgerStatsOverview, type LedgerRecord, type LedgerSummary, type LedgerReading, type LedgerRecalculation, type LedgerInheritance, type LedgerInheritanceNotApplicable } from "./ledger";

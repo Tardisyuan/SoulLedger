@@ -17,6 +17,13 @@ export const judgmentKeys = {
   all: ["judgments"] as const,
   list: (params?: Record<string, string>) => [...judgmentKeys.all, "list", params] as const,
   detail: (id: string) => [...judgmentKeys.all, "detail", id] as const,
+  /**
+   * The triage cursor. The skip list is part of the key on purpose: skipping
+   * an item *is* the query changing, so TanStack refetches the head of the
+   * queue with no imperative invalidate, and undo — which removes an id from
+   * that list — walks straight back to a cached response.
+   */
+  queue: (skip: string[], at?: string) => [...judgmentKeys.all, "queue", { skip, at: at ?? null }] as const,
 };
 
 export const workflowKeys = {

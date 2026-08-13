@@ -22,5 +22,12 @@ class JudgmentSerializer(FieldPermissionMixin, serializers.ModelSerializer):
 
 class JudgmentConcludeSerializer(serializers.Serializer):
     verdict = serializers.ChoiceField(choices=["PASSED", "FAILED", "PURGATORY", "RETRY"])
-    notes = serializers.CharField(required=False, default="")
+    # allow_blank, because a verdict with no note is the ordinary case and
+    # Judgment.notes is blank=True. Without it, DRF's CharField rejected an
+    # explicit "" while accepting an omitted key — and both clients send the
+    # key: app/judgment/[id]/page.tsx posts `notes` from a controlled textarea
+    # that starts empty, and the triage queue does the same. So every verdict
+    # filed without typing a note came back 400 "This field may not be blank",
+    # from an endpoint whose own default for the field is "".
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
     create_workflow = serializers.BooleanField(default=False)

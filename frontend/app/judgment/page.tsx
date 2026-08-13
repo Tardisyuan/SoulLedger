@@ -56,6 +56,14 @@ export default function JudgmentQueuePage() {
           {t("judgment.title")}
           <MenuGloss path="/judgment" />
         </h1>
+        {/* The list answers "which judgments exist"; the queue (§4.2) answers
+            "what do I decide next". This is how an operator enters it. */}
+        <Link
+          href="/judgment/queue"
+          className="px-3 py-1.5 rounded-md bg-[hsl(var(--color-accent))] text-black text-sm font-medium"
+        >
+          {t("judgment.queue.enter")}
+        </Link>
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-6">
