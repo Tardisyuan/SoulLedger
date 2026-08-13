@@ -1,93 +1,117 @@
-import { test, expect } from "@playwright/test";
-import { setupAuthenticatedPage } from "./fixtures";
+import { test, expect, type Page } from "@playwright/test";
+import { setupAuthenticatedPage, WORKFLOW_INSTANCE, type ApiMock } from "./fixtures";
+
+/**
+ * Text locators here must be filtered to the visible match.
+ *
+ * While the Next dev server is still compiling a route it streams the subtree
+ * into a `<div hidden>` parked on <body> and only grafts it into place once the
+ * chunk lands. Until then the same text exists twice in the DOM, and a bare
+ * getByText() resolves to two elements -> strict mode violation. It is a race,
+ * so it fails intermittently on every engine (measured: chromium 7-8 times in
+ * 42 runs), not just the slow ones. Filtering to `visible` drops the parked
+ * copy, which is inert by definition.
+ */
+const seen = (page: Page, text: string) => page.getByText(text).filter({ visible: true });
+const heading = (page: Page, name: string) =>
+  page.getByRole("heading", { name }).filter({ visible: true });
+
+/**
+ * /workflow — the approval-template screen.
+ *
+ * Every test in this file used to run unauthenticated, so middleware.ts
+ * redirected each one to /login and they all asserted against the login
+ * page's <body>. They now authenticate first (see fixtures.ts) and assert on
+ * the template list, the preview pane and the instances tab.
+ */
+
+let api: ApiMock;
+
+test.beforeEach(async ({ page }) => {
+  api = await setupAuthenticatedPage(page);
+});
 
 test.describe("Workflow page", () => {
-  test("renders workflow page without errors", async ({ page }) => {
+  test("renders the header and all three tabs for an authenticated user", async ({ page }) => {
     await page.goto("/workflow");
-    // Page should load without crashing (may redirect to login if unauthenticated)
-    await expect(page.locator("body")).toBeVisible();
-  });
 
-  test("shows workflow title when authenticated", async ({ page }) => {
-    await page.goto("/workflow");
-    // Either shows the workflow page or redirects to login
-    const title = page.locator("h1");
-    await expect(title).toBeVisible();
-  });
+    // Reaching the page at all is the first real assertion — unauthenticated
+    // this URL is a redirect to /login.
+    await expect(page).toHaveURL(/\/workflow$/);
+    await expect(page.locator("h1").filter({ visible: true })).toContainText("审批流程");
 
-  test("has workflow tab navigation", async ({ page }) => {
-    await page.goto("/workflow");
-    // Look for tab buttons (existing, editor, instances)
-    const tabs = page.locator("button").filter({ hasText: /workflow|existing|editor|instances|模板|编辑|实例/i });
-    const tabCount = await tabs.count();
-    // Should have at least 3 tab buttons if on workflow page
-    if (tabCount >= 3) {
-      await expect(tabs.first()).toBeVisible();
-    }
-  });
-});
-
-test.describe("Workflow template list", () => {
-  test("displays template section when on workflow page", async ({ page }) => {
-    await page.goto("/workflow");
-    // Check for template-related content
-    const body = page.locator("body");
-    await expect(body).toBeVisible();
-    // Page should not show error state
-    await expect(page.locator("text=500")).not.toBeVisible();
-    await expect(page.locator("text=Internal Server Error")).not.toBeVisible();
-  });
-
-  test("shows predefined templates by civilization", async ({ page }) => {
-    await page.goto("/workflow");
-    // Look for civilization names in the template list
-    const body = page.locator("body");
-    await expect(body).toBeVisible();
-  });
-});
-
-test.describe("Workflow navigation", () => {
-  test("can click between workflow tabs", async ({ page }) => {
-    await page.goto("/workflow");
-    // Find tab buttons
-    const tabButtons = page.locator("button").filter({ hasText: /existing|editor|instances/i });
-    const count = await tabButtons.count();
-
-    if (count >= 2) {
-      // Click second tab
-      await tabButtons.nth(1).click();
-      await expect(page.locator("body")).toBeVisible();
-
-      // Click first tab back
-      await tabButtons.nth(0).click();
-      await expect(page.locator("body")).toBeVisible();
+    for (const tab of ["现有流程", "流程编辑器", "审批实例"]) {
+      await expect(page.getByRole("button", { name: tab, exact: true })).toBeVisible();
     }
   });
 
-  test("navigates to workflow detail page", async ({ page }) => {
-    // Try to access a workflow instance detail
-    await page.goto("/workflow/1");
-    await expect(page.locator("body")).toBeVisible();
-    // Should not show 404 for valid route pattern
-    await expect(page.locator("text=404")).not.toBeVisible();
+  test("previews the default predefined template with its full node list", async ({ page }) => {
+    await page.goto("/workflow");
+
+    await expect(seen(page, "预定义模板")).toBeVisible();
+
+    // CHINESE_ROUTINE is the initial selection (page.tsx:91) and has ten
+    // nodes, one per court of the Chinese underworld.
+    await expect(heading(page, "十殿审判流程")).toBeVisible();
+    await expect(seen(page, "10 个节点")).toBeVisible();
+    await expect(seen(page, "秦广王 · 分流")).toBeVisible();
+    await expect(seen(page, "转轮王 · 终审")).toBeVisible();
   });
 
-  test("workflow page does not crash on load", async ({ page }) => {
-    // Capture console errors
-    const errors: string[] = [];
-    page.on("console", (msg) => {
-      if (msg.type() === "error") {
-        errors.push(msg.text());
-      }
-    });
+  test("selecting a different template swaps the preview", async ({ page }) => {
+    await page.goto("/workflow");
+    await expect(heading(page, "十殿审判流程")).toBeVisible();
+
+    await page.getByRole("button", { name: "申诉审判流程", exact: true }).click();
+
+    await expect(heading(page, "申诉审判流程")).toBeVisible();
+    await expect(heading(page, "十殿审判流程")).toHaveCount(0);
+  });
+
+  test("instances tab lists the workflows returned by the API", async ({ page }) => {
+    await page.goto("/workflow");
+
+    await page.getByRole("button", { name: "审批实例", exact: true }).click();
+
+    await expect(seen(page, WORKFLOW_INSTANCE.workflow_name)).toBeVisible();
+    await expect(seen(page, `${WORKFLOW_INSTANCE.case_type} · ${WORKFLOW_INSTANCE.soul}`)).toBeVisible();
+    expect(api.countOf("GET", "/workflows/")).toBeGreaterThan(0);
+  });
+
+  test("empty instances list shows the empty state, not a blank pane", async ({ page }) => {
+    api.on("GET", "/workflows/", { count: 0, next: null, previous: null, results: [] });
+    await page.goto("/workflow");
+
+    await page.getByRole("button", { name: "审批实例", exact: true }).click();
+    await expect(seen(page, "暂无审批实例")).toBeVisible();
+  });
+
+  test("a 500 on the instances list renders no rows and does not crash the tab", async ({ page }) => {
+    api.on("GET", "/workflows/", () => ({ status: 500, body: { detail: "boom" } }));
+    await page.goto("/workflow");
+
+    await page.getByRole("button", { name: "审批实例", exact: true }).click();
+
+    // Known gap, pinned deliberately: this tab has no error state, so a
+    // failed load is indistinguishable from "no instances". What must hold
+    // either way is that no fabricated row appears and the page still works.
+    await expect(seen(page, WORKFLOW_INSTANCE.workflow_name)).toHaveCount(0);
+    await expect(seen(page, "暂无审批实例")).toBeVisible();
+    await page.getByRole("button", { name: "现有流程", exact: true }).click();
+    await expect(heading(page, "十殿审判流程")).toBeVisible();
+  });
+});
+
+test.describe("Workflow page health", () => {
+  test("loads without an uncaught exception", async ({ page }) => {
+    // pageerror fires only for uncaught exceptions, so this cannot be muted
+    // by network noise the way a console-error filter can.
+    const crashes: string[] = [];
+    page.on("pageerror", (err) => crashes.push(err.message));
 
     await page.goto("/workflow");
-    await page.waitForTimeout(2000);
+    await expect(heading(page, "十殿审判流程")).toBeVisible();
 
-    // Filter out expected auth/network errors
-    const criticalErrors = errors.filter(
-      (e) => !e.includes("401") && !e.includes("403") && !e.includes("Failed to fetch")
-    );
-    expect(criticalErrors).toHaveLength(0);
+    expect(crashes).toEqual([]);
   });
 });
