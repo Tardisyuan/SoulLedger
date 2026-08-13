@@ -337,7 +337,12 @@ class TestDispatchAPI:
         resp = api_client.get("/api/v1/dispatch/records/", {"status": "PROPOSED"})
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
 
-    @pytest.mark.xfail(reason="Test ordering issue — fixture state pollution in full suite; passes in isolation")
+    # Was xfail("Test ordering issue — fixture state pollution in full suite;
+    # passes in isolation"). It XPASSes: it passes in isolation, in this
+    # module, and in the full suite. Nothing here is order- or backend-
+    # dependent — the record is created inside the test and both fixtures are
+    # function-scoped — so whatever pollution once existed is gone. A
+    # non-strict xfail hid that, since xpassed is not a failure.
     def test_dispatch_approve(self, api_client, db, cn_tenant, eu_tenant, cn_soul, cn_admin_user, eu_auth_headers):
         """Test approving a dispatch via API."""
         # Create fresh dispatch record with isolated data
