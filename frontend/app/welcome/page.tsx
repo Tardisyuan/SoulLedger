@@ -112,19 +112,19 @@ export default function WelcomePage() {
     },
     {
       label: t("dashboard.under_judgment"),
-      value: stats?.state_distribution.find(s => s.state === "JUDGING")?.count ?? "-",
+      value: stats?.state_distribution?.find(s => s.state === "JUDGING")?.count ?? "-",
       icon: <Scale className="w-5 h-5" />,
       color: "text-amber-400",
     },
     {
       label: t("dashboard.alive"),
-      value: stats?.state_distribution.find(s => s.state === "ALIVE")?.count ?? "-",
+      value: stats?.state_distribution?.find(s => s.state === "ALIVE")?.count ?? "-",
       icon: <Activity className="w-5 h-5" />,
       color: "text-emerald-400",
     },
     {
       label: t("dashboard.disposed"),
-      value: stats?.state_distribution.find(s => s.state === "DISPOSED")?.count ?? "-",
+      value: stats?.state_distribution?.find(s => s.state === "DISPOSED")?.count ?? "-",
       icon: <ScrollText className="w-5 h-5" />,
       color: "text-blue-400",
     },

@@ -111,19 +111,19 @@ function DashboardContent() {
     return translated === key ? apiLabel || state : translated;
   };
 
-  const stateData = stats?.state_distribution.map((s) => ({
+  const stateData = stats?.state_distribution?.map((s) => ({
     name: stateLabel(s.state, s.label),
     value: s.count,
     color: STATE_COLORS[s.state] || CHART_SERIES.neutral,
   })) ?? [];
 
-  const tenantData = stats?.tenants.map((tenant) => ({
+  const tenantData = stats?.tenants?.map((tenant) => ({
     name: getDisplayNameForTenant(tenant.tenant_code),
     total: tenant.total_souls,
     ...tenant.state_breakdown,
   })) ?? [];
 
-  const realmChartData = stats?.souls_by_realm.map((r) => ({
+  const realmChartData = stats?.souls_by_realm?.map((r) => ({
     name: r.realm_name,
     count: r.count,
     civilization: r.civilization,
@@ -132,7 +132,7 @@ function DashboardContent() {
   const formatTimestamp = (ts: string) => formatDateTime(ts);
 
   // Ledger-tab-only derived data (admin/stats page's unique cards)
-  const avgBalance = stats
+  const avgBalance = stats?.karma_distribution
     ? stats.karma_distribution.reduce((sum, k) => sum + bucketMidpoint(k.label) * k.count, 0) /
       (stats.total_souls || 1)
     : 0;
@@ -177,19 +177,19 @@ function DashboardContent() {
               <StatCard label={t("dashboard.total_souls")} value={stats?.total_souls} isLoading={loading} />
               <StatCard
                 label={t("dashboard.alive")}
-                value={stats?.state_distribution.find(s => s.state === "ALIVE")?.count}
+                value={stats?.state_distribution?.find(s => s.state === "ALIVE")?.count}
                 isLoading={loading}
                 color="text-[hsl(var(--color-status-success))]"
               />
               <StatCard
                 label={t("dashboard.under_judgment")}
-                value={stats?.state_distribution.find(s => s.state === "JUDGING")?.count}
+                value={stats?.state_distribution?.find(s => s.state === "JUDGING")?.count}
                 isLoading={loading}
                 color="text-[hsl(var(--color-accent-ink))]"
               />
               <StatCard
                 label={t("dashboard.disposed")}
-                value={stats?.state_distribution.find(s => s.state === "DISPOSED")?.count}
+                value={stats?.state_distribution?.find(s => s.state === "DISPOSED")?.count}
                 isLoading={loading}
                 color="text-[hsl(var(--color-status-lost))]"
               />
@@ -381,7 +381,7 @@ function DashboardContent() {
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    {stats?.state_distribution.map((s) => (
+                    {stats?.state_distribution?.map((s) => (
                       <div key={s.state} className="flex justify-between text-sm">
                         <span className="text-[hsl(var(--color-ink-muted))]">{stateLabel(s.state, s.label)}</span>
                         <span className="font-medium">{s.count}</span>
