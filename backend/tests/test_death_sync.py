@@ -354,7 +354,13 @@ class TestExternalApiKeyQuerysetScoping:
         from apps.death_sync.views import ExternalApiKeyViewSet
 
         view = ExternalApiKeyViewSet()
-        view.request = SimpleNamespace(user=SimpleNamespace(role=role), tenant=tenant)
+        # is_authenticated is part of the stub because scope_to_tenant
+        # (apps/core/tenant.py) fails closed for an unauthenticated caller.
+        # A `user` without it modelled a request that cannot exist — every
+        # real request.user answers this attribute.
+        view.request = SimpleNamespace(
+            user=SimpleNamespace(role=role, is_authenticated=True), tenant=tenant
+        )
         return view.get_queryset()
 
     def test_non_admin_queryset_excludes_other_tenant_key(self):
@@ -633,3 +639,87 @@ class TestDeathSyncHealthPermissionFix:
     def test_invalid_key_is_401(self):
         resp = _api_key_client("not-a-real-key").get("/api/v1/death-sync/health/")
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+# ── API-key-scoped querysets must fail CLOSED ──────────────────────────
+
+@pytest.mark.django_db
+class TestApiKeyScopedQuerysetsFailClosed:
+    """DeathRegistrationViewSet and WebhookViewSet scope by `api_key`, not by
+    tenant, because APIKeyAuthentication returns AnonymousUser on success.
+
+    Both used to fail OPEN::
+
+        api_key = getattr(self.request, 'api_key', None)
+        if api_key:
+            qs = qs.filter(api_key=api_key)
+        return qs
+
+    — no key meant the *unfiltered* queryset: every tenant's death
+    registrations, and every tenant's webhook configs including their
+    `signing_secret`. HasValidApiKey rejects those requests first, so nothing
+    leaked in practice; the point is that the queryset was one permission-class
+    edit away from being the breach, and nothing in the suite would have
+    noticed. These assert the refusal directly.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db, cn_tenant, eu_tenant):
+        from apps.death_sync.models import WebhookConfig
+
+        _, cn_hash, cn_prefix = ExternalApiKey.generate_key()
+        self.cn_key = ExternalApiKey.objects.create(
+            tenant=cn_tenant, name="CN", system_type="HOSPITAL",
+            key_hash=cn_hash, key_prefix=cn_prefix,
+        )
+        _, eu_hash, eu_prefix = ExternalApiKey.generate_key()
+        self.eu_key = ExternalApiKey.objects.create(
+            tenant=eu_tenant, name="EU", system_type="HOSPITAL",
+            key_hash=eu_hash, key_prefix=eu_prefix,
+        )
+        self.cn_reg = DeathRegistrationRequest.objects.create(
+            tenant=cn_tenant, api_key=self.cn_key, idempotency_key="cn-1",
+            source_system="HOSPITAL", source_payload={"who": "cn"},
+        )
+        DeathRegistrationRequest.objects.create(
+            tenant=eu_tenant, api_key=self.eu_key, idempotency_key="eu-1",
+            source_system="HOSPITAL", source_payload={"who": "eu"},
+        )
+        self.cn_hook = WebhookConfig.objects.create(
+            tenant=cn_tenant, api_key=self.cn_key,
+            url="https://cn.example/hook", signing_secret="whsec_cn",
+        )
+        WebhookConfig.objects.create(
+            tenant=eu_tenant, api_key=self.eu_key,
+            url="https://eu.example/hook", signing_secret="whsec_eu",
+        )
+
+    def _queryset_for(self, view_cls, api_key):
+        from types import SimpleNamespace
+
+        view = view_cls()
+        view.request = SimpleNamespace(api_key=api_key)
+        return view.get_queryset()
+
+    def test_registrations_empty_without_an_api_key(self):
+        from apps.death_sync.views import DeathRegistrationViewSet
+
+        assert list(self._queryset_for(DeathRegistrationViewSet, None)) == []
+
+    def test_webhooks_empty_without_an_api_key(self):
+        from apps.death_sync.views import WebhookViewSet
+
+        assert list(self._queryset_for(WebhookViewSet, None)) == []
+
+    def test_registrations_still_scoped_to_the_presented_key(self):
+        """Sanity check: fail-closed narrowed the no-key case only."""
+        from apps.death_sync.views import DeathRegistrationViewSet
+
+        qs = self._queryset_for(DeathRegistrationViewSet, self.cn_key)
+        assert list(qs) == [self.cn_reg]
+
+    def test_webhooks_still_scoped_to_the_presented_key(self):
+        from apps.death_sync.views import WebhookViewSet
+
+        qs = self._queryset_for(WebhookViewSet, self.cn_key)
+        assert list(qs) == [self.cn_hook]

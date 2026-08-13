@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.notifications.models import UserNotification
 from apps.notifications.serializers import UserNotificationListSerializer, UserNotificationSerializer
@@ -97,11 +98,13 @@ class NotificationViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
 
         qs = UserNotification.objects.filter(user=self.request.user).select_related("user")
 
-        # Defense-in-depth: ensure user belongs to the current tenant
-        tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            qs = qs.filter(user__tenant=tenant)
-        return qs
+        # Defense-in-depth: ensure user belongs to the current tenant.
+        # UserNotification reaches Tenant only through `user`, hence the
+        # explicit field. Was fail-open (`if tenant:` with no else) — harmless
+        # in practice because `user=self.request.user` above already narrows to
+        # one person, but it is the same shape that was a real leak elsewhere,
+        # so it goes through the same fail-closed helper as everything else.
+        return scope_to_tenant(qs, self.request, field="user__tenant")
 
     @action(detail=True, methods=["post"])
     def mark_read(self, request, pk=None):

@@ -649,3 +649,64 @@ class TestEnvelopeEdgeCases:
     def test_empty_user_ids(self):
         env = EventEnvelope(event_type="E", payload={}, domain="d", user_ids=[])
         assert env.user_ids == []
+
+
+# ------------------------------------------------------------------
+# AuditHandler tenant agreement — asserts a REFUSAL
+# ------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestAuditHandlerTenantAgreement:
+    """`AuditHandler.handle` resolved the soul with an unscoped
+    `Soul.objects.filter(id=...)` while taking the SoulEvent's tenant from
+    `envelope.tenant_code`. The two never had to agree, so an envelope naming
+    tenant B and carrying tenant A's soul_id wrote a SoulEvent that read as B's
+    and pointed at A's soul — and every SoulEvent read path filters on
+    `tenant`, so B could see it.
+
+    The first test asserts the refusal: nothing is written at all.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        from apps.souls.models import Soul
+        from apps.tenants.models import Tenant
+
+        self.tenant_a = Tenant.objects.get_or_create(
+            code="AH_A", defaults={"display_name": "Audit Handler A"}
+        )[0]
+        self.tenant_b = Tenant.objects.get_or_create(
+            code="AH_B", defaults={"display_name": "Audit Handler B"}
+        )[0]
+        self.soul_a = Soul.objects.create(name="Soul A", tenant=self.tenant_a)
+
+    # Soul.objects.create() in the fixture publishes its own SOUL_CREATED
+    # event, which this same handler logs — hence the event_type filter on
+    # every assertion below rather than a bare count().
+    EVENT = "SOUL_DIED"
+
+    def _handle(self, tenant_code):
+        AuditHandler().handle(
+            EventEnvelope(
+                event_type=self.EVENT,
+                payload={"soul_id": str(self.soul_a.id)},
+                domain="soul",
+                tenant_code=tenant_code,
+            )
+        )
+
+    def test_refuses_to_log_a_soul_from_another_tenant(self):
+        from apps.events.models import SoulEvent
+
+        self._handle(self.tenant_b.code)
+        assert not SoulEvent.objects.filter(event_type=self.EVENT).exists()
+
+    def test_still_logs_when_envelope_and_soul_agree(self):
+        """Sanity check: the guard narrows the mismatched case only."""
+        from apps.events.models import SoulEvent
+
+        self._handle(self.tenant_a.code)
+        event = SoulEvent.objects.get(event_type=self.EVENT)
+        assert event.soul == self.soul_a
+        assert event.tenant == self.tenant_a

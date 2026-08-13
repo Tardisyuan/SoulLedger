@@ -231,3 +231,29 @@ def test_every_role_with_a_permission_matrix_is_also_seeded():
         f"in ROLE_PERMISSIONS but never seeded: {sorted(with_matrix - seeded)}; "
         f"seeded but holding no permissions: {sorted(seeded - with_matrix)}"
     )
+
+
+class CacheInvalidateRoleDatabaseErrorTest(TestCase):
+    """The same swallowed-DatabaseError defect as
+    ``test_a_database_error_is_not_swallowed`` above, one module over:
+    ``PermissionCache.invalidate_role`` wrapped its descendant walk — a
+    ``Role.objects.filter()`` — in a bare ``except Exception`` that logged one
+    warning and returned.
+
+    On PostgreSQL that is an amplifier, not a nicety. A failed statement aborts
+    the surrounding transaction, so every query after it raises
+    ``InFailedSqlTransaction``; swallowing the first error hides the only
+    message that names the real cause and lets the request produce a cascade of
+    derived failures instead. Cache invalidation runs from signal handlers on
+    permission writes, which is exactly where it sits inside somebody else's
+    transaction.
+    """
+
+    def test_a_database_error_is_not_swallowed(self):
+        from apps.perm.cache import PermissionCache
+
+        cache = PermissionCache()
+        with patch("apps.perm.models.Role.objects") as objects:
+            objects.filter.side_effect = DatabaseError("connection lost")
+            with self.assertRaises(DatabaseError):
+                cache.invalidate_role("VIEWER")

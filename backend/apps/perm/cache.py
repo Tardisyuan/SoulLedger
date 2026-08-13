@@ -178,15 +178,27 @@ class PermissionCache:
         for key in keys_to_remove:
             del self._fallback_cache[key]
 
-        # Also invalidate descendant roles since they inherit from this role
-        try:
-            from apps.perm.models import Role
-            role_obj = Role.objects.filter(name=role).first()
-            if role_obj:
-                for descendant in role_obj.get_descendants():
-                    self.invalidate_role(descendant.name)
-        except Exception as e:
-            logger.warning(f"PermissionCache: failed to invalidate descendants: {e}")
+        # Also invalidate descendant roles since they inherit from this role.
+        #
+        # Nothing is caught here on purpose, for the reason recorded in
+        # apps/perm/checker.py and pinned by
+        # apps/perm/test_checker_grants.py::test_a_database_error_is_not_swallowed:
+        # the bare `except Exception` that stood here caught DatabaseError from
+        # Role.objects.filter() and logged one warning. On PostgreSQL a failed
+        # statement poisons the whole transaction — every subsequent query in
+        # it raises InFailedSqlTransaction — so swallowing the *first* error
+        # turned one broken query into an entire request's worth of cascading
+        # failures with only a warning to explain them. That amplification is
+        # how a single fault read as 1859 environment errors. Let it surface.
+        #
+        # The Redis and memory-cache invalidations above have already run, so
+        # raising here does not leave a *more* stale cache than returning would
+        # have: only the descendant roles go un-invalidated either way.
+        from apps.perm.models import Role
+        role_obj = Role.objects.filter(name=role).first()
+        if role_obj:
+            for descendant in role_obj.get_descendants():
+                self.invalidate_role(descendant.name)
 
     def invalidate_all(self) -> None:
         """Clear all permission caches."""

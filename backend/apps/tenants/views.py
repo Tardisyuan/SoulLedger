@@ -1,6 +1,7 @@
 from rest_framework import viewsets
 
 from apps.core.permissions import TenantPermission
+from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 from apps.tenants.models import Tenant
 from apps.tenants.serializers import TenantSerializer
@@ -24,10 +25,10 @@ class TenantViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     lookup_field = "code"
 
     def get_queryset(self):
-        user = self.request.user
-        if getattr(user, 'role', None) == 'ADMIN':
-            return Tenant.objects.all().order_by("code")
-        tenant = getattr(self.request, 'tenant', None)
-        if tenant:
-            return Tenant.objects.filter(pk=tenant.pk)
-        return Tenant.objects.none()
+        # field="pk": Tenant is the degenerate case — it has no `tenant` FK
+        # because it *is* the tenant, so "scoped to your tenant" means the one
+        # row. Same ADMIN bypass and same fail-closed rule as everywhere else;
+        # see apps/core/tenant.py.
+        return scope_to_tenant(
+            Tenant.objects.all().order_by("code"), self.request, field="pk"
+        )

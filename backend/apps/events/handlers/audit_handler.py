@@ -30,14 +30,31 @@ class AuditHandler(DomainEventHandler):
             from apps.souls.models import Soul
             from apps.tenants.models import Tenant
 
-            soul = Soul.objects.filter(id=envelope.payload["soul_id"]).first()
-            if soul is None:
-                logger.debug("AuditHandler: soul %s not found, skipping", envelope.payload["soul_id"])
-                return
-
             tenant = None
             if envelope.tenant_code:
                 tenant = Tenant.objects.filter(code=envelope.tenant_code).first()
+
+            # The soul lookup is scoped by the envelope's own tenant, not
+            # global. Unscoped, this method resolved the soul from the whole
+            # table and then stamped the SoulEvent with whatever tenant
+            # `envelope.tenant_code` named — so an envelope carrying tenant B's
+            # code and tenant A's soul_id produced a SoulEvent whose `tenant`
+            # said B while its `soul` FK pointed into A. Every read path
+            # downstream (SoulEventViewSet via DataScopeViewSetMixin, the
+            # timeline endpoints) filters SoulEvent by `tenant`, so that row
+            # was visible to B and leaked A's soul through the serialized
+            # `soul` relation. The event and the soul it describes must agree
+            # on their tenant.
+            soul = Soul.objects.filter(
+                id=envelope.payload["soul_id"], tenant=tenant
+            ).first()
+            if soul is None:
+                logger.debug(
+                    "AuditHandler: soul %s not found in tenant %s, skipping",
+                    envelope.payload["soul_id"],
+                    envelope.tenant_code,
+                )
+                return
 
             SoulEvent.objects.create(
                 tenant=tenant,

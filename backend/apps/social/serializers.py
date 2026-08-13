@@ -124,20 +124,34 @@ class CommentCreateSerializer(serializers.ModelSerializer):
         existing precedent in this codebase for ADMIN writing content that
         references another tenant's objects, so this defaults to the
         strict check for every role.
+
+        Fails closed on a missing tenant. The whole guard used to sit inside
+        `if tenant is not None:`, which made it a check that could be turned
+        off by the very condition it was defending against: no resolvable
+        `request.tenant` meant no comparison at all, and the write sailed
+        through to `CommentService.create_comment`, which stamps
+        `tenant=None` onto a row pointing at somebody's post. A request that
+        cannot say which tenant it belongs to has no business writing
+        tenant-scoped content.
         """
         request = self.context.get("request")
         tenant = getattr(request, "tenant", None) if request else None
-        if tenant is not None:
-            post = attrs.get("post")
-            if post is not None and str(post.tenant_id) != str(tenant.pk):
+        post = attrs.get("post")
+        parent = attrs.get("parent")
+        if tenant is None:
+            if post is not None or parent is not None:
                 raise serializers.ValidationError(
-                    "Cannot comment on a post from another tenant."
+                    "Cannot determine the tenant for this request."
                 )
-            parent = attrs.get("parent")
-            if parent is not None and str(parent.tenant_id) != str(tenant.pk):
-                raise serializers.ValidationError(
-                    "Cannot reply to a comment from another tenant."
-                )
+            return attrs
+        if post is not None and str(post.tenant_id) != str(tenant.pk):
+            raise serializers.ValidationError(
+                "Cannot comment on a post from another tenant."
+            )
+        if parent is not None and str(parent.tenant_id) != str(tenant.pk):
+            raise serializers.ValidationError(
+                "Cannot reply to a comment from another tenant."
+            )
         return attrs
 
 
@@ -215,20 +229,28 @@ class ReactionCreateSerializer(serializers.ModelSerializer):
         no need to go through `comment.post.tenant`.
 
         No ADMIN carve-out — see the note in CommentCreateSerializer.validate.
+        Fails closed on a missing tenant for the same reason given there: the
+        `if tenant is not None:` this replaces meant the guard switched itself
+        off exactly when it could not prove the request was in-tenant.
         """
         request = self.context.get("request")
         tenant = getattr(request, "tenant", None) if request else None
-        if tenant is not None:
-            post = attrs.get("post")
-            if post is not None and str(post.tenant_id) != str(tenant.pk):
+        post = attrs.get("post")
+        comment = attrs.get("comment")
+        if tenant is None:
+            if post is not None or comment is not None:
                 raise serializers.ValidationError(
-                    "Cannot react to a post from another tenant."
+                    "Cannot determine the tenant for this request."
                 )
-            comment = attrs.get("comment")
-            if comment is not None and str(comment.tenant_id) != str(tenant.pk):
-                raise serializers.ValidationError(
-                    "Cannot react to a comment from another tenant."
-                )
+            return attrs
+        if post is not None and str(post.tenant_id) != str(tenant.pk):
+            raise serializers.ValidationError(
+                "Cannot react to a post from another tenant."
+            )
+        if comment is not None and str(comment.tenant_id) != str(tenant.pk):
+            raise serializers.ValidationError(
+                "Cannot react to a comment from another tenant."
+            )
         return attrs
 
 
@@ -268,6 +290,29 @@ class FollowCreateSerializer(serializers.ModelSerializer):
         model = Follow
         fields = ["id", "following"]
         read_only_fields = ["id"]
+
+    def validate_following(self, value):
+        """`following` is an unscoped PrimaryKeyRelatedField over the whole
+        User table, so POST /follows/ with a foreign user's pk used to create
+        a Follow edge pointing out of the caller's tenant — `Follow.save()`
+        stamps the row with the *caller's* tenant regardless of where the
+        target lives, so the edge's tenant FK disagreed with its `following`
+        FK. This is the same hole `FollowViewSet.toggle` had, one door over;
+        both are closed the same way.
+
+        No ADMIN carve-out — see the note in CommentCreateSerializer.validate.
+
+        Unlike the comment/reaction guards, this one has to fail closed when
+        there is no resolvable tenant: `following` alone carries no tenant to
+        compare against, so "no tenant" cannot mean "nothing to check".
+        """
+        request = self.context.get("request")
+        tenant = getattr(request, "tenant", None) if request else None
+        if tenant is None or str(getattr(value, "tenant_id", None)) != str(tenant.pk):
+            raise serializers.ValidationError(
+                "Cannot follow a user from another tenant."
+            )
+        return value
 
 
 # ---------------------------------------------------------------------------

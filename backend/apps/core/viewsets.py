@@ -2,6 +2,7 @@
 ViewSet mixins for SoulLedger.
 """
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
+from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 
 # Standard DRF action → permission codename suffix mapping
 ACTION_PERM_MAP = {
@@ -71,15 +72,13 @@ class DataScopeViewSetMixin:
         user = self.request.user
         if not user.is_authenticated:
             return qs.none()
-        # ADMIN bypasses both tenant filtering and data scope
-        if getattr(user, 'role', None) == 'ADMIN':
+        # ADMIN bypasses both tenant filtering and data scope, so it returns
+        # before the data-scope pass below rather than going through
+        # scope_to_tenant's own admin_bypass.
+        if is_tenant_exempt(user):
             return qs
-        # Tenant isolation
-        tenant = getattr(self.request, 'tenant', None)
-        if tenant:
-            qs = qs.filter(tenant=tenant)
-        else:
-            return qs.none()
+        # Tenant isolation — see apps/core/tenant.py.
+        qs = scope_to_tenant(qs, self.request)
         # Data scope filtering
         from apps.perm.filters import DataScopeFilter
         return DataScopeFilter.filter_queryset(self.request, qs, self.queryset.model)
