@@ -1,43 +1,584 @@
-import { type Page, type BrowserContext } from "@playwright/test";
-
-/** Default test user for E2E tests. */
-const TEST_USER = {
-  username: "test_admin",
-  role: "ADMIN",
-  tenantCode: "CN_DIYU",
-  tenantDisplayName: "Chinese Diyu",
-};
-
-/** Default JWT-like token for mocked auth state. */
-const MOCK_ACCESS_TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiJ0ZXN0X2FkbWluIiwidGVuYW50X2NvZGUiOiJDTl9ESVlVIn0.mock_signature";
-const MOCK_REFRESH_TOKEN = "mock_refresh_token";
+import { type Page, type Request } from "@playwright/test";
 
 /**
- * Seeds localStorage with mock authentication tokens so the app
- * treats the user as logged in without hitting the real login endpoint.
+ * Shared E2E setup: authenticated browser state + a route-level mock of the
+ * REST API.
+ *
+ * ── Why the API is mocked ─────────────────────────────────────────────────
+ * playwright.config.ts starts ONE server: `npm run dev` (Next.js on :3333).
+ * Nothing starts Django, and lib/api/client.ts points at
+ * NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1" — so in CI every XHR
+ * this app makes is a connection refused. These specs therefore intercept
+ * `**​/api/v1/**` and answer from the fixtures below. That keeps CI free of a
+ * Postgres/Django/Redis dependency while still exercising the real router,
+ * middleware, React tree, TanStack Query cache and mutation wiring.
+ *
+ * ── Why the old fixture never authenticated anything ──────────────────────
+ * The previous version wrote `access_token` / `refresh_token` / `user` into
+ * localStorage. Not one of those three keys exists anywhere in the app:
+ *   - middleware.ts:41 gates every non-public route on the COOKIE
+ *     `soulledger_refresh`; localStorage is invisible to middleware, which
+ *     runs on the server before any script executes.
+ *   - lib/api/client.ts:42 reads the access token from the cookie
+ *     `soulledger_access` or `sessionStorage.soulledger_access`.
+ *   - TenantContext.tsx:62 hydrates the user from localStorage key
+ *     `soulledger_user`, and expects a `{ user, storedAt }` envelope rather
+ *     than a bare user object.
+ * So even when it was called it authenticated nothing — and it was never
+ * called: both specs imported it and no line invoked it.
  */
-export function seedAuthLocalStorage(page: Page): Promise<void> {
-  return page.evaluate(
-    ({ accessToken, refreshToken, user }) => {
-      localStorage.setItem("access_token", accessToken);
-      localStorage.setItem("refresh_token", refreshToken);
-      localStorage.setItem("user", JSON.stringify(user));
+
+// Must mirror playwright.config.ts — cookies are scoped to this origin.
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3333";
+
+// ── Identity ──────────────────────────────────────────────────────────────
+
+/**
+ * Shape of TenantContext's AuthUser (src/contexts/TenantContext.tsx:29).
+ * ADMIN matters: usePermissions.hasPermission short-circuits to true for
+ * role ADMIN, which is what opens every <RequirePermission> gate on the
+ * screens under test.
+ */
+export const TEST_USER = {
+  id: 1,
+  username: "test_admin",
+  display_name: "测试管理员",
+  email: "test_admin@soulledger.test",
+  role: "ADMIN" as const,
+  tenant: { id: 1, code: "CN_DIYU", display_name: "中国地府" },
+};
+
+function b64url(value: object): string {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+/**
+ * A structurally valid unsigned JWT. Nothing verifies the signature here —
+ * every request is answered by a route mock — but the payload deliberately
+ * carries `tenant_code: CN_DIYU`, matching TEST_USER.tenant.code, so this
+ * token would also satisfy the JWT-tenant/user cross-check added in 44d12f7
+ * (backend TenantPermission) if these specs were ever pointed at a real API.
+ */
+export const MOCK_ACCESS_TOKEN = [
+  b64url({ alg: "HS256", typ: "JWT" }),
+  b64url({
+    token_type: "access",
+    exp: 4102444800, // 2100-01-01, so it never expires mid-suite
+    user_id: TEST_USER.id,
+    username: TEST_USER.username,
+    tenant_code: TEST_USER.tenant.code,
+    role: TEST_USER.role,
+  }),
+  "e2e_mock_signature",
+].join(".");
+
+export const MOCK_REFRESH_TOKEN = [
+  b64url({ alg: "HS256", typ: "JWT" }),
+  b64url({ token_type: "refresh", exp: 4102444800, user_id: TEST_USER.id, tenant_code: TEST_USER.tenant.code }),
+  "e2e_mock_signature",
+].join(".");
+
+// ── Fixture data ──────────────────────────────────────────────────────────
+
+export const PERMISSIONS = [
+  { id: 1, codename: "soul.read", name: "查看灵魂", category: "souls" },
+  { id: 2, codename: "soul.create", name: "创建灵魂", category: "souls" },
+  { id: 3, codename: "dispatch.approve", name: "批准调度", category: "dispatch" },
+  { id: 4, codename: "dispatch.reject", name: "驳回调度", category: "dispatch" },
+  { id: 5, codename: "menu.read", name: "查看菜单", category: "system" },
+  { id: 6, codename: "system.settings", name: "系统设置", category: "system" },
+  { id: 7, codename: "recycle_bin.read", name: "查看回收站", category: "system" },
+  { id: 8, codename: "recycle_bin.restore", name: "恢复条目", category: "system" },
+];
+
+const ALL_PERMISSION_IDS = PERMISSIONS.map((p) => p.id);
+
+/**
+ * Baseline grants. JUDGE and GUARDIAN are deliberately non-subsets of each
+ * other (JUDGE alone holds dispatch.approve, GUARDIAN alone holds
+ * recycle_bin.read) so the matrix's "peers, not a ladder" legend —
+ * findNonSubsetPair, app/permissions/page.tsx:102 — has something real to
+ * render.
+ */
+export const ROLE_GRANTS: Record<string, number[]> = {
+  ADMIN: [...ALL_PERMISSION_IDS],
+  JUDGE: [1, 3, 5],
+  GUARDIAN: [1, 5, 7],
+};
+
+export const ROLES = [
+  { id: 1, name: "ADMIN", display_name: "管理员", scope: "GLOBAL", organization: null, organization_name: null, user_count: 2, version: 7, update_time: "2026-08-01T00:00:00Z" },
+  { id: 2, name: "JUDGE", display_name: "判官", scope: "TENANT", organization: null, organization_name: null, user_count: 5, version: 3, update_time: "2026-08-01T00:00:00Z" },
+  { id: 3, name: "GUARDIAN", display_name: "守卫", scope: "TENANT", organization: null, organization_name: null, user_count: 4, version: 2, update_time: "2026-08-01T00:00:00Z" },
+];
+
+export const SOULS = [
+  {
+    id: "11111111-1111-4111-8111-111111111111",
+    name: "孟婆的第一位客人",
+    civilization: "CHINESE",
+    current_state: "JUDGING",
+    birth_date: { year: 1820, month: 3, day: 4 },
+    death_date: { year: 1888, month: 11, day: 2 },
+    merit_score: 120,
+    demerit_score: 78,
+    karmic_balance: 42,
+    tenant_code: "CN_DIYU",
+    date_problems: [],
+    has_date_warning: false,
+    has_record_error: false,
+  },
+  {
+    id: "22222222-2222-4222-8222-222222222222",
+    name: "尼罗河的书记官",
+    civilization: "EGYPTIAN",
+    current_state: "ALIVE",
+    birth_date: { year: -1300, month: 1, day: 1 },
+    death_date: null,
+    merit_score: 0,
+    demerit_score: 0,
+    karmic_balance: 0,
+    tenant_code: "EG_DUAT",
+    date_problems: [],
+    has_date_warning: false,
+    has_record_error: false,
+  },
+];
+
+/** A PROPOSED cross-civilization dispatch: Chinese Diyu → Egyptian Duat. */
+export const PROPOSED_DISPATCH = {
+  id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  source_tenant: 1,
+  source_tenant_code: "CN_DIYU",
+  target_tenant: 3,
+  target_tenant_code: "EG_DUAT",
+  soul: SOULS[0].id,
+  soul_name: SOULS[0].name,
+  dispatched_by: "5",
+  dispatched_by_name: "崔判官",
+  status: "PROPOSED",
+  reason: "此魂的罪业需由杜阿特的天平复核。",
+  proposed_at: "2026-08-10T02:00:00Z",
+  decided_at: null,
+  executed_at: null,
+  create_time: "2026-08-10T02:00:00Z",
+  update_time: "2026-08-10T02:00:00Z",
+};
+
+export const EXECUTED_DISPATCH = {
+  ...PROPOSED_DISPATCH,
+  id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  soul: SOULS[1].id,
+  soul_name: SOULS[1].name,
+  source_tenant_code: "EU_HEAVEN_HELL",
+  target_tenant_code: "CN_DIYU",
+  status: "EXECUTED",
+  reason: "已完成移交。",
+  decided_at: "2026-08-05T02:00:00Z",
+  executed_at: "2026-08-06T02:00:00Z",
+};
+
+/**
+ * GET /souls/{id}/ — SoulSerializer. Sits in JUDGING so the detail page
+ * offers the "开始审判" action.
+ */
+export const SOUL_DETAIL = {
+  ...SOULS[0],
+  birth_name: "孟氏",
+  origin_location: "钱塘",
+  description: "首位在忘川边留下姓名的魂。",
+  tenant: 1,
+};
+
+/** GET /souls/{id}/karma/ — LedgerSummary. */
+export const SOUL_LEDGER = {
+  soul_id: SOULS[0].id,
+  soul_name: SOULS[0].name,
+  merit_score: 120,
+  demerit_score: 78,
+  karmic_balance: 42,
+  record_count: 0,
+  records: [],
+  reading: {
+    kind: "BALANCE",
+    civilization: "CHINESE",
+    balance: 42,
+    merit: 120,
+    demerit: 78,
+  },
+};
+
+/** The judgment POST /judgment/ opens for a soul already in JUDGING. */
+export const OPENED_JUDGMENT = {
+  id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+  soul: SOULS[0].id,
+  soul_name: SOULS[0].name,
+  civilization: "CHINESE",
+  verdict: null,
+  is_final: false,
+  notes: "",
+  concluded_at: null,
+  create_time: "2026-08-13T02:00:00Z",
+};
+
+/**
+ * GET /ledger/stats/overview/ — the dashboard/welcome headline numbers.
+ * Must carry `state_distribution`: app/welcome/page.tsx:115 reads
+ * `stats?.state_distribution.find(...)`, where the optional chain stops at
+ * `stats`, so any body missing that key throws into the error boundary.
+ */
+export const LEDGER_STATS = {
+  total_souls: 2,
+  state_distribution: [
+    { state: "ALIVE", label: "在世", count: 1 },
+    { state: "JUDGING", label: "审判中", count: 1 },
+    { state: "DISPOSED", label: "已处置", count: 0 },
+  ],
+  tenants: [],
+  karma_distribution: [],
+  recent_activity: [],
+  souls_by_realm: [],
+};
+
+/** One row for the workflow screen's "审批实例" tab. */
+export const WORKFLOW_INSTANCE = {
+  id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+  workflow_name: "十殿审判流程",
+  case_type: "ROUTINE",
+  soul: SOULS[0].name,
+  status: "IN_PROGRESS",
+  is_appeal: false,
+  current_node: 3,
+  create_time: "2026-08-09T01:00:00Z",
+};
+
+/**
+ * Sidebar tree. ADMIN fetches menusApi.all() → GET /menus/list-public/,
+ * which returns a bare array of top-level items (useSidebarMenus.ts).
+ */
+export const MENUS = [
+  { id: 1, name: "灵魂", path: "/souls", icon: "users", order: 1, component: null, roles: [], is_active: true, parent: null, menu_type: "MENU", visible: true },
+  { id: 2, name: "调度管理", path: "/dispatch", icon: "send", order: 2, component: null, roles: [], is_active: true, parent: null, menu_type: "MENU", visible: true },
+  { id: 3, name: "权限管理", path: "/permissions", icon: "shield", order: 3, component: null, roles: [], is_active: true, parent: null, menu_type: "MENU", visible: true },
+  { id: 4, name: "回收站", path: "/recycle-bin", icon: "trash", order: 4, component: null, roles: [], is_active: true, parent: null, menu_type: "MENU", visible: true },
+];
+
+export const RECYCLE_BIN_ENTRY = {
+  entity_type: "soul",
+  kind: "domain" as const,
+  id: "33333333-3333-4333-8333-333333333333",
+  label: "误删的渡魂人",
+  deleted_at: "2026-08-11T09:30:00Z",
+  deleted_by: "test_admin",
+  delete_reason: "录入重复",
+  cascade_id: "cascade-0001",
+  dependent_count: 8,
+  retention_days: 30,
+  hard_delete_eligible: false,
+};
+
+// ── Mock engine ───────────────────────────────────────────────────────────
+
+export interface RecordedCall {
+  method: string;
+  /** Path with the `/api/v1` prefix stripped, e.g. `/souls/`. */
+  path: string;
+  query: Record<string, string>;
+  /** Parsed JSON request body, or undefined for bodyless requests. */
+  body: any;
+  /** False when no registered handler matched and the fallback answered. */
+  handled: boolean;
+}
+
+export interface MockReply {
+  status?: number;
+  body?: unknown;
+}
+
+export type MockHandler = (call: RecordedCall) => MockReply | Promise<MockReply>;
+
+/** Turns `/dispatch/records/:id/approve/` into an anchored RegExp. */
+function toRegExp(pattern: string | RegExp): RegExp {
+  if (pattern instanceof RegExp) return pattern;
+  const source = pattern
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/:[A-Za-z_][A-Za-z0-9_]*/g, "[^/]+");
+  return new RegExp(`^${source}$`);
+}
+
+function paginated(results: unknown[]) {
+  return { count: results.length, next: null, previous: null, results };
+}
+
+/**
+ * A tiny in-browser API server. Handlers registered later win, so a test can
+ * override any default with `api.on(...)` — that is how the destructive
+ * checks (500s, 409 conflicts) are driven.
+ */
+export class ApiMock {
+  /** Every intercepted request, in order. Assert against this. */
+  readonly calls: RecordedCall[] = [];
+
+  private routes: { method: string; matcher: RegExp; handler: MockHandler }[] = [];
+
+  /** Live role versions, so the optimistic-lock counter actually advances. */
+  readonly roleVersions: Record<string, number> = Object.fromEntries(
+    ROLES.map((r) => [r.name, r.version])
+  );
+
+  /**
+   * Register a handler. `reply` may be a function or a plain value, in which
+   * case it is sent as a 200 body. Overloaded so the handler form infers its
+   * `call` parameter instead of widening to `unknown`.
+   */
+  on(method: string, path: string | RegExp, handler: MockHandler): this;
+  on(method: string, path: string | RegExp, body: unknown): this;
+  on(method: string, path: string | RegExp, reply: MockHandler | unknown): this {
+    const handler: MockHandler =
+      typeof reply === "function" ? (reply as MockHandler) : () => ({ body: reply });
+    this.routes.unshift({ method: method.toUpperCase(), matcher: toRegExp(path), handler });
+    return this;
+  }
+
+  /** Every recorded call matching method + path. */
+  find(method: string, path: string | RegExp): RecordedCall[] {
+    const matcher = toRegExp(path);
+    return this.calls.filter((c) => c.method === method.toUpperCase() && matcher.test(c.path));
+  }
+
+  lastCall(method: string, path: string | RegExp): RecordedCall | undefined {
+    return this.find(method, path).at(-1);
+  }
+
+  countOf(method: string, path: string | RegExp): number {
+    return this.find(method, path).length;
+  }
+
+  async resolve(call: RecordedCall): Promise<MockReply> {
+    for (const route of this.routes) {
+      if (route.method === call.method && route.matcher.test(call.path)) {
+        call.handled = true;
+        return route.handler(call);
+      }
+    }
+    // Unmatched: an empty page, which is what the untested background
+    // requests (notifications, menus, stats) should look like. Recorded with
+    // handled=false so a test can notice if something it cares about fell
+    // through.
+    return { body: paginated([]) };
+  }
+
+  /** The defaults every spec starts from. */
+  registerDefaults(): this {
+    this.on("POST", "/auth/login/", (call) => {
+      if (call.body?.username !== TEST_USER.username) {
+        return { status: 401, body: { detail: "No active account found with the given credentials" } };
+      }
+      return {
+        body: {
+          access: MOCK_ACCESS_TOKEN,
+          refresh: MOCK_REFRESH_TOKEN,
+          user: { ...TEST_USER, permissions: PERMISSIONS.map((p) => p.codename) },
+        },
+      };
+    });
+
+    this.on("GET", "/perm/role-permissions/", {
+      role: TEST_USER.role,
+      permissions: PERMISSIONS.map((p) => p.codename),
+      details: PERMISSIONS,
+    });
+
+    // Sidebar. ADMIN takes menusApi.all() → /menus/list-public/, a bare array.
+    this.on("GET", "/menus/list-public/", MENUS);
+
+    this.on("GET", "/ledger/stats/overview/", LEDGER_STATS);
+
+    // ── Souls ──
+    this.on("GET", "/souls/", (call) =>
+      // The date-problem badge issues its own list request with
+      // has_date_problem=true; that one must not return the whole list.
+      call.query.has_date_problem === "true"
+        ? { body: paginated([]) }
+        : { body: paginated(SOULS) }
+    );
+    this.on("POST", "/souls/", (call) => ({
+      status: 201,
+      body: {
+        id: "99999999-9999-4999-8999-999999999999",
+        ...call.body,
+        current_state: "ALIVE",
+        death_date: null,
+        date_problems: [],
+        has_date_warning: false,
+        has_record_error: false,
+      },
+    }));
+
+    // Soul detail: seven parallel requests (app/souls/[id]/page.tsx:120).
+    // /records/ is a BARE array — the @action returns serializer.data
+    // directly — so the paginated fallback would break it.
+    this.on("GET", "/souls/:id/", SOUL_DETAIL);
+    this.on("GET", "/souls/:id/karma/", SOUL_LEDGER);
+    this.on("GET", "/souls/:id/records/", []);
+
+    // ── Judgment ──
+    this.on("GET", "/judgment/", paginated([]));
+    this.on("POST", "/judgment/", { ...OPENED_JUDGMENT });
+    this.on("GET", "/judgment/:id/", { ...OPENED_JUDGMENT });
+
+    // ── Dispatch ──
+    this.on("GET", "/dispatch/records/", (call) =>
+      call.query.status === "PROPOSED"
+        ? { body: paginated([PROPOSED_DISPATCH]) }
+        : { body: paginated([PROPOSED_DISPATCH, EXECUTED_DISPATCH]) }
+    );
+    this.on("GET", "/dispatch/records/:id/", { ...PROPOSED_DISPATCH });
+    this.on("POST", "/dispatch/records/:id/approve/", {
+      ...PROPOSED_DISPATCH,
+      status: "APPROVED",
+      decided_at: "2026-08-13T02:00:00Z",
+    });
+
+    // ── Permissions matrix ──
+    this.on("GET", "/perm/permissions/", PERMISSIONS);
+    this.on("GET", "/perm/roles/", () =>
+      // Versions come from the live map so a save's bump is visible to a refetch.
+      ({ body: ROLES.map((r) => ({ ...r, version: this.roleVersions[r.name] })) })
+    );
+    this.on("GET", "/perm/roles/:name/permissions/", (call) => {
+      const role = call.path.split("/")[3];
+      const ids = ROLE_GRANTS[role] ?? [];
+      const details = PERMISSIONS.filter((p) => ids.includes(p.id));
+      return { body: { role, permissions: details.map((p) => p.codename), details } };
+    });
+    this.on("POST", "/perm/role-permissions/assign/", (call) => {
+      const role: string = call.body?.role;
+      const current = this.roleVersions[role] ?? 0;
+      if (call.body?.expected_version !== undefined && call.body.expected_version !== current) {
+        return {
+          status: 409,
+          body: { detail: "版本冲突", expected_version: call.body.expected_version, current_version: current },
+        };
+      }
+      this.roleVersions[role] = current + 1;
+      return {
+        body: {
+          role,
+          assigned_count: call.body?.permission_ids?.length ?? 0,
+          permission_ids: call.body?.permission_ids ?? [],
+          version: this.roleVersions[role],
+        },
+      };
+    });
+
+    // ── Workflow ──
+    // WorkflowTemplateViewSet sets pagination_class = None, so the template
+    // list is a bare array, not a page envelope.
+    this.on("GET", "/workflow/templates/", []);
+    this.on("GET", "/workflows/", paginated([WORKFLOW_INSTANCE]));
+
+    // ── Recycle bin ──
+    this.on("GET", "/recycle-bin/", { results: [RECYCLE_BIN_ENTRY], count: 1 });
+    this.on("POST", "/recycle-bin/restore/", { restored: 1 + RECYCLE_BIN_ENTRY.dependent_count });
+
+    return this;
+  }
+}
+
+/**
+ * The app's origin is :3333 and the API's is :8000, so every XHR is
+ * cross-origin and the browser still enforces CORS on our fulfilled
+ * responses. These headers (and the OPTIONS short-circuit below) are what
+ * keep the preflight from failing the request before the mock is consulted.
+ */
+function corsHeaders(request: Request): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": request.headers()["origin"] ?? "*",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    "Access-Control-Allow-Headers": "authorization,content-type,x-tenant-id",
+    "Access-Control-Max-Age": "86400",
+  };
+}
+
+/** Installs the interceptor for every `/api/v1/**` request on this page. */
+export async function mockApi(page: Page, mock: ApiMock = new ApiMock().registerDefaults()): Promise<ApiMock> {
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const headers = corsHeaders(request);
+
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers });
+      return;
+    }
+
+    const url = new URL(request.url());
+    const call: RecordedCall = {
+      method: request.method(),
+      path: url.pathname.replace(/^.*\/api\/v1/, ""),
+      query: Object.fromEntries(url.searchParams),
+      body: (() => {
+        try {
+          return request.postDataJSON();
+        } catch {
+          return undefined;
+        }
+      })(),
+      handled: false,
+    };
+    mock.calls.push(call);
+
+    const reply = await mock.resolve(call);
+    await route.fulfill({
+      status: reply.status ?? 200,
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify(reply.body ?? {}),
+    });
+  });
+
+  return mock;
+}
+
+/**
+ * Puts the browser in the exact state a real login leaves behind:
+ *   - `soulledger_refresh` cookie — the only thing middleware.ts inspects,
+ *     and it must be a real cookie (not localStorage) or the very first
+ *     server-side navigation redirects to /login.
+ *   - `soulledger_access` in sessionStorage — where lib/api/client.ts's
+ *     request interceptor looks for the bearer token.
+ *   - `soulledger_user` envelope in localStorage — what TenantContext
+ *     rehydrates from on mount, giving the tree a role of ADMIN.
+ *
+ * addInitScript runs before any page script on every navigation, so the
+ * storage is already populated by the time TenantContext's mount effect runs.
+ */
+export async function seedAuthState(page: Page): Promise<void> {
+  await page.context().addCookies([
+    { name: "soulledger_refresh", value: MOCK_REFRESH_TOKEN, url: BASE_URL },
+    { name: "soulledger_access", value: MOCK_ACCESS_TOKEN, url: BASE_URL },
+    { name: "soulledger-locale", value: "zh-Hans", url: BASE_URL },
+  ]);
+
+  await page.addInitScript(
+    ({ user, accessToken }) => {
+      sessionStorage.setItem("soulledger_access", accessToken);
+      // CachedUserEnvelope — TenantContext.tsx:42. `permissions` is
+      // deliberately absent; the context refetches it and never trusts cache.
+      localStorage.setItem("soulledger_user", JSON.stringify({ user, storedAt: Date.now() }));
     },
-    {
-      accessToken: MOCK_ACCESS_TOKEN,
-      refreshToken: MOCK_REFRESH_TOKEN,
-      user: TEST_USER,
-    },
+    { user: TEST_USER, accessToken: MOCK_ACCESS_TOKEN }
   );
 }
 
 /**
- * Seeds a page context with auth state. Call this in a test's
- * `beforeEach` to ensure the page starts authenticated.
+ * One-call setup for any spec that needs to be logged in: API mock first
+ * (so no request escapes to a non-existent backend), then auth state.
+ * Does not navigate — the test decides where to go.
+ *
+ * Returns the ApiMock so tests can override routes and assert on payloads.
  */
-export async function setupAuthenticatedPage(page: Page): Promise<void> {
-  await page.goto("/");
-  await seedAuthLocalStorage(page);
-  await page.reload();
+export async function setupAuthenticatedPage(page: Page): Promise<ApiMock> {
+  const api = await mockApi(page);
+  await seedAuthState(page);
+  return api;
 }
