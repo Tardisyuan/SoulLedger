@@ -36,13 +36,13 @@ export default function LedgerPage() {
         />
         <OverviewCard
           label={t("ledger.active_souls")}
-          value={ledgerStats?.state_distribution.find(s => s.state === "ALIVE")?.count}
+          value={ledgerStats?.state_distribution?.find(s => s.state === "ALIVE")?.count}
           isLoading={isLoading}
           color="text-[hsl(var(--color-status-success))]"
         />
         <OverviewCard
           label={t("ledger.judging_souls")}
-          value={ledgerStats?.state_distribution.find(s => s.state === "JUDGING")?.count}
+          value={ledgerStats?.state_distribution?.find(s => s.state === "JUDGING")?.count}
           isLoading={isLoading}
           color="text-[hsl(var(--color-accent-ink))]"
         />
@@ -54,7 +54,7 @@ export default function LedgerPage() {
           <div className="text-[hsl(var(--color-status-error))] text-sm">{t("common.error")}</div>
         ) : (
           <div className="space-y-2">
-            {ledgerStats?.state_distribution.map((item) => (
+            {ledgerStats?.state_distribution?.map((item) => (
               <div key={item.state} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className={`w-3 h-3 rounded-full ${
