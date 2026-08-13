@@ -37,7 +37,7 @@ export default function DispatchPage() {
         </div>
         <Link
           href="/dispatch/propose"
-          className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent-hover))] transition-colors"
+          className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent-hover))] hover:!text-black transition-colors"
         >
           {t("dispatch.propose")}
         </Link>
