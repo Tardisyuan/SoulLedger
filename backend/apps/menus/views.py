@@ -194,13 +194,17 @@ class MenuButtonViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         if not user.is_authenticated:
             return MenuButton.objects.none()
         qs = super().get_queryset()
-        # Tenant filtering for non-ADMIN users
-        if getattr(user, 'role', None) != 'ADMIN':
-            tenant = getattr(self.request, 'tenant', None)
-            if tenant:
-                qs = qs.filter(menu__tenant=tenant)
-            else:
-                return MenuButton.objects.none()
+        # No tenant filtering here, deliberately: Menu and MenuButton are
+        # global navigation metadata shared by every tenant — neither model
+        # has a `tenant` field, and MenuViewSet above filters by role rather
+        # than tenant for the same reason (M15 confirmed this as intended
+        # design, not a gap). What stood here was a non-ADMIN-only
+        # `qs.filter(menu__tenant=tenant)`, which could only ever raise
+        # (FieldError/ValueError -> 500) because `Menu.tenant` does not
+        # exist; every existing test authenticated as ADMIN and returned
+        # before reaching it, so the suite stayed green while all four
+        # non-ADMIN roles got a 500 from GET /menus/buttons/. Access is
+        # already gated by menu.read / menu.manage via CodenameViewSetMixin.
         # Filter by menu_id if provided
         menu_id = self.request.query_params.get('menu_id')
         if menu_id:
