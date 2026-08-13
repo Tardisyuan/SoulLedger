@@ -184,7 +184,7 @@ export default function WorkflowPage() {
         {tab === "existing" ? (
           <>
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <div>
                 <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{t("workflow.templates")}</h2>
                 <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("workflow.select_template")}</p>
@@ -195,17 +195,20 @@ export default function WorkflowPage() {
                     setEditingTemplateId(null);
                     setTab("editor");
                   }}
-                  className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium transition-colors"
+                  className="shrink-0 whitespace-nowrap px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium transition-colors"
                 >
                   + {t("workflow.new_template")}
                 </button>
               </RequirePermission>
             </div>
 
-            {/* 左右布局 */}
-            <div className="flex gap-6">
+            {/* 左右布局：窄屏改为上下堆叠。
+                固定的 `w-80 shrink-0` 在 393px 视口下会吃掉整行宽度
+                （345px 可用 − 320px 列 − 24px gap = 1px），右侧预览被压成
+                一条竖线；lg 以下先竖排，lg 起才回到双栏。 */}
+            <div className="flex flex-col gap-6 lg:flex-row">
               {/* 左侧：模板列表 */}
-              <div className="w-80 shrink-0 space-y-4">
+              <div className="w-full space-y-4 lg:w-80 lg:shrink-0">
                 {/* 后端模板列表 */}
                 {isTemplatesLoading ? (
                   <ListSkeleton count={3} />
