@@ -3,10 +3,48 @@ Concurrency tests — verifies pessimistic locking prevents race conditions.
 
 Uses transaction=True so each test's DB writes are committed and visible
 to threads on separate connections.
+
+Every test here once carried `@pytest.mark.xfail(reason="SQLite does not
+support concurrent writes")`, and every one of them XPASSed. That marker was
+wrong twice over. A non-strict xfail reports xpassed and exits 0, so "the
+locking works" and "the locking is broken" produced identical build output;
+and the tests do not, in fact, expect-fail on SQLite — they mostly pass there.
+
+Measured, 25 consecutive runs of this file on SQLite in-memory:
+
+    test_concurrent_die_only_one_succeeds          6/25 failed
+    test_concurrent_state_transition_to_disposed   4/25 failed
+    test_concurrent_approve_only_one_succeeds      4/25 failed
+    test_concurrent_approve_and_reject             2/25 failed
+    test_concurrent_invalid_transition_rejected    0/25 failed
+
+So four of them are flaky, not expected-failure: on SQLite the losing thread
+usually loses cleanly (re-reads the row, sees the new state, declines the
+transition) but sometimes trips over the whole-table write lock first and
+raises OperationalError("database table is locked: souls_soul") before it can
+re-read. Those four are now skipped on SQLite with that as the stated reason —
+the select_for_update() row locking they actually test only exists on
+PostgreSQL, which is what CI runs. The fifth races two threads through a
+transition the state machine rejects outright, so no write is ever attempted,
+no lock is ever contended, and it runs everywhere; its marker is simply gone.
 """
 import threading
 
 import pytest
+from django.db import connection
+
+# select_for_update() is a row lock on PostgreSQL and a no-op on SQLite, which
+# serialises writers with a table lock instead. Skipping is deliberate and not
+# a softer xfail: on SQLite these assertions are nondeterministic, so keeping
+# them would trade a silent gate for an intermittently red one.
+SQLITE = connection.vendor == "sqlite"
+NEEDS_ROW_LOCKS = (
+    "Requires real row-level locking (select_for_update). On SQLite the "
+    "losing thread intermittently raises OperationalError('database table is "
+    "locked') instead of blocking and re-reading, making this assertion "
+    "nondeterministic — measured flaky in 2-6 of 25 runs. Runs on PostgreSQL, "
+    "which is what CI uses."
+)
 
 from apps.authentication.models import User
 from apps.dispatch.models import DispatchRecord, DispatchStatus
@@ -68,7 +106,7 @@ def cn_soul(db, cn_tenant):
 class TestDispatchApprovalConcurrency:
     """Two users cannot approve the same dispatch simultaneously."""
 
-    @pytest.mark.xfail(reason="SQLite does not support concurrent writes")
+    @pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
     def test_concurrent_approve_only_one_succeeds(self, db, cn_tenant, eu_tenant, cn_soul, cn_admin, eu_admin):
         """
         Scenario:
@@ -114,7 +152,7 @@ class TestDispatchApprovalConcurrency:
         dr.refresh_from_db()
         assert dr.status == DispatchStatus.APPROVED
 
-    @pytest.mark.xfail(reason="SQLite does not support concurrent writes")
+    @pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
     def test_concurrent_approve_and_reject(self, db, cn_tenant, eu_tenant, cn_soul, cn_admin, eu_admin):
         """
         One thread tries to approve, another tries to reject.
@@ -167,7 +205,7 @@ class TestDispatchApprovalConcurrency:
 class TestSoulStateTransitionConcurrency:
     """Concurrent soul state transitions: only one should succeed."""
 
-    @pytest.mark.xfail(reason="SQLite does not support concurrent writes — database locked error")
+    @pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
     def test_concurrent_die_only_one_succeeds(self, db, cn_tenant):
         """
         Two threads both try to call soul.die() on the same ALIVE soul.
@@ -205,7 +243,7 @@ class TestSoulStateTransitionConcurrency:
         assert soul.current_state == SoulState.JUDGING
         assert soul.death_date is not None
 
-    @pytest.mark.xfail(reason="SQLite does not support concurrent writes")
+    @pytest.mark.skipif(SQLITE, reason=NEEDS_ROW_LOCKS)
     def test_concurrent_state_transition_to_disposed(self, db, cn_tenant):
         """
         Two threads try to transition the same soul from JUDGING -> DISPOSED.
@@ -243,7 +281,10 @@ class TestSoulStateTransitionConcurrency:
         soul.refresh_from_db()
         assert soul.current_state == SoulState.DISPOSED
 
-    @pytest.mark.xfail(reason="SQLite does not support concurrent writes")
+    # No backend guard, on purpose. Both threads are rejected by
+    # can_transition_to before any UPDATE is issued, so nothing ever contends
+    # for a lock — the old "SQLite does not support concurrent writes" xfail
+    # here was copy-paste. 25/25 green on SQLite.
     def test_concurrent_invalid_transition_rejected(self, db, cn_tenant):
         """
         Two threads try to skip states (ALIVE -> REINCARNATING).
