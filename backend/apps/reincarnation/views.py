@@ -8,7 +8,10 @@ from rest_framework.response import Response
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.reincarnation.models import Reincarnation
-from apps.reincarnation.serializers import ReincarnationSerializer
+from apps.reincarnation.serializers import (
+    RebirthRequestSerializer,
+    ReincarnationSerializer,
+)
 
 
 def _state_conflict(soul, target_state):
@@ -105,9 +108,17 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         from apps.souls.models import SoulState
         disposition = reincarnation.disposition
 
-        new_identity = request.data.get("new_identity", reincarnation.new_identity)
-        rebirth_form = request.data.get("rebirth_form", reincarnation.rebirth_form)
-        notes = request.data.get("notes", "")
+        # Validate the body before anything is asked of the soul. These three
+        # fields used to come straight off request.data and go straight into
+        # Reincarnation.objects.create(), which checks no choices — see
+        # RebirthRequestSerializer. Each still falls back to the record's own
+        # value when omitted, so an empty body behaves exactly as before,
+        # including for a legacy row whose stored form is OTHER.
+        payload = RebirthRequestSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        new_identity = payload.validated_data.get("new_identity", reincarnation.new_identity)
+        rebirth_form = payload.validated_data.get("rebirth_form", reincarnation.rebirth_form)
+        notes = payload.validated_data.get("notes", "")
 
         # Ask the cosmology before touching the soul's state, not after.
         #
@@ -159,10 +170,20 @@ class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets
         from apps.reincarnation.services import ReincarnationService
         from apps.souls.models import Soul, SoulState
 
+        # Body first, before the soul and disposition lookups: a malformed
+        # rebirth_form is a 400 whether or not the referenced soul exists, and
+        # validating here guarantees no write can precede the refusal. See
+        # RebirthRequestSerializer for what was reaching the column before.
+        # soul_id/disposition_id stay resolved by hand below — they answer 404
+        # with this viewset's {"error", "message"} shape and are tenant-scoped,
+        # neither of which a PrimaryKeyRelatedField would reproduce.
+        payload = RebirthRequestSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+
         soul_id = request.data.get("soul_id")
         disposition_id = request.data.get("disposition_id")
-        new_identity = request.data.get("new_identity", "")
-        rebirth_form = request.data.get("rebirth_form", "HUMAN")
+        new_identity = payload.validated_data.get("new_identity", "")
+        rebirth_form = payload.validated_data.get("rebirth_form", "HUMAN")
 
         # Tenant-isolated: filter soul by tenant (ADMIN bypasses)
         user_tenant = getattr(request, "tenant", None)

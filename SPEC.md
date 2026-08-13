@@ -452,7 +452,7 @@ Tenant ────────────────────────�
 | soul | FK(Soul) | 轮回灵魂 |
 | disposition | FK(Disposition) | 关联处置 |
 | target_realm | string(20) | 目标地域代码 |
-| rebirth_form | enum | HUMAN / ANIMAL / DIVINE / OTHER |
+| rebirth_form | enum | 六道：DIVINE 天道 / HUMAN 人道 / ASURA 阿修罗道 / ANIMAL 畜生道 / HUNGRY_GHOST 饿鬼道 / HELL_BEING 地狱道（另有遗留值 OTHER，不属六道） |
 | cycle_count | integer | 轮回次数 |
 | previous_realm | string(20) | 前一地域 |
 | new_identity | string(100) | 新身份名称 |

@@ -474,7 +474,10 @@ export function SoulLifecycleTimeline({
                   {row.form && (
                     <>
                       <span aria-hidden="true">·</span>
-                      <span>{row.form}</span>
+                      {/* The six paths (六道) are stored as enum keys; fall
+                          back to the raw key so a value the locale files
+                          have not caught up with still reads as something. */}
+                      <span>{tf(`reincarnation.forms.${row.form}`, row.form)}</span>
                     </>
                   )}
                   {row.isCurrent && (

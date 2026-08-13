@@ -93,9 +93,13 @@ export const workflowApproveSchema = z.object({
 export const reincarnationRebornSchema = z.object({
   soul_id: z.string().uuid('无效的灵魂ID'),
   target_realm_id: z.string().uuid('无效的目标领域ID'),
-  rebirth_form: z.enum(['HUMAN', 'ANIMAL', 'DIVINE', 'OTHER'], {
-    error: '请选择轮回形态',
-  }),
+  // 六道 (docs/07_六道轮回详解.md): 三善道 DIVINE/HUMAN/ASURA, then 三恶道
+  // ANIMAL/HUNGRY_GHOST/HELL_BEING. OTHER is legacy-only — kept so existing
+  // records validate, not offered for new rebirths.
+  rebirth_form: z.enum(
+    ['DIVINE', 'HUMAN', 'ASURA', 'ANIMAL', 'HUNGRY_GHOST', 'HELL_BEING', 'OTHER'],
+    { error: '请选择轮回形态' }
+  ),
   new_identity: z.string().max(100, '新身份最多100位').optional(),
 })
 
