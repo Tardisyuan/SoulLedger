@@ -359,7 +359,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ) : (
               <Link
                 href="/login"
-                className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent))] transition-colors"
+                className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent))] hover:!text-black transition-colors"
               >
                 {t("auth.login")}
               </Link>

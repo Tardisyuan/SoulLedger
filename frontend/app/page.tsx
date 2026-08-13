@@ -51,7 +51,7 @@ export default function HomePage() {
           {user ? (
             <a
               href="/dashboard"
-              className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--color-accent))] text-black rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--color-accent))] text-black rounded-lg text-sm font-medium hover:opacity-90 hover:!text-black transition-opacity"
             >
               {t("home.console")}
               <ExternalLink className="w-4 h-4" />
@@ -59,7 +59,7 @@ export default function HomePage() {
           ) : (
             <a
               href="/login"
-              className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--color-accent))] text-black rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--color-accent))] text-black rounded-lg text-sm font-medium hover:opacity-90 hover:!text-black transition-opacity"
             >
               {t("home.console")}
               <ExternalLink className="w-4 h-4" />
