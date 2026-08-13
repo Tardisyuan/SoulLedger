@@ -1,5 +1,16 @@
 # Production Readiness Report
 
+> ## ⚠️ SUPERSEDED — DO NOT CITE THIS REPORT'S CONCLUSION
+>
+> Written **2026-05-30**. Its "Production Ready" verdict (Security 8/10, "tenant isolation ✅")
+> was **overturned on 2026-08-07** by the multi-tenant security audit in
+> [`docs/MILESTONE_M15.md`](MILESTONE_M15.md), which found **4 CRITICAL tenant-isolation gaps
+> in this same codebase** — including `death_sync.cleanup_old_requests`, a physical `DELETE`
+> running across every tenant with no tenant boundary — plus 4 HIGH and 15 MEDIUM findings.
+>
+> Kept for historical record only. **The project's current state is whatever `git log` says**
+> (see `README.md:339`); this document is not a status page.
+
 **Date**: 2026-05-30
 **Version**: v0.1.0
 **Status**: Production Ready (with caveats)

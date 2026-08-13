@@ -1,117 +1,105 @@
 # Backend Test Coverage Roadmap
 
-## Current State (Updated: 2026-06-09)
+## Current State (Updated: 2026-08-13)
 
 | Metric | Value |
 |--------|-------|
-| Total statements | 9,464 |
-| Missed statements | 2,341 |
-| **Coverage** | **70.24%** |
-| CI threshold | 40% |
-| Gap to close | **Achieved** ✅ |
-| Tests collected | 1,209 |
-| New tests (Task #291) | 322 |
+| **Coverage** | **87.04%** |
+| CI threshold (`--cov-fail-under` in `pytest.ini`) | 80% |
+| Status | Threshold met ✅ |
+| Suite | 1,949 passed, 16 skipped, 6 xpassed |
 
-## Coverage by App (Key Files)
+Measured by the full backend suite from the repo root:
+`python -m pytest` (config in `pytest.ini`: `--cov=apps --cov-branch`). Individual runs land
+between 86.3% and 87.0% depending on working-tree state.
 
-| App | models.py | views.py | services.py | serializers.py |
-|-----|-----------|----------|-------------|----------------|
-| souls | 33% | 0% | — | 0% |
-| judgment | 90% | 0% | 0% | 0% |
-| social | 54% | 0% | 30% | 0% |
-| karma | 100% | 0% | 0% | 0% |
-| dispatch | 58% | 0% | 24% | 0% |
-| workflow | 63% | 0% | 14% | 0% |
-| death_sync | 90% | — | 14% | — |
-| disposition | 94% | 0% | 24% | 0% |
-| reincarnation | 97% | 0% | 18% | 0% |
-| actors | 68% | 0% | — | 0% |
-| realms | 78% | 0% | — | 0% |
-| menus | 69% | 0% | — | 0% |
-| perm | 62% | 0% | — | 0% |
-| audit | 97% | 0% | — | 0% |
-| events | 98% | 0% | 42% | 0% |
-| notifications | 77% | 0% | — | 0% |
-| org | 47% | 0% | — | 0% |
-| tenants | 94% | 0% | — | 0% |
-| authentication | 95% | — | — | — |
-| permissions | 95% | — | — | — |
+These are a snapshot, not a live figure — re-measure before quoting them. `git log` is the
+accurate record of project state (`README.md:339`).
 
-**Pattern**: Models have decent coverage (50-100%), but views/serializers/services are at 0% across most apps.
+> **History**: this document originally planned the climb from a 22.95% baseline to the then
+> 40% CI floor. That plan was executed (M14 / Task #291) and the goal was overshot. The
+> projection tables that drove it have been removed because they described a state the repo
+> left behind; the sections below describe where coverage actually stands. The `karma` app
+> referenced by the old tables has since been renamed `ledger`.
 
-## Highest ROI Targets
+## Coverage by App
 
-To reach 40% coverage, we need ~1,325 more statements covered.
+Production modules only — migrations and test files are excluded here, although the CI figure
+above measures the whole `apps` package.
 
-### Tier 1: View Tests (Quick Wins)
+| App | Statements | Missed | Coverage |
+|-----|-----------|--------|----------|
+| judgment | 229 | 7 | 97% |
+| authentication | 495 | 31 | 94% |
+| permissions | 31 | 2 | 94% |
+| souls | 1,565 | 111 | 93% |
+| social | 583 | 43 | 93% |
+| perm | 1,331 | 99 | 93% |
+| events | 418 | 32 | 92% |
+| dispatch | 525 | 41 | 92% |
+| menus | 217 | 19 | 91% |
+| reincarnation | 155 | 16 | 90% |
+| disposition | 193 | 21 | 89% |
+| realms | 124 | 16 | 87% |
+| workflow | 462 | 60 | 87% |
+| audit | 495 | 78 | 84% |
+| death_sync | 637 | 108 | 83% |
+| ledger | 728 | 127 | 83% |
+| core | 676 | 139 | 79% |
+| notifications | 190 | 42 | 78% |
+| tenants | 188 | 77 | 59% |
+| org | 112 | 52 | 54% |
+| actors | 398 | 265 | 33% |
+| **Total (production)** | **9,752** | **1,386** | **86%** |
 
-| App | File | Stmts | Miss | Potential Gain |
-|-----|------|-------|------|----------------|
-| perm | views.py | 160 | 160 | +160 |
-| dispatch | views.py | 150 | 150 | +150 |
-| menus | views.py | 128 | 128 | +128 |
-| karma | views.py | 120 | 120 | +120 |
-| audit | views.py | 110 | 110 | +110 |
-| workflow | views.py | 102 | 102 | +102 |
-| souls | views.py | 75 | 75 | +75 |
-| **Total** | | **845** | **845** | **+845** |
+The earlier "views/serializers/services are at 0% across most apps" pattern no longer holds —
+those layers now carry API integration tests in every app.
 
-### Tier 2: Serializer Tests
+## Remaining Gaps
 
-| App | File | Stmts | Miss | Potential Gain |
-|-----|------|-------|------|----------------|
-| dispatch | serializers.py | 74 | 74 | +74 |
-| souls | serializers.py | 60 | 60 | +60 |
-| menus | serializers.py | 51 | 51 | +51 |
-| workflow | serializers.py | 43 | 43 | +43 |
-| karma | serializers.py | 38 | 38 | +38 |
-| perm | serializers.py | 35 | 35 | +35 |
-| **Total** | | **301** | **301** | **+301** |
+Ranked by uncovered statements. Not all of these are worth closing.
 
-### Tier 3: Service Tests
+| Module | Stmts | Missed | Cover | Note |
+|--------|-------|--------|-------|------|
+| `actors/management/commands/*` | 254 | 254 | 0% | One-off data-seeding/migration commands; low value to test |
+| `tenants/management/commands/migrate_to_multitenant.py` | 53 | 53 | 0% | Same — a one-time migration script |
+| `org/management/commands/init_organizations.py` | 36 | 36 | 0% | Same |
+| `ledger/serializers.py` | 62 | 62 | 0% | **Real gap** — serializer validation untested |
+| `ledger/filters.py` | 40 | 40 | 0% | **Real gap** |
+| `audit/signals.py` | 290 | 51 | 81% | Signal branches not exercised |
+| `notifications/consumers.py` | 98 | 40 | 59% | WebSocket consumer paths |
+| `death_sync/webhook_service.py` | 83 | 39 | 48% | **Real gap** — outbound webhook retry/failure paths |
+| `workflow/views.py` | 141 | 39 | 68% | Custom actions |
+| `perm/export.py` | 57 | 35 | 29% | Export path |
+| `souls/filters.py` / `souls/querysets.py` | 129 | 56 | 43-53% | Filter/queryset branches |
 
-| App | File | Stmts | Miss | Potential Gain |
-|-----|------|-------|------|----------------|
-| dispatch | services.py | 109 | 83 | +83 |
-| karma | services.py | 78 | 78 | +78 |
-| workflow | services.py | 75 | 65 | +65 |
-| **Total** | | **262** | **226** | **+226** |
+`actors` reads low (33%) almost entirely because of the untested management commands; its
+models and views are covered.
 
-## Coverage Projection
-
-```
-Current:   1,764 / 7,684 = 22.95%
-After T1:  2,609 / 7,684 = 33.96%
-After T2:  2,910 / 7,684 = 37.87%
-After T3:  3,136 / 7,684 = 40.81% ✅
-```
-
-## Recommended Execution Order
-
-1. **Phase 1: View Tests** (2-3 days)
-   - Add API integration tests for views.py in perm, dispatch, menus, karma, audit, workflow, souls
-   - Expected gain: +845 statements → 34% coverage
-
-2. **Phase 2: Serializer Tests** (1-2 days)
-   - Add serializer validation tests for dispatch, souls, menus, workflow, karma, perm
-   - Expected gain: +301 statements → 38% coverage
-
-3. **Phase 3: Service Tests** (1-2 days)
-   - Add unit tests for dispatch, karma, workflow services
-   - Expected gain: +226 statements → 41% coverage
-
-**Total estimated effort: 4-7 days**
+Priority order if this is picked up: `ledger/serializers.py` + `ledger/filters.py` (untested
+validation on a core app), then `death_sync/webhook_service.py` (failure paths in an external
+integration), then `notifications/consumers.py`.
 
 ## Test Pattern Reference
 
 ```python
 # API integration test pattern (from apps/social/tests/test_views.py)
+def _jwt_client(user, tenant):
+    """APIClient authenticated via JWT carrying the tenant_code claim,
+    so TenantMiddleware sets request.tenant."""
+    client = APIClient()
+    token = RefreshToken.for_user(user)
+    token["tenant_code"] = tenant.code
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+    return client
+
+
 @pytest.mark.django_db
-class TestKarmaViewSet:
+class TestPostCRUD:
     @pytest.fixture(autouse=True)
     def setup(self, db):
         self.tenant = Tenant.objects.get_or_create(
-            code="TEST", defaults={"display_name": "Test"}
+            code="VP_T1", defaults={"display_name": "Post View Tenant"}
         )[0]
         self.user = User.objects.create_user(
             username="test", password="test123", role="ADMIN", tenant=self.tenant
@@ -119,12 +107,17 @@ class TestKarmaViewSet:
         self.client = _jwt_client(self.user, self.tenant)
 
     def test_list_empty(self):
-        resp = self.client.get("/api/v1/karma/")
+        resp = self.client.get("/api/v1/social/posts/")
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["count"] == 0
 ```
 
+Note: backend tests live in two places — `backend/apps/*/tests.py` and `backend/tests/`.
+Running only one of them gives a misleadingly green result.
+
 ## Files
 
 - `docs/coverage-roadmap.md` — This document
+- `docs/post-coverage-audit-report.md` — Task #291 audit (2026-06-09); its 70.24% figure is
+  superseded by the numbers above
 - `docs/MILESTONES.md` — References this as future work
