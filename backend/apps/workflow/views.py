@@ -7,6 +7,7 @@ from rest_framework.response import Response
 
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.workflow.filters import WorkflowFilter
 from apps.workflow.models import ApprovalNode, ApprovalWorkflow, NodeStatus, WorkflowTemplate
@@ -54,16 +55,7 @@ class WorkflowTemplateViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         # explicitly rather than going back to `objects`, which would
         # reintroduce the contextvar problem this override exists to solve.
         qs = WorkflowTemplate._base_manager.filter(is_deleted=False).select_related("tenant")
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        if getattr(user, 'role', None) != 'ADMIN':
-            tenant = getattr(self.request, 'tenant', None)
-            if tenant:
-                qs = qs.filter(tenant=tenant)
-            else:
-                return qs.none()
-        return qs
+        return scope_to_tenant(qs, self.request)
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -104,16 +96,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         qs = ApprovalWorkflow._base_manager.select_related(
             "soul", "soul__tenant", "tenant", "current_node", "coordinating_realm"
         ).prefetch_related("nodes").all()
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        if getattr(user, 'role', None) != 'ADMIN':
-            tenant = getattr(self.request, 'tenant', None)
-            if tenant:
-                qs = qs.filter(tenant=tenant)
-            else:
-                return qs.none()
-        return qs
+        return scope_to_tenant(qs, self.request)
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -286,12 +269,4 @@ class ApprovalNodeViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUser
         """Fresh queryset to avoid stale TenantManager contextvar filters.
         Filters by workflow__tenant since ApprovalNode has no direct tenant field."""
         qs = ApprovalNode._base_manager.select_related("workflow", "workflow__soul", "approver", "realm", "approver_actor").all()
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        if getattr(user, 'role', None) != 'ADMIN':
-            tenant = getattr(self.request, 'tenant', None)
-            if tenant:
-                return qs.filter(workflow__tenant=tenant)
-            return qs.none()
-        return qs
+        return scope_to_tenant(qs, self.request, field="workflow__tenant")

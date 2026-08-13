@@ -7,6 +7,7 @@ import uuid
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework import status
+from rest_framework.request import Request
 from rest_framework.test import APIClient, APIRequestFactory
 
 from apps.social.models import (
@@ -703,8 +704,17 @@ class TestUserProfileTenantIsolation:
 def _get_queryset_bare(view_cls, user, tenant, action="list"):
     """Instantiate view_cls and call get_queryset() directly against a bare
     request carrying only `.user` and `.tenant` — no dispatch(), no
-    permission_classes, no authentication middleware."""
-    request = APIRequestFactory().get("/")
+    permission_classes, no authentication middleware.
+
+    Wrapped in DRF's Request, not left as the factory's plain WSGIRequest:
+    these viewsets read `request.query_params`, which only exists on the DRF
+    wrapper. It went unnoticed while the no-tenant path `return`ed early —
+    the stub was never asked for anything past `.tenant`. Now that scoping is
+    a filter rather than an early exit (see apps/core/tenant.py), the rest of
+    get_queryset() runs on the no-tenant path too, exactly as it does in
+    production, and the stub has to be able to answer it.
+    """
+    request = Request(APIRequestFactory().get("/"))
     request.user = user
     request.tenant = tenant
     view = view_cls()
@@ -764,3 +774,150 @@ class TestSocialViewSetsFailClosedWithoutTenant:
         unconditional qs.none()."""
         qs = _get_queryset_bare(PostViewSet, self.user, self.tenant)
         assert list(qs) == [self.post]
+
+
+# ---------------------------------------------------------------------------
+# Cross-tenant write guards. Every test here asserts a REFUSAL.
+#
+# The recurring failure mode in this codebase is a guard that never runs — a
+# check nested under a condition that is false in exactly the situation it was
+# written for, passing its suite forever without once returning False. So these
+# do not assert that a legitimate follow/comment/reaction succeeds (other tests
+# above already cover that); they each drive the guard to actually fire.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestFollowCrossTenantRefused:
+    """`FollowViewSet.toggle` and `POST /follows/` must refuse a target in
+    another tenant, and must not leak whether that target exists."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="XF_T1", defaults={"display_name": "Cross Follow T1"}
+        )[0]
+        self.other_tenant = Tenant.objects.get_or_create(
+            code="XF_T2", defaults={"display_name": "Cross Follow T2"}
+        )[0]
+        self.user = User.objects.create_user(
+            username="xfuser1", password="test123", role="VIEWER", tenant=self.tenant,
+        )
+        self.foreign = User.objects.create_user(
+            username="xfforeign", password="test123", role="VIEWER",
+            tenant=self.other_tenant,
+        )
+        self.admin = User.objects.create_user(
+            username="xfadmin", password="test123", role="ADMIN", tenant=self.tenant,
+        )
+        self.client = _jwt_client(self.user, self.tenant)
+
+    def test_toggle_refuses_a_target_in_another_tenant(self):
+        resp = self.client.post(
+            f"{BASE}/follows/toggle/",
+            {"following": str(self.foreign.pk)},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert not Follow.objects.filter(
+            follower=self.user, following=self.foreign
+        ).exists()
+
+    def test_toggle_does_not_leak_foreign_user_existence(self):
+        """The 404/200 split was a working existence oracle: a real user ID in
+        another tenant answered differently from an ID belonging to nobody.
+        Both must look identical."""
+        real_but_foreign = self.client.post(
+            f"{BASE}/follows/toggle/",
+            {"following": str(self.foreign.pk)},
+            format="json",
+        )
+        nonexistent = self.client.post(
+            f"{BASE}/follows/toggle/", {"following": 999999}, format="json",
+        )
+        assert real_but_foreign.status_code == nonexistent.status_code
+        assert real_but_foreign.data == nonexistent.data
+
+    def test_toggle_refuses_cross_tenant_even_for_admin(self):
+        """No ADMIN carve-out on the write side — an ADMIN bypass here would
+        mint the same tenant-inconsistent Follow row the serializer rejects."""
+        admin_client = _jwt_client(self.admin, self.tenant)
+        resp = admin_client.post(
+            f"{BASE}/follows/toggle/",
+            {"following": str(self.foreign.pk)},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert not Follow.objects.filter(following=self.foreign).exists()
+
+    def test_create_refuses_a_target_in_another_tenant(self):
+        """Same hole, other door: POST /follows/ goes through
+        FollowCreateSerializer, not through toggle's lookup."""
+        resp = self.client.post(
+            f"{BASE}/follows/", {"following": str(self.foreign.pk)}, format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert not Follow.objects.filter(following=self.foreign).exists()
+
+
+@pytest.mark.django_db
+class TestSocialWriteGuardsFireWithoutTenant:
+    """The comment/reaction cross-tenant guards used to sit inside
+    `if tenant is not None:`, so an unresolved request.tenant switched off the
+    very check that case needed. These drive that exact path."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="NT_T1", defaults={"display_name": "No Tenant Guard T1"}
+        )[0]
+        self.user = User.objects.create_user(
+            username="ntuser1", password="test123", role="VIEWER", tenant=self.tenant,
+        )
+        self.post = Post.objects.create(
+            author=self.user, content="P", tenant=self.tenant
+        )
+        self.comment = Comment.objects.create(
+            author=self.user, post=self.post, content="C", tenant=self.tenant
+        )
+
+    def _serializer(self, cls, data):
+        request = Request(APIRequestFactory().post("/"))
+        request.user = self.user
+        request.tenant = None
+        return cls(data=data, context={"request": request})
+
+    def test_comment_create_refused_when_tenant_unresolved(self):
+        from apps.social.serializers import CommentCreateSerializer
+
+        s = self._serializer(
+            CommentCreateSerializer, {"post": str(self.post.pk), "content": "x"}
+        )
+        assert not s.is_valid()
+
+    def test_comment_reply_refused_when_tenant_unresolved(self):
+        from apps.social.serializers import CommentCreateSerializer
+
+        s = self._serializer(
+            CommentCreateSerializer,
+            {"post": str(self.post.pk), "parent": str(self.comment.pk), "content": "x"},
+        )
+        assert not s.is_valid()
+
+    def test_reaction_on_post_refused_when_tenant_unresolved(self):
+        from apps.social.serializers import ReactionCreateSerializer
+
+        s = self._serializer(
+            ReactionCreateSerializer,
+            {"post": str(self.post.pk), "reaction_type": "LIKE"},
+        )
+        assert not s.is_valid()
+
+    def test_reaction_on_comment_refused_when_tenant_unresolved(self):
+        from apps.social.serializers import ReactionCreateSerializer
+
+        s = self._serializer(
+            ReactionCreateSerializer,
+            {"comment": str(self.comment.pk), "reaction_type": "LIKE"},
+        )
+        assert not s.is_valid()

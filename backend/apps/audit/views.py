@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import TenantPermission
+from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 
 from .models import AuditAction, AuditLog
@@ -53,17 +54,10 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """Filter queryset based on user permissions and query params."""
-        user = self.request.user
-
-        # Non-admin users can only see their own tenant's logs
-        qs = AuditLog.objects.select_related("user", "tenant").all()
-
-        if getattr(user, 'role', None) != 'ADMIN':
-            tenant = getattr(self.request, 'tenant', None)
-            if tenant:
-                qs = qs.filter(tenant=tenant)
-            else:
-                qs = qs.none()
+        # Non-admin users can only see their own tenant's logs.
+        qs = scope_to_tenant(
+            AuditLog.objects.select_related("user", "tenant").all(), self.request
+        )
 
         # Apply query param filters
         user_id = self.request.query_params.get('user_id')
@@ -114,13 +108,10 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         GET /api/v1/audit-logs/resources/
         Returns all resource types that have audit logs (tenant-scoped).
         """
-        qs = AuditLog.objects.all()
-        if getattr(request.user, 'role', None) != 'ADMIN':
-            tenant = getattr(request, 'tenant', None)
-            if tenant:
-                qs = qs.filter(tenant=tenant)
-            else:
-                return Response([])
+        # A non-ADMIN with no resolvable tenant now gets an empty queryset
+        # rather than an early `Response([])`. Same response body, one less
+        # copy of the idiom — see apps/core/tenant.py.
+        qs = scope_to_tenant(AuditLog.objects.all(), request)
         resources = (
             qs.values_list("resource", flat=True)
             .distinct()
@@ -143,14 +134,10 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
 
         from django.db.models import Count
 
-        # Filter by tenant for non-admin users
-        qs = AuditLog.objects.all()
-        if request.user.role != 'ADMIN':
-            tenant = getattr(request, 'tenant', None)
-            if tenant:
-                qs = qs.filter(tenant=tenant)
-            else:
-                qs = qs.none()
+        # Filter by tenant for non-admin users. Unreachable today — the 403
+        # above already turned every non-ADMIN away — but kept so this stops
+        # being a leak the moment that guard is relaxed to a codename check.
+        qs = scope_to_tenant(AuditLog.objects.all(), request)
 
         action_stats = (
             qs.values("action")

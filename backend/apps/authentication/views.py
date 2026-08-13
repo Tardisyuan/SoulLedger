@@ -16,6 +16,7 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 from apps.core.permissions import IsAdminPermission, TenantPermission
+from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 
 from .serializers import (
@@ -103,7 +104,6 @@ class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = User.objects.select_related('tenant').all()
-        user = self.request.user
 
         # ADMIN is the only global-scope role (apps/perm/models.py Role.scope);
         # every other role is tenant-scoped and must never see another
@@ -120,11 +120,8 @@ class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         # IsAdminPermission, so in practice only ADMIN reaches this method —
         # but the filter below is a second line of defense for whenever
         # that gate is loosened to a permission-codename check instead.
-        if getattr(user, 'role', None) != 'ADMIN':
-            tenant = getattr(self.request, 'tenant', None)
-            if tenant is None:
-                return qs.none()
-            qs = qs.filter(tenant=tenant)
+        # (Scoping itself now lives in apps/core/tenant.py.)
+        qs = scope_to_tenant(qs, self.request)
 
         # Apply query params if present
         params = self.request.query_params

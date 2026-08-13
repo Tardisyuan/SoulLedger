@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.permissions import HasValidApiKey, IsAdminPermission, TenantPermission
+from apps.core.tenant import scope_to_api_key, scope_to_tenant
 from apps.death_sync.authentication import APIKeyAuthentication
 from apps.death_sync.models import (
     DeathRegistrationRequest,
@@ -48,14 +49,7 @@ class ExternalApiKeyViewSet(viewsets.ModelViewSet):
         # elsewhere: it costs nothing for ADMIN (still sees every key) and
         # means this queryset fails safe rather than open if a future change
         # ever grants a non-ADMIN role access to this viewset.
-        qs = super().get_queryset()
-        user = self.request.user
-        if getattr(user, "role", None) == "ADMIN":
-            return qs
-        tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            return qs.filter(tenant=tenant)
-        return qs.none()
+        return scope_to_tenant(super().get_queryset(), self.request)
 
     def perform_create(self, serializer):
         from apps.death_sync.models import ExternalApiKey
@@ -83,11 +77,10 @@ class DeathRegistrationViewSet(viewsets.ModelViewSet):
     serializer_class = DeathRegistrationRequestSerializer
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        api_key = getattr(self.request, 'api_key', None)
-        if api_key:
-            qs = qs.filter(api_key=api_key)
-        return qs
+        # Was fail-OPEN: `if api_key: qs = qs.filter(...)` with no else, so a
+        # request that reached here without a key got every tenant's death
+        # registrations. See scope_to_api_key in apps/core/tenant.py.
+        return scope_to_api_key(super().get_queryset(), self.request)
 
     def create(self, request, *args, **kwargs):
         """Register a death (single or batch)."""
@@ -210,11 +203,9 @@ class WebhookViewSet(viewsets.ModelViewSet):
     serializer_class = WebhookConfigSerializer
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        api_key = getattr(self.request, 'api_key', None)
-        if api_key:
-            qs = qs.filter(api_key=api_key)
-        return qs
+        # Was fail-OPEN, same as DeathRegistrationViewSet above — and worse
+        # here, since WebhookConfig carries `signing_secret`.
+        return scope_to_api_key(super().get_queryset(), self.request)
 
     def perform_create(self, serializer):
         import secrets

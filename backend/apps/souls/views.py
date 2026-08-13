@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.ledger.services import LedgerService
 from apps.souls.dates import (
@@ -86,17 +87,17 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         if not show_deleted:
             qs = qs.filter(is_deleted=False)
         qs = qs.filter(is_archived=False)
-        # Apply tenant isolation + DataScope filtering (equivalent to DataScopeViewSetMixin)
+        # Apply tenant isolation + DataScope filtering (equivalent to
+        # DataScopeViewSetMixin, which this viewset cannot simply inherit
+        # because of the soft-delete/archive/karma handling above and below).
+        # Scoping itself goes through apps/core/tenant.py like everywhere else.
         user = self.request.user
         if not user.is_authenticated:
             return qs.none()
-        if getattr(user, 'role', None) != 'ADMIN':
-            tenant = getattr(self.request, 'tenant', None)
-            if tenant:
-                qs = qs.filter(tenant=tenant)
-            else:
-                return qs.none()
-            # Apply DataScope filtering
+        if not is_tenant_exempt(user):
+            qs = scope_to_tenant(qs, self.request)
+            # Apply DataScope filtering — ADMIN bypasses both, hence the
+            # early branch rather than letting the helper handle the bypass.
             from apps.perm.filters import DataScopeFilter
             qs = DataScopeFilter.filter_queryset(self.request, qs, Soul)
         qs = qs.exclude_orphaned()

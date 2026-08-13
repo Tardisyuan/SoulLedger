@@ -1,34 +1,26 @@
 """
 Core mixins for ViewSets.
 """
+from apps.core.tenant import scope_to_tenant
 
 
 class TenantQuerySetMixin:
     """
     Mixin that provides tenant isolation for ViewSets.
     Filters queryset by tenant from request, unless user is ADMIN.
+
+    The scoping itself lives in apps/core/tenant.py — see that module for why
+    it is not inlined here.
     """
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-        if not user.is_authenticated:
-            return qs.none()
-        if user.role == "ADMIN":
-            return qs
-        # Some models this mixin is applied to (e.g. Organization) have no
-        # `tenant` field at all — they're global reference/hierarchy data,
-        # not per-tenant rows. Filtering unconditionally on `tenant=` used
-        # to raise FieldError for every non-ADMIN request against them.
-        # Mirror the hasattr(model, "tenant") guard TenantCreateMixin
-        # already uses below, so a model without the field is simply left
-        # unscoped rather than blowing up the request.
-        if not hasattr(qs.model, "tenant"):
-            return qs
-        tenant = getattr(self.request, "tenant", None)
-        if tenant:
-            return qs.filter(tenant=tenant)
-        return qs.none()
+        # missing_field="allow": some models this mixin is applied to (e.g.
+        # Organization) have no `tenant` field at all — they're global
+        # reference/hierarchy data, not per-tenant rows. Filtering
+        # unconditionally on `tenant=` used to raise FieldError for every
+        # non-ADMIN request against them, so a model without the field is
+        # left unscoped rather than blowing up the request.
+        return scope_to_tenant(super().get_queryset(), self.request, missing_field="allow")
 
 
 class TenantCreateMixin:

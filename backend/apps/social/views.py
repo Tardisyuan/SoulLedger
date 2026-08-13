@@ -30,6 +30,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import TenantPermission
+from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.social.models import Comment, Follow, Post, Reaction, UserProfile
 from apps.social.permissions import (
@@ -81,18 +82,13 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         return PostSerializer
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        # Same ADMIN-bypass / fail-closed idiom as UserProfileViewSet below:
-        # without the `else qs.none()`, a non-ADMIN caller with no resolved
-        # request.tenant fell through to the unfiltered queryset — every
-        # tenant's posts, not just their own.
+        # Fail-closed tenant scoping — see apps/core/tenant.py. Without the
+        # `else qs.none()` this used to inline, a non-ADMIN caller with no
+        # resolved request.tenant fell through to the unfiltered queryset —
+        # every tenant's posts, not just their own.
+        qs = scope_to_tenant(super().get_queryset(), self.request)
         user = self.request.user
         tenant = getattr(self.request, "tenant", None)
-        if getattr(user, "role", None) != "ADMIN":
-            if tenant:
-                qs = qs.filter(tenant=tenant)
-            else:
-                return qs.none()
         # Filter by visibility
         if user.is_authenticated:
             from django.db.models import Q
@@ -155,17 +151,10 @@ class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Model
         return CommentSerializer
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        # Same ADMIN-bypass / fail-closed idiom as UserProfileViewSet below —
-        # a non-ADMIN caller with no resolved request.tenant must get
-        # qs.none(), not every tenant's comments.
-        user = self.request.user
-        if getattr(user, "role", None) != "ADMIN":
-            tenant = getattr(self.request, "tenant", None)
-            if tenant:
-                qs = qs.filter(tenant=tenant)
-            else:
-                return qs.none()
+        # Fail-closed tenant scoping (apps/core/tenant.py) — a non-ADMIN
+        # caller with no resolved request.tenant must get qs.none(), not
+        # every tenant's comments.
+        qs = scope_to_tenant(super().get_queryset(), self.request)
         # Allow filtering by post
         post_id = self.request.query_params.get("post")
         if post_id:
@@ -209,17 +198,10 @@ class ReactionViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Mode
         return ReactionSerializer
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        # Same ADMIN-bypass / fail-closed idiom as UserProfileViewSet below —
-        # a non-ADMIN caller with no resolved request.tenant must get
-        # qs.none(), not every tenant's reactions.
-        user = self.request.user
-        if getattr(user, "role", None) != "ADMIN":
-            tenant = getattr(self.request, "tenant", None)
-            if tenant:
-                qs = qs.filter(tenant=tenant)
-            else:
-                return qs.none()
+        # Fail-closed tenant scoping (apps/core/tenant.py) — a non-ADMIN
+        # caller with no resolved request.tenant must get qs.none(), not
+        # every tenant's reactions.
+        qs = scope_to_tenant(super().get_queryset(), self.request)
         # Allow filtering by post or comment
         post_id = self.request.query_params.get("post")
         comment_id = self.request.query_params.get("comment")
@@ -282,16 +264,10 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
         # single-tenant idiom as Post/Comment/Reaction/UserProfile, not
         # dispatch's OR-across-two-tenants shape.
         #
-        # Same ADMIN-bypass / fail-closed idiom as UserProfileViewSet below —
-        # a non-ADMIN caller with no resolved request.tenant must get
-        # qs.none(), not every tenant's follow graph.
-        user = self.request.user
-        if getattr(user, "role", None) != "ADMIN":
-            tenant = getattr(self.request, "tenant", None)
-            if tenant:
-                qs = qs.filter(tenant=tenant)
-            else:
-                return qs.none()
+        # Fail-closed tenant scoping (apps/core/tenant.py) — a non-ADMIN
+        # caller with no resolved request.tenant must get qs.none(), not
+        # every tenant's follow graph.
+        qs = scope_to_tenant(qs, self.request)
         # Allow filtering by user
         user_id = self.request.query_params.get("user")
         if user_id:
@@ -336,9 +312,25 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
                 status=status.HTTP_400_BAD_REQUEST,
             )
         from apps.authentication.models import User
-        try:
-            following_user = User.objects.get(pk=following_id)
-        except User.DoesNotExist:
+        # Scoped, not `User.objects.get(pk=...)`. Unscoped, this action was
+        # two bugs at once: a caller in tenant A could follow a user in
+        # tenant B (Follow.save() would stamp the row with A's tenant, so the
+        # edge pointed out of its own tenant), and the 404-vs-200 split made
+        # it a working existence oracle for user IDs in every other tenant —
+        # probe an ID, a 200 means that user exists somewhere. Out-of-tenant
+        # IDs must be indistinguishable from IDs that do not exist, so this
+        # falls through to the same 404 rather than a 403.
+        #
+        # admin_bypass=False: this is a write, and the write-side stance in
+        # this app (FollowCreateSerializer.validate_following, and the note in
+        # CommentCreateSerializer.validate) is that no role — ADMIN included —
+        # creates content referencing another tenant's objects. An ADMIN with
+        # a bypass here could mint the same tenant-inconsistent Follow row
+        # that POST /follows/ now rejects.
+        following_user = scope_to_tenant(
+            User.objects.all(), request, admin_bypass=False
+        ).filter(pk=following_id).first()
+        if following_user is None:
             return Response(
                 {"detail": "User not found."},
                 status=status.HTTP_404_NOT_FOUND,
@@ -377,18 +369,12 @@ class UserProfileViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.M
         return UserProfileSerializer
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        # UserProfile has no direct tenant FK, only via user__tenant. Same
-        # ADMIN-bypass idiom as DataScopeViewSetMixin (apps/core/viewsets.py)
-        # — without this, GET /profiles/ let any authenticated user enumerate
-        # every tenant's profiles.
-        user = self.request.user
-        if getattr(user, "role", None) != "ADMIN":
-            tenant = getattr(self.request, "tenant", None)
-            if tenant:
-                qs = qs.filter(user__tenant=tenant)
-            else:
-                qs = qs.none()
+        # UserProfile has no direct tenant FK, only via user__tenant — hence
+        # the explicit `field`. Without this, GET /profiles/ let any
+        # authenticated user enumerate every tenant's profiles.
+        qs = scope_to_tenant(
+            super().get_queryset(), self.request, field="user__tenant"
+        )
         # Allow filtering by user
         user_id = self.request.query_params.get("user")
         if user_id:
