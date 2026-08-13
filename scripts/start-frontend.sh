@@ -9,8 +9,17 @@ PID_FILE="$SCRIPT_DIR/pids/frontend.pid"
 
 mkdir -p "$SCRIPT_DIR/logs" "$SCRIPT_DIR/pids"
 
-# Kill any process holding port 3333 (fallback for orphaned processes)
-if ss -tlnp 2>/dev/null | grep -q ':3333'; then
+# Kill any process holding port 3333 (fallback for orphaned processes).
+# lsof works on both macOS and Linux; ss+fuser (Linux-only) is the fallback
+# for a system that somehow lacks lsof.
+if command -v lsof >/dev/null 2>&1; then
+    PORT_PIDS=$(lsof -ti tcp:3333 2>/dev/null || true)
+    if [ -n "$PORT_PIDS" ]; then
+        echo "Clearing port 3333..."
+        kill $PORT_PIDS 2>/dev/null || true
+        sleep 1
+    fi
+elif ss -tlnp 2>/dev/null | grep -q ':3333'; then
     echo "Clearing port 3333..."
     fuser -k 3333/tcp 2>/dev/null || true
     sleep 1
@@ -28,8 +37,14 @@ if [ -f "$PID_FILE" ]; then
     rm -f "$PID_FILE"
 fi
 
-# Auto-detect server IP for API URL
-SERVER_IP=$(hostname -I | awk '{print $1}')
+# Auto-detect server IP for API URL. `hostname -I` is Linux-only; macOS
+# has no equivalent flag, so fall back to ipconfig, then localhost.
+if hostname -I >/dev/null 2>&1; then
+    SERVER_IP=$(hostname -I | awk '{print $1}')
+elif command -v ipconfig >/dev/null 2>&1; then
+    SERVER_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)
+fi
+SERVER_IP="${SERVER_IP:-localhost}"
 NEXT_PUBLIC_API_URL="http://${SERVER_IP}:8000/api/v1"
 
 echo "Building frontend..."

@@ -16,13 +16,30 @@ fi
 
 cd "$BACKEND_DIR"
 
-# Use project-specific venv if available
-if [ -f "$BACKEND_DIR/.venv/bin/python" ]; then
-    PYTHON="$BACKEND_DIR/.venv/bin/python"
-elif [ -f "/home/tardis/.pyenv/versions/3.11.15/bin/python" ]; then
-    PYTHON="/home/tardis/.pyenv/versions/3.11.15/bin/python"
+# Python interpreter: PYTHON env var wins if set (e.g. a named conda/pyenv
+# env whose python isn't on PATH as python3/python) — verified by import,
+# not just presence, so a wrong path fails loudly instead of 500ing on the
+# first request. Otherwise auto-detect: project venv, then PATH's
+# python3/python, same verification.
+if [ -n "${PYTHON:-}" ]; then
+    if ! "$PYTHON" -c "import django" >/dev/null 2>&1; then
+        echo "PYTHON=$PYTHON was set but has no Django installed." >&2
+        exit 1
+    fi
 else
-    PYTHON="python"
+    for candidate in "$BACKEND_DIR/.venv/bin/python" "$BACKEND_DIR/venv/bin/python" python3 python; do
+        if [ -x "$candidate" ] || command -v "$candidate" >/dev/null 2>&1; then
+            if "$candidate" -c "import django" >/dev/null 2>&1; then
+                PYTHON="$candidate"
+                break
+            fi
+        fi
+    done
+    if [ -z "$PYTHON" ]; then
+        echo "No python interpreter with Django installed found (checked backend/.venv, backend/venv, python3, python)." >&2
+        echo "Set PYTHON=/path/to/python to point at one directly (e.g. a named conda env), or create backend/.venv and install requirements.txt." >&2
+        exit 1
+    fi
 fi
 
 # Check if already running
