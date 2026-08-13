@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { use, useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { judgmentApi, soulsApi, type Soul } from "@/lib/api";
@@ -9,7 +9,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 const VERDICT_CONFIG: Record<string, { bg: string; text: string; border: string }> = {
@@ -42,7 +42,7 @@ const CIVILIZATION_ICONS: Record<string, string> = {
 };
 
 export default function JudgmentDetailPage({ params }: PageProps) {
-  const { id } = params;
+  const { id } = use(params);
   const router = useRouter();
   const { t, formatDate, formatDateTime } = useI18n();
   const { showToast } = useToast();
