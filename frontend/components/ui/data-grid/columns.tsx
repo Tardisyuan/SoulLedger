@@ -105,12 +105,20 @@ export function columnAlign(type: DataGridColumnType): 'left' | 'right' {
   return type === 'numeric' || type === 'actions' ? 'right' : 'left'
 }
 
-const ENUM_TONE_CLASSES: Record<EnumTone, string> = {
+/**
+ * Badge fills are capped at a 10% tint of the status token — NOT 16%.
+ * The light-mode `--color-status-*` values were re-measured against a 10%
+ * tint over the canvas (see app/globals.css `.light`, and the same note in
+ * src/components/ui/Toast.tsx); a 16% tint of the error token drops to
+ * 4.37:1, under the 4.5:1 AA floor for text. Exported so
+ * src/__tests__/dataGridToneContract.test.ts can hold new tones to it.
+ */
+export const ENUM_TONE_CLASSES: Record<EnumTone, string> = {
   neutral: 'bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] border-[hsl(var(--color-hairline-tertiary))]',
-  success: 'bg-[hsl(var(--color-status-success)/0.16)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.3)]',
-  warning: 'bg-[hsl(var(--color-status-warning)/0.16)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.3)]',
-  error: 'bg-[hsl(var(--color-status-error)/0.16)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.3)]',
-  info: 'bg-[hsl(var(--color-status-info)/0.16)] text-[hsl(var(--color-status-info))] border-[hsl(var(--color-status-info)/0.3)]',
+  success: 'bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.3)]',
+  warning: 'bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.3)]',
+  error: 'bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.3)]',
+  info: 'bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))] border-[hsl(var(--color-status-info)/0.3)]',
 }
 
 const NUMERIC_TONE_CLASSES: Record<'success' | 'error' | 'neutral', string> = {

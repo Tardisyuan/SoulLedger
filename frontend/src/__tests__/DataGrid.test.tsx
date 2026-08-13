@@ -6,7 +6,7 @@
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { DataGrid } from "@/components/ui/data-grid/DataGrid";
-import type { DataGridColumn } from "@/components/ui/data-grid/columns";
+import { ENUM_TONE_CLASSES, type DataGridColumn } from "@/components/ui/data-grid/columns";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
@@ -93,6 +93,17 @@ describe("DataGrid column taxonomy", () => {
     render(<DataGrid<Row> caption="Rows" columns={columns} data={rows} keyExtractor={(r) => r.id} />);
     expect(screen.getByText("alive")).toBeInTheDocument();
     expect(screen.getByText("disposed")).toBeInTheDocument();
+  });
+
+  it("paints each enum badge with its tone's classes, not just its label", () => {
+    render(<DataGrid<Row> caption="Rows" columns={columns} data={rows} keyExtractor={(r) => r.id} />);
+    // The label text IS the badge element, so its className is the tone map's
+    // entry verbatim. src/__tests__/dataGridToneContract.test.ts owns whether
+    // those strings are accessible; this owns whether they get applied at all.
+    expect(screen.getByText("alive")).toHaveClass(ENUM_TONE_CLASSES.success.split(" ")[0]);
+    expect(screen.getByText("disposed")).toHaveClass(ENUM_TONE_CLASSES.neutral.split(" ")[0]);
+    // A success badge must not silently fall back to the neutral surface fill.
+    expect(screen.getByText("alive")).not.toHaveClass(ENUM_TONE_CLASSES.neutral.split(" ")[0]);
   });
 
   it("puts one primary verb inline and the rest behind the overflow trigger", () => {
