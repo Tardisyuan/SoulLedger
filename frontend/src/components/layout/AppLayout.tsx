@@ -231,8 +231,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Breadcrumb / Page title area */}
           <Breadcrumb menus={menus} />
 
-          {/* Right controls */}
-          <div className="flex items-center gap-2 md:gap-3">
+          {/* Right controls.
+              `shrink-0 whitespace-nowrap` is load-bearing, not cosmetic: this
+              cluster is a flex item of an `h-16 items-center` header, so if
+              flexbox squeezes it the greeting/label text wraps onto several
+              lines, the cluster grows past 64px and — because the header is
+              `sticky z-40` — the overflow lands on top of the page below and
+              swallows clicks (the `+ 创建灵魂` button on /souls was
+              unreachable at 393px for exactly this reason). Keeping it on one
+              line caps its height; the `hidden sm:*` gates below keep that one
+              line narrow enough to fit a phone. */}
+          <div className="flex shrink-0 items-center gap-2 md:gap-3 whitespace-nowrap">
             {/* WebSocket Connection Status */}
             <ConnectionStatus />
 
@@ -298,11 +307,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </Popover>
             )}
 
-            <div className="w-px h-5 border-[hsl(var(--color-hairline))]" />
+            <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
 
-            <LanguageSwitcher />
+            {/* The locale <select> is the widest control in this row; below
+                `sm` it is dropped rather than allowed to squeeze its
+                neighbours into wrapping. Locale is still switchable from the
+                settings drawer. */}
+            <div className="hidden sm:block">
+              <LanguageSwitcher />
+            </div>
 
-            <div className="w-px h-5 border-[hsl(var(--color-hairline))]" />
+            <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
 
             {/* Theme toggle */}
             <button
@@ -323,7 +338,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               )}
             </button>
 
-            <div className="w-px h-5 border-[hsl(var(--color-hairline))]" />
+            <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
 
             {/* Settings gear */}
             <button
@@ -338,17 +353,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </svg>
             </button>
 
-            <div className="w-px h-5 border-[hsl(var(--color-hairline))]" />
+            <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
 
             {user ? (
               <>
+                {/* Hidden below `sm` (the profile page is still reachable
+                    from the sidebar); `max-w`+`truncate` above it so a long
+                    display_name cannot re-introduce the wrapping this row was
+                    fixed for. */}
                 <Link
                   href="/profile"
-                  className="text-[hsl(var(--color-ink-muted))] text-sm hover:text-[hsl(var(--color-accent-ink))] transition-colors"
+                  className="hidden sm:block max-w-[10rem] truncate text-[hsl(var(--color-ink-muted))] text-sm hover:text-[hsl(var(--color-accent-ink))] transition-colors"
                 >
                   {t("nav.greeting", { username: user.display_name || user.username })}
                 </Link>
-                <div className="w-px h-5 border-[hsl(var(--color-hairline))]" />
+                <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
                 <button
                   onClick={() => setLogoutConfirmOpen(true)}
                   className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-status-error))] text-sm transition-colors"
