@@ -1,5 +1,22 @@
 #!/usr/bin/env python
-"""Populate Egyptian underworld judicial actors."""
+"""Populate Egyptian underworld judicial actors.
+
+PARTIALLY SUPERSEDED by `python manage.py seed_mythology --civilization=egyptian`.
+The command covers Osiris/Anubis/Thoth/Ma'at/Ammit/Horus/Isis/Nephthys/Ra and
+the five Egyptian realms. It deliberately does NOT reproduce two things below,
+because they are canon questions rather than plumbing and are recorded as open
+items rather than silently resolved:
+
+  * Set (赛特) — present only here, absent from every other seed path.
+  * The "42 Judges" roster — the list holds 35 names, not 42, and two of them
+    (Ra, Maat) collide with actors this file and seed_chinese_data.py already
+    create under those names ("Ma'at" vs "Maat"), which is where several of the
+    duplicate rows `manage.py fix_actor_civilization` cleans up came from.
+
+It also disagrees with seed_chinese_data.py on where Horus/Isis/Nephthys stand
+(Hall of Two Truths here, Duat entry / Aaru there) and on their roles.
+Re-running this script will re-introduce those duplicates. Prefer the command.
+"""
 import os
 import sys
 

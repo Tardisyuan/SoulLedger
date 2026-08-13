@@ -1,6 +1,14 @@
 """
 Django management command to seed afterlife reference data.
 Covers: Chinese Diyu, European Heaven/Hell, Egyptian Duat
+
+HISTORICAL ENTRY POINT — superseded by `python manage.py seed_mythology`
+(apps/actors/management/commands/seed_mythology.py), which carries every realm
+and actor defined below, is idempotent, supports --civilization / --dry-run /
+--update, assigns the tenant this script computes but never applies, and is
+covered by backend/tests/test_seed_mythology.py. Kept here for reference; new
+work should use the command, and changes made here will not reach CI or a
+fresh clone.
 """
 import os
 import sys
