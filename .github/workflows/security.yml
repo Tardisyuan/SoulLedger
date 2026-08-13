@@ -1,12 +1,11 @@
 name: Security Scan
 
+# Manual-dispatch only: this repo is out of GitHub Actions minutes. The weekly
+# cron is disabled for the same reason — a schedule spends minutes with nobody
+# asking. Run it from the Actions tab, or `gh workflow run security.yml`.
+# To restore automatic runs, put the triggers below back.
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main]
-  schedule:
-    - cron: '0 9 * * 1'  # Every Monday at 9am
+  workflow_dispatch:
 
 jobs:
   frontend-audit:
