@@ -16,6 +16,14 @@ export interface Actor {
   realm_code?: string;
   description?: string;
   powers_json?: Record<string, unknown>;
+  /**
+   * Seat on the Forty-Two Assessors of Ma'at (Book of the Dead ch. 125), or
+   * null/absent for an actor who holds none. The list endpoint projects this
+   * one key out of `powers_json` — presence tells a bench member apart from a
+   * major god, and the value is the order the papyrus seats them in, which is
+   * NOT their alphabetical order.
+   */
+  assessor_index?: number | null;
   icon?: string;
   icon_url?: string;
   is_active: boolean;
