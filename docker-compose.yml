@@ -35,9 +35,21 @@ services:
     build:
       context: ./backend
       dockerfile: ../Dockerfile
+    # Seeding goes through `manage.py seed_mythology`, not a standalone script.
+    # This used to run `python scripts/seed_chinese_data.py`, a hand-maintained
+    # second copy of the same realm and actor tables. Two copies meant every
+    # change to the reference data (the DY_COURT_NN restructure in realms/0012,
+    # for one) had to be applied twice by hand, and the copy nothing tested was
+    # the one this deploy path ran. It also wrote its rows with tenant=NULL and
+    # title="" — invisible to the tenant-scoped viewsets — and looked its realms
+    # up through `Realm.objects`, which hides soft-deleted rows, so naming any
+    # retired realm_code would have made it insert over a tombstone and die on
+    # the unique constraint. The command matches on `all_objects`, assigns the
+    # tenant, is idempotent, and is covered by tests/test_seed_mythology.py.
+    # backend/tests/test_seed_entrypoint.py holds this line to the command.
     command: >
       sh -c "python manage.py migrate &&
-             python scripts/seed_chinese_data.py &&
+             python manage.py seed_mythology &&
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
     volumes:
       - ./backend:/app

@@ -104,13 +104,17 @@ docker compose up    # root docker-compose.yml: db, redis, backend, celery, cele
 ```
 
 Requires `DB_PASSWORD` and `SECRET_KEY` in the environment. This path runs
-migrations and seeds Chinese data on boot.
+migrations and seeds all three civilizations on boot.
 
 ### Seed data
 
 The root compose file's boot sequence is `python manage.py migrate` then
-`python scripts/seed_chinese_data.py`, which loads realms and actors for all
-three civilizations. Further seeding lives in Django management commands:
+`python manage.py seed_mythology`, which loads realms and actors for all three
+civilizations. It used to run `python scripts/seed_chinese_data.py` — a second
+hand-maintained copy of the same tables, where every edit had to be remembered
+twice and the copy docker ran was the one no test covered. That script is gone;
+the command is the only seeding entry point. Further seeding also lives in
+Django management commands:
 
 ```bash
 python manage.py seed_tenants               # CN_DIYU, EU_HEAVEN_HELL, EG_DUAT
