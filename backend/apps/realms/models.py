@@ -6,6 +6,7 @@ import uuid
 from django.db import models
 
 from apps.core.models import AuditUserFields
+from apps.disposition.models import MemoryResetMechanism
 from apps.souls.models import Civilization
 from apps.tenants.managers import TenantManager
 
@@ -56,7 +57,16 @@ class Realm(AuditUserFields, models.Model):
         related_name="sub_realms",
     )
     description = models.TextField(blank=True)
-    memory_reset_mechanism = models.CharField(max_length=100, blank=True)
+    # Constrained to MemoryResetMechanism rather than restating the values:
+    # this was a bare CharField, so the realm-side vocabulary
+    # (MENGPO/LETHE/SPELL/NONE) agreed with apps.disposition only by
+    # coincidence and nothing would have reported a drift. Blank stays legal —
+    # realms with no reset mechanism at all store "".
+    memory_reset_mechanism = models.CharField(
+        max_length=100,
+        blank=True,
+        choices=MemoryResetMechanism.choices,
+    )
     is_eternal = models.BooleanField(default=False)
     is_judgment_required = models.BooleanField(
         default=True,

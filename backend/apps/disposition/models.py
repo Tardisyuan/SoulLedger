@@ -13,8 +13,19 @@ from apps.tenants.managers import TenantManager
 
 
 class MemoryResetMechanism(models.TextChoices):
+    """
+    Canonical memory-reset mechanisms. This enum is the single source of truth
+    for both Disposition.memory_reset and Realm.memory_reset_mechanism; see
+    apps.realms.models.Realm, which reuses ``MemoryResetMechanism.choices``
+    rather than restating the values.
+
+    LETHE was stored as "LETIES" until migration disposition/0009 — a
+    misspelling of Lethe (忘川), the Greek river of forgetfulness. The member
+    name and label were always "LETHE"/"忘川 (Lethe)"; only the stored value
+    was wrong. 0009 rewrites existing rows in both tables and is reversible.
+    """
     MENGPO = "MENGPO", "孟婆汤 (Mengpo Soup)"
-    LETHE = "LETIES", "忘川 (Lethe)"
+    LETHE = "LETHE", "忘川 (Lethe)"
     SPELL = "SPELL", "Spell Recitation"
     NONE = "NONE", "No Reset"
 

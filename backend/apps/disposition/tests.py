@@ -10,9 +10,10 @@ to zero.
 """
 from django.test import TestCase
 
-from apps.disposition.models import Disposition
+from apps.disposition.models import Disposition, MemoryResetMechanism
 from apps.disposition.services import DispositionService
 from apps.judgment.models import Judgment, JudgmentMethod, Verdict
+from apps.realms.models import Realm
 from apps.souls.models import Civilization, Soul, SoulState
 from apps.tenants.models import Tenant
 
@@ -360,4 +361,42 @@ class CreateFromJudgmentTenantTest(TestCase):
         )
         self.assertFalse(
             Disposition.objects.filter(pk=disposition.pk, tenant=self.other_tenant).exists()
+        )
+
+
+class MemoryResetVocabularyTest(TestCase):
+    """
+    Realm.memory_reset_mechanism and Disposition.memory_reset describe the same
+    thing and are compared against each other in practice, but realms declared
+    its column as a bare CharField with no `choices=`. The two vocabularies
+    agreed only by coincidence — nothing would have reported a drift, and the
+    "LETIES" misspelling of LETHE survived in both for exactly that reason.
+
+    These tests are the missing check. They compare the two *fields'* declared
+    choices, not the enum against itself, so re-hardcoding a list on either
+    side (or adding a value to one and forgetting the other) turns red.
+    """
+
+    @staticmethod
+    def _field_values(model, field_name):
+        return {value for value, _label in model._meta.get_field(field_name).choices}
+
+    def test_realm_and_disposition_share_one_vocabulary(self):
+        self.assertEqual(
+            self._field_values(Realm, "memory_reset_mechanism"),
+            self._field_values(Disposition, "memory_reset"),
+        )
+
+    def test_both_fields_track_the_memory_reset_enum(self):
+        expected = set(MemoryResetMechanism.values)
+        self.assertEqual(self._field_values(Realm, "memory_reset_mechanism"), expected)
+        self.assertEqual(self._field_values(Disposition, "memory_reset"), expected)
+
+    def test_lethe_uses_the_corrected_spelling(self):
+        """Regression guard for the stored-value fix in disposition/0009.
+        LETIES was a misspelling of Lethe (忘川); it must not come back."""
+        self.assertEqual(MemoryResetMechanism.LETHE.value, "LETHE")
+        self.assertNotIn("LETIES", MemoryResetMechanism.values)
+        self.assertNotIn(
+            "LETIES", self._field_values(Realm, "memory_reset_mechanism")
         )
