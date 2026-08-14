@@ -24,12 +24,17 @@ class Command(BaseCommand):
 
         # Define field permission rules
         rules = [
-            # Soul: VIEWER can see but not edit sensitive fields
+            # Soul: VIEWER does not see the scores at all, and edits nothing
+            # sensitive. These two said visible=True until 2026-08-14, which
+            # never described what shipped: SoulSerializer has always dropped
+            # both fields from a VIEWER's payload, and read_only_fields made
+            # them unwritable for everyone, so both halves of the old rule
+            # were inert. The rule now matches the serializer.
             {
                 'role': 'VIEWER',
                 'model_name': 'Soul',
                 'field_name': 'merit_score',
-                'visible': True,
+                'visible': False,
                 'read_only': True,
                 'editable': False,
             },
@@ -37,7 +42,7 @@ class Command(BaseCommand):
                 'role': 'VIEWER',
                 'model_name': 'Soul',
                 'field_name': 'demerit_score',
-                'visible': True,
+                'visible': False,
                 'read_only': True,
                 'editable': False,
             },
