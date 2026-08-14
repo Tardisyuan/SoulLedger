@@ -17,6 +17,8 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { STATE_COLORS, CIVILIZATION_COLORS, REALM_COLORS, CHART_SERIES } from "@/lib/chart-colors";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 
 type DashboardTab = "overview" | "ledger";
 
@@ -106,9 +108,11 @@ function DashboardContent() {
   // the language picker; fall back to the API label if a key is ever missing
   // (t() returns the key itself when it can't resolve one).
   const stateLabel = (state: string, apiLabel?: string) => {
-    const key = `souls.states.${state}`;
-    const translated = t(key);
-    return translated === key ? apiLabel || state : translated;
+    const resolved = resolveEnumDisplay(t, "souls.states", state);
+    // The server's English label beats the convention's generic
+    // "unrecognized" copy, but the raw enum member is never the fallback.
+    // `label` is null only for an absent state; a chart axis needs a string.
+    return resolved.state === "known" ? resolved.label : apiLabel || resolved.label || t("common.value.unrecorded");
   };
 
   const stateData = stats?.state_distribution?.map((s) => ({
@@ -250,7 +254,7 @@ function DashboardContent() {
                         <div className="space-y-1">
                           {Object.entries(stats.tenants[i].state_breakdown).map(([state, count]) => (
                             <div key={state} className="flex justify-between text-xs">
-                              <span className="text-[hsl(var(--color-ink-muted))]">{stateLabel(state)}</span>
+                              <span title={state} className="text-[hsl(var(--color-ink-muted))]">{stateLabel(state)}</span>
                               <span style={{ color: STATE_COLORS[state] || CHART_SERIES.neutral }}>{count as number}</span>
                             </div>
                           ))}
@@ -383,7 +387,7 @@ function DashboardContent() {
                   <div className="space-y-1">
                     {stats?.state_distribution?.map((s) => (
                       <div key={s.state} className="flex justify-between text-sm">
-                        <span className="text-[hsl(var(--color-ink-muted))]">{stateLabel(s.state, s.label)}</span>
+                        <span title={s.state} className="text-[hsl(var(--color-ink-muted))]">{stateLabel(s.state, s.label)}</span>
                         <span className="font-medium">{s.count}</span>
                       </div>
                     ))}
@@ -409,7 +413,7 @@ function DashboardContent() {
                 renderRow={(realm) => (
                   <>
                     <td className="px-4 py-3 text-[hsl(var(--color-ink))]">{realm.realm_name || realm.realm_code}</td>
-                    <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{realm.civilization}</td>
+                    <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]"><DomainEnum namespace="souls.civilizations" value={realm.civilization} /></td>
                     <td className="px-4 py-3 text-right font-medium">{realm.count}</td>
                   </>
                 )}

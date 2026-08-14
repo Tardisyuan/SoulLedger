@@ -8,6 +8,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 
 export default function ProposeDispatchPage() {
   const { t } = useI18n();
@@ -89,7 +90,9 @@ export default function ProposeDispatchPage() {
               <option value="">{t("dispatch.select_soul")}</option>
               {souls.map((s) => (
                 <option key={s.id} value={s.id}>
-                  #{s.id} - {s.name} ({s.current_state})
+                  {/* An <option> can hold no child element, so this is one of the
+                      few places the enum stays a bare string. */}
+                  {s.name} ({resolveEnumDisplay(t, "souls.states", s.current_state).label ?? t("common.value.unrecorded")})
                 </option>
               ))}
             </select>

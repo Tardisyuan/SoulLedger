@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import type { Soul } from "@/lib/api/souls";
 import type { SoulEvent } from "@/lib/api/events";
 import type { Judgment } from "@/lib/api/judgment";
@@ -94,7 +95,7 @@ function RowShell({ date, dotClassName, dashed, hideConnector, highlight, tint, 
         highlight ? "bg-[hsl(var(--color-accent)/0.1)] rounded-md border border-[hsl(var(--color-accent)/0.4)]" : ""
       }`}
     >
-      <div className="w-16 shrink-0 text-[11px] text-[hsl(var(--color-ink-subtle))] text-right pt-2">{date ?? "—"}</div>
+      <div className="w-16 shrink-0 text-[11px] text-[hsl(var(--color-ink-subtle))] text-right pt-2">{date ?? <MissingValue kind="unrecorded" />}</div>
       <div className="flex flex-col items-center shrink-0">
         {terminalVariant === "flush" ? (
           <span className="w-2.5 h-px mt-3 bg-[hsl(var(--color-hairline-strong))]" aria-hidden="true" />
@@ -202,7 +203,15 @@ export function SoulLifecycleTimeline({
     const out: SpineRow[] = [];
     out.push(...buildKarmaRows(ledgerRecords));
 
-    const birth = buildBirthMarker(soul, tf("souls.detail.timeline.born", "生于 {{location}}", { location: soul.origin_location || "—" }));
+    // "生于 —" read as a birthplace named after a dash. With no recorded
+    // origin the clause is dropped entirely rather than filled with a
+    // placeholder (BRIEF §4.6).
+    const birth = buildBirthMarker(
+      soul,
+      soul.origin_location
+        ? tf("souls.detail.timeline.born", "生于 {{location}}", { location: soul.origin_location })
+        : tf("souls.detail.timeline.born_unknown_place", "出生")
+    );
     if (birth) out.push(birth);
     const death = buildDeathMarker(soul, tf("souls.detail.timeline.died", "身故"));
     if (death) out.push(death);
@@ -483,7 +492,7 @@ export function SoulLifecycleTimeline({
                   {row.isCurrent && (
                     <>
                       <span aria-hidden="true">·</span>
-                      <span>{t(`souls.states.${soul.current_state}`)}</span>
+                      <DomainEnum namespace="souls.states" value={soul.current_state} />
                     </>
                   )}
                 </div>

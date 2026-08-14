@@ -7,6 +7,7 @@ import { judgmentApi, soulsApi, type Soul } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -154,19 +155,19 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                   {soulData?.name || judgment.soul_name || judgment.soul}
                 </div>
                 <div className="text-xs text-[hsl(var(--color-ink-subtle))]">
-                  {t(`souls.civilizations.${judgment.civilization}`)}
+                  <DomainEnum namespace="souls.civilizations" value={judgment.civilization} />
                 </div>
               </div>
             </div>
             <div className="px-4 py-3 space-y-2.5 text-sm">
               <div className="flex justify-between">
                 <span className="text-[hsl(var(--color-ink-muted))]">{t("judgment.detail.court")}</span>
-                <span className="text-[hsl(var(--color-ink))]">{judgment.court || "—"}</span>
+                <span className="text-[hsl(var(--color-ink))]"><DomainText value={judgment.court} /></span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[hsl(var(--color-ink-muted))]">{t("judgment.detail.soul_name")}</span>
                 <span className="text-[hsl(var(--color-ink))] text-right truncate max-w-[140px]" title={judgment.soul}>
-                  {soulData?.name || judgment.soul_name || "—"}
+                  <DomainText value={soulData?.name || judgment.soul_name} />
                 </span>
               </div>
             </div>
@@ -179,7 +180,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 {t("judgment.detail.verdict")}
               </div>
               <div className={`text-lg font-bold ${verdictCfg.text}`}>
-                {t(`judgment.verdicts.${judgment.verdict}`)}
+                <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
               </div>
               {judgment.concluded_at && (
                 <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-2">

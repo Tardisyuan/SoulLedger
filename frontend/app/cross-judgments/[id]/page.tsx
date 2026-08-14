@@ -5,6 +5,7 @@ import { crossTenantJudgmentsApi } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 
 export default function CrossJudgmentDetailPage() {
   const { t } = useI18n();
@@ -87,7 +88,7 @@ export default function CrossJudgmentDetailPage() {
             <Skeleton className="h-6 w-20" />
           ) : (
             <span className={`px-3 py-1 rounded text-sm font-medium ${statusColors[judgment?.status ?? ""] || "bg-[hsl(var(--color-status-lost)/0.1)]"}`}>
-              {judgment?.status}
+              <DomainEnum namespace="crossJudgments.states" value={judgment?.status} />
             </span>
           )}
         </div>

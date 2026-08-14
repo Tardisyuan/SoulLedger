@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import type { DataTableColumn } from '@/components/ui/data-table'
+import { MissingValue } from '@/src/components/ui/DomainValue'
+import type { MissingKind } from '@/src/lib/domainDisplay'
 import { ActionsMenu, type OverflowMenuItem } from './ActionsMenu'
 
 /**
@@ -26,6 +28,18 @@ interface BaseColumnDef<T> {
   width?: string
   /** Extra `<td>` classes for one-off cases the type doesn't cover. */
   className?: string
+  /**
+   * Which of the three missing semantics an empty cell in this column means
+   * (src/lib/domainDisplay.ts). "unrecorded" is the common case — the fact
+   * could exist and nothing has been written yet. Set "inapplicable" when the
+   * column has no meaning for the rows it can hold, e.g. a karmic balance
+   * against a soul whose cosmology does not net merit against demerit.
+   *
+   * A recorded zero is neither: a numeric column prints the digit.
+   */
+  missingKind?: Exclude<MissingKind, 'zero'>
+  /** Context appended to the empty cell's tooltip, e.g. why it does not apply. */
+  missingReason?: string
 }
 
 export interface IdentifierColumnDef<T> extends BaseColumnDef<T> {
@@ -69,8 +83,14 @@ export interface TimestampColumnDef<T> extends BaseColumnDef<T> {
   value: (row: T) => string | number | Date | null | undefined
   /** Locale-aware formatter — pass `formatDateTime` from useI18n(). */
   format: (value: string | number | Date) => string
-  /** "Not yet recorded" label, never a bare dash (§1's empty rule for this type). */
-  emptyLabel: string
+  /**
+   * Copy for an empty cell where the column has something better to say than
+   * the convention's glyph ("never judged"). Optional since §4.6: omitting it
+   * falls through to <MissingValue kind={missingKind}>, which is typed and
+   * carries its own tooltip — strictly better than the bare dash the required
+   * field used to invite.
+   */
+  emptyLabel?: string
 }
 
 export interface ActionItem<T> {
@@ -148,11 +168,23 @@ export function EnumBadge({ value }: { value: EnumValue }) {
  * two migrated screens can drift on how an identifier or a timestamp reads.
  */
 export function renderGridCell<T>(column: DataGridColumn<T>, row: T): ReactNode {
+  /**
+   * One empty-cell renderer for every type, so no column can invent its own
+   * dash. `emptyLabel` still wins where a column has genuine copy to show
+   * ("never judged"), but the fallback is the typed <MissingValue>, not a
+   * literal — BRIEF §4.6 asked for "not recorded yet" and "not applicable" to
+   * be distinguishable, and a per-case string literal cannot be.
+   */
+  const empty = (label?: string) =>
+    label
+      ? <span className={column.missingKind === 'inapplicable' ? 'text-[hsl(var(--color-ink-subtle))]' : 'text-[hsl(var(--color-ink-tertiary))]'}>{label}</span>
+      : <MissingValue kind={column.missingKind ?? 'unrecorded'} reason={column.missingReason} />
+
   switch (column.type) {
     case 'identifier': {
       const value = column.value(row)
       if (!value) {
-        return <span className="text-[hsl(var(--color-ink-tertiary))]">{column.emptyLabel ?? '—'}</span>
+        return empty(column.emptyLabel)
       }
       return (
         <span
@@ -166,7 +198,7 @@ export function renderGridCell<T>(column: DataGridColumn<T>, row: T): ReactNode 
     case 'text': {
       const value = column.value(row)
       if (value === null || value === undefined || value === '') {
-        return <span className="text-[hsl(var(--color-ink-tertiary))]">{column.emptyLabel ?? '—'}</span>
+        return empty(column.emptyLabel)
       }
       return <span className="text-[hsl(var(--color-ink))] line-clamp-2">{value}</span>
     }
@@ -175,8 +207,9 @@ export function renderGridCell<T>(column: DataGridColumn<T>, row: T): ReactNode 
     case 'numeric': {
       const n = column.value(row)
       if (n === null || n === undefined) {
-        // "—" is NOT 0 — a missing value and a zero balance are different facts.
-        return <span className="font-mono tabular-nums text-[hsl(var(--color-ink-tertiary))]">—</span>
+        // A missing value and a zero balance are different facts, and since
+        // §4.6 they read differently: no digit here, a digit there.
+        return <span className="font-mono tabular-nums">{empty()}</span>
       }
       const formatted = column.format ? column.format(n) : String(n)
       const tone = column.tone ? column.tone(n) : 'neutral'
@@ -185,7 +218,7 @@ export function renderGridCell<T>(column: DataGridColumn<T>, row: T): ReactNode 
     case 'timestamp': {
       const value = column.value(row)
       if (value === null || value === undefined || value === '') {
-        return <span className="text-[hsl(var(--color-ink-tertiary))]">{column.emptyLabel}</span>
+        return empty(column.emptyLabel)
       }
       return <span className="font-mono tabular-nums text-[hsl(var(--color-ink))] whitespace-nowrap">{column.format(value)}</span>
     }

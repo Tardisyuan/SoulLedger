@@ -260,7 +260,17 @@
     "confirm": "Sesen",
     "back_to_list": "← Smen Wu",
     "error": "Ma Iri Sethet",
-    "row_actions": "Aha Seth Wu"
+    "row_actions": "Aha Seth Wu",
+    "value": {
+      "unrecorded": "Ma Seshu",
+      "zero": "Nefer",
+      "inapplicable": "Ma Aper",
+      "unrecognized": "Ma Rekh Medu",
+      "copy_id": "Sesh Ren Aa",
+      "id_copied": "Ren Aa Em Sesh",
+      "id_copy_failed": "Ma Sesh",
+      "copied": "Em Sesh ✓"
+    }
   },
   "pagination": {
     "info": "Per {{page}} / {{total}} ({{count}} medu)"
@@ -982,7 +992,13 @@
     "participants": "Netjeru",
     "no_participants": "Ma Rekhyu Netjeru",
     "verdict": "Unemu",
-    "failed_to_load": "Ma Khemut Seth"
+    "failed_to_load": "Ma Khemut Seth",
+    "states": {
+      "PROPOSED": "Em Djed",
+      "ACTIVE": "Em Iri",
+      "CONCLUDED": "Em Hotep",
+      "CANCELLED": "Em Kher"
+    }
   },
   "users": {
     "title": "Iri Netjeru",

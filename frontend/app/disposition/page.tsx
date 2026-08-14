@@ -7,6 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { dispositionApi, type Disposition } from "@/lib/api";
 import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
+import { DomainText } from "@/src/components/ui/DomainValue";
 import { PageSection } from "@/components/ui/page-section";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -71,7 +72,7 @@ export default function DispositionPage() {
                       </Link>
                     </p>
                     <p className="text-sm text-[hsl(var(--color-ink-subtle))]">
-                      {t("disposition.realm") || "Realm"}: {d.realm_name || d.destination_realm || "—"}
+                      {t("disposition.realm") || "Realm"}: <DomainText value={d.realm_name || d.destination_realm} />
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

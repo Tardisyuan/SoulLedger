@@ -1,6 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { crossTenantJudgmentsApi, type CrossTenantJudgmentListItem } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -63,7 +64,7 @@ export default function CrossJudgmentsPage() {
                     </p>
                   </div>
                   <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[j.status] || "bg-gray-500/20"}`}>
-                    {j.status}
+                    <DomainEnum namespace="crossJudgments.states" value={j.status} />
                   </span>
                 </div>
               </Link>

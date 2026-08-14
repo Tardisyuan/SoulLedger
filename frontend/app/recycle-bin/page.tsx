@@ -6,6 +6,8 @@ import { recycleBinApi, type RecycleBinEntry } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { DomainEnum, DomainNumber, DomainText } from "@/src/components/ui/DomainValue";
+import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { DataTable } from "@/components/ui/data-table";
 
 /**
@@ -52,7 +54,11 @@ export default function RecycleBinPage() {
     },
   });
 
-  const entityLabel = (entityType: string) => t(`recycle_bin.entity_types.${entityType}`) || entityType;
+  // `t(key) || entityType` never fired its fallback — t() returns the KEY on
+  // a miss, which is truthy, so an uncovered entity type printed
+  // "recycle_bin.entity_types.SOUL" at the user (BRIEF §4.6).
+  const entityLabel = (entityType: string) =>
+    resolveEnumDisplay(t, "recycle_bin.entity_types", entityType).label ?? t("common.value.unrecorded");
 
   return (
     <RequirePermission
@@ -89,9 +95,11 @@ export default function RecycleBinPage() {
             renderRow={(entry) => (
               <>
                 <td className="px-4 py-3">
-                  <span className="px-1.5 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
-                    {entityLabel(entry.entity_type)}
-                  </span>
+                  <DomainEnum
+                    namespace="recycle_bin.entity_types"
+                    value={entry.entity_type}
+                    className="px-1.5 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] rounded text-xs"
+                  />
                 </td>
                 <td className="px-4 py-3">
                   <div className="font-medium text-[hsl(var(--color-ink))]">{entry.label}</div>
@@ -108,10 +116,10 @@ export default function RecycleBinPage() {
                         name: entry.label,
                         count: String(entry.dependent_count),
                       })
-                    : "—"}
+                    : <DomainNumber value={entry.dependent_count} />}
                 </td>
                 <td className="px-4 py-3 text-xs text-[hsl(var(--color-ink-subtle))]">
-                  {entry.deleted_at ? new Date(entry.deleted_at).toLocaleString() : "—"}
+                  <DomainText value={entry.deleted_at ? new Date(entry.deleted_at).toLocaleString() : null} />
                   {entry.deleted_by && (
                     <div>{t("recycle_bin.deleted_by", { user: entry.deleted_by })}</div>
                   )}

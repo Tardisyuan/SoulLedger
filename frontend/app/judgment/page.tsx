@@ -7,6 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { judgmentApi, PAGE_SIZE, type Judgment } from "@/lib/api";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 
 const VERDICT_COLORS: Record<string, string> = {
   PASSED: "bg-[hsl(var(--color-verdict-passed)/0.1)] text-[hsl(var(--color-verdict-passed))]",
@@ -104,7 +105,7 @@ export default function JudgmentQueuePage() {
                 {judgment.soul_name || judgment.soul}
               </td>
               <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
-                {t(`souls.civilizations.${judgment.civilization}`)}
+                <DomainEnum namespace="souls.civilizations" value={judgment.civilization} />
               </td>
               <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
                 {judgment.court}
@@ -117,7 +118,7 @@ export default function JudgmentQueuePage() {
                       "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                     }`}
                   >
-                    {t(`judgment.verdicts.${judgment.verdict}`)}
+                    <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
                   </span>
                 ) : (
                   <span className="px-2 py-0.5 rounded text-xs font-bold bg-[hsl(var(--color-status-judging)/0.1)] text-[hsl(var(--color-status-judging))]">

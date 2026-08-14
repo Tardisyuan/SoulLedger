@@ -8,6 +8,8 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
+import { DomainEnum, DomainNumber, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
+import { isColumnUninformative, resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PAGE_SIZE, soulsApi, type SoulListItem } from "@/lib/api";
 import { formatHistoricalDate } from "@/lib/utils";
 
@@ -98,6 +100,18 @@ export default function SoulsPage() {
 
   // Create mutation with auto-invalidation
   const createMutation = useCreateSoul();
+
+  /**
+   * BRIEF §4.6: "03-souls-list shows a 死亡时间 column that is `—` for every
+   * row … columns earning no space." Most souls in the ledger are ALIVE, and
+   * an alive soul has no death date — so on a page of living souls the column
+   * is a header and a stack of dashes.
+   *
+   * It is dropped for that page, header and all, and comes straight back on a
+   * page where any soul has died. Hiding rather than merging: the column is
+   * legitimate, it just has nothing to say about *these* rows.
+   */
+  const showsDeathColumn = !isColumnUninformative(souls, (s) => Boolean(s.death_date));
 
   const states = [
     { value: "", label: t("souls.all_states") },
@@ -236,8 +250,8 @@ export default function SoulsPage() {
             { key: "name", header: t("souls.name"), sortable: true },
             { key: "civilization", header: t("souls.civilization") },
             { key: "state", header: t("souls.state") },
-            { key: "karmic_balance", header: t("souls.balance"), sortable: true, align: "right" },
-            { key: "death", header: t("souls.death") },
+            { key: "karmic_balance", header: t("souls.balance"), sortable: true, align: "right" as const },
+            ...(showsDeathColumn ? [{ key: "death", header: t("souls.death") }] : []),
             { key: "action", header: t("souls.action") },
           ]}
           data={souls}
@@ -270,19 +284,31 @@ export default function SoulsPage() {
                 </span>
               </td>
               <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
-                {t(`souls.civilizations.${soul.civilization}`)}
+                <DomainEnum namespace="souls.civilizations" value={soul.civilization} />
               </td>
               <td className="px-4 py-3">
-                <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul.current_state] ?? "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
-                  {t(`souls.states.${soul.current_state}`)}
+                <span
+                  title={soul.current_state}
+                  className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul.current_state] ?? "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}
+                >
+                  {resolveEnumDisplay(t, "souls.states", soul.current_state).label ?? t("common.value.unrecorded")}
                 </span>
               </td>
-              <td className={`px-4 py-3 text-right font-mono text-sm ${showsBalance ? ((soul.karmic_balance ?? 0) >= 0 ? "text-[hsl(var(--color-accent-ink))]" : "text-[hsl(var(--color-status-error))]") : "text-[hsl(var(--color-ink-subtle))]"}`}>
+              {/* §4.6: this column was `+0` on every row. A sign is only ever
+                  attached to a value that has one, so a zero balance now
+                  prints a bare neutral `0` — a recorded fact — while a soul
+                  whose cosmology does not net merit against demerit gets the
+                  "not applicable" dot, visibly different from both. */}
+              <td className="px-4 py-3 text-right text-sm">
                 {showsBalance
-                  ? `${(soul.karmic_balance ?? 0) >= 0 ? "+" : ""}${soul.karmic_balance ?? 0}`
-                  : <span title={t("souls.balance_not_applicable")}>—</span>}
+                  ? <DomainNumber value={soul.karmic_balance ?? 0} signed toned />
+                  : <MissingValue kind="inapplicable" reason={t("souls.balance_not_applicable")} />}
               </td>
-              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs">{formatHistoricalDate(soul.death_date) || "—"}</td>
+              {showsDeathColumn && (
+                <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs">
+                  <DomainText value={formatHistoricalDate(soul.death_date)} />
+                </td>
+              )}
               <td className="px-4 py-3">
                 <Link
                   href={`/souls/${soul.id}`}
