@@ -100,27 +100,27 @@ CHINESE_REALMS = [
 # =============================================================================
 EUROPEAN_REALMS = [
     ("EU_HEAVEN", "天堂", "上帝之国", "Kingdom of Heaven", "Heaven", RealmType.BLISS, 1,
-     "Eternal paradise - the highest bliss realm in Christian tradition", "LETIES", True, None),
+     "Eternal paradise - the highest bliss realm in Christian tradition", "LETHE", True, None),
     ("EU_PURGATORY", "炼狱", "涤罪所", "Purgatory", "Purgatory", RealmType.PURGATORY, 1,
-     "Temporary purification - souls cleansed before heaven entry", "LETIES", False, None),
+     "Temporary purification - souls cleansed before heaven entry", "LETHE", False, None),
     ("EU_HELL_1ST", "第一层地狱", "幽冥边境", "First Circle - Limbo", "Limbo", RealmType.HELL, 1,
-     "Limbo - virtuous pagans, unbaptized infants", "LETIES", True, None),
+     "Limbo - virtuous pagans, unbaptized infants", "LETHE", True, None),
     ("EU_HELL_2ND", "第二层地狱", "贪食深渊", "Second Circle - Lust", "Lust", RealmType.HELL, 2,
-     "Lustful souls - tossed by violent winds (Dante's Inferno)", "LETIES", True, None),
+     "Lustful souls - tossed by violent winds (Dante's Inferno)", "LETHE", True, None),
     ("EU_HELL_3RD", "第三层地狱", "饕餮泥沼", "Third Circle - Gluttony", "Gluttony", RealmType.HELL, 3,
-     "Gluttons - lie in icy sludge beneath rain and hail", "LETIES", True, None),
+     "Gluttons - lie in icy sludge beneath rain and hail", "LETHE", True, None),
     ("EU_HELL_4TH", "第四层地狱", "贪婪深渊", "Fourth Circle - Greed", "Greed", RealmType.HELL, 4,
-     "Avaricious and prodigal - push heavy weights (Dante)", "LETIES", True, None),
+     "Avaricious and prodigal - push heavy weights (Dante)", "LETHE", True, None),
     ("EU_HELL_5TH", "第五层地狱", "愤怒沼泽", "Fifth Circle - Anger", "Anger", RealmType.HELL, 5,
-     "Wrathful and sullen - fight on the Stygian marsh", "LETIES", True, None),
+     "Wrathful and sullen - fight on the Stygian marsh", "LETHE", True, None),
     ("EU_HELL_6TH", "第六层地狱", "异端荒原", "Sixth Circle - Heresy", "Heresy", RealmType.HELL, 6,
-     "Heretics - burned in flaming tombs", "LETIES", True, None),
+     "Heretics - burned in flaming tombs", "LETHE", True, None),
     ("EU_HELL_7TH", "第七层地狱", "暴力之渊", "Seventh Circle - Violence", "Violence", RealmType.HELL, 7,
-     "Violent against neighbors, selves, God - in three rings", "LETIES", True, None),
+     "Violent against neighbors, selves, God - in three rings", "LETHE", True, None),
     ("EU_HELL_8TH", "第八层地狱", "欺诈深渊", "Eighth Circle - Malebolge", "Malebolge", RealmType.HELL, 8,
-     "Fraud - ten concentric fosses of Malebolge", "LETIES", True, None),
+     "Fraud - ten concentric fosses of Malebolge", "LETHE", True, None),
     ("EU_HELL_9TH", "第九层地狱", "叛徒冰湖", "Ninth Circle - Treachery", "Treachery", RealmType.HELL, 9,
-     "Traitors - frozen in the lake of Cocytus (Judas, Brutus)", "LETIES", True, None),
+     "Traitors - frozen in the lake of Cocytus (Judas, Brutus)", "LETHE", True, None),
 ]
 
 # =============================================================================
@@ -143,9 +143,13 @@ EGYPTIAN_REALMS = [
 # CHINESE ACTORS
 # =============================================================================
 CHINESE_ACTORS = [
+    # Court numbers follow the standard 十殿阎罗 ordering (阎罗王=5, 平等王=9,
+    # 转轮王=10). See the COURT NUMBERING note in
+    # apps/actors/management/commands/seed_mythology.py — that command is the
+    # source of truth; this copy is kept in step with it.
     ("阎罗王", "阎罗王", "Yama King", "Yanluo", ActorRole.JUDGE, "DY_10_YAMA",
-     "十殿阎王", "十殿阎王", "Ten Courts Yama", "Yanluo",
-     "Supreme judge of the Tenth Court, final arbiter of all Chinese souls"),
+     "第五殿阎罗王", "第五殿阎罗王", "Fifth Court Yama", "Yanluo",
+     "Fifth court judge - the best-known of the ten kings, tries the gravest sins"),
     ("秦广王", "秦广王", "Qinguang Wang", "Qinguang", ActorRole.JUDGE, "DY_03_QISHI",
      "第一殿秦广王", "第一殿秦广王", "First Court Qinguang", "Qinguang",
      "First court judge - evaluates the Ledger of Life and Death"),
@@ -167,12 +171,12 @@ CHINESE_ACTORS = [
     ("都市王", "都市王", "Dushi Wang", "Dushi", ActorRole.JUDGE, "DY_05_CITY",
      "第八殿都市王", "第八殿都市王", "Eighth Court Dushi", "Dushi",
      "Eighth court - judge of merchants and craftsmen"),
-    ("转轮王", "转轮王", "Zhuanlun Wang", "Zhuanlun", ActorRole.JUDGE, "DY_06_ZHUAN",
-     "第九殿转轮王", "第九殿转轮王", "Ninth Court Zhuanlun", "Zhuanlun",
-     "Ninth court - assigns fate for the next life"),
     ("平等王", "平等王", "Pingdeng Wang", "Pingdeng", ActorRole.JUDGE, "DY_10_YAMA",
-     "第十殿平等王", "第十殿平等王", "Tenth Court Pingdeng", "Pingdeng",
-     "Tenth court - embodies perfect impartial justice"),
+     "第九殿平等王", "第九殿平等王", "Ninth Court Pingdeng", "Pingdeng",
+     "Ninth court - embodies perfect impartial justice"),
+    ("转轮王", "转轮王", "Zhuanlun Wang", "Zhuanlun", ActorRole.JUDGE, "DY_06_ZHUAN",
+     "第十殿转轮王", "第十殿转轮王", "Tenth Court Zhuanlun", "Zhuanlun",
+     "Tenth court - the wheel of rebirth; assigns fate for the next life"),
     ("孟婆", "孟婆", "Meng Po", "Mengpo", ActorRole.CONDUIT, "DY_00_PURGATORY",
      "孟婆", "孟婆", "Meng Po", "Mengpo",
      "The Meng Po - serves the soup of forgetting to departing souls"),
@@ -221,6 +225,12 @@ EUROPEAN_ACTORS = [
     ("Cerberus", "刻耳柏洛斯", "Cerberus", "Kerberos", ActorRole.GUARDIAN, "EU_HELL_1ST",
      "冥界三头犬刻耳柏洛斯", "冥界三头犬刻耳柏洛斯", "Cerberus - Three-headed Hound", "Kerberos",
      "Three-headed guardian of Hades - prevents living entry and dead exit"),
+    # Historical row. `seed_mythology` seeds Hades instead (and does not seed
+    # Pluto at all) — Pluto is the same god under his Roman name, and
+    # `manage.py consolidate_eu_pantheon` merges the pair into Hades. Running
+    # this script against a seeded database re-creates exactly the duplicate
+    # that command exists to remove. Kept only so the historical record of what
+    # this script wrote stays accurate; use the command.
     ("Pluto", "普鲁托", "Pluto", "Ploutos", ActorRole.OVERSEER, "EU_HELL_1ST",
      "冥王普鲁托", "冥王普鲁托", "Pluto - God of the Underworld", "Ploutos",
      "Roman god of the underworld - ruler of the infernal realm"),

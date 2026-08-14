@@ -17,6 +17,12 @@ This command:
      actually referenced elsewhere (Judgment.judge, WorkflowNode.approver_actor,
      CrossTenantJudgmentParticipant.participant_actor, User.actor) and
      soft-deleting the rest.
+  3. Merges same-entity-different-spelling pairs that step 2 cannot see
+     because it matches on an exact name — currently "Maat" into "Ma'at".
+     If only the non-canonical spelling exists, the row is renamed (which
+     carries its references along); if both exist, the non-canonical row is
+     soft-deleted only when nothing references it, and reported as a conflict
+     otherwise.
 
 Usage:
     python manage.py fix_actor_civilization              # dry-run (default)
@@ -44,6 +50,18 @@ MISTAG_FIXES = [
 # Names with confirmed duplicate active rows (same name, same civilization
 # after the fix above, two separate rows created by two different seed paths)
 DUPLICATE_NAMES = ["Isis", "Nephthys", "Ammit", "Charon", "Gabriel", "Ra"]
+
+# Same entity, two spellings, so the same-name dedupe above cannot see them.
+# (duplicate_spelling, canonical_spelling, civilization)
+#
+# Ma'at: seed_mythology, scripts/seed_chinese_data.py, MISTAG_FIXES above,
+# tests/test_seed_mythology.py and frontend/messages/*.json all spell the
+# goddess "Ma'at" with the apostrophe; "Maat" appears only as a bare
+# transliteration — in the Actor.name_egy column, and as one entry in
+# scripts/populate_egyptian_actors.py's "42 Judges" roster, which is where the
+# second row came from. The apostrophe spelling is therefore canonical and the
+# "Maat" row is the one that gets merged away.
+SPELLING_MERGES = [("Maat", "Ma'at", "EGYPTIAN")]
 
 DEFAULT_BACKUP_DIR = Path(__file__).resolve().parents[4] / "scripts" / "backups"
 
@@ -162,10 +180,103 @@ class Command(BaseCommand):
                 dedup_deletes.append(loser)
 
         # ------------------------------------------------------------------
+        # Step 3: spelling merges (same entity, two spellings)
+        # ------------------------------------------------------------------
+        self.stdout.write("")
+        self.stdout.write(self.style.MIGRATE_HEADING("Step 3: spelling merges"))
+        spelling_renames = []
+        for dup_name, canonical_name, civ in SPELLING_MERGES:
+            dup = Actor.objects.filter(name=dup_name, civilization=civ).first()
+            canonical = Actor.objects.filter(name=canonical_name, civilization=civ).first()
+
+            if dup is None:
+                self.stdout.write(
+                    f"  [skip] {dup_name!r} ({civ}) not present — nothing to merge into "
+                    f"{canonical_name!r}"
+                )
+                continue
+
+            if canonical is None:
+                # `Actor.objects` hides soft-deleted rows, but the
+                # unique_actor_tenant_civ_name constraint does not — a
+                # soft-deleted "Ma'at" still occupies the name, and renaming
+                # into it would raise IntegrityError mid-run.
+                buried = Actor.all_objects.filter(
+                    name=canonical_name, civilization=civ, is_deleted=True
+                ).first()
+                if buried is not None:
+                    self.stdout.write(self.style.ERROR(
+                        f"  [CONFLICT] cannot rename {dup_name!r} (id={dup.id}) to "
+                        f"{canonical_name!r}: a soft-deleted row already holds that name "
+                        f"(id={buried.id}, reason: {buried.delete_reason or 'none recorded'}). "
+                        f"The unique constraint does not exclude deleted rows."
+                    ))
+                    self.stdout.write(self.style.ERROR(
+                        "    ACTION REQUIRED: restore or hard-delete that row, then re-run."
+                    ))
+                    continue
+
+                # Only the duplicate spelling exists. Renaming it IS the merge,
+                # and it is the safest form of one: every FK pointing at the row
+                # follows the row, so nothing has to be re-pointed and nothing
+                # is deleted.
+                before = _snapshot(dup)
+                affected.append({"action": "spelling_rename", "before": before, "to": canonical_name})
+                plan.append(
+                    f"UPDATE Actor(id={dup.id}): name {dup_name!r} -> {canonical_name!r} "
+                    f"(canonical spelling)"
+                )
+                self.stdout.write(
+                    f"  {dup_name!r} (id={dup.id}): rename to {canonical_name!r} — no "
+                    f"{canonical_name!r} row exists, so {_reference_count(dup)} reference(s) "
+                    f"travel with the row"
+                )
+                spelling_renames.append((dup, canonical_name))
+                continue
+
+            refs = _reference_count(dup)
+            self.stdout.write(f"  {dup_name!r}/{canonical_name!r} ({civ}): both rows exist")
+            self.stdout.write(
+                f"    KEEP   id={canonical.id} name={canonical.name!r} "
+                f"role={canonical.role} refs={_reference_count(canonical)}"
+            )
+            if refs:
+                # Deleting a referenced row would strand Judgment.judge /
+                # User.actor on a row the app filters out. Report and stop.
+                self.stdout.write(self.style.ERROR(
+                    f"  [CONFLICT] {dup_name!r} (id={dup.id}) has {refs} live reference(s) — "
+                    f"NOT deleting."
+                ))
+                self.stdout.write(
+                    f"    users={list(dup.users.values_list('id', 'username'))} "
+                    f"judgments={dup.judgments_conducted.count()} "
+                    f"workflow_nodes={dup.approvalnode_set.count()} "
+                    f"cross_tenant_participations={dup.judgment_participations.count()}"
+                )
+                self.stdout.write(self.style.ERROR(
+                    f"    ACTION REQUIRED: re-point those references at Actor(id={canonical.id}, "
+                    f"name={canonical_name!r}), then re-run."
+                ))
+                continue
+
+            before = _snapshot(dup)
+            affected.append({
+                "action": "soft_delete_spelling_duplicate",
+                "before": before,
+                "kept_id": str(canonical.id),
+            })
+            plan.append(
+                f"SOFT-DELETE Actor(id={dup.id}, name={dup_name!r}) — spelling duplicate of "
+                f"{canonical_name!r} ({canonical.id})"
+            )
+            self.stdout.write(f"    DELETE id={dup.id} name={dup.name!r} refs=0")
+            dedup_deletes.append(dup)
+
+        # ------------------------------------------------------------------
         # Summary / apply
         # ------------------------------------------------------------------
         self.stdout.write("")
-        if not civ_updates and not dedup_deletes:
+        if not civ_updates and not dedup_deletes and not spelling_renames:
             self.stdout.write(self.style.SUCCESS("Nothing to do — data is already correct."))
             return
 
@@ -191,9 +302,14 @@ class Command(BaseCommand):
             actor.civilization = correct_civ
             actor.save(update_fields=["civilization"])
 
+        for actor, canonical_name in spelling_renames:
+            actor.name = canonical_name
+            actor.save(update_fields=["name"])
+
         for loser in dedup_deletes:
             loser.soft_delete(reason="Duplicate seed record from actor civilization mis-tagging fix")
 
         self.stdout.write(self.style.SUCCESS(
-            f"\nApplied: {len(civ_updates)} civilization fix(es), {len(dedup_deletes)} soft-delete(s)."
+            f"\nApplied: {len(civ_updates)} civilization fix(es), "
+            f"{len(spelling_renames)} spelling rename(s), {len(dedup_deletes)} soft-delete(s)."
         ))

@@ -34,6 +34,7 @@ from apps.tenants.models import Tenant
 # --------------------------------------------------------------------------
 
 # 十殿阎罗 — the ten kings of Diyu, in the order they are usually recited.
+# The index is the court: TEN_KINGS[0] holds 第一殿, TEN_KINGS[9] holds 第十殿.
 TEN_KINGS = [
     "秦广王",
     "楚江王",
@@ -46,6 +47,45 @@ TEN_KINGS = [
     "平等王",
     "转轮王",
 ]
+
+# The court number each king's title must carry. Three files in this repo used
+# to disagree about this (seed_chinese_data.py called 阎罗王 十殿阎王 and swapped
+# 平等王/转轮王; init_organizations and apps/workflow/services.py used the
+# standard ordering; populate_chinese_actors carried a third "correction" that
+# rewrote rows after the fact). The standard ordering won. This mapping is
+# spelled out here rather than derived from TEN_KINGS' index so that a reader
+# can check it against a source, and so that reordering TEN_KINGS cannot
+# silently redefine what the test asserts.
+COURT_NUMBERS = {
+    "秦广王": (1, "第一殿秦广王"),
+    "楚江王": (2, "第二殿楚江王"),
+    "宋帝王": (3, "第三殿宋帝王"),
+    "五官王": (4, "第四殿五官王"),
+    "阎罗王": (5, "第五殿阎罗王"),
+    "卞城王": (6, "第六殿卞城王"),
+    "泰山王": (7, "第七殿泰山王"),
+    "都市王": (8, "第八殿都市王"),
+    "平等王": (9, "第九殿平等王"),
+    "转轮王": (10, "第十殿转轮王"),
+}
+
+# The Greco-Roman cast `manage.py consolidate_eu_pantheon` audits for. Hades,
+# not Pluto: Pluto is the same god's Roman name and that command merges the
+# pair into Hades, so seeding Pluto would manufacture the duplicate the merge
+# exists to remove. Kept in sync by hand with
+# consolidate_eu_pantheon.GRECO_ROMAN_EXPECTED — see rule 1 in the docstring.
+GRECO_ROMAN_CAST = {
+    "Hades": "OVERSEER",
+    "Minos": "JUDGE",
+    "Aeacus": "JUDGE",
+    "Rhadamanthus": "JUDGE",
+    "Charon": "CONDUIT",
+    "Cerberus": "GUARDIAN",
+}
+
+# Norse is out of this system entirely (no judgment concept: destination
+# depends on manner of death, not on a verdict). No seed path may create them.
+NORSE_NAMES = ["Odin", "Freya", "Hel", "Valkyries"]
 
 # Dante's nine circles of Hell.
 DANTE_NINE_CIRCLES = [
@@ -111,6 +151,63 @@ def test_ten_kings_of_diyu_all_present(seeded):
 
 
 @pytest.mark.django_db
+def test_ten_kings_carry_their_canonical_court_number(seeded):
+    """Each king's title names the court he actually presides over.
+
+    This is the check that pins the 十殿阎罗 ordering. Four files used to hold
+    four opinions about which king sits where — the two seed paths disagreed
+    with apps/org's init_organizations, with apps/workflow/services.py, and
+    with each other, and populate_chinese_actors "fixed" the result at runtime.
+    Without an assertion, the next person to touch a seed table can quietly
+    reintroduce any of those.
+    """
+    titles = dict(
+        Actor.objects.filter(civilization="CHINESE", name__in=TEN_KINGS)
+        .values_list("name", "title_zh")
+    )
+    wrong = {
+        name: {"expected": expected_title, "found": titles.get(name)}
+        for name, (_court, expected_title) in COURT_NUMBERS.items()
+        if titles.get(name) != expected_title
+    }
+    assert not wrong, (
+        "Ten Kings seeded with the wrong court number in title_zh. The canonical "
+        "十殿阎罗 ordering is 秦广/楚江/宋帝/五官/阎罗/卞城/泰山/都市/平等/转轮 "
+        f"(阎罗王=5, 平等王=9, 转轮王=10). Mismatches: {wrong}"
+    )
+
+
+@pytest.mark.django_db
+def test_ten_kings_court_numbers_are_a_permutation_of_one_to_ten(seeded):
+    """No court is seeded twice and none is skipped.
+
+    The old data had two kings claiming 第十殿 (阎罗王 as 十殿阎王 and 平等王)
+    and nobody at 第五殿. Checking each title individually would not catch that
+    class of error if the expectation table itself were edited wrong, so the
+    shape of the whole set gets its own assertion.
+    """
+    seeded_titles = dict(
+        Actor.objects.filter(civilization="CHINESE", name__in=TEN_KINGS)
+        .values_list("name", "title_zh")
+    )
+    prefixes = [f"第{n}殿" for n in "一二三四五六七八九十"]
+    courts_found = {}
+    for name, title in seeded_titles.items():
+        for index, prefix in enumerate(prefixes, start=1):
+            if title.startswith(prefix):
+                courts_found.setdefault(index, []).append(name)
+                break
+
+    duplicated = {court: names for court, names in courts_found.items() if len(names) > 1}
+    missing = sorted(set(range(1, 11)) - set(courts_found))
+    assert not duplicated and not missing, (
+        f"The ten courts are not a 1..10 bijection. Courts claimed by more than "
+        f"one king: {duplicated}. Courts nobody holds: {missing}. "
+        f"Seeded titles: {seeded_titles}"
+    )
+
+
+@pytest.mark.django_db
 def test_dante_nine_circles_all_present(seeded):
     """All nine circles of Dante's Inferno exist as EUROPEAN Realms."""
     codes = set(
@@ -140,6 +237,37 @@ def test_dante_circles_carry_their_tier(seeded):
 
 
 @pytest.mark.django_db
+def test_seeded_realms_use_only_the_memory_reset_vocabulary(seeded):
+    """Every seeded realm's memory_reset_mechanism is a real enum value.
+
+    Deliberately checks the *rows*, not the field declaration. Django does not
+    validate `choices` on `.create()`, so a seed table is free to write any
+    string it likes into a column that has a perfectly correct `choices=` list;
+    apps/disposition/tests.py::MemoryResetVocabularyTest compares the two
+    fields' declarations and would stay green throughout.
+
+    That gap is how "LETIES" — a misspelling of LETHE (忘川) — reached the
+    database and survived long enough to need disposition/0009 to rewrite it.
+    The seed tables held the literal in eleven EU realm rows, so a fresh seed
+    after that migration would have written the old spelling straight back in.
+    """
+    from apps.disposition.models import MemoryResetMechanism
+
+    allowed = set(MemoryResetMechanism.values)
+    offenders = sorted(
+        set(
+            Realm.objects.exclude(memory_reset_mechanism__in=allowed)
+            .exclude(memory_reset_mechanism="")
+            .values_list("memory_reset_mechanism", "realm_code")
+        )
+    )
+    assert not offenders, (
+        f"seed_mythology wrote memory_reset_mechanism values that are not in "
+        f"MemoryResetMechanism {sorted(allowed)} — (value, realm_code): {offenders}"
+    )
+
+
+@pytest.mark.django_db
 def test_egyptian_weighing_actors_all_present(seeded):
     """The Hall of Two Truths cast exists: Ma'at, Anubis, Ammit, Thoth, Osiris."""
     names = set(
@@ -159,6 +287,123 @@ def test_egyptian_realms_all_present(seeded):
     )
     absent, message = _missing(EGYPTIAN_CORE_REALMS, codes, "Egyptian realms")
     assert not absent, message
+
+
+@pytest.mark.django_db
+def test_greco_roman_cast_present_with_correct_roles(seeded):
+    """Hades, the three judges, Charon and Cerberus all exist, correctly cast.
+
+    `consolidate_eu_pantheon` keeps Christian + Greco-Roman as the two European
+    judgment systems and audits this exact roster. The seed used to create only
+    Charon, Minos, Cerberus and Pluto, so on a fresh database that audit
+    reported Hades, Aeacus and Rhadamanthus MISSING — the audit could not pass
+    on any database this project ships.
+    """
+    found = dict(
+        Actor.objects.filter(civilization="EUROPEAN", name__in=GRECO_ROMAN_CAST)
+        .values_list("name", "role")
+    )
+    absent = [name for name in GRECO_ROMAN_CAST if name not in found]
+    miscast = {
+        name: {"expected": expected, "found": found[name]}
+        for name, expected in GRECO_ROMAN_CAST.items()
+        if name in found and found[name] != expected
+    }
+    assert not absent and not miscast, (
+        f"Greco-Roman cast incomplete or miscast. Not seeded at all: {absent}. "
+        f"Seeded with the wrong role: {miscast}. "
+        f"consolidate_eu_pantheon audits exactly these six."
+    )
+
+
+@pytest.mark.django_db
+def test_hades_is_the_sole_european_overseer(seeded):
+    """One overseer per pantheon, and on the Greco-Roman side it is Hades.
+
+    Pluto is Hades' Roman name. Seeding both would put two OVERSEERs in one
+    tenant and hand `consolidate_eu_pantheon`'s merge step a duplicate to clean
+    up on every fresh database — so Pluto is deliberately not seeded, and this
+    asserts it stays that way.
+    """
+    overseers = sorted(
+        Actor.objects.filter(civilization="EUROPEAN", role="OVERSEER")
+        .values_list("name", flat=True)
+    )
+    assert "Hades" in overseers, (
+        f"Hades is not seeded as a EUROPEAN OVERSEER. Overseers found: {overseers}"
+    )
+    assert "Pluto" not in overseers, (
+        f"Pluto was seeded alongside Hades — same god, two OVERSEER rows. "
+        f"consolidate_eu_pantheon would soft-delete one of them on every fresh "
+        f"database. Overseers found: {overseers}"
+    )
+
+
+@pytest.mark.django_db
+def test_no_norse_actors_are_seeded(seeded):
+    """Norse is out of this system — no seed path may put it back.
+
+    Norse mythology has no judgment step (destination follows manner of death,
+    not a verdict), so it cannot be one of this product's judgment systems.
+    The earlier decision demoted these rows and kept them; the current one
+    removes them. A seed path re-creating them is how that would silently undo
+    itself.
+    """
+    present = sorted(
+        Actor.all_objects.filter(name__in=NORSE_NAMES).values_list("name", flat=True)
+    )
+    assert not present, (
+        f"seed_mythology created Norse actors that are supposed to be out of "
+        f"this system: {present}. Remove them from the seed tables; use "
+        f"`manage.py consolidate_eu_pantheon --purge-norse` for rows that "
+        f"already exist in a database."
+    )
+
+
+@pytest.mark.django_db
+def test_consolidate_eu_pantheon_audit_is_clean_after_seeding(seeded):
+    """A freshly seeded database passes the EU consolidation audit.
+
+    End-to-end check of the two commands together, which is where the gap
+    actually showed: `seed_mythology` and `consolidate_eu_pantheon` each looked
+    fine on their own, but the second one's Step 2 audit reported every
+    Greco-Roman name MISSING against a database the first one had just filled.
+    """
+    out = io.StringIO()
+    call_command("consolidate_eu_pantheon", stdout=out, stderr=out)
+    output = out.getvalue()
+
+    missing_lines = [line.strip() for line in output.splitlines() if "MISSING" in line]
+    assert not missing_lines, (
+        "consolidate_eu_pantheon still reports missing actors against a "
+        "freshly seeded database:\n" + "\n".join(missing_lines)
+        + f"\n\nFull output:\n{output}"
+    )
+    assert "Hades is sole OVERSEER" in output, (
+        f"The audit did not report a clean pass, so the assertion above may be "
+        f"passing because the audit never ran.\n{output}"
+    )
+
+
+@pytest.mark.django_db
+def test_consolidate_eu_pantheon_finds_nothing_to_merge_after_seeding(seeded):
+    """Seeding does not hand the merge step work to do.
+
+    If both Pluto and Hades were seeded, this command would soft-delete one of
+    them every time a fresh database was set up, with the survivor decided by
+    insertion order. Nothing to merge is the correct post-seed state.
+    """
+    out = io.StringIO()
+    call_command("consolidate_eu_pantheon", stdout=out, stderr=out)
+    output = out.getvalue()
+    assert "nothing to merge" in output, (
+        f"consolidate_eu_pantheon found a Pluto/Hades merge to perform on a "
+        f"freshly seeded database — seeding created both names.\n{output}"
+    )
+    assert "Nothing to do" in output, (
+        f"consolidate_eu_pantheon has changes queued against a freshly seeded "
+        f"database; seed and consolidation disagree about the target state.\n{output}"
+    )
 
 
 @pytest.mark.django_db
