@@ -20,20 +20,30 @@ Re-running this script will re-introduce those duplicates. Prefer the command.
 """
 import os
 import sys
+from pathlib import Path
 
 import django
 
-# Setup Django
-sys.path.insert(0, '/home/tardis/Documents/跨文明灵魂管理系统/backend')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
-django.setup()
+# The backend package root — resolved from this file's own location, not from a
+# hardcoded absolute path off somebody else's machine. Bootstrapping lives in a
+# function so that merely *importing* this module (test collection, a linter, an
+# editor's autocomplete) does not run django.setup() as a side effect.
+BACKEND_ROOT = Path(__file__).resolve().parent.parent
 
-from apps.actors.models import Actor
-from apps.realms.models import Realm
-from apps.tenants.models import Tenant
+
+def setup_django():
+    sys.path.insert(0, str(BACKEND_ROOT))
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+    django.setup()
 
 
 def main():
+    setup_django()
+
+    from apps.actors.models import Actor
+    from apps.realms.models import Realm
+    from apps.tenants.models import Tenant
+
     # Get realm IDs
     hall = Realm.objects.get(realm_code='EG_HALL_TWO_TRUTHS')
     devourer = Realm.objects.get(realm_code='EG_DEVOURER')

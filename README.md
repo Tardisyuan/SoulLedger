@@ -108,7 +108,7 @@ docker compose up    # 根目录 docker-compose.yml：db、redis、backend、cel
 
 ```bash
 python manage.py seed_tenants               # CN_DIYU、EU_HEAVEN_HELL、EG_DUAT
-python manage.py populate_chinese_actors
+python manage.py seed_mythology             # 三种文明的领域与角色（幂等）
 python manage.py consolidate_eu_pantheon
 python manage.py seed_workflow_templates
 python manage.py seed_field_permissions
