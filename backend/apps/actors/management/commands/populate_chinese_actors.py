@@ -98,25 +98,16 @@ def run():
     else:
         print("Already exists: 地藏王菩萨")
 
-    # Fix 转轮王 court number (was 第九殿, should be 第十殿)
-    zhuanlun = Actor.objects.filter(name_zh='转轮王').first()
-    if zhuanlun and zhuanlun.title_zh != '第十殿转轮王':
-        old_title = zhuanlun.title_zh
-        zhuanlun.title_zh = '第十殿转轮王'
-        zhuanlun.title_en = 'Tenth Court Judge'
-        zhuanlun.save()
-        print(f"Fixed 转轮王 title: {old_title} -> 第十殿转轮王")
-    elif zhuanlun:
-        print(f"转轮王 title already correct: {zhuanlun.title_zh}")
-
-    # Fix 平等王 court number if needed (should be 第九殿)
-    pingdeng = Actor.objects.filter(name_zh='平等王').first()
-    if pingdeng and pingdeng.title_zh != '第九殿平等王':
-        old_title = pingdeng.title_zh
-        pingdeng.title_zh = '第九殿平等王'
-        pingdeng.title_en = 'Ninth Court Judge'
-        pingdeng.save()
-        print(f"Fixed 平等王 title: {old_title} -> 第九殿平等王")
+    # Court-number "corrections" used to live here: two blocks that rewrote
+    # 转轮王 to 第十殿 and 平等王 to 第九殿 because the seed data disagreed.
+    # The seed data no longer disagrees — seed_mythology and
+    # scripts/seed_chinese_data.py both write the standard 十殿阎罗 ordering
+    # now (阎罗王=5, 平等王=9, 转轮王=10), matching init_organizations and
+    # apps/workflow/services.py. Both blocks were guarded on
+    # `title_zh != <target>`, so against current seed data they did nothing at
+    # all; they were removed rather than left as a second, weaker copy of the
+    # canon that could silently diverge again. The mapping is now asserted in
+    # tests/test_seed_mythology.py::test_ten_kings_carry_their_canonical_court_number.
 
     print(f"\nTotal created: {len(created)}")
     for c in created:

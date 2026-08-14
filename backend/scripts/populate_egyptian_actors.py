@@ -8,10 +8,11 @@ because they are canon questions rather than plumbing and are recorded as open
 items rather than silently resolved:
 
   * Set (赛特) — present only here, absent from every other seed path.
-  * The "42 Judges" roster — the list holds 35 names, not 42, and two of them
-    (Ra, Maat) collide with actors this file and seed_chinese_data.py already
-    create under those names ("Ma'at" vs "Maat"), which is where several of the
-    duplicate rows `manage.py fix_actor_civilization` cleans up came from.
+  * The "42 Judges" roster — RESOLVED as far as it can be without new source
+    material. The colliding names ('Ra', 'Maat') have been removed, and the
+    block no longer creates a partial roster: it prints why it is skipping.
+    The remaining gap — the 42 actual assessors of BD Chapter 125 — is an open
+    canon question, spelled out in the comment above that block.
 
 It also disagrees with seed_chinese_data.py on where Horus/Isis/Nephthys stand
 (Hall of Two Truths here, Duat entry / Aaru there) and on their roles.
@@ -92,49 +93,80 @@ def main():
         else:
             print(f'Already exists: {actor.name}')
 
-    # 42 Judges
-    egyptian_names = [
-        ('Aati', '阿蒂', 'Aati'), ('Anat', '阿纳特', 'Anat'), ('Anpu', '安普', 'Anpu'),
-        ('Aped', '阿佩德', 'Aped'), ('Apuat', '阿普阿特', 'Apuat'), ('Babi', '芭比', 'Babi'),
-        ('Ba-Pef', '巴佩夫', 'Ba-Pef'), ('Bes', '贝斯', 'Bes'), ('Neith', '奈斯', 'Neith'),
-        ('Nekhbet', '奈赫贝特', 'Nekhbet'), ('Satet', '萨泰特', 'Satet'), ('Sebut', '塞布特', 'Sebut'),
-        ('Serket', '塞尔凯特', 'Serket'), ('Shu', '舒', 'Shu'), ('Tefnut', '泰芙努特', 'Tefnut'),
-        ('Geb', '盖布', 'Geb'), ('Nut', '努特', 'Nut'), ('Hathor', '哈托尔', 'Het-Heru'),
-        ('Maat', '玛特', 'Maat'), ('Ptah', '普塔赫', 'Ptah'), ('Ra', '拉', 'Ra'),
-        ('Sekhmet', '塞赫麦特', 'Sekhmet'), ('Bastet', '芭丝特', 'Bastet'), ('Tau', '陶', 'Tau'),
-        ('Aah', '阿赫', 'Aah'), ('Hapi', '哈皮', 'Hapi'), ('Duamutef', '杜阿穆特夫', 'Duamutef'),
-        ('Imsety', '伊姆塞蒂', 'Imsety'), ('Qebehsenuef', '凯贝塞努夫', 'Qebehsenuef'),
-        ('Mafdet', '玛夫戴特', 'Mafdet'), ('Aker', '阿克尔', 'Aker'), ('Heka', '赫卡', 'Heka'),
-        ('Sia', '西亚', 'Sia'), ('Hu', '胡', 'Hu'), ('Ced', '塞德', 'Sed'),
-    ]
+    # -----------------------------------------------------------------
+    # The "42 Judges" roster — INCOMPLETE, deliberately not created.
+    #
+    # The 42 assessors of the Hall of Two Truths come from Chapter 125 of
+    # the Book of the Dead: each one is paired with one clause of the
+    # negative confession ("I have not stolen", "I have not lied"), and
+    # each has a name and a home town ("Usekh-nemtut who comes from
+    # Heliopolis", and so on). It is a fixed, ordered list of 42.
+    #
+    # The list this script used to carry was not that list. It held 35
+    # names, and they were not assessors at all — they were major deities
+    # (Shu, Tefnut, Geb, Nut, Hathor, Ptah, Sekhmet, Bastet), the four
+    # sons of Horus (Hapi, Duamutef, Imsety, Qebehsenuef), and personified
+    # concepts (Heka, Sia, Hu), padded out to look like a roster. Two of
+    # them collided with actors that already exist as full deities:
+    #
+    #   * 'Ra'   — already seeded as the EGYPTIAN OVERSEER of EG_AARU.
+    #   * 'Maat' — a second spelling of the goddess seeded as "Ma'at",
+    #              JUDGE of EG_HALL_TWO_TRUTHS.
+    #
+    # Both are removed below. 'Ra' was creating the duplicate row listed in
+    # fix_actor_civilization.DUPLICATE_NAMES; 'Maat' was creating the
+    # cross-spelling duplicate that command's SPELLING_MERGES now resolves.
+    #
+    # That leaves 33 names, none of them verifiably an assessor, against a
+    # roster that must contain exactly 42 specific ones. Inventing the
+    # remaining nine — or keeping the 33 wrong ones — would put fabricated
+    # canon in the database under a name that claims authority. So this
+    # block creates nothing and says why.
+    #
+    # TO FINISH THIS: supply the 42 assessor names from a cited translation
+    # of BD Chapter 125 (Budge, Faulkner and Allen all differ in
+    # transliteration, so the choice of edition needs to be recorded), in
+    # order, each with its negative-confession clause. Then replace this
+    # block. Until then the Hall of Two Truths has its five principals
+    # (Osiris, Anubis, Thoth, Ma'at, Ammit) seeded by
+    # `manage.py seed_mythology` and no assessors.
+    # -----------------------------------------------------------------
+    FORTY_TWO_ASSESSORS_REQUIRED = 42
+    forty_two_assessors = []  # see above — intentionally empty
 
-    # Ensure we have exactly 42 judges
-    for i, (name_en, name_zh, name_egy) in enumerate(egyptian_names):
-        if i >= 42:
-            break
-        actor, created = Actor.objects.get_or_create(
-            name=name_en,
-            civilization='EGYPTIAN',
-            defaults={
-                'name': name_en,
-                'name_zh': name_zh,
-                'name_en': name_en,
-                'name_egy': name_egy,
-                'title': 'Judge of the Hall of Two Truths',
-                'title_zh': '真理大厅审判者',
-                'title_en': f'Judge #{i+1} of the Forty-Two',
-                'role': 'JUDGE',
-                'civilization': 'EGYPTIAN',
-                'realm': hall,
-                'description': 'One of the 42 Judges of the Hall of Two Truths who witness the weighing of hearts.',
-                'tenant': tenant,
-            }
+    if len(forty_two_assessors) != FORTY_TWO_ASSESSORS_REQUIRED:
+        print(
+            f'\nSKIPPED: "42 Judges" roster holds '
+            f'{len(forty_two_assessors)}/{FORTY_TWO_ASSESSORS_REQUIRED} names. '
+            f'Creating a partial roster under the name "the Forty-Two" would be '
+            f'fabricated canon, so nothing was created. See the comment above '
+            f'this block for what is needed to finish it.'
         )
-        if created:
-            print(f'Created Judge: {actor.name}')
-            created_count += 1
-        else:
-            print(f'Already exists: {actor.name}')
+    else:
+        for i, (name_en, name_zh, name_egy) in enumerate(forty_two_assessors):
+            actor, created = Actor.objects.get_or_create(
+                name=name_en,
+                civilization='EGYPTIAN',
+                defaults={
+                    'name': name_en,
+                    'name_zh': name_zh,
+                    'name_en': name_en,
+                    'name_egy': name_egy,
+                    'title': 'Judge of the Hall of Two Truths',
+                    'title_zh': '真理大厅审判者',
+                    'title_en': f'Judge #{i+1} of the Forty-Two',
+                    'role': 'JUDGE',
+                    'civilization': 'EGYPTIAN',
+                    'realm': hall,
+                    'description': 'One of the 42 Judges of the Hall of Two Truths who witness the weighing of hearts.',
+                    'tenant': tenant,
+                }
+            )
+            if created:
+                print(f'Created Judge: {actor.name}')
+                created_count += 1
+            else:
+                print(f'Already exists: {actor.name}')
 
     print(f'\nTotal EGYPTIAN actors: {Actor.objects.filter(civilization="EGYPTIAN").count()}')
     print(f'Newly created: {created_count}')

@@ -2,41 +2,69 @@
 Management command to consolidate the EU_HEAVEN_HELL tenant's pantheon down
 to two coherent judgment systems: Christian (God) and Greco-Roman (Hades).
 
-Background: EU_HEAVEN_HELL currently mixes three mythologies (Christian,
+Background: EU_HEAVEN_HELL used to mix three mythologies (Christian,
 Greco-Roman, Norse) in one tenant, producing 5 actors with role=OVERSEER
 where every other tenant has at most 1. Norse mythology has no judgment
-concept (destination depends on manner of death, not moral verdict), so it
-cannot support this product's judgment-centric model as an independent
-system. Product decision: keep Christian + Greco-Roman as the two systems,
-demote Norse actors to non-overseeing roles, keep them in the roster.
+concept — destination depends on manner of death, not on a moral verdict —
+so it cannot support this product's judgment-centric model.
 
-This command does THREE things:
+NORSE HAS BEEN REMOVED FROM THIS SYSTEM.
+----------------------------------------
+An earlier version of this command demoted Odin/Freya/Hel/Valkyries to
+non-overseeing roles and kept them in the roster. That is no longer the
+decision: Norse is out entirely, not downgraded. A pantheon with no
+judgment step has nothing to do in a ledger whose every workflow is a
+judgment, and keeping the rows around as GUARDIANs meant they kept showing
+up in actor pickers for judgments they can never take part in.
 
-  1. Norse demotion (Odin, Freya, Hel, Valkyries): strip OVERSEER/JUDGE
-     status and detach from realms that don't belong to them (Odin/Freya/
-     Valkyries were mistagged onto the Christian EU_HEAVEN realm; Hel onto
-     Hades' EU_HELL_9TH). Rows are kept, not deleted.
+What that means in practice:
 
-  2. Pluto/Hades merge: Pluto is Hades' Roman name — same deity, two rows,
+  * No seed path creates Odin, Freya, Hel or Valkyries. Neither
+    `seed_mythology` nor scripts/seed_chinese_data.py has ever listed them,
+    so a fresh database has no Norse actors at all and nothing here has to
+    run.
+  * Databases that predate the decision may still hold those rows. They are
+    NOT touched by default. Pass --purge-norse to soft-delete them, and only
+    after the live-reference check below clears each one.
+  * apps/org's init_organizations still defines a 北欧冥界 (HADES_NORSE)
+    Organization node, and frontend/src/config/workflow-templates.ts still
+    ships a 北欧分流流程 template. Those are separate models owned elsewhere
+    and are left alone here; they are recorded so whoever removes them knows
+    where to look.
+
+This command does TWO things by default, plus one on request:
+
+  1. Pluto/Hades merge: Pluto is Hades' Roman name — same deity, two rows,
      two OVERSEERs. Before merging, live references (User.actor,
      Judgment.judge, WorkflowNode.approver_actor,
      CrossTenantJudgmentParticipant.participant_actor) are checked. If only
      one row is referenced (or neither), the unreferenced/lesser-referenced
-     row is soft-deleted. If BOTH are referenced, this command does NOT
-     merge — it reports the conflict and leaves both rows untouched, so a
-     human can decide how to migrate the reference.
+     row is soft-deleted, and on a tie Hades is the survivor by name — the
+     Greek name is the canonical one, so the outcome does not depend on
+     which row happened to be inserted first. If BOTH are referenced, this
+     command does NOT merge — it reports the conflict and leaves both rows
+     untouched, so a human can decide how to migrate the reference.
 
-  3. Greco-Roman completeness audit (read-only): confirms Hades is the sole
+  2. Greco-Roman completeness audit (read-only): confirms Hades is the sole
      OVERSEER, Minos/Aeacus/Rhadamanthus are JUDGE, Charon is CONDUIT, and
      Cerberus is GUARDIAN. Deviations are printed, nothing is changed.
+     `seed_mythology` seeds exactly this cast, so a freshly seeded database
+     passes this audit clean.
+
+  3. Norse purge (--purge-norse only): soft-delete leftover Odin/Freya/Hel/
+     Valkyries rows. Each row is reference-checked first with the same
+     helper the merge uses; a row that is still referenced is reported as a
+     conflict and left alone rather than deleted out from under whatever
+     points at it.
 
 Usage:
     python manage.py consolidate_eu_pantheon               # dry-run (default)
     python manage.py consolidate_eu_pantheon --execute       # apply changes
+    python manage.py consolidate_eu_pantheon --purge-norse    # plan the purge
+    python manage.py consolidate_eu_pantheon --execute --purge-norse
     python manage.py consolidate_eu_pantheon --execute --backup-dir /path
 
-Safe to re-run: rows already at their target role/realm are skipped, and
-soft-deleted rows are skipped.
+Safe to re-run: rows already merged or already soft-deleted are skipped.
 """
 import json
 from pathlib import Path
@@ -48,18 +76,19 @@ from apps.actors.models import Actor, ActorRole
 
 TENANT_CODE = "EU_HEAVEN_HELL"
 
-# name -> new role. Realm is cleared (set to None) for all of these: none of
-# them belong to a Christian or Greco-Roman realm, and no Norse realm
-# (Valhalla / Fólkvangr / Helheim) exists in this system.
-NORSE_DEMOTIONS = {
-    "Odin": ActorRole.GUARDIAN,      # ruler of his own hall (Valhalla), not overseer of the whole system
-    "Freya": ActorRole.GUARDIAN,     # ruler of her own hall (Fólkvangr), not a judge
-    "Hel": ActorRole.GUARDIAN,       # ruler of her own hall (Helheim), not overseer of Hell
-    "Valkyries": ActorRole.CONDUIT,  # unchanged role — psychopomps, correctly tagged already
-}
-NORSE_NAMES = list(NORSE_DEMOTIONS)
+# Norse actors that historical databases may still hold. No seed path creates
+# them; --purge-norse soft-deletes whichever of them are found, after the
+# live-reference check. No Norse realm (Valhalla / Fólkvangr / Helheim) has
+# ever existed in this system, so these rows are typically mistagged onto the
+# Christian EU_HEAVEN realm or onto Hades' EU_HELL_9TH.
+NORSE_NAMES = ["Odin", "Freya", "Hel", "Valkyries"]
 
 MERGE_NAMES = ("Pluto", "Hades")
+# On a reference-count tie the Greek name wins. Without this the survivor was
+# decided by created_at, i.e. by seed insertion order, while the soft-delete
+# reason written to the database claimed unconditionally that the row was
+# "merged into Hades".
+MERGE_SURVIVOR = "Hades"
 
 GRECO_ROMAN_EXPECTED = {
     "Hades": ActorRole.OVERSEER,
@@ -104,8 +133,9 @@ def _snapshot(actor):
 class Command(BaseCommand):
     help = (
         "Consolidate EU_HEAVEN_HELL down to two judgment systems (Christian, "
-        "Greco-Roman): demote Norse actors, merge Pluto/Hades if safe, and "
-        "audit Greco-Roman role completeness. Defaults to a dry-run."
+        "Greco-Roman): merge Pluto/Hades if safe and audit Greco-Roman role "
+        "completeness. Pass --purge-norse to also soft-delete leftover Norse "
+        "actors. Defaults to a dry-run."
     )
 
     def add_arguments(self, parser):
@@ -115,6 +145,16 @@ class Command(BaseCommand):
             help="Actually write changes. Without this flag, nothing is saved.",
         )
         parser.add_argument(
+            "--purge-norse",
+            action="store_true",
+            help=(
+                "Soft-delete leftover Odin/Freya/Hel/Valkyries rows. Norse is no "
+                "longer part of this system and no seed path creates them, so this "
+                "only matters for databases that predate that decision. Rows with "
+                "live references are reported and left alone."
+            ),
+        )
+        parser.add_argument(
             "--backup-dir",
             default=str(DEFAULT_BACKUP_DIR),
             help="Directory to write the pre-change JSON backup to (execute mode only).",
@@ -122,6 +162,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         execute = options["execute"]
+        purge_norse = options["purge_norse"]
         backup_dir = Path(options["backup_dir"])
 
         mode = "EXECUTE" if execute else "DRY-RUN"
@@ -133,39 +174,9 @@ class Command(BaseCommand):
         plan = []  # human-readable summary lines
 
         # ------------------------------------------------------------------
-        # Step 1: Norse demotion
+        # Step 1: Pluto / Hades merge
         # ------------------------------------------------------------------
-        self.stdout.write(self.style.MIGRATE_HEADING("Step 1: Norse demotion (Odin/Freya/Hel/Valkyries)"))
-        role_realm_updates = []
-        for name, new_role in NORSE_DEMOTIONS.items():
-            actor = tenant_actors.filter(name=name).first()
-            if actor is None:
-                self.stdout.write(self.style.ERROR(f"  [warn] {name!r} not found in {TENANT_CODE} — skipping"))
-                continue
-
-            realm_already_none = actor.realm_id is None
-            role_already_target = actor.role == new_role
-            if realm_already_none and role_already_target:
-                self.stdout.write(f"  [skip] {name!r} already role={new_role} realm=None (id={actor.id})")
-                continue
-
-            before = _snapshot(actor)
-            affected.append({"action": "norse_demotion", "before": before, "after_role": new_role})
-            old_realm = before["realm_code"]
-            plan.append(
-                f"UPDATE Actor(id={actor.id}, name={name!r}): role {actor.role} -> {new_role}, "
-                f"realm {old_realm} -> None"
-            )
-            self.stdout.write(
-                f"  {name!r} (id={actor.id}): role {actor.role} -> {new_role}, realm {old_realm} -> None"
-            )
-            role_realm_updates.append((actor, new_role))
-
-        # ------------------------------------------------------------------
-        # Step 2: Pluto / Hades merge
-        # ------------------------------------------------------------------
-        self.stdout.write("")
-        self.stdout.write(self.style.MIGRATE_HEADING("Step 2: Pluto/Hades merge"))
+        self.stdout.write(self.style.MIGRATE_HEADING("Step 1: Pluto/Hades merge"))
         merge_delete = None
         rows = {name: tenant_actors.filter(name=name).first() for name in MERGE_NAMES}
         active_rows = {n: a for n, a in rows.items() if a is not None and not a.is_deleted}
@@ -196,9 +207,14 @@ class Command(BaseCommand):
                     "User.actor row should be re-pointed, then re-run. No changes made to either row."
                 ))
             else:
+                # Most-referenced row wins; on a tie (usually 0 refs on both)
+                # the Greek name wins outright. Falling through to created_at
+                # would let seed insertion order decide, which could soft-delete
+                # Hades and leave a row named Pluto carrying a delete reason
+                # that says "merged into Hades".
                 scored = sorted(
                     active_rows.values(),
-                    key=lambda a: (-refs[a.name], a.created_at),
+                    key=lambda a: (-refs[a.name], a.name != MERGE_SURVIVOR, a.created_at),
                 )
                 keeper, loser = scored[0], scored[1]
                 self.stdout.write(
@@ -213,15 +229,23 @@ class Command(BaseCommand):
                 merge_delete = loser
 
         # ------------------------------------------------------------------
-        # Step 3: Greco-Roman completeness audit (read-only)
+        # Step 2: Greco-Roman completeness audit (read-only)
         # ------------------------------------------------------------------
         self.stdout.write("")
-        self.stdout.write(self.style.MIGRATE_HEADING("Step 3: Greco-Roman completeness audit (read-only)"))
+        self.stdout.write(self.style.MIGRATE_HEADING("Step 2: Greco-Roman completeness audit (read-only)"))
         deviations = []
         for name, expected_role in GRECO_ROMAN_EXPECTED.items():
-            actor = tenant_actors.filter(name=name).first()
+            # Live rows only. A soft-deleted Hades is not a present Hades, and
+            # reporting it as one would make this audit pass over exactly the
+            # damage it exists to catch. `tenant_actors` is built from
+            # all_objects so the merge step above can see deleted rows.
+            actor = tenant_actors.filter(name=name, is_deleted=False).first()
             if actor is None:
-                deviations.append(f"{name}: MISSING")
+                soft_deleted = tenant_actors.filter(name=name, is_deleted=True).exists()
+                deviations.append(
+                    f"{name}: MISSING (soft-deleted row exists)" if soft_deleted
+                    else f"{name}: MISSING"
+                )
                 continue
             if actor.role != expected_role:
                 deviations.append(f"{name}: role={actor.role}, expected {expected_role}")
@@ -244,10 +268,71 @@ class Command(BaseCommand):
             )
 
         # ------------------------------------------------------------------
+        # Step 3: Norse purge (opt-in)
+        # ------------------------------------------------------------------
+        self.stdout.write("")
+        self.stdout.write(self.style.MIGRATE_HEADING("Step 3: Norse purge (Odin/Freya/Hel/Valkyries)"))
+        norse_deletes = []
+        if not purge_norse:
+            present = sorted(
+                tenant_actors.filter(name__in=NORSE_NAMES, is_deleted=False)
+                .values_list("name", flat=True)
+            )
+            if present:
+                self.stdout.write(self.style.ERROR(
+                    f"  {len(present)} Norse row(s) still present: {present}. Norse has been "
+                    f"removed from this system — re-run with --purge-norse to plan their removal."
+                ))
+            else:
+                self.stdout.write(
+                    "  [skip] no Norse rows present. No seed path creates them, so this is the "
+                    "expected state for any database seeded by `manage.py seed_mythology`."
+                )
+        else:
+            for name in NORSE_NAMES:
+                actor = tenant_actors.filter(name=name, is_deleted=False).first()
+                if actor is None:
+                    self.stdout.write(f"  [skip] {name!r} not present in {TENANT_CODE} — nothing to purge")
+                    continue
+
+                # Same reference check the merge uses. A row something still
+                # points at is reported, not deleted: soft-deleting it would
+                # leave Judgment.judge / User.actor aimed at a row the app
+                # filters out, which reads as data loss rather than cleanup.
+                refs = _reference_count(actor)
+                if refs:
+                    self.stdout.write(self.style.ERROR(
+                        f"  [CONFLICT] {name!r} (id={actor.id}) has {refs} live reference(s) — "
+                        f"NOT deleting."
+                    ))
+                    self.stdout.write(
+                        f"    users={_referencing_users(actor)} "
+                        f"judgments={actor.judgments_conducted.count()} "
+                        f"workflow_nodes={actor.approvalnode_set.count()} "
+                        f"cross_tenant_participations={actor.judgment_participations.count()}"
+                    )
+                    self.stdout.write(self.style.ERROR(
+                        "    ACTION REQUIRED: re-point those references at a non-Norse actor "
+                        "first, then re-run."
+                    ))
+                    continue
+
+                before = _snapshot(actor)
+                affected.append({"action": "norse_purge", "before": before})
+                plan.append(
+                    f"SOFT-DELETE Actor(id={actor.id}, name={name!r}) — Norse removed from this system"
+                )
+                self.stdout.write(
+                    f"  DELETE id={actor.id} name={name} role={actor.role} "
+                    f"realm={before['realm_code']} refs=0"
+                )
+                norse_deletes.append(actor)
+
+        # ------------------------------------------------------------------
         # Summary / apply
         # ------------------------------------------------------------------
         self.stdout.write("")
-        if not role_realm_updates and not merge_delete:
+        if not merge_delete and not norse_deletes:
             self.stdout.write(self.style.SUCCESS("Nothing to do — data is already consolidated."))
             return
 
@@ -269,15 +354,15 @@ class Command(BaseCommand):
             json.dump(affected, f, ensure_ascii=False, indent=2)
         self.stdout.write(self.style.SUCCESS(f"\nBackup written to {backup_path}"))
 
-        for actor, new_role in role_realm_updates:
-            actor.role = new_role
-            actor.realm = None
-            actor.save(update_fields=["role", "realm"])
-
         if merge_delete:
             merge_delete.soft_delete(reason="Merged into Hades — Pluto is Hades' Roman name; EU pantheon consolidation")
 
+        for actor in norse_deletes:
+            actor.soft_delete(
+                reason="Norse removed from this system — no judgment concept; EU pantheon consolidation"
+            )
+
         self.stdout.write(self.style.SUCCESS(
-            f"\nApplied: {len(role_realm_updates)} role/realm update(s), "
-            f"{1 if merge_delete else 0} soft-delete(s)."
+            f"\nApplied: {1 if merge_delete else 0} merge soft-delete(s), "
+            f"{len(norse_deletes)} Norse soft-delete(s)."
         ))
