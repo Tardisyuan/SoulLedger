@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { EnumBadge } from "@/components/ui/data-grid";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { useJudgmentQueue, UNDO_WINDOW_MS, type VerdictCode } from "@/src/hooks/useJudgmentQueue";
 import {
   LedgerPanel,
@@ -145,7 +147,12 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [rule, defer, undo, restoreDeferred, leave]);
 
-  const progressLabel = useMemo(
+  // `progressText`, not `progressLabel`: "N of M" is a formatted count, not a
+  // domain enum, and src/__tests__/domainDisplayContract.test.tsx reads any
+  // `*Label` rendered in a JSX text position inside a declared string-context
+  // file as an enum label owing a title={rawMember}. The name was the only
+  // thing making it look like one.
+  const progressText = useMemo(
     () =>
       t("judgment.queue.progress", {
         position: String(progress.position),
@@ -164,7 +171,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           className="text-sm font-mono tabular-nums text-[hsl(var(--color-ink-muted))]"
           aria-live="polite"
         >
-          {progressLabel}
+          {progressText}
         </p>
         <button
           type="button"
@@ -191,7 +198,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           aria-valuenow={progress.position}
           aria-valuemin={0}
           aria-valuemax={Math.max(progress.total, 1)}
-          aria-label={progressLabel}
+          aria-label={progressText}
           className="h-1 rounded bg-[hsl(var(--color-surface-3))] overflow-hidden"
         >
           <div
@@ -223,9 +230,14 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
             className="flex flex-wrap items-center gap-3 rounded-lg border border-[hsl(var(--color-accent)/0.3)] bg-[hsl(var(--color-accent)/0.1)] px-4 py-3"
           >
             <span className="text-sm text-[hsl(var(--color-ink))]">
+              {/* The verdict name is interpolated INTO another translation, so
+                  it has to be a string and cannot be <DomainEnum>. It still
+                  must not be a bare `t()` template: t() echoes its key back on
+                  a miss, so a verdict the bundle does not cover would read
+                  "judgment.verdicts.appealed recorded for 王氏". */}
               {t("judgment.queue.pending_verdict", {
                 soul: pending.soulName,
-                verdict: t(`judgment.verdicts.${pending.verdict.toLowerCase()}`),
+                verdict: resolveEnumDisplay(t, "judgment.verdicts", pending.verdict).label ?? "",
               })}
             </span>
             <span className="font-mono tabular-nums text-sm text-[hsl(var(--color-ink-muted))]">
@@ -339,7 +351,12 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                     <kbd className="font-mono text-xs px-1.5 rounded bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]">
                       {verdict.key}
                     </kbd>
-                    {t(`judgment.verdicts.${verdict.code.toLowerCase()}`)}
+                    {/* A JSX position, so the component rather than the string
+                        helper: <DomainEnum> renders one span, carries the raw
+                        member in `title` itself, and shows translated
+                        "unrecognized" copy instead of a dotted key when a
+                        verdict is missing from the bundle. */}
+                    <DomainEnum namespace="judgment.verdicts" value={verdict.code} />
                   </button>
                 ))}
                 <span aria-hidden="true" className="w-px self-stretch bg-[hsl(var(--color-hairline))]" />

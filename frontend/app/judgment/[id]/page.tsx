@@ -8,6 +8,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
+import { JudgmentGroundsPanel } from "@/src/components/judgment/JudgmentGroundsPanel";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -211,6 +212,16 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
         {/* Right main content */}
         <div className="lg:col-span-2 space-y-4">
+          {/* Cited grounds — the articles the verdict rests on.
+              Shown whenever the case has been decided (including when it cited
+              nothing, which is the informative case: a concluded verdict with
+              no stated basis is a fact the reader should see, not a box worth
+              hiding), and on an open case only once grounds have been entered,
+              so a pending proceeding does not grow an empty panel. */}
+          {(judgment.is_final || (judgment.citations?.length ?? 0) > 0) && (
+            <JudgmentGroundsPanel citations={judgment.citations ?? []} />
+          )}
+
           {/* Evidence */}
           {judgment.evidence_json && Object.keys(judgment.evidence_json).length > 0 && (
             <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] overflow-hidden">

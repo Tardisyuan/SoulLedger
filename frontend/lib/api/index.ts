@@ -20,6 +20,10 @@ export { usersApi, type User, type CreateUserInput, type UpdateUserInput, type U
 export {
   judgmentApi,
   type Judgment,
+  type JudgmentCitation,
+  type Statute,
+  type StatuteCorpus,
+  type StatutePolarity,
   type ConcludeJudgmentPayload,
   type JudgmentQueueCursor,
   type JudgmentQueueParams,

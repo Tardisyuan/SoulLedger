@@ -50,6 +50,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from apps.actors.models import Actor, ActorRole
+from apps.judgment.models import Statute
 from apps.realms.models import Realm, RealmType
 from apps.souls.models import CIVILIZATION_TENANT, Civilization
 from apps.tenants.models import Tenant
@@ -587,6 +588,227 @@ CIVILIZATION_ASSESSORS = {
     "egyptian": EGYPTIAN_ASSESSORS,
 }
 
+# --------------------------------------------------------------------------
+# Statutes — the articles a verdict can cite (apps.judgment.models.Statute)
+#
+# THREE CORPORA, THREE PROVENANCES, AND ONE OF THEM IS NOT COPIED HERE.
+#
+#   CHINESE   — transcribed from docs/11_地府审判制度与冥律.md §4.1 (offences)
+#               and §4.2 (merits). The Chinese line is the authority; the
+#               English is a translation of it, marked as such on every row.
+#   EUROPEAN  — transcribed from docs/03_七宗罪与地狱惩罚.md §1 (Gregory's
+#               seven, with the Latin), §4 (the Inferno circle and its
+#               punishment) and §5 (the Purgatorio terrace).
+#   EGYPTIAN  — NOT here. The 42 clauses are already in the database on the
+#               assessors' `powers_json["negative_confession"]`, seeded above
+#               with their edition recorded. `_seed_derived_statutes` builds a
+#               citation row that POINTS AT each assessor; the text is read
+#               back through `Statute.derived_text` at display time. Pasting
+#               the 42 clauses into this file would make it the second author
+#               of a text it does not own, and the two copies would disagree
+#               the first time one was corrected — the "two hand-maintained
+#               copies" failure this seeder was consolidated to end.
+#
+# NOTHING IN THESE TABLES IS INVENTED, and where a source is thin or
+# self-contradictory the gap is recorded as a note on the row instead of being
+# filled in:
+#
+#   * docs/11 §4.1 is headed 十恶 ("the ten evils") and lists SIX. The four
+#     missing ones are not supplied from elsewhere — six rows are what the
+#     document contains, and CN-HL-O07..O10 do not exist.
+#   * docs/11 §4.2 is headed 十善 ("the ten goods") and lists SEVEN. Same
+#     treatment.
+#   * docs/03 says in its own words that Dante's circles and the Catholic
+#     seven do not correspond one-to-one, prints 懒惰 and 暴食 against the same
+#     circle (annotating the sloth entry "（贪食）", i.e. that is gluttony's
+#     punishment), and places 嫉妒 in a bolgia of the eighth circle rather than
+#     a circle of its own. All three caveats travel on the rows as
+#     `source_notes` rather than being tidied into a clean mapping.
+#
+# WHAT THE EUROPEAN CORPUS IS NOT. It is a moral taxonomy plus a literary
+# punishment scheme. This deployment holds no canon-law text — no Decretum, no
+# 1983 Code, nothing with articles — so there is no European equivalent of
+# 冥律's numbered statute, and none has been manufactured. It also says nothing
+# about *poena*: apps/ledger/readings.py refuses to report a penalty number for
+# European souls because absolution, satisfaction owed and penance performed
+# are facts this system does not record, and a corpus of sins does not supply
+# any of them. These articles are culpa-side only.
+#
+# Per-row keys: code, ordinal, polarity, title_zh, title_en, text_zh, text_en,
+# payload, notes.
+# --------------------------------------------------------------------------
+HELL_LAW_SOURCE = (
+    "docs/11_地府审判制度与冥律.md §4.1/§4.2, itself citing 《玉历宝钞》. "
+    "The Chinese text is the authority; title_en/text_en are translations of "
+    "it and carry no independent source."
+)
+HELL_LAW_TEN_EVILS_NOTE = (
+    "docs/11 §4.1 is headed 十恶 but tabulates six entries. The remaining four "
+    "are not recorded in this deployment and have not been supplied from "
+    "elsewhere."
+)
+HELL_LAW_TEN_GOODS_NOTE = (
+    "docs/11 §4.2 is headed 十善 but tabulates seven entries. The remaining "
+    "three are not recorded in this deployment."
+)
+
+CHINESE_STATUTES = [
+    {"code": "CN-HL-O01", "ordinal": 1, "polarity": "OFFENCE",
+     "title_zh": "杀生", "title_en": "Killing",
+     "text_zh": "故意杀害人/动物。", "text_en": "Deliberately killing a person or an animal.",
+     "payload": {"punishment_hell": "刀山地狱", "qualifier_zh": "杀生越多刑罚越重"},
+     "notes": [HELL_LAW_TEN_EVILS_NOTE]},
+    {"code": "CN-HL-O02", "ordinal": 2, "polarity": "OFFENCE",
+     "title_zh": "偷盗", "title_en": "Theft",
+     "text_zh": "偷窃抢劫。", "text_en": "Stealing and robbery.",
+     "payload": {"punishment_hell": "牛坑地狱", "qualifier_zh": "返还赃物无效"},
+     "notes": [HELL_LAW_TEN_EVILS_NOTE]},
+    {"code": "CN-HL-O03", "ordinal": 3, "polarity": "OFFENCE",
+     "title_zh": "邪淫", "title_en": "Sexual misconduct",
+     "text_zh": "卖淫嫖娼。", "text_en": "Prostitution and its patronage.",
+     "payload": {"punishment_hell": "油锅地狱", "qualifier_zh": "婚内正常性行为不计"},
+     "notes": [HELL_LAW_TEN_EVILS_NOTE]},
+    {"code": "CN-HL-O04", "ordinal": 4, "polarity": "OFFENCE",
+     "title_zh": "妄语", "title_en": "False speech",
+     "text_zh": "撒谎骗人。", "text_en": "Lying and deceiving others.",
+     "payload": {"punishment_hell": "拔舌地狱", "qualifier_zh": "两舌（挑拨离间）加重"},
+     "notes": [HELL_LAW_TEN_EVILS_NOTE]},
+    {"code": "CN-HL-O05", "ordinal": 5, "polarity": "OFFENCE",
+     "title_zh": "饮酒", "title_en": "Intoxication",
+     "text_zh": "醉酒乱性。", "text_en": "Drunkenness and the disorder it leads to.",
+     "payload": {"punishment_hell": "烊铜地狱", "qualifier_zh": "道教有禁酒令"},
+     "notes": [HELL_LAW_TEN_EVILS_NOTE]},
+    {"code": "CN-HL-O06", "ordinal": 6, "polarity": "OFFENCE",
+     "title_zh": "邪见", "title_en": "False views",
+     "text_zh": "诽谤正法。", "text_en": "Slandering the true teaching.",
+     "payload": {"punishment_hell": "阿鼻地狱", "qualifier_zh": "最重罪行之一"},
+     "notes": [HELL_LAW_TEN_EVILS_NOTE]},
+
+    {"code": "CN-HL-M01", "ordinal": 11, "polarity": "MERIT",
+     "title_zh": "孝养父母", "title_en": "Filial support of parents",
+     "text_zh": "赡养双亲。", "text_en": "Providing for one's parents.",
+     "payload": {"merit_points": 100}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
+    {"code": "CN-HL-M02", "ordinal": 12, "polarity": "MERIT",
+     "title_zh": "戒杀放生", "title_en": "Abstaining from killing, releasing life",
+     "text_zh": "不杀生且放生。", "text_en": "Taking no life, and freeing captive creatures.",
+     "payload": {"merit_points": 50}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
+    {"code": "CN-HL-M03", "ordinal": 13, "polarity": "MERIT",
+     "title_zh": "布施行善", "title_en": "Almsgiving",
+     "text_zh": "施舍济困。", "text_en": "Giving alms and relieving hardship.",
+     "payload": {"merit_points": 50}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
+    {"code": "CN-HL-M04", "ordinal": 14, "polarity": "MERIT",
+     "title_zh": "诚信不欺", "title_en": "Honesty",
+     "text_zh": "不说谎守信。", "text_en": "Telling no lies and keeping one's word.",
+     "payload": {"merit_points": 30}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
+    {"code": "CN-HL-M05", "ordinal": 15, "polarity": "MERIT",
+     "title_zh": "救死扶伤", "title_en": "Succouring the dying and the injured",
+     "text_zh": "帮助危难之人。", "text_en": "Helping those in peril.",
+     "payload": {"merit_points": 40}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
+    {"code": "CN-HL-M06", "ordinal": 16, "polarity": "MERIT",
+     "title_zh": "敬奉神明", "title_en": "Reverence for the gods",
+     "text_zh": "正信神明。", "text_en": "Right faith in the gods.",
+     "payload": {"merit_points": 10}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
+    {"code": "CN-HL-M07", "ordinal": 17, "polarity": "MERIT",
+     "title_zh": "持守五戒", "title_en": "Keeping the five precepts",
+     "text_zh": "不杀不盗不淫不妄不酒。",
+     "text_en": "No killing, no theft, no sexual misconduct, no false speech, no drink.",
+     "payload": {"merit_points": 80}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
+]
+
+DEADLY_SIN_SOURCE = (
+    "docs/03_七宗罪与地狱惩罚.md §1 (Gregory the Great's seven, with the "
+    "Latin and the opposing virtue), §4 (Inferno circle and its punishment) "
+    "and §5 (Purgatorio terrace). A moral taxonomy and a literary punishment "
+    "scheme, not canon law — this deployment holds no canon-law text, and "
+    "none has been invented to fill the gap."
+)
+DANTE_MAPPING_NOTE = (
+    "docs/03 §4 states in its own words that the Inferno's circles and the "
+    "Catholic seven do not correspond one-to-one. The circle recorded here is "
+    "that document's mapping, not a claim that Dante wrote the sin into that "
+    "circle."
+)
+
+EUROPEAN_STATUTES = [
+    {"code": "EU-DS-01", "ordinal": 1, "polarity": "OFFENCE",
+     "title_zh": "傲慢", "title_en": "Pride",
+     "text_zh": "自视过高，不敬上帝。", "text_en": "Thinking too highly of oneself; irreverence toward God.",
+     "payload": {"latin": "Superbia", "opposing_virtue_zh": "谦逊",
+                 "dante_circle": 1, "inferno_punishment_zh": "永无止境的追求",
+                 "purgatorio_terrace": 1, "purgatorio_purgation_zh": "重生轻"},
+     "notes": [DANTE_MAPPING_NOTE]},
+    {"code": "EU-DS-02", "ordinal": 2, "polarity": "OFFENCE",
+     "title_zh": "贪婪", "title_en": "Greed",
+     "text_zh": "贪得无厌，敛财不止。", "text_en": "Insatiable acquisition; hoarding without end.",
+     "payload": {"latin": "Avaritia", "opposing_virtue_zh": "慷慨",
+                 "dante_circle": 4, "inferno_punishment_zh": "互相推撞，重物压身",
+                 "purgatorio_terrace": 2, "purgatorio_purgation_zh": "被火枷锁"},
+     "notes": [DANTE_MAPPING_NOTE]},
+    {"code": "EU-DS-03", "ordinal": 3, "polarity": "OFFENCE",
+     "title_zh": "淫欲", "title_en": "Lust",
+     "text_zh": "不正当的性欲望。", "text_en": "Disordered sexual desire.",
+     "payload": {"latin": "Luxuria", "opposing_virtue_zh": "贞洁",
+                 "dante_circle": 2, "inferno_punishment_zh": "狂风呼啸吹卷",
+                 "purgatorio_terrace": 3, "purgatorio_purgation_zh": "火焰中行走"},
+     "notes": [DANTE_MAPPING_NOTE]},
+    {"code": "EU-DS-04", "ordinal": 4, "polarity": "OFFENCE",
+     "title_zh": "愤怒", "title_en": "Wrath",
+     "text_zh": "无法控制情绪，报复心强。", "text_en": "Ungoverned temper; a vengeful spirit.",
+     "payload": {"latin": "Ira", "opposing_virtue_zh": "温柔",
+                 "dante_circle": 5, "inferno_punishment_zh": "在黑水里互相撕咬",
+                 "purgatorio_terrace": 4, "purgatorio_purgation_zh": "被烟熏"},
+     "notes": [DANTE_MAPPING_NOTE]},
+    {"code": "EU-DS-05", "ordinal": 5, "polarity": "OFFENCE",
+     "title_zh": "懒惰", "title_en": "Sloth",
+     "text_zh": "属灵的懈怠，逃避责任。", "text_en": "Spiritual listlessness; evading one's duties.",
+     "payload": {"latin": "Acedia", "opposing_virtue_zh": "热心",
+                 "dante_circle": 3, "inferno_punishment_zh": "躺卧臭水烂泥",
+                 "purgatorio_terrace": 5, "purgatorio_purgation_zh": "奔跑呼喊"},
+     "notes": [
+         DANTE_MAPPING_NOTE,
+         "docs/03 §4 gives sloth the third circle but annotates the punishment "
+         "'（贪食）' — it is gluttony's. Sloth has no circle of its own in the "
+         "Inferno; the shared entry is recorded as the document has it rather "
+         "than resolved.",
+     ]},
+    {"code": "EU-DS-06", "ordinal": 6, "polarity": "OFFENCE",
+     "title_zh": "暴食", "title_en": "Gluttony",
+     "text_zh": "放纵食欲，沉迷享乐。", "text_en": "Indulging appetite; sunk in pleasure.",
+     "payload": {"latin": "Gula", "opposing_virtue_zh": "节制",
+                 "dante_circle": 3, "inferno_punishment_zh": "躺卧臭水烂泥",
+                 "purgatorio_terrace": 6, "purgatorio_purgation_zh": "饥渴交加"},
+     "notes": [DANTE_MAPPING_NOTE,
+               "Shares the third circle with EU-DS-05 in docs/03 §4."]},
+    {"code": "EU-DS-07", "ordinal": 7, "polarity": "OFFENCE",
+     "title_zh": "嫉妒", "title_en": "Envy",
+     "text_zh": "见他人的好运就难受。", "text_en": "Grieving at another's good fortune.",
+     "payload": {"latin": "Invidia", "opposing_virtue_zh": "仁爱",
+                 "dante_circle": 8, "inferno_punishment_zh": "与馋媚者、邪术师同罚，被铁笼囚禁",
+                 "purgatorio_terrace": 7, "purgatorio_purgation_zh": "被冷水浸泡"},
+     "notes": [DANTE_MAPPING_NOTE,
+               "docs/03 §4 notes that envy occupies no circle of its own: the "
+               "envious are placed in the eighth circle's Malebolge alongside "
+               "flatterers and sorcerers."]},
+]
+
+# CLI label -> (corpus, rows). Egyptian is absent on purpose: its corpus is
+# derived from the assessors, not transcribed. See _seed_derived_statutes.
+CIVILIZATION_STATUTES = {
+    "chinese": ("HELL_LAW", HELL_LAW_SOURCE, CHINESE_STATUTES),
+    "european": ("DEADLY_SIN", DEADLY_SIN_SOURCE, EUROPEAN_STATUTES),
+}
+
+# What the Egyptian derivation reads off each assessor, and where it files the
+# result. `NEGATIVE_CONFESSION_FIELD` is stored on every derived row
+# (`Statute.source_actor_field`) rather than hardcoded in the model, so the
+# derivation is legible from the data itself.
+NEGATIVE_CONFESSION_FIELD = "negative_confession"
+NEGATIVE_CONFESSION_SOURCE = (
+    "Derived from the assessor actor seeded by this same command — the clause "
+    "lives on Actor.powers_json['negative_confession'] and is read from there, "
+    "never copied. Edition and papyrus are recorded on that row."
+)
+
 # CLI label -> (Civilization, realms, actors). The CLI label is lowercase for
 # typing convenience; the stored value is always the Civilization enum.
 CIVILIZATION_DATA = {
@@ -607,6 +829,15 @@ ACTOR_FIELDS = (
 # whose assessor_index or citation drifted is a changed row, so `--update` has
 # to see it.
 ASSESSOR_FIELDS = (*ACTOR_FIELDS, "powers_json")
+# `source` and `source_notes` are in the comparison set deliberately: an
+# article whose provenance changed is a changed article, and provenance is the
+# part of a statute this feature exists to keep honest.
+STATUTE_FIELDS = (
+    "civilization", "corpus", "ordinal", "polarity",
+    "title_zh", "title_en", "title_egy", "text_zh", "text_en", "text_egy",
+    "source", "source_notes", "payload_json",
+    "source_actor", "source_actor_field",
+)
 
 
 class Stats:
@@ -669,6 +900,7 @@ class Command(BaseCommand):
         tenant_stats = Stats("tenants")
         realm_stats = Stats("realms")
         actor_stats = Stats("actors")
+        statute_stats = Stats("statutes")
 
         with transaction.atomic():
             for label in labels:
@@ -683,13 +915,25 @@ class Command(BaseCommand):
                     self._seed_assessors(
                         civilization, tenant, assessors, do_update, actor_stats
                     )
+                # Statutes come last within a civilization: the Egyptian corpus
+                # is derived from the assessor rows written immediately above,
+                # and reads them back out of this same transaction.
+                corpus = CIVILIZATION_STATUTES.get(label)
+                if corpus is not None:
+                    self._seed_statutes(
+                        civilization, tenant, *corpus, do_update, statute_stats
+                    )
+                if assessors:
+                    self._seed_derived_statutes(
+                        civilization, tenant, do_update, statute_stats
+                    )
                 self.stdout.write("")
 
             if dry_run:
                 transaction.set_rollback(True)
 
         self.stdout.write(self.style.MIGRATE_HEADING("Summary"))
-        for stats in (tenant_stats, realm_stats, actor_stats):
+        for stats in (tenant_stats, realm_stats, actor_stats, statute_stats):
             self.stdout.write(f"  {stats.line()}")
 
         if dry_run:
@@ -847,6 +1091,125 @@ class Command(BaseCommand):
                 compare_fields=ASSESSOR_FIELDS,
                 tenant=tenant,
                 identity=f"Assessor {index:02d} {row['name']}",
+                do_update=do_update,
+                stats=stats,
+            )
+
+    # ------------------------------------------------------------------
+    # Statutes
+    # ------------------------------------------------------------------
+    def _seed_statutes(self, civilization, tenant, corpus, source, rows, do_update, stats):
+        """Seed one transcribed corpus — the Chinese 冥律 or the European seven.
+
+        Matched on `code`, which is why the codes are stable and mnemonic
+        (CN-HL-O01, EU-DS-03) rather than generated: a citation recorded
+        against an article has to survive a re-seed, and a re-numbering would
+        silently repoint every judgment that cited it.
+
+        `code` alone, not `(tenant, code)` — the same shape realms use with
+        `realm_code`. The uniqueness constraint on the model is per-tenant, but
+        every code here is civilization-prefixed and so globally unique in
+        practice; matching on the pair would also collide with `_upsert`'s own
+        `tenant=` argument. If two tenants ever did share a code, `_upsert`
+        reports the ambiguity and skips rather than picking one.
+        """
+        for row in rows:
+            values = {
+                "civilization": civilization,
+                "corpus": corpus,
+                "ordinal": row["ordinal"],
+                "polarity": row["polarity"],
+                "title_zh": row["title_zh"],
+                "title_en": row["title_en"],
+                "title_egy": "",
+                "text_zh": row["text_zh"],
+                "text_en": row["text_en"],
+                "text_egy": "",
+                "source": source,
+                "source_notes": list(row.get("notes", ())),
+                "payload_json": dict(row.get("payload", {})),
+                "source_actor": None,
+                "source_actor_field": "",
+            }
+            self._upsert(
+                model=Statute,
+                lookup={"code": row["code"]},
+                values=values,
+                compare_fields=STATUTE_FIELDS,
+                tenant=tenant,
+                identity=f"Statute {row['code']}",
+                do_update=do_update,
+                stats=stats,
+            )
+
+    def _seed_derived_statutes(self, civilization, tenant, do_update, stats):
+        """Give each of the Forty-Two a citable article — by reference, not by copy.
+
+        The clause itself is never written here. Each row records WHICH actor
+        it derives from and WHICH key of that actor's `powers_json` holds the
+        text; `Statute.derived_text` reads it back. Correct an assessor's
+        confession clause and every judgment that cited it reads the corrected
+        text, because there is only ever one copy of it.
+
+        The assessors are found by inspecting `powers_json` in Python rather
+        than with a `powers_json__has_key` lookup. JSON key lookups are backend
+        -specific and this command runs against SQLite locally and PostgreSQL
+        in Docker/CI; fifty-odd Egyptian actors is not a query worth risking a
+        backend disagreement over.
+        """
+        assessors = [
+            actor
+            for actor in Actor.all_objects.filter(civilization=civilization, is_deleted=False)
+            if isinstance(actor.powers_json, dict)
+            and actor.powers_json.get("assessor_index") is not None
+        ]
+        if not assessors:
+            # Not silent: an empty derivation means the assessor seed did not
+            # run or was skipped, and a corpus that quietly seeds zero articles
+            # is exactly the vacuous-success this file's tests guard against.
+            self.stdout.write(self.style.ERROR(
+                "  [warn] No assessors carry an assessor_index — the Egyptian "
+                "statute corpus derives from them and will be empty."
+            ))
+            return
+
+        assessors.sort(key=lambda actor: actor.powers_json["assessor_index"])
+        for actor in assessors:
+            index = actor.powers_json["assessor_index"]
+            clause = actor.powers_json.get(NEGATIVE_CONFESSION_FIELD) or ""
+            if not clause:
+                self.stdout.write(self.style.ERROR(
+                    f"  [warn] Assessor {index} ({actor.name}) has no "
+                    f"{NEGATIVE_CONFESSION_FIELD!r} — deriving an article with "
+                    f"no text."
+                ))
+            values = {
+                "civilization": civilization,
+                "corpus": "NEGATIVE_CONFESSION",
+                "ordinal": index,
+                # A denial, not a prohibition. See StatutePolarity.
+                "polarity": "DENIAL",
+                # The title is the assessor before whom the denial is made; the
+                # body is the denial, and the body is NOT stored.
+                "title_zh": "",
+                "title_en": actor.name,
+                "title_egy": actor.name_egy or actor.name,
+                "text_zh": "",
+                "text_en": "",
+                "text_egy": "",
+                "source": NEGATIVE_CONFESSION_SOURCE,
+                "source_notes": [],
+                "payload_json": {"assessor_index": index},
+                "source_actor": actor,
+                "source_actor_field": NEGATIVE_CONFESSION_FIELD,
+            }
+            self._upsert(
+                model=Statute,
+                lookup={"code": f"EG-NC-{index:02d}"},
+                values=values,
+                compare_fields=STATUTE_FIELDS,
+                tenant=tenant,
+                identity=f"Statute EG-NC-{index:02d} ({actor.name})",
                 do_update=do_update,
                 stats=stats,
             )

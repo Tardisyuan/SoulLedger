@@ -27,15 +27,69 @@ export interface Judgment {
   confession: string;
   verdict: "PASSED" | "FAILED" | "PURGATORY" | "RETRY" | null;
   notes: string;
+  /**
+   * The articles this verdict rests on, nested by JudgmentSerializer.
+   * Always present, possibly empty — a judgment with no cited grounds is a
+   * valid (older, or simply unfounded) record, not a loading state.
+   */
+  citations: JudgmentCitation[];
   is_final: boolean;
   created_at: string;
   concluded_at: string | null;
+}
+
+/**
+ * `apps.judgment.models.StatuteCorpus`. Three rulebooks, not one taxonomy:
+ * `HELL_LAW` is 冥律 statute, `NEGATIVE_CONFESSION` is the Forty-Two's
+ * declarations of innocence, `DEADLY_SIN` is Gregory's seven with Dante's
+ * circles. Each belongs to exactly one civilization.
+ */
+export type StatuteCorpus = "HELL_LAW" | "NEGATIVE_CONFESSION" | "DEADLY_SIN";
+
+/** `apps.judgment.models.StatutePolarity` — which way the article cuts. */
+export type StatutePolarity = "OFFENCE" | "MERIT" | "DENIAL";
+
+export interface Statute {
+  id: string;
+  code: string;
+  civilization: string;
+  corpus: StatuteCorpus;
+  ordinal: number;
+  polarity: StatutePolarity;
+  title_zh: string;
+  title_en: string;
+  title_egy: string;
+  text_zh: string;
+  text_en: string;
+  text_egy: string;
+  /** Server-resolved against Accept-Language, the way RealmLocalizedSerializer does it. */
+  display_title: string;
+  /**
+   * The article body. For a DERIVED article (the Egyptian 42) the `text_*`
+   * columns are empty by design and this is read from the linked assessor's
+   * record — so render this, never `text_en`.
+   */
+  display_text: string;
+  is_derived: boolean;
+  source: string;
+  source_notes: string[];
+  payload_json: Record<string, unknown>;
+}
+
+export interface JudgmentCitation {
+  id: string;
+  statute: Statute;
+  /** How this article applies to this case. */
+  note: string;
+  created_at: string;
 }
 
 export interface ConcludeJudgmentPayload {
   verdict: string;
   notes?: string;
   create_workflow?: boolean;
+  /** Grounds filed with the verdict; refused ids abort the conclusion. */
+  statute_ids?: string[];
 }
 
 /**
@@ -142,6 +196,18 @@ export const judgmentApi = {
    * long list readable in a network log when someone is debugging why an item
    * will not come back.
    */
+  /**
+   * The articles a verdict can be founded on. Read-only server-side — the
+   * corpus is seeded from documents whose provenance is recorded per row, so
+   * there is deliberately no create/update here.
+   */
+  statutes: (params?: Record<string, string>) =>
+    api.get<PaginatedResponse<Statute>>("/judgment/statutes/", { params }),
+  citations: (id: string) => api.get<JudgmentCitation[]>(`/judgment/${id}/citations/`),
+  cite: (id: string, statute: string, note = "") =>
+    api.post<JudgmentCitation>(`/judgment/${id}/citations/`, { statute, note }),
+  uncite: (id: string, statute: string) =>
+    api.delete(`/judgment/${id}/citations/${statute}/`),
   next: (params?: JudgmentQueueParams) => {
     const search = new URLSearchParams();
     for (const id of params?.skip ?? []) search.append("skip", id);

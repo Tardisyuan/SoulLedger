@@ -753,7 +753,26 @@
     "create_error": "创建审判失败",
     "conclude_success": "审判已结案",
     "conclude_error": "结案失败",
-    "no_evidence": "暂无证据材料"
+    "no_evidence": "暂无证据材料",
+    "grounds": {
+      "title": "依据条文",
+      "count": "引用 {{n}} 条",
+      "empty": "此判决未引用任何条文。",
+      "note": "适用理由",
+      "source": "出处",
+      "derived": "派生自",
+      "caveat": "出处存疑："
+    },
+    "statute_corpus": {
+      "HELL_LAW": "冥律",
+      "NEGATIVE_CONFESSION": "否定告白",
+      "DEADLY_SIN": "七宗罪"
+    },
+    "statute_polarity": {
+      "OFFENCE": "罪责",
+      "MERIT": "功德",
+      "DENIAL": "告白"
+    }
   },
   "audit": {
     "title": "审计日志",
@@ -943,6 +962,20 @@
       "CHINESE": "中国地府",
       "EUROPEAN": "欧洲天堂地狱",
       "EGYPTIAN": "埃及冥界"
+    },
+    "count": "{{count}} 位角色",
+    "roles": {
+      "JUDGE": "判官",
+      "EXECUTOR": "执行者",
+      "GUARDIAN": "守卫",
+      "CONDUIT": "引魂者",
+      "OVERSEER": "监理"
+    },
+    "assessors": {
+      "title": "四十二判官陪审席",
+      "count": "{{count}} 席",
+      "seat": "第 {{index}} 席",
+      "toggle": "展开或收起四十二判官陪审席"
     }
   },
   "dispatch": {

@@ -3,6 +3,7 @@ Judgment model — records of soul judgment proceedings.
 """
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from apps.core.archive import ArchivableMixin
@@ -92,9 +93,12 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
         v = self.verdict or "PENDING"
         return f"Judgment of {self.soul.name}: {v}"
 
-    def conclude(self, verdict: str, notes: str = "", create_workflow: bool = False) -> bool:
+    def conclude(self, verdict: str, notes: str = "", create_workflow: bool = False,
+                 statute_ids=None) -> bool:
         from apps.judgment.services import JudgmentConclusionService
-        return JudgmentConclusionService.conclude_judgment(self, verdict, notes, create_workflow)
+        return JudgmentConclusionService.conclude_judgment(
+            self, verdict, notes, create_workflow, statute_ids=statute_ids
+        )
 
     @property
     def can_delete(self) -> bool:
@@ -113,3 +117,285 @@ class Judgment(ArchivableMixin, AuditUserFields, models.Model):
                 archivable=True,
             )
         self.soft_delete(user=user, reason=reason)
+
+
+# ---------------------------------------------------------------------------
+# The cited basis of a verdict
+# ---------------------------------------------------------------------------
+
+
+class StatuteCorpus(models.TextChoices):
+    """Which body of rules an article belongs to.
+
+    Not one flat "sin category" list, and not one shared article schema. The
+    three cosmologies in this system do not have the same kind of rulebook, in
+    exactly the way apps/ledger/readings.py says they do not have the same kind
+    of ledger reading:
+
+      * HELL_LAW (冥律) is prescriptive statute — an offence, the hell it lands
+        you in, and a countervailing table of merit. It is the only one of the
+        three that is written as law, with 功過相抵 arithmetic attached.
+      * NEGATIVE_CONFESSION is not a code of offences at all. It is 42 things
+        the deceased *denies* having done, one per assessor, recited in the
+        Hall of Two Truths. Citing one is citing a denial the heart failed to
+        sustain — the polarity is inverted from a statute, and flattening the
+        two together would state the Egyptian material as prohibitions it does
+        not contain.
+      * DEADLY_SIN is a moral taxonomy plus a literary punishment scheme
+        (Gregory's seven; Dante's circles). It is neither statute nor liturgy,
+        and this deployment holds no canon-law text — see the note on
+        EUROPEAN_STATUTES in seed_mythology.
+
+    So `corpus` says what kind of thing the reader is looking at, and
+    CORPUS_CIVILIZATION below pins each one to the single cosmology it belongs
+    to. A statute may not be filed under a corpus its civilization does not
+    have; `Statute.clean` refuses it.
+    """
+    HELL_LAW = "HELL_LAW", "冥律 — Hell Law (Chinese)"
+    NEGATIVE_CONFESSION = "NEGATIVE_CONFESSION", "Declaration of Innocence (Egyptian)"
+    DEADLY_SIN = "DEADLY_SIN", "Seven Deadly Sins (European)"
+
+
+#: The one civilization each corpus belongs to. A dict rather than a naming
+#: convention on the code, so adding a corpus is one line here and an obvious
+#: one to review.
+CORPUS_CIVILIZATION = {
+    StatuteCorpus.HELL_LAW: Civilization.CHINESE,
+    StatuteCorpus.NEGATIVE_CONFESSION: Civilization.EGYPTIAN,
+    StatuteCorpus.DEADLY_SIN: Civilization.EUROPEAN,
+}
+
+
+class StatutePolarity(models.TextChoices):
+    """Whether citing this article counts against the soul or for it.
+
+    Without it, `docs/11` §4.2's 十善功德 rows (孝养父母 +100, 持守五戒 +80)
+    would be indistinguishable from §4.1's offences, and a judgment citing
+    "孝养父母" would read as an accusation. 功過相抵 — merit offsetting fault —
+    is a first-class rule of 冥律, so the corpus has to be able to say which
+    side of the scale an article sits on.
+
+    DENIAL is the Egyptian case and is deliberately not folded into OFFENCE:
+    "I have not stolen" is a claim the deceased makes, and what a judgment
+    cites is the failure of that claim, not a prohibition on theft.
+    """
+    OFFENCE = "OFFENCE", "Offence — counts against the soul"
+    MERIT = "MERIT", "Merit — counts for the soul"
+    DENIAL = "DENIAL", "Denial the deceased must sustain"
+
+
+class Statute(AuditUserFields, models.Model):
+    """One citable article of one cosmology's rulebook.
+
+    A model rather than a text column on Judgment, for three reasons that are
+    all about reuse rather than tidiness:
+
+      1. An article is cited by many judgments. 杀生 is one rule; a free-text
+         "依据：杀生" on each judgment is N spellings of it, and no query can
+         ask "every case decided under this article" — which is the first
+         question an explainable verdict invites.
+      2. Articles are multilingual reference data and this codebase already has
+         a shape for that: `title_zh/title_en/title_egy` + `get_localized_*`,
+         the same convention Realm and Actor use. A JSON blob on Judgment would
+         be a second, private one.
+      3. The three corpora carry structurally different facts (a hell to serve
+         in; a merit score; a circle of the Inferno). `payload_json` holds the
+         corpus-specific part, and `Statute` holds only what all three actually
+         share: identity, provenance, and which way it cuts.
+
+    DERIVED ARTICLES. `source_actor` is how the Egyptian 42 exist here without
+    a second hand-maintained copy of the text. Those clauses are already in the
+    database — `Actor.powers_json["negative_confession"]`, one per assessor,
+    seeded from Budge with its edition recorded (see seed_mythology). A Statute
+    row for assessor N carries the citation identity and points at that Actor;
+    its body text is READ from the actor at display time by
+    `get_localized_text`, and its own `text_*` columns stay empty. Copying the
+    42 clauses across would make the seeder the second author of a text it does
+    not own, and the two copies would drift the first time one was corrected.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    civilization = models.CharField(max_length=20, choices=Civilization.choices)
+    corpus = models.CharField(max_length=30, choices=StatuteCorpus.choices)
+    code = models.CharField(
+        max_length=40,
+        help_text="Stable citation key, e.g. CN-HL-O01 / EG-NC-07 / EU-DS-03",
+    )
+    #: Position within the corpus. Explicit, for the reason the assessors'
+    #: `assessor_index` is explicit: alphabetical ordering of 42 gods, or of
+    #: seven sins in Gregory's order, is wrong in a way that looks fine.
+    ordinal = models.IntegerField(default=0)
+    polarity = models.CharField(
+        max_length=10,
+        choices=StatutePolarity.choices,
+        default=StatutePolarity.OFFENCE,
+    )
+
+    title_zh = models.CharField(max_length=255, blank=True)
+    title_en = models.CharField(max_length=255, blank=True)
+    title_egy = models.CharField(max_length=255, blank=True)
+    text_zh = models.TextField(blank=True)
+    text_en = models.TextField(blank=True)
+    text_egy = models.TextField(blank=True)
+
+    #: Where this article comes from, in enough detail to check it. Never
+    #: blank on a seeded row — an article with no provenance is the failure
+    #: this whole feature exists to avoid.
+    source = models.CharField(max_length=500, blank=True)
+    #: Verbatim caveats, carried rather than smoothed over — the same
+    #: discipline as the assessors' `source_notes`. A list of strings.
+    source_notes = models.JSONField(default=list, blank=True)
+    #: Corpus-specific structured facts: `punishment_hell` and `merit_points`
+    #: for 冥律, `dante_circle`/`latin`/`opposing_virtue` for the seven sins,
+    #: `assessor_index` for the Forty-Two.
+    payload_json = models.JSONField(default=dict, blank=True)
+
+    #: The row this article's text is derived from. Set for the Egyptian 42;
+    #: null for everything transcribed from a document.
+    source_actor = models.ForeignKey(
+        "actors.Actor",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="derived_statutes",
+        help_text="Derivation source; the article body is read from this row.",
+    )
+    #: Which key of `source_actor.powers_json` holds the body text.
+    source_actor_field = models.CharField(max_length=50, blank=True)
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="statutes",
+        null=True,
+    )
+
+    class Meta:
+        ordering = ["civilization", "corpus", "ordinal", "code"]
+        verbose_name = "Statute"
+        verbose_name_plural = "Statutes"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "code"],
+                name="unique_statute_tenant_code",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["tenant", "corpus"]),
+            models.Index(fields=["civilization", "corpus", "ordinal"]),
+        ]
+
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
+    objects = TenantManager()
+
+    def __str__(self):
+        return f"{self.code} {self.title_en or self.title_zh}"
+
+    def clean(self):
+        expected = CORPUS_CIVILIZATION.get(self.corpus)
+        if expected is not None and self.civilization != expected:
+            raise ValidationError(
+                {
+                    "corpus": (
+                        f"{self.corpus} belongs to {expected}, not "
+                        f"{self.civilization}. A corpus is one cosmology's "
+                        f"rulebook; filing an article under another's states a "
+                        f"rule that tradition does not have."
+                    )
+                }
+            )
+
+    @property
+    def derived_text(self) -> str:
+        """The body text held on `source_actor`, or "" when this is not a
+        derived article.
+
+        Reads through `source_actor_field` rather than hardcoding
+        `negative_confession`, so a second derived corpus does not have to
+        rename the Egyptian one to reuse this."""
+        if self.source_actor_id is None or not self.source_actor_field:
+            return ""
+        payload = self.source_actor.powers_json or {}
+        return payload.get(self.source_actor_field) or ""
+
+    def get_localized_title(self, locale: str = "en") -> str:
+        if locale.startswith("zh"):
+            return self.title_zh or self.title_en or self.code
+        if locale == "egy":
+            return self.title_egy or self.title_en or self.code
+        return self.title_en or self.title_zh or self.code
+
+    def get_localized_text(self, locale: str = "en") -> str:
+        """The article body in the requested locale.
+
+        Falls through to `derived_text` last rather than first: a derived
+        article that later acquires a real translation should show it, and the
+        Egyptian clauses have no Chinese rendering at all (neither do the
+        assessors' names — see seed_mythology on `name_zh`)."""
+        if locale.startswith("zh"):
+            return self.text_zh or self.text_en or self.derived_text
+        if locale == "egy":
+            return self.text_egy or self.text_en or self.derived_text
+        return self.text_en or self.text_zh or self.derived_text
+
+
+class JudgmentCitation(AuditUserFields, models.Model):
+    """One article cited as the basis of one judgment.
+
+    A through-model with its own columns rather than a plain M2M, because the
+    interesting part is per-citation: *why* this article applies to this case
+    (`note`), and who entered it and when — which AuditUserFields already
+    carries, and which is the whole point of making a verdict explainable.
+
+    `statute` is PROTECT. A cited article is evidence of how a case was
+    decided; letting it be deleted out from under a concluded judgment would
+    turn a recorded basis into a dangling id. Retiring an article means
+    soft-deleting it (`is_deleted`), which keeps existing citations readable
+    while taking it out of the picker.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    judgment = models.ForeignKey(
+        Judgment,
+        on_delete=models.CASCADE,
+        related_name="citations",
+    )
+    statute = models.ForeignKey(
+        Statute,
+        on_delete=models.PROTECT,
+        related_name="citations",
+    )
+    note = models.TextField(
+        blank=True,
+        help_text="How this article applies to this case.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="judgment_citations",
+        null=True,
+    )
+
+    class Meta:
+        # Reads in the corpus's own order, not in the order somebody happened
+        # to click them: a list of grounds is a list of articles, and the
+        # 冥律/Forty-Two sequences are load-bearing.
+        ordering = ["statute__corpus", "statute__ordinal", "created_at"]
+        verbose_name = "Judgment citation"
+        verbose_name_plural = "Judgment citations"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["judgment", "statute"],
+                name="unique_citation_judgment_statute",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["judgment"]),
+            models.Index(fields=["tenant", "created_at"]),
+        ]
+
+    all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
+    objects = TenantManager()
+
+    def __str__(self):
+        return f"{self.judgment_id} cites {self.statute.code}"
