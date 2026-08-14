@@ -753,7 +753,26 @@
     "create_error": "Ma Shemsu Em Kheme Sheemtet",
     "conclude_success": "Sheemtet Seth Wetep Seth",
     "conclude_error": "Ma Wetep Sheemtet Seth",
-    "no_evidence": "Ma Medu Sethet Em Khemen Seth"
+    "no_evidence": "Ma Medu Sethet Em Khemen Seth",
+    "grounds": {
+      "title": "Cited grounds",
+      "count": "{{n}} cited",
+      "empty": "No articles were cited for this verdict.",
+      "note": "Applied",
+      "source": "Source",
+      "derived": "Derived from",
+      "caveat": "Source note:"
+    },
+    "statute_corpus": {
+      "HELL_LAW": "Hell Law (Diyu)",
+      "NEGATIVE_CONFESSION": "Declaration of Innocence",
+      "DEADLY_SIN": "Deadly Sins"
+    },
+    "statute_polarity": {
+      "OFFENCE": "Offence",
+      "MERIT": "Merit",
+      "DENIAL": "Denial"
+    }
   },
   "audit": {
     "title": "Medew Sethet",
@@ -943,6 +962,20 @@
       "CHINESE": "Duat Sherer",
       "EGYPTIAN": "Duat Mesjet",
       "EUROPEAN": "Kehat Ankh - Hetep"
+    },
+    "count": "{{count}} Netjeru",
+    "roles": {
+      "JUDGE": "Hemsu Seth",
+      "EXECUTOR": "Iri Wetep",
+      "GUARDIAN": "Smen Khet",
+      "CONDUIT": "Sheseb Abuf",
+      "OVERSEER": "Her Maa"
+    },
+    "assessors": {
+      "title": "Djadjat en Maat (42 Netjeru)",
+      "count": "{{count}} Hemset",
+      "seat": "Hemset {{index}}",
+      "toggle": "Wen how Khetem Djadjat en Maat"
     }
   },
   "dispatch": {

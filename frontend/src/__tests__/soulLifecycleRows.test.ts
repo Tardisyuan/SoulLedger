@@ -112,6 +112,7 @@ describe("buildJudgmentMarkers", () => {
       court: "地府",
       evidence_json: {},
       confession: "",
+      citations: [],
       verdict: null,
       notes: "",
       is_final: false,

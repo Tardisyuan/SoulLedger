@@ -2,6 +2,7 @@
 
 import { DataGrid, EnumBadge, type DataGridColumn, type EnumTone } from "@/components/ui/data-grid";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { formatHistoricalDate } from "@/lib/utils";
 import type { QueueLedger, QueueLedgerRecord, QueuePriorCycle, QueueRealm, QueueSoul } from "@/lib/api";
 
@@ -60,18 +61,25 @@ export function SoulIdentityPanel({ soul }: { soul: QueueSoul }) {
         {/* The state badge carries the translated label alone. §4.6: the raw
             enum and its translation side by side ("ALIVE — 存活") is the leak
             this codebase is trying to stop, so the machine value stays in the
-            tooltip. */}
+            tooltip.
+
+            `resolveEnumDisplay`, not a bare `t()` template. `t()` echoes its
+            key back on a miss, so a state or civilization the bundle does not
+            cover put the dotted path `souls.states.ASCENDED` on screen as the
+            badge's own text — the same leak in a different costume. The helper
+            returns translated "unrecognized" copy instead and keeps the raw
+            member in `title`, where it stays diagnosable. */}
         <EnumBadge
           value={{
             tone: STATE_TONE[soul.current_state] ?? "neutral",
-            label: t(`souls.states.${soul.current_state}`),
+            label: resolveEnumDisplay(t, "souls.states", soul.current_state).label,
             title: soul.current_state,
           }}
         />
         <EnumBadge
           value={{
             tone: "neutral",
-            label: t(`souls.civilizations.${soul.civilization}`),
+            label: resolveEnumDisplay(t, "souls.civilizations", soul.civilization).label,
             title: soul.civilization,
           }}
         />

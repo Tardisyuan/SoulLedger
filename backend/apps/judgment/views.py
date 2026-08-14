@@ -13,8 +13,15 @@ from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
-from apps.judgment.models import Judgment
-from apps.judgment.serializers import JudgmentConcludeSerializer, JudgmentSerializer
+from apps.judgment.models import Judgment, Statute
+from apps.judgment.serializers import (
+    JudgmentCitationSerializer,
+    JudgmentCitationWriteSerializer,
+    JudgmentConcludeSerializer,
+    JudgmentSerializer,
+    StatuteSerializer,
+)
+from apps.judgment.services import CitationRefusedError, StatuteCitationService
 from apps.ledger.services import LedgerService
 from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
@@ -77,8 +84,22 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         'partial_update': ['judgment.execute'],
         'destroy': ['judgment.execute'],
         'archive': ['judgment.execute'],
+        # Reading the grounds is a read; entering or withdrawing one is an act
+        # on the case, the same call `conclude` maps to. GET and POST share one
+        # route (DRF `mapping`) but NOT one codename — declaring both on a
+        # single action would make the cumulative check in CodenamePermission
+        # demand judgment.execute in order to *read* the grounds, which is the
+        # opposite of the split next_pending exists to preserve.
+        'citations': ['judgment.read'],
+        'cite_statute': ['judgment.execute'],
+        'uncite': ['judgment.execute'],
     }
-    queryset = Judgment.objects.select_related("soul", "soul__tenant", "tenant").all()
+    queryset = (
+        Judgment.objects
+        .select_related("soul", "soul__tenant", "tenant")
+        .prefetch_related("citations__statute", "citations__statute__source_actor")
+        .all()
+    )
     serializer_class = JudgmentSerializer
     filterset_class = JudgmentFilter
     ordering_fields = ["created_at", "concluded_at"]
@@ -275,12 +296,95 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         ).data
         return Response(payload)
 
+    # ------------------------------------------------------------------
+    # Cited grounds
+    # ------------------------------------------------------------------
+
+    @action(detail=True, methods=["get"], url_path="citations")
+    def citations(self, request, pk=None):
+        """The articles this verdict rests on, in their corpus's own order.
+
+        `GET /api/v1/judgment/{id}/citations/`
+
+        Reached through `self.get_object()`, so the judgment is tenant-scoped
+        by the same DataScopeViewSetMixin path as every other action here;
+        citations hang off it and inherit that scope rather than being queried
+        (and separately scoped) on their own.
+        """
+        judgment = self.get_object()
+        return Response(
+            JudgmentCitationSerializer(
+                judgment.citations.select_related("statute", "statute__source_actor"),
+                many=True,
+                context=self.get_serializer_context(),
+            ).data
+        )
+
+    @citations.mapping.post
+    def cite_statute(self, request, pk=None):
+        """Record one article as a ground of this judgment.
+
+        `POST /api/v1/judgment/{id}/citations/` `{"statute": "<uuid>", "note": ""}`
+
+        409, not 400, on a refusal about the judgment's *state* ("already
+        concluded") — that is the same distinction `destroy` draws for an
+        archivable judgment: the request is well-formed and the caller is
+        allowed, the record is simply past the point where it accepts this.
+        A refusal about the statute itself stays a 400.
+        """
+        judgment = self.get_object()
+        serializer = JudgmentCitationWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            StatuteCitationService.assert_amendable(judgment)
+        except CitationRefusedError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
+        try:
+            citation = StatuteCitationService.cite(
+                judgment,
+                serializer.validated_data["statute"],
+                serializer.validated_data.get("note", ""),
+            )
+        except CitationRefusedError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            JudgmentCitationSerializer(citation, context=self.get_serializer_context()).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(
+        detail=True,
+        methods=["delete"],
+        url_path=r"citations/(?P<statute_id>[^/.]+)",
+    )
+    def uncite(self, request, pk=None, statute_id=None):
+        """Withdraw a ground from a judgment that has not been concluded."""
+        judgment = self.get_object()
+        try:
+            StatuteCitationService.assert_amendable(judgment)
+        except CitationRefusedError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
+        try:
+            removed = StatuteCitationService.uncite(judgment, statute_id)
+        except CitationRefusedError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        if not removed:
+            return Response(
+                {"error": "This judgment does not cite that statute."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(detail=True, methods=["post"])
     def conclude(self, request, pk=None):
         """
         Conclude a judgment with a verdict.
         Calls Judgment.conclude() which creates disposition and transitions soul to DISPOSED.
         Optionally creates an ApprovalWorkflow if create_workflow=true.
+
+        `statute_ids` files the grounds with the verdict, in one transaction —
+        an unciteable article aborts the whole conclusion rather than leaving a
+        concluded judgment whose stated basis never landed.
         """
         judgment = self.get_object()
         if judgment.is_final:
@@ -291,6 +395,39 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
         verdict = serializer.validated_data["verdict"]
         notes = serializer.validated_data.get("notes", "")
         create_workflow = serializer.validated_data.get("create_workflow", False)
+        statute_ids = serializer.validated_data.get("statute_ids") or []
 
-        judgment.conclude(verdict, notes, create_workflow=create_workflow)
-        return Response(JudgmentSerializer(judgment).data)
+        try:
+            judgment.conclude(
+                verdict, notes, create_workflow=create_workflow, statute_ids=statute_ids
+            )
+        except CitationRefusedError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        judgment.refresh_from_db()
+        return Response(
+            JudgmentSerializer(judgment, context=self.get_serializer_context()).data
+        )
+
+
+class StatuteViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSetMixin,
+                     viewsets.ReadOnlyModelViewSet):
+    """The articles a verdict can be founded on — read-only reference data.
+
+    Read-only on purpose. These rows are seeded from documents whose provenance
+    is recorded on every row (`source`, `source_notes`); an API that let an
+    operator type a new "冥律 article" would produce exactly the fabricated
+    statutes this feature was specified not to have. Corrections go through
+    `manage.py seed_mythology --update`, next to the text they came from.
+
+    `permission_codename = "judgment"` rather than a new `statute.*` family:
+    reading the rulebook is part of reading a case, the codename is already
+    defined and granted, and inventing `statute.read` would seed an orphan no
+    role holds (apps/perm/test_codename_coverage.py catches exactly that).
+    """
+    permission_classes = [TenantPermission, CodenamePermission]
+    permission_codename = "judgment"
+    queryset = Statute.objects.select_related("source_actor", "tenant").all()
+    serializer_class = StatuteSerializer
+    filterset_fields = ["civilization", "corpus", "polarity", "code"]
+    search_fields = ["code", "title_zh", "title_en", "text_zh", "text_en"]
+    ordering_fields = ["ordinal", "code"]

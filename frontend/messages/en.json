@@ -753,7 +753,26 @@
     "create_error": "Failed to create judgment",
     "conclude_success": "Judgment concluded",
     "conclude_error": "Failed to conclude judgment",
-    "no_evidence": "No evidence on file"
+    "no_evidence": "No evidence on file",
+    "grounds": {
+      "title": "Cited grounds",
+      "count": "{{n}} cited",
+      "empty": "No articles were cited for this verdict.",
+      "note": "Applied",
+      "source": "Source",
+      "derived": "Derived from",
+      "caveat": "Source note:"
+    },
+    "statute_corpus": {
+      "HELL_LAW": "Hell Law",
+      "NEGATIVE_CONFESSION": "Declaration of Innocence",
+      "DEADLY_SIN": "Deadly Sins"
+    },
+    "statute_polarity": {
+      "OFFENCE": "Offence",
+      "MERIT": "Merit",
+      "DENIAL": "Denial"
+    }
   },
   "audit": {
     "title": "Audit Log",
@@ -943,6 +962,20 @@
       "CHINESE": "Chinese Diyu",
       "EUROPEAN": "European Heaven & Hell",
       "EGYPTIAN": "Egyptian Duat"
+    },
+    "count": "{{count}} actors",
+    "roles": {
+      "JUDGE": "Judge",
+      "EXECUTOR": "Executor",
+      "GUARDIAN": "Guardian",
+      "CONDUIT": "Soul Conduit",
+      "OVERSEER": "Overseer"
+    },
+    "assessors": {
+      "title": "The Forty-Two Assessors of Ma'at",
+      "count": "{{count}} seats",
+      "seat": "Seat {{index}}",
+      "toggle": "Show or hide the bench of forty-two"
     }
   },
   "dispatch": {
