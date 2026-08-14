@@ -19,9 +19,27 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install dependencies
         run: cd frontend && npm ci
+      # A real gate: a moderate-or-worse finding in shipped dependencies fails
+      # the job. `--omit=dev` replaces the deprecated `--production` spelling
+      # and scopes the scan to what actually ships, so a devDependency advisory
+      # does not block a release it cannot reach.
+      #
+      # Accepted advisories: none.
+      #
+      # npm audit has no per-advisory ignore flag — `--audit-level` is the only
+      # dial, and it is severity-wide. So if one specific advisory ever has to
+      # be accepted, do NOT add `continue-on-error` (that accepts every present
+      # and future finding, not the one being argued about) and do NOT lower
+      # `--audit-level` (same problem, one notch down). Either force a patched
+      # transitive version through `overrides` in package.json — the mechanism
+      # already used there for postcss and sharp, and a real fix rather than an
+      # exception — or, when no patched version exists, replace the line below
+      # with an explicit id allowlist:
+      #   npm audit --omit=dev --audit-level=moderate --json > audit.json || true
+      #   node -e '...'   # fail unless every advisory id is in ACCEPTED
+      # so that "we accept GHSA-xxxx because <reason>" is visible in the diff.
       - name: npm audit
-        run: cd frontend && npm audit --production --audit-level=moderate
-        continue-on-error: true
+        run: cd frontend && npm audit --omit=dev --audit-level=moderate
 
   backend-audit:
     runs-on: ubuntu-latest
@@ -35,6 +53,17 @@ jobs:
         run: pip install pip-audit
       - name: Install dependencies
         run: cd backend && pip install -r requirements.txt
+      # A real gate. Scoped to requirements.txt rather than the whole runner
+      # environment on purpose: the environment also holds pip, setuptools and
+      # wheel, which the runner image pins and this project neither declares
+      # nor ships. Auditing those turns the gate into a report on GitHub's
+      # image, which is exactly how it ended up waved through before.
+      #
+      # Accepted advisories: none.
+      #
+      # pip-audit does have a per-advisory ignore, so accept one by id and
+      # reason rather than by `continue-on-error`:
+      #   pip-audit --strict --desc -r requirements.txt \
+      #     --ignore-vuln PYSEC-0000-0   # <reason it is not reachable here>
       - name: pip audit
-        run: cd backend && pip-audit -r requirements.txt
-        continue-on-error: true
+        run: cd backend && pip-audit --strict --desc -r requirements.txt

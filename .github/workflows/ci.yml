@@ -55,18 +55,25 @@ jobs:
           cd backend
           pip install ruff
           ruff check .
-      # Reports but does not block, same as the frontend scan below. The only
-      # finding is PYSEC-2026-3447 in setuptools, a build-time toolchain
-      # package: MANIFEST.in exclusions can be bypassed by Unicode
-      # normalisation when building an sdist. This project does not build or
-      # publish sdists, so it is not reachable here. Restore the gate when
-      # setuptools 83 is available in the runner image.
+      # Blocks. Scoped to requirements.txt rather than the whole environment,
+      # which is what makes blocking viable: the bare `pip-audit --strict` this
+      # replaces also swept in pip and setuptools from the runner image, and
+      # the one standing finding (PYSEC-2026-3447, sdist MANIFEST.in exclusions
+      # bypassed by Unicode normalisation) was in setuptools — a build-time
+      # toolchain package this project neither declares nor ships, unreachable
+      # here because nothing builds an sdist. Waiting for the runner image to
+      # carry setuptools 83 was waiting on the wrong thing; the finding was
+      # never about this project's dependencies.
+      #
+      # Accepted advisories: none.
+      #
+      # To accept one, name it — `--ignore-vuln <id>` with the reason beside
+      # it. Not `continue-on-error`, which accepts everything that ever lands.
       - name: Security scan
-        continue-on-error: true
         run: |
           cd backend
           pip install pip-audit
-          pip-audit --strict --desc
+          pip-audit --strict --desc -r requirements.txt
 
   frontend:
     runs-on: ubuntu-latest
@@ -104,14 +111,21 @@ jobs:
         run: |
           cd frontend
           npm run test:coverage
-      # Reports but does not block. `npm audit fix` cleared ten of the twelve
-      # findings without touching package.json — only transitive versions in
-      # the lockfile moved. The remaining two (next, and sharp underneath it)
-      # need `npm audit fix --force`, i.e. a Next.js major, which is not a
-      # change to make in passing. Restore the gate once that upgrade is
-      # planned; until then the findings stay visible in the log.
+      # Blocks. The Next.js major this was waiting on turned out not to be
+      # needed: next is on 16.x and sharp is pinned forward by an override, so
+      # the two findings that once required `npm audit fix --force` are gone
+      # and the audit is clean at every severity.
+      #
+      # Accepted advisories: none.
+      #
+      # npm audit has no per-advisory ignore flag, so if one ever has to be
+      # accepted, do not reinstate `continue-on-error` and do not lower
+      # `--audit-level` — both wave through far more than the advisory in
+      # question. Prefer an `overrides` entry in package.json forcing a patched
+      # transitive version (already how postcss and sharp are handled); failing
+      # that, gate on `npm audit --json` filtered against an explicit id
+      # allowlist. See .github/workflows/security.yml for the same note.
       - name: Security scan
-        continue-on-error: true
         run: |
           cd frontend
           npm audit --audit-level=high
