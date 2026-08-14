@@ -23,10 +23,26 @@ enough to be worth explaining up front:
 *Each cosmology is numbered independently, so this folder contains three `01_`
 files and three `02_` files. Read by system, not by number.*
 
-这些文件在仓库根目录下还有一份按体系分目录的镜像：`地府结构研究/`、`欧洲天堂地狱/`、
-`埃及冥界/`。内容相同。
-*The same files are mirrored at the repo root, grouped into per-cosmology
-directories. The contents are identical.*
+这些文件在仓库根目录下曾有一份按体系分目录的、逐字节相同的镜像（`地府结构研究/`、
+`欧洲天堂地狱/`、`埃及冥界/`）。**2026-08-15 已去重**：那 19 份副本删除，三个目录只
+留一份指向本目录的 README。两份手工维护的副本会在第一次更正时分叉，这正是
+`docs/lore-verification/verify-egyptian.md` §1.5 提出的问题。
+*Those files used to be mirrored byte-for-byte at the repo root, grouped into
+per-cosmology directories. **De-duplicated on 2026-08-15**: the 19 copies were
+deleted and each directory now holds only a pointer README. Two hand-maintained
+copies fork on the first correction — the problem raised in
+`docs/lore-verification/verify-egyptian.md` §1.5.*
+
+> **本节所列的神话研究文档在 2026-08-15 做过一次史实校订**，依据是
+> [`lore-verification/`](lore-verification/) 的八份核实报告。校订前这批文档零引用，
+> 且在若干处**比 seeder 更不可靠**（`docs/09` 把望乡台与孟婆的次序搞反，seeder 是对的）。
+> 校订后各文均在正文内标注一手依据与存疑范围；仍标为「存疑」「未取得一手」的地方，
+> 请勿当作定论使用，更不要据以 seed 数据。
+> *These research documents were fact-checked on 2026-08-15 against the eight
+> reports in [`lore-verification/`](lore-verification/). They previously carried
+> zero citations and were in places less reliable than the seeder. Passages still
+> marked 存疑 / 未取得一手 are open questions, not settled facts — do not seed from
+> them.*
 
 ### 中国地府 / Chinese Diyu
 
