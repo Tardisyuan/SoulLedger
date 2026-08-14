@@ -5,7 +5,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LazyBarChart } from "@/src/components/charts/LazyDashboardCharts";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { DomainEnum, IdentifierChip } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 
 export default function LedgerPage() {
@@ -163,7 +163,17 @@ export default function LedgerPage() {
                       </span>
                       <span className="opacity-40">·</span>
                       <span>{activity.resource}</span>
-                      <span className="opacity-60">#{activity.resource_id}</span>
+                      {/* A registered departure from IDENTIFIER_POLICY clauses
+                          1 and 2 — see IDENTIFIER_POLICY_EXCEPTIONS in
+                          src/lib/domainDisplay.ts. An audit line's content IS
+                          the record it touched, so the id stays; clause 3 does
+                          not bend, so it is copyable rather than the dead text
+                          it used to be. */}
+                      <IdentifierChip
+                        id={activity.resource_id}
+                        variant="inline"
+                        ariaLabel={t("ledger.copy_resource_id", { resource: activity.resource })}
+                      />
                       <span className="opacity-40">·</span>
                       <span>{formatDateTime(activity.timestamp)}</span>
                     </div>

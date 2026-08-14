@@ -8,7 +8,7 @@
  * nothing. Both the error path and the "section must not appear" path are
  * asserted below.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LedgerPage from "@/app/ledger/page";
@@ -160,6 +160,24 @@ describe("LedgerPage with data", () => {
     // key here, so the visible copy is the convention's unrecognized string).
     expect(screen.getAllByTitle("DELETE")).toHaveLength(2);
     expect(screen.queryByText("DELETE")).not.toBeInTheDocument();
+  });
+
+  it("makes the audit row's record id copyable rather than dead text", async () => {
+    // This page is the one registered IDENTIFIER_POLICY_EXCEPTIONS entry: an
+    // audit line's content IS the record it touched, so the id stays in a list
+    // — but the clause it does NOT get to break is copyability, and it used to
+    // render as `#9` inside a plain span.
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+
+    renderPage();
+
+    const idButton = await screen.findByTitle("9");
+    expect(idButton.tagName).toBe("BUTTON");
+    expect(idButton).toHaveTextContent("#9");
+
+    fireEvent.click(idButton);
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("9"));
   });
 
   it("formats activity timestamps through the i18n formatter", async () => {

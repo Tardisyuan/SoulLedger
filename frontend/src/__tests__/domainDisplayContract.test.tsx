@@ -19,6 +19,12 @@
  *      against rendered output — glyph and ink token both — rather than
  *      against the constant maps, which would be a tautology.
  *
+ * The scan also has to tell a DECISION from a regression: the ledger's audit
+ * rows show a record id in a list on purpose, which breaks two clauses of
+ * IDENTIFIER_POLICY. That is registered in IDENTIFIER_POLICY_EXCEPTIONS and
+ * checked from both ends — an unregistered id render fails, and so does a
+ * registered entry whose page has stopped rendering one.
+ *
  * Sanity check when editing: revert any single fix in the files listed by the
  * scan and rule 1 goes red naming that file and line.
  */
@@ -30,6 +36,7 @@ import { ToastProvider } from "@/src/contexts/ToastContext";
 import { DomainEnum, DomainNumber, DomainText, IdentifierChip, MissingValue } from "@/src/components/ui/DomainValue";
 import {
   DOMAIN_DISPLAY_I18N_KEYS,
+  IDENTIFIER_POLICY_EXCEPTIONS,
   MISSING_GLYPH,
   MISSING_INK,
   isColumnUninformative,
@@ -209,6 +216,67 @@ function scanHardcodedDashes(): Violation[] {
   return found;
 }
 
+// ---------------------------------------------------------------------------
+// Rule 3 — identifiers only where IDENTIFIER_POLICY (or its registry) allows
+// ---------------------------------------------------------------------------
+
+/**
+ * Property names holding an opaque pointer to a record: `id`, `uuid`, `pk`,
+ * and anything `*_id`. `.name`, `.code`, `.label` are deliberately absent —
+ * they mean something to a reader, which is the whole distinction.
+ */
+const IDENTIFIER_FIELD_RE = String.raw`id|uuid|pk|[a-z]\w*_id`;
+
+/**
+ * `{row.resource_id}` standing in a JSX text position. Same two-character
+ * guard as RAW_ENUM_RE: `=` disqualifies every attribute — `key={row.id}`,
+ * `id={soul.id}`, `href={…}` — and `$` disqualifies template interpolation,
+ * which builds a URL rather than rendering. React keys and route segments are
+ * not display and the policy does not reach them.
+ */
+const RAW_IDENTIFIER_RE = new RegExp(
+  String.raw`(^|[^=$])\{\s*([A-Za-z_$][\w$]*(?:\??\.[\w$]+)*\??\.(?:${IDENTIFIER_FIELD_RE}))\s*\}`,
+  "g"
+);
+
+/** Where an id reaches a reader, and whether it arrived copyable. */
+interface IdentifierSite extends Violation {
+  kind: "raw" | "chip";
+}
+
+function scanIdentifierSites(): IdentifierSite[] {
+  const found: IdentifierSite[] = [];
+  for (const file of SOURCE_FILES) {
+    const rel = relative(file);
+    if (CONVENTION_MODULES.includes(rel)) continue;
+    const lines = readFileSync(file, "utf8").split("\n");
+    lines.forEach((line, i) => {
+      const code = stripComment(line);
+      RAW_IDENTIFIER_RE.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = RAW_IDENTIFIER_RE.exec(code)) !== null) {
+        found.push({ file: rel, line: i + 1, text: m[2], kind: "raw" });
+      }
+      if (code.includes("<IdentifierChip")) {
+        found.push({ file: rel, line: i + 1, text: line.trim().slice(0, 110), kind: "chip" });
+      }
+    });
+  }
+  return found;
+}
+
+/** Registry keys are POSIX; the scan reports platform separators. */
+const REGISTERED_EXCEPTION_FILES = new Set(IDENTIFIER_POLICY_EXCEPTIONS.map((e) => e.file.split("/").join(path.sep)));
+
+/**
+ * Clause 1's "the entity the page is *about*": a route with a dynamic segment
+ * whose leaf is the page itself. A list under app/souls/page.tsx is not one;
+ * app/souls/[id]/page.tsx is.
+ */
+function isDetailPage(rel: string): boolean {
+  return rel.startsWith(`app${path.sep}`) && rel.endsWith(`${path.sep}page.tsx`) && /\[[^\]]+\]/.test(rel);
+}
+
 function format(violations: Violation[]): string {
   return violations.map((v) => `  ${v.file}:${v.line}  ${v.text}`).join("\n");
 }
@@ -310,6 +378,81 @@ describe("§4.6 source contract", () => {
         ? ""
         : `Hand-written em dashes cannot say WHICH kind of missing this is. Use <MissingValue kind="unrecorded"|"inapplicable"> or <DomainText>/<DomainNumber>:\n${format(violations)}`
     ).toBe("");
+  });
+});
+
+describe("§4.6 identifier placement", () => {
+  // IDENTIFIER_POLICY has four clauses, and the owner's ruling on the ledger's
+  // audit rows is that clauses 1-2 (detail pages, once per page) can be argued
+  // with in a named entry, while 3-4 (copyable, never as a name) cannot. These
+  // three rules encode exactly that split, so a registered exception licenses a
+  // PLACE and never a behaviour.
+
+  it("finds the identifier renders it is supposed to be policing", () => {
+    // Without this the two rules below pass by scanning nothing — the same
+    // vacuous-green failure the file's own walker guard exists to catch.
+    const sites = scanIdentifierSites();
+    expect(sites.length).toBeGreaterThan(0);
+    expect(sites.some((s) => s.kind === "chip")).toBe(true);
+  });
+
+  it("renders no identifier a reader cannot copy", () => {
+    // Clause 3, and no registry entry suspends it: `#{activity.resource_id}`
+    // as bare text is a primary key someone has to retype by eye into a query.
+    // Being listed in IDENTIFIER_POLICY_EXCEPTIONS does not help here — that
+    // registry answers "where", never "how".
+    const raw = scanIdentifierSites().filter((s) => s.kind === "raw");
+    expect(
+      raw.length === 0
+        ? ""
+        : `Identifiers rendered as dead text. Use <IdentifierChip id={…} variant="inline"|"chip"> — truncated on screen, whole value on the clipboard:\n${format(raw)}`
+    ).toBe("");
+  });
+
+  it("shows an identifier outside a detail-page header only where the registry says so", () => {
+    const sites = scanIdentifierSites();
+    const perFile = new Map<string, IdentifierSite[]>();
+    for (const site of sites) perFile.set(site.file, [...(perFile.get(site.file) ?? []), site]);
+
+    const offenders: Violation[] = [];
+    for (const [file, fileSites] of perFile) {
+      if (REGISTERED_EXCEPTION_FILES.has(file)) continue; // clauses 1-2 waived, in writing
+      if (!isDetailPage(file)) {
+        // Clause 1 — a list row or a nested reference showing a primary key.
+        offenders.push(...fileSites.map((s) => ({ ...s, text: `not a detail page — ${s.text}` })));
+      } else if (fileSites.length > 1) {
+        // Clause 2 — the right page, but the id has started repeating.
+        offenders.push(...fileSites.map((s) => ({ ...s, text: `${fileSites.length} identifier renders on one page — ${s.text}` })));
+      }
+    }
+    expect(
+      offenders.length === 0
+        ? ""
+        : "An identifier appears where IDENTIFIER_POLICY does not sanction one. Show the NAME, or — if the id is genuinely the content, as it is in an audit line — add an entry to IDENTIFIER_POLICY_EXCEPTIONS in src/lib/domainDisplay.ts saying so:\n" +
+          format(offenders)
+    ).toBe("");
+  });
+
+  it("keeps every registered exception pointing at a page that still renders an identifier", () => {
+    // An exception whose site has gone away is a licence nobody is using, and
+    // the next code to land in that file inherits it in silence — the same
+    // decay the dash-exception check above guards against.
+    const scanned = new Set(scanIdentifierSites().map((s) => s.file));
+    for (const exception of IDENTIFIER_POLICY_EXCEPTIONS) {
+      const rel = exception.file.split("/").join(path.sep);
+      expect(`${rel} still renders an identifier: ${scanned.has(rel)}`).toContain("true");
+    }
+  });
+
+  it("makes every exception argue its case rather than just occupy a slot", () => {
+    for (const exception of IDENTIFIER_POLICY_EXCEPTIONS) {
+      expect(statSync(path.join(FRONTEND_ROOT, exception.file)).isFile()).toBe(true);
+      expect(exception.registered).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(exception.site.length).toBeGreaterThan(10);
+      // A one-liner like "needed for debugging" is how a registry turns into a
+      // rubber stamp; the reason has to survive being read by the next person.
+      expect(`${exception.file}: ${exception.reason}`.length).toBeGreaterThan(160);
+    }
   });
 });
 
@@ -446,6 +589,57 @@ describe("<IdentifierChip>", () => {
 
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(UUID));
     expect(await screen.findByText(copy("common.value.copied"))).toBeInTheDocument();
+  });
+
+  it("stays copyable in the inline variant a registered exception uses", async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+
+    render(
+      <I18nProvider>
+        <ToastProvider>
+          <IdentifierChip id={UUID} variant="inline" ariaLabel="Copy Soul record ID" />
+        </ToastProvider>
+      </I18nProvider>
+    );
+
+    const button = screen.getByRole("button", { name: "Copy Soul record ID" });
+    // Without a border, the sigil is what says "record number" — but the
+    // behaviour under it is the chip's, which is the point of the variant.
+    expect(button.textContent).toBe("#3f2504e0 ⧉");
+    expect(button.getAttribute("title")).toBe(UUID);
+
+    fireEvent.click(button);
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(UUID));
+  });
+
+  it("drops the chrome, not the affordance, when it has to repeat down a list", () => {
+    const { container: chip } = render(
+      <I18nProvider>
+        <ToastProvider>
+          <IdentifierChip id={UUID} />
+        </ToastProvider>
+      </I18nProvider>
+    );
+    const { container: inline } = render(
+      <I18nProvider>
+        <ToastProvider>
+          <IdentifierChip id={UUID} variant="inline" />
+        </ToastProvider>
+      </I18nProvider>
+    );
+    const chipClass = chip.querySelector("button")!.className;
+    const inlineClass = inline.querySelector("button")!.className;
+
+    expect(chipClass).not.toBe(inlineClass);
+    // Ten filled pills down a metadata column read as the page's content. No
+    // fill also keeps the variant clear of the 0.1 badge-tint cap entirely.
+    expect(chipClass).toMatch(/\bbg-/);
+    expect(inlineClass).not.toMatch(/\bbg-/);
+    expect(inlineClass).not.toMatch(/\bborder\b/);
+    // Both are still buttons with a hover state — the affordance is the part
+    // the variant may not economise on.
+    expect(inlineClass).toContain("hover:");
   });
 
   it("says so when the clipboard refuses, rather than looking like a no-op", async () => {
