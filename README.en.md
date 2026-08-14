@@ -114,7 +114,7 @@ three civilizations. Further seeding lives in Django management commands:
 
 ```bash
 python manage.py seed_tenants               # CN_DIYU, EU_HEAVEN_HELL, EG_DUAT
-python manage.py populate_chinese_actors
+python manage.py seed_mythology             # realms + actors, all three (idempotent)
 python manage.py consolidate_eu_pantheon
 python manage.py seed_workflow_templates
 python manage.py seed_field_permissions
