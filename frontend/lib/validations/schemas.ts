@@ -104,13 +104,23 @@ export const reincarnationRebornSchema = z.object({
 })
 
 // ── Disposition ──────────────────────────────────────
-
-export const dispositionExecuteSchema = z.object({
-  destination_realm_id: z.string().uuid('无效的目标领域ID'),
-  memory_reset: z.enum(['NONE', 'PARTIAL', 'FULL']).optional(),
-  is_eternal: z.boolean().optional(),
-  notes: z.string().max(500, '备注最多500位').optional(),
-})
+//
+// There is deliberately no dispositionExecuteSchema here. The body of
+// POST /disposition/{id}/execute/ is validated server-side by
+// DispositionExecuteSerializer (backend/apps/disposition/serializers.py),
+// which declares exactly one optional field, `new_identity`. Everything the
+// execution needs — destination_realm, memory_reset, is_eternal, notes — is
+// already on the Disposition row and read from it by DispositionService;
+// none of it is accepted in the request body. The only caller,
+// frontend/app/disposition/page.tsx, posts no body at all.
+//
+// A schema stood here until it was removed: it required destination_realm_id
+// and typed memory_reset as NONE/PARTIAL/FULL. Two of those three values have
+// never existed server-side — the real enum is
+// apps.disposition.models.MemoryResetMechanism (MENGPO / LETHE / SPELL /
+// NONE) — and nothing ever imported the schema, so the mismatch could not
+// surface as a failure. Reinstate one only alongside a form that submits it,
+// and derive its fields from the serializer.
 
 // ── Ledger Record ────────────────────────────────────
 
@@ -138,5 +148,4 @@ export type JudgmentConcludeInput = z.infer<typeof judgmentConcludeSchema>
 export type WorkflowAdvanceInput = z.infer<typeof workflowAdvanceSchema>
 export type WorkflowApproveInput = z.infer<typeof workflowApproveSchema>
 export type ReincarnationRebornInput = z.infer<typeof reincarnationRebornSchema>
-export type DispositionExecuteInput = z.infer<typeof dispositionExecuteSchema>
 export type LedgerRecordInput = z.infer<typeof ledgerRecordSchema>
