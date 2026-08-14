@@ -609,5 +609,5 @@ User ──────────────►│  Nginx/CDN  │ HTTPS
 
 ---
 
-*本文档由 OpenSpec 变更追踪：`openspec/changes/soulledger-system-design/`*
+*本文档由 OpenSpec 变更追踪：`openspec/changes/archive/soulledger-system-design/`（2026-08-14 已归档）*
 *最后更新：2026-05-08*

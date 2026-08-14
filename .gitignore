@@ -37,13 +37,13 @@ frontend/next-env.d.ts
 
 # Screenshots/docs
 #
-# These three lines have to stay in this order. A global ignore
+# The first two lines have to stay in this order. A global ignore
 # (~/.gitignore_global) excludes `docs` outright, and git never descends into an
 # excluded directory — so any `!docs/...` exception below it is unreachable.
 # Un-ignore the directory itself first, re-ignore its contents, then carve out
-# the one subtree we want tracked.
+# what we want tracked.
 #
-# All three are anchored with a leading slash. Without it these match a `docs`
+# All of these are anchored with a leading slash. Without it they match a `docs`
 # directory at any depth, so `!docs/` also exposed backend/docs/ — which the
 # global rule had been hiding.
 !/docs/
@@ -51,6 +51,20 @@ frontend/next-env.d.ts
 # Design handoff: Claude Design reads this repo over GitHub, so the brief and
 # the captured screens must be committed for it to see them at all.
 !/docs/design-handoff/
+# Prose under docs/ is the project's written record — milestones, roadmaps, code
+# reviews, investigations. Leaving it untracked meant conclusions recorded here
+# existed only on one machine. MILESTONE_M15.md documents that the menu/perm
+# endpoints are deliberately tenant-global; nobody reading the repo could see
+# that, so the "missing" filter was later added back as a fix and 500'd every
+# non-admin role (c2ca5ac). Track the Markdown; `/docs/*` above still catches
+# loose screenshots, exports and other binaries dropped into this directory.
+!/docs/*.md
+# Same deal one level down: descend into archive/, re-ignore its contents, then
+# take back only the Markdown — so a binary dropped in there stays ignored too.
+!/docs/archive/
+/docs/archive/**/*
+!/docs/archive/**/
+!/docs/archive/**/*.md
 .playwright-mcp/
 
 # Scripts
