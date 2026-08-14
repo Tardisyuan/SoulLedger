@@ -39,25 +39,45 @@ class ChineseRoutingTest(TestCase):
     def test_failed_with_zero_karma_is_regression_case(self):
         """The bug: karmic_balance decays to 0 for ancient souls, which used
         to send an explicit FAILED verdict to heaven. It must land in the
-        mildest hell tier (tier 3) instead."""
+        mildest punishment court (第二殿楚江王) instead.
+
+        Written against CHINESE_HELL_MIN_TIER rather than a literal key: the
+        floor moved from 3 to 2 when the ten courts became ten realms, because
+        the band now indexes courts and the first court administers no
+        punishment. What this test is about is that karma 0 lands at the
+        *floor*, whatever the floor is — not which integer that is.
+        """
         realm = DispositionService._route_chinese(None, Verdict.FAILED, 0)
-        self.assertEqual(realm, DispositionService.CHINESE_HELL_TIERS[3])
+        self.assertEqual(
+            realm,
+            DispositionService.CHINESE_HELL_TIERS[
+                DispositionService.CHINESE_HELL_MIN_TIER
+            ],
+        )
 
     def test_failed_severity_scales_with_negative_karma(self):
+        deepest = DispositionService.CHINESE_HELL_TIERS[
+            DispositionService.CHINESE_HELL_MAX_TIER
+        ]
+        # abs(-25)//10 + 1 = 3 — inside the band, so the court is picked
+        # directly rather than by a clamp.
         self.assertEqual(
             DispositionService._route_chinese(None, Verdict.FAILED, -25),
             DispositionService.CHINESE_HELL_TIERS[3],
         )
+        # abs(-95)//10 + 1 = 10, above the ceiling: saturates at the deepest
+        # hell (第九殿平等王, 阿鼻地狱). Not the tenth court — that one turns the
+        # wheel of rebirth and is deliberately not a sentencing destination.
         self.assertEqual(
             DispositionService._route_chinese(None, Verdict.FAILED, -95),
-            DispositionService.CHINESE_HELL_TIERS[10],
+            deepest,
         )
         # Severity is driven by magnitude, not sign — a FAILED verdict with
         # positive karma still gets tiered by abs(karma), it just can never
         # escape to heaven.
         self.assertEqual(
             DispositionService._route_chinese(None, Verdict.FAILED, 95),
-            DispositionService.CHINESE_HELL_TIERS[10],
+            deepest,
         )
 
     def test_purgatory_verdict_never_routes_to_heaven(self):

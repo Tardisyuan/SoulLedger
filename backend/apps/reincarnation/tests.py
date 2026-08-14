@@ -142,7 +142,7 @@ class TestRebirthIntoEachPath:
         soul = _soul_ready_for_rebirth(_tenant("CN_DIYU"), merit=0, demerit=0)
         for form in (RebirthForm.ASURA, RebirthForm.HUNGRY_GHOST, RebirthForm.HELL_BEING):
             record = Reincarnation(
-                soul=soul, target_realm="DY_10_YAMA", rebirth_form=form.value,
+                soul=soul, target_realm="DY_COURT_05_YANLUO", rebirth_form=form.value,
                 cycle_count=1, tenant=soul.tenant,
             )
             record.full_clean(exclude=["disposition"])
