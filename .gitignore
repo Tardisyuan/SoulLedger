@@ -65,6 +65,12 @@ frontend/next-env.d.ts
 /docs/archive/**/*
 !/docs/archive/**/
 !/docs/archive/**/*.md
+# And again for the source verification reports. Same four lines, same reason:
+# descend, re-ignore, take back only the Markdown.
+!/docs/lore-verification/
+/docs/lore-verification/**/*
+!/docs/lore-verification/**/
+!/docs/lore-verification/**/*.md
 .playwright-mcp/
 
 # Scripts
