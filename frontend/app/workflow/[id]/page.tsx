@@ -8,6 +8,8 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import Link from "next/link";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
+import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.5)]",
@@ -25,13 +27,10 @@ const VERDICT_COLORS: Record<string, string> = {
   SKIPPED: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]",
 };
 
-const NODE_TYPE_KEYS: Record<string, string> = {
-  TRIAL: "workflow.node_type.trial",
-  EVALUATION: "workflow.node_type.evaluation",
-  APPEAL: "workflow.node_type.appeal",
-  FINAL: "workflow.node_type.final",
-  EXECUTION: "workflow.node_type.execution",
-};
+// NODE_TYPE_KEYS used to bridge TRIAL -> workflow.node_type.trial by hand,
+// because the bundle keys this namespace lowercase. resolveEnumDisplay now
+// folds case itself, so the map (and the raw-enum fallback beside every use
+// of it) is gone — see src/lib/domainDisplay.ts.
 
 export default function WorkflowDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,19 +38,12 @@ export default function WorkflowDetailPage() {
   const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
 
-  // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
-  const statusLabel = (status?: string | null) => {
-    if (!status) return status ?? "";
-    const key = `workflow.status.${status}`;
-    const label = t(key);
-    return label === key ? status : label;
-  };
-  const verdictLabel = (verdict?: string | null) => {
-    if (!verdict) return verdict ?? "";
-    const key = `workflow.verdicts.${verdict.toLowerCase()}`;
-    const label = t(key);
-    return label === key ? verdict : label;
-  };
+  // Falling back to the raw enum was the §4.6 leak in miniature: a status
+  // the bundle didn't cover printed "IN_PROGRESS" at the user.
+  const statusLabel = (status?: string | null) =>
+    resolveEnumDisplay(t, "workflow.status", status).label ?? t("common.value.unrecorded");
+  const verdictLabel = (verdict?: string | null) =>
+    resolveEnumDisplay(t, "workflow.verdicts", verdict).label ?? t("common.value.unrecorded");
 
   const [selectedVerdict, setSelectedVerdict] = useState<string>("");
   const [notes, setNotes] = useState("");
@@ -135,9 +127,11 @@ export default function WorkflowDetailPage() {
           ← {t("workflow.detail.back_to_list")}
         </Link>
         <h1 className="text-lg font-bold text-[hsl(var(--color-ink))] flex-1">{workflow.workflow_name}</h1>
-        <span className={`px-2 py-0.5 rounded text-xs font-bold border ${statusColor}`}>
-          {statusLabel(workflow.status)}
-        </span>
+        <DomainEnum
+          namespace="workflow.status"
+          value={workflow.status}
+          className={`px-2 py-0.5 rounded text-xs font-bold border ${statusColor}`}
+        />
         {workflow.is_appeal && (
           <span className="px-2 py-0.5 rounded text-xs bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]">
             {t("workflow.detail.appeal")}
@@ -158,11 +152,11 @@ export default function WorkflowDetailPage() {
             </div>
             <div>
               <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.case_type")}</dt>
-              <dd className="text-[hsl(var(--color-ink))]">{workflow.case_type}</dd>
+              <dd className="text-[hsl(var(--color-ink))]"><DomainEnum namespace="workflow.case_types" value={workflow.case_type} /></dd>
             </div>
             <div>
               <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.judgment_verdict")}</dt>
-              <dd className="text-[hsl(var(--color-ink))]">{workflow.judgment_verdict || "—"}</dd>
+              <dd className="text-[hsl(var(--color-ink))]"><DomainEnum namespace="workflow.verdicts" value={workflow.judgment_verdict} /></dd>
             </div>
             <div>
               <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.priority")}</dt>
@@ -178,7 +172,7 @@ export default function WorkflowDetailPage() {
             </div>
             <div>
               <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.completed_at")}</dt>
-              <dd className="text-[hsl(var(--color-ink))]">{workflow.completed_at ? formatDateTime(workflow.completed_at) : "—"}</dd>
+              <dd className="text-[hsl(var(--color-ink))]"><DomainText value={workflow.completed_at ? formatDateTime(workflow.completed_at) : null} missingKind={workflow.status === "COMPLETED" ? "unrecorded" : "inapplicable"} missingReason={statusLabel(workflow.status)} /></dd>
             </div>
           </dl>
         </div>
@@ -192,7 +186,7 @@ export default function WorkflowDetailPage() {
             <div className="mb-4 p-3 bg-[hsl(var(--color-surface-2))] rounded border border-[hsl(var(--color-hairline))]">
               <div className="font-medium text-[hsl(var(--color-ink))]">{currentNode.node_name}</div>
               <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
-                {t(NODE_TYPE_KEYS[currentNode.node_type]) || currentNode.node_type} · {currentNode.court_code}
+                <DomainEnum namespace="workflow.node_type" value={currentNode.node_type} /> · <DomainText value={currentNode.court_code} />
               </div>
               <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
                 {t("workflow.detail.order")}: {currentNode.node_order}
@@ -355,7 +349,7 @@ export default function WorkflowDetailPage() {
                         )}
                       </div>
                       <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
-                        {t(NODE_TYPE_KEYS[node.node_type]) || node.node_type} · {node.court_code || "—"}
+                        <DomainEnum namespace="workflow.node_type" value={node.node_type} /> · <DomainText value={node.court_code} />
                       </div>
 
                       {/* Verdict and notes for completed nodes */}
@@ -363,7 +357,7 @@ export default function WorkflowDetailPage() {
                         <div className="mt-3 pt-3 border-t border-[hsl(var(--color-hairline))]/50">
                           <div className="flex items-center gap-2 mb-2">
                             <span className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict ?? ""] || ""}`}>
-                              {nodeVerdictLabel}
+                              <span title={node.verdict ?? undefined}>{nodeVerdictLabel}</span>
                             </span>
                             {node.decided_at && (
                               <span className="text-xs text-[hsl(var(--color-ink-subtle))]">
@@ -385,7 +379,7 @@ export default function WorkflowDetailPage() {
 
                     {/* Status badge */}
                     <span className={`px-2 py-0.5 rounded text-xs font-medium border ${nodeColor}`}>
-                      {nodeStatusLabel}
+                      <span title={node.status}>{nodeStatusLabel}</span>
                     </span>
                   </div>
 
@@ -413,12 +407,14 @@ export default function WorkflowDetailPage() {
                 <div key={node.id} className="bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</span>
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict ?? ""] || ""}`}>
-                      {verdictLabel(node.verdict)}
-                    </span>
+                    <DomainEnum
+                      namespace="workflow.verdicts"
+                      value={node.verdict}
+                      className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict ?? ""] || ""}`}
+                    />
                   </div>
                   <div className="text-xs text-[hsl(var(--color-ink-muted))]">
-                    {t("workflow.detail.decided_at")}: {node.decided_at ? formatDateTime(node.decided_at) : "—"}
+                    {t("workflow.detail.decided_at")}: <DomainText value={node.decided_at ? formatDateTime(node.decided_at) : null} />
                   </div>
                   {node.notes && (
                     <p className="text-sm text-[hsl(var(--color-ink-muted))] mt-2 italic">&ldquo;{node.notes}&rdquo;</p>

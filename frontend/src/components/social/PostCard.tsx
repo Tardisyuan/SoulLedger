@@ -8,6 +8,7 @@ import { useDeletePost } from "@/src/hooks/useSocial";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { ReactionBar } from "./ReactionBar";
 import type { Post } from "@/lib/api";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 
 const VISIBILITY_COLORS: Record<string, string> = {
   PUBLIC: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
@@ -42,7 +43,7 @@ export function PostCard({ post }: { post: Post }) {
         <span
           className={`text-xs px-2 py-0.5 rounded-full ${VISIBILITY_COLORS[post.visibility] ?? ""}`}
         >
-          {t(`social.visibility.${post.visibility}`) || post.visibility}
+          <DomainEnum namespace="social.visibility" value={post.visibility} />
         </span>
         <span className="text-xs text-[hsl(var(--color-ink-muted))] ml-auto">
           {formatDate(post.create_time)}

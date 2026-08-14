@@ -13,6 +13,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { WORKFLOW_TEMPLATES, type TemplateKey } from "@/src/config/workflow-templates";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 
 // ── Types for template data ──────────────────────────────────────
 
@@ -80,13 +81,6 @@ export default function WorkflowPage() {
   const { t } = useI18n();
   const { showToast } = useToast();
 
-  // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
-  const statusLabel = (status?: string | null) => {
-    if (!status) return status ?? "";
-    const key = `workflow.status.${status}`;
-    const label = t(key);
-    return label === key ? status : label;
-  };
   const router = useRouter();
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>("CHINESE_ROUTINE");
   const [workflowInstance, setWorkflowInstance] = useState<ApprovalWorkflow | null>(null);
@@ -229,7 +223,7 @@ export default function WorkflowPage() {
                       >
                         <div className="text-sm font-medium truncate">{tmpl.name}</div>
                         <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-0.5">
-                          {tmpl.civilization} · {t(CASE_TYPE_KEYS[tmpl.case_type || '']) || tmpl.case_type}
+                          <DomainEnum namespace="workflow.civilizations" value={tmpl.civilization} /> · <DomainEnum namespace="workflow.case_types" value={tmpl.case_type} />
                         </div>
                       </button>
                     ))}
@@ -280,10 +274,10 @@ export default function WorkflowPage() {
                               <h3 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{tmpl.name}</h3>
                               <div className="flex gap-2 mt-1">
                                 <span className="px-2 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] rounded text-xs">
-                                  {tmpl.civilization}
+                                  <DomainEnum namespace="workflow.civilizations" value={tmpl.civilization} />
                                 </span>
                                 <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
-                                  {t(CASE_TYPE_KEYS[tmpl.case_type || '']) || tmpl.case_type}
+                                  <DomainEnum namespace="workflow.case_types" value={tmpl.case_type} />
                                 </span>
                               </div>
                             </div>
@@ -342,7 +336,7 @@ export default function WorkflowPage() {
                                   <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
                                   <span className="text-xs text-[hsl(var(--color-ink-muted))]">{node.court_code}</span>
                                   <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-                                  <span className="text-xs text-[hsl(var(--color-ink-muted))]">{node.node_type}</span>
+                                  <span className="text-xs text-[hsl(var(--color-ink-muted))]"><DomainEnum namespace="workflow.node_type" value={node.node_type} /></span>
                                 </div>
                               ))}
                             </div>
@@ -368,10 +362,10 @@ export default function WorkflowPage() {
                             <h3 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{currentTemplate.name}</h3>
                             <div className="flex gap-2 mt-1">
                               <span className="px-2 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] rounded text-xs">
-                                {currentTemplate.civilization}
+                                <DomainEnum namespace="workflow.civilizations" value={currentTemplate.civilization} />
                               </span>
                               <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
-                                {t(CASE_TYPE_KEYS[currentTemplate.caseType || '']) || currentTemplate.caseType}
+                                <DomainEnum namespace="workflow.case_types" value={currentTemplate.caseType} />
                               </span>
                             </div>
                           </div>
@@ -431,7 +425,7 @@ export default function WorkflowPage() {
                               <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
                               <span className="text-xs text-[hsl(var(--color-ink-muted))]">{node.court}</span>
                               <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-                              <span className="text-xs text-[hsl(var(--color-ink-muted))]">{node.type}</span>
+                              <span className="text-xs text-[hsl(var(--color-ink-muted))]"><DomainEnum namespace="workflow.node_type" value={node.type} /></span>
                             </div>
                           ))}
                         </div>
@@ -487,7 +481,7 @@ export default function WorkflowPage() {
                     <div>
                       <div className="font-medium text-[hsl(var(--color-ink))]">{wf.workflow_name}</div>
                       <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
-                        {wf.case_type} · {wf.soul}
+                        <DomainEnum namespace="workflow.case_types" value={wf.case_type} /> · {wf.soul}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -500,7 +494,7 @@ export default function WorkflowPage() {
                             : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                         }`}
                       >
-                        {statusLabel(wf.status)}
+                        <DomainEnum namespace="workflow.status" value={wf.status} />
                       </span>
                       {wf.is_appeal && (
                         <span className="px-2 py-0.5 rounded text-xs bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]">
@@ -526,18 +520,18 @@ export default function WorkflowPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <span className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.civilization")}</span>
-                  <p className="text-sm text-[hsl(var(--color-ink))] font-medium">{viewingTemplate.civilization}</p>
+                  <p className="text-sm text-[hsl(var(--color-ink))] font-medium"><DomainEnum namespace="workflow.civilizations" value={viewingTemplate.civilization} /></p>
                 </div>
                 <div>
                   <span className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("workflow.detail.case_type")}</span>
                   <p className="text-sm text-[hsl(var(--color-ink))] font-medium">
-                    {t(CASE_TYPE_KEYS[viewingTemplate.case_type || viewingTemplate.caseType || '']) || viewingTemplate.case_type || viewingTemplate.caseType || "—"}
+                    <DomainEnum namespace="workflow.case_types" value={viewingTemplate.case_type || viewingTemplate.caseType} />
                   </p>
                 </div>
               </div>
               <div>
                 <span className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("workflow.detail.notes")}</span>
-                <p className="text-sm text-[hsl(var(--color-ink))]">{viewingTemplate.description || "—"}</p>
+                <p className="text-sm text-[hsl(var(--color-ink))]"><DomainText value={viewingTemplate.description} /></p>
               </div>
               <div>
                 <span className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("workflow.detail.nodes")}</span>
@@ -550,7 +544,7 @@ export default function WorkflowPage() {
                       <div className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</div>
                       <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
                         {node.court_code && <span>🏛 {node.court_code}</span>}
-                        <span className="ml-2">{node.node_type}</span>
+                        <span className="ml-2"><DomainEnum namespace="workflow.node_type" value={node.node_type} /></span>
                       </div>
                       {node.approver_role && (
                         <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">

@@ -7,6 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton, CardSkeleton, ListSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 
 export default function DispatchPage() {
   const { t } = useI18n();
@@ -85,9 +86,6 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
     EXECUTED: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]",
     CANCELLED: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]",
   };
-  // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
-  const statusKey = `dispatch.states.${dispatch.status}`;
-  const statusLabel = t(statusKey) === statusKey ? dispatch.status : t(statusKey);
 
   return (
     <Link href={`/dispatch/${dispatch.id}`} className="block">
@@ -99,9 +97,14 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
               {dispatch.source_tenant_code} → {dispatch.target_tenant_code}
             </p>
           </div>
-          <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[dispatch.status] || "bg-[hsl(var(--color-status-lost)/0.1)]"}`}>
-            {statusLabel}
-          </span>
+          {/* <DomainEnum> renders exactly one span, so passing the badge
+              classes to it makes the badge itself the enum — no wrapper, and
+              the raw member reaches `title` for free (BRIEF §4.6). */}
+          <DomainEnum
+            namespace="dispatch.states"
+            value={dispatch.status}
+            className={`px-2 py-1 rounded text-xs font-medium ${statusColors[dispatch.status] || "bg-[hsl(var(--color-status-lost)/0.1)]"}`}
+          />
         </div>
         {dispatch.reason && (
           <p className="mt-2 text-sm text-[hsl(var(--color-ink-muted))]">{dispatch.reason}</p>

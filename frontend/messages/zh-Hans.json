@@ -260,7 +260,17 @@
     "confirm": "确认",
     "back_to_list": "返回列表",
     "error": "出错了",
-    "row_actions": "行操作"
+    "row_actions": "行操作",
+    "value": {
+      "unrecorded": "尚未记录",
+      "zero": "零",
+      "inapplicable": "不适用",
+      "unrecognized": "未识别取值",
+      "copy_id": "复制完整 ID",
+      "id_copied": "ID 已复制到剪贴板",
+      "id_copy_failed": "复制失败",
+      "copied": "已复制 ✓"
+    }
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)"
@@ -982,7 +992,13 @@
     "participants": "参与者",
     "no_participants": "暂无参与者",
     "verdict": "裁决",
-    "failed_to_load": "加载失败"
+    "failed_to_load": "加载失败",
+    "states": {
+      "PROPOSED": "已提议",
+      "ACTIVE": "进行中",
+      "CONCLUDED": "已结案",
+      "CANCELLED": "已取消"
+    }
   },
   "users": {
     "title": "用户管理",

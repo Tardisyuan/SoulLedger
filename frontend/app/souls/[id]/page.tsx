@@ -31,6 +31,8 @@ import {
   type RebirthFormValue,
 } from "@/src/components/souls/RebirthFormSelect";
 import { DateProblemsPanel } from "@/src/components/souls/DateProblemsPanel";
+import { DomainEnum, DomainText, IdentifierChip } from "@/src/components/ui/DomainValue";
+import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -290,8 +292,15 @@ export default function SoulDetailPage() {
                   both translated badges — no raw enum text next to them. */}
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold text-[hsl(var(--color-accent-ink))]">{soul?.name}</h1>
-                <span className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul?.current_state || "ALIVE"]}`}>
-                  {t(`souls.states.${soul?.current_state}`)}
+                {/* §4.6 verbatim: this badge read "ALIVE — 存活", the raw
+                    enum and its translation side by side. The enum now lives
+                    in `title` only — visible to anyone diagnosing, invisible
+                    to everyone reading. */}
+                <span
+                  title={soul?.current_state}
+                  className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul?.current_state || "ALIVE"]}`}
+                >
+                  {resolveEnumDisplay(t, "souls.states", soul?.current_state).label ?? t("common.value.unrecorded")}
                 </span>
                 {generation !== null && (
                   <span className="px-2 py-0.5 rounded text-xs font-bold bg-[hsl(var(--color-status-reincarnating)/0.1)] text-[hsl(var(--color-status-reincarnating))]">
@@ -304,7 +313,7 @@ export default function SoulDetailPage() {
                   name would just be noise), the birth/death span that
                   belongs to that same origin identity, and a copyable ID. */}
               <div className="flex items-center gap-2 text-xs text-[hsl(var(--color-ink-muted))] flex-wrap">
-                <span>{t(`souls.civilizations.${soul?.civilization}`)}</span>
+                <DomainEnum namespace="souls.civilizations" value={soul?.civilization} />
                 {/* previous_identity and dateRangeText are merged into one
                     clause (defect #4, Stage 3 doc) — birth/death dates
                     belong to birth_name's life, not the current headline
@@ -327,10 +336,14 @@ export default function SoulDetailPage() {
                     <span>{dateRangeText}</span>
                   </>
                 )}
+                {/* The one place a UUID is shown — see IDENTIFIER_POLICY in
+                    src/lib/domainDisplay.ts: the entity the page is about,
+                    once, in the header, copyable, never standing in for a
+                    name. */}
                 {soul?.id && (
                   <>
                     <span aria-hidden="true">·</span>
-                    <IdChip id={soul.id} tf={tf} showToast={showToast} />
+                    <IdentifierChip id={soul.id} ariaLabel={tf("souls.detail.copy_id_aria", "Copy soul ID")} />
                   </>
                 )}
               </div>
@@ -420,7 +433,7 @@ export default function SoulDetailPage() {
                     redundant and couldn't be pasted into anything. */}
                 <div className="flex justify-between">
                   <dt className="text-[hsl(var(--color-ink-muted))]">{t("souls.civilization")}</dt>
-                  <dd className="text-[hsl(var(--color-ink))]">{t(`souls.civilizations.${soul?.civilization}`)}</dd>
+                  <dd className="text-[hsl(var(--color-ink))]"><DomainEnum namespace="souls.civilizations" value={soul?.civilization} /></dd>
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-[hsl(var(--color-ink-muted))] shrink-0">
@@ -432,15 +445,25 @@ export default function SoulDetailPage() {
                       ? tf("souls.detail.birth_of", "Birth ({{name}})", { name: soul.birth_name })
                       : t("souls.detail.birth")}
                   </dt>
-                  <dd className="text-[hsl(var(--color-ink))] text-right">{birthDisplay || "—"}</dd>
+                  <dd className="text-[hsl(var(--color-ink))] text-right"><DomainText value={birthDisplay} /></dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.death")}</dt>
-                  <dd className="text-[hsl(var(--color-ink))]">{deathDisplay || "—"}</dd>
+                  {/* A soul that has not died has no death date, and that is
+                      "not applicable while alive", not "nobody wrote it down
+                      yet" — the two are different facts and now read
+                      differently (BRIEF §4.6). */}
+                  <dd className="text-[hsl(var(--color-ink))]">
+                    <DomainText
+                      value={deathDisplay}
+                      missingKind={soul?.current_state === "ALIVE" ? "inapplicable" : "unrecorded"}
+                      missingReason={soul?.current_state === "ALIVE" ? t("souls.states.ALIVE") : undefined}
+                    />
+                  </dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.location_label")}</dt>
-                  <dd className="text-[hsl(var(--color-ink))]">{soul?.origin_location || "—"}</dd>
+                  <dd className="text-[hsl(var(--color-ink))]"><DomainText value={soul?.origin_location} /></dd>
                 </div>
               </dl>
             )}
@@ -479,7 +502,7 @@ export default function SoulDetailPage() {
             />
           ) : (
             <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-              <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
+              <h2 title={soul?.civilization} className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
               <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
             </div>
           )}
@@ -675,38 +698,6 @@ export default function SoulDetailPage() {
   );
 }
 
-interface IdChipProps {
-  id: string;
-  tf: (key: string, fallback: string, params?: Record<string, string>) => string;
-  showToast: (msg: string, type?: ToastType, dur?: number) => string;
-}
-
-// Truncated-and-unselectable IDs are useless to anyone who needs to paste one
-// into a ticket. This renders the short form but copies the full UUID, with
-// on-click feedback so it doesn't look like a no-op.
-function IdChip({ id, tf, showToast }: IdChipProps) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(id);
-      setCopied(true);
-      showToast(tf("souls.detail.id_copied", "ID copied to clipboard"), "success");
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      showToast(tf("souls.detail.id_copy_failed", "Copy failed"), "error");
-    }
-  }, [id, showToast, tf]);
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      title={id}
-      aria-label={tf("souls.detail.copy_id_aria", "Copy soul ID")}
-      className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
-    >
-      {copied ? tf("souls.detail.copied", "Copied ✓") : `${id.slice(0, 8)} ⧉`}
-    </button>
-  );
-}
+// IdChip used to live here. It is now <IdentifierChip> in
+// src/components/ui/DomainValue.tsx, next to the policy that says when an
+// identifier may be rendered at all (BRIEF §4.6).

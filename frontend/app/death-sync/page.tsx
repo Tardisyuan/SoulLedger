@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 
 interface DeathRegistration {
   id: string;
@@ -31,12 +32,6 @@ export default function DeathSyncPage() {
   const { t, formatDateTime } = useI18n();
   const { user } = useTenant();
 
-  // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
-  const statusLabel = (status: string) => {
-    const key = `death_sync.status.${status}`;
-    const label = t(key);
-    return label === key ? status : label;
-  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["death-sync", "registrations"],
@@ -75,9 +70,11 @@ export default function DeathSyncPage() {
                       {t("death_sync.reference") || "Ref"}: {reg.source_reference_id || reg.idempotency_key}
                     </p>
                   </div>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${STATUS_COLORS[reg.status] || ""}`}>
-                    {statusLabel(reg.status)}
-                  </span>
+                  <DomainEnum
+                    namespace="death_sync.status"
+                    value={reg.status}
+                    className={`px-2 py-1 rounded text-xs font-medium ${STATUS_COLORS[reg.status] || ""}`}
+                  />
                 </div>
                 <div className="mt-2 flex gap-4 text-xs text-[hsl(var(--color-ink-muted))]">
                   <span>{t("death_sync.requested") || "Requested"}: {formatDateTime(reg.request_timestamp)}</span>

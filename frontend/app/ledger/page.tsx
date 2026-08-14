@@ -5,10 +5,19 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LazyBarChart } from "@/src/components/charts/LazyDashboardCharts";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 
 export default function LedgerPage() {
   const { t, formatDateTime } = useI18n();
   const { user } = useTenant();
+
+  // Same rule as the dashboard's state chart: the translated enum wins, the
+  // server's own label is the fallback, and the raw enum member never is.
+  const stateLabel = (state: string, apiLabel?: string) => {
+    const resolved = resolveEnumDisplay(t, "souls.states", state);
+    return resolved.state === "known" ? resolved.label : apiLabel || resolved.label || t("common.value.unrecorded");
+  };
 
   const { data: stats, isLoading, error } = useQuery({
     queryKey: ["ledger", "stats", "overview"],
@@ -65,7 +74,7 @@ export default function LedgerPage() {
                     item.state === "SETTLED" ? "bg-[hsl(var(--color-status-settled))]" :
                     "bg-[hsl(var(--color-status-error))]"
                   }`} />
-                  <span className="text-sm text-[hsl(var(--color-ink))]">{t(`souls.states.${item.state}`) === `souls.states.${item.state}` ? item.label : t(`souls.states.${item.state}`)}</span>
+                  <span title={item.state} className="text-sm text-[hsl(var(--color-ink))]">{stateLabel(item.state, item.label)}</span>
                 </div>
                 {isLoading ? (
                   <Skeleton className="h-4 w-12" />
@@ -108,7 +117,7 @@ export default function LedgerPage() {
                 <div key={item.realm_code} className="flex items-center justify-between">
                   <div>
                     <span className="text-sm text-[hsl(var(--color-ink))]">{item.realm_name}</span>
-                    <span className="text-xs text-[hsl(var(--color-ink-muted))] ml-2">({item.civilization})</span>
+                    <span className="text-xs text-[hsl(var(--color-ink-muted))] ml-2">(<DomainEnum namespace="souls.civilizations" value={item.civilization} />)</span>
                   </div>
                   {isLoading ? (
                     <Skeleton className="h-4 w-12" />
@@ -140,13 +149,13 @@ export default function LedgerPage() {
                       activity.action === "EXECUTE" ? "bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]" :
                       "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
                     }`}>
-                      {t(`audit.actions.${activity.action}`)}
+                      <DomainEnum namespace="audit.actions" value={activity.action} />
                     </span>
                   </div>
                   {/* Details */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-[hsl(var(--color-ink))] font-medium">
-                      {activity.description || t(`audit.actions.${activity.action}`)}
+                      {activity.description || <DomainEnum namespace="audit.actions" value={activity.action} />}
                     </p>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-[hsl(var(--color-ink-muted))]">
                       <span className="flex items-center gap-1">

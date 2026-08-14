@@ -9,6 +9,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 
 const STATUS_COLORS: Record<string, string> = {
   PROPOSED: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))]",
@@ -95,9 +96,13 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
 
   const isProposed = dispatch.status === "PROPOSED";
   const isApproved = dispatch.status === "APPROVED";
-  // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
-  const statusKey = `dispatch.states.${dispatch.status}`;
-  const statusLabel = t(statusKey) === statusKey ? (STATUS_LABELS[dispatch.status] || dispatch.status) : t(statusKey);
+  // STATUS_LABELS is real copy and beats the convention's generic
+  // "unrecognized" wording, but the raw member is never the fallback (§4.6).
+  const statusResolved = resolveEnumDisplay(t, "dispatch.states", dispatch.status);
+  const statusLabel =
+    statusResolved.state === "known"
+      ? statusResolved.label
+      : STATUS_LABELS[dispatch.status] || statusResolved.label || t("common.value.unrecorded");
 
   return (
     <div className="p-6 max-w-3xl">
@@ -112,7 +117,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
         <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))]">
           {t("dispatch.detail_title")}
         </h1>
-        <span className={`px-3 py-1 rounded text-sm font-medium ${STATUS_COLORS[dispatch.status] || ""}`}>
+        <span title={dispatch.status} className={`px-3 py-1 rounded text-sm font-medium ${STATUS_COLORS[dispatch.status] || ""}`}>
           {statusLabel}
         </span>
       </div>
@@ -126,7 +131,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
           </div>
           <div>
             <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.status")}</p>
-            <p className="font-medium text-[hsl(var(--color-ink))]">{statusLabel}</p>
+            <p title={dispatch.status} className="font-medium text-[hsl(var(--color-ink))]">{statusLabel}</p>
           </div>
           <div>
             <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.source_tenant")}</p>

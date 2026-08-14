@@ -8,6 +8,7 @@ import { PageSection } from "@/components/ui/page-section";
 import { CardSkeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Castle, Cloud, Flame, CircleDot } from "lucide-react";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 
 const CIVILIZATION_CONFIG: Record<string, { nameKey: string; icon: React.ReactNode }> = {
   CHINESE: { nameKey: "realms.civilizations.CHINESE", icon: <Castle className="w-6 h-6" /> },
@@ -98,7 +99,7 @@ export default function RealmsPage() {
                             <div className="mt-2 flex items-center justify-between">
                               <span className={`px-2 py-1 rounded text-xs font-medium border flex items-center gap-1 ${typeConfig.className}`}>
                                 {typeConfig.icon}
-                                {t(`realms.types.${realm.realm_type}`)}
+                                <DomainEnum namespace="realms.types" value={realm.realm_type} />
                               </span>
                             </div>
                             {/* TODO: Add description field to Realm API response */}

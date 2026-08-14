@@ -12,6 +12,7 @@ import { showToast } from "@/src/components/ui/Toast";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 
 export default function UsersPage() {
   const { t } = useI18n();
@@ -145,7 +146,7 @@ export default function UsersPage() {
                     ? "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]"
                     : "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]"
                 }`}>
-                  {t(`users.roles.${user.role}`)}
+                  <DomainEnum namespace="users.roles" value={user.role} />
                 </span>
               </td>
               <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))]">

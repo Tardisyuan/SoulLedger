@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { ledgerApi, type LedgerStatsOverview } from "@/lib/api";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 import {
   Users,
   Scale,
@@ -280,7 +281,7 @@ export default function WelcomePage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs px-2 py-0.5 rounded bg-[hsl(var(--color-surface-1))] text-[hsl(var(--color-ink-muted))]">
-                      {activity.action}
+                      <DomainEnum namespace="audit.actions" value={activity.action} />
                     </span>
                     <span className="text-xs text-[hsl(var(--color-ink-subtle))]">
                       {formatTimestamp(activity.timestamp)}

@@ -124,7 +124,6 @@ export default function AuditPage() {
       width: "212px",
       value: (g) => g.time,
       format: (v) => formatDateTime(v),
-      emptyLabel: "—",
     },
     {
       type: "text",

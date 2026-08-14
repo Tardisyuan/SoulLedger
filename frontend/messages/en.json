@@ -260,7 +260,17 @@
     "confirm": "Confirm",
     "back_to_list": "Back to list",
     "error": "Something went wrong",
-    "row_actions": "Row actions"
+    "row_actions": "Row actions",
+    "value": {
+      "unrecorded": "Not recorded",
+      "zero": "Zero",
+      "inapplicable": "Not applicable",
+      "unrecognized": "Unrecognized value",
+      "copy_id": "Copy full ID",
+      "id_copied": "ID copied to clipboard",
+      "id_copy_failed": "Copy failed",
+      "copied": "Copied ✓"
+    }
   },
   "pagination": {
     "info": "Page {{page}} / {{total}} ({{count}} records)"
@@ -982,7 +992,13 @@
     "participants": "Participants",
     "no_participants": "No participants yet",
     "verdict": "Verdict",
-    "failed_to_load": "Failed to load"
+    "failed_to_load": "Failed to load",
+    "states": {
+      "PROPOSED": "Proposed",
+      "ACTIVE": "Active",
+      "CONCLUDED": "Concluded",
+      "CANCELLED": "Cancelled"
+    }
   },
   "users": {
     "title": "User Management",
