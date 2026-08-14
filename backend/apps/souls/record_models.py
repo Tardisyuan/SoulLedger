@@ -97,8 +97,21 @@ class SoulRecord(AuditUserFields, models.Model):
     )
     is_milestone = models.BooleanField(
         default=False,
-        help_text="If true, weight is doubled (major life event)",
+        help_text=(
+            "Marks a turning point in the life. Display only — the lifecycle "
+            "timeline stars and tints it. It does NOT change the deed's weight."
+        ),
     )
+    # The help_text used to promise "weight is doubled". Nothing ever doubled
+    # it: LedgerService applies _decay_weight and nothing else. Restoring the
+    # promise would have been the wrong repair on three counts. `weight` is
+    # already settable on the same serializer, so a multiplier would be a
+    # second, hidden way to set it — and ticking a display checkbox is a
+    # surprising way to move an audited balance. The decay rate is per-tenant
+    # configuration (see _decay_rate_for); a flat 2x applied identically to all
+    # three cosmologies is the flattening this ledger exists to refuse. And the
+    # field is already load-bearing as a marker: SoulLifecycleTimeline stars it.
+    # LedgerServiceMilestoneTests pins the decision so it cannot drift back.
     evidence_json = models.JSONField(default=dict, blank=True)
     recorded_at = models.DateTimeField(auto_now_add=True)
 
