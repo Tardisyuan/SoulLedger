@@ -64,7 +64,14 @@ INITIAL_ORGANIZATIONS = [
         "level": 0,
     },
     {"name": "希腊冥界", "code": "HADES_GREEK", "category": "EUROPEAN", "parent_code": "HADES"},
-    {"name": "北欧冥界", "code": "HADES_NORSE", "category": "EUROPEAN", "parent_code": "HADES"},
+    # 北欧冥界 (HADES_NORSE) used to sit here as a second child of HADES. Norse
+    # is out of this system entirely — a pantheon whose destination depends on
+    # the manner of death, not on a verdict, has no judgment step to host, and
+    # apps/actors' consolidate_eu_pantheon removed the actors on that basis.
+    # The org node was the last thing still creating a home for them. It had no
+    # children, no users and no ORG-scoped roles pointing at it, so removing it
+    # takes nothing with it; a database seeded before this keeps its row until
+    # someone deletes it by hand.
     {"name": "地狱", "code": "HELL", "category": "EUROPEAN", "parent": None, "level": 0},
 
     # ========== 埃及冥界 ==========
