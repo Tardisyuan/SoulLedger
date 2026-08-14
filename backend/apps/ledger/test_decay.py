@@ -365,3 +365,65 @@ class TestDecayIsPerCivilization:
         assert CIVILIZATION_DECAY_RATE[Civilization.EUROPEAN] == 0.0
         assert CIVILIZATION_DECAY_RATE[Civilization.CHINESE] == DECAY_RATE
         assert CIVILIZATION_DECAY_RATE[Civilization.EGYPTIAN] == DECAY_RATE
+
+
+@pytest.mark.django_db
+class TestMilestoneIsAMarkerNotAMultiplier:
+    """`is_milestone` stars a deed in the timeline. It does not weigh it.
+
+    The field's help_text promised "weight is doubled" from the day it landed,
+    and nothing ever doubled anything — LedgerService applies _decay_weight and
+    stops. These tests pin the decision that the text was the bug, so that a
+    later reading of the old promise cannot quietly turn a display flag into a
+    balance multiplier.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        self.tenant = Tenant.objects.get_or_create(
+            code="CN_DIYU", defaults={"display_name": "CN_DIYU"}
+        )[0]
+
+    def _soul_with(self, *, is_milestone: bool) -> Soul:
+        """One deed of weight 100, fifty years before a 1900 death."""
+        soul = Soul.objects.create(
+            name=f"milestone={is_milestone}", current_state=SoulState.JUDGING,
+            death_year=1900, death_month=1, death_day=1, tenant=self.tenant,
+        )
+        SoulRecord.objects.create(
+            soul=soul, record_type="MERIT", description="deed at 20",
+            weight=100, event_year=1850, event_month=1, event_day=1,
+            is_milestone=is_milestone,
+        )
+        return soul
+
+    def test_a_milestone_deed_weighs_exactly_what_an_ordinary_one_weighs(self):
+        plain = LedgerService.get_ledger_summary(self._soul_with(is_milestone=False))
+        starred = LedgerService.get_ledger_summary(self._soul_with(is_milestone=True))
+
+        assert starred["records"][0]["effective_weight"] == 60.65
+        assert (
+            starred["records"][0]["effective_weight"]
+            == plain["records"][0]["effective_weight"]
+        ), "is_milestone changed the arithmetic — it is a marker, not a multiplier"
+
+    def test_the_recalculated_score_does_not_move_either(self):
+        plain = LedgerService.recalculate_soul_ledger(self._soul_with(is_milestone=False))
+        starred = LedgerService.recalculate_soul_ledger(self._soul_with(is_milestone=True))
+        assert starred["merit_score"] == plain["merit_score"] == 61
+
+    def test_the_flag_still_reaches_the_client(self):
+        """Inert in the arithmetic is not the same as dropped on the floor.
+
+        The lifecycle timeline stars and tints on this value, so the summary
+        has to keep carrying it.
+        """
+        summary = LedgerService.get_ledger_summary(self._soul_with(is_milestone=True))
+        assert summary["records"][0]["is_milestone"] is True
+
+    def test_the_help_text_does_not_promise_a_multiplier(self):
+        """The original defect was a sentence, so a test has to read it."""
+        help_text = SoulRecord._meta.get_field("is_milestone").help_text
+        assert "doubl" not in help_text.lower(), (
+            f"help_text promises weighting the ledger does not do: {help_text!r}"
+        )
