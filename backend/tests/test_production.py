@@ -3,10 +3,40 @@ M8 Production Readiness Tests
 - Health endpoints
 - Production settings
 - Docker configuration validation
+
+The four Docker/env classes below were skipped with the reason "M8
+infrastructure not yet created". They were not skipped because the
+infrastructure was missing — M8 shipped it — but because every path in them was
+hardcoded to /home/tardis/Documents/跨文明灵魂管理系统/..., the absolute path of
+one developer's checkout on one machine. That resolves nowhere on CI or on any
+other clone, so the assertions could only ever fail and the skip hid it. Paths
+are now derived from this file's location, so the tests follow the repository
+instead of the machine.
 """
-import pytest
+import os
+
+import yaml
 from django.conf import settings
 from django.test import Client
+
+# backend/tests/test_production.py -> backend/tests -> backend -> repo root
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+COMPOSE_PROD = os.path.join(REPO_ROOT, "infrastructure", "docker-compose.prod.yml")
+NGINX_CONF = os.path.join(REPO_ROOT, "infrastructure", "nginx.conf")
+ENV_EXAMPLE = os.path.join(REPO_ROOT, ".env.example")
+BACKEND_DOCKERFILE = os.path.join(REPO_ROOT, "backend", "Dockerfile")
+FRONTEND_DOCKERFILE = os.path.join(REPO_ROOT, "frontend", "Dockerfile")
+
+
+def _load_compose():
+    with open(COMPOSE_PROD) as f:
+        return yaml.safe_load(f)
+
+
+def _read(path):
+    with open(path) as f:
+        return f.read()
 
 
 class TestHealthEndpoints:
@@ -80,143 +110,101 @@ class TestProductionSettings:
         assert db_name is not None
 
 
-@pytest.mark.skip(reason="M8 infrastructure not yet created")
 class TestDockerConfiguration:
     """Validate docker-compose.prod.yml structure"""
 
     def test_docker_compose_file_exists(self):
         """docker-compose.prod.yml should exist"""
-        import os
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/infrastructure/docker-compose.prod.yml'
-        assert os.path.exists(path), f"Expected {path} to exist"
+        assert os.path.exists(COMPOSE_PROD), f"Expected {COMPOSE_PROD} to exist"
 
     def test_docker_compose_has_required_services(self):
         """All required services should be defined"""
-        import yaml
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/infrastructure/docker-compose.prod.yml'
-        with open(path) as f:
-            config = yaml.safe_load(f)
-        services = config.get('services', {})
+        services = _load_compose().get('services', {})
         required = ['postgres', 'redis', 'backend', 'frontend', 'nginx']
         for svc in required:
             assert svc in services, f"Missing service: {svc}"
 
     def test_docker_compose_has_healthchecks(self):
         """postgres and redis should have healthchecks"""
-        import yaml
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/infrastructure/docker-compose.prod.yml'
-        with open(path) as f:
-            config = yaml.safe_load(f)
-        services = config.get('services', {})
+        services = _load_compose().get('services', {})
         for svc in ['postgres', 'redis']:
             assert 'healthcheck' in services[svc], f"{svc} missing healthcheck"
 
     def test_docker_compose_restart_policies(self):
         """Services should have restart policies"""
-        import yaml
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/infrastructure/docker-compose.prod.yml'
-        with open(path) as f:
-            config = yaml.safe_load(f)
-        services = config.get('services', {})
+        services = _load_compose().get('services', {})
         for svc in ['postgres', 'redis', 'backend', 'nginx']:
             assert services[svc].get('restart') in ['unless-stopped', 'always', 'on-failure']
 
     def test_nginx_config_exists(self):
         """nginx.conf should exist"""
-        import os
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/infrastructure/nginx.conf'
-        assert os.path.exists(path), f"Expected {path} to exist"
+        assert os.path.exists(NGINX_CONF), f"Expected {NGINX_CONF} to exist"
 
     def test_nginx_has_security_headers(self):
         """nginx.conf should have security headers"""
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/infrastructure/nginx.conf'
-        with open(path) as f:
-            content = f.read()
+        content = _read(NGINX_CONF)
         required_headers = ['X-Frame-Options', 'X-Content-Type-Options', 'X-XSS-Protection']
         for header in required_headers:
             assert header in content, f"Missing security header: {header}"
 
 
-@pytest.mark.skip(reason="M8 infrastructure not yet created")
 class TestEnvExample:
     """Validate .env.example structure"""
 
     def test_env_example_exists(self):
         """ .env.example should exist"""
-        import os
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/.env.example'
-        assert os.path.exists(path), f"Expected {path} to exist"
+        assert os.path.exists(ENV_EXAMPLE), f"Expected {ENV_EXAMPLE} to exist"
 
     def test_env_example_has_required_vars(self):
         """.env.example should document required variables"""
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/.env.example'
-        with open(path) as f:
-            content = f.read()
+        content = _read(ENV_EXAMPLE)
         required_vars = ['POSTGRES_PASSWORD', 'DJANGO_SECRET_KEY', 'REDIS_PASSWORD']
         for var in required_vars:
             assert var in content, f"Missing env var: {var}"
 
     def test_env_example_no_real_secrets(self):
         """.env.example should not contain real secrets"""
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/.env.example'
-        with open(path) as f:
-            content = f.read()
+        content = _read(ENV_EXAMPLE)
         # Should have placeholder values, not real passwords
         assert 'changeme' in content or 'your-' in content or 'example' in content.lower()
 
 
-@pytest.mark.skip(reason="M8 infrastructure not yet created")
 class TestBackendDockerfile:
     """Validate backend Dockerfile structure"""
 
     def test_dockerfile_exists(self):
         """backend/Dockerfile should exist"""
-        import os
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/backend/Dockerfile'
-        assert os.path.exists(path), f"Expected {path} to exist"
+        assert os.path.exists(BACKEND_DOCKERFILE), f"Expected {BACKEND_DOCKERFILE} to exist"
 
     def test_dockerfile_multistage(self):
         """Dockerfile should use multi-stage build"""
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/backend/Dockerfile'
-        with open(path) as f:
-            content = f.read()
+        content = _read(BACKEND_DOCKERFILE)
         assert 'AS' in content.upper() or 'FROM' in content, "Should have multi-stage build"
 
     def test_dockerfile_exposes_port(self):
         """Dockerfile should EXPOSE the port"""
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/backend/Dockerfile'
-        with open(path) as f:
-            content = f.read()
+        content = _read(BACKEND_DOCKERFILE)
         assert 'EXPOSE 8000' in content or 'EXPOSE' in content
 
     def test_dockerfile_no_sudo(self):
         """Dockerfile should not use sudo"""
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/backend/Dockerfile'
-        with open(path) as f:
-            content = f.read()
+        content = _read(BACKEND_DOCKERFILE)
         assert 'sudo' not in content.lower()
 
 
-@pytest.mark.skip(reason="M8 infrastructure not yet created")
 class TestFrontendDockerfile:
     """Validate frontend Dockerfile structure"""
 
     def test_dockerfile_exists(self):
         """frontend/Dockerfile should exist"""
-        import os
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/frontend/Dockerfile'
-        assert os.path.exists(path), f"Expected {path} to exist"
+        assert os.path.exists(FRONTEND_DOCKERFILE), f"Expected {FRONTEND_DOCKERFILE} to exist"
 
     def test_dockerfile_multistage(self):
         """Dockerfile should use multi-stage build"""
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/frontend/Dockerfile'
-        with open(path) as f:
-            content = f.read()
+        content = _read(FRONTEND_DOCKERFILE)
         assert 'AS' in content.upper() or 'FROM' in content
 
     def test_dockerfile_node_alpine(self):
         """Dockerfile should use alpine for small image"""
-        path = '/home/tardis/Documents/跨文明灵魂管理系统/frontend/Dockerfile'
-        with open(path) as f:
-            content = f.read()
+        content = _read(FRONTEND_DOCKERFILE)
         assert 'alpine' in content.lower()

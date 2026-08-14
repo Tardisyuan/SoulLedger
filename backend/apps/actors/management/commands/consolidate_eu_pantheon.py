@@ -26,11 +26,10 @@ What that means in practice:
   * Databases that predate the decision may still hold those rows. They are
     NOT touched by default. Pass --purge-norse to soft-delete them, and only
     after the live-reference check below clears each one.
-  * apps/org's init_organizations still defines a 北欧冥界 (HADES_NORSE)
-    Organization node, and frontend/src/config/workflow-templates.ts still
-    ships a 北欧分流流程 template. Those are separate models owned elsewhere
-    and are left alone here; they are recorded so whoever removes them knows
-    where to look.
+  * The two Norse leftovers this note used to point at are gone: the 北欧冥界
+    (HADES_NORSE) Organization node in apps/org's init_organizations and the
+    北欧分流流程 template in frontend/src/config/workflow-templates.ts were
+    both removed once a reference check showed nothing pointed at them.
 
 This command does TWO things by default, plus one on request:
 

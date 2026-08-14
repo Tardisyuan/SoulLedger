@@ -137,17 +137,12 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       { id: "n3", name: "Rhadamanthus · 终审", court: "冥界", type: "终审", order: 3 },
     ],
   },
-  EUROPEAN_NORDIC: {
-    civilization: "EUROPEAN",
-    caseType: "SPECIAL",
-    name: "北欧分流流程",
-    description: "Valhalla/Folkvangr/Hel分流",
-    nodes: [
-      { id: "n1", name: "Odin · 审判", court: "Asgard", type: "英灵审判", order: 1 },
-      { id: "n2", name: "Freya · 分流", court: "Folkvangr", type: "英灵分流", order: 2 },
-      { id: "n3", name: "Hel · 冥界分流", court: "Niflheim", type: "冥界分流", order: 3 },
-    ],
-  },
+  // 北欧分流流程 (Odin/Freya/Hel) used to sit here. Norse is out of this
+  // system: destination there follows the manner of death, not a verdict, so
+  // there is no judgment for a judgment workflow to model. The actors were
+  // removed by apps/actors' consolidate_eu_pantheon and no Asgard/Folkvangr/
+  // Niflheim realm has ever existed, so applying this preset produced a
+  // workflow whose every node named someone the system cannot supply.
   EUROPEAN_HELL_CIRCLE: {
     civilization: "EUROPEAN",
     caseType: "SPECIAL",
@@ -177,6 +172,17 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     nodes: [
       { id: "n1", name: "Anubis · 引导", court: "杜阿特", type: "灵魂引导", order: 1 },
       { id: "n2", name: "Thoth · 记录", court: "杜阿特", type: "功过记录", order: 2 },
+      // One aggregate node, not shorthand for 42 nodes. The forty-two
+      // assessors do exist as 42 real Actor rows (powers_json.assessor_index
+      // 1-42), but the negative confession is one step of the weighing: the
+      // soul makes all 42 declarations in a single passage of the Hall of Two
+      // Truths, and no assessor approves or rejects on their own. A workflow
+      // node is an approval step, so 42 of them would model 42 sequential
+      // sign-offs that the rite does not have. apps/workflow/services.py holds
+      // the same shape server-side ("四十二神官 · 罪行核实", one TRIAL node),
+      // and this preset must stay in step with it — a preset the backend would
+      // not accept is worse than an abstract one. Pick individual assessors in
+      // the editor if a case genuinely needs a named one.
       { id: "n3", name: "42审判者 · 初审", court: "杜阿特", type: "42审判", order: 3 },
       { id: "n4", name: "Ammit · 吞噬宣判", court: "杜阿特", type: "吞噬宣判", order: 4 },
       { id: "n5", name: "Osiris · 终审", court: "芦苇原", type: "终审", order: 5 },
