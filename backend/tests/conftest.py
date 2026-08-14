@@ -150,3 +150,22 @@ def eu_auth_headers(api_client, eu_admin_user):
     if eu_admin_user.tenant:
         token["tenant_code"] = eu_admin_user.tenant.code
     return {"HTTP_AUTHORIZATION": f"Bearer {token.access_token}"}
+
+
+@pytest.fixture
+def migration_round_trip(transactional_db):
+    """Run a data migration forward, back, and forward again — see
+    ``tests/migration_roundtrip.py`` for what it asserts and why.
+
+    ``transactional_db`` because migrations issue DDL and commit: the default
+    wrap-each-test-in-a-transaction fixture cannot roll that back. Restoring
+    the schema happens in this fixture's teardown, which runs *inside*
+    ``transactional_db``'s, so every table is back at its latest version before
+    the flush touches it — including when the test failed.
+    """
+    from tests.migration_roundtrip import migrate_to_latest, run_round_trip
+
+    try:
+        yield run_round_trip
+    finally:
+        migrate_to_latest()
