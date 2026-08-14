@@ -18,25 +18,32 @@ module.exports = {
   ],
   // Baseline lock, not a target. This threshold was 60 across the board while
   // nothing ever ran it — `npm test` was bare `jest`, so CI never passed
-  // --coverage and the numbers were never checked. Measured reality on the day
-  // the gate was switched on: statements 30.03 / branches 20.59 / lines 30.01 /
-  // functions 19.66. These values sit just under that, so the gate holds today
-  // and fails the moment coverage regresses. An aspirational 60 here would only
-  // get the gate deleted again. Ratchet these up as coverage climbs; the target
-  // is still 60.
+  // --coverage and the numbers were never checked. An aspirational 60 here
+  // would only get the gate deleted again. Ratchet these up as coverage
+  // climbs; the target is still 60.
+  //
+  // History of measured coverage, each entry the reading taken when these
+  // numbers were last moved:
+  //   gate switched on  statements 30.03 / branches 20.59 / functions 19.66 / lines 30.01
+  //   this pass         statements 51.44 / branches 40.39 / functions 41.00 / lines 51.96
+  //
+  // The jump came from covering the two WebSocket clients, the event
+  // registry, the sidebar-menu gates, the remaining souls/social hooks, and
+  // five page components (ledger, welcome, dashboard, workflow,
+  // notifications, audit).
   //
   // Each number is ~1 point below the measured figure, deliberately not flush
-  // against it (30.03 -> 30 would leave 0.03 points of room). One new
+  // against it (51.44 -> 51 would leave 0.44 points of room). One new
   // component landing without tests moves these by more than that — branch
   // coverage was observed sliding 20.59 -> 20.34 in a single afternoon — and a
   // gate that cries wolf on ordinary work is a gate someone deletes. One point
-  // still catches any real regression: it is ~170 statements or ~100 branches.
+  // still catches any real regression: it is ~52 statements or ~50 branches.
   coverageThreshold: {
     global: {
-      branches: 19,
-      functions: 19,
-      lines: 29,
-      statements: 29,
+      branches: 39,
+      functions: 40,
+      lines: 51,
+      statements: 50,
     },
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],

@@ -1,0 +1,254 @@
+/**
+ * Tests for app/ledger/page.tsx — the ledger statistics screen.
+ *
+ * This page renders three independent sections that each have to survive a
+ * failed or empty stats call on their own. The interesting failure is the
+ * quiet one: a section that renders zeros instead of an error, or a realm /
+ * activity block that shows an empty shell when the backend returned
+ * nothing. Both the error path and the "section must not appear" path are
+ * asserted below.
+ */
+import { render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import LedgerPage from "@/app/ledger/page";
+import { ledgerApi } from "@/lib/api";
+
+jest.mock("@/lib/api", () => ({
+  ledgerApi: { statsOverview: jest.fn() },
+}));
+
+let mockUser: { id: number } | null = { id: 1 };
+const mockT = jest.fn((key: string) => key);
+
+jest.mock("@/src/contexts/TenantContext", () => ({
+  useTenant: () => ({ user: mockUser }),
+}));
+
+jest.mock("@/src/contexts/I18nContext", () => ({
+  useI18n: () => ({
+    t: (key: string) => mockT(key),
+    formatDateTime: (value: string) => `dt(${value})`,
+    locale: "en",
+    hydrated: true,
+  }),
+}));
+
+// The bar chart is a next/dynamic import; stub it so the assertions are
+// about the page's own branching, not recharts' internals.
+jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
+  LazyBarChart: ({ data }: { data: unknown[] }) => (
+    <div data-testid="bar-chart">{data.length}</div>
+  ),
+}));
+
+const mockedStats = ledgerApi.statsOverview as jest.Mock;
+
+function renderPage() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+  return render(<LedgerPage />, { wrapper: Wrapper });
+}
+
+const fullStats = {
+  total_souls: 128,
+  state_distribution: [
+    { state: "ALIVE", label: "Alive", count: 40 },
+    { state: "JUDGING", label: "Judging", count: 12 },
+    { state: "DISPOSED", label: "Disposed", count: 30 },
+    { state: "REINCARNATING", label: "Reincarnating", count: 5 },
+    { state: "SETTLED", label: "Settled", count: 8 },
+    { state: "UNKNOWN_STATE", label: "Mystery", count: 1 },
+  ],
+  karma_distribution: [
+    { name: "0-100", count: 3 },
+    { name: "100-200", count: 7 },
+  ],
+  souls_by_realm: [
+    { realm_code: "R1", realm_name: "Diyu", civilization: "CHINESE", count: 20 },
+    { realm_code: "R2", realm_name: "Duat", civilization: "EGYPTIAN", count: 11 },
+  ],
+  recent_activity: [
+    {
+      id: 1,
+      action: "CREATE",
+      description: "Soul added",
+      user: "admin",
+      resource: "Soul",
+      resource_id: "9",
+      timestamp: "2026-01-01T00:00:00Z",
+    },
+    {
+      id: 2,
+      action: "DELETE",
+      description: "",
+      user: "clerk",
+      resource: "Soul",
+      resource_id: "10",
+      timestamp: "2026-01-02T00:00:00Z",
+    },
+  ],
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockUser = { id: 1 };
+  mockT.mockImplementation((key: string) => key);
+  mockedStats.mockResolvedValue({ data: fullStats });
+});
+
+// ── Data path ────────────────────────────────────────────────────────
+
+describe("LedgerPage with data", () => {
+  it("renders the headline totals from the stats payload", async () => {
+    renderPage();
+
+    expect(await screen.findByText("128")).toBeInTheDocument();
+    // ALIVE and JUDGING counts feed the other two overview cards.
+    expect(screen.getAllByText("40").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("12").length).toBeGreaterThan(0);
+  });
+
+  it("renders one row per state, including a state it has no colour for", async () => {
+    renderPage();
+
+    for (const label of ["Alive", "Judging", "Disposed", "Reincarnating", "Settled", "Mystery"]) {
+      expect(await screen.findByText(label)).toBeInTheDocument();
+    }
+  });
+
+  it("prefers the backend label when the i18n key has no translation", async () => {
+    renderPage();
+
+    expect(await screen.findByText("Alive")).toBeInTheDocument();
+    expect(screen.queryByText("souls.states.ALIVE")).not.toBeInTheDocument();
+  });
+
+  it("prefers the translation when one exists for the state key", async () => {
+    mockT.mockImplementation((key: string) => (key === "souls.states.ALIVE" ? "存活" : key));
+
+    renderPage();
+
+    expect(await screen.findByText("存活")).toBeInTheDocument();
+    expect(screen.queryByText("Alive")).not.toBeInTheDocument();
+  });
+
+  it("feeds the karma distribution into the bar chart", async () => {
+    renderPage();
+
+    expect(await screen.findByTestId("bar-chart")).toHaveTextContent("2");
+  });
+
+  it("renders the realm section with its civilization annotations", async () => {
+    renderPage();
+
+    expect(await screen.findByText("Diyu")).toBeInTheDocument();
+    // Raw enum in `title`, translated copy in the text node (BRIEF §4.6).
+    expect(screen.getByTitle("EGYPTIAN")).toBeInTheDocument();
+  });
+
+  it("renders recent activity, falling back to the action label when the description is blank", async () => {
+    renderPage();
+
+    expect(await screen.findByText("Soul added")).toBeInTheDocument();
+    // The DELETE row has an empty description, so it shows the action label
+    // in the body as well as in the badge — hence two matches. Since BRIEF
+    // §4.6 both go through <DomainEnum>, which carries the raw member in
+    // `title` and translated copy in the text node (`t` is mocked to echo its
+    // key here, so the visible copy is the convention's unrecognized string).
+    expect(screen.getAllByTitle("DELETE")).toHaveLength(2);
+    expect(screen.queryByText("DELETE")).not.toBeInTheDocument();
+  });
+
+  it("formats activity timestamps through the i18n formatter", async () => {
+    renderPage();
+
+    expect(await screen.findByText("dt(2026-01-01T00:00:00Z)")).toBeInTheDocument();
+  });
+});
+
+// ── Empty / partial payloads ─────────────────────────────────────────
+
+describe("LedgerPage with a sparse payload", () => {
+  it("omits the realm section entirely when the list is empty", async () => {
+    mockedStats.mockResolvedValue({ data: { ...fullStats, souls_by_realm: [] } });
+
+    renderPage();
+
+    await screen.findByText("128");
+    expect(screen.queryByText("ledger.souls_by_realm")).not.toBeInTheDocument();
+  });
+
+  it("omits the activity section entirely when the list is empty", async () => {
+    mockedStats.mockResolvedValue({ data: { ...fullStats, recent_activity: [] } });
+
+    renderPage();
+
+    await screen.findByText("128");
+    expect(screen.queryByText("ledger.recent_activity")).not.toBeInTheDocument();
+  });
+
+  it("shows zero rather than blank when a count is missing from the payload", async () => {
+    mockedStats.mockResolvedValue({ data: { total_souls: 5, state_distribution: [] } });
+
+    renderPage();
+
+    await screen.findByText("5");
+    // active + judging overview cards both fall back to 0
+    const overviewZeros = screen
+      .getAllByText("0")
+      .filter((el) => el.className.includes("text-3xl"));
+    expect(overviewZeros).toHaveLength(2);
+  });
+
+  it("caps the activity list at ten rows", async () => {
+    const many = Array.from({ length: 15 }, (_, i) => ({
+      id: i,
+      action: "UPDATE",
+      description: `activity-${i}`,
+      user: "u",
+      resource: "Soul",
+      resource_id: String(i),
+      timestamp: "2026-01-01T00:00:00Z",
+    }));
+    mockedStats.mockResolvedValue({ data: { ...fullStats, recent_activity: many } });
+
+    renderPage();
+
+    expect(await screen.findByText("activity-0")).toBeInTheDocument();
+    expect(screen.getByText("activity-9")).toBeInTheDocument();
+    expect(screen.queryByText("activity-10")).not.toBeInTheDocument();
+  });
+});
+
+// ── Failure and gating ───────────────────────────────────────────────
+
+describe("LedgerPage failure handling", () => {
+  it("shows an error message in each section instead of empty data", async () => {
+    mockedStats.mockRejectedValue(new Error("boom"));
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getAllByText("common.error").length).toBeGreaterThan(0));
+    expect(screen.queryByTestId("bar-chart")).not.toBeInTheDocument();
+  });
+
+  it("still renders the page header when the stats call fails", async () => {
+    mockedStats.mockRejectedValue(new Error("boom"));
+
+    renderPage();
+
+    expect(await screen.findByText("ledger.title")).toBeInTheDocument();
+  });
+
+  it("does not call the stats endpoint at all when there is no user", async () => {
+    mockUser = null;
+
+    renderPage();
+
+    expect(await screen.findByText("ledger.title")).toBeInTheDocument();
+    expect(mockedStats).not.toHaveBeenCalled();
+  });
+});
