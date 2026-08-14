@@ -2,17 +2,17 @@
 """Populate Egyptian underworld judicial actors.
 
 PARTIALLY SUPERSEDED by `python manage.py seed_mythology --civilization=egyptian`.
-The command covers Osiris/Anubis/Thoth/Ma'at/Ammit/Horus/Isis/Nephthys/Ra and
-the five Egyptian realms. It deliberately does NOT reproduce two things below,
-because they are canon questions rather than plumbing and are recorded as open
-items rather than silently resolved:
+The command covers Osiris/Anubis/Thoth/Ma'at/Ammit/Horus/Isis/Nephthys/Ra, the
+five Egyptian realms, and — since the roster was sourced — the Forty-Two
+Assessors of Ma'at. One thing below is still not reproduced anywhere else:
 
-  * Set (赛特) — present only here, absent from every other seed path.
-  * The "42 Judges" roster — RESOLVED as far as it can be without new source
-    material. The colliding names ('Ra', 'Maat') have been removed, and the
-    block no longer creates a partial roster: it prints why it is skipping.
-    The remaining gap — the 42 actual assessors of BD Chapter 125 — is an open
-    canon question, spelled out in the comment above that block.
+  * Set (赛特) — present only here, absent from every other seed path. That is a
+    canon question rather than plumbing, so it is left recorded as an open item
+    rather than silently resolved.
+
+The "42 Judges" roster that used to live in this file is GONE — see the note
+where it stood. It is now `EGYPTIAN_ASSESSORS` in
+`backend/apps/actors/management/commands/seed_mythology.py`.
 
 It also disagrees with seed_chinese_data.py on where Horus/Isis/Nephthys stand
 (Hall of Two Truths here, Duat entry / Aaru there) and on their roles.
@@ -104,79 +104,48 @@ def main():
             print(f'Already exists: {actor.name}')
 
     # -----------------------------------------------------------------
-    # The "42 Judges" roster — INCOMPLETE, deliberately not created.
+    # The "42 Judges" roster used to live here. It is GONE, and it is not
+    # coming back to this file.
     #
-    # The 42 assessors of the Hall of Two Truths come from Chapter 125 of
-    # the Book of the Dead: each one is paired with one clause of the
-    # negative confession ("I have not stolen", "I have not lied"), and
-    # each has a name and a home town ("Usekh-nemtut who comes from
-    # Heliopolis", and so on). It is a fixed, ordered list of 42.
+    # WHERE IT WENT: `EGYPTIAN_ASSESSORS` in
+    # backend/apps/actors/management/commands/seed_mythology.py, seeded by
+    # `python manage.py seed_mythology --civilization=egyptian`. That is a
+    # real, sourced, ordered 42 — Budge's transliteration of the Papyrus of
+    # Nebseni (BM EA 9900, sheet 30), names from The Gods of the Egyptians I
+    # (1904) and home places plus confession clauses from The Book of the
+    # Dead: ... the Theban Recension II (1901), cross-checked slot by slot
+    # against UCL Digital Egypt's Papyrus of Maiherperi transcription. Each
+    # row carries its position in the bench, its home town, its clause of the
+    # negative confession, and its citation in `powers_json`. Uncertain
+    # readings are flagged in the row rather than smoothed away.
     #
-    # The list this script used to carry was not that list. It held 35
-    # names, and they were not assessors at all — they were major deities
-    # (Shu, Tefnut, Geb, Nut, Hathor, Ptah, Sekhmet, Bastet), the four
-    # sons of Horus (Hapi, Duamutef, Imsety, Qebehsenuef), and personified
-    # concepts (Heka, Sia, Hu), padded out to look like a roster. Two of
-    # them collided with actors that already exist as full deities:
+    # WHY THE OLD LIST WAS NOT A ROSTER OF ASSESSORS. The 42 assessors of
+    # Chapter 125 are a fixed, ordered bench: each is addressed by name, given
+    # a home town, and paired with one clause of the negative confession
+    # ("O Usekht-nemmat who comest forth from Annu, I have not done
+    # iniquity"). What this file held was 33 names that were nothing of the
+    # kind — major deities (Shu, Tefnut, Geb, Nut, Hathor, Ptah, Sekhmet,
+    # Bastet), the four sons of Horus (Hapi, Duamutef, Imsety, Qebehsenuef),
+    # and personified concepts (Heka, Sia, Hu). None of them appears in any
+    # papyrus witness of the bench of 42; Geb and Hathor are not assessors in
+    # any manuscript.
     #
-    #   * 'Ra'   — already seeded as the EGYPTIAN OVERSEER of EG_AARU.
-    #   * 'Maat' — a second spelling of the goddess seeded as "Ma'at",
-    #              JUDGE of EG_HALL_TWO_TRUTHS.
+    # Its actual provenance was traced: the padding came from a single
+    # sentence of prose in the World History Encyclopedia article "The
+    # Forty-Two Judges" — "Of these, there were nine great judges: Ra, Shu,
+    # Tefnut, Geb, Nut, Isis, Nephthys, Horus, Hathor" — which is a different
+    # claim about a different group. The list was assembled from that
+    # sentence rather than from the article's own list, then topped up to
+    # length. Two entries also collided with real seeded deities: 'Ra' (the
+    # EGYPTIAN OVERSEER of EG_AARU) manufactured the duplicate row named in
+    # fix_actor_civilization.DUPLICATE_NAMES, and 'Maat' manufactured the
+    # cross-spelling duplicate of "Ma'at" that the same command's
+    # SPELLING_MERGES exists to resolve.
     #
-    # Both are removed below. 'Ra' was creating the duplicate row listed in
-    # fix_actor_civilization.DUPLICATE_NAMES; 'Maat' was creating the
-    # cross-spelling duplicate that command's SPELLING_MERGES now resolves.
-    #
-    # That leaves 33 names, none of them verifiably an assessor, against a
-    # roster that must contain exactly 42 specific ones. Inventing the
-    # remaining nine — or keeping the 33 wrong ones — would put fabricated
-    # canon in the database under a name that claims authority. So this
-    # block creates nothing and says why.
-    #
-    # TO FINISH THIS: supply the 42 assessor names from a cited translation
-    # of BD Chapter 125 (Budge, Faulkner and Allen all differ in
-    # transliteration, so the choice of edition needs to be recorded), in
-    # order, each with its negative-confession clause. Then replace this
-    # block. Until then the Hall of Two Truths has its five principals
-    # (Osiris, Anubis, Thoth, Ma'at, Ammit) seeded by
-    # `manage.py seed_mythology` and no assessors.
+    # The project owner's decision is that the 33 are discarded outright, not
+    # migrated: they were never assessors, so there is nothing in them to
+    # carry over. Do not re-add a roster here.
     # -----------------------------------------------------------------
-    FORTY_TWO_ASSESSORS_REQUIRED = 42
-    forty_two_assessors = []  # see above — intentionally empty
-
-    if len(forty_two_assessors) != FORTY_TWO_ASSESSORS_REQUIRED:
-        print(
-            f'\nSKIPPED: "42 Judges" roster holds '
-            f'{len(forty_two_assessors)}/{FORTY_TWO_ASSESSORS_REQUIRED} names. '
-            f'Creating a partial roster under the name "the Forty-Two" would be '
-            f'fabricated canon, so nothing was created. See the comment above '
-            f'this block for what is needed to finish it.'
-        )
-    else:
-        for i, (name_en, name_zh, name_egy) in enumerate(forty_two_assessors):
-            actor, created = Actor.objects.get_or_create(
-                name=name_en,
-                civilization='EGYPTIAN',
-                defaults={
-                    'name': name_en,
-                    'name_zh': name_zh,
-                    'name_en': name_en,
-                    'name_egy': name_egy,
-                    'title': 'Judge of the Hall of Two Truths',
-                    'title_zh': '真理大厅审判者',
-                    'title_en': f'Judge #{i+1} of the Forty-Two',
-                    'role': 'JUDGE',
-                    'civilization': 'EGYPTIAN',
-                    'realm': hall,
-                    'description': 'One of the 42 Judges of the Hall of Two Truths who witness the weighing of hearts.',
-                    'tenant': tenant,
-                }
-            )
-            if created:
-                print(f'Created Judge: {actor.name}')
-                created_count += 1
-            else:
-                print(f'Already exists: {actor.name}')
 
     print(f'\nTotal EGYPTIAN actors: {Actor.objects.filter(civilization="EGYPTIAN").count()}')
     print(f'Newly created: {created_count}')

@@ -378,6 +378,215 @@ EGYPTIAN_ACTORS = [
      "Supreme sun god - the ultimate authority over life and death in the Duat"),
 ]
 
+# --------------------------------------------------------------------------
+# The Forty-Two Assessors of Ma'at — Book of the Dead, Chapter 125 part B
+# ("the Declaration of Innocence" / "negative confession").
+#
+# WHY THESE ROWS ARE DICTS AND NOT 11-TUPLES. Every other actor here is fully
+# described by the eleven columns above. An assessor is not: the text gives each
+# one a fixed *position* in the bench, a home town, and one clause of the
+# confession, and none of the three has a column on Actor. They go into
+# `powers_json` (a JSONField that already exists and that no seeder had used, so
+# this table needs no migration).
+#
+# `assessor_index` is the load-bearing one. `Actor.Meta.ordering` is
+# ["civilization", "role", "name"], which sorts the bench *alphabetically* —
+# i.e. wrong, and wrong in a way that looks fine. Anything that displays the 42
+# must order on powers_json["assessor_index"] explicitly.
+#
+# EDITION. Budge's transliteration of the Papyrus of Nebseni (BM EA 9900, sheet
+# 30). Names from The Gods of the Egyptians vol. I (1904) pp. 418-419; home
+# places and confession clauses from The Book of the Dead: ... the Theban
+# Recension vol. II (1901) ch. CXXV pt. 2, pp. 366-371. Both public domain, same
+# translator reading the same sheet, so the merge is one edition and not a
+# splice of two. The 42-slot sequence was cross-checked slot by slot against an
+# independent witness — UCL Digital Egypt's transcription of the Papyrus of
+# Maiherperi (Quirke, 2002) — and all 42 correspond.
+#
+# The edition has to be recorded in the data, not just chosen, because the
+# manuscripts genuinely differ: the Papyrus of Ani puts the same gods in a
+# different order (Budge 1895 prints Ani in the main text and Nebseni in an
+# appendix, flagging the divergence himself), and Papyrus Cairo 2512 has only 32
+# declarations. There is no "the" list. Hence `source_edition` and `papyrus` on
+# every row.
+#
+# NOT-FABRICATED, DELIBERATELY. Where the source is uncertain the uncertainty is
+# carried into the row as `source_notes` rather than smoothed over: #8 has no
+# home town (that is what the text says, so the field is empty, not guessed),
+# #32's clause is partly unreadable in the scan, #37's name reading is Budge's
+# own query, #38 and #39 carry Budge's own question marks on the place, and
+# #21/#22/#23 are the three places where the second witness disagrees. This
+# table replaced a 33-name list of major deities (Shu, Geb, Nut, Hathor, the
+# four sons of Horus...) that was assembled from a "nine great judges" sentence
+# in an encyclopedia article and was not a roster of assessors at all — see
+# backend/scripts/populate_egyptian_actors.py.
+#
+# `name_zh` is left blank on all 42. These have no established Chinese
+# rendering; `get_localized_name()` already falls back to `name_en`. Inventing
+# Chinese names for forty-two obscure deities is the exact failure this table
+# exists to correct.
+#
+# COLLISION GUARD. None of the 42 collides with a seeded Egyptian actor
+# (Osiris, Anubis, Thoth, Ma'at, Ammit, Horus, Isis, Nephthys, Ra, or Set from
+# the script). The two near misses are #34 `Nefer-Tem` and #26 `Basti`: neither
+# Nefertem nor Bastet is currently seeded as a major deity, and if one ever is,
+# it must NOT be spelled `Nefer-Tem` or `Basti` or it will merge into an
+# assessor row. tests/test_seed_mythology.py pins both names.
+# --------------------------------------------------------------------------
+ASSESSOR_REALM_CODE = "EG_HALL_TWO_TRUTHS"
+ASSESSOR_PAPYRUS = "Nebseni (BM EA 9900, sheet 30)"
+ASSESSOR_SOURCE_EDITION = (
+    "Budge 1904, The Gods of the Egyptians I, pp. 418-419 (names); "
+    "Budge 1901, The Book of the Dead: ... the Theban Recension II, "
+    "ch. CXXV pt. 2, pp. 366-371 (home places, confession clauses). "
+    "Public domain. Sequence cross-checked against UCL Digital Egypt's "
+    "Papyrus of Maiherperi transcription (Quirke 2002), 42/42. "
+    "negative_confession is a one-line paraphrase of Budge's clause, not his prose."
+)
+
+# Per-row keys: index, name, meaning (Budge's epithet gloss; "" where he gives
+# none), home_place ("" only for #8, which has none in the text), denies
+# (paraphrase of the confession clause), notes (verbatim source caveats).
+EGYPTIAN_ASSESSORS = [
+    {"index": 1, "name": "Usekht-nemmat", "meaning": "whose strides are long",
+     "home_place": "Annu (Heliopolis)", "denies": "wrongdoing / iniquity"},
+    {"index": 2, "name": "Hept-shet", "meaning": "embraced by flame",
+     "home_place": "Kher-aha", "denies": "robbery with violence"},
+    {"index": 3, "name": "Fenti", "meaning": "the divine Nose",
+     "home_place": "Khemennu (Hermopolis)", "denies": "violence against a person"},
+    {"index": 4, "name": "Am-khaibetu", "meaning": "who eatest shades",
+     "home_place": "the place where the Nile riseth", "denies": "theft"},
+    {"index": 5, "name": "Neha-hau", "meaning": "",
+     "home_place": "Re-stau", "denies": "killing a man or a woman",
+     "notes": ["Budge also prints the name as 'Neha-hra'; both readings are his."]},
+    {"index": 6, "name": "Rerti", "meaning": "double Lion-god",
+     "home_place": "heaven", "denies": "short measure (\"made light the bushel\")"},
+    {"index": 7, "name": "Maati-f-em-tes", "meaning": "whose two eyes are like flint",
+     "home_place": "Sekhem (Letopolis)", "denies": "acting deceitfully",
+     "notes": ["Budge's reading. The modern reading of the same signs is "
+               "'irty.fy-m-ds' ('his two eyes are of flint') — a decipherment "
+               "refinement a century later, not a different god."]},
+    {"index": 8, "name": "Neba-per-em-khetkhet",
+     "meaning": "Flame, who comest forth as thou goest back",
+     "home_place": "", "denies": "purloining what belongs to God",
+     "notes": ["No home place: the formula here is 'who comest forth as [thou] "
+               "goest back' rather than a town. Stored empty because that is "
+               "what the text says, not because the datum is missing."]},
+    {"index": 9, "name": "Set-kesu", "meaning": "Crusher of bones",
+     "home_place": "Suten-henen (Heracleopolis)", "denies": "uttering falsehood"},
+    {"index": 10, "name": "Uatch-nes", "meaning": "who makest the flame wax strong",
+     "home_place": "Het-ka-Ptah (Memphis)", "denies": "carrying away food"},
+    {"index": 11, "name": "Qerti", "meaning": "the two sources of the Nile",
+     "home_place": "Amentet", "denies": "uttering evil words"},
+    {"index": 12, "name": "Hetch-abehu", "meaning": "whose teeth shine",
+     "home_place": "Ta-she (the Fayyum)", "denies": "attacking a man"},
+    {"index": 13, "name": "Am-senf", "meaning": "who dost consume blood",
+     "home_place": "the house of slaughter", "denies": "killing the god's cattle"},
+    {"index": 14, "name": "Am-beseku", "meaning": "who dost consume the entrails",
+     "home_place": "the mābet chamber", "denies": "acting deceitfully"},
+    {"index": 15, "name": "Neb-Maat", "meaning": "god of Right and Truth",
+     "home_place": "the city of double Maati", "denies": "laying waste ploughed land"},
+    {"index": 16, "name": "Thenemi", "meaning": "who goest backwards",
+     "home_place": "the city of Bast (Bubastis)", "denies": "prying / making mischief",
+     "notes": ["Dropped entirely by one Internet Archive scan of Budge 1904 "
+               "(godsofegyptianso00budg jumps 15 -> 17); read off a second, "
+               "independent scan of the same edition (Cornell, cu31924092320500) "
+               "and confirmed by the Maiherperi witness ('i.tnmy pr m bAst'). "
+               "Not reconstructed."]},
+    {"index": 17, "name": "Aati", "meaning": "",
+     "home_place": "Annu (Heliopolis)", "denies": "slander (\"setting the mouth in motion\")"},
+    {"index": 18, "name": "Tutu-f", "meaning": "doubly evil",
+     "home_place": "the nome of Ati (9th Lower Egyptian, Busiris)",
+     "denies": "anger without cause"},
+    {"index": 19, "name": "Uamemti", "meaning": "the serpent",
+     "home_place": "the house of slaughter", "denies": "adultery with another man's wife",
+     "notes": ["Budge 1901 spells the name 'Uamenti'; Budge 1904 'Uamemti'."]},
+    {"index": 20, "name": "Maa-an-f", "meaning": "who lookest upon what is brought to him",
+     "home_place": "the Temple of Amsu (Min)", "denies": "sin against purity"},
+    {"index": 21, "name": "Heri-seru", "meaning": "Chief of the divine Princes",
+     "home_place": "the city of Nehatu", "denies": "striking fear into a man",
+     "notes": ["Home place differs between witnesses: Budge/Nebseni 'Nehatu' vs "
+               "UCL/Maiherperi 'Imu'. The Nebseni value is recorded; the variant "
+               "is not silently resolved."]},
+    {"index": 22, "name": "Khemi", "meaning": "the Destroyer",
+     "home_place": "the Lake of Kaui (Khas?)",
+     "denies": "encroaching upon sacred times and seasons",
+     "notes": ["Home place differs between witnesses: Budge/Nebseni 'the Lake of "
+               "Kaui (Khas?)' vs UCL/Maiherperi 'the great place'. Budge's own "
+               "query is kept."]},
+    {"index": 23, "name": "Shet-kheru", "meaning": "who orderest speech",
+     "home_place": "Urit", "denies": "being a man of anger",
+     "notes": ["Home place differs between witnesses: Budge/Nebseni 'Urit' vs "
+               "UCL/Maiherperi 'the shrine'."]},
+    {"index": 24, "name": "Nekhen", "meaning": "the Child",
+     "home_place": "the Lake of Heq-at (13th Lower Egyptian nome)",
+     "denies": "deafness to the words of truth"},
+    {"index": 25, "name": "Ser-kheru", "meaning": "disposer of speech",
+     "home_place": "the city of Unes (19th Upper Egyptian nome)",
+     "denies": "stirring up strife",
+     "notes": ["Budge also prints the name as 'Ser-khera'."]},
+    {"index": 26, "name": "Basti", "meaning": "",
+     "home_place": "the Secret city", "denies": "making anyone weep"},
+    {"index": 27, "name": "Hra-f-ha-f", "meaning": "whose face is turned backwards",
+     "home_place": "the Dwelling", "denies": "impurity"},
+    {"index": 28, "name": "Ta-ret", "meaning": "Leg of fire",
+     "home_place": "Akhekhu", "denies": "\"eating my heart\" (losing one's temper)"},
+    {"index": 29, "name": "Kenemti", "meaning": "",
+     "home_place": "Kenemet", "denies": "abuse of others"},
+    {"index": 30, "name": "An-hetep-f", "meaning": "who bringest thine offering",
+     "home_place": "Sau (Sais)", "denies": "acting with violence"},
+    {"index": 31, "name": "Neb-hrau", "meaning": "lord of faces",
+     "home_place": "Tchefet", "denies": "judging hastily"},
+    {"index": 32, "name": "Serekhi", "meaning": "who givest knowledge",
+     "home_place": "Unth", "denies": "taking vengeance upon the god",
+     "notes": ["Confession clause is PARTIAL. The scan of Budge 1901 vol. II "
+               "p. 370 is unreadable across part of this clause ('I have not >. "
+               "ueeeeeee'); the recoverable half is 'I have not taken vengeance "
+               "upon the god'. Budge 1895's Nebseni appendix gives the fuller "
+               "sense as transgressing against / vexing God. Not completed by "
+               "guesswork."]},
+    {"index": 33, "name": "Neb-abui", "meaning": "lord of two horns",
+     "home_place": "Satiu", "denies": "multiplying speech overmuch"},
+    {"index": 34, "name": "Nefer-Tem", "meaning": "",
+     "home_place": "Het-ka-Ptah (Memphis)", "denies": "deceit / wickedness"},
+    {"index": 35, "name": "Tem-sep", "meaning": "",
+     "home_place": "Tattu (Busiris)", "denies": "cursing the king"},
+    {"index": 36, "name": "Ari-em-ab-f", "meaning": "whose heart doth labour",
+     "home_place": "the city of Tebti", "denies": "fouling water"},
+    {"index": 37, "name": "Ahi-mu", "meaning": "Ahi of the water",
+     "home_place": "Nu", "denies": "raising the voice haughtily",
+     "notes": ["Name reading is UNCERTAIN — Budge himself prints it as "
+               "'Ahi-mu (?)'. The query is his, and it is kept."]},
+    {"index": 38, "name": "Utu-rekhit", "meaning": "who givest commands to mankind",
+     "home_place": "[Sau (?)]", "denies": "cursing the god",
+     "notes": ["Home place is UNCERTAIN — Budge prints '[Sau (?)]' with his own "
+               "query, and this is one of the two slots where the Maiherperi "
+               "witness disagrees. Recorded exactly as Budge has it, brackets "
+               "and question mark included."]},
+    {"index": 39, "name": "Neheb-nefert", "meaning": "",
+     "home_place": "the Lake of Nefer (?)", "denies": "insolence",
+     "notes": ["Home place is UNCERTAIN — Budge's own query. UCL/Maiherperi has "
+               "'Gem' in this slot. Budge's reading recorded, disagreement not "
+               "resolved."]},
+    {"index": 40, "name": "Neheb-kau", "meaning": "",
+     "home_place": "[thy] city", "denies": "seeking distinctions for oneself",
+     "notes": ["Budge's text gives the place as '[thy] city' — the bracket is "
+               "his, and the phrase is what the formula says here."]},
+    {"index": 41, "name": "Tcheser-tep", "meaning": "whose head is holy",
+     "home_place": "[thy] habitation",
+     "denies": "wealth beyond what is justly one's own",
+     "notes": ["Budge's text gives the place as '[thy] habitation' — bracket his."]},
+    {"index": 42, "name": "An-a-f", "meaning": "who bringest thine own arm",
+     "home_place": "Aukert (the underworld)",
+     "denies": "contempt for the god of one's own town"},
+]
+
+# CLI label -> the assessor table seeded after that civilization's actors. Kept
+# out of CIVILIZATION_DATA so the Chinese and European entries keep their shape.
+CIVILIZATION_ASSESSORS = {
+    "egyptian": EGYPTIAN_ASSESSORS,
+}
+
 # CLI label -> (Civilization, realms, actors). The CLI label is lowercase for
 # typing convenience; the stored value is always the Civilization enum.
 CIVILIZATION_DATA = {
@@ -394,6 +603,10 @@ ACTOR_FIELDS = (
     "name_zh", "name_en", "name_egy", "role", "realm",
     "title", "title_zh", "title_en", "title_egy", "description",
 )
+# Assessors carry the same columns plus the structured payload — an assessor
+# whose assessor_index or citation drifted is a changed row, so `--update` has
+# to see it.
+ASSESSOR_FIELDS = (*ACTOR_FIELDS, "powers_json")
 
 
 class Stats:
@@ -465,6 +678,11 @@ class Command(BaseCommand):
                 tenant = self._seed_tenant(civilization, tenant_stats)
                 self._seed_realms(civilization, tenant, realms, do_update, realm_stats)
                 self._seed_actors(civilization, tenant, actors, do_update, actor_stats)
+                assessors = CIVILIZATION_ASSESSORS.get(label)
+                if assessors:
+                    self._seed_assessors(
+                        civilization, tenant, assessors, do_update, actor_stats
+                    )
                 self.stdout.write("")
 
             if dry_run:
@@ -572,6 +790,84 @@ class Command(BaseCommand):
                 do_update=do_update,
                 stats=stats,
             )
+
+    # ------------------------------------------------------------------
+    # The Forty-Two Assessors
+    # ------------------------------------------------------------------
+    def _seed_assessors(self, civilization, tenant, rows, do_update, stats):
+        """Seed the bench of 42 through the same upsert as everything else.
+
+        Separate from `_seed_actors` only because the rows carry three values
+        Actor has no column for (position in the bench, home town, confession
+        clause) and they go into `powers_json`. Idempotency, tenant assignment,
+        soft-delete handling and dry-run all come from `_upsert` unchanged.
+        """
+        realm = Realm.all_objects.filter(
+            civilization=civilization, realm_code=ASSESSOR_REALM_CODE
+        ).first()
+        if realm is None:
+            self.stdout.write(self.style.ERROR(
+                f"  [warn] The Forty-Two reference unknown realm "
+                f"{ASSESSOR_REALM_CODE!r} — seeding with realm=None"
+            ))
+
+        for row in rows:
+            index = row["index"]
+            powers = {
+                "assessor_index": index,
+                "home_place": row["home_place"],
+                "negative_confession": row["denies"],
+                "source_edition": ASSESSOR_SOURCE_EDITION,
+                "papyrus": ASSESSOR_PAPYRUS,
+            }
+            if row.get("notes"):
+                # Verbatim source caveats. Present only where the source is
+                # actually uncertain, so an empty key never reads as "checked".
+                powers["source_notes"] = list(row["notes"])
+
+            title = f"Assessor {index} of the Forty-Two"
+            values = {
+                # name_zh stays empty on purpose — see the table's header.
+                "name_zh": "",
+                "name_en": row["name"],
+                "name_egy": row["name"],
+                "role": ActorRole.JUDGE,
+                "realm": realm,
+                "title": title,
+                "title_zh": f"四十二判官之第{index}位",
+                "title_en": title,
+                "title_egy": "",
+                "description": self._assessor_description(row),
+                "powers_json": powers,
+            }
+            self._upsert(
+                model=Actor,
+                lookup={"name": row["name"], "civilization": civilization},
+                values=values,
+                compare_fields=ASSESSOR_FIELDS,
+                tenant=tenant,
+                identity=f"Assessor {index:02d} {row['name']}",
+                do_update=do_update,
+                stats=stats,
+            )
+
+    @staticmethod
+    def _assessor_description(row):
+        parts = [
+            f"Assessor {row['index']} of the Forty-Two of Ma'at, "
+            f"Book of the Dead chapter 125."
+        ]
+        if row["meaning"]:
+            parts.append(f"Budge glosses the name as \"{row['meaning']}\".")
+        if row["home_place"]:
+            parts.append(f"Comes forth from {row['home_place']}.")
+        else:
+            parts.append("The text gives no home place for this one.")
+        parts.append(f"Denies {row['denies']}.")
+        parts.append(f"Papyrus of {ASSESSOR_PAPYRUS}. {ASSESSOR_SOURCE_EDITION}")
+        for note in row.get("notes", ()):
+            parts.append(f"Note: {note}")
+        return " ".join(parts)
 
     # ------------------------------------------------------------------
     # Shared upsert

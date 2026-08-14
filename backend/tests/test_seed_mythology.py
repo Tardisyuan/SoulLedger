@@ -145,6 +145,97 @@ DANTE_NINE_CIRCLES = [
 EGYPTIAN_WEIGHING_ACTORS = ["Ma'at", "Anubis", "Ammit", "Thoth", "Osiris"]
 EGYPTIAN_VERDICT_REALMS = ["EG_AARU", "EG_DEVOURER"]
 
+# The Forty-Two Assessors of Ma'at, Book of the Dead chapter 125 part B, in the
+# order of the Papyrus of Nebseni (Budge's transliteration; BM EA 9900 sheet
+# 30). The index in this list is the assessor's position in the bench:
+# FORTY_TWO_ASSESSORS[0] is the first addressed, FORTY_TWO_ASSESSORS[41] the
+# last. Spelled out here rather than imported from seed_mythology, per rule 1 in
+# the module docstring — and here the rule earns its keep twice over, because
+# this is a roster the repo has already got wrong once. The block this replaced
+# held 33 names that were not assessors at all (major deities, the four sons of
+# Horus, personified concepts) assembled from a stray sentence about "nine great
+# judges"; an imported expectation would have ratified whatever the seed table
+# happened to say, which is exactly how that list survived.
+FORTY_TWO_ASSESSORS = [
+    "Usekht-nemmat",
+    "Hept-shet",
+    "Fenti",
+    "Am-khaibetu",
+    "Neha-hau",
+    "Rerti",
+    "Maati-f-em-tes",
+    "Neba-per-em-khetkhet",
+    "Set-kesu",
+    "Uatch-nes",
+    "Qerti",
+    "Hetch-abehu",
+    "Am-senf",
+    "Am-beseku",
+    "Neb-Maat",
+    "Thenemi",
+    "Aati",
+    "Tutu-f",
+    "Uamemti",
+    "Maa-an-f",
+    "Heri-seru",
+    "Khemi",
+    "Shet-kheru",
+    "Nekhen",
+    "Ser-kheru",
+    "Basti",
+    "Hra-f-ha-f",
+    "Ta-ret",
+    "Kenemti",
+    "An-hetep-f",
+    "Neb-hrau",
+    "Serekhi",
+    "Neb-abui",
+    "Nefer-Tem",
+    "Tem-sep",
+    "Ari-em-ab-f",
+    "Ahi-mu",
+    "Utu-rekhit",
+    "Neheb-nefert",
+    "Neheb-kau",
+    "Tcheser-tep",
+    "An-a-f",
+]
+
+# Every Egyptian actor that is NOT one of the Forty-Two. `Set` is seeded only by
+# backend/scripts/populate_egyptian_actors.py, never by the command, but it is
+# listed here so that a future decision to fold Set into the command cannot
+# silently create a name clash with the bench.
+EGYPTIAN_PRINCIPALS = [
+    "Osiris", "Anubis", "Thoth", "Ma'at", "Ammit",
+    "Horus", "Isis", "Nephthys", "Ra", "Set",
+]
+
+# Two assessor names sit one vowel away from a major deity who is not currently
+# seeded: #34 Nefer-Tem beside Nefertem, #26 Basti beside Bastet. If either
+# deity is ever added to EGYPTIAN_ACTORS under these exact spellings, the
+# seeder's (civilization, name) match key would fold the deity into the
+# assessor's row instead of creating a second one — the same class of bug that
+# 'Ra' and 'Maat' caused in the deleted 33-name list, but silent, because a
+# merge produces no duplicate for fix_actor_civilization to find.
+ASSESSOR_NAMES_RESERVED_AGAINST_DEITIES = {
+    "Nefer-Tem": 34,
+    "Basti": 26,
+}
+
+# Assessors whose source entry is flagged as uncertain or incomplete, and which
+# must therefore still be carrying that flag in the data. The prose of each note
+# is deliberately NOT asserted — only that a note is present — so that improving
+# the wording is free but deleting the caveat is not. #8's home place is empty
+# because the text gives none ("who comest forth as [thou] goest back"), which
+# is a fact about the text and not a gap to be filled in.
+ASSESSORS_WITH_SOURCE_CAVEATS = {
+    8: "no home place in the text",
+    32: "confession clause partly unreadable in the scan",
+    37: "name reading is Budge's own query",
+    38: "home place is Budge's own query, second witness disagrees",
+    39: "home place is Budge's own query, second witness disagrees",
+}
+
 # Realms the Chinese and Egyptian sides cannot work without. 阎罗殿 is
 # DY_COURT_05_YANLUO since the ten courts became ten realms; it was DY_10_YAMA
 # back when the code's number was the realm's position in the seed list rather
@@ -522,6 +613,296 @@ def test_egyptian_realms_all_present(seeded):
     )
     absent, message = _missing(EGYPTIAN_CORE_REALMS, codes, "Egyptian realms")
     assert not absent, message
+
+
+# --------------------------------------------------------------------------
+# The Forty-Two Assessors of Ma'at
+#
+# BD chapter 125 seats a bench of 42 beside the weighing, each addressed by
+# name, each with a home town, each paired with one clause of the negative
+# confession. The repo carried a fake version of this roster for a long time —
+# 33 major deities and personified concepts padded out to look like a list — so
+# these checks are written to fail loudly on both of the ways it can go wrong
+# again: a name that is not an assessor getting in, and the bench losing its
+# order.
+# --------------------------------------------------------------------------
+
+
+def _assessors():
+    """Every seeded Egyptian actor that claims a place in the bench of 42."""
+    return {
+        actor.name: actor
+        for actor in Actor.objects.filter(civilization="EGYPTIAN")
+        if isinstance(actor.powers_json, dict)
+        and actor.powers_json.get("assessor_index") is not None
+    }
+
+
+@pytest.mark.django_db
+def test_forty_two_assessors_all_present(seeded):
+    """All 42 assessors of BD chapter 125 exist as EGYPTIAN Actors."""
+    names = set(
+        Actor.objects.filter(civilization="EGYPTIAN", name__in=FORTY_TWO_ASSESSORS)
+        .values_list("name", flat=True)
+    )
+    absent, message = _missing(FORTY_TWO_ASSESSORS, names, "assessors of Ma'at")
+    assert not absent, message
+
+
+@pytest.mark.django_db
+def test_the_bench_holds_exactly_forty_two_and_nobody_else(seeded):
+    """Nothing extra wears an assessor_index, and nothing is missing one.
+
+    The set-equality is the point. Checking only that the 42 expected names are
+    present would stay green if a forty-third row were seeded alongside them —
+    which is precisely the shape of the defect this roster replaced.
+    """
+    found = sorted(_assessors())
+    expected = sorted(FORTY_TWO_ASSESSORS)
+    assert found == expected, (
+        f"The bench of 42 is not the expected roster. "
+        f"Seeded but not expected: {sorted(set(found) - set(expected))}. "
+        f"Expected but not seeded: {sorted(set(expected) - set(found))}. "
+        f"Total carrying an assessor_index: {len(found)}."
+    )
+
+
+@pytest.mark.django_db
+def test_assessor_index_is_a_permutation_of_one_to_forty_two(seeded):
+    """Positions 1..42, each used exactly once.
+
+    `assessor_index` is the only thing that records the order the text puts
+    these gods in — `Actor.Meta.ordering` is ["civilization", "role", "name"],
+    so without it the bench sorts alphabetically. A duplicated or skipped index
+    means two assessors claim one seat and one seat is empty, and nothing else
+    in the system would notice.
+    """
+    indices = {}
+    for name, actor in _assessors().items():
+        indices.setdefault(actor.powers_json["assessor_index"], []).append(name)
+
+    duplicated = {index: sorted(n) for index, n in indices.items() if len(n) > 1}
+    missing = sorted(set(range(1, 43)) - set(indices))
+    out_of_range = sorted(i for i in indices if not isinstance(i, int) or not 1 <= i <= 42)
+    assert not duplicated and not missing and not out_of_range, (
+        f"assessor_index is not a 1..42 bijection. Seats claimed by more than "
+        f"one assessor: {duplicated}. Seats nobody holds: {missing}. "
+        f"Indices outside 1..42: {out_of_range}."
+    )
+
+
+@pytest.mark.django_db
+def test_each_assessor_holds_the_seat_the_text_gives_him(seeded):
+    """Assessor N is the Nth name in the Nebseni order, not the Nth alphabetically."""
+    seated = {
+        actor.powers_json["assessor_index"]: name
+        for name, actor in _assessors().items()
+    }
+    misseated = {
+        index: {"expected": expected, "found": seated.get(index)}
+        for index, expected in enumerate(FORTY_TWO_ASSESSORS, start=1)
+        if seated.get(index) != expected
+    }
+    assert not misseated, (
+        f"Assessors seeded in the wrong seat (Papyrus of Nebseni order, "
+        f"Budge 1904 pp. 418-419): {misseated}"
+    )
+
+
+@pytest.mark.django_db
+def test_the_bench_order_is_not_the_alphabetical_order(seeded):
+    """The canonical order genuinely differs from the model's default ordering.
+
+    Not a tautology check on the data — a check that `assessor_index` is load
+    bearing. If the bench happened to be in alphabetical order, every display
+    that forgot to sort on the index would look correct and the omission would
+    never surface. It does not: Aati is 17th in the text and 1st alphabetically.
+    """
+    by_index = [name for _, name in sorted(
+        (actor.powers_json["assessor_index"], name)
+        for name, actor in _assessors().items()
+    )]
+    alphabetical = sorted(by_index)
+    assert by_index != alphabetical, (
+        "The seeded bench of 42 is in alphabetical order, so nothing would ever "
+        "reveal a display that ignores assessor_index. Check the seed table "
+        "against the Nebseni order."
+    )
+
+
+@pytest.mark.django_db
+def test_every_assessor_is_a_judge_of_the_hall_of_two_truths(seeded):
+    """Role JUDGE, realm EG_HALL_TWO_TRUTHS — the bench sits where the text puts it."""
+    miscast = {
+        name: {"role": actor.role, "realm": getattr(actor.realm, "realm_code", None)}
+        for name, actor in _assessors().items()
+        if actor.role != "JUDGE"
+        or getattr(actor.realm, "realm_code", None) != "EG_HALL_TWO_TRUTHS"
+    }
+    assert not miscast, (
+        f"Assessors seeded with the wrong role or realm — every one of the 42 "
+        f"must be a JUDGE in EG_HALL_TWO_TRUTHS: {miscast}"
+    )
+
+
+@pytest.mark.django_db
+def test_assessors_carry_their_edition_and_papyrus(seeded):
+    """Provenance travels inside the row.
+
+    The failure this roster replaced was unattributed data: 33 names with no
+    citation, which is why nobody could tell they were wrong without doing the
+    research from scratch. A row that has lost its citation is on its way back
+    to that state.
+    """
+    unattributed = sorted(
+        name for name, actor in _assessors().items()
+        if not actor.powers_json.get("source_edition")
+        or not actor.powers_json.get("papyrus")
+    )
+    assert not unattributed, (
+        f"Assessors seeded without source_edition and papyrus in powers_json: "
+        f"{unattributed}. The edition has to be recorded in the data — the "
+        f"manuscripts disagree on both the order and the count, so a name "
+        f"without an edition is not a checkable claim."
+    )
+
+
+@pytest.mark.django_db
+def test_assessors_carry_a_home_place_and_a_confession(seeded):
+    """Each row holds the two things the text pairs with the name.
+
+    #8 is the one exception on home place and it is not an exception to the
+    rule: the text gives him no town, so the field is empty on purpose and
+    ASSESSORS_WITH_SOURCE_CAVEATS records why.
+    """
+    incomplete = {
+        name: {
+            "home_place": actor.powers_json.get("home_place"),
+            "negative_confession": actor.powers_json.get("negative_confession"),
+        }
+        for name, actor in _assessors().items()
+        if not actor.powers_json.get("negative_confession")
+        or (
+            not actor.powers_json.get("home_place")
+            and actor.powers_json.get("assessor_index")
+            not in ASSESSORS_WITH_SOURCE_CAVEATS
+        )
+    }
+    assert not incomplete, (
+        f"Assessors missing home_place or negative_confession in powers_json: "
+        f"{incomplete}"
+    )
+
+
+@pytest.mark.django_db
+def test_flagged_assessors_keep_their_source_caveats(seeded):
+    """The uncertain entries stay marked uncertain.
+
+    Five of the 42 are not clean readings: #8 has no home town in the text, #32's
+    confession clause is partly unreadable in the scan, #37's name is Budge's own
+    query, and #38/#39 carry his question marks on the place where the second
+    witness also disagrees. Those flags are the honest part of the roster and are
+    the first thing a future tidy-up would delete. Only the presence of a note is
+    asserted, never its wording, so the prose can be improved freely.
+    """
+    by_index = {
+        actor.powers_json["assessor_index"]: (name, actor)
+        for name, actor in _assessors().items()
+    }
+    unflagged = {}
+    for index, why in ASSESSORS_WITH_SOURCE_CAVEATS.items():
+        if index not in by_index:
+            continue
+        name, actor = by_index[index]
+        if not actor.powers_json.get("source_notes"):
+            unflagged[index] = {"name": name, "caveat_that_was_dropped": why}
+    assert not unflagged, (
+        f"Assessors whose source caveat was dropped from powers_json"
+        f"['source_notes']: {unflagged}. These readings are uncertain in the "
+        f"source; recording them as if they were not is the fabrication this "
+        f"roster exists to correct."
+    )
+
+    eighth = by_index.get(8)
+    assert eighth is None or eighth[1].powers_json.get("home_place") == "", (
+        f"Assessor 8 was given a home place ({eighth[1].powers_json.get('home_place')!r}). "
+        f"The text gives him none — the formula reads 'who comest forth as [thou] "
+        f"goest back'. An empty string is the correct value; a guess is not."
+    )
+
+
+@pytest.mark.django_db
+def test_no_assessor_collides_with_an_egyptian_principal(seeded):
+    """The bench and the principals share no name.
+
+    The deleted 33-name list collided on 'Ra' and 'Maat', manufacturing on every
+    fresh database exactly the duplicate and cross-spelling rows that
+    `fix_actor_civilization` exists to clean up.
+    """
+    collisions = sorted(set(FORTY_TWO_ASSESSORS) & set(EGYPTIAN_PRINCIPALS))
+    assert not collisions, (
+        f"Assessor names that are also major Egyptian deities: {collisions}. "
+        f"The seeder matches on (civilization, name), so a shared name is one "
+        f"row wearing two identities."
+    )
+
+    duplicated = sorted(
+        name for name in FORTY_TWO_ASSESSORS
+        if Actor.all_objects.filter(civilization="EGYPTIAN", name=name).count() > 1
+    )
+    assert not duplicated, (
+        f"More than one EGYPTIAN row seeded under an assessor's name: {duplicated}"
+    )
+
+
+@pytest.mark.django_db
+def test_nefertem_and_basti_belong_to_the_bench_not_to_the_pantheon(seeded):
+    """The two near-miss names are held by assessors, and stay that way.
+
+    #34 Nefer-Tem and #26 Basti are one vowel from the deities Nefertem and
+    Bastet, neither of which is seeded. Whoever adds those deities must not
+    spell them this way: the seeder matches on (civilization, name), so it would
+    quietly overwrite an assessor rather than creating a second actor — a silent
+    merge, leaving no duplicate for `fix_actor_civilization` to catch. This test
+    is the tripwire on that.
+    """
+    bench = _assessors()
+    wrong = {}
+    for name, expected_index in ASSESSOR_NAMES_RESERVED_AGAINST_DEITIES.items():
+        actor = bench.get(name)
+        if actor is None:
+            wrong[name] = "not seeded as an assessor at all"
+        elif actor.powers_json.get("assessor_index") != expected_index:
+            wrong[name] = (
+                f"holds seat {actor.powers_json.get('assessor_index')}, "
+                f"expected {expected_index}"
+            )
+    assert not wrong, (
+        f"The names reserved for assessors are no longer held by them: {wrong}. "
+        f"If Nefertem or Bastet is being added as a major deity, give the deity "
+        f"its own spelling — do not reuse the assessor's."
+    )
+
+
+@pytest.mark.django_db
+def test_second_run_creates_no_assessors(seeded):
+    """Idempotency for the bench specifically.
+
+    The 42 go through a second seeding pass with its own row builder, so
+    "re-running creates nothing" has to be true of that pass and not only of the
+    command as a whole.
+    """
+    before = len(_assessors())
+    output = _seed(civilization="egyptian")
+    after = len(_assessors())
+    assert before == after == 42, (
+        f"Re-seeding changed the size of the bench: {before} -> {after} "
+        f"(expected 42 both times).\n{output}"
+    )
+    assert "created=0" in output, (
+        f"A second --civilization=egyptian run reported creations — the assessor "
+        f"pass is not idempotent.\n{output}"
+    )
 
 
 @pytest.mark.django_db
