@@ -18,6 +18,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
+from apps.ledger.fungibility import class_for_category
 from apps.ledger.models import SoulRecord  # noqa: F401 — re-exported from souls for BC
 from apps.ledger.readings import get_civilization_reading
 from apps.souls.dates import year_span
@@ -314,6 +315,13 @@ class LedgerService:
         demerit = 0
         demerit_count = 0
         record_summaries = []
+        # Merit and demerit again, split by which pool the deed falls in, so
+        # the reading can apply 「功過有不可折者」 — a hundred merits of spent
+        # cash do not discharge the hundred faults of a killing. Accumulated
+        # from the same unrounded `effective_weight` as the totals above, for
+        # the reason spelled out below: a total is not the sum of its displayed
+        # parts. See apps/ledger/fungibility.py.
+        class_totals = {}
 
         for r in records:
             years = cls._get_record_age_years(
@@ -339,16 +347,32 @@ class LedgerService:
             # denormalised field already uses.
             displayed_weight = round(effective_weight, 2)
 
-            if r.record_type == "MERIT":
-                merit += effective_weight
-            elif r.record_type == "DEMERIT":
-                demerit += effective_weight
-                demerit_count += 1
+            # Only MERIT and DEMERIT open a pool. JUDGMENT and DISPOSITION
+            # records score nothing, and giving them an all-zero class would
+            # put empty rows in the reading that look like a classification
+            # somebody made.
+            fungibility_class = class_for_category(r.category)
+            if r.record_type in ("MERIT", "DEMERIT"):
+                pool = class_totals.setdefault(
+                    fungibility_class, {"merit": 0.0, "demerit": 0.0}
+                )
+                if r.record_type == "MERIT":
+                    merit += effective_weight
+                    pool["merit"] += effective_weight
+                else:
+                    demerit += effective_weight
+                    demerit_count += 1
+                    pool["demerit"] += effective_weight
 
             record_summaries.append({
                 "id": str(r.id),
                 "type": r.record_type,
                 "category": r.category,
+                # Which pool this deed can be offset against — derived from
+                # `category`, never stored. Present on every record so the
+                # classification behind `reading.non_fungible` is visible
+                # rather than being an unexplained per-class total.
+                "fungibility_class": fungibility_class,
                 "description": r.description,
                 "original_weight": r.weight,
                 "effective_weight": displayed_weight,
@@ -391,7 +415,8 @@ class LedgerService:
             # apps/ledger/readings.py for why one shape for all of them was
             # wrong.
             "reading": get_civilization_reading(
-                soul.civilization, total_merit, total_demerit, demerit_count
+                soul.civilization, total_merit, total_demerit, demerit_count,
+                class_totals,
             ),
         }
 
