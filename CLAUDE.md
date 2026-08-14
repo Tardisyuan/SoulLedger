@@ -54,11 +54,26 @@ cd frontend && npx playwright test --project=chromium
 - Before fixing a bug, write it out first: symptom → root cause → proposed fix
 - If the root cause is unknown, say so — do not ship a patch that only hides the symptom
 - After fixing, check whether the same root cause exists elsewhere in the codebase
+- A new check must be proven to fail: mutate the thing it guards, watch it go red, then trust the green
+- Assert absence as well as presence — "the right value is shown" stays green while the wrong one sits beside it
+- A test double that behaves like the bug is worse than no test: it makes correct code look broken and broken code look fine
+- Do not state as fact anything you did not execute or query — an adjacent command does not answer a different question
+- A comment, a mock, and a chat message each make a claim on behalf of code you did not run; the ones that read as settled are the ones nobody re-derives
 
 *Why:* `docs/PRODUCTION_READINESS_REPORT.md` claimed "Production Ready / Security 8.5" on
 2026-05-30; the 2026-08-07 M15 audit found 4 CRITICAL tenant-isolation gaps in that same code.
 Many of the 61 fix commits in 2026-08 patch what the previous fix missed — e.g. `d879960`
 "close the last two tenant-scoping gaps the M15 pass missed".
+
+*Why:* the 2026-08-14 BRIEF §4.6 session hit the same unverified-claim shape four times.
+A comment in `app/dispatch/page.tsx` said "the raw member goes to `title` instead" above a badge
+with no `title` attribute; it shipped through review. A Jest stub in
+`src/__tests__/WorkflowPage.test.tsx` (`DomainEnum: ({value}) => <span>{value}</span>`) reproduced
+the exact defect under test, so the test measured the stub. A contract rule in
+`src/__tests__/domainDisplayContract.test.tsx` checked that `title={...}` existed near an enum
+render but never what was inside it, so `title={t("some.key")}` would have passed a rule whose
+whole point is that the raw member stays recoverable. And an agent ran `git branch --show-current`,
+read `main`, and reported that a named branch did not exist — it existed locally and on origin.
 
 ## Setup
 
