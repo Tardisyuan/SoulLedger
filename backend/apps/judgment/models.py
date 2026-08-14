@@ -132,19 +132,35 @@ class StatuteCorpus(models.TextChoices):
     exactly the way apps/ledger/readings.py says they do not have the same kind
     of ledger reading:
 
-      * HELL_LAW (冥律) is prescriptive statute — an offence, the hell it lands
-        you in, and a countervailing table of merit. It is the only one of the
-        three that is written as law, with 功過相抵 arithmetic attached.
       * NEGATIVE_CONFESSION is not a code of offences at all. It is 42 things
         the deceased *denies* having done, one per assessor, recited in the
         Hall of Two Truths. Citing one is citing a denial the heart failed to
         sustain — the polarity is inverted from a statute, and flattening the
         two together would state the Egyptian material as prohibitions it does
-        not contain.
-      * DEADLY_SIN is a moral taxonomy plus a literary punishment scheme
-        (Gregory's seven; Dante's circles). It is neither statute nor liturgy,
-        and this deployment holds no canon-law text — see the note on
-        EUROPEAN_STATUTES in seed_mythology.
+        not contain. It is the only corpus with data in it.
+      * HELL_LAW (冥律) and DEADLY_SIN are EMPTY, and their emptiness is a
+        finding rather than a backlog item. Both were seeded in 6017f04 and
+        withdrawn: there is no codified 冥律 to transcribe (《玉历宝钞》 is a
+        hall-by-hall morality tract with no articles, no numbering and no
+        sentence lengths), and the Inferno is not stratified by the seven
+        capital sins (Dante layers hell on Aristotle's tripartite scheme, and
+        pride, envy and sloth get no circle at all). The withdrawal note in
+        seed_mythology.py has the detail; migration judgment/0012 retired the
+        rows.
+
+    THE TWO EMPTY VALUES ARE KEPT ON PURPOSE. Rows still carry them — the ones
+    0012 soft-deleted, and any it refused to touch because a judgment had
+    already cited them — and a value that has left the enum is a row whose
+    `corpus` no longer renders, no longer validates, and no longer reverses.
+    An empty choice costs nothing; an unreadable stored value costs a decided
+    case its stated grounds.
+
+    ADDING THE NEXT ONE. If the Chinese side returns via 《太微仙君功過格》 —
+    a merit ledger with genuinely enumerated, signed entries — it very likely
+    wants a NEW value rather than a refill of HELL_LAW. A 功過格 is an account
+    book the living keep on themselves; 冥律 claims to be a penal code hell
+    administers. Reusing the name would file the one under the other and
+    resurrect exactly the framing that had to be withdrawn.
 
     So `corpus` says what kind of thing the reader is looking at, and
     CORPUS_CIVILIZATION below pins each one to the single cosmology it belongs
@@ -169,11 +185,13 @@ CORPUS_CIVILIZATION = {
 class StatutePolarity(models.TextChoices):
     """Whether citing this article counts against the soul or for it.
 
-    Without it, `docs/11` §4.2's 十善功德 rows (孝养父母 +100, 持守五戒 +80)
-    would be indistinguishable from §4.1's offences, and a judgment citing
-    "孝养父母" would read as an accusation. 功過相抵 — merit offsetting fault —
-    is a first-class rule of 冥律, so the corpus has to be able to say which
-    side of the scale an article sits on.
+    MERIT has no rows behind it at the moment — the corpus that had them was
+    withdrawn (see StatuteCorpus) — and it stays because the distinction is
+    real wherever the Chinese material eventually lands: 功過相抵, merit
+    offsetting fault, is the arithmetic a 功過格 is entirely made of, and
+    without a polarity a judgment citing 孝养父母 would read as an accusation
+    of filial piety. What was fabricated was a numbering, not the idea that a
+    ledger has two columns.
 
     DENIAL is the Egyptian case and is deliberately not folded into OFFENCE:
     "I have not stolen" is a claim the deceased makes, and what a judgment
