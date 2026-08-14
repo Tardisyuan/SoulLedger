@@ -187,8 +187,111 @@ CHINESE_REALMS = [
 EUROPEAN_REALMS = [
     ("EU_HEAVEN", "天堂", "上帝之国", "Kingdom of Heaven", "Heaven", RealmType.BLISS, 1,
      "Eternal paradise - the highest bliss realm in Christian tradition", "LETHE", True, None),
+    # The mountain as a whole. It is a container now — the seven terraces below
+    # hang off this row by `parent_realm` (see REALM_PARENTS) — so its
+    # description says what the container holds instead of describing a single
+    # undifferentiated waiting room.
     ("EU_PURGATORY", "炼狱", "涤罪所", "Purgatory", "Purgatory", RealmType.PURGATORY, 1,
-     "Temporary purification - souls cleansed before heaven entry", "LETHE", False, None),
+     "Mount Purgatory entire: Ante-Purgatory (Purg. I-IX), the seven terraces "
+     "that are its sub-realms, and the Earthly Paradise at the summit where "
+     "Lethe and Eunoè run (Purg. XXVIII, XXXI, XXXIII). Every soul admitted "
+     "here is already saved; the suffering is remedial and it ends. The memory "
+     "reset happens at the summit, after the seventh terrace — not on the way up",
+     "LETHE", False, None),
+    # ----------------------------------------------------------------------
+    # THE SEVEN TERRACES OF MOUNT PURGATORY.
+    #
+    # WHY THEY EXIST. The seven capital sins were seeded in 6017f04 as seven
+    # DEADLY_SIN statutes carrying a `dante_circle`, and were withdrawn whole in
+    # 8308204: Dante does not layer hell by the seven sins. He layers it on
+    # Aristotle's tripartition — incontinenza / malizia / matta bestialitade,
+    # said outright by Virgil in Inf. XI.79-84 — and pride, envy and sloth have
+    # no circle at all. The structure that IS ordered by the seven is this one,
+    # Purgatorio X-XXVII, and the repo did not model it, so the withdrawn
+    # articles had nowhere to return to. These seven rows are that anchor.
+    #
+    # ORDER IS THE POINT. Bottom to top: pride, envy, wrath, sloth, avarice,
+    # gluttony, lust. `tier` is the terrace number, exactly as `tier` is the
+    # circle number for EU_HELL_* and the court number for DY_COURT_*. Dante's
+    # own reason for that order is the theory of disordered love Virgil gives in
+    # Purg. XVII: terraces 1-3 are love perverted (aimed at a neighbour's harm),
+    # terrace 4 is love defective, terraces 5-7 are love excessive. It is not
+    # Gregory the Great's order and must not be credited to him — his seven
+    # (Moralia in Job XXXI.xlv.87) are inanis gloria, invidia, ira, tristitia,
+    # avaritia, ventris ingluvies, luxuria, with superbia the root above them
+    # rather than one of them, and no acedia at all.
+    #
+    # SUB-REALMS, NOT REPLACEMENTS. EU_PURGATORY stays and stays a destination:
+    # `DispositionService._route_european` sends every PURGATORY/RETRY verdict
+    # to it, Lethe stands on it, and the mountain is one place with parts, not
+    # seven places that happen to be near each other. So these seven point at it
+    # through `Realm.parent_realm` — the field's first use in seeded data.
+    #
+    # NOT DISPOSITION DESTINATIONS. No verdict routes to a terrace and this
+    # change does not add one, for the same reason EU_PLATO_MEADOW is not a
+    # destination: the router has verdict and karma to work with, and a terrace
+    # is chosen by WHICH sin, which nothing in a Judgment currently records.
+    # Routing by karma magnitude would reproduce the circle-severity ladder that
+    # made "seven sins over nine circles" look plausible in the first place.
+    # tests/test_purgatorio_terraces.py asserts the absence, so adding a route
+    # has to be a decision rather than a drift.
+    #
+    # NO LETHE ON THE WAY UP. All eleven European realms carried
+    # memory_reset_mechanism=LETHE, which is wrong for the nine circles (Dante's
+    # damned keep their memories — Francesca, Ulysses, Ugolino all recount their
+    # lives) and wrong here: Lethe is at the summit, in the Earthly Paradise,
+    # after the seventh terrace. These rows say NONE.
+    ("EU_PURGATORY_T1_PRIDE", "炼狱第一层", "傲慢之台", "First Terrace - Pride",
+     "Superbia", RealmType.PURGATORY, 1,
+     "First terrace: pride. The penitent walks bent double beneath a great "
+     "stone, past carved exempla of humility (Purg. X-XII). Love perverted. "
+     "Pride has no circle in the Inferno at all — this is its only place in "
+     "the poem",
+     "NONE", False, None),
+    ("EU_PURGATORY_T2_ENVY", "炼狱第二层", "嫉妒之台", "Second Terrace - Envy",
+     "Invidia", RealmType.PURGATORY, 2,
+     "Second terrace: envy. The penitent's eyelids are sewn shut with iron "
+     "wire (Purg. XIII-XV). Love perverted. Envy has no circle in the Inferno "
+     "either; the withdrawn EU-DS-07 gave it an iron cage in the eighth "
+     "circle, and no part of the poem contains one",
+     "NONE", False, None),
+    ("EU_PURGATORY_T3_WRATH", "炼狱第三层", "愤怒之台", "Third Terrace - Wrath",
+     "Ira", RealmType.PURGATORY, 3,
+     "Third terrace: wrath. The penitent walks through thick, blinding, "
+     "choking smoke (Purg. XV-XVII). Love perverted. The Inferno's fifth "
+     "circle also holds the wrathful, but it holds them as incontinence, not "
+     "as one of the seven",
+     "NONE", False, None),
+    ("EU_PURGATORY_T4_SLOTH", "炼狱第四层", "懒惰之台", "Fourth Terrace - Sloth",
+     "Acedia", RealmType.PURGATORY, 4,
+     "Fourth terrace: sloth (acedia). The penitent runs without pause, calling "
+     "out exempla of zeal (Purg. XVIII-XIX). Love defective — the single sin "
+     "of too little love, and the hinge of the mountain. Sloth has no circle "
+     "of its own in the Inferno: the accidiosi sunk under the Styx are read by "
+     "some as acedia and by Dante as anger turned inward, and the reading is "
+     "disputed",
+     "NONE", False, None),
+    ("EU_PURGATORY_T5_AVARICE", "炼狱第五层", "贪婪之台", "Fifth Terrace - Avarice",
+     "Avaritia", RealmType.PURGATORY, 5,
+     "Fifth terrace: avarice, and prodigality with it. The penitent lies face "
+     "down on the ground (Purg. XIX-XXII). Love excessive. Two directions of "
+     "one disorder share the terrace, the same pairing the Inferno's fourth "
+     "circle makes of the avaricious and the prodigal",
+     "NONE", False, None),
+    ("EU_PURGATORY_T6_GLUTTONY", "炼狱第六层", "暴食之台", "Sixth Terrace - Gluttony",
+     "Gula", RealmType.PURGATORY, 6,
+     "Sixth terrace: gluttony. The penitent starves and thirsts beneath fruit "
+     "trees whose scent draws and whose branches withhold (Purg. XXII-XXIV). "
+     "Love excessive",
+     "NONE", False, None),
+    ("EU_PURGATORY_T7_LUST", "炼狱第七层", "淫欲之台", "Seventh Terrace - Lust",
+     "Luxuria", RealmType.PURGATORY, 7,
+     "Seventh and last terrace: lust. The penitent passes through a wall of "
+     "flame (Purg. XXV-XXVII). Love excessive. What lies above is not an "
+     "eighth terrace but the summit itself — the Earthly Paradise, Lethe and "
+     "Eunoè, and the ascent to the stars",
+     "NONE", False, None),
+    # ----------------------------------------------------------------------
     ("EU_HELL_1ST", "第一层地狱", "幽冥边境", "First Circle - Limbo", "Limbo", RealmType.HELL, 1,
      "Limbo - virtuous pagans, unbaptized infants", "LETHE", True, None),
     # name_zh was 「贪食深渊」 (gluttony) against a name_en of "Second Circle -
@@ -259,6 +362,27 @@ EUROPEAN_REALMS = [
      "and neither is invented: this row is the judgment ground only.",
      "NONE", False, None),
 ]
+
+# child realm_code -> the realm it is a part of. `Realm.parent_realm` has
+# existed since realms/0001 and has been serialized and select_related the whole
+# time, with nothing in the seed data ever using it: the ten courts are siblings,
+# the nine circles are siblings, and no seeded row was a part of another.
+#
+# The seven terraces are. Dante's Purgatory is one mountain — Ante-Purgatory,
+# seven terraces, Earthly Paradise — and flattening it into eight peers would
+# lose the one relation that says the terraces are stages of a single ascent and
+# that the summit is above all seven rather than beside them. Kept as a separate
+# map rather than a twelfth column on the realm tuples so that the eleven rows
+# with no parent do not each carry a `None`.
+REALM_PARENTS = {
+    "EU_PURGATORY_T1_PRIDE": "EU_PURGATORY",
+    "EU_PURGATORY_T2_ENVY": "EU_PURGATORY",
+    "EU_PURGATORY_T3_WRATH": "EU_PURGATORY",
+    "EU_PURGATORY_T4_SLOTH": "EU_PURGATORY",
+    "EU_PURGATORY_T5_AVARICE": "EU_PURGATORY",
+    "EU_PURGATORY_T6_GLUTTONY": "EU_PURGATORY",
+    "EU_PURGATORY_T7_LUST": "EU_PURGATORY",
+}
 
 EGYPTIAN_REALMS = [
     ("EG_DUAT_ENTRY", "杜阿特入口", "杜阿特之门", "Gate of Duat", "DuatEntry", RealmType.PURGATORY, 1,
@@ -1028,7 +1152,7 @@ CIVILIZATION_ASSESSORS = {
 # --------------------------------------------------------------------------
 # Statutes — the articles a verdict can cite (apps.judgment.models.Statute)
 #
-# ONE CORPUS IS SEEDED, AND IT IS NOT WRITTEN IN THIS FILE.
+# TWO CORPORA ARE SEEDED, AND THE LARGER ONE IS NOT WRITTEN IN THIS FILE.
 #
 #   EGYPTIAN  — NOT here. The 42 clauses are already in the database on the
 #               assessors' `powers_json["negative_confession"]`, seeded above
@@ -1040,12 +1164,18 @@ CIVILIZATION_ASSESSORS = {
 #               the first time one was corrected — the "two hand-maintained
 #               copies" failure this seeder was consolidated to end.
 #
-# WITHDRAWN: THE CHINESE (HELL_LAW) AND EUROPEAN (DEADLY_SIN) CORPORA.
+#   EUROPEAN  — here, below, as EUROPEAN_STATUTES. Seven articles, one per
+#               terrace of Mount Purgatory. This is the SECOND attempt at this
+#               corpus; the first was withdrawn, and the difference between
+#               them is the whole point of the note that follows.
+#
+# WITHDRAWN: THE CHINESE (HELL_LAW) CORPUS.
+# RE-ANCHORED: THE EUROPEAN (DEADLY_SIN) ONE.
 #
 # Commit 6017f04 seeded thirteen Chinese rows (CN-HL-O01..O06, CN-HL-M01..M07)
 # and seven European ones (EU-DS-01..07) from this file. Both tables were
-# removed after independent verification of their sources. Rows that already
-# reached a database are soft-deleted by
+# removed in 8308204 after independent verification of their sources. Rows that
+# already reached a database are soft-deleted by
 # apps/judgment/migrations/0012_withdraw_fabricated_statutes.py — reversibly,
 # and never over a row a judgment has actually cited.
 #
@@ -1069,19 +1199,46 @@ CIVILIZATION_ASSESSORS = {
 #     layers hell on Aristotle's tripartite scheme (Inf. XI.79-84), and three
 #     of the seven — pride, envy, sloth — have no circle at all. The structure
 #     that IS ordered by the seven is the Purgatorio's seven terraces, which
-#     this deployment does not model. The ordering was attributed to Gregory
+#     this deployment did not model. The ordering was attributed to Gregory
 #     the Great but does not match his: for Gregory pride is not one of the
 #     seven, it is the root from which they grow. And EU-DS-07's punishment
 #     ("被铁笼囚禁", caged in iron) appears in no part of the poem — it was
-#     invented outright. See scratchpad/verify-christian-structure.md.
+#     invented outright. See docs/lore-verification/verify-christian-structure.md.
 #
-# DO NOT "COMPLETE" THESE LISTS. The obvious repair — supply the four missing
-# 十恶, the three missing 十善, restore pride/envy/sloth to their circles — is
-# the one repair that must not be made. Nothing was missing. The lists were
-# pinned to the wrong structures, and filling the holes only produces a more
-# convincing forgery: correctly-numbered articles of a code that was never
-# written, and circles Dante did not put those sins in. A corpus returns here
-# only with a primary text that actually has the shape the model claims.
+# WHAT CHANGED FOR EUROPE, AND WHAT DID NOT. The seven sins themselves were
+# never the finding: the names and the Latin (Superbia, Invidia, Ira, Acedia,
+# Avaritia, Gula, Luxuria) were right the first time. What failed was the
+# structure they hung on. The repair is therefore NOT a corrected mapping of
+# sins onto circles — there is no such mapping to correct. It is a place:
+# EU_PURGATORY_T1..T7 above are the seven terraces of Purgatorio X-XXVII, which
+# is the one structure in the Commedia that the seven do order, and every
+# article below cites its terrace instead of a circle.
+#
+# `dante_circle` IS RETIRED AND IS NOT COMING BACK. It was never a coordinate
+# in Dante — it is a later popular chart laying two unrelated taxonomies over
+# each other, and for pride, envy and sloth it named a circle the poem does not
+# give them. No row below carries the key, and tests/test_purgatorio_terraces.py
+# asserts that no seeded statute ever does. `purgatorio_terrace` replaces it and
+# is a different kind of value: 1-7, checkable against the poem, and against the
+# realm rows in this same file.
+#
+# THE CODES ARE NEW: EU-DS-T1..T7, not EU-DS-01..07. Reusing the old codes
+# would have been worse than a collision. judgment/0012 deliberately did NOT
+# retire any withdrawn article a judgment had cited, so a live EU-DS-07 may
+# exist on a deployed database carrying the iron cage — and `_upsert` matches on
+# `code`. Re-seeding under the same code would either be skipped as a
+# soft-deleted row (silently seeding six of seven) or, with --update, rewrite
+# the recorded grounds of a decided case into a different article. A new
+# citation key leaves the tombstones legible as what they are.
+#
+# DO NOT "COMPLETE" THE CHINESE LIST. The obvious repair — supply the four
+# missing 十恶, the three missing 十善 — is the one repair that must not be
+# made. Nothing was missing. The list was pinned to a structure the sources do
+# not have, and filling the holes only produces a more convincing forgery:
+# correctly-numbered articles of a code that was never written. A corpus
+# returns here only with a primary text that actually has the shape the model
+# claims — which is exactly the test the European seven have now passed and
+# had not before.
 #
 # WHERE THE CHINESE SIDE IS HEADED. The workable anchor is not a law code but
 # a merit ledger: 《太微仙君功過格》 (1171, in the Daozang), which really does
@@ -1099,14 +1256,299 @@ CIVILIZATION_ASSESSORS = {
 # against UCL's Maiherperi papyrus, and it stays.
 # --------------------------------------------------------------------------
 
+#: Provenance carried by every one of the seven. One string for the corpus
+#: because they all come from the same place in the same poem.
+DEADLY_SIN_SOURCE = (
+    "Dante, Purgatorio X-XXVII — the seven terraces of Mount Purgatory, the one "
+    "structure in the Commedia that the seven capital sins order. The sequence "
+    "is Dante's own, resting on the theory of disordered love Virgil states in "
+    "Purg. XVII, and is NOT Gregory the Great's: his seven (Moralia in Job "
+    "XXXI.xlv.87) are inanis gloria, invidia, ira, tristitia, avaritia, ventris "
+    "ingluvies, luxuria, with superbia their root and not one of them. "
+    "docs/lore-verification/verify-christian-structure.md §3.3."
+)
+
+#: Carried by all seven, because the mistake it guards against was made once
+#: already and made for all seven at once.
+NOT_A_CIRCLE_NOTE = (
+    "This is a terrace, not a circle. Dante layers hell on Aristotle's "
+    "tripartition — incontinenza / malizia / matta bestialitade, said by Virgil "
+    "at Inf. XI.79-84 — and pride, envy and sloth get no circle in it at all. "
+    "The withdrawn EU-DS-01..07 carried a `dante_circle`; no such coordinate "
+    "exists in Dante and it is not restored here."
+)
+
+#: Also carried by all seven: `opposing_virtue` is the one field in the payload
+#: that is not Dante's.
+CONTRARY_VIRTUE_NOTE = (
+    "`opposing_virtue_*` is from the 'seven contrary virtues', a pairing that "
+    "descends from Prudentius' Psychomachia (c. 410). It is a common later "
+    "table whose wording varies between versions — charity or kindness against "
+    "envy — not a list the Church defined, and not one Dante publishes; he "
+    "names exempla on each terrace instead."
+)
+
+# The seven capital sins, one article per terrace, bottom to top.
+#
+# `ordinal` is the terrace number and so is `payload["purgatorio_terrace"]`, and
+# `payload["terrace_realm_code"]` names the realm row seeded above. The three
+# agree or tests/test_purgatorio_terraces.py fails: an article that says terrace
+# 2 while pointing at the fifth terrace's realm is exactly the drift that let
+# five of the seven sit on the wrong terrace in the withdrawn table.
+EUROPEAN_STATUTES = [
+    {
+        "code": "EU-DS-T1",
+        "ordinal": 1,
+        "polarity": "OFFENCE",
+        "title_zh": "傲慢",
+        "title_en": "Pride",
+        "text_zh": (
+            "傲慢（Superbia）。炼狱山第一层，《炼狱篇》X-XII。属「爱之偏邪」——"
+            "爱指向邻人之恶。苦修：背负巨石弯腰而行，沿途是刻在石上的谦逊范例。"
+        ),
+        "text_en": (
+            "Pride (Superbia). The first terrace of Mount Purgatory, Purg. "
+            "X-XII. Love perverted — turned toward a neighbour's harm. The "
+            "penitent walks bent double beneath a great stone, past carved "
+            "exempla of humility."
+        ),
+        "notes": [
+            NOT_A_CIRCLE_NOTE,
+            CONTRARY_VIRTUE_NOTE,
+            "Gregory the Great treats superbia not as one of the seven but as "
+            "the root they grow from (Moralia in Job XXXI.xlv.87: 'Radix "
+            "quippe cuncti mali superbia est'). Dante gives it a terrace, and "
+            "the lowest; the ordinal here is Dante's, not Gregory's.",
+        ],
+        "payload": {
+            "purgatorio_terrace": 1,
+            "terrace_realm_code": "EU_PURGATORY_T1_PRIDE",
+            "latin": "Superbia",
+            "opposing_virtue_zh": "谦逊",
+            "opposing_virtue_en": "humility",
+            "purgation_zh": "背负巨石弯腰而行",
+            "purgation_en": "bowed double beneath a great stone",
+            "cantos": "Purg. X-XII",
+            "love_disorder": "perverted",
+        },
+    },
+    {
+        "code": "EU-DS-T2",
+        "ordinal": 2,
+        "polarity": "OFFENCE",
+        "title_zh": "嫉妒",
+        "title_en": "Envy",
+        "text_zh": (
+            "嫉妒（Invidia）。炼狱山第二层，《炼狱篇》XIII-XV。属「爱之偏邪」。"
+            "苦修：眼睑被铁丝缝合。"
+        ),
+        "text_en": (
+            "Envy (Invidia). The second terrace, Purg. XIII-XV. Love "
+            "perverted. The penitent's eyelids are sewn shut with iron wire."
+        ),
+        "notes": [
+            NOT_A_CIRCLE_NOTE,
+            CONTRARY_VIRTUE_NOTE,
+            "The withdrawn EU-DS-07 put envy on the seventh terrace under "
+            "「被冷水浸泡」 and in the eighth circle of hell under 「被铁笼囚禁」. "
+            "Neither is in the poem; the iron cage was invented outright, and "
+            "Malebolge contains no cage. Purg. XIII is the eyelids and the "
+            "wire.",
+        ],
+        "payload": {
+            "purgatorio_terrace": 2,
+            "terrace_realm_code": "EU_PURGATORY_T2_ENVY",
+            "latin": "Invidia",
+            "opposing_virtue_zh": "仁爱",
+            "opposing_virtue_en": "charity",
+            "purgation_zh": "眼睑被铁丝缝合",
+            "purgation_en": "eyelids sewn shut with iron wire",
+            "cantos": "Purg. XIII-XV",
+            "love_disorder": "perverted",
+        },
+    },
+    {
+        "code": "EU-DS-T3",
+        "ordinal": 3,
+        "polarity": "OFFENCE",
+        "title_zh": "愤怒",
+        "title_en": "Wrath",
+        "text_zh": (
+            "愤怒（Ira）。炼狱山第三层，《炼狱篇》XV-XVII。属「爱之偏邪」。"
+            "苦修：行走于呛人的浓烟之中。"
+        ),
+        "text_en": (
+            "Wrath (Ira). The third terrace, Purg. XV-XVII. Love perverted. "
+            "The penitent walks through thick, blinding, choking smoke."
+        ),
+        "notes": [
+            NOT_A_CIRCLE_NOTE,
+            CONTRARY_VIRTUE_NOTE,
+            "The Inferno's fifth circle holds the wrathful too (Inf. "
+            "VII-VIII), but as incontinence under Aristotle's scheme rather "
+            "than as an item on this list. The overlap of four sins with "
+            "circles 2-5 is a coincidence of the two vocabularies, not a "
+            "correspondence.",
+        ],
+        "payload": {
+            "purgatorio_terrace": 3,
+            "terrace_realm_code": "EU_PURGATORY_T3_WRATH",
+            "latin": "Ira",
+            "opposing_virtue_zh": "温良",
+            "opposing_virtue_en": "meekness",
+            "purgation_zh": "行走于呛人的浓烟中",
+            "purgation_en": "walking through choking smoke",
+            "cantos": "Purg. XV-XVII",
+            "love_disorder": "perverted",
+        },
+    },
+    {
+        "code": "EU-DS-T4",
+        "ordinal": 4,
+        "polarity": "OFFENCE",
+        "title_zh": "懒惰",
+        "title_en": "Sloth",
+        "text_zh": (
+            "懒惰（Acedia）。炼狱山第四层，《炼狱篇》XVIII-XIX。属「爱之不足」——"
+            "七宗罪中唯一一条「爱得太少」，位于全山的转折处。苦修：不停奔跑呼喊。"
+        ),
+        "text_en": (
+            "Sloth (Acedia). The fourth terrace, Purg. XVIII-XIX. Love "
+            "defective — the single sin of too little love, and the hinge "
+            "between the three below and the three above. The penitent runs "
+            "without pause, calling out exempla of zeal."
+        ),
+        "notes": [
+            NOT_A_CIRCLE_NOTE,
+            CONTRARY_VIRTUE_NOTE,
+            "DISPUTED, AND LEFT DISPUTED: whether acedia has any place in the "
+            "Inferno at all. The accidiosi sunk beneath the Styx in the fifth "
+            "circle are connected to it by some readings, while Dante presents "
+            "them as anger turned inward (UT Austin, Danteworlds, circle 5). "
+            "This article states the terrace and takes no position on the "
+            "circle. The withdrawn EU-DS-05 stated circle 3, which is "
+            "gluttony's, and its own note admitted as much.",
+            "Gregory's seven have tristitia and no acedia (Moralia in Job "
+            "XXXI.xlv.87); acedia is the name the later Western list uses and "
+            "the one that fits Dante's fourth terrace.",
+        ],
+        "payload": {
+            "purgatorio_terrace": 4,
+            "terrace_realm_code": "EU_PURGATORY_T4_SLOTH",
+            "latin": "Acedia",
+            "opposing_virtue_zh": "热忱",
+            "opposing_virtue_en": "zeal",
+            "purgation_zh": "不停奔跑呼喊",
+            "purgation_en": "running without pause",
+            "cantos": "Purg. XVIII-XIX",
+            "love_disorder": "defective",
+        },
+    },
+    {
+        "code": "EU-DS-T5",
+        "ordinal": 5,
+        "polarity": "OFFENCE",
+        "title_zh": "贪婪",
+        "title_en": "Avarice",
+        "text_zh": (
+            "贪婪（Avaritia），与挥霍同层。炼狱山第五层，《炼狱篇》XIX-XXII。"
+            "属「爱之过度」。苦修：面朝下俯卧于地。"
+        ),
+        "text_en": (
+            "Avarice (Avaritia), with prodigality beside it. The fifth "
+            "terrace, Purg. XIX-XXII. Love excessive. The penitent lies face "
+            "down on the ground."
+        ),
+        "notes": [
+            NOT_A_CIRCLE_NOTE,
+            CONTRARY_VIRTUE_NOTE,
+            "The terrace holds the prodigal as well as the miserly (Purg. "
+            "XXII), so this article is not 'stinginess' but disordered "
+            "attachment to goods in either direction — the same pairing the "
+            "Inferno's fourth circle makes of the avari and the prodighi.",
+        ],
+        "payload": {
+            "purgatorio_terrace": 5,
+            "terrace_realm_code": "EU_PURGATORY_T5_AVARICE",
+            "latin": "Avaritia",
+            "opposing_virtue_zh": "慷慨",
+            "opposing_virtue_en": "generosity",
+            "purgation_zh": "面朝下俯卧于地",
+            "purgation_en": "lying face down on the ground",
+            "cantos": "Purg. XIX-XXII",
+            "love_disorder": "excessive",
+        },
+    },
+    {
+        "code": "EU-DS-T6",
+        "ordinal": 6,
+        "polarity": "OFFENCE",
+        "title_zh": "暴食",
+        "title_en": "Gluttony",
+        "text_zh": (
+            "暴食（Gula）。炼狱山第六层，《炼狱篇》XXII-XXIV。属「爱之过度」。"
+            "苦修：在够不到的果树下饥渴。"
+        ),
+        "text_en": (
+            "Gluttony (Gula). The sixth terrace, Purg. XXII-XXIV. Love "
+            "excessive. The penitent starves and thirsts beneath fruit trees "
+            "whose scent draws and whose branches withhold."
+        ),
+        "notes": [NOT_A_CIRCLE_NOTE, CONTRARY_VIRTUE_NOTE],
+        "payload": {
+            "purgatorio_terrace": 6,
+            "terrace_realm_code": "EU_PURGATORY_T6_GLUTTONY",
+            "latin": "Gula",
+            "opposing_virtue_zh": "节制",
+            "opposing_virtue_en": "temperance",
+            "purgation_zh": "在够不到的果树下饥渴",
+            "purgation_en": "hunger and thirst beneath unreachable fruit",
+            "cantos": "Purg. XXII-XXIV",
+            "love_disorder": "excessive",
+        },
+    },
+    {
+        "code": "EU-DS-T7",
+        "ordinal": 7,
+        "polarity": "OFFENCE",
+        "title_zh": "淫欲",
+        "title_en": "Lust",
+        "text_zh": (
+            "淫欲（Luxuria）。炼狱山第七层，也是最后一层，《炼狱篇》XXV-XXVII。"
+            "属「爱之过度」。苦修：穿过巨大的火墙。"
+        ),
+        "text_en": (
+            "Lust (Luxuria). The seventh and last terrace, Purg. XXV-XXVII. "
+            "Love excessive. The penitent passes through a wall of flame."
+        ),
+        "notes": [
+            NOT_A_CIRCLE_NOTE,
+            CONTRARY_VIRTUE_NOTE,
+            "Nothing is above the seventh terrace except the summit itself: "
+            "the Earthly Paradise, Lethe and Eunoè (Purg. XXVIII, XXXI, "
+            "XXXIII). There is no eighth terrace.",
+        ],
+        "payload": {
+            "purgatorio_terrace": 7,
+            "terrace_realm_code": "EU_PURGATORY_T7_LUST",
+            "latin": "Luxuria",
+            "opposing_virtue_zh": "贞洁",
+            "opposing_virtue_en": "chastity",
+            "purgation_zh": "穿过巨大的火墙",
+            "purgation_en": "passing through a wall of flame",
+            "cantos": "Purg. XXV-XXVII",
+            "love_disorder": "excessive",
+        },
+    },
+]
+
 # CLI label -> (corpus, source, rows) for a corpus TRANSCRIBED into this file.
-# Empty, and not because transcription is unsupported: `_seed_statutes` below
-# is the intact mechanism, exercised directly by
-# tests/test_judgment_statutes.py so it cannot rot while unused. It is empty
-# because this deployment currently holds no document with the shape a
-# statute corpus claims. Egyptian is absent for the opposite reason — its
-# corpus is derived rather than transcribed. See _seed_derived_statutes.
-CIVILIZATION_STATUTES = {}
+# Chinese is absent because the document behind it has no articles to
+# transcribe; Egyptian is absent for the opposite reason — its corpus is derived
+# rather than transcribed, see _seed_derived_statutes.
+CIVILIZATION_STATUTES = {
+    "european": ("DEADLY_SIN", DEADLY_SIN_SOURCE, EUROPEAN_STATUTES),
+}
 
 # What the Egyptian derivation reads off each assessor, and where it files the
 # result. `NEGATIVE_CONFESSION_FIELD` is stored on every derived row
@@ -1304,6 +1746,56 @@ class Command(BaseCommand):
                 do_update=do_update,
                 stats=stats,
             )
+        self._link_realm_parents(civilization, rows, do_update, stats)
+
+    def _link_realm_parents(self, civilization, rows, do_update, stats):
+        """Attach the realms in REALM_PARENTS to the realm they are part of.
+
+        A second pass rather than a column in `values`: the parent has to exist
+        before the child can point at it, and both are rows in the same table
+        this loop is still writing. Running afterwards means the order of the
+        seed table cannot decide whether the link resolves.
+
+        Filling in a NULL parent happens regardless of `--update`, for the same
+        reason `_upsert` fills in a NULL tenant regardless: an unset structural
+        link is not somebody's decision being overwritten, it is a row that has
+        not been told what it belongs to yet. Repointing a parent that is
+        already set to something else IS a decision, and that needs --update.
+        """
+        codes = {row[0] for row in rows}
+        by_code = {
+            realm.realm_code: realm
+            for realm in Realm.all_objects.filter(civilization=civilization)
+        }
+        for child_code, parent_code in REALM_PARENTS.items():
+            if child_code not in codes:
+                continue
+            child = by_code.get(child_code)
+            parent = by_code.get(parent_code)
+            if child is None or parent is None:
+                missing = child_code if child is None else parent_code
+                self.stdout.write(self.style.ERROR(
+                    f"  [warn] Realm {child_code} belongs under {parent_code} and "
+                    f"{missing} is not in the database — left unlinked"
+                ))
+                continue
+            if child.is_deleted:
+                # Same rule as _upsert: a retired row is reported by that pass
+                # and otherwise left exactly as it is.
+                continue
+            if child.parent_realm_id == parent.id:
+                continue
+            if child.parent_realm_id is None or do_update:
+                self.stdout.write(f"  ~ Realm {child_code}: parent_realm -> {parent_code}")
+                stats.updated += 1
+                child.parent_realm = parent
+                child.save()
+                continue
+            self.stdout.write(
+                f"  = Realm {child_code}: sits under "
+                f"{child.parent_realm.realm_code} rather than {parent_code} — "
+                f"left as-is (pass --update to overwrite)"
+            )
 
     # ------------------------------------------------------------------
     # Actors
@@ -1411,12 +1903,13 @@ class Command(BaseCommand):
     def _seed_statutes(self, civilization, tenant, corpus, source, rows, do_update, stats):
         """Seed one corpus transcribed from a document into CIVILIZATION_STATUTES.
 
-        No corpus is currently transcribed — CIVILIZATION_STATUTES is empty and
-        this method has no caller in `handle`. It is kept, not deleted: the
-        withdrawal above removed two fabricated tables, not the ability to seed
-        a real one, and the next corpus (功過格, if it verifies) arrives through
-        exactly this path. tests/test_judgment_statutes.py calls it directly
-        with a throwaway row so an unused path cannot quietly break.
+        One corpus is transcribed today: the seven capital sins, one article per
+        terrace of Purgatorio (EUROPEAN_STATUTES). This path was kept alive
+        while CIVILIZATION_STATUTES was empty — the withdrawal removed two
+        fabricated tables, not the ability to seed a real one — and
+        tests/test_judgment_statutes.py still calls it directly with a throwaway
+        row, which is what the next corpus (功過格, if it verifies) will arrive
+        through.
 
         Matched on `code`, which is why real codes should be stable and
         mnemonic rather than generated: a citation recorded against an article

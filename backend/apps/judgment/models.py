@@ -137,23 +137,29 @@ class StatuteCorpus(models.TextChoices):
         Hall of Two Truths. Citing one is citing a denial the heart failed to
         sustain — the polarity is inverted from a statute, and flattening the
         two together would state the Egyptian material as prohibitions it does
-        not contain. It is the only corpus with data in it.
-      * HELL_LAW (冥律) and DEADLY_SIN are EMPTY, and their emptiness is a
-        finding rather than a backlog item. Both were seeded in 6017f04 and
-        withdrawn: there is no codified 冥律 to transcribe (《玉历宝钞》 is a
-        hall-by-hall morality tract with no articles, no numbering and no
-        sentence lengths), and the Inferno is not stratified by the seven
-        capital sins (Dante layers hell on Aristotle's tripartite scheme, and
-        pride, envy and sloth get no circle at all). The withdrawal note in
-        seed_mythology.py has the detail; migration judgment/0012 retired the
-        rows.
+        not contain.
+      * DEADLY_SIN is the seven capital sins, one article per terrace of Mount
+        Purgatory (EU-DS-T1..T7). It was seeded in 6017f04 against Dante's nine
+        circles, withdrawn in 8308204 because that frame does not exist — the
+        Inferno is layered on Aristotle's tripartite scheme (Inf. XI.79-84) and
+        pride, envy and sloth get no circle at all — and re-anchored to
+        Purgatorio X-XXVII, which is the structure the seven actually order.
+        The articles carry `purgatorio_terrace`; the `dante_circle` the first
+        attempt carried is retired, being a coordinate the poem does not have.
+      * HELL_LAW (冥律) is EMPTY, and its emptiness is a finding rather than a
+        backlog item. It was seeded in 6017f04 and withdrawn: there is no
+        codified 冥律 to transcribe — 《玉历宝钞》 is a hall-by-hall morality
+        tract with no articles, no numbering and no sentence lengths. The
+        withdrawal note in seed_mythology.py has the detail; migration
+        judgment/0012 retired the rows.
 
-    THE TWO EMPTY VALUES ARE KEPT ON PURPOSE. Rows still carry them — the ones
-    0012 soft-deleted, and any it refused to touch because a judgment had
-    already cited them — and a value that has left the enum is a row whose
-    `corpus` no longer renders, no longer validates, and no longer reverses.
-    An empty choice costs nothing; an unreadable stored value costs a decided
-    case its stated grounds.
+    THE EMPTY VALUE IS KEPT ON PURPOSE. Rows still carry it — the ones 0012
+    soft-deleted, and any it refused to touch because a judgment had already
+    cited them — and a value that has left the enum is a row whose `corpus` no
+    longer renders, no longer validates, and no longer reverses. An empty choice
+    costs nothing; an unreadable stored value costs a decided case its stated
+    grounds. The same applies to the retired EU-DS-01..07 rows, which are
+    DEADLY_SIN tombstones sitting beside the seven live terrace articles.
 
     ADDING THE NEXT ONE. If the Chinese side returns via 《太微仙君功過格》 —
     a merit ledger with genuinely enumerated, signed entries — it very likely
@@ -217,7 +223,7 @@ class Statute(AuditUserFields, models.Model):
          the same convention Realm and Actor use. A JSON blob on Judgment would
          be a second, private one.
       3. The three corpora carry structurally different facts (a hell to serve
-         in; a merit score; a circle of the Inferno). `payload_json` holds the
+         in; a merit score; a terrace of Purgatory). `payload_json` holds the
          corpus-specific part, and `Statute` holds only what all three actually
          share: identity, provenance, and which way it cuts.
 
@@ -262,9 +268,10 @@ class Statute(AuditUserFields, models.Model):
     #: Verbatim caveats, carried rather than smoothed over — the same
     #: discipline as the assessors' `source_notes`. A list of strings.
     source_notes = models.JSONField(default=list, blank=True)
-    #: Corpus-specific structured facts: `punishment_hell` and `merit_points`
-    #: for 冥律, `dante_circle`/`latin`/`opposing_virtue` for the seven sins,
-    #: `assessor_index` for the Forty-Two.
+    #: Corpus-specific structured facts: `purgatorio_terrace`, `latin`,
+    #: `opposing_virtue_*` and the terrace's realm_code for the seven sins,
+    #: `assessor_index` for the Forty-Two. NOT `dante_circle` — that key was
+    #: retired with the first attempt at the seven; see StatuteCorpus.
     payload_json = models.JSONField(default=dict, blank=True)
 
     #: The row this article's text is derived from. Set for the Egyptian 42;
