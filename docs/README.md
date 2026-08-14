@@ -85,15 +85,17 @@ tenant. That is a product compromise, not a claim that they are one system.*
 
 ## 2. 工程文档 / Engineering docs
 
-> ⚠️ **本目录大部分内容没有进版本库。** `.gitignore` 里 `/docs/*` 忽略了整个目录，
-> 只保留了神话研究、`design-handoff/` 和下面标为「已入库」的少数文件。其余文件只存在
-> 于维护者的工作副本里，在 GitHub 上看不到。下表用「仅本地」标出，并且**不加链接**——
-> 加了在 GitHub 上就是死链。
+> ℹ️ **本目录下的 Markdown 现在全部进版本库。** 2026-08-14 之前，`.gitignore` 的
+> `/docs/*` 把这里大部分文件排除在外，它们只存在于维护者的工作副本里。这造成过实际
+> 损害：`MILESTONE_M15.md` 记录了「menu/perm 端点全局共享、不分租户」是**有意设计**，
+> 但仓库里的人看不到，于是那个「缺失」的租户过滤被当成 bug 补了回去，导致
+> `GET /menus/buttons/` 对每个非 ADMIN 角色都 500（已由 `c2ca5ac` 修复）。
+> 现在 `.gitignore` 只继续排除散落在本目录的截图与其他二进制文件。
 >
-> *Most of this folder is not in version control. `.gitignore` excludes `/docs/*`,
-> keeping only the mythology research, `design-handoff/`, and the few files marked
-> "in repo" below. The rest exist only in the maintainer's working copy and are
-> invisible on GitHub, so they are listed here without links.*
+> *All Markdown in this folder is now tracked. Until 2026-08-14 `/docs/*` excluded
+> most of it, so conclusions recorded here were invisible to anyone reading the
+> repo — which is how a deliberate design decision got "fixed" back into a 500.
+> `.gitignore` now only excludes loose screenshots and other binaries here.*
 
 **长期有效 / Living:**
 
@@ -102,10 +104,10 @@ tenant. That is a product compromise, not a claim that they are one system.*
 | [MILESTONES.md](MILESTONES.md) | 已入库 | 里程碑历史与计划。落后于代码，以 `git log` 为准 |
 | [coverage-roadmap.md](coverage-roadmap.md) | 已入库 | 测试覆盖率工作计划 |
 | [claude-reference.md](claude-reference.md) | 已入库 | 本仓库的 Claude Code 参考（由 `../CLAUDE.md` 按需加载） |
-| `ARCHITECTURE.md` | 仅本地 | 架构概览 |
-| `CONVENTIONS.md` | 仅本地 | 前后端编码规约 |
-| `API.md` | 仅本地 | API 手写索引。**权威来源是运行中的 `/api/docs/`（drf-spectacular）** |
-| `TECHNICAL_DOCS.md` | 仅本地 | 权限系统与项目结构说明 |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 已入库 | 架构概览 |
+| [CONVENTIONS.md](CONVENTIONS.md) | 已入库 | 前后端编码规约 |
+| [API.md](API.md) | 已入库 | API 手写索引。**权威来源是运行中的 `/api/docs/`（drf-spectacular）** |
+| [TECHNICAL_DOCS.md](TECHNICAL_DOCS.md) | 已入库 | 权限系统与项目结构说明 |
 
 **带日期的报告 / Dated reports** — 这些是某一天的快照，写下之后不再更新。当历史读，
 不要当现状读。*Snapshots of one day's state, never updated afterwards. Read them as
@@ -122,15 +124,30 @@ history, not as a description of the code today.*
 [task-292-security-validation.md](task-292-security-validation.md)、
 [task-292-implementation-report.md](task-292-implementation-report.md)
 
-仅本地 / *local only*：`BACKEND_CODE_REVIEW_20260529.md`、
-`FRONTEND_CODE_REVIEW_20260528.md`、`code-review-backend.md`、
-`code-review-frontend.md`、`post-coverage-audit-report.md`、`MILESTONE_M7.md`、
-`MILESTONE_M8.md`、`MILESTONE_M15.md`、`M7_用户组织架构重构.md`、`ROADMAP_V2.md`、
-`v2-plan-analysis.md`、`snowy-analysis.md`（菜单/权限设计的参考来源）、
-`DEBATE_RESULTS.md`、`REVIEW_RESULTS.md`、`LESSONS_LEARNED.md`
+同样已入库（2026-08-14 起）/ *also in repo, since 2026-08-14*：
+[BACKEND_CODE_REVIEW_20260529.md](BACKEND_CODE_REVIEW_20260529.md)、
+[FRONTEND_CODE_REVIEW_20260528.md](FRONTEND_CODE_REVIEW_20260528.md)、
+[code-review-backend.md](code-review-backend.md)、
+[code-review-frontend.md](code-review-frontend.md)、
+[post-coverage-audit-report.md](post-coverage-audit-report.md)、
+[MILESTONE_M7.md](MILESTONE_M7.md)、[MILESTONE_M8.md](MILESTONE_M8.md)、
+[MILESTONE_M15.md](MILESTONE_M15.md)、
+[M7_用户组织架构重构.md](M7_用户组织架构重构.md)、
+[v2-plan-analysis.md](v2-plan-analysis.md)、
+[snowy-analysis.md](snowy-analysis.md)（菜单/权限设计的参考来源）、
+[DEBATE_RESULTS.md](DEBATE_RESULTS.md)、[REVIEW_RESULTS.md](REVIEW_RESULTS.md)、
+[LESSONS_LEARNED.md](LESSONS_LEARNED.md)
 
-`archive/` 下是更早的记录，`backend/docs/` 下是后端自己的文档（权限矩阵与审计报告）。
-两者都被 ignore 规则排除在版本库之外，只存在于工作副本里。
+**`MILESTONE_M15.md` 值得单独一提**：它列出三条被确认为**有意为之**的设计，其中
+「menu/perm 端点全局共享、不分租户」这一条正是本目录曾经不入库所付出的代价。
+
+[`archive/`](archive/) 下是已废弃或更早的记录，目前包括
+[`ROADMAP_V2.md`](archive/ROADMAP_V2.md)（V2 灵魂客户端 + 转生抢购规划，
+2026-08-14 标记 superseded——其前提与本项目「无用户、从未部署」的定位冲突；
+其中已交付的死亡同步 API 与 WebSocket 通知见文首说明）与 `memory/` 下的早期记录。
+
+`backend/docs/` 下是后端自己的文档（权限矩阵与审计报告），仍被全局 ignore 规则
+排除在版本库之外，只存在于工作副本里。
 
 ---
 

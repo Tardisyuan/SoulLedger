@@ -3,7 +3,9 @@
 > **版本：** 2.0（多租户重构版）
 > **更新日期：** 2026-05-09
 > **状态：** 设计中
-> **OpenSpec 追踪：** `openspec/changes/multi-tenant-architecture/`
+> **OpenSpec 追踪：** `openspec/changes/archive/multi-tenant-architecture/`
+> （2026-08-14 已归档——该提案的绝大部分早已实现，但任务清单从未被勾选过。
+> 归档头部有逐主题的现状核实与设计差异说明。）
 
 ---
 
@@ -1934,4 +1936,4 @@ localhost
 
 ---
 
-*本文档由 OpenSpec 变更追踪：`openspec/changes/multi-tenant-architecture/`*
+*本文档由 OpenSpec 变更追踪：`openspec/changes/archive/multi-tenant-architecture/`（已归档）*

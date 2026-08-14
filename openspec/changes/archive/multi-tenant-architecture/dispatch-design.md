@@ -1,6 +1,6 @@
 # 跨租户审判与外派设计
 
-> **OpenSpec 追踪：** `openspec/changes/multi-tenant-architecture/dispatch-design.md`
+> **OpenSpec 追踪：** `openspec/changes/archive/multi-tenant-architecture/dispatch-design.md`（已归档）
 > **状态：** 设计中
 > **版本：** 1.0
 > **更新日期：** 2026-05-09
