@@ -192,6 +192,33 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         if node.status != NodeStatus.PENDING:
             return Response({"error": "Node already processed"}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Approver identity. `workflow.approve` (CodenamePermission, above)
+        # answers "may this user approve things" — it cannot answer "may this
+        # user approve *this* node", because that depends on who the node names.
+        # Every JUDGE and ADMIN holds the codename, so without this check any of
+        # them could decide a node reserved for 阎罗王, and `complete_node` would
+        # write their name into `node.approver` as though they were.
+        #
+        # `ApprovalNode.can_approve` existed to answer exactly this and was
+        # never called from anywhere — the guard was written, then bypassed by
+        # its own call site. This is that call site.
+        #
+        # Scoped to nodes that actually name an approver: `SYSTEM` nodes (what
+        # WorkflowService creates, and what every in-flight workflow in the live
+        # data currently sits on) and unconfigured ACTOR/ROLE nodes designate
+        # nobody, so there is no identity to enforce and they keep the codename
+        # gate they have always had. Making `can_approve` itself the gate for
+        # those would deny every SYSTEM node — can_approve returns False for
+        # them by design — and freeze those workflows.
+        if node.designates_approver and not node.can_approve(request.user):
+            return Response(
+                {
+                    "error": "Not the designated approver for this node",
+                    "detail": "只有该节点指定的审批人可以审批；如需推进请使用越级推进（escalate）",
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         verdict = serializer.validated_data["verdict"]
         notes = serializer.validated_data.get("notes", "")
 

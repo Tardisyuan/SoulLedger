@@ -386,6 +386,275 @@ class TestWorkflowApproveNode:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
 
+# -- Approver identity enforcement --------------------------------------------
+@pytest.mark.django_db
+class TestApproveNodeApproverIdentity:
+    """`approve_node` must refuse a user who is not the node's designated approver.
+
+    `ApprovalNode.can_approve` existed but (a) its ACTOR branch was
+    `return True  # TODO: check user.actor == approver_actor` and (b) nothing
+    ever called it — `approve_node` went straight to `complete_node`. So a node
+    that named 阎罗王 as its approver could be decided by anyone holding
+    `workflow.approve`, and the decision was recorded under *their* name.
+
+    Both halves are asserted here: the identity comparison itself, and that the
+    view actually consults it. A guard that is correct but uncalled is the
+    failure mode this repo keeps hitting, so the API-level tests are the point —
+    the `can_approve` unit tests below only pin the semantics.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        clear_current_tenant()
+        self.tenant = Tenant.objects.get_or_create(
+            code="AI_T1", defaults={"display_name": "Approver Identity Tenant"}
+        )[0]
+        self.soul = Soul.objects.create(name="Identity Soul", tenant=self.tenant)
+
+        from apps.actors.models import Actor
+
+        self.actor_designated = Actor.objects.create(
+            name="阎罗王 (designated)",
+            civilization="CHINESE",
+            role="JUDGE",
+            tenant=self.tenant,
+        )
+        self.actor_other = Actor.objects.create(
+            name="秦广王 (other)",
+            civilization="CHINESE",
+            role="JUDGE",
+            tenant=self.tenant,
+        )
+
+        # Every user below is ADMIN on purpose: ADMIN is this codebase's
+        # tenant-exempt role (apps/core/tenant.py) and holds `workflow.approve`,
+        # so if the guard still refuses them, it is refusing on approver
+        # identity and not incidentally on some other permission.
+        self.user_designated = User.objects.create_user(
+            username="ai_designated", password="test123", role="ADMIN",
+            tenant=self.tenant, actor=self.actor_designated,
+        )
+        self.user_impostor = User.objects.create_user(
+            username="ai_impostor", password="test123", role="ADMIN",
+            tenant=self.tenant, actor=self.actor_other,
+        )
+        self.user_no_actor = User.objects.create_user(
+            username="ai_no_actor", password="test123", role="ADMIN",
+            tenant=self.tenant, actor=None,
+        )
+
+    def _make_node(self, client, *, approver_type="ACTOR", approver_actor=None,
+                   approver_role=""):
+        """Create a workflow + one PENDING node through the API."""
+        resp = client.post(
+            f"{WORKFLOWS}/",
+            {"workflow_name": "Identity WF", "soul": str(self.soul.pk),
+             "case_type": "ROUTINE"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        wf_pk = resp.data["id"]
+
+        payload = {
+            "workflow": wf_pk,
+            "node_name": "身份校验节点",
+            "node_order": 1,
+            "approver_type": approver_type,
+            "approver_role": approver_role,
+        }
+        if approver_actor is not None:
+            payload["approver_actor"] = str(approver_actor.pk)
+        resp = client.post(f"{NODES}/", payload, format="json")
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        return wf_pk, resp.data["id"]
+
+    def _approve(self, client, wf_pk, node_pk, verdict="PASSED"):
+        return client.post(
+            f"{WORKFLOWS}/{wf_pk}/approve_node/",
+            {"verdict": verdict, "node_id": str(node_pk)},
+            format="json",
+        )
+
+    # -- the core assertion: a non-designated user is refused -----------------
+    def test_non_designated_actor_is_denied(self):
+        """THE regression test. Before the fix this returned 200 and the node
+        was APPROVED under the impostor's name."""
+        setup_client = _jwt_client(self.user_designated, self.tenant)
+        wf_pk, node_pk = self._make_node(
+            setup_client, approver_actor=self.actor_designated
+        )
+
+        impostor = _jwt_client(self.user_impostor, self.tenant)
+        resp = self._approve(impostor, wf_pk, node_pk)
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN, (
+            f"non-designated approver was allowed to approve: {resp.status_code} {resp.data}"
+        )
+
+        # And the node must be untouched — not merely the response code.
+        from apps.workflow.models import ApprovalNode, NodeStatus
+
+        node = ApprovalNode.objects.get(pk=node_pk)
+        assert node.status == NodeStatus.PENDING
+        assert node.verdict == ""
+        assert node.approver_id is None
+
+    def test_designated_actor_can_approve(self):
+        """The guard must not break the legitimate path."""
+        client = _jwt_client(self.user_designated, self.tenant)
+        wf_pk, node_pk = self._make_node(
+            client, approver_actor=self.actor_designated
+        )
+
+        resp = self._approve(client, wf_pk, node_pk)
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+
+        from apps.workflow.models import ApprovalNode, NodeStatus
+
+        node = ApprovalNode.objects.get(pk=node_pk)
+        assert node.status == NodeStatus.APPROVED
+        assert node.approver_id == self.user_designated.pk
+
+    def test_user_without_actor_is_denied(self):
+        """No actor on the user means no identity to match — deny, never fall
+        through to 'allow because we cannot tell'."""
+        setup_client = _jwt_client(self.user_designated, self.tenant)
+        wf_pk, node_pk = self._make_node(
+            setup_client, approver_actor=self.actor_designated
+        )
+
+        client = _jwt_client(self.user_no_actor, self.tenant)
+        resp = self._approve(client, wf_pk, node_pk)
+        assert resp.status_code == status.HTTP_403_FORBIDDEN, resp.data
+
+        from apps.workflow.models import ApprovalNode, NodeStatus
+
+        assert ApprovalNode.objects.get(pk=node_pk).status == NodeStatus.PENDING
+
+    def test_actor_node_without_designated_actor_keeps_codename_gate(self):
+        """`approver_type=ACTOR` with `approver_actor=NULL` designates nobody.
+
+        This is the *model default* for a node created through the API, and it
+        is what every pre-existing node fixture in this file uses. There is no
+        identity to compare, so the node stays governed by the `workflow.approve`
+        codename permission exactly as before — the identity guard only engages
+        where an approver was actually named. `can_approve` still reports False
+        here (see the unit test below); the view does not treat that as a veto
+        for an unconfigured node.
+        """
+        client = _jwt_client(self.user_no_actor, self.tenant)
+        wf_pk, node_pk = self._make_node(client, approver_actor=None)
+
+        resp = self._approve(client, wf_pk, node_pk)
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+
+    def test_role_node_requires_matching_role(self):
+        """The ROLE branch is enforced through the same call site."""
+        setup_client = _jwt_client(self.user_designated, self.tenant)
+        wf_pk, node_pk = self._make_node(
+            setup_client, approver_type="ROLE", approver_role="JUDGE"
+        )
+
+        # ADMIN != JUDGE, and ADMIN is deliberately not exempt here.
+        resp = self._approve(setup_client, wf_pk, node_pk)
+        assert resp.status_code == status.HTTP_403_FORBIDDEN, resp.data
+
+    def test_system_node_still_approvable(self):
+        """SYSTEM nodes are what `WorkflowService` actually creates, and every
+        in-flight workflow in the live data sits on one. They designate no
+        approver, so they keep the codename gate — tightening this would freeze
+        those workflows and is a separate product decision."""
+        client = _jwt_client(self.user_no_actor, self.tenant)
+        wf_pk, node_pk = self._make_node(client, approver_type="SYSTEM")
+
+        resp = self._approve(client, wf_pk, node_pk)
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+
+
+@pytest.mark.django_db
+class TestCanApproveUnit:
+    """`ApprovalNode.can_approve` semantics, asserted directly."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        clear_current_tenant()
+        from apps.actors.models import Actor
+        from apps.workflow.models import ApprovalNode, ApprovalWorkflow
+
+        self.tenant = Tenant.objects.get_or_create(
+            code="CA_T1", defaults={"display_name": "can_approve Tenant"}
+        )[0]
+        soul = Soul.objects.create(name="CA Soul", tenant=self.tenant)
+        self.workflow = ApprovalWorkflow.objects.create(
+            workflow_name="CA WF", soul=soul, tenant=self.tenant
+        )
+        self.actor_a = Actor.objects.create(
+            name="Actor A", civilization="CHINESE", role="JUDGE", tenant=self.tenant
+        )
+        self.actor_b = Actor.objects.create(
+            name="Actor B", civilization="CHINESE", role="JUDGE", tenant=self.tenant
+        )
+        self.node_model = ApprovalNode
+
+    def _node(self, **kwargs):
+        defaults = {
+            "workflow": self.workflow,
+            "node_name": "n",
+            "node_order": 1,
+            "approver_type": "ACTOR",
+        }
+        defaults.update(kwargs)
+        return self.node_model.objects.create(**defaults)
+
+    def _user(self, username, actor=None, role="JUDGE"):
+        return User.objects.create_user(
+            username=username, password="x", role=role,
+            tenant=self.tenant, actor=actor,
+        )
+
+    def test_matching_actor_is_true(self):
+        node = self._node(approver_actor=self.actor_a)
+        assert node.can_approve(self._user("ca_match", actor=self.actor_a)) is True
+
+    def test_different_actor_is_false(self):
+        node = self._node(approver_actor=self.actor_a)
+        assert node.can_approve(self._user("ca_diff", actor=self.actor_b)) is False
+
+    def test_user_without_actor_is_false(self):
+        node = self._node(approver_actor=self.actor_a)
+        assert node.can_approve(self._user("ca_noactor", actor=None)) is False
+
+    def test_admin_without_matching_actor_is_false(self):
+        """ADMIN is tenant-exempt for *visibility*; approving as someone else is
+        an authorization decision, and the audited `escalate` action is the
+        sanctioned way for an admin to move a stuck flow."""
+        node = self._node(approver_actor=self.actor_a)
+        admin = self._user("ca_admin", actor=None, role="ADMIN")
+        assert node.can_approve(admin) is False
+
+    def test_null_approver_actor_is_false(self):
+        """No designated approver → nobody satisfies the identity test. This is
+        the pre-existing behaviour of this method and is preserved."""
+        node = self._node(approver_actor=None)
+        assert node.can_approve(self._user("ca_null", actor=self.actor_a)) is False
+
+    def test_system_node_is_false(self):
+        node = self._node(approver_type="SYSTEM")
+        assert node.can_approve(self._user("ca_sys", actor=self.actor_a)) is False
+
+    def test_non_pending_node_is_false(self):
+        from apps.workflow.models import NodeStatus
+
+        node = self._node(approver_actor=self.actor_a, status=NodeStatus.APPROVED)
+        assert node.can_approve(self._user("ca_done", actor=self.actor_a)) is False
+
+    def test_anonymous_user_is_false(self):
+        from django.contrib.auth.models import AnonymousUser
+
+        node = self._node(approver_actor=self.actor_a)
+        assert node.can_approve(AnonymousUser()) is False
+
+
 # -- Workflow stats action ----------------------------------------------------
 @pytest.mark.django_db
 class TestWorkflowStats:
