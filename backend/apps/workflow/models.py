@@ -352,14 +352,78 @@ class ApprovalNode(AuditUserFields, models.Model):
     def __str__(self):
         return f"{self.workflow.soul.name} - {self.node_name} ({self.status})"
 
+    @property
+    def designates_approver(self) -> bool:
+        """True when this node names *who* must decide it.
+
+        A node can carry an ``approver_type`` without naming anyone: ``ACTOR``
+        is the field default, so a node POSTed to ``/api/v1/nodes/`` without an
+        ``approver_actor`` claims actor-approval and designates nobody. ``ROLE``
+        with an empty ``approver_role`` is the same shape. ``SYSTEM`` designates
+        nobody by definition.
+
+        ``approve_node`` uses this to decide whether the identity check applies
+        at all: where an approver is named, ``can_approve`` is authoritative;
+        where none is, the node stays governed by the ``workflow.approve``
+        codename permission as it always was. Splitting it this way is what lets
+        the guard be enforced without freezing the in-flight workflows, whose
+        nodes ``WorkflowService`` creates as ``SYSTEM``.
+        """
+        if self.approver_type == "ACTOR":
+            return self.approver_actor_id is not None
+        if self.approver_type == "ROLE":
+            return bool(self.approver_role)
+        return False
+
     def can_approve(self, user) -> bool:
-        """Check if user can approve this node."""
+        """Whether ``user`` is the approver this node designates.
+
+        This used to answer ``True`` for *any* user as soon as the node named an
+        ``approver_actor``::
+
+            if self.approver_type == "ACTOR" and self.approver_actor:
+                return True  # TODO: check user.actor == approver_actor
+
+        — so a node whose approver was 阎罗王 could be decided by anyone who
+        reached it, and ``complete_node`` then recorded the decision under that
+        caller's name. The TODO had outlived several audits as a note rather
+        than a finding. It was also never *called*: ``approve_node`` went
+        straight to ``complete_node``, so fixing the comparison alone would have
+        left a correct guard that nothing consults. Both halves are closed;
+        ``apps/workflow/tests.py`` asserts the refusal through the API, not just
+        against this method.
+
+        Fail-closed on every axis. A user with no linked ``Actor`` is refused
+        rather than falling back to role or to "cannot tell, allow" — 18 of the
+        100 users in the live data have ``actor=NULL``, so an
+        allow-when-unknown branch would have been the common case, not the edge
+        case. ADMIN gets no bypass either: tenant-exemption
+        (``apps/core/tenant.py``) is about which rows a user may *see*, and
+        approving in another actor's name is an authorization decision, not a
+        visibility one. An admin who must move a stuck flow has
+        ``ApprovalWorkflowViewSet.escalate``, which demands a written reason and
+        writes an ``AuditLog`` — the override stays available, but visible.
+        """
         if self.status != NodeStatus.PENDING:
             return False
-        if self.approver_type == "SYSTEM":
-            return False  # System nodes are auto-processed
-        if self.approver_type == "ACTOR" and self.approver_actor:
-            return True  # TODO: check user.actor == approver_actor
+
+        # AnonymousUser has no `actor_id`/`role`; asking with getattr keeps this
+        # method total rather than raising AttributeError at the call site.
+        if not getattr(user, "is_authenticated", False):
+            return False
+
+        if self.approver_type == "ACTOR":
+            if self.approver_actor_id is None:
+                return False  # designates nobody — nobody satisfies it
+            user_actor_id = getattr(user, "actor_id", None)
+            if user_actor_id is None:
+                return False  # no identity to compare
+            return user_actor_id == self.approver_actor_id
+
         if self.approver_type == "ROLE":
+            if not self.approver_role:
+                return False
             return getattr(user, "role", None) == self.approver_role
+
+        # SYSTEM, and any approver_type added later without a branch here.
         return False
