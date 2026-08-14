@@ -437,7 +437,7 @@ Tenant ────────────────────────�
 | tenant | FK(Tenant) | 所属租户（通过 Soul 级联） |
 | soul | FK(Soul) | 被处置灵魂 |
 | destination_realm | FK(Realm) | 目标地域 |
-| memory_reset | enum | MENGPO / LETIES / SPELL / NONE |
+| memory_reset | enum | MENGPO / LETHE / SPELL / NONE |
 | is_eternal | boolean | 是否永恒处置 |
 | is_executed | boolean | 是否已执行 |
 | created_at | datetime | 创建时间 |
@@ -818,7 +818,7 @@ judgment.conclude(verdict=PASSED/PURGATORY)?
 | 值 | 租户 | 说明 |
 |----|------|------|
 | MENGPO | CN_DIYU | 孟婆汤（清除现世记忆） |
-| LETIES | EU_HEAVEN_HELL | 忘川（Lethe 河水） |
+| LETHE | EU_HEAVEN_HELL | 忘川（Lethe 河水） |
 | SPELL | EG_DUAT | 咒语（魔法记忆消除） |
 | NONE | 通用 | 完整记忆保留 |
 
