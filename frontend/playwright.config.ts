@@ -29,15 +29,23 @@ export default defineConfig({
    *   2. /workflow's `flex` + `w-80 shrink-0` two-column row left the preview
    *      pane 1px wide at 393px. Fixed by stacking below `lg`.
    *
-   * The third failure was NOT a mobile defect and is still here: several
-   * assertions in e2e/workflow.spec.ts use non-unique text locators, and
-   * during a dev-server compile React parks a copy of the streamed subtree in
-   * a `<div hidden>` at the top of <body> before splicing it in. While that
-   * copy exists the locator matches twice and Playwright raises a strict-mode
-   * violation, which it does not retry away. It is engine-agnostic —
-   * `--repeat-each=6` reproduces it 7-8 times in 42 on chromium, which has
-   * been in CI all along — so it is not a reason to hold mobile-chrome back.
-   * `retries: 2` below absorbs it; the fix is unique locators in the spec.
+   * The third failure was NOT a mobile defect: during a dev-server compile
+   * React parks a copy of the streamed subtree in a `<div hidden>` at the top
+   * of <body> before splicing it in, so a bare text locator matched twice and
+   * Playwright raised a strict-mode violation, which it does not retry away.
+   * Engine-agnostic — it was reproducing 7-8 times in 42 on chromium, which
+   * had been in CI all along.
+   *
+   * That one is now fixed too, in the spec rather than here: e2e/
+   * workflow.spec.ts routes its text locators through `seen()`/`heading()`,
+   * which append `.filter({ visible: true })` and so drop the parked copy —
+   * inert by definition. Re-measured 2026-08-14 with the repro above
+   * (`--repeat-each=6 --retries=0`, i.e. no retry masking): 42/42 passed.
+   * Being a race, that is evidence it no longer reproduces, not a proof it
+   * cannot; `retries: 2` below stays as a backstop. Any NEW text assertion in
+   * these specs should go through the same helpers.
+   *
+   * Current state, all three projects, 2026-08-14: 37/37 each.
    */
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
