@@ -164,7 +164,7 @@ describe("buildDispositionMarkers", () => {
       is_eternal: false,
       is_executed: true,
       executed_at: "2020-03-01T00:00:00Z",
-      memory_reset: "FULL",
+      memory_reset: "MENGPO",
       notes: "",
       created_at: "2020-02-15T00:00:00Z",
       ...overrides,
