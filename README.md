@@ -97,14 +97,16 @@ docker compose up -d   # postgres:16-alpine :5432，redis:7-alpine :6379
 docker compose up    # 根目录 docker-compose.yml：db、redis、backend、celery、celery-beat、frontend
 ```
 
-需要在环境中提供 `DB_PASSWORD` 与 `SECRET_KEY`。该路径会在启动时执行迁移并灌入中国域
-种子数据。
+需要在环境中提供 `DB_PASSWORD` 与 `SECRET_KEY`。该路径会在启动时执行迁移并灌入三种
+文明的领域与角色。
 
 ### 种子数据
 
-根 compose 的启动顺序是 `python manage.py migrate` 再
-`python scripts/seed_chinese_data.py`，后者会载入三种文明的领域与角色。其余种子数据
-由 Django 管理命令提供：
+根 compose 的启动顺序是 `python manage.py migrate` 再 `python manage.py
+seed_mythology`，后者会载入三种文明的领域与角色。它曾经调用
+`python scripts/seed_chinese_data.py` —— 同一批数据的第二份手工副本，改一处就得记得
+改另一处，而 docker 跑的恰好是没有测试覆盖的那一份。该脚本已删除，种子数据只有管理
+命令这一个入口。其余种子数据同样由 Django 管理命令提供：
 
 ```bash
 python manage.py seed_tenants               # CN_DIYU、EU_HEAVEN_HELL、EG_DUAT
