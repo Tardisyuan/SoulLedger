@@ -633,6 +633,7 @@
     "balance_distribution": "Balance Distribution",
     "souls_by_realm": "Souls by Realm",
     "recent_activity": "Recent Activity",
+    "copy_resource_id": "Copy {resource} record ID",
     "civ": {
       "CHINESE": "Ledger of Merit and Demerit",
       "EUROPEAN": "Judgment and Penance",

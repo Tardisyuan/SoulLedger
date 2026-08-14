@@ -633,6 +633,7 @@
     "balance_distribution": "Unemu Seth",
     "souls_by_realm": "Aba Seth Per Ahet",
     "recent_activity": "Khedu Sethet",
+    "copy_resource_id": "Sesh Ren {resource}",
     "civ": {
       "CHINESE": "Sesh Nefer Bin",
       "EUROPEAN": "Sheemtet we Sethet",

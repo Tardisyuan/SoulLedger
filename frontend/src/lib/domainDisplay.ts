@@ -40,7 +40,9 @@
  *
  * ── Identifiers ───────────────────────────────────────────────────────────
  *
- * See `IDENTIFIER_POLICY`. A UUID is shown in exactly one situation.
+ * See `IDENTIFIER_POLICY`. A UUID is shown in exactly one situation, plus the
+ * named departures in `IDENTIFIER_POLICY_EXCEPTIONS` — which are a registry,
+ * not a comment, so the contract test can tell a decision from a regression.
  */
 
 // ---------------------------------------------------------------------------
@@ -88,6 +90,9 @@ export const DOMAIN_DISPLAY_I18N_KEYS: readonly string[] = [
   "common.value.id_copied",
   "common.value.id_copy_failed",
   "common.value.copied",
+  // Needed by the registered exception below: ten copy buttons in one list all
+  // announcing "Copy full ID" tell a screen reader nothing about which.
+  "ledger.copy_resource_id",
 ];
 
 // ---------------------------------------------------------------------------
@@ -158,8 +163,66 @@ export function resolveEnumDisplay(
  * Everything else — breadcrumbs, table cells, body copy, empty states — shows
  * the name, and shows `unrecorded` when there is no name. React keys and URL
  * segments are not display and are unaffected.
+ *
+ * Clauses 1 and 2 are about PLACEMENT and can be argued with, once, in
+ * writing: see `IDENTIFIER_POLICY_EXCEPTIONS`. Clauses 3 and 4 are not
+ * negotiable and no exception suspends them — an id nobody can paste, or an id
+ * standing where a name should be, is the defect itself rather than a place it
+ * appears.
  */
 export const IDENTIFIER_POLICY = "detail-page header, copyable, once, never as a name" as const;
+
+/** One registered departure from clauses 1–2 of `IDENTIFIER_POLICY`. */
+export interface IdentifierPolicyException {
+  /** Path relative to `frontend/`, POSIX separators. */
+  file: string;
+  /** Which render on that page, in enough words to find it by eye. */
+  site: string;
+  /**
+   * Why the id is *content* here rather than an implementation detail that
+   * leaked out. "It was already there" is not a reason; neither is "the design
+   * looks emptier without it".
+   */
+  reason: string;
+  /** ISO date the owner signed it off. */
+  registered: string;
+}
+
+/**
+ * The complete list of places an identifier is shown outside a detail-page
+ * header. `src/__tests__/domainDisplayContract.test.tsx` scans the source tree
+ * for identifier renders and fails on any site not named here — so this array,
+ * not a comment, is what makes an exception an exception rather than a
+ * regression nobody noticed.
+ *
+ * It cuts both ways: the same test fails when a registered file has stopped
+ * rendering an identifier. A stale entry is a licence nobody is using, and the
+ * next code to land at that path inherits it silently.
+ *
+ * Keep it short and argued. An entry added to make a test go green is the
+ * failure mode the registry exists to prevent.
+ */
+export const IDENTIFIER_POLICY_EXCEPTIONS: readonly IdentifierPolicyException[] = [
+  {
+    file: "app/ledger/page.tsx",
+    site: 'recent-activity rows: "<resource> #<resource_id>" in the metadata line',
+    reason:
+      "An audit line's whole job is to say which record was touched, so the id " +
+      "IS the content here — this is the one screen where it is not an " +
+      "implementation detail leaking through. The row carries no human name to " +
+      "show instead: the audit payload has a resource TYPE (Soul) and a primary " +
+      "key, and nothing else identifies the row's subject. Drop the id and the " +
+      "entry degrades to \"someone changed a soul\", which is untraceable and " +
+      "makes the log worthless for the audit it exists to serve. So clause 1 " +
+      "(detail pages only) and clause 2 (once per page) are waived: this is a " +
+      "list, ten rows deep. Clause 3 is not — the id renders as an " +
+      "<IdentifierChip>, because a key you cannot paste into a query is not a " +
+      "trace, it is a decoration. Clause 4 is not either: the resource type " +
+      "still reads next to it, and the id is not standing in for a name that " +
+      "exists somewhere unshown.",
+    registered: "2026-08-14",
+  },
+];
 
 /** Characters of a UUID shown before the copy affordance. */
 export const IDENTIFIER_SHORT_LENGTH = 8;

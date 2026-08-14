@@ -633,6 +633,7 @@
     "balance_distribution": "功过分布",
     "souls_by_realm": "各领域灵魂数",
     "recent_activity": "最近活动",
+    "copy_resource_id": "复制 {resource} 记录 ID",
     "civ": {
       "CHINESE": "功过格",
       "EUROPEAN": "审判与补赎",

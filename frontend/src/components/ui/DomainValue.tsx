@@ -164,14 +164,41 @@ export interface IdentifierChipProps {
   id: string;
   /** Accessible name for the copy button, e.g. "Copy soul ID". */
   ariaLabel?: string;
+  /**
+   * `chip` — a bordered pill. Correct where the policy's normal case puts it:
+   * one id, alone in a detail-page header, where the chrome is what says
+   * "this is a thing you can take with you".
+   *
+   * `inline` — same button, same clipboard behaviour, no chrome: monospace at
+   * the surrounding text size, sigil instead of a border. For a registered
+   * `IDENTIFIER_POLICY_EXCEPTIONS` site, where the affordance repeats once per
+   * row; ten pills down a metadata column would out-shout the rows they
+   * annotate and read as the page's main content, which is exactly the
+   * "raw system values leak into the interface" complaint the policy answers.
+   */
+  variant?: "chip" | "inline";
 }
+
+const IDENTIFIER_VARIANT_CLASSES: Record<"chip" | "inline", string> = {
+  chip:
+    "font-mono text-[11px] px-1.5 py-0.5 rounded bg-[hsl(var(--color-surface-2))] " +
+    "border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-3))] " +
+    "text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors",
+  // No fill at all, so nothing here can approach the 0.1 badge-tint cap
+  // (src/__tests__/dataGridToneContract.test.ts). The dotted underline is the
+  // only affordance, and it only firms up on hover/focus.
+  inline:
+    "font-mono text-inherit underline decoration-dotted decoration-[hsl(var(--color-hairline))] " +
+    "underline-offset-2 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] " +
+    "hover:decoration-[hsl(var(--color-ink-muted))] transition-colors",
+};
 
 /**
  * The one sanctioned way a UUID reaches a reader — see `IDENTIFIER_POLICY` in
  * src/lib/domainDisplay.ts. Reads short, copies whole; a truncated,
  * unselectable id is useless to anyone pasting it into a ticket or a query.
  */
-export function IdentifierChip({ id, ariaLabel }: IdentifierChipProps) {
+export function IdentifierChip({ id, ariaLabel, variant = "chip" }: IdentifierChipProps) {
   const { t } = useI18n();
   const { showToast } = useToast();
   const [copied, setCopied] = useState(false);
@@ -193,9 +220,14 @@ export function IdentifierChip({ id, ariaLabel }: IdentifierChipProps) {
       onClick={handleCopy}
       title={id}
       aria-label={ariaLabel ?? t("common.value.copy_id")}
-      className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
+      className={IDENTIFIER_VARIANT_CLASSES[variant]}
+      data-identifier-variant={variant}
     >
-      {copied ? t("common.value.copied") : `${shortIdentifier(id)} ⧉`}
+      {copied
+        ? t("common.value.copied")
+        : // The `#` sigil does the work the border does in the chip variant:
+          // says "record number" where there is no chrome to say it.
+          `${variant === "inline" ? "#" : ""}${shortIdentifier(id)} ⧉`}
     </button>
   );
 }
