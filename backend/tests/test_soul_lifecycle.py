@@ -29,11 +29,16 @@ def chinese_realms(db, cn_tenant):
             "tenant": cn_tenant,
         }
     )
+    # 第九殿平等王 — 阿鼻地狱, the deepest hell and therefore where the karma
+    # band saturates. Not the tenth court: that one turns the wheel of rebirth
+    # and administers no punishment, so it is deliberately absent from
+    # DispositionService.CHINESE_HELL_TIERS.
     Realm.objects.get_or_create(
-        realm_code="DY_10_YAMA",
+        realm_code="DY_COURT_09_PINGDENG",
         defaults={
-            "name_local": "第十殿", "name_zh": "阎罗殿", "name_en": "Tenth Court Yama",
-            "civilization": "CHINESE", "realm_type": "HELL", "tier": 10,
+            "name_local": "第九殿", "name_zh": "第九殿平等王",
+            "name_en": "Ninth Court Pingdeng",
+            "civilization": "CHINESE", "realm_type": "HELL", "tier": 9,
             "is_eternal": True,
             "tenant": cn_tenant,
         }
@@ -107,12 +112,12 @@ class TestSoulLifecycle:
         assert reincarnation.rebirth_form == "HUMAN"
 
     def test_full_lifecycle_failed(self, chinese_realms, cn_tenant):
-        """Test: Soul with negative karma fails judgment and goes to hell tier 10"""
+        """Test: Soul with negative karma fails judgment and goes to the deepest hell"""
         soul = Soul.objects.create(
             name="Criminal Wang",
             tenant=cn_tenant,
             merit_score=0,
-            demerit_score=100,  # karma = -100 → hell tier 10
+            demerit_score=100,  # karma = -100 → severity band saturates at 9
         )
         soul.die()
         soul.refresh_from_db()
@@ -121,15 +126,15 @@ class TestSoulLifecycle:
         judgment = Judgment.objects.create(
             soul=soul, civilization=soul.civilization, tenant=cn_tenant
         )
-        judgment.conclude(Verdict.FAILED, "Murderer, condemned to Tenth Court")
+        judgment.conclude(Verdict.FAILED, "Murderer, condemned to the Ninth Court")
         soul.refresh_from_db()
 
         assert soul.current_state == SoulState.DISPOSED
         disposition = Disposition.objects.filter(soul=soul).first()
         assert disposition is not None
         assert disposition.destination_realm is not None
-        # karma=-100: tier = min(10, max(3, abs(-100)/10+1)) = min(10, max(3, 11)) = 10
-        assert disposition.destination_realm.realm_code == "DY_10_YAMA"
+        # karma=-100: band = min(9, max(2, abs(-100)//10 + 1)) = min(9, 11) = 9
+        assert disposition.destination_realm.realm_code == "DY_COURT_09_PINGDENG"
 
     def test_invalid_transitions(self, cn_tenant):
         """Test: Cannot die twice, cannot skip states"""

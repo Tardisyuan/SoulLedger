@@ -125,7 +125,7 @@ class TestJudgmentQueueCursor:
         )
         Reincarnation.objects.create(
             soul=soul,
-            target_realm="DY_06_ZHUAN",
+            target_realm="DY_COURT_10_ZHUANLUN",
             cycle_count=1,
             tenant=cn_tenant,
         )

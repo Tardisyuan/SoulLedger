@@ -89,8 +89,8 @@ const disposedSoul = {
 const pendingDisposition = {
   id: DISPOSITION_ID,
   is_executed: false,
-  realm_name: "第十殿",
-  realm_code: "DY_10_YAMA",
+  realm_name: "第五殿",
+  realm_code: "DY_COURT_05_YANLUO",
 };
 
 function renderPage() {

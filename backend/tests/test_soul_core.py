@@ -84,26 +84,26 @@ class TestSoulRecord:
 class TestRealmAndActor:
     def test_create_chinese_realm(self, cn_tenant):
         realm = Realm.objects.create(
-            realm_code="DY_10_YAMA",
+            realm_code="DY_COURT_05_YANLUO",
             civilization=Civilization.CHINESE,
-            name_local="第十殿",
-            name_en="Tenth Court Yama",
+            name_local="第五殿",
+            name_en="Fifth Court Yama",
             realm_type=RealmType.HELL,
-            tier=10,
+            tier=5,
             is_eternal=True,
             tenant=cn_tenant,
         )
         assert realm.id is not None
-        assert realm.realm_code == "DY_10_YAMA"
+        assert realm.realm_code == "DY_COURT_05_YANLUO"
 
     def test_create_actor(self, cn_tenant):
         realm = Realm.objects.create(
-            realm_code="DY_10_YAMA",
+            realm_code="DY_COURT_05_YANLUO",
             civilization=Civilization.CHINESE,
-            name_local="第十殿",
-            name_en="Tenth Court",
+            name_local="第五殿",
+            name_en="Fifth Court Yama",
             realm_type=RealmType.HELL,
-            tier=10,
+            tier=5,
             tenant=cn_tenant,
         )
         actor = Actor.objects.create(

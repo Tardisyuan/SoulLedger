@@ -22,15 +22,34 @@ class DispositionService:
     # Chinese realms
     CHINESE_PURGATORY = "DY_00_PURGATORY"
     CHINESE_HEAVEN = "DY_01_HEAVEN"
+
+    # The eight *punishment* courts, keyed by severity band. The ten courts are
+    # a procedural sequence, not a severity ladder, and two of them administer
+    # no punishment at all: the first reads the Ledger of Life and Death and
+    # opens the case, the tenth assigns the next life. Sentencing a soul to
+    # either is not a milder or harsher outcome, it is a category error — so
+    # the band is clamped to 2..9 and those two courts are deliberately absent
+    # from this map. Court 9 (阿鼻地狱) is the deepest hell and therefore the
+    # ceiling; it is not the tenth court's job to be the worst.
+    #
+    # The keys are a severity band, *not* the realm's `tier` column, even
+    # though both now run 1..10 over the same rows. Those were the same number
+    # before this map was rewritten, which is part of how a realm called
+    # "第十殿 / Tenth Court Yama" ended up holding the fifth court's king: tier
+    # was doing duty as a karma bucket and as a court number simultaneously,
+    # and whichever meaning you read it with, some other file disagreed. `tier`
+    # is the court number now and nothing else; the bucket lives here.
+    CHINESE_HELL_MIN_TIER = 2
+    CHINESE_HELL_MAX_TIER = 9
     CHINESE_HELL_TIERS = {
-        3: "DY_03_QISHI",
-        4: "DY_04_TAISHAN",
-        5: "DY_05_CITY",
-        6: "DY_06_ZHUAN",
-        7: "DY_07_JIAN",
-        8: "DY_08_HAN",
-        9: "DY_09_YANG",
-        10: "DY_10_YAMA",
+        2: "DY_COURT_02_CHUJIANG",
+        3: "DY_COURT_03_SONGDI",
+        4: "DY_COURT_04_WUGUAN",
+        5: "DY_COURT_05_YANLUO",
+        6: "DY_COURT_06_BIANCHENG",
+        7: "DY_COURT_07_TAISHAN",
+        8: "DY_COURT_08_DUSHI",
+        9: "DY_COURT_09_PINGDENG",
     }
 
     # European realms
@@ -151,12 +170,18 @@ class DispositionService:
             # reserved below for verdicts that are themselves inconclusive
             # (PURGATORY/RETRY); this soul's guilt is not inconclusive, so
             # conflating the two would blur a real distinction. The tier
-            # formula already floors at tier 3 via max(3, ...) for any
-            # hell-bound soul, so karma == 0 needs no special case — it
-            # lands at the mildest hell tier, which is the correct floor
-            # for "guilty, but no recorded severity", not a free pass.
-            tier = min(10, max(3, (abs(karma) // 10) + 1))
-            return cls.CHINESE_HELL_TIERS.get(tier, cls.CHINESE_HELL_TIERS[10])
+            # formula already floors at the mildest punishment court via
+            # max(CHINESE_HELL_MIN_TIER, ...) for any hell-bound soul, so
+            # karma == 0 needs no special case — it lands in 第二殿楚江王,
+            # which is the correct floor for "guilty, but no recorded
+            # severity", not a free pass.
+            tier = min(
+                cls.CHINESE_HELL_MAX_TIER,
+                max(cls.CHINESE_HELL_MIN_TIER, (abs(karma) // 10) + 1),
+            )
+            return cls.CHINESE_HELL_TIERS.get(
+                tier, cls.CHINESE_HELL_TIERS[cls.CHINESE_HELL_MAX_TIER]
+            )
         # PURGATORY and RETRY are themselves non-final/inconclusive verdicts
         # — the soul waits, regardless of what karma says. A nonnegative
         # karma balance is not a reason to short-circuit an appeal straight
