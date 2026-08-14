@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import {
+  domainEnum,
   mockApi,
   setupAuthenticatedPage,
   OPENED_JUDGMENT,
@@ -57,7 +58,11 @@ test.describe("Critical path: login and create a soul", () => {
     const rows = page.locator("tbody tr");
     await expect(rows).toHaveCount(SOULS.length);
     await expect(rows.first()).toContainText(SOULS[0].name);
+    // Same §4.6 pair as the dispatch badge below: translated copy in the
+    // text node, raw member reachable only via `title`.
     await expect(rows.first()).toContainText("审判中"); // current_state JUDGING
+    await expect(domainEnum(rows.first(), "JUDGING")).toBeVisible();
+    await expect(rows.first().getByText("JUDGING", { exact: true })).toHaveCount(0);
     await expect(rows.nth(1)).toContainText(SOULS[1].name);
     // karmic_balance is a CHINESE-only instrument; the Egyptian row must
     // show an em dash rather than a netted number.
@@ -172,7 +177,14 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
     // cross-tenant dispatch is that it leaves one cosmology for another.
     const pendingCard = pendingSection.locator(`a[href="/dispatch/${PROPOSED_DISPATCH.id}"]`);
     await expect(pendingCard).toContainText("CN_DIYU → EG_DUAT");
+    // §4.6, both halves. The badge carries the translated copy in its text
+    // node and the raw member in `title`; asserting the title is what makes
+    // this survive a translation edit, and the absence assertion is the half
+    // that can't be faked — toContainText alone still passes on the
+    // "PROPOSED 待审批" double-render the convention exists to remove.
     await expect(pendingCard).toContainText("待审批");
+    await expect(domainEnum(pendingCard, "PROPOSED")).toBeVisible();
+    await expect(pendingCard.getByText("PROPOSED", { exact: true })).toHaveCount(0);
     await expect(pendingCard).toContainText(`灵魂 #${PROPOSED_DISPATCH.soul}`);
     await expect(pendingCard).toContainText(PROPOSED_DISPATCH.reason);
 

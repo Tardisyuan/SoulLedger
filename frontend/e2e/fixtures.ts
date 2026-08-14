@@ -1,4 +1,4 @@
-import { type Page, type Request } from "@playwright/test";
+import { type Locator, type Page, type Request } from "@playwright/test";
 
 /**
  * Shared E2E setup: authenticated browser state + a route-level mock of the
@@ -30,6 +30,38 @@ import { type Page, type Request } from "@playwright/test";
 
 // Must mirror playwright.config.ts — cookies are scoped to this origin.
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3333";
+
+// ── Locators for the display conventions ──────────────────────────────────
+
+/**
+ * Locates a domain enum by its RAW member — souls state/civilization,
+ * workflow case_type/status/node_type, dispatch status, cross-judgment
+ * status, audit action, realm type, and so on.
+ *
+ * BRIEF §4.6 (src/lib/domainDisplay.ts, src/components/ui/DomainValue.tsx):
+ * `<DomainEnum>` puts the TRANSLATED copy in the text node and the raw
+ * SCREAMING_SNAKE member in `title`, for triage. Two rules follow, and both
+ * are the reason this helper exists rather than a bare getByText:
+ *
+ *   - Never assert a raw enum member as visible text. That is precisely the
+ *     defect §4.6 removes, so such an assertion pins the bug in place.
+ *   - Prefer this over asserting the translated string. Going through `title`
+ *     survives a translation edit AND simultaneously proves the raw member
+ *     stayed out of the text node.
+ *
+ * `.filter({ visible: true })` for the same reason the spec files do it: while
+ * the dev server compiles a route it parks a duplicate subtree in a
+ * `<div hidden>`, so an unfiltered locator intermittently matches twice.
+ *
+ * `scope` takes a Locator as well as the Page, and usually should: the same
+ * enum member legitimately renders more than once per screen (a PROPOSED
+ * dispatch appears in both the pending and history lists, since
+ * dispatchApi.history() hits the same unfiltered endpoint), so a page-wide
+ * getByTitle would be ambiguous. Scope it to the row or card under test.
+ */
+export function domainEnum(scope: Page | Locator, rawMember: string) {
+  return scope.getByTitle(rawMember).filter({ visible: true });
+}
 
 // ── Identity ──────────────────────────────────────────────────────────────
 

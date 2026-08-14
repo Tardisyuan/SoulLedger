@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { setupAuthenticatedPage, WORKFLOW_INSTANCE, type ApiMock } from "./fixtures";
+import { domainEnum, setupAuthenticatedPage, WORKFLOW_INSTANCE, type ApiMock } from "./fixtures";
 
 /**
  * Text locators here must be filtered to the visible match.
@@ -74,7 +74,15 @@ test.describe("Workflow page", () => {
     await page.getByRole("button", { name: "审批实例", exact: true }).click();
 
     await expect(seen(page, WORKFLOW_INSTANCE.workflow_name)).toBeVisible();
-    await expect(seen(page, `${WORKFLOW_INSTANCE.case_type} · ${WORKFLOW_INSTANCE.soul}`)).toBeVisible();
+    await expect(seen(page, WORKFLOW_INSTANCE.soul)).toBeVisible();
+
+    // The row's meta line is `<DomainEnum case_type> · <soul>`. Asserting the
+    // enum through `title` rather than either the raw member or one locale's
+    // copy — see domainEnum() in fixtures.ts for why.
+    await expect(domainEnum(page, WORKFLOW_INSTANCE.case_type)).toBeVisible();
+    // The §4.6 regression guard: the raw member must never reach the user.
+    await expect(page.getByText(WORKFLOW_INSTANCE.case_type, { exact: true })).toHaveCount(0);
+
     expect(api.countOf("GET", "/workflows/")).toBeGreaterThan(0);
   });
 
