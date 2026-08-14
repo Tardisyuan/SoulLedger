@@ -104,10 +104,32 @@ TENANTS = {
 CHINESE_REALMS = [
     ("DY_01_HEAVEN", "天堂", "第一层天界", "First Heaven", "TLITLITLI", RealmType.BLISS, 1,
      "Pure merit souls - highest bliss, no reincarnation", "NONE", True, None),
+    # SOURCE NOT FOUND. 「杨柳宫」 could not be located as an underworld place in
+    # 《玉历宝钞》, in 《佛说预修十王生七经》, or in the general folklore material
+    # searched for the 2026-08-14 cast review — see
+    # docs/lore-verification/verify-cn-cast.md §3.9, which files it as
+    # 「查不到出处」 rather than as a fabrication, and allows that it may be this
+    # project's own invention or borrowed from a novel or a game.
+    #
+    # It is kept, and labelled, rather than deleted. An invented realm that says
+    # it is invented costs nothing; a deletion would destroy a deliberate
+    # fictional element on the strength of a failed search, and "I could not
+    # find it" is not "it does not exist". Whoever knows where this came from
+    # should replace this note with the answer.
     ("DY_02_YANGLIU", "杨柳宫", "杨柳宫", "Yangliu Palace", "Yangliu", RealmType.BLISS, 2,
-     "Souls awaiting reunion with loved ones", "MENGPO", False, None),
+     "Souls awaiting reunion with loved ones. SOURCE UNKNOWN: no underworld "
+     "place by this name appears in 《玉历宝钞》 or 《十王经》; treat as this "
+     "project's own element until a source is produced",
+     "MENGPO", False, None),
+    # "washed by Mengpo broth" was struck from this description. 《玉历宝钞》
+    # 「孟婆神」 puts the 醧忘台 「居第十殿，冥王殿前六桥之外」 and has the broth
+    # drunk after sentence and before rebirth — so a soul that has drunk it
+    # here, before being judged, would face its court with no memory of the
+    # life being judged. The tenth court's row below already says this
+    # correctly; only the holding pen and the 孟婆 actor row disagreed.
     ("DY_00_PURGATORY", "待审所", "待审所", "Purgatory Holding", "Daishensuo", RealmType.PURGATORY, 1,
-     "Souls awaiting judgment - washed by Mengpo broth", "MENGPO", False, None),
+     "Souls awaiting judgment - held before the first court reads the ledger",
+     "MENGPO", False, None),
     ("DY_COURT_01_QINGUANG", "第一殿", "第一殿秦广王", "First Court Qinguang", "Qinguang",
      RealmType.HELL, 1,
      "Intake court - the Ledger of Life and Death is read and the soul's case "
@@ -116,9 +138,16 @@ CHINESE_REALMS = [
      RealmType.HELL, 2,
      "活大地狱 - the mildest punishment court; thieves and those who wounded "
      "others in life", "MENGPO", False, 100),
+    # 忤逆尊长 is the offence 《玉历》 actually opens the third court with, and it
+    # was the one missing: the row read "evil tongue, false witness,
+    # oath-breaking", of which only 教唆兴讼 (incitement to litigation) has a
+    # counterpart in the text. Note that filial offence is split across two
+    # courts in 《玉历》 — defying one's elders here, failing to keep or bury
+    # one's parents at the eighth — and the repo had put all of it at the eighth.
     ("DY_COURT_03_SONGDI", "第三殿", "第三殿宋帝王", "Third Court Songdi", "Songdi",
      RealmType.HELL, 3,
-     "黑绳大地狱 - evil tongue, false witness, oath-breaking", "MENGPO", False, 80),
+     "黑绳大地狱 - 忤逆尊长, 教唆兴讼, 背恩失节: defying one's elders, inciting "
+     "litigation, betraying a trust", "MENGPO", False, 80),
     ("DY_COURT_04_WUGUAN", "第四殿", "第四殿五官王", "Fourth Court Wuguan", "Wuguan",
      RealmType.HELL, 4,
      "合大地狱 - fraud, withheld dues, falsified accounts", "MENGPO", False, 60),
@@ -132,6 +161,15 @@ CHINESE_REALMS = [
     ("DY_COURT_07_TAISHAN", "第七殿", "第七殿泰山王", "Seventh Court Taishan", "Taishan",
      RealmType.HELL, 7,
      "热恼地狱 - desecration of the dead, trafficking in bodies", "MENGPO", False, 30),
+    # COURTS 8 AND 9 ARE SWAPPED BETWEEN THE TWO MAJOR SYSTEMS, AND THIS REPO
+    # FOLLOWS 《玉历宝钞》. 《佛说预修十王生七经》 and the Daoist tradition seat
+    # 平等王 at the eighth and 都市王 at the ninth; 《玉历宝钞》 reverses them, and
+    # that is what is seeded here and in COURT_NUMBERS. Both are real orderings
+    # and neither is a mistake — but which one is in force has to be recorded,
+    # because a reader checking these rows against a 十王经-based source will
+    # find two courts apparently transposed and has no way to tell a version
+    # difference from a bug. The rest of the file is 玉历 too (楚江 not 初江,
+    # 卞城 not 变成, 泰山 not 太山), so the choice is at least consistent.
     ("DY_COURT_08_DUSHI", "第八殿", "第八殿都市王", "Eighth Court Dushi", "Dushi",
      RealmType.HELL, 8,
      "大热恼地狱 - unfilial conduct and betrayal of one's own house", "MENGPO", False, 20),
@@ -153,7 +191,12 @@ EUROPEAN_REALMS = [
      "Temporary purification - souls cleansed before heaven entry", "LETHE", False, None),
     ("EU_HELL_1ST", "第一层地狱", "幽冥边境", "First Circle - Limbo", "Limbo", RealmType.HELL, 1,
      "Limbo - virtuous pagans, unbaptized infants", "LETHE", True, None),
-    ("EU_HELL_2ND", "第二层地狱", "贪食深渊", "Second Circle - Lust", "Lust", RealmType.HELL, 2,
+    # name_zh was 「贪食深渊」 (gluttony) against a name_en of "Second Circle -
+    # Lust". Dante's second circle is lust (Inf. V) and gluttony is the third
+    # (Inf. VI), so the Chinese alias was one circle out of step with the
+    # English on the same row — and EU_HELL_3RD already carries 「饕餮泥沼」,
+    # so the repo named gluttony twice and lust not at all.
+    ("EU_HELL_2ND", "第二层地狱", "色欲之风", "Second Circle - Lust", "Lust", RealmType.HELL, 2,
      "Lustful souls - tossed by violent winds (Dante's Inferno)", "LETHE", True, None),
     ("EU_HELL_3RD", "第三层地狱", "饕餮泥沼", "Third Circle - Gluttony", "Gluttony", RealmType.HELL, 3,
      "Gluttons - lie in icy sludge beneath rain and hail", "LETHE", True, None),
@@ -169,6 +212,52 @@ EUROPEAN_REALMS = [
      "Fraud - ten concentric fosses of Malebolge", "LETHE", True, None),
     ("EU_HELL_9TH", "第九层地狱", "叛徒冰湖", "Ninth Circle - Treachery", "Treachery", RealmType.HELL, 9,
      "Traitors - frozen in the lake of Cocytus (Judas, Brutus)", "LETHE", True, None),
+    # --------------------------------------------------------------------
+    # TWO GREEK PLACES, ADDED BECAUSE THE GREEK CAST HAD NOWHERE TO STAND.
+    #
+    # Until now the eleven European realms were nine Dante circles plus heaven
+    # and purgatory — every one of them Christian or Dantean — while seven of
+    # the eleven European actors are Greek. There was no Greek place in the
+    # system at all, so each Greek figure had been filed into whichever
+    # Christian/Dantean row looked closest, and every one of those placements
+    # was wrong: Charon in Purgatory, Cerberus in Limbo, Minos and both of his
+    # fellow judges in the ninth circle, Hades in Limbo.
+    #
+    # The fix is not to redistribute them among Dante's circles. Dante uses
+    # exactly one of these figures as a judge (Minos, Inf. V) and does not use
+    # Aeacus or Rhadamanthus at all, so any circle they were given would be an
+    # invention. These two rows are the smallest set of *attested* Greek places
+    # that lets the cast be placed by a source instead of by proximity.
+    #
+    # EACH ROW NAMES ITS AUTHOR. Homer, Hesiod, Pindar, Plato and Virgil do not
+    # describe the same underworld — Homer has no moral sorting at all, Plato
+    # has a two-way fork, Virgil has the fullest geography — so "the Greek
+    # underworld" is not a thing that can be seeded. What can be seeded is one
+    # named author's account of one place, which is what these are. Do not add
+    # a third row on the assumption that these two are the start of a complete
+    # map; see docs/lore-verification/verify-greek.md §5 for the list of what
+    # is missing and why completing it is a research task, not a data entry.
+    #
+    # Neither is a disposition destination. `DispositionService` routes no
+    # verdict to either, deliberately: a soul is not sentenced to the ferry or
+    # to the fork, it passes through them.
+    ("EU_ACHERON", "阿刻戎渡口", "冥河渡口", "The Crossing of Acheron", "Acheron",
+     RealmType.NEUTRAL, 0,
+     "The far bank of Acheron, where the dead are ferried in. Virgil, Aeneid "
+     "6.295-297 ('the way leads to that Tartarean stream of Acheron'); Dante "
+     "puts Charon here too, before the first circle (Inferno III), which is why "
+     "this is a threshold and not a circle. Euripides, Alcestis 252-256 has the "
+     "same crossing as a lake. Not a destination: nobody is sentenced here.",
+     "NONE", False, None),
+    ("EU_PLATO_MEADOW", "岔路草原", "审判岔路", "The Meadow at the Parting of the Ways",
+     "Meadow", RealmType.NEUTRAL, 0,
+     "Plato, Gorgias 524a: the dead are judged in a meadow at the fork in the "
+     "road, one way leading to the Isles of the Blessed and the other to "
+     "Tartarus. This is a sorting point that stands BEFORE any punishment, "
+     "which is the whole reason the three judges cannot be housed in a circle "
+     "of Dante's hell. Neither destination the fork leads to is modelled here, "
+     "and neither is invented: this row is the judgment ground only.",
+     "NONE", False, None),
 ]
 
 EGYPTIAN_REALMS = [
@@ -178,10 +267,67 @@ EGYPTIAN_REALMS = [
      "The weighing of the heart against Ma'at's feather", "SPELL", False, None),
     ("EG_AARU", "阿鲁之地", "芦苇之地", "Field of Reeds (Aaru)", "Aaru", RealmType.BLISS, 1,
      "Egyptian paradise - eternal life in the Field of Reeds beyond Duat", "NONE", True, None),
-    ("EG_AM_TYAT", "阿姆·特亚特", "芦苇之地边境", "Path of Amtyat", "Amtyat", RealmType.NEUTRAL, 3,
-     "Border realm before the final judgment", "SPELL", False, None),
-    ("EG_DEVOURER", "吞噬者", "阿米特之地", "Devourer's Realm", "AmMit", RealmType.HELL, 10,
-     "Ammit waits here - soul destroyed if heart fails weighing", "SPELL", True, None),
+    # EG_AM_TYAT IS GONE, AND IS NOT COMING BACK.
+    #
+    # The row read ("EG_AM_TYAT", "阿姆·特亚特", "芦苇之地边境", "Path of Amtyat",
+    # NEUTRAL, tier 3, "Border realm before the final judgment"). "Amtyat" is
+    # not an Egyptian place. It is absent from Budge's Book of the Dead
+    # glossary, from Budge's Egyptian Heaven and Hell vol. II, from UCL Digital
+    # Egypt, from museum records and from general search; there is no "path of
+    # Amtyat" and no border strip before judgment anywhere in the corpus. The
+    # two plausible origins are Am-Tuat (Imy-Dwꜣt — the *title of a book*, the
+    # Amduat) and Amentet (Imntt, "the West", which is the whole west and not a
+    # frontier), i.e. a book title or a direction mistaken for a place.
+    #
+    # It is deleted rather than renamed. realms/0013 tombstones the row on
+    # databases that already have it; tests/test_seed_entrypoint.py records the
+    # removal as deliberate so it does not read as a dropped row.
+    #
+    # If the disposition state machine ever does need a waypoint between the
+    # gate and the hall, the attested filler is the seven ꜥrrwt-gates of BD
+    # 144/147 — literally the approaches to the house of Osiris, same scripture
+    # and same edition as the forty-two assessors below. Do not invent a second
+    # transit realm; inventing one is what produced this row.
+    #
+    # EG_DEVOURER IS AN OUTCOME, NOT AN ADDRESS.
+    #
+    # It used to be 「吞噬者 / 阿米特之地 / Devourer's Realm」 with Ammit living
+    # in it, which asserts three things the sources do not: that there is a
+    # place, that Ammit is in it, and that it is a hell — somewhere a soul *is*
+    # rather than the end of the soul. Being eaten by Ammit is the second
+    # death: the heart is destroyed and the person ceases to exist. There is no
+    # damned population and nowhere for it to be. Ammit herself stands at the
+    # balance in the Hall, which is where every standard vignette draws her
+    # (Budge, Papyrus of Ani, Plate III; BM EA 9901), and she has moved back
+    # there in EGYPTIAN_ACTORS below.
+    #
+    # WHY THE CODE STAYS `EG_DEVOURER` WHEN THE MEANING HAS CHANGED. The
+    # obvious follow-through is to rename it EG_ANNIHILATION. The code is a
+    # live identifier, not a label: `DispositionService` routes every failed
+    # Egyptian heart to this string, executed dispositions in existing
+    # databases record it as their destination, and
+    # frontend/src/components/souls/SoulLifecycleTimeline.tsx hard-codes
+    # `realm_code === "EG_DEVOURER"` as the one signal it has for "this soul was
+    # annihilated". Renaming the code is therefore NOT the one-line change in
+    # disposition/services.py it looks like — it is that line plus a migration
+    # plus a frontend change that has to land in the same deploy, or the
+    # annihilation state silently stops rendering. The rename is a coordinated
+    # follow-up; correcting what the row *claims* is not, and is done here.
+    #
+    # realm_type stays HELL for the same reason and under protest: of
+    # {HELL, PURGATORY, BLISS, NEUTRAL} none means "ceased to exist", and
+    # NEUTRAL ("between") would be a worse lie than HELL — it would file
+    # annihilation next to the ferry crossing as another waypoint.
+    ("EG_DEVOURER", "第二次死亡", "湮灭", "Second Death (annihilation by Ammit)", "AmMit",
+     RealmType.HELL, 10,
+     "Not a place and not a residence: the outcome recorded when the heart is "
+     "heavier than the feather and Ammit devours it. Egyptian sources call this "
+     "the second death — the person ceases to exist, is not punished, and does "
+     "not go anywhere. Ammit is seeded in EG_HALL_TWO_TRUTHS, where she is drawn "
+     "beside the balance (Budge, Papyrus of Ani, Plate III; BM EA 9901). The "
+     "realm_code is retained as a stable identifier for dispositions already "
+     "recorded against it.",
+     "SPELL", True, None),
 ]
 
 # --------------------------------------------------------------------------
@@ -219,39 +365,74 @@ CHINESE_ACTORS = [
     ("秦广王", "秦广王", "Qinguang Wang", "Qinguang", ActorRole.JUDGE, "DY_COURT_01_QINGUANG",
      "第一殿秦广王", "第一殿秦广王", "First Court Qinguang", "Qinguang",
      "First court judge - evaluates the Ledger of Life and Death"),
+    # FOUR OF THESE DESCRIPTIONS CONTRADICTED THE COURT THEY SIT IN. The realm
+    # rows above were right in every case and the actor rows had never been
+    # updated to match, so the same court described itself two ways depending
+    # on which table you read. 楚江王 "awards merit for good deeds" against a
+    # 活大地狱; 卞城王 "manages reincarnation scheduling", which is the *tenth*
+    # king's work and the one thing the sixth court does not do; 都市王 "judge
+    # of merchants and craftsmen", reading 「都市」 as a marketplace when it is
+    # the capital and his docket is unfilial conduct; 泰山王 "judge of the
+    # mountains", which borrows 泰山府君 and is not what 《玉历》 gives the
+    # seventh court. All four now say what their own realm row says.
     ("楚江王", "楚江王", "Chujiang Wang", "Chujiang", ActorRole.JUDGE, "DY_COURT_02_CHUJIANG",
      "第二殿楚江王", "第二殿楚江王", "Second Court Chujiang", "Chujiang",
-     "Second court judge - awards merit for good deeds"),
+     "Second court judge - presides over 活大地狱, the mildest punishment court: "
+     "abduction, appropriating what belongs to others, maiming"),
     ("宋帝王", "宋帝王", "Songdi Wang", "Songdi", ActorRole.JUDGE, "DY_COURT_03_SONGDI",
      "第三殿宋帝王", "第三殿宋帝王", "Third Court Songdi", "Songdi",
-     "Third court judge - handles cases of evil tongue and false witness"),
+     "Third court judge - presides over 黑绳大地狱: defying one's elders, "
+     "inciting litigation, betraying a trust"),
     ("五官王", "五官王", "Wuguan Wang", "Wuguan", ActorRole.JUDGE, "DY_COURT_04_WUGUAN",
      "第四殿五官王", "第四殿五官王", "Fourth Court Wuguan", "Wuguan",
      "Fourth court judge - chief accountant of deeds"),
     ("卞城王", "卞城王", "Biancheng Wang", "Biancheng", ActorRole.JUDGE, "DY_COURT_06_BIANCHENG",
      "第六殿卞城王", "第六殿卞城王", "Sixth Court Biancheng", "Biancheng",
-     "Sixth court judge - manages reincarnation scheduling"),
+     "Sixth court judge - presides over 大叫唤大地狱: sacrilege against images "
+     "and scriptures, irreverence toward heaven and earth"),
     ("泰山王", "泰山王", "Taishan Wang", "Taishan", ActorRole.JUDGE, "DY_COURT_07_TAISHAN",
      "第七殿泰山王", "第七殿泰山王", "Seventh Court Taishan", "Taishan",
-     "Seventh court - linked to Mount Tai, judge of the mountains"),
+     "Seventh court judge - presides over 热恼大地狱: taking bones for medicine, "
+     "and the scattering of kin from one another"),
     ("都市王", "都市王", "Dushi Wang", "Dushi", ActorRole.JUDGE, "DY_COURT_08_DUSHI",
      "第八殿都市王", "第八殿都市王", "Eighth Court Dushi", "Dushi",
-     "Eighth court - judge of merchants and craftsmen"),
+     "Eighth court judge - presides over 大热恼大地狱: unfilial conduct, the "
+     "parent left unkept in life and unburied in death. 「都市」 is the capital, "
+     "not a marketplace"),
     ("平等王", "平等王", "Pingdeng Wang", "Pingdeng", ActorRole.JUDGE, "DY_COURT_09_PINGDENG",
      "第九殿平等王", "第九殿平等王", "Ninth Court Pingdeng", "Pingdeng",
      "Ninth court - embodies perfect impartial justice"),
     ("转轮王", "转轮王", "Zhuanlun Wang", "Zhuanlun", ActorRole.JUDGE, "DY_COURT_10_ZHUANLUN",
      "第十殿转轮王", "第十殿转轮王", "Tenth Court Zhuanlun", "Zhuanlun",
      "Tenth court - the wheel of rebirth; assigns fate for the next life"),
-    ("孟婆", "孟婆", "Meng Po", "Mengpo", ActorRole.CONDUIT, "DY_00_PURGATORY",
+    # 孟婆 MOVED FROM THE HOLDING PEN TO THE TENTH COURT. 《玉历宝钞》
+    # 「孟婆神」 places her 醧忘台 「居第十殿，冥王殿前六桥之外」 — the tenth
+    # court, outside the six bridges before the king's hall — and the broth is
+    # drunk after sentence, on the way to the next life. Seating her at
+    # DY_00_PURGATORY had her erasing a soul's memory of the life it was about
+    # to be tried for. DY_COURT_10_ZHUANLUN's own description already said this
+    # ("the broth of forgetting drunk"), so the two tables disagreed about the
+    # same act.
+    ("孟婆", "孟婆", "Meng Po", "Mengpo", ActorRole.CONDUIT, "DY_COURT_10_ZHUANLUN",
      "孟婆", "孟婆", "Meng Po", "Mengpo",
-     "The Meng Po - serves the soup of forgetting to departing souls"),
+     "The Meng Po - keeps the 醧忘台 at the tenth court, 「居第十殿，冥王殿前六桥"
+     "之外」, and serves the broth of forgetting to souls already sentenced and "
+     "bound for the next life"),
+    # 牛头/马面 stay in the holding pen. 《玉历》 shows them at the fifth court
+    # 「牛头、马面，押赴高台」, escorting the condemned up the 望乡台, but escort
+    # duty is by nature not confined to one court and the fifth court is the one
+    # place the text happens to name them. Recording that in the description is
+    # what the source supports; moving the rows would assert a posting the text
+    # does not give them either.
     ("牛头", "牛头", "Ox Head", "Niutou", ActorRole.GUARDIAN, "DY_00_PURGATORY",
      "牛头马面", "牛头马面", "Ox Head and Horse Face", "Niuma",
-     "Ox Head - one of the two guardians who escort the dead"),
+     "Ox Head - one of the two guardians who escort the dead. 《玉历》 names the "
+     "pair at the fifth court, 「牛头、马面，押赴高台」, marching the condemned up "
+     "the 望乡台; the escort itself runs across all ten courts"),
     ("马面", "马面", "Horse Face", "Mamian", ActorRole.GUARDIAN, "DY_00_PURGATORY",
      "马面", "马面", "Horse Face", "Mamian",
-     "Horse Face - companion guardian of the underworld dead"),
+     "Horse Face - companion guardian of the underworld dead; see 牛头 for the "
+     "fifth-court 望乡台 escort 《玉历》 names them in"),
     ("白无常", "白无常", "White Impermanence", "Bai Wuchang", ActorRole.CONDUIT, "DY_00_PURGATORY",
      "白无常", "白无常", "White Wuchang", "BaiWuchang",
      "White Impermanence - captures wandering souls, brings gentle death"),
@@ -261,9 +442,23 @@ CHINESE_ACTORS = [
     ("判官", "判官", "Registrar", "Panguan", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
      "判官", "判官", "Clerk-Registrar of the Dead", "Panguan",
      "Registrars who compile and verify the Book of Life and Death"),
+    # 钟馗 IS KEPT AND LABELLED, NOT REMOVED. He does not appear anywhere in
+    # 《玉历宝钞》, so nothing in the ten-court system gives him a torture-chamber
+    # post; "assists in torture" was a modern popular reading written as if it
+    # were canon. His attested character is the opposite end of the business —
+    # 驱邪捉鬼, hunting malignant ghosts and warding a household, from 沈括
+    # 《梦溪笔谈·补笔谈》卷三 (Wu Daozi's painting, Xuanzong's dream) and the
+    # Dunhuang Tang manuscript 《除夕钟馗驱傩文》, both New Year exorcism
+    # material. Removing him would delete a real figure over a placement error;
+    # what the data owed was the note that he is not part of this system.
     ("钟馗", "钟馗", "Zhong Kui", "Zhongkui", ActorRole.EXECUTOR, "DY_COURT_05_YANLUO",
      "钟馗", "钟馗", "Zhong Kui - Demon Queller", "Zhongkui",
-     "Demon hunter and executor - assists in torture and evil spirit expulsion"),
+     "Demon queller - hunts malignant ghosts and wards the household (沈括 "
+     "《梦溪笔谈·补笔谈》卷三; Dunhuang 《除夕钟馗驱傩文》). NOT A 《玉历宝钞》 "
+     "FIGURE: he appears nowhere in that text and holds no office in the ten "
+     "courts. His pairing with the 罚恶司 of the 四大判官 is a late popular "
+     "attribution, and this row is filed at the fifth court for want of a "
+     "posting, not on a source"),
     # Named judicial personnel beyond the ten kings. These three used to live in
     # a separate `populate_chinese_actors` command that could never run: it
     # defined a bare `run()` instead of a `Command` class, so `manage.py
@@ -290,7 +485,11 @@ CHINESE_ACTORS = [
     ("魏征", "魏征", "Wei Zheng", "Weizheng", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
      "察查司正堂", "察查司正堂", "Head of the Appeals Court", "Weizheng",
      "Head of the 察查司 - audits wrongful convictions and overturns a king's "
-     "misjudgment; the opening node of the Chinese appeal workflow"),
+     "misjudgment; the opening node of the Chinese appeal workflow. 察查司 is "
+     "this system's term, not a classical office: 魏征 appears in the underworld "
+     "narrative of 《西游记》 ch. 10 as a living chancellor writing to 崔珏, not "
+     "as a seated judge, and the popular four-registrar lists that do place him "
+     "usually give him the 赏善司 instead"),
     ("崔府君", "崔府君", "Cui Fujun", "Cuifujun", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
      "崔判官", "崔判官", "Cui the Registrar", "Cuifujun",
      "崔珏 - senior registrar and judge of the underworld courts; keeps the "
@@ -301,82 +500,320 @@ CHINESE_ACTORS = [
      "the hells; relief path for wrongful deaths and those in the torture chambers"),
 ]
 
+# CHRISTIANITY HAS NO NAMED BENCH, AND THAT IS A FINDING, NOT A GAP.
+#
+# The other two civilizations in this file each supply a roster: ten kings for
+# Diyu, forty-two assessors for the Hall of Two Truths. Europe has no such list
+# and cannot be made to produce one. The last judgment in this theology has a
+# single judge — Christ — with no jury, no division of labour and no assigned
+# seats: John 5:22 ("the Father judgeth no man, but hath committed all judgment
+# unto the Son"), the Nicene Creed's 「他将在荣耀中再来，审判活人死人」, and CCC
+# 1021-1022 (particular judgment) and 1038-1041 (last judgment), which describe
+# Christ coming in glory and separating the nations and introduce no second
+# judging person. Angels appear at the judgment as gatherers and executors
+# (Matt 13:41-42, 24:31, 25:31), never as adjudicators. The two passages that
+# sound like a bench are not one: Matt 19:28 / Luke 22:30 seats the twelve
+# apostles, but assigns them no dockets and no names, and 1 Cor 6:2-3 makes the
+# subject "the saints" — everyone, not a closed list.
+#
+# So this slot is deliberately empty, and the emptiness is asserted by
+# tests/test_seed_mythology.py::test_the_christian_side_seats_one_judge_and_no_bench
+# rather than left to be noticed. That test is the point of this comment: an
+# empty slot with nothing watching it is indistinguishable from an oversight,
+# and the next person to notice the asymmetry will fill it.
+#
+# WHY IT MATTERS THAT NOBODY FILLS IT. This repo has already run the
+# experiment. The forty-two assessors were, for a long time, thirty-five names
+# that were not assessors — assembled because the template said a bench went
+# there. Europe has been under the same pressure and answered it differently
+# but not better: of eleven European actors seven are Greek and three of those
+# were cast as judges, so Europe's bench was filled entirely by Greeks. Adding
+# a Christian tribunal, or promoting Michael, or counting Minos as European, are
+# all the same move. The correct answer to "who else judges" is that nobody
+# does.
 EUROPEAN_ACTORS = [
     ("God", "上帝", "God (YHWH)", "God", ActorRole.OVERSEER, "EU_HEAVEN",
      "全能者", "全能者", "The Almighty", "God",
-     "Supreme deity - final judge of souls in Christian tradition"),
-    ("Michael", "米迦勒", "Archangel Michael", "Mikael", ActorRole.JUDGE, "EU_HEAVEN",
-     "大天使长米迦勒", "大天使长米迦勒", "Archangel Michael", "Mikael",
-     "Leader of the archangels - weighs souls at the heavenly throne"),
+     "Supreme deity. OVERSEER and not JUDGE: the row used to be cast as "
+     "overseer while its own description called it the final judge of souls, "
+     "and the judgment is committed to the Son (John 5:22). Whether the Trinity "
+     "should be one row or three is a modelling question this seed does not "
+     "answer; what it does answer is that the JUDGE slot points at Christ"),
+    # THE JUDGE THE CREED NAMES WAS NOT IN THE DATABASE. Before this row,
+    # `grep -i 'christ\|jesus\|基督\|耶稣'` matched nothing anywhere in the repo,
+    # while John 5:22, Acts 10:42, Rom 14:10 / 2 Cor 5:10 (βῆμα τοῦ Χριστοῦ),
+    # Matt 25:31-46, the Nicene Creed and CCC 1021-1041 all name Christ as the
+    # one who judges the living and the dead. The European side had a judgment
+    # system with its judge missing, and the JUDGE role handed instead to
+    # Michael and to Satan, neither of whom judges anybody.
+    ("Christ", "基督", "Christ", "Christos", ActorRole.JUDGE, "EU_HEAVEN",
+     "审判活人死人者", "审判活人死人者", "Judge of the Living and the Dead", "Christos",
+     "The judge of the last judgment, and the only one this theology has. "
+     "John 5:22: the Father judges no one but has given all judgment to the "
+     "Son. Nicene Creed: he will come again in glory to judge the living and "
+     "the dead. CCC 1021-1022 makes even the particular judgment a referral of "
+     "a life to Christ; CCC 1038-1041 has him separate the nations at the last. "
+     "Catholic, Orthodox and Protestant readings agree on this point without "
+     "reservation"),
+    # Michael's role was JUDGE on the strength of "weighs souls at the heavenly
+    # throne". Soul-weighing (psychostasis) is a medieval iconographic motif
+    # that entered Christian art around the 4th century from Greek psychostasia,
+    # itself from the Egyptian weighing of the heart that this same file seeds
+    # on the Egyptian side — so the repo had Michael performing Anubis' job,
+    # borrowed twice over. Neither scripture nor doctrine connects him to a
+    # balance. What does have a text is leading: the Offertory of the Roman
+    # Requiem, *sed signifer sanctus Michael repraesentet eas in lucem sanctam*
+    # — "let the standard-bearer Saint Michael bring them into the holy light".
+    # A standard-bearer who brings souls in is CONDUIT.
+    ("Michael", "米迦勒", "Archangel Michael", "Mikael", ActorRole.CONDUIT, "EU_HEAVEN",
+     "掌旗者圣米迦勒", "掌旗者圣米迦勒", "Michael the Standard-Bearer", "Mikael",
+     "Leads souls into the light: *signifer sanctus Michael repraesentet eas in "
+     "lucem sanctam*, Offertory of the Roman Requiem. Captain of the heavenly "
+     "host (Rev 12:7; Dan 10:13, 12:1; Jude 9). He does NOT weigh souls — that "
+     "image is medieval iconography borrowed from Egyptian psychostasia, not "
+     "scripture and not doctrine, and it is why this row used to be a JUDGE"),
     ("Gabriel", "加百列", "Archangel Gabriel", "Gabrielle", ActorRole.CONDUIT, "EU_HEAVEN",
      "加百列", "加百列", "Archangel Gabriel", "Gabrielle",
-     "Messenger angel - guides souls to judgment and heaven"),
-    ("Satan", "撒旦", "Satan", "Satan", ActorRole.JUDGE, "EU_HELL_9TH",
+     "Messenger angel - carries announcements to the living (Dan 8:16, 9:21; "
+     "Luke 1:11-20, 1:26-38). CONDUIT in the sense of bearing word, not of "
+     "escorting the dead: 'guides souls to judgment and heaven' was Michael's "
+     "office (see above) written onto Gabriel, and the last-trumpet image "
+     "attached to him is Islamic and later folk tradition, not biblical"),
+    # Satan was cast as JUDGE, which neither tradition supports. In theology he
+    # is the accuser — ὁ κατήγωρ, "the accuser of our brethren" (Rev 12:10), the
+    # prosecuting figure of Job 1-2 — and he is himself judged (Rev 20:10). In
+    # Dante he is not an agent at all: Inferno XXXIV has him frozen to the chest
+    # in Cocytus chewing Judas, Brutus and Cassius, an instrument of punishment
+    # rather than anyone who decides anything. EXECUTOR is the closest of the
+    # five roles to both readings; ActorRole has no ACCUSER and adding one for a
+    # single row would be a migration this correction does not need.
+    ("Satan", "撒旦", "Satan", "Satan", ActorRole.EXECUTOR, "EU_HELL_9TH",
      "堕落者撒旦", "堕落者撒旦", "Satan - Adversary", "Satan",
-     "The adversary - ruler of the ninth circle of Hell, final tempter"),
-    ("Charon", "卡戎", "Charon", "Kharos", ActorRole.CONDUIT, "EU_PURGATORY",
-     "冥河渡神卡戎", "冥河渡神卡戎", "Charon - Ferryman of Styx", "Kharos",
-     "Ferryman of the River Styx - transports souls across to the underworld"),
-    ("Minos", "米诺斯", "Minos", "Mino", ActorRole.JUDGE, "EU_HELL_9TH",
+     "The adversary. Accuser rather than judge in theology (Rev 12:10 ὁ "
+     "κατήγωρ; Job 1-2), and himself the object of judgment (Rev 20:10). In "
+     "Dante he is the punishment itself, frozen in Cocytus at the bottom of the "
+     "ninth circle with three mouths (Inferno XXXIV) - he sentences nobody"),
+    # Charon was in Purgatory, which is wrong in both traditions at once. The
+    # Greek Charon works the entrance to the underworld; Dante's Charon works
+    # Acheron at the gate of hell (Inferno III), and Dante's *purgatorial*
+    # boatman is an angel (Purgatorio II), so there is no reading in which the
+    # ferryman of the dead belongs on the mountain of penance. The title also
+    # said Styx, which is the Roman poets' river and contradicts this repo's own
+    # docs/04; Virgil, Aeneid 6.295-297 and Dante both put him on Acheron.
+    ("Charon", "卡戎", "Charon", "Kharos", ActorRole.CONDUIT, "EU_ACHERON",
+     "冥河渡神卡戎", "冥河渡神卡戎", "Charon - Ferryman of Acheron", "Kharos",
+     "Ferryman of Acheron - takes the dead across at the threshold of the "
+     "underworld (Virgil, Aeneid 6.295-297; Dante, Inferno III; Euripides, "
+     "Alcestis 252-256 has the same crossing as a lake). Roman poets often "
+     "write Styx for the river, which is where this row's old title came from"),
+    # Minos was in the ninth circle with a description of second-circle work:
+    # "judge in the ninth circle, assigns souls to their hell-circle". Assigning
+    # the circle is exactly what Dante's Minos does, and he does it at the
+    # entrance to the second, where the sinner confesses and he coils his tail
+    # the number of times equal to the circle it belongs in (Inferno V.4-15). A
+    # judge who allots circles cannot be sitting in the last one.
+    ("Minos", "米诺斯", "Minos", "Mino", ActorRole.JUDGE, "EU_HELL_2ND",
      "米诺斯", "米诺斯", "Judge Minos", "Mino",
-     "King Minos - judge in the ninth circle, assigns souls to their hell-circle"),
-    ("Cerberus", "刻耳柏洛斯", "Cerberus", "Kerberos", ActorRole.GUARDIAN, "EU_HELL_1ST",
+     "King Minos - stands at the entrance to the second circle, hears each "
+     "soul's confession and allots it the circle it belongs to by the coils of "
+     "his tail (Dante, Inferno V.4-15). THIS ROW IS DANTE'S MINOS. Plato's "
+     "Minos, Gorgias 524a, is the final arbiter at the fork when the other two "
+     "judges are in doubt, and Homer's, Odyssey 11.568-571, gives judgment "
+     "sceptre in hand; those are different offices in different underworlds"),
+    ("Cerberus", "刻耳柏洛斯", "Cerberus", "Kerberos", ActorRole.GUARDIAN, "EU_HELL_3RD",
      "冥界三头犬刻耳柏洛斯", "冥界三头犬刻耳柏洛斯", "Cerberus - Three-headed Hound", "Kerberos",
-     "Three-headed guardian of Hades - prevents living entry and dead exit"),
+     "Three-headed hound - Dante sets him over the gluttons in the third "
+     "circle, barking with his three gullets over the souls in the freezing "
+     "rain (Inferno VI); in the Greek tradition he keeps the gate of the "
+     "underworld itself (Apollodorus 2.5.12). He was seeded in the first "
+     "circle, which is neither. Hesiod's earliest description gives him fifty "
+     "heads (Theogony 311-312); the three are Apollodorus, Virgil and Dante"),
     # Greco-Roman side. `consolidate_eu_pantheon` audits exactly this cast —
     # Hades sole OVERSEER, Minos/Aeacus/Rhadamanthus JUDGE, Charon CONDUIT,
     # Cerberus GUARDIAN — so it has to be seeded, or that audit reports every
     # name MISSING on a fresh database.
     #
-    # Hades, not Pluto: Pluto is the Roman name of the same god and
-    # `consolidate_eu_pantheon` merges the pair into Hades. Pluto is therefore
-    # deliberately NOT seeded — it only exists in databases predating that
-    # command, which is exactly the case the merge step is there to clean up.
-    # Seeding both would manufacture on every fresh database the duplicate the
-    # merge exists to remove.
-    ("Hades", "哈迪斯", "Hades", "Aides", ActorRole.OVERSEER, "EU_HELL_1ST",
+    # Hades, not Pluto: same god, and `consolidate_eu_pantheon` merges the pair
+    # into Hades. Pluto is therefore deliberately NOT seeded — it only exists in
+    # databases predating that command, which is exactly the case the merge step
+    # is there to clean up. Seeding both would manufacture on every fresh
+    # database the duplicate the merge exists to remove.
+    #
+    # The reason recorded for that merge used to be "Pluto is Hades' Roman
+    # name", which is a simplification that gets the direction wrong. Πλούτων
+    # (Plouton) is a GREEK cult title, absent from Homer and Hesiod and current
+    # from the 5th century BCE through the Eleusinian mysteries, from πλοῦτος,
+    # wealth — Plato, Cratylus 403a has people avoid the name Hades and say
+    # Plouton instead, because wealth comes up out of the earth. Pluto is the
+    # Latin transcription of that Greek title. Rome's own underworld gods are
+    # Dis Pater and Orcus; Cicero equates Dis with Plouton. So the merge folds
+    # two cult aspects of one Greek god, not a Greek name and a Roman one.
+    #
+    # WHERE HADES SITS IS AN ENGINEERING PLACEMENT AND IS LABELLED AS ONE. He
+    # was in EU_HELL_1ST, Limbo, which has no basis at all — Dante has no
+    # "Hades' level", and the Dis of the Commedia is the walled city of the
+    # sixth circle and Lucifer himself. This system models no house of Hades, so
+    # he is seated as overseer of the Greek judgment ground below, the only
+    # Greek place here that is his. That is a compromise, exactly like the one
+    # recorded above for 地藏王菩萨, and not a claim from a text.
+    ("Hades", "哈迪斯", "Hades", "Aides", ActorRole.OVERSEER, "EU_PLATO_MEADOW",
      "冥王哈迪斯", "冥王哈迪斯", "Hades - Lord of the Underworld", "Aides",
-     "Greek god of the underworld - sole overseer of the Greco-Roman infernal realm"),
-    ("Aeacus", "艾亚哥斯", "Aeacus", "Aiakos", ActorRole.JUDGE, "EU_HELL_9TH",
+     "Greek god of the underworld - sole overseer of the Greco-Roman infernal "
+     "realm. Also Plouton (Πλούτων), a Greek cult title from πλοῦτος 'wealth' "
+     "(Plato, Cratylus 403a), of which Latin Pluto is the transcription; Rome's "
+     "native underworld gods are Dis Pater and Orcus. PLACEMENT IS AN "
+     "ENGINEERING CHOICE: no house of Hades is modelled here, so he oversees "
+     "the judgment ground rather than being given one of Dante's circles"),
+    # AEACUS AND RHADAMANTHUS ARE NOT IN THE COMMEDIA, WHICH IS WHY THEY HAVE
+    # THEIR OWN PLACE NOW. Both used to sit in EU_HELL_9TH — Dante's frozen
+    # Cocytus, where this file also seeds Satan — and they are wrong there twice
+    # over. Dante borrows one Greek judge, Minos, and neither of these two
+    # appears in the poem at all; and Plato, who is where the three-judge
+    # division of labour comes from, sets the judgment at a fork in a meadow
+    # with one road to the Isles of the Blessed and one to Tartarus. That is a
+    # sorting point *before* punishment. A ninth circle is not a place Plato's
+    # cosmology contains — the layering is Dante's.
+    #
+    # The division of labour is Gorgias 524a (Rhadamanthus tries those from
+    # Asia, Aeacus those from Europe, Minos decides when they are in doubt).
+    # Note 524a, not 523e: 523e is Zeus announcing the reform, and the
+    # assignment of the three is the passage after it.
+    #
+    # Their two destinations are still not modelled and are deliberately not
+    # invented. EU_PLATO_MEADOW is the ground they judge on and nothing more.
+    ("Aeacus", "艾亚哥斯", "Aeacus", "Aiakos", ActorRole.JUDGE, "EU_PLATO_MEADOW",
      "冥界判官艾亚哥斯", "冥界判官艾亚哥斯", "Judge Aeacus", "Aiakos",
-     "One of the three judges of the dead - holds the keys of the underworld, "
-     "judges the souls of Europe"),
-    ("Rhadamanthus", "拉达曼提斯", "Rhadamanthus", "Rhadamanthys", ActorRole.JUDGE, "EU_HELL_9TH",
+     "One of the three judges of the dead - tries those who come from Europe "
+     "(Plato, Gorgias 524a) and holds the keys of the underworld (Pindar, "
+     "Isthmian 7.47; Apollodorus 3.12.6). Son of Zeus and the nymph Aegina, and "
+     "grandfather of Achilles. He does not appear in Dante"),
+    ("Rhadamanthus", "拉达曼提斯", "Rhadamanthus", "Rhadamanthys", ActorRole.JUDGE,
+     "EU_PLATO_MEADOW",
      "冥界判官拉达曼提斯", "冥界判官拉达曼提斯", "Judge Rhadamanthus", "Rhadamanthys",
-     "One of the three judges of the dead - brother of Minos, judges the souls of Asia"),
+     "One of the three judges of the dead - tries those who come from Asia "
+     "(Plato, Gorgias 524a). Homer instead has him living in Elysium rather "
+     "than judging (Odyssey 4.563-565) and Virgil has him ruling and punishing "
+     "in Tartarus (Aeneid 6.566); the brotherhood with Minos is usually cited "
+     "to Iliad 14.321-322, which has not been checked line by line here. He "
+     "does not appear in Dante"),
+    # Lethe's realm is right and its description was not. EU_PURGATORY is
+    # Dante's placement — Lethe runs through the Earthly Paradise at the summit
+    # of Mount Purgatory, where Matelda explains that it washes away the memory
+    # of sin while Eunoe restores the memory of good done (Purgatorio XXVIII).
+    # The row described Virgil's Lethe instead, drunk before rebirth to forget a
+    # past life (Aeneid 6.703ff), so realm and meaning came from different
+    # poems. The realm was kept and the meaning corrected. Eunoe is absent,
+    # which means only half of Dante's pair of rivers is modelled; that is a
+    # known omission, not an oversight.
     ("Lethe", "忘川", "River Lethe", "Lethe", ActorRole.CONDUIT, "EU_PURGATORY",
      "忘川河神", "忘川河神", "Lethe - River of Forgetfulness", "Lethe",
-     "Spirit of the river Lethe - souls drink to forget their past lives"),
+     "Spirit of the river Lethe - at the summit of Mount Purgatory the souls "
+     "who have finished their penance are drawn through it and lose the memory "
+     "of their sins (Dante, Purgatorio XXVIII). Not Virgil's Lethe, drunk "
+     "before rebirth to forget a whole past life (Aeneid 6.703ff): that one "
+     "belongs to a cosmology with reincarnation in it. Dante pairs it with "
+     "Eunoe, which this system does not model"),
 ]
 
+# THE WEIGHING IS ONE SCENE AND EVERYONE IN IT IS IN THE SAME ROOM.
+#
+# Six of these nine used to be somewhere else. Budge's Papyrus of Ani plates III
+# and IV, and the British Museum's Hunefer papyrus (BM EA 9901/3), draw the same
+# procedure with the same cast in one hall: Anubis works the balance, Thoth
+# stands behind him with pen and palette and records, Ammit waits beside the
+# scales, the Ennead ratifies, Horus takes the vindicated by the hand and leads
+# him forward, and Osiris receives him enthroned with Isis and Nephthys behind
+# him. Nobody in that scene is in the Field of Reeds — that is where the
+# acquitted go afterwards — and nobody is stationed at the gate of the Duat.
+#
+# ROLES: THE ENUM DOES NOT HAVE THE WORDS THIS SCENE NEEDS. There is no role
+# meaning "works the instrument of judgment" (Anubis) or "is the standard by
+# which it is judged" (Ma'at). Rather than add enum values for one civilization,
+# JUDGE is left to mean "principal of the tribunal" and the descriptions carry
+# what each one actually does. The one demotion made is Ma'at's, because
+# Ma'at-as-juror is the clearly wrong one: her feather is the counterweight in
+# the pan, so she is not on the bench, she is the test.
+#
+# HEADCOUNT WARNING: with the four relocations below, EG_HALL_TWO_TRUTHS holds
+# nine principals plus the forty-two assessors. Any UI that renders "judges of
+# the Hall" as one flat list needs the principals/bench distinction first —
+# `powers_json["assessor_index"]` is the discriminator, and it is present on
+# exactly the forty-two.
 EGYPTIAN_ACTORS = [
     ("Osiris", "奥西里斯", "Osiris", "Wsir", ActorRole.JUDGE, "EG_HALL_TWO_TRUTHS",
      "冥王奥西里斯", "冥王奥西里斯", "Osiris - Lord of the Duat", "Wsir",
-     "God of the dead and resurrection - supreme judge in the Hall of Two Truths"),
+     "God of the dead and resurrection - presides over the Hall of Two Truths, "
+     "enthroned in his shrine, and receives the vindicated dead (Budge, Papyrus "
+     "of Ani, Plate IV; BD 125A in the Papyrus of Nu, BM EA 10477)"),
     ("Anubis", "阿努比斯", "Anubis", "Inpw", ActorRole.JUDGE, "EG_HALL_TWO_TRUTHS",
-     "亡灵守护神阿努比斯", "亡灵守护神阿努比斯", "Anubis - Guardian of the Dead", "Inpw",
-     "Jackal-headed god - conducts the weighing of the heart ceremony"),
+     "掌秤者阿努比斯", "掌秤者阿努比斯", "Anubis - Keeper of the Scales", "Inpw",
+     "Jackal-headed god - WORKS THE BALANCE. He tests the tongue of the scales "
+     "and adjusts the plummet; the inscription over him in the Papyrus of Ani "
+     "reads 'O weigher of righteousness, guide the balance that it may be "
+     "stablished', and BD 30B calls him 'him who keepeth the scales'. He "
+     "decides nothing - the role JUDGE here means principal of the tribunal, "
+     "because ActorRole has no term for the one who operates the instrument"),
     ("Thoth", "托特", "Thoth", "Djehuty", ActorRole.JUDGE, "EG_HALL_TWO_TRUTHS",
-     "智慧之神托特", "智慧之神托特", "Thoth - God of Wisdom and Writing", "Djehuty",
-     "Ibis-headed god - records the verdict, advises Osiris during weighing"),
-    ("Ma'at", "玛特", "Ma'at", "Maat", ActorRole.JUDGE, "EG_HALL_TWO_TRUTHS",
-     "真理与正义女神玛特", "真理与正义女神玛特", "Ma'at - Goddess of Truth and Justice", "Maat",
-     "Daughter of Ra - the feather of Ma'at is the standard for the weighing"),
-    ("Ammit", "阿米特", "Ammit (The Devourer)", "Ammut", ActorRole.EXECUTOR, "EG_DEVOURER",
+     "书记之神托特", "书记之神托特", "Thoth - Scribe of the Tribunal", "Djehuty",
+     "Ibis-headed god - THE REGISTRAR. He stands behind Anubis with reed-pen "
+     "and palette, records the result of the weighing, and reads the finding to "
+     "the assembled gods ('Hear ye this judgment...'); the Papyrus of Nebseni "
+     "labels the ape on the beam 'Thoth, lord of the scales'. He reports the "
+     "verdict; he does not pronounce it"),
+    # Ma'at is the only demotion in this block. She was a JUDGE, which puts the
+    # standard of measurement on the bench that applies it; in BM EA 9901 she
+    # sits on the beam of the balance and her feather goes into the pan.
+    # GUARDIAN is the least wrong of the five available roles — none of them
+    # means "the criterion" — and the description is where the actual fact
+    # lives. If ActorRole ever grows a non-agent value, this row is the reason.
+    ("Ma'at", "玛特", "Ma'at", "Maat", ActorRole.GUARDIAN, "EG_HALL_TWO_TRUTHS",
+     "真理与正义女神玛特", "真理与正义女神玛特", "Ma'at - The Standard of the Weighing", "Maat",
+     "Daughter of Ra - SHE IS THE STANDARD, NOT A JUDGE. Her feather is the "
+     "counterweight the heart is weighed against, and she sits on the beam of "
+     "the balance (BM EA 9901). The hall is named for her: wsxt nt mAaty, the "
+     "broad hall of the Two Goddesses of What is Right, a dual. Cast GUARDIAN "
+     "because ActorRole has no value meaning 'the criterion'; she was cast "
+     "JUDGE, which seated the measure among the people applying it"),
+    ("Ammit", "阿米特", "Ammit (The Devourer)", "Ammut", ActorRole.EXECUTOR,
+     "EG_HALL_TWO_TRUTHS",
      "吞噬者阿米特", "吞噬者阿米特", "Ammit - The Devourer", "Ammut",
-     "The Devourer - part lion, part hippopotamus, part crocodile - consumes unworthy hearts"),
-    ("Horus", "荷鲁斯", "Horus", "Hor", ActorRole.GUARDIAN, "EG_DUAT_ENTRY",
-     "天空之神荷鲁斯", "天空之神荷鲁斯", "Horus - God of the Sky", "Hor",
-     "Falcon-headed god - protects the living and guides souls through the Duat"),
-    ("Isis", "伊西斯", "Isis", "Aset", ActorRole.CONDUIT, "EG_AARU",
+     "The Devourer - fore-part a crocodile, hind quarters a hippopotamus, "
+     "middle a lion. She waits AT THE BALANCE in the Hall, which is where every "
+     "standard vignette draws her (Budge, Papyrus of Ani, Plate III; BM EA "
+     "9901), and acts only if the heart fails. She was seeded into a realm "
+     "named after her, which made annihilation look like an address she lived "
+     "at; see EG_DEVOURER above"),
+    # Horus was the worst-placed row in the file: GUARDIAN at the gate of the
+    # Duat, a post the sources do not give him, and the deleted
+    # populate_egyptian_actors had him as a JUDGE instead. He is neither. In
+    # both the Ani and the Hunefer papyri, Horus son of Isis takes the
+    # vindicated dead by the hand after the weighing and walks him to Osiris'
+    # shrine. That is escort duty, and CONDUIT is the role for it.
+    ("Horus", "荷鲁斯", "Horus", "Hor", ActorRole.CONDUIT, "EG_HALL_TWO_TRUTHS",
+     "引导者荷鲁斯", "引导者荷鲁斯", "Horus - Who Leads the Vindicated Forward", "Hor",
+     "Falcon-headed Horus son of Isis - takes the vindicated dead by the hand "
+     "after the weighing and leads him forward to Osiris, lord of eternity "
+     "(Budge, Papyrus of Ani, Plate IV; BM EA 9901/3, the Hunefer papyrus). He "
+     "is not a gatekeeper of the Duat and he is not a prosecutor - the "
+     "prosecution story belongs to the Contendings of Horus and Seth (Papyrus "
+     "Chester Beatty I), a different text about a dispute among the living gods"),
+    ("Isis", "伊西斯", "Isis", "Aset", ActorRole.CONDUIT, "EG_HALL_TWO_TRUTHS",
      "生命女神伊西斯", "生命女神伊西斯", "Isis - Goddess of Life and Magic", "Aset",
-     "Great mother goddess - protects the dead, aids resurrection spells"),
-    ("Nephthys", "奈芙蒂斯", "Nephthys", "NebetHet", ActorRole.CONDUIT, "EG_AARU",
+     "Great mother goddess - stands behind Osiris' throne in the Hall with "
+     "Nephthys as he receives the dead (Budge, Papyrus of Ani, Plate IV). She "
+     "was seeded into the Field of Reeds, which is where the acquitted go after "
+     "the judgment she attends"),
+    ("Nephthys", "奈芙蒂斯", "Nephthys", "NebetHet", ActorRole.CONDUIT, "EG_HALL_TWO_TRUTHS",
      "丧葬女神奈芙蒂斯", "丧葬女神奈芙蒂斯", "Nephthys - Goddess of Mourning", "NebetHet",
-     "Protects the dead - assists Anubis in funeral rites and judgment"),
-    ("Ra", "拉", "Ra (Atum)", "Re", ActorRole.OVERSEER, "EG_AARU",
+     "Protects the dead - stands with Isis behind Osiris' throne in the Hall "
+     "(Budge, Papyrus of Ani, Plate IV). Same relocation and same reason as Isis"),
+    ("Ra", "拉", "Ra (Atum)", "Re", ActorRole.OVERSEER, "EG_HALL_TWO_TRUTHS",
      "太阳神拉", "太阳神拉", "Ra - Sun God and Creator", "Re",
-     "Supreme sun god - the ultimate authority over life and death in the Duat"),
+     "Supreme sun god - heads the row of twelve enthroned gods above the "
+     "weighing scene as Harmachis, 'the great god within his boat' (Budge, "
+     "Papyrus of Ani, Plate III). Aaru is not his domain, which is where this "
+     "row used to be; his other netherworld office is the nightly voyage of the "
+     "solar barque in the Amduat and the Book of Gates"),
 ]
 
 # --------------------------------------------------------------------------

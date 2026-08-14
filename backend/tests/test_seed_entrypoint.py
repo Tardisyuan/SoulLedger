@@ -87,6 +87,22 @@ RETIRED_SCRIPT_REALMS = [
     "EG_DUAT_ENTRY", "EG_HALL_TWO_TRUTHS", "EG_AARU", "EG_AM_TYAT", "EG_DEVOURER",
 ]
 
+# Rows from the inventory above that the command deliberately no longer seeds.
+# Subtracted from the expectation rather than deleted from it, so the inventory
+# stays the frozen record of what the script wrote and every departure from it
+# has to be written down here with its reason.
+#
+# EG_AM_TYAT ("Path of Amtyat"): retired by realms/0013 as unattested. Searched
+# for and not found in Budge's Book of the Dead glossary, in Budge's Egyptian
+# Heaven and Hell vol. II, in UCL Digital Egypt, in museum records, or in
+# general search. The likeliest origins are Am-Tuat — Imy-Dwꜣt, the *title of a
+# book*, the Amduat — and Amentet (Imntt, "the West", which is the entire west
+# and not a frontier); either way a book or a direction was turned into a
+# "border realm before the final judgment", which is not a thing the Egyptian
+# afterlife corpus contains. tests/test_seed_mythology.py asserts it stays
+# unseeded.
+DELIBERATELY_RETIRED_REALMS = ["EG_AM_TYAT"]
+
 RETIRED_SCRIPT_ACTORS = [
     "阎罗王", "秦广王", "楚江王", "宋帝王", "五官王", "卞城王", "泰山王", "都市王",
     "平等王", "转轮王", "孟婆", "牛头", "马面", "白无常", "黑无常", "判官", "钟馗",
@@ -243,7 +259,9 @@ def test_seed_mythology_still_seeds_everything_the_retired_script_seeded():
     call_command(SEED_COMMAND, stdout=io.StringIO())
 
     missing_realms = sorted(
-        set(RETIRED_SCRIPT_REALMS) - set(Realm.objects.values_list("realm_code", flat=True))
+        set(RETIRED_SCRIPT_REALMS)
+        - set(DELIBERATELY_RETIRED_REALMS)
+        - set(Realm.objects.values_list("realm_code", flat=True))
     )
     missing_actors = sorted(
         set(RETIRED_SCRIPT_ACTORS) - set(Actor.objects.values_list("name", flat=True))

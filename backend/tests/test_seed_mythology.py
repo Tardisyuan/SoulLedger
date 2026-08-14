@@ -109,18 +109,133 @@ JUDICIAL_PERSONNEL = {
     "地藏王菩萨": ("OVERSEER", "地藏王菩萨", "DY_COURT_01_QINGUANG"),
 }
 
-# The Greco-Roman cast `manage.py consolidate_eu_pantheon` audits for. Hades,
-# not Pluto: Pluto is the same god's Roman name and that command merges the
+# --------------------------------------------------------------------------
+# WHERE EACH ACTOR STANDS, NOT JUST WHAT IT IS.
+#
+# Every placement table below carries (role, realm_code), and that second
+# column is the whole reason these tables were rewritten on 2026-08-15. Until
+# then this file and consolidate_eu_pantheon.GRECO_ROMAN_EXPECTED both locked
+# the role and said nothing about the realm, and role is the column that
+# happened to be right. Fourteen actors stood somewhere no source puts them and
+# every check in the repo reported OK:
+#
+#   Minos in Dante's ninth circle, with a description of the work his Minos
+#   does at the entrance to the second; Aeacus and Rhadamanthus in the ninth
+#   circle of a poem neither of them appears in; Charon in Purgatory, whose
+#   boatman is an angel; Cerberus in Limbo; Hades in Limbo; Michael judging;
+#   Satan judging; Horus guarding a gate; Isis, Nephthys and Ra in the Field of
+#   Reeds, which is where the acquitted go after the judgment they attend;
+#   Ammit in a realm named after her; Ma'at on the bench that applies her own
+#   feather; 孟婆 serving the broth of forgetting to souls not yet tried.
+#
+# A check that verifies one column of a two-column fact goes green at exactly
+# the rate the other column goes wrong. These tables are the fix, and the
+# mutation check is: move any one actor to a realm it does not belong in and
+# both this file and `manage.py consolidate_eu_pantheon` must go red naming who,
+# where they should be, and where they actually are.
+# --------------------------------------------------------------------------
+
+# The Greco-Roman cast `manage.py consolidate_eu_pantheon` audits for, as
+# (role, realm_code). Hades, not Pluto: same god, and that command merges the
 # pair into Hades, so seeding Pluto would manufacture the duplicate the merge
 # exists to remove. Kept in sync by hand with
 # consolidate_eu_pantheon.GRECO_ROMAN_EXPECTED — see rule 1 in the docstring.
+#
+# The sources, one per row:
+#   Hades        EU_PLATO_MEADOW  overseer of the Greek judgment ground. The one
+#                                 engineering placement of the six — no house of
+#                                 Hades is modelled, and Limbo was not one.
+#   Minos        EU_HELL_2ND      Dante, Inferno V.4-15.
+#   Aeacus       EU_PLATO_MEADOW  Plato, Gorgias 524a (those from Europe).
+#   Rhadamanthus EU_PLATO_MEADOW  Plato, Gorgias 524a (those from Asia).
+#   Charon       EU_ACHERON       Virgil, Aeneid 6.295-297; Dante, Inferno III.
+#   Cerberus     EU_HELL_3RD      Dante, Inferno VI.
 GRECO_ROMAN_CAST = {
-    "Hades": "OVERSEER",
-    "Minos": "JUDGE",
-    "Aeacus": "JUDGE",
-    "Rhadamanthus": "JUDGE",
-    "Charon": "CONDUIT",
-    "Cerberus": "GUARDIAN",
+    "Hades": ("OVERSEER", "EU_PLATO_MEADOW"),
+    "Minos": ("JUDGE", "EU_HELL_2ND"),
+    "Aeacus": ("JUDGE", "EU_PLATO_MEADOW"),
+    "Rhadamanthus": ("JUDGE", "EU_PLATO_MEADOW"),
+    "Charon": ("CONDUIT", "EU_ACHERON"),
+    "Cerberus": ("GUARDIAN", "EU_HELL_3RD"),
+}
+
+# The two Greek places, added because the Greek cast had none. All eleven
+# European realms were Christian or Dantean while seven of the eleven European
+# actors are Greek, so every Greek figure had been filed into whichever Dantean
+# row looked nearest — which is how five of six ended up misplaced at once.
+GREEK_REALMS = ["EU_ACHERON", "EU_PLATO_MEADOW"]
+
+# The Christian cast, as (role, realm_code). Christ is the row that did not
+# exist: `grep -i 'christ\|jesus\|基督\|耶稣'` matched nothing anywhere in this
+# repo while John 5:22, the Nicene Creed and CCC 1021-1041 all name him as the
+# one who judges the living and the dead. The JUDGE role had gone to Michael
+# (soul-weighing is medieval iconography borrowed from Egyptian psychostasia,
+# not doctrine; his liturgical office is *signifer sanctus Michael repraesentet
+# eas in lucem sanctam*, which is CONDUIT) and to Satan (the accuser of Rev
+# 12:10, and in Dante an instrument of punishment frozen in Cocytus — neither
+# is a judge).
+CHRISTIAN_CAST = {
+    "Christ": ("JUDGE", "EU_HEAVEN"),
+    "God": ("OVERSEER", "EU_HEAVEN"),
+    "Michael": ("CONDUIT", "EU_HEAVEN"),
+    "Gabriel": ("CONDUIT", "EU_HEAVEN"),
+    "Satan": ("EXECUTOR", "EU_HELL_9TH"),
+}
+
+# The Egyptian principals — the weighing-scene cast, as (role, realm_code).
+# Every one of them is in the Hall, because the Papyrus of Ani plates III-IV
+# and the Hunefer papyrus (BM EA 9901/3) draw one scene in one room: Anubis
+# works the balance, Thoth records and reports, Ammit waits beside the scales,
+# Horus leads the vindicated forward, Osiris receives him with Isis and
+# Nephthys behind the throne, and Ra heads the row of twelve gods above.
+#
+# Two roles here are the least-wrong value rather than the right one, and the
+# assertion is deliberately made on them anyway. ActorRole has no term for "works
+# the instrument" (Anubis, left JUDGE) or "is the standard" (Ma'at, demoted to
+# GUARDIAN because her feather is the counterweight in the pan and JUDGE seated
+# the measure among the people applying it). Locking the compromise is what
+# makes it visible when someone revisits it.
+EGYPTIAN_PRINCIPALS_PLACED = {
+    "Osiris": ("JUDGE", "EG_HALL_TWO_TRUTHS"),
+    "Anubis": ("JUDGE", "EG_HALL_TWO_TRUTHS"),
+    "Thoth": ("JUDGE", "EG_HALL_TWO_TRUTHS"),
+    "Ma'at": ("GUARDIAN", "EG_HALL_TWO_TRUTHS"),
+    "Ammit": ("EXECUTOR", "EG_HALL_TWO_TRUTHS"),
+    "Horus": ("CONDUIT", "EG_HALL_TWO_TRUTHS"),
+    "Isis": ("CONDUIT", "EG_HALL_TWO_TRUTHS"),
+    "Nephthys": ("CONDUIT", "EG_HALL_TWO_TRUTHS"),
+    "Ra": ("OVERSEER", "EG_HALL_TWO_TRUTHS"),
+}
+
+# A realm that must never be seeded again. "Amtyat" is not an Egyptian place —
+# absent from Budge's Book of the Dead glossary, from Egyptian Heaven and Hell
+# II, from UCL Digital Egypt, from museum records and from search. It is most
+# likely Am-Tuat (the title of a book, the Amduat) or Amentet ("the West")
+# turned into a border realm. realms/0013 tombstones it on existing databases;
+# this list is what stops the seed table re-creating it on fresh ones.
+UNATTESTED_REALMS = ["EG_AM_TYAT"]
+
+# The Chinese cast who are not one of the ten kings and not one of the three
+# named judicial personnel, as (role, realm_code). 孟婆 is the reason this table
+# exists: she was in DY_00_PURGATORY, pouring the broth of forgetting into souls
+# that had not been tried yet, while DY_COURT_10_ZHUANLUN's own description said
+# the broth is drunk after sentence. 《玉历宝钞》 puts her 醧忘台 「居第十殿，冥王
+# 殿前六桥之外」.
+#
+# 牛头/马面 stay in the holding pen deliberately. 《玉历》 names them at the fifth
+# court 「牛头、马面，押赴高台」, but escort duty is not confined to one court and
+# that is the only place the text happens to mention them; the description
+# carries the reference instead. 钟馗 likewise keeps a posting the sources do
+# not give him — he appears nowhere in 《玉历宝钞》 at all — and his description
+# says so.
+CHINESE_ATTENDANTS = {
+    "孟婆": ("CONDUIT", "DY_COURT_10_ZHUANLUN"),
+    "牛头": ("GUARDIAN", "DY_00_PURGATORY"),
+    "马面": ("GUARDIAN", "DY_00_PURGATORY"),
+    "白无常": ("CONDUIT", "DY_00_PURGATORY"),
+    "黑无常": ("CONDUIT", "DY_00_PURGATORY"),
+    "判官": ("JUDGE", "DY_COURT_05_YANLUO"),
+    "钟馗": ("EXECUTOR", "DY_COURT_05_YANLUO"),
 }
 
 # Norse is out of this system entirely (no judgment concept: destination
@@ -259,6 +374,50 @@ def _missing(expected, actual, what):
     return absent, (
         f"seed_mythology left {len(absent)} of {len(expected)} {what} out of the "
         f"database: {absent}. Present: {sorted(actual & set(expected))}"
+    )
+
+
+def _placement_faults(civilization, expected, what):
+    """Compare a {name: (role, realm_code)} table against the database.
+
+    Returns a message when anything is absent, miscast or standing in the wrong
+    realm, and None when every row matches. Role and realm are reported
+    separately, so a row that is wrong in both columns says so twice instead of
+    hiding the second fault behind the first — and every line names the actor,
+    the realm the source puts it in, and the realm it is actually in, because a
+    failure that says only "wrong realm" sends the reader back to the seed table
+    to find out what right looks like.
+    """
+    found = {
+        name: (role, realm_code)
+        for name, role, realm_code in Actor.objects.filter(
+            civilization=civilization, name__in=expected
+        ).values_list("name", "role", "realm__realm_code")
+    }
+
+    absent = [name for name in expected if name not in found]
+    miscast = [
+        f"{name}: role={found[name][0]}, expected {role}"
+        for name, (role, _) in expected.items()
+        if name in found and found[name][0] != role
+    ]
+    misplaced = [
+        f"{name}: belongs in {realm_code}, found in "
+        f"{found[name][1] or 'no realm at all'}"
+        for name, (_, realm_code) in expected.items()
+        if name in found and found[name][1] != realm_code
+    ]
+
+    if not (absent or miscast or misplaced):
+        return None
+    return (
+        f"{what} is wrong in a seeded database.\n"
+        f"  Not seeded at all: {absent}\n"
+        f"  Wrong role: {miscast}\n"
+        f"  Wrong realm: {misplaced}\n"
+        f"The realm half of this check is the one that matters: role alone was "
+        f"all this file locked until 2026-08-15, and fourteen actors stood "
+        f"somewhere no source puts them the whole time it was green."
     )
 
 
@@ -534,6 +693,30 @@ def test_named_judicial_personnel_carry_their_role_title_and_realm(seeded):
 
 
 @pytest.mark.django_db
+def test_chinese_attendants_carry_their_role_and_realm(seeded):
+    """The non-king Chinese cast stands where it stands, 孟婆 above all.
+
+    孟婆 was in DY_00_PURGATORY, serving the broth of forgetting to souls that
+    had not been tried yet — which would have every soul face its court with no
+    memory of the life being judged. 《玉历宝钞》「孟婆神」 puts her 醧忘台 「居第
+    十殿，冥王殿前六桥之外」 and has the broth drunk after sentence, on the way to
+    the next life. DY_COURT_10_ZHUANLUN's own realm description already said so,
+    so the two tables described the same act two incompatible ways and nothing
+    compared them.
+
+    牛头/马面 and 钟馗 are pinned here at postings that are admitted compromises
+    rather than sourced facts — the escort pair are named at the fifth court but
+    work across all ten, and 钟馗 appears nowhere in 《玉历宝钞》 at all. Pinning a
+    compromise is the point: it stays visible, and moving it becomes a decision
+    rather than a drift.
+    """
+    fault = _placement_faults(
+        "CHINESE", CHINESE_ATTENDANTS, "The Chinese attendant cast"
+    )
+    assert fault is None, fault
+
+
+@pytest.mark.django_db
 def test_dante_nine_circles_all_present(seeded):
     """All nine circles of Dante's Inferno exist as EUROPEAN Realms."""
     codes = set(
@@ -613,6 +796,57 @@ def test_egyptian_realms_all_present(seeded):
     )
     absent, message = _missing(EGYPTIAN_CORE_REALMS, codes, "Egyptian realms")
     assert not absent, message
+
+
+@pytest.mark.django_db
+def test_the_weighing_cast_all_stands_in_the_hall(seeded):
+    """One scene, one room — and six of the nine used to be somewhere else.
+
+    Budge's Papyrus of Ani plates III-IV and the British Museum's Hunefer
+    papyrus (BM EA 9901/3) draw the same procedure with the same cast in one
+    hall: Anubis tests the tongue of the balance, Thoth stands behind him with
+    reed-pen and palette and records the result, Ammit waits beside the scales,
+    the Ennead ratifies, Horus takes the vindicated by the hand and leads him
+    forward, and Osiris receives him enthroned with Isis and Nephthys behind
+    him, under a row of twelve gods headed by Ra.
+
+    Horus had been a GUARDIAN at the gate of the Duat, a post no source gives
+    him. Isis, Nephthys and Ra were in the Field of Reeds, which is where the
+    acquitted go *after* the judgment these three attend. Ammit was in a realm
+    named after her. Ma'at was on the bench, when her feather is what goes into
+    the pan.
+    """
+    fault = _placement_faults(
+        "EGYPTIAN", EGYPTIAN_PRINCIPALS_PLACED, "The Egyptian weighing cast"
+    )
+    assert fault is None, fault
+
+
+@pytest.mark.django_db
+def test_no_unattested_realm_is_seeded(seeded):
+    """A realm nobody could find a source for does not come back.
+
+    `EG_AM_TYAT` / "Path of Amtyat" survived in the seed table because nothing
+    ever asked where it came from. It is not in Budge's Book of the Dead
+    glossary, not in Egyptian Heaven and Hell II, not in UCL Digital Egypt, not
+    in any museum record and not in general search; the likely origins are
+    Am-Tuat (the *title of a book*, the Amduat) and Amentet ("the West"), i.e.
+    a book or a direction turned into a border realm.
+
+    Checked through `all_objects`, so a row soft-deleted by realms/0013 and then
+    re-created by an edited seed table is still caught — `Realm.objects` would
+    hide the tombstone and see only the fresh row.
+    """
+    resurrected = sorted(
+        Realm.all_objects.filter(realm_code__in=UNATTESTED_REALMS, is_deleted=False)
+        .values_list("realm_code", flat=True)
+    )
+    assert not resurrected, (
+        f"Unattested realms are alive in a freshly seeded database: "
+        f"{resurrected}. realms/0013 retired them and the seed table must not "
+        f"put them back. If a source has since been found, replace this list "
+        f"entry with the citation rather than deleting the check."
+    )
 
 
 # --------------------------------------------------------------------------
@@ -906,29 +1140,105 @@ def test_second_run_creates_no_assessors(seeded):
 
 
 @pytest.mark.django_db
-def test_greco_roman_cast_present_with_correct_roles(seeded):
-    """Hades, the three judges, Charon and Cerberus all exist, correctly cast.
+def test_greek_realms_present(seeded):
+    """The Greek cast has Greek ground to stand on.
+
+    Without these two rows there is no place in the system that any of the
+    seven Greek actors belongs to, and the only way to give them a realm at all
+    is to put them in a circle of Dante's hell — which is how Minos, Aeacus,
+    Rhadamanthus, Charon, Cerberus and Hades all came to be misplaced at once.
+    """
+    codes = set(
+        Realm.objects.filter(civilization="EUROPEAN", realm_code__in=GREEK_REALMS)
+        .values_list("realm_code", flat=True)
+    )
+    absent, message = _missing(GREEK_REALMS, codes, "Greek realms")
+    assert not absent, message
+
+
+@pytest.mark.django_db
+def test_greco_roman_cast_present_with_correct_roles_and_realms(seeded):
+    """Hades, the three judges, Charon and Cerberus exist, cast AND placed.
 
     `consolidate_eu_pantheon` keeps Christian + Greco-Roman as the two European
     judgment systems and audits this exact roster. The seed used to create only
     Charon, Minos, Cerberus and Pluto, so on a fresh database that audit
     reported Hades, Aeacus and Rhadamanthus MISSING — the audit could not pass
     on any database this project ships.
+
+    Then it could, and it still said nothing useful: with all six seeded, five
+    of them were standing in a realm no source supports and both this test and
+    that audit passed, because both locked the role and neither looked at the
+    realm. The realm is checked here now.
     """
-    found = dict(
-        Actor.objects.filter(civilization="EUROPEAN", name__in=GRECO_ROMAN_CAST)
-        .values_list("name", "role")
+    fault = _placement_faults(
+        "EUROPEAN", GRECO_ROMAN_CAST, "The Greco-Roman cast"
     )
-    absent = [name for name in GRECO_ROMAN_CAST if name not in found]
-    miscast = {
-        name: {"expected": expected, "found": found[name]}
-        for name, expected in GRECO_ROMAN_CAST.items()
-        if name in found and found[name] != expected
-    }
-    assert not absent and not miscast, (
-        f"Greco-Roman cast incomplete or miscast. Not seeded at all: {absent}. "
-        f"Seeded with the wrong role: {miscast}. "
-        f"consolidate_eu_pantheon audits exactly these six."
+    assert fault is None, (
+        f"{fault}\nconsolidate_eu_pantheon audits exactly these six and its "
+        f"GRECO_ROMAN_EXPECTED must say the same thing this table does."
+    )
+
+
+@pytest.mark.django_db
+def test_christian_cast_present_with_correct_roles_and_realms(seeded):
+    """The judge the creed names is in the database, and nobody else is judging.
+
+    Christ was missing outright — `grep -i 'christ|jesus|基督|耶稣'` matched
+    nothing anywhere in the repo — while John 5:22 ("the Father judgeth no man,
+    but hath committed all judgment unto the Son"), the Nicene Creed and CCC
+    1021-1041 name him without qualification, and all three of Catholic,
+    Orthodox and Protestant readings agree on the point.
+
+    The JUDGE role had instead been given to Michael and to Satan. Michael
+    weighing souls is a medieval iconographic motif that reached Christian art
+    through Greek psychostasia from the Egyptian weighing of the heart this
+    same seeder puts in the Hall of Two Truths — so the repo had Michael doing
+    Anubis' job — while his liturgical office is to lead (*signifer sanctus
+    Michael repraesentet eas in lucem sanctam*, Offertory of the Roman
+    Requiem). Satan is the accuser (Rev 12:10; Job 1-2) and is himself judged
+    (Rev 20:10); in Dante he is the punishment, frozen in Cocytus (Inf. XXXIV).
+    Neither adjudicates anything.
+    """
+    fault = _placement_faults("EUROPEAN", CHRISTIAN_CAST, "The Christian cast")
+    assert fault is None, fault
+
+
+@pytest.mark.django_db
+def test_the_christian_side_seats_one_judge_and_no_bench(seeded):
+    """Christianity's bench is empty, and the emptiness is asserted, not assumed.
+
+    Diyu has ten kings and the Hall of Two Truths has forty-two assessors.
+    Christianity has neither, and not because the research came up short: the
+    theology does not use the structure. One judge, no jury, no division of
+    labour, no assigned seats. The two passages that sound like a bench are not
+    one — Matt 19:28 / Luke 22:30 seats the twelve apostles but gives them no
+    dockets and no names, and 1 Cor 6:2-3 makes the subject "the saints", i.e.
+    everyone rather than a closed list. Angels attend the judgment as gatherers
+    and executors (Matt 13:41-42, 24:31, 25:31), never as adjudicators.
+
+    This test is the mechanism that keeps the slot explicitly empty rather than
+    merely unfilled. An empty slot with nothing watching it reads as an
+    oversight, and the repo has already run that experiment once: the forty-two
+    assessors were for a long time thirty-five names that were not assessors,
+    assembled because the template said a bench belonged there. Europe answered
+    the same pressure by counting Greeks — three of the eleven European actors
+    were Greek judges — which is why the Greek names are excluded here by
+    realm rather than by a hardcoded list of who not to count.
+    """
+    christian_realms = ["EU_HEAVEN", "EU_PURGATORY"]
+    judges = sorted(
+        Actor.objects.filter(
+            civilization="EUROPEAN",
+            role="JUDGE",
+            realm__realm_code__in=christian_realms,
+        ).values_list("name", flat=True)
+    )
+    assert judges == ["Christ"], (
+        f"The Christian side of EU_HEAVEN_HELL should seat exactly one judge, "
+        f"Christ, and it seats {judges}. If a name was added here to fill out a "
+        f"tribunal: there is no tribunal to fill. If Christ is missing, the "
+        f"judgment system has no judge. Realms checked: {christian_realms}."
     )
 
 
@@ -995,9 +1305,28 @@ def test_consolidate_eu_pantheon_audit_is_clean_after_seeding(seeded):
         "freshly seeded database:\n" + "\n".join(missing_lines)
         + f"\n\nFull output:\n{output}"
     )
-    assert "Hades is sole OVERSEER" in output, (
-        f"The audit did not report a clean pass, so the assertion above may be "
-        f"passing because the audit never ran.\n{output}"
+    # The audit prints each deviation as an indented bullet under a "Deviations
+    # found:" header. Matched on that shape rather than on a keyword: an earlier
+    # draft looked for "expected " and matched the Norse step's "this is the
+    # expected state", i.e. a check that failed on a line reporting success.
+    deviation_lines = [
+        line.strip() for line in output.splitlines()
+        if line.startswith("    - ")
+    ]
+    assert "Deviations found" not in output, (
+        "consolidate_eu_pantheon's Greco-Roman audit found deviations against a "
+        "freshly seeded database:\n" + "\n".join(deviation_lines)
+        + f"\n\nFull output:\n{output}"
+    )
+    assert not deviation_lines, (
+        "consolidate_eu_pantheon reports role or realm deviations against a "
+        "freshly seeded database:\n" + "\n".join(deviation_lines)
+        + f"\n\nFull output:\n{output}"
+    )
+    assert "all six stand in the realm their source puts them in" in output, (
+        f"The audit did not report a clean pass, so the assertions above may be "
+        f"passing because the audit never ran — or because its realm check was "
+        f"removed, which is the failure this phrase exists to detect.\n{output}"
     )
 
 

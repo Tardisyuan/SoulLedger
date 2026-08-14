@@ -68,8 +68,26 @@ class DispositionService:
     }
 
     # Egyptian realms
+    #
+    # EG_DEVOURER IS AN OUTCOME, NOT AN ADDRESS. The row used to be modelled as
+    # "Ammit's realm" — a hell the failed soul is sent to, with Ammit living in
+    # it. Being devoured by Ammit is the second death: the heart is destroyed
+    # and the person ceases to exist. There is no damned population and nowhere
+    # for it to be, and Ammit stands at the balance in the Hall of Two Truths,
+    # which is where seed_mythology now seeds her. The realm's name and
+    # description say outcome rather than place as of 2026-08-15.
+    #
+    # The code itself was deliberately NOT renamed to EG_ANNIHILATION, which is
+    # what it should be called. This constant is one line, but the string is a
+    # live identifier in three places at once: executed dispositions in existing
+    # databases record it as their destination, and
+    # frontend/src/components/souls/SoulLifecycleTimeline.tsx hard-codes
+    # `realm_code === "EG_DEVOURER"` as its only signal that a soul was
+    # annihilated. Renaming here alone would silently stop that state
+    # rendering — so the rename is a coordinated backend+frontend change with a
+    # migration, and correcting what the row claims did not have to wait for it.
     EG_AARU = "EG_AARU"           # Paradise (passed)
-    EG_DEVOURER = "EG_DEVOURER"   # Ammit's realm (failed)
+    EG_DEVOURER = "EG_DEVOURER"   # Annihilation (failed) — see the note above
     EG_DUAT_ENTRY = "EG_DUAT_ENTRY"  # Entry/purgatory
 
     @classmethod
