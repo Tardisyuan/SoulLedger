@@ -34,8 +34,8 @@ SoulLedger/
 │   │   ├── events/              # 审计日志
 │   │   ├── workflow/             # 工作流引擎（预留）
 │   │   └── karma/               # 业力服务
-│   ├── scripts/
-│   │   └── seed_chinese_data.py # 数据初始化脚本
+│   ├── apps/actors/management/commands/
+│   │   └── seed_mythology.py    # 三文明数据初始化（幂等，唯一入口）
 │   └── tests/
 ├── frontend/
 │   ├── app/
