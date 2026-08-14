@@ -3,6 +3,7 @@ REST serializers for Soul app.
 """
 from rest_framework import serializers
 
+from apps.core.field_permissions import FieldPermissionMixin
 from apps.souls.dates import ERROR, WARNING, check_record_date, check_soul_dates
 from apps.souls.fields import HistoricalDateField
 from apps.souls.models import Soul, SoulState
@@ -188,7 +189,25 @@ class SoulRecordSerializer(serializers.ModelSerializer):
         ))
 
 
-class SoulSerializer(serializers.ModelSerializer):
+class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
+    """Soul detail. Field access is enforced in two layers, deliberately.
+
+    The hardcoded VIEWER checks below are the floor. FieldPermissionMixin
+    reads FieldPermission rows and can only narrow further — it never widens,
+    because a DB-driven rule that is the *only* guard fails open: the rules
+    live in a management command, and an unseeded database would hand VIEWER
+    every field. The floor holds with an empty table.
+
+    The two used to disagree. seed_field_permissions declared VIEWER's
+    merit_score and demerit_score `visible=True, read_only=True`, while this
+    serializer has always removed them from the payload outright, and
+    read_only_fields already made them unwritable for every role — so both
+    halves of the seeded rule were inert and the looser text never described
+    what shipped. The seed now says visible=False, which is what the code
+    does. Widening VIEWER back to seeing scores is a security decision and
+    needs to be made deliberately, not inherited from a stale fixture.
+    """
+
     karmic_balance = serializers.IntegerField(read_only=True)
     tenant_code = serializers.CharField(source="tenant.code", read_only=True)
     records = SoulRecordSerializer(many=True, read_only=True)
