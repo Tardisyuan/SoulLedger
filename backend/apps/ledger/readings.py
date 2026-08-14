@@ -37,6 +37,7 @@ copy hard-coded in a service module, which is the wrong place for it — see the
 same TODO on TERMINAL_COSMOLOGY_REASON in services.py. A later pass owns the
 copy.
 """
+from apps.ledger.fungibility import offset_within_classes
 from apps.souls.models import Civilization
 
 # What the heart is weighed against, in SoulRecord.weight units.
@@ -64,22 +65,41 @@ from apps.souls.models import Civilization
 MAAT_FEATHER_WEIGHT = 1
 
 
-def _chinese_reading(merit: int, demerit: int, demerit_count: int) -> dict:
-    """A cumulative account. Merit and demerit net off; the total is the answer.
+def _chinese_reading(merit: int, demerit: int, demerit_count: int,
+                     class_totals: dict | None = None) -> dict:
+    """A cumulative account — but not a single interchangeable pool.
 
-    The one place the existing `karmic_balance` is the native instrument rather
-    than a borrowed one, so this reading is deliberately just that number.
+    `balance` stays merit minus demerit. It is the native instrument here (it is
+    what 不善門#8's 夾注 defines: 「一過去功一分，十過去功十分」), it is what
+    `Soul.karmic_balance` mirrors, and it is what disposition routes on.
+
+    What is added is the limit the same tradition puts on that arithmetic.
+    《文昌帝君功過格·凡例》: 「功過有不可折者。如用財之百功，不可折致死人之
+    百過。」 A single scalar pool cannot express that, and this system did not:
+    a hundred hundred-cash alms cancelled one killing exactly, which is the
+    trade the 凡例 rules out by name. `non_fungible` nets each class against
+    itself and reports what is left standing on both sides — see
+    apps/ledger/fungibility.py, including what it deliberately does not do.
+
+    Absent when `class_totals` is None. A caller that cannot say where the
+    points came from gets no claim about fungibility rather than a fabricated
+    one — the same discipline `get_civilization_reading` applies to an unmapped
+    tenant below.
     """
-    return {
+    reading = {
         "kind": "BALANCE",
         "civilization": Civilization.CHINESE.value,
         "balance": merit - demerit,
         "merit": merit,
         "demerit": demerit,
     }
+    if class_totals is not None:
+        reading["non_fungible"] = offset_within_classes(class_totals)
+    return reading
 
 
-def _egyptian_reading(merit: int, demerit: int, demerit_count: int) -> dict:
+def _egyptian_reading(merit: int, demerit: int, demerit_count: int,
+                      class_totals: dict | None = None) -> dict:
     """A threshold. The heart against a fixed counterweight — pass or fail.
 
     The heart's weight is the demerit total *alone*. Merit does not appear, and
@@ -105,7 +125,8 @@ def _egyptian_reading(merit: int, demerit: int, demerit_count: int) -> dict:
     }
 
 
-def _european_reading(merit: int, demerit: int, demerit_count: int) -> dict:
+def _european_reading(merit: int, demerit: int, demerit_count: int,
+                      class_totals: dict | None = None) -> dict:
     """Two unrelated numbers, because guilt and penalty are two facts here.
 
     *Culpa* is guilt: that a wrong was done, and how grave. It maps onto the
@@ -153,8 +174,15 @@ CIVILIZATION_READING = {
 
 
 def get_civilization_reading(civilization: str, merit: int, demerit: int,
-                             demerit_count: int) -> dict:
+                             demerit_count: int,
+                             class_totals: dict | None = None) -> dict:
     """The reading this soul's cosmology uses, or an explicit refusal.
+
+    Every builder takes `class_totals`; only the Chinese one uses it, and the
+    other two ignore it on purpose rather than not being offered it. Merit does
+    not enter an Egyptian weighing at all and does not reduce European culpa, so
+    a per-class split of merit has nothing to say there — the uniform signature
+    is what keeps that a stated decision instead of a missing argument.
 
     `civilization` may be UNKNOWN_CIVILIZATION — a real value the API returns
     for a soul whose tenant code is not in TENANT_CIVILIZATION. It gets no
@@ -179,4 +207,4 @@ def get_civilization_reading(civilization: str, merit: int, demerit: int,
                 "no rule for what its ledger means. Configure the tenant."
             ),
         }
-    return builder(merit, demerit, demerit_count)
+    return builder(merit, demerit, demerit_count, class_totals)

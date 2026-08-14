@@ -602,12 +602,14 @@ class TestStatuteReadIsolation:
 class TestSeededCorpora:
     """`manage.py seed_mythology` is the only way articles enter the system.
 
-    TWO corpora are seeded. The Egyptian Forty-Two, derived from assessor rows
-    whose provenance was checked clause by clause; and the seven capital sins,
-    one per terrace of Purgatorio (EU-DS-T1..T7). The Chinese (HELL_LAW) table
-    that shipped in 6017f04 stays withdrawn — not because entries were missing
-    but because the frame was fabricated: there is no codified 冥律 with
-    numbered articles to transcribe.
+    THREE corpora are seeded. The Egyptian Forty-Two, derived from assessor rows
+    whose provenance was checked clause by clause; the seven capital sins, one
+    per terrace of Purgatorio (EU-DS-T1..T7); and 《太微仙君功過格》 (1171) under
+    GONGGUOGE. The Chinese (HELL_LAW) table that shipped in 6017f04 stays
+    withdrawn — not because entries were missing but because the frame was
+    fabricated: there is no codified 冥律 with numbered articles to transcribe,
+    and the 功過格 arriving under its own corpus value does not make there be
+    one.
 
     The European seven came back a different way, and the difference is what is
     asserted here. They were not "completed" or re-mapped onto corrected
@@ -624,7 +626,7 @@ class TestSeededCorpora:
 
         call_command("seed_mythology", verbosity=0)
 
-    def test_the_chinese_corpus_still_seeds_nothing_at_all(self):
+    def test_the_hell_law_corpus_still_seeds_nothing_at_all(self):
         """A trip wire, and it is meant to be annoying to route around.
 
         The tempting repair is to "finish" the withdrawn list — supply the four
@@ -632,6 +634,12 @@ class TestSeededCorpora:
         structure the sources do not have, and completing it yields a more
         convincing forgery, not a corpus. `all_objects`, so a row cannot hide
         behind is_deleted either.
+
+        The Chinese side is no longer empty — GONGGUOGE holds 73 articles — and
+        this assertion is unchanged by that, deliberately. 冥律 not being a
+        document is a fact about 冥律; refilling HELL_LAW with 功過格 articles
+        would file an account book the living keep on themselves as a penal code
+        hell administers, which is the exact framing 8308204 withdrew.
         """
         withdrawn = Statute.all_objects.filter(corpus=StatuteCorpus.HELL_LAW)
         assert list(withdrawn.values_list("code", flat=True)) == []
@@ -652,14 +660,21 @@ class TestSeededCorpora:
         )
         assert reused == []
 
-    def test_the_two_seeded_corpora_are_the_whole_inventory(self):
-        """States the whole seeded inventory, so a third corpus appearing
+    def test_the_three_seeded_corpora_are_the_whole_inventory(self):
+        """States the whole seeded inventory, so a fourth corpus appearing
         anywhere — under a new enum value, or smuggled in under an existing
-        one — fails here rather than being noticed by nobody."""
+        one — fails here rather than being noticed by nobody.
+
+        GONGGUOGE holds 73 and not 75: 救濟門 is titled 十二條 and both
+        independent transcriptions segment it into 11, 不軌門 is titled 六條 and
+        both give 5. The two missing articles are NOT supplied. See
+        tests/test_gongguoge.py, which holds the substance.
+        """
         by_corpus = {}
         for corpus in Statute.all_objects.values_list("corpus", flat=True):
             by_corpus[corpus] = by_corpus.get(corpus, 0) + 1
         assert by_corpus == {
+            StatuteCorpus.GONGGUOGE: 73,
             StatuteCorpus.NEGATIVE_CONFESSION: 42,
             StatuteCorpus.DEADLY_SIN: 7,
         }
@@ -725,11 +740,12 @@ class TestSeededCorpora:
             )
             for code in ("CN_DIYU", "EU_HEAVEN_HELL", "EG_DUAT")
         }
-        # The Chinese tenant holds no articles at all. Its courts are untouched
-        # — it is the rulebook that was withdrawn, not the cosmology. The
+        # The Chinese tenant holds the 功過格 and NOTHING under HELL_LAW: it was
+        # the rulebook that was withdrawn, not the cosmology, and what came back
+        # is a different kind of document rather than the same one repaired. The
         # European tenant holds the seven terrace articles and nothing else.
         assert by_tenant == {
-            "CN_DIYU": set(),
+            "CN_DIYU": {StatuteCorpus.GONGGUOGE},
             "EU_HEAVEN_HELL": {StatuteCorpus.DEADLY_SIN},
             "EG_DUAT": {StatuteCorpus.NEGATIVE_CONFESSION},
         }
@@ -754,10 +770,11 @@ class TestTranscriptionMechanism:
 
     Deleting it along with the withdrawn tables would have been the wrong
     lesson: what failed verification was two bodies of data, not the ability
-    to seed a transcribed corpus. It sat with no caller for a while and is
-    exercised directly here regardless, on a throwaway row, so that the path
-    the next corpus arrives through — 《太微仙君功過格》 is the candidate — is
-    tested apart from whatever happens to be in CIVILIZATION_STATUTES today.
+    to seed a transcribed corpus. It sat with no caller for a while, and both
+    corpora that have arrived since — the terraces and 《太微仙君功過格》 — came
+    in through it. It is still exercised directly here on a throwaway row, so
+    the path is tested apart from whatever happens to be in
+    CIVILIZATION_STATUTES today.
     """
 
     def test_a_transcribed_row_still_seeds_and_is_idempotent(self, cn_tenant):
@@ -769,13 +786,15 @@ class TestTranscriptionMechanism:
             Stats,
         )
 
-        # Exactly one corpus is transcribed: the seven capital sins, on the
-        # terraces of Purgatorio. If a second appears here, read the withdrawal
-        # note at the top of the statute section in seed_mythology.py first —
-        # 冥律 is empty because the text behind it has no articles, not because
-        # nobody has got round to typing them in.
-        assert set(CIVILIZATION_STATUTES) == {"european"}
+        # Two corpora are transcribed: the seven capital sins on the terraces of
+        # Purgatorio, and 《太微仙君功過格》 under GONGGUOGE. If a third appears
+        # here, read the withdrawal note at the top of the statute section in
+        # seed_mythology.py first — HELL_LAW is empty because the text behind it
+        # has no articles, not because nobody has got round to typing them in,
+        # and the 功過格 arriving did not change that.
+        assert set(CIVILIZATION_STATUTES) == {"chinese", "european"}
         assert CIVILIZATION_STATUTES["european"][0] == StatuteCorpus.DEADLY_SIN
+        assert CIVILIZATION_STATUTES["chinese"][0] == StatuteCorpus.GONGGUOGE
 
         row = {
             "code": "ZZ-FIXTURE-01",

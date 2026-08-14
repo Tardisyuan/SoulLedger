@@ -153,6 +153,24 @@ class StatuteCorpus(models.TextChoices):
         withdrawal note in seed_mythology.py has the detail; migration
         judgment/0012 retired the rows.
 
+        GONGGUOGE ARRIVING DOES NOT CHANGE THIS. The finding was about 冥律,
+        not about the Chinese side having nothing: 《太微仙君功過格》 is real
+        and is now seeded, and a codified 冥律 is still a document nobody has
+        ever produced. HELL_LAW stays empty, and refilling it with the 功過格
+        articles would re-assert the very thing 8308204 withdrew.
+      * GONGGUOGE (功過格) is 《太微仙君功過格》 (1171, Daozang 洞真部戒律類),
+        73 transcribed articles under CN-GGG-*: 35 功 and 38 過, in four gates
+        each. Signed, enumerated, point-valued — the shape `polarity` was built
+        for — and the ONLY corpus here whose articles carry positive entries.
+        It is also the one corpus this system uses for something its own text
+        does not claim: a 功過格 is an account book the LIVING keep on
+        themselves, whose sanctions are 奪紀奪算 (years struck off a life),
+        the 300/1300-good thresholds for immortality and 餘慶餘殃 falling on
+        descendants. 太微 names no hell anywhere. Every seeded row carries that
+        appropriation in `source_notes` rather than being quietly filed as
+        infernal law, which is exactly how the withdrawn HELL_LAW corpus
+        started.
+
     THE EMPTY VALUE IS KEPT ON PURPOSE. Rows still carry it — the ones 0012
     soft-deleted, and any it refused to touch because a judgment had already
     cited them — and a value that has left the enum is a row whose `corpus` no
@@ -161,12 +179,15 @@ class StatuteCorpus(models.TextChoices):
     grounds. The same applies to the retired EU-DS-01..07 rows, which are
     DEADLY_SIN tombstones sitting beside the seven live terrace articles.
 
-    ADDING THE NEXT ONE. If the Chinese side returns via 《太微仙君功過格》 —
-    a merit ledger with genuinely enumerated, signed entries — it very likely
-    wants a NEW value rather than a refill of HELL_LAW. A 功過格 is an account
-    book the living keep on themselves; 冥律 claims to be a penal code hell
-    administers. Reusing the name would file the one under the other and
-    resurrect exactly the framing that had to be withdrawn.
+    WHY GONGGUOGE IS A NEW VALUE AND NOT A REFILL OF HELL_LAW. A 功過格 is an
+    account book the living keep on themselves; 冥律 claims to be a penal code
+    hell administers. Reusing the name would file the one under the other and
+    resurrect exactly the framing that had to be withdrawn — and it would do it
+    silently, because the codes and the prose would all look correct. The
+    citation keys are new for the same reason the terraces' are (CN-GGG-*, not
+    CN-HL-*): judgment/0012 deliberately left cited articles live, so a
+    CN-HL-O01 may still exist on a deployed database, and `_upsert` matches on
+    `code`.
 
     So `corpus` says what kind of thing the reader is looking at, and
     CORPUS_CIVILIZATION below pins each one to the single cosmology it belongs
@@ -174,6 +195,7 @@ class StatuteCorpus(models.TextChoices):
     have; `Statute.clean` refuses it.
     """
     HELL_LAW = "HELL_LAW", "冥律 — Hell Law (Chinese)"
+    GONGGUOGE = "GONGGUOGE", "功過格 — Ledger of Merit and Demerit (Chinese)"
     NEGATIVE_CONFESSION = "NEGATIVE_CONFESSION", "Declaration of Innocence (Egyptian)"
     DEADLY_SIN = "DEADLY_SIN", "Seven Deadly Sins (European)"
 
@@ -183,21 +205,32 @@ class StatuteCorpus(models.TextChoices):
 #: one to review.
 CORPUS_CIVILIZATION = {
     StatuteCorpus.HELL_LAW: Civilization.CHINESE,
+    StatuteCorpus.GONGGUOGE: Civilization.CHINESE,
     StatuteCorpus.NEGATIVE_CONFESSION: Civilization.EGYPTIAN,
     StatuteCorpus.DEADLY_SIN: Civilization.EUROPEAN,
 }
+#: Two corpora may share a civilization — Chinese has both the empty HELL_LAW
+#: and the seeded GONGGUOGE — so this is deliberately not inverted into a
+#: civilization -> corpus lookup anywhere. `Statute.clean` reads it in the one
+#: direction that is a function.
 
 
 class StatutePolarity(models.TextChoices):
     """Whether citing this article counts against the soul or for it.
 
-    MERIT has no rows behind it at the moment — the corpus that had them was
-    withdrawn (see StatuteCorpus) — and it stays because the distinction is
-    real wherever the Chinese material eventually lands: 功過相抵, merit
+    MERIT has rows behind it again: the 35 功 of GONGGUOGE. It was kept while
+    the corpus that had them was withdrawn (see StatuteCorpus) because the
+    distinction is real wherever the Chinese material lands — 功過相抵, merit
     offsetting fault, is the arithmetic a 功過格 is entirely made of, and
-    without a polarity a judgment citing 孝养父母 would read as an accusation
-    of filial piety. What was fabricated was a numbering, not the idea that a
+    without a polarity a judgment citing 賑濟窮民 would read as an accusation
+    of almsgiving. What was fabricated was a numbering, not the idea that a
     ledger has two columns.
+
+    Note what MERIT/OFFENCE does NOT say: that any merit article offsets any
+    offence article. 《文昌帝君功過格》凡例 rules the opposite outright —
+    「功過有不可折者。如用財之百功，不可折致死人之百過」 — and each seeded
+    row carries a `payload_json["fungibility_class"]` saying which pool it
+    belongs to. See apps/ledger/fungibility.py.
 
     DENIAL is the Egyptian case and is deliberately not folded into OFFENCE:
     "I have not stolen" is a claim the deceased makes, and what a judgment
@@ -242,7 +275,10 @@ class Statute(AuditUserFields, models.Model):
     corpus = models.CharField(max_length=30, choices=StatuteCorpus.choices)
     code = models.CharField(
         max_length=40,
-        help_text="Stable citation key, e.g. CN-HL-O01 / EG-NC-07 / EU-DS-03",
+        help_text=(
+            "Stable citation key, e.g. CN-GGG-F-JJ-01 / EG-NC-07 / EU-DS-T3. "
+            "CN-HL-* and EU-DS-01..07 are withdrawn keys and are not reused."
+        ),
     )
     #: Position within the corpus. Explicit, for the reason the assessors'
     #: `assessor_index` is explicit: alphabetical ordering of 42 gods, or of
@@ -270,8 +306,15 @@ class Statute(AuditUserFields, models.Model):
     source_notes = models.JSONField(default=list, blank=True)
     #: Corpus-specific structured facts: `purgatorio_terrace`, `latin`,
     #: `opposing_virtue_*` and the terrace's realm_code for the seven sins,
-    #: `assessor_index` for the Forty-Two. NOT `dante_circle` — that key was
-    #: retired with the first attempt at the seven; see StatuteCorpus.
+    #: `assessor_index` for the Forty-Two, and for GONGGUOGE the two-level
+    #: 門 classification plus the scoring structure a single scalar cannot
+    #: hold — `clauses` (救濟門#4 alone carries twelve conditional values),
+    #: `nullifiers` (「則無功」), `cap`, `derived`, `money_rate` and
+    #: `fungibility_class`. Point values live in `clauses[].points` as JSON
+    #: numbers rather than in a column, because 半功/半過 is 0.5 and the
+    #: article is a table of conditions, not one number. NOT `dante_circle` —
+    #: that key was retired with the first attempt at the seven; see
+    #: StatuteCorpus.
     payload_json = models.JSONField(default=dict, blank=True)
 
     #: The row this article's text is derived from. Set for the Egyptian 42;
@@ -404,7 +447,7 @@ class JudgmentCitation(AuditUserFields, models.Model):
     class Meta:
         # Reads in the corpus's own order, not in the order somebody happened
         # to click them: a list of grounds is a list of articles, and the
-        # 冥律/Forty-Two sequences are load-bearing.
+        # 功過格/Forty-Two sequences are load-bearing.
         ordering = ["statute__corpus", "statute__ordinal", "created_at"]
         verbose_name = "Judgment citation"
         verbose_name_plural = "Judgment citations"

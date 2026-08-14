@@ -1152,7 +1152,16 @@ CIVILIZATION_ASSESSORS = {
 # --------------------------------------------------------------------------
 # Statutes — the articles a verdict can cite (apps.judgment.models.Statute)
 #
-# TWO CORPORA ARE SEEDED, AND THE LARGER ONE IS NOT WRITTEN IN THIS FILE.
+# THREE CORPORA ARE SEEDED, AND THE LARGEST ONE IS NOT WRITTEN IN THIS FILE.
+#
+#   CHINESE   — here, below, as CHINESE_STATUTES: 《太微仙君功過格》 (1171),
+#               73 transcribed articles under corpus GONGGUOGE. This is the
+#               SECOND attempt at the Chinese side too, and it is a different
+#               kind of document from the one that was withdrawn — not a penal
+#               code but a ledger the living keep on themselves. Read the block
+#               above CHINESE_STATUTES before touching it; the appropriation it
+#               documents is the whole reason this corpus is allowed to exist
+#               here at all.
 #
 #   EGYPTIAN  — NOT here. The 42 clauses are already in the database on the
 #               assessors' `powers_json["negative_confession"]`, seeded above
@@ -1240,15 +1249,29 @@ CIVILIZATION_ASSESSORS = {
 # claims — which is exactly the test the European seven have now passed and
 # had not before.
 #
-# WHERE THE CHINESE SIDE IS HEADED. The workable anchor is not a law code but
-# a merit ledger: 《太微仙君功過格》 (1171, in the Daozang), which really does
-# enumerate numbered items with signed point values — the shape `polarity` and
-# `payload_json["merit_points"]` were built for, and one this system can cite
-# honestly. Verification of that text is in progress elsewhere. Note before
-# reusing anything: a 功過格 is a moral account book kept by the living, not a
-# penal code administered by hell, so it is very probably a NEW StatuteCorpus
-# value rather than a refill of HELL_LAW. See the note on StatuteCorpus in
+# WHERE THE CHINESE SIDE WENT. The workable anchor was not a law code but a
+# merit ledger: 《太微仙君功過格》 (1171, in the Daozang), which really does
+# enumerate items with signed point values — the shape `polarity` was built
+# for, and one this system can cite honestly. It has been verified
+# (docs/lore-verification/gongguoge.md: full text, two independent
+# transcriptions collated, every point value in the document) and it is seeded
+# below as CHINESE_STATUTES under a NEW corpus value, GONGGUOGE, not as a
+# refill of HELL_LAW: a 功過格 is a moral account book kept by the living, not
+# a penal code administered by hell, and filing one under the other would
+# rebuild the framing that had to be withdrawn. The citation keys are new for
+# the same reason as the terraces': CN-GGG-*, never CN-HL-*.
+#
+# HELL_LAW STAYS EMPTY, AND THAT IS STILL THE FINDING. The Chinese side having
+# a real corpus does not make 冥律 a document. It is not one, and no amount of
+# 功過格 material changes that. See the note on StatuteCorpus in
 # apps/judgment/models.py.
+#
+# WHAT WAS NOT DONE WITH IT. 功過格 has no time decay of any kind — a monthly
+# balance carries forward at face value — and no periodic settlement is
+# implemented on top of the existing continuous decay, because that would score
+# the same deeds twice. The decay in apps/ledger/services.py remains labelled a
+# product choice, which is what its own comment already said and what the
+# verification independently confirmed.
 #
 # EGYPTIAN IS UNAFFECTED. It was never transcribed here (see above), it is
 # derived from assessor rows whose provenance was checked clause by clause
@@ -1542,11 +1565,634 @@ EUROPEAN_STATUTES = [
     },
 ]
 
+# --------------------------------------------------------------------------
+# CHINESE — 《太微仙君功過格》 (corpus GONGGUOGE)
+#
+# The Chinese side comes back, and it comes back as something else. 冥律 is
+# still not a document (see the withdrawal note above, which stands unamended);
+# what exists is a merit ledger, and this is the earliest surviving one.
+#
+# WHAT THIS TEXT IS. 又玄子, 序署「西山會真堂無憂軒又玄子」, dates his preface
+# to 大定辛卯 — 金世宗大定十一年, 1171 — and says he received the格 in a dream
+# at 紫府 before 太微仙君. It is in the 正統道藏 at 洞真部戒律類雨字號, one
+# fascicle, 「二篇同卷」: 功格三十六條 in four 門 and 過律三十九條 in four 門.
+# Brokaw (1991) independently identifies it as the earliest extant 功過格, with
+# 36 approved and 39 proscribed acts.
+#
+# WHAT IT IS NOT, AND WHY EVERY ROW SAYS SO. It is not a penal code and it does
+# not judge the dead. Its sanctions run entirely in this life: 奪紀奪算 (a 紀
+# is 300 days and an 算 3 days, per 抱朴子·微旨 — the later 「紀＝12年」 gloss
+# has no source we could verify and is NOT used), the 三百善/一千三百善
+# thresholds for 地仙/天仙 (太上感應篇), and 餘慶餘殃 landing on one's
+# descendants (太微's preface opens by quoting 《易》 on exactly that). The word
+# for any hell appears nowhere in the text. Using it as a basis for judging the
+# dead is this system's APPROPRIATION, it is deliberate, and APPROPRIATION_NOTE
+# below is carried by all 73 rows so it can never be quietly forgotten — which
+# is precisely how the withdrawn HELL_LAW corpus began.
+#
+# There is one primary sentence that licenses the appropriation, and it is the
+# text's own core religious claim rather than an apologetic we constructed: the
+# preface says a self-kept tally and heaven's audit agree exactly —
+# 「與上天真司考校之數，昭然相契，悉無異焉」.
+#
+# 73 ROWS, NOT 75, AND THE GAP IS NOT FILLED. 救濟門 is titled 十二條 and both
+# independent digital transcriptions segment it into 11; 不軌門 is titled 六條
+# and both give 5. So the transcribed total is 35 + 38 = 73 against a claimed
+# 75. The verification report marks the two likeliest split points and marks
+# them as CONJECTURE. They are recorded here in `source_notes` and in
+# `payload["transcription_gap"]`, and NOT acted on. Inventing the two missing
+# articles — or splitting a paragraph to make the arithmetic come out — is the
+# identical move that produced the fabricated 冥律: a more convincing forgery.
+#
+# THE DECAY QUESTION IS ALREADY ANSWERED AND IS NOT REOPENED HERE. 功過格 has
+# no decay of any kind; the monthly settlement carries the balance forward at
+# face value (「折除之外者…當書總記訖，再書後月」). apps/ledger/services.py
+# already says this in CIVILIZATION_DECAY_RATE and labels its decay a product
+# choice. Nothing in this corpus is wired to that arithmetic, and no periodic
+# settlement is implemented — running 一月一小比 as extra arithmetic on top of
+# a continuous decay would count the same deeds twice.
+# --------------------------------------------------------------------------
+
+GONGGUOGE_SOURCE = (
+    "《太微仙君功過格》，金大定十一年（1171）又玄子序，《正統道藏》洞真部戒律類雨字號，一卷。"
+    "底本：維基文庫轉錄（標注 from=正統道藏）；異文校以中國哲學書電子化計劃 ctext.org "
+    "chapter=199527。兩個轉錄本逐字比對後，實質性異文三處已按文義取捨並在 source_notes 標明。"
+    "未核道藏影印本。條目與分值全部為原文，無一為本系統自定。"
+    "docs/lore-verification/gongguoge.md §1-§4。"
+)
+
+#: Carried by all 73. The one note that must never fall off a row.
+APPROPRIATION_NOTE = (
+    "挪用聲明：《太微仙君功過格》是在世修道者每日自記的道德賬簿，不是冥府判案的法典。"
+    "其原生賞罰為在世奪紀奪算（紀＝三百日、算＝三日，據《抱朴子·微旨》）、"
+    "成仙閾值（三百善地仙／一千三百善天仙，據《太上感應篇》）與子孫餘慶餘殃；"
+    "全文不出現任何地獄名，也沒有任何一條說分數會被冥官用來判入某殿某獄。"
+    "本系統拿它作審判計分依據，是一次有意的挪用。其唯一一手文本依據是本書序文的主張——"
+    "自記之數「與上天真司考校之數，昭然相契，悉無異焉」，即賬簿被視為天曹底賬的鏡像。"
+    "清《十戒功過格》序進一步把功過格掛靠於「陰律」，但同樣未提供任何編號條文。"
+)
+
+#: Carried by all 73 as well: the fungibility class is only half sourced.
+FUNGIBILITY_CLASS_NOTE = (
+    "payload.fungibility_class 的兩個值 MONEY／LIFE 有明文依據——"
+    "《文昌帝君功過格·凡例》：「功過有不可折者。如用財之百功，不可折致死人之百過。"
+    "零積之十功不能折一次之十過也。」其餘的值（RITUAL／SPEECH／CONDUCT）是本系統自定的細分，"
+    "太微與文昌都沒有給出這樣的分類。見 apps/ledger/fungibility.py。"
+)
+
+#: 救濟門 and 不軌門 only.
+TRANSCRIPTION_GAP_NOTE = (
+    "條數不符，且不予補齊：門題與兩個獨立轉錄本的分段數對不上，短一條。"
+    "核實報告標出了最可能的切分點並註明那是推測而非原刻分段；本系統照原樣保留缺口，"
+    "在 payload.transcription_gap 記明。需道藏影印本才能定讞。"
+)
+
+#: (code segment, polarity, 門, English gloss, titled count, unit, default class)
+GONGGUOGE_GATES = {
+    "JJ": ("F-JJ", "MERIT", "救濟門", "Relief and Rescue", "十二條", "功", "LIFE"),
+    "JD": ("F-JD", "MERIT", "教典門", "Scripture and Ordination", "七條", "功", "RITUAL"),
+    "FX": ("F-FX", "MERIT", "焚修門", "Offering and Cultivation", "五條", "功", "RITUAL"),
+    "YS": ("F-YS", "MERIT", "用事門", "Conduct of Affairs", "十二條", "功", "CONDUCT"),
+    "BR": ("G-BR", "OFFENCE", "不仁門", "Inhumanity", "十五條", "過", "LIFE"),
+    "BS": ("G-BS", "OFFENCE", "不善門", "Unwholesomeness", "八條", "過", "RITUAL"),
+    "BY": ("G-BY", "OFFENCE", "不義門", "Unrighteousness", "十條", "過", "MONEY"),
+    "BG": ("G-BG", "OFFENCE", "不軌門", "Transgression of Discipline", "六條", "過", "RITUAL"),
+}
+
+#: 百錢為一功 — 太微's rate, and version-bound: 《十戒功過格》 uses 三十文為一功.
+#: Carried per-article rather than as one constant, so a second recension does
+#: not have to overwrite this one's.
+RATE_100_CASH = {"per": 100, "currency_zh": "錢", "points": 1}
+#: 一貫為一功 (用事門#4). Ten times dearer than 救濟門#7's 貫錢為十功, because
+#: persuading somebody else to give is not the same act as giving.
+RATE_1000_CASH = {"per": 1000, "currency_zh": "錢", "points": 1}
+
+# The corpus. One tuple per transcribed segment:
+#   (gate, ordinal-within-gate, title_zh, title_en, text_zh, clauses, extras)
+#
+# `clauses` is (condition_zh, points) pairs — the article's own conditional
+# values, verbatim in number. 救濟門#4 alone carries twelve of them and 焚修門#1
+# and 用事門#12 carry 0.5, which is why a single `merit_points` column was never
+# going to hold this corpus. `extras` merges into payload_json.
+#
+# 〔 〕 marks the original's double-column interlinear notes, except at 不仁門#4
+# where it marks an UNRESOLVED variant — the note on that row says which.
+GONGGUOGE_ENTRIES = [
+    # ---------------- 功格 · 救濟門 (11 transcribed of 十二條) -------------
+    ("JJ", 1, "符法針藥救疾", "Healing the sick by talisman, needle or medicine",
+     "以符法針藥救重疾一人為十功，小疾一人為五功，如受病家賄賂則無功，治邪一同。凡行治一度為一功，施藥一服為一功。",
+     (("救重疾一人", 10), ("救小疾一人", 5), ("凡行治一度", 1), ("施藥一服", 1)),
+     {"nullifiers": (("受病家賄賂", "no_merit"),)}),
+    ("JJ", 2, "傳救人符法方術", "Transmitting a life-saving art",
+     "傳一符一法一方一術、令人積行救人，每一術為十功，如受賄而傳，或令人受賄，則並無功。",
+     (("每傳一術", 10),),
+     {"nullifiers": (("受賄而傳", "no_merit"), ("令人受賄", "no_merit"))}),
+    ("JJ", 3, "傳保益性命符法", "Transmitting an art that preserves life",
+     "傳人保益性命符法藥術等，每一事為五功，如受賄而傳為一功。",
+     (("每傳一事", 5), ("受賄而傳", 1)), {}),
+    ("JJ", 4, "救免減刑", "Rescue, pardon and mitigation of punishment",
+     "救一人刑死性命為百功，免死刑性命一人為百功，減死刑性命一人為五十功，"
+     "救人徒刑為四十功，免人徒刑為三十功，減人徒刑為二十功，"
+     "救人杖刑為十功，免人杖刑為八功，減人杖刑為六功，"
+     "救人笞刑為五功，免人笞刑為四功，減人笞刑為三功。"
+     "〔救謂非自己主事，得門竭力救之是也；免謂自己主事，特爽原免者是也。〕"
+     "如依法定罪則無功，如私家減免婢僕之屬，同此論功。",
+     (("救一人刑死性命", 100), ("免死刑性命一人", 100), ("減死刑性命一人", 50),
+      ("救人徒刑", 40), ("免人徒刑", 30), ("減人徒刑", 20),
+      ("救人杖刑", 10), ("免人杖刑", 8), ("減人杖刑", 6),
+      ("救人笞刑", 5), ("免人笞刑", 4), ("減人笞刑", 3)),
+     {"nullifiers": (("依法定罪", "no_merit"),),
+      "notes": (
+          "校勘：本條四處作「減」，維基文庫轉錄本作「滅」，此處從 ctext 本。"
+          "理由是文義——救／免／減三級遞降（救為非自己主事而竭力救之、免為自己主事而特爽原免、"
+          "減為減輕刑等）自洽，「滅」為形近訛字。這是文義校勘意見，不是版本學結論；未核影印本。",
+      )}),
+    ("JJ", 5, "救有力報人之畜", "Saving a beast that can repay",
+     "救有力報人之畜一命為十功。〔謂駝、騾、牛、馬、驢畜等。〕",
+     (("救有力報人之畜一命", 10),), {}),
+    ("JJ", 6, "救無力報人之畜", "Saving a beast that cannot repay",
+     "救無力報人之畜一命為八功，〔謂山野禽獸之屬〕蟲蟻飛蛾濕生之類一命為一功。",
+     (("救無力報人之畜一命", 8), ("蟲蟻飛蛾濕生之類一命", 1)), {}),
+    ("JJ", 7, "賑濟窮民", "Relieving the destitute",
+     "賑濟鰥寡孤獨窮民百錢為一功，貫錢為十功，如一錢散施，積至百錢為一功，"
+     "米麥幣帛衣物，以錢數論功，饒潤窮民債負，亦同此論。濟饑渴之民一飲一食皆為一功。",
+     (("賑濟窮民百錢", 1), ("賑濟窮民貫錢", 10), ("濟饑渴之民一飲一食", 1)),
+     {"fungibility_class": "MONEY", "money_rate": RATE_100_CASH,
+      "transcription_gap": {
+          "gate_titled": "十二條", "gate_transcribed": 11,
+          "conjectured_split_here": True,
+          "conjecture": "報告推測「賑濟鰥寡孤獨窮民…」與「濟饑渴之民一飲一食皆為一功」在道藏原刻中很可能是兩條，"
+                        "但兩個轉錄本都作一段。未予拆分。",
+      },
+      "notes": (TRANSCRIPTION_GAP_NOTE,)}),
+    ("JJ", 8, "濟寒凍之民", "Sheltering the freezing",
+     "濟寒凍之民暖室一宵為一功。", (("暖室一宵", 1),),
+     {"fungibility_class": "MONEY"}),
+    ("JJ", 9, "救人畜疲困", "Relieving exhaustion in man or beast",
+     "救接人畜筋力疲困之苦一時為一功。", (("救接一時", 1),), {}),
+    ("JJ", 10, "葬無主之骨", "Burying the unclaimed dead",
+     "葬無主之骨一人為五十功，施地與無土之家葬一人為三十功，若令出備租課則無功。"
+     "埋藏自死者、走獸、飛禽、六畜等一命為一功，若埋藏禽獸、六畜骨殖及十六斤為一功。",
+     (("葬無主之骨一人", 50), ("施地與無土之家葬一人", 30),
+      ("埋藏自死禽畜一命", 1), ("埋藏禽獸六畜骨殖十六斤", 1)),
+     {"nullifiers": (("令出備租課", "no_merit"),)}),
+    ("JJ", 11, "平理道途造橋濟渡", "Mending roads, building ferries and bridges",
+     "平理道途嶮阻及泥水陷沒之所一日一人之功為十功，"
+     "若造船橋濟渡、不求賄賂者，所費百錢為一功，一日一人之功為十功。",
+     (("平理道途一日一人之功", 10), ("造船橋濟渡所費百錢", 1), ("造船橋濟渡一日一人之功", 10)),
+     {"fungibility_class": "MONEY", "money_rate": RATE_100_CASH,
+      "nullifiers": (("求賄賂", "no_merit"),)}),
+
+    # ---------------- 功格 · 教典門 (7 of 七條) ---------------------------
+    ("JD", 1, "自受法籙經教", "Receiving register and scripture oneself",
+     "自己受救人法籙經教一宗為二十功，受保護自身法籙經教一宗為十五功。",
+     (("受救人法籙經教一宗", 20), ("受保護自身法籙經教一宗", 15)), {}),
+    ("JD", 2, "於高士處求受", "Seeking transmission from an adept",
+     "於高士處求救人法籙經教一宗為八功，求保護自身法籙經教一宗為四功。",
+     (("求救人法籙經教一宗", 8), ("求保護自身法籙經教一宗", 4)), {}),
+    ("JD", 3, "傳度弟子", "Ordaining disciples",
+     "傳受行法官一人為百功，度籙生弟子一人為五十功，度受戒弟子一人為三十功。",
+     (("傳受行法官一人", 100), ("度籙生弟子一人", 50), ("度受戒弟子一人", 30)), {}),
+    ("JD", 4, "以經法付人", "Passing scripture to a friend",
+     "以救眾經法付人為五功，保養性命經法付人為四功，演道經論付人為三功。〔為朋友間相受也。〕",
+     (("救眾經法付人", 5), ("保養性命經法付人", 4), ("演道經論付人", 3)), {}),
+    ("JD", 5, "注撰經法", "Composing scripture and commentary",
+     "自己注撰救眾經法一宗為三十功，保養性命經法一宗為二十功，〔謂得功驗者〕"
+     "讚道之文一篇為一功，〔謂詩詞歌頌等〕若詠無教化者則無功。",
+     (("注撰救眾經法一宗", 30), ("注撰保養性命經法一宗", 20), ("讚道之文一篇", 1)),
+     {"nullifiers": (("詠無教化者", "no_merit"),)}),
+    ("JD", 6, "簡編經法", "Compiling scripture",
+     "自己簡編救眾經法一宗為十功，保養性命經法一宗為五功，讚道之文一篇為一功。",
+     (("簡編救眾經法一宗", 10), ("簡編保養性命經法一宗", 5), ("讚道之文一篇", 1)), {}),
+    ("JD", 7, "雕造印施經教", "Cutting blocks and printing scripture",
+     "雕造經教所費百錢為一功，貫錢為十功，印造散施與人小經一卷為十功，〔謂千字已下者〕"
+     "大經一卷為二十功，〔謂千字已上者〕並謂上聖正典有教化者，非談論興亡勝敗之書及詠風月之文。",
+     (("雕造經教所費百錢", 1), ("雕造經教所費貫錢", 10),
+      ("印造散施小經一卷", 10), ("印造散施大經一卷", 20)),
+     {"fungibility_class": "MONEY", "money_rate": RATE_100_CASH}),
+
+    # ---------------- 功格 · 焚修門 (5 of 五條) ---------------------------
+    ("FX", 1, "修置聖像壇宇供物", "Repairing images, altars and offerings",
+     "修聖像、壇宇、幢蓋、幡花、器皿、床坐，及諸供養之物，費百錢為一功，貫錢為十功，"
+     "如施與人錢物，修置百錢為半功，貫錢為五功，或以什物一件為一功。",
+     (("自修費百錢", 1), ("自修費貫錢", 10),
+      ("施與人錢物修置百錢", 0.5), ("施與人錢物修置貫錢", 5), ("以什物一件", 1)),
+     {"fungibility_class": "MONEY", "money_rate": RATE_100_CASH,
+      "notes": (
+          "非整數分值：「修置百錢為半功」＝0.5 功。全書另一處半分值在用事門#12（素食中味為半功），"
+          "過律側在不善門#1（半過）。原文如此，未取整。",
+      )}),
+    ("FX", 2, "旦夕朝禮", "Morning and evening observance",
+     "旦夕朝禮，為國為眾，焚修一朝為二功，為己焚修一朝為一功。",
+     (("為國為眾焚修一朝", 2), ("為己焚修一朝", 1)), {}),
+    ("FX", 3, "章醮祈禳", "Petition and offering rites",
+     "章醮，為國、為民、為祖先、為孤魂、為尊親，祈禳灾害，薦拔沉魂，一分為二功，"
+     "為己一分為一功，為施主一分為一功，若受法信則無功。",
+     (("為國為民為祖先為孤魂為尊親一分", 2), ("為己一分", 1), ("為施主一分", 1)),
+     {"nullifiers": (("受法信", "no_merit"),)}),
+    ("FX", 4, "拔亡符命", "Talismans for the delivery of the dead",
+     "為無告孤魂告行拔亡符命一符為十功，祖先尊親一亡為十功，為平交親知及卑幼一亡為五功，"
+     "為施主一亡為四功，若受法信則無功。",
+     (("為無告孤魂一符", 10), ("為祖先尊親一亡", 10),
+      ("為平交親知及卑幼一亡", 5), ("為施主一亡", 4)),
+     {"nullifiers": (("受法信", "no_merit"),)}),
+    ("FX", 5, "誦經聖號", "Recitation of scripture and holy names",
+     "為國為民，或尊親先亡，或無主孤魂，誦大經一卷為六功，小經一卷為三功，聖號百遍為三功，"
+     "為平交親知及卑幼誦大經為四功，小經聖號為二功，為施主誦大經一卷為三功，小經聖號為一功，"
+     "若受法信則無功。為己禳謝，誦大經一卷為二功，小經聖號為一功。",
+     (("為國為民尊親孤魂誦大經一卷", 6), ("小經一卷", 3), ("聖號百遍", 3),
+      ("為平交親知及卑幼誦大經", 4), ("為平交卑幼小經聖號", 2),
+      ("為施主誦大經一卷", 3), ("為施主小經聖號", 1),
+      ("為己禳謝誦大經一卷", 2), ("為己小經聖號", 1)),
+     {"nullifiers": (("受法信", "no_merit"),)}),
+
+    # ---------------- 功格 · 用事門 (12 of 十二條) ------------------------
+    ("YS", 1, "興諸善事", "Setting good works afoot",
+     "興諸善事，利益一人為一功。", (("利益一人", 1),), {}),
+    ("YS", 2, "講演化眾", "Preaching to an assembly",
+     "講演經教及諸善言，化諭於眾，在席十人為一功，百人為十功，人數雖多，止五十功。",
+     (("在席十人", 1), ("在席百人", 10)),
+     {"fungibility_class": "SPEECH", "cap": 50,
+      "notes": (
+          "「人數雖多，止五十功」是全書唯一的顯式單次上限。若本系統要做單次行為封頂，"
+          "這是唯一一處有原文依據的地方。",
+      )}),
+    ("YS", 3, "文章誡勸", "Admonition in writing",
+     "以文章詩詞，誡勸於眾，一篇為一功。", (("一篇", 1),),
+     {"fungibility_class": "SPEECH"}),
+    ("YS", 4, "化人出財", "Moving others to give",
+     "化人出財，修諸功德，一貫為一功。", (("化人出財一貫", 1),),
+     {"fungibility_class": "MONEY", "money_rate": RATE_1000_CASH,
+      "notes": (
+          "換算率與救濟門#7 不同且不是筆誤：賑濟自出貫錢為十功，化人出財一貫僅一功——"
+          "勸別人掏錢與自己掏錢不是同一件事。金錢換算率隨版本而變（《十戒功過格》作三十文為一功），"
+          "故 money_rate 綁在條上而非全局常量。",
+      )}),
+    ("YS", 5, "勸免官刑", "Dissuading from litigation",
+     "勸人官門鬪訟，免死刑為十功，免徒刑為五功，免杖刑為二功，免笞刑為一功。",
+     (("免死刑", 10), ("免徒刑", 5), ("免杖刑", 2), ("免笞刑", 1)),
+     {"fungibility_class": "LIFE"}),
+    ("YS", 6, "勸諫鬪爭", "Talking men out of a quarrel",
+     "勸諫人鬪爭，一人為一功。", (("一人", 1),),
+     {"fungibility_class": "SPEECH",
+      "notes": (
+          "校勘：作「勸諫」，從 ctext 本；維基文庫轉錄本作「勸謙」。"
+          "理由是詞彙——「勸諫」是詞，「勸謙」不是。同見用事門#10。",
+      )}),
+    ("YS", 7, "舉薦賢達", "Recommending the worthy",
+     "舉薦高明賢達有德之士用事，一人為十功。", (("一人", 10),), {}),
+    ("YS", 8, "讚揚人善", "Praising another's good",
+     "讚揚人之善道，一事為一功。", (("一事", 1),), {"fungibility_class": "SPEECH"}),
+    ("YS", 9, "掩遏人惡", "Covering another's fault",
+     "掩遏人之惡業，一事為一功。", (("一事", 1),), {"fungibility_class": "SPEECH"}),
+    ("YS", 10, "勸諫迴心", "Turning a man from wrongdoing",
+     "勸諫人令不為非、不廉、不孝、不貞、不良、不善、不慈、不仁、不義，一人迴心為十功。",
+     (("一人迴心", 10),),
+     {"fungibility_class": "SPEECH",
+      "notes": ("校勘：作「勸諫」，從 ctext 本；維基文庫轉錄本作「勸謙」。同見用事門#6。",)}),
+    ("YS", 11, "衣服儉素", "Plain clothing",
+     "自己著紙衣一件為二功，著布素麄衲之衣一件為一功，〔謂有而不著者是功〕著紈帛者無功。",
+     (("著紙衣一件", 2), ("著布素麄衲之衣一件", 1)),
+     {"nullifiers": (("著紈帛", "no_merit"),)}),
+    ("YS", 12, "飲膳節制", "Abstinence at table",
+     "自己飲膳，有而不食者為三功，晚而不食者為二功，素食下味為一功，素食中味為半功，"
+     "素食上味為無功。〔謂有上味及素饌佳餚而故不食者…蓋有而故不食者為功。〕",
+     (("有而不食", 3), ("晚而不食", 2), ("素食下味", 1), ("素食中味", 0.5)),
+     {"nullifiers": (("素食上味", "no_merit"),),
+      "notes": (
+          "非整數分值：「素食中味為半功」＝0.5 功。另見焚修門#1。",
+          "本條夾注在核實報告的轉錄中有省略（「…」處）；未補，需影印本。",
+      )}),
+
+    # ---------------- 過律 · 不仁門 (15 of 十五條) ------------------------
+    ("BR", 1, "見疾不救", "Refusing to treat the sick",
+     "凡有重疾告治，不為拯救者，一人為二過，小疾一人為一過，治不如法為一過，"
+     "不愈而受賄百錢為一過，貫錢為十過。",
+     (("重疾不救一人", -2), ("小疾不救一人", -1), ("治不如法", -1),
+      ("不愈而受賄百錢", -1), ("不愈而受賄貫錢", -10)),
+     {"money_rate": RATE_100_CASH}),
+    ("BR", 2, "修合毒藥", "Compounding poison",
+     "修合毒藥，欲害於人為十過，害人性命為百過，害人不死而病為五十過，"
+     "害一切眾生禽畜性命為十過，害而不死為五過，舉意欲害為一過。",
+     (("欲害於人", -10), ("害人性命", -100), ("害人不死而病", -50),
+      ("害眾生禽畜性命", -10), ("害而不死", -5), ("舉意欲害", -1)),
+     {"notes": ("「舉意欲害為一過」——起心動念即入賬，全書共有數處，見不仁門#5。",)}),
+    ("BR", 3, "厭禱呪咀", "Malefic ritual",
+     "學厭禱呪咀邪法，欲害於人為十過，害人性命為百過，害人不死而病為五十過，"
+     "害人六畜一命為十過，令病為五過，舉意欲害為一過，"
+     "厭禳人家，令見惟異，欲取財賄為十過，得財百錢為一過，貫錢為十過。",
+     (("欲害於人", -10), ("害人性命", -100), ("害人不死而病", -50),
+      ("害人六畜一命", -10), ("令病", -5), ("舉意欲害", -1),
+      ("厭禳人家欲取財賄", -10), ("得財百錢", -1), ("得財貫錢", -10)),
+     {"money_rate": RATE_100_CASH}),
+    ("BR", 4, "謀人入罪", "Contriving another's punishment",
+     "謀人死刑，成者為百過，不成為五十過，舉意不作為十過；"
+     "謀人徒刑，成者為四十過，不成為二十過，舉意不作為八過；"
+     "謀人杖刑為十過，不成為八過，舉意為五過；謀人笞刑為三過，不成為四過，舉意為三過。"
+     "凡為官吏，入人罪者，同此論。為行法官，妄入〔鬼神〕罪者，亦同此論。",
+     (("謀人死刑成", -100), ("謀人死刑不成", -50), ("謀人死刑舉意不作", -10),
+      ("謀人徒刑成", -40), ("謀人徒刑不成", -20), ("謀人徒刑舉意不作", -8),
+      ("謀人杖刑", -10), ("謀人杖刑不成", -8), ("謀人杖刑舉意", -5),
+      ("謀人笞刑", -3), ("謀人笞刑不成", -4), ("謀人笞刑舉意", -3)),
+     {"notes": (
+         "存疑異文，未定讞：「妄入〔鬼神〕罪」——ctext 本作「妄入鬼神罪者」，"
+         "維基文庫本作「妄入罪者」，多／少「鬼神」二字。若 ctext 本對，這是全文唯一一句涉及"
+         "「對鬼神定罪」的條文（行法道士妄劾鬼神之罪亦照此論過）。此處〔 〕標的是未定異文，"
+         "不是原文夾注。需影印本。",
+         "笞刑三檔原文作「三過／四過／三過」，不隨死徒杖三檔遞降，疑為刻誤；照錄不改。",
+     )}),
+    ("BR", 5, "心中舉惡", "Harm intended in the heart",
+     "心中暗舉惡事，欲殘害於人，一人為一過，事成殘害一人為十過，"
+     "心意中邪婬雜想非理之事，一事為一過。",
+     (("暗舉惡事欲殘害一人", -1), ("事成殘害一人", -10), ("邪婬雜想非理之事一事", -1)), {}),
+    ("BR", 6, "惡言傷人", "Words meant to wound",
+     "凡言舉惡事，欲殘言於人，一人為一過，事成為十過，惡語向師長、尊親為十過，"
+     "向善人為八過，向平交為四過，向卑幼為一過，言約失信為一過，揚人惡事為一過，掩人善事為一過。",
+     (("欲殘言於人一人", -1), ("事成", -10), ("惡語向師長尊親", -10),
+      ("惡語向善人", -8), ("惡語向平交", -4), ("惡語向卑幼", -1),
+      ("言約失信", -1), ("揚人惡事", -1), ("掩人善事", -1)),
+     {"fungibility_class": "SPEECH"}),
+    ("BR", 7, "殺人", "Killing",
+     "故傷殺人性命為百過，誤傷殺性命為八十過，以言遽殺者，同使人殺者，為六十過。",
+     (("故傷殺人性命", -100), ("誤傷殺性命", -80), ("以言遽殺／使人殺", -60)), {}),
+    ("BR", 8, "殺畜", "Killing beasts",
+     "故殺有力報人之畜，一命為十過，誤殺為五過；故殺無力報人之畜，飛禽走獸之類，"
+     "一命為八過，誤殺為四過；故殺蟲蟻飛蛾濕生之屬，一命為二過，誤殺為一過；"
+     "故殺傷人害物者、惡獸毒蟲為一過。〔謂虎、狼、蛇、蝎、毒蟲之屬〕使人殺者同上論。",
+     (("故殺有力報人之畜一命", -10), ("誤殺有力報人之畜", -5),
+      ("故殺無力報人之畜一命", -8), ("誤殺無力報人之畜", -4),
+      ("故殺蟲蟻飛蛾濕生一命", -2), ("誤殺蟲蟻飛蛾濕生", -1),
+      ("故殺傷人害物之惡獸毒蟲", -1)), {}),
+    ("BR", 9, "見殺不救", "Standing by at a killing",
+     "見殺不救，隨本人之過減半，無門可救，不生慈念為二過，助讚殺生為五過。",
+     (("無門可救而不生慈念", -2), ("助讚殺生", -5)),
+     {"derived": {"of": "actor_offence", "factor": 0.5,
+                  "condition_zh": "見殺不救，隨本人之過減半"},
+      "notes": (
+          "「隨本人之過減半」是派生值，不是常數：旁觀者之過＝行為人之過÷2。"
+          "本系統在 payload.derived 記下這條規則，但不計算它——"
+          "SoulRecord 沒有把一條記錄關聯到另一條記錄的行為人的欄位。",
+      )}),
+    ("BR", 10, "救得而不救", "Able to save and not saving",
+     "若救得而不救者為十過，無門可救，不生慈念者為一過。",
+     (("救得而不救", -10), ("無門可救不生慈念", -1)), {}),
+    ("BR", 11, "幸災", "Taking pleasure in another's trouble",
+     "見人有憂，不行解釋而故暢快者為五過。", (("見人有憂而故暢快", -5),),
+     {"fungibility_class": "CONDUCT"}),
+    ("BR", 12, "見死不慈", "No pity at a death",
+     "見人畜死，不起慈念者為一過。"
+     "〔凡言慈念者，謂見苦不能得救，止以持念聖號經文，迴向以結善緣也。〕",
+     (("見人畜死不起慈念", -1),), {}),
+    ("BR", 13, "剛使役", "Driving man or beast past exhaustion",
+     "役使人畜，至於疲乏力倦，不矜其苦而剛使役者，一時為十過，加之鞭笞者，一杖為一過。",
+     (("剛使役一時", -10), ("加之鞭笞一杖", -1)), {}),
+    ("BR", 14, "用水陷溺路徑", "Flooding a road",
+     "用水陷溺路徑，使人畜出入行履艱難者，一時為十過。", (("一時", -10),), {}),
+    ("BR", 15, "摧毀船橋", "Destroying a ferry or bridge",
+     "摧毀船橋，使不通渡者，一時為十過。", (("一時", -10),), {}),
+
+    # ---------------- 過律 · 不善門 (8 of 八條) ---------------------------
+    ("BS", 1, "毀壞功德聖像", "Destroying sacred objects",
+     "毀壞功德、聖像、壇宇…及諸獻供之物，百錢之直為一過，貫錢之直為十過，"
+     "以巧言說人，毀壞百錢之直為半過，貫錢之直為五過，見而不觀為一過，讚助為五過。",
+     (("毀壞百錢之直", -1), ("毀壞貫錢之直", -10),
+      ("以巧言說人毀壞百錢之直", -0.5), ("以巧言說人毀壞貫錢之直", -5),
+      ("見而不觀", -1), ("讚助", -5)),
+     {"money_rate": RATE_100_CASH,
+      "abridged": True,
+      "notes": (
+          "非整數分值：「以巧言說人，毀壞百錢之直為半過」＝-0.5 過。",
+          "轉錄省略：本條原文在核實報告的轉錄中有「…」省略處，未補。需影印本補全。",
+      )}),
+    ("BS", 2, "指斥聖像經教", "Reviling images and scripture",
+     "以言指斥，毀天尊聖像為二十過，真人為十五過，神君為十過，見毀滅不勸為一過，"
+     "讚助毀滅為五過，毀滅經教，與此同論。",
+     (("指斥天尊聖像", -20), ("指斥真人", -15), ("指斥神君", -10),
+      ("見毀滅不勸", -1), ("讚助毀滅", -5)), {}),
+    ("BS", 3, "齋日不朝真", "Missing observance on a fast day",
+     "每遇齋日及諸節令吉辰，故不朝真為二過，因私務不及並非齋日為一過，因公務不及無過，"
+     "為食酒肉葷辛及犯觸不朝真為五過，忌日誤朝真為一過。",
+     (("故不朝真", -2), ("因私務不及並非齋日", -1),
+      ("為食酒肉葷辛及犯觸不朝真", -5), ("忌日誤朝真", -1)),
+     {"nullifiers": (("因公務不及", "no_demerit"),),
+      "notes": (
+          "「因公務不及無過」是豁免條款，不是計分條款——與功格側的「則無功」同一機制、方向相反，"
+          "故同記在 payload.nullifiers，effect 作 no_demerit。",
+      )}),
+    ("BS", 4, "晚食", "Eating late",
+     "遇節辰食晚食為二過，常日晚食為一過。",
+     (("節辰食晚食", -2), ("常日晚食", -1)), {}),
+    ("BS", 5, "齋醮不備", "Faults in the conduct of a rite",
+     "齋醮供聖鎮信之物，一物不備為一過，章詞一字差錯為一過…三時朝真，一時有失為五過，"
+     "供養進獻之物，一物不備為一過，一物不潔為一過，及不如法為一過。",
+     (("一物不備", -1), ("章詞一字差錯", -1), ("三時朝真一時有失", -5),
+      ("供養進獻一物不備", -1), ("一物不潔", -1), ("不如法", -1)),
+     {"abridged": True,
+      "notes": ("轉錄省略：本條原文在核實報告的轉錄中有「…」省略處，未補。需影印本補全。",)}),
+    ("BS", 6, "妄用法信錢物", "Misusing a donor's offering",
+     "應受施主法信錢物，非理使用，百錢為一過，貫錢為十過。",
+     (("非理使用百錢", -1), ("非理使用貫錢", -10)),
+     {"fungibility_class": "MONEY", "money_rate": RATE_100_CASH}),
+    ("BS", 7, "符簡差錯", "Errors in a written talisman",
+     "薦亡符簡文字等，一字差錯為一過，脫漏一字為一過，符文差錯脫漏為十過，修寫書篆不如法為五過。",
+     (("一字差錯", -1), ("脫漏一字", -1), ("符文差錯脫漏", -10), ("修寫書篆不如法", -5)), {}),
+    ("BS", 8, "誦經有失", "Faults in recitation",
+     "誦念經典，漏一字為一過，漏一句為五過…心意不專為五過，邪婬雜想及思惡事為十過…"
+     "念經發嗔怒為十過，凌辱他人為十過。"
+     "〔凡言十過，其功全無，並是虛念。但一過去功一分，十過去功十分，所以不用也。〕",
+     (("漏一字", -1), ("漏一句", -5), ("心意不專", -5),
+      ("邪婬雜想及思惡事", -10), ("念經發嗔怒", -10), ("凌辱他人", -10)),
+     {"abridged": True,
+      "notes": (
+          "本條夾注是全書唯一一處把功過相抵寫成算術的地方：「但一過去功一分，十過去功十分」"
+          "——過直接抵銷功，一比一。這是 apps/ledger/readings.py 的中國側淨額讀數的原文依據；"
+          "抵銷的類別限制另見《文昌帝君功過格·凡例》，記在 payload.fungibility_class。",
+          "轉錄省略：本條原文在核實報告的轉錄中有兩處「…」省略，未補。需影印本補全。",
+      )}),
+
+    # ---------------- 過律 · 不義門 (10 of 十條) --------------------------
+    ("BY", 1, "教唆鬪訟", "Inciting litigation",
+     "教唆人官門鬪訟，死刑為三十過，徒刑為二十過，杖罪為十過；笞罪為八過。",
+     (("致死刑", -30), ("致徒刑", -20), ("致杖罪", -10), ("致笞罪", -8)),
+     {"fungibility_class": "LIFE"}),
+    ("BY", 2, "教唆鬪爭", "Inciting a quarrel",
+     "教唆人鬪爭，一人為一過。", (("一人", -1),), {"fungibility_class": "SPEECH"}),
+    ("BY", 3, "教人為非", "Teaching another to do wrong",
+     "教人為不廉、不孝、不義、不仁、不善、不慈，為非作過，一事為一過。",
+     (("一事", -1),), {"fungibility_class": "SPEECH"}),
+    ("BY", 4, "見賢不薦", "Passing over the worthy",
+     "見賢不薦為一過，見賢不師為一過。",
+     (("見賢不薦", -1), ("見賢不師", -1)), {"fungibility_class": "CONDUCT"}),
+    ("BY", 5, "背師", "Failing or betraying a teacher",
+     "見明師不參授典教為二過，不依師之教旨為十過，反叛師長為五十過，違師教公為三十過，"
+     "尊長父母同此論。",
+     (("見明師不參授典教", -2), ("不依師之教旨", -10),
+      ("反叛師長", -50), ("違師教公", -30)),
+     {"fungibility_class": "CONDUCT"}),
+    ("BY", 6, "不交良友", "Refusing good company",
+     "良朋勝友不交，設為一過。", (("不交", -1),), {"fungibility_class": "CONDUCT"}),
+    ("BY", 7, "窮民不濟", "Refusing the destitute",
+     "窮民不濟為一過，復加凌辱一人為三過。",
+     (("窮民不濟", -1), ("復加凌辱一人", -3)), {}),
+    ("BY", 8, "偷盜", "Theft",
+     "偷盜人財物，或教人偷盜，百錢為一過，貫錢為十過；若見偷盜，不勸為一過，讚助偷盜為五過，"
+     "米麥幣帛衣服，並論錢數定過。",
+     (("偷盜百錢", -1), ("偷盜貫錢", -10), ("見偷盜不勸", -1), ("讚助偷盜", -5)),
+     {"money_rate": RATE_100_CASH}),
+    ("BY", 9, "不義取財", "Taking what is not rightfully one's own",
+     "不義而取人財物，百錢為一過，貫錢為十過。",
+     (("不義取財百錢", -1), ("不義取財貫錢", -10)), {"money_rate": RATE_100_CASH}),
+    ("BY", 10, "欠財不還", "Withholding a debt",
+     "欠人財物，抵諱不還，百錢為一過，貫錢為十過，因而謀害，其過加倍。",
+     (("抵諱不還百錢", -1), ("抵諱不還貫錢", -10)),
+     {"money_rate": RATE_100_CASH,
+      "multipliers": (("因而謀害", 2),),
+      "notes": (
+          "「其過加倍」是全書唯一的倍率條款。《文昌帝君功過格·凡例》另有系統性的倍率規則"
+          "（祖父母、繼母每功加倍等），太微沒有；不要把文昌的倍率搬到本語料上。",
+      )}),
+
+    # ---------------- 過律 · 不軌門 (5 transcribed of 六條) ---------------
+    ("BG", 1, "傳法出偽、注撰煙粉", "False transmission; writing erotica",
+     "傳教法，隱真出偽，欺罔弟子，一事為五過；如受法信，百錢為一過，得人不傳為一過，傳非其人為十過。"
+     "注撰煙粉傳記、詩詞、歌行，一篇為二過，傳與一人為二過，簡編一篇為一過，傳與一人為一過，"
+     "自己記念一篇為一過。",
+     (("隱真出偽欺罔弟子一事", -5), ("受法信百錢", -1),
+      ("得人不傳", -1), ("傳非其人", -10),
+      ("注撰煙粉傳記詩詞歌行一篇", -2), ("傳與一人", -2),
+      ("簡編一篇", -1), ("簡編傳與一人", -1), ("自己記念一篇", -1)),
+     {"money_rate": RATE_100_CASH,
+      "transcription_gap": {
+          "gate_titled": "六條", "gate_transcribed": 5,
+          "conjectured_split_here": True,
+          "conjecture": "門題六條，兩個轉錄本都只有 5 段。報告推測本段實含兩個不相干主題"
+                        "（「傳教法，隱真出偽…」與「注撰煙粉傳記…」）並在報告的表中拆成兩行，"
+                        "但明確註明那是編輯判斷而非原刻分段。本系統照轉錄本作一條，不拆。",
+      },
+      "notes": (TRANSCRIPTION_GAP_NOTE,)}),
+    ("BG", 2, "食肉", "Eating meat",
+     "食肉，故殺性命食之為六過，買肉食之為三過，違禁肉故食為六過，誤食為三過，"
+     "過齋日食之為十過，食後入壇念善為十過。",
+     (("故殺性命食之", -6), ("買肉食之", -3), ("違禁肉故食", -6),
+      ("違禁肉誤食", -3), ("過齋日食之", -10), ("食後入壇念善", -10)), {}),
+    ("BG", 3, "飲酒", "Drinking",
+     "飲酒為評議惡事，與人飲一升為六過，無故與不良人飲一升為二過，無故與常人飲一升為一過，"
+     "助婬懽飲一升為十過；為和合事理，與友人飲，祭酒、待賓、服藥，皆不坐；"
+     "過齋日飲致醉，或酒後入壇念善為五過。",
+     (("為評議惡事與人飲一升", -6), ("無故與不良人飲一升", -2),
+      ("無故與常人飲一升", -1), ("助婬懽飲一升", -10),
+      ("過齋日飲致醉／酒後入壇念善", -5)),
+     {"nullifiers": (("為和合事理與友人飲", "no_demerit"), ("祭酒", "no_demerit"),
+                     ("待賓", "no_demerit"), ("服藥", "no_demerit")),
+      "notes": (
+          "撤回的 CN-HL-* 語料把「飲酒」列為十惡之一，那是錯的——飲酒不在佛教十惡中"
+          "（見 docs/lore-verification/verify-cn-structure.md §4 錯誤 #1）。"
+          "功過格是「飲酒」這一條在本系統中唯一站得住的出處，"
+          "且必須連同豁免條款一起用：「為和合事理，與友人飲，祭酒、待賓、服藥，皆不坐」。",
+      )}),
+    ("BG", 4, "食五辛", "Eating the five pungent roots",
+     "五辛無故食之，一食為一過，食後持念經一大卷為十過，一小經為五過，一聖號為一過，"
+     "齋日食之為五過。",
+     (("無故食之一食", -1), ("食後持念大經一卷", -10), ("食後持念小經", -5),
+      ("食後持念聖號", -1), ("齋日食之", -5)), {}),
+    ("BG", 5, "受觸", "Ritual defilement",
+     "受觸極親為五十過，近親為三十過，遠親為二十過，良家為十五過，"
+     "受觸之後，入壇念道、朝真、禮聖及齋日犯觸隨儀，每一過為五過。",
+     (("受觸極親", -50), ("受觸近親", -30), ("受觸遠親", -20), ("受觸良家", -15),
+      ("受觸後入壇念道朝真禮聖及齋日犯觸隨儀每一過", -5)), {}),
+]
+
+
+def _gongguoge_rows():
+    """Expand GONGGUOGE_ENTRIES into the row shape `_seed_statutes` consumes.
+
+    Built rather than written out, because the parts that repeat 73 times —
+    the appropriation note, the gate metadata, the corpus-wide payload keys —
+    are exactly the parts that must not be allowed to differ between rows. The
+    parts that are per-article (the text, every point value, every caveat) are
+    literal above and are never derived from anything.
+
+    `ordinal` is continuous 1..73 in document order — 功格 then 過律 — and NOT
+    the number within the 門, which is carried separately as
+    `payload["gate_ordinal"]`. `Statute.Meta.ordering` sorts on `ordinal`, so a
+    per-gate numbering would interleave 救濟門一 with 不仁門一 and read the
+    corpus out of the order the document has.
+
+    `text_en` is left empty on every row, on purpose. `get_localized_text`
+    falls back to `text_zh`, so an English reader sees the 1171 Chinese rather
+    than a translation this seeder would be the sole author of. Titles are
+    glossed because a picker needs a label; the articles are not, because a
+    loose English rendering of a scoring clause is a different scoring clause.
+    """
+    rows = []
+    for ordinal, entry in enumerate(GONGGUOGE_ENTRIES, start=1):
+        gate_key, gate_ordinal, title_zh, title_en, text_zh, clauses, extras = entry
+        segment, polarity, gate_zh, gate_en, titled, unit, default_class = (
+            GONGGUOGE_GATES[gate_key]
+        )
+        payload = {
+            "gate": gate_zh,
+            "gate_en": gate_en,
+            "gate_ordinal": gate_ordinal,
+            "gate_titled_count": titled,
+            "unit": unit,
+            "clauses": [
+                {"condition_zh": condition, "points": points}
+                for condition, points in clauses
+            ],
+            "nullifiers": [
+                {"condition_zh": condition, "effect": effect}
+                for condition, effect in extras.get("nullifiers", ())
+            ],
+            "multipliers": [
+                {"condition_zh": condition, "factor": factor}
+                for condition, factor in extras.get("multipliers", ())
+            ],
+            "cap": extras.get("cap"),
+            "derived": extras.get("derived"),
+            "money_rate": extras.get("money_rate"),
+            "fungibility_class": extras.get("fungibility_class", default_class),
+            # Every point value in this corpus is the document's own. The
+            # withdrawn CN-HL-* rows are what happens when that is not tracked:
+            # 「+100 孝养父母」 with nothing behind the number.
+            "attestation": "PRIMARY",
+            # Not the judgment basis the text itself claims — see
+            # APPROPRIATION_NOTE. Kept as a queryable flag so a report can ask
+            # "what in this database is used for something its source does not
+            # say" without parsing prose.
+            "appropriated_as_judgment_basis": True,
+            "native_sanctions": ["奪紀奪算", "成仙閾值（三百善／一千三百善）", "子孫餘慶餘殃"],
+            "names_any_hell": False,
+        }
+        if "transcription_gap" in extras:
+            payload["transcription_gap"] = extras["transcription_gap"]
+        if extras.get("abridged"):
+            payload["text_abridged_in_transcription"] = True
+        rows.append({
+            "code": f"CN-GGG-{segment}-{gate_ordinal:02d}",
+            "ordinal": ordinal,
+            "polarity": polarity,
+            "title_zh": f"{gate_zh}·{title_zh}",
+            "title_en": title_en,
+            "text_zh": text_zh,
+            "text_en": "",
+            "notes": [
+                APPROPRIATION_NOTE,
+                FUNGIBILITY_CLASS_NOTE,
+                *extras.get("notes", ()),
+            ],
+            "payload": payload,
+        })
+    return rows
+
+
+CHINESE_STATUTES = _gongguoge_rows()
+
 # CLI label -> (corpus, source, rows) for a corpus TRANSCRIBED into this file.
-# Chinese is absent because the document behind it has no articles to
-# transcribe; Egyptian is absent for the opposite reason — its corpus is derived
-# rather than transcribed, see _seed_derived_statutes.
+# Egyptian is absent for the opposite reason to the other two — its corpus is
+# derived rather than transcribed, see _seed_derived_statutes.
 CIVILIZATION_STATUTES = {
+    "chinese": ("GONGGUOGE", GONGGUOGE_SOURCE, CHINESE_STATUTES),
     "european": ("DEADLY_SIN", DEADLY_SIN_SOURCE, EUROPEAN_STATUTES),
 }
 
