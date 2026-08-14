@@ -50,6 +50,16 @@ from apps.tenants.models import Tenant
 
 
 def make_statute(tenant, code, **kwargs):
+    """A throwaway article for the mechanism tests below.
+
+    The CN-HL-* codes and the 冥律 flavour are FIXTURE TEXT, not seed data and
+    not a claim that any such article exists: the HELL_LAW and DEADLY_SIN
+    corpora were withdrawn (see the withdrawal note in seed_mythology.py and
+    migration judgment/0012), and `TestSeededCorpora` below asserts that
+    seeding produces none of them. What these rows exercise is the citation
+    machinery — polarity, ordering, tenant refusals, PROTECT — which is
+    corpus-agnostic and stays.
+    """
     values = {
         "civilization": Civilization.CHINESE,
         "corpus": StatuteCorpus.HELL_LAW,
@@ -590,9 +600,12 @@ class TestStatuteReadIsolation:
 class TestSeededCorpora:
     """`manage.py seed_mythology` is the only way articles enter the system.
 
-    These assert what the three corpora ARE, including the two places the
-    sources are thin. A test that pinned "十恶 has ten rows" would be pinning a
-    number the document does not contain.
+    ONE corpus is seeded: the Egyptian Forty-Two, derived from assessor rows
+    whose provenance was checked clause by clause. The Chinese (HELL_LAW) and
+    European (DEADLY_SIN) tables that shipped in 6017f04 were withdrawn — not
+    because entries were missing but because the frames were fabricated (no
+    codified 冥律 with numbered articles; Dante's circles are not the seven
+    capital sins), so most of what is asserted here is that they stay gone.
     """
 
     @pytest.fixture(autouse=True)
@@ -601,21 +614,28 @@ class TestSeededCorpora:
 
         call_command("seed_mythology", verbosity=0)
 
-    def test_the_chinese_corpus_is_what_docs_11_contains_and_no_more(self):
-        offences = Statute.objects.filter(
-            corpus=StatuteCorpus.HELL_LAW, polarity=StatutePolarity.OFFENCE
+    def test_the_withdrawn_corpora_seed_nothing_at_all(self):
+        """A trip wire, and it is meant to be annoying to route around.
+
+        The tempting repair is to "finish" the withdrawn lists — supply the
+        four 十恶 that looked missing, put pride/envy/sloth back in circles.
+        Nothing was missing: the lists were pinned to structures the sources
+        do not have, and completing them yields a more convincing forgery, not
+        a corpus. `all_objects`, so a row cannot hide behind is_deleted either.
+        """
+        withdrawn = Statute.all_objects.filter(
+            corpus__in=(StatuteCorpus.HELL_LAW, StatuteCorpus.DEADLY_SIN)
         )
-        merits = Statute.objects.filter(
-            corpus=StatuteCorpus.HELL_LAW, polarity=StatutePolarity.MERIT
-        )
-        # docs/11 §4.1 is headed 十恶 and tabulates six; §4.2 is headed 十善 and
-        # tabulates seven. The missing rows are NOT supplied from elsewhere.
-        assert offences.count() == 6
-        assert merits.count() == 7
-        assert not Statute.objects.filter(code="CN-HL-O07").exists()
-        # And the shortfall is recorded on the rows rather than left for a
-        # reader to notice.
-        assert any("十恶" in note for note in offences.first().source_notes)
+        assert list(withdrawn.values_list("code", flat=True)) == []
+
+    def test_the_forty_two_are_the_only_thing_seeded(self):
+        """States the whole seeded inventory, so a fourth corpus appearing
+        anywhere — under a new enum value, or smuggled in under an existing
+        one — fails here rather than being noticed by nobody."""
+        by_corpus = {}
+        for corpus in Statute.all_objects.values_list("corpus", flat=True):
+            by_corpus[corpus] = by_corpus.get(corpus, 0) + 1
+        assert by_corpus == {StatuteCorpus.NEGATIVE_CONFESSION: 42}
 
     def test_every_seeded_article_carries_its_provenance(self):
         without_source = Statute.objects.filter(source="").values_list("code", flat=True)
@@ -626,9 +646,42 @@ class TestSeededCorpora:
         assert derived.count() == 42
         for statute in derived:
             assert statute.source_actor_id is not None, statute.code
+            assert statute.source_actor_field == "negative_confession", statute.code
             # The clause is NOT copied onto the statute — one source of truth.
             assert statute.text_en == "", statute.code
+            assert statute.text_zh == "", statute.code
+            assert statute.text_egy == "", statute.code
             assert statute.derived_text, statute.code
+            # A denial the deceased makes, never a prohibition. Folding these
+            # into OFFENCE would state the Egyptian material as a code of
+            # offences it is not.
+            assert statute.polarity == StatutePolarity.DENIAL, statute.code
+
+        # Forty-two assessors, forty-two derivations: no two articles read off
+        # the same actor, which a partially-run assessor seed would produce.
+        assert len({statute.source_actor_id for statute in derived}) == 42
+        assert sorted(statute.code for statute in derived) == [
+            f"EG-NC-{index:02d}" for index in range(1, 43)
+        ]
+
+    def test_correcting_an_assessor_corrects_the_seeded_article(self):
+        """The derivation proved on the real seeded rows, not just a fixture.
+
+        This is the property that makes the Egyptian corpus survivable while
+        the other two did not: there is exactly one copy of each clause, so a
+        reading that turns out to be wrong is corrected in one place and every
+        judgment that cited it reads the correction.
+        """
+        statute = Statute.objects.get(code="EG-NC-07")
+        actor = statute.source_actor
+        actor.powers_json["negative_confession"] = "a corrected reading"
+        actor.save(update_fields=["powers_json"])
+
+        statute.refresh_from_db()
+        assert statute.derived_text == "a corrected reading"
+        assert statute.get_localized_text("en") == "a corrected reading"
+        # And still nowhere else.
+        assert statute.text_en == ""
 
     def test_the_forty_two_read_in_bench_order_not_alphabetically(self):
         ordinals = list(
@@ -638,17 +691,6 @@ class TestSeededCorpora:
         )
         assert ordinals == list(range(1, 43))
 
-    def test_the_european_corpus_carries_the_documents_own_caveats(self):
-        sins = Statute.objects.filter(corpus=StatuteCorpus.DEADLY_SIN)
-        assert sins.count() == 7
-        # docs/03 says the seven and Dante's circles do not correspond
-        # one-to-one; every row says so rather than presenting a clean map.
-        assert all(statute.source_notes for statute in sins)
-        sloth = sins.get(code="EU-DS-05")
-        gluttony = sins.get(code="EU-DS-06")
-        assert sloth.payload_json["dante_circle"] == gluttony.payload_json["dante_circle"]
-        assert any("gluttony" in note for note in sloth.source_notes)
-
     def test_each_corpus_stays_inside_its_own_tenant(self):
         by_tenant = {
             code: set(
@@ -656,9 +698,12 @@ class TestSeededCorpora:
             )
             for code in ("CN_DIYU", "EU_HEAVEN_HELL", "EG_DUAT")
         }
+        # The Chinese and European tenants hold no articles at all now. Their
+        # tenants and their courts are untouched — it is the rulebook that was
+        # withdrawn, not the cosmology.
         assert by_tenant == {
-            "CN_DIYU": {StatuteCorpus.HELL_LAW},
-            "EU_HEAVEN_HELL": {StatuteCorpus.DEADLY_SIN},
+            "CN_DIYU": set(),
+            "EU_HEAVEN_HELL": set(),
             "EG_DUAT": {StatuteCorpus.NEGATIVE_CONFESSION},
         }
 
@@ -669,3 +714,192 @@ class TestSeededCorpora:
         call_command("seed_mythology", verbosity=0)
         after = list(Statute.objects.order_by("code").values_list("code", "update_time"))
         assert before == after
+
+
+# ---------------------------------------------------------------------------
+# The transcription path, kept alive without a corpus to run it on
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestTranscriptionMechanism:
+    """`_seed_statutes` has no caller while CIVILIZATION_STATUTES is empty.
+
+    Deleting it along with the withdrawn tables would have been the wrong
+    lesson: what failed verification was two bodies of data, not the ability
+    to seed a transcribed corpus. The next one — 《太微仙君功過格》 is the
+    candidate — arrives through this method, so it is exercised directly here
+    rather than left to rot as unreachable code.
+    """
+
+    def test_a_transcribed_row_still_seeds_and_is_idempotent(self, cn_tenant):
+        import io
+
+        from apps.actors.management.commands.seed_mythology import (
+            CIVILIZATION_STATUTES,
+            Command,
+            Stats,
+        )
+
+        # No corpus is transcribed today. If this ever fails, read the
+        # withdrawal note at the top of the statute section in
+        # seed_mythology.py before adding anything back.
+        assert CIVILIZATION_STATUTES == {}
+
+        row = {
+            "code": "ZZ-FIXTURE-01",
+            "ordinal": 1,
+            "polarity": StatutePolarity.OFFENCE,
+            "title_zh": "样例", "title_en": "Fixture",
+            "text_zh": "样例条文。", "text_en": "A fixture article.",
+            "payload": {"note": "fixture"},
+            "notes": ["fixture row — no source is being claimed"],
+        }
+        command = Command(stdout=io.StringIO())
+        stats = Stats("statutes")
+        for _ in range(2):
+            command._seed_statutes(
+                Civilization.CHINESE, cn_tenant, StatuteCorpus.HELL_LAW,
+                "fixture — asserts the mechanism, not a corpus", [row], False, stats,
+            )
+
+        seeded = Statute.all_objects.get(code="ZZ-FIXTURE-01")
+        assert seeded.tenant_id == cn_tenant.id
+        assert seeded.source_notes == ["fixture row — no source is being claimed"]
+        assert seeded.payload_json == {"note": "fixture"}
+        # Created once, recognised as unchanged the second time.
+        assert (stats.created, stats.unchanged) == (1, 1)
+
+
+# ---------------------------------------------------------------------------
+# The withdrawal migration (judgment/0012)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestWithdrawalMigration:
+    """Retiring the fabricated articles must not rewrite decided cases.
+
+    The migration soft-deletes, because `JudgmentCitation.statute` is PROTECT
+    and a cited article is the recorded basis of a verdict. And it refuses to
+    touch an article some judgment actually cited: that citation happened, and
+    a data migration is the wrong place to decide what a court should have
+    said instead.
+    """
+
+    @pytest.fixture
+    def migration(self):
+        from importlib import import_module
+
+        return import_module("apps.judgment.migrations.0012_withdraw_fabricated_statutes")
+
+    @pytest.fixture
+    def registry(self):
+        from django.apps import apps as django_apps
+
+        return django_apps
+
+    def test_it_retires_the_withdrawn_corpora_and_leaves_the_egyptian_alone(
+        self, migration, registry, cn_tenant, eg_tenant
+    ):
+        chinese = make_statute(cn_tenant, "CN-HL-O01")
+        european = make_statute(
+            cn_tenant, "EU-DS-01",
+            civilization=Civilization.EUROPEAN, corpus=StatuteCorpus.DEADLY_SIN,
+        )
+        egyptian = make_statute(
+            eg_tenant, "EG-NC-01",
+            civilization=Civilization.EGYPTIAN,
+            corpus=StatuteCorpus.NEGATIVE_CONFESSION,
+            polarity=StatutePolarity.DENIAL,
+        )
+
+        migration.forward(registry, None)
+
+        for statute in (chinese, european):
+            statute.refresh_from_db()
+            assert statute.is_deleted is True, statute.code
+            assert statute.delete_reason == migration.DELETE_REASON
+            assert statute.delete_cascade_id == migration.CASCADE_ID
+            assert statute.deleted_at is not None
+        egyptian.refresh_from_db()
+        assert egyptian.is_deleted is False
+
+        # Soft, not hard: the row is still there to be read.
+        assert Statute.all_objects.filter(code="CN-HL-O01").exists()
+        # And gone from every live query, which is what takes it out of the
+        # picker and out of the API.
+        assert not Statute.all_objects.filter(
+            corpus__in=(StatuteCorpus.HELL_LAW, StatuteCorpus.DEADLY_SIN), is_deleted=False
+        ).exists()
+
+    def test_an_article_a_judgment_actually_cited_is_reported_and_kept(
+        self, migration, registry, cn_tenant, cn_judgment, capsys
+    ):
+        cited = make_statute(cn_tenant, "CN-HL-O01")
+        uncited = make_statute(cn_tenant, "CN-HL-O04", ordinal=4, title_zh="妄语")
+        StatuteCitationService.cite(cn_judgment, cited.id, "as decided")
+
+        migration.forward(registry, None)
+
+        cited.refresh_from_db()
+        uncited.refresh_from_db()
+        assert cited.is_deleted is False
+        assert uncited.is_deleted is True
+        # Reported, not silently skipped — somebody has to look at this case.
+        assert "CN-HL-O01" in capsys.readouterr().out
+        # The citation itself is untouched.
+        assert cn_judgment.citations.count() == 1
+
+    def test_the_withdrawal_reverses(self, migration, registry, cn_tenant):
+        statute = make_statute(cn_tenant, "CN-HL-O01")
+
+        migration.forward(registry, None)
+        migration.backward(registry, None)
+
+        statute.refresh_from_db()
+        assert statute.is_deleted is False
+        assert statute.deleted_at is None
+        assert statute.delete_reason == ""
+        assert statute.delete_cascade_id is None
+
+    def test_reversing_does_not_resurrect_a_row_it_never_deleted(
+        self, migration, registry, cn_tenant
+    ):
+        """The reverse restores exactly what this migration retired. An article
+        retired for some other reason — superseded, mis-keyed, withdrawn by
+        hand — is not swept back into circulation by rolling this one back."""
+        other = make_statute(cn_tenant, "CN-HL-O04", ordinal=4)
+        other.soft_delete(reason="retired by hand, nothing to do with 0012")
+
+        migration.forward(registry, None)
+        migration.backward(registry, None)
+
+        other.refresh_from_db()
+        assert other.is_deleted is True
+        assert other.delete_reason == "retired by hand, nothing to do with 0012"
+
+    def test_running_it_twice_is_a_no_op(self, migration, registry, cn_tenant):
+        statute = make_statute(cn_tenant, "CN-HL-O01")
+        migration.forward(registry, None)
+        statute.refresh_from_db()
+        first_deleted_at = statute.deleted_at
+
+        migration.forward(registry, None)
+        statute.refresh_from_db()
+        assert statute.deleted_at == first_deleted_at
+
+    def test_it_is_a_no_op_on_a_database_that_never_held_them(
+        self, migration, registry, eg_tenant
+    ):
+        """The ordinary case from now on: a fresh clone seeds no HELL_LAW or
+        DEADLY_SIN rows at all, so the migration finds nothing to do."""
+        egyptian = make_statute(
+            eg_tenant, "EG-NC-01",
+            civilization=Civilization.EGYPTIAN,
+            corpus=StatuteCorpus.NEGATIVE_CONFESSION,
+            polarity=StatutePolarity.DENIAL,
+        )
+        migration.forward(registry, None)
+        egyptian.refresh_from_db()
+        assert egyptian.is_deleted is False

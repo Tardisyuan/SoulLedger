@@ -591,14 +591,8 @@ CIVILIZATION_ASSESSORS = {
 # --------------------------------------------------------------------------
 # Statutes — the articles a verdict can cite (apps.judgment.models.Statute)
 #
-# THREE CORPORA, THREE PROVENANCES, AND ONE OF THEM IS NOT COPIED HERE.
+# ONE CORPUS IS SEEDED, AND IT IS NOT WRITTEN IN THIS FILE.
 #
-#   CHINESE   — transcribed from docs/11_地府审判制度与冥律.md §4.1 (offences)
-#               and §4.2 (merits). The Chinese line is the authority; the
-#               English is a translation of it, marked as such on every row.
-#   EUROPEAN  — transcribed from docs/03_七宗罪与地狱惩罚.md §1 (Gregory's
-#               seven, with the Latin), §4 (the Inferno circle and its
-#               punishment) and §5 (the Purgatorio terrace).
 #   EGYPTIAN  — NOT here. The 42 clauses are already in the database on the
 #               assessors' `powers_json["negative_confession"]`, seeded above
 #               with their edition recorded. `_seed_derived_statutes` builds a
@@ -609,194 +603,73 @@ CIVILIZATION_ASSESSORS = {
 #               the first time one was corrected — the "two hand-maintained
 #               copies" failure this seeder was consolidated to end.
 #
-# NOTHING IN THESE TABLES IS INVENTED, and where a source is thin or
-# self-contradictory the gap is recorded as a note on the row instead of being
-# filled in:
+# WITHDRAWN: THE CHINESE (HELL_LAW) AND EUROPEAN (DEADLY_SIN) CORPORA.
 #
-#   * docs/11 §4.1 is headed 十恶 ("the ten evils") and lists SIX. The four
-#     missing ones are not supplied from elsewhere — six rows are what the
-#     document contains, and CN-HL-O07..O10 do not exist.
-#   * docs/11 §4.2 is headed 十善 ("the ten goods") and lists SEVEN. Same
-#     treatment.
-#   * docs/03 says in its own words that Dante's circles and the Catholic
-#     seven do not correspond one-to-one, prints 懒惰 and 暴食 against the same
-#     circle (annotating the sloth entry "（贪食）", i.e. that is gluttony's
-#     punishment), and places 嫉妒 in a bolgia of the eighth circle rather than
-#     a circle of its own. All three caveats travel on the rows as
-#     `source_notes` rather than being tidied into a clean mapping.
+# Commit 6017f04 seeded thirteen Chinese rows (CN-HL-O01..O06, CN-HL-M01..M07)
+# and seven European ones (EU-DS-01..07) from this file. Both tables were
+# removed after independent verification of their sources. Rows that already
+# reached a database are soft-deleted by
+# apps/judgment/migrations/0012_withdraw_fabricated_statutes.py — reversibly,
+# and never over a row a judgment has actually cited.
 #
-# WHAT THE EUROPEAN CORPUS IS NOT. It is a moral taxonomy plus a literary
-# punishment scheme. This deployment holds no canon-law text — no Decretum, no
-# 1983 Code, nothing with articles — so there is no European equivalent of
-# 冥律's numbered statute, and none has been manufactured. It also says nothing
-# about *poena*: apps/ledger/readings.py refuses to report a penalty number for
-# European souls because absolution, satisfaction owed and penance performed
-# are facts this system does not record, and a corpus of sins does not supply
-# any of them. These articles are culpa-side only.
+# THE FRAME WAS FABRICATED, NOT MERELY THE DETAIL. This is the distinction
+# that decides what may be done about it:
 #
-# Per-row keys: code, ordinal, polarity, title_zh, title_en, text_zh, text_en,
-# payload, notes.
+#   CHINESE — there is no codified 冥律. The primary text behind docs/11,
+#     《玉历宝钞》, is a morality tract narrated hall by hall: it has no article
+#     numbers, no sentence lengths in years, and nothing with the form of a
+#     律. `article_number` and `min_punishment_years` were therefore a modern
+#     statute-book shell fitted over a text that has no statutes, and the
+#     citation codes CN-HL-* asserted an article numbering that no source
+#     contains. docs/11 §1.2 additionally cites 《太上老君律》 — a book that
+#     does not exist; the Daozang has no work under that title. The §4.1 list
+#     was not "十恶 with four missing" either: 饮酒 is not one of Buddhism's
+#     ten evils at all, so the list held five wrong absences plus one entry
+#     that does not belong, and §4.2's seven had no correspondence to the
+#     十善业道 whatsoever. See scratchpad/verify-cn-structure.md.
+#
+#   EUROPEAN — the Inferno is not stratified by the seven capital sins. Dante
+#     layers hell on Aristotle's tripartite scheme (Inf. XI.79-84), and three
+#     of the seven — pride, envy, sloth — have no circle at all. The structure
+#     that IS ordered by the seven is the Purgatorio's seven terraces, which
+#     this deployment does not model. The ordering was attributed to Gregory
+#     the Great but does not match his: for Gregory pride is not one of the
+#     seven, it is the root from which they grow. And EU-DS-07's punishment
+#     ("被铁笼囚禁", caged in iron) appears in no part of the poem — it was
+#     invented outright. See scratchpad/verify-christian-structure.md.
+#
+# DO NOT "COMPLETE" THESE LISTS. The obvious repair — supply the four missing
+# 十恶, the three missing 十善, restore pride/envy/sloth to their circles — is
+# the one repair that must not be made. Nothing was missing. The lists were
+# pinned to the wrong structures, and filling the holes only produces a more
+# convincing forgery: correctly-numbered articles of a code that was never
+# written, and circles Dante did not put those sins in. A corpus returns here
+# only with a primary text that actually has the shape the model claims.
+#
+# WHERE THE CHINESE SIDE IS HEADED. The workable anchor is not a law code but
+# a merit ledger: 《太微仙君功過格》 (1171, in the Daozang), which really does
+# enumerate numbered items with signed point values — the shape `polarity` and
+# `payload_json["merit_points"]` were built for, and one this system can cite
+# honestly. Verification of that text is in progress elsewhere. Note before
+# reusing anything: a 功過格 is a moral account book kept by the living, not a
+# penal code administered by hell, so it is very probably a NEW StatuteCorpus
+# value rather than a refill of HELL_LAW. See the note on StatuteCorpus in
+# apps/judgment/models.py.
+#
+# EGYPTIAN IS UNAFFECTED. It was never transcribed here (see above), it is
+# derived from assessor rows whose provenance was checked clause by clause
+# against Budge's reading of the Nebseni papyrus and cross-checked 42/42
+# against UCL's Maiherperi papyrus, and it stays.
 # --------------------------------------------------------------------------
-HELL_LAW_SOURCE = (
-    "docs/11_地府审判制度与冥律.md §4.1/§4.2, itself citing 《玉历宝钞》. "
-    "The Chinese text is the authority; title_en/text_en are translations of "
-    "it and carry no independent source."
-)
-HELL_LAW_TEN_EVILS_NOTE = (
-    "docs/11 §4.1 is headed 十恶 but tabulates six entries. The remaining four "
-    "are not recorded in this deployment and have not been supplied from "
-    "elsewhere."
-)
-HELL_LAW_TEN_GOODS_NOTE = (
-    "docs/11 §4.2 is headed 十善 but tabulates seven entries. The remaining "
-    "three are not recorded in this deployment."
-)
 
-CHINESE_STATUTES = [
-    {"code": "CN-HL-O01", "ordinal": 1, "polarity": "OFFENCE",
-     "title_zh": "杀生", "title_en": "Killing",
-     "text_zh": "故意杀害人/动物。", "text_en": "Deliberately killing a person or an animal.",
-     "payload": {"punishment_hell": "刀山地狱", "qualifier_zh": "杀生越多刑罚越重"},
-     "notes": [HELL_LAW_TEN_EVILS_NOTE]},
-    {"code": "CN-HL-O02", "ordinal": 2, "polarity": "OFFENCE",
-     "title_zh": "偷盗", "title_en": "Theft",
-     "text_zh": "偷窃抢劫。", "text_en": "Stealing and robbery.",
-     "payload": {"punishment_hell": "牛坑地狱", "qualifier_zh": "返还赃物无效"},
-     "notes": [HELL_LAW_TEN_EVILS_NOTE]},
-    {"code": "CN-HL-O03", "ordinal": 3, "polarity": "OFFENCE",
-     "title_zh": "邪淫", "title_en": "Sexual misconduct",
-     "text_zh": "卖淫嫖娼。", "text_en": "Prostitution and its patronage.",
-     "payload": {"punishment_hell": "油锅地狱", "qualifier_zh": "婚内正常性行为不计"},
-     "notes": [HELL_LAW_TEN_EVILS_NOTE]},
-    {"code": "CN-HL-O04", "ordinal": 4, "polarity": "OFFENCE",
-     "title_zh": "妄语", "title_en": "False speech",
-     "text_zh": "撒谎骗人。", "text_en": "Lying and deceiving others.",
-     "payload": {"punishment_hell": "拔舌地狱", "qualifier_zh": "两舌（挑拨离间）加重"},
-     "notes": [HELL_LAW_TEN_EVILS_NOTE]},
-    {"code": "CN-HL-O05", "ordinal": 5, "polarity": "OFFENCE",
-     "title_zh": "饮酒", "title_en": "Intoxication",
-     "text_zh": "醉酒乱性。", "text_en": "Drunkenness and the disorder it leads to.",
-     "payload": {"punishment_hell": "烊铜地狱", "qualifier_zh": "道教有禁酒令"},
-     "notes": [HELL_LAW_TEN_EVILS_NOTE]},
-    {"code": "CN-HL-O06", "ordinal": 6, "polarity": "OFFENCE",
-     "title_zh": "邪见", "title_en": "False views",
-     "text_zh": "诽谤正法。", "text_en": "Slandering the true teaching.",
-     "payload": {"punishment_hell": "阿鼻地狱", "qualifier_zh": "最重罪行之一"},
-     "notes": [HELL_LAW_TEN_EVILS_NOTE]},
-
-    {"code": "CN-HL-M01", "ordinal": 11, "polarity": "MERIT",
-     "title_zh": "孝养父母", "title_en": "Filial support of parents",
-     "text_zh": "赡养双亲。", "text_en": "Providing for one's parents.",
-     "payload": {"merit_points": 100}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
-    {"code": "CN-HL-M02", "ordinal": 12, "polarity": "MERIT",
-     "title_zh": "戒杀放生", "title_en": "Abstaining from killing, releasing life",
-     "text_zh": "不杀生且放生。", "text_en": "Taking no life, and freeing captive creatures.",
-     "payload": {"merit_points": 50}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
-    {"code": "CN-HL-M03", "ordinal": 13, "polarity": "MERIT",
-     "title_zh": "布施行善", "title_en": "Almsgiving",
-     "text_zh": "施舍济困。", "text_en": "Giving alms and relieving hardship.",
-     "payload": {"merit_points": 50}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
-    {"code": "CN-HL-M04", "ordinal": 14, "polarity": "MERIT",
-     "title_zh": "诚信不欺", "title_en": "Honesty",
-     "text_zh": "不说谎守信。", "text_en": "Telling no lies and keeping one's word.",
-     "payload": {"merit_points": 30}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
-    {"code": "CN-HL-M05", "ordinal": 15, "polarity": "MERIT",
-     "title_zh": "救死扶伤", "title_en": "Succouring the dying and the injured",
-     "text_zh": "帮助危难之人。", "text_en": "Helping those in peril.",
-     "payload": {"merit_points": 40}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
-    {"code": "CN-HL-M06", "ordinal": 16, "polarity": "MERIT",
-     "title_zh": "敬奉神明", "title_en": "Reverence for the gods",
-     "text_zh": "正信神明。", "text_en": "Right faith in the gods.",
-     "payload": {"merit_points": 10}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
-    {"code": "CN-HL-M07", "ordinal": 17, "polarity": "MERIT",
-     "title_zh": "持守五戒", "title_en": "Keeping the five precepts",
-     "text_zh": "不杀不盗不淫不妄不酒。",
-     "text_en": "No killing, no theft, no sexual misconduct, no false speech, no drink.",
-     "payload": {"merit_points": 80}, "notes": [HELL_LAW_TEN_GOODS_NOTE]},
-]
-
-DEADLY_SIN_SOURCE = (
-    "docs/03_七宗罪与地狱惩罚.md §1 (Gregory the Great's seven, with the "
-    "Latin and the opposing virtue), §4 (Inferno circle and its punishment) "
-    "and §5 (Purgatorio terrace). A moral taxonomy and a literary punishment "
-    "scheme, not canon law — this deployment holds no canon-law text, and "
-    "none has been invented to fill the gap."
-)
-DANTE_MAPPING_NOTE = (
-    "docs/03 §4 states in its own words that the Inferno's circles and the "
-    "Catholic seven do not correspond one-to-one. The circle recorded here is "
-    "that document's mapping, not a claim that Dante wrote the sin into that "
-    "circle."
-)
-
-EUROPEAN_STATUTES = [
-    {"code": "EU-DS-01", "ordinal": 1, "polarity": "OFFENCE",
-     "title_zh": "傲慢", "title_en": "Pride",
-     "text_zh": "自视过高，不敬上帝。", "text_en": "Thinking too highly of oneself; irreverence toward God.",
-     "payload": {"latin": "Superbia", "opposing_virtue_zh": "谦逊",
-                 "dante_circle": 1, "inferno_punishment_zh": "永无止境的追求",
-                 "purgatorio_terrace": 1, "purgatorio_purgation_zh": "重生轻"},
-     "notes": [DANTE_MAPPING_NOTE]},
-    {"code": "EU-DS-02", "ordinal": 2, "polarity": "OFFENCE",
-     "title_zh": "贪婪", "title_en": "Greed",
-     "text_zh": "贪得无厌，敛财不止。", "text_en": "Insatiable acquisition; hoarding without end.",
-     "payload": {"latin": "Avaritia", "opposing_virtue_zh": "慷慨",
-                 "dante_circle": 4, "inferno_punishment_zh": "互相推撞，重物压身",
-                 "purgatorio_terrace": 2, "purgatorio_purgation_zh": "被火枷锁"},
-     "notes": [DANTE_MAPPING_NOTE]},
-    {"code": "EU-DS-03", "ordinal": 3, "polarity": "OFFENCE",
-     "title_zh": "淫欲", "title_en": "Lust",
-     "text_zh": "不正当的性欲望。", "text_en": "Disordered sexual desire.",
-     "payload": {"latin": "Luxuria", "opposing_virtue_zh": "贞洁",
-                 "dante_circle": 2, "inferno_punishment_zh": "狂风呼啸吹卷",
-                 "purgatorio_terrace": 3, "purgatorio_purgation_zh": "火焰中行走"},
-     "notes": [DANTE_MAPPING_NOTE]},
-    {"code": "EU-DS-04", "ordinal": 4, "polarity": "OFFENCE",
-     "title_zh": "愤怒", "title_en": "Wrath",
-     "text_zh": "无法控制情绪，报复心强。", "text_en": "Ungoverned temper; a vengeful spirit.",
-     "payload": {"latin": "Ira", "opposing_virtue_zh": "温柔",
-                 "dante_circle": 5, "inferno_punishment_zh": "在黑水里互相撕咬",
-                 "purgatorio_terrace": 4, "purgatorio_purgation_zh": "被烟熏"},
-     "notes": [DANTE_MAPPING_NOTE]},
-    {"code": "EU-DS-05", "ordinal": 5, "polarity": "OFFENCE",
-     "title_zh": "懒惰", "title_en": "Sloth",
-     "text_zh": "属灵的懈怠，逃避责任。", "text_en": "Spiritual listlessness; evading one's duties.",
-     "payload": {"latin": "Acedia", "opposing_virtue_zh": "热心",
-                 "dante_circle": 3, "inferno_punishment_zh": "躺卧臭水烂泥",
-                 "purgatorio_terrace": 5, "purgatorio_purgation_zh": "奔跑呼喊"},
-     "notes": [
-         DANTE_MAPPING_NOTE,
-         "docs/03 §4 gives sloth the third circle but annotates the punishment "
-         "'（贪食）' — it is gluttony's. Sloth has no circle of its own in the "
-         "Inferno; the shared entry is recorded as the document has it rather "
-         "than resolved.",
-     ]},
-    {"code": "EU-DS-06", "ordinal": 6, "polarity": "OFFENCE",
-     "title_zh": "暴食", "title_en": "Gluttony",
-     "text_zh": "放纵食欲，沉迷享乐。", "text_en": "Indulging appetite; sunk in pleasure.",
-     "payload": {"latin": "Gula", "opposing_virtue_zh": "节制",
-                 "dante_circle": 3, "inferno_punishment_zh": "躺卧臭水烂泥",
-                 "purgatorio_terrace": 6, "purgatorio_purgation_zh": "饥渴交加"},
-     "notes": [DANTE_MAPPING_NOTE,
-               "Shares the third circle with EU-DS-05 in docs/03 §4."]},
-    {"code": "EU-DS-07", "ordinal": 7, "polarity": "OFFENCE",
-     "title_zh": "嫉妒", "title_en": "Envy",
-     "text_zh": "见他人的好运就难受。", "text_en": "Grieving at another's good fortune.",
-     "payload": {"latin": "Invidia", "opposing_virtue_zh": "仁爱",
-                 "dante_circle": 8, "inferno_punishment_zh": "与馋媚者、邪术师同罚，被铁笼囚禁",
-                 "purgatorio_terrace": 7, "purgatorio_purgation_zh": "被冷水浸泡"},
-     "notes": [DANTE_MAPPING_NOTE,
-               "docs/03 §4 notes that envy occupies no circle of its own: the "
-               "envious are placed in the eighth circle's Malebolge alongside "
-               "flatterers and sorcerers."]},
-]
-
-# CLI label -> (corpus, rows). Egyptian is absent on purpose: its corpus is
-# derived from the assessors, not transcribed. See _seed_derived_statutes.
-CIVILIZATION_STATUTES = {
-    "chinese": ("HELL_LAW", HELL_LAW_SOURCE, CHINESE_STATUTES),
-    "european": ("DEADLY_SIN", DEADLY_SIN_SOURCE, EUROPEAN_STATUTES),
-}
+# CLI label -> (corpus, source, rows) for a corpus TRANSCRIBED into this file.
+# Empty, and not because transcription is unsupported: `_seed_statutes` below
+# is the intact mechanism, exercised directly by
+# tests/test_judgment_statutes.py so it cannot rot while unused. It is empty
+# because this deployment currently holds no document with the shape a
+# statute corpus claims. Egyptian is absent for the opposite reason — its
+# corpus is derived rather than transcribed. See _seed_derived_statutes.
+CIVILIZATION_STATUTES = {}
 
 # What the Egyptian derivation reads off each assessor, and where it files the
 # result. `NEGATIVE_CONFESSION_FIELD` is stored on every derived row
@@ -1099,12 +972,19 @@ class Command(BaseCommand):
     # Statutes
     # ------------------------------------------------------------------
     def _seed_statutes(self, civilization, tenant, corpus, source, rows, do_update, stats):
-        """Seed one transcribed corpus — the Chinese 冥律 or the European seven.
+        """Seed one corpus transcribed from a document into CIVILIZATION_STATUTES.
 
-        Matched on `code`, which is why the codes are stable and mnemonic
-        (CN-HL-O01, EU-DS-03) rather than generated: a citation recorded
-        against an article has to survive a re-seed, and a re-numbering would
-        silently repoint every judgment that cited it.
+        No corpus is currently transcribed — CIVILIZATION_STATUTES is empty and
+        this method has no caller in `handle`. It is kept, not deleted: the
+        withdrawal above removed two fabricated tables, not the ability to seed
+        a real one, and the next corpus (功過格, if it verifies) arrives through
+        exactly this path. tests/test_judgment_statutes.py calls it directly
+        with a throwaway row so an unused path cannot quietly break.
+
+        Matched on `code`, which is why real codes should be stable and
+        mnemonic rather than generated: a citation recorded against an article
+        has to survive a re-seed, and a re-numbering would silently repoint
+        every judgment that cited it.
 
         `code` alone, not `(tenant, code)` — the same shape realms use with
         `realm_code`. The uniqueness constraint on the model is per-tenant, but
