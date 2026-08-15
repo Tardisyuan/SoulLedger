@@ -46,7 +46,7 @@ def main():
 
     # Get realm IDs
     hall = Realm.objects.get(realm_code='EG_HALL_TWO_TRUTHS')
-    devourer = Realm.objects.get(realm_code='EG_DEVOURER')
+    devourer = Realm.objects.get(realm_code='EG_ANNIHILATION')
 
     # Get first tenant (system tenant)
     tenant = Tenant.objects.first()

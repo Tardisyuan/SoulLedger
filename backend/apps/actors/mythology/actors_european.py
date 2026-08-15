@@ -224,3 +224,26 @@ EUROPEAN_ACTORS = [
      "belongs to a cosmology with reincarnation in it. Dante pairs it with "
      "Eunoe, which this system does not model"),
 ]
+
+# --------------------------------------------------------------------------
+# OTHER RENDERINGS OF THESE NAMES THAT THIS REPOSITORY ACTUALLY USES.
+#
+# Same table and same rules as EGYPTIAN_ACTOR_ALIASES — read its header for what
+# qualifies and why this is not a fifth name column.
+EUROPEAN_ACTOR_ALIASES = {
+    # `Πλούτων`/`Pluto` and `Hades` are one god, and this repository had already
+    # concluded so before this table existed: `consolidate_eu_pantheon` merges a
+    # `Pluto` row into `Hades`, and the Hades row above records the reasoning
+    # (Plouton is a Greek cult title from πλοῦτος, wealth — Plato, Cratylus
+    # 403a — of which Latin Pluto is a transcription; Rome's own underworld gods
+    # are Dis Pater and Orcus). What that conclusion did not have was anywhere
+    # to live except a management command's `MERGE_NAMES` tuple and a comment.
+    # It lives here now, so a lookup handed "Pluto" finds Hades on the strength
+    # of recorded data rather than because somebody remembered to run a merge.
+    #
+    # Recording the alias does NOT resurrect Pluto and does not change what
+    # `consolidate_eu_pantheon` does: that command matches on `name` exactly, no
+    # Pluto row is seeded, and on a legacy database that still has one the
+    # resolver's column pass finds it before this alias is ever consulted.
+    "Hades": ["Pluto"],
+}

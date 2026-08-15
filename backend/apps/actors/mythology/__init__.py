@@ -173,10 +173,14 @@ against UCL's Maiherperi papyrus, and it stays.
 """
 from apps.actors.mythology.actors_chinese import CHINESE_ACTORS
 from apps.actors.mythology.actors_egyptian import (
+    EGYPTIAN_ACTOR_ALIASES,
     EGYPTIAN_ACTORS,
     EGYPTIAN_ASSESSORS,
 )
-from apps.actors.mythology.actors_european import EUROPEAN_ACTORS
+from apps.actors.mythology.actors_european import (
+    EUROPEAN_ACTOR_ALIASES,
+    EUROPEAN_ACTORS,
+)
 from apps.actors.mythology.realms import (
     CHINESE_REALMS,
     EGYPTIAN_REALMS,
@@ -280,6 +284,17 @@ CIVILIZATION_ASSESSORS = {
     "egyptian": EGYPTIAN_ASSESSORS,
 }
 
+# CLI label -> {Actor.name: [other written forms of the same being]}. The rules
+# for what qualifies — and what is a canon question wearing an alias's clothes —
+# are in EGYPTIAN_ACTOR_ALIASES' header in actors_egyptian.py; the European
+# table follows them. The Chinese cast has no entry: its `name` and `name_zh`
+# are the same string on every row and nothing in this repository writes a
+# second rendering of any of the ten kings.
+CIVILIZATION_ACTOR_ALIASES = {
+    "european": EUROPEAN_ACTOR_ALIASES,
+    "egyptian": EGYPTIAN_ACTOR_ALIASES,
+}
+
 # CLI label -> (corpus, source, rows) for a corpus TRANSCRIBED into this file.
 # Egyptian is absent for the opposite reason to the other two — its corpus is
 # derived rather than transcribed, see _seed_derived_statutes.
@@ -301,15 +316,18 @@ __all__ = [
     "CHINESE_ACTORS",
     "CHINESE_REALMS",
     "CHINESE_STATUTES",
+    "CIVILIZATION_ACTOR_ALIASES",
     "CIVILIZATION_ASSESSORS",
     "CIVILIZATION_DATA",
     "CIVILIZATION_STATUTES",
     "CORPUS_PROVENANCE",
     "DEADLY_SIN_SOURCE",
     "DERIVED",
+    "EGYPTIAN_ACTOR_ALIASES",
     "EGYPTIAN_ACTORS",
     "EGYPTIAN_ASSESSORS",
     "EGYPTIAN_REALMS",
+    "EUROPEAN_ACTOR_ALIASES",
     "EUROPEAN_ACTORS",
     "EUROPEAN_REALMS",
     "EUROPEAN_STATUTES",

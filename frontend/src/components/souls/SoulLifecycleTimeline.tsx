@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
+import { ANNIHILATION_REALM_CODE } from "@/src/lib/realmCodes";
 import type { Soul } from "@/lib/api/souls";
 import type { SoulEvent } from "@/lib/api/events";
 import type { Judgment } from "@/lib/api/judgment";
@@ -170,13 +171,20 @@ export function SoulLifecycleTimeline({
     );
   }, [isSettled, dispositions]);
 
-  // EG_DEVOURER is the one realm_code DispositionService routes a failed
-  // Egyptian soul to (backend/apps/disposition/services.py) — Ammit's realm,
+  // ANNIHILATION_REALM_CODE is the one realm_code DispositionService routes a
+  // failed Egyptian soul to (backend/apps/disposition/services.py) —
   // annihilation rather than a destination. Neither Disposition nor Realm
   // carries a dedicated "nobody survives this" flag today, so this reads the
   // one concrete signal that exists rather than inventing a new field for a
   // purely presentational distinction.
-  const isAnnihilated = terminalDisposition?.realm_code === "EG_DEVOURER";
+  //
+  // The literal deliberately lives in src/lib/realmCodes.ts and not here: it
+  // is a backend identifier, and it was hard-coded at this line until the
+  // EG_DEVOURER -> EG_ANNIHILATION rename. A backend-only rename would have
+  // stopped this branch matching without failing anything. See that file, and
+  // backend/tests/test_annihilation_realm_code.py, which compares the two
+  // sides.
+  const isAnnihilated = terminalDisposition?.realm_code === ANNIHILATION_REALM_CODE;
 
   const openJudgment = useMemo(() => judgments.find((j) => !j.is_final), [judgments]);
 

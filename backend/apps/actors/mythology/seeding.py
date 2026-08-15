@@ -9,7 +9,7 @@ point Django discovers.
 
 Moved verbatim out of ``seed_mythology.py``.
 """
-from apps.actors.models import Actor, ActorRole
+from apps.actors.models import ALIASES_KEY, Actor, ActorRole
 from apps.actors.mythology import TENANTS
 from apps.actors.mythology.actors_egyptian import (
     ASSESSOR_PAPYRUS,
@@ -33,11 +33,17 @@ REALM_FIELDS = (
 ACTOR_FIELDS = (
     "name_zh", "name_en", "name_egy", "role", "realm",
     "title", "title_zh", "title_en", "title_egy", "description",
+    # `powers_json` is in the comparison set for ordinary actors too, because
+    # it is where a row's recorded aliases live (see EGYPTIAN_ACTOR_ALIASES) and
+    # an actor whose set of names changed is a changed row. It was previously
+    # compared for assessors only, which meant `--update` could not have
+    # propagated an alias edit to an existing database.
+    "powers_json",
 )
-# Assessors carry the same columns plus the structured payload — an assessor
-# whose assessor_index or citation drifted is a changed row, so `--update` has
-# to see it.
-ASSESSOR_FIELDS = (*ACTOR_FIELDS, "powers_json")
+# Assessors carry the same columns; their `powers_json` additionally holds
+# assessor_index, home_place and the confession clause, and an assessor whose
+# index or citation drifted is a changed row that `--update` has to see.
+ASSESSOR_FIELDS = ACTOR_FIELDS
 # `source` and `source_notes` are in the comparison set deliberately: an
 # article whose provenance changed is a changed article, and provenance is the
 # part of a statute this feature exists to keep honest.
@@ -177,7 +183,28 @@ class MythologySeeder:
     # ------------------------------------------------------------------
     # Actors
     # ------------------------------------------------------------------
-    def _seed_actors(self, civilization, tenant, rows, do_update, stats):
+    def _seed_actors(self, civilization, tenant, rows, do_update, stats, aliases=None):
+        """Seed one civilization's principals.
+
+        `aliases` is `{Actor.name: [other written forms]}` — the correspondence
+        between two spellings of one being, recorded rather than inferred. See
+        the header of EGYPTIAN_ACTOR_ALIASES for why it lives in `powers_json`
+        and not in a fifth name column, and `WorkflowService._resolve_approver`
+        for who reads it back.
+        """
+        aliases = aliases or {}
+
+        # An alias table naming a row this cast does not have is a typo that
+        # would otherwise be silent: the alias is simply never written, and the
+        # lookup that was supposed to use it falls through to the behaviour it
+        # was meant to replace. Say so rather than seeding around it.
+        unknown = sorted(set(aliases) - {row[0] for row in rows})
+        if unknown:
+            self.stdout.write(self.style.ERROR(
+                f"  [warn] alias table names actor(s) not in this cast: "
+                f"{unknown} — those aliases are not seeded"
+            ))
+
         # Realm FKs are resolved by code against whatever is in the DB now —
         # including the realms this same run just wrote inside this transaction.
         realm_by_code = {r.realm_code: r for r in Realm.all_objects.filter(civilization=civilization)}
@@ -202,6 +229,15 @@ class MythologySeeder:
                 "title_en": title_en,
                 "title_egy": title_egy,
                 "description": description,
+                # `{}` and not "leave whatever is there" for an actor with no
+                # aliases: `powers_json` is compared field-wise, so a value has
+                # to be supplied for every row or an aliasless actor would
+                # compare its `{}` against a missing key and read as changed on
+                # every run. `{}` is also the model default, so a freshly
+                # seeded database and a migrated one agree.
+                "powers_json": (
+                    {ALIASES_KEY: list(aliases[name])} if name in aliases else {}
+                ),
             }
             self._upsert(
                 model=Actor,
