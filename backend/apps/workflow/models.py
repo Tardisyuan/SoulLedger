@@ -362,12 +362,14 @@ class ApprovalNode(AuditUserFields, models.Model):
         with an empty ``approver_role`` is the same shape. ``SYSTEM`` designates
         nobody by definition.
 
-        ``approve_node`` uses this to decide whether the identity check applies
-        at all: where an approver is named, ``can_approve`` is authoritative;
-        where none is, the node stays governed by the ``workflow.approve``
-        codename permission as it always was. Splitting it this way is what lets
-        the guard be enforced without freezing the in-flight workflows, whose
-        nodes ``WorkflowService`` creates as ``SYSTEM``.
+        This no longer decides *whether* the identity check runs —
+        ``can_approve`` is now ``approve_node``'s only gate, and it refuses an
+        undesignated node like it refuses everything else it cannot verify.
+        What this property still decides is which of two refusals the caller is
+        told about: "you are not the approver" and "this node names no approver,
+        so nobody is" are different problems with different fixes, and
+        collapsing them into one message leaves an operator re-deriving which
+        one they hit.
         """
         if self.approver_type == "ACTOR":
             return self.approver_actor_id is not None
@@ -403,6 +405,30 @@ class ApprovalNode(AuditUserFields, models.Model):
         visibility one. An admin who must move a stuck flow has
         ``ApprovalWorkflowViewSet.escalate``, which demands a written reason and
         writes an ``AuditLog`` — the override stays available, but visible.
+
+        **A node that designates nobody answers False, and that is now a
+        refusal rather than a formality.** Until
+        ``0011_backfill_ten_court_approvers`` this method's verdict on such a
+        node was never acted on: ``approve_node`` consulted it only for nodes
+        that named someone, and every node in the live database was ``SYSTEM``.
+        Making it the sole gate means an undesignated node cannot be approved by
+        anyone at all. That is deliberate and it is the only answer that is not
+        a guess: the question this method is asked is "is this user the approver
+        this node names", and for a node that names no one the honest answer is
+        not "yes, anyone" — it is "there is nobody to be". The alternatives were
+        both worse. Falling back to the ``workflow.approve`` codename is what
+        the code did before and is precisely the hole being closed: every JUDGE
+        and ADMIN holds it. Falling back to role would let the field default
+        (``approver_type="ACTOR"``, ``approver_actor=NULL``) silently mean
+        "anyone with the right role", which nobody wrote down anywhere.
+
+        Such a node is not stuck, it is *routed*: ``escalate`` moves it past,
+        with a written reason and an ``AuditLog`` row naming who overrode what.
+        A flow whose steps do not say who decides them should cost a paper
+        trail to run, not run silently. ``WorkflowService`` no longer creates
+        undesignated nodes where the template names an approver, so this is the
+        rare case rather than the normal one — 0 of the 30 nodes in the live
+        data are left undesignated after the backfill.
         """
         if self.status != NodeStatus.PENDING:
             return False

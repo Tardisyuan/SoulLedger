@@ -282,7 +282,22 @@ class TestApprovalWorkflowAPI:
         )
 
     @pytest.fixture
-    def workflow(self, soul, cn_tenant):
+    def workflow(self, soul, cn_tenant, admin_user):
+        # The node designates `admin_user`'s own actor. It used to designate
+        # nobody (approver_type defaults to ACTOR with approver_actor NULL),
+        # which `approve_node` waved through on the `workflow.approve` codename
+        # alone — the hole `workflow/0011_backfill_ten_court_approvers` and the
+        # gate in `views.approve_node` close. With `can_approve` as the only
+        # gate an undesignated node is refused, so leaving this blank would make
+        # test_approve_node assert 403 for a reason it is not about.
+        from apps.actors.models import Actor
+
+        approver = Actor.objects.create(
+            name="测试审批人", civilization="CHINESE", role="JUDGE", tenant=cn_tenant
+        )
+        admin_user.actor = approver
+        admin_user.save(update_fields=["actor"])
+
         wf = ApprovalWorkflow.objects.create(
             soul=soul,
             workflow_name="测试流程",
@@ -296,6 +311,8 @@ class TestApprovalWorkflowAPI:
             node_order=1,
             node_type="TRIAL",
             status=NodeStatus.PENDING,
+            approver_type="ACTOR",
+            approver_actor=approver,
         )
         wf.current_node = wf.nodes.first()
         wf.status = ApprovalWorkflowStatus.IN_PROGRESS

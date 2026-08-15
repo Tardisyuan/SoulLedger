@@ -290,16 +290,33 @@ class TestWorkflowAdvance:
 # -- Workflow approve_node action ---------------------------------------------
 @pytest.mark.django_db
 class TestWorkflowApproveNode:
-    """ApprovalWorkflow.approve_node action."""
+    """ApprovalWorkflow.approve_node action — the non-identity paths.
+
+    Every node built here designates `self.actor`, which is `self.user`'s own
+    actor. It did not used to: the nodes were created with the model defaults
+    (`approver_type="ACTOR"`, `approver_actor=NULL`), which designated nobody
+    and, until `can_approve` became the only gate, was approvable by anyone
+    holding the `workflow.approve` codename. Now that undesignated nodes are
+    refused, a fixture that leaves the approver blank would make every test in
+    this class assert 403 for a reason none of them is about — 404 for a
+    missing node, 400 for a missing verdict, and so on. Designating the caller
+    keeps each test measuring its own subject.
+    """
 
     @pytest.fixture(autouse=True)
     def setup(self, db):
         clear_current_tenant()
+        from apps.actors.models import Actor
+
         self.tenant = Tenant.objects.get_or_create(
             code="AN_T1", defaults={"display_name": "Approve Tenant"}
         )[0]
+        self.actor = Actor.objects.create(
+            name="审批人", civilization="CHINESE", role="JUDGE", tenant=self.tenant
+        )
         self.user = User.objects.create_user(
-            username="anuser1", password="test123", role="ADMIN", tenant=self.tenant
+            username="anuser1", password="test123", role="ADMIN",
+            tenant=self.tenant, actor=self.actor,
         )
         self.soul = Soul.objects.create(name="Appr Soul", tenant=self.tenant)
         self.client = _jwt_client(self.user, self.tenant)
@@ -318,7 +335,13 @@ class TestWorkflowApproveNode:
         node_pks = []
         for name, order, *rest in node_statuses:
             status_val = rest[0] if rest else None
-            data = {"workflow": wf_pk, "node_name": name, "node_order": order}
+            data = {
+                "workflow": wf_pk,
+                "node_name": name,
+                "node_order": order,
+                "approver_type": "ACTOR",
+                "approver_actor": str(self.actor.pk),
+            }
             if status_val:
                 data["status"] = status_val
             resp = self.client.post(f"{NODES}/", data, format="json")
@@ -531,22 +554,41 @@ class TestApproveNodeApproverIdentity:
 
         assert ApprovalNode.objects.get(pk=node_pk).status == NodeStatus.PENDING
 
-    def test_actor_node_without_designated_actor_keeps_codename_gate(self):
-        """`approver_type=ACTOR` with `approver_actor=NULL` designates nobody.
+    def test_actor_node_without_designated_actor_is_denied(self):
+        """`approver_type=ACTOR` with `approver_actor=NULL` designates nobody,
+        and is now refused rather than waved through.
 
-        This is the *model default* for a node created through the API, and it
-        is what every pre-existing node fixture in this file uses. There is no
-        identity to compare, so the node stays governed by the `workflow.approve`
-        codename permission exactly as before — the identity guard only engages
-        where an approver was actually named. `can_approve` still reports False
-        here (see the unit test below); the view does not treat that as a veto
-        for an unconfigured node.
+        This is the *model default* for a node created through the API. It used
+        to fall back to the `workflow.approve` codename, which every JUDGE and
+        ADMIN holds — i.e. the field default silently meant "anyone". There is
+        no identity to compare here, so the only answer that is not a guess is
+        no; `escalate` is the way past, and it leaves an AuditLog.
         """
         client = _jwt_client(self.user_no_actor, self.tenant)
         wf_pk, node_pk = self._make_node(client, approver_actor=None)
 
         resp = self._approve(client, wf_pk, node_pk)
-        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert resp.status_code == status.HTTP_403_FORBIDDEN, resp.data
+        # Same message a SYSTEM node gets: `approver_type=ACTOR` with a NULL
+        # actor is the same fact wearing a different label — the node names
+        # nobody — and the fix is the same, configure an approver or escalate.
+        assert resp.data["error"] == "Node designates no approver"
+
+        from apps.workflow.models import ApprovalNode, NodeStatus
+
+        node = ApprovalNode.objects.get(pk=node_pk)
+        assert node.status == NodeStatus.PENDING
+        assert node.verdict == ""
+        assert node.approver_id is None
+
+    def test_actor_node_with_matching_actor_is_still_allowed(self):
+        """The counterpart to the test above, in the same shape: the denial is
+        about *who*, not about the branch being unreachable."""
+        client = _jwt_client(self.user_designated, self.tenant)
+        wf_pk, node_pk = self._make_node(
+            client, approver_actor=self.actor_designated
+        )
+        assert self._approve(client, wf_pk, node_pk).status_code == status.HTTP_200_OK
 
     def test_role_node_requires_matching_role(self):
         """The ROLE branch is enforced through the same call site."""
@@ -559,16 +601,69 @@ class TestApproveNodeApproverIdentity:
         resp = self._approve(setup_client, wf_pk, node_pk)
         assert resp.status_code == status.HTTP_403_FORBIDDEN, resp.data
 
-    def test_system_node_still_approvable(self):
-        """SYSTEM nodes are what `WorkflowService` actually creates, and every
-        in-flight workflow in the live data sits on one. They designate no
-        approver, so they keep the codename gate — tightening this would freeze
-        those workflows and is a separate product decision."""
+    def test_system_node_is_denied_with_its_own_message(self):
+        """SYSTEM designates nobody by definition, so nobody can satisfy it.
+
+        This used to return 200: the guard was scoped to nodes that named an
+        approver and `WorkflowService` created every node as SYSTEM, so the
+        check refused nothing that existed. `0011_backfill_ten_court_approvers`
+        gave the real nodes their kings and `WorkflowService` now sets them at
+        creation, so a SYSTEM node is a misconfiguration rather than the norm —
+        and it says so, in a message distinct from "you are not the approver",
+        because the two are fixed differently.
+        """
         client = _jwt_client(self.user_no_actor, self.tenant)
         wf_pk, node_pk = self._make_node(client, approver_type="SYSTEM")
 
         resp = self._approve(client, wf_pk, node_pk)
+        assert resp.status_code == status.HTTP_403_FORBIDDEN, resp.data
+        assert resp.data["error"] == "Node designates no approver"
+
+        from apps.workflow.models import ApprovalNode, NodeStatus
+
+        node = ApprovalNode.objects.get(pk=node_pk)
+        assert node.status == NodeStatus.PENDING
+        assert node.verdict == ""
+        assert node.approver_id is None
+        assert node.decided_at is None
+
+    def test_system_node_is_denied_to_a_judge_with_an_actor_too(self):
+        """Not merely refused because *this* caller had no actor. A JUDGE with
+        a perfectly good Actor is refused as well — SYSTEM has no approver for
+        anyone to be."""
+        client = _jwt_client(self.user_impostor, self.tenant)
+        wf_pk, node_pk = self._make_node(client, approver_type="SYSTEM")
+
+        resp = self._approve(client, wf_pk, node_pk)
+        assert resp.status_code == status.HTTP_403_FORBIDDEN, resp.data
+
+    def test_denied_node_can_still_be_moved_by_escalate(self):
+        """The refusal is a route, not a dead end. `escalate` is the sanctioned
+        way past an undesignated node and it costs an AuditLog row."""
+        from apps.audit.models import AuditLog
+
+        client = _jwt_client(self.user_no_actor, self.tenant)
+        wf_pk, node_pk = self._make_node(client, approver_type="SYSTEM")
+        # A second node to advance onto.
+        client.post(
+            f"{NODES}/",
+            {"workflow": wf_pk, "node_name": "下一节点", "node_order": 2,
+             "approver_type": "SYSTEM"},
+            format="json",
+        )
+
+        assert self._approve(client, wf_pk, node_pk).status_code == (
+            status.HTTP_403_FORBIDDEN
+        )
+
+        before = AuditLog.objects.filter(resource="workflow.escalate").count()
+        resp = client.post(
+            f"{WORKFLOWS}/{wf_pk}/escalate/",
+            {"reason": "该节点未指定审批人，需人工推进"},
+            format="json",
+        )
         assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert AuditLog.objects.filter(resource="workflow.escalate").count() == before + 1
 
 
 @pytest.mark.django_db
@@ -935,3 +1030,271 @@ class TestCreateFromJudgmentTemplateTenantScoping:
         assert workflow.workflow_name != "租户B的模板"
         assert workflow.workflow_name == expected_default_name
         assert workflow.tenant_id == self.tenant_a.id
+
+
+# -- The real-data shape: a SYSTEM node created by WorkflowService ------------
+@pytest.mark.django_db
+class TestServiceCreatedNodeApproverIdentity:
+    """The gate as it applies to the nodes that actually exist.
+
+    `4ceffe8` scoped the identity check to nodes that *designate* an approver,
+    and `WorkflowService` creates every node as `SYSTEM` — measured against the
+    live database on 2026-08-15: 30 ApprovalNodes, 30 of them SYSTEM, 0 ACTOR,
+    0 ROLE, all PENDING, all with `approver_actor IS NULL`, spread over 3
+    in-flight 十殿审判流程 workflows (a 4th workflow, "DebugTpl", has no nodes
+    at all). So the identity comparison, correct as it is, could not refuse a
+    single row in production.
+
+    This class builds that exact shape — `create_from_judgment` for a CN_DIYU
+    soul, ten courts, node 1 belonging to 秦广王 — and asks whether the wrong
+    king can decide it.
+    """
+
+    @pytest.fixture(autouse=True)
+    def setup(self, db):
+        clear_current_tenant()
+        from apps.actors.models import Actor
+
+        self.tenant = Tenant.objects.get_or_create(
+            code="CN_DIYU", defaults={"display_name": "Chinese Diyu"}
+        )[0]
+        self.soul = Soul.objects.create(name="十殿受审魂", tenant=self.tenant)
+
+        # The two kings this test needs. Names are the seeder's `name` column
+        # (apps/actors/.../seed_mythology.py CHINESE_ACTORS), which is also what
+        # the 十殿审判流程 template nodes are named after.
+        self.qinguang = Actor.objects.create(
+            name="秦广王", civilization="CHINESE", role="JUDGE", tenant=self.tenant
+        )
+        self.chujiang = Actor.objects.create(
+            name="楚江王", civilization="CHINESE", role="JUDGE", tenant=self.tenant
+        )
+
+        self.user_qinguang = User.objects.create_user(
+            username="wf_qinguang", password="x", role="JUDGE",
+            tenant=self.tenant, actor=self.qinguang,
+        )
+        self.user_chujiang = User.objects.create_user(
+            username="wf_chujiang", password="x", role="JUDGE",
+            tenant=self.tenant, actor=self.chujiang,
+        )
+
+    def _workflow(self):
+        from apps.judgment.models import Judgment
+        from apps.souls.models import Civilization
+        from apps.workflow.services import WorkflowService
+
+        judgment = Judgment.objects.create(
+            soul=self.soul,
+            civilization=Civilization.CHINESE,
+            court="第一殿",
+            verdict="PASSED",
+            is_final=True,
+            tenant=self.tenant,
+        )
+        return WorkflowService.create_from_judgment(judgment)
+
+    def _approve(self, client, workflow, node, verdict="PASSED"):
+        return client.post(
+            f"{WORKFLOWS}/{workflow.pk}/approve_node/",
+            {"verdict": verdict, "node_id": str(node.pk)},
+            format="json",
+        )
+
+    def test_service_designates_the_king_each_court_names(self):
+        """`WorkflowService` must set the approver at creation.
+
+        Backfilling the existing rows without this would have closed the hole
+        for exactly as long as it took someone to create the next workflow.
+        """
+        workflow = self._workflow()
+        node = workflow.nodes.get(node_order=1)
+        assert node.node_name == "秦广王 · 分流"
+        assert node.approver_type == "ACTOR"
+        assert node.approver_actor_id == self.qinguang.pk
+
+        second = workflow.nodes.get(node_order=2)
+        assert second.approver_actor_id == self.chujiang.pk
+
+    def test_uncast_king_leaves_the_node_system(self):
+        """The other eight kings are not seeded in this tenant, so their nodes
+        get no approver — and no Actor is invented for them either."""
+        from apps.actors.models import Actor
+
+        before = Actor.objects.count()
+        workflow = self._workflow()
+        assert Actor.objects.count() == before
+        assert workflow.nodes.filter(approver_type="SYSTEM").count() == 8
+
+    def test_wrong_king_cannot_decide_first_court(self):
+        """THE regression test, in the shape the live data actually has.
+
+        Before this change the same call returned 200: the node was SYSTEM (as
+        all 30 live nodes were), `approve_node` only consulted `can_approve`
+        for nodes that designated someone, and so 楚江王 decided 秦广王's court
+        and the workflow advanced to the second.
+        """
+        from apps.workflow.models import ApprovalWorkflowStatus, NodeStatus
+
+        workflow = self._workflow()
+        node = workflow.nodes.get(node_order=1)
+        assert node.node_name == "秦广王 · 分流"
+
+        client = _jwt_client(self.user_chujiang, self.tenant)
+        resp = self._approve(client, workflow, node)
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN, (
+            f"the wrong king decided the first court: {resp.status_code} {resp.data}"
+        )
+        node.refresh_from_db()
+        assert node.status == NodeStatus.PENDING
+        assert node.verdict == ""
+        assert node.approver_id is None
+        assert node.decided_at is None
+
+        # And the flow did not move on behind the refusal.
+        workflow.refresh_from_db()
+        assert workflow.current_node_id == node.pk
+        assert workflow.status == ApprovalWorkflowStatus.IN_PROGRESS
+
+    def test_the_right_king_can_decide_his_own_court(self):
+        """The guard must not break the legitimate path — 秦广王 decides the
+        first court, and the decision is recorded under his user."""
+        from apps.workflow.models import NodeStatus
+
+        workflow = self._workflow()
+        node = workflow.nodes.get(node_order=1)
+
+        client = _jwt_client(self.user_qinguang, self.tenant)
+        resp = self._approve(client, workflow, node)
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+
+        node.refresh_from_db()
+        assert node.status == NodeStatus.APPROVED
+        assert node.verdict == "PASSED"
+        assert node.approver_id == self.user_qinguang.pk
+
+    def test_a_king_cannot_run_ahead_to_a_later_court(self):
+        """秦广王 holds `workflow.approve` and is a legitimate approver *of his
+        own node*. That must not let him decide the second court's."""
+        from apps.workflow.models import NodeStatus
+
+        workflow = self._workflow()
+        second = workflow.nodes.get(node_order=2)
+
+        client = _jwt_client(self.user_qinguang, self.tenant)
+        resp = self._approve(client, workflow, second)
+        assert resp.status_code == status.HTTP_403_FORBIDDEN, resp.data
+
+        second.refresh_from_db()
+        assert second.status == NodeStatus.PENDING
+        assert second.approver_id is None
+
+    def test_a_king_without_a_linked_user_actor_is_denied(self):
+        """A user with no Actor has no identity to compare — deny, never fall
+        through to role. 18 of the 100 users in the live data have actor=NULL,
+        13 of them ADMIN, so allow-when-unknown would be the common case."""
+        workflow = self._workflow()
+        node = workflow.nodes.get(node_order=1)
+
+        rootless = User.objects.create_user(
+            username="wf_no_actor", password="x", role="ADMIN",
+            tenant=self.tenant, actor=None,
+        )
+        client = _jwt_client(rootless, self.tenant)
+        resp = self._approve(client, workflow, node)
+        assert resp.status_code == status.HTTP_403_FORBIDDEN, resp.data
+
+
+# -- The backfill basis, cross-checked ----------------------------------------
+@pytest.mark.django_db
+class TestTemplateApproverBasis:
+    """`WORKFLOW_TEMPLATES` and `workflow/0011`'s frozen table must not drift.
+
+    The migration deliberately keeps its own copy of the (node_name,
+    court_code, node_order) -> actor table: a migration records what was true
+    when it ran, and the template is live code. Two copies with no comparison
+    between them is how this repo's numbering ended up in five conflicting
+    places, so the comparison is here.
+    """
+
+    def test_every_template_node_either_names_an_approver_or_is_listed(self):
+        """No node may be silently approver-less. Either the template says who
+        decides it, or `TEMPLATE_NODES_WITHOUT_AN_APPROVER` says why nobody
+        can — never both and never neither. Adding a node without doing one of
+        the two fails here rather than shipping a step nobody can approve."""
+        from apps.workflow.services import (
+            TEMPLATE_NODES_WITHOUT_AN_APPROVER,
+            WORKFLOW_TEMPLATES,
+        )
+
+        unexplained, doubly_claimed = [], []
+        seen = set()
+        for template in WORKFLOW_TEMPLATES.values():
+            for node in template["nodes"]:
+                seen.add(node["name"])
+                has_actor = bool(node.get("actor"))
+                listed = node["name"] in TEMPLATE_NODES_WITHOUT_AN_APPROVER
+                if not has_actor and not listed:
+                    unexplained.append(node["name"])
+                if has_actor and listed:
+                    doubly_claimed.append(node["name"])
+
+        assert unexplained == [], (
+            f"template nodes with no approver and no recorded reason: "
+            f"{unexplained}. Give them an `actor`, or record why they cannot "
+            f"have one in TEMPLATE_NODES_WITHOUT_AN_APPROVER."
+        )
+        assert doubly_claimed == [], (
+            f"nodes both designating an approver and listed as having none: "
+            f"{doubly_claimed}"
+        )
+
+        # The other direction: no stale entries explaining nodes that are gone.
+        # 审批节点 is built inline in create_from_judgment's fallback, so it is
+        # the one entry with no row in WORKFLOW_TEMPLATES.
+        stale = sorted(set(TEMPLATE_NODES_WITHOUT_AN_APPROVER) - seen - {"审批节点"})
+        assert stale == [], f"reasons recorded for nodes no template has: {stale}"
+
+    def test_the_migration_table_matches_the_templates(self):
+        """Every row the migration will write must correspond to a template
+        node that names that same actor at that same court and order."""
+        from importlib import import_module
+
+        from apps.workflow.services import WORKFLOW_TEMPLATES
+
+        rows = import_module(
+            "apps.workflow.migrations.0011_backfill_ten_court_approvers"
+        ).ROWS
+
+        from_templates = {
+            (node["name"], node["court"], node["order"], node["actor"])
+            for template in WORKFLOW_TEMPLATES.values()
+            for node in template["nodes"]
+            if node.get("actor")
+        }
+        from_migration = {
+            (name, court, order, actor) for name, court, order, _civ, actor in rows
+        }
+
+        assert from_migration == from_templates, (
+            "the migration's frozen table and WORKFLOW_TEMPLATES disagree.\n"
+            f"  only in the migration: {sorted(from_migration - from_templates)}\n"
+            f"  only in the templates: {sorted(from_templates - from_migration)}"
+        )
+
+    def test_the_ten_courts_are_all_present(self):
+        """The load-bearing half of the basis, restated once so that dropping a
+        king from the template cannot pass by agreeing with a shrunken copy of
+        itself. King N sits at 第N殿 — the same pairing seed_mythology encodes
+        as king N in DY_COURT_NN."""
+        from apps.workflow.services import WORKFLOW_TEMPLATES, CaseType
+
+        expected = [
+            ("第一殿", "秦广王"), ("第二殿", "楚江王"), ("第三殿", "宋帝王"),
+            ("第四殿", "五官王"), ("第五殿", "阎罗王"), ("第六殿", "卞城王"),
+            ("第七殿", "泰山王"), ("第八殿", "都市王"), ("第九殿", "平等王"),
+            ("第十殿", "转轮王"),
+        ]
+        nodes = WORKFLOW_TEMPLATES[("CHINESE", CaseType.ROUTINE)]["nodes"]
+        assert [(n["court"], n.get("actor")) for n in nodes] == expected

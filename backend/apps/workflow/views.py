@@ -203,14 +203,37 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         # never called from anywhere — the guard was written, then bypassed by
         # its own call site. This is that call site.
         #
-        # Scoped to nodes that actually name an approver: `SYSTEM` nodes (what
-        # WorkflowService creates, and what every in-flight workflow in the live
-        # data currently sits on) and unconfigured ACTOR/ROLE nodes designate
-        # nobody, so there is no identity to enforce and they keep the codename
-        # gate they have always had. Making `can_approve` itself the gate for
-        # those would deny every SYSTEM node — can_approve returns False for
-        # them by design — and freeze those workflows.
-        if node.designates_approver and not node.can_approve(request.user):
+        # `can_approve` is now the *only* gate. It used to be scoped to nodes
+        # that already named an approver (`node.designates_approver and ...`),
+        # which sounded conservative and was in practice a no-op: measured on
+        # 2026-08-15, all 30 ApprovalNodes in the live database were SYSTEM, so
+        # the condition was False for every row that existed and the guard
+        # refused nothing. The scope has been removed and the nodes have been
+        # given the approvers their own templates name
+        # (0011_backfill_ten_court_approvers, and WorkflowService now sets them
+        # at creation), so the check applies to the rows instead of stepping
+        # around them.
+        #
+        # A node that still designates nobody is refused too — see
+        # ApprovalNode.can_approve for why that is the only non-guessing
+        # answer. It is refused with a different message, because "you are not
+        # the approver" and "this node has no approver" are fixed differently:
+        # the first is somebody else's to decide, the second is a
+        # misconfiguration. Both point at `escalate`, which is the sanctioned
+        # way past and leaves an AuditLog.
+        if not node.can_approve(request.user):
+            if not node.designates_approver:
+                return Response(
+                    {
+                        "error": "Node designates no approver",
+                        "detail": (
+                            "该节点未指定审批人（approver_type=SYSTEM 或 approver_actor 为空），"
+                            "无人满足其身份条件；请为节点配置审批人，或使用越级推进（escalate）"
+                            "留痕推进"
+                        ),
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             return Response(
                 {
                     "error": "Not the designated approver for this node",

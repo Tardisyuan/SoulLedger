@@ -18,28 +18,45 @@ from apps.workflow.models import (
 )
 
 # Workflow templates by civilization and case type
+#
+# ``actor`` names the approver a node designates, spelled exactly as the
+# ``Actor.name`` column ``seed_mythology`` writes. It is what
+# ``_resolve_approver`` turns into ``approver_actor``, and it is present on a
+# node only where the template already said who decides — see
+# ``TEMPLATE_NODES_WITHOUT_AN_APPROVER`` below for the ones deliberately left
+# without it and why. A node with no ``actor`` key is created as ``SYSTEM``,
+# which after ``0011_backfill_ten_court_approvers`` means it can only be moved
+# by the audited ``escalate`` path. That is the intended cost: an approval
+# flow whose steps do not say who approves them is not a thing this system
+# should be able to run silently.
 WORKFLOW_TEMPLATES = {
-    # Chinese ten courts
+    # Chinese ten courts.
+    #
+    # Every node here names a king, and the court it names him in agrees with
+    # the court he sits in per CHINESE_ACTORS / CHINESE_REALMS (king N in
+    # DY_COURT_NN, as `79dee57` corrected and test_seed_mythology asserts). Two
+    # independent columns saying the same thing is why this template — and only
+    # this one — can be backfilled without judgement calls.
     (Civilization.CHINESE, CaseType.ROUTINE): {
         "name": "十殿审判流程",
         "nodes": [
-            {"name": "秦广王 · 分流", "court": "第一殿", "type": NodeType.TRIAL, "order": 1},
-            {"name": "楚江王 · 初审", "court": "第二殿", "type": NodeType.TRIAL, "order": 2},
-            {"name": "宋帝王 · 二审", "court": "第三殿", "type": NodeType.TRIAL, "order": 3},
-            {"name": "五官王 · 三审", "court": "第四殿", "type": NodeType.TRIAL, "order": 4},
-            {"name": "阎罗王 · 四审", "court": "第五殿", "type": NodeType.TRIAL, "order": 5},
-            {"name": "卞城王 · 五审", "court": "第六殿", "type": NodeType.TRIAL, "order": 6},
-            {"name": "泰山王 · 六审", "court": "第七殿", "type": NodeType.TRIAL, "order": 7},
-            {"name": "都市王 · 七审", "court": "第八殿", "type": NodeType.TRIAL, "order": 8},
-            {"name": "平等王 · 八审", "court": "第九殿", "type": NodeType.TRIAL, "order": 9},
-            {"name": "转轮王 · 终审", "court": "第十殿", "type": NodeType.FINAL, "order": 10},
+            {"name": "秦广王 · 分流", "court": "第一殿", "type": NodeType.TRIAL, "order": 1, "actor": "秦广王"},
+            {"name": "楚江王 · 初审", "court": "第二殿", "type": NodeType.TRIAL, "order": 2, "actor": "楚江王"},
+            {"name": "宋帝王 · 二审", "court": "第三殿", "type": NodeType.TRIAL, "order": 3, "actor": "宋帝王"},
+            {"name": "五官王 · 三审", "court": "第四殿", "type": NodeType.TRIAL, "order": 4, "actor": "五官王"},
+            {"name": "阎罗王 · 四审", "court": "第五殿", "type": NodeType.TRIAL, "order": 5, "actor": "阎罗王"},
+            {"name": "卞城王 · 五审", "court": "第六殿", "type": NodeType.TRIAL, "order": 6, "actor": "卞城王"},
+            {"name": "泰山王 · 六审", "court": "第七殿", "type": NodeType.TRIAL, "order": 7, "actor": "泰山王"},
+            {"name": "都市王 · 七审", "court": "第八殿", "type": NodeType.TRIAL, "order": 8, "actor": "都市王"},
+            {"name": "平等王 · 八审", "court": "第九殿", "type": NodeType.TRIAL, "order": 9, "actor": "平等王"},
+            {"name": "转轮王 · 终审", "court": "第十殿", "type": NodeType.FINAL, "order": 10, "actor": "转轮王"},
         ],
     },
     # Chinese appeal
     (Civilization.CHINESE, CaseType.APPEAL): {
         "name": "申诉审判流程",
         "nodes": [
-            {"name": "魏征 · 察查司", "court": "察查司", "type": NodeType.APPEAL, "order": 1},
+            {"name": "魏征 · 察查司", "court": "察查司", "type": NodeType.APPEAL, "order": 1, "actor": "魏征"},
             {"name": "原殿阎王 · 复核", "court": "原审判殿", "type": NodeType.TRIAL, "order": 2},
             {"name": "上级殿阎王", "court": "上一殿", "type": NodeType.TRIAL, "order": 3},
             {"name": "酆都大帝 · 终审", "court": "酆都", "type": NodeType.FINAL, "order": 4},
@@ -77,11 +94,66 @@ WORKFLOW_TEMPLATES = {
     (Civilization.EGYPTIAN, CaseType.HEART_WEIGHING): {
         "name": "欧西里斯称重流程",
         "nodes": [
-            {"name": "阿努比斯 · 引渡审判", "court": "Hall of Two Truths", "type": NodeType.TRIAL, "order": 1},
+            # `actor` carries the seeded `Actor.name`, which for the Egyptian
+            # cast is the English form — the Chinese in the node label is the
+            # `name_zh` column. Node 1's label 阿努比斯 is character-for-character
+            # Anubis' `name_zh`; node 3's 欧西里斯 is NOT — the seeder spells
+            # Osiris 奥西里斯. Two renderings of Wsir, one system, and nothing
+            # reconciles them. The mapping here is on the deity, which the
+            # template's own name (欧西里斯称重流程) and the sole Osiris row in
+            # EGYPTIAN_ACTORS make unambiguous; the spelling split is a real
+            # inconsistency and is called out rather than papered over.
+            {"name": "阿努比斯 · 引渡审判", "court": "Hall of Two Truths", "type": NodeType.TRIAL, "order": 1, "actor": "Anubis"},
             {"name": "四十二神官 · 罪行核实", "court": "Hall of Two Truths", "type": NodeType.TRIAL, "order": 2},
-            {"name": "欧西里斯 · 终审", "court": "Duat", "type": NodeType.FINAL, "order": 3},
+            {"name": "欧西里斯 · 终审", "court": "Duat", "type": NodeType.FINAL, "order": 3, "actor": "Osiris"},
         ],
     },
+}
+
+
+# The template nodes that name no approver, and the reason each one names none.
+#
+# This list is not consulted at runtime. It exists so that "this node has no
+# `actor` key" reads as a recorded finding instead of an omission somebody
+# forgot to fill in — and so that adding an `actor` to one of them has to be a
+# deliberate deletion from this list. `tests.py::TestTemplateApproverBasis`
+# asserts the two stay in step: every node in WORKFLOW_TEMPLATES either carries
+# an `actor` or appears here, never both and never neither.
+TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
+    # 申诉审判流程
+    "原殿阎王 · 复核": "「原殿」 is whichever court first tried the case. The node "
+                   "does not say which, and ApprovalWorkflow records no such "
+                   "column — original_workflow is nullable and is not set for "
+                   "an appeal raised outside create_appeal_workflow. Resolving "
+                   "it would mean picking one of ten kings.",
+    "上级殿阎王": "「上一殿」 is relative to the court above, which is unknown for "
+              "the same reason 原殿阎王 is.",
+    "酆都大帝 · 终审": "酆都大帝 has no Actor row in any civilization's cast "
+                  "(0 hits in seed_mythology). Creating one to satisfy a "
+                  "workflow template would be inventing a member of the "
+                  "pantheon.",
+    "案件分类": "Names an activity, not a person.",
+    "城隍初审": "城隍 is an office held by many local City Gods and has no Actor "
+             "row; 「城隍体系」 in the court column says so outright — it is a "
+             "system, not a seat.",
+    "十殿联审": "Ten kings sitting jointly. approver_actor is a single FK; "
+             "picking one of the ten would misrecord a joint session as one "
+             "king's decision.",
+    "主教座堂初审": "An institution (Diocese). EUROPEAN_ACTORS has no bishop.",
+    "教省复审": "An institution (Archdiocese).",
+    "罗马教廷终审": "An institution (the Curia). Naming a pope would be inventing "
+               "one.",
+    "忏悔赦免审核": "A sacrament, not a person.",
+    "炼狱净化评估": "Names the process. Purgatorio's terraces have no seated "
+               "judge — see realms/0014, which deliberately added no actor.",
+    "天堂准入终审": "Names the gate. Peter is not in EUROPEAN_ACTORS.",
+    "四十二神官 · 罪行核实": "The forty-two assessors are forty-two Actor rows "
+                     "(seed_mythology seeds them individually). One FK cannot "
+                     "hold a bench, and the confession is made to all of them "
+                     "in turn (BD 125).",
+    # Generic fallback built in create_from_judgment
+    "审批节点": "The fallback node for a (civilization, case_type) pair with no "
+             "template. By construction nothing is known about who decides it.",
 }
 
 
@@ -98,6 +170,54 @@ class WorkflowService:
     Creates approval workflow instances from concluded judgments.
     Routes to civilization-specific templates.
     """
+
+    @classmethod
+    def _resolve_approver(cls, node_def: dict, civilization: str, tenant_id) -> dict:
+        """Turn a template node's ``actor`` name into approver columns.
+
+        Returns the kwargs ``ApprovalNode.objects.create`` should get:
+        ``{"approver_type": "ACTOR", "approver_actor": <Actor>}`` when the named
+        actor is on this tenant's bench, and ``{"approver_type": "SYSTEM"}``
+        otherwise.
+
+        Falling back to ``SYSTEM`` is the fail-closed direction, not a
+        convenience: since ``can_approve`` became ``approve_node``'s only gate,
+        a ``SYSTEM`` node cannot be decided by anyone and has to go through the
+        audited ``escalate``. The alternative — creating the node as ``ACTOR``
+        with ``approver_actor=NULL`` — looks like it designates someone and
+        designates no one, which is the exact shape the guard was written to
+        refuse.
+
+        Lookup is by ``name`` and then ``name_zh``, scoped to the workflow's own
+        tenant and civilization. Both columns because the cast is spelled two
+        ways: the Chinese kings' ``name`` is the Chinese (秦广王) while the
+        Egyptian gods' is the English (``Osiris``), with the Chinese in
+        ``name_zh``. The tenant scope matters because ``Actor.name`` is not
+        globally unique — it is unique per ``(name, civilization)`` per tenant,
+        and an unscoped ``.get()`` would raise MultipleObjectsReturned the first
+        time two tenants seed the same pantheon.
+        """
+        actor_name = node_def.get("actor")
+        if not actor_name:
+            return {"approver_type": "SYSTEM"}
+
+        from django.db.models import Q
+
+        from apps.actors.models import Actor
+
+        actor = (
+            Actor._base_manager.filter(
+                Q(name=actor_name) | Q(name_zh=actor_name),
+                civilization=civilization,
+                tenant_id=tenant_id,
+                is_deleted=False,
+            )
+            .order_by("name")
+            .first()
+        )
+        if actor is None:
+            return {"approver_type": "SYSTEM"}
+        return {"approver_type": "ACTOR", "approver_actor": actor}
 
     @classmethod
     def validate_civilization_case_type(cls, civilization: str, case_type: str) -> str | None:
@@ -234,10 +354,17 @@ class WorkflowService:
                     node_name=node_def["name"],
                     node_order=node_def["order"],
                     node_type=node_def["type"],
-                    approver_type="SYSTEM",  # Default to system approval
                     court_code=node_def["court"],
                     status=NodeStatus.PENDING,
                     required_verdicts=["PASSED", "FAILED", "CONFIRMED", "REJECTED", "SKIPPED"],
+                    # Was a hardcoded `approver_type="SYSTEM"`, which is why
+                    # all 30 nodes in the live database designate nobody and
+                    # why the identity check `4ceffe8` added could not refuse a
+                    # single one of them. Backfilling the existing rows
+                    # (0011_backfill_ten_court_approvers) without fixing this
+                    # would have closed the hole for exactly as long as it took
+                    # someone to create the next workflow.
+                    **cls._resolve_approver(node_def, civilization, judgment.tenant_id),
                 )
                 if first_node is None:
                     first_node = node
@@ -284,10 +411,17 @@ class WorkflowService:
                     node_name=node_def["name"],
                     node_order=node_def["order"],
                     node_type=node_def["type"],
-                    approver_type="SYSTEM",
                     court_code=node_def["court"],
                     status=NodeStatus.PENDING,
                     required_verdicts=["PASSED", "FAILED", "CONFIRMED", "REJECTED", "SKIPPED"],
+                    # Same resolution as create_from_judgment. Only 魏征 ·
+                    # 察查司 resolves in this template; the other three name a
+                    # court relative to a case (原殿/上一殿) or a god with no
+                    # Actor row (酆都大帝), so they stay SYSTEM. See
+                    # TEMPLATE_NODES_WITHOUT_AN_APPROVER.
+                    **cls._resolve_approver(
+                        node_def, soul.civilization, appeal_workflow.tenant_id
+                    ),
                 )
                 if first_node is None:
                     first_node = node
