@@ -358,7 +358,7 @@ EGYPTIAN_REALMS = [
     # and same edition as the forty-two assessors below. Do not invent a second
     # transit realm; inventing one is what produced this row.
     #
-    # EG_DEVOURER IS AN OUTCOME, NOT AN ADDRESS.
+    # EG_ANNIHILATION IS AN OUTCOME, NOT AN ADDRESS.
     #
     # It used to be 「吞噬者 / 阿米特之地 / Devourer's Realm」 with Ammit living
     # in it, which asserts three things the sources do not: that there is a
@@ -370,31 +370,42 @@ EGYPTIAN_REALMS = [
     # (Budge, Papyrus of Ani, Plate III; BM EA 9901), and she has moved back
     # there in EGYPTIAN_ACTORS below.
     #
-    # WHY THE CODE STAYS `EG_DEVOURER` WHEN THE MEANING HAS CHANGED. The
-    # obvious follow-through is to rename it EG_ANNIHILATION. The code is a
-    # live identifier, not a label: `DispositionService` routes every failed
-    # Egyptian heart to this string, executed dispositions in existing
-    # databases record it as their destination, and
-    # frontend/src/components/souls/SoulLifecycleTimeline.tsx hard-codes
-    # `realm_code === "EG_DEVOURER"` as the one signal it has for "this soul was
-    # annihilated". Renaming the code is therefore NOT the one-line change in
-    # disposition/services.py it looks like — it is that line plus a migration
-    # plus a frontend change that has to land in the same deploy, or the
-    # annihilation state silently stops rendering. The rename is a coordinated
-    # follow-up; correcting what the row *claims* is not, and is done here.
+    # THE CODE WAS `EG_DEVOURER` AND IS NOW `EG_ANNIHILATION`. 79dee57 corrected
+    # what this row claims and deliberately left the code alone, because the
+    # string was a live identifier in three places at once — `DispositionService`
+    # routes every failed Egyptian heart to it, existing databases record it as
+    # dispositions' destination, and the frontend timeline hard-coded
+    # `realm_code === "EG_DEVOURER"` as its one signal for "this soul was
+    # annihilated" — so renaming it in any single place would have silently
+    # stopped the annihilation state rendering.
+    #
+    # All three moved together:
+    #   * `DispositionService.EG_ANNIHILATION` (apps/disposition/services.py),
+    #   * this row, plus realms/0015_rename_devourer_to_annihilation for
+    #     databases that already hold the old code. The rename is in place, so
+    #     `Disposition.destination_realm` and `Actor.realm` follow the row
+    #     untouched; `Reincarnation.target_realm` is a CharField holding a
+    #     realm_code and is rewritten explicitly, the same way realms/0012 had
+    #     to rewrite it for the ten courts,
+    #   * `ANNIHILATION_REALM_CODE` in frontend/src/lib/realmCodes.ts, which the
+    #     timeline now imports instead of spelling the string itself.
+    #
+    # tests/test_annihilation_realm_code.py reads that TypeScript module from
+    # the backend suite and compares it against the constant, so the two sides
+    # cannot drift apart again without a red test.
     #
     # realm_type stays HELL for the same reason and under protest: of
     # {HELL, PURGATORY, BLISS, NEUTRAL} none means "ceased to exist", and
     # NEUTRAL ("between") would be a worse lie than HELL — it would file
     # annihilation next to the ferry crossing as another waypoint.
-    ("EG_DEVOURER", "第二次死亡", "湮灭", "Second Death (annihilation by Ammit)", "AmMit",
+    ("EG_ANNIHILATION", "第二次死亡", "湮灭", "Second Death (annihilation by Ammit)", "AmMit",
      RealmType.HELL, 10,
      "Not a place and not a residence: the outcome recorded when the heart is "
      "heavier than the feather and Ammit devours it. Egyptian sources call this "
      "the second death — the person ceases to exist, is not punished, and does "
      "not go anywhere. Ammit is seeded in EG_HALL_TWO_TRUTHS, where she is drawn "
-     "beside the balance (Budge, Papyrus of Ani, Plate III; BM EA 9901). The "
-     "realm_code is retained as a stable identifier for dispositions already "
-     "recorded against it.",
+     "beside the balance (Budge, Papyrus of Ani, Plate III; BM EA 9901). The row "
+     "keeps its primary key across the rename from EG_DEVOURER, so dispositions "
+     "already recorded against it still resolve.",
      "SPELL", True, None),
 ]

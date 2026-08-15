@@ -40,12 +40,19 @@
 构；`审批节点` 是无模板时的兜底。这些节点回填后仍是 `SYSTEM`，也就是**任何人
 都批不了**，只能走留痕的 `escalate` —— 见 `ApprovalNode.can_approve` 的说明。
 
-埃及两行有一处**已知的不一致**并且是故意保留原样记录的：节点名 `阿努比斯` 与
-`Actor.name_zh` 逐字相同，而节点名 `欧西里斯` 与 seeder 的 `奥西里斯` 不同字
-——同一位 Wsir 的两种译名，本仓库两处各写一种。这里按神格对应(模板自己就叫
-「欧西里斯称重流程」，EGYPTIAN_ACTORS 里 Osiris 只有一行)，查找同时匹配
-`name` 与 `name_zh` 因此两种写法都能落地；译名不统一本身是一条应当由所有者裁
-决的遗留问题，写在这里而不是悄悄抹平。
+埃及两行有一处译名不一致：节点名 `阿努比斯` 与 `Actor.name_zh` 逐字相同，而
+节点名 `欧西里斯` 与 seeder 的 `奥西里斯` 不同字——同一位 Wsir 的两种译名，本
+仓库两处各写一种。
+
+本迁移最初写下时，这条对应**是推断而非数据**：按神格对应(模板自己就叫「欧西里
+斯称重流程」，EGYPTIAN_ACTORS 里 Osiris 只有一行)，落地靠的是 `ROWS` 这一行的
+actor 键恰好写作 `Osiris`、而查找同时匹配 `name` 与 `name_zh`。当时的 docstring
+把这一点标明为遗留问题，交由所有者裁决。
+
+**所有者已裁决：两种译名都保留，对应关系记入数据。** 「欧西里斯」现在是 Osiris
+行上的一条 alias(`EGYPTIAN_ACTOR_ALIASES` → `powers_json["aliases"]`)，
+`_find_actor` 读的就是它，见该函数的说明。这个迁移正向做的事一行没变——`ROWS`
+仍写 `Osiris`，仍解析到同一行——变的是它凭什么解析得到。
 
 不做什么
 --------
@@ -114,21 +121,55 @@ ROWS = [
 def _find_actor(actor_model, actor_name, civilization, tenant_id):
     """The named actor on this workflow's own bench, or None.
 
-    `name` 或 `name_zh` 任一相符即可：中国侧 cast 的 `name` 是中文(秦广王)，
-    埃及侧的 `name` 是英文(Osiris)、中文在 `name_zh`。按 tenant 与
-    civilization 收口，因为 `Actor.name` 不是全局唯一的——两个租户各种一套同名
-    pantheon 时，不收口的查找会取到别人的行。
+    四个名字列任一相符即可：中国侧 cast 的 `name` 是中文(秦广王)，埃及侧的
+    `name` 是英文(Osiris)、中文在 `name_zh`。按 tenant 与 civilization 收口，
+    因为 `Actor.name` 不是全局唯一的——两个租户各种一套同名 pantheon 时，不收
+    口的查找会取到别人的行。
+
+    列都不中时再查 `powers_json["aliases"]` —— **同一位神的另一种译名**，记在
+    数据里而不是靠查找碰运气。本迁移的 docstring 原先写明 `欧西里斯`(模板)与
+    `奥西里斯`(seeder)的对应「是推断而非数据」；那份对应现在是 Osiris 行上的
+    一条 alias(`EGYPTIAN_ACTOR_ALIASES`)，这里读的就是它。取值规则见
+    `apps/actors/models.py::resolve_actor_by_any_name`——本函数是它的冻结副本，
+    与 `ROWS` 同样的分工：迁移记录当时的事实，活代码可以继续演进。
+
+    别名比对在 Python 里做而不是用 `powers_json` 的 JSON 查询：JSON 包含查询
+    是后端相关的(SQLite 不支持，而测试跑在 SQLite 上)，候选集又只是一个租户、
+    一个文明的 cast。`apps/actors/mythology/seeding.py` 对 `assessor_index`
+    作的是同一个选择。
+
+    `powers_json` 自 `actors/0001` 就在模型上，所以这里读它**不需要**给本迁移
+    加新依赖——给一个可能已经 apply 过的迁移加依赖会触发
+    InconsistentMigrationHistory。
     """
-    return (
-        actor_model._base_manager.filter(
-            Q(name=actor_name) | Q(name_zh=actor_name),
-            civilization=civilization,
-            tenant_id=tenant_id,
-            is_deleted=False,
-        )
-        .order_by("name")
-        .first()
-    )
+    # 空串不是名字：可选名字列是 `blank=True`，`Q(name_zh="")` 会命中所有没有
+    # 中文名的行(四十二判官全在内)。`ROWS` 里没有空串，但守卫写在这里而不是靠
+    # 调用方，与 `resolve_actor_by_any_name` 同。
+    if not actor_name:
+        return None
+
+    candidates = actor_model._base_manager.filter(
+        civilization=civilization,
+        tenant_id=tenant_id,
+        is_deleted=False,
+    ).order_by("name")
+
+    exact = candidates.filter(
+        Q(name=actor_name)
+        | Q(name_zh=actor_name)
+        | Q(name_en=actor_name)
+        | Q(name_egy=actor_name)
+    ).first()
+    if exact is not None:
+        return exact
+
+    for actor in candidates:
+        powers = actor.powers_json
+        if not isinstance(powers, dict):
+            continue
+        if actor_name in (powers.get("aliases") or []):
+            return actor
+    return None
 
 
 def _candidates(node_model, node_name, court_code, node_order):

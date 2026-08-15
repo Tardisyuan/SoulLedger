@@ -873,7 +873,7 @@
     },
     "codes": {
       "EG_AARU": "阿鲁之地",
-      "EG_DEVOURER": "吞噬者",
+      "EG_ANNIHILATION": "第二次死亡",
       "EG_AM_TYAT": "阿姆·特亚特",
       "EG_DUAT_ENTRY": "杜阿特入口",
       "EG_HALL_TWO_TRUTHS": "真理殿堂",
@@ -907,7 +907,7 @@
     },
     "names": {
       "EG_AARU": "芦苇原",
-      "EG_DEVOURER": "吞噬者领域",
+      "EG_ANNIHILATION": "湮灭",
       "EG_AM_TYAT": "阿姆·特亚特之路",
       "EG_DUAT_ENTRY": "杜阿特入口",
       "EG_HALL_TWO_TRUTHS": "真理大厅",

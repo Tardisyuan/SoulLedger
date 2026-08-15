@@ -98,11 +98,18 @@ WORKFLOW_TEMPLATES = {
             # cast is the English form — the Chinese in the node label is the
             # `name_zh` column. Node 1's label 阿努比斯 is character-for-character
             # Anubis' `name_zh`; node 3's 欧西里斯 is NOT — the seeder spells
-            # Osiris 奥西里斯. Two renderings of Wsir, one system, and nothing
-            # reconciles them. The mapping here is on the deity, which the
-            # template's own name (欧西里斯称重流程) and the sole Osiris row in
-            # EGYPTIAN_ACTORS make unambiguous; the spelling split is a real
-            # inconsistency and is called out rather than papered over.
+            # Osiris 奥西里斯. Two renderings of Wsir, and both are kept: the
+            # owner's decision was to keep both translations and record the
+            # correspondence rather than pick one.
+            #
+            # It is recorded now. 「欧西里斯」 is an alias on the Osiris row
+            # (EGYPTIAN_ACTOR_ALIASES -> powers_json["aliases"]), so the
+            # node-label-to-deity mapping is data in the database and not the
+            # inference it was when workflow/0011 wrote it down.
+            # `_resolve_approver` reads that data, and
+            # tests/test_actor_name_aliases.py asserts that every personal name
+            # in a node label resolves to the actor the node designates — so
+            # this pairing is checked rather than asserted in a comment.
             {"name": "阿努比斯 · 引渡审判", "court": "Hall of Two Truths", "type": NodeType.TRIAL, "order": 1, "actor": "Anubis"},
             {"name": "四十二神官 · 罪行核实", "court": "Hall of Two Truths", "type": NodeType.TRIAL, "order": 2},
             {"name": "欧西里斯 · 终审", "court": "Duat", "type": NodeType.FINAL, "order": 3, "actor": "Osiris"},
@@ -188,32 +195,44 @@ class WorkflowService:
         designates no one, which is the exact shape the guard was written to
         refuse.
 
-        Lookup is by ``name`` and then ``name_zh``, scoped to the workflow's own
-        tenant and civilization. Both columns because the cast is spelled two
-        ways: the Chinese kings' ``name`` is the Chinese (秦广王) while the
-        Egyptian gods' is the English (``Osiris``), with the Chinese in
-        ``name_zh``. The tenant scope matters because ``Actor.name`` is not
-        globally unique — it is unique per ``(name, civilization)`` per tenant,
-        and an unscoped ``.get()`` would raise MultipleObjectsReturned the first
-        time two tenants seed the same pantheon.
+        Lookup is over every name the cast records, scoped to the workflow's own
+        tenant and civilization: the four name columns first, then the aliases
+        on ``powers_json["aliases"]`` — see
+        ``apps/actors/models.py::resolve_actor_by_any_name``. The columns have
+        to be plural because the cast is spelled two ways: the Chinese kings'
+        ``name`` is the Chinese (秦广王) while the Egyptian gods' is the English
+        (``Osiris``), with the Chinese in ``name_zh``.
+
+        The alias pass is the part that is *recorded* rather than lucky. Until
+        ``EGYPTIAN_ACTOR_ALIASES`` existed, a template naming 「欧西里斯」 —
+        which is what the heart-weighing template calls itself, while the seeder
+        spells the same god 「奥西里斯」 — resolved to nobody, and the reason the
+        node worked at all was that the ``actor`` key beside it happened to say
+        ``"Osiris"``. That correspondence was an inference living in a comment.
+        It is now a row in the database, and this is what reads it.
+
+        The alias pass runs in Python, not as a ``powers_json`` lookup. JSON
+        containment lookups are backend-specific (they are unsupported on
+        SQLite, which is what the test suite runs on), and the candidate set is
+        one civilization's cast for one tenant — tens of rows. ``seeding.py``
+        makes the same choice for ``assessor_index`` and says the same thing.
+
+        The tenant scope matters because ``Actor.name`` is not globally unique —
+        it is unique per ``(name, civilization)`` per tenant, and an unscoped
+        ``.get()`` would raise MultipleObjectsReturned the first time two
+        tenants seed the same pantheon.
         """
         actor_name = node_def.get("actor")
         if not actor_name:
             return {"approver_type": "SYSTEM"}
 
-        from django.db.models import Q
+        from apps.actors.models import Actor, resolve_actor_by_any_name
 
-        from apps.actors.models import Actor
-
-        actor = (
+        actor = resolve_actor_by_any_name(
             Actor._base_manager.filter(
-                Q(name=actor_name) | Q(name_zh=actor_name),
-                civilization=civilization,
-                tenant_id=tenant_id,
-                is_deleted=False,
-            )
-            .order_by("name")
-            .first()
+                civilization=civilization, tenant_id=tenant_id, is_deleted=False
+            ),
+            actor_name,
         )
         if actor is None:
             return {"approver_type": "SYSTEM"}

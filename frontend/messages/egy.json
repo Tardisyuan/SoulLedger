@@ -873,7 +873,7 @@
     },
     "codes": {
       "EG_AARU": "Aaru",
-      "EG_DEVOURER": "Ammit",
+      "EG_ANNIHILATION": "AmMit",
       "EG_AM_TYAT": "Am-Tyat",
       "EG_DUAT_ENTRY": "Duat Pert",
       "EG_HALL_TWO_TRUTHS": "Weret Hall of Ma'at",
@@ -907,7 +907,7 @@
     },
     "names": {
       "EG_AARU": "Aaru - Field of Reeds",
-      "EG_DEVOURER": "Ammit - Devourer",
+      "EG_ANNIHILATION": "AmMit - Second Death",
       "EG_AM_TYAT": "Am-Tyat Path",
       "EG_DUAT_ENTRY": "Duat Gate",
       "EG_HALL_TWO_TRUTHS": "Weret Hall of Two Truths",

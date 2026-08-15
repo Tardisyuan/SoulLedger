@@ -69,25 +69,32 @@ class DispositionService:
 
     # Egyptian realms
     #
-    # EG_DEVOURER IS AN OUTCOME, NOT AN ADDRESS. The row used to be modelled as
-    # "Ammit's realm" — a hell the failed soul is sent to, with Ammit living in
-    # it. Being devoured by Ammit is the second death: the heart is destroyed
-    # and the person ceases to exist. There is no damned population and nowhere
-    # for it to be, and Ammit stands at the balance in the Hall of Two Truths,
-    # which is where seed_mythology now seeds her. The realm's name and
-    # description say outcome rather than place as of 2026-08-15.
+    # EG_ANNIHILATION IS AN OUTCOME, NOT AN ADDRESS. The row used to be
+    # modelled as "Ammit's realm" — a hell the failed soul is sent to, with
+    # Ammit living in it. Being devoured by Ammit is the second death: the heart
+    # is destroyed and the person ceases to exist. There is no damned population
+    # and nowhere for it to be, and Ammit stands at the balance in the Hall of
+    # Two Truths, which is where seed_mythology seeds her. 79dee57 corrected the
+    # row's name and description on 2026-08-15 and deliberately left the code
+    # alone, because the string was a live identifier in three places at once
+    # and renaming it in any one of them alone would have broken the other two.
     #
-    # The code itself was deliberately NOT renamed to EG_ANNIHILATION, which is
-    # what it should be called. This constant is one line, but the string is a
-    # live identifier in three places at once: executed dispositions in existing
-    # databases record it as their destination, and
-    # frontend/src/components/souls/SoulLifecycleTimeline.tsx hard-codes
-    # `realm_code === "EG_DEVOURER"` as its only signal that a soul was
-    # annihilated. Renaming here alone would silently stop that state
-    # rendering — so the rename is a coordinated backend+frontend change with a
-    # migration, and correcting what the row claims did not have to wait for it.
+    # The rename landed as the coordinated change that note asked for:
+    #
+    #   1. this constant and `_route_egyptian`'s two return sites,
+    #   2. the seed row in apps/actors/mythology/realms.py, plus
+    #      realms/0015_rename_devourer_to_annihilation for databases that
+    #      already hold the old code — including Reincarnation.target_realm,
+    #      which is a CharField and does not follow a rename the way the
+    #      Disposition.destination_realm foreign key does,
+    #   3. the frontend's annihilation signal, which no longer hard-codes a
+    #      string at all: it reads ANNIHILATION_REALM_CODE from
+    #      frontend/src/lib/realmCodes.ts.
+    #
+    # tests/test_annihilation_realm_code.py compares this constant against that
+    # TypeScript module, so the next rename cannot land on one side only.
     EG_AARU = "EG_AARU"           # Paradise (passed)
-    EG_DEVOURER = "EG_DEVOURER"   # Annihilation (failed) — see the note above
+    EG_ANNIHILATION = "EG_ANNIHILATION"  # Annihilation (failed) — see above
     EG_DUAT_ENTRY = "EG_DUAT_ENTRY"  # Entry/purgatory
 
     @classmethod
@@ -250,7 +257,7 @@ class DispositionService:
                 return cls.EG_AARU
             elif verdict == Verdict.FAILED:
                 # Heart heavier than feather → Ammit devours
-                return cls.EG_DEVOURER
+                return cls.EG_ANNIHILATION
             else:
                 # PURGATORY/RETRY: soul waits in Duat entry
                 return cls.EG_DUAT_ENTRY
@@ -269,7 +276,7 @@ class DispositionService:
             if verdict == Verdict.PASSED:
                 return cls.EG_AARU
             if verdict == Verdict.FAILED:
-                return cls.EG_DEVOURER
+                return cls.EG_ANNIHILATION
             # PURGATORY/RETRY: the verdict is inconclusive, so karma must not
             # be allowed to reach for the Devourer. Being eaten by Ammit is
             # the second death — annihilation, with no appeal and nothing left

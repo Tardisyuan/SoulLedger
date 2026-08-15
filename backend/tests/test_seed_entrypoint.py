@@ -84,7 +84,7 @@ RETIRED_SCRIPT_REALMS = [
     "EU_HEAVEN", "EU_PURGATORY", "EU_HELL_1ST", "EU_HELL_2ND", "EU_HELL_3RD",
     "EU_HELL_4TH", "EU_HELL_5TH", "EU_HELL_6TH", "EU_HELL_7TH", "EU_HELL_8TH",
     "EU_HELL_9TH",
-    "EG_DUAT_ENTRY", "EG_HALL_TWO_TRUTHS", "EG_AARU", "EG_AM_TYAT", "EG_DEVOURER",
+    "EG_DUAT_ENTRY", "EG_HALL_TWO_TRUTHS", "EG_AARU", "EG_AM_TYAT", "EG_ANNIHILATION",
 ]
 
 # Rows from the inventory above that the command deliberately no longer seeds.

@@ -258,7 +258,7 @@ DANTE_NINE_CIRCLES = [
 # The Egyptian weighing-of-the-heart cast, plus the two realms the verdict
 # sends a soul to: paradise, or Ammit.
 EGYPTIAN_WEIGHING_ACTORS = ["Ma'at", "Anubis", "Ammit", "Thoth", "Osiris"]
-EGYPTIAN_VERDICT_REALMS = ["EG_AARU", "EG_DEVOURER"]
+EGYPTIAN_VERDICT_REALMS = ["EG_AARU", "EG_ANNIHILATION"]
 
 # The Forty-Two Assessors of Ma'at, Book of the Dead chapter 125 part B, in the
 # order of the Papyrus of Nebseni (Budge's transliteration; BM EA 9900 sheet
@@ -1383,7 +1383,7 @@ def test_every_realm_disposition_routing_can_return_actually_exists(seeded):
         DispositionService.EU_HEAVEN,
         DispositionService.EU_PURGATORY,
         DispositionService.EG_AARU,
-        DispositionService.EG_DEVOURER,
+        DispositionService.EG_ANNIHILATION,
         DispositionService.EG_DUAT_ENTRY,
         *DispositionService.CHINESE_HELL_TIERS.values(),
         *DispositionService.EU_HELL_CIRCLES.values(),

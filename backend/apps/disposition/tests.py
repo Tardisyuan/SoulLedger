@@ -154,7 +154,7 @@ class EgyptianStandardRoutingTest(TestCase):
     precedence bug: `verdict == PASSED or karma >= 50` and
     `verdict == PURGATORY or -50 < karma < 50` let karma override an
     explicit FAILED verdict, parking condemned souls in EG_DUAT_ENTRY
-    instead of EG_DEVOURER whenever karma landed in the tie band.
+    instead of EG_ANNIHILATION whenever karma landed in the tie band.
     """
 
     def test_passed_always_aaru_regardless_of_karma(self):
@@ -176,7 +176,7 @@ class EgyptianStandardRoutingTest(TestCase):
                     DispositionService._route_egyptian(
                         None, Verdict.FAILED, JudgmentMethod.STANDARD, karma
                     ),
-                    DispositionService.EG_DEVOURER,
+                    DispositionService.EG_ANNIHILATION,
                 )
 
     def test_inconclusive_verdict_never_reaches_the_devourer(self):
@@ -232,7 +232,7 @@ class EgyptianHeartWeighingRoutingTest(TestCase):
                     DispositionService._route_egyptian(
                         None, Verdict.FAILED, JudgmentMethod.HEART_WEIGHING, karma
                     ),
-                    DispositionService.EG_DEVOURER,
+                    DispositionService.EG_ANNIHILATION,
                 )
                 self.assertEqual(
                     DispositionService._route_egyptian(

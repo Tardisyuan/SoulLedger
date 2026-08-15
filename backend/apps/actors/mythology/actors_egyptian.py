@@ -82,7 +82,7 @@ EGYPTIAN_ACTORS = [
      "standard vignette draws her (Budge, Papyrus of Ani, Plate III; BM EA "
      "9901), and acts only if the heart fails. She was seeded into a realm "
      "named after her, which made annihilation look like an address she lived "
-     "at; see EG_DEVOURER above"),
+     "at; see EG_ANNIHILATION above"),
     # Horus was the worst-placed row in the file: GUARDIAN at the gate of the
     # Duat, a post the sources do not give him, and the deleted
     # populate_egyptian_actors had him as a JUDGE instead. He is neither. In
@@ -115,6 +115,78 @@ EGYPTIAN_ACTORS = [
      "row used to be; his other netherworld office is the nightly voyage of the "
      "solar barque in the Amduat and the Book of Gates"),
 ]
+
+# --------------------------------------------------------------------------
+# OTHER RENDERINGS OF THESE NAMES THAT THIS REPOSITORY ACTUALLY USES.
+#
+# `Actor.name` -> the other written forms that denote the same being.
+#
+# WHY THIS TABLE EXISTS. `apps/workflow/services.py`'s 「欧西里斯称重流程」 names
+# its final node 「欧西里斯 · 终审」, and this file spells the same god 「奥西里斯」.
+# One Wsir, two Chinese renderings, one in each of two files, and until now
+# nothing in the database said they were the same god. `workflow/0011` still
+# resolved that node to the Osiris row — but only because its own frozen table
+# happens to carry the actor key `"Osiris"`, and its docstring said outright
+# that the pairing was an inference from the template's title rather than
+# something recorded anywhere. The owner's decision was to keep both renderings
+# and record the correspondence, so that is what this is: the correspondence,
+# as data, on the row it belongs to.
+#
+# WHY NOT A FIFTH NAME COLUMN. `Actor` has four, and none of them is the shape
+# this needs:
+#
+#   * `name` is the identity key — it is half of the (tenant, civilization,
+#     name) unique constraint — and *which language it is in varies by
+#     civilization*: the Chinese kings' `name` is Chinese (秦广王), the Egyptian
+#     gods' is English (Osiris). It is not a language slot at all.
+#   * `name_zh` / `name_en` / `name_egy` hold exactly one canonical rendering
+#     per language, and they are in `ACTOR_FIELDS`, so `--update` treats a change
+#     to one as a changed row. They answer "what do we display in locale L",
+#     which is a different question from "what other strings mean this being".
+#
+# A fifth column would have to be `name_zh_alt`, and that is wrong twice over:
+# it assumes there is exactly one variant, and it assumes the variant is
+# Chinese — but `Heru` below is a variant of `name_egy` and `Maat` of `name_en`.
+# The shape wanted is a *set* of strings per row, so it goes in `powers_json`,
+# which is already where this package puts per-actor structure that Actor has no
+# column for (the assessors' `assessor_index`, `home_place` and
+# `negative_confession` are all there, and none of those is a "power" either).
+#
+# It also has to be a column that exists in the *historical* Actor model at
+# `workflow/0011`'s dependency point, because that migration's `_find_actor`
+# reads this data and a frozen, possibly-already-applied migration must not gain
+# a new dependency. `powers_json` has been on the model since `actors/0001`.
+#
+# WHAT GOES IN AND WHAT DOES NOT. An entry here asserts *one being, two written
+# forms*. It is not a place to reconcile disagreements about who someone is:
+#
+#   * `Set` / `Seth` — `scripts/populate_egyptian_actors.py` seeds a Set with
+#     `name_egy='Seth'` (a Greek form in an Egyptian-name field, recorded in
+#     docs/lore-verification/verify-egyptian.md §row 10). No `Set` row exists in
+#     this cast at all, so there is nothing to alias; whether Set belongs in the
+#     judgment of the dead is a canon question, and that script already records
+#     it as an open item.
+#   * `Ra` / `Atum` — `name_en` is "Ra (Atum)". Atum is a distinct god who is
+#     *identified with* Ra in some contexts, which is a theological claim and
+#     not a spelling. Recording it as an alias would assert the identification.
+#   * `Ma'at` / `Maat` — already recorded, in a column: `name_egy` is "Maat", and
+#     `fix_actor_civilization.SPELLING_MERGES` merges a stray `Maat` row into
+#     `Ma'at`. Nothing to add.
+#
+# Every entry below names the file that uses the other spelling, so an alias
+# whose only user disappears can be removed on evidence.
+EGYPTIAN_ACTOR_ALIASES = {
+    # 「欧」 vs 「奥」 for Wsir. The 「欧西里斯」 spelling is what
+    # apps/workflow/services.py's HEART_WEIGHING template calls both itself and
+    # its final node; `name_zh` here is 「奥西里斯」. Both are current, standard
+    # Chinese renderings of the same god and the owner kept both.
+    "Osiris": ["欧西里斯"],
+    # ḥr transliterated two ways. `name_egy` here is "Hor";
+    # scripts/populate_egyptian_actors.py writes "Heru" for the same god, which
+    # docs/lore-verification/verify-egyptian.md records as a known low-severity
+    # inconsistency between the two seed paths rather than a second deity.
+    "Horus": ["Heru"],
+}
 
 # --------------------------------------------------------------------------
 # The Forty-Two Assessors of Ma'at — Book of the Dead, Chapter 125 part B

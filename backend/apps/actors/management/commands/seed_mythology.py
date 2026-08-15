@@ -61,6 +61,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from apps.actors.mythology import (
+    CIVILIZATION_ACTOR_ALIASES,
     CIVILIZATION_ASSESSORS,
     CIVILIZATION_DATA,
     CIVILIZATION_STATUTES,
@@ -71,6 +72,7 @@ from apps.actors.mythology.seeding import MythologySeeder, Stats
 # module by tests/test_judgment_statutes.py, and this module stays the name
 # the rest of the repo refers to.
 __all__ = [
+    "CIVILIZATION_ACTOR_ALIASES",
     "CIVILIZATION_ASSESSORS",
     "CIVILIZATION_DATA",
     "CIVILIZATION_STATUTES",
@@ -131,7 +133,10 @@ class Command(MythologySeeder, BaseCommand):
 
                 tenant = self._seed_tenant(civilization, tenant_stats)
                 self._seed_realms(civilization, tenant, realms, do_update, realm_stats)
-                self._seed_actors(civilization, tenant, actors, do_update, actor_stats)
+                self._seed_actors(
+                    civilization, tenant, actors, do_update, actor_stats,
+                    aliases=CIVILIZATION_ACTOR_ALIASES.get(label),
+                )
                 assessors = CIVILIZATION_ASSESSORS.get(label)
                 if assessors:
                     self._seed_assessors(

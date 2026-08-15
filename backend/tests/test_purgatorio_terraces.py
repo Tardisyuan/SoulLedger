@@ -486,7 +486,7 @@ def test_no_verdict_is_routed_to_a_terrace(seeded):
         DispositionService.EU_HEAVEN,
         DispositionService.EU_PURGATORY,
         DispositionService.EG_AARU,
-        DispositionService.EG_DEVOURER,
+        DispositionService.EG_ANNIHILATION,
         DispositionService.EG_DUAT_ENTRY,
         *DispositionService.CHINESE_HELL_TIERS.values(),
         *DispositionService.EU_HELL_CIRCLES.values(),
