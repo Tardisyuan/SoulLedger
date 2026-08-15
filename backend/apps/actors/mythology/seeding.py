@@ -1,0 +1,489 @@
+"""The seeding mechanism: upsert semantics, per-table passes, run tally.
+
+Everything here is about *how* rows are written and nothing about *what*
+they say — the corpora are the sibling modules, and the provenance contract
+between them is in ``apps.actors.mythology``. ``MythologySeeder`` is mixed
+into the ``Command`` in
+``apps/actors/management/commands/seed_mythology.py``, which stays the entry
+point Django discovers.
+
+Moved verbatim out of ``seed_mythology.py``.
+"""
+from apps.actors.models import Actor, ActorRole
+from apps.actors.mythology import TENANTS
+from apps.actors.mythology.actors_egyptian import (
+    ASSESSOR_PAPYRUS,
+    ASSESSOR_REALM_CODE,
+    ASSESSOR_SOURCE_EDITION,
+)
+from apps.actors.mythology.realms import REALM_PARENTS
+from apps.actors.mythology.statutes_egyptian import (
+    NEGATIVE_CONFESSION_FIELD,
+    NEGATIVE_CONFESSION_SOURCE,
+)
+from apps.judgment.models import Statute
+from apps.realms.models import Realm
+from apps.souls.models import CIVILIZATION_TENANT
+from apps.tenants.models import Tenant
+
+REALM_FIELDS = (
+    "name_local", "name_zh", "name_en", "name_egy", "realm_type", "tier",
+    "description", "memory_reset_mechanism", "is_eternal", "cycle_limit",
+)
+ACTOR_FIELDS = (
+    "name_zh", "name_en", "name_egy", "role", "realm",
+    "title", "title_zh", "title_en", "title_egy", "description",
+)
+# Assessors carry the same columns plus the structured payload — an assessor
+# whose assessor_index or citation drifted is a changed row, so `--update` has
+# to see it.
+ASSESSOR_FIELDS = (*ACTOR_FIELDS, "powers_json")
+# `source` and `source_notes` are in the comparison set deliberately: an
+# article whose provenance changed is a changed article, and provenance is the
+# part of a statute this feature exists to keep honest.
+STATUTE_FIELDS = (
+    "civilization", "corpus", "ordinal", "polarity",
+    "title_zh", "title_en", "title_egy", "text_zh", "text_en", "text_egy",
+    "source", "source_notes", "payload_json",
+    "source_actor", "source_actor_field",
+)
+
+
+class Stats:
+    """Per-model tally, printed as the run summary."""
+
+    def __init__(self, label):
+        self.label = label
+        self.created = 0
+        self.updated = 0
+        self.unchanged = 0
+        self.skipped = 0
+
+    def line(self):
+        return (
+            f"{self.label:<8} created={self.created:<4} updated={self.updated:<4} "
+            f"unchanged={self.unchanged:<4} skipped={self.skipped}"
+        )
+
+
+class MythologySeeder:
+    """The write path, split out of `Command` so the data tables can be too.
+
+    Mixed into the management command rather than instantiated: every method
+    reports through ``self.stdout``/``self.style``, which are BaseCommand's.
+    """
+
+    # ------------------------------------------------------------------
+    # Tenants
+    # ------------------------------------------------------------------
+    def _seed_tenant(self, civilization, stats):
+        code = CIVILIZATION_TENANT[civilization]
+        tenant = Tenant.objects.filter(code=code).first()
+        if tenant is not None:
+            stats.unchanged += 1
+            return tenant
+
+        self.stdout.write(f"  + Tenant {code}")
+        stats.created += 1
+        # Written even in dry-run: the whole run is one transaction that gets
+        # rolled back at the end, and writing means a dry-run against an empty
+        # database resolves realm FKs and reports the same plan a real run
+        # would take, rather than a cascade of "unknown realm" warnings.
+        return Tenant.objects.create(
+            code=code, display_name=TENANTS[code], dispatch_enabled=True
+        )
+
+    # ------------------------------------------------------------------
+    # Realms
+    # ------------------------------------------------------------------
+    def _seed_realms(self, civilization, tenant, rows, do_update, stats):
+        for row in rows:
+            (realm_code, name_local, name_zh, name_en, name_egy, realm_type, tier,
+             description, memory_reset, is_eternal, cycle_limit) = row
+            values = {
+                "civilization": civilization,
+                "name_local": name_local,
+                "name_zh": name_zh,
+                "name_en": name_en,
+                "name_egy": name_egy,
+                "realm_type": realm_type,
+                "tier": tier,
+                "description": description,
+                "memory_reset_mechanism": memory_reset,
+                "is_eternal": is_eternal,
+                "cycle_limit": cycle_limit,
+            }
+            self._upsert(
+                model=Realm,
+                lookup={"realm_code": realm_code},
+                values=values,
+                compare_fields=("civilization", *REALM_FIELDS),
+                tenant=tenant,
+                identity=f"Realm {realm_code}",
+                do_update=do_update,
+                stats=stats,
+            )
+        self._link_realm_parents(civilization, rows, do_update, stats)
+
+    def _link_realm_parents(self, civilization, rows, do_update, stats):
+        """Attach the realms in REALM_PARENTS to the realm they are part of.
+
+        A second pass rather than a column in `values`: the parent has to exist
+        before the child can point at it, and both are rows in the same table
+        this loop is still writing. Running afterwards means the order of the
+        seed table cannot decide whether the link resolves.
+
+        Filling in a NULL parent happens regardless of `--update`, for the same
+        reason `_upsert` fills in a NULL tenant regardless: an unset structural
+        link is not somebody's decision being overwritten, it is a row that has
+        not been told what it belongs to yet. Repointing a parent that is
+        already set to something else IS a decision, and that needs --update.
+        """
+        codes = {row[0] for row in rows}
+        by_code = {
+            realm.realm_code: realm
+            for realm in Realm.all_objects.filter(civilization=civilization)
+        }
+        for child_code, parent_code in REALM_PARENTS.items():
+            if child_code not in codes:
+                continue
+            child = by_code.get(child_code)
+            parent = by_code.get(parent_code)
+            if child is None or parent is None:
+                missing = child_code if child is None else parent_code
+                self.stdout.write(self.style.ERROR(
+                    f"  [warn] Realm {child_code} belongs under {parent_code} and "
+                    f"{missing} is not in the database — left unlinked"
+                ))
+                continue
+            if child.is_deleted:
+                # Same rule as _upsert: a retired row is reported by that pass
+                # and otherwise left exactly as it is.
+                continue
+            if child.parent_realm_id == parent.id:
+                continue
+            if child.parent_realm_id is None or do_update:
+                self.stdout.write(f"  ~ Realm {child_code}: parent_realm -> {parent_code}")
+                stats.updated += 1
+                child.parent_realm = parent
+                child.save()
+                continue
+            self.stdout.write(
+                f"  = Realm {child_code}: sits under "
+                f"{child.parent_realm.realm_code} rather than {parent_code} — "
+                f"left as-is (pass --update to overwrite)"
+            )
+
+    # ------------------------------------------------------------------
+    # Actors
+    # ------------------------------------------------------------------
+    def _seed_actors(self, civilization, tenant, rows, do_update, stats):
+        # Realm FKs are resolved by code against whatever is in the DB now —
+        # including the realms this same run just wrote inside this transaction.
+        realm_by_code = {r.realm_code: r for r in Realm.all_objects.filter(civilization=civilization)}
+
+        for row in rows:
+            (name, name_zh, name_en, name_egy, role, realm_code,
+             title, title_zh, title_en, title_egy, description) = row
+            realm = realm_by_code.get(realm_code)
+            if realm is None:
+                self.stdout.write(self.style.ERROR(
+                    f"  [warn] Actor {name!r} references unknown realm {realm_code!r} — "
+                    f"seeding with realm=None"
+                ))
+            values = {
+                "name_zh": name_zh,
+                "name_en": name_en,
+                "name_egy": name_egy,
+                "role": role,
+                "realm": realm,
+                "title": title,
+                "title_zh": title_zh,
+                "title_en": title_en,
+                "title_egy": title_egy,
+                "description": description,
+            }
+            self._upsert(
+                model=Actor,
+                lookup={"name": name, "civilization": civilization},
+                values=values,
+                compare_fields=ACTOR_FIELDS,
+                tenant=tenant,
+                identity=f"Actor {name}",
+                do_update=do_update,
+                stats=stats,
+            )
+
+    # ------------------------------------------------------------------
+    # The Forty-Two Assessors
+    # ------------------------------------------------------------------
+    def _seed_assessors(self, civilization, tenant, rows, do_update, stats):
+        """Seed the bench of 42 through the same upsert as everything else.
+
+        Separate from `_seed_actors` only because the rows carry three values
+        Actor has no column for (position in the bench, home town, confession
+        clause) and they go into `powers_json`. Idempotency, tenant assignment,
+        soft-delete handling and dry-run all come from `_upsert` unchanged.
+        """
+        realm = Realm.all_objects.filter(
+            civilization=civilization, realm_code=ASSESSOR_REALM_CODE
+        ).first()
+        if realm is None:
+            self.stdout.write(self.style.ERROR(
+                f"  [warn] The Forty-Two reference unknown realm "
+                f"{ASSESSOR_REALM_CODE!r} — seeding with realm=None"
+            ))
+
+        for row in rows:
+            index = row["index"]
+            powers = {
+                "assessor_index": index,
+                "home_place": row["home_place"],
+                "negative_confession": row["denies"],
+                "source_edition": ASSESSOR_SOURCE_EDITION,
+                "papyrus": ASSESSOR_PAPYRUS,
+            }
+            if row.get("notes"):
+                # Verbatim source caveats. Present only where the source is
+                # actually uncertain, so an empty key never reads as "checked".
+                powers["source_notes"] = list(row["notes"])
+
+            title = f"Assessor {index} of the Forty-Two"
+            values = {
+                # name_zh stays empty on purpose — see the table's header.
+                "name_zh": "",
+                "name_en": row["name"],
+                "name_egy": row["name"],
+                "role": ActorRole.JUDGE,
+                "realm": realm,
+                "title": title,
+                "title_zh": f"四十二判官之第{index}位",
+                "title_en": title,
+                "title_egy": "",
+                "description": self._assessor_description(row),
+                "powers_json": powers,
+            }
+            self._upsert(
+                model=Actor,
+                lookup={"name": row["name"], "civilization": civilization},
+                values=values,
+                compare_fields=ASSESSOR_FIELDS,
+                tenant=tenant,
+                identity=f"Assessor {index:02d} {row['name']}",
+                do_update=do_update,
+                stats=stats,
+            )
+
+    # ------------------------------------------------------------------
+    # Statutes
+    # ------------------------------------------------------------------
+    def _seed_statutes(self, civilization, tenant, corpus, source, rows, do_update, stats):
+        """Seed one corpus transcribed from a document into CIVILIZATION_STATUTES.
+
+        One corpus is transcribed today: the seven capital sins, one article per
+        terrace of Purgatorio (EUROPEAN_STATUTES). This path was kept alive
+        while CIVILIZATION_STATUTES was empty — the withdrawal removed two
+        fabricated tables, not the ability to seed a real one — and
+        tests/test_judgment_statutes.py still calls it directly with a throwaway
+        row, which is what the next corpus (功過格, if it verifies) will arrive
+        through.
+
+        Matched on `code`, which is why real codes should be stable and
+        mnemonic rather than generated: a citation recorded against an article
+        has to survive a re-seed, and a re-numbering would silently repoint
+        every judgment that cited it.
+
+        `code` alone, not `(tenant, code)` — the same shape realms use with
+        `realm_code`. The uniqueness constraint on the model is per-tenant, but
+        every code here is civilization-prefixed and so globally unique in
+        practice; matching on the pair would also collide with `_upsert`'s own
+        `tenant=` argument. If two tenants ever did share a code, `_upsert`
+        reports the ambiguity and skips rather than picking one.
+        """
+        for row in rows:
+            values = {
+                "civilization": civilization,
+                "corpus": corpus,
+                "ordinal": row["ordinal"],
+                "polarity": row["polarity"],
+                "title_zh": row["title_zh"],
+                "title_en": row["title_en"],
+                "title_egy": "",
+                "text_zh": row["text_zh"],
+                "text_en": row["text_en"],
+                "text_egy": "",
+                "source": source,
+                "source_notes": list(row.get("notes", ())),
+                "payload_json": dict(row.get("payload", {})),
+                "source_actor": None,
+                "source_actor_field": "",
+            }
+            self._upsert(
+                model=Statute,
+                lookup={"code": row["code"]},
+                values=values,
+                compare_fields=STATUTE_FIELDS,
+                tenant=tenant,
+                identity=f"Statute {row['code']}",
+                do_update=do_update,
+                stats=stats,
+            )
+
+    def _seed_derived_statutes(self, civilization, tenant, do_update, stats):
+        """Give each of the Forty-Two a citable article — by reference, not by copy.
+
+        The clause itself is never written here. Each row records WHICH actor
+        it derives from and WHICH key of that actor's `powers_json` holds the
+        text; `Statute.derived_text` reads it back. Correct an assessor's
+        confession clause and every judgment that cited it reads the corrected
+        text, because there is only ever one copy of it.
+
+        The assessors are found by inspecting `powers_json` in Python rather
+        than with a `powers_json__has_key` lookup. JSON key lookups are backend
+        -specific and this command runs against SQLite locally and PostgreSQL
+        in Docker/CI; fifty-odd Egyptian actors is not a query worth risking a
+        backend disagreement over.
+        """
+        assessors = [
+            actor
+            for actor in Actor.all_objects.filter(civilization=civilization, is_deleted=False)
+            if isinstance(actor.powers_json, dict)
+            and actor.powers_json.get("assessor_index") is not None
+        ]
+        if not assessors:
+            # Not silent: an empty derivation means the assessor seed did not
+            # run or was skipped, and a corpus that quietly seeds zero articles
+            # is exactly the vacuous-success this file's tests guard against.
+            self.stdout.write(self.style.ERROR(
+                "  [warn] No assessors carry an assessor_index — the Egyptian "
+                "statute corpus derives from them and will be empty."
+            ))
+            return
+
+        assessors.sort(key=lambda actor: actor.powers_json["assessor_index"])
+        for actor in assessors:
+            index = actor.powers_json["assessor_index"]
+            clause = actor.powers_json.get(NEGATIVE_CONFESSION_FIELD) or ""
+            if not clause:
+                self.stdout.write(self.style.ERROR(
+                    f"  [warn] Assessor {index} ({actor.name}) has no "
+                    f"{NEGATIVE_CONFESSION_FIELD!r} — deriving an article with "
+                    f"no text."
+                ))
+            values = {
+                "civilization": civilization,
+                "corpus": "NEGATIVE_CONFESSION",
+                "ordinal": index,
+                # A denial, not a prohibition. See StatutePolarity.
+                "polarity": "DENIAL",
+                # The title is the assessor before whom the denial is made; the
+                # body is the denial, and the body is NOT stored.
+                "title_zh": "",
+                "title_en": actor.name,
+                "title_egy": actor.name_egy or actor.name,
+                "text_zh": "",
+                "text_en": "",
+                "text_egy": "",
+                "source": NEGATIVE_CONFESSION_SOURCE,
+                "source_notes": [],
+                "payload_json": {"assessor_index": index},
+                "source_actor": actor,
+                "source_actor_field": NEGATIVE_CONFESSION_FIELD,
+            }
+            self._upsert(
+                model=Statute,
+                lookup={"code": f"EG-NC-{index:02d}"},
+                values=values,
+                compare_fields=STATUTE_FIELDS,
+                tenant=tenant,
+                identity=f"Statute EG-NC-{index:02d} ({actor.name})",
+                do_update=do_update,
+                stats=stats,
+            )
+
+    @staticmethod
+    def _assessor_description(row):
+        parts = [
+            f"Assessor {row['index']} of the Forty-Two of Ma'at, "
+            f"Book of the Dead chapter 125."
+        ]
+        if row["meaning"]:
+            parts.append(f"Budge glosses the name as \"{row['meaning']}\".")
+        if row["home_place"]:
+            parts.append(f"Comes forth from {row['home_place']}.")
+        else:
+            parts.append("The text gives no home place for this one.")
+        parts.append(f"Denies {row['denies']}.")
+        parts.append(f"Papyrus of {ASSESSOR_PAPYRUS}. {ASSESSOR_SOURCE_EDITION}")
+        for note in row.get("notes", ()):
+            parts.append(f"Note: {note}")
+        return " ".join(parts)
+
+    # ------------------------------------------------------------------
+    # Shared upsert
+    # ------------------------------------------------------------------
+    def _upsert(self, *, model, lookup, values, compare_fields, tenant, identity,
+                do_update, stats):
+        """Create-or-reconcile one row, keyed on `lookup`.
+
+        `all_objects` rather than `objects`, so a soft-deleted row is *seen*
+        (and deliberately left alone) instead of being invisible and then
+        colliding with the unique constraint on insert.
+        """
+        existing = list(model.all_objects.filter(**lookup))
+        alive = [obj for obj in existing if not obj.is_deleted]
+
+        if len(alive) > 1:
+            # Duplicate rows predate this command (see fix_actor_civilization).
+            # Reconciling them is that command's job; say so and move on.
+            self.stdout.write(self.style.ERROR(
+                f"  [warn] {identity}: {len(alive)} live rows match {lookup} — "
+                f"ambiguous, skipping. Run `manage.py fix_actor_civilization` to dedupe."
+            ))
+            stats.skipped += 1
+            return
+
+        if not alive:
+            if existing:
+                self.stdout.write(
+                    f"  [skip] {identity}: only soft-deleted row(s) match — not resurrecting "
+                    f"(reason: {existing[0].delete_reason or 'none recorded'})"
+                )
+                stats.skipped += 1
+                return
+            self.stdout.write(f"  + {identity}")
+            stats.created += 1
+            model.all_objects.create(**lookup, **values, tenant=tenant)
+            return
+
+        obj = alive[0]
+        changed = [
+            field for field in (*compare_fields, "tenant")
+            if getattr(obj, field, None) != (tenant if field == "tenant" else values.get(field))
+        ]
+        # A row seeded before tenants were assigned has tenant=None; filling
+        # that in is not an edit to the mythology, it is the row finally becoming
+        # visible to the tenant that owns it, so it happens regardless of
+        # --update.
+        tenant_only = changed == ["tenant"]
+
+        if not changed:
+            stats.unchanged += 1
+            return
+
+        if do_update or tenant_only:
+            what = "tenant" if tenant_only else ", ".join(changed)
+            self.stdout.write(f"  ~ {identity}: {what}")
+            stats.updated += 1
+            if do_update:
+                for field, value in values.items():
+                    setattr(obj, field, value)
+            obj.tenant = tenant
+            obj.save()
+            return
+
+        self.stdout.write(
+            f"  = {identity}: exists, differs on [{', '.join(changed)}] — "
+            f"left as-is (pass --update to overwrite)"
+        )
+        stats.unchanged += 1
