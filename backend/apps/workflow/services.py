@@ -195,6 +195,78 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
 }
 
 
+# The same record, for the *presets* — the node labels
+# ``frontend/src/config/workflow-templates.ts`` writes down as naming nobody in
+# its own ``NODES_THAT_NAME_NO_ACTOR`` table.
+#
+# This one IS consulted at runtime, and it has to be: since ``_resolve_approver``
+# falls back to reading the node label, the labels it reads are overwhelmingly
+# preset labels (a preset saved from /workflow becomes ``nodes_json``, which
+# ``create_from_judgment`` prefers over ``WORKFLOW_TEMPLATES``). Consulting only
+# the backend table would leave every frontend-only bench, institution and
+# action name — 42审判者 · 否定告白, 城隍申诉审理, 枉死城登记, … — to be
+# resolved if the cast happens to contain a row answering to it. "Nothing
+# currently answers to that name" is luck; the two tables are the decision.
+#
+# Names only, no reasons: the reasons are written next to the entries in the
+# TypeScript file and duplicating them here would give this repository two
+# copies of a rationale free to drift. What must not drift is the *set*, and
+# ``tests/test_workflow_preset_approvers.py`` compares it against the parsed
+# module — the same file, parsed the same way,
+# ``tests/test_workflow_template_cast.py`` already reads.
+PRESET_NODES_THAT_NAME_NO_ACTOR = frozenset({
+    # 中国
+    "原殿阎王 · 复核",
+    "上级殿阎王",
+    "酆都大帝 · 终审",
+    "酆都大帝直审",
+    "案件分类",
+    "城隍初审",
+    "城隍申诉审理",
+    "十殿联审",
+    "枉死城登记",
+    "寿数折抵",
+    "罪行核定",
+    "阿鼻地狱入狱",
+    "功德核定",
+    "轮回分流",
+    "功德评定",
+    "紧急受理",
+    "申诉受理",
+    # 埃及
+    "42审判者 · 否定告白",
+})
+
+
+#: How a node label names a person: 「<name> · <step>」. Identical to the probe
+#: ``tests/test_workflow_template_cast.py`` uses to assert that every preset
+#: node names somebody the cast can supply — that assertion is only worth
+#: something if the runtime resolves the same substring the test probes, so the
+#: two are compared in ``tests/test_workflow_preset_approvers.py`` rather than
+#: merely written the same way.
+NODE_LABEL_SEPARATOR = " · "
+
+
+def _named_person(node_name: str) -> str:
+    """The part of a node label that claims to be somebody's name.
+
+    A label with no separator is taken whole, so 「城隍初审」 is probed as a name
+    rather than excused by its own formatting — it is excused by being listed
+    above, which is a decision, not a punctuation accident.
+    """
+    if NODE_LABEL_SEPARATOR in node_name:
+        return node_name.split(NODE_LABEL_SEPARATOR)[0]
+    return node_name
+
+
+def _designates_nobody(node_name: str) -> bool:
+    """Whether this node is *recorded* as naming nobody, by either side."""
+    return (
+        node_name in TEMPLATE_NODES_WITHOUT_AN_APPROVER
+        or node_name in PRESET_NODES_THAT_NAME_NO_ACTOR
+    )
+
+
 # Valid case types per civilization
 VALID_CASE_TYPES_BY_CIVILIZATION = {
     Civilization.CHINESE: {CaseType.ROUTINE, CaseType.APPEAL, CaseType.CROSS_REALM, CaseType.SPECIAL},
@@ -211,12 +283,44 @@ class WorkflowService:
 
     @classmethod
     def _resolve_approver(cls, node_def: dict, civilization: str, tenant_id) -> dict:
-        """Turn a template node's ``actor`` name into approver columns.
+        """Turn the person a template node names into approver columns.
 
         Returns the kwargs ``ApprovalNode.objects.create`` should get:
         ``{"approver_type": "ACTOR", "approver_actor": <Actor>}`` when the named
         actor is on this tenant's bench, and ``{"approver_type": "SYSTEM"}``
         otherwise.
+
+        **The name comes from the ``actor`` key, or failing that from the node's
+        own label.** The second half is not a convenience either: nodes built
+        from a *preset* have no ``actor`` key at all — ``workflow-templates.ts``
+        writes ``name/court/type/order``, /workflow saves that as
+        ``WorkflowTemplate.nodes_json``, and ``create_from_judgment`` prefers a
+        stored template over ``WORKFLOW_TEMPLATES``. Reading only the ``actor``
+        key therefore made *every* preset-built node ``SYSTEM``, and since
+        ``7fe9a28`` a ``SYSTEM`` node can be decided by nobody: a workflow
+        created from a preset was stuck from birth, while its labels named
+        Christ and Michael, both of whom the cast supplies. Measured in
+        ``e7e87e7``::
+
+            1.'Christ · 私审判' SYSTEM None   2.'Michael · 引领入光' SYSTEM None
+            3.'Christ · 公审判' SYSTEM None
+
+        The label is probed the way ``tests/test_workflow_template_cast.py``
+        probes it — the part before 「 · 」, or the whole string when there is no
+        separator (see ``_named_person``). That file asserts that every preset
+        node names somebody the cast can supply; the assertion is only worth
+        something if this resolves the same substring, so the two probes are
+        compared in ``tests/test_workflow_preset_approvers.py`` instead of being
+        written the same way twice and hoped over.
+
+        **A node recorded as naming nobody is not probed at all**, whichever of
+        the two tables records it (see ``_designates_nobody``). 「四十二神官 ·
+        罪行核实」 is a forty-two-member bench and 「十殿联审」 is ten kings
+        sitting jointly; ``approver_actor`` is a single FK, so resolving either
+        would file a joint session as one being's decision — a quieter and worse
+        error than the stuck flow this fallback fixes. The exclusion is checked
+        against an ``Actor`` deliberately created to answer to an excused label,
+        so it is a rule rather than an accident of who is currently seeded.
 
         Falling back to ``SYSTEM`` is the fail-closed direction, not a
         convenience: since ``can_approve`` became ``approve_node``'s only gate,
@@ -254,6 +358,11 @@ class WorkflowService:
         tenants seed the same pantheon.
         """
         actor_name = node_def.get("actor")
+        if not actor_name:
+            node_name = node_def.get("name") or ""
+            if _designates_nobody(node_name):
+                return {"approver_type": "SYSTEM"}
+            actor_name = _named_person(node_name)
         if not actor_name:
             return {"approver_type": "SYSTEM"}
 
