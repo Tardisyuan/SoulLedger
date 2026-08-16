@@ -4,10 +4,26 @@ Serializers for workflow app.
 from rest_framework import serializers
 
 from apps.workflow.models import ApprovalNode, ApprovalWorkflow, WorkflowTemplate
+from apps.workflow.node_shape import normalize_template_node
 
 
 class WorkflowTemplateNodeSerializer(serializers.Serializer):
-    """Serializer for a single template node."""
+    """Serializer for a single template node.
+
+    These field names are the canonical spelling of a stored node — see
+    ``apps/workflow/node_shape.py`` for why this shape and not the
+    ``name/court/type/order`` one ``WORKFLOW_TEMPLATES`` uses.
+
+    On *input* only this shape is accepted, so nothing new is written in the
+    other one. On *output* the node is normalized first, because rows in the
+    other shape can already exist: ``seed_workflow_templates`` wrote
+    ``WORKFLOW_TEMPLATES`` verbatim into ``nodes_json`` until this change, and
+    rendering such a row raised ``KeyError: 'node_name'`` from
+    ``rest_framework/fields.py`` — a 500 on ``GET
+    /api/v1/workflow/templates/{id}/``, the mirror image of the
+    ``KeyError: 'name'`` the same split caused in ``create_from_judgment``.
+    Both are held as regressions in ``tests/test_workflow_node_shape.py``.
+    """
     id = serializers.CharField(required=False, allow_blank=True)
     node_name = serializers.CharField(max_length=255)
     node_type = serializers.ChoiceField(
@@ -21,6 +37,17 @@ class WorkflowTemplateNodeSerializer(serializers.Serializer):
         default="ROLE"
     )
     node_order = serializers.IntegerField(default=1)
+
+    def to_representation(self, instance):
+        """Render a stored node, in whichever shape it was stored.
+
+        Anything that is not a mapping is handed to DRF unchanged so it fails
+        the way it always did — this exists to translate a known older spelling,
+        not to swallow junk in ``nodes_json``.
+        """
+        if isinstance(instance, dict):
+            instance = normalize_template_node(instance)
+        return super().to_representation(instance)
 
 
 class WorkflowTemplateSerializer(serializers.ModelSerializer):

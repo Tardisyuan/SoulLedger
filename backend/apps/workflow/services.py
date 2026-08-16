@@ -16,6 +16,7 @@ from apps.workflow.models import (
     NodeType,
     WorkflowTemplate,
 )
+from apps.workflow.node_shape import normalize_template_node
 
 # Workflow templates by civilization and case type
 #
@@ -290,6 +291,19 @@ class WorkflowService:
         actor is on this tenant's bench, and ``{"approver_type": "SYSTEM"}``
         otherwise.
 
+        Or ``{"approver_type": "ROLE", "approver_role": …}`` when the node
+        names no person but *does* carry a role somebody typed into the editor —
+        see "the role a node carries" below.
+
+        **The node is normalized first** (``normalize_template_node``), so this
+        reads one spelling whichever the caller holds — a raw
+        ``WORKFLOW_TEMPLATES`` entry, a row the API serializer wrote, or an
+        already-normalized dict from the loops below. It matters most here:
+        reading the label is what makes preset-built nodes approvable at all
+        (below), and reading it under a key half the rows lack would re-break
+        that in silence, because every test of it in
+        ``tests/test_workflow_preset_approvers.py`` hands this the other shape.
+
         **The name comes from the ``actor`` key, or failing that from the node's
         own label.** The second half is not a convenience either: nodes built
         from a *preset* have no ``actor`` key at all — ``workflow-templates.ts``
@@ -356,27 +370,45 @@ class WorkflowService:
         it is unique per ``(name, civilization)`` per tenant, and an unscoped
         ``.get()`` would raise MultipleObjectsReturned the first time two
         tenants seed the same pantheon.
+
+        **The role a node carries is the last thing tried, not the first.**
+        A node saved from /workflow can set ``approver_type="ROLE"`` with an
+        ``approver_role`` — and a non-empty ``approver_role`` is one of exactly
+        two things ``designates_approver`` accepts, so discarding it would hand
+        the user back the un-approvable node ``e7e87e7`` measured, arriving
+        through a different key. It is tried *after* the name because naming a
+        person is the more specific designation and because ``"ROLE"`` is what
+        ``WorkflowEditor.getTemplateNodes`` defaults **every** node to
+        (``approver_type ?? "ROLE"``, ``approver_role`` usually ``""``) — an
+        empty role is a default, not a decision, and honouring the default
+        ahead of the label would have unpicked ``625f4d1`` for every template
+        the editor has ever saved. An empty role designates nobody, so it falls
+        through to ``SYSTEM`` exactly as before.
         """
+        node_def = normalize_template_node(node_def)
+        node_name = node_def["node_name"]
         actor_name = node_def.get("actor")
-        if not actor_name:
-            node_name = node_def.get("name") or ""
-            if _designates_nobody(node_name):
-                return {"approver_type": "SYSTEM"}
+        excused = not actor_name and _designates_nobody(node_name)
+        if not actor_name and not excused:
             actor_name = _named_person(node_name)
-        if not actor_name:
-            return {"approver_type": "SYSTEM"}
 
-        from apps.actors.models import Actor, resolve_actor_by_any_name
+        if actor_name:
+            from apps.actors.models import Actor, resolve_actor_by_any_name
 
-        actor = resolve_actor_by_any_name(
-            Actor._base_manager.filter(
-                civilization=civilization, tenant_id=tenant_id, is_deleted=False
-            ),
-            actor_name,
-        )
-        if actor is None:
-            return {"approver_type": "SYSTEM"}
-        return {"approver_type": "ACTOR", "approver_actor": actor}
+            actor = resolve_actor_by_any_name(
+                Actor._base_manager.filter(
+                    civilization=civilization, tenant_id=tenant_id, is_deleted=False
+                ),
+                actor_name,
+            )
+            if actor is not None:
+                return {"approver_type": "ACTOR", "approver_actor": actor}
+
+        role = node_def.get("approver_role") or ""
+        if node_def.get("approver_type") == "ROLE" and role:
+            return {"approver_type": "ROLE", "approver_role": role}
+
+        return {"approver_type": "SYSTEM"}
 
     @classmethod
     def validate_civilization_case_type(cls, civilization: str, case_type: str) -> str | None:
@@ -505,15 +537,22 @@ class WorkflowService:
                 tenant=judgment.tenant,
             )
 
-            # Create nodes
+            # Create nodes. Normalized first, because `template["nodes"]` is
+            # one of two shapes — a stored `nodes_json` is what the API
+            # serializer wrote, WORKFLOW_TEMPLATES and the fallback above are
+            # `name/court/type/order` — and this read only the second, so
+            # `node_def["name"]` raised KeyError (a 500 from
+            # apps/judgment/services.py:189) for every template a user had
+            # actually saved. apps/workflow/node_shape.py has the rest.
             first_node = None
-            for node_def in template["nodes"]:
+            for position, raw_node_def in enumerate(template["nodes"], start=1):
+                node_def = normalize_template_node(raw_node_def, position)
                 node = ApprovalNode.objects.create(
                     workflow=workflow,
-                    node_name=node_def["name"],
-                    node_order=node_def["order"],
-                    node_type=node_def["type"],
-                    court_code=node_def["court"],
+                    node_name=node_def["node_name"],
+                    node_order=node_def["node_order"],
+                    node_type=node_def["node_type"],
+                    court_code=node_def["court_code"],
                     status=NodeStatus.PENDING,
                     required_verdicts=["PASSED", "FAILED", "CONFIRMED", "REJECTED", "SKIPPED"],
                     # Was a hardcoded `approver_type="SYSTEM"`, which is why
@@ -564,13 +603,18 @@ class WorkflowService:
         appeal_template = WORKFLOW_TEMPLATES.get((soul.civilization, CaseType.APPEAL))
         if appeal_template:
             first_node = None
-            for node_def in appeal_template["nodes"]:
+            for position, raw_node_def in enumerate(appeal_template["nodes"], start=1):
+                # Normalized like create_from_judgment, though this loop only
+                # ever sees WORKFLOW_TEMPLATES: reading one spelling here is
+                # what stops a future stored-template lookup, copied from
+                # above, reintroducing the KeyError.
+                node_def = normalize_template_node(raw_node_def, position)
                 node = ApprovalNode.objects.create(
                     workflow=appeal_workflow,
-                    node_name=node_def["name"],
-                    node_order=node_def["order"],
-                    node_type=node_def["type"],
-                    court_code=node_def["court"],
+                    node_name=node_def["node_name"],
+                    node_order=node_def["node_order"],
+                    node_type=node_def["node_type"],
+                    court_code=node_def["court_code"],
                     status=NodeStatus.PENDING,
                     required_verdicts=["PASSED", "FAILED", "CONFIRMED", "REJECTED", "SKIPPED"],
                     # Same resolution as create_from_judgment. Only 魏征 ·
