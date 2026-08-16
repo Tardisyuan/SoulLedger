@@ -29,6 +29,21 @@ from apps.workflow.models import (
 # by the audited ``escalate`` path. That is the intended cost: an approval
 # flow whose steps do not say who approves them is not a thing this system
 # should be able to run silently.
+#
+# THIS IS NOT THE SAME TABLE AS THE FRONTEND PRESETS, AND THAT IS DELIBERATE.
+# ``frontend/src/config/workflow-templates.ts`` holds seventeen presets keyed by
+# name (``CHINESE_ROUTINE``, ``EUROPEAN_GREEK``, …); this dict holds six keyed by
+# ``(civilization, case_type)``. Neither is generated from the other and their
+# node sets differ — the frontend has Greek, Dante and 枉死城 flows this file has
+# never had, this file has the two European ecclesiastical flows the frontend has
+# never had, and a European ROUTINE judgment falls through *here* to the generic
+# 审批节点 below while the frontend offers a 末日审判流程 preset for the same pair.
+# The presets are what a user picks in the editor and can save as a
+# ``WorkflowTemplate`` row, which ``create_from_judgment`` then reads in
+# preference to this dict — so the two sets meet in the database rather than in
+# code. The one rule both must obey is that a node naming a person must name a
+# person the cast can supply; ``tests/test_workflow_template_cast.py`` asserts it
+# across both.
 WORKFLOW_TEMPLATES = {
     # Chinese ten courts.
     #
@@ -153,7 +168,23 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
     "忏悔赦免审核": "A sacrament, not a person.",
     "炼狱净化评估": "Names the process. Purgatorio's terraces have no seated "
                "judge — see realms/0014, which deliberately added no actor.",
-    "天堂准入终审": "Names the gate. Peter is not in EUROPEAN_ACTORS.",
+    # THIS ONE IS NOW A DECISION RATHER THAN AN ABSENCE, AND IT IS WHY THE
+    # REASON GREW. It used to say only "Names the gate. Peter is not in
+    # EUROPEAN_ACTORS." — true when written, and no longer the whole story:
+    # `79dee57` seeded Christ, so the cast does contain a judge who could be
+    # named here, and the next reader who notices that will point this node at
+    # him. Do not. There is no second adjudication at the exit of purgatory:
+    # the particular judgment already referred the life to Christ (CCC
+    # 1021-1022), and CCC 1030-1032 has purgation followed by entry into
+    # heaven with nothing further to decide. Naming a judge here would invent
+    # a tribunal, which is the same move as the archangel council the frontend
+    # preset used to run (see the European section of
+    # frontend/src/config/workflow-templates.ts).
+    "天堂准入终审": "Names the gate. Peter is not in EUROPEAN_ACTORS, and Christ — "
+               "who is, since 79dee57 — does not judge here: the particular "
+               "judgment referred the life to him already (CCC 1021-1022) and "
+               "purgation is followed by entry, not by a second verdict (CCC "
+               "1030-1032).",
     "四十二神官 · 罪行核实": "The forty-two assessors are forty-two Actor rows "
                      "(seed_mythology seeds them individually). One FK cannot "
                      "hold a bench, and the confession is made to all of them "
