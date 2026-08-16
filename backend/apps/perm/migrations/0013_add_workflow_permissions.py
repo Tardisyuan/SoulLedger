@@ -37,6 +37,9 @@ Data migration: 补上缺失的 workflow.* 权限。
 - reverse 对本迁移新建的 RolePermission / Permission 做真删除（queryset.delete()
   是裸 SQL DELETE，不会走 SoftDeleteMixin 覆写的实例级 delete()），保证
   forward → backward → forward 反复跑不会撞 codename 唯一约束。
+- 「本迁移新建的」是字面意思，不是「这六个 codename 沾边的一切」——
+  见 remove_workflow_permissions() 的说明，以及为什么删 Permission 那一步的
+  级联才是真正的破坏来源。
 """
 from django.db import migrations
 
@@ -102,16 +105,56 @@ def create_workflow_permissions(apps, schema_editor):
 
 
 def remove_workflow_permissions(apps, schema_editor):
+    """只撤本迁移授出的那些行。
+
+    原来的写法是「按 codename 一刀切」：先删掉引用这六个 codename 的**全部**
+    RolePermission，再删掉这六条 Permission。两步都比 forward 写的多。
+
+    - forward 只给 ADMIN 和 JUDGE 授权（见 ROLE_GRANTS）。按 codename 删会连
+      带删掉别人授的 —— 在权限管理界面上手动给 GUARDIAN 加的 workflow.approve
+      就是典型例子，没有任何迁移会授它，所以它只可能是人授的。
+    - 更要命的是第二步。Permission 被删时 RolePermission.permission 是
+      CASCADE，于是**即使第一步一行没删，级联也会把所有引用它的授权一起带走**。
+      也就是说旧版 reverse 撤销一个「什么都没建」的 forward（codename 早就存在、
+      get_or_create 只是取到）时，照样能把整张授权表上这六个 codename 清空。
+
+    所以这里改成：
+    1. 只删 (ADMIN|JUDGE) × 该角色被授的 codename，即 forward 的写入集合；
+    2. Permission 只删「删完第一步后已经没有任何 RolePermission 引用」的那几条
+       —— 还有人引用就说明它不是本迁移独占的，留着。留着也不影响幂等：forward
+       是 get_or_create，再跑一遍会取到而不是重建。
+
+    残留风险（不改 forward 就消不掉）：本迁移之前就存在、且没有任何授权指向它的
+    Permission 行，与 forward 刚建的那条长得一模一样，会被一并删除。forward 没
+    有记录自己建了哪几条，而给它加标记等于改写一条已经在生产库上 apply 过的迁移。
+
+    真删除而非软删除，仍然是为了保证反复 forward/backward 不撞 codename 唯一约束。
+    """
     Permission = apps.get_model("perm", "Permission")
+    Role = apps.get_model("perm", "Role")
     RolePermission = apps.get_model("perm", "RolePermission")
 
     codenames = [codename for codename, _, _ in WORKFLOW_PERMISSIONS]
 
-    # 真删除，不走软删除，避免下次 forward 撞 codename 唯一约束。
-    RolePermission.all_objects.filter(
-        permission__codename__in=codenames
-    ).delete()
-    Permission.all_objects.filter(codename__in=codenames).delete()
+    for role_name, granted in ROLE_GRANTS.items():
+        role = Role.all_objects.filter(name=role_name, is_deleted=False).first()
+        if role is None:
+            # forward 在同样的分支上什么都没授，这里也就没有什么可撤。
+            continue
+        RolePermission.all_objects.filter(
+            role=role, permission__codename__in=granted, is_deleted=False
+        ).delete()
+
+    # 只删已经没人引用的 Permission。软删除的授权也算引用 —— 它仍是一行外键，
+    # 硬删 Permission 一样会级联把它带走。
+    orphaned = [
+        permission.pk
+        for permission in Permission.all_objects.filter(
+            codename__in=codenames, is_deleted=False
+        )
+        if not RolePermission.all_objects.filter(permission=permission).exists()
+    ]
+    Permission.all_objects.filter(pk__in=orphaned).delete()
 
     _invalidate_cache(ROLE_GRANTS.keys())
 

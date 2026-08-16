@@ -35,8 +35,9 @@ apps/org/tests.py::OrganizationAPITest.setUp() (creates its own CN_DIYU) was
 tripped by during development of this migration — fixed here by gating tenant
 creation on there being backfill work to do.
 
-Reversal clears the FK back to null, mirroring 0004_realm_tenant's sibling
-migrations elsewhere in the codebase that add a data-migration counterpart.
+Reversal clears the FK back to null on the rows this migration set it on, and
+only those — see clear_tenant() for which rows that excludes and why an
+Organization already pointed at a tenant is none of the rollback's business.
 """
 from django.db import migrations
 
@@ -80,8 +81,44 @@ def backfill_tenant(apps, schema_editor):
 
 
 def clear_tenant(apps, schema_editor):
+    """Null the FK only on the rows the backfill wrote it to.
+
+    This used to be a single ``filter(category__in=CIV_TO_TENANT)`` update,
+    which never asked *which* tenant a row was pointing at. The forward is
+    narrower than that in two ways at once — it only touches rows whose
+    ``tenant`` is NULL, and it only ever writes the one tenant CIV_TO_TENANT
+    names for that category — so the complement is
+    ``category == X AND tenant.code == CIV_TO_TENANT[X]``.
+
+    What the wide version destroyed: an Organization deliberately administered
+    by a tenant other than its category's default — a CHINESE-category joint
+    court run out of EU_HEAVEN_HELL, say. The backfill skipped it (its tenant
+    was not NULL) and the rollback nulled it anyway, losing an assignment that
+    predates this migration entirely.
+
+    Residual case, unclosable without changing an already-applied forward: an
+    Organization created *after* the backfill whose tenant happens to be its
+    category's default is identical to one the backfill wrote, and is cleared
+    with them.
+
+    The Tenant rows the forward may have get_or_create'd are deliberately not
+    deleted here. A Tenant is referenced by Soul/Realm/Actor/Judgment as well,
+    so deleting one on the strength of "this migration might have created it"
+    reaches much further than an Organization FK; and leaving it costs nothing,
+    because the forward get_or_creates rather than creates.
+    """
     Organization = apps.get_model("org", "Organization")
-    Organization.all_objects.filter(category__in=CIV_TO_TENANT).update(tenant=None)
+    Tenant = apps.get_model("tenants", "Tenant")
+
+    for category, tenant_code in CIV_TO_TENANT.items():
+        tenant = Tenant.all_objects.filter(code=tenant_code).first()
+        if tenant is None:
+            # No such Tenant row, so the forward cannot have pointed anything
+            # at it for this category.
+            continue
+        Organization.all_objects.filter(category=category, tenant=tenant).update(
+            tenant=None
+        )
 
 
 class Migration(migrations.Migration):

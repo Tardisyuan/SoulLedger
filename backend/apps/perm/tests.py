@@ -334,9 +334,17 @@ class WorkflowPermissionMigrationTest(TestCase):
         )
         # 0017 also replays 0013's own effects into the test database (it grants
         # the workflow codenames it finds already seeded). This class is about
-        # what 0013 contributes, so rewind its six codenames first — otherwise
-        # "forward created these grants" would hold whether or not 0013 does
-        # anything. 0013's own reverse function is the exact inverse to use.
+        # what 0013 contributes, so rewind its ADMIN/JUDGE grants first —
+        # otherwise "forward created these grants" would hold whether or not
+        # 0013 does anything. 0013's own reverse function is the exact inverse
+        # to use.
+        #
+        # It rewinds *0013's* rows and no more: the reverse no longer deletes
+        # by codename, so MODERATOR's workflow grants (0014's and 0015's, which
+        # 0017 re-asserts) survive it, and with them the Permission rows they
+        # point at. Tests below that need those gone clear them explicitly,
+        # standing in for the 0014/0015 reverses that would have run first in
+        # the real graph.
         self._backward()
         invalidate_all_permissions()
         self.addCleanup(invalidate_all_permissions)
@@ -398,8 +406,24 @@ class WorkflowPermissionMigrationTest(TestCase):
         for codename in ("workflow.create", "workflow.update", "workflow.delete"):
             self.assertFalse(check_permission(judge_user, codename))
 
+    def _drop_other_roles_workflow_grants(self):
+        """Stand in for the 0014/0015 reverses, which run before 0013's.
+
+        Migrating back to perm/0012 unapplies 0015 and 0014 first, and those
+        take MODERATOR's workflow grants with them — so by the time 0013's
+        reverse runs, ADMIN and JUDGE are the only holders left. Calling
+        `remove_workflow_permissions` directly skips that, and the narrowed
+        reverse (correctly) refuses to delete a Permission somebody still
+        holds a grant on. Doing it here keeps these two assertions about
+        0013 rather than about the call order of a hand-driven test.
+        """
+        RolePermission.objects.filter(
+            permission__codename__in=self.WORKFLOW_CODENAMES
+        ).exclude(role__in=[self.admin_role, self.judge_role]).delete()
+
     def test_reverse_removes_permissions_and_role_permissions(self):
         self._forward()
+        self._drop_other_roles_workflow_grants()
         self._backward()
         self.assertFalse(
             Permission.objects.filter(codename__in=self.WORKFLOW_CODENAMES).exists()
@@ -408,12 +432,51 @@ class WorkflowPermissionMigrationTest(TestCase):
             RolePermission.objects.filter(permission__codename__in=self.WORKFLOW_CODENAMES).exists()
         )
 
+    def test_reverse_keeps_a_permission_another_role_still_holds(self):
+        """The narrowing this reverse was given, stated as its own assertion.
+
+        `RolePermission.permission` is CASCADE, so deleting the Permission row
+        is how the old reverse revoked grants it never issued — MODERATOR's
+        four workflow codenames come from 0014/0015, and a `DELETE FROM
+        perm_permission WHERE codename IN (...)` took them out without ever
+        naming MODERATOR. Here MODERATOR keeps its grants (nothing stands in
+        for the 0014 reverse), and both the grant and the Permission under it
+        have to survive 0013's rollback.
+        """
+        moderator, _ = Role.objects.get_or_create(
+            name="MODERATOR", defaults={"display_name": "Realm Lead"}
+        )
+        self._forward()
+        read_perm = Permission.objects.get(codename="workflow.read")
+        RolePermission.objects.get_or_create(role=moderator, permission=read_perm)
+
+        self._backward()
+
+        self.assertTrue(
+            Permission.objects.filter(codename="workflow.read").exists(),
+            "the reverse deleted a Permission another role still holds a grant on",
+        )
+        self.assertTrue(
+            RolePermission.objects.filter(
+                role=moderator, permission__codename="workflow.read"
+            ).exists(),
+            "MODERATOR's grant was cascaded away by 0013's rollback",
+        )
+        # …and the rows 0013 itself wrote are gone all the same.
+        self.assertFalse(
+            RolePermission.objects.filter(
+                role=self.admin_role, permission__codename__startswith="workflow."
+            ).exists()
+        )
+        self.assertFalse(Permission.objects.filter(codename="workflow.advance").exists())
+
     def test_reverse_restores_dict_fallback_for_judge(self):
         from apps.perm.cache import invalidate_all_permissions
         from apps.perm.checker import check_permission
 
         judge_user = User.objects.create_user(username="judge_wf_test2", password="x", role="JUDGE")
         self._forward()
+        self._drop_other_roles_workflow_grants()
         self._backward()
         invalidate_all_permissions()
 
