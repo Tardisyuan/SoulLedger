@@ -13,6 +13,9 @@
  *      British Museum Papyrus of Hunefer, BM EA 9901)
  *   - verify-greek.md §2.1-2.2, §三 item 3
  *     (Plato, *Gorgias* 524a; Dante, *Inferno* V.4-15)
+ *   - verify-christian-cast.md
+ *     (John 5:22, Acts 10:42, 2 Cor 5:10, Matt 25:31-46, the Nicene Creed,
+ *      CCC 1021-1041; Offertory of the Roman Requiem for Michael)
  *
  * Each assertion below asserts absence as well as presence: checking that
  * Osiris sits in the Hall is not enough if a second node still puts him in
@@ -21,6 +24,7 @@
  */
 
 import {
+  NODES_THAT_NAME_NO_ACTOR,
   WORKFLOW_TEMPLATES,
   type WorkflowNodeTemplate,
   type WorkflowTemplate,
@@ -175,11 +179,118 @@ describe("Dante's hell circles: Minos sorts at the second circle", () => {
     expect(classifier?.name).toContain("Minos");
   });
 
-  it("does not have Lucifer pronouncing sentence", () => {
-    // Lucifer is frozen in Judecca chewing traitors (Inferno XXXIV). Passing
+  it("does not have the ninth-circle node pronouncing sentence", () => {
+    // He is frozen in Judecca chewing traitors (Inferno XXXIV). Passing
     // sentence is Minos' function, and it happens 33 cantos earlier.
-    const lucifer = circles.nodes.find((node) => node.name.includes("Lucifer"));
-    expect(lucifer).toBeDefined();
-    expect(lucifer?.name).not.toContain("宣判");
+    //
+    // The node is named for the cast row, `Satan`, not for Dante's Lucifero:
+    // one figure, but only one of the two spellings resolves to an Actor, and
+    // backend/tests/test_workflow_template_cast.py holds every preset node to
+    // naming somebody seed_mythology can supply.
+    const ninth = circles.nodes.find((node) => node.name.includes("Satan"));
+    expect(ninth).toBeDefined();
+    expect(ninth?.name).not.toContain("宣判");
+    expect(circles.nodes.some((node) => node.name.includes("Lucifer"))).toBe(false);
+  });
+});
+
+// ── Christendom: one judge, and Michael is not him ───────────────────
+
+describe("European Christian templates: Christ judges, Michael leads", () => {
+  // Sources: docs/lore-verification/verify-christian-cast.md. John 5:22 (the
+  // Father judges no one but has given all judgment to the Son), Acts 10:42,
+  // 2 Cor 5:10 (βῆμα τοῦ Χριστοῦ), Matt 25:31-46, the Nicene Creed, CCC
+  // 1021-1041. Michael's one liturgically grounded office is leading: *signifer
+  // sanctus Michael repraesentet eas in lucem sanctam*, Offertory of the Roman
+  // Requiem. Weighing souls is medieval iconography out of Greek psychostasia
+  // out of the Egyptian weighing of the heart — the same rite this file's
+  // Egyptian section locks — and is why apps/actors seeds him CONDUIT.
+  //
+  // These three presets ran Michael as both first and final instance, with
+  // Gabriel and an "angelic council" in between. All four were the same error:
+  // the Chinese ten-court ladder of instances imported onto a theology that has
+  // exactly one judge and no bench.
+  const CHRISTIAN_KEYS = ["EUROPEAN_ROUTINE", "EUROPEAN_APPEAL", "EUROPEAN_EMERGENCY"];
+  const christian = CHRISTIAN_KEYS.map(
+    (key) => [key, WORKFLOW_TEMPLATES[key]] as [string, WorkflowTemplate],
+  );
+
+  it.each(christian)("%s ends at Christ, not at an archangel", (_key, template) => {
+    const last = [...template.nodes].sort((a, b) => a.order - b.order).at(-1);
+    expect(last?.name).toContain("Christ");
+  });
+
+  it("gives Michael no hearing to hold, in any template", () => {
+    // Absence as well as presence: he must still be there (he leads), and no
+    // node of his may be an instance of judgment.
+    const michael = templates.flatMap(([, template]) => nodesNaming(template, "Michael"));
+    expect(michael.length).toBeGreaterThan(0);
+    for (const node of michael) {
+      expect(node.name).not.toContain("审");
+      expect(node.type).not.toContain("审");
+    }
+  });
+
+  it("seats nobody as both first instance and final instance", () => {
+    // The defect this describe block exists for, stated as the general rule:
+    // one name at 初审 and the same name at 终审 is a judge reviewing himself.
+    //
+    // Christ holds two nodes in EUROPEAN_ROUTINE and that is deliberate — the
+    // particular judgment at death (CCC 1021-1022) and the general one at the
+    // end (CCC 1038-1041) are two judgments in the Catechism, by the one judge,
+    // not two tiers of one. So the rule is about instances, not about a name
+    // appearing twice.
+    const offenders: string[] = [];
+    for (const [key, template] of templates) {
+      const byPerson: Record<string, string[]> = {};
+      for (const node of template.nodes) {
+        const person = node.name.split(" · ")[0];
+        (byPerson[person] ??= []).push(node.type);
+      }
+      for (const [person, types] of Object.entries(byPerson)) {
+        if (types.some((t) => t.includes("初审")) && types.some((t) => t.includes("终审"))) {
+          offenders.push(`${key}/${person}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("convenes no angelic council and gives Gabriel no part in judging the dead", () => {
+    // Neither passage that sounds like a bench is one: Matt 19:28 / Luke 22:30
+    // seats the twelve apostles with no dockets and no names, and 1 Cor 6:2-3's
+    // subject is "the saints" — everyone, not a closed list. Gabriel carries
+    // announcements to the living (Dan 8:16, 9:21; Luke 1:11-38); escorting the
+    // dead was Michael's office written onto him, and the last-trumpet image is
+    // later tradition, not scripture.
+    const named = templates.flatMap(([key, template]) =>
+      template.nodes
+        .filter((node) => node.name.includes("天使议会") || node.name.includes("Gabriel"))
+        .map((node) => `${key}/${node.name}`),
+    );
+    expect(named).toEqual([]);
+  });
+});
+
+// ── The record of which nodes name nobody ────────────────────────────
+
+describe("NODES_THAT_NAME_NO_ACTOR stays in step with the presets", () => {
+  // The half of the cross-end contract Jest can check. Whether a name resolves
+  // to a seeded Actor is a database question and lives in
+  // backend/tests/test_workflow_template_cast.py; that a recorded reason still
+  // describes a node that exists is a text question and belongs here, where it
+  // fails in a second instead of after a seed.
+  const names = new Set(templates.flatMap(([, template]) => template.nodes.map((n) => n.name)));
+
+  it("records reasons only for nodes some preset actually has", () => {
+    const stale = Object.keys(NODES_THAT_NAME_NO_ACTOR).filter((name) => !names.has(name));
+    expect(stale).toEqual([]);
+  });
+
+  it("records a non-empty reason for each of them", () => {
+    const blank = Object.entries(NODES_THAT_NAME_NO_ACTOR)
+      .filter(([, reason]) => reason.trim() === "")
+      .map(([name]) => name);
+    expect(blank).toEqual([]);
   });
 });

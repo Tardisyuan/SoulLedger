@@ -7,6 +7,11 @@
 // intuitive-looking. Node-level comments below name the plate or line each
 // value rests on. src/__tests__/workflowTemplateLore.test.ts locks the ones
 // that were actually found wrong.
+//
+// 还有一条跨端约束：节点名里的人必须是名册里真实存在的人。规则与理由表见文件
+// 末尾的 NODES_THAT_NAME_NO_ACTOR，断言在
+// backend/tests/test_workflow_template_cast.py（它把本文件当文本读，因为
+// Jest 连不上数据库、pytest 跑不了 TypeScript）。
 
 export interface WorkflowNodeTemplate {
   id: string;
@@ -76,7 +81,9 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     nodes: [
       { id: "n1", name: "枉死城登记", court: "枉死城", type: "登记", order: 1 },
       { id: "n2", name: "城隍申诉审理", court: "城隍", type: "申诉", order: 2 },
-      { id: "n3", name: "地藏王超度", court: "九华山", type: "超度", order: 3 },
+      // 名册里的行叫「地藏王菩萨」，「地藏王超度」解析不到任何人。改成
+      // 「<名册里的名字> · <步骤>」的写法，这一步才指得到具体的谁。
+      { id: "n3", name: "地藏王菩萨 · 超度", court: "九华山", type: "超度", order: 3 },
       { id: "n4", name: "寿数折抵", court: "枉死城", type: "等待", order: 4 },
     ],
   },
@@ -111,27 +118,71 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     ],
   },
   // ========== 欧洲天堂地狱 ==========
+  //
+  // 依据：docs/lore-verification/verify-christian-cast.md。这三个模板此前让
+  // Michael 同时坐初审与终审，并在中间插进 Gabriel 与「天使议会」。四处都没有
+  // 依据，且错的方向一致：把中国十殿的多级复审形状套在一个只有一位审判者的
+  // 神学上。
+  //
+  //   · 审判者是基督，且只有他一位。约 5:22「父不审判什么人，乃将审判的事全交
+  //     与子」；徒 10:42「神所立…作审判活人死人的主」；林后 5:10 βῆμα τοῦ
+  //     Χριστοῦ「我们众人必要在基督台前显露出来」；太 25:31-46 人子分别万民；
+  //     尼西亚信经「他将在荣耀中再来，审判活人死人」；CCC 1021-1041。
+  //   · Michael 不称量灵魂。称量（psychostasia）是中世纪图像学母题，经希腊
+  //     psychostasia 源自本文件埃及一侧的称心，圣经与次经都没有把天平交给他。
+  //     他有礼仪依据的职分是引路：罗马安魂弥撒奉献经「sed signifer sanctus
+  //     Michael repraesentet eas in lucem sanctam」——愿掌旗者圣米迦勒引他们进入
+  //     圣光。掌旗引入的人不作裁断。
+  //   · Gabriel 是向活人传信的（但 8:16、9:21；路 1:11-20、1:26-38）。「引导亡魂
+  //     受审」本是 Michael 的职分被写到了他身上，末日号角的形象则是伊斯兰与后世
+  //     民间传统。所以他不在亡魂审判流程里。
+  //   · 「天使议会」不存在。看起来像陪审席的两处经文都不是：太 19:28 / 路 22:30
+  //     给十二使徒设座却不分案不点名，林前 6:2-3 的主语是「圣徒」——所有人，不是
+  //     一份名单。seeder 在 actors_european.py 顶部记录了同一结论，并指出「补一个
+  //     基督教陪审席」和「把 Michael 提成审判者」是同一个动作。
+  //
+  // 名册与此一致：actors_european.py 里 Michael 是 CONDUIT，Christ 是唯一的
+  // JUDGE。节点名的「·」前半段必须是名册里解析得到的名字——
+  // backend/tests/test_workflow_template_cast.py 跨端核对这一点，解析不到的
+  // 节点必须在下方 NODES_THAT_NAME_NO_ACTOR 里写明理由。
   EUROPEAN_ROUTINE: {
     civilization: "EUROPEAN",
     caseType: "ROUTINE",
     name: "末日审判流程",
-    description: "完整天堂/地狱分流审判",
+    description: "基督的私审判与公审判；米迦勒引领，不作裁断",
     nodes: [
-      { id: "n1", name: "Michael · 初审", court: "天堂", type: "初审", order: 1 },
-      { id: "n2", name: "Gabriel · 听证", court: "天堂", type: "听证", order: 2 },
-      { id: "n3", name: "天使议会 · 复议", court: "天堂", type: "复议", order: 3 },
-      { id: "n4", name: "Michael · 终审", court: "天堂", type: "终审", order: 4 },
+      // 私审判：CCC 1021-1022 ——「人在死亡的一刻…在一个把他的一生交付基督的
+      // 私审判中，即时领受永远的报应」。这是死时发生的第一次、也是唯一一次
+      // 个别裁断。
+      { id: "n1", name: "Christ · 私审判", court: "天堂", type: "私审判", order: 1 },
+      // 安魂弥撒奉献经求的是「libera eas de ore leonis… sed signifer sanctus
+      // Michael repraesentet eas in lucem sanctam」：先求脱离，再求掌旗者引入
+      // 圣光。所以引领跟在裁断之后，而不是之前——这也是为什么 Michael 既不是
+      // 初审也不是终审：他不在审级里。
+      { id: "n2", name: "Michael · 引领入光", court: "天堂", type: "引领", order: 2 },
+      // 公审判：太 25:31-46 人子在荣耀里坐宝座分别万民；尼西亚信经；
+      // CCC 1038-1041。与 n1 同一位审判者，是《要理问答》分开的两次审判
+      //（死时的私审判、末日的公审判），不是一审二审——不要把它读成
+      // 「同一个人既初审又终审」重新爬回来。
+      { id: "n3", name: "Christ · 公审判", court: "天堂", type: "终审", order: 3 },
     ],
   },
   EUROPEAN_APPEAL: {
     civilization: "EUROPEAN",
     caseType: "APPEAL",
     name: "天堂申诉流程",
-    description: "大天使公会审核",
+    description: "申诉呈至基督台前；天使不构成审级",
     nodes: [
-      { id: "n1", name: "Gabriel · 受理", court: "天堂", type: "申诉受理", order: 1 },
-      { id: "n2", name: "天使议会 · 复核", court: "天堂", type: "议会复核", order: 2 },
-      { id: "n3", name: "Michael · 终审", court: "天堂", type: "终审", order: 3 },
+      // 受理是一个动作，不是一位天使。原来的「Gabriel · 受理」把传信天使
+      // 当成了亡魂案件的受理者（见本节顶部）。
+      { id: "n1", name: "申诉受理", court: "天堂", type: "申诉受理", order: 1 },
+      // repraesentet 的字面意思就是「呈上、引到面前」（安魂弥撒奉献经），
+      // 所以 Michael 在这里把灵魂呈到审判台前，同样不作裁断。
+      { id: "n2", name: "Michael · 引领呈上", court: "天堂", type: "引领", order: 2 },
+      // 林后 5:10：「我们众人必要在基督台前显露出来」——申诉的尽头是同一个
+      // 审判台，不是一个更高的审级。原来的「天使议会 · 复核 → Michael · 终审」
+      // 凭空造了一层复核，又让 Michael 复核他自己的初审。
+      { id: "n3", name: "Christ · 终审", court: "天堂", type: "终审", order: 3 },
     ],
   },
   EUROPEAN_GREEK: {
@@ -179,19 +230,26 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       // 圈层的是 Minos，位置在**第二圈入口**，不是第一圈（Limbo，善良异教徒，
       // 无审无罚）。此前的「罪行核定 @ 地狱第一层」把分级判定放在了 Limbo。
       { id: "n1", name: "Minos · 判定圈层", court: "第二层入口", type: "罪行分类", order: 1 },
-      // Lucifer 在第九圈 Judecca 冰中，三口啃噬叛徒，**不宣判**（《地狱篇》
+      // 他在第九圈 Judecca 冰中，三口啃噬叛徒，**不宣判**（《地狱篇》
       // XXXIV）。原文「入狱宣判」把 Minos 的职能安在了他身上。
-      { id: "n2", name: "Lucifer · 第九层收监", court: "第九层", type: "入狱执行", order: 2 },
+      //
+      // 名字用名册里的 `Satan` 而不是「Lucifer」：同一位（但丁称 Lucifero、
+      // Dite），但模板节点名要能在 seeder 里解析到，否则这一步在流程里指向的是
+      // 一个系统拿不出的人（EUROPEAN_ACTORS 有 Satan，没有 Lucifer）。
+      { id: "n2", name: "Satan · 第九层收监", court: "第九层", type: "入狱执行", order: 2 },
     ],
   },
   EUROPEAN_EMERGENCY: {
     civilization: "EUROPEAN",
     caseType: "EMERGENCY",
     name: "紧急审判流程",
-    description: "大天使紧急处置",
+    description: "紧急队列仍由基督审判——没有可以升级到的第二位审判者",
     nodes: [
       { id: "n1", name: "紧急受理", court: "天堂", type: "紧急受理", order: 1 },
-      { id: "n2", name: "Michael · 紧急审判", court: "天堂", type: "紧急审判", order: 2 },
+      // 队列的紧急程度是本系统的调度概念，改变不了谁审判：约 5:22 把审判全给了
+      // 子，没有第二位审判者可以在赶时间的时候顶上。原来的「Michael · 紧急审判」
+      // 是这三处 Michael 兼审的第三处。
+      { id: "n2", name: "Christ · 紧急审判", court: "天堂", type: "紧急审判", order: 2 },
     ],
   },
   // ========== 埃及冥界 ==========
@@ -308,3 +366,46 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
 };
 
 export type TemplateKey = keyof typeof WORKFLOW_TEMPLATES;
+
+/**
+ * 名字解析不到任何 Actor 的节点，以及每一个这样的节点的理由。
+ *
+ * 规则（backend/tests/test_workflow_template_cast.py 强制）：一个节点的名字，
+ * 取「·」之前的一段（没有「·」就取整串），要么能在 `seed_mythology` 播下的名册里
+ * 解析到一位 Actor，要么在这张表里写明为什么解析不到。**不许两者皆有，也不许
+ * 两者皆无**——两者皆有意味着理由过期了（那个人现在名册里有了），两者皆无意味着
+ * 这一步指着一个系统拿不出的人。
+ *
+ * 这张表是后端 `apps/workflow/services.py::TEMPLATE_NODES_WITHOUT_AN_APPROVER`
+ * 的前端对应物，措辞刻意一致：同名的节点两边理由相同，跨端断言也核对这一点。
+ * 前后端模板是两套（键不同、节点集不同、后端没有欧洲 ROUTINE 一套），共有的只有
+ * 「节点名指的人必须真实存在」这条约束，所以约束写在一处、两套数据各自遵守。
+ *
+ * 为什么这件事有后果：本文件的预设可以在 /workflow 里被「编辑」保存成后端的
+ * WorkflowTemplate.nodes_json，`WorkflowService.create_from_judgment` 会照它建
+ * ApprovalNode。落库的节点名指着谁，界面上就说谁在审这一步。名字指不到人的时候，
+ * 系统不会报错，只会安静地把这一步记成 SYSTEM——`can_approve` 之后谁都不能批，
+ * 只能走审计过的 escalate。
+ */
+export const NODES_THAT_NAME_NO_ACTOR: Record<string, string> = {
+  // ── 中国 ──────────────────────────────────────────────
+  "原殿阎王 · 复核": "「原殿」是先前审理此案的那一殿，节点没说是哪一殿，模型里也没有这一列。要解析就得在十王里挑一个。",
+  "上级殿阎王": "「上一殿」相对于哪一殿未知，理由同上。",
+  "酆都大帝 · 终审": "酆都大帝在任何一套名册里都没有对应的 Actor 行（seed_mythology 里 0 处）。为了让模板解析得通而造一行，等于凭空往神谱里加人。",
+  "酆都大帝直审": "同上，紧急流程里的同一位。",
+  "案件分类": "名字说的是一件事，不是一个人。",
+  "城隍初审": "城隍是许多地方城隍共有的职位而不是一个座位，没有 Actor 行；court 列写的「城隍体系」已经把这一点说明白了。",
+  "城隍申诉审理": "同上。",
+  "十殿联审": "十王合议。approver 是单个外键，挑其中一位就把合议记成了一位王的裁断。",
+  "枉死城登记": "登记动作。",
+  "寿数折抵": "等待与折抵，不是谁的裁断。",
+  "罪行核定": "名字说的是一件事。",
+  "阿鼻地狱入狱": "执行动作；阿鼻地狱是地方不是人。",
+  "功德核定": "名字说的是一件事。",
+  "轮回分流": "名字说的是一件事。",
+  "功德评定": "名字说的是一件事。",
+  "紧急受理": "受理动作。中国 / 欧洲 / 埃及三套紧急流程共用这个节点名，理由相同。",
+  "申诉受理": "受理动作。原来这里写的是「Gabriel · 受理」，见欧洲一节顶部为什么传信天使不受理亡魂案件。",
+  // ── 埃及 ──────────────────────────────────────────────
+  "42审判者 · 否定告白": "四十二判官确实是四十二行真实的 Actor（powers_json.assessor_index 1-42），但一个外键装不下一整席，而否定告白是向他们全体一次说完的（BD 125）。后端同一节点（「四十二神官 · 罪行核实」）记的是同一条理由。",
+};
