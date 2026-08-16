@@ -206,23 +206,68 @@ EUROPEAN_ACTORS = [
      "in Tartarus (Aeneid 6.566); the brotherhood with Minos is usually cited "
      "to Iliad 14.321-322, which has not been checked line by line here. He "
      "does not appear in Dante"),
-    # Lethe's realm is right and its description was not. EU_PURGATORY is
-    # Dante's placement — Lethe runs through the Earthly Paradise at the summit
-    # of Mount Purgatory, where Matelda explains that it washes away the memory
-    # of sin while Eunoe restores the memory of good done (Purgatorio XXVIII).
-    # The row described Virgil's Lethe instead, drunk before rebirth to forget a
-    # past life (Aeneid 6.703ff), so realm and meaning came from different
-    # poems. The realm was kept and the meaning corrected. Eunoe is absent,
-    # which means only half of Dante's pair of rivers is modelled; that is a
-    # known omission, not an oversight.
-    ("Lethe", "忘川", "River Lethe", "Lethe", ActorRole.CONDUIT, "EU_PURGATORY",
+    # THE TWO STREAMS OF THE EARTHLY PARADISE, AND WHY THEY ARE BOTH HERE.
+    #
+    # `79dee57` corrected what Lethe *means*: the row used to say souls drink to
+    # forget their past lives, which is Virgil's Lethe (Aen. 6.703ff), drunk
+    # before rebirth by souls who are going round again — and Dante's Purgatory
+    # has no rebirth in it at all. His Lethe takes away the memory of sin and
+    # nothing else. That fix left two things undone, and this is them.
+    #
+    # FIRST, THE REALM. Lethe used to stand on `EU_PURGATORY`, the whole
+    # mountain, which is Dante's placement only if you read "Mount Purgatory" as
+    # a point rather than a climb: the water is at the *summit*, in the Earthly
+    # Paradise above the seventh terrace, and a soul reaches it after the
+    # penance rather than during it. Both rows stand on `EU_EARTHLY_PARADISE`.
+    #
+    # SECOND, EUNOE. Dante's two streams are a pair and the pairing is the
+    # point — Matelda describes them together in Purg. XXVIII, one
+    # taking away the memory of sin and the other giving back the memory of good
+    # done, and Dante is put through both (Lethe in XXXI, Eunoè last of all in
+    # XXXIII) before he can rise. Seeding Lethe alone left the system asserting
+    # the classical river under a Dantean address, because Eunoè is exactly the
+    # thing the classical corpus does not have: Dante invented her, and the name
+    # (Gk. εὖ νόος, "good mind") is his coinage. Half the pair reads as the
+    # Greek Lethe; the pair reads as Dante's.
+    #
+    # BOTH ARE CONDUIT, and deliberately the same role. `ActorRole.CONDUIT` is
+    # "Soul Conduit / Guide" — the thing a soul is carried through on its way
+    # somewhere — which is what each of these is: neither weighs anything
+    # (JUDGE), bars anything (GUARDIAN), inflicts anything (EXECUTOR) or
+    # administers anything (OVERSEER), and the crossing is one passage with two
+    # halves rather than two unrelated events. That their *effects* run opposite
+    # ways — one erases, one restores — is not a role distinction, because
+    # `ActorRole` names an actor's function in a soul's transit and has no
+    # vocabulary for the direction of an effect. Giving Eunoè a different role
+    # to express "restores rather than erases" would encode that difference in
+    # the one column that does not mean it, and would split a pair the source
+    # states in a single sentence.
+    ("Lethe", "忘川", "River Lethe", "Lethe", ActorRole.CONDUIT,
+     "EU_EARTHLY_PARADISE",
      "忘川河神", "忘川河神", "Lethe - River of Forgetfulness", "Lethe",
      "Spirit of the river Lethe - at the summit of Mount Purgatory the souls "
      "who have finished their penance are drawn through it and lose the memory "
-     "of their sins (Dante, Purgatorio XXVIII). Not Virgil's Lethe, drunk "
+     "of their sins (Dante, Purgatorio XXVIII, XXXI). Not Virgil's Lethe, drunk "
      "before rebirth to forget a whole past life (Aeneid 6.703ff): that one "
-     "belongs to a cosmology with reincarnation in it. Dante pairs it with "
-     "Eunoe, which this system does not model"),
+     "belongs to a cosmology with reincarnation in it, and this one does not. "
+     "Dante pairs it with Eunoe, which stands in the same realm"),
+    # `name_zh` is a transliteration and is labelled as one. 忘川 is a received
+    # Chinese term with its own history; Eunoè has no counterpart because the
+    # river is Dante's invention, so 「欧诺埃河」 is this repository writing the
+    # Greek down in Chinese characters and not a rendering with a source behind
+    # it. Whoever knows what the standard 神曲 translations use should replace it
+    # and say which translation.
+    ("Eunoe", "欧诺埃河", "River Eunoe", "Eunoe", ActorRole.CONDUIT,
+     "EU_EARTHLY_PARADISE",
+     "欧诺埃河神", "欧诺埃河神", "Eunoe - River of Good Remembrance", "Eunoe",
+     "Spirit of the river Eunoe, the second of the two streams of the Earthly "
+     "Paradise: a soul drinks from it after Lethe and the memory of the good it "
+     "did is given back, after which it is 'pure and ready to rise to the "
+     "stars' (Dante, Purgatorio XXVIII, XXXIII). Dante's own "
+     "invention — no classical source has this river, and the name is his, from "
+     "Gk. eu-noos, 'good mind'. It is seeded because Lethe without it reads as "
+     "the Greek river of forgetting under a Christian address; the pair is what "
+     "makes the placement Dante's"),
 ]
 
 # --------------------------------------------------------------------------

@@ -130,18 +130,43 @@ CHINESE_REALMS = [
 ]
 
 EUROPEAN_REALMS = [
+    # NOT LETHE. This row carried `memory_reset_mechanism="LETHE"` along with
+    # every other European realm, and heaven is the one place in the Commedia
+    # where the claim is easiest to disprove: the blessed remember, and their
+    # remembering is most of what Paradiso consists of — Piccarda names the
+    # convent she was taken from (Par. III), Justinian recounts the
+    # whole history of the eagle (Par. VI), Cacciaguida tells Dante about
+    # twelfth-century Florence and about Dante's own exile (Par. XV-XVII).
+    # Lethe is also nowhere near here: it runs at the summit of Mount
+    # Purgatory, and a soul reaches heaven having already crossed it, which
+    # makes the reset a thing that happened to it somewhere else. A field
+    # naming the mechanism *this realm* applies is the wrong place to record a
+    # river two realms down the road.
     ("EU_HEAVEN", "天堂", "上帝之国", "Kingdom of Heaven", "Heaven", RealmType.BLISS, 1,
-     "Eternal paradise - the highest bliss realm in Christian tradition", "LETHE", True, None),
+     "Eternal paradise - the highest bliss realm in Christian tradition", "NONE", True, None),
     # The mountain as a whole. It is a container now — the seven terraces below
     # hang off this row by `parent_realm` (see REALM_PARENTS) — so its
     # description says what the container holds instead of describing a single
     # undifferentiated waiting room.
+    #
+    # THIS ROW KEEPS LETHE — the only one of the eleven realms that used to
+    # carry it still doing so. The mountain is not a level, it is the whole
+    # ascent, and the ascent ends in the water: a soul admitted here leaves by
+    # being drawn through Lethe and then Eunoè at the summit (Purg. XXXI,
+    # XXXIII) and by no other exit. So "what happens to memory in this realm"
+    # has an answer for the container even though seven of its eight parts
+    # answer NONE. The alternative reading — that a container should say NONE
+    # and let the summit sub-realm carry the mechanism alone — was considered
+    # and rejected: it would make this row, the destination
+    # `DispositionService._route_european` sends every PURGATORY and RETRY
+    # verdict to, state that no memory reset occurs on a mountain whose own
+    # description names both rivers.
     ("EU_PURGATORY", "炼狱", "涤罪所", "Purgatory", "Purgatory", RealmType.PURGATORY, 1,
      "Mount Purgatory entire: Ante-Purgatory (Purg. I-IX), the seven terraces "
-     "that are its sub-realms, and the Earthly Paradise at the summit where "
-     "Lethe and Eunoè run (Purg. XXVIII, XXXI, XXXIII). Every soul admitted "
-     "here is already saved; the suffering is remedial and it ends. The memory "
-     "reset happens at the summit, after the seventh terrace — not on the way up",
+     "and the Earthly Paradise at the summit, all of which are its sub-realms. "
+     "Every soul admitted here is already saved; the suffering is remedial and "
+     "it ends. The memory reset happens at the summit, in EU_EARTHLY_PARADISE "
+     "after the seventh terrace — not on the way up",
      "LETHE", False, None),
     # ----------------------------------------------------------------------
     # THE SEVEN TERRACES OF MOUNT PURGATORY.
@@ -168,9 +193,12 @@ EUROPEAN_REALMS = [
     #
     # SUB-REALMS, NOT REPLACEMENTS. EU_PURGATORY stays and stays a destination:
     # `DispositionService._route_european` sends every PURGATORY/RETRY verdict
-    # to it, Lethe stands on it, and the mountain is one place with parts, not
-    # seven places that happen to be near each other. So these seven point at it
-    # through `Realm.parent_realm` — the field's first use in seeded data.
+    # to it, and the mountain is one place with parts, not seven places that
+    # happen to be near each other. So these seven point at it through
+    # `Realm.parent_realm` — the field's first use in seeded data. (Lethe used
+    # to stand on this row too, which was the mountain-wide version of the same
+    # error: it put the river on every terrace. It stands on
+    # EU_EARTHLY_PARADISE now, which is where Dante puts it.)
     #
     # NOT DISPOSITION DESTINATIONS. No verdict routes to a terrace and this
     # change does not add one, for the same reason EU_PLATO_MEADOW is not a
@@ -185,7 +213,9 @@ EUROPEAN_REALMS = [
     # memory_reset_mechanism=LETHE, which is wrong for the nine circles (Dante's
     # damned keep their memories — Francesca, Ulysses, Ugolino all recount their
     # lives) and wrong here: Lethe is at the summit, in the Earthly Paradise,
-    # after the seventh terrace. These rows say NONE.
+    # after the seventh terrace. These rows say NONE, and so do the nine circles
+    # and heaven now; the two rows that still say LETHE are the mountain and
+    # EU_EARTHLY_PARADISE, which is the only place the water actually is.
     ("EU_PURGATORY_T1_PRIDE", "炼狱第一层", "傲慢之台", "First Terrace - Pride",
      "Superbia", RealmType.PURGATORY, 1,
      "First terrace: pride. The penitent walks bent double beneath a great "
@@ -237,29 +267,89 @@ EUROPEAN_REALMS = [
      "Eunoè, and the ascent to the stars",
      "NONE", False, None),
     # ----------------------------------------------------------------------
+    # THE SUMMIT. Purgatorio XXVIII-XXXIII.
+    #
+    # WHY IT IS ITS OWN ROW. Lethe used to stand on EU_PURGATORY, i.e. on the
+    # whole mountain, which put the river everywhere on it — including on the
+    # seven terraces a soul crosses while it still needs the memory of the life
+    # it is doing penance for. Dante is specific about where the water is:
+    # Matelda meets Dante in the Earthly Paradise at the top of the mountain
+    # (XXVIII), draws him through Lethe after his confession (XXXI), and gives
+    # him Eunoè last of all (XXXIII), after which he is 「puro e disposto a
+    # salire a le stelle」. The place is above the seventh terrace and below
+    # heaven, and it is neither; it needs a row of its own to be either.
+    #
+    # WHY `tier` IS 8 AND WHY THAT IS NOT AN EIGHTH TERRACE. `tier` on this
+    # mountain is the position in the ascent — 1..7 are the terraces, in the
+    # order Purg. XVII's theory of disordered love puts them — and the summit
+    # is above all seven, so the only number that keeps the column sortable is
+    # 8. It does not make this a terrace: there is no eighth terrace, nothing
+    # is purged here, and EU-DS-T1..T7 stop at seven precisely because the
+    # eighth thing on the mountain is not a sin. The distinction is carried by
+    # `realm_code` and by the description, not by the integer.
+    #
+    # WHY `realm_type` IS PURGATORY. It is part of Mount Purgatory: the same
+    # mountain, above the last terrace, reached by climbing and left by rising
+    # to the stars. BLISS would say this is the beatitude, and it is not — the
+    # Empyrean is EU_HEAVEN and Dante has not got there yet; NEUTRAL would file
+    # Eden alongside the ferry crossing as another waypoint nobody is sentenced
+    # to. `is_eternal` is False for the same reason it is False on the
+    # terraces: nobody stays.
+    #
+    # NOT A DISPOSITION DESTINATION, for the reason the terraces are not:
+    # `DispositionService._route_european` sends PURGATORY and RETRY verdicts
+    # to the mountain, and a soul reaches the summit by finishing the climb
+    # rather than by being sentenced to it.
+    ("EU_EARTHLY_PARADISE", "地上乐园", "地上乐园", "The Earthly Paradise",
+     "EarthlyParadise", RealmType.PURGATORY, 8,
+     "The summit of Mount Purgatory, above the seventh terrace: the garden of "
+     "Eden, where Matelda keeps the two streams (Purg. XXVIII). A soul that "
+     "has finished the seven terraces is "
+     "drawn through Lethe, which takes away the memory of its sins (Purg. "
+     "XXXI), and then through Eunoè, which gives back the memory of the good "
+     "it did (Purg. XXXIII); after both it is 'pure and ready to rise to the "
+     "stars'. This is the only place in the European cosmology where memory is "
+     "touched at all — not the nine circles, where the damned remember "
+     "everything, and not heaven, which a soul reaches already washed",
+     "LETHE", False, None),
+    # ----------------------------------------------------------------------
+    # NO LETHE IN HELL. All nine circles below carried
+    # `memory_reset_mechanism="LETHE"`, which is not a small mislabelling: it
+    # asserts the opposite of what the Inferno is. Dante's damned keep their
+    # memories and the poem is built out of them — Francesca tells the whole
+    # story of the book and the kiss (Inf. V), Ulysses his last voyage
+    # (XXVI), Ugolino the tower and the door (XXXIII). Farinata states the
+    # mechanics outright (Inf. X.100-108): the damned see the distant future
+    # and are blind to the present, so once time stops their sight will be
+    # extinguished, and memory of the world is the one connection they still
+    # have to it. A soul in this hell that had drunk Lethe would not be being
+    # punished; it would not know what for.
+    #
+    # `docs/01`'s comparison table already said 「基督教 记忆消除=否」 while
+    # these rows said LETHE — one of the two had to be wrong, and it was these.
     ("EU_HELL_1ST", "第一层地狱", "幽冥边境", "First Circle - Limbo", "Limbo", RealmType.HELL, 1,
-     "Limbo - virtuous pagans, unbaptized infants", "LETHE", True, None),
+     "Limbo - virtuous pagans, unbaptized infants", "NONE", True, None),
     # name_zh was 「贪食深渊」 (gluttony) against a name_en of "Second Circle -
     # Lust". Dante's second circle is lust (Inf. V) and gluttony is the third
     # (Inf. VI), so the Chinese alias was one circle out of step with the
     # English on the same row — and EU_HELL_3RD already carries 「饕餮泥沼」,
     # so the repo named gluttony twice and lust not at all.
     ("EU_HELL_2ND", "第二层地狱", "色欲之风", "Second Circle - Lust", "Lust", RealmType.HELL, 2,
-     "Lustful souls - tossed by violent winds (Dante's Inferno)", "LETHE", True, None),
+     "Lustful souls - tossed by violent winds (Dante's Inferno)", "NONE", True, None),
     ("EU_HELL_3RD", "第三层地狱", "饕餮泥沼", "Third Circle - Gluttony", "Gluttony", RealmType.HELL, 3,
-     "Gluttons - lie in icy sludge beneath rain and hail", "LETHE", True, None),
+     "Gluttons - lie in icy sludge beneath rain and hail", "NONE", True, None),
     ("EU_HELL_4TH", "第四层地狱", "贪婪深渊", "Fourth Circle - Greed", "Greed", RealmType.HELL, 4,
-     "Avaricious and prodigal - push heavy weights (Dante)", "LETHE", True, None),
+     "Avaricious and prodigal - push heavy weights (Dante)", "NONE", True, None),
     ("EU_HELL_5TH", "第五层地狱", "愤怒沼泽", "Fifth Circle - Anger", "Anger", RealmType.HELL, 5,
-     "Wrathful and sullen - fight on the Stygian marsh", "LETHE", True, None),
+     "Wrathful and sullen - fight on the Stygian marsh", "NONE", True, None),
     ("EU_HELL_6TH", "第六层地狱", "异端荒原", "Sixth Circle - Heresy", "Heresy", RealmType.HELL, 6,
-     "Heretics - burned in flaming tombs", "LETHE", True, None),
+     "Heretics - burned in flaming tombs", "NONE", True, None),
     ("EU_HELL_7TH", "第七层地狱", "暴力之渊", "Seventh Circle - Violence", "Violence", RealmType.HELL, 7,
-     "Violent against neighbors, selves, God - in three rings", "LETHE", True, None),
+     "Violent against neighbors, selves, God - in three rings", "NONE", True, None),
     ("EU_HELL_8TH", "第八层地狱", "欺诈深渊", "Eighth Circle - Malebolge", "Malebolge", RealmType.HELL, 8,
-     "Fraud - ten concentric fosses of Malebolge", "LETHE", True, None),
+     "Fraud - ten concentric fosses of Malebolge", "NONE", True, None),
     ("EU_HELL_9TH", "第九层地狱", "叛徒冰湖", "Ninth Circle - Treachery", "Treachery", RealmType.HELL, 9,
-     "Traitors - frozen in the lake of Cocytus (Judas, Brutus)", "LETHE", True, None),
+     "Traitors - frozen in the lake of Cocytus (Judas, Brutus)", "NONE", True, None),
     # --------------------------------------------------------------------
     # TWO GREEK PLACES, ADDED BECAUSE THE GREEK CAST HAD NOWHERE TO STAND.
     #
@@ -327,6 +417,12 @@ REALM_PARENTS = {
     "EU_PURGATORY_T5_AVARICE": "EU_PURGATORY",
     "EU_PURGATORY_T6_GLUTTONY": "EU_PURGATORY",
     "EU_PURGATORY_T7_LUST": "EU_PURGATORY",
+    # The summit is the eighth part of the mountain and hangs off it the same
+    # way the seven terraces do. Its `tier` (8) is what says it is above them;
+    # `parent_realm` is what says it is on the same mountain rather than beside
+    # it. Both statements are needed — a summit that is only "tier 8" would sort
+    # correctly and belong nowhere.
+    "EU_EARTHLY_PARADISE": "EU_PURGATORY",
 }
 
 EGYPTIAN_REALMS = [
