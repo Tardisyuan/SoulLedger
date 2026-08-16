@@ -17,14 +17,40 @@ ROLE_MAPPING = {
 
 
 def populate_rbac_role(apps, schema_editor):
-    """Map User.role (CharField) → User.rbac_role (FK to perm.Role)."""
+    """Map User.role (CharField) → User.rbac_role (FK to perm.Role).
+
+    ``_base_manager`` rather than ``.objects``, for the reason ``reverse_populate``
+    below already gives: perm/0012 replaces perm.Role's managers with
+    ``all_objects`` alone, and this migration's only perm dependency is
+    ``perm/0001`` — a *lower* bound, which does not stop perm from running
+    ahead. A whole-database ``manage.py migrate`` happens to schedule this one
+    before perm/0012 and so never notices; naming the app does not::
+
+        manage.py migrate                     # everything applied
+        manage.py migrate authentication 0009 # unapply 0010..0013
+        manage.py migrate authentication      # AttributeError
+
+    …because the second command rolls back only authentication, leaving perm at
+    0018 and the historical ``Role`` without an ``objects`` to call.
+
+    The rows found are the same ones either way, so this is not a change of
+    behaviour and the already-applied forward stays honest: at every state this
+    migration can run in, ``Role.objects`` is the auto-created default manager
+    and ``User.objects`` is a plain ``UserManager`` (the soft-delete manager
+    arrives in authentication/0012, which cannot be applied while 0010 is not),
+    and ``_base_manager`` is unfiltered too. ``.get`` is kept rather than
+    ``.filter(...).first()`` so the ``Role.DoesNotExist`` branch below is
+    reached exactly as before.
+    """
     User = apps.get_model("authentication", "User")
     Role = apps.get_model("perm", "Role")
 
     for user_role_name, perm_role_name in ROLE_MAPPING.items():
         try:
-            perm_role = Role.objects.get(name=perm_role_name)
-            User.objects.filter(role=user_role_name, rbac_role__isnull=True).update(rbac_role=perm_role)
+            perm_role = Role._base_manager.get(name=perm_role_name)
+            User._base_manager.filter(
+                role=user_role_name, rbac_role__isnull=True
+            ).update(rbac_role=perm_role)
         except Role.DoesNotExist:
             pass  # perm.Role not seeded yet — skip
 
@@ -62,11 +88,10 @@ def reverse_populate(apps, schema_editor):
     app has moved past 0012 finds no ``Role.objects`` to call. Both managers
     are unfiltered, so the rows found are the same ones either way.
 
-    The forward above has that same exposure and is deliberately left alone —
-    ``manage.py migrate authentication`` on a database whose perm app is at
-    0018 raises ``AttributeError: type object 'Role' has no attribute
-    'objects'`` from populate_rbac_role above. It is a defect in the forward,
-    not in the rollback, and this change does not rewrite forwards.
+    The forward above had that same exposure and now uses ``_base_manager``
+    too; ``tests/test_migration_reverse_scope.py::
+    test_auth_0010_forward_runs_with_perm_already_past_0012`` runs it through a
+    real ``migrate`` with perm left at 0018, which is where it used to raise.
     """
     User = apps.get_model("authentication", "User")
     Role = apps.get_model("perm", "Role")

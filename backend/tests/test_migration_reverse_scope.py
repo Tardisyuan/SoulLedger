@@ -24,10 +24,14 @@ Every test here seeds a row the forward provably skips and then requires it to
 survive the rollback. Against the unfixed reverses each of these failed, with
 the harness naming the row that went missing.
 
-Two of the four cannot be driven through ``run_round_trip``, for reasons that
-live in their *forwards* and so were out of scope for this change — see
-``test_perm_0008_reverse_stops_at_a_hand_written_scope`` and
-``test_auth_0010_round_trip`` for what those reasons are.
+Two of the four had forwards that did not work, which ``2e82fcd`` recorded and
+left alone: authentication/0010 raised ``AttributeError`` whenever perm had
+reached 0012, and perm/0008 inserted nothing on any backend that tolerates a
+NULL primary key in ``INSERT OR IGNORE``. Both are repaired here, and each has
+a test that runs the *forward* through a real ``migrate`` rather than only
+asserting on the reverse —
+``test_auth_0010_forward_runs_with_perm_already_past_0012`` and
+``test_perm_0008_forward_actually_inserts_through_a_real_migrate``.
 """
 import json
 import uuid
@@ -58,29 +62,24 @@ def test_auth_0010_round_trip(migration_round_trip):
     ``Role.DoesNotExist`` branch skips it). Neither is this migration's row to
     clear, and the old reverse cleared both.
 
-    The ``migrate_to(perm/0011)`` in ``seed`` is not scene-setting. The forward
-    calls ``Role.objects.get(...)``, and perm/0012 replaces perm.Role's
-    managers with ``all_objects`` alone — so applying this migration against a
-    database whose perm app has already reached 0012 raises
-    ``AttributeError: type object 'Role' has no attribute 'objects'``. Nothing
-    in the graph forbids that ordering: authentication/0010 declares only
-    ``perm/0001``, and it is 0009's ``perm/0011`` dependency that keeps a
-    clean install on the working side of the line. Rolling perm back to 0011
-    for the duration puts the forward somewhere it can run. Fixing it properly
-    means editing the forward, which this change deliberately does not do.
+    This used to open by rolling perm back to 0011 for the duration, because
+    the forward called ``Role.objects.get(...)`` and perm/0012 replaces
+    perm.Role's managers with ``all_objects`` alone — so the forward could not
+    run at all against a perm app that had reached 0012. That was a way round
+    the defect rather than a fix for it; the forward now uses ``_base_manager``
+    and perm is left where the test database has it (0018), which is also the
+    state ``test_auth_0010_forward_runs_with_perm_already_past_0012`` pins
+    directly.
     """
     role_names: dict[int, str] = {}
 
     def seed(state):
-        # See the docstring: the forward cannot run with perm at 0012+.
-        state = migrate_to([("perm", "0011_fieldpermission")])
         role_model = state.get_model("perm", "Role")
         user_model = state.get_model("authentication", "User")
 
         # perm/0017 seeds ADMIN/MODERATOR/JUDGE/GUARDIAN/VIEWER into the test
-        # database at creation, and rolling perm back does not remove Role
-        # rows — so these are get_or_create, and GUARDIAN has to be deleted
-        # rather than merely not created.
+        # database at creation, so these are get_or_create, and GUARDIAN has to
+        # be deleted rather than merely not created.
         role_model._base_manager.filter(name="GUARDIAN").delete()
         roles = {
             name: role_model._base_manager.get_or_create(
@@ -107,12 +106,11 @@ def test_auth_0010_round_trip(migration_round_trip):
         )
 
     def rbac_role_name(user):
-        # Deliberately not a select_related join: `state` here can be a
-        # registry rendered against a *different* perm version than the one on
-        # disk, and joining perm_role would select columns that migration has
-        # added or dropped. The id->name map was frozen in `seed`; a pk missing
-        # from it is a KeyError rather than a silent None that would read as
-        # "this row was cleared".
+        # Deliberately not a select_related join: `state` is a historical
+        # registry, and joining perm_role would select whatever columns that
+        # version of perm.Role happens to carry. The id->name map was frozen in
+        # `seed`; a pk missing from it is a KeyError rather than a silent None
+        # that would read as "this row was cleared".
         if user.rbac_role_id is None:
             return None
         return role_names[user.rbac_role_id]
@@ -154,6 +152,54 @@ def test_auth_0010_round_trip(migration_round_trip):
         check_forward=check_forward,
         check_reverse=check_reverse,
     )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_auth_0010_forward_runs_with_perm_already_past_0012():
+    """The forward itself, on the graph order a real ``migrate`` can produce.
+
+    ``authentication/0010`` declares only ``("perm", "0001_initial")``, which is
+    a *lower* bound and nothing more — it does not stop perm from running ahead.
+    perm/0012 replaces perm.Role's managers with ``all_objects`` alone, so a
+    forward that reaches for ``Role.objects`` raises the moment perm has got
+    that far. A whole-database ``manage.py migrate`` happens to order
+    authentication/0010 first and so never sees it; naming the app does:
+
+        manage.py migrate                     # everything applied
+        manage.py migrate authentication 0009 # unapply 0010..0013
+        manage.py migrate authentication      # AttributeError
+
+    This test is that third command. Only authentication is rolled back, so
+    perm stays where the first command left it — at 0018, well past 0012 — and
+    the ``hasattr`` assertion below is what keeps that true: if some later
+    change puts ``objects`` back on the historical Role, this test is no longer
+    exercising the condition it was written for and says so rather than
+    passing quietly.
+    """
+    try:
+        state = migrate_to([("authentication", "0009_add_rbac_role_fk")])
+        role_model = state.get_model("perm", "Role")
+        user_model = state.get_model("authentication", "User")
+
+        assert not hasattr(role_model, "objects"), (
+            "perm.Role still has `objects` at this state — perm is not past "
+            "0012 and this test no longer covers the AttributeError it exists for"
+        )
+
+        admin = role_model._base_manager.get_or_create(
+            name="ADMIN", defaults={"display_name": "Administrator"}
+        )[0]
+        user_model._base_manager.create(username="fwd_admin", role="ADMIN")
+
+        state = migrate_to(
+            [("authentication", "0013_loginlog_delete_cascade_id_user_delete_cascade_id")]
+        )
+        user_model = state.get_model("authentication", "User")
+        assert (
+            user_model._base_manager.get(username="fwd_admin").rbac_role_id == admin.pk
+        ), "the forward ran but did not populate rbac_role"
+    finally:
+        migrate_to_latest()
 
 
 @pytest.mark.django_db
@@ -317,27 +363,85 @@ HAND_WRITTEN_SCOPE = (
 
 
 @pytest.mark.django_db(transaction=True)
+def test_perm_0008_forward_actually_inserts_through_a_real_migrate():
+    """The forward's ``bulk_create``, run by ``migrate`` at 0008's own state.
+
+    ``RowLevelDataScope.id`` is a UUIDField and its ``default=uuid.uuid4``
+    arrives only in perm/0010, so the historical model this migration is handed
+    has no default at all. ``bulk_create(..., ignore_conflicts=True)`` therefore
+    offers the backend a NULL primary key, and SQLite's ``INSERT OR IGNORE``
+    swallows the NOT NULL violation and drops every row without a word.
+    (PostgreSQL's ``ON CONFLICT DO NOTHING`` does not absorb NOT NULL, so the
+    same statement raises there — the two backends disagree about whether this
+    migration is broken.)
+
+    Nobody noticed because the forward almost never gets this far: it opens
+    with ``if not Role.objects.exists(): return`` and no migration creates a
+    Role row until perm/0017, so on every install the guard fires first. The
+    seeding is reachable only where Role rows predate 0008 — which is what the
+    seed below builds.
+
+    Measured before the fix: three roles present, an empty scope table, and
+    ``0`` rows after the forward.
+    """
+    try:
+        state = migrate_to([("perm", "0007_role_parent")])
+        role_model = state.get_model("perm", "Role")
+        scope_model = state.get_model("perm", "RowLevelDataScope")
+
+        for name in ("ACTOR", "GUARDIAN", "VIEWER"):
+            role_model._base_manager.get_or_create(
+                name=name, defaults={"display_name": name}
+            )
+        scope_model._base_manager.all().delete()
+
+        state = migrate_to([("perm", "0008_apply_data_scope_filter")])
+        scope_model = state.get_model("perm", "RowLevelDataScope")
+
+        declared = sorted(
+            (
+                role_name,
+                PERM_0008.SEEDED_MODEL_NAME,
+                PERM_0008.SEEDED_SCOPE_TYPE,
+                priority,
+                True,
+                json.dumps(conditions, sort_keys=True, ensure_ascii=False),
+            )
+            for role_name, conditions, priority in PERM_0008.SEEDED_SCOPES
+        )
+        assert _scope_rows(scope_model._base_manager) == declared, (
+            "the forward inserted nothing (or not what SEEDED_SCOPES describes) "
+            "when run by a real migrate at 0008's own historical state"
+        )
+    finally:
+        migrate_to_latest()
+
+
+@pytest.mark.django_db(transaction=True)
 def test_perm_0008_reverse_stops_at_a_hand_written_scope():
     """Driven through real ``migrate``, but not through ``run_round_trip``.
 
-    The harness refuses a forward that changes nothing, and this forward
-    changes nothing — for a defect that lives in the forward and so is not this
-    change's to repair. ``RowLevelDataScope.id`` is a UUIDField **with no
-    default** until perm/0010; at 0008's own historical state the
-    ``bulk_create(..., ignore_conflicts=True)`` therefore offers SQLite a NULL
-    primary key, and ``INSERT OR IGNORE`` drops all three rows without a word.
-    (On PostgreSQL ``ON CONFLICT DO NOTHING`` does not absorb a NOT NULL
-    violation, so the same statement raises there instead.) Measured: 1 scope
-    before the forward, 1 after — and 0 after the old reverse.
+    When this was written the forward inserted nothing at all — the missing
+    ``id`` default meant SQLite's ``INSERT OR IGNORE`` dropped all three rows in
+    silence — and the measurement was 1 scope before the forward, 1 after, and
+    0 after the *old* reverse. A migration that seeded nothing still deleted a
+    hand-written rule, because the forward's own guard ("skip a role that
+    already has a Soul scope") means a database carrying such a rule is exactly
+    the database the forward writes nothing for.
 
-    That is the whole point. The migration seeded nothing and its rollback
-    still deleted a hand-written rule, because the forward's own guard —
-    "skip a role that already has a Soul scope" — means a database carrying
-    such a rule is exactly the database the forward writes nothing for.
+    The forward now inserts, so what this test measures has moved: ACTOR is
+    still skipped by that guard, GUARDIAN and VIEWER are now genuinely written,
+    and the reverse has to take back those two while leaving the hand-written
+    ACTOR/WRITE/priority-99 row standing. The assertions were already phrased
+    for that — "whatever the forward wrote must be gone after the reverse, and
+    the hand-written row must still be there" — so they did not need loosening;
+    they are simply no longer satisfiable by a reverse that does nothing.
 
-    The assertion is written so it stays honest if the id default is ever
-    backported: whatever the forward wrote must be gone after the reverse, and
-    the hand-written row must still be there.
+    The reason it could not use ``run_round_trip`` has gone with the defect —
+    the harness rejects a forward that changes nothing, and this one now
+    changes something — so converting it is possible; it is left driving
+    ``migrate_to`` by hand because that is what it already does correctly, and
+    a rewrite would add no assertion the harness does not already make here.
     """
     try:
         state = migrate_to([("perm", "0007_role_parent")])
@@ -427,12 +531,27 @@ def test_perm_0008_reverse_deletes_what_it_seeded_and_no_more():
 def test_perm_0008_seeded_scopes_table_matches_the_forward():
     """``SEEDED_SCOPES`` is the table the *reverse* deletes by.
 
-    The forward was left exactly as it shipped — it is applied in production
-    and rewriting it is the one thing this change may not do — so the constant
-    the reverse reads is not the constant the forward writes from, and nothing
-    in the language keeps the two in step. This test is that guarantee: run the
-    real forward on an empty scope table and require the rows it produces to be
-    precisely what ``SEEDED_SCOPES`` describes.
+    The forward does not read that constant — it still spells the three rows
+    out longhand — so nothing in the language keeps the two in step. This test
+    is that guarantee: run the real forward on an empty scope table and require
+    the rows it produces to be precisely what ``SEEDED_SCOPES`` describes.
+
+    What it is guarding against has changed. While the forward could not insert
+    (no ``id`` default at 0008's historical state), this was the *only* place
+    the forward's output was observable at all: it calls the function against
+    the current model classes, which do carry the default, so it was reading a
+    forward that no real ``migrate`` had ever been able to run. It kept the
+    reverse's delete-by-description in step with a write that never happened —
+    worth having, since the reverse did run and did delete, but a step removed
+    from the database.
+
+    Now the forward inserts for real, and
+    ``test_perm_0008_forward_actually_inserts_through_a_real_migrate`` makes
+    the same comparison at 0008's own historical state. The two overlap
+    deliberately rather than redundantly: this one pins the forward against
+    today's models (the shape the reverse's own tests exercise), that one pins
+    it against the historical models ``migrate`` actually hands it, and the
+    ``id`` defect was precisely a disagreement between those two.
     """
     from django.apps import apps
 
