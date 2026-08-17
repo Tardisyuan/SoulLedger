@@ -104,6 +104,18 @@ class DispositionService:
     EG_ANNIHILATION = "EG_ANNIHILATION"  # Annihilation (failed) — see above
     EG_DUAT_ENTRY = "EG_DUAT_ENTRY"  # Entry/purgatory
 
+    # Greek realms — Plato's fork and the two roads out of it (Gorgias 524a).
+    #
+    # THERE ARE THREE CODES HERE AND ONLY TWO OF THEM ARE DESTINATIONS. The
+    # meadow is the ground the judging happens on, not a place anyone is sent
+    # to; see `_route_greek` for why an inconclusive verdict lands there anyway
+    # and why that is not a third road. `EU_PLATO_MEADOW` keeps its `EU_` prefix
+    # under GREEK on purpose — a realm_code is a join key, not a label (see
+    # apps/actors/mythology/realms.py, GREEK_REALMS §CODES).
+    GR_MEADOW = "EU_PLATO_MEADOW"
+    GR_ISLES = "GR_ISLES_OF_THE_BLESSED"
+    GR_TARTARUS = "GR_TARTARUS"
+
     @classmethod
     def create_from_judgment(cls, judgment: Judgment) -> Disposition:
         """
@@ -177,6 +189,13 @@ class DispositionService:
             return cls._route_european(soul, verdict, soul.demerit_score)
         elif civilization == Civilization.EGYPTIAN:
             return cls._route_egyptian(soul, verdict, judgment_method, karma)
+        elif civilization == Civilization.GREEK:
+            # No ledger figure is passed, and the omission is the argument. The
+            # other three branches each hand their router a number because each
+            # of those cosmologies grades an outcome once the verdict has fixed
+            # it — a court, a circle, a threshold. Plato's fork has nothing to
+            # grade: two roads, no depth. See `_route_greek`.
+            return cls._route_greek(soul, verdict)
         else:
             # No cosmology, so no realm. This branch is reached when the
             # soul's tenant code is not in TENANT_CIVILIZATION — see
@@ -457,6 +476,93 @@ class DispositionService:
                 return cls.EG_AARU
             return cls.EG_DUAT_ENTRY
 
+    @classmethod
+    def _route_greek(cls, soul: Soul, verdict: str) -> str:
+        """Route a Greek soul. Two roads out of one meadow, and nothing to grade.
+
+        THE SOURCE IS ONE SENTENCE AND IT NAMES ALL THREE PLACES. Plato,
+        Gorgias 524a: the dead are judged 「in the meadow at the dividing of the
+        road, whence are the two ways leading, one to the Isles of the Blest,
+        and the other to Tartarus」. That is the whole geography this method
+        has, and it is the whole geography it is allowed to have — the two
+        destination rows exist in `GREEK_REALMS` *because* that sentence names
+        them, and nothing else of the Greek underworld is seeded.
+
+        WHY THERE IS NO SEVERITY INPUT. `_route_chinese` takes an unoffset
+        demerit figure and `_route_european` takes culpa because both
+        cosmologies grade an outcome the verdict has already fixed: ten courts,
+        nine circles. Plato's fork has no such dimension. A road is not deep,
+        and 524a does not say the greatly unjust go further along it than the
+        slightly unjust — it says which way each is sent. So this method reads
+        the verdict and nothing else, and the two ladders next door are
+        deliberately not borrowed:
+
+          * NOT the European circles. Depth is Dante's structure, arrived at
+            through Inf. XI's kinds of sin; `_route_european` §2 already records
+            that even *that* ladder is the wrong shape for its own poem.
+            Copying it here would import a stopgap as a doctrine.
+          * NOT the Chinese pool. `apps/ledger/readings.py` refuses 功過相抵 for
+            this cosmology by name: Republic X 615b requites good-doing on its
+            own road and in its own measure, never as a subtraction from the
+            term owed on the other, and netting the two 「would rebuild the
+            Chinese account under a Greek name」.
+            `LedgerService.get_unoffset_demerit` returns None for a Greek soul
+            and is not called here.
+
+        WHERE AN INCONCLUSIVE VERDICT GOES, AND WHY THAT IS NOT A THIRD ROAD.
+        524a is a single sorting at a fork; it has no 「pending」 outcome,
+        because nothing in it is pending — the judges try the case and the soul
+        takes one road or the other. `Verdict` has four members and two of them
+        (PURGATORY, RETRY) say the outcome is not fixed yet, so this system can
+        hold a state the passage does not describe. It is answered by naming
+        the one place in 524a that is *not* a destination: the meadow itself.
+        A soul whose verdict is unfinished has not been sent anywhere; it is
+        still standing where the judging happens. That is a statement about the
+        absence of a sorting, not the invention of a third outcome, and it is
+        why `GR_MEADOW` must never appear beside the other two as an outcome
+        anywhere else.
+
+        RETRY in particular has a sourced home there and no home above it.
+        Gorgias 524a gives Rhadamanthus the dead of Asia and Aeacus those of
+        Europe, and Minos 「the privilege of the final decision」 when those two
+        are in doubt — the review happens *at the fork*, and there is nothing
+        over Minos to appeal to. `tests/test_workflow_appeal_nodes.py` records
+        the same absence from the workflow side.
+
+        THE INCURABLE (ἀνίατοι) ARE NOT ROUTED, BECAUSE THEY CANNOT BE
+        IDENTIFIED. Gorgias 525c makes those whose wrongs are incurable
+        everlasting examples in Hades, while Republic X 615a-b sentences the
+        unjust to a thousand-year circuit and then sends them back to choose a
+        new life (617d-620d). The owner's ruling is that both hold: rebirth is
+        the norm and the incurable are the exception. Only the norm is
+        implemented, and the exception is left unrouted rather than
+        approximated, because Plato's criterion is *curability* — whether
+        punishment can still benefit the soul — and this system records nothing
+        that bears on it. `Soul` carries `merit_score` and `demerit_score` and
+        no other moral field; `RecordCategory` is a 功過格 vocabulary (see
+        apps/ledger/fungibility.py) with no member for incorrigibility;
+        `Judgment` has free-form notes and a citation to a `Statute`. There is
+        no number here that means 「beyond help」, and manufacturing one — a
+        demerit threshold, a record count — would be inventing the classifier,
+        which is the one repair `docs/lore-verification/README.md` §1 rules out
+        for exactly this kind of material. So every FAILED Greek soul takes the
+        same road, and how far along it stops is a question this system does not
+        answer. `tests/test_greek_sentence_basis.py` pins that as a
+        contradiction, the way `tests/test_european_hell_basis.py` pins Dante's.
+        """
+        if verdict == Verdict.PASSED:
+            return cls.GR_ISLES
+        if verdict == Verdict.FAILED:
+            # Tartarus for everyone the judges send left, with no attempt to
+            # tell the curable from the incurable — see the docstring. The
+            # realm's `is_eternal` is False, which now carries Republic X's
+            # term-served norm rather than merely declining to assert
+            # perpetuity; the exception 525c states has no column to live in.
+            return cls.GR_TARTARUS
+        # PURGATORY and RETRY: no road taken yet, so the soul is still on the
+        # ground the judging happens on. Not a third destination.
+        return cls.GR_MEADOW
+
     @staticmethod
     def execute(disposition: Disposition) -> bool:
         """
@@ -484,9 +590,11 @@ class DispositionService:
         # gate uses rather than by a second `if civ == CHINESE` here, so that
         # adding a rebirth-capable civilization stays a one-line change in
         # apps/ledger/services.py and cannot leave the state machine and the
-        # rebirth gate disagreeing about the same soul. GREEK will need
-        # exactly that when it lands — Plato's souls do choose a new life at
-        # the Spindle of Necessity.
+        # rebirth gate disagreeing about the same soul. GREEK was that one
+        # line: Plato's souls do choose a new life at the Spindle of Necessity
+        # (Republic X, 617d-620d), so a Greek soul leaves an executed
+        # disposition REINCARNATING and this method needed no Greek branch to
+        # make that happen.
         soul = disposition.soul
         if soul.civilization in REBIRTH_CAPABLE_CIVILIZATIONS:
             soul.transition_to(SoulState.REINCARNATING, "Disposition executed")

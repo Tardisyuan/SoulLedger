@@ -360,11 +360,19 @@ class TestDecayIsPerCivilization:
         assert LedgerService.get_ledger_summary(soul)["records"][0]["decay_factor"] == 0.6065
 
     def test_rate_is_configuration_not_a_hardcoded_civilization(self):
-        """GREEK arrives soon with its own answer; it must be one entry."""
+        """A dict, so a cosmology wanting its own answer gets an entry.
+
+        GREEK was expected to want one and does not — see
+        CIVILIZATION_DECAY_RATE's comment and
+        tests/test_greek_sentence_basis.py, which pins the absence and the
+        reason. Asserted here too, because this is the test somebody edits when
+        they decide to complete the table.
+        """
         assert isinstance(CIVILIZATION_DECAY_RATE, dict)
         assert CIVILIZATION_DECAY_RATE[Civilization.EUROPEAN] == 0.0
         assert CIVILIZATION_DECAY_RATE[Civilization.CHINESE] == DECAY_RATE
         assert CIVILIZATION_DECAY_RATE[Civilization.EGYPTIAN] == DECAY_RATE
+        assert Civilization.GREEK not in CIVILIZATION_DECAY_RATE
 
 
 @pytest.mark.django_db

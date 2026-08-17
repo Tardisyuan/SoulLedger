@@ -248,7 +248,7 @@ class TestInheritanceMeritDemeritSplit:
 
 @pytest.mark.django_db
 class TestInheritanceCivilizationGate:
-    """Inheritance presupposes rebirth, and two of the three cosmologies
+    """Inheritance presupposes rebirth, and two of the four cosmologies
     here are terminal — Aaru/Ammit and Heaven/Hell/Purgatory."""
 
     @pytest.fixture(autouse=True)
@@ -294,11 +294,17 @@ class TestInheritanceCivilizationGate:
         assert resp.data["detail"]
 
     def test_gate_is_a_set_not_a_hardcoded_civilization(self):
-        """Adding a rebirth-capable civilization must be a one-line change."""
+        """Adding a rebirth-capable civilization must be a one-line change.
+
+        It was, and GREEK is the line: Republic X 617d-620d has the soul choose
+        a new life at the Spindle of Necessity. The membership is asserted as an
+        exact set rather than by length, so that a cosmology gaining or losing a
+        next life is visible here by name — a count would go green again the
+        moment one was swapped for another.
+        """
         from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS
         assert isinstance(REBIRTH_CAPABLE_CIVILIZATIONS, frozenset)
-        assert "CHINESE" in REBIRTH_CAPABLE_CIVILIZATIONS
-        assert len(REBIRTH_CAPABLE_CIVILIZATIONS) == 1
+        assert set(REBIRTH_CAPABLE_CIVILIZATIONS) == {"CHINESE", "GREEK"}
 
     def test_service_raises_rather_than_returning_a_number(self):
         _, soul = self._client_and_soul("EGYPTIAN")

@@ -84,8 +84,9 @@ CIVILIZATION_TENANT = {
 # This used to be Civilization.CHINESE — an unrecognised tenant code fell
 # through to the first entry in the map. That was never a decision anyone
 # made, it was the default argument of a dict lookup showing through, and it
-# had a consequence nobody chose either: Chinese Diyu is the one rebirth-capable
-# cosmology modelled here, so *unknown* silently meant *reborn*. A soul in a
+# had a consequence nobody chose either: Chinese Diyu was then the one
+# rebirth-capable cosmology modelled here (Greek has since joined it), so
+# *unknown* silently meant *reborn*. A soul in a
 # misconfigured or freshly created tenant was handed a next life on the
 # strength of a typo. Guessing wrong about a cosmology is not a cosmetic error
 # — it decides whether a soul is annihilated, admitted, or sent round again.
@@ -119,10 +120,11 @@ class SoulState(models.TextChoices):
     JUDGING = "JUDGING", "Under Judgment"
     DISPOSED = "DISPOSED", "Disposed"
     REINCARNATING = "REINCARNATING", "Reincarnating"
-    # Where a soul stops. Only one of the cosmologies modelled here has a next
+    # Where a soul stops. Two of the four cosmologies modelled here have no next
     # life: Egyptian judgment ends at Aaru or in Ammit's jaws, and European
     # (Dante) judgment ends at Heaven, Hell, or Purgatory-then-Heaven — the
-    # Purgatorio empties upward, never back into a new birth. Every executed
+    # Purgatorio empties upward, never back into a new birth. (Diyu has one, and
+    # so does Plato's circuit: Republic X 617d-620d.) Every executed
     # disposition used to move its soul to REINCARNATING regardless, so a soul
     # admitted to the Field of Reeds was labelled as queued for a rebirth its
     # cosmology does not have. The rebirth *machinery* already refused those
