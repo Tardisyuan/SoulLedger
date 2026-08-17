@@ -80,7 +80,14 @@ export interface LedgerInheritance {
   soul_id: string;
   inherited_merit: number;
   inherited_demerit: number;
-  inheritance_note: string;
+  /** Fraction of merit that survives the gate — 0.2 today. Was an English
+   * `inheritance_note` sentence composed in apps/ledger/services.py; the rates
+   * come over as numbers now so the wording can live in the message bundles
+   * and the card can stop mirroring the constants as literals. */
+  inheritance_merit_rate: number;
+  /** Fraction of unripened demerit that survives — 1.0 today, deliberately not
+   * symmetric with the above. */
+  inheritance_demerit_rate: number;
 }
 
 // 409 body — the soul's cosmology is terminal (e.g. Egyptian judgment ending

@@ -126,7 +126,12 @@ class LedgerInheritanceView(APIView):
     GET /ledger/inheritance/{soul_id}/
 
     Returns the ledger a soul carries into its next life: merit at
-    LedgerService.INHERITANCE_MERIT, demerit at INHERITANCE_DEMERIT.
+    LedgerService.INHERITANCE_MERIT, demerit at INHERITANCE_DEMERIT, plus
+    those two rates themselves as `inheritance_merit_rate` /
+    `inheritance_demerit_rate` so a client can *label* the split without
+    hand-copying the constants (which is how the frontend's own 20/100
+    literals came to exist). No prose: the wording is the caller's, in the
+    caller's locale.
 
     409 REBIRTH_NOT_APPLICABLE for a soul whose cosmology is terminal
     (EGYPTIAN, EUROPEAN) — there is no next life to inherit into.

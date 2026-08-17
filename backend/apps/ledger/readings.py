@@ -45,10 +45,17 @@ sentences on the unoffset-demerit figure `non_fungible` reports below (via
 raw balance because 「不可折」 is a limit on 功過相抵 and neither of them has one.
 That asymmetry is the same one this module is built on, carried one layer out.
 
-TODO(i18n): the prose in `poena_unavailable` and `reason` below is user-facing
-copy hard-coded in a service module, which is the wrong place for it — see the
-same TODO on TERMINAL_COSMOLOGY_REASON in services.py. A later pass owns the
-copy.
+TODO(i18n): the prose in `poena_unavailable` and `reason` below is copy
+hard-coded in a service module. The TODO it used to point at — on
+TERMINAL_COSMOLOGY_REASON in services.py — has since been answered, and the
+answer was a split rather than a move: a string a component *renders* belongs
+in the frontend catalogues (that pass took `inheritance_note` out of
+get_reincarnation_inheritance and replaced it with the two rates as numbers),
+while a string only non-browser clients and the logs ever read stays here in
+English on purpose. Which side these two fall on has NOT been established —
+SoulReadingPanel.tsx draws the poena panel from `souls.detail.reading.*` keys
+rather than from this prose, which is evidence but not a survey. A later pass
+owns that check and the copy.
 """
 from apps.ledger.fungibility import offset_within_classes
 from apps.souls.models import Civilization

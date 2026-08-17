@@ -198,10 +198,24 @@ describe("SoulLifecycleTimeline — tabs and system-event toggle", () => {
       />
     );
 
-    expect(screen.queryByText(/业力重算/)).not.toBeInTheDocument();
+    // Identified by the raw event_type on the row's `title`, not by its copy.
+    // This used to look for the literal "业力重算", which only worked because
+    // soulLifecycleRows.ts carried a hard-coded Chinese label map — the very
+    // thing that made the row untranslatable. That copy now lives in
+    // souls.events.* in the three bundles, and this file's `t` echoes keys, so
+    // matching on Chinese here would be matching on a defect.
+    expect(document.querySelector('[title="KARMA_RECALCULATED"]')).toBeNull();
 
     fireEvent.click(screen.getByRole("checkbox"));
 
-    expect(screen.getByText(/业力重算/)).toBeInTheDocument();
+    const row = document.querySelector('[title="KARMA_RECALCULATED"]');
+    expect(row).not.toBeNull();
+    // Raw member recoverable from `title`, and absent from the text beside it.
+    // What that text actually says in each locale is asserted against the real
+    // bundles in soulLifecycleEventCopy.test.tsx.
+    expect(row?.textContent).not.toContain("KARMA_RECALCULATED");
+    // The Δ+3 from the payload still renders — the row decodes the event, it
+    // does not just name its type.
+    expect(row?.textContent).toContain("Δ+3");
   });
 });

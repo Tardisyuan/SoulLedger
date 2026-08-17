@@ -6,13 +6,21 @@ import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 import type { LedgerReading, LedgerRecord, LedgerInheritance } from "@/lib/api/ledger";
 import type { HistoricalDate } from "@/lib/utils";
 
-// Fixed policy constants from apps/ledger/services.py (INHERITANCE_MERIT /
-// INHERITANCE_DEMERIT) — not returned by the API, but a stable, deliberately
-// documented design constant (merit thins to a fifth on rebirth, demerit
-// carries at full strength), safe to mirror here as static copy rather than
-// a live-fetched number.
-const INHERITANCE_MERIT_PCT = 20;
-const INHERITANCE_DEMERIT_PCT = 100;
+/** A rate from the inheritance payload, as the whole-number percentage the
+ * bars and the caption both want.
+ *
+ * These used to be two literals here — `INHERITANCE_MERIT_PCT = 20` and
+ * `INHERITANCE_DEMERIT_PCT = 100` — mirroring INHERITANCE_MERIT /
+ * INHERITANCE_DEMERIT in apps/ledger/services.py, on the argument that a
+ * deliberately documented constant is safe to copy. It was not: the backend
+ * was *also* composing an English sentence out of the same two constants, and
+ * the message bundles carried a third version of the claim that had already
+ * gone stale ("Merit and demerit pass to the next incarnation", which describes
+ * the symmetric 0.2/0.2 policy that no longer exists). The endpoint now returns
+ * the rates, so there is one source and the copy is a translation of it. */
+function ratePct(rate: number): number {
+  return Math.round(rate * 100);
+}
 
 interface SoulKarmaLedgerCardProps {
   ledgerLabel: string;
@@ -191,12 +199,16 @@ export function SoulKarmaLedgerCard({
               mechanic, not a universal one (see SoulReadingPanel's `kind`
               switch for the same civilization-conditional pattern). A single
               number can't distinguish a 20% carry from a 100% one; two bars
-              at a glance can. `inheritance` is already only non-null where
-              the backend has a forward preview (today: Chinese only), but
-              this checks the civilization explicitly so a future
-              rebirth-capable cosmology with a different mechanic (Greek,
-              self-chosen at the Spindle — see the doc's §5 note) doesn't
-              silently inherit this rendering. */}
+              at a glance can. `inheritance` is non-null wherever the backend
+              has a forward preview, which since f92ed35 is CHINESE *and*
+              GREEK — REBIRTH_CAPABLE_CIVILIZATIONS gained the Spindle of
+              Necessity (Republic X 617d-620d). This comment used to say
+              "today: Chinese only"; it was true when written and stopped being
+              true without anything going red. The explicit check is what
+              stopped that from silently handing a Greek soul the Chinese
+              rendering — the caption below it still reports whatever rates the
+              API applied, which is a statement about this system's arithmetic
+              rather than a claim about Plato. */}
           {reading.civilization === "CHINESE" && (
             <div className="space-y-2.5 mb-3">
               <div>
@@ -207,7 +219,7 @@ export function SoulKarmaLedgerCard({
                 <div className="h-2 rounded-full bg-[hsl(var(--color-karma-merit)/0.18)] overflow-hidden">
                   <span
                     className="block h-full rounded-full bg-[hsl(var(--color-karma-merit))]"
-                    style={{ width: `${INHERITANCE_MERIT_PCT}%` }}
+                    style={{ width: `${ratePct(inheritance.inheritance_merit_rate)}%` }}
                   />
                 </div>
               </div>
@@ -219,7 +231,7 @@ export function SoulKarmaLedgerCard({
                 <div className="h-2 rounded-full bg-[hsl(var(--color-karma-demerit)/0.18)] overflow-hidden">
                   <span
                     className="block h-full rounded-full bg-[hsl(var(--color-karma-demerit))]"
-                    style={{ width: `${INHERITANCE_DEMERIT_PCT}%` }}
+                    style={{ width: `${ratePct(inheritance.inheritance_demerit_rate)}%` }}
                   />
                 </div>
               </div>
@@ -244,9 +256,12 @@ export function SoulKarmaLedgerCard({
             </span>
           </div>
           <p className="text-[10px] text-[hsl(var(--color-ink-subtle))] mt-2">
-            {tf("ledger.carry_forward_rate", "承前 {{merit}}% 功德 · {{demerit}}% 罪业", {
-              merit: String(INHERITANCE_MERIT_PCT),
-              demerit: String(INHERITANCE_DEMERIT_PCT),
+            {/* Now a real bundle key in all three catalogues rather than a
+                Chinese `tf` fallback that shipped untranslated to every
+                locale, and the numbers are the API's rather than this file's. */}
+            {t("ledger.carry_forward_rate", {
+              merit: String(ratePct(inheritance.inheritance_merit_rate)),
+              demerit: String(ratePct(inheritance.inheritance_demerit_rate)),
             })}
           </p>
           <p className="text-[10px] text-[hsl(var(--color-ink-subtle))] mt-1">{t("ledger.inheritance_note")}</p>

@@ -14,6 +14,7 @@ import {
   buildReincarnationMarkers,
   groupSystemEvents,
   describeSystemEvent,
+  buildSystemRows,
   computeFutureStages,
   buildCycleBandRows,
   filterRows,
@@ -245,19 +246,74 @@ describe("system events — grouping and payload decoding", () => {
     expect(groupSystemEvents(events)).toHaveLength(2);
   });
 
+  /**
+   * Deliberately NOT an identity function, and deliberately not the raw member
+   * with a prefix glued on either: both would still put "JUDGING" on screen, so
+   * a `toContain("JUDGING")` assertion would pass while the defect stood. The
+   * sentinels share no substring with any enum member, which is what lets the
+   * absence assertions below mean something here.
+   *
+   * These sentinels prove the *wiring* — that no branch of describeSystemEvent
+   * reaches an enum except through `labels`. That the real labels are real
+   * translations is a different claim and is asserted against the actual
+   * bundles in soulLifecycleEventCopy.test.tsx, which builds them with the
+   * production `makeSystemEventLabels` and the production `t`.
+   */
+  const SENTINELS: Record<string, string> = {
+    STATE_CHANGED: "⟪evt-changed⟫",
+    SOUL_CREATED: "⟪evt-created⟫",
+    KARMA_RECALCULATED: "⟪evt-karma⟫",
+    JUDGING: "⟪st-judging⟫",
+    DISPOSED: "⟪st-disposed⟫",
+  };
+  const labels = {
+    eventType: (raw: string) => SENTINELS[raw] ?? "⟪evt-unknown⟫",
+    state: (raw: string | null) => (raw === null ? "⟪st-none⟫" : SENTINELS[raw] ?? "⟪st-unknown⟫"),
+  };
+
   it("decodes STATE_CHANGED payload into a readable transition instead of the bare token", () => {
     const text = describeSystemEvent(
-      event({ event_type: "STATE_CHANGED", payload: { old_state: "JUDGING", new_state: "DISPOSED", reason: "Judgment concluded: PASSED" } })
+      event({ event_type: "STATE_CHANGED", payload: { old_state: "JUDGING", new_state: "DISPOSED", reason: "Judgment concluded: PASSED" } }),
+      labels
     );
     expect(text).not.toBe("STATE_CHANGED");
-    expect(text).toContain("JUDGING");
-    expect(text).toContain("DISPOSED");
+    expect(text).toContain("⟪st-judging⟫");
+    expect(text).toContain("⟪st-disposed⟫");
+    // Both sides went through labels.state. This pair used to read
+    // toContain("JUDGING") / toContain("DISPOSED") — green on the raw
+    // interpolation that was the bug.
+    expect(text).not.toContain("JUDGING");
+    expect(text).not.toContain("DISPOSED");
+    // `payload.reason` is backend audit text, not this UI's copy — see the note
+    // on describeSystemEvent. It is still shown verbatim.
     expect(text).toContain("Judgment concluded: PASSED");
   });
 
-  it("falls back to a label map (not the raw token) for an unmapped-but-known event type, and to the token itself only when truly unknown", () => {
-    expect(describeSystemEvent(event({ event_type: "SOUL_CREATED", payload: {} }))).not.toBe("SOUL_CREATED");
-    expect(describeSystemEvent(event({ event_type: "SOME_FUTURE_EVENT_TYPE", payload: {} }))).toBe("SOME_FUTURE_EVENT_TYPE");
+  it("routes an absent transition side through labels rather than printing a placeholder of its own", () => {
+    const text = describeSystemEvent(
+      event({ event_type: "STATE_CHANGED", payload: { new_state: "DISPOSED" } }),
+      labels
+    );
+    expect(text).toContain("⟪st-none⟫");
+    // The old code substituted a literal "?" for a missing side, which is a
+    // fourth missing-value glyph nobody registered in domainDisplay.ts.
+    expect(text).not.toContain("?");
+  });
+
+  it("never renders the raw event_type, for a mapped type or an unknown one", () => {
+    expect(describeSystemEvent(event({ event_type: "SOUL_CREATED", payload: {} }), labels)).toBe("⟪evt-created⟫");
+    // This used to assert the raw token came back — `toBe("SOME_FUTURE_EVENT_TYPE")`.
+    // A member the bundles do not cover is now the `unrecognized` case, not a
+    // licence to print the member.
+    const unknown = describeSystemEvent(event({ event_type: "SOME_FUTURE_EVENT_TYPE", payload: {} }), labels);
+    expect(unknown).toBe("⟪evt-unknown⟫");
+    expect(unknown).not.toContain("SOME_FUTURE_EVENT_TYPE");
+  });
+
+  it("keeps the raw event_type on the row for triage, out of the rendered title", () => {
+    const [row] = buildSystemRows([event({ event_type: "STATE_CHANGED", payload: { old_state: "JUDGING", new_state: "DISPOSED" } })], labels);
+    expect(row.rawEventType).toBe("STATE_CHANGED");
+    expect(row.title).not.toContain("STATE_CHANGED");
   });
 });
 
@@ -314,7 +370,7 @@ describe("filterRows / sortRows", () => {
   const rows: SpineRow[] = [
     { id: "k1", kind: "karma", category: "karma", sortKey: 10, dateLabel: null, effectiveSigned: 1, originalSigned: 1, decayFactor: 1, yearsElapsed: 0, title: "", category_code: "X", type: "MERIT", isMilestone: false },
     { id: "j1", kind: "marker", category: "judgment", sortKey: 20, dateLabel: null, glyph: "", title: "", tone: "neutral" },
-    { id: "s1", kind: "system", category: "system", sortKey: 30, dateLabel: null, title: "", count: 1, actor: "system", items: [] },
+    { id: "s1", kind: "system", category: "system", sortKey: 30, dateLabel: null, title: "", rawEventType: "STATE_CHANGED", count: 1, actor: "system", items: [] },
     { id: "st1", kind: "future", category: "structural", sortKey: 5, title: "", hint: "" },
   ];
 

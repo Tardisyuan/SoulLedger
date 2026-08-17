@@ -26,6 +26,7 @@ import {
   filterRows,
   sortRows,
   describeSystemEvent,
+  makeSystemEventLabels,
   type SpineTab,
   type SpineRow,
   type FutureStageKey,
@@ -207,6 +208,11 @@ export function SoulLifecycleTimeline({
     },
   };
 
+  // Built once and threaded into both the row builder and the expanded-detail
+  // render below, so the collapsed summary and the rows underneath it cannot
+  // resolve the same enum two different ways.
+  const systemEventLabels = useMemo(() => makeSystemEventLabels(t), [t]);
+
   const rows: SpineRow[] = useMemo(() => {
     const out: SpineRow[] = [];
     out.push(...buildKarmaRows(ledgerRecords));
@@ -249,7 +255,7 @@ export function SoulLifecycleTimeline({
       })
     );
 
-    if (includeSystemEvents) out.push(...buildSystemRows(events));
+    if (includeSystemEvents) out.push(...buildSystemRows(events, systemEventLabels));
 
     const futureStages = computeFutureStages(soul.current_state).filter(
       (s) => !(s === "JUDGING" && soul.current_state === "JUDGING")
@@ -268,7 +274,7 @@ export function SoulLifecycleTimeline({
     out.push(...buildCycleBandRows(soul, reincarnations, (n) => tf("souls.detail.timeline.cycle_band", "第 {{n}} 世", { n: String(n) })));
 
     return sortRows(out);
-  }, [soul, judgments, dispositions, reincarnations, events, ledgerRecords, includeSystemEvents, openJudgment]);
+  }, [soul, judgments, dispositions, reincarnations, events, ledgerRecords, includeSystemEvents, openJudgment, systemEventLabels]);
 
   const visibleRows = filterRows(rows, tab, includeSystemEvents);
 
@@ -429,7 +435,10 @@ export function SoulLifecycleTimeline({
                     aria-expanded={isOpen}
                     className="text-left w-full"
                   >
-                    <div className="text-xs text-[hsl(var(--color-ink-muted))]">
+                    {/* `title` carries the raw event_type — the domainDisplay
+                        convention: translated copy on screen, raw member
+                        recoverable for triage, and never the other way round. */}
+                    <div className="text-xs text-[hsl(var(--color-ink-muted))]" title={row.rawEventType}>
                       {row.title}
                       {row.count > 1 && ` ×${row.count}`} · {row.actor}
                       {row.count > 1 && (
@@ -443,7 +452,7 @@ export function SoulLifecycleTimeline({
                     <div className="mt-1 space-y-0.5 pl-2 border-l border-[hsl(var(--color-hairline))]">
                       {row.items.map((item) => (
                         <div key={item.id} className="text-[10px] text-[hsl(var(--color-ink-subtle))] font-mono truncate">
-                          {describeSystemEvent(item)}
+                          {describeSystemEvent(item, systemEventLabels)}
                         </div>
                       ))}
                     </div>
