@@ -102,7 +102,12 @@ INITIAL_ORGANIZATIONS = [
     # this rename). The display name now says which book it is; `code` is left
     # alone because init_organizations matches on it and it is a join key.
     {"name": "门之书十二门", "code": "DUAT_GATES", "category": "EGYPTIAN", "parent_code": "DUAT"},
-    {"name": "阿佩普领域", "code": "DUAT_APEP", "category": "EGYPTIAN", "parent_code": "DUAT"},
+    # Same shape as DUAT_GATES above, found alongside it: Apep is the serpent Ra
+    # fights during the night voyage, so this node is Ra's journey too, not the
+    # dead person's. verify-egyptian.md §9.4 names only DUAT_GATES, so this one
+    # is a reading of the same finding rather than a quotation of it — the name
+    # says which book, and `code` is left alone for the same reason.
+    {"name": "阴间之书阿佩普领域", "code": "DUAT_APEP", "category": "EGYPTIAN", "parent_code": "DUAT"},
 ]
 
 
