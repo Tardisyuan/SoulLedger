@@ -23,8 +23,10 @@ What is asserted, and why in this order
    ``StatuteCorpus.SOMETHING`` without saying where its text comes from fails
    here, which is the exact omission that let a corpus be invented from a
    template.
-2. The declarations still say what they said: 2 transcribed, 1 derived, 1
-   absent, with the counts and the deliberate 功過格 gap named.
+2. The declarations still say what they said: 3 transcribed, 1 derived, 1
+   absent, with the counts and the two deliberate gaps named — 功過格's 73
+   against a claimed 75, and INFERNO's 26 articles against the 24 places the
+   report counts.
 3. The prose is still in the package docstring. A table nobody reads is not the
    comparison; the paragraph is, and deleting it while keeping the table is not
    a silent option.
@@ -75,6 +77,17 @@ EXPECTED = {
         "civilization": "european",
         "count": 7,
         "marker": "here, below, as EUROPEAN_STATUTES. Seven articles, one per",
+    },
+    # Europe has TWO corpora and they are not alternatives: the seven capital
+    # sins order the terraces of Purgatorio, Aristotle's tripartition orders
+    # the circles of the Inferno (Inf. XI.79-84), and joining the two produces
+    # the chart 8308204 was withdrawn for. 26 articles: nine circles, three
+    # gironi, ten bolge, four zones of Cocytus.
+    "INFERNO": {
+        "nature": "TRANSCRIBED",
+        "civilization": "european",
+        "count": 26,
+        "marker": "A SECOND EUROPEAN CORPUS AND NOT MORE ARTICLES IN THE FIRST,",
     },
     "HELL_LAW": {
         "nature": "ABSENT",
@@ -170,6 +183,34 @@ def test_the_gongguoge_gap_is_declared_rather_than_closed():
         f"GONGGUOGE's `known_gap` no longer names {missing}. Those are the two "
         f"gates whose titled count and transcribed count disagree, and naming "
         f"them is what stops the next reader from 'completing' the corpus."
+    )
+
+
+def test_the_inferno_gap_is_declared_rather_than_closed():
+    """26 articles against a report that counts 24 places, and the difference
+    is named.
+
+    The Antinferno (Inf. III) is a real place in the poem and is not one of the
+    nine circles, so it is not transcribed. A declaration that said nothing
+    about it would present the corpus as covering the whole of hell, and the
+    next reader would either write the missing article or quietly restate one
+    count as the other.
+    """
+    gap = mythology.CORPUS_PROVENANCE["INFERNO"]["known_gap"]
+
+    assert gap, (
+        "INFERNO's `known_gap` was emptied. The corpus transcribes the nine "
+        "circles and their subdivisions and leaves out the Antinferno; a "
+        "declaration with no shortfall in it reads as the whole Inferno."
+    )
+    missing = [
+        phrase for phrase in ("Antinferno", "Inf. III", "24", "26")
+        if phrase not in gap
+    ]
+    assert not missing, (
+        f"INFERNO's `known_gap` no longer names {missing}. Naming the omitted "
+        f"place and both counts is what stops the next reader from 'completing' "
+        f"the corpus."
     )
 
 

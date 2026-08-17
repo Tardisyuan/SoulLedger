@@ -12,6 +12,9 @@ in one of the sibling modules:
     statutes_chinese.py   GONGGUOGE — provenance, gates, row builder
     gongguoge_entries.py  GONGGUOGE — the 73 transcribed segments
     statutes_european.py  DEADLY_SIN — the seven terraces
+    statutes_inferno.py   INFERNO — provenance, the wall of Dis, row builder
+    statutes_inferno_entries.py
+                          INFERNO — the 26 transcribed places
     statutes_egyptian.py  NEGATIVE_CONFESSION — the pointer, and no text
 
 WHY THE NOTE BELOW IS IN THE PACKAGE AND NOT IN ANY ONE MODULE. The three
@@ -46,7 +49,7 @@ the ones the note below points at resolve like this:
 
 Statutes — the articles a verdict can cite (apps.judgment.models.Statute)
 
-THREE CORPORA ARE SEEDED, AND THE LARGEST ONE IS NOT WRITTEN IN THIS FILE.
+FOUR CORPORA ARE SEEDED, AND THE LARGEST ONE IS NOT WRITTEN IN THIS FILE.
 
   CHINESE   — here, below, as CHINESE_STATUTES: 《太微仙君功過格》 (1171),
               73 transcribed articles under corpus GONGGUOGE. This is the
@@ -71,6 +74,17 @@ THREE CORPORA ARE SEEDED, AND THE LARGEST ONE IS NOT WRITTEN IN THIS FILE.
               terrace of Mount Purgatory. This is the SECOND attempt at this
               corpus; the first was withdrawn, and the difference between
               them is the whole point of the note that follows.
+
+  EUROPEAN  — and, separately, as INFERNO_STATUTES: 26 articles for the
+              nine circles of the Inferno, the three gironi of the seventh,
+              the ten bolge of Malebolge and the four zones of Cocytus.
+              A SECOND EUROPEAN CORPUS AND NOT MORE ARTICLES IN THE FIRST,
+              because the two are different structures in different canticles
+              ordered by different things: the seven capital sins order the
+              terraces, Aristotle's tripartition orders the circles (Inf.
+              XI.79-84), and the finding of verify-christian-structure.md is
+              that joining them produces a chart existing nowhere in Dante.
+              No article in either cites the other's coordinate.
 
 WITHDRAWN: THE CHINESE (HELL_LAW) CORPUS.
 RE-ANCHORED: THE EUROPEAN (DEADLY_SIN) ONE.
@@ -124,6 +138,30 @@ give them. No row below carries the key, and tests/test_purgatorio_terraces.py
 asserts that no seeded statute ever does. `purgatorio_terrace` replaces it and
 is a different kind of value: 1-7, checkable against the poem, and against the
 realm rows in this same file.
+
+AND THE INFERNO CORPUS IS NOT `dante_circle` COMING BACK EITHER. The retired
+key was a circle number hung on a CAPITAL SIN, naming a circle for pride, envy
+and sloth that the poem does not give them. In INFERNO_STATUTES the circle is
+not an attribute of anything — the circle IS the article, exactly as the
+terrace article for wrath IS the third terrace. Nothing there carries the
+retired key, and tests/test_purgatorio_terraces.py still asserts that of every
+seeded statute in every corpus. What the circles corpus does NOT do is decide
+anything: which circle a soul belongs in needs a kind of sin, and
+`RecordCategory` is a 功過格 taxonomy with no member that could reach five of
+the nine. `_route_european` is unchanged and the contradiction tests in
+backend/tests/test_european_hell_basis.py are still green, which is how it
+should be read — a citable article is something a judge points at by hand.
+
+26 ARTICLES AGAINST A REPORT THAT COUNTS 24 PLACES. verify-christian-structure
+.md §6 counts the Inferno's distinct places at 24: the Antinferno, circles 1-6,
+the seventh circle's three gironi, the eighth's ten bolge, the ninth's four
+zones. This corpus counts ARTICLES: each of the nine circles gets one, because
+a citation of "the eighth circle" needs something to point at, and each of the
+seventeen subdivisions gets one — 26. The Antinferno (Inf. III: the gate, the
+ignavi, the Acheron, Charon) is not one of the nine circles and is NOT
+transcribed; the omission is recorded on EU-INF-C1 as a `transcription_gap`
+rather than made up for by re-labelling something else. Two counts of two
+different things, and neither is quietly restated as the other.
 
 THE CODES ARE NEW: EU-DS-T1..T7, not EU-DS-01..07. Reusing the old codes
 would have been worse than a collision. judgment/0012 deliberately did NOT
@@ -195,6 +233,11 @@ from apps.actors.mythology.statutes_european import (
     DEADLY_SIN_SOURCE,
     EUROPEAN_STATUTES,
 )
+from apps.actors.mythology.statutes_inferno import (
+    DIS_WALL,
+    INFERNO_SOURCE,
+    INFERNO_STATUTES,
+)
 from apps.souls.models import Civilization
 
 # The same comparison, in a form a test can hold to the database.
@@ -251,6 +294,26 @@ CORPUS_PROVENANCE = {
         "known_gap": None,
         "docstring_marker": "here, below, as EUROPEAN_STATUTES. Seven articles, one per",
     },
+    "INFERNO": {
+        "civilization": "european",
+        "nature": TRANSCRIBED,
+        "module": "apps.actors.mythology.statutes_inferno",
+        "article_count": 26,
+        "source": (
+            "Dante, Inferno IV-XXXIV — the nine circles, the seventh's three "
+            "gironi, the eighth's ten bolge, the ninth's four zones of Cocytus"
+        ),
+        "known_gap": (
+            "The Antinferno (Inf. III) — the gate and its inscription, the ignavi, "
+            "the Acheron and Charon — is NOT transcribed: it is not one of the nine "
+            "circles. verify-christian-structure.md §6 counts the poem's places at 24 "
+            "by including it and by not counting a subdivided circle as a place of its "
+            "own; this corpus counts 26 articles by giving every circle one and every "
+            "subdivision one. The omission is recorded on EU-INF-C1 in "
+            "payload.transcription_gap and is deliberately NOT closed."
+        ),
+        "docstring_marker": "A SECOND EUROPEAN CORPUS AND NOT MORE ARTICLES IN THE FIRST,",
+    },
     "HELL_LAW": {
         "civilization": "chinese",
         "nature": ABSENT,
@@ -301,12 +364,26 @@ CIVILIZATION_ACTOR_ALIASES = {
     "egyptian": EGYPTIAN_ACTOR_ALIASES,
 }
 
-# CLI label -> (corpus, source, rows) for a corpus TRANSCRIBED into this file.
-# Egyptian is absent for the opposite reason to the other two — its corpus is
-# derived rather than transcribed, see _seed_derived_statutes.
+# CLI label -> the corpora TRANSCRIBED into this package for that civilization,
+# each as (corpus, source, rows). Egyptian is absent for the opposite reason to
+# the other two — its corpus is derived rather than transcribed, see
+# _seed_derived_statutes.
+#
+# A TUPLE OF CORPORA PER CIVILIZATION, NOT ONE. Europe has two and they are not
+# alternatives: DEADLY_SIN is the seven capital sins on the terraces of
+# Purgatorio, INFERNO is the circles of hell, and the finding that made the
+# first corpus get rebuilt is precisely that these are separate structures.
+# Collapsing them back into one entry — one corpus per civilization — would put
+# the pressure back on whoever comes next to file a circle article under
+# DEADLY_SIN because that is where the European statutes go.
 CIVILIZATION_STATUTES = {
-    "chinese": ("GONGGUOGE", GONGGUOGE_SOURCE, CHINESE_STATUTES),
-    "european": ("DEADLY_SIN", DEADLY_SIN_SOURCE, EUROPEAN_STATUTES),
+    "chinese": (
+        ("GONGGUOGE", GONGGUOGE_SOURCE, CHINESE_STATUTES),
+    ),
+    "european": (
+        ("DEADLY_SIN", DEADLY_SIN_SOURCE, EUROPEAN_STATUTES),
+        ("INFERNO", INFERNO_SOURCE, INFERNO_STATUTES),
+    ),
 }
 
 # CLI label -> (Civilization, realms, actors). The CLI label is lowercase for
@@ -342,6 +419,7 @@ __all__ = [
     "CORPUS_PROVENANCE",
     "DEADLY_SIN_SOURCE",
     "DERIVED",
+    "DIS_WALL",
     "EGYPTIAN_ACTOR_ALIASES",
     "EGYPTIAN_ACTORS",
     "EGYPTIAN_ASSESSORS",
@@ -353,6 +431,8 @@ __all__ = [
     "GREEK_ACTOR_ALIASES",
     "GREEK_ACTORS",
     "GREEK_REALMS",
+    "INFERNO_SOURCE",
+    "INFERNO_STATUTES",
     "REALM_PARENTS",
     "TENANTS",
     "TRANSCRIBED",
