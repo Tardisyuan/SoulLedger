@@ -70,6 +70,52 @@ including shapes written after the migration ran. Normalizing is correct
 without knowing the answer; migrating requires knowing it. The query an
 operator can run to check is in ``tests/test_workflow_node_shape.py``'s module
 docstring.
+
+The same answer, for the same reason, covers ``node_type`` — added later, when
+the frontend presets turned out to hold Chinese step names there. Reasoned, not
+measured, because the sandbox still cannot reach 192.168.2.115:
+
+* Only three things write ``WorkflowTemplate.nodes_json``. The API has validated
+  ``node_type`` against a five-member ``ChoiceField`` since ``14a4c44``, the
+  commit that introduced the app — so the one path a user can drive has never
+  been able to store 「分流」; it answered 400 instead, which *is* the defect
+  being fixed. ``seed_workflow_templates`` writes ``WORKFLOW_TEMPLATES``, whose
+  ``type`` is a real ``NodeType`` member. The third is a hand-written UPDATE.
+* Only three things write ``ApprovalNode.node_type``. ``ApprovalNodeSerializer``
+  is a ``ModelSerializer``, so the column's ``choices`` validate it.
+  ``create_from_judgment`` and ``create_appeal_workflow`` copy it from a
+  template with no validation at all — that is the hole — but their input is one
+  of the two above.
+* The last real measurement (``workflow/0011``'s docstring, 2026-08-15, live
+  database): ``WorkflowTemplate`` 7 rows with ``nodes_json`` empty on every one,
+  ``ApprovalNode`` 30 rows, all of them the three 十殿审判流程 workflows built
+  from ``WORKFLOW_TEMPLATES`` — i.e. ``TRIAL``×9 + ``FINAL`` each.
+
+So a migration would rewrite rows this reasoning says cannot exist, and would
+still leave the unvalidated copy in ``create_from_judgment`` open for the next
+hand-written row. Normalizing closes the copy for any stored value, past or
+future. An operator with database access can check both halves::
+
+    -- template rows whose stored node_type is outside NodeType
+    SELECT id, name, civilization, case_type,
+           jsonb_path_query_array(nodes_json::jsonb,
+               '$[*] ? (!(@.node_type == "TRIAL" || @.node_type == "EVALUATION"
+                       || @.node_type == "APPEAL" || @.node_type == "FINAL"
+                       || @.node_type == "EXECUTION"))') AS bad_nodes
+    FROM workflow_workflowtemplate
+    WHERE jsonb_array_length(nodes_json::jsonb) > 0;
+
+    -- approval nodes that already carry one
+    SELECT node_type, count(*)
+    FROM workflow_approvalnode
+    WHERE node_type NOT IN ('TRIAL','EVALUATION','APPEAL','FINAL','EXECUTION')
+    GROUP BY node_type;
+
+If the second query returns rows, that is the case this reasoning ruled out and
+the finding to bring back — those are already-created nodes, which normalization
+does *not* reach (it runs when a workflow is built, not on rows already built),
+and they would need a data migration of their own. The first query's rows are
+already handled: they normalize on read.
 """
 
 #: canonical key -> the legacy key that means the same thing.
@@ -81,6 +127,13 @@ LEGACY_NODE_KEYS = {
     "node_type": "type",
     "court_code": "court",
 }
+
+#: ``NodeType.values``, spelled out for the same reason the ``"TRIAL"`` default
+#: below is: this module has to stay importable from a migration, where the
+#: model layer is exactly what one must not import. ``tests/test_workflow_node_shape.py``
+#: asserts this tuple equals ``NodeType.values`` and equals the choice list on
+#: ``WorkflowTemplateNodeSerializer.node_type``, so the three cannot drift.
+NODE_TYPE_VALUES = ("TRIAL", "EVALUATION", "APPEAL", "FINAL", "EXECUTION")
 
 #: Keys carried through as-is when present. ``actor`` is what ``_resolve_approver``
 #: prefers over the label; ``approver_type``/``approver_role`` are what the
@@ -122,7 +175,25 @@ def normalize_template_node(node_def: dict, position: int = 1) -> dict:
     # migration, where importing the model layer is how a historical state gets
     # read through today's fields. The value is asserted equal to NodeType.TRIAL
     # in tests/test_workflow_node_shape.py so the two cannot drift.
+    #
+    # A node_type that is not a NodeType member is treated the same as a missing
+    # one. `ApprovalNode.node_type` is a `choices`-constrained column and
+    # `create_from_judgment` copies this value into it with `objects.create()`,
+    # which runs no `full_clean()` — so an out-of-range value lands in the column
+    # and stays there, where it renders as 「未识别取值」 and is missed by every
+    # `node_type=` filter. The frontend presets held Chinese step names in this
+    # key (「分流」, 「初审」 …); the fix for that is the mapping table in
+    # `frontend/src/config/workflow-node-types.ts`, applied before the value ever
+    # leaves the browser, and the serializer's ChoiceField still refuses such a
+    # value on the way in. This clause is not that fix and does not replace it —
+    # it is for rows that are *already stored*, which no boundary check can reach
+    # and which `apps/workflow/migrations/0011`'s measurement could not rule out
+    # (see this module's closing section). Coercing rather than raising follows
+    # the rule already set two lines up: a malformed stored node should degrade
+    # to the safest node, not 500 a judgment that has nothing to do with it.
     normalized.setdefault("node_type", "TRIAL")
+    if normalized["node_type"] not in NODE_TYPE_VALUES:
+        normalized["node_type"] = "TRIAL"
     normalized.setdefault("court_code", "")
 
     for key in CARRIED_NODE_KEYS:

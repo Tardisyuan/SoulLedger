@@ -17,6 +17,19 @@ export interface WorkflowNodeTemplate {
   id: string;
   name: string;
   court: string;
+  /**
+   * 中文步骤名，**不是** `NodeType` 成员。「分流」「初审」「申诉受理」…
+   *
+   * 它比 NodeType 具体，并且被 `src/__tests__/workflowTemplateLore.test.ts`
+   * 当作考据锁定（Ammit 的每个节点必须是「失败分支」，希腊三位必须是
+   * 「分区审判」而不是「初审/复核」，Michael 的任何节点的 type 不得含
+   * 「审」），所以它留在这里。
+   *
+   * 但它不能原样发到后端：`node_type` 是 ChoiceField，只收五个 NodeType 成员，
+   * 于是「编辑」保存任何预设都会 400。判读成 NodeType 的表在
+   * `src/config/workflow-node-types.ts`（`PRESET_NODE_TYPE` / `nodeTypeFor`），
+   * 新增预设漏映射会让 `src/__tests__/presetNodeTypes.test.ts` 变红。
+   */
   type: string;
   order: number;
 }
@@ -67,7 +80,13 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     name: "跨域审判流程",
     description: "涉及多地区协调的复杂案件",
     nodes: [
-      { id: "n1", name: "案件分类", court: "第一殿", type: "分流", order: 1 },
+      // type 是「案件分类」而不是「分流」，而且这不是笔误的修正。后端
+      // WORKFLOW_TEMPLATES 里这个同名节点记作 NodeType.EVALUATION，而
+      // 「秦广王 · 分流」记作 NodeType.TRIAL——同一个旧标签「分流」在两个节点
+      // 上要两个不同的答案，一张按步骤名索引的表给不出两个。分开写之后
+      // backend/tests/test_workflow_preset_node_types.py 能逐条核对两侧对每个
+      // 同名节点的判读一致。
+      { id: "n1", name: "案件分类", court: "第一殿", type: "案件分类", order: 1 },
       { id: "n2", name: "城隍初审", court: "城隍体系", type: "地方初审", order: 2 },
       { id: "n3", name: "十殿联审", court: "十殿", type: "联审", order: 3 },
       { id: "n4", name: "酆都大帝 · 终审", court: "酆都", type: "终审", order: 4 },
