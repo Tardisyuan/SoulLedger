@@ -126,8 +126,45 @@ WORKFLOW_TEMPLATES = {
             # tests/test_actor_name_aliases.py asserts that every personal name
             # in a node label resolves to the actor the node designates — so
             # this pairing is checked rather than asserted in a comment.
-            {"name": "阿努比斯 · 引渡审判", "court": "Hall of Two Truths", "type": NodeType.TRIAL, "order": 1, "actor": "Anubis"},
-            {"name": "四十二神官 · 罪行核实", "court": "Hall of Two Truths", "type": NodeType.TRIAL, "order": 2},
+            #
+            # NODES 1 AND 2 WERE BOTH RENAMED AND BOTH RE-TYPED, FROM
+            # 「阿努比斯 · 引渡审判」/TRIAL AND 「四十二神官 · 罪行核实」/TRIAL.
+            # The old values said, twice each, the thing the sources deny.
+            #
+            # * **Anubis operates the balance; he does not judge.** Plate III's
+            #   inscription calls him 「O weigher of righteousness」 and BD 30B
+            #   「him who keepeth the scales」 (Budge, Papyrus of Ani 1895;
+            #   independently in BM EA 9901, Hunefer). The verdict is Thoth's to
+            #   record and read out and Osiris' to accept. So the step produces a
+            #   measurement, which is EVALUATION — and 「审判」 in the old label
+            #   asserted the opposite in the one column a reader sees first.
+            #   docs/lore-verification/README.md's position table lists
+            #   「Anubis | judge | operates the scales」 among the errors its
+            #   audits could not see, and verify-egyptian.md §7 row 8 files
+            #   `Anubis → JUDGE` as wrong in kind.
+            # * **The forty-two declarations are a statement, not an instance.**
+            #   BD 125B has the deceased make all forty-two negative
+            #   declarations in one passage of the hall; no assessor decides
+            #   anything, and there is nothing for them to 「核实」 — the old
+            #   label made the bench the actor of a verification the rite does
+            #   not contain. Recording a step is a measurement, not a hearing,
+            #   so it is EVALUATION too.
+            #
+            # The frontend had already corrected its own copies of these two —
+            # `Anubis · 引导与称量` and `42审判者 · 否定告白`, both mapped to
+            # EVALUATION in `frontend/src/config/workflow-node-types.ts`, whose
+            # comment on 灵魂引导 said outright that the backend node was still
+            # carrying 「阿努比斯审判」的旧读法. It no longer is, and that comment
+            # was updated with this change. The step words here are the frontend's;
+            # the deity spellings stay this file's own (Chinese labels, English
+            # `actor` keys), so the two tables agree about the reading without
+            # pretending to be one table — see the header above.
+            #
+            # Already-stored rows carrying the old spellings are corrected by
+            # `0012_correct_the_egyptian_weighing_nodes`, which also records why
+            # `0011`'s frozen ROWS still name the old label and must.
+            {"name": "阿努比斯 · 引导与称量", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 1, "actor": "Anubis"},
+            {"name": "四十二神官 · 否定告白", "court": "Hall of Two Truths", "type": NodeType.EVALUATION, "order": 2},
             {"name": "欧西里斯 · 终审", "court": "Duat", "type": NodeType.FINAL, "order": 3, "actor": "Osiris"},
         ],
     },
@@ -186,10 +223,13 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
                "judgment referred the life to him already (CCC 1021-1022) and "
                "purgation is followed by entry, not by a second verdict (CCC "
                "1030-1032).",
-    "四十二神官 · 罪行核实": "The forty-two assessors are forty-two Actor rows "
+    # Renamed from 「四十二神官 · 罪行核实」 with the node itself — the reason is
+    # unchanged, but the old step word claimed the bench performed a
+    # verification, which is the reading the rename removes.
+    "四十二神官 · 否定告白": "The forty-two assessors are forty-two Actor rows "
                      "(seed_mythology seeds them individually). One FK cannot "
-                     "hold a bench, and the confession is made to all of them "
-                     "in turn (BD 125).",
+                     "hold a bench, and the declarations are addressed to all "
+                     "of them in one passage of the hall (BD 125).",
     # Generic fallback built in create_from_judgment
     "审批节点": "The fallback node for a (civilization, case_type) pair with no "
              "template. By construction nothing is known about who decides it.",
@@ -268,11 +308,41 @@ def _designates_nobody(node_name: str) -> bool:
     )
 
 
-# Valid case types per civilization
+# Valid case types per civilization.
+#
+# ALL THREE CIVILIZATIONS ALLOW `APPEAL`, AND THIS TABLE IS THE THING THAT
+# CHANGED. Until now only the Chinese set carried it, which made *every*
+# European and Egyptian appeal a `ValueError`: `create_from_judgment` sets
+# `case_type = CaseType.APPEAL` unconditionally when `is_appeal=True` and no
+# explicit case type is passed (the default path — `views.create_from_judgment`
+# forwards `request.data.get("case_type")`, i.e. `None`, for a request that only
+# says `is_appeal: true`), and then validates that value against this table.
+#
+# The repository answered the same question two ways, and this table was the
+# one that was behind. `create_appeal_workflow` a few hundred lines below writes
+# `case_type=CaseType.APPEAL` for a soul of any civilization and validated
+# nothing at all, so an appeal raised through *that* entry point has always been
+# legal for all three. Two presets say the same: `EUROPEAN_APPEAL` and
+# `EGYPTIAN_APPEAL` in `frontend/src/config/workflow-templates.ts` are complete
+# flows (Christ · 私审判 …, Isis · 受理 → Nephthys · 复核 → Osiris · 终审) that a
+# user can save and that no judgment could ever be routed to. Two entry points
+# and two presets against one set: the set was widened rather than the other
+# four narrowed.
+#
+# Both entry points now run this check — see `create_appeal_workflow`, which
+# validates through `validate_civilization_case_type` for the same reason. The
+# agreement between them is meant to be structural, not a coincidence that
+# holds while the two happen to write the same constant.
 VALID_CASE_TYPES_BY_CIVILIZATION = {
     Civilization.CHINESE: {CaseType.ROUTINE, CaseType.APPEAL, CaseType.CROSS_REALM, CaseType.SPECIAL},
-    Civilization.EUROPEAN: {CaseType.CANONIZATION, CaseType.PURGATORY_REVIEW, CaseType.HERESY_TRIAL, CaseType.ROUTINE},
-    Civilization.EGYPTIAN: {CaseType.HEART_WEIGHING, CaseType.DIVINE_TRIAL, CaseType.ROUTINE},
+    Civilization.EUROPEAN: {
+        CaseType.CANONIZATION, CaseType.PURGATORY_REVIEW, CaseType.HERESY_TRIAL,
+        CaseType.ROUTINE, CaseType.APPEAL,
+    },
+    Civilization.EGYPTIAN: {
+        CaseType.HEART_WEIGHING, CaseType.DIVINE_TRIAL, CaseType.ROUTINE,
+        CaseType.APPEAL,
+    },
 }
 
 
@@ -329,7 +399,7 @@ class WorkflowService:
 
         **A node recorded as naming nobody is not probed at all**, whichever of
         the two tables records it (see ``_designates_nobody``). 「四十二神官 ·
-        罪行核实」 is a forty-two-member bench and 「十殿联审」 is ten kings
+        否定告白」 is a forty-two-member bench and 「十殿联审」 is ten kings
         sitting jointly; ``approver_actor`` is a single FK, so resolving either
         would file a joint session as one being's decision — a quieter and worse
         error than the stuck flow this fallback fixes. The exclusion is checked
@@ -583,9 +653,41 @@ class WorkflowService:
     ) -> ApprovalWorkflow:
         """
         Create an appeal workflow from an existing rejected workflow.
+
+        Raises:
+            ValueError: If APPEAL is not valid for the soul's civilization.
+
+        **Why this validates at all.** It did not, and that absence was half of
+        the defect the case-type table above records: this method wrote
+        ``case_type=CaseType.APPEAL`` for a soul of any civilization while
+        ``create_from_judgment`` refused the same pair for two of the three. The
+        table is now widened so both answers agree — but agreement between a
+        checked path and an unchecked one is a coincidence, not a rule. Whoever
+        removes ``APPEAL`` from one of the sets next should find out here as
+        well as there, rather than shipping an appeal that only one door
+        refuses.
+
+        **This is not a no-op**, and the one case it changes is worth stating.
+        For the three civilizations the answer is identical before and after,
+        because ``APPEAL`` is now in every set. It differs for a soul whose
+        ``civilization`` is ``UNKNOWN_CIVILIZATION`` — a soul whose tenant is
+        missing or whose tenant code is not in ``TENANT_CIVILIZATION``. Before,
+        that soul got an appeal workflow with **no nodes at all** (there is no
+        ``(UNKNOWN, APPEAL)`` template, the node loop never runs, and the
+        workflow is left ``PENDING`` with ``current_node=None``); now it raises,
+        which is what ``create_from_judgment`` has always done for the same soul
+        — ``VALID_CASE_TYPES_BY_CIVILIZATION.get(UNKNOWN, set())`` is empty. A
+        node-less approval workflow cannot be advanced, approved or escalated,
+        so the change replaces a stuck row with the error that explains it.
         """
         judgment = original_workflow.judgment
         soul = original_workflow.soul
+
+        validation_error = cls.validate_civilization_case_type(
+            soul.civilization, CaseType.APPEAL
+        )
+        if validation_error:
+            raise ValueError(validation_error)
 
         appeal_workflow = ApprovalWorkflow.objects.create(
             judgment=judgment,

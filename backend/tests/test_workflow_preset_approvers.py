@@ -216,7 +216,7 @@ def test_a_label_naming_somebody_the_cast_lacks_stays_system(seeded):
 
 
 def test_an_excused_bench_is_not_resolved_to_one_of_its_members(seeded):
-    """「四十二神官 · 罪行核实」 is forty-two assessors, not a judge.
+    """「四十二神官 · 否定告白」 is forty-two assessors, not a judge.
 
     The label is listed in `TEMPLATE_NODES_WITHOUT_AN_APPROVER`, and this test
     makes the exclusion do work rather than being true by accident: it puts a
@@ -233,7 +233,7 @@ def test_an_excused_bench_is_not_resolved_to_one_of_its_members(seeded):
     workflow = _workflow_for(Civilization.EGYPTIAN, tenant)
     first, second, third = _by_order(workflow)
 
-    assert second.node_name == "四十二神官 · 罪行核实"
+    assert second.node_name == "四十二神官 · 否定告白"
     assert (second.approver_type, second.approver_actor_id) == ("SYSTEM", None), (
         f"the bench node was resolved to {bench.pk}"
     )
@@ -246,8 +246,8 @@ def test_a_node_excused_only_by_the_frontend_table_is_not_resolved_either(seeded
     """The same bench, spelled the way the *preset* spells it.
 
     「42审判者 · 否定告白」 appears only in `NODES_THAT_NAME_NO_ACTOR` — the
-    backend table has never heard of it, because the backend template calls the
-    step 「四十二神官 · 罪行核实」. The fallback exists to serve preset-built
+    backend table has never heard of it, because the backend template spells the
+    same bench 「四十二神官 · 否定告白」. The fallback exists to serve preset-built
     nodes, so it has to honour the preset's own record of which of them name
     nobody; consulting only the backend table would leave every frontend-only
     bench, institution and action name to be resolved on luck.
