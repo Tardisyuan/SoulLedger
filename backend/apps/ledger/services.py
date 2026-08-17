@@ -86,6 +86,23 @@ INHERITANCE_DEMERIT = 1.0
 # Spindle of Necessity (Republic X, 617d-620d).
 REBIRTH_CAPABLE_CIVILIZATIONS = frozenset({Civilization.CHINESE})
 
+# Cosmologies whose routing is bound by 「功過有不可折者」.
+#
+# 功過格 is a Chinese instrument and the 凡例 limit on 功過相抵 is a limit on a
+# Chinese arithmetic. The other two cosmologies here have no offsetting step for
+# it to constrain: an Egyptian heart is weighed against the feather with merit
+# absent from the scale entirely, and European culpa is retired by absolution
+# rather than by a good deed (see apps/ledger/readings.py). A pool split has
+# nothing to say about either, so neither is in this set and neither routes any
+# differently than it did.
+#
+# A frozenset rather than `if civ == CHINESE` for the same reason
+# REBIRTH_CAPABLE_CIVILIZATIONS is one: GREEK is planned, and whether Plato's
+# thousand-year circuit has a non-fungibility rule is a question somebody will
+# have to answer on purpose, in one place, rather than by discovering which
+# branch of an if-chain it fell into.
+NON_FUNGIBLE_CIVILIZATIONS = frozenset({Civilization.CHINESE})
+
 # TODO(i18n): the reasons below and `inheritance_note` in
 # get_reincarnation_inheritance are user-facing copy hard-coded in the service
 # layer, which is the wrong place for it — it cannot be localised, and the
@@ -401,11 +418,13 @@ class LedgerService:
             "merit_score": total_merit,
             "demerit_score": total_demerit,
             # Unchanged, and deliberately so. It is the Chinese reading served
-            # to everyone, but it is also a Soul property the souls app owns,
-            # what disposition/services.py routes on at seven sites, and what
-            # querysets filter and order by. `reading` below adds the
-            # instrument each cosmology actually uses; retiring this one is a
-            # separate and much larger change.
+            # to everyone, but it is also a Soul property the souls app owns and
+            # a column expression querysets filter and order by in SQL, which is
+            # why it cannot become pool-aware without disagreeing with itself —
+            # see get_unoffset_demerit below and apps/ledger/fungibility.py.
+            # `reading` below adds the instrument each cosmology actually uses,
+            # and routing now reads that instrument rather than this number;
+            # retiring this one is still a separate and much larger change.
             "karmic_balance": total_merit - total_demerit,
             "record_count": records.count(),
             "records": record_summaries,
@@ -422,6 +441,48 @@ class LedgerService:
 
         cache.set(cache_key, result, LEDGER_CACHE_TTL)
         return result
+
+    @classmethod
+    def get_unoffset_demerit(cls, soul: Soul) -> float | None:
+        """Fault that no merit of its own kind could discharge — or None.
+
+        This is the routing-layer half of 「功過有不可折者」. `get_ledger_summary`
+        already computes the figure and reports it inside
+        `reading["non_fungible"]`; this is the accessor for callers that need to
+        *act* on it rather than display it, and today that means
+        `DispositionService._route_chinese` picking a court.
+
+        Returns None — not 0 — in the two cases where this system has no
+        partitioned reading to offer, because 0 is a claim ("nothing stands
+        against this soul") and None is the absence of one:
+
+        * The soul's cosmology is not in NON_FUNGIBLE_CIVILIZATIONS. 功過格 does
+          not govern an Egyptian weighing or a Latin culpa, and handing either
+          a number derived from it would apply the Chinese rule to somebody
+          else's afterlife — the exact flattening apps/ledger/readings.py
+          exists to refuse.
+        * The ledger holds no MERIT or DEMERIT records to partition. A caller
+          that cannot say where the points came from gets no claim about
+          fungibility rather than a fabricated one, which is the same
+          discipline `_chinese_reading` applies when `class_totals` is None.
+
+          In production the two answers coincide: merit_score and demerit_score
+          are read-only through the API and are only ever written by
+          `recalculate_soul_ledger`, which derives them from those same
+          records, so a soul with no scored records also has a balance of 0 and
+          would route to the floor either way. They diverge only for a soul
+          whose denormalised scores were set by something other than its
+          records — a fixture, a data migration, a direct ORM write. For that
+          soul the denormalised score is what `karmic_balance` says and what
+          the rest of the system displays, and refusing to overrule it with a
+          partition we were unable to compute is the conservative answer.
+        """
+        if soul.civilization not in NON_FUNGIBLE_CIVILIZATIONS:
+            return None
+        non_fungible = cls.get_ledger_summary(soul)["reading"].get("non_fungible")
+        if not non_fungible or not non_fungible["by_class"]:
+            return None
+        return non_fungible["unoffset_demerit"]
 
     @classmethod
     def _invalidate_cache(cls, soul: Soul):

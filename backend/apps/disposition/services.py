@@ -4,7 +4,7 @@ Routes to the correct realm based on civilization and verdict.
 """
 from apps.disposition.models import Disposition
 from apps.judgment.models import Judgment, JudgmentMethod, Verdict
-from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS
+from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS, LedgerService
 from apps.realms.models import Realm
 from apps.souls.models import Civilization, Soul
 
@@ -142,7 +142,26 @@ class DispositionService:
         karma = soul.karmic_balance
 
         if civilization == Civilization.CHINESE:
-            return cls._route_chinese(soul, verdict, karma)
+            # 「功過有不可折者」 reaches the router here, and only here.
+            #
+            # `karma` is merit minus demerit over one undifferentiated pool, so
+            # a hundred hundred-cash alms cancel a killing in it exactly. That
+            # arithmetic is still what `karmic_balance` means everywhere else in
+            # this system (it is a column expression that querysets sort and
+            # filter on — see apps/souls/querysets.py), so it is not redefined;
+            # what changes is which number sentences a Chinese soul.
+            #
+            # Computed only for FAILED, because that is the only branch that
+            # consumes a severity figure and computing one walks the soul's
+            # whole record set. A PASSED soul goes to heaven regardless and a
+            # PURGATORY/RETRY soul waits regardless; neither should pay for a
+            # ledger read to be told so.
+            unoffset_demerit = (
+                LedgerService.get_unoffset_demerit(soul)
+                if verdict == Verdict.FAILED
+                else None
+            )
+            return cls._route_chinese(soul, verdict, karma, unoffset_demerit)
         elif civilization == Civilization.EUROPEAN:
             return cls._route_european(soul, verdict, karma)
         elif civilization == Civilization.EGYPTIAN:
@@ -168,13 +187,42 @@ class DispositionService:
             return ""
 
     @classmethod
-    def _route_chinese(cls, soul: Soul, verdict: str, karma: int) -> str:
+    def _route_chinese(
+        cls,
+        soul: Soul,
+        verdict: str,
+        karma: int,
+        unoffset_demerit: float | None = None,
+    ) -> str:
         """
-        Route Chinese soul based on verdict and karma.
+        Route Chinese soul based on verdict and severity.
 
-        The verdict is the court's authoritative judicial decision; karma is
-        only the severity input used to pick a tier *within* the outcome the
-        verdict already determined. This used to be checked as
+        `unoffset_demerit` is the fault left standing once merit has been netted
+        off *within* its own class — 「功過有不可折者。如用財之百功，不可折致死
+        人之百過。」 (《文昌帝君功過格·凡例》). When it is given it is the
+        severity input; `karma` then decides nothing at all here, and that is
+        the change. Under `abs(karma)` a soul who gave a hundred hundred-cash
+        alms and killed a man read as a soul at zero and was sentenced to 第二
+        殿楚江王, the mildest punishment court — nine courts milder than the same
+        killing alone, the difference being a hundred coins. See
+        `LedgerService.get_unoffset_demerit`.
+
+        None means no partitioned reading was available (a soul with no scored
+        records; or a direct call from a unit test exercising the tier
+        arithmetic), and `abs(karma)` is used exactly as before. That fallback
+        is a refusal to invent a partition, not a softer rule: see the same
+        method for why 0 would have been a claim and None is not.
+
+        The two are never blended and never compared. A ledger is partitioned or
+        it is not; taking `max(abs(karma), unoffset_demerit)` would let the
+        undifferentiated pool raise a sentence the partition says is unwarranted,
+        which is the netting error again with the sign flipped.
+
+        The verdict is the court's authoritative judicial decision; severity is
+        only the input used to pick a tier *within* the outcome the verdict
+        already determined — so an unoffset killing does not overturn a PASSED
+        verdict any more than a positive balance used to overturn a FAILED one.
+        This used to be checked as
         `verdict == PASSED or karma >= 0`, a disjunction that let a
         nonnegative karmic balance send a FAILED/PURGATORY/RETRY soul to
         heaven anyway. Because merit and demerit both decay toward zero for
@@ -200,9 +248,17 @@ class DispositionService:
             # karma == 0 needs no special case — it lands in 第二殿楚江王,
             # which is the correct floor for "guilty, but no recorded
             # severity", not a free pass.
+            #
+            # That floor is also where a FAILED soul with *only* merit now
+            # lands. `abs(karma)` used to send it to the deepest hell for
+            # having been generous — abs() reads a magnitude and cannot tell
+            # +95 from -95 — and 不可折 severity, being a demerit total, has no
+            # sign to lose. A soul with no recorded fault has no recorded
+            # severity, which is precisely the case the floor is for.
+            severity = abs(karma) if unoffset_demerit is None else unoffset_demerit
             tier = min(
                 cls.CHINESE_HELL_MAX_TIER,
-                max(cls.CHINESE_HELL_MIN_TIER, (abs(karma) // 10) + 1),
+                max(cls.CHINESE_HELL_MIN_TIER, int(severity // 10) + 1),
             )
             return cls.CHINESE_HELL_TIERS.get(
                 tier, cls.CHINESE_HELL_TIERS[cls.CHINESE_HELL_MAX_TIER]
@@ -222,6 +278,16 @@ class DispositionService:
         and is authoritative, karma only selects circle depth once FAILED
         is already established. See `_route_chinese` for why the previous
         `verdict == PASSED or karma >= 0` disjunction was wrong.
+
+        DELIBERATELY NOT GIVEN THE 不可折 TREATMENT. 「功過有不可折者」 is a limit
+        on 功過相抵, and 功過相抵 is a Chinese mechanic; a 1724 Daoist ledger has
+        no jurisdiction over Dante's circles, and importing its pool rule here
+        would be the flattening apps/ledger/readings.py refuses, arriving from
+        the opposite direction. There is a separate and real question about this
+        line — readings.py holds that European culpa is not reduced by merit at
+        all, which `abs(karma)` (merit minus demerit) plainly does — but the
+        answer to it is a European doctrine of guilt, not a Chinese one, and it
+        is not this change's to make.
         """
         if verdict == Verdict.PASSED:
             return cls.EU_HEAVEN
@@ -250,6 +316,15 @@ class DispositionService:
            FAILED = heart heavier = Ammit destroys)
           PURGATORY = inconclusive, wait in Duat
         - STANDARD: fall back to karma-based routing
+
+        DELIBERATELY NOT GIVEN THE 不可折 TREATMENT, and for a sharper reason
+        than the European branch: there is no offsetting step here for a
+        non-fungibility rule to constrain. The heart is weighed against the
+        feather and merit never goes on the scale at all (see
+        `_egyptian_reading`), so partitioning merit into pools it may and may
+        not discharge from answers a question this cosmology does not ask.
+        `karma >= 50` on the inconclusive branch is a threshold read, not an
+        offset, and it is left exactly as it was.
         """
         if judgment_method == JudgmentMethod.HEART_WEIGHING:
             if verdict == Verdict.PASSED:
