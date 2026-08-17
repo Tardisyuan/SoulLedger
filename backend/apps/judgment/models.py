@@ -146,6 +146,32 @@ class StatuteCorpus(models.TextChoices):
         Purgatorio X-XXVII, which is the structure the seven actually order.
         The articles carry `purgatorio_terrace`; the `dante_circle` the first
         attempt carried is retired, being a coordinate the poem does not have.
+      * INFERNO is the OTHER European corpus and a different structure in a
+        different canticle: the nine circles of Inferno IV-XXXIV plus the
+        seventh circle's three gironi, the eighth's ten bolge and the ninth's
+        four zones of Cocytus, 26 articles under EU-INF-*. Two European
+        corpora rather than one enlarged one, because the seven capital sins
+        order the terraces and Aristotle's tripartition orders the circles
+        (Inf. XI.79-84), and the single finding of
+        docs/lore-verification/verify-christian-structure.md is that joining
+        the two produces a chart that exists nowhere in Dante. No article here
+        cites a terrace and no terrace article cites a circle.
+
+        THIS IS NOT `dante_circle` RETURNING. That key was a circle number
+        hung on a capital sin — a coordinate for pride, envy and sloth that
+        the poem does not give them. Here the circle is not an attribute of
+        anything: the circle IS the article, the way the terrace article for
+        wrath IS the third terrace. No row in any corpus carries the retired
+        key, and tests/test_purgatorio_terraces.py still asserts it of every
+        seeded statute.
+
+        AND IT ROUTES NOTHING. Which circle a soul belongs in needs a kind of
+        sin; `RecordCategory` is a 功過格 taxonomy, and baptismal state,
+        doctrinal position and the identity of a betrayed trust have no field
+        anywhere in this system. `_route_european` still sorts by a demerit
+        magnitude and the contradiction tests in
+        backend/tests/test_european_hell_basis.py still pass. An article is
+        something a judge can cite by hand.
       * HELL_LAW (冥律) is EMPTY, and its emptiness is a finding rather than a
         backlog item. It was seeded in 6017f04 and withdrawn: there is no
         codified 冥律 to transcribe — 《玉历宝钞》 is a hall-by-hall morality
@@ -198,6 +224,7 @@ class StatuteCorpus(models.TextChoices):
     GONGGUOGE = "GONGGUOGE", "功過格 — Ledger of Merit and Demerit (Chinese)"
     NEGATIVE_CONFESSION = "NEGATIVE_CONFESSION", "Declaration of Innocence (Egyptian)"
     DEADLY_SIN = "DEADLY_SIN", "Seven Deadly Sins (European)"
+    INFERNO = "INFERNO", "Inferno — the Circles of Dante's Hell (European)"
 
 
 #: The one civilization each corpus belongs to. A dict rather than a naming
@@ -208,9 +235,11 @@ CORPUS_CIVILIZATION = {
     StatuteCorpus.GONGGUOGE: Civilization.CHINESE,
     StatuteCorpus.NEGATIVE_CONFESSION: Civilization.EGYPTIAN,
     StatuteCorpus.DEADLY_SIN: Civilization.EUROPEAN,
+    StatuteCorpus.INFERNO: Civilization.EUROPEAN,
 }
 #: Two corpora may share a civilization — Chinese has both the empty HELL_LAW
-#: and the seeded GONGGUOGE — so this is deliberately not inverted into a
+#: and the seeded GONGGUOGE, and Europe has both DEADLY_SIN (the terraces) and
+#: INFERNO (the circles) — so this is deliberately not inverted into a
 #: civilization -> corpus lookup anywhere. `Statute.clean` reads it in the one
 #: direction that is a function.
 
@@ -276,8 +305,9 @@ class Statute(AuditUserFields, models.Model):
     code = models.CharField(
         max_length=40,
         help_text=(
-            "Stable citation key, e.g. CN-GGG-F-JJ-01 / EG-NC-07 / EU-DS-T3. "
-            "CN-HL-* and EU-DS-01..07 are withdrawn keys and are not reused."
+            "Stable citation key, e.g. CN-GGG-F-JJ-01 / EG-NC-07 / EU-DS-T3 / "
+            "EU-INF-C8-B02. CN-HL-* and EU-DS-01..07 are withdrawn keys and "
+            "are not reused."
         ),
     )
     #: Position within the corpus. Explicit, for the reason the assessors'
@@ -312,8 +342,12 @@ class Statute(AuditUserFields, models.Model):
     #: `nullifiers` (「則無功」), `cap`, `derived`, `money_rate` and
     #: `fungibility_class`. Point values live in `clauses[].points` as JSON
     #: numbers rather than in a column, because 半功/半過 is 0.5 and the
-    #: article is a table of conditions, not one number. NOT `dante_circle` —
-    #: that key was retired with the first attempt at the seven; see
+    #: article is a table of conditions, not one number. For INFERNO it holds
+    #: `circle`, the subdivision's kind/index/name, `parent_code` and
+    #: `within_dis` — the wall of Dis, which is the poem's only real divider.
+    #: NOT `dante_circle` — that key was retired with the first attempt at the
+    #: seven, and `circle` on a circle article is not it: one was a coordinate
+    #: invented for a sin, the other is the article's own identity. See
     #: StatuteCorpus.
     payload_json = models.JSONField(default=dict, blank=True)
 

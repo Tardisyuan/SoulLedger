@@ -660,8 +660,8 @@ class TestSeededCorpora:
         )
         assert reused == []
 
-    def test_the_three_seeded_corpora_are_the_whole_inventory(self):
-        """States the whole seeded inventory, so a fourth corpus appearing
+    def test_the_four_seeded_corpora_are_the_whole_inventory(self):
+        """States the whole seeded inventory, so a fifth corpus appearing
         anywhere — under a new enum value, or smuggled in under an existing
         one — fails here rather than being noticed by nobody.
 
@@ -669,6 +669,14 @@ class TestSeededCorpora:
         independent transcriptions segment it into 11, 不軌門 is titled 六條 and
         both give 5. The two missing articles are NOT supplied. See
         tests/test_gongguoge.py, which holds the substance.
+
+        INFERNO holds 26 and not 24: verify-christian-structure.md §6 counts
+        the poem's distinct PLACES at 24 by including the Antinferno and by not
+        counting a subdivided circle as a place of its own, while this corpus
+        counts ARTICLES — nine circles plus three gironi, ten bolge and four
+        zones of Cocytus. The Antinferno is not transcribed and the omission is
+        recorded on EU-INF-C1. See tests/test_inferno_circles.py, which holds
+        the substance.
         """
         by_corpus = {}
         for corpus in Statute.all_objects.values_list("corpus", flat=True):
@@ -677,6 +685,7 @@ class TestSeededCorpora:
             StatuteCorpus.GONGGUOGE: 73,
             StatuteCorpus.NEGATIVE_CONFESSION: 42,
             StatuteCorpus.DEADLY_SIN: 7,
+            StatuteCorpus.INFERNO: 26,
         }
 
     def test_every_seeded_article_carries_its_provenance(self):
@@ -743,10 +752,13 @@ class TestSeededCorpora:
         # The Chinese tenant holds the 功過格 and NOTHING under HELL_LAW: it was
         # the rulebook that was withdrawn, not the cosmology, and what came back
         # is a different kind of document rather than the same one repaired. The
-        # European tenant holds the seven terrace articles and nothing else.
+        # European tenant holds TWO corpora — the seven terrace articles of
+        # Purgatorio and the 26 circles of the Inferno — because those are two
+        # structures ordered by two different things, and merging them is the
+        # chart 8308204 withdrew.
         assert by_tenant == {
             "CN_DIYU": {StatuteCorpus.GONGGUOGE},
-            "EU_HEAVEN_HELL": {StatuteCorpus.DEADLY_SIN},
+            "EU_HEAVEN_HELL": {StatuteCorpus.DEADLY_SIN, StatuteCorpus.INFERNO},
             "EG_DUAT": {StatuteCorpus.NEGATIVE_CONFESSION},
         }
 
@@ -786,15 +798,22 @@ class TestTranscriptionMechanism:
             Stats,
         )
 
-        # Two corpora are transcribed: the seven capital sins on the terraces of
-        # Purgatorio, and 《太微仙君功過格》 under GONGGUOGE. If a third appears
-        # here, read the withdrawal note at the top of the statute section in
-        # seed_mythology.py first — HELL_LAW is empty because the text behind it
-        # has no articles, not because nobody has got round to typing them in,
-        # and the 功過格 arriving did not change that.
-        assert set(CIVILIZATION_STATUTES) == {"chinese", "european"}
-        assert CIVILIZATION_STATUTES["european"][0] == StatuteCorpus.DEADLY_SIN
-        assert CIVILIZATION_STATUTES["chinese"][0] == StatuteCorpus.GONGGUOGE
+        # Three corpora are transcribed: the seven capital sins on the terraces
+        # of Purgatorio, 《太微仙君功過格》 under GONGGUOGE, and the circles of
+        # the Inferno. Written out per civilization rather than as a flat set,
+        # because the value is now a TUPLE of corpora — Europe has two, and the
+        # whole finding behind 8308204 is that its two are separate structures.
+        # If a fourth appears here, read the withdrawal note in
+        # apps/actors/mythology/__init__.py first: HELL_LAW is empty because the
+        # text behind it has no articles, not because nobody has got round to
+        # typing them in, and neither the 功過格 nor the Inferno changed that.
+        assert {
+            label: [entry[0] for entry in entries]
+            for label, entries in CIVILIZATION_STATUTES.items()
+        } == {
+            "chinese": [StatuteCorpus.GONGGUOGE],
+            "european": [StatuteCorpus.DEADLY_SIN, StatuteCorpus.INFERNO],
+        }
 
         row = {
             "code": "ZZ-FIXTURE-01",

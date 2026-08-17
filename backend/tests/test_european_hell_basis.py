@@ -44,7 +44,7 @@ circles Dante gives them nowhere, one punishment invented outright.
 """
 import pytest
 
-from apps.actors.mythology import EUROPEAN_STATUTES
+from apps.actors.mythology import EUROPEAN_STATUTES, INFERNO_STATUTES
 from apps.disposition.services import DispositionService
 from apps.judgment.models import CORPUS_CIVILIZATION, Judgment, StatuteCorpus, Verdict
 from apps.ledger.services import LedgerService
@@ -349,15 +349,28 @@ def test_no_model_in_this_system_carries_a_circle_or_a_sin_kind():
             )
 
 
-def test_the_only_european_corpus_is_purgatorio_and_names_no_circle():
-    """CONTRADICTION, PINNED: the citable European rules are terraces.
+def test_the_european_corpora_are_citable_text_and_still_route_nothing():
+    """CONTRADICTION, PINNED: a citable article is not a routing input.
 
     `JudgmentCitation` is the one structured link between a judgment and a named
-    fault, and everything it can point at for a European soul is DEADLY_SIN —
-    seven capital sins, one per terrace of Mount Purgatory. Three of them (pride,
-    envy, sloth) have no circle in Hell at all, and the `dante_circle` an earlier
-    version carried was withdrawn in 8308204 as a coordinate the poem does not
-    have. Citing a terrace tells the router nothing about a circle.
+    fault. There are now TWO European corpora and this test was relaxed in
+    exactly one place to say so: DEADLY_SIN, the seven capital sins one per
+    terrace of Mount Purgatory, and INFERNO, the nine circles with the seventh's
+    three gironi, the eighth's ten bolge and the ninth's four zones. Three of the
+    seven (pride, envy, sloth) still have no circle at all, and the
+    `dante_circle` an earlier version carried is still withdrawn — 8308204, a
+    coordinate the poem does not have.
+
+    WHY THE RELAXATION IS ONLY THAT ONE LINE. The claim this file makes is that
+    nothing here classifies a sin the way Dante does, and transcribing the
+    circles did not change it: the circles corpus is TEXT, and choosing an
+    article for a soul still needs a kind of sin, a baptismal state, a doctrinal
+    position or the identity of a betrayed trust — none of which exists on any
+    model (see the two tests above and the one below). `_route_european` still
+    reads a demerit magnitude and the two CONTRADICTION tests at the top of this
+    section are still green. So this file is NOT ready to be deleted; the
+    condition in its docstring is "whoever supplies real sin classification",
+    and nobody has.
 
     Expectations hand-written rather than derived from the table, per the rule
     tests/test_purgatorio_terraces.py states.
@@ -366,7 +379,7 @@ def test_the_only_european_corpus_is_purgatorio_and_names_no_circle():
         corpus for corpus, civ in CORPUS_CIVILIZATION.items()
         if civ == Civilization.EUROPEAN
     }
-    assert european_corpora == {StatuteCorpus.DEADLY_SIN}
+    assert european_corpora == {StatuteCorpus.DEADLY_SIN, StatuteCorpus.INFERNO}
 
     assert len(EUROPEAN_STATUTES) == 7
     for article in EUROPEAN_STATUTES:
@@ -381,3 +394,25 @@ def test_the_only_european_corpus_is_purgatorio_and_names_no_circle():
 
     # Absence, stated positively: the three the Inferno has no room for.
     assert {"Pride", "Envy", "Sloth"} <= {a["title_en"] for a in EUROPEAN_STATUTES}
+
+    # TIGHTENED, not relaxed: the circles corpus carries no hook a router could
+    # read. It has no deed category, no weight and no score — the three shapes
+    # through which a statute could quietly become an input to
+    # `_route_european` — so an article remains something a judge cites by hand.
+    # tests/test_inferno_circles.py checks what the 26 articles say; this checks
+    # what they must not be able to do.
+    assert len(INFERNO_STATUTES) == 26
+    routable = ("record_category", "category", "weight", "points", "score",
+                "culpa", "karma", "threshold", "band")
+    for article in INFERNO_STATUTES:
+        offenders = {
+            key for key in article["payload"]
+            if any(fragment in key for fragment in routable)
+        }
+        assert not offenders, (
+            f"{article['code']} carries {sorted(offenders)}. A circle article "
+            f"that scores or categorises a deed is the missing classification "
+            f"arriving through the corpus rather than through a model — re-read "
+            f"_route_european §3 before wiring it up, and delete these tests on "
+            f"purpose if it is real."
+        )

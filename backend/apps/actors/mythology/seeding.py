@@ -316,9 +316,12 @@ class MythologySeeder:
     def _seed_statutes(self, civilization, tenant, corpus, source, rows, do_update, stats):
         """Seed one corpus transcribed from a document into CIVILIZATION_STATUTES.
 
-        One corpus is transcribed today: the seven capital sins, one article per
-        terrace of Purgatorio (EUROPEAN_STATUTES). This path was kept alive
-        while CIVILIZATION_STATUTES was empty — the withdrawal removed two
+        Three corpora are transcribed today: the seven capital sins on the
+        terraces of Purgatorio (EUROPEAN_STATUTES), 《太微仙君功過格》
+        (CHINESE_STATUTES) and the circles of the Inferno (INFERNO_STATUTES).
+        Called once per corpus, so a civilization with two of them — Europe has
+        two, and they are separate structures — seeds both. This path was kept
+        alive while CIVILIZATION_STATUTES was empty — the withdrawal removed two
         fabricated tables, not the ability to seed a real one — and
         tests/test_judgment_statutes.py still calls it directly with a throwaway
         row, which is what the next corpus (功過格, if it verifies) will arrive

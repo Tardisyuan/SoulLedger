@@ -145,8 +145,13 @@ class Command(MythologySeeder, BaseCommand):
                 # Statutes come last within a civilization: the Egyptian corpus
                 # is derived from the assessor rows written immediately above,
                 # and reads them back out of this same transaction.
-                corpus = CIVILIZATION_STATUTES.get(label)
-                if corpus is not None:
+                #
+                # A loop rather than one call: a civilization may have more than
+                # one transcribed corpus, and Europe does — the seven capital
+                # sins on the terraces of Purgatorio and the circles of the
+                # Inferno are two structures, not one list. See
+                # CIVILIZATION_STATUTES.
+                for corpus in CIVILIZATION_STATUTES.get(label, ()):
                     self._seed_statutes(
                         civilization, tenant, *corpus, do_update, statute_stats
                     )
