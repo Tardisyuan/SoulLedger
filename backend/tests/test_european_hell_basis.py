@@ -1,0 +1,383 @@
+"""What sorts a soul into a circle of Dante's Hell — and what this system uses.
+
+Two claims live in this file and they are not the same claim.
+
+**Fixed, and pinned here so it stays fixed.** `_route_european` used to pick a
+circle from `abs(karma)` — merit minus demerit. So a European soul got *milder*
+the more good it had done: a hundred alms against one killing netted to zero and
+put the killer in circle 1. apps/ledger/readings.py already rules that out for
+this cosmology in as many words — 「a good deed does not retire a sin, absolution
+does, and letting merit reduce culpa would rebuild the Chinese netting account
+under a Latin name」 — and `_european_reading` already reported `culpa` as the
+demerit total alone. The router now reads the same figure.
+
+`test_alms_no_longer_buy_a_killing_out_of_the_lower_circles` was written first in
+its inverted form, asserting circle 1, and run green against the unmodified
+router; the assertions were then flipped. The recorded run is in the task log.
+Same discipline as tests/test_ledger_fungibility.py, and for the same reason: a
+check nobody has watched fail is a check nobody has evidence for.
+
+**NOT fixed, and pinned here so that fixing it has to be deliberate.** Dante does
+not layer Hell by how much wrong was done. Virgil says the basis outright at Inf.
+XI.79-84, citing the Ethics — 「Incontinence, and Malice, and insane Bestiality」
+(Longfellow 1867, Project Gutenberg #1001). Incontinenza is circles 2-5, malizia
+(violence, fraud) and matta bestialitade (treachery) are 6-9 inside the walls of
+Dis, and that wall is the poem's only real divider.
+docs/lore-verification/verify-christian-structure.md §2, §3.1, §6.
+
+A magnitude ladder cannot express that, whatever number is fed into it. The
+"contradiction" tests below assert that the ladder is STILL a magnitude ladder
+and that the classification it would need STILL does not exist anywhere in this
+system. They are written the way
+tests/test_migration_reverse_scope.py::test_perm_0008_sample_scopes_contradict_perm_0017
+is written, and for the same reason: nothing in the language connects a routing
+formula to a claim about Aristotle, so the disagreement has to be asserted or it
+is invisible. Whoever supplies real sin classification will find these tests red
+and has to delete them on purpose — which is the point.
+
+WHAT NOT TO DO WHEN THAT DAY COMES. Do not invent the missing categories.
+docs/lore-verification/README.md §1 is about this exact material: "Do not
+complete these lists. Filling in the 'missing' four evils, three virtues, or
+three sins is the one repair that is certainly wrong." `8308204` is what happened
+the last time it was tried — seven sins fitted to nine circles, three of them to
+circles Dante gives them nowhere, one punishment invented outright.
+"""
+import pytest
+
+from apps.actors.mythology import EUROPEAN_STATUTES
+from apps.disposition.services import DispositionService
+from apps.judgment.models import CORPUS_CIVILIZATION, Judgment, StatuteCorpus, Verdict
+from apps.ledger.services import LedgerService
+from apps.souls.models import Civilization, Soul, SoulState
+from apps.souls.record_models import RecordCategory, SoulRecord
+from apps.tenants.models import Tenant
+
+BAND = DispositionService.EU_HELL_CULPA_BAND
+
+#: Named through the map rather than by literal realm code, per the convention
+#: apps/disposition/tests.py states: these tests are about which end of the
+#: structure a soul lands at, not which string spells it.
+LIMBO = DispositionService.EU_HELL_CIRCLES[1]
+FRAUD = DispositionService.EU_HELL_CIRCLES[8]
+TREACHERY = DispositionService.EU_HELL_CIRCLES[9]
+
+#: One killing, weighted the way tests/test_ledger_fungibility.py weights it.
+KILLING_POINTS = 100
+#: A hundred one-point alms against it — the offset that used to work.
+ALMS_POINTS = 1
+ALMS_COUNT = 100
+
+
+@pytest.fixture
+def make_european_soul(db):
+    """European souls whose deeds are dated in their year of death.
+
+    CIVILIZATION_DECAY_RATE puts EUROPEAN at 0.0, so no decay applies here at
+    all and the scores are exactly the weights. A factory rather than one soul
+    because every claim below compares two ledgers against each other.
+    """
+    tenant = Tenant.objects.get_or_create(
+        code="EU_HEAVEN_HELL", defaults={"display_name": "European Heaven/Hell"}
+    )[0]
+
+    def _make(name):
+        soul = Soul.objects.create(
+            name=name,
+            current_state=SoulState.JUDGING,
+            death_year=2000,
+            tenant=tenant,
+        )
+        assert soul.civilization == Civilization.EUROPEAN
+        return soul
+
+    return _make
+
+
+def _record(soul, record_type, category, weight, description):
+    return SoulRecord.objects.create(
+        soul=soul,
+        record_type=record_type,
+        category=category,
+        weight=weight,
+        description=description,
+        event_year=2000,
+    )
+
+
+def _alms(soul, count=ALMS_COUNT):
+    for n in range(count):
+        _record(soul, "MERIT", RecordCategory.CHARITY, ALMS_POINTS, f"alms #{n + 1}")
+
+
+def _killing(soul):
+    _record(soul, "DEMERIT", RecordCategory.MURDER, KILLING_POINTS, "slew a man")
+
+
+def _fraud(soul, weight=KILLING_POINTS):
+    _record(soul, "DEMERIT", RecordCategory.DECEPTION, weight, "defrauded a man")
+
+
+# --------------------------------------------------------------------------
+# The half that is fixed: merit no longer buys a European soul out of anything
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_alms_no_longer_buy_a_killing_out_of_the_lower_circles(make_european_soul):
+    """The defect, in one soul.
+
+    A hundred alms and one killing. `karmic_balance` is zero — it is still zero,
+    deliberately, and that is asserted below — and `abs(karma) // 15 + 1` read
+    that zero as circle 1. Culpa is 100 and does not know the alms happened.
+    """
+    soul = make_european_soul("almsgiving killer")
+    with SoulRecord.batch():
+        _alms(soul)
+        _killing(soul)
+    soul.refresh_from_db()
+
+    assert soul.karmic_balance == 0, "fixture no longer reproduces the netting"
+    assert soul.demerit_score == KILLING_POINTS
+
+    destination = DispositionService._route_to_realm(soul, Verdict.FAILED)
+    expected = DispositionService.EU_HELL_CIRCLES[KILLING_POINTS // BAND + 1]
+    assert destination == expected
+    # Assert the absence as well: circle 1 is Limbo, and the whole defect was
+    # that generosity landed a killer there.
+    assert destination != LIMBO, "merit is buying culpa down again"
+
+
+@pytest.mark.django_db
+def test_merit_moves_a_european_soul_nowhere_at_all(make_european_soul):
+    """Not "less", but "not at all" — culpa has no merit term in it.
+
+    Two identical killers, one of whom gave away a fortune. A test that only
+    checked the generous one had *sunk deeper* would stay green if merit still
+    counted for a fraction of itself.
+    """
+    plain = make_european_soul("killer")
+    generous = make_european_soul("generous killer")
+    with SoulRecord.batch():
+        _killing(plain)
+        _alms(generous, ALMS_COUNT * 10)
+        _killing(generous)
+    plain.refresh_from_db()
+    generous.refresh_from_db()
+
+    assert generous.karmic_balance > plain.karmic_balance
+    assert DispositionService._route_to_realm(
+        generous, Verdict.FAILED
+    ) == DispositionService._route_to_realm(plain, Verdict.FAILED)
+
+
+@pytest.mark.django_db
+def test_the_verdict_still_outranks_the_ledger(make_european_soul):
+    """Culpa picks depth inside an outcome the verdict has already fixed.
+
+    The heaviest ledger this fixture can build does not get to sentence a soul
+    the court passed, or to conclude an appeal the court left open. Same
+    precedence rule as `_route_chinese`.
+    """
+    soul = make_european_soul("condemned by nobody")
+    with SoulRecord.batch():
+        _killing(soul)
+        _fraud(soul)
+    soul.refresh_from_db()
+
+    assert (
+        DispositionService._route_to_realm(soul, Verdict.PASSED)
+        == DispositionService.EU_HEAVEN
+    )
+    for verdict in (Verdict.PURGATORY, Verdict.RETRY):
+        assert (
+            DispositionService._route_to_realm(soul, verdict)
+            == DispositionService.EU_PURGATORY
+        ), f"{verdict} was concluded by a severity figure"
+
+
+@pytest.mark.django_db
+def test_the_gongguoge_rule_still_does_not_reach_the_european_router(
+    make_european_soul,
+):
+    """The fix is a European doctrine, not the Chinese one arriving late.
+
+    452616f gave `_route_chinese` the 「功過有不可折者」 partition and argued, per
+    call site, that neither other cosmology gets it. That argument still holds
+    and this asserts it: `get_unoffset_demerit` refuses a European soul, and the
+    refusal is None — the absence of a claim — not 0.
+
+    The soul is built so the two rules actually disagree, which the almsgiving
+    killer no longer does. Charity and greed both fall in the MONEY pool
+    (apps/ledger/fungibility.py), so a leaked partition would offset them
+    against each other, report zero unoffset fault, and land this soul in Limbo.
+    Culpa does not net at all: merit is not on the scale, and 100 points of
+    theft are 100 points of guilt however much was given away.
+    """
+    soul = make_european_soul("outside 凡例's jurisdiction")
+    with SoulRecord.batch():
+        _alms(soul)
+        _record(soul, "DEMERIT", RecordCategory.GREED, KILLING_POINTS, "stole")
+    soul.refresh_from_db()
+
+    assert soul.karmic_balance == 0
+    assert LedgerService.get_unoffset_demerit(soul) is None
+    assert LedgerService.get_unoffset_demerit(soul) != 0
+
+    destination = DispositionService._route_to_realm(soul, Verdict.FAILED)
+    assert destination == DispositionService.EU_HELL_CIRCLES[
+        KILLING_POINTS // BAND + 1
+    ]
+    assert destination != LIMBO, "the 功過格 partition is offsetting a European soul"
+
+
+# --------------------------------------------------------------------------
+# The half that is not fixed. These tests assert a contradiction is still there.
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_violence_and_fraud_of_equal_weight_still_land_in_the_same_circle(
+    make_european_soul,
+):
+    """CONTRADICTION, PINNED. Inf. XI puts these two on opposite sides of Dis.
+
+    Murder is violence, circle 7, the boiling Phlegethon (Inf. XII). Fraud is
+    circle 8, the ten fosses of Malebolge (Inf. XVIII-XXX). Dante separates them
+    by KIND — malizia divides into violence and fraud, and fraud is the graver
+    because it corrupts the bond peculiar to man (Inf. XI.22-27). Weigh them the
+    same and this router cannot tell them apart, because the only thing it reads
+    is the weight.
+
+    This goes red when someone routes by sin type. That is the day to delete it,
+    having first read `_route_european`'s docstring §3 on why nobody has.
+    """
+    killer = make_european_soul("violent")
+    swindler = make_european_soul("fraudulent")
+    with SoulRecord.batch():
+        _killing(killer)
+        _fraud(swindler)
+    killer.refresh_from_db()
+    swindler.refresh_from_db()
+
+    assert killer.demerit_score == swindler.demerit_score
+    assert DispositionService._route_to_realm(
+        killer, Verdict.FAILED
+    ) == DispositionService._route_to_realm(swindler, Verdict.FAILED), (
+        "violence and fraud are routed by kind now — Inf. XI is satisfied and "
+        "this test has done its job; delete it"
+    )
+
+
+@pytest.mark.django_db
+def test_a_petty_fraud_is_sorted_above_a_grave_one_by_weight_alone(
+    make_european_soul,
+):
+    """CONTRADICTION, PINNED. The same sin, two circles, because of a number.
+
+    One swindler cheats small and one cheats large. Both belong in Malebolge and
+    nowhere else; this router sends them to different circles — and sends the
+    small one to Limbo, which holds virtuous pagans and unbaptized infants and is
+    not a punishment at all (Inf. IV). The magnitude ladder does not merely lack
+    a kind, it actively contradicts the one it is standing on.
+    """
+    petty = make_european_soul("petty swindler")
+    grave = make_european_soul("grave swindler")
+    with SoulRecord.batch():
+        _fraud(petty, weight=1)
+        _fraud(grave, weight=BAND * 8)
+    petty.refresh_from_db()
+    grave.refresh_from_db()
+
+    assert DispositionService._route_to_realm(petty, Verdict.FAILED) == LIMBO
+    assert DispositionService._route_to_realm(grave, Verdict.FAILED) == TREACHERY
+    assert FRAUD not in {
+        DispositionService._route_to_realm(petty, Verdict.FAILED),
+        DispositionService._route_to_realm(grave, Verdict.FAILED),
+    }, "a fraud now reaches Malebolge — routing by kind has landed; delete this"
+
+
+def test_nothing_in_this_system_classifies_a_sin_the_way_dante_does():
+    """CONTRADICTION, PINNED: the missing input, named field by field.
+
+    Routing by kind needs to know the kind. `RecordCategory` is the only deed
+    taxonomy in the codebase and it is a Chinese one — apps/ledger/fungibility.py
+    maps every member onto a 功過格 gate. Five of the nine circles have no member
+    that could reach them, and the sixth, Limbo, is not a sin at all.
+
+    Treachery is the sharpest case and worth stating separately: it is not a deed
+    type but a relationship of trust betrayed — kin, country, guest, benefactor,
+    the four zones of Cocytus (Inf. XXXII-XXXIV). No amount of categorising
+    *deeds* produces it.
+    """
+    members = {member.name for member in RecordCategory}
+    unreachable = {
+        "LUST": "circle 2, Inf. V",
+        "GLUTTONY": "circle 3, Inf. VI",
+        "WRATH": "circle 5, Inf. VII-VIII",
+        "HERESY": "circle 6, Inf. IX-XI",
+        "TREACHERY": "circle 9, Inf. XXXII-XXXIV",
+    }
+    for name, where in unreachable.items():
+        assert name not in members, (
+            f"RecordCategory now has {name} ({where}) — the classification this "
+            f"system lacked may have arrived; re-read _route_european §3"
+        )
+
+    # BLASPHEMY exists and is NOT heresy. Dante's heretics are the Epicureans
+    # who denied the soul's immortality (circle 6); blasphemy is violence
+    # against God, the third ring of circle 7 (Inf. XIV). Reading one as the
+    # other is the shape of mistake 8308204 was withdrawn for.
+    assert "BLASPHEMY" in members
+
+
+def test_no_model_in_this_system_carries_a_circle_or_a_sin_kind():
+    """CONTRADICTION, PINNED: asserted as absence, because that is what it is.
+
+    A field named for a circle appearing on any of these three is the signal
+    that someone has started storing the coordinate. It is also the signal that
+    they may be reinventing `dante_circle`, which is why this test names it.
+    """
+    forbidden = ("circle", "sin_kind", "sin_type", "dante")
+    for model in (Soul, SoulRecord, Judgment):
+        names = {field.name for field in model._meta.get_fields()}
+        for fragment in forbidden:
+            offenders = {name for name in names if fragment in name}
+            assert not offenders, (
+                f"{model.__name__} now carries {sorted(offenders)}. If this is "
+                f"real sin classification, _route_european can stop guessing. "
+                f"If it is a revived `dante_circle`, read 8308204 first."
+            )
+
+
+def test_the_only_european_corpus_is_purgatorio_and_names_no_circle():
+    """CONTRADICTION, PINNED: the citable European rules are terraces.
+
+    `JudgmentCitation` is the one structured link between a judgment and a named
+    fault, and everything it can point at for a European soul is DEADLY_SIN —
+    seven capital sins, one per terrace of Mount Purgatory. Three of them (pride,
+    envy, sloth) have no circle in Hell at all, and the `dante_circle` an earlier
+    version carried was withdrawn in 8308204 as a coordinate the poem does not
+    have. Citing a terrace tells the router nothing about a circle.
+
+    Expectations hand-written rather than derived from the table, per the rule
+    tests/test_purgatorio_terraces.py states.
+    """
+    european_corpora = {
+        corpus for corpus, civ in CORPUS_CIVILIZATION.items()
+        if civ == Civilization.EUROPEAN
+    }
+    assert european_corpora == {StatuteCorpus.DEADLY_SIN}
+
+    assert len(EUROPEAN_STATUTES) == 7
+    for article in EUROPEAN_STATUTES:
+        payload = article["payload"]
+        assert payload["purgatorio_terrace"] == article["ordinal"]
+        offenders = {key for key in payload if "circle" in key or "dante" in key}
+        assert not offenders, (
+            f"{article['code']} carries {sorted(offenders)} — the withdrawn "
+            f"`dante_circle` is back; read 8308204 and "
+            f"docs/lore-verification/verify-christian-structure.md §4.1"
+        )
+
+    # Absence, stated positively: the three the Inferno has no room for.
+    assert {"Pride", "Envy", "Sloth"} <= {a["title_en"] for a in EUROPEAN_STATUTES}

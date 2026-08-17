@@ -372,16 +372,27 @@ def test_a_ledger_with_no_scored_records_still_routes_on_the_raw_balance(
 
 
 @pytest.mark.django_db
-def test_the_other_two_cosmologies_route_exactly_as_they_did(db):
+def test_the_other_two_cosmologies_are_still_refused_the_partition(db):
     """功過格 is Chinese at the router too, not just in the reading.
 
     Each soul below is the same almsgiving killer, filed under a cosmology the
-    凡例 has no jurisdiction over. If the rule leaked across, the European soul
-    would be sentenced on 100 points of unoffset fault — circle 7 — instead of
-    on its balance of zero, which is circle 1.
+    凡例 has no jurisdiction over, and `get_unoffset_demerit` refuses both.
+
+    THE EUROPEAN DESTINATION IS NO LONGER THE DISCRIMINATOR IT WAS. This test
+    used to read "circle 1, because the balance is zero" and treat circle 7 as
+    proof that the 功過格 partition had leaked. That inference has since become
+    unsound: `_route_european` now sentences on culpa — the demerit total alone,
+    which is the European rule apps/ledger/readings.py states, not this one — so
+    circle 7 is where this soul belongs for a reason 凡例 has nothing to do with,
+    and the two hypotheses no longer disagree on this fixture.
+
+    The leak check therefore rests on the `is None` assertion below, and on
+    tests/test_european_hell_basis.py, which builds the soul the two rules DO
+    disagree about: money merit against money fault, where a leaked partition
+    would offset to zero and European culpa does not.
     """
     for code, verdict, expected in (
-        ("EU_HEAVEN_HELL", Verdict.FAILED, DispositionService.EU_HELL_CIRCLES[1]),
+        ("EU_HEAVEN_HELL", Verdict.FAILED, DispositionService.EU_HELL_CIRCLES[7]),
         ("EG_DUAT", Verdict.PURGATORY, DispositionService.EG_DUAT_ENTRY),
     ):
         tenant = Tenant.objects.get_or_create(
@@ -401,7 +412,7 @@ def test_the_other_two_cosmologies_route_exactly_as_they_did(db):
         assert LedgerService.get_unoffset_demerit(soul) is None, (
             f"{code} was handed a 功過格 severity figure"
         )
-        # ...so the raw balance still picks the destination, unchanged.
+        # ...and each cosmology's own instrument picks the destination.
         assert DispositionService._route_to_realm(soul, verdict) == expected
 
 

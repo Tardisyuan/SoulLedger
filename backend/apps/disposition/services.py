@@ -67,6 +67,13 @@ class DispositionService:
         9: "EU_HELL_9TH",   # Treachery (Judas/Brutus)
     }
 
+    #: Points of culpa per circle in `_route_european`'s stopgap depth ladder.
+    #: Named rather than inlined so that the tests which pin the ladder as
+    #: WRONG can build souls in known bands without hard-coding the arithmetic
+    #: they are objecting to. It is a bucket width, not a doctrine: Dante sorts
+    #: by kind of sin, not by quantity of it — see `_route_european`.
+    EU_HELL_CULPA_BAND = 15
+
     # Egyptian realms
     #
     # EG_ANNIHILATION IS AN OUTCOME, NOT AN ADDRESS. The row used to be
@@ -163,7 +170,11 @@ class DispositionService:
             )
             return cls._route_chinese(soul, verdict, karma, unoffset_demerit)
         elif civilization == Civilization.EUROPEAN:
-            return cls._route_european(soul, verdict, karma)
+            # `karma` is deliberately not passed. European culpa is the demerit
+            # total alone (apps/ledger/readings.py::_european_reading), so the
+            # net balance is not merely unused here — handing it over is what
+            # let a hundred alms buy a killing down to circle 1.
+            return cls._route_european(soul, verdict, soul.demerit_score)
         elif civilization == Civilization.EGYPTIAN:
             return cls._route_egyptian(soul, verdict, judgment_method, karma)
         else:
@@ -270,35 +281,109 @@ class DispositionService:
         return cls.CHINESE_PURGATORY
 
     @classmethod
-    def _route_european(cls, soul: Soul, verdict: str, karma: int) -> str:
+    def _route_european(cls, soul: Soul, verdict: str, culpa: int) -> str:
         """
-        Route European soul based on verdict and karma (Dante's Inferno circles).
+        Route European soul based on verdict and culpa (Dante's Inferno circles).
 
         Same precedence rule as `_route_chinese`: verdict is checked first
-        and is authoritative, karma only selects circle depth once FAILED
+        and is authoritative, the ledger only selects circle depth once FAILED
         is already established. See `_route_chinese` for why the previous
         `verdict == PASSED or karma >= 0` disjunction was wrong.
 
-        DELIBERATELY NOT GIVEN THE 不可折 TREATMENT. 「功過有不可折者」 is a limit
-        on 功過相抵, and 功過相抵 is a Chinese mechanic; a 1724 Daoist ledger has
-        no jurisdiction over Dante's circles, and importing its pool rule here
-        would be the flattening apps/ledger/readings.py refuses, arriving from
-        the opposite direction. There is a separate and real question about this
-        line — readings.py holds that European culpa is not reduced by merit at
-        all, which `abs(karma)` (merit minus demerit) plainly does — but the
-        answer to it is a European doctrine of guilt, not a Chinese one, and it
-        is not this change's to make.
+        MERIT NO LONGER ENTERS, AND THE DEPTH LADDER IS STILL NOT DANTE'S.
+        Those are two separate statements and only the first has been acted on.
+
+        1. What was fixed: `abs(karma)`, merit minus demerit
+        ----------------------------------------------------
+        The depth used to be read off `abs(karma)`, so a European soul got
+        *shallower* — milder — the more good it had done: a hundred alms against
+        one killing netted to zero and landed the killer in circle 1. That is
+        the trade apps/ledger/readings.py rules out for this cosmology by name:
+        「in this cosmology a good deed does not retire a sin, absolution does,
+        and letting merit reduce culpa would rebuild the Chinese netting account
+        under a Latin name」. `_european_reading` already reports `culpa` as the
+        DEMERIT total alone for exactly that reason, and the router now reads
+        the same figure off the same column.
+
+        This is NOT the 不可折 treatment 452616f gave `_route_chinese`.
+        「功過有不可折者」 is a limit on 功過相抵, 功過相抵 is a Chinese mechanic,
+        and a 1724 Daoist ledger has no jurisdiction over Dante's circles;
+        `LedgerService.get_unoffset_demerit` still returns None here and is still
+        not called. What changed is that European guilt is now read by the
+        European rule that readings.py already states — merit is simply not on
+        the scale — rather than by a partition borrowed from somebody else.
+
+        `culpa` is supplied by the caller as `soul.demerit_score`, not fetched
+        through a ledger walk, because unlike the unoffset figure there is
+        nothing to partition: culpa *is* the decayed demerit total, which is the
+        column `recalculate_soul_ledger` writes and the rest of the system
+        displays. There is therefore no "no partition available" case, no None
+        to fall back from — and no fallback that could quietly readmit merit.
+        It is a parameter rather than a lookup for the reason `_route_chinese`
+        takes its severity as one: the arithmetic stays unit-testable without a
+        database.
+
+        2. What was NOT fixed: sorting nine circles by magnitude at all
+        ---------------------------------------------------------------
+        Dante does not layer Hell by how much wrong was done. He layers it by
+        WHAT KIND, and says so outright — Virgil, Inf. XI.79-84, citing the
+        Ethics: 「Incontinence, and Malice, and insane Bestiality」 (Longfellow
+        1867, Project Gutenberg #1001). Incontinenza fills circles 2-5, malizia
+        (violence and fraud) and matta bestialitade (treachery) fill 6-9 inside
+        the walls of Dis, and that wall is the only real divider in the poem.
+        docs/lore-verification/verify-christian-structure.md §2, §3.1, §6.
+
+        So `culpa // 15` is the wrong SHAPE, not merely the wrong input. Under
+        it a fraud and a murder of equal weight go to the same circle, which
+        Inf. XI puts on opposite sides of Dis; and circle 1, the floor this
+        arithmetic lands a nearly-blameless soul in, is Limbo — the virtuous
+        pagans and unbaptized infants, who are there for want of baptism and not
+        as a light sentence (Inf. IV).
+
+        3. Why it is not fixed here: the classification does not exist
+        --------------------------------------------------------------
+        Routing by kind needs to know what kind, and nothing in this system
+        records it:
+
+          * `Soul` carries `merit_score` and `demerit_score` and no other moral
+            field.
+          * `SoulRecord.category` (RecordCategory) is the closest thing, and it
+            is a Chinese vocabulary — apps/ledger/fungibility.py maps each
+            member onto a 功過格 gate. It has no member for lust, gluttony,
+            wrath, heresy or treachery, which is five of the nine circles; and
+            treachery is not a deed type at all but a relationship of trust
+            betrayed (kin / country / guest / benefactor, Inf. XXXII-XXXIV),
+            which no field records.
+          * `Judgment` records `evidence_json`, `confession` and `notes`, all
+            free-form, plus `JudgmentCitation` to a `Statute`.
+          * The only European corpus is DEADLY_SIN — the seven capital sins,
+            EU-DS-T1..T7. Those are PURGATORIO terraces. Every article carries
+            NOT_A_CIRCLE_NOTE saying so, the `dante_circle` payload key that an
+            earlier version invented was withdrawn in 8308204 as a coordinate
+            the poem does not have, and pride, envy and sloth get no circle at
+            all. Citing a terrace article says nothing about a circle.
+
+        Inventing the missing classification is the one repair that is certainly
+        wrong; docs/lore-verification/README.md §1 says so about this exact
+        material, and 8308204 is what happened the last time it was tried.
+
+        So this method sentences on culpa, states that the ladder is a stopgap,
+        and does not manufacture a taxonomy to replace it.
+        `tests/test_european_hell_basis.py` pins both halves: the merit fix, and
+        the contradiction that remains — whoever supplies real sin
+        classification has to delete those assertions on purpose.
         """
         if verdict == Verdict.PASSED:
             return cls.EU_HEAVEN
         if verdict == Verdict.FAILED:
-            # abs(karma) / 15 → circle 1-9 (Dante's structure: outer circles
-            # are less severe). karma == 0 floors at circle 1, same
-            # reasoning as the Chinese tier-3 floor above.
-            circle = min(9, max(1, (abs(karma) // 15) + 1))
+            # culpa / 15 → circle 1-9. A stopgap ladder on the right number,
+            # not Dante's basis; see §2 and §3 above. culpa is a demerit total
+            # and so is never negative — there is no magnitude to take and no
+            # sign to lose, which is why there is no abs() here any more.
+            circle = min(9, max(1, (culpa // cls.EU_HELL_CULPA_BAND) + 1))
             return cls.EU_HELL_CIRCLES.get(circle, cls.EU_HELL_CIRCLES[9])
         # PURGATORY and RETRY: inconclusive verdict, soul waits regardless
-        # of karma.
+        # of what the ledger says.
         return cls.EU_PURGATORY
 
     @classmethod
