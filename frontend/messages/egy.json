@@ -92,7 +92,8 @@
     "civilizations": {
       "CHINESE": "Hanacht",
       "EUROPEAN": "Eremitee",
-      "EGYPTIAN": "Kemet"
+      "EGYPTIAN": "Kemet",
+      "GREEK": "Haunebut"
     },
     "categories": {
       "CHARITY": "Redi Awy",
@@ -564,7 +565,8 @@
     "civilizations": {
       "EGYPTIAN": "Duat Mesjet",
       "EUROPEAN": "Kehat Ankh - Hetep",
-      "CHINESE": "Duat Sherer"
+      "CHINESE": "Duat Sherer",
+      "GREEK": "Duat Haunebut"
     },
     "template_detail": "Medu Pet Sethety",
     "appeal_badge": "Sesen Seth",
@@ -863,7 +865,8 @@
     "civilizations": {
       "CHINESE": "Duat Sherer",
       "EUROPEAN": "Kehat Ankh - Hetep",
-      "EGYPTIAN": "Duat Mesjet"
+      "EGYPTIAN": "Duat Mesjet",
+      "GREEK": "Duat Haunebut"
     },
     "types": {
       "HELL": "Amenti",
@@ -947,7 +950,8 @@
     "civilizations": {
       "CHINESE": "Duat Sherer",
       "EGYPTIAN": "Duat Mesjet",
-      "EUROPEAN": "Kehat Ankh - Hetep"
+      "EUROPEAN": "Kehat Ankh - Hetep",
+      "GREEK": "Duat Haunebut"
     },
     "root": "Tepy",
     "organizations_count": "{{count}} Shemsu Wu"
@@ -961,7 +965,8 @@
     "civilizations": {
       "CHINESE": "Duat Sherer",
       "EGYPTIAN": "Duat Mesjet",
-      "EUROPEAN": "Kehat Ankh - Hetep"
+      "EUROPEAN": "Kehat Ankh - Hetep",
+      "GREEK": "Duat Haunebut"
     },
     "count": "{{count}} Netjeru",
     "roles": {

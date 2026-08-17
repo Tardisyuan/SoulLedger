@@ -33,7 +33,7 @@ from apps.workflow.node_shape import normalize_template_node
 #
 # THIS IS NOT THE SAME TABLE AS THE FRONTEND PRESETS, AND THAT IS DELIBERATE.
 # ``frontend/src/config/workflow-templates.ts`` holds seventeen presets keyed by
-# name (``CHINESE_ROUTINE``, ``EUROPEAN_GREEK``, …); this dict holds eight keyed
+# name (``CHINESE_ROUTINE``, ``GREEK_ROUTINE``, …); this dict holds eight keyed
 # by ``(civilization, case_type)``. Neither is generated from the other and their
 # node sets differ — the frontend has Greek, Dante and 枉死城 flows this file has
 # never had, this file has the two European ecclesiastical flows the frontend has
@@ -394,7 +394,7 @@ def _designates_nobody(node_name: str) -> bool:
 
 # Valid case types per civilization.
 #
-# ALL THREE CIVILIZATIONS ALLOW `APPEAL`, AND THIS TABLE IS THE THING THAT
+# EVERY CIVILIZATION ALLOWS `APPEAL`, AND THIS TABLE IS THE THING THAT
 # CHANGED. Until now only the Chinese set carried it, which made *every*
 # European and Egyptian appeal a `ValueError`: `create_from_judgment` sets
 # `case_type = CaseType.APPEAL` unconditionally when `is_appeal=True` and no
@@ -427,6 +427,33 @@ VALID_CASE_TYPES_BY_CIVILIZATION = {
         CaseType.HEART_WEIGHING, CaseType.DIVINE_TRIAL, CaseType.ROUTINE,
         CaseType.APPEAL,
     },
+    # GREEK, AND WHY IT IS TWO MEMBERS RATHER THAN A COPY OF EUROPEAN'S SET.
+    #
+    # This entry is not optional decoration on the GREEK split; without it the
+    # civilization is validated against `.get(civilization, set())`, i.e. the
+    # empty set, and *every* Greek case type is a ValueError — including the
+    # appeal path, which writes `case_type=APPEAL` for a soul of any
+    # civilization and then validates it here.
+    #
+    # ROUTINE is the whole of what Gorgias 524a describes: every Greek dead is
+    # judged at the meadow's fork and sent to the Isles of the Blessed or to
+    # Tartarus. That is the ordinary complete proceeding on this side, which is
+    # what ROUTINE names. `GREEK_ROUTINE` in
+    # `frontend/src/config/workflow-templates.ts` is that flow.
+    #
+    # APPEAL for the reason the whole table gained it: both entry points write
+    # it unconditionally for any civilization, so a set without it makes the
+    # feature raise rather than refuse.
+    #
+    # NOTHING ELSE IS ADMITTED, and the omissions are decisions rather than an
+    # unfinished list. CANONIZATION and PURGATORY_REVIEW are Christian
+    # institutions; HERESY_TRIAL is Dante's sixth circle; HEART_WEIGHING and
+    # DIVINE_TRIAL are Egyptian; CROSS_REALM and SPECIAL are Chinese-side
+    # members whose meaning rests on the ten courts' ladder of instances, and
+    # Plato's fork has no ladder to skip. Adding one here on the strength of
+    # "the other civilizations have more" is exactly the template-filling this
+    # repository keeps finding in its own history.
+    Civilization.GREEK: {CaseType.ROUTINE, CaseType.APPEAL},
 }
 
 

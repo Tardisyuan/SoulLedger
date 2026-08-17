@@ -100,7 +100,8 @@
     "civilizations": {
       "CHINESE": "Chinese",
       "EUROPEAN": "European",
-      "EGYPTIAN": "Egyptian"
+      "EGYPTIAN": "Egyptian",
+      "GREEK": "Greek"
     },
     "categories": {
       "CHARITY": "Charity",
@@ -558,7 +559,8 @@
     "civilizations": {
       "CHINESE": "Chinese Diyu",
       "EUROPEAN": "European Heaven & Hell",
-      "EGYPTIAN": "Egyptian Duat"
+      "EGYPTIAN": "Egyptian Duat",
+      "GREEK": "Greek Underworld"
     },
     "case_types": {
       "ROUTINE": "Routine Trial",
@@ -863,7 +865,8 @@
     "civilizations": {
       "CHINESE": "Chinese Diyu",
       "EUROPEAN": "European Heaven & Hell",
-      "EGYPTIAN": "Egyptian Duat"
+      "EGYPTIAN": "Egyptian Duat",
+      "GREEK": "Greek Underworld"
     },
     "types": {
       "HELL": "Hell",
@@ -947,7 +950,8 @@
     "civilizations": {
       "CHINESE": "Chinese Diyu",
       "EUROPEAN": "European Heaven & Hell",
-      "EGYPTIAN": "Egyptian Duat"
+      "EGYPTIAN": "Egyptian Duat",
+      "GREEK": "Greek Underworld"
     },
     "root": "Root",
     "organizations_count": "{{count}} organizations"
@@ -961,7 +965,8 @@
     "civilizations": {
       "CHINESE": "Chinese Diyu",
       "EUROPEAN": "European Heaven & Hell",
-      "EGYPTIAN": "Egyptian Duat"
+      "EGYPTIAN": "Egyptian Duat",
+      "GREEK": "Greek Underworld"
     },
     "count": "{{count}} actors",
     "roles": {

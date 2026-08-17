@@ -6,7 +6,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
 import { CardSkeleton } from "@/components/ui/skeleton";
-import { ChevronDown, Castle, Cloud, Flame, CircleDot } from "lucide-react";
+import { ChevronDown, Castle, Cloud, Flame, CircleDot, Columns } from "lucide-react";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 
@@ -14,6 +14,10 @@ const CIVILIZATION_CONFIG: Record<string, { nameKey: string; icon: React.ReactNo
   CHINESE: { nameKey: "realms.civilizations.CHINESE", icon: <Castle className="w-6 h-6" /> },
   EUROPEAN: { nameKey: "realms.civilizations.EUROPEAN", icon: <Cloud className="w-6 h-6" /> },
   EGYPTIAN: { nameKey: "realms.civilizations.EGYPTIAN", icon: <CircleDot className="w-6 h-6" /> },
+  // The fork in the road, the Isles of the Blessed and Tartarus. Without an
+  // entry the whole GREEK group renders headerless — the realms are fetched and
+  // then grouped by a config that does not know the key.
+  GREEK: { nameKey: "realms.civilizations.GREEK", icon: <Columns className="w-6 h-6" /> },
 };
 
 const REALM_TYPE_CONFIG: Record<string, { icon: React.ReactNode; className: string }> = {

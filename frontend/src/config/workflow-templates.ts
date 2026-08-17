@@ -253,33 +253,44 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       { id: "n3", name: "Christ · 终审", court: "天堂", type: "终审", order: 3 },
     ],
   },
-  EUROPEAN_GREEK: {
-    civilization: "EUROPEAN",
-    // SPECIAL → ROUTINE。`SPECIAL` 不在欧洲的 `VALID_CASE_TYPES_BY_CIVILIZATION`
-    //（{CANONIZATION, PURGATORY_REVIEW, HERESY_TRIAL, ROUTINE, APPEAL}）里，所以
-    // 这套预设存得进去（POST 只过 `CaseType.choices` 这个 ChoiceField），
-    // `create_from_judgment` 却对 (EUROPEAN, SPECIAL) 抛 ValueError——存了也永远
-    // 路由不到。与 EGYPTIAN_TRIALS 刚修掉的是同一种缺陷。
+  // 本套原名 `EUROPEAN_GREEK`，文明字段写的是 EUROPEAN。改名与改文明是同一件事
+  // 落地：`Civilization.GREEK` 现在是后端枚举的第四个成员，租户 `GR_HADES`，
+  // Hades / Aeacus / Rhadamanthus 与柏拉图的 Minos 都在它名下
+  //（apps/actors/mythology/actors_greek.py）。
+  //
+  //（上一句刻意不把那个旧值写成 `字段名: "值"` 的形状：
+  // backend/tests/test_workflow_preset_node_types.py 把本文件当文本读，按预设 key
+  // 切块、再用正则抓字段并塞进 dict，所以注释里出现同形字面量会被当成一次真实
+  // 赋值——同名键后写的赢，正好写在别的预设的块里。）
+  //
+  // 下面那段旧注释说「希腊与但丁被塞进同一个 civilization 是另一处已记录在案的
+  // 缺陷（docs/lore-verification/README.md §3；verify-greek.md 三.1），不该由
+  // case_type 替它打补丁」——那处缺陷已经修掉，这一行就是它修掉之后的样子。
+  //
+  // 为什么必须一起改：`backend/tests/test_workflow_template_cast.py` 把本文件当
+  // 文本读，按 `(civilization, 节点名里的人)` 去名册里查。Aeacus 与
+  // Rhadamanthus 已不在 EUROPEAN 名册里，本套若仍写 EUROPEAN，存成
+  // WorkflowTemplate 后建出的 ApprovalNode 会挂着两个名册查不到的人名——审批人
+  // SYSTEM、只能靠 escalate 推动，而界面照样显示名字，像是有人在裁决。
+  GREEK_ROUTINE: {
+    civilization: "GREEK",
+    // SPECIAL → ROUTINE。`SPECIAL` 不在希腊的 `VALID_CASE_TYPES_BY_CIVILIZATION`
+    //（{ROUTINE, APPEAL}）里，也不在改判之前所属的欧洲集合里，所以这套预设存得
+    // 进去（POST 只过 `CaseType.choices` 这个 ChoiceField），
+    // `create_from_judgment` 却会抛 ValueError——存了也永远路由不到。与
+    // EGYPTIAN_TRIALS 修掉的是同一种缺陷。
     //
-    // **修法不是把 SPECIAL 补进欧洲集合。** 没有人定义过「特案」对欧洲是什么意思；
-    // 而这一套之所以看上去「特殊」，特殊在**它出自另一套文献传统**（柏拉图，不是
-    // 但丁/基督教），不在它是哪一类程序。「属于哪套传统」不是 case_type 回答的
-    // 问题——与「多急」不进 case_type 是同一条理由（见 CHINESE_EMERGENCY 顶部）。
-    // 希腊与但丁被塞进同一个 civilization 是另一处已记录在案的缺陷
-    //（docs/lore-verification/README.md §3；verify-greek.md 三.1），不该由
-    // case_type 替它打补丁。
+    // **修法不是把 SPECIAL 补进集合。** 没有人定义过「特案」对希腊是什么意思；
+    // 而这一套之所以曾经看上去「特殊」，特殊在**它出自另一套文献传统**（柏拉图，
+    // 不是但丁/基督教），不在它是哪一类程序。「属于哪套传统」不是 case_type 回答
+    // 的问题——与「多急」不进 case_type 是同一条理由（见 CHINESE_EMERGENCY 顶部）。
+    // 那个问题现在由 civilization 回答，这正是它该回答的。
     //
     // 按**内容**判：《高尔吉亚篇》524a 里所有亡魂都到岔路口草地受审，判完分往
-    // 至福岛或塔尔塔罗斯——这是希腊一侧对一个普通亡魂的完整常规程序，既不是申诉
-    //（APPEAL），也不是封圣审查或异端审判（那两个成员各有自己的所指，其中
-    // CANONIZATION / PURGATORY_REVIEW 在 apps/workflow/services.py 的服务端
-    // WORKFLOW_TEMPLATES 里各自另有一套教会流程占着）。`ROUTINE`（常规审判）指的
-    // 就是「本文明对一个普通案子的标准程序」，也是三个文明共同的兜底档，理由写在
-    // backend/tests/test_workflow_preset_case_types.py 顶部。
-    //
-    // 于是欧洲一侧 ROUTINE 上有三套（本套、EUROPEAN_ROUTINE、EUROPEAN_EMERGENCY）。
-    // 没有代码按 (civilization, case_type) 取唯一模板，理由见 EGYPTIAN_TRIALS 那
-    // 一段；能路由到但要靠 `.first()` 选，好过挂着 SPECIAL 永远路由不到。
+    // 至福岛或塔尔塔罗斯——这是希腊一侧对一个普通亡魂的完整常规程序，不是申诉
+    //（APPEAL），而 APPEAL 是希腊集合里仅有的另一个成员。`ROUTINE`（常规审判）
+    // 指的就是「本文明对一个普通案子的标准程序」，也是各文明共同的兜底档，理由
+    // 写在 backend/tests/test_workflow_preset_case_types.py 顶部。
     caseType: "ROUTINE",
     name: "希腊冥界流程",
     // 依据：柏拉图《高尔吉亚篇》524a（Perseus/Loeb W.R.M. Lamb 公版英译）。
@@ -314,7 +325,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
   // workflow whose every node named someone the system cannot supply.
   EUROPEAN_HELL_CIRCLE: {
     civilization: "EUROPEAN",
-    // SPECIAL → ROUTINE。不可路由的那一半理由与 EUROPEAN_GREEK 完全相同（欧洲集合
+    // SPECIAL → ROUTINE。不可路由的那一半理由与 GREEK_ROUTINE 完全相同（欧洲集合
     // 里没有 SPECIAL）。这一套为什么也落在 ROUTINE，而不是集合里另外三个看起来更
     //「像地狱」的成员：
     //

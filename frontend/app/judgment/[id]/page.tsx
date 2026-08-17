@@ -41,6 +41,7 @@ const CIVILIZATION_ICONS: Record<string, string> = {
   CHINESE: "CN",
   EUROPEAN: "EU",
   EGYPTIAN: "EG",
+  GREEK: "GR",
 };
 
 export default function JudgmentDetailPage({ params }: PageProps) {

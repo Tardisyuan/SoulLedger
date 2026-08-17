@@ -50,10 +50,17 @@ EXPECTED_ALIASES = {
         # scripts/populate_egyptian_actors.py writes "Heru".
         "Horus": ["Heru"],
     },
-    "EUROPEAN": {
+    "GREEK": {
         # `consolidate_eu_pantheon` merges a Pluto row into Hades and records
         # why (Plouton is a Greek cult title of Hades; Latin Pluto transcribes
         # it). That conclusion is now data rather than a tuple in a command.
+        #
+        # GREEK, not EUROPEAN. Hades moved when GREEK became its own
+        # civilization, and the alias had to move with him: `_seed_actors` warns
+        # and drops any alias naming an actor the cast it is seeding does not
+        # contain, so an entry left behind in a European table would have
+        # stopped reaching the database — silently, in the sense that the
+        # resolver would simply go back to not knowing the name.
         "Hades": ["Pluto"],
     },
 }
@@ -116,12 +123,22 @@ def test_the_lookup_resolves_every_recorded_name_to_one_row(seeded):
             f"expected {expected!r}"
         )
 
-    european = Actor.all_objects.filter(civilization="EUROPEAN")
-    found = resolve_actor_by_any_name(european, "Pluto")
+    greek = Actor.all_objects.filter(civilization="GREEK")
+    found = resolve_actor_by_any_name(greek, "Pluto")
     assert found is not None and found.name == "Hades", (
         f"'Pluto' resolved to {found.name if found else None!r}. No Pluto row "
         f"is seeded — consolidate_eu_pantheon merges it away — so the alias on "
         f"Hades is the only thing that can answer this."
+    )
+    # And absence on the other side of the split: every caller scopes the
+    # resolver to one civilization, so an alias filed under the wrong one
+    # answers nobody. Asserting only the positive above would stay green with
+    # the entry duplicated into a European table nothing seeds from.
+    european = Actor.all_objects.filter(civilization="EUROPEAN")
+    assert resolve_actor_by_any_name(european, "Pluto") is None, (
+        "'Pluto' resolved inside the EUROPEAN cast. Hades is GREEK; a European "
+        "row answering to his cult title means the split left a duplicate "
+        "behind."
     )
 
 

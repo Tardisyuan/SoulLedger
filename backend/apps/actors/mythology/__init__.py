@@ -4,9 +4,10 @@
 entry point and the write path (`seeding.py`); every row it writes is a literal
 in one of the sibling modules:
 
-    realms.py             the three cosmologies' places, and REALM_PARENTS
+    realms.py             the four cosmologies' places, and REALM_PARENTS
     actors_chinese.py     the ten kings and the officers of the courts
-    actors_european.py    the Christian figures and the Greek ones
+    actors_european.py    the Christian figures and the three Dante borrowed
+    actors_greek.py       Plato's three judges, Hades, and Plato's Minos
     actors_egyptian.py    the nine principals of the Hall, and the bench of 42
     statutes_chinese.py   GONGGUOGE — provenance, gates, row builder
     gongguoge_entries.py  GONGGUOGE — the 73 transcribed segments
@@ -177,14 +178,13 @@ from apps.actors.mythology.actors_egyptian import (
     EGYPTIAN_ACTORS,
     EGYPTIAN_ASSESSORS,
 )
-from apps.actors.mythology.actors_european import (
-    EUROPEAN_ACTOR_ALIASES,
-    EUROPEAN_ACTORS,
-)
+from apps.actors.mythology.actors_european import EUROPEAN_ACTORS
+from apps.actors.mythology.actors_greek import GREEK_ACTOR_ALIASES, GREEK_ACTORS
 from apps.actors.mythology.realms import (
     CHINESE_REALMS,
     EGYPTIAN_REALMS,
     EUROPEAN_REALMS,
+    GREEK_REALMS,
     REALM_PARENTS,
 )
 from apps.actors.mythology.statutes_chinese import (
@@ -276,6 +276,11 @@ TENANTS = {
     "CN_DIYU": "Chinese Afterlife",
     "EU_HEAVEN_HELL": "European Afterlife",
     "EG_DUAT": "Egyptian Afterlife",
+    # GREEK's own tenant, and the reason it needed one: `Soul.civilization` is
+    # derived from the soul's tenant code through `TENANT_CIVILIZATION`, so a
+    # cosmology with no tenant can never hold a soul. See the note on that map
+    # in apps/souls/models.py.
+    "GR_HADES": "Greek Afterlife",
 }
 
 # CLI label -> the assessor table seeded after that civilization's actors. Kept
@@ -286,12 +291,13 @@ CIVILIZATION_ASSESSORS = {
 
 # CLI label -> {Actor.name: [other written forms of the same being]}. The rules
 # for what qualifies — and what is a canon question wearing an alias's clothes —
-# are in EGYPTIAN_ACTOR_ALIASES' header in actors_egyptian.py; the European
-# table follows them. The Chinese cast has no entry: its `name` and `name_zh`
-# are the same string on every row and nothing in this repository writes a
-# second rendering of any of the ten kings.
+# are in EGYPTIAN_ACTOR_ALIASES' header in actors_egyptian.py; the Greek table
+# follows them. The Chinese cast has no entry: its `name` and `name_zh` are the
+# same string on every row and nothing in this repository writes a second
+# rendering of any of the ten kings. The European cast has no entry either — its
+# one alias was Hades/Pluto, and it moved to the Greek table with the Hades row.
 CIVILIZATION_ACTOR_ALIASES = {
-    "european": EUROPEAN_ACTOR_ALIASES,
+    "greek": GREEK_ACTOR_ALIASES,
     "egyptian": EGYPTIAN_ACTOR_ALIASES,
 }
 
@@ -304,11 +310,24 @@ CIVILIZATION_STATUTES = {
 }
 
 # CLI label -> (Civilization, realms, actors). The CLI label is lowercase for
-# typing convenience; the stored value is always the Civilization enum.
+# typing convenience; the stored value is always the Civilization enum. This
+# dict is also what `--civilization` accepts, so a fourth entry here is what
+# makes `seed_mythology --civilization=greek` a real option rather than an
+# argparse error.
+#
+# GREEK is fourth, not merged into "european": the two cosmologies answer
+# different questions and their rows are owned by different tenants. Seeding
+# order matters in one respect only — `_seed_actors` resolves realm FKs against
+# `Realm.all_objects.filter(civilization=...)`, i.e. only within the civilization
+# being seeded — so every actor's realm must appear in that civilization's own
+# realm table. EU_PLATO_MEADOW is therefore listed under GREEK_REALMS and not
+# under EUROPEAN_REALMS, even though its code still carries the EU_ prefix it
+# was created with.
 CIVILIZATION_DATA = {
     "chinese": (Civilization.CHINESE, CHINESE_REALMS, CHINESE_ACTORS),
     "european": (Civilization.EUROPEAN, EUROPEAN_REALMS, EUROPEAN_ACTORS),
     "egyptian": (Civilization.EGYPTIAN, EGYPTIAN_REALMS, EGYPTIAN_ACTORS),
+    "greek": (Civilization.GREEK, GREEK_REALMS, GREEK_ACTORS),
 }
 
 __all__ = [
@@ -327,11 +346,13 @@ __all__ = [
     "EGYPTIAN_ACTORS",
     "EGYPTIAN_ASSESSORS",
     "EGYPTIAN_REALMS",
-    "EUROPEAN_ACTOR_ALIASES",
     "EUROPEAN_ACTORS",
     "EUROPEAN_REALMS",
     "EUROPEAN_STATUTES",
     "GONGGUOGE_SOURCE",
+    "GREEK_ACTOR_ALIASES",
+    "GREEK_ACTORS",
+    "GREEK_REALMS",
     "REALM_PARENTS",
     "TENANTS",
     "TRANSCRIBED",

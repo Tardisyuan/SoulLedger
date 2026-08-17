@@ -48,10 +48,22 @@ This command does TWO things by default, plus one on request:
      command does NOT merge — it reports the conflict and leaves both rows
      untouched, so a human can decide how to migrate the reference.
 
-  2. Greco-Roman completeness audit (read-only): confirms each of the six is
+  2. Greco-Roman completeness audit (read-only): confirms each of the seven is
      present, holds its role, AND STANDS IN ITS REALM. Deviations are printed,
      nothing is changed. `seed_mythology` seeds exactly this cast, so a freshly
      seeded database passes this audit clean.
+
+     IT IS TWO TABLES SINCE GREEK BECAME ITS OWN CIVILIZATION. The audit looks
+     rows up by `(name, civilization)`, so the split moved four of the six names
+     out from under the query without touching the data: Hades, Aeacus and
+     Rhadamanthus are GREEK now, and Plato's Minos is a new GREEK row alongside
+     Dante's EUROPEAN one. A single six-name table would have reported three
+     MISSING on every correctly-seeded database — which is precisely the state
+     this audit was in before those three were seeded at all, and the reason
+     that failure is worth naming twice. `GREEK_EXPECTED` is checked against
+     GREEK and `GRECO_ROMAN_EXPECTED` against EUROPEAN; a deviation line says
+     which civilization it is about, because "Minos: wrong realm" no longer
+     identifies a row.
 
      THE REALM HALF OF THAT CHECK IS NEW, AND ITS ABSENCE IS WHY THIS AUDIT
      REPORTED OK FOR SO LONG OVER DATA THAT WAS WRONG. Until 2026-08-15 the
@@ -95,6 +107,7 @@ from django.utils import timezone
 from apps.actors.models import Actor, ActorRole
 
 TENANT_CODE = "EU_HEAVEN_HELL"
+GREEK_TENANT_CODE = "GR_HADES"
 
 # Norse actors that historical databases may still hold. No seed path creates
 # them; --purge-norse soft-deletes whichever of them are found, after the
@@ -111,32 +124,53 @@ MERGE_NAMES = ("Pluto", "Hades")
 MERGE_SURVIVOR = "Hades"
 
 # name -> (role, realm_code). BOTH halves are checked. Adding the realm column
-# is the whole point of this table: see the note in the module docstring for the
-# five misplacements a role-only expectation waved through for months.
+# is the whole point of these tables: see the note in the module docstring for
+# the five misplacements a role-only expectation waved through for months.
+#
+# THERE ARE TWO TABLES NOW, AND THE SPLIT IS NOT COSMETIC. This audit queries by
+# `civilization`, so when GREEK stopped being a value of EUROPEAN, a single
+# six-name table would have reported Hades, Aeacus and Rhadamanthus MISSING on
+# every correctly-seeded database — the exact failure mode the audit's own
+# docstring records it having had before those three were seeded at all. Each
+# table is checked against the civilization its rows actually live in.
 #
 # Each entry is the placement a source supports, and the source is on the actor
-# row in seed_mythology.EUROPEAN_ACTORS:
+# row in the corresponding mythology module:
 #
-#   Hades        EU_PLATO_MEADOW  overseer of the Greek judgment ground. The one
-#                                 engineering placement here: no house of Hades
-#                                 is modelled, and Limbo was not a substitute.
+# EUROPEAN — the three Dante borrowed, in apps.actors.mythology.actors_european:
 #   Minos        EU_HELL_2ND      Dante, Inferno V.4-15 — he allots the circle
 #                                 from the entrance to the second.
-#   Aeacus       EU_PLATO_MEADOW  Plato, Gorgias 524a — tries those from Europe.
-#   Rhadamanthus EU_PLATO_MEADOW  Plato, Gorgias 524a — tries those from Asia.
 #   Charon       EU_ACHERON       Virgil, Aeneid 6.295-297; Dante, Inferno III.
 #   Cerberus     EU_HELL_3RD      Dante, Inferno VI — over the gluttons.
 #
-# Kept in sync by hand with tests/test_seed_mythology.py's GRECO_ROMAN_CAST,
-# which is a deliberate second copy — importing this one would make that test
-# ratify whatever this file happens to say.
+# GREEK — in apps.actors.mythology.actors_greek:
+#   Hades        EU_PLATO_MEADOW  overseer of the Greek judgment ground. The one
+#                                 engineering placement here: no house of Hades
+#                                 is modelled, and Limbo was not a substitute.
+#                                 The realm keeps its EU_ code, which records
+#                                 where it was written and not what owns it.
+#   Aeacus       EU_PLATO_MEADOW  Plato, Gorgias 524a — tries those from Europe.
+#   Rhadamanthus EU_PLATO_MEADOW  Plato, Gorgias 524a — tries those from Asia.
+#   Minos        EU_PLATO_MEADOW  Plato, Gorgias 524a — the final decision when
+#                                 the other two are in doubt. A DIFFERENT ROW
+#                                 from the EUROPEAN Minos above and a different
+#                                 office; both are audited, and a database that
+#                                 has only one of them fails here naming which.
+#
+# Kept in sync by hand with tests/test_seed_mythology.py's GRECO_ROMAN_CAST and
+# GREEK_CAST, which are a deliberate second copy — importing these would make
+# that test ratify whatever this file happens to say.
 GRECO_ROMAN_EXPECTED = {
-    "Hades": (ActorRole.OVERSEER, "EU_PLATO_MEADOW"),
     "Minos": (ActorRole.JUDGE, "EU_HELL_2ND"),
-    "Aeacus": (ActorRole.JUDGE, "EU_PLATO_MEADOW"),
-    "Rhadamanthus": (ActorRole.JUDGE, "EU_PLATO_MEADOW"),
     "Charon": (ActorRole.CONDUIT, "EU_ACHERON"),
     "Cerberus": (ActorRole.GUARDIAN, "EU_HELL_3RD"),
+}
+
+GREEK_EXPECTED = {
+    "Hades": (ActorRole.OVERSEER, "EU_PLATO_MEADOW"),
+    "Aeacus": (ActorRole.JUDGE, "EU_PLATO_MEADOW"),
+    "Rhadamanthus": (ActorRole.JUDGE, "EU_PLATO_MEADOW"),
+    "Minos": (ActorRole.JUDGE, "EU_PLATO_MEADOW"),
 }
 
 DEFAULT_BACKUP_DIR = Path(__file__).resolve().parents[4] / "scripts" / "backups"
@@ -200,6 +234,51 @@ class Command(BaseCommand):
             help="Directory to write the pre-change JSON backup to (execute mode only).",
         )
 
+    @staticmethod
+    def _audit(queryset, civilization, expected):
+        """One civilization's cast, as a list of deviation lines (empty = OK).
+
+        `civilization` is part of the lookup and not decoration: two rows are
+        named Minos — Dante's under EUROPEAN and Plato's under GREEK — and a
+        name-only match would return whichever came first and then report the
+        other one's realm as a deviation. `(name, civilization)` is the pair
+        `unique_actor_tenant_civ_name` and `seed_mythology`'s upsert both key
+        on, so it is the pair that identifies a row here too.
+        """
+        cast = queryset.filter(civilization=civilization)
+        deviations = []
+        for name, (expected_role, expected_realm) in expected.items():
+            # Live rows only. A soft-deleted Hades is not a present Hades, and
+            # reporting it as one would make this audit pass over exactly the
+            # damage it exists to catch. The queryset is built from all_objects
+            # so the merge step can see deleted rows.
+            actor = cast.filter(name=name, is_deleted=False).first()
+            if actor is None:
+                soft_deleted = cast.filter(name=name, is_deleted=True).exists()
+                deviations.append(
+                    f"{civilization} {name}: MISSING (soft-deleted row exists)"
+                    if soft_deleted else f"{civilization} {name}: MISSING"
+                )
+                continue
+            # Role and realm are reported separately and both are reported, so a
+            # row that is wrong twice says so twice rather than hiding the
+            # second fault behind the first. Every message names who, where they
+            # should be, and where they actually are — a deviation line that
+            # only said "Minos: wrong realm" would send the reader back to this
+            # file to find out what right looks like, and with two Minoses it
+            # would not even say which one.
+            if actor.role != expected_role:
+                deviations.append(
+                    f"{civilization} {name}: role={actor.role}, expected {expected_role}"
+                )
+            found_realm = actor.realm.realm_code if actor.realm else None
+            if found_realm != expected_realm:
+                deviations.append(
+                    f"{civilization} {name}: belongs in realm {expected_realm}, "
+                    f"found in {found_realm or 'no realm at all'}"
+                )
+        return deviations
+
     def handle(self, *args, **options):
         execute = options["execute"]
         purge_norse = options["purge_norse"]
@@ -208,7 +287,21 @@ class Command(BaseCommand):
         mode = "EXECUTE" if execute else "DRY-RUN"
         self.stdout.write(self.style.WARNING(f"=== consolidate_eu_pantheon ({mode}) ===\n"))
 
-        tenant_actors = Actor.all_objects.filter(tenant__code=TENANT_CODE, civilization="EUROPEAN")
+        # The European cast, and the Greek one that used to be part of it.
+        #
+        # Steps 1 and 3 look across BOTH, deliberately. Pluto and the Norse
+        # leftovers are rows on databases that predate the GREEK split, so they
+        # carry `civilization="EUROPEAN"` and the `EU_HEAVEN_HELL` tenant, while
+        # the Hades that Pluto has to be merged into is GREEK and owned by
+        # `GR_HADES` on any database that has run realms/0018. Scoping the merge
+        # to one tenant would have found one active row on each side of the
+        # split, reported "nothing to merge", and left the duplicate standing —
+        # a cleanup command that stops working the moment the data it cleans up
+        # is spread across the boundary it was spread across by.
+        tenant_actors = Actor.all_objects.filter(
+            tenant__code__in=(TENANT_CODE, GREEK_TENANT_CODE),
+            civilization__in=("EUROPEAN", "GREEK"),
+        )
 
         affected = []  # snapshots collected for the backup file
         plan = []  # human-readable summary lines
@@ -273,36 +366,10 @@ class Command(BaseCommand):
         # ------------------------------------------------------------------
         self.stdout.write("")
         self.stdout.write(self.style.MIGRATE_HEADING("Step 2: Greco-Roman completeness audit (read-only)"))
-        deviations = []
-        for name, (expected_role, expected_realm) in GRECO_ROMAN_EXPECTED.items():
-            # Live rows only. A soft-deleted Hades is not a present Hades, and
-            # reporting it as one would make this audit pass over exactly the
-            # damage it exists to catch. `tenant_actors` is built from
-            # all_objects so the merge step above can see deleted rows.
-            actor = tenant_actors.filter(name=name, is_deleted=False).first()
-            if actor is None:
-                soft_deleted = tenant_actors.filter(name=name, is_deleted=True).exists()
-                deviations.append(
-                    f"{name}: MISSING (soft-deleted row exists)" if soft_deleted
-                    else f"{name}: MISSING"
-                )
-                continue
-            # Role and realm are reported separately and both are reported, so a
-            # row that is wrong twice says so twice rather than hiding the
-            # second fault behind the first. Every message names who, where they
-            # should be, and where they actually are — a deviation line that
-            # only said "Minos: wrong realm" would send the reader back to this
-            # file to find out what right looks like.
-            if actor.role != expected_role:
-                deviations.append(
-                    f"{name}: role={actor.role}, expected {expected_role}"
-                )
-            found_realm = actor.realm.realm_code if actor.realm else None
-            if found_realm != expected_realm:
-                deviations.append(
-                    f"{name}: belongs in realm {expected_realm}, found in "
-                    f"{found_realm or 'no realm at all'}"
-                )
+        deviations = [
+            *self._audit(tenant_actors, "EUROPEAN", GRECO_ROMAN_EXPECTED),
+            *self._audit(tenant_actors, "GREEK", GREEK_EXPECTED),
+        ]
         if deviations:
             self.stdout.write(self.style.ERROR("  Deviations found:"))
             for d in deviations:
@@ -310,13 +377,18 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(
                 "  On an existing database, `manage.py seed_mythology --update` "
                 "reconciles these — the seeder is create-only by default and "
-                "will not move an actor that is already there."
+                "will not move an actor that is already there. A whole "
+                "civilization reported MISSING usually means realms/0018 has "
+                "not been applied and the Greek rows are still filed as "
+                "EUROPEAN."
             ))
         else:
             self.stdout.write(self.style.SUCCESS(
-                "  OK — Hades is sole OVERSEER, Minos/Aeacus/Rhadamanthus are JUDGE, "
-                "Charon is CONDUIT, Cerberus is GUARDIAN, and all six stand in the "
-                "realm their source puts them in."
+                "  OK — EUROPEAN: Dante's Minos is JUDGE at the second circle, "
+                "Charon is CONDUIT on Acheron, Cerberus is GUARDIAN over the "
+                "gluttons. GREEK: Hades is sole OVERSEER and Aeacus, "
+                "Rhadamanthus and Plato's Minos are JUDGE at the fork. All "
+                "seven stand in the realm their source puts them in."
             ))
 
         lethe = tenant_actors.filter(name="Lethe").first()
@@ -325,8 +397,10 @@ class Command(BaseCommand):
                 f"  Lethe: civilization={lethe.civilization} realm={lethe.realm.realm_code if lethe.realm else None} "
                 f"role={lethe.role} — Purgatory placement matches Dante's Purgatorio "
                 f"(Lethe sits atop Mount Purgatory, Purg. XXVIII); no change made. "
-                f"Lethe is outside GRECO_ROMAN_EXPECTED because he is a river "
-                f"modelled as an actor, not one of the six the merge concerns."
+                f"Lethe is outside both expectation tables because he is a river "
+                f"modelled as an actor, not one of the cast the merge concerns — "
+                f"and he stays EUROPEAN through the GREEK split, because what "
+                f"this row holds is Dante's Lethe and not Virgil's."
             )
 
         # ------------------------------------------------------------------

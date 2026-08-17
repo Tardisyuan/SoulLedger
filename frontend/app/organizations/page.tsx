@@ -27,16 +27,21 @@ async function fetchAllOrganizations(): Promise<Organization[]> {
   return all;
 }
 
+// GREEK: 冥界/HADES and 希腊冥界/HADES_GREEK were `category="EUROPEAN"` until
+// org/0007 refiled them. Without an entry here the badge renders with no icon
+// and no colour, which reads as a tree nobody owns rather than as a missing map.
 const CIVILIZATION_ICONS: Record<string, string> = {
   CHINESE: "🏯",
   EUROPEAN: "⛪",
   EGYPTIAN: "𓋴",
+  GREEK: "🏛",
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
   CHINESE: "bg-[hsl(38,92%,50%,0.2)] text-[hsl(38,92%,50%)]",
   EUROPEAN: "bg-[hsl(217,91%,52%,0.2)] text-[hsl(217,91%,52%)]",
   EGYPTIAN: "bg-[hsl(271,81%,56%,0.2)] text-[hsl(271,81%,56%)]",
+  GREEK: "bg-[hsl(174,72%,40%,0.2)] text-[hsl(174,72%,40%)]",
 };
 
 export default function OrganizationsPage() {

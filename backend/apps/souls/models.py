@@ -17,6 +17,28 @@ class Civilization(models.TextChoices):
     CHINESE = "CHINESE", "Chinese Diyu"
     EUROPEAN = "EUROPEAN", "European Heaven/Hell"
     EGYPTIAN = "EGYPTIAN", "Egyptian Duat"
+    # GREEK IS A FOURTH COSMOLOGY, NOT A REGION OF THE EUROPEAN ONE.
+    #
+    # It used to be filed under EUROPEAN, and that was never a claim anybody
+    # checked: Hades, Aeacus and Rhadamanthus stood in EU_PLATO_MEADOW — Plato's
+    # fork in the road, Gorgias 524a — while carrying the civilization of a
+    # tenant whose other rows are the Nicene Creed's judgment and Dante's nine
+    # circles. The two systems answer different questions with different
+    # instruments: Dante's judgment is *poena* after *culpa* is forgiven, and
+    # Plato's is a fixed term served (Republic X, 615a-b). One enum member
+    # cannot carry both, and while it did, the Greek rows were reachable only
+    # through the European tenant and inherited European routing, European
+    # case types and the European ledger reading by default.
+    #
+    # WHAT DELIBERATELY DID NOT MOVE. Minos, Cerberus and Charon stay EUROPEAN,
+    # because their text anchor in this repository is Dante and not the Greeks:
+    # Minos allots the circle at the entrance to the second (Inf. V.4-15),
+    # Cerberus stands over the gluttons in the third (Inf. VI), Charon works
+    # Acheron at the gate of hell (Inf. III). Plato's Minos is a *separate row*
+    # under GREEK — the two are different offices in different underworlds
+    # (Gorg. 524a's final arbiter at the fork vs the coiling tail of Inf. V),
+    # which is what the actor row itself has said all along.
+    GREEK = "GREEK", "Greek Underworld"
 
 
 # The one place tenant codes and cosmologies meet. A tenant is an
@@ -28,6 +50,15 @@ TENANT_CIVILIZATION = {
     "CN_DIYU": Civilization.CHINESE,
     "EU_HEAVEN_HELL": Civilization.EUROPEAN,
     "EG_DUAT": Civilization.EGYPTIAN,
+    # GREEK NEEDS ITS OWN TENANT OR IT CAN NEVER HOLD A SOUL.
+    #
+    # `Soul.civilization` is derived from the soul's tenant through this map and
+    # from nothing else (see the property below). A GREEK enum member with no
+    # tenant code pointing at it would therefore be unreachable by construction:
+    # no soul could ever read GREEK, so its routing branch, its ledger reading
+    # and its workflow templates would all be dead code that no test could
+    # distinguish from working code.
+    "GR_HADES": Civilization.GREEK,
 }
 
 # The same fact read backwards: which tenant speaks for a given cosmology.

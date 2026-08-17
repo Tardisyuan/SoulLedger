@@ -14,8 +14,14 @@ else in the survey:
     *poena* after *culpa* has already been forgiven; guilt and penalty come
     apart, which is exactly the thing a netting total cannot represent.
   * GREEK, when it lands, is a sentence served — Plato's thousand-year circuit,
-    repaid tenfold (Republic X, 615a-b). Elapsed time, not a balance. It is not
-    in the Civilization enum yet and must not be added here first.
+    repaid tenfold (Republic X, 615a-b). Elapsed time, not a balance. It has
+    landed: `Civilization.GREEK` exists, `GR_HADES` is its tenant, and
+    `_greek_reading` below is the fourth entry. The sentence this bullet used to
+    end with — "not in the Civilization enum yet and must not be added here
+    first" — was about the *order* of one change, not a prohibition on ever
+    making it: the enum member has to exist before a key can name it, and
+    `apps/ledger/test_readings.py` requires the two to match, so both halves
+    land together or the suite is red in between.
 
 So four cosmologies want four differently-shaped answers: a balance, a
 comparison, two unrelated numbers, and a duration. Serving all of them one
@@ -25,7 +31,7 @@ net balance passes an Egyptian soul on a mechanic his tradition does not have.
 
 Held as a dict of builders rather than an if/elif chain for the same reason
 REBIRTH_CAPABLE_CIVILIZATIONS in services.py is a frozenset: adding GREEK
-should be one entry, next to the others, where it is obvious that a fourth
+was one entry, next to the others, where it is obvious that a fourth
 answer was needed and what it is.
 
 This module *adds* a reading. It does not replace `karmic_balance`, which is a
@@ -174,10 +180,78 @@ def _european_reading(merit: int, demerit: int, demerit_count: int,
     }
 
 
+# The two numbers Republic X actually states, kept as named constants because
+# they are quotations and not tuning knobs.
+#
+# 615a-b: the unjust "had paid the penalty in turn tenfold for each" wrong done,
+# "and the measure of this was by periods of a hundred years each, so that on
+# the assumption that this was the length of human life the punishment might be
+# ten times the crime" — ten periods of a hundred years, i.e. a thousand-year
+# circuit, and the same measure requites those who did well.
+GREEK_REPAYMENT_MULTIPLE = 10
+GREEK_CIRCUIT_YEARS = 100 * GREEK_REPAYMENT_MULTIPLE
+
+
+def _greek_reading(merit: int, demerit: int, demerit_count: int,
+                   class_totals: dict | None = None) -> dict:
+    """A sentence, measured in time — how much is owed, not how much is left.
+
+    This is the one reading of the four whose unit is not a quantity of deeds
+    at all. Plato's souls are sentenced to a *term*: each wrong is repaid
+    tenfold, the unit of repayment is a hundred-year period, and the circuit is
+    a thousand years (Republic X, 615a-b). What decides where a soul stands is
+    therefore how much of that term has elapsed, and elapsed time is a fact
+    about the sentence rather than about the ledger.
+
+    WHY `wrongs` IS THE RECORD COUNT AND NOT THE DEMERIT TOTAL. Republic X
+    counts deeds — "for all the wrongs they had ever done to anyone... they had
+    paid the penalty in turn tenfold for each" — so the multiplier applies per
+    wrong, not per unit of gravity. `weight` is this system's own severity
+    scale; nothing in Plato grades wrongs by magnitude and then multiplies the
+    magnitude, and reading the demerit *sum* here would silently convert a
+    house scale into a term of years the source never authorises. The same
+    discipline MAAT_FEATHER_WEIGHT is labelled with, in the other direction.
+
+    WHY MERIT IS ABSENT, AND WHY THAT IS NOT THE EGYPTIAN REASON. In the
+    Egyptian weighing merit is absent because there is no offsetting step at
+    all. Here good deeds do count — 615b requites well-doing "in the same
+    measure" — but on their *own* clock, on the road to the right, and never as
+    a subtraction from the term owed on the road to the left. Two tenfold
+    repayments running in parallel is not a net balance, and printing one would
+    rebuild the Chinese account under a Greek name. The record count of merits
+    is not in this function's signature either, so reporting the merit *sum*
+    beside a wrongs *count* would put two different units under one heading.
+
+    WHY `elapsed_years` IS None. The same shape as `poena` in the European
+    reading, and for the same kind of reason: this is not a lookup nobody has
+    written, it is data the ledger does not hold. SoulRecord records what was
+    done in life and when; nothing records when a sentence began or how much of
+    it has been served, and Soul has no such column. Deriving elapsed time from
+    `death_year` would be inventing a start date for a term this system has
+    never actually begun counting.
+    """
+    return {
+        "kind": "SENTENCE",
+        "civilization": Civilization.GREEK.value,
+        # What the term is owed for: the number of recorded wrongs.
+        "wrongs": demerit_count,
+        "repayment_multiple": GREEK_REPAYMENT_MULTIPLE,
+        "circuit_years": GREEK_CIRCUIT_YEARS,
+        "elapsed_years": None,
+        "elapsed_unavailable": (
+            "Plato's sentence is a term served, so what decides a soul's "
+            "standing is how much of the thousand-year circuit has elapsed. "
+            "Nothing in this ledger records when the term began or how much of "
+            "it has been served, so there is no honest number to report here."
+        ),
+    }
+
+
 CIVILIZATION_READING = {
     Civilization.CHINESE: _chinese_reading,
     Civilization.EGYPTIAN: _egyptian_reading,
     Civilization.EUROPEAN: _european_reading,
+    Civilization.GREEK: _greek_reading,
 }
 
 

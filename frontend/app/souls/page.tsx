@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useSouls, useCreateSoul } from "@/src/hooks/useSouls";
+import { CIVILIZATION_OPTIONS } from "@/src/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -122,11 +123,15 @@ export default function SoulsPage() {
     { value: "SETTLED", label: t("souls.states.SETTLED") },
   ];
 
+  // Built from CIVILIZATION_OPTIONS rather than listed: a civilization missing
+  // from this filter is one whose souls cannot be filtered for at all, and the
+  // dropdown looks complete either way.
   const civilizations = [
     { value: "", label: t("souls.all_civilizations") },
-    { value: "CHINESE", label: t("souls.civilizations.CHINESE") },
-    { value: "EUROPEAN", label: t("souls.civilizations.EUROPEAN") },
-    { value: "EGYPTIAN", label: t("souls.civilizations.EGYPTIAN") },
+    ...CIVILIZATION_OPTIONS.map((civ) => ({
+      value: civ,
+      label: t(`souls.civilizations.${civ}`),
+    })),
   ];
 
   const isFiltered = Boolean(search || stateFilter || civilizationFilter || balanceMin || balanceMax || problemsOnly);

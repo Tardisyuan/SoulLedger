@@ -23,6 +23,11 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workflowApi } from "@/lib/api";
+import {
+  CIVILIZATION_OPTIONS,
+  isCivilizationOption,
+  type CivilizationOption,
+} from "@/src/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Modal } from "@/src/components/ui/Modal";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -40,7 +45,7 @@ export interface TemplateNode {
 export interface WorkflowTemplateInput {
   name: string;
   description: string;
-  civilization: "CHINESE" | "EUROPEAN" | "EGYPTIAN";
+  civilization: CivilizationOption;
   case_type: string;
   /**
    * 本模板默认的急缓：0=普通, 1=紧急, 2=危急。对应后端
@@ -150,7 +155,13 @@ export default function WorkflowEditor({
   // Form state - initialized from query data
   const [templateName, setTemplateName] = useState("");
   const [templateDescription, setTemplateDescription] = useState("");
-  const [templateCiv, setTemplateCiv] = useState<"CHINESE" | "EUROPEAN" | "EGYPTIAN">("CHINESE");
+  // GREEK is in the union because `GREEK_ROUTINE` is one of the presets this
+  // editor can be opened with. The two guards below only call `setTemplateCiv`
+  // for a value they recognise and otherwise leave the state at its "CHINESE"
+  // default — so omitting a civilization here does not fail, it silently
+  // relabels somebody else's flow, and saving would file Aeacus, Rhadamanthus
+  // and Plato's Minos under the Chinese ten courts.
+  const [templateCiv, setTemplateCiv] = useState<CivilizationOption>("CHINESE");
   const [templateCaseType, setTemplateCaseType] = useState("ROUTINE");
   // 0=普通 by default, the same floor the model column has.
   const [templatePriority, setTemplatePriority] = useState(0);
@@ -180,8 +191,10 @@ export default function WorkflowEditor({
       const civ = existingTemplate.civilization;
       setTemplateName(existingTemplate.name || "");
       setTemplateDescription(existingTemplate.description || "");
-      // Validate civilization value
-      if (civ === "CHINESE" || civ === "EUROPEAN" || civ === "EGYPTIAN") {
+      // Validate civilization value against the one list, not a hand-written
+      // or-chain: an unrecognised value leaves the state at its "CHINESE"
+      // default, so a member missing from the check is a silent relabelling.
+      if (isCivilizationOption(civ)) {
         setTemplateCiv(civ);
       }
       setTemplateCaseType(existingTemplate.case_type || "ROUTINE");
@@ -231,7 +244,7 @@ export default function WorkflowEditor({
       const civ = initialTemplateData.civilization;
       setTemplateName(initialTemplateData.name || initialTemplateData.templateName || "");
       setTemplateDescription(initialTemplateData.description || initialTemplateData.templateDescription || "");
-      if (civ === "CHINESE" || civ === "EUROPEAN" || civ === "EGYPTIAN") {
+      if (isCivilizationOption(civ)) {
         setTemplateCiv(civ);
       }
       setTemplateCaseType(initialTemplateData.case_type || initialTemplateData.caseType || "ROUTINE");
@@ -486,9 +499,15 @@ export default function WorkflowEditor({
             aria-label={t("workflow.editor.civilization_select_label") === "workflow.editor.civilization_select_label" ? "Civilization" : t("workflow.editor.civilization_select_label")}
             className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           >
-            <option value="CHINESE">{t("workflow.civilizations.CHINESE")}</option>
-            <option value="EUROPEAN">{t("workflow.civilizations.EUROPEAN")}</option>
-            <option value="EGYPTIAN">{t("workflow.civilizations.EGYPTIAN")}</option>
+            {/* Rendered from CIVILIZATION_OPTIONS so the dropdown cannot fall
+                behind the union the state is typed with — three hand-written
+                <option>s beside a four-member type is a value the editor can
+                hold and the user can never pick back. */}
+            {CIVILIZATION_OPTIONS.map((civ) => (
+              <option key={civ} value={civ}>
+                {t(`workflow.civilizations.${civ}`)}
+              </option>
+            ))}
           </select>
           <select
             value={templateCaseType}

@@ -5,6 +5,10 @@ import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from "@headlessui/re
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { soulsApi } from "@/lib/api";
+import {
+  CIVILIZATION_OPTIONS,
+  type CivilizationOption,
+} from "@/src/config/civilizations";
 import { soulCreateSchema } from "@/lib/validations/schemas";
 import { useFormValidation } from "@/lib/validations/useFormValidation";
 
@@ -87,7 +91,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
   const locationId = `${formId}-location`;
 
   const [name, setName] = useState("");
-  const [civilization, setCivilization] = useState<"CHINESE" | "EUROPEAN" | "EGYPTIAN">("CHINESE");
+  const [civilization, setCivilization] = useState<CivilizationOption>("CHINESE");
   const [birthDate, setBirthDate] = useState("");
   const [originLocation, setOriginLocation] = useState("");
   const [loading, setLoading] = useState(false);
@@ -211,9 +215,11 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
               getError('civilization') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
           >
-            <option value="CHINESE">{t("souls.civilizations.CHINESE")}</option>
-            <option value="EUROPEAN">{t("souls.civilizations.EUROPEAN")}</option>
-            <option value="EGYPTIAN">{t("souls.civilizations.EGYPTIAN")}</option>
+            {CIVILIZATION_OPTIONS.map((civ) => (
+              <option key={civ} value={civ}>
+                {t(`souls.civilizations.${civ}`)}
+              </option>
+            ))}
           </select>
           {getError('civilization') && (
             <span id={civilizationErrorId} role="alert" className="text-xs text-red-500">{getError('civilization')}</span>
