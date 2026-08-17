@@ -117,10 +117,11 @@ _CASE_TYPE_OPTION = re.compile(
 #: civilization's set in `VALID_CASE_TYPES_BY_CIVILIZATION`, and the reason each
 #: one is recorded rather than fixed.
 #:
-#: Every entry here is a **gap this task did not create and did not fix** — see
-#: the task report. They are listed so the gap is a finding with a count rather
-#: than silence, and so that adding another (or re-filing an EMERGENCY preset
-#: into one) has to be a deliberate edit to this table.
+#: **It is empty, and that is the current finding rather than an oversight.**
+#: Every preset that was ever listed here has since been re-filed into a member
+#: its civilization's set accepts — the history is kept in the comments inside
+#: the dict, because each deletion records a decision. Adding an entry back (or
+#: re-filing a preset into one) has to be a deliberate edit to this table.
 #:
 #: The consequence is real but is *not* the 400 this file is about: these
 #: presets save fine (`WorkflowTemplateSerializer` validates `case_type` against
@@ -151,22 +152,54 @@ CASE_TYPES_NOT_VALID_FOR_THEIR_CIVILIZATION: dict[str, str] = {
     # names), and two presets sharing a case type is the pre-existing shape of
     # the three SPECIAL pairs below.
     #
-    # The three below are untouched by this task and stay recorded.
-    "EUROPEAN_GREEK": (
-        "SPECIAL is not in the European set, which is "
-        "{CANONIZATION, PURGATORY_REVIEW, HERESY_TRIAL, ROUTINE}. The Greek "
-        "underworld is genuinely a special case and genuinely European in this "
-        "system's taxonomy; the set is what is behind."
-    ),
-    "EUROPEAN_HELL_CIRCLE": "Same as EUROPEAN_GREEK: SPECIAL is not in the European set.",
-    "EGYPTIAN_AFTERLIFE": (
-        "SPECIAL is not in the Egyptian set, which is "
-        "{HEART_WEIGHING, DIVINE_TRIAL, ROUTINE, APPEAL}. Unlike EGYPTIAN_TRIALS "
-        "this one is not simply mis-labelled: 死后世界分流 is a routing of the "
-        "dead by merit, and neither DIVINE_TRIAL (a god deciding outside the "
-        "rite) nor HEART_WEIGHING (which this flow does not perform) names it. "
-        "Deciding what does is a lore question, not a re-filing."
-    ),
+    # THE LAST THREE ENTRIES ARE NOW GONE TOO, AND THE TABLE IS DELIBERATELY
+    # EMPTY RATHER THAN DELETED.
+    #
+    # `EUROPEAN_GREEK`, `EUROPEAN_HELL_CIRCLE` and `EGYPTIAN_AFTERLIFE` were the
+    # remaining three, all carrying SPECIAL, which is in neither the European
+    # nor the Egyptian set. The repair was *not* to add SPECIAL to those two
+    # sets — nobody has ever defined what "special case" means for Europe or
+    # Egypt, and the Chinese SPECIAL presets (枉死城, 阿鼻地狱, 紧急) all name
+    # flows that skip a ladder of instances those two civilizations do not have.
+    # Each was re-filed by content into a member its own civilization's set
+    # already carries; the reasoning is written on each preset in
+    # `frontend/src/config/workflow-templates.ts` and summarised here:
+    #
+    # * `EUROPEAN_GREEK` -> `ROUTINE`. Gorgias 524a judges *every* Greek dead at
+    #   the meadow's fork and sends them to the Isles of the Blest or Tartarus —
+    #   the ordinary complete proceeding on that side, not an exception. What
+    #   makes it look special is that it belongs to another textual tradition
+    #   (Plato, not Dante), and "which tradition" is not what `case_type`
+    #   answers — the same argument that kept "how urgent" out of it. Greek and
+    #   Dante sharing one civilization is a separate recorded defect
+    #   (`docs/lore-verification/README.md` §3, `verify-greek.md` §3.1).
+    # * `EUROPEAN_HELL_CIRCLE` -> `ROUTINE`. `HERESY_TRIAL` would name one of
+    #   the nine circles for a flow that classifies all of them (Dante divides
+    #   by Aristotle's tripartition, Inf. XI, not by heresy or the seven sins);
+    #   `PURGATORY_REVIEW` and `CANONIZATION` are already two other, real flows
+    #   in this repo's server-side `WORKFLOW_TEMPLATES`. Inf. V.4-15 has Minos
+    #   examine and assign *every* damned soul, which is the ordinary path.
+    # * `EGYPTIAN_AFTERLIFE` -> `ROUTINE`, and this is the one the previous
+    #   entry called an open lore question. Both of its negatives still hold —
+    #   it is not `DIVINE_TRIAL` (a god deciding outside the rite) and it must
+    #   not be `HEART_WEIGHING`, since it performs no weighing while the preset
+    #   that does (`EGYPTIAN_ROUTINE`, 心脏称重流程) is itself filed under
+    #   ROUTINE, so that pairing would swap the two. What the entry missed is
+    #   the third candidate. The lore answer is that Egyptian sources have *no*
+    #   merit-sorting of the dead separate from the weighing: this flow's hall
+    #   (两真之殿) and its two outcomes (Aaru / Ammit, the second death) are the
+    #   weighing's hall and the weighing's two outcomes (Budge, Ani 1895,
+    #   Plates III-IV; `docs/lore-verification/verify-egyptian.md` §3.3). So it
+    #   is not another kind of proceeding but the ordinary one written at the
+    #   resolution of its outcomes — which is what ROUTINE names, and how
+    #   `CHINESE_REINCARNATION` (功德核定 → 轮回分流, the identical shape) is
+    #   already filed.
+    #
+    # The table stays as an empty dict, not as a deleted symbol: the assertion
+    # below reads it from both ends, so an empty table is the strongest possible
+    # statement — *no* preset is filed under a case type its civilization
+    # refuses — and the next preset that needs an excuse has to add it here on
+    # purpose.
 }
 
 
@@ -407,7 +440,10 @@ def test_each_preset_case_type_is_valid_for_its_civilization_or_is_recorded():
     quietly joining the list — and that an entry whose gap gets fixed goes red
     instead of aging into a lie. The `stale` half is not hypothetical: widening
     the three sets with APPEAL, and re-filing EGYPTIAN_TRIALS onto DIVINE_TRIAL,
-    each reddened it until the matching entry was deleted.
+    each reddened it until the matching entry was deleted. Re-filing the last
+    three SPECIALs reddened it a third time, and putting one of them back on
+    SPECIAL — with its entry already gone — reddens the `unrecorded` half
+    instead. Both directions were measured; the output is in the task report.
     """
     presets = _preset_case_types()
     civilization_of = {key: preset["civilization"] for key, preset in _presets().items()}
@@ -438,9 +474,14 @@ def test_each_preset_case_type_is_valid_for_its_civilization_or_is_recorded():
         f"civilization now: {stale}. The gap was closed; delete the entry "
         f"rather than leaving a finding that has become false."
     )
-    # The three this task re-filed are inside their sets, said directly so the
-    # decision does not rest on the arithmetic above alone.
-    for key in ("CHINESE_EMERGENCY", "EUROPEAN_EMERGENCY", "EGYPTIAN_EMERGENCY"):
+    # Every preset re-filed out of this table, named directly so the decisions
+    # do not rest on the arithmetic above alone: the three EMERGENCY ones
+    # (`a77a41e`), EGYPTIAN_TRIALS (`8b5aa00`), and the last three SPECIALs.
+    for key in (
+        "CHINESE_EMERGENCY", "EUROPEAN_EMERGENCY", "EGYPTIAN_EMERGENCY",
+        "EGYPTIAN_TRIALS",
+        "EUROPEAN_GREEK", "EUROPEAN_HELL_CIRCLE", "EGYPTIAN_AFTERLIFE",
+    ):
         assert key not in outside, (
             f"{key} was re-filed into a case type its civilization does not "
             f"accept ({presets[key]} for {civilization_of[key]}). That trades a "

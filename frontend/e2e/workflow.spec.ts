@@ -110,6 +110,80 @@ test.describe("Workflow page", () => {
   });
 });
 
+test.describe("Workflow editor toolbar", () => {
+  /**
+   * `WorkflowTemplate.priority` in a real browser, end to end.
+   *
+   * `20994df` added the column, the toolbar `<select>` and Jest coverage for
+   * the label, the three option strings, the default and the save payload —
+   * but every one of those assertions runs against a jsdom tree that was never
+   * navigated to, and the backend assertion starts from a hand-built POST. The
+   * one thing nothing covered is the join: that the control actually renders
+   * on /workflow behind the real router, middleware and lazy chunk, and that
+   * what a user picks in it is what leaves the browser.
+   *
+   * That join is exactly where this column used to be lost — the editor sent a
+   * body with no `priority` key at all, so the three `priority: 1` presets were
+   * saved back as ordinary ones and nothing anywhere went red.
+   *
+   * No product code was changed to make this writable: the select is located by
+   * the `aria-label` it already carries (`t("workflow.detail.priority")`), the
+   * same key `app/workflow/[id]/page.tsx` labels `ApprovalWorkflow.priority`
+   * with, so this test also fails if that shared label is forked.
+   */
+  test("priority select renders, offers exactly three tiers, and its choice reaches the POST body", async ({
+    page,
+  }) => {
+    // The default mock has no POST handler for this path, so it would fall
+    // through to the empty-page fallback and still 200. Answering 201 with the
+    // echoed body is what the real WorkflowTemplateViewSet does.
+    api.on("POST", "/workflow/templates/", (call) => ({
+      status: 201,
+      body: { id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", ...call.body },
+    }));
+
+    await page.goto("/workflow");
+    await page.getByRole("button", { name: "流程编辑器", exact: true }).click();
+
+    const priority = page.getByLabel("优先级", { exact: true }).filter({ visible: true });
+    await expect(priority).toBeVisible();
+
+    // Three tiers, and each option's value paired with its own copy — a select
+    // whose labels drifted off their values reads correctly and saves the wrong
+    // number. `toHaveCount(3)` is the absence half: a fourth tier would have to
+    // be a deliberate edit here, because 0/1/2 is the whole of the model column.
+    await expect(priority.locator("option")).toHaveCount(3);
+    for (const [value, label] of [["0", "普通"], ["1", "紧急"], ["2", "危急"]]) {
+      await expect(priority.locator(`option[value="${value}"]`)).toHaveText(label);
+    }
+
+    // A fresh editor opens at the column's own floor.
+    await expect(priority).toHaveValue("0");
+
+    await page.getByLabel("模板名称", { exact: true }).filter({ visible: true }).fill("危急模板");
+    await priority.selectOption("2");
+    await expect(priority).toHaveValue("2");
+
+    await page.getByRole("button", { name: "保存模板", exact: true }).click();
+
+    await expect.poll(() => api.countOf("POST", "/workflow/templates/")).toBe(1);
+    const body = api.lastCall("POST", "/workflow/templates/")!.body;
+
+    // `toBe(2)`, not `toBe("2")`: the select hands back a string and
+    // `WorkflowEditor` is what calls Number() on it. Dropping that conversion
+    // would leave a payload DRF still coerces, so the type is the only place
+    // the regression is visible — and 2 is neither the default (0) nor the
+    // value any preset carries (1), so it can only have come from the click.
+    expect(body.priority).toBe(2);
+    expect(body.name).toBe("危急模板");
+
+    // The save really was the create path, not a silent no-op that left the
+    // editor's other fields behind.
+    expect(body.case_type).toBe("ROUTINE");
+    expect(body.civilization).toBe("CHINESE");
+  });
+});
+
 test.describe("Workflow page health", () => {
   test("loads without an uncaught exception", async ({ page }) => {
     // pageerror fires only for uncaught exceptions, so this cannot be muted

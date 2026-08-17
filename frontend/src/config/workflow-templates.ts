@@ -255,7 +255,32 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
   },
   EUROPEAN_GREEK: {
     civilization: "EUROPEAN",
-    caseType: "SPECIAL",
+    // SPECIAL → ROUTINE。`SPECIAL` 不在欧洲的 `VALID_CASE_TYPES_BY_CIVILIZATION`
+    //（{CANONIZATION, PURGATORY_REVIEW, HERESY_TRIAL, ROUTINE, APPEAL}）里，所以
+    // 这套预设存得进去（POST 只过 `CaseType.choices` 这个 ChoiceField），
+    // `create_from_judgment` 却对 (EUROPEAN, SPECIAL) 抛 ValueError——存了也永远
+    // 路由不到。与 EGYPTIAN_TRIALS 刚修掉的是同一种缺陷。
+    //
+    // **修法不是把 SPECIAL 补进欧洲集合。** 没有人定义过「特案」对欧洲是什么意思；
+    // 而这一套之所以看上去「特殊」，特殊在**它出自另一套文献传统**（柏拉图，不是
+    // 但丁/基督教），不在它是哪一类程序。「属于哪套传统」不是 case_type 回答的
+    // 问题——与「多急」不进 case_type 是同一条理由（见 CHINESE_EMERGENCY 顶部）。
+    // 希腊与但丁被塞进同一个 civilization 是另一处已记录在案的缺陷
+    //（docs/lore-verification/README.md §3；verify-greek.md 三.1），不该由
+    // case_type 替它打补丁。
+    //
+    // 按**内容**判：《高尔吉亚篇》524a 里所有亡魂都到岔路口草地受审，判完分往
+    // 至福岛或塔尔塔罗斯——这是希腊一侧对一个普通亡魂的完整常规程序，既不是申诉
+    //（APPEAL），也不是封圣审查或异端审判（那两个成员各有自己的所指，其中
+    // CANONIZATION / PURGATORY_REVIEW 在 apps/workflow/services.py 的服务端
+    // WORKFLOW_TEMPLATES 里各自另有一套教会流程占着）。`ROUTINE`（常规审判）指的
+    // 就是「本文明对一个普通案子的标准程序」，也是三个文明共同的兜底档，理由写在
+    // backend/tests/test_workflow_preset_case_types.py 顶部。
+    //
+    // 于是欧洲一侧 ROUTINE 上有三套（本套、EUROPEAN_ROUTINE、EUROPEAN_EMERGENCY）。
+    // 没有代码按 (civilization, case_type) 取唯一模板，理由见 EGYPTIAN_TRIALS 那
+    // 一段；能路由到但要靠 `.first()` 选，好过挂着 SPECIAL 永远路由不到。
+    caseType: "ROUTINE",
     name: "希腊冥界流程",
     // 依据：柏拉图《高尔吉亚篇》524a（Perseus/Loeb W.R.M. Lamb 公版英译）。
     description: "柏拉图《高尔吉亚篇》524a：岔路口草地上的分流审判",
@@ -289,7 +314,26 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
   // workflow whose every node named someone the system cannot supply.
   EUROPEAN_HELL_CIRCLE: {
     civilization: "EUROPEAN",
-    caseType: "SPECIAL",
+    // SPECIAL → ROUTINE。不可路由的那一半理由与 EUROPEAN_GREEK 完全相同（欧洲集合
+    // 里没有 SPECIAL）。这一套为什么也落在 ROUTINE，而不是集合里另外三个看起来更
+    //「像地狱」的成员：
+    //
+    //   · HERESY_TRIAL（异端审判）不行。异端只是九圈里的**第六圈**，而 Minos 在
+    //     第二圈入口分的是全部罪行；但丁的分层依据是《地狱篇》XI 里维吉尔说的
+    //     亚里士多德三分（不节制／暴力／欺诈），既不是七罪宗也不是异端一项
+    //    （docs/lore-verification/README.md §1）。挂 HERESY_TRIAL 等于用一圈的
+    //     名字盖住九圈，正是那份报告警告过的「把清单接到错误的结构上」。
+    //   · PURGATORY_REVIEW（炼狱复核）不行。地狱恰恰是判决不可复核的地方；而且
+    //     服务端 WORKFLOW_TEMPLATES 里 (EUROPEAN, PURGATORY_REVIEW) 已经是另一套
+    //     实实在在的流程（忏悔赦免审核 → 炼狱净化评估 → 天堂准入终审）。
+    //   · CANONIZATION（封圣审查）与本套无关，同样已被服务端另一套流程占用。
+    //
+    // 剩下 ROUTINE，而它是对的：《地狱篇》V.4-15「Examines the transgressions at
+    // the entrance; / Judges, and sends according as he girds him」——**每一个**
+    // 被罚的灵魂都从 Minos 这里过，这是但丁地狱对罪魂的标准处置路径，不是走在
+    // 程序之外的例外。（中国一侧同形的阿鼻地狱流程挂 SPECIAL，是因为中国集合里
+    // 有 SPECIAL，且那套确实**跳过**十殿的审级；这里没有被跳过的审级。）
+    caseType: "ROUTINE",
     name: "地狱圈层流程",
     description: "九层地狱罪行分类",
     priority: 0,
@@ -400,7 +444,33 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
   },
   EGYPTIAN_AFTERLIFE: {
     civilization: "EGYPTIAN",
-    caseType: "SPECIAL",
+    // SPECIAL → ROUTINE。埃及集合是 {HEART_WEIGHING, DIVINE_TRIAL, ROUTINE,
+    // APPEAL}，SPECIAL 不在其中，与 EGYPTIAN_TRIALS 同病：存得进去，
+    // `create_from_judgment` 对 (EGYPTIAN, SPECIAL) 抛 ValueError。
+    //
+    // 这一套此前被登记成「无处可归的考据问题」，理由是「按功德分流」既不是
+    // DIVINE_TRIAL 也不是 HEART_WEIGHING。**那两条否定仍然成立**：
+    //   · DIVINE_TRIAL 命名的是「神明不经称量直接裁断」（见 EGYPTIAN_TRIALS 与
+    //     EGYPTIAN_EMERGENCY），而这里的裁断跟在 n1 的评定之后，不是不经程序。
+    //   · HEART_WEIGHING 不能挂：本流程里没有秤、没有羽毛、没有否定告白，也没有
+    //     托特。而且真正演出称心的那一套（EGYPTIAN_ROUTINE「心脏称重流程」，五个
+    //     节点全在两真之殿）自己挂的是 ROUTINE——把**没有**秤的这套判成
+    //     HEART_WEIGHING、让**有**秤的那套留在 ROUTINE，是把两者对调。
+    //
+    // 被漏掉的第三个候选是 ROUTINE，而它成立，理由是考据本身：埃及文献里**没有**
+    // 独立于称心之外的「按功德分流」仪轨。本套的地点（两真之殿）与两个结局
+    //（芦苇原 ／ 阿米特吞噬即第二次死亡）逐项就是称心的地点与称心的两个结局
+    //（Budge《亚尼纸草》1895 图版 III–IV；docs/lore-verification/verify-egyptian.md
+    // §3.3）。也就是说它不是另一类程序，而是**同一个常规程序按结局写的低分辨率
+    // 版本**，`ROUTINE`（常规审判）正是这个。仓库里已有一模一样的形状照此归档：
+    // CHINESE_REINCARNATION（功德核定 → 轮回分流，两个节点，按功德分流）挂的就是
+    // ROUTINE。
+    //
+    // 顺带留一条**未修**的观察，别让它随归档一起消失：既然本套与 EGYPTIAN_ROUTINE
+    // 是同一程序的两个分辨率，它是否还该作为独立预设存在，是产品问题而不是
+    // case_type 问题。归到 ROUTINE 让这个问题显形（同文明同 case_type 由
+    // `.first()` 取模板），比让它挂着一个永远路由不到的 SPECIAL 把问题藏起来好。
+    caseType: "ROUTINE",
     name: "死后世界分流",
     description: "根据生前功德分流",
     priority: 0,
