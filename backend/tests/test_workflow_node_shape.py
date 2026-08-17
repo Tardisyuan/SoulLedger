@@ -434,8 +434,8 @@ def test_normalization_fills_only_what_is_missing():
 
 def test_normalization_carries_the_keys_the_canonical_shape_has_no_field_for():
     node = normalize_template_node(
-        {"name": "阿努比斯 · 引渡审判", "court": "Hall of Two Truths",
-         "type": "TRIAL", "order": 1, "actor": "Anubis"}
+        {"name": "阿努比斯 · 引导与称量", "court": "Hall of Two Truths",
+         "type": "EVALUATION", "order": 1, "actor": "Anubis"}
     )
     assert node["actor"] == "Anubis"
-    assert node["node_name"] == "阿努比斯 · 引渡审判"
+    assert node["node_name"] == "阿努比斯 · 引导与称量"

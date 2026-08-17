@@ -384,7 +384,24 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
   },
   EGYPTIAN_TRIALS: {
     civilization: "EGYPTIAN",
-    caseType: "SPECIAL",
+    // SPECIAL → DIVINE_TRIAL。这一套叫「神判流程」、描述写「神明直接审判」，而
+    // `DIVINE_TRIAL` 的中文标签就是「神判」——名字与它挂的 case_type 原本互相
+    // 矛盾。内容也说的是同一件事：没有称量，两个节点是 Horus 引见 + Osiris 裁
+    // 断，即神明不经心脏称重直接裁断，正是 DIVINE_TRIAL 命名的东西（同理见
+    // EGYPTIAN_EMERGENCY 顶部）。
+    //
+    // 另一半理由是这个 case_type 根本到不了：`SPECIAL` 不在埃及的
+    // `VALID_CASE_TYPES_BY_CIVILIZATION` 里，所以这套预设存得下来，
+    // `create_from_judgment` 却对 (EGYPTIAN, SPECIAL) 抛 ValueError——存了也永远
+    // 路由不到。改成 DIVINE_TRIAL 两头都通，登记表里的对应条目随之删除。
+    //
+    // 与 EGYPTIAN_EMERGENCY 同挂 DIVINE_TRIAL 是允许的：没有任何代码按
+    // (civilization, case_type) 取唯一模板——`WorkflowTemplate` 上没有相应的唯一
+    // 约束（`0006` 删掉了按名字的那条，`0008` 又删掉了 civ/case/active 索引），
+    // `create_from_judgment` 用的是 `.first()`，而预设本身按自己的键索引。同一
+    // 文明多套预设共用一个 case_type 也不是新情况：`EGYPTIAN_AFTERLIFE` 与本套
+    // 此前就同挂 SPECIAL，欧洲的 GREEK / HELL_CIRCLE 至今如此。
+    caseType: "DIVINE_TRIAL",
     name: "神判流程",
     description: "神明直接审判",
     nodes: [
@@ -405,11 +422,10 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     // 正是 DIVINE_TRIAL 这个成员命名的东西，也不能是 HEART_WEIGHING——这套流程里
     // 没有称量。埃及一侧此前没有任何一套预设落在 DIVINE_TRIAL 上，这一套补上了。
     //
-    //（顺带记一笔，不在本次改动范围内：叫「神判流程」的 EGYPTIAN_TRIALS 反而挂着
-    // SPECIAL 而不是 DIVINE_TRIAL，而 SPECIAL 并不在埃及的
-    // VALID_CASE_TYPES_BY_CIVILIZATION 里。那是另一处错配，登记在
-    // backend/tests/test_workflow_preset_case_types.py 的
-    // CASE_TYPES_NOT_VALID_FOR_THEIR_CIVILIZATION 里。）
+    //（原先这里记着一笔「不在本次改动范围内」的错配：叫「神判流程」的
+    // EGYPTIAN_TRIALS 反而挂着 SPECIAL。那一处现已修正，EGYPTIAN_TRIALS 也归到
+    // DIVINE_TRIAL，理由写在它自己那里；两套同挂一个 case_type 没有代码依赖被
+    // 破坏，同样写在那里。）
     caseType: "DIVINE_TRIAL",
     name: "紧急审判流程",
     description: "神庙紧急处置",

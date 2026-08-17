@@ -1258,7 +1258,22 @@ class TestTemplateApproverBasis:
 
     def test_the_migration_table_matches_the_templates(self):
         """Every row the migration will write must correspond to a template
-        node that names that same actor at that same court and order."""
+        node that names that same actor at that same court and order.
+
+        **Through 0012's rename table, not directly.** `0011.ROWS` is frozen on
+        the node names as they were when it ran, and one of them —
+        「阿努比斯 · 引渡审判」 — has since been corrected to
+        「阿努比斯 · 引导与称量」 (Anubis operates the balance; see
+        `services.WORKFLOW_TEMPLATES` and `0012`). Updating `0011.ROWS` to the
+        new spelling is the repair that looks obvious and is wrong: a database
+        still at 0010 holds nodes under the *old* name, 0011 runs before 0012,
+        and a 0011 keyed on the new name would silently backfill nothing there.
+
+        So the comparison is made across the rename rather than dropped. The
+        property it still holds is the one it was written for: no row the
+        migration will write may name an actor, court or order that no template
+        node has.
+        """
         from importlib import import_module
 
         from apps.workflow.services import WORKFLOW_TEMPLATES
@@ -1266,6 +1281,10 @@ class TestTemplateApproverBasis:
         rows = import_module(
             "apps.workflow.migrations.0011_backfill_ten_court_approvers"
         ).ROWS
+        renames = import_module(
+            "apps.workflow.migrations.0012_correct_the_egyptian_weighing_nodes"
+        ).RENAMES
+        renamed_to = {old: new for old, new, _court, _order, _old, _new in renames}
 
         from_templates = {
             (node["name"], node["court"], node["order"], node["actor"])
@@ -1274,7 +1293,8 @@ class TestTemplateApproverBasis:
             if node.get("actor")
         }
         from_migration = {
-            (name, court, order, actor) for name, court, order, _civ, actor in rows
+            (renamed_to.get(name, name), court, order, actor)
+            for name, court, order, _civ, actor in rows
         }
 
         assert from_migration == from_templates, (
@@ -1282,6 +1302,27 @@ class TestTemplateApproverBasis:
             f"  only in the migration: {sorted(from_migration - from_templates)}\n"
             f"  only in the templates: {sorted(from_templates - from_migration)}"
         )
+
+        # Absence, so that the bridge above cannot be what makes this pass. The
+        # rename table may only carry names 0011 actually froze *or* names the
+        # templates actually carry — an entry for neither is a rename of
+        # nothing, and would let any two unrelated strings be reconciled here.
+        frozen = {name for name, *_ in rows}
+        current = {
+            node["name"]
+            for template in WORKFLOW_TEMPLATES.values()
+            for node in template["nodes"]
+        }
+        for old, new, _court, _order, _old_type, _new_type in renames:
+            assert new in current, (
+                f"0012 renames a node to {new!r}, which no template carries. "
+                f"The migration would rewrite live rows into a name the "
+                f"service will never create again."
+            )
+            assert old in frozen or old not in current, (
+                f"0012 renames {old!r}, which the templates still carry and "
+                f"0011 never froze — one of the two tables is stale."
+            )
 
     def test_the_ten_courts_are_all_present(self):
         """The load-bearing half of the basis, restated once so that dropping a

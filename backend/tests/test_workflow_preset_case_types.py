@@ -117,10 +117,10 @@ _CASE_TYPE_OPTION = re.compile(
 #: civilization's set in `VALID_CASE_TYPES_BY_CIVILIZATION`, and the reason each
 #: one is recorded rather than fixed.
 #:
-#: Every entry here is a **pre-existing gap this task did not create and did not
-#: fix** — see the task report. They are listed so the gap is a finding with a
-#: count rather than silence, and so that adding a seventh (or re-filing an
-#: EMERGENCY preset into one) has to be a deliberate edit to this table.
+#: Every entry here is a **gap this task did not create and did not fix** — see
+#: the task report. They are listed so the gap is a finding with a count rather
+#: than silence, and so that adding another (or re-filing an EMERGENCY preset
+#: into one) has to be a deliberate edit to this table.
 #:
 #: The consequence is real but is *not* the 400 this file is about: these
 #: presets save fine (`WorkflowTemplateSerializer` validates `case_type` against
@@ -128,15 +128,30 @@ _CASE_TYPE_OPTION = re.compile(
 #: `ValueError` for the pair, so no judgment of that civilization can ever be
 #: routed to the template the operator just saved.
 CASE_TYPES_NOT_VALID_FOR_THEIR_CIVILIZATION: dict[str, str] = {
-    "EUROPEAN_APPEAL": (
-        "APPEAL is not in the European set. This is the sharpest of the six: "
-        "`create_from_judgment(..., is_appeal=True)` sets case_type=APPEAL "
-        "unconditionally and then validates it, so *every* European appeal "
-        "raises ValueError. (`create_appeal_workflow` writes APPEAL directly "
-        "and never validates, so the two entry points disagree.) Reported "
-        "separately; fixing it is a change to the validator, not to a preset."
-    ),
-    "EGYPTIAN_APPEAL": "Same as EUROPEAN_APPEAL: APPEAL is not in the Egyptian set.",
+    # THREE ENTRIES WERE DELETED FROM THIS TABLE RATHER THAN EDITED, AND THE
+    # DELETIONS ARE THE POINT.
+    #
+    # `EUROPEAN_APPEAL` and `EGYPTIAN_APPEAL` were here because APPEAL was
+    # missing from two of the three sets in `VALID_CASE_TYPES_BY_CIVILIZATION`,
+    # which made *every* European and Egyptian appeal a ValueError out of
+    # `create_from_judgment(..., is_appeal=True)`. All three sets now carry
+    # APPEAL and both entry points validate against them (see the comment above
+    # the table and `create_appeal_workflow`'s docstring), so the two entries
+    # became false and `test_each_preset_case_type_is_valid_for_its_civilization_or_is_recorded`
+    # would have reddened on `stale` — which is the half of that assertion that
+    # stops a finding from aging into a lie.
+    #
+    # `EGYPTIAN_TRIALS` was here because a preset *named* 神判流程 carried
+    # SPECIAL rather than DIVINE_TRIAL — and 神判 is DIVINE_TRIAL's own label.
+    # It now carries DIVINE_TRIAL, so it too is gone from here. Note that
+    # `EGYPTIAN_EMERGENCY` (re-filed by `a77a41e`) carries DIVINE_TRIAL as well;
+    # nothing selects a unique template by `(civilization, case_type)`
+    # (`create_from_judgment` uses `.first()`, `WorkflowTemplate` has no such
+    # constraint since `0006`/`0008`, and the presets are keyed by their own
+    # names), and two presets sharing a case type is the pre-existing shape of
+    # the three SPECIAL pairs below.
+    #
+    # The three below are untouched by this task and stay recorded.
     "EUROPEAN_GREEK": (
         "SPECIAL is not in the European set, which is "
         "{CANONIZATION, PURGATORY_REVIEW, HERESY_TRIAL, ROUTINE}. The Greek "
@@ -146,12 +161,11 @@ CASE_TYPES_NOT_VALID_FOR_THEIR_CIVILIZATION: dict[str, str] = {
     "EUROPEAN_HELL_CIRCLE": "Same as EUROPEAN_GREEK: SPECIAL is not in the European set.",
     "EGYPTIAN_AFTERLIFE": (
         "SPECIAL is not in the Egyptian set, which is "
-        "{HEART_WEIGHING, DIVINE_TRIAL, ROUTINE}."
-    ),
-    "EGYPTIAN_TRIALS": (
-        "Same as EGYPTIAN_AFTERLIFE. Note this preset is *named* 神判流程 while "
-        "carrying SPECIAL rather than DIVINE_TRIAL — a separate mis-filing, "
-        "left alone here so this task changes only the three it is about."
+        "{HEART_WEIGHING, DIVINE_TRIAL, ROUTINE, APPEAL}. Unlike EGYPTIAN_TRIALS "
+        "this one is not simply mis-labelled: 死后世界分流 is a routing of the "
+        "dead by merit, and neither DIVINE_TRIAL (a god deciding outside the "
+        "rite) nor HEART_WEIGHING (which this flow does not perform) names it. "
+        "Deciding what does is a lore question, not a re-filing."
     ),
 }
 
@@ -387,12 +401,13 @@ def test_each_preset_case_type_is_valid_for_its_civilization_or_is_recorded():
 
     `VALID_CASE_TYPES_BY_CIVILIZATION` is what `create_from_judgment` checks
     before it will build a workflow, so a preset outside its civilization's set
-    saves but can never be routed to. Six presets were already in that state
-    before this task and are recorded above with reasons; the point of asserting
-    it from both ends is that the three EMERGENCY presets had to be re-filed
-    into case types that are *inside* their sets rather than quietly joining the
-    list — and that an entry whose gap gets fixed goes red instead of aging into
-    a lie.
+    saves but can never be routed to. The presets still in that state are
+    recorded above with reasons; the point of asserting it from both ends is
+    that a preset must be re-filed into a case type *inside* its set rather than
+    quietly joining the list — and that an entry whose gap gets fixed goes red
+    instead of aging into a lie. The `stale` half is not hypothetical: widening
+    the three sets with APPEAL, and re-filing EGYPTIAN_TRIALS onto DIVINE_TRIAL,
+    each reddened it until the matching entry was deleted.
     """
     presets = _preset_case_types()
     civilization_of = {key: preset["civilization"] for key, preset in _presets().items()}
