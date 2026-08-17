@@ -1,7 +1,7 @@
 /**
  * Tests for WorkflowEditor component
  */
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Mock all heavy dependencies before import
@@ -87,6 +87,14 @@ jest.mock("@/src/contexts/I18nContext", () => ({
         "workflow.case_types.HERESY_TRIAL": "Heresy Trial",
         "workflow.case_types.HEART_WEIGHING": "Heart Weighing",
         "workflow.case_types.DIVINE_TRIAL": "Divine Trial",
+        // The three priority labels are `workflow.detail.*`, reused rather
+        // than duplicated: `app/workflow/[id]/page.tsx` shows the *instance*
+        // priority with the same keys, and this select sets the template
+        // default that instance inherits.
+        "workflow.detail.priority": "Priority",
+        "workflow.detail.normal": "Normal",
+        "workflow.detail.urgent": "Urgent",
+        "workflow.detail.critical": "Critical",
         "common.cancel": "Cancel",
         "common.save": "Save",
       };
@@ -173,5 +181,69 @@ describe("WorkflowEditor", () => {
   it("renders hint panel", () => {
     renderWithProviders(<WorkflowEditor />);
     expect(screen.getByText("Double-click nodes to edit")).toBeInTheDocument();
+  });
+
+  // ── template priority ──────────────────────────────────────────────
+  //
+  // The template-level default urgency. It has to reach the POST body: DRF
+  // discards a key the serializer does not declare *without complaining*, and
+  // the mirror-image failure here is the editor never sending it at all — in
+  // both cases the save answers 201 and the value is gone.
+
+  it("offers the three priority levels, using the same labels as the detail page", () => {
+    renderWithProviders(<WorkflowEditor />);
+    const select = screen.getByLabelText("Priority");
+    expect(select).toHaveValue("0");
+    expect(
+      Array.from(select.querySelectorAll("option")).map((o) => o.textContent)
+    ).toEqual(["Normal", "Urgent", "Critical"]);
+  });
+
+  it("opens a preset at the priority the preset declares", () => {
+    renderWithProviders(
+      <WorkflowEditor
+        initialTemplateData={{
+          name: "紧急审判流程",
+          civilization: "CHINESE",
+          case_type: "SPECIAL",
+          priority: 1,
+          nodes_json: [],
+        }}
+      />
+    );
+    expect(screen.getByLabelText("Priority")).toHaveValue("1");
+  });
+
+  it("sends the chosen priority in the saved template", async () => {
+    const { workflowApi } = require("@/lib/api");
+    renderWithProviders(<WorkflowEditor />);
+
+    fireEvent.change(screen.getByLabelText("Priority"), { target: { value: "2" } });
+    fireEvent.click(screen.getByText(/Save Template/));
+
+    await waitFor(() => expect(workflowApi.templates.create).toHaveBeenCalled());
+    expect(workflowApi.templates.create).toHaveBeenCalledWith(
+      expect.objectContaining({ priority: 2 })
+    );
+  });
+
+  it("sends 0 rather than omitting the field when the level is left at normal", async () => {
+    // Absence: an editor that only forwarded a *changed* priority would keep
+    // the case above green while every unchanged template arrived without the
+    // key — which the backend reads as "not specified", not as "normal".
+    const { workflowApi } = require("@/lib/api");
+    const before = workflowApi.templates.create.mock.calls.length;
+    renderWithProviders(<WorkflowEditor />);
+
+    fireEvent.click(screen.getByText(/Save Template/));
+
+    // The module-level mock is shared across this file's cases and is not
+    // cleared between them, so read *this* render's call rather than the first
+    // one ever made.
+    await waitFor(() =>
+      expect(workflowApi.templates.create.mock.calls.length).toBeGreaterThan(before)
+    );
+    const payload = workflowApi.templates.create.mock.calls.at(-1)[0];
+    expect(payload).toHaveProperty("priority", 0);
   });
 });

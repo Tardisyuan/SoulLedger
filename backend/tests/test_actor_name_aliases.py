@@ -279,8 +279,14 @@ def test_a_node_label_resolves_to_the_actor_that_node_designates(seeded, resolve
             )
             checked += 1
 
-    assert checked == 13, (
-        f"expected the 13 nodes that name an approver, checked {checked} — the "
+    # 13 -> 18 when `(EUROPEAN, APPEAL)` and `(EGYPTIAN, APPEAL)` were added to
+    # WORKFLOW_TEMPLATES: 「Michael · 引领呈上」, 「Christ · 终审」, 「Isis · 受理」,
+    # 「Nephthys · 复核」 and 「Osiris · 终审」 each name an approver, and each was
+    # checked by the assertions above before this number was moved — the count
+    # is the guard against templates *losing* their `actor` keys, not a cap on
+    # how many may have them.
+    assert checked == 18, (
+        f"expected the 18 nodes that name an approver, checked {checked} — the "
         f"count is asserted so a template losing its `actor` keys cannot pass "
         f"this by having nothing to check"
     )

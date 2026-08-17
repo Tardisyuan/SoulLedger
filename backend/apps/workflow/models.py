@@ -225,6 +225,26 @@ class WorkflowTemplate(AuditUserFields, models.Model):
         choices=CaseType.choices,
         default=CaseType.ROUTINE,
     )
+
+    # The urgency this *procedure* is written for, not the urgency of any one
+    # case. Same three values as ApprovalWorkflow.priority above, deliberately:
+    # this column is a default for that one, so a second scale would mean
+    # translating between them at every read.
+    #
+    # WHICH ONE WINS IS DECIDED IN ONE PLACE — `WorkflowService._resolve_priority`
+    # — and the order is: an explicitly passed instance-level priority, then this
+    # template value, then the floor (0 for a judgment, 1 for an appeal). The
+    # column exists because 「this procedure is for urgent cases」 was previously
+    # sayable only by picking a CaseType member for it, which is the mistake
+    # `a77a41e` undid: case_type answers "which kind of case", priority answers
+    # "how urgent", and EMERGENCY was the second answer written into the first
+    # column. See frontend/src/config/workflow-templates.ts::CHINESE_EMERGENCY.
+    priority = models.IntegerField(
+        default=0,
+        help_text="Default priority for workflows built from this template: "
+                  "0=normal, 1=urgent, 2=critical",
+    )
+
     is_active = models.BooleanField(default=True)
 
     # Template nodes stored as JSON

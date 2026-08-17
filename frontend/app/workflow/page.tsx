@@ -60,6 +60,10 @@ interface TemplatePreviewData {
   civilization: string;
   case_type?: string;
   caseType?: string;
+  // The template-level default urgency (0/1/2). Optional here because this
+  // shape also stands in for backend templates fetched before the column
+  // existed; `WorkflowEditor` treats undefined as 0.
+  priority?: number;
   nodes_json?: FlowNode[];
   // Either shape: the preset templates in WORKFLOW_TEMPLATES use FrontendNode,
   // while a template fetched from the API uses the serializer's node shape.
@@ -389,6 +393,12 @@ export default function WorkflowPage() {
                                     description: currentTemplate.description,
                                     civilization: currentTemplate.civilization,
                                     case_type: currentTemplate.caseType,
+                                    // Carried through, or the three 紧急审判流程
+                                    // presets would arrive in the editor as
+                                    // ordinary ones and be saved back at 0 —
+                                    // the preset's `priority: 1` would be a
+                                    // value nothing could ever read.
+                                    priority: currentTemplate.priority,
                                     nodes_json: currentTemplate.nodes.map((n: FrontendNode) => ({
                                       id: n.id,
                                       node_name: n.name,
