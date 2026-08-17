@@ -98,52 +98,64 @@ class ChineseRoutingTest(TestCase):
 
 
 class EuropeanRoutingTest(TestCase):
-    """Matrix: every Verdict value crossed with negative/zero/positive karma."""
+    """Matrix: every Verdict value crossed with a range of culpa.
 
-    def test_passed_always_heaven_regardless_of_karma(self):
-        for karma in (-100, 0, 100):
-            with self.subTest(karma=karma):
+    The third argument used to be karma — merit minus demerit — and the matrix
+    ran it over (-100, 0, 100) because the router took `abs()` of it and a
+    generous soul could therefore be sentenced for its generosity. It is culpa
+    now: the demerit total alone, which is what `_european_reading` has always
+    reported and what `_route_european` now sentences on. Culpa is a sum of
+    demerit weights and cannot be negative, so the matrix runs over magnitudes
+    instead of signs, and `tests/test_european_hell_basis.py` covers what the
+    sign used to be hiding.
+    """
+
+    def test_passed_always_heaven_regardless_of_culpa(self):
+        for culpa in (0, 100, 1000):
+            with self.subTest(culpa=culpa):
                 self.assertEqual(
-                    DispositionService._route_european(None, Verdict.PASSED, karma),
+                    DispositionService._route_european(None, Verdict.PASSED, culpa),
                     DispositionService.EU_HEAVEN,
                 )
 
     def test_failed_never_routes_to_heaven(self):
-        for karma in (-100, 0, 100):
-            with self.subTest(karma=karma):
-                realm = DispositionService._route_european(None, Verdict.FAILED, karma)
+        for culpa in (0, 100, 1000):
+            with self.subTest(culpa=culpa):
+                realm = DispositionService._route_european(None, Verdict.FAILED, culpa)
                 self.assertNotEqual(realm, DispositionService.EU_HEAVEN)
                 self.assertIn(realm, DispositionService.EU_HELL_CIRCLES.values())
 
-    def test_failed_with_zero_karma_is_regression_case(self):
-        """Same regression as Chinese routing: decayed karma == 0 must not
-        send a FAILED verdict to heaven. Lands in the outermost circle."""
+    def test_failed_with_zero_culpa_is_regression_case(self):
+        """Same regression as Chinese routing: a ledger that decayed to nothing
+        must not send a FAILED verdict to heaven. Lands in the outermost circle
+        — which is Limbo, and is one of the things
+        `tests/test_european_hell_basis.py` pins as still wrong."""
         realm = DispositionService._route_european(None, Verdict.FAILED, 0)
         self.assertEqual(realm, DispositionService.EU_HELL_CIRCLES[1])
 
-    def test_failed_severity_scales_with_negative_karma(self):
+    def test_failed_severity_scales_with_culpa(self):
         self.assertEqual(
-            DispositionService._route_european(None, Verdict.FAILED, -30),
+            DispositionService._route_european(None, Verdict.FAILED, 30),
             DispositionService.EU_HELL_CIRCLES[3],
         )
         self.assertEqual(
-            DispositionService._route_european(None, Verdict.FAILED, -200),
+            DispositionService._route_european(None, Verdict.FAILED, 200),
             DispositionService.EU_HELL_CIRCLES[9],
         )
 
     def test_purgatory_verdict_never_routes_to_heaven(self):
-        for karma in (-100, 0, 100):
-            with self.subTest(karma=karma):
+        for culpa in (0, 100, 1000):
+            with self.subTest(culpa=culpa):
                 self.assertEqual(
-                    DispositionService._route_european(None, Verdict.PURGATORY, karma),
+                    DispositionService._route_european(None, Verdict.PURGATORY, culpa),
                     DispositionService.EU_PURGATORY,
                 )
 
     def test_retry_verdict_never_routes_to_heaven(self):
-        for karma in (-100, 0, 100):
-            with self.subTest(karma=karma):
+        for culpa in (0, 100, 1000):
+            with self.subTest(culpa=culpa):
                 self.assertEqual(
-                    DispositionService._route_european(None, Verdict.RETRY, karma),
+                    DispositionService._route_european(None, Verdict.RETRY, culpa),
                     DispositionService.EU_PURGATORY,
                 )
 
