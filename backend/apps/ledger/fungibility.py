@@ -66,10 +66,55 @@ What this does not do
   property would disagree with every queryset computing the same name in the
   database. The raw net stays the raw net, and what changed is which number
   routing reads.
-* It does NOT implement 零積不抵整發 (the granularity rule). Doing so needs a
-  notion of whether a fault was incurred "at a stroke", which no field records —
-  `is_milestone` is display-only by explicit decision (see SoulRecord). A proxy
-  built out of record counts would be an invented rule wearing a citation.
+* It does NOT implement 零積不抵整發, the second half of the same 凡例 sentence:
+  「零積之十功不能折一次之十過也。」 Ten merits earned a fraction at a time do not
+  discharge one fault worth ten at a stroke. The two rules are cumulative rather
+  than alternatives — a discharge must clear both — so applying this one would
+  only ever narrow what `offset_within_classes` permits, never widen it. The
+  investigation behind the decision not to apply it, and its evidence:
+
+  THE TEXT DOES GIVE A CRITERION, AND IT IS PER-CLAUSE. 一次 means "on one
+  occasion", and every scoring clause in 太微 states its own per-occasion value —
+  that is what the `clauses` list on each seeded article is. 救濟門#7 carries
+  both readings of one act in a single sentence: 「賑濟鰥寡孤獨窮民百錢為一功，
+  貫錢為十功，如一錢散施，積至百錢為一功」. A string of cash handed over at once
+  is 一次之十功; the same ten merits reached a coin at a time are 零積. Same
+  article, same MONEY pool, opposite granularity. So granularity is a property of
+  (clause, number of occasions) and not of an article, and no tag attached to an
+  article could carry it.
+
+  WHAT IS MISSING IS ON THIS SIDE OF THE JOIN. A `SoulRecord` cites no clause and
+  counts no occasions. `weight` is an operator-supplied integer whose own help
+  text calls it a "significance weight (1-100)"; nothing binds it to a clause's
+  value and nothing says one row is one occasion. Those two absent inputs are
+  named in GRANULARITY_MISSING_INPUTS so that the next attempt adds data rather
+  than inventing a marker.
+
+  WHY NOT THE PROXIES THAT SUGGEST THEMSELVES:
+
+  - Record counts. "One row is one occasion, so a hundred rows of weight 1 is
+    零積" reads convincingly against a test fixture and fails against data:
+    nothing stops a clerk entering a year of alms as one row, or documenting one
+    killing across three, and a bulk import obeys no such convention at all. It
+    would make which of the ten courts a soul is sent to a function of how many
+    rows somebody typed. The first version of this note called that an invented
+    rule wearing a citation; that judgement stands, and this is the evidence for
+    it.
+  - `is_milestone`. Display-only by explicit decision, and SoulRecord states the
+    reason in as many words — ticking a display checkbox is a surprising way to
+    move an audited balance.
+  - A granularity tag backfilled onto the 73 transcribed segments. 「一次」 does
+    not occur anywhere in the corpus, and the one place 太微 discusses
+    accumulation at all is 救濟門#7 above, where it grants the accumulated merit
+    its full value rather than marking it down. Completing that corpus against a
+    distinction it does not draw is the repair docs/lore-verification/README.md
+    §1 forbids by name, and `8308204` is what it looks like when it is tried.
+
+  So the reading states the rule and states that it is not applied, the way
+  `_european_reading` reports `poena: None` with a reason instead of a proxy.
+  `tests/test_ledger_granularity.py` pins the gap open: it builds the soul the
+  rule is about and asserts this system still treats 零積 and 一次 alike, so
+  closing the gap has to be done deliberately.
 * It does NOT decay, cap, or otherwise re-score anything. Decay is applied
   upstream by LedgerService and 功過格 has none of it (see the note on
   CIVILIZATION_DECAY_RATE in services.py); this module partitions numbers it is
@@ -101,10 +146,41 @@ FUNGIBILITY_CLASSES = (LIFE, MONEY, RITUAL, SPEECH, CONDUCT)
 #: that a test — and a reader — can tell the sourced part from the invented one.
 ATTESTED_CLASSES = (MONEY, LIFE)
 
-FUNGIBILITY_RULE_ZH = (
-    "功過有不可折者。如用財之百功，不可折致死人之百過。"
-    "零積之十功不能折一次之十過也。"
+#: The first 凡例 rule — the class limit, which this module applies.
+CLASS_RULE_ZH = "功過有不可折者。如用財之百功，不可折致死人之百過。"
+
+#: The second — the granularity limit, quoted on its own because it is the one
+#: this module does NOT apply. See "What this does not do" in the docstring.
+GRANULARITY_RULE_ZH = "零積之十功不能折一次之十過也。"
+
+#: What a `SoulRecord` would have to carry before 零積不抵整發 could be applied
+#: to it. Named as data rather than described as prose so that the next attempt
+#: adds the join the corpus already has one side of, instead of inventing a
+#: granularity marker on the deed. See the module docstring.
+GRANULARITY_MISSING_INPUTS = (
+    # Which scoring clause the deed was scored under. Every clause states its
+    # own per-occasion value; that value is what 一次 means.
+    "statute_clause",
+    # How many separate occasions this one row's weight covers. One row is not
+    # one occasion and nothing in this system says it is.
+    "occurrence_count",
 )
+
+#: Why every offset below is granularity-blind, in the shape
+#: `_european_reading` uses for `poena_unavailable`: report the absence with its
+#: reason rather than substitute a number for it.
+GRANULARITY_UNAVAILABLE = (
+    "零積不抵整發 is not applied. Telling a total reached at one stroke from one "
+    "reached a fraction at a time needs the clause a deed was scored under and "
+    "the number of occasions its weight covers; a SoulRecord carries neither, "
+    "and `weight` is an operator-supplied significance figure that may bundle "
+    "any number of occasions of any clause. Every offset reported here is "
+    "therefore granularity-blind and may discharge a lump fault with scattered "
+    "merit."
+)
+
+#: Both halves, composed rather than retyped so the pair cannot drift apart.
+FUNGIBILITY_RULE_ZH = CLASS_RULE_ZH + GRANULARITY_RULE_ZH
 FUNGIBILITY_RULE_SOURCE = (
     "《文昌帝君功過格·凡例》，雍正二年（1724）。維基文庫轉錄。"
     "docs/lore-verification/gongguoge.md §7.3。"
@@ -170,6 +246,13 @@ def offset_within_classes(class_totals: dict) -> dict:
     The two are deliberately not subtracted from one another. A soul with 100
     unusable alms and 100 unoffset killings is not at zero; it is a soul that
     gave generously and killed somebody, and one number cannot say that.
+
+    WITHIN a class the netting is still granularity-blind: `min(merit, demerit)`
+    cannot tell ten merits scraped together from one worth ten, so scattered
+    merit discharges a lump fault of its own kind in full. That is the half of
+    the 凡例 sentence this module does not apply, and the returned reading says
+    so — `granularity_applied` is False and `granularity_unavailable` gives the
+    reason. See the module docstring for why the available proxies were refused.
     """
     by_class = {}
     unoffset_demerit = 0.0
@@ -197,6 +280,13 @@ def offset_within_classes(class_totals: dict) -> dict:
         "rule_zh": FUNGIBILITY_RULE_ZH,
         "rule_source": FUNGIBILITY_RULE_SOURCE,
         "attested_classes": list(ATTESTED_CLASSES),
+        # The half of `rule_zh` that the numbers above do not implement,
+        # reported rather than quietly omitted. A reader handed both sentences
+        # and no flag would reasonably assume both were applied.
+        "granularity_rule_zh": GRANULARITY_RULE_ZH,
+        "granularity_applied": False,
+        "granularity_unavailable": GRANULARITY_UNAVAILABLE,
+        "granularity_missing_inputs": list(GRANULARITY_MISSING_INPUTS),
     }
 
 
