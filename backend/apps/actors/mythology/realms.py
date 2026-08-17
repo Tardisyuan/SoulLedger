@@ -495,11 +495,103 @@ REALM_PARENTS = {
     "EU_EARTHLY_PARADISE": "EU_PURGATORY",
 }
 
+# THE GATES OF THE DUAT ARE THE DEAD PERSON'S, NOT RA'S.
+#
+# What was here: `EG_DUAT_ENTRY` described as where the "soul begins the night
+# journey", and — in `docs/` and in the org tree's `DUAT_GATES` (十二门) — a
+# twelve-gate structure. **The night journey is Ra's.** The twelve gates belong
+# to the *Book of Gates*, and the twelve hours belong to the *Amduat*: two
+# different books, both about the sun god's nightly transit, and neither about
+# the deceased. `docs/lore-verification/verify-egyptian.md` §4.2 records the
+# precise relationship and the reason the two must not be interleaved — the
+# Book of Gates puts a named gate at each boundary and the Amduat gives each
+# hour a city and a door, so filing one book's names under the other's labels is
+# a splice that reads as data and is not.
+#
+# The org node has since been renamed to 门之书十二门 — it does model a
+# twelve-gate structure, and that structure is the Book of Gates', so the name
+# now says which book rather than implying the deceased walks it. Its `code`
+# stays `DUAT_GATES`, being the key `init_organizations` matches on.
+#
+# This application models a dead person being judged. The Book of the Dead has
+# its own gate corpus, and it is the corpus the forty-two assessors already come
+# from (§4.4, §9.4):
+#
+#   BD 144 and BD 147 (variants of one text) — "knowing the names of the keepers
+#     of the seven approaches", the ꜥrrwt-gates of the house of Osiris in the
+#     field of reeds. Seven gates, three keepers each (iry-ꜥꜣ doorkeeper, sꜣw
+#     watcher, smi herald) = twenty-one named beings.
+#   BD 145 and BD 146 (variants of one text) — "start of the gateways of the
+#     Field of Reeds of the domain of Osiris", the sbḫt-portals. Twenty-one
+#     portals, one demon each.
+#
+# TWO SERIES, NOT ONE RUN OF TWENTY-EIGHT. The seven ꜥrrwt and the twenty-one
+# sbḫt are different words for different gates in different chapters, and the
+# only thing that would make them one numbered sequence is somebody needing a
+# tidy list. They are two rows, and they carry the same `tier` — the chapter
+# titles put both at the entrance to Osiris's domain in the field of reeds, and
+# no witness obtained here gives an order *between* the two texts. Equal tier is
+# that statement; 3 and 4 would have been an invented sequence.
+#
+# WHY THERE ARE TWO ROWS AND NOT TWENTY-EIGHT — the part most likely to be
+# "fixed" by someone reading this as incomplete. **Not one gate of either series
+# is seeded individually, because no transcription of any of their names has
+# been obtained.** What the evidence in `docs/lore-verification/` actually
+# contains for BD 144-147 is the chapter titles, the counts and the keeper
+# roles, from UCL Digital Egypt's chapter list (Quirke, 2002) — an academic
+# source that was read. It does **not** contain the seven gate names, the
+# twenty-one keepers, or the twenty-one portal demons; Budge's *Theban
+# Recension* vol. II is named there as where they are, and the volume was read
+# for BD 125 (the assessors' towns and clauses, pp. 366-371), not for 144-147.
+# The order of the series has no second witness either, and the assessor round
+# proved that matters: Ani and Nebseni disagree on the sequence of the
+# forty-two, so a row called "the fourth gate" would be asserting a position
+# nothing here can support.
+#
+# `README.md` §1 of the verification set states the rule this obeys: completing
+# these lists is the one certain way to get them wrong. Twenty-eight rows named
+# only by their ordinal would be that mistake in its politest form — they would
+# look like data, resolve as FKs, and say nothing. Two frameworks were once
+# filled in this way and had to be withdrawn whole in 8308204.
+#
+# WHEN THE TRANSCRIPTIONS ARE OBTAINED, the rows go in with their names and
+# their citation, exactly as the forty-two assessors did, and
+# `tests/test_duat_gates.py::test_a_seeded_duat_gate_names_its_source_edition`
+# is what makes a numbered gate arrive with its source rather than without one.
 EGYPTIAN_REALMS = [
     ("EG_DUAT_ENTRY", "杜阿特入口", "杜阿特之门", "Gate of Duat", "DuatEntry", RealmType.PURGATORY, 1,
-     "Entry to the underworld Duat - soul begins the night journey", "SPELL", False, None),
+     "Entry to the underworld Duat, where the dead person's own passage west begins. "
+     "What this row records is the start of a soul's journey and nothing else; the gates "
+     "that passage then meets are seeded separately as EG_SEVEN_ARRWT and "
+     "EG_TWENTYONE_SEBKHET, which carry their chapters and their edition.",
+     "SPELL", False, None),
     ("EG_HALL_TWO_TRUTHS", "真理殿堂", "两真之殿", "Hall of Two Truths", "HallTwoTruths", RealmType.PURGATORY, 2,
      "The weighing of the heart against Ma'at's feather", "SPELL", False, None),
+    ("EG_SEVEN_ARRWT", "七道通路", "七道通路", "The Seven Approaches to the House of Osiris",
+     "SevenArrwt", RealmType.PURGATORY, 3,
+     "Book of the Dead 144 and 147, two variants of one text: 'knowing the names of the "
+     "keepers of the seven approaches' — the ꜥrrwt-gates of the house of Osiris in the "
+     "field of reeds. Seven gates, three keepers apiece (iry-ꜥꜣ doorkeeper, sꜣw watcher, "
+     "smi herald), twenty-one named beings in all. Chapter title and counts from UCL "
+     "Digital Egypt, Book of the Dead chapters by number (Quirke, 2002); the text is in "
+     "Budge, The Book of the Dead: An English Translation of the Chapters, Hymns, etc., of "
+     "the Theban Recension, vol. II — the volume already cited for the forty-two assessors' "
+     "towns and clauses. This row is the set, not a member of it: no individual gate and no "
+     "individual keeper is seeded, because no transcription of their names has been "
+     "obtained and the order of the series has no second witness.",
+     "SPELL", False, None),
+    ("EG_TWENTYONE_SEBKHET", "二十一道门户", "二十一道门户",
+     "The Twenty-One Portals of the Field of Reeds", "TwentyOneSebkhet", RealmType.PURGATORY, 3,
+     "Book of the Dead 145 and 146, two variants of one text: 'start of the gateways of the "
+     "Field of Reeds of the domain of Osiris' — the sbḫt-portals, twenty-one of them, one "
+     "demon to each. A different series from the seven ꜥrrwt, in a different pair of "
+     "chapters, and not a continuation of their numbering. Chapter titles from UCL "
+     "Digital Egypt, Book of the Dead chapters by number (Quirke, 2002); the text is in "
+     "Budge, Theban Recension, vol. II, the same volume the forty-two assessors come from. "
+     "As with the seven, no individual portal and no individual demon is seeded: the names "
+     "have not been transcribed here and inventing them is how this repository has gone "
+     "wrong before.",
+     "SPELL", False, None),
     ("EG_AARU", "阿鲁之地", "芦苇之地", "Field of Reeds (Aaru)", "Aaru", RealmType.BLISS, 1,
      "Egyptian paradise - eternal life in the Field of Reeds beyond Duat", "NONE", True, None),
     # EG_AM_TYAT IS GONE, AND IS NOT COMING BACK.
@@ -518,11 +610,16 @@ EGYPTIAN_REALMS = [
     # databases that already have it; tests/test_seed_entrypoint.py records the
     # removal as deliberate so it does not read as a dropped row.
     #
-    # If the disposition state machine ever does need a waypoint between the
-    # gate and the hall, the attested filler is the seven ꜥrrwt-gates of BD
-    # 144/147 — literally the approaches to the house of Osiris, same scripture
-    # and same edition as the forty-two assessors below. Do not invent a second
-    # transit realm; inventing one is what produced this row.
+    # The attested gates now exist: EG_SEVEN_ARRWT and EG_TWENTYONE_SEBKHET,
+    # above. One thing they are not is a drop-in for this row's slot. Amtyat was
+    # a "border realm before the final judgment" and the chapter titles put both
+    # gate corpora at the *entrance to the house of Osiris in the field of
+    # reeds*, i.e. after the weighing and not before it, which is why they carry
+    # tier 3 and the Hall keeps tier 2. §3.4 of the verification set floated the
+    # seven ꜥrrwt as a pre-judgment waypoint; that was a suggestion about the
+    # state machine's shape, and the sources are what decided against it.
+    # If a waypoint before the Hall is ever genuinely needed, it needs a source
+    # — inventing one is what produced this row.
     #
     # EG_ANNIHILATION IS AN OUTCOME, NOT AN ADDRESS.
     #

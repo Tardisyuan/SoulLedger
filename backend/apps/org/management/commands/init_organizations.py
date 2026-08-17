@@ -93,7 +93,15 @@ INITIAL_ORGANIZATIONS = [
         "level": 0,
     },
     {"name": "真理大厅", "code": "DUAT_HALL", "category": "EGYPTIAN", "parent_code": "DUAT"},
-    {"name": "十二门", "code": "DUAT_GATES", "category": "EGYPTIAN", "parent_code": "DUAT"},
+    # 「十二门」 named the Book of Gates' structure without saying so, which is
+    # the confusion the realm side was just re-anchored away from: the Book of
+    # Gates and the Amduat are two different books about Ra's night voyage, and
+    # the dead person's own itinerary is BD 144/147 and 145/146 (see
+    # EG_SEVEN_ARRWT and EG_TWENTYONE_SEBKHET in mythology/realms.py, and
+    # docs/lore-verification/verify-egyptian.md §9.4, which asks for exactly
+    # this rename). The display name now says which book it is; `code` is left
+    # alone because init_organizations matches on it and it is a join key.
+    {"name": "门之书十二门", "code": "DUAT_GATES", "category": "EGYPTIAN", "parent_code": "DUAT"},
     {"name": "阿佩普领域", "code": "DUAT_APEP", "category": "EGYPTIAN", "parent_code": "DUAT"},
 ]
 
