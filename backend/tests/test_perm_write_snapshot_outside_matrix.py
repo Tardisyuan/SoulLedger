@@ -445,8 +445,9 @@ EXPECTED = {
 def snapshot_tenants(db):
     """Home tenant (every role user lives here) plus one to dispatch against.
 
-    CN_DIYU is deliberate: it is the only rebirth-capable cosmology
-    (REBIRTH_CAPABLE_CIVILIZATIONS in apps/ledger/services.py), so the
+    CN_DIYU is deliberate: it is a rebirth-capable cosmology
+    (REBIRTH_CAPABLE_CIVILIZATIONS in apps/ledger/services.py — Diyu and, since
+    the Greek split, Plato's circuit; EU_HEAVEN_HELL below is not), so the
     reincarnation endpoints reach their real side effects instead of stopping
     at a 409 that would hide whether a permission gate ran.
     """

@@ -422,10 +422,17 @@ EUROPEAN_REALMS = [
 # realms/0012 and realms/0015 each needed a dedicated migration to change. The
 # two new rows take `GR_` because they are new and nothing points at them yet.
 #
-# NONE OF THE THREE IS A DISPOSITION DESTINATION YET. `DispositionService` has
-# no Greek branch — that is a later phase — so no verdict routes here, and the
-# absence is deliberate rather than pending: routing to Tartarus or the Isles
-# requires a Greek verdict vocabulary this system does not have.
+# TWO OF THE THREE ARE DISPOSITION DESTINATIONS NOW; THE MEADOW IS NOT ONE.
+# This paragraph used to say that none of them was, because `DispositionService`
+# had no Greek branch and "routing to Tartarus or the Isles requires a Greek
+# verdict vocabulary this system does not have". It has one now, and the
+# vocabulary question was answered rather than waved through: PASSED and FAILED
+# are the two roads 524a names, and the two verdicts that say nothing is settled
+# yet (PURGATORY, RETRY) leave the soul standing on the meadow — which is where
+# 524a puts a soul that has not been sent down either road, and is a statement
+# about the absence of a sorting rather than a third outcome. The meadow is
+# therefore reachable without being a destination, in the sense EU_ACHERON above
+# is not: nobody is sentenced to it. See `DispositionService._route_greek`.
 GREEK_REALMS = [
     ("EU_PLATO_MEADOW", "岔路草原", "审判岔路", "The Meadow at the Parting of the Ways",
      "Meadow", RealmType.NEUTRAL, 0,
@@ -436,16 +443,32 @@ GREEK_REALMS = [
      "of Dante's hell. Both roads out of it are now seeded, because the same "
      "sentence names them; nothing else of the Greek geography is.",
      "NONE", False, None),
-    # `is_eternal` IS FALSE ON BOTH ROADS, AND THAT IS A RECORDED LIMITATION
-    # RATHER THAN A FINDING. Gorgias 524a — the passage these two rows are
-    # seeded from — says where the roads go and nothing at all about how long
-    # anyone stays. The authors who do speak to duration disagree: 525c makes
-    # the incurable everlasting examples, while Republic X, 615a-b sentences the
-    # unjust to a thousand-year circuit and then sends them back to choose a new
-    # life. `is_eternal` is a BooleanField with no third state, so one of the
-    # two claims has to be stored, and False is the one that does not assert
-    # perpetuity on the strength of a passage that never mentions it. Do not
-    # read it as "Plato says the sentence ends".
+    # `is_eternal` IS STILL FALSE ON BOTH ROADS, AND IT NOW MEANS SOMETHING.
+    # It was written as a recorded limitation: Gorgias 524a says where the roads
+    # go and nothing about how long anyone stays, the authors who do speak to
+    # duration disagree — 525c makes the incurable everlasting examples while
+    # Republic X, 615a-b sentences the unjust to a thousand-year circuit and then
+    # sends them back to choose a new life (617d-620d) — and `is_eternal` is a
+    # BooleanField with no third state, so False was chosen as the value that
+    # asserts nothing. That note ended "do not read it as 'Plato says the
+    # sentence ends'", and this paragraph supersedes that sentence rather than
+    # deleting it: the owner has ruled that Republic X is the norm and 525c the
+    # exception, so False now carries the norm, and it is the same value for a
+    # different and stronger reason. `REBIRTH_CAPABLE_CIVILIZATIONS` and
+    # `DispositionService.execute` agree with it — a Greek soul leaves an
+    # executed disposition REINCARNATING.
+    #
+    # WHAT THE COLUMN STILL CANNOT CARRY IS THE EXCEPTION, AND THAT IS NOT A
+    # BOOLEAN'S FAULT. In 525c the everlastingness belongs to the *soul* — to
+    # whether its wrongs are curable — not to the place; the same Tartarus holds
+    # both kinds. A per-soul column for it already exists (`Disposition
+    # .is_eternal`, which `create_from_judgment` copies off this flag), so the
+    # shape is not missing. The input is: nothing in this system distinguishes
+    # an incurable soul from a curable one, and no widening of this field would
+    # supply it. Changing this to True would make every Greek soul sent left an
+    # ἀνίατος, which is the smaller of the two populations and the one Plato
+    # treats as remarkable. See `DispositionService._route_greek` and
+    # tests/test_greek_sentence_basis.py.
     ("GR_ISLES_OF_THE_BLESSED", "至福岛", "至福岛", "The Isles of the Blessed",
      "IslesOfTheBlest", RealmType.BLISS, 1,
      "Plato, Gorgias 524a: one of the two roads out of the meadow, taken by "

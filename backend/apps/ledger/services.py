@@ -50,9 +50,29 @@ DECAY_RATE = 0.01  # per year — the rate for any cosmology not listed below.
 # contradicts the arithmetic under it is worse than either alone, and of the two
 # it is the arithmetic that was never argued for.
 #
-# A dict rather than `if civ == EUROPEAN`, for the reason GREEK is about to
-# make concrete: a thousand-year circuit repaid tenfold is a sentence with a
-# clock, and whatever number that wants, it will not be this one.
+# A dict rather than `if civ == EUROPEAN`, so that a cosmology wanting its own
+# answer gets an entry rather than a branch.
+#
+# GREEK HAS NO ENTRY, AND THAT IS THE ANSWER RATHER THAN THE ABSENCE OF ONE.
+# This comment used to end by predicting that Plato's thousand-year circuit
+# would want a rate of its own — "a sentence with a clock, and whatever number
+# that wants, it will not be this one". It wants none. A rate here scales the
+# *weight* of a deed by elapsed time, and nothing on the Greek side reads a
+# weight: `_greek_reading` counts wrongs (Republic X 615a-b repays tenfold per
+# wrong done, and `weight` is this house's own severity scale, not Plato's),
+# and `DispositionService._route_greek` reads the verdict alone, because a fork
+# has two roads and no depth to grade. An entry would be a rate governing
+# nothing, and choosing 0.0 for it would additionally assert that Greek deeds
+# do not fade — a doctrine nobody here has argued for, on a mechanic no Greek
+# reading consults.
+#
+# What the missing entry actually does is leave a Greek soul on the shared
+# DECAY_RATE for its displayed merit/demerit sums, via `.get(..., DECAY_RATE)`.
+# That is deliberate and is the same call `_decay_rate_for` documents for an
+# unmapped tenant: decay is a house rule about recency, the sums are raw
+# arithmetic true of any ledger, and applying it there attributes nothing to
+# Plato. tests/test_greek_sentence_basis.py pins the absence so that filling
+# the dict in for symmetry has to be a decision.
 CIVILIZATION_DECAY_RATE = {
     Civilization.CHINESE: DECAY_RATE,
     Civilization.EGYPTIAN: DECAY_RATE,
@@ -77,14 +97,29 @@ INHERITANCE_MERIT = 0.2
 # lives erased anything at all.
 INHERITANCE_DEMERIT = 1.0
 
-# Inheritance presupposes rebirth, and only one of the three cosmologies here
-# has one. Egyptian judgment ends at Aaru or Ammit; European (Dante) judgment
-# ends at Heaven, Hell, or Purgatory-then-Heaven, and Purgatorio empties
-# upward, never back into a new life. Held as a set rather than an
-# `if civ == CHINESE` so that adding a rebirth-capable civilization is one
-# line — GREEK is planned, and Plato's souls do choose a new life at the
-# Spindle of Necessity (Republic X, 617d-620d).
-REBIRTH_CAPABLE_CIVILIZATIONS = frozenset({Civilization.CHINESE})
+# Inheritance presupposes rebirth, and two of the four cosmologies here have
+# one. Egyptian judgment ends at Aaru or Ammit; European (Dante) judgment ends
+# at Heaven, Hell, or Purgatory-then-Heaven, and Purgatorio empties upward,
+# never back into a new life. Held as a set rather than an `if civ == CHINESE`
+# so that adding a rebirth-capable civilization is one line.
+#
+# GREEK IS THAT ONE LINE, AND IT IS THE NORM RATHER THAN THE WHOLE STORY.
+# Republic X 615a-b sentences the unjust to a thousand-year circuit and 617d-620d
+# then has them choose a new life at the Spindle of Necessity, so rebirth is
+# what ordinarily happens to a Greek soul and the set says so. Gorgias 525c
+# states an exception in the other direction — those whose wrongs are incurable
+# (ἀνίατοι) are made everlasting examples instead — and the owner's ruling is
+# that both hold. The exception is not encoded anywhere, here or in
+# `DispositionService._route_greek`, because Plato's criterion is curability
+# and nothing in this system records anything that bears on it; see that
+# method's docstring, and tests/test_greek_sentence_basis.py, which pins the
+# gap as a contradiction rather than letting a threshold be invented for it.
+#
+# For the same reason GREEK is deliberately absent from
+# TERMINAL_COSMOLOGY_REASON below: a cosmology cannot be in both, the norm is
+# rebirth, and half an entry covering only the incurable would describe a
+# population this system cannot pick out.
+REBIRTH_CAPABLE_CIVILIZATIONS = frozenset({Civilization.CHINESE, Civilization.GREEK})
 
 # Cosmologies whose routing is bound by 「功過有不可折者」.
 #
@@ -97,10 +132,19 @@ REBIRTH_CAPABLE_CIVILIZATIONS = frozenset({Civilization.CHINESE})
 # differently than it did.
 #
 # A frozenset rather than `if civ == CHINESE` for the same reason
-# REBIRTH_CAPABLE_CIVILIZATIONS is one: GREEK is planned, and whether Plato's
-# thousand-year circuit has a non-fungibility rule is a question somebody will
-# have to answer on purpose, in one place, rather than by discovering which
-# branch of an if-chain it fell into.
+# REBIRTH_CAPABLE_CIVILIZATIONS is one: whether Plato's thousand-year circuit
+# has a non-fungibility rule was a question somebody had to answer on purpose,
+# in one place, rather than by discovering which branch of an if-chain it fell
+# into.
+#
+# ANSWERED: GREEK IS NOT IN THIS SET, and for the Egyptian reason rather than
+# the European one. 「不可折」 is a limit on 功過相抵, and Republic X has no
+# offsetting step for it to limit — 615b requites well-doing "in the same
+# measure" on its own road, tenfold like the punishment and in parallel with
+# it, so a good deed never discharges any part of the term owed on the other
+# road. There is nothing to partition, and `get_unoffset_demerit` accordingly
+# returns None for a Greek soul, which `DispositionService._route_greek` does
+# not call in the first place.
 NON_FUNGIBLE_CIVILIZATIONS = frozenset({Civilization.CHINESE})
 
 # TODO(i18n): the reasons below and `inheritance_note` in
