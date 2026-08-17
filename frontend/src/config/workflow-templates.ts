@@ -39,6 +39,25 @@ export interface WorkflowTemplate {
   caseType: string;
   name: string;
   description: string;
+  /**
+   * 本套程序默认的急缓：0=普通, 1=紧急, 2=危急。与
+   * `ApprovalWorkflow.priority` 同一把尺子，因为它就是那一列的默认值——
+   * 存成 `WorkflowTemplate.priority` 之后，`WorkflowService.create_from_judgment`
+   * 建流程时若调用方没有显式指定，就落到这个值。
+   *
+   * **这个字段是必填的，没有默认值，这一点是故意的。** 三套「紧急审判流程」
+   * 之所以需要它，是因为 `caseType` 回答的是「这是哪一类案子」而不是「多急」
+   *（见下面 CHINESE_EMERGENCY 顶部那段：`"EMERGENCY"` 曾经被写进 caseType，
+   * 一保存就 400）。把它设成可选、缺省当 0，会让下一套新增的紧急预设在没人
+   * 表态的情况下静默地变成普通件；必填意味着新增预设时 tsc 会逼着作者回答
+   * 这个问题。**不许因为「大多数是 0」就把它改成可选。**
+   *
+   * 跨端断言：backend/tests/test_workflow_template_priority.py 核对这里写着
+   * `priority: 1` 的那几套，与后端
+   * `0014_backfill_emergency_template_priority.EMERGENCY_TEMPLATES` 的签名表
+   * 一致。
+   */
+  priority: number;
   nodes: WorkflowNodeTemplate[];
 }
 
@@ -49,6 +68,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "ROUTINE",
     name: "十殿审判流程",
     description: "完整十殿审判，根据罪行裁定轮回",
+    priority: 0,
     nodes: [
       { id: "n1", name: "秦广王 · 分流", court: "第一殿", type: "分流", order: 1 },
       { id: "n2", name: "楚江王 · 初审", court: "第二殿", type: "初审", order: 2 },
@@ -67,6 +87,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "APPEAL",
     name: "申诉审判流程",
     description: "察查司审核 → 原殿复核 → 上级殿 → 酆都大帝终审",
+    priority: 0,
     nodes: [
       { id: "n1", name: "魏征 · 察查司", court: "察查司", type: "申诉受理", order: 1 },
       { id: "n2", name: "原殿阎王 · 复核", court: "原审判殿", type: "原殿复核", order: 2 },
@@ -79,6 +100,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "CROSS_REALM",
     name: "跨域审判流程",
     description: "涉及多地区协调的复杂案件",
+    priority: 0,
     nodes: [
       // type 是「案件分类」而不是「分流」，而且这不是笔误的修正。后端
       // WORKFLOW_TEMPLATES 里这个同名节点记作 NodeType.EVALUATION，而
@@ -97,6 +119,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "SPECIAL",
     name: "枉死城流程",
     description: "冤死灵魂申诉 → 城隍/地藏王处理",
+    priority: 0,
     nodes: [
       { id: "n1", name: "枉死城登记", court: "枉死城", type: "登记", order: 1 },
       { id: "n2", name: "城隍申诉审理", court: "城隍", type: "申诉", order: 2 },
@@ -111,6 +134,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "SPECIAL",
     name: "阿鼻地狱流程",
     description: "五逆十恶直接入阿鼻地狱，永不轮回",
+    priority: 0,
     nodes: [
       { id: "n1", name: "罪行核定", court: "第一殿", type: "罪行评定", order: 1 },
       { id: "n2", name: "阿鼻地狱入狱", court: "阿鼻地狱", type: "入狱执行", order: 2 },
@@ -121,6 +145,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "ROUTINE",
     name: "直送轮回流程",
     description: "大善人(功德≥500)直接轮回",
+    priority: 0,
     nodes: [
       { id: "n1", name: "功德核定", court: "第一殿", type: "功德评定", order: 1 },
       { id: "n2", name: "轮回分流", court: "第十殿", type: "轮回分流", order: 2 },
@@ -152,6 +177,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "SPECIAL",
     name: "紧急审判流程",
     description: "特殊紧急案件直达酆都",
+    priority: 1,
     nodes: [
       { id: "n1", name: "紧急受理", court: "酆都", type: "紧急受理", order: 1 },
       { id: "n2", name: "酆都大帝直审", court: "酆都", type: "直审", order: 2 },
@@ -190,6 +216,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "ROUTINE",
     name: "末日审判流程",
     description: "基督的私审判与公审判；米迦勒引领，不作裁断",
+    priority: 0,
     nodes: [
       // 私审判：CCC 1021-1022 ——「人在死亡的一刻…在一个把他的一生交付基督的
       // 私审判中，即时领受永远的报应」。这是死时发生的第一次、也是唯一一次
@@ -212,6 +239,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "APPEAL",
     name: "天堂申诉流程",
     description: "申诉呈至基督台前；天使不构成审级",
+    priority: 0,
     nodes: [
       // 受理是一个动作，不是一位天使。原来的「Gabriel · 受理」把传信天使
       // 当成了亡魂案件的受理者（见本节顶部）。
@@ -231,6 +259,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     name: "希腊冥界流程",
     // 依据：柏拉图《高尔吉亚篇》524a（Perseus/Loeb W.R.M. Lamb 公版英译）。
     description: "柏拉图《高尔吉亚篇》524a：岔路口草地上的分流审判",
+    priority: 0,
     nodes: [
       // 依据：柏拉图《高尔吉亚篇》524a —— 审判在「the meadow at the dividing of
       // the road, whence are the two ways leading, one to the Isles of the
@@ -263,6 +292,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "SPECIAL",
     name: "地狱圈层流程",
     description: "九层地狱罪行分类",
+    priority: 0,
     nodes: [
       // 依据：但丁《地狱篇》V.4-15（Longfellow 公版英译）——「There standeth
       // Minos horribly, and snarls; / Examines the transgressions at the
@@ -290,6 +320,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "ROUTINE",
     name: "紧急审判流程",
     description: "紧急队列仍由基督审判——没有可以升级到的第二位审判者",
+    priority: 1,
     nodes: [
       { id: "n1", name: "紧急受理", court: "天堂", type: "紧急受理", order: 1 },
       // 队列的紧急程度是本系统的调度概念，改变不了谁审判：约 5:22 把审判全给了
@@ -304,6 +335,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "ROUTINE",
     name: "心脏称重流程",
     description: "完整杜阿特审判，心脏与羽毛称重",
+    priority: 0,
     nodes: [
       // 全流程发生在**两真之殿（Hall of Two Truths）**，不在芦苇原。
       // 依据：Budge《亚尼纸草》1895 图版 III–IV（pp. 255–259，公版）；大英博物馆
@@ -355,6 +387,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "APPEAL",
     name: "埃及申诉流程",
     description: "奥西里斯委员会重审",
+    priority: 0,
     nodes: [
       // 伊西斯与奈芙蒂斯立于奥西里斯宝座之后，在**两真之殿**内（Budge/亚尼
       // 图版 IV：「Behind him stand Nephthys on his right hand and Isis on his
@@ -370,6 +403,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "SPECIAL",
     name: "死后世界分流",
     description: "根据生前功德分流",
+    priority: 0,
     nodes: [
       // 分流的**裁定**在两真之殿作出；芦苇原只是通过者的去向。n2/n3 是同一个
       // 判决的两条分支，不是两个先后步骤。
@@ -404,6 +438,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "DIVINE_TRIAL",
     name: "神判流程",
     description: "神明直接审判",
+    priority: 0,
     nodes: [
       // 荷鲁斯不作任何初审。他在称量**之后**牵着已获判无罪的亡者的手，把他引入
       // 奥西里斯的神龛——依据：Budge/亚尼 图版 IV「the hawk-headed god Horus,
@@ -429,6 +464,7 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
     caseType: "DIVINE_TRIAL",
     name: "紧急审判流程",
     description: "神庙紧急处置",
+    priority: 1,
     nodes: [
       { id: "n1", name: "紧急受理", court: "埃及", type: "紧急受理", order: 1 },
       // 芦苇原 → 两真之殿：同 EGYPTIAN_ROUTINE n4，奥西里斯在殿内审判，

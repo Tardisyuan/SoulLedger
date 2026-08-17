@@ -42,6 +42,16 @@ export interface WorkflowTemplateInput {
   description: string;
   civilization: "CHINESE" | "EUROPEAN" | "EGYPTIAN";
   case_type: string;
+  /**
+   * 本模板默认的急缓：0=普通, 1=紧急, 2=危急。对应后端
+   * `WorkflowTemplate.priority`，是 `ApprovalWorkflow.priority` 的默认值——
+   * 建流程时调用方没有显式指定，就落到这个值。
+   *
+   * 它必须在 POST 的 body 里，否则 DRF 会把这个键**静默丢掉**并照样答 201：
+   * 预设里写着 `priority: 1` 的三套「紧急审判流程」会存成 0，而没有任何地方
+   * 会报错。
+   */
+  priority: number;
   nodes: TemplateNode[];
 }
 
@@ -128,6 +138,7 @@ export default function WorkflowEditor({
   const courtCodeId = `${formId}-court-code`;
   const approverTypeId = `${formId}-approver-type`;
   const approverRoleId = `${formId}-approver-role`;
+  const templatePriorityId = `${formId}-template-priority`;
 
   // State
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -141,6 +152,8 @@ export default function WorkflowEditor({
   const [templateDescription, setTemplateDescription] = useState("");
   const [templateCiv, setTemplateCiv] = useState<"CHINESE" | "EUROPEAN" | "EGYPTIAN">("CHINESE");
   const [templateCaseType, setTemplateCaseType] = useState("ROUTINE");
+  // 0=普通 by default, the same floor the model column has.
+  const [templatePriority, setTemplatePriority] = useState(0);
 
   // Load existing template if editing
   const { data: existingTemplate } = useQuery({
@@ -172,6 +185,10 @@ export default function WorkflowEditor({
         setTemplateCiv(civ);
       }
       setTemplateCaseType(existingTemplate.case_type || "ROUTINE");
+      // `?? 0`, not `|| 0`: they agree today, but `||` would also swallow a
+      // genuine 0 if the scale ever grew a falsy member, and reading a stored
+      // priority is exactly the place a silent 0 costs the most.
+      setTemplatePriority(existingTemplate.priority ?? 0);
 
       const flowNodes = (existingTemplate.nodes || []).map(
         (n: TemplateNode, idx: number) => ({
@@ -218,6 +235,11 @@ export default function WorkflowEditor({
         setTemplateCiv(civ);
       }
       setTemplateCaseType(initialTemplateData.case_type || initialTemplateData.caseType || "ROUTINE");
+      // The preset's own default urgency — `priority: 1` on the three
+      // 紧急审判流程 presets. Without this line the editor would open them at 0
+      // and save them back at 0, which is the value the whole column exists to
+      // stop being the only expressible one.
+      setTemplatePriority(initialTemplateData.priority ?? 0);
 
       const nodesData = initialTemplateData.nodes_json || initialTemplateData.nodes || [];
       const flowNodes = nodesData.map(
@@ -286,6 +308,7 @@ export default function WorkflowEditor({
         description: templateDescription,
         civilization: templateCiv,
         case_type: templateCaseType,
+        priority: templatePriority,
         nodes: getTemplateNodes(),
       });
     },
@@ -412,10 +435,11 @@ export default function WorkflowEditor({
       description: templateDescription,
       civilization: templateCiv,
       case_type: templateCaseType,
+      priority: templatePriority,
       nodes: getTemplateNodes(),
     };
     saveMutation.mutate(templateData);
-  }, [templateName, templateDescription, templateCiv, templateCaseType, getTemplateNodes, saveMutation]);
+  }, [templateName, templateDescription, templateCiv, templateCaseType, templatePriority, getTemplateNodes, saveMutation]);
 
   // Node type options
   const nodeTypeOptions = [
@@ -430,6 +454,16 @@ export default function WorkflowEditor({
     { value: "ROLE", label: t("workflow.approver_types.ROLE") },
     { value: "ACTOR", label: t("workflow.approver_types.ACTOR") },
     { value: "SYSTEM", label: t("workflow.approver_types.SYSTEM") },
+  ];
+
+  // 三档急缓的文案复用 `workflow.detail.*`——`app/workflow/[id]/page.tsx` 用同一
+  // 组键把 `ApprovalWorkflow.priority` 的 0/1/2 显示成普通/紧急/危急，三份 bundle
+  // (en / zh-Hans / egy) 都已有这四个键。这里说的是同一根尺子的同一个刻度，新造一
+  // 组平行文案会让同一个 1 在模板页和流程页读起来不一样。
+  const priorityOptions = [
+    { value: 0, label: t("workflow.detail.normal") },
+    { value: 1, label: t("workflow.detail.urgent") },
+    { value: 2, label: t("workflow.detail.critical") },
   ];
 
   return (
@@ -471,6 +505,19 @@ export default function WorkflowEditor({
             <option value="HERESY_TRIAL">{t("workflow.case_types.HERESY_TRIAL")}</option>
             <option value="HEART_WEIGHING">{t("workflow.case_types.HEART_WEIGHING")}</option>
             <option value="DIVINE_TRIAL">{t("workflow.case_types.DIVINE_TRIAL")}</option>
+          </select>
+          <select
+            id={templatePriorityId}
+            value={templatePriority}
+            onChange={(e) => setTemplatePriority(Number(e.target.value))}
+            aria-label={t("workflow.detail.priority")}
+            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+          >
+            {priorityOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         </div>
 

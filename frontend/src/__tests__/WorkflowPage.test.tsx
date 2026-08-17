@@ -61,8 +61,23 @@ jest.mock("@/src/contexts/I18nContext", () => ({
 }));
 
 jest.mock("@/src/components/charts/LazyWorkflowEditor", () => ({
-  LazyWorkflowEditor: ({ templateId }: { templateId?: string }) => (
-    <div data-testid="editor">{templateId ?? "new"}</div>
+  // `initialTemplateData.priority` is rendered, not just accepted: the preset's
+  // template-level urgency has to survive the hand-off into the editor, and a
+  // stub that swallowed it would keep the case below green while the three
+  // 紧急审判流程 presets opened — and saved — as ordinary ones.
+  LazyWorkflowEditor: ({
+    templateId,
+    initialTemplateData,
+  }: {
+    templateId?: string;
+    initialTemplateData?: { priority?: number };
+  }) => (
+    <div data-testid="editor">
+      {templateId ?? "new"}
+      <span data-testid="editor-priority">
+        {initialTemplateData ? String(initialTemplateData.priority) : "none"}
+      </span>
+    </div>
   ),
 }));
 
@@ -431,6 +446,30 @@ describe("WorkflowPage editor tab", () => {
     fireEvent.click(screen.getByText("common.edit"));
 
     expect(screen.getByTestId("editor")).toHaveTextContent("7");
+  });
+
+  it("hands the preset's own priority to the editor", async () => {
+    // 紧急审判流程 (CHINESE_EMERGENCY) carries `priority: 1`. Dropping it here
+    // would make the editor open at 0 and POST 0, so `WorkflowTemplate.priority`
+    // would exist and no preset could ever set it.
+    renderPage();
+
+    await screen.findByText("workflow.predefined_templates");
+    fireEvent.click(screen.getAllByText("紧急审判流程")[0]);
+    fireEvent.click(screen.getByText("common.edit"));
+
+    expect(screen.getByTestId("editor-priority")).toHaveTextContent("1");
+  });
+
+  it("hands an ordinary preset's priority through as 0, not as undefined", async () => {
+    // Absence: the case above would also pass if `priority` were hardcoded to
+    // 1 on the way into the editor.
+    renderPage();
+
+    await screen.findByText("workflow.predefined_templates");
+    fireEvent.click(screen.getByText("common.edit"));
+
+    expect(screen.getByTestId("editor-priority")).toHaveTextContent("0");
   });
 
   it("returns to the template list when the editor tab is left", async () => {

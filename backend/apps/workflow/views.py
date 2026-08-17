@@ -282,7 +282,15 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
 
         case_type = request.data.get("case_type")
         is_appeal = request.data.get("is_appeal", False)
-        priority = request.data.get("priority", 0)
+        # `.get("priority")`, NOT `.get("priority", 0)`. The default turned every
+        # request that omitted the field into an explicit "normal", which
+        # `WorkflowService._resolve_priority` cannot tell from a caller who
+        # actually asked for 0 — so the instance-level value would have won
+        # every time and `WorkflowTemplate.priority` would have had no effect
+        # through the only endpoint that creates workflows. Absent now arrives
+        # as None ("not specified") and falls through to the template; a sent
+        # `"priority": 0` still arrives as 0 and still wins.
+        priority = request.data.get("priority")
 
         try:
             workflow = WorkflowService.create_from_judgment(

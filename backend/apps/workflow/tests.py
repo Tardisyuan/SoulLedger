@@ -1207,6 +1207,36 @@ class TestServiceCreatedNodeApproverIdentity:
 
 
 # -- The backfill basis, cross-checked ----------------------------------------
+#: Template nodes that name an approver but have no row in
+#: `0011_backfill_ten_court_approvers`, and why each one needs none.
+#:
+#: Read `TestTemplateApproverBasis.test_the_migration_table_matches_the_templates`
+#: for what this list is allowed to do. In short: `0011` gave already-stored
+#: `ApprovalNode` rows the approver their template names. A node can only have
+#: stored copies if a workflow of its `(civilization, case_type)` pair could
+#: ever be built — and for these five that pair was unreachable through both
+#: doors until the same change that added them.
+NODES_ADDED_AFTER_THE_BACKFILL = {
+    # (EUROPEAN, APPEAL) and (EGYPTIAN, APPEAL). Until `8b5aa00`
+    # `VALID_CASE_TYPES_BY_CIVILIZATION` carried APPEAL for the Chinese only,
+    # so `create_from_judgment` raised ValueError for both pairs; and
+    # `create_appeal_workflow`, which did not validate, had no template for
+    # them and so wrote a workflow with no nodes at all. Either way no
+    # ApprovalNode has ever been stored under these names, so there is nothing
+    # for a backfill migration to match — one written for them would update
+    # zero rows by construction, and the comparison would then be the template
+    # against a copy of itself.
+    "Michael · 引领呈上": "(EUROPEAN, APPEAL) was unbuildable before 8b5aa00; "
+                      "no stored node has ever carried this name.",
+    "Christ · 终审": "Same template, same reason.",
+    "Isis · 受理": "(EGYPTIAN, APPEAL), same reason.",
+    "Nephthys · 复核": "Same template, same reason.",
+    "Osiris · 终审": "Same template, same reason. Note this is NOT the "
+                  "heart-weighing template's 「欧西里斯 · 终审」, which 0011 did "
+                  "freeze — different string, different node, different court.",
+}
+
+
 @pytest.mark.django_db
 class TestTemplateApproverBasis:
     """`WORKFLOW_TEMPLATES` and `workflow/0011`'s frozen table must not drift.
@@ -1273,6 +1303,29 @@ class TestTemplateApproverBasis:
         property it still holds is the one it was written for: no row the
         migration will write may name an actor, court or order that no template
         node has.
+
+        **And the other direction is held modulo `NODES_ADDED_AFTER_THE_BACKFILL`.**
+        A template node that names an actor but has no row in `0011` used to
+        fail here, on the reading that such a node's already-stored copies were
+        never given their approver. That reading holds for every node whose
+        `(civilization, case_type)` pair a workflow could actually be built
+        for — the ten courts and the heart weighing — whether or not any such
+        row happens to exist in a given database; `0011` is written to match
+        what it finds and to do nothing when it finds nothing.
+
+        It is *not* right for a node whose pair could not be reached **at all**
+        before the node existed. There, "no stored copies" is not a measurement
+        that might come out differently on another database, it is a property
+        of the code that was shipped: both doors refused or emptied the pair.
+        A backfill written for such a node would match zero rows by
+        construction, and this test would then be comparing the template
+        against a copy of itself.
+
+        So such nodes are listed, with the reason, rather than either failing
+        here or being waved through by loosening the comparison to one
+        direction. The list is guarded below: an entry may not name anything
+        `0011` actually froze (that would let a frozen row silently vanish),
+        and may not name anything no template carries (a stale excuse).
         """
         from importlib import import_module
 
@@ -1297,6 +1350,12 @@ class TestTemplateApproverBasis:
             for name, court, order, _civ, actor in rows
         }
 
+        exempt = {
+            entry for entry in from_templates
+            if entry[0] in NODES_ADDED_AFTER_THE_BACKFILL
+        }
+        from_templates = from_templates - exempt
+
         assert from_migration == from_templates, (
             "the migration's frozen table and WORKFLOW_TEMPLATES disagree.\n"
             f"  only in the migration: {sorted(from_migration - from_templates)}\n"
@@ -1313,6 +1372,22 @@ class TestTemplateApproverBasis:
             for template in WORKFLOW_TEMPLATES.values()
             for node in template["nodes"]
         }
+
+        # The exemption list, held from both ends. Without these two an entry
+        # here could excuse a frozen row that had gone missing from the
+        # templates, or go on excusing a node that no longer exists.
+        for name in sorted(NODES_ADDED_AFTER_THE_BACKFILL):
+            assert name not in frozen, (
+                f"{name!r} is listed as postdating 0011, but 0011 froze a row "
+                f"for it. The list would then be hiding a real disagreement "
+                f"between the migration and the template."
+            )
+            assert name in current, (
+                f"{name!r} is listed as postdating 0011 but no template "
+                f"carries it — a stale exemption, which silently excuses the "
+                f"next node that happens to be named this."
+            )
+
         for old, new, _court, _order, _old_type, _new_type in renames:
             assert new in current, (
                 f"0012 renames a node to {new!r}, which no template carries. "

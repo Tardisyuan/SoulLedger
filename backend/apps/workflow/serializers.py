@@ -51,7 +51,18 @@ class WorkflowTemplateNodeSerializer(serializers.Serializer):
 
 
 class WorkflowTemplateSerializer(serializers.ModelSerializer):
-    """Serializer for WorkflowTemplate."""
+    """Serializer for WorkflowTemplate.
+
+    ``priority`` is in ``fields`` deliberately and the omission would be
+    silent: DRF drops unknown keys from ``request.data`` without complaint, so
+    a template POSTed with ``"priority": 1`` from the editor would have been
+    stored as 0 and answered 201, and every workflow built from it would have
+    come out normal-priority with nothing anywhere saying why. That failure
+    mode — an accepted request whose payload was quietly discarded — is the
+    reason this field exists at the API layer at all, and
+    ``tests/test_workflow_template_priority.py`` POSTs a 1 and reads the row
+    back rather than trusting the 201.
+    """
     nodes = WorkflowTemplateNodeSerializer(many=True, required=False, source='nodes_json')
 
     class Meta:
@@ -62,6 +73,7 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
             "description",
             "civilization",
             "case_type",
+            "priority",
             "is_active",
             "nodes",
             "created_at",
@@ -90,6 +102,11 @@ class WorkflowTemplateListSerializer(serializers.ModelSerializer):
             "description",
             "civilization",
             "case_type",
+            # Unlike `nodes`, one integer per row is not the payload this
+            # serializer exists to avoid — and the list screen is where a user
+            # picks which template to apply, so 「this one is for urgent
+            # cases」 has to be visible before the detail fetch.
+            "priority",
             "is_active",
             "created_at",
             "node_count",

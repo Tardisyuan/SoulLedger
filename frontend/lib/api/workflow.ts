@@ -81,6 +81,13 @@ export interface WorkflowTemplateListItem {
   description: string;
   civilization: string;
   case_type: string;
+  /**
+   * The template's default urgency — 0=normal, 1=urgent, 2=critical, the same
+   * scale as `ApprovalWorkflow.priority`, which is what it is a default for.
+   * On both serializers (list *and* detail) because the list screen is where a
+   * template is picked.
+   */
+  priority: number;
   is_active: boolean;
   created_at: string;
   /** How many nodes this template has — `len(nodes_json)` on the backend. */

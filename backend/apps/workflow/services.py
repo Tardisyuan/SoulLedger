@@ -33,8 +33,8 @@ from apps.workflow.node_shape import normalize_template_node
 #
 # THIS IS NOT THE SAME TABLE AS THE FRONTEND PRESETS, AND THAT IS DELIBERATE.
 # ``frontend/src/config/workflow-templates.ts`` holds seventeen presets keyed by
-# name (``CHINESE_ROUTINE``, ``EUROPEAN_GREEK``, …); this dict holds six keyed by
-# ``(civilization, case_type)``. Neither is generated from the other and their
+# name (``CHINESE_ROUTINE``, ``EUROPEAN_GREEK``, …); this dict holds eight keyed
+# by ``(civilization, case_type)``. Neither is generated from the other and their
 # node sets differ — the frontend has Greek, Dante and 枉死城 flows this file has
 # never had, this file has the two European ecclesiastical flows the frontend has
 # never had, and a European ROUTINE judgment falls through *here* to the generic
@@ -45,6 +45,16 @@ from apps.workflow.node_shape import normalize_template_node
 # code. The one rule both must obey is that a node naming a person must name a
 # person the cast can supply; ``tests/test_workflow_template_cast.py`` asserts it
 # across both.
+#
+# TWO OF THE EIGHT ARE PORTS OF A PRESET, WHICH IS NEW AND IS NOT A CHANGE OF
+# POLICY. ``(EUROPEAN, APPEAL)`` and ``(EGYPTIAN, APPEAL)`` carry the same node
+# labels as ``EUROPEAN_APPEAL`` / ``EGYPTIAN_APPEAL`` above, because without an
+# entry here an appeal for those two civilizations resolved to nothing at all —
+# see ``WorkflowService._resolve_template``. Sharing the labels is what puts
+# them under ``tests/test_workflow_preset_node_types.py::
+# test_the_two_sides_agree_on_a_shared_node_s_type``, so the two tables' reading
+# of those steps is compared rather than assumed. The other six entries stay
+# spelled this file's own way; the two tables are still two tables.
 WORKFLOW_TEMPLATES = {
     # Chinese ten courts.
     #
@@ -104,6 +114,71 @@ WORKFLOW_TEMPLATES = {
             {"name": "忏悔赦免审核", "court": "Confessional", "type": NodeType.EVALUATION, "order": 1},
             {"name": "炼狱净化评估", "court": "Purgatory Court", "type": NodeType.TRIAL, "order": 2},
             {"name": "天堂准入终审", "court": "Heaven Gate", "type": NodeType.FINAL, "order": 3},
+        ],
+    },
+    # European appeal
+    #
+    # ADDED BECAUSE `create_appeal_workflow` HAD NOTHING TO BUILD FROM HERE.
+    # Until this entry existed, `WORKFLOW_TEMPLATES.get((EUROPEAN, APPEAL))`
+    # answered None, the node loop ran zero times, and a European appeal came
+    # out as an ApprovalWorkflow with no nodes at all — PENDING with
+    # `current_node=None`, which cannot be advanced, approved or escalated.
+    # `create_from_judgment` never had that failure because it ends in a
+    # generic single-node fallback; that fallback is now shared (see
+    # `_resolve_template`), so the stuck row is impossible either way. This
+    # entry is the *other* half: a generic 审批节点 is movable but says nothing,
+    # and 「天堂申诉流程」 is a flow this repository already had a sourced
+    # version of.
+    #
+    # THE CONTENT IS THE FRONTEND PRESET, NOT A NEW READING. `EUROPEAN_APPEAL`
+    # in `frontend/src/config/workflow-templates.ts` carries the sourcing —
+    # 约 5:22 / 林后 5:10 for Christ as the only judge, the Requiem offertory's
+    # `repraesentet` for Michael presenting rather than deciding, and the
+    # deletion of the invented 天使议会 复核 layer. Nothing here is decided
+    # afresh; the node labels are copied character for character, which is what
+    # puts these three nodes under
+    # `tests/test_workflow_preset_node_types.py::test_the_two_sides_agree_on_a_shared_node_s_type`
+    # — the two tables' readings of them are now compared rather than merely
+    # written the same way twice.
+    #
+    # The court column is this file's own spelling (English, like Diocese and
+    # Vatican above) rather than the preset's 天堂: courts are not compared
+    # across the two tables, and the Egyptian block below already shows that
+    # each table keeps its own column conventions while agreeing about the
+    # reading.
+    (Civilization.EUROPEAN, CaseType.APPEAL): {
+        "name": "天堂申诉流程",
+        "nodes": [
+            {"name": "申诉受理", "court": "Heaven", "type": NodeType.APPEAL, "order": 1},
+            {"name": "Michael · 引领呈上", "court": "Heaven", "type": NodeType.EXECUTION, "order": 2, "actor": "Michael"},
+            {"name": "Christ · 终审", "court": "Heaven", "type": NodeType.FINAL, "order": 3, "actor": "Christ"},
+        ],
+    },
+    # Egyptian appeal
+    #
+    # Same reason and same provenance as the European appeal above: without it
+    # `create_appeal_workflow` built an Egyptian appeal with no nodes. The
+    # content is `EGYPTIAN_APPEAL` from the preset file, whose sourcing is
+    # Budge/Ani Plate IV — Isis and Nephthys stand behind Osiris' throne *in
+    # the Hall of Two Truths*, not in the Field of Reeds and not in a generic
+    # 「埃及」.
+    #
+    # The labels are the preset's English spellings (`Isis`, `Nephthys`,
+    # `Osiris`) rather than the Chinese ones the heart-weighing template above
+    # uses (阿努比斯, 欧西里斯). That is a deliberate difference between two
+    # blocks of the same file, so: the Chinese spellings up there are frozen by
+    # `0011`/`0012`, which wrote them into live rows and must keep naming them
+    # that way. These nodes are new, nothing has ever been stored under them,
+    # and copying the preset's spelling is what lets the two tables be compared
+    # node-for-node instead of only civilization-for-civilization. Either
+    # spelling resolves — `Actor.name` for the Egyptian cast *is* the English
+    # form, and 欧西里斯 resolves through EGYPTIAN_ACTOR_ALIASES.
+    (Civilization.EGYPTIAN, CaseType.APPEAL): {
+        "name": "埃及申诉流程",
+        "nodes": [
+            {"name": "Isis · 受理", "court": "Hall of Two Truths", "type": NodeType.APPEAL, "order": 1, "actor": "Isis"},
+            {"name": "Nephthys · 复核", "court": "Hall of Two Truths", "type": NodeType.TRIAL, "order": 2, "actor": "Nephthys"},
+            {"name": "Osiris · 终审", "court": "Hall of Two Truths", "type": NodeType.FINAL, "order": 3, "actor": "Osiris"},
         ],
     },
     # Egyptian heart weighing
@@ -199,6 +274,15 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
     "十殿联审": "Ten kings sitting jointly. approver_actor is a single FK; "
              "picking one of the ten would misrecord a joint session as one "
              "king's decision.",
+    # 天堂申诉流程. Shared with the preset, which excuses the same name for the
+    # same reason — `tests/test_workflow_template_cast.py::
+    # test_the_two_sides_excuse_the_same_shared_nodes` asserts the two sides do
+    # not disagree about it.
+    "申诉受理": "Names the act of accepting an appeal, not a person. It used to "
+             "read 「Gabriel · 受理」 in the preset; Gabriel announces to the "
+             "living (Dan 8:16, 9:21; Lk 1:11-38) and does not receive the "
+             "dead's cases — see the European section of "
+             "frontend/src/config/workflow-templates.ts.",
     "主教座堂初审": "An institution (Diocese). EUROPEAN_ACTORS has no bishop.",
     "教省复审": "An institution (Archdiocese).",
     "罗马教廷终审": "An institution (the Curia). Naming a pope would be inventing "
@@ -501,12 +585,222 @@ class WorkflowService:
         return None
 
     @classmethod
+    def _generic_template(cls, civilization: str) -> dict:
+        """The one-node flow a pair with no template of its own falls back to.
+
+        It exists so that "no template" is a flow nobody can *read* anything
+        into rather than a flow nobody can *move*: 审批节点 designates nobody
+        (it is listed in ``TEMPLATE_NODES_WITHOUT_AN_APPROVER``) and so has to
+        go through the audited ``escalate``, which is a visible cost. A
+        node-less workflow, by contrast, is silently stuck — see
+        ``_resolve_template``.
+        """
+        return {
+            "name": f"{civilization} 审批流程",
+            "nodes": [
+                {"name": "审批节点", "court": civilization, "type": NodeType.TRIAL, "order": 1},
+            ],
+        }
+
+    @classmethod
+    def _resolve_template(
+        cls, civilization: str, case_type: str, tenant
+    ) -> tuple[dict, int | None]:
+        """The template for this pair, and the priority it declares (if any).
+
+        **BOTH ENTRY POINTS RESOLVE A TEMPLATE THROUGH THIS METHOD, AND THAT IS
+        THE POINT OF IT EXISTING.** They used to resolve one in two different
+        ways, and the difference was not a nuance:
+
+        * ``create_from_judgment`` looked in the database first, then in
+          ``WORKFLOW_TEMPLATES``, then fell back to a generic single node;
+        * ``create_appeal_workflow`` looked *only* in ``WORKFLOW_TEMPLATES``
+          and had no fallback at all.
+
+        ``WORKFLOW_TEMPLATES`` carried an ``APPEAL`` entry for the Chinese
+        only, so a European or Egyptian appeal raised through the second door
+        got an ``ApprovalWorkflow`` with **zero nodes**: ``status=PENDING``,
+        ``current_node=None``, and therefore un-advanceable (``advance_to_next``
+        finds nothing), un-approvable (``approve_node`` 404s on "Node not
+        found") and un-escalatable (``escalate`` needs a next node too). A row
+        that can only be deleted.
+
+        Two independent causes, and both are closed here rather than one:
+        the *structural* one is that a second lookup existed at all, and the
+        *content* one is that the hardcoded table had no European or Egyptian
+        appeal to find. ``WORKFLOW_TEMPLATES`` now carries both — ported from
+        the presets, which were already sourced — so those two appeals get
+        their own flows rather than a generic 审批节点 that moves but says
+        nothing.
+
+        This was a latent defect, not an outage: ``create_appeal_workflow`` has
+        no production caller anywhere in the backend (only tests reach it). It
+        is repaired because the two doors are meant to answer the same question
+        the same way — the same reason ``8b5aa00`` gave that method the
+        case-type validation this one already ran.
+
+        **The second element is the template's own priority**, or ``None`` when
+        the template that won has nothing to say about it. Only a stored
+        ``WorkflowTemplate`` row can say anything: ``WORKFLOW_TEMPLATES`` and
+        the generic fallback are code, and a hardcoded urgency there would be a
+        default nobody could see or change. ``None`` is not ``0`` —
+        ``_resolve_priority`` distinguishes "this template asks for normal" from
+        "this template does not say", and only the first outranks a floor.
+
+        A DB template only wins if it actually defines nodes. Without that
+        check an active template with ``nodes_json=[]`` shadows the hardcoded
+        default and yields a workflow with no steps — which is exactly what
+        happened: seven empty templates left over from testing sat on
+        CHINESE/ROUTINE, so every Chinese routine judgment silently got an
+        empty shell instead of 十殿审判流程. An unconfigured template should
+        fall through to something that works, not override it.
+
+        The query is scoped to ``tenant``. ``WorkflowTemplate`` is a genuinely
+        per-tenant resource (``WorkflowTemplateViewSet`` enforces DataScope +
+        tenant on every other path, and the model even used to carry a
+        ``unique_workflow_template_tenant_name`` constraint) — it is not a
+        shared/global resource the way ``Menu`` or the RBAC Permission/Role
+        tables turned out to be. Without this filter, a tenant with no custom
+        template for the pair could silently pick up another tenant's active
+        template instead of falling through to the hardcoded default.
+
+        **The returned template always has at least one node.** That is the
+        invariant the callers rely on to be unable to build a node-less
+        workflow, and ``tests/test_workflow_appeal_nodes.py`` asserts it over
+        every ``(civilization, case_type)`` pair the validator admits — not
+        only the ones that happen to have entries today.
+        """
+        try:
+            db_template = (
+                WorkflowTemplate.objects.filter(
+                    civilization=civilization,
+                    case_type=case_type,
+                    is_active=True,
+                    tenant=tenant,
+                )
+                .exclude(nodes_json=[])
+                .first()
+            )
+            if db_template and db_template.nodes_json:
+                return (
+                    {"name": db_template.name, "nodes": db_template.nodes_json},
+                    db_template.priority,
+                )
+        except Exception:
+            pass
+
+        template = WORKFLOW_TEMPLATES.get((civilization, case_type))
+        if template and template["nodes"]:
+            return template, None
+
+        return cls._generic_template(civilization), None
+
+    @classmethod
+    def _resolve_priority(
+        cls, explicit: int | None, template_priority: int | None, floor: int
+    ) -> int:
+        """Which of the two priorities wins, in one place.
+
+        **Explicitly passed instance-level priority > template default > the
+        entry point's floor.** The case that forces the argument to be
+        ``int | None`` rather than ``int`` is the first ``>``: with a
+        ``priority: int = 0`` signature, "the caller asked for normal" and "the
+        caller said nothing" arrive as the same value, so honouring the
+        template would have silently overridden every explicit ``0`` and
+        honouring the argument would have made the template column dead on
+        arrival. Only ``None`` distinguishes them, so ``None`` is the default
+        and ``0`` means somebody chose it.
+
+        The same reasoning is why ``views.ApprovalWorkflowViewSet``
+        ``.create_from_judgment`` no longer reads
+        ``request.data.get("priority", 0)``: that call turned *every* request
+        that omitted the field into an explicit 0, which would have won here
+        and left the template column with no effect whatsoever through the one
+        endpoint that creates workflows. It now reads ``.get("priority")``, so
+        an absent field arrives as ``None`` and a sent ``0`` still arrives as
+        ``0``.
+
+        ``floor`` is the entry point's own answer when nobody else has one: 0
+        for ``create_from_judgment``, 1 for ``create_appeal_workflow``. The
+        second is not a new decision — that method's signature has always
+        defaulted to 1, on the reading that raising an appeal is itself the
+        urgent act — and keeping it means this change does not quietly
+        de-prioritise every appeal ever created.
+        """
+        if explicit is not None:
+            return explicit
+        if template_priority is not None:
+            return template_priority
+        return floor
+
+    @classmethod
+    def _create_nodes(cls, workflow: ApprovalWorkflow, template: dict, civilization: str):
+        """Create ``template``'s nodes on ``workflow``; return the first one.
+
+        Shared by both entry points for the same reason ``_resolve_template``
+        is: the two loops were near-identical — same fields, same verdicts, same
+        approver resolution — differing only in which template they were handed
+        and in whether they ran at all. A duplicate is where the next divergence
+        goes, and the divergence that had already happened was the whole defect.
+
+        Nodes are normalized first, because ``template["nodes"]`` is one of two
+        shapes — a stored ``nodes_json`` is what the API serializer wrote,
+        ``WORKFLOW_TEMPLATES`` and the fallback are ``name/court/type/order`` —
+        and this read only the second, so ``node_def["name"]`` raised KeyError
+        (a 500 from ``apps/judgment/services.py:189``) for every template a user
+        had actually saved. ``apps/workflow/node_shape.py`` has the rest.
+
+        Raises:
+            ValueError: if the template produced no nodes at all. By
+                construction ``_resolve_template`` cannot return an empty one,
+                so this is a guard against a *future* caller passing a template
+                from somewhere else — it is the last place a node-less workflow
+                could still be built, and it refuses inside the caller's
+                transaction so nothing half-built is left behind.
+        """
+        first_node = None
+        for position, raw_node_def in enumerate(template["nodes"], start=1):
+            node_def = normalize_template_node(raw_node_def, position)
+            node = ApprovalNode.objects.create(
+                workflow=workflow,
+                node_name=node_def["node_name"],
+                node_order=node_def["node_order"],
+                node_type=node_def["node_type"],
+                court_code=node_def["court_code"],
+                status=NodeStatus.PENDING,
+                required_verdicts=["PASSED", "FAILED", "CONFIRMED", "REJECTED", "SKIPPED"],
+                # Was a hardcoded `approver_type="SYSTEM"`, which is why all 30
+                # nodes in the live database designate nobody and why the
+                # identity check `4ceffe8` added could not refuse a single one
+                # of them. Backfilling the existing rows
+                # (0011_backfill_ten_court_approvers) without fixing this would
+                # have closed the hole for exactly as long as it took someone
+                # to create the next workflow.
+                **cls._resolve_approver(node_def, civilization, workflow.tenant_id),
+            )
+            if first_node is None:
+                first_node = node
+
+        if first_node is None:
+            raise ValueError(
+                f"template {template.get('name')!r} defines no nodes; an "
+                f"approval workflow with no nodes cannot be advanced, approved "
+                f"or escalated. Use WorkflowService._resolve_template, which "
+                f"always answers with at least one node."
+            )
+
+        workflow.current_node = first_node
+        workflow.status = ApprovalWorkflowStatus.IN_PROGRESS
+        workflow.save()
+        return first_node
+
+    @classmethod
     def create_from_judgment(
         cls,
         judgment: Judgment,
         case_type: str | None = None,
         is_appeal: bool = False,
-        priority: int = 0,
+        priority: int | None = None,
     ) -> ApprovalWorkflow | None:
         """
         Create an ApprovalWorkflow instance from a Judgment.
@@ -515,7 +809,13 @@ class WorkflowService:
             judgment: The concluded judgment
             case_type: Override case type (auto-detected from judgment if not provided)
             is_appeal: Whether this is an appeal workflow
-            priority: Workflow priority (0=normal, 1=urgent, 2=critical)
+            priority: Workflow priority (0=normal, 1=urgent, 2=critical).
+                **None means "not specified"**, which is not the same as 0:
+                an unspecified priority falls through to the template's own
+                ``WorkflowTemplate.priority`` and only then to 0, while an
+                explicit 0 wins over the template. See ``_resolve_priority``
+                for why the parameter had to stop defaulting to 0 for the
+                template column to mean anything at all.
 
         Returns:
             Created ApprovalWorkflow or None if no template matches
@@ -542,57 +842,14 @@ class WorkflowService:
         if validation_error:
             raise ValueError(validation_error)
 
-        # Look up template: DB first, then hardcoded fallback.
-        #
-        # A DB template only wins if it actually defines nodes. Without that
-        # check an active template with nodes_json=[] shadows the hardcoded
-        # default and yields a workflow with no steps — which is exactly what
-        # happened: seven empty templates left over from testing sat on
-        # CHINESE/ROUTINE, so every Chinese routine judgment silently got an
-        # empty shell instead of 十殿审判流程. An unconfigured template should
-        # fall through to something that works, not override it.
-        #
-        # The query is also scoped to judgment.tenant. WorkflowTemplate is a
-        # genuinely per-tenant resource (WorkflowTemplateViewSet enforces
-        # DataScope + tenant on every other path, and the model even used to
-        # carry a unique_workflow_template_tenant_name constraint) — it is
-        # not a shared/global resource the way Menu or the RBAC
-        # Permission/Role tables turned out to be. Without this filter, a
-        # tenant with no custom template for (civilization, case_type) could
-        # silently pick up another tenant's active template instead of
-        # falling through to the hardcoded WORKFLOW_TEMPLATES default.
-        template = None
-        try:
-            db_template = (
-                WorkflowTemplate.objects.filter(
-                    civilization=civilization,
-                    case_type=case_type,
-                    is_active=True,
-                    tenant=judgment.tenant,
-                )
-                .exclude(nodes_json=[])
-                .first()
-            )
-            if db_template and db_template.nodes_json:
-                template = {
-                    "name": db_template.name,
-                    "nodes": db_template.nodes_json,
-                }
-        except Exception:
-            pass
-
-        if template is None:
-            template = WORKFLOW_TEMPLATES.get((civilization, case_type))
-
-        # Fallback for unhandled combinations
-        if template is None:
-            # Generic minimal workflow
-            template = {
-                "name": f"{civilization} 审批流程",
-                "nodes": [
-                    {"name": "审批节点", "court": civilization, "type": NodeType.TRIAL, "order": 1},
-                ],
-            }
+        # Look up template: DB first, then the hardcoded table, then a generic
+        # one-node flow. `create_appeal_workflow` calls the same method — see
+        # `_resolve_template` for what the two doors used to do differently and
+        # what that cost.
+        template, template_priority = cls._resolve_template(
+            civilization, case_type, judgment.tenant
+        )
+        priority = cls._resolve_priority(priority, template_priority, floor=0)
 
         with transaction.atomic():
             # Create workflow
@@ -607,41 +864,10 @@ class WorkflowService:
                 tenant=judgment.tenant,
             )
 
-            # Create nodes. Normalized first, because `template["nodes"]` is
-            # one of two shapes — a stored `nodes_json` is what the API
-            # serializer wrote, WORKFLOW_TEMPLATES and the fallback above are
-            # `name/court/type/order` — and this read only the second, so
-            # `node_def["name"]` raised KeyError (a 500 from
-            # apps/judgment/services.py:189) for every template a user had
-            # actually saved. apps/workflow/node_shape.py has the rest.
-            first_node = None
-            for position, raw_node_def in enumerate(template["nodes"], start=1):
-                node_def = normalize_template_node(raw_node_def, position)
-                node = ApprovalNode.objects.create(
-                    workflow=workflow,
-                    node_name=node_def["node_name"],
-                    node_order=node_def["node_order"],
-                    node_type=node_def["node_type"],
-                    court_code=node_def["court_code"],
-                    status=NodeStatus.PENDING,
-                    required_verdicts=["PASSED", "FAILED", "CONFIRMED", "REJECTED", "SKIPPED"],
-                    # Was a hardcoded `approver_type="SYSTEM"`, which is why
-                    # all 30 nodes in the live database designate nobody and
-                    # why the identity check `4ceffe8` added could not refuse a
-                    # single one of them. Backfilling the existing rows
-                    # (0011_backfill_ten_court_approvers) without fixing this
-                    # would have closed the hole for exactly as long as it took
-                    # someone to create the next workflow.
-                    **cls._resolve_approver(node_def, civilization, judgment.tenant_id),
-                )
-                if first_node is None:
-                    first_node = node
-
-            # Set first node as current
-            if first_node:
-                workflow.current_node = first_node
-                workflow.status = ApprovalWorkflowStatus.IN_PROGRESS
-                workflow.save()
+            # Create nodes, and refuse a template that has none — see
+            # `_create_nodes`. Inside the transaction, so a refusal leaves no
+            # half-built workflow behind.
+            cls._create_nodes(workflow, template, civilization)
 
         return workflow
 
@@ -649,13 +875,28 @@ class WorkflowService:
     def create_appeal_workflow(
         cls,
         original_workflow: ApprovalWorkflow,
-        priority: int = 1,
+        priority: int | None = None,
     ) -> ApprovalWorkflow:
         """
         Create an appeal workflow from an existing rejected workflow.
 
+        Args:
+            original_workflow: the workflow being appealed against.
+            priority: as in ``create_from_judgment`` — **None means "not
+                specified"**, and falls through to the stored template's
+                ``WorkflowTemplate.priority`` and then to 1. The floor is 1
+                rather than 0 because this method's signature has always
+                defaulted to 1 (raising an appeal is itself the urgent act);
+                the parameter changed from ``int`` to ``int | None`` so that an
+                explicit ``priority=0`` is now expressible and distinguishable
+                from silence. Every existing caller passing nothing still gets
+                1, and ``tests/test_coverage_boost.py`` still gets 2 for
+                ``priority=2``.
+
         Raises:
-            ValueError: If APPEAL is not valid for the soul's civilization.
+            ValueError: If APPEAL is not valid for the soul's civilization, or
+                if the resolved template defines no nodes (which
+                ``_resolve_template`` makes unreachable — see ``_create_nodes``).
 
         **Why this validates at all.** It did not, and that absence was half of
         the defect the case-type table above records: this method wrote
@@ -679,6 +920,15 @@ class WorkflowService:
         — ``VALID_CASE_TYPES_BY_CIVILIZATION.get(UNKNOWN, set())`` is empty. A
         node-less approval workflow cannot be advanced, approved or escalated,
         so the change replaces a stuck row with the error that explains it.
+
+        **And the node-less workflow this method built for two of the three
+        real civilizations is gone too.** The paragraph above closed the
+        ``UNKNOWN`` case by refusing it; the European and Egyptian cases were
+        not refused — they were *built*, empty, because this method read only
+        ``WORKFLOW_TEMPLATES`` (which had a Chinese appeal and nothing else)
+        and, unlike ``create_from_judgment``, had no generic fallback and never
+        looked at the tenant's stored ``WorkflowTemplate`` rows at all. Both
+        halves are now ``_resolve_template``'s job, which both doors call.
         """
         judgment = original_workflow.judgment
         soul = original_workflow.soul
@@ -689,52 +939,46 @@ class WorkflowService:
         if validation_error:
             raise ValueError(validation_error)
 
-        appeal_workflow = ApprovalWorkflow.objects.create(
-            judgment=judgment,
-            soul=soul,
-            workflow_name=f"申诉: {original_workflow.workflow_name}",
-            case_type=CaseType.APPEAL,
-            priority=priority,
-            status=ApprovalWorkflowStatus.PENDING,
-            is_appeal=True,
-            original_workflow=original_workflow,
-            tenant=judgment.tenant if judgment else None,
+        # The appeal belongs to the tenant the case does. This used to read
+        # `judgment.tenant if judgment else None`, and the `None` half was not
+        # deliberate — `ApprovalWorkflow.judgment` is nullable, and it has to be
+        # for an appeal to be chained at all (the FK is a OneToOne, so every
+        # test that reaches this method builds its original *without* one), so the
+        # common case here wrote `tenant=NULL`: a row no tenant-scoped read
+        # returns, on the same soul whose original workflow does have a tenant.
+        # It also decides which stored templates `_resolve_template` may see, so
+        # leaving it NULL would have made the template lookup below findable
+        # only by an unscoped query. The original workflow's tenant is the one
+        # fact always available here.
+        tenant = judgment.tenant if judgment else original_workflow.tenant
+        template, template_priority = cls._resolve_template(
+            soul.civilization, CaseType.APPEAL, tenant
         )
+        priority = cls._resolve_priority(priority, template_priority, floor=1)
 
-        # Create appeal nodes
-        appeal_template = WORKFLOW_TEMPLATES.get((soul.civilization, CaseType.APPEAL))
-        if appeal_template:
-            first_node = None
-            for position, raw_node_def in enumerate(appeal_template["nodes"], start=1):
-                # Normalized like create_from_judgment, though this loop only
-                # ever sees WORKFLOW_TEMPLATES: reading one spelling here is
-                # what stops a future stored-template lookup, copied from
-                # above, reintroducing the KeyError.
-                node_def = normalize_template_node(raw_node_def, position)
-                node = ApprovalNode.objects.create(
-                    workflow=appeal_workflow,
-                    node_name=node_def["node_name"],
-                    node_order=node_def["node_order"],
-                    node_type=node_def["node_type"],
-                    court_code=node_def["court_code"],
-                    status=NodeStatus.PENDING,
-                    required_verdicts=["PASSED", "FAILED", "CONFIRMED", "REJECTED", "SKIPPED"],
-                    # Same resolution as create_from_judgment. Only 魏征 ·
-                    # 察查司 resolves in this template; the other three name a
-                    # court relative to a case (原殿/上一殿) or a god with no
-                    # Actor row (酆都大帝), so they stay SYSTEM. See
-                    # TEMPLATE_NODES_WITHOUT_AN_APPROVER.
-                    **cls._resolve_approver(
-                        node_def, soul.civilization, appeal_workflow.tenant_id
-                    ),
-                )
-                if first_node is None:
-                    first_node = node
+        # Atomic like create_from_judgment, so that `_create_nodes`' refusal of
+        # a node-less template cannot leave the workflow row behind without
+        # them. Before this, nothing here was transactional because nothing
+        # here could fail — the node loop simply did not run.
+        with transaction.atomic():
+            appeal_workflow = ApprovalWorkflow.objects.create(
+                judgment=judgment,
+                soul=soul,
+                workflow_name=f"申诉: {original_workflow.workflow_name}",
+                case_type=CaseType.APPEAL,
+                priority=priority,
+                status=ApprovalWorkflowStatus.PENDING,
+                is_appeal=True,
+                original_workflow=original_workflow,
+                tenant=tenant,
+            )
 
-            if first_node:
-                appeal_workflow.current_node = first_node
-                appeal_workflow.status = ApprovalWorkflowStatus.IN_PROGRESS
-                appeal_workflow.save()
+            # Same resolution as create_from_judgment, because it is the same
+            # method. In the Chinese appeal template only 魏征 · 察查司
+            # resolves; the other three name a court relative to a case
+            # (原殿/上一殿) or a god with no Actor row (酆都大帝), so they stay
+            # SYSTEM. See TEMPLATE_NODES_WITHOUT_AN_APPROVER.
+            cls._create_nodes(appeal_workflow, template, soul.civilization)
 
         return appeal_workflow
 
