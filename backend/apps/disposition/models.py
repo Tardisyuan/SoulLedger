@@ -63,10 +63,18 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
         default=MemoryResetMechanism.NONE,
     )
     is_eternal = models.BooleanField(default=False)
+    # `null` means no term was recorded, NOT "eternal" — `is_eternal` above is
+    # the column that answers that, and the two disagreed. A Greek FAILED
+    # disposition is is_eternal=False with sentence_years=None, which the old
+    # help_text read as "eternal" while the row beside it said the opposite.
+    # No number is invented to settle it: Republic X's thousand years belong to
+    # a different dialogue than the Gorgias 524a that GR_TARTARUS is seeded
+    # from, and welding the two is the synthesis verify-greek.md §6 warns off.
+    # tests/test_greek_sentence_basis.py pins the gap.
     sentence_years = models.IntegerField(
         null=True,
         blank=True,
-        help_text="Sentence duration in years (null = eternal)",
+        help_text="Sentence duration in years; null = no term recorded (see is_eternal)",
     )
     is_executed = models.BooleanField(default=False)
     executed_at = models.DateTimeField(null=True, blank=True)
