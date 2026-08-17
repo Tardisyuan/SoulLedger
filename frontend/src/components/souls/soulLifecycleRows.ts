@@ -10,6 +10,7 @@
  * (verdict enum, realm_name, timestamps) than a freeform event payload does.
  * Raw SoulEvent rows are used only for the toggle-gated "system events" feed.
  */
+import { resolveEnumDisplay, type Translate } from "@/src/lib/domainDisplay";
 import type { Soul } from "@/lib/api/souls";
 import type { SoulEvent } from "@/lib/api/events";
 import type { Judgment } from "@/lib/api/judgment";
@@ -58,6 +59,11 @@ export interface SystemGroupRow extends BaseRow {
   category: "system";
   dateLabel: string | null;
   title: string;
+  /** The raw `event_type` member, for the row's `title` attribute only — the
+   * same arrangement `src/lib/domainDisplay.ts` documents for every other enum
+   * here: translated copy on screen, raw value recoverable for triage. Never
+   * render this as text. */
+  rawEventType: string;
   count: number;
   actor: string;
   items: SoulEvent[];
@@ -264,58 +270,82 @@ export function groupSystemEvents(events: SoulEvent[]): { key: string; eventType
   return groups;
 }
 
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  SOUL_CREATED: "灵魂登记",
-  SOUL_DIED: "记录身故",
-  STATE_CHANGED: "状态变更",
-  RECORD_ADDED: "记录添加",
-  JUDGMENT_INITIATED: "审判开始",
-  JUDGMENT_CONCLUDED: "审判结束",
-  DISPOSITION_CREATED: "处置生成",
-  REINCARNATION_TRIGGERED: "轮回触发",
-  KARMA_RECALCULATED: "业力重算",
-  WORKFLOW_CREATED: "工作流创建",
-  WORKFLOW_ASSIGNED: "工作流指派",
-  WORKFLOW_APPROVED: "工作流通过",
-  WORKFLOW_REJECTED: "工作流驳回",
-  DISPATCH_CREATED: "调度创建",
-  DISPATCH_APPROVED: "调度批准",
-  DISPATCH_REJECTED: "调度驳回",
-  DISPATCH_EXECUTED: "调度执行",
-  DISPATCH_STATUS_CHANGED: "调度状态变更",
-  DEATH_SYNC_RECEIVED: "死亡同步接收",
-  DEATH_SYNC_PROCESSED: "死亡同步处理",
-};
+/**
+ * The two enum→text lookups a system-event row needs, injected the same way
+ * every other builder in this file takes its copy.
+ *
+ * This replaced a private `Record<string, string>` of twenty hard-coded Chinese
+ * labels sitting in a module that is otherwise deliberately copy-free. The map
+ * only covered `event_type`; the STATE_CHANGED branch interpolated `old_state`
+ * and `new_state` straight from the payload, so a Chinese-labelled row read
+ * "状态变更 JUDGING → DISPOSED" — a translated prefix in front of two raw enum
+ * members, in every locale, which is BRIEF §4.6's complaint exactly.
+ *
+ * Both functions must return translated copy or a translated placeholder, never
+ * the member they were handed. `makeSystemEventLabels` is the only supported
+ * construction; a hand-rolled identity function here reintroduces the defect and
+ * makes a test measuring it look green.
+ */
+export interface SystemEventLabels {
+  /** `souls.events.<TYPE>`. */
+  eventType: (raw: string) => string;
+  /** `souls.states.<STATE>`; null when the payload carried no state at all. */
+  state: (raw: string | null) => string;
+}
+
+/**
+ * Build the labels from a real `t`, routing both namespaces through
+ * `resolveEnumDisplay` — translated copy first, translated "unrecognized" for a
+ * member the bundles do not cover, and the raw member never.
+ */
+export function makeSystemEventLabels(t: Translate): SystemEventLabels {
+  const via = (namespace: string) => (raw: string | null) => {
+    const resolved = resolveEnumDisplay(t, namespace, raw);
+    // `label` is null only for the "missing" branch (null/empty input), which
+    // for a state means the payload recorded no such side to the transition.
+    return resolved.label ?? t("common.value.unrecorded");
+  };
+  return { eventType: via("souls.events"), state: via("souls.states") };
+}
 
 /** Defect fix: render the event's actual payload, not the bare event_type
  * token — a bare "STATE_CHANGED" row told the user nothing a raw audit
- * table wouldn't already show worse. */
-export function describeSystemEvent(e: SoulEvent): string {
+ * table wouldn't already show worse.
+ *
+ * Everything this returns is either translated copy or punctuation, with one
+ * documented exception: `payload.reason` is free text the backend wrote into
+ * the audit record (e.g. "Judgment concluded: PASSED"). It is data about what
+ * happened rather than this UI's copy, it is not drawn from any enumerable set,
+ * and it is shown verbatim for the same reason a deed's description is. That is
+ * a separate, backend-side i18n question from the one this function closed. */
+export function describeSystemEvent(e: SoulEvent, labels: SystemEventLabels): string {
   const p = e.payload as Record<string, unknown>;
+  const event = labels.eventType(e.event_type);
   switch (e.event_type) {
     case "STATE_CHANGED": {
-      const oldState = typeof p.old_state === "string" ? p.old_state : "?";
-      const newState = typeof p.new_state === "string" ? p.new_state : "?";
+      const oldState = labels.state(typeof p.old_state === "string" ? p.old_state : null);
+      const newState = labels.state(typeof p.new_state === "string" ? p.new_state : null);
       const reason = typeof p.reason === "string" && p.reason ? ` · ${p.reason}` : "";
-      return `${EVENT_TYPE_LABELS.STATE_CHANGED} ${oldState} → ${newState}${reason}`;
+      return `${event} ${oldState} → ${newState}${reason}`;
     }
     case "KARMA_RECALCULATED": {
       const delta = typeof p.delta === "number" ? p.delta : null;
-      return delta === null ? EVENT_TYPE_LABELS.KARMA_RECALCULATED : `${EVENT_TYPE_LABELS.KARMA_RECALCULATED} · Δ${delta >= 0 ? "+" : ""}${delta}`;
+      return delta === null ? event : `${event} · Δ${delta >= 0 ? "+" : ""}${delta}`;
     }
     default:
-      return EVENT_TYPE_LABELS[e.event_type] ?? e.event_type;
+      return event;
   }
 }
 
-export function buildSystemRows(events: SoulEvent[]): SystemGroupRow[] {
+export function buildSystemRows(events: SoulEvent[], labels: SystemEventLabels): SystemGroupRow[] {
   return groupSystemEvents(events).map((g) => ({
     id: `system-${g.key}`,
     kind: "system",
     category: "system",
     sortKey: toSortMs(g.date),
     dateLabel: isoDateLabel(g.date),
-    title: describeSystemEvent(g.items[0]),
+    title: describeSystemEvent(g.items[0], labels),
+    rawEventType: g.eventType,
     count: g.items.length,
     actor: g.actor,
     items: g.items,

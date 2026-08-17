@@ -9,7 +9,12 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.ledger.services import LedgerService, RebirthNotApplicable
+from apps.ledger.services import (
+    INHERITANCE_DEMERIT,
+    INHERITANCE_MERIT,
+    LedgerService,
+    RebirthNotApplicable,
+)
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
 from apps.tenants.models import Tenant
@@ -194,7 +199,13 @@ class TestLedgerInheritanceView:
         assert resp.data["soul_id"] == str(self.soul.id)
         assert "inherited_merit" in resp.data
         assert "inherited_demerit" in resp.data
-        assert "inheritance_note" in resp.data
+        assert "inheritance_merit_rate" in resp.data
+        assert "inheritance_demerit_rate" in resp.data
+        # Absence, not just presence. The rates were added *to replace* a
+        # rendered English sentence; a body carrying both would mean the
+        # frontend could go on reading the sentence and the drift this pass
+        # closed would still be open with a green test sitting next to it.
+        assert "inheritance_note" not in resp.data
 
     def test_inheritance_404_for_nonexistent_soul(self):
         resp = self.client.get(f"{BASE}/inheritance/{uuid.uuid4()}/")
@@ -239,11 +250,29 @@ class TestInheritanceMeritDemeritSplit:
         # one side of this ledger that does not net down.
         assert result["inherited_demerit"] == 100
 
-    def test_inheritance_note_is_derived_from_the_constants(self):
-        """The note must not hard-code a percentage that can go stale."""
+    def test_the_rates_are_the_constants_and_no_prose_ships_with_them(self):
+        """The response reports the split as numbers, and says nothing in words.
+
+        This replaced a test that asserted "20%" and "100%" appeared inside an
+        English `inheritance_note`. That note was rendered copy living in the
+        service layer, and the frontend had *separately* hard-coded 20 and 100
+        into SoulKarmaLedgerCard.tsx, so moving either constant desynced three
+        places at once. Pinning identity against the constants — rather than a
+        formatted string, or the literals 0.2/1.0 — means a change to the policy
+        moves the wire value with it and cannot be half-applied.
+        """
         result = LedgerService.get_reincarnation_inheritance(self.soul)
-        assert "20%" in result["inheritance_note"]
-        assert "100%" in result["inheritance_note"]
+        assert result["inheritance_merit_rate"] == INHERITANCE_MERIT
+        assert result["inheritance_demerit_rate"] == INHERITANCE_DEMERIT
+        # The asymmetry is the point of the pair — equal rates would satisfy
+        # both lines above while erasing what they exist to report.
+        assert result["inheritance_merit_rate"] < result["inheritance_demerit_rate"]
+        # And no sentence came back with them, in any key.
+        assert "inheritance_note" not in result
+        assert not any(isinstance(v, str) and " " in v for v in result.values()), (
+            "the inheritance response is numbers and an id; a value with a "
+            "space in it is prose that has crept back into the service layer"
+        )
 
 
 @pytest.mark.django_db
@@ -261,6 +290,7 @@ class TestInheritanceCivilizationGate:
                 ("CHINESE", "CN_DIYU"),
                 ("EUROPEAN", "EU_HEAVEN_HELL"),
                 ("EGYPTIAN", "EG_DUAT"),
+                ("GREEK", "GR_HADES"),
             )
         }
 
@@ -276,11 +306,23 @@ class TestInheritanceCivilizationGate:
         )
         return _jwt_client(user, tenant), soul
 
-    def test_chinese_soul_still_gets_a_number(self):
-        client, soul = self._client_and_soul("CHINESE")
+    @pytest.mark.parametrize("civ", ["CHINESE", "GREEK"])
+    def test_rebirth_capable_soul_still_gets_a_number(self, civ):
+        """Both sides of REBIRTH_CAPABLE_CIVILIZATIONS, by name.
+
+        GREEK joined that frozenset in f92ed35 (Republic X 617d-620d: the soul
+        chooses a new life at the Spindle). It reaches this endpoint's 200 path,
+        so it reaches the *new response shape* too, and the rates have to be on
+        a Greek body for the same reason they are on a Chinese one — the card
+        that draws them is not civilization-gated.
+        """
+        client, soul = self._client_and_soul(civ)
         resp = client.get(f"{BASE}/inheritance/{soul.id}/")
         assert resp.status_code == status.HTTP_200_OK
         assert "inherited_merit" in resp.data
+        assert resp.data["inheritance_merit_rate"] == INHERITANCE_MERIT
+        assert resp.data["inheritance_demerit_rate"] == INHERITANCE_DEMERIT
+        assert "inheritance_note" not in resp.data
 
     @pytest.mark.parametrize("civ", ["EGYPTIAN", "EUROPEAN"])
     def test_terminal_cosmology_returns_409(self, civ):

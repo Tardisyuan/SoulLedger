@@ -192,7 +192,13 @@ describe("SoulDetailPage — inheritance panel", () => {
         soul_id: SOUL_ID,
         inherited_merit: 20,
         inherited_demerit: 100,
-        inheritance_note: "carries forward",
+        // The rates the endpoint now ships in place of the English
+        // `inheritance_note` sentence it used to compose. Kept on the mock
+        // because the card formats its caption and its two bar widths out of
+        // them — a mock still carrying the old field would leave those reading
+        // `NaN%` while every assertion below stayed green.
+        inheritance_merit_rate: 0.2,
+        inheritance_demerit_rate: 1.0,
       },
     });
 
@@ -210,6 +216,19 @@ describe("SoulDetailPage — inheritance panel", () => {
     // merit_score === demerit_score === 100, karmic_balance is 0) this line
     // rendered "+0". This is the regression the endpoint switch fixes.
     expect(screen.getByText("-80")).toBeInTheDocument();
+
+    // The two ratio bars are sized from the response's rates rather than from
+    // percentages hard-coded in the card. Asserted on the widths because this
+    // file's `t` echoes keys and drops params, so the caption itself renders as
+    // "ledger.carry_forward_rate" and can say nothing about the numbers.
+    const bars = document.querySelectorAll<HTMLElement>("span.block.h-full");
+    expect(bars).toHaveLength(2);
+    expect(bars[0].style.width).toBe("20%");
+    expect(bars[1].style.width).toBe("100%");
+    // Absence too: a mock still carrying the retired `inheritance_note` and no
+    // rates renders `NaN%`, which is a width the browser ignores — the bar
+    // simply collapses and nothing above would have noticed.
+    expect(document.body.innerHTML).not.toContain("NaN");
   });
 
   it("treats a non-409 error (500) as a real query error, not the 409 render-nothing path", async () => {

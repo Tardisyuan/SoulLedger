@@ -147,12 +147,37 @@ REBIRTH_CAPABLE_CIVILIZATIONS = frozenset({Civilization.CHINESE, Civilization.GR
 # not call in the first place.
 NON_FUNGIBLE_CIVILIZATIONS = frozenset({Civilization.CHINESE})
 
-# TODO(i18n): the reasons below and `inheritance_note` in
-# get_reincarnation_inheritance are user-facing copy hard-coded in the service
-# layer, which is the wrong place for it — it cannot be localised, and the
-# frontend message catalogues already carry their own (already stale) copies of
-# the same sentences. This belongs in the i18n catalogues; a later pass owns
-# the copy.
+# RESOLVED(i18n): the reasons below stay here. `inheritance_note` did not.
+#
+# The old TODO covered both as one defect, and they are not the same kind of
+# string — which is why it was right about one of them and wrong about this one.
+#
+# `inheritance_note` was a *sentence the soul-detail card rendered*. It is gone
+# from get_reincarnation_inheritance below, which now returns the two rates as
+# numbers (`inheritance_merit_rate` / `inheritance_demerit_rate`) and leaves the
+# wording to frontend/messages/{en,zh-Hans,egy}.json under
+# `ledger.carry_forward_rate`. The drift the TODO named had two ends rather than
+# one: the frontend was *also* hand-copying 20 and 100 into
+# SoulKarmaLedgerCard.tsx as literals, so the constants below could move and
+# both the backend sentence and the frontend bars would disagree with each
+# other. Both ends now read the same two numbers off the wire.
+#
+# The reasons below are the `detail` of an HTTP 409 body, and this product's
+# frontend never renders them: app/souls/[id]/page.tsx turns the 409 into `null`
+# and hides the card entirely, and handleReincarnate reads `data.error`, which
+# this body does not carry. What does read `detail` is everything that is not a
+# browser — curl, an integration client, DRF's own renderer, and `str(exc)` in
+# the logs — none of which has a message catalogue, and this service consults no
+# Accept-Language. Localising it would move English prose out of here and put
+# nothing readable in its place for the only readers it has. So it stays, in
+# English, on purpose.
+#
+# The localisable half of the same question is answered by `civilization`: it is
+# the machine-readable discriminator a UI keys its own copy off, which is why
+# the 409 body carries it *beside* the prose instead of only the prose. A
+# frontend that ever needs to say "this cosmology has no next life" in the
+# reader's language keys on that field and owns the sentence; it must not parse
+# `detail`.
 TERMINAL_COSMOLOGY_REASON = {
     Civilization.EGYPTIAN: (
         "Egyptian judgment is terminal: the heart is weighed once and the soul "
@@ -574,13 +599,18 @@ class LedgerService:
             "soul_id": str(soul.id),
             "inherited_merit": round(effective["effective_merit"] * INHERITANCE_MERIT),
             "inherited_demerit": round(effective["effective_demerit"] * INHERITANCE_DEMERIT),
-            # TODO(i18n): user-facing copy does not belong in the service
-            # layer — see TERMINAL_COSMOLOGY_REASON above. Derived from the
-            # constants rather than hard-coding "20%" so it can't go stale
-            # against them the way the frontend catalogues already have.
-            "inheritance_note": (
-                f"{INHERITANCE_MERIT:.0%} of effective merit passes to the next "
-                f"incarnation; unripened demerit carries in full "
-                f"({INHERITANCE_DEMERIT:.0%})."
-            ),
+            # The rates themselves, not a sentence about them. This replaced an
+            # `inheritance_note` string — see the RESOLVED(i18n) note on
+            # TERMINAL_COSMOLOGY_REASON above for why that one moved out and the
+            # 409 `detail` did not.
+            #
+            # Fractions rather than the 20/100 percentages the card draws with,
+            # because these ARE the constants: shipping the same float the
+            # arithmetic two lines up used makes it impossible for the displayed
+            # rate and the applied rate to disagree, which is exactly what
+            # happened while the frontend kept its own literals. Formatting a
+            # fraction as a percentage is the display layer's job and it has a
+            # locale to do it in; this layer has neither.
+            "inheritance_merit_rate": INHERITANCE_MERIT,
+            "inheritance_demerit_rate": INHERITANCE_DEMERIT,
         }
