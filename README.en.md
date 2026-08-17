@@ -320,8 +320,11 @@ short version:
   systems — the Ten Courts of Diyu, Dante's circles and the Norse and Greek
   underworlds, the twelve gates of the Duat and the weighing of the heart. This
   is the source material the domain model was derived from, and it is why
-  `readings.py` looks the way it does. Mirrored at the repo root under
-  `地府结构研究/`, `欧洲天堂地狱/` and `埃及冥界/`.
+  `readings.py` looks the way it does. These used to be mirrored byte-for-byte
+  at the repo root under `地府结构研究/`, `欧洲天堂地狱/` and `埃及冥界/`;
+  **de-duplicated on 2026-08-15** (`b2645e3`), which deleted the 19 copies and
+  left each directory holding one README that maps the old filenames into
+  `docs/`.
 - **Engineering docs.** Architecture, conventions, API notes, milestones, and a
   set of dated review/audit reports.
 - **[`docs/design-handoff/`](docs/design-handoff/)** — a design brief package sent
