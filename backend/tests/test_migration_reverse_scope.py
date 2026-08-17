@@ -580,6 +580,70 @@ def test_perm_0008_seeded_scopes_table_matches_the_forward():
     )
 
 
+PERM_0017 = import_module("apps.perm.migrations.0017_seed_roles_and_grants")
+
+
+@pytest.mark.django_db(transaction=True)
+def test_perm_0008_sample_scopes_stay_unreachable():
+    """A full ``migrate`` from empty must leave the scope table empty.
+
+    The two tests above establish that the forward *can* insert, which is what
+    makes this one necessary rather than pedantic: fixing the NULL-primary-key
+    defect turned a write that could never happen into one held back by a single
+    guard. This pins the outcome that guard produces on a real install, so any
+    later change that makes the seeding reachable — dropping the
+    ``Role.objects.exists()`` early return, seeding Role rows here, moving 0017
+    ahead of 0008 — has to come through this test rather than through a silent
+    narrowing of two roles' soul lists.
+
+    See the module docstring of the migration for why reachable is the wrong
+    target. The assertion is on the whole table, not on the three rows: a fourth
+    sample scope appearing here is the same event.
+    """
+    migrate_to_latest()
+
+    from apps.perm.models import RowLevelDataScope
+
+    assert _scope_rows(RowLevelDataScope._base_manager.all()) == [], (
+        "perm/0008's sample scopes reached a database migrated from empty. "
+        "They contradict perm/0017 — see that migration's frozen GRANTS, which "
+        "give GUARDIAN and VIEWER an unrestricted soul.read."
+    )
+
+
+def test_perm_0008_sample_scopes_contradict_perm_0017():
+    """Name the contradiction, so that resolving it cannot be done by accident.
+
+    Neither constant is read by the other, and both are frozen literals inside
+    applied migrations, so nothing in the language connects them. This asserts
+    the disagreement *is still there* — which sounds backwards for a test until
+    you consider the two ways it goes red:
+
+      - somebody widens 0008's rows or drops one, believing the demo harmless;
+      - somebody narrows 0017's ``soul.read`` for GUARDIAN or VIEWER.
+
+    The second is the interesting one. It is the decision the migration docstring
+    says belongs in its own migration, and if it is ever taken, these three
+    sample rows stop being contradictory and this test is the thing that says so
+    out loud — go re-read 0008 and decide deliberately whether they should live.
+    """
+    scoped_roles = {role_name for role_name, _, _ in PERM_0008.SEEDED_SCOPES}
+    assert scoped_roles == {"ACTOR", "GUARDIAN", "VIEWER"}
+
+    # ACTOR is not a role 0017 creates, so its scope can never match a user.
+    assert "ACTOR" not in {name for name, _ in PERM_0017.ROLES}, (
+        "perm/0017 now seeds an ACTOR role, so perm/0008's ACTOR scope is no "
+        "longer inert — re-read 0008's docstring"
+    )
+
+    # The other two hold soul.read with no state restriction attached.
+    for role_name in ("GUARDIAN", "VIEWER"):
+        assert "soul.read" in PERM_0017.GRANTS[role_name], (
+            f"perm/0017 no longer grants {role_name} soul.read — perm/0008's "
+            f"sample scope for it may have stopped contradicting anything"
+        )
+
+
 # --------------------------------------------------------------------------
 # perm/0013_add_workflow_permissions
 # --------------------------------------------------------------------------
