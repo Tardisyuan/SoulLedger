@@ -66,18 +66,6 @@ interface TemplatePreviewData {
   nodes?: FrontendNode[] | WorkflowTemplateNode[];
 }
 
-const CASE_TYPE_KEYS: Record<string, string> = {
-  ROUTINE: "workflow.case_types.ROUTINE",
-  APPEAL: "workflow.case_types.APPEAL",
-  CROSS_REALM: "workflow.case_types.CROSS_REALM",
-  SPECIAL: "workflow.case_types.SPECIAL",
-  HEART_WEIGHING: "workflow.case_types.HEART_WEIGHING",
-  DIVINE_TRIAL: "workflow.case_types.DIVINE_TRIAL",
-  CANONIZATION: "workflow.case_types.CANONIZATION",
-  PURGATORY_REVIEW: "workflow.case_types.PURGATORY_REVIEW",
-  HERESY_TRIAL: "workflow.case_types.HERESY_TRIAL",
-};
-
 export default function WorkflowPage() {
   const { t } = useI18n();
   const { showToast } = useToast();
