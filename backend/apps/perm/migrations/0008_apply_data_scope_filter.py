@@ -1,8 +1,33 @@
 """
 Migration: Apply data scope filter to RowLevelDataScope.
 
-This migration seeds sample RowLevelDataScope entries that demonstrate
-the data scope filtering capability.
+Three sample RowLevelDataScope entries, written to demonstrate the data scope
+filtering capability, and unreachable on every real database — the
+``Role.objects.exists()`` guard in the forward returns first, because no
+migration creates a Role row until perm/0017. See ``seed_sample_data_scopes``
+for how that was measured.
+
+**The right repair is not to make them reachable.** They contradict perm/0017,
+which is where role permissions are actually decided:
+
+  - 0017's frozen ``GRANTS`` gives GUARDIAN and VIEWER a plain ``soul.read``,
+    with no state restriction. These rows would narrow the same two roles to
+    ``DISPOSED`` and ``ALIVE`` respectively — and not as dead data, because
+    ``apps/souls/views.py`` runs ``DataScopeFilter`` over the Soul queryset. A
+    GUARDIAN would stop seeing every soul that is merely alive.
+  - The ACTOR row names a role in neither ``UserRole`` nor ``DEFAULT_ROLES``,
+    and 0017's ``ROLES`` does not create it. It can only ever match nobody.
+
+So the two tables disagree about what GUARDIAN and VIEWER may read, and 0017 is
+the one that is deliberate: it is a frozen literal precisely so that a migration
+replays the same result forever, and its docstring records the audit requirement
+that no role's effective permission set shrinks. Narrowing soul visibility is a
+security decision that belongs in its own migration with its own reasoning, not
+a side effect of restoring a demo.
+
+Both halves are pinned by
+tests/test_migration_reverse_scope.py::test_perm_0008_sample_scopes_stay_unreachable
+and ::test_perm_0008_sample_scopes_contradict_perm_0017.
 """
 import json
 import uuid
