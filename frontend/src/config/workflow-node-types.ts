@@ -137,7 +137,12 @@ export const PRESET_NODE_TYPE: Record<string, NodeTypeMember> = {
   轮回分流: "EXECUTION",
   // 三套紧急流程共用的受理动作，名字说的是一件事不是一个人。它确认案件够得上
   // 紧急队列——是对案件的分诊，与「案件分类」同形，故 EVALUATION。它不是申诉
-  // 受理：这三套流程的 case_type 是 EMERGENCY 不是 APPEAL。
+  // 受理：这三套流程受理的是新案，不是对既有裁断的再审。
+  //
+  //（原句写的是「这三套流程的 case_type 是 EMERGENCY 不是 APPEAL」。`EMERGENCY`
+  // 从来不是 `CaseType` 的成员，那正是这三套预设保存必定 400 的原因；三套现已分别
+  // 归入 SPECIAL / ROUTINE / DIVINE_TRIAL，理由见 workflow-templates.ts 里
+  // CHINESE_EMERGENCY 顶部。分诊出来的「紧急」落在 ApprovalWorkflow.priority 上。）
   紧急受理: "EVALUATION",
   // 酆都大帝直审：紧急案件直达酆都，跳过十殿审级。酆都大帝之上没有更高的一级，
   // 他的话就是最后一句；后端两处「酆都大帝 · 终审」也都是 FINAL。

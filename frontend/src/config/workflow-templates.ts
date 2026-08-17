@@ -128,7 +128,28 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
   },
   CHINESE_EMERGENCY: {
     civilization: "CHINESE",
-    caseType: "EMERGENCY",
+    // 曾经是 `"EMERGENCY"`，而 `CaseType` 没有这个成员，于是这三套预设一保存就
+    // 400（`{'case_type': ['"EMERGENCY" is not a valid choice.']}`）。
+    //
+    // 修法不是给 `CaseType` 补一个成员。九个既有成员回答的都是同一个问题——
+    //「这是哪一类案子」，`ROUTINE`（常规审判）也不例外：它指的是十殿那套完整程序，
+    // 是三个文明共同的兜底，不是「不着急的那一档」。而 `EMERGENCY` 回答的是
+    //「多急」，那是另一根轴，并且那根轴上已经有一列了——
+    // `ApprovalWorkflow.priority`（0=normal, 1=urgent, 2=critical），它被
+    // views.py 读、被 WorkflowFilter 的 priority_min/priority_max 与
+    // ordering_fields 用、两个 serializer 都带、`app/workflow/[id]/page.tsx`
+    // 会显示它，而它 =1 时在 zh-Hans 里的字面就是「紧急」。再加一个
+    // `CaseType.EMERGENCY`（「紧急审判」）等于把同一件事写进两列。
+    //
+    // 本文件与 workflow-node-types.ts 早就把这个判断写下来了两次：
+    //「队列的紧急程度是本系统的调度概念，改变不了谁审判」（见 EUROPEAN_EMERGENCY
+    // n2），以及「紧急受理」被判读成 EVALUATION 的理由是「确认案件够得上紧急
+    // 队列——是对案件的分诊」。
+    //
+    // 这一套归到 SPECIAL（特案审判）：它跳过十殿的审级直接在酆都裁定，是走在常规
+    // 程序之外的案子，与同为 SPECIAL 的枉死城流程、阿鼻地狱流程同形；本套的
+    // description 自己写的也是「特殊」。案子的急缓交给 priority，创建工作流时传。
+    caseType: "SPECIAL",
     name: "紧急审判流程",
     description: "特殊紧急案件直达酆都",
     nodes: [
@@ -260,7 +281,13 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
   },
   EUROPEAN_EMERGENCY: {
     civilization: "EUROPEAN",
-    caseType: "EMERGENCY",
+    // 见 CHINESE_EMERGENCY 顶部：为什么急缓不进 case_type，而留在 priority。
+    //
+    // 这一套归到 ROUTINE，理由就写在下面 n2 的注释里：紧急队列仍由基督审判，没有
+    // 可以升级到的第二位审判者。也就是说，与 EUROPEAN_ROUTINE 相比，**案子的
+    // 类别没有任何不同**，不同的只是队列。既然差别只在队列，case_type 就该和
+    // EUROPEAN_ROUTINE 一样，差别由 priority 表达。
+    caseType: "ROUTINE",
     name: "紧急审判流程",
     description: "紧急队列仍由基督审判——没有可以升级到的第二位审判者",
     nodes: [
@@ -372,7 +399,18 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
   },
   EGYPTIAN_EMERGENCY: {
     civilization: "EGYPTIAN",
-    caseType: "EMERGENCY",
+    // 见 CHINESE_EMERGENCY 顶部：为什么急缓不进 case_type，而留在 priority。
+    //
+    // 这一套归到 DIVINE_TRIAL（神判）：奥西里斯不经称心直接裁断，「神明直接审判」
+    // 正是 DIVINE_TRIAL 这个成员命名的东西，也不能是 HEART_WEIGHING——这套流程里
+    // 没有称量。埃及一侧此前没有任何一套预设落在 DIVINE_TRIAL 上，这一套补上了。
+    //
+    //（顺带记一笔，不在本次改动范围内：叫「神判流程」的 EGYPTIAN_TRIALS 反而挂着
+    // SPECIAL 而不是 DIVINE_TRIAL，而 SPECIAL 并不在埃及的
+    // VALID_CASE_TYPES_BY_CIVILIZATION 里。那是另一处错配，登记在
+    // backend/tests/test_workflow_preset_case_types.py 的
+    // CASE_TYPES_NOT_VALID_FOR_THEIR_CIVILIZATION 里。）
+    caseType: "DIVINE_TRIAL",
     name: "紧急审判流程",
     description: "神庙紧急处置",
     nodes: [
