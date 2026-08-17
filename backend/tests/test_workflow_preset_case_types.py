@@ -165,14 +165,19 @@ CASE_TYPES_NOT_VALID_FOR_THEIR_CIVILIZATION: dict[str, str] = {
     # already carries; the reasoning is written on each preset in
     # `frontend/src/config/workflow-templates.ts` and summarised here:
     #
-    # * `EUROPEAN_GREEK` -> `ROUTINE`. Gorgias 524a judges *every* Greek dead at
-    #   the meadow's fork and sends them to the Isles of the Blest or Tartarus —
-    #   the ordinary complete proceeding on that side, not an exception. What
-    #   makes it look special is that it belongs to another textual tradition
-    #   (Plato, not Dante), and "which tradition" is not what `case_type`
-    #   answers — the same argument that kept "how urgent" out of it. Greek and
-    #   Dante sharing one civilization is a separate recorded defect
-    #   (`docs/lore-verification/README.md` §3, `verify-greek.md` §3.1).
+    # * `GREEK_ROUTINE` (then named `EUROPEAN_GREEK`) -> `ROUTINE`. Gorgias 524a
+    #   judges *every* Greek dead at the meadow's fork and sends them to the
+    #   Isles of the Blest or Tartarus — the ordinary complete proceeding on that
+    #   side, not an exception. What made it look special is that it belongs to
+    #   another textual tradition (Plato, not Dante), and "which tradition" is
+    #   not what `case_type` answers — the same argument that kept "how urgent"
+    #   out of it. Greek and Dante sharing one civilization was a separate
+    #   recorded defect (`docs/lore-verification/README.md` §3,
+    #   `verify-greek.md` §3.1) and has since been fixed at its own layer:
+    #   `Civilization.GREEK` is the fourth enum member, the preset carries it,
+    #   and `VALID_CASE_TYPES_BY_CIVILIZATION[GREEK]` is `{ROUTINE, APPEAL}`. The
+    #   case type did not have to move to accommodate that, which is the point —
+    #   it was already answering the right question.
     # * `EUROPEAN_HELL_CIRCLE` -> `ROUTINE`. `HERESY_TRIAL` would name one of
     #   the nine circles for a flow that classifies all of them (Dante divides
     #   by Aristotle's tripartition, Inf. XI, not by heresy or the seven sins);
@@ -298,11 +303,13 @@ def test_every_preset_saves_through_the_api(seeded):  # noqa: F811  (imported fi
     in `_bearer`: force-auth leaves the template `tenant=NULL` and every
     tenant-scoped read downstream skips it.
     """
+    # One admin per civilization a preset can be filed under. Derived from
+    # `Civilization` rather than listed, because the failure mode of listing is
+    # a KeyError at POST time for the preset of a civilization added later —
+    # which is a crash, not a finding, and says nothing about whether that
+    # preset saves.
     tenant_for = {
-        civilization: _tenant(civilization)
-        for civilization in (
-            Civilization.CHINESE, Civilization.EUROPEAN, Civilization.EGYPTIAN
-        )
+        civilization: _tenant(civilization) for civilization in Civilization
     }
     clients = {
         civilization: APIClient(**_bearer(_admin(tenant, f"case_type_{civilization}")))
@@ -480,7 +487,7 @@ def test_each_preset_case_type_is_valid_for_its_civilization_or_is_recorded():
     for key in (
         "CHINESE_EMERGENCY", "EUROPEAN_EMERGENCY", "EGYPTIAN_EMERGENCY",
         "EGYPTIAN_TRIALS",
-        "EUROPEAN_GREEK", "EUROPEAN_HELL_CIRCLE", "EGYPTIAN_AFTERLIFE",
+        "GREEK_ROUTINE", "EUROPEAN_HELL_CIRCLE", "EGYPTIAN_AFTERLIFE",
     ):
         assert key not in outside, (
             f"{key} was re-filed into a case type its civilization does not "

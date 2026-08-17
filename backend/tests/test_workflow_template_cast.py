@@ -226,9 +226,12 @@ def test_the_preset_file_parses_into_every_node_it_contains():
         f"some. Fix the pattern; do not narrow what this file checks."
     )
     civilizations = {civilization for civilization, _ in nodes}
-    assert civilizations == {"CHINESE", "EUROPEAN", "EGYPTIAN"}, (
-        f"presets parsed for {sorted(civilizations)}; all three cosmologies "
-        f"have presets in this file"
+    assert civilizations == {"CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"}, (
+        f"presets parsed for {sorted(civilizations)}; all four cosmologies "
+        f"have presets in this file. GREEK arrived when `EUROPEAN_GREEK` was "
+        f"re-filed as `GREEK_ROUTINE` — the preset's node people (Aeacus, "
+        f"Rhadamanthus, Plato's Minos) are seeded under GREEK, and the resolver "
+        f"below scopes each probe to its preset's civilization."
     )
 
 

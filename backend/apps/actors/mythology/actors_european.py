@@ -1,7 +1,16 @@
-"""The European cast — the Christian figures and the Greek ones.
+"""The European cast — the Christian figures, and the three Dante borrowed.
 
 Moved verbatim out of ``seed_mythology.py``. The tuple columns are the ones
 documented at the top of ``actors_chinese.py``.
+
+This file used to hold the Greek cast too, under the same ``EUROPEAN``
+civilization. It no longer does: Hades, Aeacus and Rhadamanthus are in
+``actors_greek.py`` under ``Civilization.GREEK``, along with a second Minos row
+that is Plato's. What stayed is what Dante actually uses — Minos at the entrance
+to the second circle (Inf. V.4-15), Cerberus over the gluttons in the third
+(Inf. VI), Charon on Acheron at the gate (Inf. III) — because the anchor every
+one of those rows cites is the *Commedia*, and a row's civilization should
+follow the text it is written from rather than the language its name came from.
 
 Cross-references in the comments below ("above", "below", "this file") were
 written when every table in this package was one module; see the package
@@ -36,11 +45,21 @@ from apps.actors.models import ActorRole
 # experiment. The forty-two assessors were, for a long time, thirty-five names
 # that were not assessors — assembled because the template said a bench went
 # there. Europe has been under the same pressure and answered it differently
-# but not better: of eleven European actors seven are Greek and three of those
-# were cast as judges, so Europe's bench was filled entirely by Greeks. Adding
-# a Christian tribunal, or promoting Michael, or counting Minos as European, are
-# all the same move. The correct answer to "who else judges" is that nobody
-# does.
+# but not better: of eleven European actors seven were Greek and three of those
+# were cast as judges, so Europe's bench read as full while every name in it
+# came from another cosmology. Adding a Christian tribunal, promoting Michael,
+# or counting a Greek judge toward the Christian bench are all the same move.
+# The correct answer to "who else judges" is that nobody does.
+#
+# THE SPLIT MADE THIS EMPTIER AND DID NOT MAKE IT A GAP. Hades, Aeacus and
+# Rhadamanthus are GREEK now, so the Christian side is down to God, Christ,
+# Michael, Gabriel and Satan, of whom exactly one judges. One Greek judge is
+# still seeded in this file — Dante's Minos — and he is the reason
+# ``test_the_christian_side_seats_one_judge_and_no_bench`` counts *two* JUDGE
+# rows across the whole EUROPEAN civilization rather than filtering by realm to
+# get to one. He allots circles at the gate of a poem this cast belongs to; he
+# is not a member of a tribunal, and there is no tribunal for him to be a member
+# of. See ``docs/lore-verification/README.md`` §3: the emptiness is the finding.
 EUROPEAN_ACTORS = [
     ("God", "上帝", "God (YHWH)", "God", ActorRole.OVERSEER, "EU_HEAVEN",
      "全能者", "全能者", "The Almighty", "God",
@@ -122,14 +141,31 @@ EUROPEAN_ACTORS = [
     # entrance to the second, where the sinner confesses and he coils his tail
     # the number of times equal to the circle it belongs in (Inferno V.4-15). A
     # judge who allots circles cannot be sitting in the last one.
+    #
+    # HE KEEPS `JUDGE`, AND THE SPLIT WAS THE MOMENT TO RE-EXAMINE IT. The
+    # tempting reading is that Dante's Minos only *sorts* — that he routes a soul
+    # to a circle already decided by the sin it confessed, which would make him a
+    # CONDUIT and would leave EUROPEAN with exactly one judge, Christ, and a
+    # tidier test. The poem does not support it. Inf. V.9 is 「giudica e manda
+    # secondo ch'avvinghia」 — *judges* and sends, in that order, after 「essamina
+    # le colpe ne l'intrata」, examines the transgressions at the entrance. The
+    # examining and the judging are the work; the tail is only how the sentence
+    # is pronounced. Demoting him would have meant contradicting the one verb the
+    # source is explicit about in order to make an assertion elsewhere in the
+    # repository come out round, which is the shape of error this file exists to
+    # document. `ActorRole` has no member meaning "allots without adjudicating"
+    # either — CONDUIT carries, GUARDIAN bars, EXECUTOR inflicts — so the
+    # demotion would also have had to store a claim none of the five values make.
     ("Minos", "米诺斯", "Minos", "Mino", ActorRole.JUDGE, "EU_HELL_2ND",
      "米诺斯", "米诺斯", "Judge Minos", "Mino",
-     "King Minos - stands at the entrance to the second circle, hears each "
+     "King Minos - stands at the entrance to the second circle, examines each "
      "soul's confession and allots it the circle it belongs to by the coils of "
-     "his tail (Dante, Inferno V.4-15). THIS ROW IS DANTE'S MINOS. Plato's "
-     "Minos, Gorgias 524a, is the final arbiter at the fork when the other two "
-     "judges are in doubt, and Homer's, Odyssey 11.568-571, gives judgment "
-     "sceptre in hand; those are different offices in different underworlds"),
+     "his tail: 'giudica e manda secondo ch'avvinghia' (Dante, Inferno V.4-15). "
+     "THIS ROW IS DANTE'S MINOS. Plato's Minos, Gorgias 524a, is the final "
+     "arbiter at the fork when the other two judges are in doubt, and now has a "
+     "row of his own under GREEK; Homer's, Odyssey 11.568-571, gives judgment "
+     "sceptre in hand and is not seeded. Different offices in different "
+     "underworlds"),
     ("Cerberus", "刻耳柏洛斯", "Cerberus", "Kerberos", ActorRole.GUARDIAN, "EU_HELL_3RD",
      "冥界三头犬刻耳柏洛斯", "冥界三头犬刻耳柏洛斯", "Cerberus - Three-headed Hound", "Kerberos",
      "Three-headed hound - Dante sets him over the gluttons in the third "
@@ -138,74 +174,6 @@ EUROPEAN_ACTORS = [
      "underworld itself (Apollodorus 2.5.12). He was seeded in the first "
      "circle, which is neither. Hesiod's earliest description gives him fifty "
      "heads (Theogony 311-312); the three are Apollodorus, Virgil and Dante"),
-    # Greco-Roman side. `consolidate_eu_pantheon` audits exactly this cast —
-    # Hades sole OVERSEER, Minos/Aeacus/Rhadamanthus JUDGE, Charon CONDUIT,
-    # Cerberus GUARDIAN — so it has to be seeded, or that audit reports every
-    # name MISSING on a fresh database.
-    #
-    # Hades, not Pluto: same god, and `consolidate_eu_pantheon` merges the pair
-    # into Hades. Pluto is therefore deliberately NOT seeded — it only exists in
-    # databases predating that command, which is exactly the case the merge step
-    # is there to clean up. Seeding both would manufacture on every fresh
-    # database the duplicate the merge exists to remove.
-    #
-    # The reason recorded for that merge used to be "Pluto is Hades' Roman
-    # name", which is a simplification that gets the direction wrong. Πλούτων
-    # (Plouton) is a GREEK cult title, absent from Homer and Hesiod and current
-    # from the 5th century BCE through the Eleusinian mysteries, from πλοῦτος,
-    # wealth — Plato, Cratylus 403a has people avoid the name Hades and say
-    # Plouton instead, because wealth comes up out of the earth. Pluto is the
-    # Latin transcription of that Greek title. Rome's own underworld gods are
-    # Dis Pater and Orcus; Cicero equates Dis with Plouton. So the merge folds
-    # two cult aspects of one Greek god, not a Greek name and a Roman one.
-    #
-    # WHERE HADES SITS IS AN ENGINEERING PLACEMENT AND IS LABELLED AS ONE. He
-    # was in EU_HELL_1ST, Limbo, which has no basis at all — Dante has no
-    # "Hades' level", and the Dis of the Commedia is the walled city of the
-    # sixth circle and Lucifer himself. This system models no house of Hades, so
-    # he is seated as overseer of the Greek judgment ground below, the only
-    # Greek place here that is his. That is a compromise, exactly like the one
-    # recorded above for 地藏王菩萨, and not a claim from a text.
-    ("Hades", "哈迪斯", "Hades", "Aides", ActorRole.OVERSEER, "EU_PLATO_MEADOW",
-     "冥王哈迪斯", "冥王哈迪斯", "Hades - Lord of the Underworld", "Aides",
-     "Greek god of the underworld - sole overseer of the Greco-Roman infernal "
-     "realm. Also Plouton (Πλούτων), a Greek cult title from πλοῦτος 'wealth' "
-     "(Plato, Cratylus 403a), of which Latin Pluto is the transcription; Rome's "
-     "native underworld gods are Dis Pater and Orcus. PLACEMENT IS AN "
-     "ENGINEERING CHOICE: no house of Hades is modelled here, so he oversees "
-     "the judgment ground rather than being given one of Dante's circles"),
-    # AEACUS AND RHADAMANTHUS ARE NOT IN THE COMMEDIA, WHICH IS WHY THEY HAVE
-    # THEIR OWN PLACE NOW. Both used to sit in EU_HELL_9TH — Dante's frozen
-    # Cocytus, where this file also seeds Satan — and they are wrong there twice
-    # over. Dante borrows one Greek judge, Minos, and neither of these two
-    # appears in the poem at all; and Plato, who is where the three-judge
-    # division of labour comes from, sets the judgment at a fork in a meadow
-    # with one road to the Isles of the Blessed and one to Tartarus. That is a
-    # sorting point *before* punishment. A ninth circle is not a place Plato's
-    # cosmology contains — the layering is Dante's.
-    #
-    # The division of labour is Gorgias 524a (Rhadamanthus tries those from
-    # Asia, Aeacus those from Europe, Minos decides when they are in doubt).
-    # Note 524a, not 523e: 523e is Zeus announcing the reform, and the
-    # assignment of the three is the passage after it.
-    #
-    # Their two destinations are still not modelled and are deliberately not
-    # invented. EU_PLATO_MEADOW is the ground they judge on and nothing more.
-    ("Aeacus", "艾亚哥斯", "Aeacus", "Aiakos", ActorRole.JUDGE, "EU_PLATO_MEADOW",
-     "冥界判官艾亚哥斯", "冥界判官艾亚哥斯", "Judge Aeacus", "Aiakos",
-     "One of the three judges of the dead - tries those who come from Europe "
-     "(Plato, Gorgias 524a) and holds the keys of the underworld (Pindar, "
-     "Isthmian 7.47; Apollodorus 3.12.6). Son of Zeus and the nymph Aegina, and "
-     "grandfather of Achilles. He does not appear in Dante"),
-    ("Rhadamanthus", "拉达曼提斯", "Rhadamanthus", "Rhadamanthys", ActorRole.JUDGE,
-     "EU_PLATO_MEADOW",
-     "冥界判官拉达曼提斯", "冥界判官拉达曼提斯", "Judge Rhadamanthus", "Rhadamanthys",
-     "One of the three judges of the dead - tries those who come from Asia "
-     "(Plato, Gorgias 524a). Homer instead has him living in Elysium rather "
-     "than judging (Odyssey 4.563-565) and Virgil has him ruling and punishing "
-     "in Tartarus (Aeneid 6.566); the brotherhood with Minos is usually cited "
-     "to Iliad 14.321-322, which has not been checked line by line here. He "
-     "does not appear in Dante"),
     # THE TWO STREAMS OF THE EARTHLY PARADISE, AND WHY THEY ARE BOTH HERE.
     #
     # `79dee57` corrected what Lethe *means*: the row used to say souls drink to
@@ -270,25 +238,19 @@ EUROPEAN_ACTORS = [
      "makes the placement Dante's"),
 ]
 
-# --------------------------------------------------------------------------
-# OTHER RENDERINGS OF THESE NAMES THAT THIS REPOSITORY ACTUALLY USES.
+# THERE IS NO EUROPEAN_ACTOR_ALIASES, AND ITS ABSENCE IS NOT AN OVERSIGHT.
 #
-# Same table and same rules as EGYPTIAN_ACTOR_ALIASES — read its header for what
-# qualifies and why this is not a fifth name column.
-EUROPEAN_ACTOR_ALIASES = {
-    # `Πλούτων`/`Pluto` and `Hades` are one god, and this repository had already
-    # concluded so before this table existed: `consolidate_eu_pantheon` merges a
-    # `Pluto` row into `Hades`, and the Hades row above records the reasoning
-    # (Plouton is a Greek cult title from πλοῦτος, wealth — Plato, Cratylus
-    # 403a — of which Latin Pluto is a transcription; Rome's own underworld gods
-    # are Dis Pater and Orcus). What that conclusion did not have was anywhere
-    # to live except a management command's `MERGE_NAMES` tuple and a comment.
-    # It lives here now, so a lookup handed "Pluto" finds Hades on the strength
-    # of recorded data rather than because somebody remembered to run a merge.
-    #
-    # Recording the alias does NOT resurrect Pluto and does not change what
-    # `consolidate_eu_pantheon` does: that command matches on `name` exactly, no
-    # Pluto row is seeded, and on a legacy database that still has one the
-    # resolver's column pass finds it before this alias is ever consulted.
-    "Hades": ["Pluto"],
-}
+# There used to be one, and it held exactly one entry: Hades -> Pluto. Hades is
+# GREEK now, and the alias went with the row it names, to
+# `actors_greek.py::GREEK_ACTOR_ALIASES`. Leaving the table behind would not
+# have been harmless — `_seed_actors` warns and drops any alias naming an actor
+# the cast it is seeding does not contain, so the entry would have stopped being
+# written and the lookup it serves would have gone back to the behaviour the
+# alias was added to replace.
+#
+# Nothing else on this cast needs one. The European rows are spelled one way
+# each in this repository, the same reason the Chinese cast has never had an
+# alias table. If a second rendering of a European name does turn up, add the
+# table back here and register it in `CIVILIZATION_ACTOR_ALIASES`; an empty dict
+# kept as a placeholder would only make the next reader check whether it was
+# empty on purpose.

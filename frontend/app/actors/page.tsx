@@ -14,6 +14,8 @@ const CIVILIZATION_ICONS: Record<string, string> = {
   CHINESE: "🏯",
   EUROPEAN: "⛪",
   EGYPTIAN: "𓋴",
+  // Hades, Aeacus, Rhadamanthus and Plato's Minos are GREEK since realms/0018.
+  GREEK: "🏛",
 };
 
 /**

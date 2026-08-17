@@ -30,6 +30,7 @@ class TestCivilizationReadings:
                 (Civilization.CHINESE, "CN_DIYU"),
                 (Civilization.EUROPEAN, "EU_HEAVEN_HELL"),
                 (Civilization.EGYPTIAN, "EG_DUAT"),
+                (Civilization.GREEK, "GR_HADES"),
             )
         }
 
@@ -157,14 +158,75 @@ class TestCivilizationReadings:
             assert soul.karmic_balance == 18, civ
 
     def test_a_fourth_cosmology_is_one_entry(self):
-        """GREEK is planned and is not in the enum yet — adding its reading
-        must be a dict entry, not a fourth branch grown into an if/elif."""
+        """GREEK arrived as a dict entry, not a fourth branch of an if/elif.
+
+        This is also the assertion that forces the enum and the table to land in
+        the same commit: adding `Civilization.GREEK` alone turns this red, and
+        the only way to make it green is to say what a Greek ledger means.
+        """
         from apps.ledger.readings import CIVILIZATION_READING
         assert isinstance(CIVILIZATION_READING, dict)
         assert set(CIVILIZATION_READING) == set(Civilization)
 
     def test_reading_is_looked_up_not_defaulted(self):
-        """Called directly with a civilization nobody has configured."""
-        reading = get_civilization_reading("GREEK", merit=30, demerit=12, demerit_count=1)
+        """Called directly with a civilization nobody has configured.
+
+        NORSE, not GREEK. This test used to pass "GREEK" as its stand-in for an
+        unconfigured cosmology, which was true right up until GREEK was
+        configured — at which point the assertion would have gone on passing for
+        the wrong reason if the value had been left alone, or (as here) started
+        failing and revealed that the *branch under test* had lost its only
+        witness. The replacement is not an arbitrary string: Norse was removed
+        from this system outright because a pantheon whose destination follows
+        the manner of death has no judgment step to host (see
+        `consolidate_eu_pantheon`'s module docstring), so it is a cosmology this
+        repository has decided will never be in `TENANT_CIVILIZATION` — the one
+        thing this test needs of it.
+        """
+        reading = get_civilization_reading("NORSE", merit=30, demerit=12, demerit_count=1)
         assert reading["kind"] == "UNAVAILABLE"
+        assert reading["civilization"] == "NORSE"
+        assert "NORSE" not in Civilization.values, (
+            "NORSE is this test's stand-in for a cosmology nobody configured. "
+            "If it has become a real Civilization member, the UNAVAILABLE "
+            "branch is no longer being exercised — pick another unconfigured "
+            "name rather than leaving this green over a lookup that now hits."
+        )
+
+    # -- GREEK: a term served ---------------------------------------------
+
+    def test_greek_reads_a_sentence_and_not_a_balance(self):
+        soul = self._soul(self.tenants[Civilization.GREEK], merits=(30,), demerits=(7, 5))
+        reading = LedgerService.get_ledger_summary(soul)["reading"]
+        assert reading["kind"] == "SENTENCE"
         assert reading["civilization"] == "GREEK"
+        # Republic X, 615a-b: tenfold for each wrong, in hundred-year periods.
+        assert reading["repayment_multiple"] == 10
+        assert reading["circuit_years"] == 1000
+        # Two recorded wrongs, counted as deeds and not summed as weights: the
+        # multiplier in Plato applies per wrong done, and 12 is this system's
+        # own severity scale rather than anything the source grades by.
+        assert reading["wrongs"] == 2
+        assert "balance" not in reading, (
+            "A net merit-minus-demerit balance is the Chinese instrument. "
+            "Plato does not net a good life against a term owed — 615b requites "
+            "well-doing on its own road, in its own measure."
+        )
+        assert "heart_weight" not in reading
+        assert "culpa" not in reading
+
+    def test_greek_refuses_to_report_elapsed_time(self):
+        """The one number the reading needs and the ledger does not hold.
+
+        Same discipline as `poena` in the European reading: an explicit refusal
+        with a reason, rather than a proxy derived from data that means
+        something else.
+        """
+        soul = self._soul(self.tenants[Civilization.GREEK], merits=(30,), demerits=(12,))
+        reading = LedgerService.get_ledger_summary(soul)["reading"]
+        assert reading["elapsed_years"] is None
+        assert reading["elapsed_unavailable"]
+        # Absence asserted as well as presence: a derived stand-in would sit
+        # happily beside the None and nobody would notice.
+        assert "years_served" not in reading
+        assert "years_remaining" not in reading

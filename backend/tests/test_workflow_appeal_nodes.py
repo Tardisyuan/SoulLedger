@@ -74,7 +74,37 @@ from apps.workflow.services import (
     WorkflowService,
 )
 
-CIVILIZATIONS = (Civilization.CHINESE, Civilization.EUROPEAN, Civilization.EGYPTIAN)
+#: Hand-written, not derived from `Civilization` — see the note on the same
+#: constant in tests/test_workflow_appeal_across_civilizations.py. GREEK is
+#: included because it has a tenant and therefore souls; a civilization with no
+#: appeal path is what this file exists to catch.
+CIVILIZATIONS = (
+    Civilization.CHINESE,
+    Civilization.EUROPEAN,
+    Civilization.EGYPTIAN,
+    Civilization.GREEK,
+)
+
+#: Which of them has an appeal flow that names anybody, as opposed to falling
+#: through to the generic single 审批节点.
+#:
+#: GREEK IS ABSENT AND NOBODY SHOULD WRITE IT ONE. Gorgias 524a has no appeal
+#: step in it: Rhadamanthus and Aeacus try the dead of Asia and of Europe, and
+#: Minos holds the final decision when those two are in doubt — he *is* the
+#: review, and there is nothing above him to appeal to. A three-node Greek
+#: appeal template would therefore be an invented procedure dressed in sourced
+#: names, which is the failure `docs/lore-verification/` catalogues over and
+#: over. The generic fallback is the honest answer: an appeal on that side is a
+#: movable workflow that declines to say who hears it.
+#:
+#: The exclusion is not a silent skip — `test_both_doors_build_the_same_appeal_
+#: flow` asserts the fallback *positively* for anything not in this tuple, so
+#: adding a real template goes red here rather than being waved through.
+CIVILIZATIONS_WITH_A_SOURCED_APPEAL = (
+    Civilization.CHINESE,
+    Civilization.EUROPEAN,
+    Civilization.EGYPTIAN,
+)
 
 
 @pytest.fixture
@@ -169,12 +199,26 @@ def test_both_doors_build_the_same_appeal_flow(seeded, civilization):
     assert shape(through_judgment) == shape(through_appeal_door), (
         "the two doors built different appeal flows for the same civilization"
     )
-    assert len(shape(through_appeal_door)) > 1, (
-        f"{civilization} appeals resolve to a single node, which is the "
-        f"generic 审批节点 fallback — a flow that moves but names nothing. "
-        f"WORKFLOW_TEMPLATES should carry a real appeal template for this "
-        f"civilization."
-    )
+
+    built = shape(through_appeal_door)
+    if civilization in CIVILIZATIONS_WITH_A_SOURCED_APPEAL:
+        assert len(built) > 1, (
+            f"{civilization} appeals resolve to a single node, which is the "
+            f"generic 审批节点 fallback — a flow that moves but names nothing. "
+            f"WORKFLOW_TEMPLATES should carry a real appeal template for this "
+            f"civilization."
+        )
+    else:
+        # The reciprocal, so the exclusion above cannot age into a lie. The day
+        # somebody adds a sourced (GREEK, APPEAL) template this goes red and
+        # forces the name into the tuple, instead of the new template being
+        # quietly excused by a list nobody re-read.
+        assert len(built) == 1 and built[0][0] == "审批节点", (
+            f"{civilization} is recorded as having no sourced appeal flow, but "
+            f"it resolved to {built}. If a real appeal template was added, move "
+            f"{civilization} into CIVILIZATIONS_WITH_A_SOURCED_APPEAL and say "
+            f"where the procedure comes from."
+        )
 
 
 @pytest.mark.django_db

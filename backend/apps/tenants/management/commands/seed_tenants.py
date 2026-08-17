@@ -1,5 +1,5 @@
 """
-Management command to seed the three tenant records.
+Management command to seed the four tenant records.
 Idempotent — uses get_or_create so it's safe to run multiple times.
 """
 from django.core.management.base import BaseCommand
@@ -8,7 +8,10 @@ from apps.tenants.models import Tenant
 
 
 class Command(BaseCommand):
-    help = "Seed the three multi-tenant records: CN_DIYU, EU_HEAVEN_HELL, EG_DUAT"
+    help = (
+        "Seed the four multi-tenant records: CN_DIYU, EU_HEAVEN_HELL, EG_DUAT, "
+        "GR_HADES"
+    )
 
     def handle(self, *args, **options):
         tenants = [
@@ -28,6 +31,15 @@ class Command(BaseCommand):
                 "code": "EG_DUAT",
                 "display_name": "Egyptian Afterlife",
                 "description": "Egyptian Duat — Field of Reeds (Aaru), Hall of Two Truths, Lake of Fire",
+                "dispatch_enabled": True,
+            },
+            {
+                "code": "GR_HADES",
+                "display_name": "Greek Afterlife",
+                "description": (
+                    "Greek underworld — the meadow at the parting of the ways, "
+                    "the Isles of the Blessed and Tartarus (Plato, Gorgias 524a)"
+                ),
                 "dispatch_enabled": True,
             },
         ]

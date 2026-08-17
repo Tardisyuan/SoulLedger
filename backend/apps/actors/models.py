@@ -130,7 +130,11 @@ class Actor(AuditUserFields, models.Model):
 #: already carries the assessors' `assessor_index` and confession clause.
 #: `apps/actors/mythology/actors_egyptian.py::EGYPTIAN_ACTOR_ALIASES` is the
 #: seeded content and states what does and does not qualify as an alias;
-#: `actors_european.py::EUROPEAN_ACTOR_ALIASES` is the other table.
+#: `actors_greek.py::GREEK_ACTOR_ALIASES` is the other table — it holds
+#: Hades/Pluto, and it moved there from `actors_european.py` with the Hades row
+#: when GREEK was split out of EUROPEAN. The European and Chinese casts have no
+#: alias table at all: nothing in this repository writes a second rendering of
+#: any of their names.
 ALIASES_KEY = "aliases"
 
 

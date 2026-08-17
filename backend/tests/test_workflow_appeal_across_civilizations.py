@@ -76,7 +76,17 @@ from apps.tenants.models import Tenant
 from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus, CaseType
 from apps.workflow.services import VALID_CASE_TYPES_BY_CIVILIZATION, WorkflowService
 
-CIVILIZATIONS = (Civilization.CHINESE, Civilization.EUROPEAN, Civilization.EGYPTIAN)
+#: Written out rather than derived from `Civilization`, for the reason every
+#: expectation table in this suite is: a list built from the thing under test
+#: agrees with it by construction. GREEK joined when it became the fourth enum
+#: member — it has its own tenant (`GR_HADES`) and therefore its own souls, so
+#: an appeal on that side is a real path and not a hypothetical one.
+CIVILIZATIONS = (
+    Civilization.CHINESE,
+    Civilization.EUROPEAN,
+    Civilization.EGYPTIAN,
+    Civilization.GREEK,
+)
 
 
 @pytest.fixture
@@ -118,9 +128,10 @@ def _judgment(civilization, tenant, name):
 def test_appeal_is_valid_in_every_civilization():
     """The smallest place the defect is visible; no database needed.
 
-    Stated as "all three" rather than "European and Egyptian" so that the
-    Chinese set losing APPEAL — which would break the one civilization that
-    always worked — fails here too.
+    Stated over every civilization rather than over "European and Egyptian" so
+    that the Chinese set losing APPEAL — which would break the one civilization
+    that always worked — fails here too, and so that a civilization added later
+    with no set at all fails here rather than at the first appeal.
     """
     without = sorted(
         civilization

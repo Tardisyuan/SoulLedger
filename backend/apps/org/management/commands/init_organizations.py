@@ -56,14 +56,25 @@ INITIAL_ORGANIZATIONS = [
     {"name": "大天使团", "code": "HEAVEN_ANGEL", "category": "EUROPEAN", "parent_code": "HEAVEN"},
     {"name": "天堂执行层", "code": "HEAVEN_EXEC", "category": "EUROPEAN", "parent_code": "HEAVEN"},
 
+    {"name": "地狱", "code": "HELL", "category": "EUROPEAN", "parent": None, "level": 0},
+
+    # ========== 希腊冥界 ==========
+    # These two were `category="EUROPEAN"` until GREEK became its own
+    # civilization, and they are the one org subtree that was never Christian or
+    # Dantean: 冥界/HADES and its child 希腊冥界/HADES_GREEK exist to hold the
+    # Greek cast, and the child said so in its own name while filing itself
+    # under the European category. Rows already in a database are moved by
+    # org/0007_hades_tree_becomes_greek — this table only decides what a fresh
+    # `init_organizations` creates, and it creates with `get_or_create` defaults
+    # that never touch an existing row's category.
     {
         "name": "冥界",
         "code": "HADES",
-        "category": "EUROPEAN",
+        "category": "GREEK",
         "parent": None,
         "level": 0,
     },
-    {"name": "希腊冥界", "code": "HADES_GREEK", "category": "EUROPEAN", "parent_code": "HADES"},
+    {"name": "希腊冥界", "code": "HADES_GREEK", "category": "GREEK", "parent_code": "HADES"},
     # 北欧冥界 (HADES_NORSE) used to sit here as a second child of HADES. Norse
     # is out of this system entirely — a pantheon whose destination depends on
     # the manner of death, not on a verdict, has no judgment step to host, and
@@ -72,7 +83,6 @@ INITIAL_ORGANIZATIONS = [
     # children, no users and no ORG-scoped roles pointing at it, so removing it
     # takes nothing with it; a database seeded before this keeps its row until
     # someone deletes it by hand.
-    {"name": "地狱", "code": "HELL", "category": "EUROPEAN", "parent": None, "level": 0},
 
     # ========== 埃及冥界 ==========
     {

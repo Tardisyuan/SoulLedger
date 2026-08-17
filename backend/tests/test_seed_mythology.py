@@ -135,35 +135,61 @@ JUDICIAL_PERSONNEL = {
 # where they should be, and where they actually are.
 # --------------------------------------------------------------------------
 
-# The Greco-Roman cast `manage.py consolidate_eu_pantheon` audits for, as
-# (role, realm_code). Hades, not Pluto: same god, and that command merges the
-# pair into Hades, so seeding Pluto would manufacture the duplicate the merge
-# exists to remove. Kept in sync by hand with
+# The three Greek figures Dante actually uses, as (role, realm_code). They are
+# EUROPEAN because every anchor their rows cite is the Commedia's, not because
+# of where the names come from. Kept in sync by hand with
 # consolidate_eu_pantheon.GRECO_ROMAN_EXPECTED — see rule 1 in the docstring.
 #
 # The sources, one per row:
-#   Hades        EU_PLATO_MEADOW  overseer of the Greek judgment ground. The one
-#                                 engineering placement of the six — no house of
-#                                 Hades is modelled, and Limbo was not one.
 #   Minos        EU_HELL_2ND      Dante, Inferno V.4-15.
-#   Aeacus       EU_PLATO_MEADOW  Plato, Gorgias 524a (those from Europe).
-#   Rhadamanthus EU_PLATO_MEADOW  Plato, Gorgias 524a (those from Asia).
 #   Charon       EU_ACHERON       Virgil, Aeneid 6.295-297; Dante, Inferno III.
 #   Cerberus     EU_HELL_3RD      Dante, Inferno VI.
 GRECO_ROMAN_CAST = {
-    "Hades": ("OVERSEER", "EU_PLATO_MEADOW"),
     "Minos": ("JUDGE", "EU_HELL_2ND"),
-    "Aeacus": ("JUDGE", "EU_PLATO_MEADOW"),
-    "Rhadamanthus": ("JUDGE", "EU_PLATO_MEADOW"),
     "Charon": ("CONDUIT", "EU_ACHERON"),
     "Cerberus": ("GUARDIAN", "EU_HELL_3RD"),
 }
 
-# The two Greek places, added because the Greek cast had none. All eleven
-# European realms were Christian or Dantean while seven of the eleven European
-# actors are Greek, so every Greek figure had been filed into whichever Dantean
-# row looked nearest — which is how five of six ended up misplaced at once.
-GREEK_REALMS = ["EU_ACHERON", "EU_PLATO_MEADOW"]
+# The Greek cast proper, under `Civilization.GREEK` and the `GR_HADES` tenant.
+# Hades, not Pluto: same god, and `consolidate_eu_pantheon` merges the pair into
+# Hades, so seeding Pluto would manufacture the duplicate the merge exists to
+# remove.
+#
+#   Hades        EU_PLATO_MEADOW  overseer of the Greek judgment ground. The one
+#                                 engineering placement of the four — no house
+#                                 of Hades is modelled, and Limbo was not one.
+#   Aeacus       EU_PLATO_MEADOW  Plato, Gorgias 524a (those from Europe).
+#   Rhadamanthus EU_PLATO_MEADOW  Plato, Gorgias 524a (those from Asia).
+#   Minos        EU_PLATO_MEADOW  Plato, Gorgias 524a — the final decision when
+#                                 the other two are in doubt. A SECOND Minos
+#                                 row, distinct from the EUROPEAN one above:
+#                                 "different offices in different underworlds",
+#                                 which is what that row's own description has
+#                                 said since before this one existed.
+GREEK_CAST = {
+    "Hades": ("OVERSEER", "EU_PLATO_MEADOW"),
+    "Aeacus": ("JUDGE", "EU_PLATO_MEADOW"),
+    "Rhadamanthus": ("JUDGE", "EU_PLATO_MEADOW"),
+    "Minos": ("JUDGE", "EU_PLATO_MEADOW"),
+}
+
+# The Greek places, under GREEK. EU_PLATO_MEADOW keeps its EU_ code: a
+# `realm_code` is a join key (`Reincarnation.target_realm` stores it as text,
+# `consolidate_eu_pantheon` audits against it) and renaming one cost realms/0012
+# and realms/0015 a dedicated migration each. The prefix records where the row
+# was written, not what owns it.
+#
+# The two destinations are here because Gorgias 524a names them in the same
+# sentence as the fork — "the two ways leading, one to the Isles of the Blest,
+# and the other to Tartarus" — and for no other reason. Asphodel and the five
+# rivers are deliberately absent; see GREEK_REALMS' header in
+# apps/actors/mythology/realms.py.
+GREEK_REALM_CODES = ["EU_PLATO_MEADOW", "GR_ISLES_OF_THE_BLESSED", "GR_TARTARUS"]
+
+# EU_ACHERON is NOT in the list above. It stays EUROPEAN with Charon, whose
+# anchor is Dante at the gate of hell (Inf. III); the crossing is the threshold
+# of *that* hell.
+DANTE_THRESHOLD_REALM = "EU_ACHERON"
 
 # The Christian cast, as (role, realm_code). Christ is the row that did not
 # exist: `grep -i 'christ\|jesus\|基督\|耶稣'` matched nothing anywhere in this
@@ -1141,42 +1167,115 @@ def test_second_run_creates_no_assessors(seeded):
 
 @pytest.mark.django_db
 def test_greek_realms_present(seeded):
-    """The Greek cast has Greek ground to stand on.
+    """The Greek cast has Greek ground to stand on, filed under GREEK.
 
-    Without these two rows there is no place in the system that any of the
-    seven Greek actors belongs to, and the only way to give them a realm at all
-    is to put them in a circle of Dante's hell — which is how Minos, Aeacus,
-    Rhadamanthus, Charon, Cerberus and Hades all came to be misplaced at once.
+    Without EU_PLATO_MEADOW there is no place in the system any of the Greek
+    actors belongs to, and the only way to give them a realm at all is to put
+    them in a circle of Dante's hell — which is how Minos, Aeacus, Rhadamanthus,
+    Charon, Cerberus and Hades all came to be misplaced at once.
+
+    The civilization is asserted, not just the presence. These rows existed
+    under EUROPEAN before the split and would still exist under EUROPEAN if the
+    split had moved the seed table without moving the data, and the whole point
+    of the change is which tenant owns them.
     """
     codes = set(
-        Realm.objects.filter(civilization="EUROPEAN", realm_code__in=GREEK_REALMS)
+        Realm.objects.filter(civilization="GREEK", realm_code__in=GREEK_REALM_CODES)
         .values_list("realm_code", flat=True)
     )
-    absent, message = _missing(GREEK_REALMS, codes, "Greek realms")
+    absent, message = _missing(GREEK_REALM_CODES, codes, "Greek realms")
     assert not absent, message
+
+    # And the crossing stayed behind. Asserting only the three above stays green
+    # if EU_ACHERON is swept into GREEK along with them, which would take
+    # Dante's threshold — and, since actors resolve realms within their own
+    # civilization, Charon's posting — with it.
+    acheron = Realm.objects.filter(realm_code=DANTE_THRESHOLD_REALM).first()
+    assert acheron is not None, f"{DANTE_THRESHOLD_REALM} is not seeded at all"
+    assert acheron.civilization == "EUROPEAN", (
+        f"{DANTE_THRESHOLD_REALM} is {acheron.civilization}. The crossing stays "
+        f"EUROPEAN because the row that stands on it does: Dante puts Charon on "
+        f"Acheron before the first circle (Inf. III), and that is the anchor "
+        f"this deployment's Charon row cites."
+    )
 
 
 @pytest.mark.django_db
 def test_greco_roman_cast_present_with_correct_roles_and_realms(seeded):
-    """Hades, the three judges, Charon and Cerberus exist, cast AND placed.
+    """The three Dante borrowed exist, cast AND placed, and stay EUROPEAN.
 
-    `consolidate_eu_pantheon` keeps Christian + Greco-Roman as the two European
-    judgment systems and audits this exact roster. The seed used to create only
-    Charon, Minos, Cerberus and Pluto, so on a fresh database that audit
+    `consolidate_eu_pantheon` audits this exact roster. The seed used to create
+    only Charon, Minos, Cerberus and Pluto, so on a fresh database that audit
     reported Hades, Aeacus and Rhadamanthus MISSING — the audit could not pass
     on any database this project ships.
 
     Then it could, and it still said nothing useful: with all six seeded, five
     of them were standing in a realm no source supports and both this test and
     that audit passed, because both locked the role and neither looked at the
-    realm. The realm is checked here now.
+    realm. The realm is checked here now, and since the GREEK split the
+    civilization is what decides which of the two Minos rows this table is
+    talking about.
     """
     fault = _placement_faults(
         "EUROPEAN", GRECO_ROMAN_CAST, "The Greco-Roman cast"
     )
     assert fault is None, (
-        f"{fault}\nconsolidate_eu_pantheon audits exactly these six and its "
+        f"{fault}\nconsolidate_eu_pantheon audits exactly these three and its "
         f"GRECO_ROMAN_EXPECTED must say the same thing this table does."
+    )
+
+
+@pytest.mark.django_db
+def test_greek_cast_present_with_correct_roles_and_realms(seeded):
+    """Hades and Plato's three judges, under GREEK and on Plato's ground.
+
+    Three of these four rows moved out of EUROPEAN and one is new. What makes
+    the move worth a test of its own is that nothing about the rows changed
+    except the column that decides which tenant owns them — so a half-applied
+    split (seed table moved, realms/0018 not run, or the reverse) leaves rows
+    that look right in every respect this repository used to check.
+
+    The fourth row, Plato's Minos, is the only name added anywhere in the split.
+    Its justification is the EUROPEAN Minos row's own words — the two are
+    "different offices in different underworlds" — and not that a fork with two
+    named judges looked as if it were missing a third. The rule the forty-two
+    assessors taught this repository is that a slot does not justify a row.
+    """
+    fault = _placement_faults("GREEK", GREEK_CAST, "The Greek cast")
+    assert fault is None, (
+        f"{fault}\nconsolidate_eu_pantheon.GREEK_EXPECTED audits exactly these "
+        f"four and must say the same thing this table does."
+    )
+
+
+@pytest.mark.django_db
+def test_the_two_minos_rows_are_two_rows(seeded):
+    """One name, two offices, two rows — and neither is a stray duplicate.
+
+    This is the assertion that keeps the second Minos honest. A single row
+    answering to both readings would be the collapse the EUROPEAN row's comment
+    warns about (a judge who allots circles in a cosmology that has none), and a
+    duplicate created by accident would look identical to a duplicate created on
+    purpose unless somebody says which is which. So: exactly two live rows named
+    Minos in the whole database, one per civilization, standing in different
+    realms.
+    """
+    rows = sorted(
+        Actor.objects.filter(name="Minos").values_list(
+            "civilization", "realm__realm_code"
+        )
+    )
+    assert rows == [
+        ("EUROPEAN", "EU_HELL_2ND"),
+        ("GREEK", "EU_PLATO_MEADOW"),
+    ], (
+        f"Minos rows in the database: {rows}. There should be exactly two — "
+        f"Dante's, who coils his tail at the entrance to the second circle "
+        f"(Inf. V.4-15), and Plato's, who holds the final decision at the fork "
+        f"when Aeacus and Rhadamanthus are in doubt (Gorg. 524a). If there is "
+        f"one, a cosmology has lost its arbiter; if there are three, somebody "
+        f"has seeded Homer's (Od. 11.568-571) without giving him a realm the "
+        f"poem supports."
     )
 
 
@@ -1223,45 +1322,78 @@ def test_the_christian_side_seats_one_judge_and_no_bench(seeded):
     assessors were for a long time thirty-five names that were not assessors,
     assembled because the template said a bench belonged there. Europe answered
     the same pressure by counting Greeks — three of the eleven European actors
-    were Greek judges — which is why the Greek names are excluded here by
-    realm rather than by a hardcoded list of who not to count.
+    were Greek judges.
+
+    THE REALM FILTER IS GONE, AND ITS REMOVAL IS THE POINT OF THIS REVISION.
+    This test used to ask only about judges standing in EU_HEAVEN or
+    EU_PURGATORY, and said so in its own docstring: the Greek names were
+    "excluded here by realm rather than by a hardcoded list of who not to
+    count". That was a workaround for a civilization column that could not tell
+    the two systems apart, and it left the nine circles, the seven terraces and
+    the summit entirely unwatched — a judge added anywhere in Dante's hell
+    passed this test in silence. Since GREEK became its own civilization the
+    exclusion is done by the column that means it, so the query here is now the
+    *whole* European cast and nothing in it is unwatched.
+
+    WHY THE ANSWER IS TWO NAMES AND NOT ONE. Dante's Minos stays EUROPEAN and
+    stays a JUDGE. The tempting alternative was to demote him — call him a
+    sorter, get the count down to one, and have a rounder assertion — and the
+    poem does not allow it: Inf. V.9 is 「giudica e manda secondo ch'avvinghia」,
+    *judges* and sends, after 「essamina le colpe ne l'intrata」. The tail is how
+    the sentence is pronounced, not a substitute for pronouncing one. So the
+    honest statement is not "Europe has one judge" but "Europe has one
+    *Christian* judge, and one more that Dante borrowed" — and the way to keep
+    that from becoming a licence to add a third is to name both and refuse
+    anything else.
     """
-    christian_realms = ["EU_HEAVEN", "EU_PURGATORY"]
     judges = sorted(
-        Actor.objects.filter(
-            civilization="EUROPEAN",
-            role="JUDGE",
-            realm__realm_code__in=christian_realms,
-        ).values_list("name", flat=True)
+        Actor.objects.filter(civilization="EUROPEAN", role="JUDGE")
+        .values_list("name", flat=True)
     )
-    assert judges == ["Christ"], (
-        f"The Christian side of EU_HEAVEN_HELL should seat exactly one judge, "
-        f"Christ, and it seats {judges}. If a name was added here to fill out a "
-        f"tribunal: there is no tribunal to fill. If Christ is missing, the "
-        f"judgment system has no judge. Realms checked: {christian_realms}."
+    assert judges == ["Christ", "Minos"], (
+        f"The EUROPEAN cast should seat exactly two judges and it seats "
+        f"{judges}.\n"
+        f"  Christ — the only judge this theology has (John 5:22; the Nicene "
+        f"Creed; CCC 1021-1041). If he is missing, the judgment system has no "
+        f"judge.\n"
+        f"  Minos — Dante's, at the entrance to the second circle (Inf. "
+        f"V.4-15). He is not a member of a tribunal and there is no tribunal "
+        f"for him to be a member of; he is here because the Commedia is part of "
+        f"this cosmology and Plato's Minos is a separate GREEK row.\n"
+        f"Anyone else is a bench being filled. There is no bench: Matt 19:28 / "
+        f"Luke 22:30 seats the twelve apostles with no dockets and no names, "
+        f"and 1 Cor 6:2-3 makes the subject 'the saints', i.e. everyone."
     )
 
 
 @pytest.mark.django_db
-def test_hades_is_the_sole_european_overseer(seeded):
-    """One overseer per pantheon, and on the Greco-Roman side it is Hades.
+def test_hades_is_the_sole_greek_overseer(seeded):
+    """One overseer per pantheon, and on the Greek side it is Hades — alone.
 
-    Pluto is Hades' Roman name. Seeding both would put two OVERSEERs in one
-    tenant and hand `consolidate_eu_pantheon`'s merge step a duplicate to clean
-    up on every fresh database — so Pluto is deliberately not seeded, and this
-    asserts it stays that way.
+    Pluto is not a Roman name for Hades but a Latin transcription of Πλούτων, a
+    Greek cult title of the same god (Plato, Cratylus 403a); Rome's own
+    underworld gods are Dis Pater and Orcus. Either way it is one god, and
+    seeding both spellings would put two OVERSEERs in one tenant and hand
+    `consolidate_eu_pantheon`'s merge step a duplicate to clean up on every
+    fresh database — so Pluto is deliberately not seeded, and this asserts it
+    stays that way.
+
+    The query is now the whole GREEK civilization and the assertion is an exact
+    list rather than a membership test. Before the split this asked whether
+    "Hades" appeared among the European overseers, which stayed green with any
+    number of others beside him; a cosmology's sole administrator is a claim
+    about the whole set.
     """
     overseers = sorted(
-        Actor.objects.filter(civilization="EUROPEAN", role="OVERSEER")
+        Actor.objects.filter(civilization="GREEK", role="OVERSEER")
         .values_list("name", flat=True)
     )
-    assert "Hades" in overseers, (
-        f"Hades is not seeded as a EUROPEAN OVERSEER. Overseers found: {overseers}"
-    )
-    assert "Pluto" not in overseers, (
-        f"Pluto was seeded alongside Hades — same god, two OVERSEER rows. "
-        f"consolidate_eu_pantheon would soft-delete one of them on every fresh "
-        f"database. Overseers found: {overseers}"
+    assert overseers == ["Hades"], (
+        f"The Greek side should seat exactly one OVERSEER, Hades, and it seats "
+        f"{overseers}. 'Pluto' here means the merge duplicate is back — same "
+        f"god, two rows. Anyone else means a second administrator was added to "
+        f"a cosmology whose only sourced one is the god the underworld is "
+        f"named after."
     )
 
 
@@ -1323,11 +1455,22 @@ def test_consolidate_eu_pantheon_audit_is_clean_after_seeding(seeded):
         "freshly seeded database:\n" + "\n".join(deviation_lines)
         + f"\n\nFull output:\n{output}"
     )
-    assert "all six stand in the realm their source puts them in" in output, (
+    assert "All seven stand in the realm their source puts them in" in output, (
         f"The audit did not report a clean pass, so the assertions above may be "
         f"passing because the audit never ran — or because its realm check was "
         f"removed, which is the failure this phrase exists to detect.\n{output}"
     )
+    # Both halves of the split ran. The audit looks rows up by
+    # `(name, civilization)`, so a version of it that had kept one six-name
+    # table would report the four Greek names MISSING — which the assertions
+    # above would catch — but a version that dropped the Greek table entirely
+    # would report nothing at all and pass every check above by checking less.
+    for civilization in ("EUROPEAN", "GREEK"):
+        assert civilization in output, (
+            f"consolidate_eu_pantheon's audit never mentions {civilization}. "
+            f"A clean report over a cast it did not look at is not a clean "
+            f"cast.\n{output}"
+        )
 
 
 @pytest.mark.django_db

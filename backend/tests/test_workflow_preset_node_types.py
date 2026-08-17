@@ -259,7 +259,12 @@ def test_the_preset_file_parses_into_every_node_it_contains():
         f"pattern; do not narrow what this file checks."
     )
     civilizations = {preset["civilization"] for preset in presets.values()}
-    assert civilizations == {"CHINESE", "EUROPEAN", "EGYPTIAN"}
+    assert civilizations == {"CHINESE", "EUROPEAN", "EGYPTIAN", "GREEK"}, (
+        f"presets parsed for {sorted(civilizations)}. GREEK joined when "
+        f"`EUROPEAN_GREEK` was re-filed as `GREEK_ROUTINE` — its nodes name "
+        f"Aeacus, Rhadamanthus and Plato's Minos, who are seeded under "
+        f"`Civilization.GREEK` and the `GR_HADES` tenant."
+    )
 
 
 # ── the table, against NodeType ───────────────────────────────────────
@@ -460,10 +465,12 @@ def test_no_preset_is_rejected_for_its_node_types(seeded):
     this case honest about which defect it measures; the EMERGENCY one is
     reported separately rather than folded in here.
     """
+    # One admin per civilization, derived from `Civilization` rather than
+    # listed. Listing fails as a KeyError at POST time for the preset of a
+    # civilization added later, which is a crash rather than a finding and says
+    # nothing about whether that preset's node types are accepted.
     tenant_for = {
-        "CHINESE": _tenant(Civilization.CHINESE),
-        "EUROPEAN": _tenant(Civilization.EUROPEAN),
-        "EGYPTIAN": _tenant(Civilization.EGYPTIAN),
+        civilization.value: _tenant(civilization) for civilization in Civilization
     }
     clients = {
         civilization: APIClient(**_bearer(_admin(tenant, f"preset_{civilization}")))

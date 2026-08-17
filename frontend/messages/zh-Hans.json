@@ -100,7 +100,8 @@
     "civilizations": {
       "CHINESE": "中国",
       "EUROPEAN": "欧洲",
-      "EGYPTIAN": "埃及"
+      "EGYPTIAN": "埃及",
+      "GREEK": "希腊"
     },
     "categories": {
       "CHARITY": "布施",
@@ -558,7 +559,8 @@
     "civilizations": {
       "CHINESE": "中国地府",
       "EUROPEAN": "欧洲天堂地狱",
-      "EGYPTIAN": "埃及冥界"
+      "EGYPTIAN": "埃及冥界",
+      "GREEK": "希腊冥界"
     },
     "case_types": {
       "ROUTINE": "常规审判",
@@ -863,7 +865,8 @@
     "civilizations": {
       "CHINESE": "中国地府",
       "EUROPEAN": "欧洲天堂地狱",
-      "EGYPTIAN": "埃及杜阿特"
+      "EGYPTIAN": "埃及杜阿特",
+      "GREEK": "希腊冥界"
     },
     "types": {
       "HELL": "地狱",
@@ -947,7 +950,8 @@
     "civilizations": {
       "CHINESE": "中国地府",
       "EUROPEAN": "欧洲天堂与地狱",
-      "EGYPTIAN": "埃及杜阿特"
+      "EGYPTIAN": "埃及杜阿特",
+      "GREEK": "希腊冥界"
     },
     "root": "根",
     "organizations_count": "{{count}} 个组织"
@@ -961,7 +965,8 @@
     "civilizations": {
       "CHINESE": "中国地府",
       "EUROPEAN": "欧洲天堂地狱",
-      "EGYPTIAN": "埃及冥界"
+      "EGYPTIAN": "埃及冥界",
+      "GREEK": "希腊冥界"
     },
     "count": "{{count}} 位角色",
     "roles": {

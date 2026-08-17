@@ -135,7 +135,21 @@ describe("Egyptian trials: Horus escorts, he does not hold a first hearing", () 
 // ── Greece: Plato's fork, not a ladder of appeals ────────────────────
 
 describe("Greek template follows Gorgias 524a", () => {
-  const greek = WORKFLOW_TEMPLATES.EUROPEAN_GREEK;
+  const greek = WORKFLOW_TEMPLATES.GREEK_ROUTINE;
+
+  it("is filed under its own civilization, not Europe's", () => {
+    // The preset used to be `EUROPEAN_GREEK` with `civilization: "EUROPEAN"`,
+    // and its own comment recorded that as a defect awaiting a backend that
+    // could tell Plato from Dante. `Civilization.GREEK` exists now, with the
+    // `GR_HADES` tenant and Hades/Aeacus/Rhadamanthus/Minos seeded under it.
+    //
+    // This is not decoration: backend/tests/test_workflow_template_cast.py
+    // resolves each node's person against the cast of *this* civilization, so
+    // "EUROPEAN" here would mean two of the three nodes name somebody the
+    // European roster cannot supply — an ApprovalNode with approver SYSTEM
+    // showing a name as if someone were deciding it.
+    expect(greek.civilization).toBe("GREEK");
+  });
 
   it("gives Minos the final decision, last", () => {
     // "to Minos I will give the privilege of the final decision" — Gorgias

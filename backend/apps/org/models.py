@@ -46,10 +46,17 @@ class Organization(AuditUserFields):
         help_text="父组织（平行部门）"
     )
     # 分类：对应原来的 civilization
+    # Mirrors apps.souls.models.Civilization by hand rather than reusing
+    # `Civilization.choices`: the labels here are Chinese and the enum's are
+    # English, and this column is documented as "对应原来的 civilization" rather
+    # than as the same value. Adding GREEK keeps the two in step — an
+    # Organization whose category is not a civilization would be a tree no
+    # tenant answers for.
     CATEGORY_CHOICES = [
         ('CHINESE', '中国地府'),
         ('EUROPEAN', '欧洲天堂地狱'),
         ('EGYPTIAN', '埃及冥界'),
+        ('GREEK', '希腊冥界'),
     ]
     category = models.CharField(
         max_length=20,

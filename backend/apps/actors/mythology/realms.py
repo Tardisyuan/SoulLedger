@@ -1,4 +1,4 @@
-"""Realm tables for the three cosmologies, and the one parent/child link.
+"""Realm tables for the four cosmologies, and the one parent/child link.
 
 Moved verbatim out of ``seed_mythology.py``; see that command's docstring
 for how the rows are matched and ``apps.actors.mythology`` for the corpus
@@ -351,34 +351,31 @@ EUROPEAN_REALMS = [
     ("EU_HELL_9TH", "第九层地狱", "叛徒冰湖", "Ninth Circle - Treachery", "Treachery", RealmType.HELL, 9,
      "Traitors - frozen in the lake of Cocytus (Judas, Brutus)", "NONE", True, None),
     # --------------------------------------------------------------------
-    # TWO GREEK PLACES, ADDED BECAUSE THE GREEK CAST HAD NOWHERE TO STAND.
+    # THE CROSSING, WHICH IS DANTE'S AND STAYS HERE.
     #
-    # Until now the eleven European realms were nine Dante circles plus heaven
-    # and purgatory — every one of them Christian or Dantean — while seven of
-    # the eleven European actors are Greek. There was no Greek place in the
-    # system at all, so each Greek figure had been filed into whichever
-    # Christian/Dantean row looked closest, and every one of those placements
-    # was wrong: Charon in Purgatory, Cerberus in Limbo, Minos and both of his
+    # This row and EU_PLATO_MEADOW were added together as "two Greek places",
+    # because the eleven European realms were nine Dante circles plus heaven and
+    # purgatory while seven of the eleven European actors were Greek, and every
+    # Greek figure had been filed into whichever Christian/Dantean row looked
+    # closest: Charon in Purgatory, Cerberus in Limbo, Minos and both of his
     # fellow judges in the ninth circle, Hades in Limbo.
     #
-    # The fix is not to redistribute them among Dante's circles. Dante uses
-    # exactly one of these figures as a judge (Minos, Inf. V) and does not use
-    # Aeacus or Rhadamanthus at all, so any circle they were given would be an
-    # invention. These two rows are the smallest set of *attested* Greek places
-    # that lets the cast be placed by a source instead of by proximity.
+    # The pair has since been split, because they answer to different authors.
+    # The meadow is Plato's and has moved to GREEK_REALMS below with the three
+    # judges who stand on it. The crossing stays EUROPEAN because the actor it
+    # exists to seat stays EUROPEAN: Dante puts Charon on Acheron before the
+    # first circle (Inf. III), which is the anchor this deployment's Charon row
+    # cites, and the crossing is the threshold of *this* hell.
     #
     # EACH ROW NAMES ITS AUTHOR. Homer, Hesiod, Pindar, Plato and Virgil do not
     # describe the same underworld — Homer has no moral sorting at all, Plato
     # has a two-way fork, Virgil has the fullest geography — so "the Greek
     # underworld" is not a thing that can be seeded. What can be seeded is one
-    # named author's account of one place, which is what these are. Do not add
-    # a third row on the assumption that these two are the start of a complete
-    # map; see docs/lore-verification/verify-greek.md §5 for the list of what
-    # is missing and why completing it is a research task, not a data entry.
+    # named author's account of one place, which is what these are.
     #
-    # Neither is a disposition destination. `DispositionService` routes no
-    # verdict to either, deliberately: a soul is not sentenced to the ferry or
-    # to the fork, it passes through them.
+    # Not a disposition destination. `DispositionService` routes no verdict
+    # here, deliberately: a soul is not sentenced to the ferry, it passes
+    # through it.
     ("EU_ACHERON", "阿刻戎渡口", "冥河渡口", "The Crossing of Acheron", "Acheron",
      RealmType.NEUTRAL, 0,
      "The far bank of Acheron, where the dead are ferried in. Virgil, Aeneid "
@@ -387,14 +384,87 @@ EUROPEAN_REALMS = [
      "this is a threshold and not a circle. Euripides, Alcestis 252-256 has the "
      "same crossing as a lake. Not a destination: nobody is sentenced here.",
      "NONE", False, None),
+]
+
+# --------------------------------------------------------------------------
+# GREEK — Plato's fork and the two roads out of it.
+#
+# WHY THIS TABLE EXISTS AT ALL. These rows were EUROPEAN until the split, which
+# put Plato's judgment ground in the same cosmology as Dante's circles and the
+# Nicene Creed's last judgment. Nothing about the row was wrong; the
+# civilization column was, and it had consequences beyond taxonomy — a Greek
+# realm under the European tenant is reachable only through European routing,
+# and a soul in it reads the European ledger reading (culpa/poena) rather than
+# the term-served one Republic X actually describes.
+#
+# WHY THERE ARE EXACTLY THREE ROWS, AND WHY THE OBVIOUS FOURTH IS NOT HERE.
+# Gorgias 524a is one passage and it names three places: the meadow at the
+# parting of the ways, and the two roads out of it — "the two ways leading, one
+# to the Isles of the Blest, and the other to Tartarus". The two destinations
+# are added *because that sentence names them*, and for no other reason. They
+# are not the start of a map of the Greek underworld.
+#
+# Asphodel is the case that proves the rule and it is deliberately absent.
+# Homer's ἀσφοδελὸς λειμών (Od. 11.538-540) is where Achilles walks — a hero,
+# not a middling soul — and the neat Tartarus/Asphodel/Elysium triad is a modern
+# textbook systematisation, not a division any ancient author makes. The five
+# rivers are absent for the same reason: Styx, Acheron, Cocytus, Phlegethon and
+# Lethe come from four authors who do not agree about them, and seeding them as
+# one geography would assert a consensus that does not exist. See
+# docs/lore-verification/verify-greek.md §2.6 and §6, which say in as many words
+# not to synthesise a standard version, and the EU_ACHERON comment above, which
+# says the same thing about the crossing.
+#
+# CODES. The meadow keeps `EU_PLATO_MEADOW`. Its code records where the row was
+# first written, not what it now belongs to, and renaming a `realm_code` is not
+# a cosmetic edit here: it is the join key `Reincarnation.target_realm` stores as
+# text, the string `consolidate_eu_pantheon` audits against, and the identifier
+# realms/0012 and realms/0015 each needed a dedicated migration to change. The
+# two new rows take `GR_` because they are new and nothing points at them yet.
+#
+# NONE OF THE THREE IS A DISPOSITION DESTINATION YET. `DispositionService` has
+# no Greek branch — that is a later phase — so no verdict routes here, and the
+# absence is deliberate rather than pending: routing to Tartarus or the Isles
+# requires a Greek verdict vocabulary this system does not have.
+GREEK_REALMS = [
     ("EU_PLATO_MEADOW", "岔路草原", "审判岔路", "The Meadow at the Parting of the Ways",
      "Meadow", RealmType.NEUTRAL, 0,
      "Plato, Gorgias 524a: the dead are judged in a meadow at the fork in the "
      "road, one way leading to the Isles of the Blessed and the other to "
      "Tartarus. This is a sorting point that stands BEFORE any punishment, "
      "which is the whole reason the three judges cannot be housed in a circle "
-     "of Dante's hell. Neither destination the fork leads to is modelled here, "
-     "and neither is invented: this row is the judgment ground only.",
+     "of Dante's hell. Both roads out of it are now seeded, because the same "
+     "sentence names them; nothing else of the Greek geography is.",
+     "NONE", False, None),
+    # `is_eternal` IS FALSE ON BOTH ROADS, AND THAT IS A RECORDED LIMITATION
+    # RATHER THAN A FINDING. Gorgias 524a — the passage these two rows are
+    # seeded from — says where the roads go and nothing at all about how long
+    # anyone stays. The authors who do speak to duration disagree: 525c makes
+    # the incurable everlasting examples, while Republic X, 615a-b sentences the
+    # unjust to a thousand-year circuit and then sends them back to choose a new
+    # life. `is_eternal` is a BooleanField with no third state, so one of the
+    # two claims has to be stored, and False is the one that does not assert
+    # perpetuity on the strength of a passage that never mentions it. Do not
+    # read it as "Plato says the sentence ends".
+    ("GR_ISLES_OF_THE_BLESSED", "至福岛", "至福岛", "The Isles of the Blessed",
+     "IslesOfTheBlest", RealmType.BLISS, 1,
+     "Plato, Gorgias 524a: one of the two roads out of the meadow, taken by "
+     "those who have lived justly. Pindar, Olympian 2 describes the same "
+     "destination as requiring three lives without injustice on either side of "
+     "the grave, with Rhadamanthys judging at Kronos' side — a harder entry "
+     "condition than the Gorgias states, and one this row does not model. Not "
+     "Homer's Elysian plain (Od. 4.563-568), which is an exemption from death "
+     "granted to particular men rather than a reward for a life.",
+     "NONE", False, None),
+    ("GR_TARTARUS", "塔尔塔罗斯", "塔尔塔罗斯", "Tartarus", "Tartaros",
+     RealmType.HELL, 1,
+     "Plato, Gorgias 524a: the other road out of the meadow. In Hesiod "
+     "(Theogony 720ff) Tartarus is the pit the Titans are imprisoned in rather "
+     "than a destination for human dead, and in Virgil (Aeneid 6.548-579) it is "
+     "walled three times about, ringed by the Phlegethon and ruled by "
+     "Rhadamanthus — who in Plato is a judge at the fork and not a warden. "
+     "Three incompatible accounts of one name; this row is the Gorgias one, "
+     "which is the only one the judges seeded beside it belong to.",
      "NONE", False, None),
 ]
 
