@@ -29,8 +29,15 @@ should be one entry, next to the others, where it is obvious that a fourth
 answer was needed and what it is.
 
 This module *adds* a reading. It does not replace `karmic_balance`, which is a
-Soul property the souls app owns, which disposition/services.py routes on, and
-which querysets filter and order by. Removing it is a separate, larger change.
+Soul property the souls app owns and which querysets filter and order by in SQL.
+Removing it is a separate, larger change.
+
+What routing reads is no longer the same question. `disposition/services.py`
+used to sentence every soul on `karmic_balance`; the Chinese branch now
+sentences on the unoffset-demerit figure `non_fungible` reports below (via
+`LedgerService.get_unoffset_demerit`), and the other two branches still read the
+raw balance because 「不可折」 is a limit on 功過相抵 and neither of them has one.
+That asymmetry is the same one this module is built on, carried one layer out.
 
 TODO(i18n): the prose in `poena_unavailable` and `reason` below is user-facing
 copy hard-coded in a service module, which is the wrong place for it — see the
@@ -70,8 +77,9 @@ def _chinese_reading(merit: int, demerit: int, demerit_count: int,
     """A cumulative account — but not a single interchangeable pool.
 
     `balance` stays merit minus demerit. It is the native instrument here (it is
-    what 不善門#8's 夾注 defines: 「一過去功一分，十過去功十分」), it is what
-    `Soul.karmic_balance` mirrors, and it is what disposition routes on.
+    what 不善門#8's 夾注 defines: 「一過去功一分，十過去功十分」) and it is what
+    `Soul.karmic_balance` mirrors. It is no longer what disposition routes a
+    Chinese soul on — see `non_fungible` below and the module docstring.
 
     What is added is the limit the same tradition puts on that arithmetic.
     《文昌帝君功過格·凡例》: 「功過有不可折者。如用財之百功，不可折致死人之

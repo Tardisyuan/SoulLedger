@@ -43,15 +43,29 @@ decision, not a textual correction.
 
 What this does not do
 ---------------------
-* It does NOT touch `Soul.karmic_balance`, `merit_score`, `demerit_score`, or
-  `DispositionService`. Those still net raw across every class, so the routing a
-  verdict receives is unchanged by this module. That is a real remaining gap and
-  is stated rather than papered over: karmic_balance is a Soul property the
-  souls app owns, seven disposition call sites route on it, and querysets order
-  by it. Rewriting it is a separate change with its own argument to make. What
-  lands here is the *reading* — the same place apps/ledger/readings.py put its
-  refusal to flatten three cosmologies into one net, one level deeper: inside
-  the Chinese ledger, merit and fault are not all interchangeable either.
+* It does NOT re-score anything. `merit_score` and `demerit_score` still mean
+  exactly what they meant — the decayed sums of a soul's MERIT and DEMERIT
+  records — and no stored number changes because this module exists. It
+  partitions numbers it is handed; it does not restate them.
+
+  This module's first version also left the routing layer alone, so a verdict
+  was still handed down on a single netted balance and buying off a killing
+  still worked where it cost a soul something. That half has since landed:
+  `LedgerService.get_unoffset_demerit` exposes the figure below and
+  `DispositionService._route_chinese` sentences on it. Which of the disposition
+  call sites take it and which deliberately do not is argued there, per site —
+  the short version is that only the Chinese one does, because 「不可折」 is a
+  limit on 功過相抵 and neither of the other two cosmologies has that step.
+
+* It does NOT redefine `Soul.karmic_balance`, and that is a decision rather than
+  an omission. It is a column expression before it is a property: querysets
+  annotate `merit_score - demerit_score` to sort and range-filter souls in SQL
+  (apps/souls/querysets.py, apps/souls/filters.py, apps/ledger/views.py). A pool
+  is derived in Python from a record's category and is deliberately not a stored
+  column (see above), so there is no SQL for a pool-aware balance — a redefined
+  property would disagree with every queryset computing the same name in the
+  database. The raw net stays the raw net, and what changed is which number
+  routing reads.
 * It does NOT implement 零積不抵整發 (the granularity rule). Doing so needs a
   notion of whether a fault was incurred "at a stroke", which no field records —
   `is_milestone` is display-only by explicit decision (see SoulRecord). A proxy

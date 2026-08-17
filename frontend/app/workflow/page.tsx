@@ -11,6 +11,7 @@ import { LazyWorkflowEditor } from "@/src/components/charts/LazyWorkflowEditor";
 import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { WORKFLOW_TEMPLATES, type TemplateKey } from "@/src/config/workflow-templates";
+import { nodeTypeFor } from "@/src/config/workflow-node-types";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
@@ -378,7 +379,12 @@ export default function WorkflowPage() {
                                     id: n.id,
                                     node_name: n.name,
                                     court_code: n.court,
-                                    node_type: n.type,
+                                    // `n.type` 是中文步骤名，不是 NodeType 成员——
+                                    // 原样放进 node_type 是「编辑预设必定 400」的
+                                    // 源头（见 src/config/workflow-node-types.ts）。
+                                    // 预览走的是同一个映射，好让预览看到的类型和
+                                    // 保存后存下的类型是同一个。
+                                    node_type: nodeTypeFor(n.type),
                                   })),
                                 });
                                 setViewModalOpen(true);
@@ -399,7 +405,12 @@ export default function WorkflowPage() {
                                       id: n.id,
                                       node_name: n.name,
                                       court_code: n.court,
-                                      node_type: n.type,
+                                      // 这一行就是缺陷所在：原本是 `n.type`，把
+                                      //「分流」「初审」「终审」…送进 WorkflowEditor，
+                                      // getTemplateNodes() 再 POST 成 node_type，而
+                                      // WorkflowTemplateNodeSerializer 的 ChoiceField
+                                      // 只收五个 NodeType 成员 → 400。
+                                      node_type: nodeTypeFor(n.type),
                                     })),
                                   });
                                   setTab("editor");
@@ -425,7 +436,13 @@ export default function WorkflowPage() {
                               <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
                               <span className="text-xs text-[hsl(var(--color-ink-muted))]">{node.court}</span>
                               <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-                              <span className="text-xs text-[hsl(var(--color-ink-muted))]"><DomainEnum namespace="workflow.node_type" value={node.type} /></span>
+                              {/* `workflow.node_type` 这个 bundle 只有 trial/
+                                  evaluation/appeal/final/execution 五个键，所以
+                                  直接传 `node.type`（「分流」…）时 <DomainEnum> 一律
+                                  判为 unrecognized，这一格 56 个预设节点全部显示
+                                 「未识别取值」。映射之后它显示的是真正的类型，也和
+                                  保存下去的值是同一个。 */}
+                              <span className="text-xs text-[hsl(var(--color-ink-muted))]"><DomainEnum namespace="workflow.node_type" value={nodeTypeFor(node.type)} /></span>
                             </div>
                           ))}
                         </div>
