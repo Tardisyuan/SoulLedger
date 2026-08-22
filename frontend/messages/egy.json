@@ -232,9 +232,9 @@
         "poena_missing_absolution": "Ma Rekhyu Wehem Netjer",
         "poena_missing_satisfaction": "Ma Rekhyu Aha Wehem",
         "poena_missing_penance": "Ma Rekhyu Iri Wehem",
-        "unavailable_explanation": "Aset Ahamet Ma Rekhyu Aba Hemsu — Aba Unemu Tepy Her Tepy.",
+        "unavailable_tenant_not_mapped_explanation": "Aset Ahamet Ma Rekhyu Aba Hemsu — Aba Unemu Tepy Her Tepy.",
         "unavailable_raw_data": "Unemu Tepy (Ma Aba Hemsu)",
-        "unavailable_cta": "Khemen Aset Ahamet Em Aba Hemsu."
+        "unavailable_tenant_not_mapped_cta": "Khemen Aset Ahamet Em Aba Hemsu."
       },
       "date_problems": {
         "title": "Ma Sethet Hru Wu",

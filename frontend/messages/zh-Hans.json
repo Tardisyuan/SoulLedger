@@ -240,9 +240,9 @@
         "poena_missing_absolution": "是否已获赦免",
         "poena_missing_satisfaction": "应偿补赎多少",
         "poena_missing_penance": "已行补赎多少",
-        "unavailable_explanation": "该灵魂所属租户尚未映射到任何文明宇宙观，因此没有可呈现的解读——仅显示下方原始账目。",
+        "unavailable_tenant_not_mapped_explanation": "该灵魂所属租户尚未映射到任何文明宇宙观，因此没有可呈现的解读——仅显示下方原始账目。",
         "unavailable_raw_data": "原始账目（非解读）",
-        "unavailable_cta": "请为该租户配置文明映射以启用解读。"
+        "unavailable_tenant_not_mapped_cta": "请为该租户配置文明映射以启用解读。"
       },
       "date_problems": {
         "title": "日期问题",

@@ -166,9 +166,20 @@ GRANULARITY_MISSING_INPUTS = (
     "occurrence_count",
 )
 
-#: Why every offset below is granularity-blind, in the shape
-#: `_european_reading` uses for `poena_unavailable`: report the absence with its
+#: Why every offset below is granularity-blind: report the absence with its
 #: reason rather than substitute a number for it.
+#:
+#: This is prose and stays prose, unlike the two English sentences that came
+#: out of readings.py. The difference is who reads it. Those two were fields
+#: of a 200 body that SoulReadingPanel.tsx renders, and the panel already had
+#: its own catalogue copy for the same content. This one has no reader at all
+#: on the frontend — `non_fungible` is not surfaced by any component, no
+#: bundle carries a granularity string, and the only thing that reads it is
+#: tests/test_ledger_granularity.py. Moving it to a catalogue would delete an
+#: explanation and put nothing in its place, which is the reason
+#: TERMINAL_COSMOLOGY_REASON stayed too. The machine-readable half of the
+#: same question is already answered beside it, by `granularity_applied` and
+#: GRANULARITY_MISSING_INPUTS.
 GRANULARITY_UNAVAILABLE = (
     "零積不抵整發 is not applied. Telling a total reached at one stroke from one "
     "reached a fraction at a time needs the clause a deed was scored under and "

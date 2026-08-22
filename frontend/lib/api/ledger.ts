@@ -30,14 +30,58 @@ export interface LedgerStatsOverview {
 }
 
 /**
+ * The facts *poena* presupposes and which the ledger does not record, mirroring
+ * `POENA_MISSING_INPUTS` in backend/apps/ledger/readings.py.
+ *
+ * This used to be an English sentence on the wire (`poena_unavailable`) that
+ * nothing read, next to three hard-coded `<li>` elements in SoulReadingPanel
+ * that said the same thing better. Two copies of one fact, and only one of them
+ * would have moved: a fourth missing input on the backend left the panel
+ * rendering three bullets with nothing red.
+ *
+ * `SoulReadingPanel` now renders one bullet per member of the payload's
+ * `poena_missing` and derives each bullet's copy key mechanically —
+ * `souls.detail.reading.poena_missing_${member.toLowerCase()}`. A member with
+ * no key in a bundle therefore reaches the screen as a visible raw key rather
+ * than as a quietly shorter list. `src/__tests__/SoulReadingPanel.test.tsx`
+ * holds the copy total over this list;
+ * `apps/ledger/test_readings.py::TestFrontendMemberListsAgree` holds this list
+ * equal to the backend's, which is the half Jest cannot see.
+ */
+export const POENA_MISSING_INPUTS = ["ABSOLUTION", "SATISFACTION", "PENANCE"] as const;
+export type PoenaMissingInput = (typeof POENA_MISSING_INPUTS)[number];
+
+/**
+ * Why a ledger got no reading at all, mirroring `UNAVAILABLE_REASON_CODES`.
+ *
+ * One member, and it is still keyed rather than flat. The copy keys are
+ * `souls.detail.reading.unavailable_${code.toLowerCase()}_explanation` and
+ * `..._cta`; they used to be the codeless `unavailable_explanation` /
+ * `unavailable_cta`, which a second cause of UNAVAILABLE would have inherited
+ * silently and been mis-described by — a real string, in the right language, in
+ * the right place, saying the wrong thing. That is the `ledger.civ.UNKNOWN`
+ * defect `civilizationCopyCoverage.test.ts` exists because of.
+ */
+export const UNAVAILABLE_REASON_CODES = ["TENANT_NOT_MAPPED"] as const;
+export type UnavailableReasonCode = (typeof UNAVAILABLE_REASON_CODES)[number];
+
+/**
  * What each cosmology reads off the ledger. Discriminated on `kind` —
  * apps/ledger/readings.py deliberately does not force one shape on all four.
  */
 export type LedgerReading =
   | { kind: "BALANCE"; civilization: string; balance: number; merit: number; demerit: number }
   | { kind: "THRESHOLD"; civilization: string; heart_weight: number; counterweight: number; heavier_than_feather: boolean }
-  | { kind: "GUILT_AND_PENALTY"; civilization: string; culpa: number; culpa_record_count: number; poena: null; poena_unavailable: string }
-  | { kind: "UNAVAILABLE"; civilization: string; reason: string };
+  | {
+      kind: "GUILT_AND_PENALTY";
+      civilization: string;
+      culpa: number;
+      culpa_record_count: number;
+      poena: null;
+      /** Non-empty for as long as `poena` is null — see POENA_MISSING_INPUTS. */
+      poena_missing: PoenaMissingInput[];
+    }
+  | { kind: "UNAVAILABLE"; civilization: string; reason_code: UnavailableReasonCode };
 
 /**
  * One entry of `LedgerSummary.records`, built by hand in

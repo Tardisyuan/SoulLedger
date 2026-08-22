@@ -45,17 +45,43 @@ sentences on the unoffset-demerit figure `non_fungible` reports below (via
 raw balance because 「不可折」 is a limit on 功過相抵 and neither of them has one.
 That asymmetry is the same one this module is built on, carried one layer out.
 
-TODO(i18n): the prose in `poena_unavailable` and `reason` below is copy
-hard-coded in a service module. The TODO it used to point at — on
-TERMINAL_COSMOLOGY_REASON in services.py — has since been answered, and the
-answer was a split rather than a move: a string a component *renders* belongs
-in the frontend catalogues (that pass took `inheritance_note` out of
-get_reincarnation_inheritance and replaced it with the two rates as numbers),
-while a string only non-browser clients and the logs ever read stays here in
-English on purpose. Which side these two fall on has NOT been established —
-SoulReadingPanel.tsx draws the poena panel from `souls.detail.reading.*` keys
-rather than from this prose, which is evidence but not a survey. A later pass
-owns that check and the copy.
+RESOLVED(i18n): the two English sentences that used to sit in this module —
+`poena_unavailable` in `_european_reading` and `reason` in
+`get_civilization_reading` — are gone. `poena_missing` and `reason_code`
+replaced them.
+
+The survey the old TODO asked for was done, and it found the worst case: the
+frontend never read either string, and rendered the same content itself, more
+completely. `SoulReadingPanel.tsx` drew the poena panel from
+`souls.detail.reading.*` keys — a heading plus *three separate bullets* where
+the sentence had one clause listing three things — and drew the unmapped-tenant
+panel from `unavailable_explanation` and `unavailable_cta`. Both fields were
+declared in `frontend/lib/api/ledger.ts` and read by nothing in the repository.
+
+So the split `66a5a3f` drew holds and these two fall on the catalogue side of
+it. What distinguishes them from TERMINAL_COSMOLOGY_REASON, which stays in
+services.py in English on purpose: that one is the `detail` of a 409 whose only
+readers are non-browser clients and the logs. These two were fields of a 200
+body that a component renders, and a rendered string belongs where the
+translations are.
+
+What replaced them is not a shorter sentence, it is the members the sentence
+was enumerating — the same move `66a5a3f` made when it took `inheritance_note`
+out and left the two rates as numbers. A hard-coded clause on this side and a
+hard-coded list of three bullets on the other is two copies of one fact, and
+the second copy is the one that does not move: had the missing-input list here
+grown to four, the panel would have gone on rendering three and nothing would
+have been red. The panel now renders one bullet per member of `poena_missing`
+and derives each bullet's catalogue key from the member name, so a fourth
+member reaches the screen — as copy, or failing that as a visible raw key —
+rather than being silently dropped.
+
+A non-browser client is not left with a bare `null`. `poena_missing` names the
+absent facts in the doctrine's own vocabulary and `reason_code` names the
+state; both are stable identifiers a client can switch on, which an English
+sentence never was, and both are enumerated as module constants below so the
+full set is readable in one place instead of being reconstructed out of a
+paragraph.
 """
 from apps.ledger.fungibility import offset_within_classes
 from apps.souls.models import Civilization
@@ -146,6 +172,22 @@ def _egyptian_reading(merit: int, demerit: int, demerit_count: int,
     }
 
 
+#: The facts *poena* presupposes and which nothing in this ledger records, as
+#: members rather than as a sentence that lists them.
+#:
+#: Same device as GRANULARITY_MISSING_INPUTS in fungibility.py, and for the same
+#: stated reason: naming the absent inputs as data means the next attempt adds
+#: the data rather than inventing a marker, a caller can enumerate them, and a
+#: catalogue can key one string off each member. The wording of what each member
+#: means lives in `_european_reading`'s docstring below and in the three message
+#: bundles; it is deliberately not on the wire.
+#:
+#: Order is Purgatorio's order of operations — absolution first, because
+#: satisfaction is only owed for a sin already forgiven and penance only
+#: discharges satisfaction — and the panel renders the list in it.
+POENA_MISSING_INPUTS = ("ABSOLUTION", "SATISFACTION", "PENANCE")
+
+
 def _european_reading(merit: int, demerit: int, demerit_count: int,
                       class_totals: dict | None = None) -> dict:
     """Two unrelated numbers, because guilt and penalty are two facts here.
@@ -164,14 +206,18 @@ def _european_reading(merit: int, demerit: int, demerit_count: int,
 
     The gap is not a lookup we have not written; it is data we do not hold.
     Poena presupposes three facts, and SoulRecord stores none of them: that
-    absolution has occurred (nothing records contrition or confession), how much
-    satisfaction is owed for a forgiven sin (weight measures the gravity of the
+    ABSOLUTION has occurred (nothing records contrition or confession), how much
+    SATISFACTION is owed for a forgiven sin (weight measures the gravity of the
     deed, which is culpa, and Dante's terraces are not sorted by it), and how
-    much penance has already been performed (there is no record type for an act
+    much PENANCE has already been performed (there is no record type for an act
     of expiation — MERIT is a good deed done in life, not satisfaction rendered
     after death). Deriving poena from the demerit total would just be culpa
     printed twice under a second heading, which is precisely the collapse this
     reading exists to stop making.
+
+    Those three are POENA_MISSING_INPUTS, and the reading reports them by name
+    instead of describing them in a sentence — see the RESOLVED(i18n) note in
+    the module docstring for why the sentence went.
     """
     return {
         "kind": "GUILT_AND_PENALTY",
@@ -179,11 +225,10 @@ def _european_reading(merit: int, demerit: int, demerit_count: int,
         "culpa": demerit,
         "culpa_record_count": demerit_count,
         "poena": None,
-        "poena_unavailable": (
-            "Poena is what remains after culpa is absolved. Nothing in this "
-            "ledger records absolution, satisfaction owed, or penance "
-            "performed, so there is no honest number to report here."
-        ),
+        # Non-empty for as long as `poena` is None. An absence that does not say
+        # what is missing is the bare null this list exists to avoid handing a
+        # client, so the two travel together and test_readings.py pins the pair.
+        "poena_missing": list(POENA_MISSING_INPUTS),
     }
 
 
@@ -262,6 +307,23 @@ CIVILIZATION_READING = {
 }
 
 
+#: Why a ledger got no reading, as a code rather than a sentence.
+#:
+#: One member today, and the tuple exists anyway. `reason_code` is the field a
+#: client switches on, and it is the field the panel derives its two catalogue
+#: keys from — `souls.detail.reading.unavailable_<code lowercased>_explanation`
+#: and `..._cta` — so the set has to be enumerable from one place in order to be
+#: checked against the three message bundles. That derivation is the point: the
+#: keys used to be the flat `unavailable_explanation` / `unavailable_cta`, which
+#: a second cause of UNAVAILABLE would have silently inherited and been
+#: mis-described by. It is the `ledger.civ.UNKNOWN` failure `48a5e74` shipped —
+#: a plausible string in the right place saying the wrong thing — and keying on
+#: the code is what turns it into a visible miss.
+REASON_TENANT_NOT_MAPPED = "TENANT_NOT_MAPPED"
+
+UNAVAILABLE_REASON_CODES = (REASON_TENANT_NOT_MAPPED,)
+
+
 def get_civilization_reading(civilization: str, merit: int, demerit: int,
                              demerit_count: int,
                              class_totals: dict | None = None) -> dict:
@@ -280,7 +342,7 @@ def get_civilization_reading(civilization: str, merit: int, demerit: int,
     `Soul.civilization`, where an unrecognised tenant silently meant Diyu and
     therefore silently meant reborn. A ledger has no interpretation until
     someone says whose ledger it is, so an unconfigured tenant gets a refusal
-    with a reason, not somebody else's arithmetic.
+    with a reason code, not somebody else's arithmetic.
 
     `merit`, `demerit` and the top-level `karmic_balance` are still in the
     payload for these souls. They are raw sums, true of any ledger and
@@ -291,9 +353,13 @@ def get_civilization_reading(civilization: str, merit: int, demerit: int,
         return {
             "kind": "UNAVAILABLE",
             "civilization": str(civilization),
-            "reason": (
-                "This soul's tenant is not mapped to a cosmology, so there is "
-                "no rule for what its ledger means. Configure the tenant."
-            ),
+            # A state, not a sentence. The remedy — configure the tenant's
+            # civilization mapping — is not a second field: it is what
+            # TENANT_NOT_MAPPED *means*, and emitting it separately would be
+            # two wire names for one fact, which is exactly how the
+            # `inheritance_note` prose and the frontend's hard-coded 20/100
+            # got to disagree. The imperative half is copy, and the panel owns
+            # it as `unavailable_tenant_not_mapped_cta`.
+            "reason_code": REASON_TENANT_NOT_MAPPED,
         }
     return builder(merit, demerit, demerit_count, class_totals)

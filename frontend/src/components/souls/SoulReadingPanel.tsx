@@ -1,6 +1,6 @@
 "use client";
 
-import type { LedgerReading } from "@/lib/api/ledger";
+import type { LedgerReading, UnavailableReasonCode } from "@/lib/api/ledger";
 import { useI18n } from "@/src/contexts/I18nContext";
 
 type TFunc = (key: string, params?: Record<string, string>) => string;
@@ -40,6 +40,7 @@ export function SoulReadingPanel({ reading, meritScore, demeritScore, karmicBala
     case "UNAVAILABLE":
       return (
         <UnavailableReading
+          reasonCode={reading.reason_code}
           meritScore={meritScore}
           demeritScore={demeritScore}
           karmicBalance={karmicBalance}
@@ -164,11 +165,19 @@ function GuiltAndPenaltyReading({
         <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
           {t("souls.detail.reading.poena_unavailable_heading")}
         </p>
-        <ul className="text-[11px] text-[hsl(var(--color-ink-subtle))] mt-2 space-y-0.5 list-disc list-inside">
-          <li>{t("souls.detail.reading.poena_missing_absolution")}</li>
-          <li>{t("souls.detail.reading.poena_missing_satisfaction")}</li>
-          <li>{t("souls.detail.reading.poena_missing_penance")}</li>
-        </ul>
+        {/* One bullet per member the backend actually sent, not three
+            hard-coded ones. `poena_missing` is the list readings.py builds the
+            absence out of; rendering a fixed three meant a fourth missing
+            input would have been dropped with nothing going red. The key is
+            derived from the member so a member with no copy shows the raw key
+            — ugly, and therefore self-reporting — instead of vanishing. */}
+        {reading.poena_missing.length > 0 && (
+          <ul className="text-[11px] text-[hsl(var(--color-ink-subtle))] mt-2 space-y-0.5 list-disc list-inside">
+            {reading.poena_missing.map((missing) => (
+              <li key={missing}>{t(`souls.detail.reading.poena_missing_${missing.toLowerCase()}`)}</li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
@@ -176,19 +185,29 @@ function GuiltAndPenaltyReading({
 
 // ── UNAVAILABLE — an unmapped tenant gets a refusal, not a borrowed reading ──
 function UnavailableReading({
+  reasonCode,
   meritScore,
   demeritScore,
   karmicBalance,
   t,
 }: {
+  reasonCode: UnavailableReasonCode;
   meritScore: number;
   demeritScore: number;
   karmicBalance: number;
   t: TFunc;
 }) {
+  // Both strings are keyed on the code rather than being the flat
+  // `unavailable_explanation` / `unavailable_cta` they used to be. A second
+  // cause of UNAVAILABLE would have inherited the first one's wording without
+  // anything failing; keyed, it shows the raw key until somebody writes copy.
+  const slug = reasonCode.toLowerCase();
+
   return (
     <div className="space-y-3">
-      <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.reading.unavailable_explanation")}</p>
+      <p className="text-sm text-[hsl(var(--color-ink-muted))]">
+        {t(`souls.detail.reading.unavailable_${slug}_explanation`)}
+      </p>
 
       {/* Plain data, not a reading — neutral ink, no merit/demerit greens
           and reds, no "balance" framing. Those colors are what the other
@@ -211,7 +230,9 @@ function UnavailableReading({
         </div>
       </div>
 
-      <p className="text-xs text-[hsl(var(--color-status-warning))]">{t("souls.detail.reading.unavailable_cta")}</p>
+      <p className="text-xs text-[hsl(var(--color-status-warning))]">
+        {t(`souls.detail.reading.unavailable_${slug}_cta`)}
+      </p>
     </div>
   );
 }
