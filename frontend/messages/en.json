@@ -240,9 +240,9 @@
         "poena_missing_absolution": "Whether absolution has occurred",
         "poena_missing_satisfaction": "How much satisfaction is owed",
         "poena_missing_penance": "How much penance has been performed",
-        "unavailable_explanation": "This soul's tenant is not mapped to a cosmology, so there is no verdict to render — only the raw ledger below.",
+        "unavailable_tenant_not_mapped_explanation": "This soul's tenant is not mapped to a cosmology, so there is no verdict to render — only the raw ledger below.",
         "unavailable_raw_data": "Raw ledger (not a reading)",
-        "unavailable_cta": "Configure this tenant's civilization mapping to enable a reading."
+        "unavailable_tenant_not_mapped_cta": "Configure this tenant's civilization mapping to enable a reading."
       },
       "date_problems": {
         "title": "Date Problems",
