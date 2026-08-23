@@ -136,3 +136,88 @@ to JUDGE (cross-tenant judgment is a judgment activity), which is the kind of
 per-codename reassignment `17-permissions` will need to make routine rather
 than exceptional — expect this table to keep changing shape as policy
 settles, not just as data changes.
+
+---
+
+## 5. There is a fourth civilization, and its reading is a fourth shape
+
+§1 above says "the three civilizations" and gives a three-row table. That is now
+out of date, and not by a theme — by a structural kind.
+
+Greek was split out of European (`Civilization.GREEK`). It had been hiding
+inside it: seven of the eleven European actors were Greek, three of them judges,
+which is why `EUROPEAN_GREEK` templates and Plato's meadow kept sitting oddly in
+a Dante-shaped model. `backend/apps/ledger/readings.py::_greek_reading` now
+gives it its own reading, and §1's table needs a fourth row:
+
+| civilization | what the ledger says | shape |
+|---|---|---|
+| Greece | **A term served.** Every wrong is repaid tenfold, reckoned in circuits of a thousand years (Plato, *Republic* X 615a-b). Not a balance, not a threshold — elapsed time against a debt of time. | a quantity owed, and a quantity served |
+
+### The hard part: the number that matters cannot be shown
+
+`elapsed_years` is `null`, and it is not null because a query has not been
+written. The ledger records **when a deed happened**, never when a sentence
+began or how much of it has run. Deriving a start from the death date was
+considered and refused — it would invent the beginning of a term this system has
+never actually started counting.
+
+So this is a reading whose *deciding* quantity is structurally absent. Europe
+has an absence too (`poena`), and they are not the same absence, which is the
+design question:
+
+- **Europe's** missing quantity has no rule. Penance owed after absolution is a
+  fact the ledger has no concept of.
+- **Greece's** missing quantity has a rule and no clock. We know exactly what
+  would be measured; nothing is measuring it.
+
+### What is on screen today, and why
+
+Rather than invent a form, the panel currently borrows §1's European grammar —
+a dashed rule, an em-dash where a number would go, and no shared axis between
+the two halves, so the absence can never read as a zero that offsets the debt.
+That reuse was deliberate, not a default, and it is exactly the decision worth a
+second opinion.
+
+Current copy (`souls.detail.reading.*`, all three locales):
+
+```
+Term owed        4
+                 recorded wrongs · repaid 10-fold
+                 Reckoned in circuits of 1000 years — the unit of
+                 repayment, not the length of this term.
+- - - - - - - - - - - - - - - - - - - - - - - - -
+Served           —
+                 Not recorded in this ledger
+                   · When the term began
+                   · How much of it has been served
+```
+
+The ledger heading for this cosmology is **Sentence to be Served** /
+偿还刑期 / Renpet Wehem, beside China's 功过格 and Egypt's 称心.
+
+### What needs designing
+
+- **Does a term-served want Europe's form at all?** Two absences with different
+  causes are currently drawn identically. If they should differ, the difference
+  has to be legible without a caption.
+- **A count of events, not a weight.** Greece counts *how many wrongs*, not how
+  heavy — the system's severity scale is deliberately not used here. Every other
+  cosmology's headline number is a magnitude. A count that looks like a magnitude
+  invites the wrong comparison.
+- **The thousand years is a unit, not a length.** The obvious rendering —
+  "sentenced to 1000 years", a progress bar, a percentage — is wrong three times
+  over: the term's length is unknown, the elapsed portion is unknown, and the
+  circuit is the measure rather than the sentence. There is no denominator.
+- **Never multiply.** `wrongs × 10` is not computed anywhere on purpose. Tenfold
+  repayment is a rule; a product reads as a balance, which is the Chinese model
+  again.
+- **The em-dash carries meaning** and is announced to screen readers. Any
+  replacement has to keep an accessible name saying *not recorded*, not *zero*
+  (see `BRIEF.md` §5).
+- **§1's warning now applies four ways.** Four structurally different readings
+  are not one component with a variant prop — and the fourth is the one whose
+  main number is missing, which is the case a shared component will quietly get
+  wrong.
+
+Nothing in `screens/` shows any of this; the captures predate all four readings.
