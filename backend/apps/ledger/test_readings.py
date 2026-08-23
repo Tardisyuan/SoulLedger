@@ -230,7 +230,9 @@ class TestCivilizationReadings:
         repository has decided will never be in `TENANT_CIVILIZATION` — the one
         thing this test needs of it.
         """
-        reading = get_civilization_reading("NORSE", merit=30, demerit=12, demerit_count=1)
+        reading = get_civilization_reading(
+            "NORSE", merit=30, demerit=12, merit_count=3, demerit_count=1
+        )
         assert reading["kind"] == "UNAVAILABLE"
         assert reading["civilization"] == "NORSE"
         assert reading["reason_code"] == REASON_TENANT_NOT_MAPPED
@@ -286,6 +288,117 @@ class TestCivilizationReadings:
         assert "years_served" not in reading
         assert "years_remaining" not in reading
 
+    def test_greek_reports_the_right_hand_road_as_well_as_the_left(self):
+        """The reading modelled one of Republic X's two roads and not the other.
+
+        614c sends the just to the right and upward and the unjust to the left
+        and downward; 615b requites well-doing "in the same measure" — the same
+        tenfold, over the same thousand-year circuit. Building the reading out
+        of `demerit_count` alone said the left-hand road and left the right one
+        unsayable, so a soul who had done well got a reading that mentioned
+        nothing it had done well.
+
+        `benefactions` is a *count* of merit records for exactly the reason
+        `wrongs` is a count of demerit records: the multiplier in Plato applies
+        per deed done, and `weight` is this system's severity scale, which no
+        source reckons a term of years by. Three benefactions of weights 9, 4
+        and 5 are three, not eighteen — and this soul is built so that those two
+        readings are different numbers.
+        """
+        soul = self._soul(
+            self.tenants[Civilization.GREEK], merits=(9, 4, 5), demerits=(7, 5)
+        )
+        reading = LedgerService.get_ledger_summary(soul)["reading"]
+
+        assert reading["wrongs"] == 2
+        assert reading["benefactions"] == 3
+        # One rule and one clock, not one of each per road. 615b's "same
+        # measure" is the same measure, and 614c's two roads leave the same
+        # judgment and return to the same meadow, so there is one circuit
+        # length and one elapsed figure the ledger does not hold.
+        assert reading["repayment_multiple"] == 10
+        assert reading["circuit_years"] == 1000
+        assert reading["elapsed_years"] is None
+        assert reading["elapsed_missing"] == list(SENTENCE_MISSING_INPUTS)
+
+    def test_greek_reports_a_road_even_when_the_other_is_empty(self):
+        """A soul with nothing on one side still gets both roads reported.
+
+        0 here is not the absence `elapsed_years` is. "No recorded wrongs" is
+        something this ledger genuinely knows, and a road reported as 0 says it;
+        dropping the field instead would make an empty road indistinguishable
+        from a road this reading does not model — which is the state the whole
+        change is undoing.
+        """
+        just = self._soul(self.tenants[Civilization.GREEK], merits=(4, 6))
+        reading = LedgerService.get_ledger_summary(just)["reading"]
+        assert reading["benefactions"] == 2
+        assert reading["wrongs"] == 0
+
+        unjust = self._soul(self.tenants[Civilization.GREEK], demerits=(4, 6, 8))
+        reading = LedgerService.get_ledger_summary(unjust)["reading"]
+        assert reading["benefactions"] == 0
+        assert reading["wrongs"] == 3
+
+    def test_greek_nets_neither_road_against_the_other(self):
+        """Two parallel tenfold repayments, and nothing that is their arithmetic.
+
+        The reason merit stayed out of this reading in the first place was that
+        subtracting it would rebuild the Chinese account under a Greek name.
+        Passing the merit count in is what makes that failure reachable, so the
+        guard is a property over the whole payload rather than a check on the
+        two fields anyone would think to look at: no value in this reading may
+        be the difference of the two roads, their product, or `wrongs` and
+        `benefactions` multiplied out by the repayment rule.
+
+        The last of those is the `ef7df3d` prohibition applied to the new road.
+        Tenfold repayment is a rule Republic X states, not a balance it
+        computes; `3 × 10 = 30` is a quantity of nothing this system has a unit
+        for, and printing it beside a term would read as a debt.
+
+        The soul is built so that every forbidden figure is distinct from every
+        permitted one — 9+4+5 merit weights over three records against 7+5
+        demerit weights over two — so this cannot pass by coincidence.
+        """
+        soul = self._soul(
+            self.tenants[Civilization.GREEK], merits=(9, 4, 5), demerits=(7, 5)
+        )
+        summary = LedgerService.get_ledger_summary(soul)
+        reading = summary["reading"]
+
+        # The netting reading this one refuses to be, computed here so the
+        # numbers below are visibly the ones the payload must not contain.
+        assert summary["merit_score"] == 18
+        assert summary["demerit_score"] == 12
+        assert summary["karmic_balance"] == 6
+
+        forbidden = {
+            1, -1,      # benefactions - wrongs, and its negation
+            6, -6,      # the karmic balance, and its negation
+            5,          # the two roads added together
+            18, 12,     # the weight sums: counts, not magnitudes
+            30, 20,     # each road multiplied out by the repayment rule
+            10 * 5,     # ...and both roads multiplied out together
+        }
+        numbers = {
+            v for v in reading.values()
+            if isinstance(v, int) and not isinstance(v, bool)
+        }
+        assert not (numbers & forbidden), (
+            "A Greek reading value is the arithmetic of the two roads. They are "
+            "parallel repayments — 615b requites well-doing on its own road, in "
+            "its own measure — and a difference, a sum or a product of them is "
+            "the Chinese account wearing a Greek name."
+        )
+
+        # Exhaustive, not a spot check: a netted field cannot be added under a
+        # name nobody thought to forbid.
+        assert set(reading) == {
+            "kind", "civilization", "wrongs", "benefactions",
+            "repayment_multiple", "circuit_years",
+            "elapsed_years", "elapsed_missing",
+        }
+
 
 # --------------------------------------------------------------------------
 # The prose rule
@@ -328,11 +441,13 @@ class TestNoProseInReadings:
     def _all_readings(self):
         for civ in Civilization:
             yield get_civilization_reading(
-                civ.value, merit=30, demerit=12, demerit_count=2,
+                civ.value, merit=30, demerit=12, merit_count=3, demerit_count=2,
                 class_totals=self.CLASS_TOTALS,
             )
         # And the refusal, which is the fifth shape this module can return.
-        yield get_civilization_reading("NORSE", merit=30, demerit=12, demerit_count=2)
+        yield get_civilization_reading(
+            "NORSE", merit=30, demerit=12, merit_count=3, demerit_count=2
+        )
 
     def test_a_reading_returns_identifiers_and_numbers_not_sentences(self):
         found = set()
@@ -423,13 +538,15 @@ def _backend_reading_kinds() -> set[str]:
     """
     kinds = {
         get_civilization_reading(
-            civ.value, merit=30, demerit=12, demerit_count=2,
+            civ.value, merit=30, demerit=12, merit_count=3, demerit_count=2,
             class_totals={"MONEY": {"merit": 10, "demerit": 4}},
         )["kind"]
         for civ in Civilization
     }
     kinds.add(
-        get_civilization_reading("NORSE", merit=0, demerit=0, demerit_count=0)["kind"]
+        get_civilization_reading(
+            "NORSE", merit=0, demerit=0, merit_count=0, demerit_count=0
+        )["kind"]
     )
     return kinds
 

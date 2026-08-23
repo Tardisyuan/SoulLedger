@@ -221,26 +221,44 @@ function GuiltAndPenaltyReading({
   );
 }
 
-// ── GREEK (千年轮回) — a term owed, and a term served that nobody recorded ──
+// ── GREEK (千年轮回) — two roads, one circuit, and a clock nobody started ──
 //
-// Deliberately the same visual grammar as GuiltAndPenaltyReading above: a known
-// figure, then a dashed rule, then an em-dash where a number would go. The two
-// readings are the same problem — one fact the ledger holds and one it does not
-// — and this repository has already argued out how to draw that once. Drawing
-// it a second way would invite the reader to think the two absences differ.
+// Deliberately the same visual grammar as GuiltAndPenaltyReading above: known
+// figures, then a dashed rule, then an em-dash where a number would go. The two
+// readings are the same problem — facts the ledger holds and one it does not —
+// and this repository has already argued out how to draw that once. Drawing it
+// a second way would invite the reader to think the two absences differ.
+//
+// The right-hand road is drawn as a second Road, not as a second column and not
+// as the other end of one axis. Republic X's judges send the just to the right
+// and upward and the unjust to the left and downward (614c) and repay both
+// tenfold over the same thousand years (615b); two rows in the same grammar,
+// one under the other, is the most this can say without saying more. The merit
+// green and the demerit red are the colours the BALANCE reading uses for the
+// two halves of a subtraction, and they are used here for the opposite reason —
+// to keep the two roads apart — which is a risk taken knowingly and mitigated
+// by the copy, which says on the right-hand row that it does not offset.
 //
 // What is deliberately NOT here:
-//   * `wrongs × repayment_multiple` as a figure. Tenfold repayment is the rule
-//     Republic X states, not a balance it computes; printing "40" for four
-//     wrongs would read as "owes 40", a quantity no source asserts and this
-//     system has no unit for. The two numbers are shown side by side instead
-//     and the reader is left to hold them as what they are.
+//   * anything derived from both roads. Not their difference (that is the
+//     Chinese balance), not their sum, not a bar split between them. They are
+//     parallel repayments over one circuit and the payload relates them by
+//     nothing; a figure that relates them would be this panel's invention.
+//   * `wrongs × repayment_multiple`, or the same for `benefactions`. Tenfold
+//     repayment is the rule Republic X states, not a balance it computes;
+//     printing "40" for four wrongs would read as "owes 40", a quantity no
+//     source asserts and this system has no unit for. The counts and the rule
+//     are shown as what they are and the reader holds them apart.
 //   * a progress bar or a percentage. The denominator is a term length nobody
 //     has computed and the numerator is `elapsed_years`, which is null. A bar
 //     would have to invent both.
 //   * `circuit_years` as a headline. 1000 is the length of one circuit — the
 //     unit the repayment is reckoned in — and rendering it large next to the
 //     word "sentence" would say this soul was sentenced to a thousand years.
+//     It sits under both roads because it is the unit of both.
+//   * an em-dash for an empty road. A road with no recorded deeds is 0, which
+//     the ledger knows; the em-dash is reserved for elapsed time, which it does
+//     not. Spending the glyph on both would flatten that distinction.
 function SentenceReading({
   reading,
   t,
@@ -250,21 +268,30 @@ function SentenceReading({
 }) {
   return (
     <div className="space-y-4">
-      <div>
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-[hsl(var(--color-karma-demerit))]">
-            {t("souls.detail.reading.sentence_owed_label")}
-          </span>
-          <span className="text-xl font-bold text-[hsl(var(--color-karma-demerit))] tabular-nums">
-            {reading.wrongs}
-          </span>
-        </div>
-        <div className="text-xs text-[hsl(var(--color-ink-subtle))] text-right mt-0.5">
-          {t("souls.detail.reading.sentence_owed_detail", {
+      <div className="space-y-3">
+        {/* The left-hand road. */}
+        <Road
+          label={t("souls.detail.reading.sentence_owed_label")}
+          count={reading.wrongs}
+          detail={t("souls.detail.reading.sentence_owed_detail", {
             multiple: String(reading.repayment_multiple),
           })}
-        </div>
-        <p className="text-[11px] text-[hsl(var(--color-ink-subtle))] mt-1">
+          tone="demerit"
+        />
+        {/* The right-hand road, in the same grammar and never netted against
+            the one above. The repayment rule is the same number on both rows
+            because 615b says it is the same measure; it is interpolated from
+            the one field the payload carries rather than written twice. */}
+        <Road
+          label={t("souls.detail.reading.sentence_requited_label")}
+          count={reading.benefactions}
+          detail={t("souls.detail.reading.sentence_requited_detail", {
+            multiple: String(reading.repayment_multiple),
+          })}
+          tone="merit"
+        />
+        {/* Under both roads, because the circuit is the unit of both. */}
+        <p className="text-[11px] text-[hsl(var(--color-ink-subtle))]">
           {t("souls.detail.reading.sentence_circuit", { years: String(reading.circuit_years) })}
         </p>
       </div>
@@ -272,7 +299,9 @@ function SentenceReading({
       {/* Same dashed rule, em-dash and absent shared axis as poena, and for the
           same reason: time served is not zero, it is unknown. A 0 here would
           be a claim that the term has not begun, which is a fact about a
-          sentence and not a fact this ledger holds. */}
+          sentence and not a fact this ledger holds. One row for both roads:
+          they leave the same judgment and return to the same meadow, so there
+          is one elapsed figure and this ledger is missing it once. */}
       <div className="border-t border-dashed border-[hsl(var(--color-hairline))] pt-3">
         <div className="flex justify-between items-center">
           <span className="text-sm text-[hsl(var(--color-ink-muted))]">
@@ -296,6 +325,41 @@ function SentenceReading({
             ))}
           </ul>
         )}
+      </div>
+    </div>
+  );
+}
+
+// One road: a label, a count of deeds, and the rule that repays them.
+//
+// Extracted so the two roads cannot drift into two different treatments. The
+// count is `tabular-nums` and the same size on both, because a road drawn
+// smaller than the other is a claim about which one matters that Republic X
+// does not make. `count` is rendered as given — including 0, which is a fact
+// the ledger holds, unlike the elapsed time below it.
+function Road({
+  label,
+  count,
+  detail,
+  tone,
+}: {
+  label: string;
+  count: number;
+  detail: string;
+  tone: "merit" | "demerit";
+}) {
+  const ink = tone === "merit"
+    ? "text-[hsl(var(--color-karma-merit))]"
+    : "text-[hsl(var(--color-karma-demerit))]";
+
+  return (
+    <div>
+      <div className="flex justify-between items-center">
+        <span className={`text-sm ${ink}`}>{label}</span>
+        <span className={`text-xl font-bold tabular-nums ${ink}`}>{count}</span>
+      </div>
+      <div className="text-xs text-[hsl(var(--color-ink-subtle))] text-right mt-0.5">
+        {detail}
       </div>
     </div>
   );

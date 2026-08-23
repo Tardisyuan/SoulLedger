@@ -67,6 +67,8 @@ const ZH = {
   unavailableCta: "请为该租户配置文明映射以启用解读。",
   owedLabel: "所欠刑期",
   owedDetail: "桩在案过错 · 每桩 10 倍偿还",
+  requitedLabel: "所得回报",
+  requitedDetail: "桩在案善行 · 于右道同以 10 倍偿还，不冲抵刑期",
   circuit: "以 1000 年为一个周期计量——这是偿还的单位，不是本刑期的长度。",
   elapsedLabel: "已服",
   poenaHeading: "无法计算",
@@ -189,6 +191,11 @@ function sentence(overrides: Partial<Extract<LedgerReading, { kind: "SENTENCE" }
     kind: "SENTENCE",
     civilization: "GREEK",
     wrongs: 4,
+    // Deliberately different from `wrongs`: every assertion below that looks up a
+    // figure by its text would be ambiguous if the two roads carried the same
+    // number, and the arithmetic guard needs the difference (1), the sum (7)
+    // and the products (40, 30, 12) to be distinct from both.
+    benefactions: 3,
     repayment_multiple: 10,
     circuit_years: 1000,
     elapsed_years: null,
@@ -221,6 +228,62 @@ describe("SoulReadingPanel — the Greek sentence renders at all", () => {
     // system has never defined — the "rule rendered as a balance" collapse the
     // whole readings module exists to stop making.
     expect(container.textContent ?? "").not.toContain("40");
+  });
+
+  it("draws the right-hand road beside the left, not instead of it", () => {
+    // The defect this test was written for: `_greek_reading` took the demerit
+    // count alone, so the panel could say what a soul owed and had no way to
+    // say what it was owed. Republic X sends the just to the right and upward
+    // and the unjust to the left and downward (614c) and requites both tenfold
+    // over the same circuit (615b); a panel that draws one of those two roads
+    // is not a shorter reading, it is a different one.
+    renderPanel(sentence({ wrongs: 4, benefactions: 3 }));
+
+    expect(screen.getByText(ZH.owedLabel)).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
+    expect(screen.getByText(ZH.requitedLabel)).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText(ZH.requitedDetail)).toBeInTheDocument();
+  });
+
+  it("never renders the two roads' arithmetic", () => {
+    // The whole reason merit stayed out of this reading until now. Every
+    // number below is a way of collapsing two parallel repayments into one
+    // figure: their difference (the Chinese balance), their sum, their product,
+    // and each multiplied out by the repayment rule (`ef7df3d`: tenfold is a
+    // rule Republic X states, not a total it computes).
+    //
+    // `queryByText` matches an element's whole text, so "1" here means an
+    // element that says exactly "1" — the 1 inside "1000" cannot satisfy it,
+    // and a substring check on the container would be satisfied by it.
+    const { container } = renderPanel(sentence({ wrongs: 4, benefactions: 3 }));
+
+    for (const collapsed of ["1", "7", "12", "40", "30"]) {
+      expect(screen.queryByText(collapsed)).not.toBeInTheDocument();
+    }
+    expect(container.textContent ?? "").not.toContain("40");
+    expect(container.textContent ?? "").not.toContain("30");
+    // And no shared axis to invite the eye to do the subtraction the numbers
+    // do not: no bar, no percentage. Same prohibition as the elapsed half.
+    expect(container.querySelector("progress")).toBeNull();
+    expect(container.querySelector('[role="progressbar"]')).toBeNull();
+    expect(container.textContent ?? "").not.toContain("%");
+  });
+
+  it("reports an empty road as 0 and keeps the em-dash for the clock alone", () => {
+    // 0 and — are different claims and this panel must keep them apart. "No
+    // recorded good deeds" is something the ledger knows; how much of the
+    // circuit has run is not. Drawing the empty road as an absence would put
+    // the two on the same footing, and dropping it would take the reading back
+    // to the one road it is being fixed for.
+    const { container } = renderPanel(sentence({ wrongs: 4, benefactions: 0 }));
+
+    expect(screen.getByText(ZH.requitedLabel)).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
+    const dashes = Array.from(container.querySelectorAll("span")).filter(
+      (el) => el.textContent?.trim() === "—"
+    );
+    expect(dashes).toHaveLength(1);
   });
 
   it("presents the circuit as a period and never as this soul's term", () => {
@@ -424,6 +487,8 @@ describe("reading copy coverage", () => {
     for (const key of [
       "souls.detail.reading.sentence_owed_label",
       "souls.detail.reading.sentence_owed_detail",
+      "souls.detail.reading.sentence_requited_label",
+      "souls.detail.reading.sentence_requited_detail",
       "souls.detail.reading.sentence_circuit",
       "souls.detail.reading.sentence_elapsed_label",
       "souls.detail.reading.elapsed_unavailable_heading",
@@ -443,6 +508,11 @@ describe("reading copy coverage", () => {
     // does not have, because a missing key at least shows itself.
     const bundle = BUNDLES[locale];
     expect(at(bundle, "souls.detail.reading.sentence_owed_detail")).toContain("{{multiple}}");
+    // The same multiple, on the other road. One quoted number, two roads: a
+    // translation that hard-codes "10" here would be a second copy of a
+    // constant, which is how the frontend's 20/100 came to disagree with the
+    // backend's inheritance rates.
+    expect(at(bundle, "souls.detail.reading.sentence_requited_detail")).toContain("{{multiple}}");
     expect(at(bundle, "souls.detail.reading.sentence_circuit")).toContain("{{years}}");
     expect(at(bundle, "souls.detail.reading.unrenderable_kind")).toContain("{{kind}}");
   });

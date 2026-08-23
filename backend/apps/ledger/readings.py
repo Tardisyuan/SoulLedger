@@ -13,9 +13,11 @@ else in the survey:
   * EUROPEAN (Dante) judgment is not an account at all. Purgatorio works off
     *poena* after *culpa* has already been forgiven; guilt and penalty come
     apart, which is exactly the thing a netting total cannot represent.
-  * GREEK, when it lands, is a sentence served — Plato's thousand-year circuit,
-    repaid tenfold (Republic X, 615a-b). Elapsed time, not a balance. It has
-    landed: `Civilization.GREEK` exists, `GR_HADES` is its tenant, and
+  * GREEK is not one reckoning but two running side by side — Plato's judges
+    send the just to the right and the unjust to the left (Republic X, 614c),
+    and both roads repay tenfold over the same thousand-year circuit (615a-b).
+    Two parallel counts on one clock, and emphatically not their difference. It
+    has landed: `Civilization.GREEK` exists, `GR_HADES` is its tenant, and
     `_greek_reading` below is the fourth entry. The sentence this bullet used to
     end with — "not in the Civilization enum yet and must not be added here
     first" — was about the *order* of one change, not a prohibition on ever
@@ -24,7 +26,8 @@ else in the survey:
     land together or the suite is red in between.
 
 So four cosmologies want four differently-shaped answers: a balance, a
-comparison, two unrelated numbers, and a duration. Serving all of them one
+comparison, two unrelated numbers, and two parallel repayments on a clock
+nobody started. Serving all of them one
 shape built around a net total does not simplify the model, it silently applies
 the Chinese one to everybody — and it is not harmless. Run against real data, a
 net balance passes an Egyptian soul on a mechanic his tradition does not have.
@@ -120,8 +123,8 @@ from apps.souls.models import Civilization
 MAAT_FEATHER_WEIGHT = 1
 
 
-def _chinese_reading(merit: int, demerit: int, demerit_count: int,
-                     class_totals: dict | None = None) -> dict:
+def _chinese_reading(merit: int, demerit: int, merit_count: int,
+                     demerit_count: int, class_totals: dict | None = None) -> dict:
     """A cumulative account — but not a single interchangeable pool.
 
     `balance` stays merit minus demerit. It is the native instrument here (it is
@@ -141,6 +144,16 @@ def _chinese_reading(merit: int, demerit: int, demerit_count: int,
     points came from gets no claim about fungibility rather than a fabricated
     one — the same discipline `get_civilization_reading` applies to an unmapped
     tenant below.
+
+    Neither record count is used, and that is the same decision as
+    `_european_reading`'s in the opposite direction. 功過格 counts 分, not
+    deeds: 不善門#8's 夾注 prices a fault at 「一過去功一分」 and a grave one at
+    十分, so the ledger's own unit is the weight and a tally of how many entries
+    produced it says nothing this account can act on. `demerit_count` is what
+    the European reading needs precisely because *there* the deed is the unit;
+    `merit_count` is what the Greek reading needs for the same reason. Received
+    and unused, so that ignoring them stays a decision with a stated reason
+    rather than an argument nobody offered this builder.
     """
     reading = {
         "kind": "BALANCE",
@@ -154,8 +167,8 @@ def _chinese_reading(merit: int, demerit: int, demerit_count: int,
     return reading
 
 
-def _egyptian_reading(merit: int, demerit: int, demerit_count: int,
-                      class_totals: dict | None = None) -> dict:
+def _egyptian_reading(merit: int, demerit: int, merit_count: int,
+                      demerit_count: int, class_totals: dict | None = None) -> dict:
     """A threshold. The heart against a fixed counterweight — pass or fail.
 
     The heart's weight is the demerit total *alone*. Merit does not appear, and
@@ -168,6 +181,13 @@ def _egyptian_reading(merit: int, demerit: int, demerit_count: int,
     data it passed a soul it should not have: a heart carrying 18 points of
     recorded wrongdoing read as +6 once 24 points of merit were subtracted from
     it, and +6 is on the passing side of every threshold anyone would pick.
+
+    `merit_count` is therefore doubly irrelevant here and is received anyway.
+    If the merit *sum* has nothing to say to a scale that never subtracts, a
+    tally of the deeds behind it has less; and the weighing does not count
+    wrongs either, because what goes on the pan is the heart's weight and not a
+    list of charges. The 42 declarations of the Papyrus of Ani are denials, one
+    per wrong, but they are the interrogation and not the measurement.
     """
     return {
         "kind": "THRESHOLD",
@@ -197,8 +217,8 @@ def _egyptian_reading(merit: int, demerit: int, demerit_count: int,
 POENA_MISSING_INPUTS = ("ABSOLUTION", "SATISFACTION", "PENANCE")
 
 
-def _european_reading(merit: int, demerit: int, demerit_count: int,
-                      class_totals: dict | None = None) -> dict:
+def _european_reading(merit: int, demerit: int, merit_count: int,
+                      demerit_count: int, class_totals: dict | None = None) -> dict:
     """Two unrelated numbers, because guilt and penalty are two facts here.
 
     *Culpa* is guilt: that a wrong was done, and how grave. It maps onto the
@@ -227,6 +247,17 @@ def _european_reading(merit: int, demerit: int, demerit_count: int,
     Those three are POENA_MISSING_INPUTS, and the reading reports them by name
     instead of describing them in a sentence — see the RESOLVED(i18n) note in
     the module docstring for why the sentence went.
+
+    `merit_count` is received and unused, and the asymmetry with
+    `culpa_record_count` is the argument rather than an oversight. The demerit
+    count travels because "one grave sin" and "eight small ones" are different
+    guilts and the same number, and culpa is a thing this reading reports. There
+    is no merit figure here at all for a merit count to qualify: a good deed
+    does not retire a sin, so counting good deeds beside culpa would put a
+    number on screen whose only available reading is the subtraction this
+    cosmology does not perform. The Greek reading takes the same count and does
+    report it, because there the good deeds have a road of their own to be
+    repaid on; Purgatorio gives them none.
     """
     return {
         "kind": "GUILT_AND_PENALTY",
@@ -249,6 +280,13 @@ def _european_reading(merit: int, demerit: int, demerit_count: int,
 # the assumption that this was the length of human life the punishment might be
 # ten times the crime" — ten periods of a hundred years, i.e. a thousand-year
 # circuit, and the same measure requites those who did well.
+#
+# One multiple and one circuit length, for two roads. That is not an economy of
+# fields, it is what 615b says: those who had done good "received requital in
+# the same measure". Emitting a second `reward_multiple` and a second circuit
+# would be two wire names for one quoted fact, and the two copies would be free
+# to drift — the failure `inheritance_note` and the frontend's hard-coded
+# 20/100 already demonstrated once in this codebase.
 GREEK_REPAYMENT_MULTIPLE = 10
 GREEK_CIRCUIT_YEARS = 100 * GREEK_REPAYMENT_MULTIPLE
 
@@ -269,19 +307,38 @@ GREEK_CIRCUIT_YEARS = 100 * GREEK_REPAYMENT_MULTIPLE
 #: Order is the order of the arithmetic that cannot be done: without a start
 #: date there is nothing to measure elapsed time *from*, and time served is the
 #: quantity that measurement would produce. The panel renders the list in it.
+#:
+#: TWO MEMBERS FOR TWO ROADS, NOT TWO PER ROAD. `_greek_reading` now reports the
+#: right-hand road as well as the left, and the question of whether the just
+#: soul's clock is a second unknown was asked and answered no. Republic X puts
+#: both roads on *one* circuit: the souls are judged together, depart together
+#: — right and upward, or left and downward (614c) — and meet again in the
+#: meadow when the thousand years are up. So there is one moment the circuit
+#: began and one quantity of it that has passed, and this ledger holds neither.
+#: A parallel `REQUITAL_MISSING_INPUTS` would claim four absent facts where
+#: there are two, and would give the two lists room to disagree about one gap.
+#:
+#: The names lean penal, and they are kept. `TERM_START` is the start of a fixed
+#: term, which the circuit is for the just as much as for the unjust — nobody
+#: comes back early. `TIME_SERVED` is the quantity of that term already gone
+#: through, and "served" in that sense is what both roads are doing; only the
+#: *content* of the thousand years differs, which is what `wrongs` and
+#: `benefactions` are for. Renaming a stable wire identifier to soften a
+#: connotation would cost three message bundles and buy no fact.
 SENTENCE_MISSING_INPUTS = ("TERM_START", "TIME_SERVED")
 
 
-def _greek_reading(merit: int, demerit: int, demerit_count: int,
-                   class_totals: dict | None = None) -> dict:
-    """A sentence, measured in time — how much is owed, not how much is left.
+def _greek_reading(merit: int, demerit: int, merit_count: int,
+                   demerit_count: int, class_totals: dict | None = None) -> dict:
+    """Two roads, one circuit — how much is owed on each, not what they net to.
 
-    This is the one reading of the four whose unit is not a quantity of deeds
-    at all. Plato's souls are sentenced to a *term*: each wrong is repaid
+    This is the one reading of the four whose verdict is not a quantity of
+    deeds at all. Plato's souls are put on a *term*: each deed is repaid
     tenfold, the unit of repayment is a hundred-year period, and the circuit is
     a thousand years (Republic X, 615a-b). What decides where a soul stands is
     therefore how much of that term has elapsed, and elapsed time is a fact
-    about the sentence rather than about the ledger.
+    about the circuit rather than about the ledger. The deed counts below say
+    what each of the two roads is repaying; they do not say how far along it is.
 
     WHY `wrongs` IS THE RECORD COUNT AND NOT THE DEMERIT TOTAL. Republic X
     counts deeds — "for all the wrongs they had ever done to anyone... they had
@@ -292,15 +349,28 @@ def _greek_reading(merit: int, demerit: int, demerit_count: int,
     house scale into a term of years the source never authorises. The same
     discipline MAAT_FEATHER_WEIGHT is labelled with, in the other direction.
 
-    WHY MERIT IS ABSENT, AND WHY THAT IS NOT THE EGYPTIAN REASON. In the
-    Egyptian weighing merit is absent because there is no offsetting step at
-    all. Here good deeds do count — 615b requites well-doing "in the same
-    measure" — but on their *own* clock, on the road to the right, and never as
-    a subtraction from the term owed on the road to the left. Two tenfold
-    repayments running in parallel is not a net balance, and printing one would
-    rebuild the Chinese account under a Greek name. The record count of merits
-    is not in this function's signature either, so reporting the merit *sum*
-    beside a wrongs *count* would put two different units under one heading.
+    WHY `benefactions` IS HERE, AND WHY IT IS NOT A SUBTRACTION. 614c sends the
+    just to the right and upward and the unjust to the left and downward; 615b
+    requites those who had done good "in the same measure" — the same tenfold,
+    over the same thousand years. This reading used to take `demerit_count`
+    alone, which modelled the left-hand road and left the right one unsayable:
+    a soul who had done well got a reading in which nothing it had done well
+    appeared. That was a defensible refusal only for as long as the alternative
+    on offer was subtraction.
+
+    It is not the alternative taken. `benefactions` sits beside `wrongs` as a
+    second count, never netted against it and never multiplied out — the two
+    roads are parallel repayments, and a difference or a sum of them is the
+    Chinese account wearing a Greek name, which is the one thing this module
+    exists to stop. This is also why the merit *sum* is still absent: the count
+    is the unit both roads are reckoned in, and putting a magnitude beside a
+    tally would file two different things under one heading. Republic X counts
+    deeds on both sides or neither.
+
+    WHY THAT IS NOT THE EGYPTIAN REASON, EITHER. In the Egyptian weighing merit
+    is absent because there is no offsetting step at all — nothing a good deed
+    could be reported *as*. Here there is: its own road, its own tenfold, and no
+    arithmetic connecting it to the term owed.
 
     WHY `elapsed_years` IS None. The same shape as `poena` in the European
     reading, and for the same kind of reason: this is not a lookup nobody has
@@ -314,14 +384,28 @@ def _greek_reading(merit: int, demerit: int, demerit_count: int,
     reports them by name instead of describing them in a paragraph — the same
     move `poena_missing` made, for the same reason, and now that the panel
     exists the same reason applies here.
+
+    That pair is reported once and covers both roads. The two roads share a
+    clock: one judgment starts them, one thousand years runs, one meadow ends
+    it. What the ledger lacks is a start date and an elapsed figure — two facts,
+    not four — and the constant's own note argues that out.
     """
     return {
         "kind": "SENTENCE",
         "civilization": Civilization.GREEK.value,
-        # What the term is owed for: the number of recorded wrongs.
+        # The left-hand road (614c). What the term is owed for: the number of
+        # recorded wrongs.
         "wrongs": demerit_count,
+        # The right-hand road. What is requited in the same measure: the number
+        # of recorded good deeds. A count, like `wrongs`, and standing on its
+        # own — nothing in this payload relates the two, because Republic X
+        # relates them only by running them at the same time.
+        "benefactions": merit_count,
+        # One rule, both roads (615b). Not multiplied by either count here or
+        # anywhere: tenfold repayment is what is owed per deed, not a total.
         "repayment_multiple": GREEK_REPAYMENT_MULTIPLE,
         "circuit_years": GREEK_CIRCUIT_YEARS,
+        # One clock for both roads, and the ledger does not hold it.
         "elapsed_years": None,
         # Non-empty for as long as `elapsed_years` is None, exactly as
         # `poena_missing` is for `poena`. An absence that does not say what is
@@ -357,15 +441,25 @@ UNAVAILABLE_REASON_CODES = (REASON_TENANT_NOT_MAPPED,)
 
 
 def get_civilization_reading(civilization: str, merit: int, demerit: int,
-                             demerit_count: int,
+                             merit_count: int, demerit_count: int,
                              class_totals: dict | None = None) -> dict:
     """The reading this soul's cosmology uses, or an explicit refusal.
 
-    Every builder takes `class_totals`; only the Chinese one uses it, and the
-    other two ignore it on purpose rather than not being offered it. Merit does
-    not enter an Egyptian weighing at all and does not reduce European culpa, so
-    a per-class split of merit has nothing to say there — the uniform signature
-    is what keeps that a stated decision instead of a missing argument.
+    Every builder takes the same five arguments and each one ignores some of
+    them on purpose rather than not being offered them. Only the Chinese
+    builder uses `class_totals`: merit does not enter an Egyptian weighing at
+    all and does not reduce European culpa, so a per-class split of merit has
+    nothing to say there. Only the European and Greek builders use a record
+    count, and only the Greek one uses `merit_count` — a uniform signature is
+    what keeps each of those a stated decision, argued in the builder's own
+    docstring, instead of a missing argument nobody had to defend.
+
+    `merit_count` is the newest of the five and the reason is worth keeping
+    here rather than only in `_greek_reading`: adding it touched four builders
+    to serve one, which is the cost of this shape and was paid deliberately.
+    The alternative — handing the Greek builder a sixth positional argument the
+    others do not take — is a table of callables that cannot be called
+    uniformly, i.e. the if/elif chain this dict replaced.
 
     `civilization` may be UNKNOWN_CIVILIZATION — a real value the API returns
     for a soul whose tenant code is not in TENANT_CIVILIZATION. It gets no
@@ -394,4 +488,4 @@ def get_civilization_reading(civilization: str, merit: int, demerit: int,
             # it as `unavailable_tenant_not_mapped_cta`.
             "reason_code": REASON_TENANT_NOT_MAPPED,
         }
-    return builder(merit, demerit, demerit_count, class_totals)
+    return builder(merit, demerit, merit_count, demerit_count, class_totals)

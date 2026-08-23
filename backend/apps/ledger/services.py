@@ -399,6 +399,13 @@ class LedgerService:
 
         merit = 0
         demerit = 0
+        # Both record counts, because two readings are reckoned in deeds rather
+        # than in weight: the European one qualifies culpa with how many wrongs
+        # produced it, and the Greek one counts each road's deeds because
+        # Republic X repays tenfold *per deed done*. `merit_count` is the
+        # symmetric half of that and was missing, which is why the Greek reading
+        # could describe only the road to the left.
+        merit_count = 0
         demerit_count = 0
         record_summaries = []
         # Merit and demerit again, split by which pool the deed falls in, so
@@ -444,6 +451,7 @@ class LedgerService:
                 )
                 if r.record_type == "MERIT":
                     merit += effective_weight
+                    merit_count += 1
                     pool["merit"] += effective_weight
                 else:
                     demerit += effective_weight
@@ -503,8 +511,12 @@ class LedgerService:
             # apps/ledger/readings.py for why one shape for all of them was
             # wrong.
             "reading": get_civilization_reading(
-                soul.civilization, total_merit, total_demerit, demerit_count,
-                class_totals,
+                soul.civilization, total_merit, total_demerit,
+                # Keyword, not positional. Two adjacent ints whose names are the
+                # only thing telling them apart is exactly the argument pair a
+                # future edit transposes in silence.
+                merit_count=merit_count, demerit_count=demerit_count,
+                class_totals=class_totals,
             ),
         }
 

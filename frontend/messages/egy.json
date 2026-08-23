@@ -234,6 +234,8 @@
         "poena_missing_penance": "Ma Rekhyu Iri Wehem",
         "sentence_owed_label": "Wehem Aha",
         "sentence_owed_detail": "Medu Seth · {{multiple}}× Wehem",
+        "sentence_requited_label": "Wehem Nefer",
+        "sentence_requited_detail": "Medu Nefer · {{multiple}}× Wehem Her Wenemy, Ma Her Aha",
         "sentence_circuit": "{{years}} Renpet Em Sep — Aha Wehem, Ma Aha Wetu.",
         "sentence_elapsed_label": "Renpet Iri",
         "elapsed_unavailable_heading": "Ma Medu Em Unemu",
