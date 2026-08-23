@@ -72,6 +72,13 @@ export type UnavailableReasonCode = (typeof UNAVAILABLE_REASON_CODES)[number];
  * Same device as POENA_MISSING_INPUTS above, and the panel renders them the
  * same way: one bullet per member the backend sent, copy key derived as
  * `souls.detail.reading.elapsed_missing_${member.toLowerCase()}`.
+ *
+ * Two members for two roads, not two per road. The SENTENCE reading reports a
+ * left-hand and a right-hand road, and they share one clock: Republic X judges
+ * the souls together, sends them out together, and gathers them in the meadow
+ * when the same thousand years are up. So the ledger is missing one start date
+ * and one elapsed figure, and a second parallel list would claim four absences
+ * where there are two.
  */
 export const SENTENCE_MISSING_INPUTS = ["TERM_START", "TIME_SERVED"] as const;
 export type SentenceMissingInput = (typeof SENTENCE_MISSING_INPUTS)[number];
@@ -123,19 +130,27 @@ export type LedgerReading =
       /** GREEK — Plato's thousand-year circuit, repaid tenfold (Republic X, 615a-b). */
       kind: "SENTENCE";
       civilization: string;
-      /** The number of recorded wrongs, counted as deeds. NOT the demerit sum:
-       *  Republic X multiplies per wrong done, and `weight` is this system's own
-       *  severity scale, which no source grades a term of years by. */
+      /** The left-hand road (614c): the number of recorded wrongs, counted as
+       *  deeds. NOT the demerit sum: Republic X multiplies per wrong done, and
+       *  `weight` is this system's own severity scale, which no source grades a
+       *  term of years by. */
       wrongs: number;
-      /** 10. A rule — what is owed per wrong — and not a balance. Multiplying it
-       *  by `wrongs` and printing the product would state a debt the source does
-       *  not, which is the "rule rendered as a balance" collapse this file's
-       *  other readings exist to stop. */
+      /** The right-hand road: the number of recorded good deeds, requited "in
+       *  the same measure" (615b). A count, like `wrongs`, and standing beside
+       *  it rather than against it — the two roads run in parallel over one
+       *  circuit, so their difference is not a reading, it is the Chinese net
+       *  balance under a Greek name. Never subtract, never sum, never total. */
+      benefactions: number;
+      /** 10. One rule for both roads — what is repaid per deed — and not a
+       *  balance. Multiplying it by either count and printing the product would
+       *  state a debt the source does not, which is the "rule rendered as a
+       *  balance" collapse this file's other readings exist to stop. */
       repayment_multiple: number;
-      /** 1000. The length of one circuit, i.e. the unit the repayment is
+      /** 1000. The length of one circuit, i.e. the unit both roads' repayment is
        *  reckoned in — not the length of this soul's term. */
       circuit_years: number;
-      /** Always null. The ledger records no sentence start and no time served. */
+      /** Always null. The ledger records no circuit start and no time served,
+       *  and that one missing clock is what both roads run on. */
       elapsed_years: null;
       /** Non-empty for as long as `elapsed_years` is null — see
        *  SENTENCE_MISSING_INPUTS. */
