@@ -249,3 +249,86 @@ export const CIV_PREFIX_BY_TENANT_CODE = Object.fromEntries(
 
 export const TENANT_CODES = Object.values(CIVILIZATION_CODES) as string[];
 export const CIV_PREFIXES = [...new Set(Object.values(CIV_PREFIX_BY_TENANT_CODE))].sort();
+
+// ---------------------------------------------------------------------------
+// The surface ramp, resolved per tenant.
+//
+// `resolveTriple` above answers "what does surface-1 look like on the neutral
+// 240° fallback". These answer "what does it look like for THIS civilization",
+// which is the question the Stage 9 review asked and the reason globals.css no
+// longer claims the ramp carries identity: the answers are all the same colour.
+// ---------------------------------------------------------------------------
+
+/** Every `--color-surface-N` token, derived from the stylesheet rather than listed. */
+export const SURFACE_TOKENS: string[] = suffixesOf(ROOT_TOKENS, "--color-surface").map(
+  (suffix) => `--color-surface-${suffix}`
+);
+
+if (SURFACE_TOKENS.length === 0) {
+  throw new Error(
+    `No \`--color-surface-*\` tokens found in ${GLOBALS_CSS}. Fix this parser; ` +
+      `do not delete the comparison — an empty list makes every ramp assertion ` +
+      `vacuously green.`
+  );
+}
+
+/**
+ * `"12 13% 7%"` -> `[20, 16, 16]`, sRGB 0-255.
+ *
+ * Assertions about whether two tenants look alike have to be made in the space
+ * the eye reads, not in HSL: `12 13% 7%` and `232 13% 7%` are 220° apart as
+ * numbers and 4/255 apart as pixels, and it is the second figure that decides
+ * whether anyone can tell the tenants apart. Throws on anything that is not a
+ * bare `H S% L%` triple rather than coercing `NaN` through and comparing it.
+ */
+export function hslTripleToRgb(triple: string): [number, number, number] {
+  const m = /^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/.exec(triple.trim());
+  if (m === null) {
+    throw new Error(`Not a bare \`H S% L%\` triple: ${JSON.stringify(triple)}`);
+  }
+  const h = Number(m[1]);
+  const s = Number(m[2]) / 100;
+  const l = Number(m[3]) / 100;
+  const a = s * Math.min(l, 1 - l);
+  const channel = (n: number): number => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  };
+  return [Math.round(255 * channel(0)), Math.round(255 * channel(8)), Math.round(255 * channel(4))];
+}
+
+/**
+ * A ramp token resolved as the named civilization renders it — `--civ-hue`
+ * bound to that civilization's `--color-civ-hue-*` the way its `[data-civ]`
+ * rule binds it, instead of to the neutral `:root` fallback.
+ *
+ * The override is a local copy; `TOKENS_BY_THEME` is not mutated, so
+ * `chartColourContract`'s pin that `--civ-hue` is still `240` in both themes
+ * keeps meaning what it says.
+ */
+export function resolveRampForCiv(theme: ThemeName, prefix: string, name: string): string {
+  const tokens = TOKENS_BY_THEME[theme];
+  const hue = tokens[`--color-civ-hue-${prefix}`];
+  if (hue === undefined) {
+    throw new Error(`No \`--color-civ-hue-${prefix}\` in the ${theme} tokens of ${GLOBALS_CSS}.`);
+  }
+  return resolveTriple({ ...tokens, "--civ-hue": hue }, name);
+}
+
+/** The widest single-channel gap between two colours, 0-255. */
+export function maxChannelDelta(
+  a: readonly [number, number, number],
+  b: readonly [number, number, number]
+): number {
+  return Math.max(...a.map((v, i) => Math.abs(v - b[i])));
+}
+
+/** Every unordered pair of civilization prefixes. */
+export function civPairs(): [string, string][] {
+  const out: [string, string][] = [];
+  for (let i = 0; i < CIV_PREFIXES.length; i += 1) {
+    for (let j = i + 1; j < CIV_PREFIXES.length; j += 1) out.push([CIV_PREFIXES[i], CIV_PREFIXES[j]]);
+  }
+  if (out.length === 0) throw new Error("No civilization pairs — CIV_PREFIXES is too short to compare.");
+  return out;
+}

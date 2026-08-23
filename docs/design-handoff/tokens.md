@@ -110,9 +110,22 @@ neither is substitutable for the other.
 - `--color-civ-hue-<prefix>` is a **bare hue degree** (`12`, `232`, `44`, `88`). The
   `[data-civ]` rules feed it into `--civ-hue`, which surface-1..4 interpolate
   (`hsl(var(--civ-hue) 13% 7%)`). A full triple cannot go in that position.
-- `--color-civ-mark-<prefix>` is a **full HSL triple**, for the two places a flat
-  civilization colour is still drawn: the 3px rule in a mixed-civilization list, and
-  the chart legend.
+- `--color-civ-mark-<prefix>` is a **full HSL triple**, and it is where civilization
+  identity actually lives. An earlier version of this line named "the 3px rule in a
+  mixed-civilization list, and the chart legend" as its two consumers; neither
+  exists, and searching the history of every commit that touched `--color-civ-mark`
+  finds no point at which either did. The mark is drawn at exactly **one** place
+  today — the per-civilization swatch in `frontend/app/dashboard/page.tsx`. Grep
+  `--color-civ-mark` and `CIVILIZATION_COLORS` before trusting this sentence either.
+
+The surface ramp is deliberately **not** the identity channel, whatever
+`BRIEF.md` §4.9 asked for. Measured: at `hsl(h 13% 7%)` the four tenants' surfaces
+land within 4/255 of each other, and within 6/255 across the whole ramp in both
+themes — 13% saturation at 7% lightness cannot express a hue. The owner's ruling
+was to accept the ramp as a near-neutral floor rather than raise it to the ~35-40%
+that would repaint every screen. `ADDENDUM.md` §6 carries the measurement and the
+decision; `frontend/src/__tests__/civilizationColourContract.test.ts` pins it, so
+raising the ramp's saturation turns a test red rather than passing unremarked.
 
 Re-tabulating corrected values here would not have ended the drift, it would have
 started a third copy: a table of triples still cannot drive a surface ramp. So the
