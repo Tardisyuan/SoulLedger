@@ -26,112 +26,27 @@
  * No DOM and no browser: a file read and two regexes, the same technique
  * `backend/apps/ledger/test_readings.py::TestFrontendMemberListsAgree` uses to
  * hold the two ends of the ledger payload together.
- */
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { CIVILIZATION_COLORS, STATE_COLORS } from "@/lib/chart-colors";
-import { CIVILIZATION_CODES } from "@/src/config/civilizations";
-
-const FRONTEND_ROOT = path.join(__dirname, "..", "..");
-const GLOBALS_CSS = path.join(FRONTEND_ROOT, "app", "globals.css");
-const SOULS_TS = path.join(FRONTEND_ROOT, "lib", "api", "souls.ts");
-
-const css = readFileSync(GLOBALS_CSS, "utf8");
-
-// ---------------------------------------------------------------------------
-// Parsing
-// ---------------------------------------------------------------------------
-
-/**
- * Merge every block with the given selector into one token map, later
- * declarations winning — exactly how the cascade resolves them. There is more
- * than one `:root` and more than one `.light` block in globals.css.
  *
- * Throws rather than returning `{}` if the selector matches nothing: a contract
- * test that silently stops finding what it compares is worse than no test, and
- * `{}` would make every "both sides agree" assertion below vacuously green.
+ * SCOPE. This file covers the two tables keyed by a *domain enumeration* —
+ * civilizations and lifecycle states — and the `[data-civ]` wiring that makes
+ * the civilization tokens paint anything. `chartColourContract.test.ts` covers
+ * the other three (REALM_COLORS, CHART_SERIES, CHART_CHROME), which were never
+ * mirrors at all. Both import their parser from `./support/globalsCssTokens`
+ * rather than each carrying a copy: two regex readers of one stylesheet is the
+ * same defect these tests exist to close.
  */
-function readTokens(selector: string): Record<string, string> {
-  const blocks = [...css.matchAll(new RegExp(`${selector}\\s*\\{([^}]*)\\}`, "g"))];
-  if (blocks.length === 0) {
-    throw new Error(
-      `No \`${selector}\` block found in ${GLOBALS_CSS}. If the file was ` +
-        `restructured, fix this parser — do not delete the comparison.`
-    );
-  }
-  const tokens: Record<string, string> = {};
-  for (const block of blocks) {
-    for (const decl of block[1].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
-      tokens[decl[1]] = decl[2].trim();
-    }
-  }
-  return tokens;
-}
-
-const ROOT_TOKENS = readTokens(":root");
-const LIGHT_TOKENS = readTokens("\\.light");
-
-/** Suffixes of every token matching a `--prefix-<suffix>` family, sorted. */
-function suffixesOf(tokens: Record<string, string>, family: string): string[] {
-  const hits = Object.keys(tokens)
-    .filter((name) => name.startsWith(`${family}-`))
-    .map((name) => name.slice(family.length + 1));
-  return [...new Set(hits)].sort();
-}
-
-/** `--color-civ-mark-cn: 12 55% 58%;` -> `hsl(12 55% 58%)`, the literal form chart-colors uses. */
-function asChartLiteral(triple: string): string {
-  return `hsl(${triple})`;
-}
-
-/**
- * The `[data-civ="X"]` rules, mapped to the token each points `--civ-hue` at.
- * These are what actually retint the surface ramp; tokens without a rule are
- * inert, which is precisely how GREEK rendered on the neutral 240° fallback
- * while looking, in the stylesheet, fully wired up.
- */
-function readCivAttrRules(): Record<string, string> {
-  const rules: Record<string, string> = {};
-  const pattern = /\[data-civ="([\w-]+)"\]\s*\{\s*--civ-hue:\s*var\((--[\w-]+)\)\s*;?\s*\}/g;
-  for (const m of css.matchAll(pattern)) rules[m[1]] = m[2];
-  return rules;
-}
-
-/**
- * `Soul.current_state` from lib/api/souls.ts — the states the payload can
- * actually carry, read as text because Jest sees the type only at compile time
- * and a type cannot be iterated at runtime. This is the reverse direction for
- * STATE_COLORS: without it, a state the API can send but no chart can colour
- * stays green forever.
- */
-function readSoulStates(): string[] {
-  const source = readFileSync(SOULS_TS, "utf8");
-  const m = /^\s*current_state:\s*("[A-Z_]+"(?:\s*\|\s*"[A-Z_]+")*)\s*;/m.exec(source);
-  if (m === null) {
-    throw new Error(
-      `Could not find the \`current_state\` union in ${SOULS_TS}. Fix this ` +
-        `parser; do not delete the comparison.`
-    );
-  }
-  const members = [...m[1].matchAll(/"([A-Z_]+)"/g)].map((x) => x[1]);
-  if (members.length === 0) throw new Error(`current_state parsed empty in ${SOULS_TS}`);
-  return members;
-}
-
-/**
- * The one prefix rule, written once. `TenantContext` derives the `[data-civ]`
- * attribute as `tenantCode.split("_")[0].toLowerCase()`; the CSS token families
- * are keyed by that same prefix. Deriving it here from `CIVILIZATION_CODES`
- * rather than hardcoding `["cn","eu","eg","gr"]` is what makes a *fifth*
- * civilization turn this file red the moment it is added to the config — which
- * is the enumeration point Greek slipped through.
- */
-const CIV_PREFIX_BY_TENANT_CODE = Object.fromEntries(
-  Object.values(CIVILIZATION_CODES).map((code) => [code, code.split("_")[0].toLowerCase()])
-) as Record<string, string>;
-
-const TENANT_CODES = Object.values(CIVILIZATION_CODES) as string[];
-const CIV_PREFIXES = [...new Set(Object.values(CIV_PREFIX_BY_TENANT_CODE))].sort();
+import {
+  CIV_PREFIXES,
+  CIV_PREFIX_BY_TENANT_CODE,
+  LIGHT_TOKENS,
+  ROOT_TOKENS,
+  TENANT_CODES,
+  asChartLiteral,
+  readCivAttrRules,
+  readSoulStates,
+  suffixesOf,
+} from "./support/globalsCssTokens";
+import { CIVILIZATION_COLORS, STATE_COLORS } from "@/lib/chart-colors";
 
 // ---------------------------------------------------------------------------
 
