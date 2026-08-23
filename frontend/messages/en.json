@@ -230,7 +230,8 @@
       "id_copied": "ID copied to clipboard",
       "id_copy_failed": "Copy failed",
       "reading": {
-        "threshold_hint": "Heart weighs {{weight}}× the feather (feather = {{counterweight}})",
+        "figure_scale_weight": "weight",
+        "threshold_hint": "Heart {{weight}} · feather {{counterweight}} ({{scale}})",
         "threshold_pass": "Not heavier than the feather",
         "threshold_fail": "Heavier than the feather",
         "culpa_label": "Culpa (guilt)",

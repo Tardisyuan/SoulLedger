@@ -1,6 +1,13 @@
 "use client";
 
-import type { LedgerReading, UnavailableReasonCode } from "@/lib/api/ledger";
+import type { ReactNode } from "react";
+
+import {
+  READING_QUANTITIES,
+  type LedgerReading,
+  type QuantityKind,
+  type UnavailableReasonCode,
+} from "@/lib/api/ledger";
 import { useI18n } from "@/src/contexts/I18nContext";
 
 type TFunc = (key: string, params?: Record<string, string>) => string;
@@ -81,6 +88,75 @@ export function SoulReadingPanel({ reading, meritScore, demeritScore, karmicBala
   }
 }
 
+// ── One number, drawn as the kind of quantity it is ─────────────────────
+//
+// The defect this exists for: European `culpa` and a Greek road's count were
+// both `text-xl font-bold`, so 22 and 4 sat side by side and read as two values
+// of one quantity — "this soul is worse". 22 is a sum of `SoulRecord.weight`
+// and 4 is a tally of ledger rows. Nothing relates them, and a cross-tenant
+// listing will sort them into one column anyway.
+//
+// `3fdbbba` left the two class strings no longer identical, but only because
+// the Greek fork had just been told to stop using the merit/demerit palette.
+// A distinction arrived at as a side effect can be lost as a side effect, so
+// the kind is now declared — `data-quantity` — rather than inferred from
+// whatever styling a panel happens to have.
+//
+// WHY THE MARKER IS A SCALE AND NOT A UNIT. Three of the four kinds already
+// say what they are inside the value or the caption next to it: a duration is
+// "{{years}} 年", a ratio ends in "×", a count has its noun ("5 项记录",
+// "桩在案过错"). Only magnitudes are mute, and they are mute because there is
+// no honest unit to print. `SoulRecord.weight` calls itself "Significance
+// weight (1-100)" — a scale this system invented. 分 is the 功過格's own unit
+// and borrowing it for Purgatorio or the Hall of Two Truths would be the
+// netting mistake in different clothes; "points" would sound like a score.
+// So the marker names the scale rather than claiming a unit, and it is the one
+// piece of copy on the panel whose job is to say "this number is not a tally".
+//
+// The marker is NOT `aria-hidden`, unlike the em-dash below it. The em-dash is
+// hidden because the sentence under it says the same thing; nothing else here
+// says what culpa is measured on, so hiding the marker would hand a screen
+// reader the bare "22" this component was fixed for.
+function Figure({
+  field,
+  quantity,
+  className,
+  numeralProps,
+  children,
+  t,
+}: {
+  /** The payload field this figure shows, or a name for a derived one. */
+  field: string;
+  quantity: QuantityKind;
+  className: string;
+  /** Extra attributes for the numeral itself — `Road` keeps its own
+   *  `data-road-count` hook on the styled element rather than on a wrapper, so
+   *  the fork's "both roads are drawn identically" assertions go on comparing
+   *  the classes that actually draw them. */
+  numeralProps?: Record<string, string>;
+  children: ReactNode;
+  t: TFunc;
+}) {
+  return (
+    <span className="inline-flex items-baseline gap-1">
+      {/* The numeral, and nothing but the numeral: `data-quantity` elements are
+          compared by text in the contract test, and a marker inside this span
+          would make a magnitude's text differ from the number it prints. */}
+      <span {...numeralProps} data-quantity={quantity} data-quantity-field={field} className={className}>
+        {children}
+      </span>
+      {quantity === "magnitude" && (
+        <span
+          data-quantity-scale={field}
+          className="text-[11px] font-normal text-[hsl(var(--color-ink-subtle))]"
+        >
+          {t("souls.detail.reading.figure_scale_weight")}
+        </span>
+      )}
+    </span>
+  );
+}
+
 // ── CHINESE (功过格) — a cumulative net account ──────────────────────
 function BalanceReading({
   reading,
@@ -89,26 +165,50 @@ function BalanceReading({
   reading: Extract<LedgerReading, { kind: "BALANCE" }>;
   t: TFunc;
 }) {
+  // All three are sums of SoulRecord.weight — and a difference of two of them
+  // is still one. 功過格 is the one cosmology whose own tradition names the
+  // unit (分, per 不善門#8's 夾注), and this panel still shows the generic
+  // scale: a unit taught here is a unit the Egyptian and European panels would
+  // then have to refuse, in the same slot, for the same number.
+  const q = READING_QUANTITIES.BALANCE;
+
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center">
         <span className="text-sm text-[hsl(var(--color-karma-merit))]">{t("souls.detail.merit")}</span>
-        <span className="text-lg font-bold text-[hsl(var(--color-karma-merit))]">+{reading.merit}</span>
+        <Figure
+          field="merit"
+          quantity={q.merit}
+          t={t}
+          className="text-lg font-bold tabular-nums text-[hsl(var(--color-karma-merit))]"
+        >
+          +{reading.merit}
+        </Figure>
       </div>
       <div className="flex justify-between items-center">
         <span className="text-sm text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.demerit")}</span>
-        <span className="text-lg font-bold text-[hsl(var(--color-karma-demerit))]">-{reading.demerit}</span>
+        <Figure
+          field="demerit"
+          quantity={q.demerit}
+          t={t}
+          className="text-lg font-bold tabular-nums text-[hsl(var(--color-karma-demerit))]"
+        >
+          -{reading.demerit}
+        </Figure>
       </div>
       <div className="border-t border-[hsl(var(--color-hairline))] pt-2 flex justify-between items-center">
         <span className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
-        <span
-          className={`text-xl font-bold ${
+        <Figure
+          field="balance"
+          quantity={q.balance}
+          t={t}
+          className={`text-xl font-bold tabular-nums ${
             reading.balance >= 0 ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"
           }`}
         >
           {reading.balance >= 0 ? "+" : ""}
           {reading.balance}
-        </span>
+        </Figure>
       </div>
     </div>
   );
@@ -133,17 +233,34 @@ function ThresholdReading({
           recorded wrongdoing, so a badge that reads "fail" forever would
           convey nothing. The ratio is at least a number that moves. */}
       <div className="flex flex-col items-center py-1">
-        <span
+        {/* A ratio, and marked as one. It is derived rather than sent, so it has
+            no entry in READING_QUANTITIES — the two magnitudes it is made of do,
+            and they stay in the sentence below. */}
+        <Figure
+          field="ratio"
+          quantity="ratio"
+          t={t}
           className={`text-3xl font-bold tabular-nums ${
             failed ? "text-[hsl(var(--color-status-error))]" : "text-[hsl(var(--color-karma-merit))]"
           }`}
         >
           {ratioText}
-        </span>
+        </Figure>
+        {/* The hint states the two magnitudes and names the scale they are on;
+            the multiple is the headline's business alone.
+
+            It used to read "the heart weighs {{weight}}× the feather" with
+            `weight` bound to `heart_weight` — a magnitude standing in a ratio's
+            slot, correct only because MAAT_FEATHER_WEIGHT is 1. A feather of 2
+            would have put 11× above a sentence saying 22×, with nothing red:
+            the same "a number is not the kind it looks like" defect this whole
+            change is about, one field along. The scale word is interpolated
+            rather than written into the sentence so there is one copy of it. */}
         <span className="text-xs text-[hsl(var(--color-ink-muted))] mt-1 text-center">
           {t("souls.detail.reading.threshold_hint", {
             weight: String(reading.heart_weight),
             counterweight: String(reading.counterweight),
+            scale: t("souls.detail.reading.figure_scale_weight"),
           })}
         </span>
       </div>
@@ -173,10 +290,25 @@ function GuiltAndPenaltyReading({
   return (
     <div className="space-y-4">
       <div>
+        {/* The exact pair the design review is about. `culpa` is a weight sum
+            and the caption under it is a row tally, and until now the sum was a
+            bare numeral with a count sitting directly beneath it — so the
+            numeral borrowed the caption's grammar and read as "22 of
+            something". It names its scale now; the caption keeps its noun. */}
         <div className="flex justify-between items-center">
           <span className="text-sm text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.reading.culpa_label")}</span>
-          <span className="text-xl font-bold text-[hsl(var(--color-karma-demerit))]">{reading.culpa}</span>
+          <Figure
+            field="culpa"
+            quantity={READING_QUANTITIES.GUILT_AND_PENALTY.culpa}
+            t={t}
+            className="text-xl font-bold tabular-nums text-[hsl(var(--color-karma-demerit))]"
+          >
+            {reading.culpa}
+          </Figure>
         </div>
+        {/* `culpa_record_count` is classified a count and deliberately stays in
+            this sentence: a second numeral of culpa's size beside culpa is the
+            confusion, not the fix. */}
         <div className="text-xs text-[hsl(var(--color-ink-subtle))] text-right mt-0.5">
           {t("souls.detail.reading.culpa_records", { count: String(reading.culpa_record_count) })}
         </div>
@@ -195,8 +327,19 @@ function GuiltAndPenaltyReading({
               glyph's whole job is to occupy the slot a number would have taken;
               the sentence that follows says why it is empty, and it is the next
               thing read. Hiding it cannot make it read as a zero, which is the
-              failure mode this position has to avoid. */}
-          <span className="text-xl font-bold text-[hsl(var(--color-ink-subtle))]" aria-hidden="true">
+              failure mode this position has to avoid.
+
+              `data-quantity-absent`, never `data-quantity`: the slot exists but
+              the quantity does not. `poena` is typed `null` rather than
+              `number | null` because this reading has no inputs to compute it
+              from, so assigning it a kind would be a claim about a quantity
+              that has never existed. Compare the elapsed slot below, which is a
+              duration the ledger merely has no start date for. */}
+          <span
+            data-quantity-absent="poena"
+            className="text-xl font-bold text-[hsl(var(--color-ink-subtle))]"
+            aria-hidden="true"
+          >
             —
           </span>
         </div>
@@ -292,14 +435,20 @@ function SentenceReading({
         rule={t("souls.detail.reading.sentence_repayment_rule", {
           multiple: String(reading.repayment_multiple),
         })}
+        t={t}
         owed={{
           label: t("souls.detail.reading.sentence_owed_label"),
           count: reading.wrongs,
+          // Both roads are counts of deeds — Republic X counts wrongs done, not
+          // this system's severity weights — so neither carries the weight
+          // scale marker and the two stay identically drawn.
+          quantity: READING_QUANTITIES.SENTENCE.wrongs,
           detail: t("souls.detail.reading.sentence_owed_detail"),
         }}
         requited={{
           label: t("souls.detail.reading.sentence_requited_label"),
           count: reading.benefactions,
+          quantity: READING_QUANTITIES.SENTENCE.benefactions,
           detail: t("souls.detail.reading.sentence_requited_detail"),
         }}
       />
@@ -347,15 +496,34 @@ function SentenceReading({
             /* Not aria-hidden, unlike the em-dash: this one is the value.
                Carried through a copy key rather than printed bare, because
                "2424" under a label reading 已服 states no unit — and the unit
-               is the one thing a term of years is measured in. */
-            <span className="text-xl font-bold tabular-nums text-[hsl(var(--color-ink))]">
+               is the one thing a term of years is measured in.
+
+               A duration, and therefore no weight-scale marker: the unit is
+               already inside the value, and appending the severity scale to it
+               would say the years were measured in weight. That is the same
+               category error as the counts, arriving from the other side. */
+            <Figure
+              field="elapsed_years"
+              quantity={READING_QUANTITIES.SENTENCE.elapsed_years}
+              t={t}
+              className="text-xl font-bold tabular-nums text-[hsl(var(--color-ink))]"
+            >
               {t("souls.detail.reading.sentence_elapsed_years", {
                 years: String(reading.elapsed_years),
               })}
-            </span>
+            </Figure>
           ) : (
-            /* aria-hidden for the same reason as the poena slot above. */
-            <span className="text-xl font-bold text-[hsl(var(--color-ink-subtle))]" aria-hidden="true">
+            /* aria-hidden for the same reason as the poena slot above, and
+               `data-quantity-absent` for a different reason than poena's: this
+               one names the kind that belongs in the slot. A duration is what
+               the ledger would hold if it held a start date, so the slot can
+               say so; poena is a quantity this cosmology has no inputs for at
+               all, and naming a kind there would invent one. */
+            <span
+              data-quantity-absent="elapsed_years"
+              className="text-xl font-bold text-[hsl(var(--color-ink-subtle))]"
+              aria-hidden="true"
+            >
               —
             </span>
           )}
@@ -386,6 +554,9 @@ function SentenceReading({
 interface RoadProps {
   label: string;
   count: number;
+  /** Always `count` — declared rather than assumed, so the day a road stops
+   *  being a tally of deeds the change has to be made here and is visible. */
+  quantity: QuantityKind;
   detail: string;
 }
 
@@ -419,10 +590,12 @@ function Fork({
   rule,
   owed,
   requited,
+  t,
 }: {
   rule: string;
   owed: RoadProps;
   requited: RoadProps;
+  t: TFunc;
 }) {
   return (
     <div data-fork="">
@@ -458,9 +631,9 @@ function Fork({
           there is no fourth: a difference, a sum or a ratio has no cell to sit
           in, and giving it one is a change to this grid that a reviewer sees. */}
       <div className={FORK_COLUMNS}>
-        <Road road="owed" {...owed} />
+        <Road road="owed" t={t} {...owed} />
         <div data-fork-gutter="" />
-        <Road road="requited" {...requited} />
+        <Road road="requited" t={t} {...requited} />
       </div>
     </div>
   );
@@ -482,16 +655,26 @@ function Fork({
 // is the same mistake as colouring the roads and is refused for the same
 // reason. So the structure is always drawn and the zero is drawn like any
 // other number.
-function Road({ road, label, count, detail }: RoadProps & { road: string }) {
+//
+// The count is a `count`, and that is the half of the review's pair that needed
+// no new copy: the caption directly beneath already names what is being counted
+// (桩在案过错 / recorded wrongs), so the road says what it is without borrowing
+// the weight scale culpa now carries. Both roads pass the same kind through, so
+// the two remain literally the same class string — which is what the tests
+// compare, and what a marker on one road alone would break.
+function Road({ road, label, count, quantity, detail, t }: RoadProps & { road: string; t: TFunc }) {
   return (
     <div data-road={road} className="flex flex-col items-center text-center">
       <span className="text-sm text-[hsl(var(--color-ink-muted))]">{label}</span>
-      <span
-        data-road-count={road}
+      <Figure
+        field={road === "owed" ? "wrongs" : "benefactions"}
+        quantity={quantity}
+        t={t}
+        numeralProps={{ "data-road-count": road }}
         className="text-xl font-bold tabular-nums text-[hsl(var(--color-ink))]"
       >
         {count}
-      </span>
+      </Figure>
       <span className="text-xs text-[hsl(var(--color-ink-subtle))] mt-0.5">{detail}</span>
     </div>
   );
@@ -546,22 +729,35 @@ function UnavailableReading({
 
       {/* Plain data, not a reading — neutral ink, no merit/demerit greens
           and reds, no "balance" framing. Those colors are what the other
-          three readings use to render a verdict, and this state has none. */}
+          three readings use to render a verdict, and this state has none.
+
+          Still magnitudes, though, and marked as such. `LedgerSummary`'s three
+          sums are the same SoulRecord.weight totals the BALANCE panel reads;
+          neutral ink says "no verdict here", which is a different statement
+          from "these are not weights". A reader who scrolls from a Greek soul's
+          road count to this box is making exactly the comparison the review
+          caught, and the box is the place it is least defended against. */}
       <div className="rounded border border-dashed border-[hsl(var(--color-hairline))] p-3 space-y-1.5">
         <p className="text-[11px] uppercase tracking-wide text-[hsl(var(--color-ink-subtle))]">
           {t("souls.detail.reading.unavailable_raw_data")}
         </p>
         <div className="flex justify-between text-sm">
           <span className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.merit")}</span>
-          <span className="text-[hsl(var(--color-ink))]">{meritScore}</span>
+          <Figure field="merit_score" quantity="magnitude" t={t} className="tabular-nums text-[hsl(var(--color-ink))]">
+            {meritScore}
+          </Figure>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.demerit")}</span>
-          <span className="text-[hsl(var(--color-ink))]">{demeritScore}</span>
+          <Figure field="demerit_score" quantity="magnitude" t={t} className="tabular-nums text-[hsl(var(--color-ink))]">
+            {demeritScore}
+          </Figure>
         </div>
         <div className="flex justify-between text-sm border-t border-[hsl(var(--color-hairline))] pt-1">
           <span className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
-          <span className="text-[hsl(var(--color-ink))]">{karmicBalance}</span>
+          <Figure field="karmic_balance" quantity="magnitude" t={t} className="tabular-nums text-[hsl(var(--color-ink))]">
+            {karmicBalance}
+          </Figure>
         </div>
       </div>
 
