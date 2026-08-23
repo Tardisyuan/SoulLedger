@@ -222,7 +222,6 @@
       "id_copied": "Medu Sesh Abuf",
       "id_copy_failed": "Ma Sesh Seth",
       "reading": {
-        "figure_scale_weight": "Aha",
         "threshold_hint": "Ib {{weight}} · Shu {{counterweight}} ({{scale}})",
         "threshold_pass": "Ma Aba Aa Shu",
         "threshold_fail": "Aba Aa Shu",
@@ -663,6 +662,7 @@
     "next_life_inheritance": "Aru Tepy",
     "carry_forward_rate": "Em Tepy Aru: {{merit}}% Nefer · {{demerit}}% Bin",
     "inheritance_note": "Nefer Khet Em Sebekhet, Bin Ma Khet Sethet",
+    "figure_scale_weight": "Aha",
     "original_weight": "Khemut Seth",
     "effective_weight": "Em Tepy Seth",
     "decay_factor": "Khet Seth",

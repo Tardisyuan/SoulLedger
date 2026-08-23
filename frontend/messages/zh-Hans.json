@@ -230,7 +230,6 @@
       "id_copied": "ID 已复制到剪贴板",
       "id_copy_failed": "复制失败",
       "reading": {
-        "figure_scale_weight": "权重",
         "threshold_hint": "心重 {{weight}} · 羽重 {{counterweight}}（{{scale}}）",
         "threshold_pass": "未重于费斯之羽",
         "threshold_fail": "重于费斯之羽",
@@ -663,6 +662,7 @@
     "next_life_inheritance": "下一世继承",
     "carry_forward_rate": "承前 {{merit}}% 功德 · {{demerit}}% 罪业",
     "inheritance_note": "功德过关即减，未熟之业不减分毫",
+    "figure_scale_weight": "权重",
     "original_weight": "原始",
     "effective_weight": "有效",
     "decay_factor": "衰减系数",

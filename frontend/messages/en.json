@@ -230,7 +230,6 @@
       "id_copied": "ID copied to clipboard",
       "id_copy_failed": "Copy failed",
       "reading": {
-        "figure_scale_weight": "weight",
         "threshold_hint": "Heart {{weight}} · feather {{counterweight}} ({{scale}})",
         "threshold_pass": "Not heavier than the feather",
         "threshold_fail": "Heavier than the feather",
@@ -663,6 +662,7 @@
     "next_life_inheritance": "Next Life Inheritance",
     "carry_forward_rate": "Carries forward: {{merit}}% of merit · {{demerit}}% of demerit",
     "inheritance_note": "Merit thins on the way through the gate; demerit that has not yet ripened does not.",
+    "figure_scale_weight": "weight",
     "original_weight": "Original",
     "effective_weight": "Effective",
     "decay_factor": "Decay Factor",

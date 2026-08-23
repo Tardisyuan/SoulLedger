@@ -47,13 +47,12 @@ import { render, screen } from "@testing-library/react";
 
 import {
   POENA_MISSING_INPUTS,
-  QUANTITY_KINDS,
   READING_KINDS,
-  READING_QUANTITIES,
   SENTENCE_MISSING_INPUTS,
   type LedgerReading,
   type LedgerReadingKind,
 } from "@/lib/api/ledger";
+import { QUANTITY_KINDS, READING_QUANTITIES } from "@/lib/api/ledgerQuantities";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 
@@ -75,7 +74,10 @@ function at(bundle: unknown, path: string): unknown {
 
 /** The provider's default locale, so these are the strings that render below. */
 const ZH = {
-  /** `figure_scale_weight` — the marker a magnitude carries and nothing else does. */
+  /** `ledger.figure_scale_weight` — the marker a magnitude carries and nothing
+   *  else does. It moved out of `souls.detail.reading` when the judgment
+   *  queue's triage card started reading it: a key under one page's reading
+   *  panel told a translator the word could only affect that panel. */
   scale: "权重",
   elapsedYears: (years: number) => `${years} 年`,
 };
@@ -316,7 +318,7 @@ describe("SoulReadingPanel — a magnitude names its scale and nothing else does
   it.each(Object.keys(BUNDLES))("%s prints real copy in the marker, and never a digit", (locale) => {
     // A marker that renders its own key, or renders empty, is the marker not
     // existing while every structural assertion above stays green.
-    const value = at(BUNDLES[locale], "souls.detail.reading.figure_scale_weight");
+    const value = at(BUNDLES[locale], "ledger.figure_scale_weight");
 
     expect(typeof value).toBe("string");
     expect(String(value).trim()).not.toBe("");
@@ -449,7 +451,7 @@ describe("threshold hint — the heart's weight is not the heart's ratio", () =>
     // is how the frontend's inheritance rates came to disagree with the
     // backend's.
     const hint = String(at(BUNDLES[locale], "souls.detail.reading.threshold_hint"));
-    const scale = String(at(BUNDLES[locale], "souls.detail.reading.figure_scale_weight"));
+    const scale = String(at(BUNDLES[locale], "ledger.figure_scale_weight"));
 
     expect(hint).toContain("{{weight}}");
     expect(hint).toContain("{{counterweight}}");

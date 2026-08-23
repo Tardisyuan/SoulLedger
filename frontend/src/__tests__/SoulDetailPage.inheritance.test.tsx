@@ -215,12 +215,22 @@ describe("SoulDetailPage — inheritance panel", () => {
 
     await screen.findByText("ledger.next_life_inheritance");
 
-    expect(
-      screen.getByText((_, el) => el?.textContent === "souls.detail.merit: +20")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText((_, el) => el?.textContent === "souls.detail.demerit: -100")
-    ).toBeInTheDocument();
+    // These two used to be matched as one element's text, "souls.detail.merit:
+    // +20". They are two elements now: the numeral carries `data-quantity`, and
+    // the scale marker that says what a weight sum is measured on sits beside
+    // it as a sibling rather than inside the number. Asserted on the classified
+    // figure instead, which pins strictly more than the old string did — that
+    // the number on screen is the one the card declares a magnitude, that it
+    // reads exactly `+20` with the marker NOT folded into it, and that the
+    // label is still next to it.
+    const merit = document.querySelector<HTMLElement>('[data-quantity-field="inherited_merit"]');
+    const demerit = document.querySelector<HTMLElement>('[data-quantity-field="inherited_demerit"]');
+    expect(merit?.textContent).toBe("+20");
+    expect(merit?.dataset.quantity).toBe("magnitude");
+    expect(demerit?.textContent).toBe("-100");
+    expect(demerit?.dataset.quantity).toBe("magnitude");
+    expect(screen.getByText("souls.detail.merit:")).toBeInTheDocument();
+    expect(screen.getByText("souls.detail.demerit:")).toBeInTheDocument();
     // 20 - 100 = -80: under the old `karmic_balance * 0.2` formula (with
     // merit_score === demerit_score === 100, karmic_balance is 0) this line
     // rendered "+0". This is the regression the endpoint switch fixes.

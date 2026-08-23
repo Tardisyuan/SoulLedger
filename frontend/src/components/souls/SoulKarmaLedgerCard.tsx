@@ -2,8 +2,14 @@
 
 import { useI18n } from "@/src/contexts/I18nContext";
 import { LazyLifespanBarChart } from "@/src/components/charts/LazyDashboardCharts";
+import { Figure } from "@/src/components/ledger/QuantityFigure";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 import type { LedgerReading, LedgerRecord, LedgerInheritance } from "@/lib/api/ledger";
+import {
+  INHERITANCE_QUANTITIES,
+  RECORD_QUANTITIES,
+  SUMMARY_QUANTITIES,
+} from "@/lib/api/ledgerQuantities";
 import type { HistoricalDate } from "@/lib/utils";
 
 /** A rate from the inheritance payload, as the whole-number percentage the
@@ -129,32 +135,74 @@ export function SoulKarmaLedgerCard({
           <p className="text-[11px] uppercase tracking-wide text-[hsl(var(--color-ink-subtle))] mb-1.5">
             {tf("ledger.raw_vs_decayed", "原始 / 衰减后")}
           </p>
+          {/* Five weight sums, and until now five bare numerals — directly under
+              a reading panel whose figures name the scale they are on. Adjacent
+              is the worst place to be inconsistent: a marked figure above an
+              unmarked one does not read as "one of these names its scale", it
+              reads as "these are different quantities", which is the exact
+              misreading `185e70c` set out to end one card higher up.
+
+              The raw pair take their kind from `original_weight`, the field
+              they are sums of, rather than from a literal typed here; the
+              decayed pair and the balance are `LedgerSummary`'s own fields and
+              take theirs from that payload's table. */}
           <div className="flex justify-between text-xs">
             <span className="text-[hsl(var(--color-ink-muted))]">{tf("ledger.raw_merit", "原始 功德")}</span>
-            <span className="text-[hsl(var(--color-karma-merit))]">+{rawMerit}</span>
+            <Figure
+              field="raw_merit"
+              quantity={RECORD_QUANTITIES.original_weight}
+              t={t}
+              className="tabular-nums text-[hsl(var(--color-karma-merit))]"
+            >
+              +{rawMerit}
+            </Figure>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-[hsl(var(--color-ink-muted))]">{tf("ledger.raw_demerit", "原始 罪业")}</span>
-            <span className="text-[hsl(var(--color-karma-demerit))]">-{rawDemerit}</span>
+            <Figure
+              field="raw_demerit"
+              quantity={RECORD_QUANTITIES.original_weight}
+              t={t}
+              className="tabular-nums text-[hsl(var(--color-karma-demerit))]"
+            >
+              -{rawDemerit}
+            </Figure>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-[hsl(var(--color-ink-muted))]">{tf("ledger.decayed_merit", "衰减后 功德")}</span>
-            <span className="text-[hsl(var(--color-karma-merit))]">+{meritScore}</span>
+            <Figure
+              field="merit_score"
+              quantity={SUMMARY_QUANTITIES.merit_score}
+              t={t}
+              className="tabular-nums text-[hsl(var(--color-karma-merit))]"
+            >
+              +{meritScore}
+            </Figure>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-[hsl(var(--color-ink-muted))]">{tf("ledger.decayed_demerit", "衰减后 罪业")}</span>
-            <span className="text-[hsl(var(--color-karma-demerit))]">-{demeritScore}</span>
+            <Figure
+              field="demerit_score"
+              quantity={SUMMARY_QUANTITIES.demerit_score}
+              t={t}
+              className="tabular-nums text-[hsl(var(--color-karma-demerit))]"
+            >
+              -{demeritScore}
+            </Figure>
           </div>
           <div className="flex justify-between items-center pt-1">
             <span className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
-            <span
-              className={`text-lg font-bold ${
+            <Figure
+              field="karmic_balance"
+              quantity={SUMMARY_QUANTITIES.karmic_balance}
+              t={t}
+              className={`text-lg font-bold tabular-nums ${
                 karmicBalance >= 0 ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"
               }`}
             >
               {karmicBalance >= 0 ? "+" : ""}
               {karmicBalance}
-            </span>
+            </Figure>
           </div>
           {/* rawBalance is computed but intentionally not re-shown as a second
               big number here — 余额 above is the decayed balance the cosmology
@@ -173,6 +221,11 @@ export function SoulKarmaLedgerCard({
           </div>
         </div>
 
+        {/* A count, classified as one in SUMMARY_QUANTITIES and deliberately not
+            a figure: it already carries its noun ("12 条记录"), which is what
+            every count on screen does and what no magnitude can do. Promoting it
+            to a numeral beside the weight sums above is the confusion, not the
+            fix — the same call `culpa_record_count` gets one card higher. */}
         <div className="text-xs text-[hsl(var(--color-ink-subtle))] text-right mt-3">
           {recordCount} {t("souls.detail.records")}
         </div>
@@ -209,8 +262,24 @@ export function SoulKarmaLedgerCard({
               rendering — the caption below it still reports whatever rates the
               API applied, which is a statement about this system's arithmetic
               rather than a claim about Plato. */}
+          {/* WHY THE TWO NUMBERS IN EACH BAR CAPTION ARE NOT FIGURES. What this
+              block draws is a *rate* — `inheritance_merit_rate`, classified a
+              ratio — and the two numerals are the operands it acts on, printed
+              as the bar's endpoints. That is the Egyptian headline's shape
+              exactly: the ratio is the figure, and `heart_weight` and
+              `counterweight` stay in the hint beside it rather than becoming
+              numerals of their own. Marking four endpoints inside a two-line
+              graphic would print the scale word four times to say what the three
+              rows below already say once each — and both operands are marked
+              elsewhere on this same card, `meritScore` in the block above and
+              `inherited_merit` in the row below.
+
+              `data-inheritance-bars` is here for the contract test, which pins
+              that this subtree draws no classified figure at all. Without it the
+              decision above is a paragraph, and a paragraph is what gets
+              overtaken. */}
           {reading.civilization === "CHINESE" && (
-            <div className="space-y-2.5 mb-3">
+            <div data-inheritance-bars="" className="space-y-2.5 mb-3">
               <div>
                 <div className="flex justify-between text-[11px] font-mono text-[hsl(var(--color-karma-merit))] mb-1">
                   <span>{t("souls.detail.merit")} {meritScore}</span>
@@ -238,27 +307,65 @@ export function SoulKarmaLedgerCard({
             </div>
           )}
 
+          {/* The three numerals every cosmology with a forward preview gets, and
+              the only figures in this card. Two are the payload's own sums and
+              take their kind from INHERITANCE_QUANTITIES; the third is their
+              difference, and a difference of magnitudes is still a magnitude —
+              the same argument BALANCE makes about netting merit against
+              demerit, which is why this row exists only where a next life
+              does. */}
           <div className="flex justify-between text-xs">
-            <span className="text-[hsl(var(--color-karma-merit))]">{t("souls.detail.merit")}: +{inheritance.inherited_merit}</span>
-            <span className="text-[hsl(var(--color-karma-demerit))]">{t("souls.detail.demerit")}: -{inheritance.inherited_demerit}</span>
+            <span className="inline-flex items-baseline gap-1 text-[hsl(var(--color-karma-merit))]">
+              <span>{t("souls.detail.merit")}:</span>
+              <Figure
+                field="inherited_merit"
+                quantity={INHERITANCE_QUANTITIES.inherited_merit}
+                t={t}
+                className="tabular-nums text-[hsl(var(--color-karma-merit))]"
+              >
+                +{inheritance.inherited_merit}
+              </Figure>
+            </span>
+            <span className="inline-flex items-baseline gap-1 text-[hsl(var(--color-karma-demerit))]">
+              <span>{t("souls.detail.demerit")}:</span>
+              <Figure
+                field="inherited_demerit"
+                quantity={INHERITANCE_QUANTITIES.inherited_demerit}
+                t={t}
+                className="tabular-nums text-[hsl(var(--color-karma-demerit))]"
+              >
+                -{inheritance.inherited_demerit}
+              </Figure>
+            </span>
           </div>
           <div className="flex justify-between text-xs mt-1">
             <span className="text-[hsl(var(--color-ink-subtle))]">{t("souls.detail.balance")}: </span>
-            <span
-              className={
+            <Figure
+              field="inherited_balance"
+              quantity={INHERITANCE_QUANTITIES.inherited_merit}
+              t={t}
+              className={`tabular-nums ${
                 inheritance.inherited_merit - inheritance.inherited_demerit >= 0
                   ? "text-[hsl(var(--color-karma-merit))]"
                   : "text-[hsl(var(--color-karma-demerit))]"
-              }
+              }`}
             >
               {inheritance.inherited_merit - inheritance.inherited_demerit >= 0 ? "+" : ""}
               {inheritance.inherited_merit - inheritance.inherited_demerit}
-            </span>
+            </Figure>
           </div>
           <p className="text-[10px] text-[hsl(var(--color-ink-subtle))] mt-2">
             {/* Now a real bundle key in all three catalogues rather than a
                 Chinese `tf` fallback that shipped untranslated to every
-                locale, and the numbers are the API's rather than this file's. */}
+                locale, and the numbers are the API's rather than this file's.
+
+                Both rates are classified `ratio` and reach the screen only
+                here and as the bar widths above — never as a figure. A
+                fraction drawn as a bold numeral with the weight scale beside
+                it would say the *rate* was measured in weight, which is the
+                category error the four kinds exist to make impossible; the
+                percent sign is the rate's own unit and it is already in the
+                sentence. */}
             {t("ledger.carry_forward_rate", {
               merit: String(ratePct(inheritance.inheritance_merit_rate)),
               demerit: String(ratePct(inheritance.inheritance_demerit_rate)),
