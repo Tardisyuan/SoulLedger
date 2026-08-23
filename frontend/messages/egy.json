@@ -239,6 +239,7 @@
         "sentence_requited_detail": "Medu Nefer · Ma Her Aha",
         "sentence_circuit": "{{years}} Renpet Em Sep — Aha Wehem, Ma Aha Wetu.",
         "sentence_elapsed_label": "Renpet Iri",
+        "sentence_elapsed_years": "{{years}} Renpet",
         "elapsed_unavailable_heading": "Ma Medu Em Unemu",
         "elapsed_missing_term_start": "Ma Rekhyu Wepet Wehem",
         "elapsed_missing_time_served": "Ma Rekhyu Renpet Iri",

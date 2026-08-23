@@ -78,6 +78,10 @@ const ZH = {
   elapsedHeading: "本账本未记",
   termStart: "刑期何时开始",
   timeServed: "已服了多少",
+  /** `sentence_elapsed_years` interpolated. A unit, not a bare number: "2424"
+   *  under a label reading 已服 states no unit, and years are the only thing a
+   *  term is measured in here. */
+  elapsedYears: (years: number) => `${years} 年`,
 };
 
 function renderPanel(reading: LedgerReading) {
@@ -357,6 +361,115 @@ describe("SoulReadingPanel — the Greek sentence renders at all", () => {
       ZH.termStart,
       "souls.detail.reading.elapsed_missing_parole",
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The clock can now be read, and the em-dash must get out of its way
+// ---------------------------------------------------------------------------
+//
+// `elapsed_years` was typed `null` — the type, not the value — and this slot
+// drew the em-dash without ever asking. `Disposition.term_start` made the
+// backend able to send a number, and an unchanged panel would have drawn "—"
+// on top of it: an absence rendered over a fact, which is worse than the
+// honest blank it replaced and worse than the number it hid.
+//
+// Everything below is that written down, in both directions. The absent path
+// is asserted just as hard as the present one, because a fix that makes the
+// number appear and also turns the honest absence into a 0 has traded one
+// wrong claim for another.
+
+describe("SoulReadingPanel — elapsed time, when the ledger has it", () => {
+  it("renders the years served instead of the em-dash", () => {
+    const { container } = renderPanel(sentence({ elapsed_years: 2424, elapsed_missing: [] }));
+
+    expect(screen.getByText(ZH.elapsedLabel)).toBeInTheDocument();
+    expect(screen.getByText(ZH.elapsedYears(2424))).toBeInTheDocument();
+    // Absence asserted beside presence: the whole defect is a "—" sitting
+    // next to a number rather than instead of one.
+    const dashes = Array.from(container.querySelectorAll("span")).filter(
+      (el) => el.textContent?.trim() === "—"
+    );
+    expect(dashes).toHaveLength(0);
+  });
+
+  it("drops the not-recorded heading and its bullets", () => {
+    const { container } = renderPanel(sentence({ elapsed_years: 2424, elapsed_missing: [] }));
+
+    expect(screen.queryByText(ZH.elapsedHeading)).not.toBeInTheDocument();
+    expect(container.querySelectorAll("ul")).toHaveLength(0);
+  });
+
+  it("renders a served count of zero as zero and not as the em-dash", () => {
+    // The truthiness trap, and the reason the branch is `!== null`. A term
+    // that began this year has served 0 years of it, which is a fact; the
+    // em-dash means the ledger does not know, which is not the same claim.
+    // `elapsed_years && ...` would have redrawn the glyph over it.
+    const { container } = renderPanel(sentence({ elapsed_years: 0, elapsed_missing: [] }));
+
+    expect(screen.getByText(ZH.elapsedYears(0))).toBeInTheDocument();
+    const dashes = Array.from(container.querySelectorAll("span")).filter(
+      (el) => el.textContent?.trim() === "—"
+    );
+    expect(dashes).toHaveLength(0);
+  });
+
+  it("lets the number decide when the payload contradicts itself", () => {
+    // The backend sends the list empty whenever the number is present, so this
+    // payload should not occur. It is asserted anyway because "should not
+    // occur" is not a rendering rule: a panel that drew both would put a
+    // figure and a claim that the figure is unavailable in the same box.
+    const { container } = renderPanel(
+      sentence({ elapsed_years: 300, elapsed_missing: [...SENTENCE_MISSING_INPUTS] })
+    );
+
+    expect(screen.getByText(ZH.elapsedYears(300))).toBeInTheDocument();
+    expect(container.querySelectorAll("ul")).toHaveLength(0);
+    expect(screen.queryByText(ZH.termStart)).not.toBeInTheDocument();
+  });
+
+  it("still refuses to turn the number into progress", () => {
+    // A served figure larger than the circuit is a real state — Republic X's
+    // souls come back, and this ledger does not know whether this one has.
+    // The prohibition that held while the numerator was null holds harder now
+    // that it is not: there is still no term length to be a denominator.
+    const { container } = renderPanel(
+      sentence({ elapsed_years: 2424, elapsed_missing: [], circuit_years: 1000 })
+    );
+    const text = container.textContent ?? "";
+
+    expect(container.querySelector("progress")).toBeNull();
+    expect(container.querySelector('[role="progressbar"]')).toBeNull();
+    expect(text).not.toContain("%");
+    // 2424 - 1000 and 2424 / 1000: the remainder and the ratio a progress
+    // reading would produce. Neither is a fact this payload contains.
+    expect(screen.queryByText(ZH.elapsedYears(1424))).not.toBeInTheDocument();
+    expect(text).not.toContain("2.4");
+  });
+
+  it("gives the number no colour the roads do not have", () => {
+    // Both roads are plain ink at identical weight, and their shared clock is
+    // not allowed to be louder. A green or red served figure would be the
+    // merit/demerit palette — the BALANCE reading's subtraction — arriving
+    // through the one slot the fork does not govern.
+    renderPanel(sentence({ elapsed_years: 2424, elapsed_missing: [] }));
+
+    const value = screen.getByText(ZH.elapsedYears(2424));
+    expect(value.className).not.toContain("karma-merit");
+    expect(value.className).not.toContain("karma-demerit");
+    expect(value.className).not.toContain("status-error");
+  });
+
+  it("keeps the em-dash and the bullets when the ledger still has nothing", () => {
+    // The other direction, restated here rather than left to the older test:
+    // this describe block is where someone will come to change this slot, and
+    // the absent path has to be visible from the same place.
+    const { container } = renderPanel(sentence({ elapsed_years: null }));
+
+    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.getByText(ZH.elapsedHeading)).toBeInTheDocument();
+    expect(bulletTexts(container)).toEqual([ZH.termStart, ZH.timeServed]);
+    expect(screen.queryByText(ZH.elapsedYears(0))).not.toBeInTheDocument();
   });
 });
 
@@ -697,6 +810,7 @@ describe("reading copy coverage", () => {
       "souls.detail.reading.sentence_requited_detail",
       "souls.detail.reading.sentence_circuit",
       "souls.detail.reading.sentence_elapsed_label",
+      "souls.detail.reading.sentence_elapsed_years",
       "souls.detail.reading.elapsed_unavailable_heading",
       "souls.detail.reading.unrenderable_kind",
     ]) {
@@ -718,6 +832,11 @@ describe("reading copy coverage", () => {
     // copies free to drift. It still has to be interpolated there.
     expect(at(bundle, "souls.detail.reading.sentence_repayment_rule")).toContain("{{multiple}}");
     expect(at(bundle, "souls.detail.reading.sentence_circuit")).toContain("{{years}}");
+    // The served figure is the number this copy is *about*. A translation that
+    // drops the placeholder reads as a complete phrase and states nothing —
+    // and here it would state nothing in the slot an em-dash used to occupy,
+    // i.e. it would look exactly like the absence it replaced.
+    expect(at(bundle, "souls.detail.reading.sentence_elapsed_years")).toContain("{{years}}");
     expect(at(bundle, "souls.detail.reading.unrenderable_kind")).toContain("{{kind}}");
 
     // The other half of what the two road captions used to be asserted for, and

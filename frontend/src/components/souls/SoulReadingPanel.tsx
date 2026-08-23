@@ -265,15 +265,20 @@ function GuiltAndPenaltyReading({
 //     used to be interpolated into each road's caption, which drew one fact
 //     twice and left the two copies free to drift.
 //   * a progress bar or a percentage. The denominator is a term length nobody
-//     has computed and the numerator is `elapsed_years`, which is null. A bar
-//     would have to invent both.
+//     has computed — `circuit_years` is the unit of repayment, not this soul's
+//     term — and the prohibition survived `elapsed_years` becoming a real
+//     number. It used to rest on both ends being missing; only one of them
+//     ever was.
 //   * `circuit_years` as a headline. 1000 is the length of one circuit — the
 //     unit the repayment is reckoned in — and rendering it large next to the
 //     word "sentence" would say this soul was sentenced to a thousand years.
 //     It sits below the fork because it is the unit of both roads.
 //   * an em-dash for an empty road. A road with no recorded deeds is 0, which
-//     the ledger knows; the em-dash is reserved for elapsed time, which it does
-//     not. Spending the glyph on both would flatten that distinction.
+//     the ledger knows; the em-dash is reserved for an elapsed figure it does
+//     not. Spending the glyph on both would flatten that distinction — and the
+//     distinction is now load-bearing in both directions, because a term start
+//     *can* be recorded and 0 years served is then a real answer sitting in the
+//     same slot the glyph used to own unconditionally.
 function SentenceReading({
   reading,
   t,
@@ -307,34 +312,71 @@ function SentenceReading({
         {t("souls.detail.reading.sentence_circuit", { years: String(reading.circuit_years) })}
       </p>
 
-      {/* Same dashed rule, em-dash and absent shared axis as poena, and for the
-          same reason: time served is not zero, it is unknown. A 0 here would
-          be a claim that the term has not begun, which is a fact about a
-          sentence and not a fact this ledger holds. One row for both roads:
-          they leave the same judgment and return to the same meadow, so there
-          is one elapsed figure and this ledger is missing it once. */}
+      {/* Same dashed rule, em-dash and absent shared axis as poena *when the
+          figure is absent*, and for the same reason: time served is not zero,
+          it is unknown. A 0 there would be a claim that the term has not begun,
+          which is a fact about a sentence and not one this ledger held. One row
+          for both roads: they leave the same judgment and return to the same
+          meadow, so there is one elapsed figure.
+
+          The branch is new and the defect it closes is a real one, not a
+          hypothetical. `elapsed_years` was typed `null` and this slot drew the
+          em-dash unconditionally — it never asked. The moment the backend could
+          send a number (Disposition.term_start), an unchanged panel would have
+          gone on drawing "—" over a figure it had been given: an absence
+          rendered on top of a fact, which is worse than either the old honest
+          blank or the new number.
+
+          The condition is `!== null`, not truthiness. 0 is a real answer here
+          now — a term that began this year has served no years of it — and
+          `elapsed_years && ...` would have redrawn the em-dash over it, which
+          is the same defect wearing a shorter operator.
+
+          What is deliberately still NOT here: a progress bar, a percentage, a
+          remainder. The denominator would be a term length nobody computes;
+          `circuit_years` is the unit of repayment and not this soul's term, and
+          dividing by it would state a fraction Republic X does not. And no
+          colour on either path — the two roads are plain ink and so is their
+          clock. */}
       <div className="border-t border-dashed border-[hsl(var(--color-hairline))] pt-3">
         <div className="flex justify-between items-center">
           <span className="text-sm text-[hsl(var(--color-ink-muted))]">
             {t("souls.detail.reading.sentence_elapsed_label")}
           </span>
-          {/* aria-hidden for the same reason as the poena slot above. */}
-          <span className="text-xl font-bold text-[hsl(var(--color-ink-subtle))]" aria-hidden="true">
-            —
-          </span>
+          {reading.elapsed_years !== null ? (
+            /* Not aria-hidden, unlike the em-dash: this one is the value.
+               Carried through a copy key rather than printed bare, because
+               "2424" under a label reading 已服 states no unit — and the unit
+               is the one thing a term of years is measured in. */
+            <span className="text-xl font-bold tabular-nums text-[hsl(var(--color-ink))]">
+              {t("souls.detail.reading.sentence_elapsed_years", {
+                years: String(reading.elapsed_years),
+              })}
+            </span>
+          ) : (
+            /* aria-hidden for the same reason as the poena slot above. */
+            <span className="text-xl font-bold text-[hsl(var(--color-ink-subtle))]" aria-hidden="true">
+              —
+            </span>
+          )}
         </div>
-        <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
-          {t("souls.detail.reading.elapsed_unavailable_heading")}
-        </p>
-        {/* One bullet per member the backend sent, key derived from the member,
-            exactly as the poena list does it — including the failure mode: a
-            member with no copy shows its raw key rather than vanishing. */}
-        {reading.elapsed_missing.length > 0 && (
-          <ul className="text-[11px] text-[hsl(var(--color-ink-subtle))] mt-2 space-y-0.5 list-disc list-inside">
-            {reading.elapsed_missing.map((missing) => (
-              <li key={missing}>{t(`souls.detail.reading.elapsed_missing_${missing.toLowerCase()}`)}</li>
-            ))}
-          </ul>
+        {reading.elapsed_years === null && (
+          <>
+            <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
+              {t("souls.detail.reading.elapsed_unavailable_heading")}
+            </p>
+            {/* One bullet per member the backend sent, key derived from the
+                member, exactly as the poena list does it — including the
+                failure mode: a member with no copy shows its raw key rather
+                than vanishing. */}
+            {reading.elapsed_missing.length > 0 && (
+              <ul className="text-[11px] text-[hsl(var(--color-ink-subtle))] mt-2 space-y-0.5 list-disc list-inside">
+                {reading.elapsed_missing.map((missing) => (
+                  <li key={missing}>{t(`souls.detail.reading.elapsed_missing_${missing.toLowerCase()}`)}</li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </div>
     </div>

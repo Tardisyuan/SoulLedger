@@ -288,32 +288,56 @@ def compare_historical_dates(a, b) -> int:
     return 0
 
 
-def lifespan_years(birth, death):
-    """Whole years lived, or None if either end is unknown.
+def whole_years_between(start, end):
+    """Whole years from ``start`` to ``end``, or None if either end is unknown.
 
-    ``birth``/``death`` are (year, month, day) triples. Spans go through
+    ``start``/``end`` are (year, month, day) triples. Spans go through
     ``year_span`` so the missing year 0 is accounted for: 612 BCE to 580
     BCE is 32 years, and 50 BCE to 10 CE is 59, not 60.
 
-    Subtracts a year when the birthday had not come round again in the year
-    of death, the ordinary way an age is counted. Unknown months or days
-    mean no subtraction, so the answer is an upper bound accurate to within
-    a year — ample for a rule whose threshold is 150.
+    Subtracts a year when the anniversary had not come round again in the
+    later year, the ordinary way an elapsed count is taken. Unknown months
+    or days mean no subtraction, so the answer is an upper bound accurate to
+    within a year.
+
+    May be negative, which is how a caller learns the two dates are in the
+    wrong order.
+
+    Named for the arithmetic rather than for a life on purpose. It was
+    ``lifespan_years`` and nothing else, and the first caller that was not
+    about a lifespan — ``apps.ledger.readings``, measuring how much of a
+    Greek soul's term has run since ``Disposition.term_start`` — would have
+    had to either import a function whose name asserts something false about
+    its arguments or copy the four lines. Both of those are how two copies of
+    one piece of arithmetic start; ``lifespan_years`` below keeps its name and
+    its own docstring and delegates here.
+    """
+    start_year, start_month, start_day = start
+    end_year, end_month, end_day = end
+    if start_year is None or end_year is None:
+        return None
+    span = year_span(start_year, end_year)
+    # Same arbitrary year on both sides so only month/day decide the order.
+    # (Year 1, not year 0 — the latter does not exist in this convention and
+    # would be rejected anywhere else in this module.)
+    if compare_historical_dates((1, start_month, start_day), (1, end_month, end_day)) > 0:
+        span -= 1
+    return span
+
+
+def lifespan_years(birth, death):
+    """Whole years lived, or None if either end is unknown.
+
+    ``birth``/``death`` are (year, month, day) triples. The arithmetic is
+    ``whole_years_between`` above — the year-0 correction and the "had the
+    birthday come round again" subtraction, which is the ordinary way an age
+    is counted. The answer is an upper bound accurate to within a year when
+    month or day is unknown, which is ample for a rule whose threshold is 150.
 
     May be negative, which is how a caller learns the two dates are in the
     wrong order.
     """
-    birth_year, birth_month, birth_day = birth
-    death_year, death_month, death_day = death
-    if birth_year is None or death_year is None:
-        return None
-    span = year_span(birth_year, death_year)
-    # Same arbitrary year on both sides so only month/day decide the order.
-    # (Year 1, not year 0 — the latter does not exist in this convention and
-    # would be rejected anywhere else in this module.)
-    if compare_historical_dates((1, birth_month, birth_day), (1, death_month, death_day)) > 0:
-        span -= 1
-    return span
+    return whole_years_between(birth, death)
 
 
 def check_soul_dates(birth, death) -> list[DateProblem]:
@@ -432,5 +456,105 @@ def check_record_date(event, birth, death, *, ack_fingerprint: str | None = None
             f"soul's death ({format_historical_date(*death)}). Legitimate for a "
             f"posthumous record; check it is not a mis-typed year.",
             acknowledged=acknowledged,
+        ))
+    return problems
+
+
+# ----------------------------------------------------------------------
+# The third date, and the first one that is not about a life.
+#
+# `Disposition.term_start` is when a soul's term began being counted — the
+# moment Republic X's circuit starts running for it. Everything above this
+# line compares dates that all sit inside one life, or a record against the
+# life it belongs to: birth, death, and an event between them. The frame of
+# reference is a person, and every rule above is some form of "this cannot
+# have happened before there was anybody for it to happen to".
+#
+# A term start is not in that frame. It is after the life, in the part of
+# this system's model that begins where a biography ends, and the two things
+# it can contradict are of two different kinds:
+#
+#   * another date — the soul's death, which a term cannot precede; and
+#   * a *state* — the soul's own `current_state`, which is not a date at all.
+#
+# So this rule does not fit `check_soul_dates(birth, death)` or
+# `check_record_date(event, birth, death)`, and it is not made to. It takes
+# the state as an argument and says so in the signature, which is the whole
+# reason it is a third function rather than a third branch inside one of the
+# other two.
+#
+# What it does NOT check, deliberately: that a term start is in the past.
+# Nothing above this line has an opinion about "now" either — a soul may be
+# recorded as having died in 612 BCE or last week, and no rule here compares
+# either to the clock. `apps.ledger.readings` does compare a term start to
+# today, because elapsed time is what it reports, and it floors the answer at
+# zero rather than reporting a negative span. A rule about the future would be
+# a third kind of comparison and it has not been asked for.
+# ----------------------------------------------------------------------
+
+#: `SoulState.ALIVE`'s stored value, spelled out because this module cannot
+#: import it. `apps.souls.models` imports *this* module (for the
+#: `birth_date`/`death_date` compatibility properties), so importing the enum
+#: back would be a cycle. A literal in one module and an enum in the other is
+#: two copies of one value that are free to drift silently — the rule would
+#: simply stop firing, which is the quiet failure mode this repository keeps
+#: finding — so `apps/souls/test_dates.py` asserts the two are equal.
+ALIVE_STATE = "ALIVE"
+
+
+def check_term_start(term_start, death, soul_state, *, term_executed=False) -> list[DateProblem]:
+    """Sanity-check a disposition's term start against the soul it sentences.
+
+    ``term_start`` is a (year, month, day) triple and may be all None — no
+    term start recorded is the ordinary case and the one every row that
+    predates the column is in. ``death`` is the soul's death triple.
+    ``soul_state`` is ``Soul.current_state``. ``term_executed`` is the
+    disposition's ``is_executed``.
+
+    **term_start_before_death** — ERROR. Every cosmology modelled here starts
+    the term at judgment, and judgment follows death: ``Soul.transition_to``
+    refuses ALIVE -> JUDGING without a death date, and a Disposition only
+    exists once a judgment has concluded. So a term that began before its
+    soul died is not an unusual case, it is two facts that cannot both be
+    right — the same grading, and for the same reason, as
+    ``death_before_birth``.
+
+    **term_start_on_a_living_soul** — ERROR, and ``term_executed`` is the
+    reason it can be one. The naive form of this rule ("ALIVE and has a term
+    start") fires on a soul that has been through the whole circuit and come
+    back: ``ReincarnationService.complete_rebirth`` clears ``death_date`` and
+    transitions the soul to ALIVE, and the disposition it served under keeps
+    its rows. That soul is ALIVE, has no death date, and legitimately owns a
+    term start — so the naive rule would have reported a contradiction on the
+    single most ordinary outcome in the system, and being wrong about the
+    common case is how a rule gets switched off.
+
+    An *executed* disposition's term start is history: the term ran, and then
+    it ended. What cannot be true is a term that is still in force for a soul
+    that is not dead, so the rule is scoped to ``term_executed=False`` and is
+    an ERROR there. ``apps/disposition/test_term_start.py`` pins the reborn
+    soul as the case that must stay silent.
+    """
+    problems = []
+    if term_start[0] is None:
+        return problems
+
+    if death[0] is not None and compare_historical_dates(term_start, death) < 0:
+        problems.append(DateProblem(
+            ERROR,
+            "term_start_before_death",
+            f"term start {format_historical_date(*term_start)} is before the soul's "
+            f"death ({format_historical_date(*death)}). A term begins at judgment and "
+            f"judgment follows death, so one of the two dates is wrong.",
+        ))
+
+    if soul_state == ALIVE_STATE and not term_executed:
+        problems.append(DateProblem(
+            ERROR,
+            "term_start_on_a_living_soul",
+            f"term start {format_historical_date(*term_start)} is recorded for a soul "
+            f"that is {ALIVE_STATE} and whose disposition has not been executed. A term "
+            f"that has not been served cannot have begun for a soul that has not died — "
+            f"check the soul's state, or whether this term start belongs to it at all.",
         ))
     return problems
