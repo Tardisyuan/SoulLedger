@@ -79,16 +79,25 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   const tenantCode = user?.tenant?.code ?? null;
 
   // Surface-first civilization identity (globals.css §4.9 / Stage 5 §2):
-  // stamp [data-civ] on <html> so the [data-civ="cn"|"eu"|"eg"] rules there
-  // can point --civ-hue at this tenant's hue and retint surface-1..4.
-  // Tenant codes are CN_DIYU / EU_HEAVEN_HELL / EG_DUAT (backend
+  // stamp [data-civ] on <html> so the [data-civ="cn"|"eu"|"eg"|"gr"] rules
+  // there can point --civ-hue at this tenant's hue and retint surface-1..4.
+  // Tenant codes are CN_DIYU / EU_HEAVEN_HELL / EG_DUAT / GR_HADES (backend
   // TENANT_CIVILIZATION, apps/souls/models.py) — the prefix before the first
   // underscore is exactly the [data-civ] suffix. An unmapped or absent
   // tenant clears the attribute, which leaves --civ-hue at its neutral
   // :root/.light fallback rather than guessing a civilization.
+  //
+  // `gr` was missing from this list until Stage 9, and THIS omission — not
+  // any missing token — is why every Greek screen rendered on the neutral
+  // 240° fallback: the attribute was deleted, so no [data-civ] rule matched
+  // and --civ-hue never left :root. Adding a fifth civilization means adding
+  // it here as well as in globals.css; a whitelist that silently falls
+  // through to `delete` cannot report its own gap, so
+  // src/__tests__/TenantContext.test.tsx asserts one stamped attribute per
+  // member of CIVILIZATION_CODES.
   useEffect(() => {
     const civ = tenantCode?.split("_")[0]?.toLowerCase();
-    if (civ === "cn" || civ === "eu" || civ === "eg") {
+    if (civ === "cn" || civ === "eu" || civ === "eg" || civ === "gr") {
       document.documentElement.dataset.civ = civ;
     } else {
       delete document.documentElement.dataset.civ;

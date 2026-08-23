@@ -11,6 +11,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { TenantProvider, useTenant } from "@/src/contexts/TenantContext";
+import { CIVILIZATION_CODES } from "@/src/config/civilizations";
 import { permApi } from "@/lib/api";
 
 jest.mock("@/lib/api", () => ({
@@ -23,7 +24,7 @@ const mockMyRolePermissions = permApi.myRolePermissions as jest.Mock;
 
 const USER_KEY = "soulledger_user";
 
-function seedStoredUser() {
+function seedStoredUser(tenantCode: string | null = "CN_DIYU") {
   localStorage.setItem(
     USER_KEY,
     JSON.stringify({
@@ -33,7 +34,7 @@ function seedStoredUser() {
         display_name: "Judge One",
         email: "judge1@test.com",
         role: "JUDGE",
-        tenant: { id: 1, code: "CN_DIYU", display_name: "地狱" },
+        tenant: tenantCode === null ? null : { id: 1, code: tenantCode, display_name: tenantCode },
       },
       storedAt: Date.now(),
     })
@@ -89,5 +90,74 @@ describe("TenantContext rehydration", () => {
 
     expect(result.current.user).toBeNull();
     expect(mockMyRolePermissions).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The [data-civ] stamp — surface-first civilization identity.
+ *
+ * This whitelist, not any missing token, is why every Greek screen rendered on
+ * the neutral 240° fallback: globals.css had no `gr` entry either, but even
+ * once it did, a tenant code the `if` does not recognise falls through to
+ * `delete`, and a deleted attribute matches no [data-civ] rule. The failure is
+ * silent by construction — nothing throws, nothing warns, the page simply
+ * looks like a logged-out one.
+ *
+ * So the assertion is driven off CIVILIZATION_CODES rather than a literal list:
+ * a fifth civilization added to the config turns this red without anyone
+ * remembering this file exists. And each case asserts the attribute's VALUE,
+ * not merely that it is set — `expect(...).toBeDefined()` would stay green if
+ * every tenant stamped `cn`.
+ */
+describe("TenantContext [data-civ] stamp", () => {
+  const CASES = Object.entries(CIVILIZATION_CODES).map(([civ, code]) => ({
+    civ,
+    code,
+    expected: code.split("_")[0].toLowerCase(),
+  }));
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockMyRolePermissions.mockReset();
+    mockMyRolePermissions.mockResolvedValue({ data: { permissions: [] } });
+    delete document.documentElement.dataset.civ;
+  });
+
+  it("has a case per civilization the frontend knows about", () => {
+    expect(CASES.length).toBeGreaterThan(3);
+  });
+
+  it.each(CASES)("$civ ($code) stamps data-civ=\"$expected\"", async ({ code, expected }) => {
+    seedStoredUser(code);
+    renderHook(() => useTenant(), { wrapper });
+
+    await waitFor(() => {
+      expect(document.documentElement.dataset.civ).toBe(expected);
+    });
+  });
+
+  it("every civilization gets a DISTINCT prefix — no two share a hue by accident", () => {
+    const stamps = CASES.map((c) => c.expected);
+    expect(new Set(stamps).size).toBe(stamps.length);
+  });
+
+  it("clears the attribute for a tenant this deployment does not map to a cosmology", async () => {
+    // Not "leaves it alone" — actively cleared, so a user switching from a
+    // mapped tenant to an unmapped one drops back to the neutral fallback
+    // instead of keeping the previous civilization's tint.
+    document.documentElement.dataset.civ = "cn";
+    seedStoredUser("NO_HEL");
+    renderHook(() => useTenant(), { wrapper });
+
+    await waitFor(() => {
+      expect(document.documentElement.dataset.civ).toBeUndefined();
+    });
+  });
+
+  it("stamps nothing when there is no tenant at all", () => {
+    document.documentElement.dataset.civ = "eg";
+    renderHook(() => useTenant(), { wrapper });
+
+    expect(document.documentElement.dataset.civ).toBeUndefined();
   });
 });

@@ -98,22 +98,35 @@ judgment are the same red.
 
 ## Civilization identity
 
-| Token | Dark | Light | Civilization |
-|---|---|---|---|
-| `--color-civ-cn` | `38 92% 50%` | `38 92% 40%` | Chinese 地府 |
-| `--color-civ-eu` | `217 91% 52%` | `217 91% 45%` | European Heaven/Hell |
-| `--color-civ-eg` | `271 81% 56%` | `271 81% 48%` | Egyptian Duat |
+**Not tabulated here. `frontend/app/globals.css` is the authority.** Read the
+`--color-civ-*` declarations in its `:root` and `.light` blocks, and the
+`[data-civ]` rules directly beneath them.
 
-Previously every page picked its own — the dashboard drew Chinese in red while
-organizations drew it in amber, so one screen showed the same civilization in two
-colours. Unified to amber/blue/purple to keep hues far apart.
+The table that used to sit here listed `--color-civ-cn` / `-eu` / `-eg` as full HSL
+triples. Those three tokens do not exist. They were not merely stale values, they
+were the wrong *shape*: identity is expressed as two token families now, and
+neither is substitutable for the other.
 
-**`--color-civ-cn` is identical to `--color-accent`.** The Chinese civilization is
-therefore indistinguishable from the app's primary interactive colour, which is a
-problem given Chinese is the default tenant.
+- `--color-civ-hue-<prefix>` is a **bare hue degree** (`12`, `232`, `44`, `88`). The
+  `[data-civ]` rules feed it into `--civ-hue`, which surface-1..4 interpolate
+  (`hsl(var(--civ-hue) 13% 7%)`). A full triple cannot go in that position.
+- `--color-civ-mark-<prefix>` is a **full HSL triple**, for the two places a flat
+  civilization colour is still drawn: the 3px rule in a mixed-civilization list, and
+  the chart legend.
 
-This three-token set is the entire current expression of civilization identity. See
-§4.9 of the brief.
+Re-tabulating corrected values here would not have ended the drift, it would have
+started a third copy: a table of triples still cannot drive a surface ramp. So the
+table is gone and this section is a pointer.
+
+There are **four** civilizations — Chinese, European, Egyptian and Greek. The old
+note that "this three-token set is the entire current expression of civilization
+identity" was wrong twice over: wrong about the token set, and wrong about the
+count.
+
+`frontend/lib/chart-colors.ts` mirrors `--color-civ-mark-*` as literals because
+Recharts cannot read CSS custom properties. That mirror is not a second system —
+`frontend/src/__tests__/civilizationColourContract.test.ts` parses `globals.css` and
+fails if the two disagree in either direction.
 
 ---
 
@@ -124,24 +137,17 @@ CSS custom properties**, so `lib/chart-colors.ts` mirrors the tokens as literals
 are the dark-theme values and they do not follow the `.light` override — which is why
 charts stay dark-themed in light mode.
 
-```ts
-STATE_COLORS        ALIVE hsl(160 84% 39%) · JUDGING hsl(38 92% 50%)
-                    DISPOSED hsl(220 80% 62%) · REINCARNATING hsl(217 91% 60%)
-                    LOST hsl(0 0% 50%)
+The five maps are `STATE_COLORS`, `CIVILIZATION_COLORS`, `REALM_COLORS`,
+`CHART_SERIES` and `CHART_CHROME`. **Read their values from the module, not from
+here.** A transcription of them used to sit at this spot and every line of it had
+drifted — it still listed five lifecycle states after `SETTLED` was added, still gave
+`JUDGING` the accent amber it had been moved off, still named `CHART_SERIES.balance`
+as `karma`, and still showed three civilizations.
 
-CIVILIZATION_COLORS CN_DIYU hsl(38 92% 50%) · EU_HEAVEN_HELL hsl(217 91% 52%)
-                    EG_DUAT hsl(271 81% 56%)
-
-REALM_COLORS        HELL hsl(0 84% 60%) · PURGATORY hsl(217 91% 60%)
-                    BLISS hsl(142 76% 36%) · NEUTRAL hsl(0 0% 50%)
-
-CHART_SERIES        karma hsl(271 81% 56%) · realm hsl(217 91% 60%)
-                    neutral hsl(220 6% 55%)
-
-CHART_CHROME        accent hsl(38 92% 50%) · grid hsl(220 8% 18%)
-                    axis hsl(220 8% 18%) · tick hsl(215 8% 57%)
-                    tooltipBg hsl(240 13% 7%) · tooltipBorder hsl(220 8% 18%)
-```
+`STATE_COLORS` and `CIVILIZATION_COLORS` are pinned to `globals.css` by
+`frontend/src/__tests__/civilizationColourContract.test.ts` and cannot drift again
+without a red test. The other three are not pinned yet — treat their values as
+unverified until read from source.
 
 Any chart palette you propose needs a light variant and must be expressible as literal
 values, not variable references.
