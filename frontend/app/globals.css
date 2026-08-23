@@ -159,15 +159,35 @@
   --color-civ-mark-eu: 232 42% 64%;
   --color-civ-hue-eg: 44;
   --color-civ-mark-eg: 44 45% 55%;
+  /* GREEK 希腊冥界. 88deg, not the 138deg that maximises the gap to the other
+     three: 138 sits 94deg from both neighbours but only 12deg off
+     --color-karma-merit / --color-status-alive / --color-verdict-passed
+     (150deg). A civilization whose identity colour IS the merit colour is a
+     misreading, not a legibility complaint -- a hue clash is hard to tell
+     apart, a semantic clash is read as the wrong thing. 88's nearest
+     neighbour is Egyptian's 44, 44deg off — still wider than the 32deg that
+     already separates Chinese (12) from Egyptian (44), so this adds no
+     tighter pair than the palette already had. Nearest status hue is
+     --color-accent at 50deg. Measured 7.78:1 against this tenant's own
+     surface-1, hsl(88 13% 7%) -- AAA. */
+  --color-civ-hue-gr: 88;
+  --color-civ-mark-gr: 88 40% 52%;
 }
 
 /* TenantProvider stamps this on <html> once the logged-in user's tenant
    (and therefore civilization) is known — see src/contexts/TenantContext.tsx.
    No attribute (logged-out, or a tenant this deployment doesn't map to a
-   cosmology) leaves --civ-hue at its :root/.light fallback. */
+   cosmology) leaves --civ-hue at its :root/.light fallback.
+
+   One rule per member of CIVILIZATION_CODES (src/config/civilizations.ts) —
+   a civilization with tokens but no rule here silently renders on the
+   neutral 240° fallback, which is how GREEK looked identical to a
+   logged-out screen. src/__tests__/civilizationColourContract.test.ts
+   enumerates this list from that config and fails if the two disagree. */
 [data-civ="cn"] { --civ-hue: var(--color-civ-hue-cn); }
 [data-civ="eu"] { --civ-hue: var(--color-civ-hue-eu); }
 [data-civ="eg"] { --civ-hue: var(--color-civ-hue-eg); }
+[data-civ="gr"] { --civ-hue: var(--color-civ-hue-gr); }
 
 .light {
   /* alive/judging/reincarnating/settled/warning (and their karma/verdict/
@@ -198,6 +218,11 @@
   --color-civ-mark-eu: 232 45% 44%;
   --color-civ-hue-eg: 44;
   --color-civ-mark-eg: 44 52% 34%;
+  /* Same hue as dark; the mark drops to 32% lightness for light-mode
+     surfaces. Measured 4.97:1 on this tenant's light surface-1,
+     hsl(88 14% 98%) -- AA. */
+  --color-civ-hue-gr: 88;
+  --color-civ-mark-gr: 88 46% 32%;
 }
 
 @layer base {

@@ -35,6 +35,17 @@
 <p class="sub">Dark-theme values from <code>app/globals.css</code>. Light values and full notes in <b>tokens.md</b>.</p>
 
 <div class="warn">
+  <b>This page is a point-in-time snapshot, not a reference.</b> It was rendered to show the
+  design review what the UI looked like going in, and every swatch below is frozen at that
+  moment — <code>status-alive</code>, the surface ramp and the whole
+  <b>Civilization identity</b> section have all moved since. The authority for current values is
+  <code>frontend/app/globals.css</code>; the civilization tokens shown below
+  (<code>--color-civ-cn</code> / <code>-eu</code> / <code>-eg</code>) no longer exist under any
+  name and were replaced by the <code>--color-civ-hue-*</code> / <code>--color-civ-mark-*</code>
+  pair for four civilizations, not three. Do not build against this page.
+</div>
+
+<div class="warn">
   <b>Colour is the only thing tokenised.</b> There is no type scale, spacing scale, radius scale,
   elevation scale or motion token in the system — which is why the app has drifted to four heading
   sizes and four border-radius values. All five missing scales are part of the ask.
