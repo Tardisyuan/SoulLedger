@@ -45,10 +45,19 @@ sentences on the unoffset-demerit figure `non_fungible` reports below (via
 raw balance because 「不可折」 is a limit on 功過相抵 and neither of them has one.
 That asymmetry is the same one this module is built on, carried one layer out.
 
-RESOLVED(i18n): the two English sentences that used to sit in this module —
-`poena_unavailable` in `_european_reading` and `reason` in
-`get_civilization_reading` — are gone. `poena_missing` and `reason_code`
-replaced them.
+RESOLVED(i18n): the three English sentences that used to sit in this module —
+`poena_unavailable` in `_european_reading`, `reason` in
+`get_civilization_reading`, and `elapsed_unavailable` in `_greek_reading` —
+are gone. `poena_missing`, `reason_code` and `elapsed_missing` replaced them.
+
+The third one went a release later than the other two, and the delay was the
+argument rather than an oversight. `elapsed_unavailable` was exempted from the
+prose rule on a survey finding — `SoulReadingPanel.tsx` had no SENTENCE branch,
+so converting it would have deleted an explanation and put nothing in its
+place — and that exemption was recorded as an exact-set assertion in
+`test_readings.py::PROSE_STILL_ALLOWED` so that giving the Greek reading a
+panel could not happen without the finding being re-decided. The panel now
+exists; the finding is void; the field is members. That set is empty again.
 
 The survey the old TODO asked for was done, and it found the worst case: the
 frontend never read either string, and rendered the same content itself, more
@@ -244,6 +253,25 @@ GREEK_REPAYMENT_MULTIPLE = 10
 GREEK_CIRCUIT_YEARS = 100 * GREEK_REPAYMENT_MULTIPLE
 
 
+#: The facts elapsed time presupposes and which nothing in this ledger records,
+#: as members rather than as a sentence that lists them.
+#:
+#: Third instance of the device — after GRANULARITY_MISSING_INPUTS in
+#: fungibility.py and POENA_MISSING_INPUTS above — and the first one that had to
+#: be converted rather than born that way. `elapsed_unavailable` was a
+#: four-line English paragraph on the wire, and `test_readings.py` exempted it
+#: from the prose rule for one stated reason: `SoulReadingPanel.tsx` had no
+#: SENTENCE branch, so converting it would have deleted an explanation and put
+#: nothing in its place. That reason expired the moment the panel was built, and
+#: the exemption was written as an exact-set assertion precisely so that
+#: building the panel had to come back past it.
+#:
+#: Order is the order of the arithmetic that cannot be done: without a start
+#: date there is nothing to measure elapsed time *from*, and time served is the
+#: quantity that measurement would produce. The panel renders the list in it.
+SENTENCE_MISSING_INPUTS = ("TERM_START", "TIME_SERVED")
+
+
 def _greek_reading(merit: int, demerit: int, demerit_count: int,
                    class_totals: dict | None = None) -> dict:
     """A sentence, measured in time — how much is owed, not how much is left.
@@ -281,6 +309,11 @@ def _greek_reading(merit: int, demerit: int, demerit_count: int,
     it has been served, and Soul has no such column. Deriving elapsed time from
     `death_year` would be inventing a start date for a term this system has
     never actually begun counting.
+
+    The two facts it does not hold are SENTENCE_MISSING_INPUTS, and the reading
+    reports them by name instead of describing them in a paragraph — the same
+    move `poena_missing` made, for the same reason, and now that the panel
+    exists the same reason applies here.
     """
     return {
         "kind": "SENTENCE",
@@ -290,12 +323,11 @@ def _greek_reading(merit: int, demerit: int, demerit_count: int,
         "repayment_multiple": GREEK_REPAYMENT_MULTIPLE,
         "circuit_years": GREEK_CIRCUIT_YEARS,
         "elapsed_years": None,
-        "elapsed_unavailable": (
-            "Plato's sentence is a term served, so what decides a soul's "
-            "standing is how much of the thousand-year circuit has elapsed. "
-            "Nothing in this ledger records when the term began or how much of "
-            "it has been served, so there is no honest number to report here."
-        ),
+        # Non-empty for as long as `elapsed_years` is None, exactly as
+        # `poena_missing` is for `poena`. An absence that does not say what is
+        # missing is the bare null the list exists to avoid handing a client,
+        # so the two travel together and test_readings.py pins the pair.
+        "elapsed_missing": list(SENTENCE_MISSING_INPUTS),
     }
 
 

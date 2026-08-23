@@ -1,5 +1,6 @@
 /**
- * The two panels that report an absence, and the copy they report it with.
+ * The panels that report an absence, the copy they do it with, and the
+ * exhaustiveness guarantee that keeps a panel from being absent itself.
  *
  * Why this file exists
  * --------------------
@@ -29,18 +30,23 @@
  * `WorkflowPage.test.tsx` was caught with: it reproduced the defect under test
  * and measured itself.
  *
- * The direction this file cannot see — a member added on the backend and not
- * to `POENA_MISSING_INPUTS` here — is held by
+ * The direction this file cannot see — a member, or a whole `kind`, added on
+ * the backend and not to the constants in `lib/api/ledger.ts` — is held by
  * `apps/ledger/test_readings.py::TestFrontendMemberListsAgree`, which reads
  * this module's declarations as text and compares them to the Python tuples.
+ * That blind spot is how the GREEK panel came to not exist for a release.
  */
 import { render, screen } from "@testing-library/react";
 
 import {
   POENA_MISSING_INPUTS,
+  READING_KINDS,
+  SENTENCE_MISSING_INPUTS,
   UNAVAILABLE_REASON_CODES,
   type LedgerReading,
+  type LedgerReadingKind,
   type PoenaMissingInput,
+  type SentenceMissingInput,
 } from "@/lib/api/ledger";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
@@ -59,6 +65,13 @@ const ZH = {
   unavailableExplanation:
     "该灵魂所属租户尚未映射到任何文明宇宙观，因此没有可呈现的解读——仅显示下方原始账目。",
   unavailableCta: "请为该租户配置文明映射以启用解读。",
+  owedLabel: "所欠刑期",
+  owedDetail: "桩在案过错 · 每桩 10 倍偿还",
+  circuit: "以 1000 年为一个周期计量——这是偿还的单位，不是本刑期的长度。",
+  elapsedLabel: "已服",
+  elapsedHeading: "本账本未记",
+  termStart: "刑期何时开始",
+  timeServed: "已服了多少",
 };
 
 function renderPanel(reading: LedgerReading) {
@@ -155,6 +168,185 @@ describe("SoulReadingPanel — poena bullets follow the payload", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// GREEK — the panel that did not exist
+// ---------------------------------------------------------------------------
+//
+// `f92ed35` gave the Greek reading `kind: "SENTENCE"`. `lib/api/ledger.ts`
+// declared four kinds, this component switched over those four with no
+// `default`, and so a SENTENCE payload fell out of the switch, the function
+// returned `undefined`, and React 18 rendered that as nothing. A Greek soul's
+// ledger card was blank — not broken-looking, blank, indistinguishable from a
+// soul with no ledger at all — and `tsc`, `eslint` and the whole Jest suite
+// were green throughout, because a switch is exhaustive over the union the
+// frontend declares and the union was the half nobody updated.
+//
+// Everything below is that failure written down as assertions.
+
+function sentence(overrides: Partial<Extract<LedgerReading, { kind: "SENTENCE" }>> = {}): LedgerReading {
+  return {
+    kind: "SENTENCE",
+    civilization: "GREEK",
+    wrongs: 4,
+    repayment_multiple: 10,
+    circuit_years: 1000,
+    elapsed_years: null,
+    elapsed_missing: [...SENTENCE_MISSING_INPUTS],
+    ...overrides,
+  };
+}
+
+describe("SoulReadingPanel — the Greek sentence renders at all", () => {
+  it("renders the panel instead of nothing", () => {
+    // The assertion that would have caught the whole defect. Before the
+    // `SENTENCE` branch existed this rendered an empty container and every
+    // more specific expectation below would have failed for the same reason,
+    // so it is worth stating the crude one first: something is on screen.
+    const { container } = renderPanel(sentence());
+
+    expect(container).not.toBeEmptyDOMElement();
+    expect((container.textContent ?? "").trim().length).toBeGreaterThan(0);
+  });
+
+  it("shows the wrongs count and the repayment rule as two separate facts", () => {
+    const { container } = renderPanel(sentence({ wrongs: 4 }));
+
+    expect(screen.getByText(ZH.owedLabel)).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
+    expect(screen.getByText(ZH.owedDetail)).toBeInTheDocument();
+
+    // Absence, and it is the point of the upper half. Tenfold repayment is the
+    // rule Republic X states; 4 × 10 = 40 is a debt it does not, in a unit this
+    // system has never defined — the "rule rendered as a balance" collapse the
+    // whole readings module exists to stop making.
+    expect(container.textContent ?? "").not.toContain("40");
+  });
+
+  it("presents the circuit as a period and never as this soul's term", () => {
+    renderPanel(sentence());
+
+    expect(screen.getByText(ZH.circuit)).toBeInTheDocument();
+    // 1000 appears only inside that sentence, not as a headline figure. The
+    // headline is the wrongs count; a large "1000" beside the word 刑期 would
+    // say the soul was sentenced to a thousand years, which is a claim about
+    // this soul that the circuit length is not.
+    const headline = screen.getByText("4");
+    expect(headline.className).toContain("text-xl");
+    expect(screen.queryByText("1000")).not.toBeInTheDocument();
+  });
+
+  it("reports elapsed time as an em-dash absence, not as zero and not as progress", () => {
+    const { container } = renderPanel(sentence());
+    const text = container.textContent ?? "";
+
+    expect(screen.getByText(ZH.elapsedLabel)).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.getByText(ZH.elapsedHeading)).toBeInTheDocument();
+    // A 0 would claim the term has not begun; the ledger does not know that
+    // either. Same argument as poena, which is why the two are drawn alike.
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
+    // And no bar or percentage: the numerator is null and the denominator is a
+    // term length nobody has computed, so a progress indicator invents both.
+    expect(container.querySelector("progress")).toBeNull();
+    expect(container.querySelector('[role="progressbar"]')).toBeNull();
+    expect(text).not.toContain("%");
+  });
+
+  it("names what is missing, one bullet per member, in the payload's order", () => {
+    const { container } = renderPanel(sentence());
+
+    expect(bulletTexts(container)).toEqual([ZH.termStart, ZH.timeServed]);
+  });
+
+  it("follows the payload when the list shrinks or is reordered", () => {
+    const { container } = renderPanel(sentence({ elapsed_missing: ["TIME_SERVED"] }));
+
+    expect(bulletTexts(container)).toEqual([ZH.timeServed]);
+    expect(screen.queryByText(ZH.termStart)).not.toBeInTheDocument();
+  });
+
+  it("keeps the heading and drops the list when nothing is reported missing", () => {
+    const { container } = renderPanel(sentence({ elapsed_missing: [] }));
+
+    expect(container.querySelectorAll("ul")).toHaveLength(0);
+    expect(screen.getAllByText(ZH.elapsedHeading).length).toBeGreaterThan(0);
+  });
+
+  it("never puts a raw member name or a raw key on screen", () => {
+    const { container } = renderPanel(sentence());
+    const text = container.textContent ?? "";
+
+    for (const member of SENTENCE_MISSING_INPUTS) {
+      expect(text).not.toContain(member);
+    }
+    expect(text).not.toContain("souls.detail.reading");
+  });
+
+  it("shows the raw key for a member no bundle has copy for", () => {
+    const unknown = ["TERM_START", "PAROLE"] as unknown as SentenceMissingInput[];
+    const { container } = renderPanel(sentence({ elapsed_missing: unknown }));
+
+    expect(bulletTexts(container)).toEqual([
+      ZH.termStart,
+      "souls.detail.reading.elapsed_missing_parole",
+    ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Exhaustiveness — the property, not the four instances of it
+// ---------------------------------------------------------------------------
+//
+// This is the half of the fix that matters more than the Greek panel itself.
+// The panel is one bug fixed; these two are what makes the *next* kind loud.
+
+/** One payload per kind. Keyed by kind so the check below can be total. */
+const SAMPLES: Record<LedgerReadingKind, LedgerReading> = {
+  BALANCE: { kind: "BALANCE", civilization: "CHINESE", balance: 18, merit: 30, demerit: 12 },
+  THRESHOLD: {
+    kind: "THRESHOLD", civilization: "EGYPTIAN",
+    heart_weight: 12, counterweight: 1, heavier_than_feather: true,
+  },
+  GUILT_AND_PENALTY: guiltAndPenalty([...POENA_MISSING_INPUTS]),
+  SENTENCE: sentence(),
+  UNAVAILABLE: { kind: "UNAVAILABLE", civilization: "UNKNOWN", reason_code: "TENANT_NOT_MAPPED" },
+};
+
+describe("SoulReadingPanel — every kind renders something", () => {
+  it("has a sample for every kind and no sample for a kind that does not exist", () => {
+    // `Record<LedgerReadingKind, ...>` already makes a missing entry a `tsc`
+    // error; this is the run-time half, and the half that survives someone
+    // widening the index signature to shut the compiler up.
+    expect(Object.keys(SAMPLES).sort()).toEqual([...READING_KINDS].sort());
+  });
+
+  it.each([...READING_KINDS])("%s does not render blank", (kind) => {
+    // The generalised form of the defect: not "SENTENCE was missing" but "a
+    // kind can be missing and nothing says so". `undefined` from the switch
+    // produces an empty container and no error of any sort.
+    const { container } = renderPanel(SAMPLES[kind]);
+
+    expect(container).not.toBeEmptyDOMElement();
+    expect((container.textContent ?? "").trim()).not.toBe("");
+  });
+
+  it("says so out loud when the backend sends a kind this build has never heard of", () => {
+    // The window between a backend deploy and a frontend one, which is exactly
+    // the window `f92ed35` opened and nobody closed. `tsc` cannot help here —
+    // the payload is data, not a type — so the `default` branch is the only
+    // thing between this and a blank card.
+    const unknown = { kind: "ORDEAL", civilization: "NORSE" } as unknown as LedgerReading;
+    const { container } = renderPanel(unknown);
+
+    expect(container).not.toBeEmptyDOMElement();
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    // The kind is named, because a notice that does not say which kind is a
+    // shrug. This is the one place a raw wire value on screen is the intent.
+    expect(container.textContent ?? "").toContain("ORDEAL");
+    expect(container.textContent ?? "").not.toContain("souls.detail.reading");
+  });
+});
+
 describe("SoulReadingPanel — the unmapped tenant's copy is keyed on the reason", () => {
   it("renders the explanation and the CTA for the code it was given", () => {
     renderPanel({ kind: "UNAVAILABLE", civilization: "UNKNOWN", reason_code: "TENANT_NOT_MAPPED" });
@@ -210,6 +402,50 @@ describe("reading copy coverage", () => {
     expect(missing).toEqual([]);
   });
 
+  it.each(Object.keys(BUNDLES))("%s has a bullet for every elapsed_missing member", (locale) => {
+    const missing: string[] = [];
+
+    for (const member of SENTENCE_MISSING_INPUTS) {
+      const key = `souls.detail.reading.elapsed_missing_${member.toLowerCase()}`;
+      const value = at(BUNDLES[locale], key);
+      if (typeof value !== "string" || value.trim() === "") missing.push(key);
+    }
+
+    expect(missing).toEqual([]);
+  });
+
+  it.each(Object.keys(BUNDLES))("%s has the fixed copy the two panels need", (locale) => {
+    // The SENTENCE panel's own labels, and the notice the `default` branch
+    // renders. Not derived from a member list, so nothing else would miss them
+    // — and a bundle without them renders a raw key where a label goes.
+    const missing: string[] = [];
+
+    for (const key of [
+      "souls.detail.reading.sentence_owed_label",
+      "souls.detail.reading.sentence_owed_detail",
+      "souls.detail.reading.sentence_circuit",
+      "souls.detail.reading.sentence_elapsed_label",
+      "souls.detail.reading.elapsed_unavailable_heading",
+      "souls.detail.reading.unrenderable_kind",
+    ]) {
+      const value = at(BUNDLES[locale], key);
+      if (typeof value !== "string" || value.trim() === "") missing.push(key);
+    }
+
+    expect(missing).toEqual([]);
+  });
+
+  it.each(Object.keys(BUNDLES))("%s keeps the interpolations the panels pass", (locale) => {
+    // `{{multiple}}`, `{{years}}` and `{{kind}}` are the numbers and the value
+    // the copy is *about*. A translation that drops the placeholder reads as a
+    // complete sentence and states nothing — the failure mode a missing key
+    // does not have, because a missing key at least shows itself.
+    const bundle = BUNDLES[locale];
+    expect(at(bundle, "souls.detail.reading.sentence_owed_detail")).toContain("{{multiple}}");
+    expect(at(bundle, "souls.detail.reading.sentence_circuit")).toContain("{{years}}");
+    expect(at(bundle, "souls.detail.reading.unrenderable_kind")).toContain("{{kind}}");
+  });
+
   it.each(Object.keys(BUNDLES))("%s has an explanation and a CTA for every reason code", (locale) => {
     const missing: string[] = [];
 
@@ -233,6 +469,10 @@ describe("reading copy coverage", () => {
     for (const [locale, bundle] of Object.entries(BUNDLES)) {
       for (const member of POENA_MISSING_INPUTS) {
         const key = `souls.detail.reading.poena_missing_${member.toLowerCase()}`;
+        if (at(bundle, key) === member) offenders.push(`${locale}:${key}`);
+      }
+      for (const member of SENTENCE_MISSING_INPUTS) {
+        const key = `souls.detail.reading.elapsed_missing_${member.toLowerCase()}`;
         if (at(bundle, key) === member) offenders.push(`${locale}:${key}`);
       }
       for (const code of UNAVAILABLE_REASON_CODES) {

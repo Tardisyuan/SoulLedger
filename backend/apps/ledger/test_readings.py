@@ -17,6 +17,7 @@ from apps.ledger.readings import (
     MAAT_FEATHER_WEIGHT,
     POENA_MISSING_INPUTS,
     REASON_TENANT_NOT_MAPPED,
+    SENTENCE_MISSING_INPUTS,
     UNAVAILABLE_REASON_CODES,
     get_civilization_reading,
 )
@@ -272,7 +273,14 @@ class TestCivilizationReadings:
         soul = self._soul(self.tenants[Civilization.GREEK], merits=(30,), demerits=(12,))
         reading = LedgerService.get_ledger_summary(soul)["reading"]
         assert reading["elapsed_years"] is None
-        assert reading["elapsed_unavailable"]
+        # The null and the reason travel together, exactly as `poena` and
+        # `poena_missing` do. A bare null names nothing a client can act on and
+        # gives the panel nothing to say beyond an em-dash.
+        assert reading["elapsed_missing"] == list(SENTENCE_MISSING_INPUTS)
+        assert "elapsed_unavailable" not in reading, (
+            "The English paragraph this field carried is copy, and copy belongs "
+            "in the bundles now that the panel renders SENTENCE."
+        )
         # Absence asserted as well as presence: a derived stand-in would sit
         # happily beside the None and nobody would notice.
         assert "years_served" not in reading
@@ -292,16 +300,24 @@ class TestCivilizationReadings:
 #: prose that has crept into the service layer. Blunt on purpose — it does not
 #: need to guess which key the next sentence would arrive under.
 #:
-#: `elapsed_unavailable` is exempt because the survey that removed
+#: Empty. It has one member's worth of history and the history is the point.
+#:
+#: `elapsed_unavailable` was exempt because the survey that removed
 #: `poena_unavailable` and `reason` reached the opposite conclusion about it.
 #: Those two were read by nothing and duplicated catalogue copy the panel had
 #: already written, more completely, in three languages. `SoulReadingPanel.tsx`
-#: has no SENTENCE branch at all and no bundle carries a Greek-sentence string,
-#: so converting this one would delete an explanation and put nothing in its
-#: place — the reason `fungibility.GRANULARITY_UNAVAILABLE` and
-#: `services.TERMINAL_COSMOLOGY_REASON` also stayed. It is listed rather than
-#: skipped so that giving the Greek reading a panel has to come back past here.
-PROSE_STILL_ALLOWED = {("SENTENCE", "elapsed_unavailable")}
+#: had no SENTENCE branch at all and no bundle carried a Greek-sentence string,
+#: so converting that one would have deleted an explanation and put nothing in
+#: its place — the reason `fungibility.GRANULARITY_UNAVAILABLE` and
+#: `services.TERMINAL_COSMOLOGY_REASON` still stay. It was listed rather than
+#: skipped so that giving the Greek reading a panel had to come back past here.
+#:
+#: It did. The panel exists, the three bundles carry
+#: `souls.detail.reading.elapsed_missing_*`, the field is
+#: `SENTENCE_MISSING_INPUTS`, and the exemption is spent. Kept as an empty set
+#: rather than deleted with it: an empty allow-list says the answer today is
+#: *none*, which is a different claim from there being no rule.
+PROSE_STILL_ALLOWED: set[tuple[str, str]] = set()
 
 
 class TestNoProseInReadings:
@@ -358,7 +374,9 @@ class TestNoProseInReadings:
         the failure would be visible but ugly. Keeping the members to
         SCREAMING_SNAKE is what makes the derivation total.
         """
-        for members in (POENA_MISSING_INPUTS, UNAVAILABLE_REASON_CODES):
+        for members in (
+            POENA_MISSING_INPUTS, SENTENCE_MISSING_INPUTS, UNAVAILABLE_REASON_CODES,
+        ):
             assert members, "an empty enumeration guards nothing"
             for member in members:
                 assert re.fullmatch(r"[A-Z][A-Z_]*", member), member
@@ -395,6 +413,27 @@ def _ts_const_members(source: str, name: str) -> list[str]:
     return members
 
 
+def _backend_reading_kinds() -> set[str]:
+    """Every `kind` this module can put on the wire, by asking it.
+
+    Enumerated by calling the builders rather than by keeping a fifth list of
+    kind strings: forgetting to update a list is the entire failure this file
+    guards, and a set derived from the builders cannot fall behind them. The
+    refusal is included because the panel has to render it too.
+    """
+    kinds = {
+        get_civilization_reading(
+            civ.value, merit=30, demerit=12, demerit_count=2,
+            class_totals={"MONEY": {"merit": 10, "demerit": 4}},
+        )["kind"]
+        for civ in Civilization
+    }
+    kinds.add(
+        get_civilization_reading("NORSE", merit=0, demerit=0, demerit_count=0)["kind"]
+    )
+    return kinds
+
+
 class TestFrontendMemberListsAgree:
     """The two ends must enumerate the same members, not merely both have a list.
 
@@ -421,4 +460,40 @@ class TestFrontendMemberListsAgree:
             "UNAVAILABLE_REASON_CODES disagree. Each code names two catalogue "
             "keys — `unavailable_<code>_explanation` and `..._cta` — and a code "
             "the frontend does not know about has neither."
+        )
+
+    def test_sentence_missing_inputs_are_the_same_on_both_ends(self):
+        members = _ts_const_members(LEDGER_TS.read_text(), "SENTENCE_MISSING_INPUTS")
+        assert members == list(SENTENCE_MISSING_INPUTS), (
+            "SENTENCE_MISSING_INPUTS disagree. Same shape as poena_missing: the "
+            "panel renders one bullet per member and derives the copy key from "
+            "the member name, and the order is the order they appear in."
+        )
+
+    def test_every_kind_the_backend_can_send_has_a_frontend_member(self):
+        """The seam the blank Greek panel actually came through.
+
+        The two comparisons above are about members *inside* a reading. This one
+        is about the reading's own discriminator, and it is the check whose
+        absence let `f92ed35` ship a `kind` no frontend branch handled.
+
+        Nothing on the TypeScript side could have caught it: the panel switched
+        exhaustively over `LedgerReading`, and `LedgerReading` is declared in
+        the frontend — so the switch was exhaustive over a union that was itself
+        missing SENTENCE, `tsc` passed, the component returned `undefined`, and
+        React 18 renders `undefined` as nothing. No error, no warning, no red
+        test, just an empty card. Only a check reading the *backend's* kinds is
+        positioned to see that, and this is it.
+
+        Sets, not lists: a switch's branch order carries no meaning.
+        """
+        members = _ts_const_members(LEDGER_TS.read_text(), "READING_KINDS")
+        assert len(members) == len(set(members)), f"duplicate kinds in {LEDGER_TS}"
+        assert set(members) == _backend_reading_kinds(), (
+            "The kinds the frontend can render and the kinds the backend can "
+            "return have diverged. A kind only the backend knows renders as a "
+            "blank panel — SoulReadingPanel's `default` branch turns that into "
+            "a visible notice, but a notice is a symptom and this is the cause. "
+            "A kind only the frontend knows is dead code claiming to handle "
+            "something nothing sends."
         )
