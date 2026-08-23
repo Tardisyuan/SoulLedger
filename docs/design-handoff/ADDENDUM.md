@@ -212,9 +212,12 @@ The ledger heading for this cosmology is **Sentence to be Served** /
 - **Never multiply.** `wrongs × 10` is not computed anywhere on purpose. Tenfold
   repayment is a rule; a product reads as a balance, which is the Chinese model
   again.
-- **The em-dash carries meaning** and is announced to screen readers. Any
-  replacement has to keep an accessible name saying *not recorded*, not *zero*
-  (see `BRIEF.md` §5).
+- **The em-dash is `aria-hidden`, and the sentence under it does the talking.**
+  It shipped with an `aria-label` set to the same catalogue key as that
+  sentence, so a screen reader announced the explanation twice — once as the
+  value, once as itself. Raised in review and corrected. Whatever replaces the
+  glyph must leave that sentence in the reading order and must not re-acquire a
+  name of its own; the position must never read as *zero* (see `BRIEF.md` §5).
 - **§1's warning now applies four ways.** Four structurally different readings
   are not one component with a variant prop — and the fourth is the one whose
   main number is missing, which is the case a shared component will quietly get

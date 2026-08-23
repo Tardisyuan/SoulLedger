@@ -69,6 +69,7 @@ const ZH = {
   owedDetail: "桩在案过错 · 每桩 10 倍偿还",
   circuit: "以 1000 年为一个周期计量——这是偿还的单位，不是本刑期的长度。",
   elapsedLabel: "已服",
+  poenaHeading: "无法计算",
   elapsedHeading: "本账本未记",
   termStart: "刑期何时开始",
   timeServed: "已服了多少",
@@ -495,5 +496,49 @@ describe("reading copy coverage", () => {
       expect(at(bundle, "souls.detail.reading.unavailable_explanation")).toBeUndefined();
       expect(at(bundle, "souls.detail.reading.unavailable_cta")).toBeUndefined();
     }
+  });
+});
+
+/**
+ * The em-dash occupies the slot a number would have taken. It used to carry an
+ * `aria-label` set to the *same* catalogue key as the sentence rendered
+ * directly beneath it, so a screen reader announced that sentence twice — once
+ * as the value, once as itself. Raised in review against the shipped panel.
+ *
+ * The fix is `aria-hidden`, not a second shorter string: the explanation is the
+ * next thing read either way, and adding a distinct name would put two
+ * descriptions of one absence into the catalogue for translators to drift apart.
+ *
+ * What must NOT happen is the glyph acquiring an accessible name again, and
+ * what must not happen either is the explanation disappearing along with it —
+ * silence in that position would leave the row saying nothing at all. Both
+ * halves are asserted, in both branches.
+ */
+describe("SoulReadingPanel — the absent value is not announced twice", () => {
+  const CASES: Array<[string, () => LedgerReading, string]> = [
+    ["poena", () => guiltAndPenalty([...POENA_MISSING_INPUTS]), ZH.poenaHeading],
+    ["elapsed", () => sentence(), ZH.elapsedHeading],
+  ];
+
+  it.each(CASES)("%s: the heading is rendered once, not twice", (_name, build, heading) => {
+    const { container } = renderPanel(build());
+
+    // Once as visible copy...
+    expect(screen.getAllByText(heading)).toHaveLength(1);
+    // ...and never as an accessible name, which is what produced the double.
+    expect(screen.queryAllByLabelText(heading)).toHaveLength(0);
+
+    // The glyph is still there and still silent.
+    const dash = Array.from(container.querySelectorAll("span")).find(
+      (el) => el.textContent?.trim() === "—"
+    );
+    expect(dash).toBeDefined();
+    expect(dash).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it.each(CASES)("%s: hiding the glyph did not take the explanation with it", (_name, build, heading) => {
+    const { container } = renderPanel(build());
+    // Absence assertion's complement: silence here would pass the test above.
+    expect(container.textContent).toContain(heading);
   });
 });

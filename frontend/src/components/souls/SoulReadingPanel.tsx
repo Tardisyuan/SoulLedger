@@ -189,7 +189,14 @@ function GuiltAndPenaltyReading({
       <div className="border-t border-dashed border-[hsl(var(--color-hairline))] pt-3">
         <div className="flex justify-between items-center">
           <span className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.reading.poena_label")}</span>
-          <span className="text-xl font-bold text-[hsl(var(--color-ink-subtle))]" aria-label={t("souls.detail.reading.poena_unavailable_heading")}>
+          {/* aria-hidden, not aria-labelled. The label used to be the same key
+              as the <p> directly below, so a screen reader announced the
+              explanation twice — once as the value and once as itself. The
+              glyph's whole job is to occupy the slot a number would have taken;
+              the sentence that follows says why it is empty, and it is the next
+              thing read. Hiding it cannot make it read as a zero, which is the
+              failure mode this position has to avoid. */}
+          <span className="text-xl font-bold text-[hsl(var(--color-ink-subtle))]" aria-hidden="true">
             —
           </span>
         </div>
@@ -271,10 +278,8 @@ function SentenceReading({
           <span className="text-sm text-[hsl(var(--color-ink-muted))]">
             {t("souls.detail.reading.sentence_elapsed_label")}
           </span>
-          <span
-            className="text-xl font-bold text-[hsl(var(--color-ink-subtle))]"
-            aria-label={t("souls.detail.reading.elapsed_unavailable_heading")}
-          >
+          {/* aria-hidden for the same reason as the poena slot above. */}
+          <span className="text-xl font-bold text-[hsl(var(--color-ink-subtle))]" aria-hidden="true">
             —
           </span>
         </div>
