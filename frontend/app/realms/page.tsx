@@ -20,11 +20,49 @@ const CIVILIZATION_CONFIG: Record<string, { nameKey: string; icon: React.ReactNo
   GREEK: { nameKey: "realms.civilizations.GREEK", icon: <Columns className="w-6 h-6" /> },
 };
 
+/**
+ * The realm-type badge, drawn from the VERDICT palette — the domain layer —
+ * rather than the system-feedback one it used to borrow.
+ *
+ * HELL/PURGATORY/BLISS were on --color-status-error/-info/-success, which
+ * app/globals.css disallows in as many words on the block that declares them:
+ * "System-layer feedback: transient chrome only (toast, inline validation,
+ * banner), always beside an icon — never a row, a badge or a chart." A badge is
+ * the named counter-example, and the rule lived only in that comment.
+ *
+ * NOTHING ON SCREEN MOVES FOR THOSE THREE. globals.css aliases the two
+ * palettes to identical triples on purpose ("PASSED/FAILED alias
+ * karma-merit/feedback-error deliberately — two reds 30° apart would read as
+ * one colour applied inconsistently"), so this is a rename, in both themes.
+ * That is the point: the value was never the problem, the layer was, and a
+ * badge sitting on a feedback token is a badge that moves the day the feedback
+ * palette is re-tuned for toasts. These are the same three tokens
+ * `REALM_COLORS` in lib/chart-colors.ts mirrors, so the chart legend and the
+ * badge now name one palette instead of two that happen to agree.
+ *
+ * NEUTRAL DOES CHANGE, from the accent amber to the authored dim neutral,
+ * following the same ruling `REALM_COLORS.NEUTRAL` records: `RealmType.NEUTRAL`
+ * is a waypoint nobody is sentenced to, so no verdict token can mirror it, and
+ * --color-status-lost is a lifecycle token meaning the soul went missing.
+ * Amber was the accent — the colour of every button, link and heading — which
+ * said "act on this" about the ferry crossing.
+ *
+ * The ruling pins --color-ink-tertiary, and that is what fills and outlines
+ * this badge. The LABEL is --color-ink-muted instead, because the ruling was
+ * made about a chart fill and a chart fill has no text sitting on it:
+ * ink-tertiary over a 10% tint of itself measures 2.56:1 in light mode
+ * (4.51:1 dark) — below the 4.5:1 AA floor. ink-muted on that same tint is
+ * 6.41:1 light / 10.51:1 dark. The amber it replaces was itself under the
+ * floor at 4.47:1 on the card and 4.27:1 on its hover state.
+ *
+ * src/__tests__/statusTokenLayering.test.ts holds this map to the rule, and to
+ * every other domain-enum-keyed badge map in the app.
+ */
 const REALM_TYPE_CONFIG: Record<string, { icon: React.ReactNode; className: string }> = {
-  HELL: { icon: <Flame className="w-4 h-4" />, className: 'bg-[hsl(var(--color-status-error)/0.1)] border-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))]' },
-  PURGATORY: { icon: <Cloud className="w-4 h-4" />, className: 'bg-[hsl(var(--color-status-info)/0.1)] border-[hsl(var(--color-status-info)/0.3)] text-[hsl(var(--color-status-info))]' },
-  BLISS: { icon: <CircleDot className="w-4 h-4" />, className: 'bg-[hsl(var(--color-status-success)/0.1)] border-[hsl(var(--color-status-success)/0.3)] text-[hsl(var(--color-status-success))]' },
-  NEUTRAL: { icon: <Castle className="w-4 h-4" />, className: 'bg-[hsl(var(--color-accent))]/10 border-[hsl(var(--color-accent))]/30 text-[hsl(var(--color-accent-ink))]' },
+  HELL: { icon: <Flame className="w-4 h-4" />, className: 'bg-[hsl(var(--color-verdict-failed)/0.1)] border-[hsl(var(--color-verdict-failed)/0.3)] text-[hsl(var(--color-verdict-failed))]' },
+  PURGATORY: { icon: <Cloud className="w-4 h-4" />, className: 'bg-[hsl(var(--color-verdict-purgatory)/0.1)] border-[hsl(var(--color-verdict-purgatory)/0.3)] text-[hsl(var(--color-verdict-purgatory))]' },
+  BLISS: { icon: <CircleDot className="w-4 h-4" />, className: 'bg-[hsl(var(--color-verdict-passed)/0.1)] border-[hsl(var(--color-verdict-passed)/0.3)] text-[hsl(var(--color-verdict-passed))]' },
+  NEUTRAL: { icon: <Castle className="w-4 h-4" />, className: 'bg-[hsl(var(--color-ink-tertiary)/0.1)] border-[hsl(var(--color-ink-tertiary)/0.3)] text-[hsl(var(--color-ink-muted))]' },
 };
 
 export default function RealmsPage() {

@@ -15,7 +15,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { getDisplayNameForTenant } from "@/src/config/civilizations";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
-import { STATE_COLORS, CIVILIZATION_COLORS, REALM_COLORS, CHART_SERIES } from "@/lib/chart-colors";
+import { useChartColors } from "@/src/hooks/useChartColors";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -35,6 +35,11 @@ function DashboardContent() {
   const { t, formatDateTime } = useI18n();
   const { showToast } = useToast();
   const router = useRouter();
+  // Recharts fills are literals and do not follow the `.light` cascade, so the
+  // theme has to pick the table. `REALM_COLORS` used to be imported here and
+  // never read — the realm histogram is single-series and fills with
+  // CHART_SERIES.realm — so it is not destructured.
+  const { STATE_COLORS, CIVILIZATION_COLORS, CHART_SERIES } = useChartColors();
   const searchParams = useSearchParams();
   const activeTab: DashboardTab = searchParams.get("tab") === "ledger" ? "ledger" : "overview";
 

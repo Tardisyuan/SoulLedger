@@ -1,6 +1,7 @@
 /**
  * `app/globals.css` is the authority for colour. This file makes that true for
- * the three tables in `lib/chart-colors.ts` that `f62fdaa` did not reach.
+ * the three tables in `lib/chart-colors.ts` that `f62fdaa` did not reach, in
+ * BOTH THEMES.
  *
  * `civilizationColourContract.test.ts` pinned STATE_COLORS and
  * CIVILIZATION_COLORS after both drifted off tokens they were written to
@@ -16,6 +17,15 @@
  * Two of those landed a couple of degrees from a live token — `217 91% 60%` is
  * 2° off `--color-verdict-purgatory` — which is the version of this failure
  * that survives review, because a near-miss reads as the token.
+ *
+ * WHY EVERY PIN IS NOW PER-THEME. `0b4f8fb` pinned all five tables to the
+ * `:root` block, and `:root` is the DARK theme; globals.css declares a
+ * different value for almost every one of these tokens under `.light`. So the
+ * old file pinned half the contract and left the other half free — charts drew
+ * dark-theme colours on light-theme pages, which is what BRIEF §4.5 recorded,
+ * and no assertion here could see it. `lib/chart-colors.ts` now exports one
+ * table per theme and every pin below runs over `THEMES`, so a light value is
+ * exactly as pinned as its dark twin.
  *
  * CHART_CHROME is the opposite case and worth stating: five of its six entries
  * were already exact token mirrors. Only `tooltipBg` was stranded, by
@@ -34,24 +44,23 @@
  */
 import {
   CIV_PREFIXES,
+  LIGHT_EFFECTIVE_TOKENS,
   LIGHT_TOKENS,
   ROOT_TOKENS,
-  literalOf,
+  THEMES,
+  TOKENS_BY_THEME,
+  type ThemeName,
+  lastDeclarationOffset,
+  literalOfIn,
   readRealmTypes,
   resolveTriple,
   suffixesOf,
 } from "./support/globalsCssTokens";
-import {
-  CHART_CHROME,
-  CHART_SERIES,
-  CIVILIZATION_COLORS,
-  REALM_COLORS,
-  STATE_COLORS,
-} from "@/lib/chart-colors";
+import { CHART_COLORS, type ChartColors } from "@/lib/chart-colors";
 
 const REALM_TYPES = readRealmTypes();
 
-/** Which token each realm type mirrors. */
+/** Which token each realm type mirrors. One answer for both themes — the pin is a token, not a value. */
 const REALM_TOKENS: Record<string, string> = {
   HELL: "--color-verdict-failed",
   PURGATORY: "--color-verdict-purgatory",
@@ -105,27 +114,35 @@ const CHROME_TOKENS: Record<string, string> = {
   tooltipBorder: "--color-hairline",
 };
 
-/** Every mirror table in lib/chart-colors.ts, keyed by its export name. */
-const ALL_MIRRORS: Record<string, Record<string, string>> = {
-  STATE_COLORS,
-  CIVILIZATION_COLORS,
-  REALM_COLORS,
-  CHART_SERIES: { ...CHART_SERIES },
-  CHART_CHROME: { ...CHART_CHROME },
-};
+/** Every mirror table in one theme's bundle, keyed by its property name. */
+function allMirrors(theme: ThemeName): Record<string, Record<string, string>> {
+  const c: ChartColors = CHART_COLORS[theme];
+  return {
+    STATE_COLORS: c.STATE_COLORS,
+    CIVILIZATION_COLORS: c.CIVILIZATION_COLORS,
+    REALM_COLORS: c.REALM_COLORS,
+    CHART_SERIES: { ...c.CHART_SERIES },
+    CHART_CHROME: { ...c.CHART_CHROME },
+  };
+}
+
+/** Every `theme × key` pair, so `it.each` reads as one row per pin. */
+function pins(tokens: Record<string, string>): [ThemeName, string][] {
+  return THEMES.flatMap((theme) => Object.keys(tokens).map((key) => [theme, key] as [ThemeName, string]));
+}
 
 /**
  * Entries in lib/chart-colors.ts whose value matches no token in globals.css at
  * all, and the reason each is allowed to stand.
  *
  * **It is empty, and that is the current finding rather than an oversight.**
- * Every entry across all five tables now resolves to a declared token. An empty
- * allow-list says the answer today is *none*, which is a different claim from
- * there being no rule — and the rule is the point: this is the sweep that would
- * have caught `hsl(271 81% 56%)` (Tailwind purple-600) sitting in a file whose
- * docstring calls itself a mirror of globals.css, and `hsl(217 91% 60%)`
- * (blue-500) sitting 2° from --color-verdict-purgatory, which is the shape a
- * reviewer reads as "that IS the token".
+ * Every entry across all five tables in both themes now resolves to a declared
+ * token. An empty allow-list says the answer today is *none*, which is a
+ * different claim from there being no rule — and the rule is the point: this is
+ * the sweep that would have caught `hsl(271 81% 56%)` (Tailwind purple-600)
+ * sitting in a file whose docstring calls itself a mirror of globals.css, and
+ * `hsl(217 91% 60%)` (blue-500) sitting 2° from --color-verdict-purgatory,
+ * which is the shape a reviewer reads as "that IS the token".
  *
  * Adding an entry back has to be a deliberate edit here, with the reason.
  */
@@ -147,19 +164,63 @@ describe("the parser is looking at something", () => {
   it("found the realm types", () => {
     expect(REALM_TYPES).toEqual(expect.arrayContaining(["HELL", "NEUTRAL"]));
   });
+
+  // ── the light side: the premises LIGHT_EFFECTIVE_TOKENS rests on ──────────
+  it("resolves the light surface ramp, which only `:root` gives a hue", () => {
+    // `.light` never redeclares --civ-hue, so resolving --color-surface-1
+    // against the raw `.light` block alone throws on a dangling var(). The
+    // effective map is what a browser would compute, and 240 is the neutral
+    // fallback the ramp inherits.
+    expect(LIGHT_TOKENS["--civ-hue"]).toBeUndefined();
+    expect(() => resolveTriple(LIGHT_TOKENS, "--color-surface-1")).toThrow();
+    expect(resolveTriple(LIGHT_EFFECTIVE_TOKENS, "--color-surface-1")).toBe("240 14% 98%");
+  });
+
+  it("`.light` really does win over `:root` for every token it redeclares", () => {
+    // The cascade claim LIGHT_EFFECTIVE_TOKENS is built on. `:root` and
+    // `.light` have the same specificity (0,1,0), so source order decides —
+    // and globals.css interleaves them `:root`, `.light`, `:root`, `.light`.
+    // Reordering the file so a `:root` block landed last would silently make
+    // the light mirror wrong while every other assertion here stayed green.
+    const shared = Object.keys(LIGHT_TOKENS).filter((name) => name in ROOT_TOKENS);
+    expect(shared.length).toBeGreaterThan(10);
+    for (const name of shared) {
+      expect(lastDeclarationOffset("\\.light", name)).toBeGreaterThan(
+        lastDeclarationOffset(":root", name)
+      );
+    }
+  });
+
+  it("the two themes are different palettes, not one table copied twice", () => {
+    // Without this, `LIGHT = DARK` would satisfy every per-token pin below the
+    // moment someone "fixed" a failure by copying the dark values across —
+    // which is exactly the bug being closed, wearing a passing test.
+    const dark = allMirrors("dark");
+    const light = allMirrors("light");
+    const differing = Object.keys(dark).filter((table) =>
+      Object.keys(dark[table]).some((key) => dark[table][key] !== light[table][key])
+    );
+    expect(differing.sort()).toEqual([
+      "CHART_CHROME",
+      "CHART_SERIES",
+      "CIVILIZATION_COLORS",
+      "REALM_COLORS",
+      "STATE_COLORS",
+    ]);
+  });
 });
 
 describe("REALM_COLORS mirrors the verdict palette, and names where it cannot", () => {
-  it("covers every realm type the UI can render, and nothing else", () => {
-    expect(Object.keys(REALM_COLORS).sort()).toEqual([...REALM_TYPES].sort());
+  it.each(THEMES)("%s covers every realm type the UI can render, and nothing else", (theme) => {
+    expect(Object.keys(CHART_COLORS[theme].REALM_COLORS).sort()).toEqual([...REALM_TYPES].sort());
   });
 
   it("the pinning table covers exactly the same keys", () => {
-    expect(Object.keys(REALM_TOKENS).sort()).toEqual(Object.keys(REALM_COLORS).sort());
+    expect(Object.keys(REALM_TOKENS).sort()).toEqual(Object.keys(CHART_COLORS.dark.REALM_COLORS).sort());
   });
 
-  it.each(Object.keys(REALM_TOKENS))("%s carries its dark-mode token verbatim", (realm) => {
-    expect(REALM_COLORS[realm]).toBe(literalOf(REALM_TOKENS[realm]));
+  it.each(pins(REALM_TOKENS))("%s: %s carries its token verbatim", (theme, realm) => {
+    expect(CHART_COLORS[theme].REALM_COLORS[realm]).toBe(literalOfIn(theme, REALM_TOKENS[realm]));
   });
 
   it("every --color-verdict-* token either names a realm or is recorded as naming none", () => {
@@ -178,34 +239,34 @@ describe("REALM_COLORS mirrors the verdict palette, and names where it cannot", 
     expect(outside.sort()).toEqual(Object.keys(REALMS_PINNED_OUTSIDE_THE_VERDICT_PALETTE).sort());
   });
 
-  it("NEUTRAL is not drawn as a lost soul, and not as any verdict", () => {
+  it.each(THEMES)("%s: NEUTRAL is not drawn as a lost soul, and not as any verdict", (theme) => {
     // Absence, not presence. `--color-status-lost` is the answer that looks
     // right and says the wrong thing, and it would keep every "NEUTRAL has a
     // token" assertion above green while doing so.
-    expect(REALM_COLORS.NEUTRAL).not.toBe(literalOf("--color-status-lost"));
+    const neutral = CHART_COLORS[theme].REALM_COLORS.NEUTRAL;
+    expect(neutral).not.toBe(literalOfIn(theme, "--color-status-lost"));
     for (const suffix of suffixesOf(ROOT_TOKENS, "--color-verdict")) {
-      expect(REALM_COLORS.NEUTRAL).not.toBe(literalOf(`--color-verdict-${suffix}`));
+      expect(neutral).not.toBe(literalOfIn(theme, `--color-verdict-${suffix}`));
     }
   });
 
-  it("does not draw two realm types in one colour", () => {
-    const values = Object.values(REALM_COLORS);
+  it.each(THEMES)("%s: does not draw two realm types in one colour", (theme) => {
+    const values = Object.values(CHART_COLORS[theme].REALM_COLORS);
     expect(new Set(values).size).toBe(values.length);
   });
 });
 
 describe("CHART_SERIES mirrors globals.css", () => {
-  const series = { ...CHART_SERIES } as Record<string, string>;
-
   it("the pinning table covers exactly the same keys", () => {
-    expect(Object.keys(SERIES_TOKENS).sort()).toEqual(Object.keys(series).sort());
+    expect(Object.keys(SERIES_TOKENS).sort()).toEqual(Object.keys(CHART_COLORS.dark.CHART_SERIES).sort());
   });
 
-  it.each(Object.keys(SERIES_TOKENS))("%s carries its dark-mode token verbatim", (key) => {
-    expect(series[key]).toBe(literalOf(SERIES_TOKENS[key]));
+  it.each(pins(SERIES_TOKENS))("%s: %s carries its token verbatim", (theme, key) => {
+    const series = { ...CHART_COLORS[theme].CHART_SERIES } as Record<string, string>;
+    expect(series[key]).toBe(literalOfIn(theme, SERIES_TOKENS[key]));
   });
 
-  it("balance and realm share one token on purpose", () => {
+  it.each(THEMES)("%s: balance and realm share one token on purpose", (theme) => {
     // Asserted rather than left implicit: this is the one place in the five
     // tables where two entries are deliberately identical, so a future reader
     // finding them equal has something that says it was meant. Not a
@@ -213,28 +274,28 @@ describe("CHART_SERIES mirrors globals.css", () => {
     // docstring in lib/chart-colors.ts for why neither has anything to encode.
     expect(SERIES_TOKENS.balance).toBe("--color-accent");
     expect(SERIES_TOKENS.realm).toBe("--color-accent");
-    expect(series.balance).toBe(series.realm);
+    expect(CHART_COLORS[theme].CHART_SERIES.balance).toBe(CHART_COLORS[theme].CHART_SERIES.realm);
   });
 
-  it("the unknown-state fallback is not the LOST colour", () => {
+  it.each(THEMES)("%s: the unknown-state fallback is not the LOST colour", (theme) => {
     // An unrecognised state rendering identically to LOST is the wrong value
     // sitting exactly where the right one belongs.
-    expect(series.neutral).not.toBe(literalOf("--color-status-lost"));
+    const { CHART_SERIES, STATE_COLORS } = CHART_COLORS[theme];
+    expect(CHART_SERIES.neutral).not.toBe(literalOfIn(theme, "--color-status-lost"));
     for (const state of Object.keys(STATE_COLORS)) {
-      expect(series.neutral).not.toBe(STATE_COLORS[state]);
+      expect(CHART_SERIES.neutral).not.toBe(STATE_COLORS[state]);
     }
   });
 });
 
 describe("CHART_CHROME mirrors globals.css", () => {
-  const chrome = { ...CHART_CHROME } as Record<string, string>;
-
   it("the pinning table covers exactly the same keys", () => {
-    expect(Object.keys(CHROME_TOKENS).sort()).toEqual(Object.keys(chrome).sort());
+    expect(Object.keys(CHROME_TOKENS).sort()).toEqual(Object.keys(CHART_COLORS.dark.CHART_CHROME).sort());
   });
 
-  it.each(Object.keys(CHROME_TOKENS))("%s carries its dark-mode token verbatim", (key) => {
-    expect(chrome[key]).toBe(literalOf(CHROME_TOKENS[key]));
+  it.each(pins(CHROME_TOKENS))("%s: %s carries its token verbatim", (theme, key) => {
+    const chrome = { ...CHART_COLORS[theme].CHART_CHROME } as Record<string, string>;
+    expect(chrome[key]).toBe(literalOfIn(theme, CHROME_TOKENS[key]));
   });
 
   // ── tooltipBg: the premises the "does not follow the tenant" decision rests on
@@ -249,18 +310,24 @@ describe("CHART_CHROME mirrors globals.css", () => {
     // 240 is what `:root` declares for logged-out screens and tenants this
     // deployment does not map. If a civilization ever claimed 240, the tooltip
     // would silently become that tenant's colour while claiming to be neutral.
-    expect(ROOT_TOKENS["--civ-hue"]).toBe("240");
-    for (const prefix of CIV_PREFIXES) {
-      expect(ROOT_TOKENS[`--color-civ-hue-${prefix}`]).not.toBe(ROOT_TOKENS["--civ-hue"]);
+    // Checked per theme because `.light` inherits the fallback rather than
+    // restating it — a `.light { --civ-hue: … }` added tomorrow would move the
+    // light tooltip off the neutral branch without touching the dark one.
+    for (const theme of THEMES) {
+      expect(TOKENS_BY_THEME[theme]["--civ-hue"]).toBe("240");
+      for (const prefix of CIV_PREFIXES) {
+        expect(TOKENS_BY_THEME[theme][`--color-civ-hue-${prefix}`]).not.toBe("240");
+      }
     }
   });
 });
 
 describe("every entry in lib/chart-colors.ts mirrors a declared token", () => {
-  it("across all five tables, with the exceptions named", () => {
-    const declared = new Set(Object.keys(ROOT_TOKENS).map((name) => literalOf(name)));
+  it.each(THEMES)("%s: across all five tables, with the exceptions named", (theme) => {
+    const tokens = TOKENS_BY_THEME[theme];
+    const declared = new Set(Object.keys(tokens).map((name) => literalOfIn(theme, name)));
     const unmirrored: string[] = [];
-    for (const [table, map] of Object.entries(ALL_MIRRORS)) {
+    for (const [table, map] of Object.entries(allMirrors(theme))) {
       for (const [key, value] of Object.entries(map)) {
         if (!declared.has(value)) unmirrored.push(`${table}.${key}`);
       }
@@ -268,9 +335,10 @@ describe("every entry in lib/chart-colors.ts mirrors a declared token", () => {
     expect(unmirrored.sort()).toEqual(Object.keys(CHART_COLOURS_MIRRORING_NO_TOKEN).sort());
   });
 
-  it("compares against a real set of tokens", () => {
+  it.each(THEMES)("%s: compares against a real set of tokens", (theme) => {
     // Without this the assertion above passes trivially if `declared` empties.
-    expect(new Set(Object.keys(ROOT_TOKENS).map((n) => literalOf(n))).size).toBeGreaterThan(20);
-    expect(Object.values(ALL_MIRRORS).every((m) => Object.keys(m).length > 0)).toBe(true);
+    const tokens = TOKENS_BY_THEME[theme];
+    expect(new Set(Object.keys(tokens).map((n) => literalOfIn(theme, n))).size).toBeGreaterThan(20);
+    expect(Object.values(allMirrors(theme)).every((m) => Object.keys(m).length > 0)).toBe(true);
   });
 });
