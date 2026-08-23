@@ -2,10 +2,18 @@ import { api } from "./client";
 import type { PaginatedResponse } from "./users";
 import type { LedgerSummary } from "./ledger";
 import type { HistoricalDate } from "@/lib/utils";
+import type { CivilizationOption } from "@/src/config/civilizations";
 
 export interface SoulInput {
   name: string;
-  civilization: "CHINESE" | "EUROPEAN" | "EGYPTIAN";
+  // Derived, not re-listed. This union was written out by hand when
+  // `Civilization` had three members, and it stayed at three after GREEK
+  // (tenant `GR_HADES`) became the fourth — which `tsc` cannot notice, because
+  // a hand-written union is a claim about the wire and the compiler only ever
+  // checks the code against the claim. `CIVILIZATION_OPTIONS` is the frontend's
+  // one list (see src/config/civilizations.ts); a copy that agrees today is not
+  // the same thing as no copy.
+  civilization: CivilizationOption;
   birth_date: string | null;
   origin_location: string;
   current_state?: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST" | "SETTLED";
@@ -58,10 +66,14 @@ export interface SoulRecordDateProblem extends DateProblemBase {
 interface SoulBase {
   id: string;
   name: string;
-  // "UNKNOWN" is not a real civilization — it is what the backend returns
-  // for a tenant code it doesn't recognise (misconfiguration), not a choice
-  // anyone makes.
-  civilization: "CHINESE" | "EUROPEAN" | "EGYPTIAN" | "UNKNOWN";
+  // Same derived list as SoulInput above, plus one value the read side can
+  // carry and the write side must not: "UNKNOWN" is not a real civilization —
+  // it is what the backend returns for a tenant code it doesn't recognise
+  // (misconfiguration), not a choice anyone makes. That is why this is
+  // `CivilizationOption | "UNKNOWN"` rather than the same type as SoulInput,
+  // and why "UNKNOWN" does not belong in CIVILIZATION_OPTIONS — putting it
+  // there would offer a misconfiguration in every dropdown.
+  civilization: CivilizationOption | "UNKNOWN";
   current_state: "ALIVE" | "JUDGING" | "DISPOSED" | "REINCARNATING" | "LOST" | "SETTLED";
   /** HistoricalDateField: {year, month, day} | null */
   birth_date: HistoricalDate | null;
