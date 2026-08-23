@@ -189,3 +189,75 @@ class TestActorBenchOfFortyTwo:
             "?ordering=name no longer reaches the queryset — the viewset's "
             f"default clause is overriding OrderingFilter. Got: {names}"
         )
+
+
+@pytest.mark.django_db
+class TestRealmDescriptionStaysOffTheCard:
+    """Where `Realm.description` goes, and the TODO that asked the wrong thing.
+
+    `frontend/app/realms/page.tsx` carried `{/* TODO: Add description field to
+    Realm API response */}` on the realm card. Half of it was accurate: the
+    field is on the model and in `RealmSerializer`, but `RealmListSerializer` —
+    which is what `get_serializer_class` returns for `action == "list"`, and the
+    list is what that page fetches — does not carry it. So the payload really
+    did lack the field the comment named.
+
+    The other half was wrong, and it is the half that would have shipped. What
+    `description` holds is provenance prose for maintainers, written in English
+    with citations embedded in it — "Second terrace: envy. The penitent's
+    eyelids are sewn shut with iron wire (Purg. XIII-XV)" — and in one case a
+    review finding addressed to whoever reads the seed table next: DY_02_YANGLIU
+    says "SOURCE UNKNOWN: no underworld place by this name appears in 《玉历宝钞》
+    or 《十王经》; treat as this project's own element until a source is
+    produced". None of that is product copy, and a UI whose default locale is
+    zh-Hans would have been rendering it untranslated on every card.
+
+    Realm text that *is* product copy already has a home: the page reads
+    `realms.names.<code>` and `realms.codes.<code>` out of the three message
+    bundles, which is the same split `66a5a3f` and `52cf8e4` drew for the
+    ledger — a string a component renders belongs where the translations are.
+    Adding `description` to the list serializer in order to display it would
+    have crossed that line in the one direction those two commits spent their
+    effort closing.
+
+    Same shape as `test_the_rest_of_powers_json_stays_off_the_list` above: one
+    field being on the model is not an argument for it being on a list row.
+    """
+
+    def _realm(self, tenant):
+        return Realm.objects.create(
+            realm_code="DESC_REALM", civilization=Civilization.CHINESE,
+            name_local="记述地域", name_en="Described Realm",
+            realm_type=RealmType.HELL, tenant=tenant,
+            description="SOURCE UNKNOWN: maintainer prose, not product copy",
+        )
+
+    def test_the_list_row_does_not_carry_the_seed_prose(
+        self, api_client, admin_user, cn_tenant
+    ):
+        _authenticate(api_client, admin_user)
+        realm = self._realm(cn_tenant)
+
+        rows = api_client.get("/api/v1/realms/").data["results"]
+        row = next(r for r in rows if r["realm_code"] == realm.realm_code)
+
+        assert "description" not in row, (
+            "RealmListSerializer is shipping `description` to the realms grid. "
+            "It is unlocalized maintainer prose — source notes, citations, and "
+            "in one row a 「查不到出处」 finding — and the page it feeds defaults "
+            "to zh-Hans. If a realm blurb is genuinely wanted on the card, it "
+            "belongs in the three message bundles keyed on realm_code, beside "
+            "realms.names and realms.codes; it does not belong on this row."
+        )
+        # Absence asserted by content as well as by key: the same prose arriving
+        # under `notes` or `summary` would be the identical mistake renamed.
+        assert "SOURCE UNKNOWN" not in str(row)
+
+    def test_the_detail_row_still_carries_it(self, api_client, admin_user, cn_tenant):
+        """Not hidden — placed. A maintainer reading one realm still gets it."""
+        _authenticate(api_client, admin_user)
+        realm = self._realm(cn_tenant)
+
+        detail = api_client.get(f"/api/v1/realms/{realm.pk}/").data
+
+        assert detail["description"] == realm.description
