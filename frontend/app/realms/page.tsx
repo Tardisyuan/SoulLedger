@@ -106,7 +106,20 @@ export default function RealmsPage() {
                                 <DomainEnum namespace="realms.types" value={realm.realm_type} />
                               </span>
                             </div>
-                            {/* TODO: Add description field to Realm API response */}
+                            {/* DECIDED, not pending: `Realm.description` stays off this
+                                card, and the API is right to keep it off the list row.
+                                The TODO that used to sit here was half accurate — the
+                                field is on the model and in RealmSerializer, but
+                                RealmListSerializer (what `action == "list"` returns, and
+                                this page fetches the list) does not carry it — and wrong
+                                about the remedy. What it holds is maintainer prose in
+                                English with citations in it, and in one row a source
+                                review addressed to the next editor of the seed table;
+                                this page defaults to zh-Hans. Realm text that is product
+                                copy is already keyed on realm_code in the three bundles,
+                                which is where a blurb would go if one is ever wanted.
+                                Pinned by tests/test_realm_actor_api.py::
+                                TestRealmDescriptionStaysOffTheCard. */}
                           </div>
                         );
                       })}
