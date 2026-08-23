@@ -224,3 +224,59 @@ The ledger heading for this cosmology is **Sentence to be Served** /
   wrong.
 
 Nothing in `screens/` shows any of this; the captures predate all four readings.
+
+---
+
+## 6. Greek has no colour, and the colour docs describe tokens that no longer exist
+
+Two findings from the Stage 8 review, both back to you because both are colour
+decisions. Neither is fixed in code; this section is the whole record.
+
+### Greek is live and renders in the default hue
+
+`app/globals.css` drives per-tenant surfaces from `--civ-hue`, switched by a
+`[data-civ]` rule:
+
+```css
+[data-civ="cn"] { --civ-hue: var(--color-civ-hue-cn); }   /* 12  */
+[data-civ="eu"] { --civ-hue: var(--color-civ-hue-eu); }   /* 232 */
+[data-civ="eg"] { --civ-hue: var(--color-civ-hue-eg); }   /* 44  */
+```
+
+There is no `gr`. A Greek tenant falls through to the base `--civ-hue: 240`,
+which sits **eight degrees from European's 232** — so the two cosmologies render
+as very nearly the same application. Nothing errors; they are simply alike, and
+the rule §1 of this addendum was written to enforce ("keep hues far apart") is
+being broken by omission rather than by choice.
+
+`lib/chart-colors.ts::CIVILIZATION_COLORS` is keyed by tenant code —
+`CN_DIYU`, `EU_HEAVEN_HELL`, `EG_DUAT` — and has no `GR_HADES`, so any chart
+that colours by civilization hands Greek an `undefined`.
+
+**What is needed:** one hue for Greece, far from 12, 44 and 232, plus the
+matching `--color-civ-mark-gr` triple and a `CIVILIZATION_COLORS` entry. The
+constraint is the existing one and there is now one more hue competing for
+space.
+
+### The colour documentation mirrors a token set that was deleted
+
+`tokens.md` §Civilization identity documents `--color-civ-cn` / `-eu` / `-eg`
+with the values `38 92% 50%`, `217 91% 52%`, `271 81% 56%`, and closes with
+"This three-token set is the entire current expression of civilization
+identity."
+
+Grepping the frontend for those three names returns nothing. `globals.css`
+carries `--color-civ-hue-*` and `--color-civ-mark-*` instead, and the values
+disagree as well — amber/blue/purple in the document, `12 / 232 / 44` in the
+stylesheet. `CIVILIZATION_COLORS` still carries the document's values and its
+comment still says "mirrors `--color-civ-*`", naming tokens that are not there.
+
+So there are two colour systems: the live one in `globals.css`, and a second one
+described identically in `tokens.md` and `chart-colors.ts` that nothing checks
+against it. Which is authoritative is a question for you — the stylesheet is
+what ships, but the chart palette is what a reader of `tokens.md` would build
+against, and neither knows about the other.
+
+**What is needed:** a decision on which set is real, and — whichever way it
+goes — the other updated to match, so the fourth civilization is added once
+rather than to two systems that will drift again.
