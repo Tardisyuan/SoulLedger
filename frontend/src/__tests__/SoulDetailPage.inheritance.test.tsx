@@ -60,7 +60,16 @@ jest.mock("@/src/components/souls/SoulEditModal", () => ({
 }));
 
 const mockInheritance = jest.fn();
+// `requireActual` first, then override only the call being stubbed. The factory
+// used to return `{ ledgerApi }` alone, which silently deleted every other
+// export of the module — the member lists, the reading kinds, and (the one that
+// caught it) `READING_QUANTITIES`, which `SoulReadingPanel` reads to say whether
+// a number is a weight sum or a tally. A module mock that drops what it is not
+// stubbing does not fail where it is wrong; it fails in whatever component
+// reaches for the missing export next, which is how a mock ends up measuring
+// itself. Only the HTTP call needs to be a stub here.
 jest.mock("@/lib/api/ledger", () => ({
+  ...jest.requireActual("@/lib/api/ledger"),
   ledgerApi: {
     inheritance: (...args: unknown[]) => mockInheritance(...args),
   },

@@ -51,7 +51,15 @@ jest.mock("@/src/components/souls/SoulEditModal", () => ({
   SoulEditModal: () => null,
 }));
 
+// `requireActual` first — same reason as in SoulDetailPage.inheritance.test.tsx.
+// Returning `{ ledgerApi }` alone deletes the module's other exports, and one of
+// them (`READING_QUANTITIES`) is what SoulReadingPanel reads to say whether a
+// number is a weight sum or a tally. Nothing was red here because this suite
+// happens not to reach that panel; the mock was still lying about the module,
+// and a mock that is wrong only where nobody looks yet is the shape this
+// repository keeps getting caught by.
 jest.mock("@/lib/api/ledger", () => ({
+  ...jest.requireActual("@/lib/api/ledger"),
   ledgerApi: { inheritance: jest.fn().mockRejectedValue({ response: { status: 409 } }) },
 }));
 
