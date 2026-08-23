@@ -275,10 +275,12 @@ Nothing in `screens/` shows any of this; the captures predate all four readings.
 
 ---
 
-## 6. Greek has no colour, and the colour docs describe tokens that no longer exist
+## 6. Greek has no colour, the colour docs describe tokens that no longer exist — and the surface ramp never carried identity at all
 
 Two findings from the Stage 8 review, both back to you because both are colour
-decisions. Neither is fixed in code; this section is the whole record.
+decisions. Both are now answered and fixed in code; a third, larger finding
+from Stage 9 sits underneath them and overturns a premise this section and
+`BRIEF.md` §4.9 were both written on top of. This section is the whole record.
 
 ### Greek is live and renders in the default hue
 
@@ -301,10 +303,83 @@ being broken by omission rather than by choice.
 `CN_DIYU`, `EU_HEAVEN_HELL`, `EG_DUAT` — and has no `GR_HADES`, so any chart
 that colours by civilization hands Greek an `undefined`.
 
-**What is needed:** one hue for Greece, far from 12, 44 and 232, plus the
-matching `--color-civ-mark-gr` triple and a `CIVILIZATION_COLORS` entry. The
-constraint is the existing one and there is now one more hue competing for
-space.
+**Done, in `f62fdaa`.** Greek has `--color-civ-hue-gr: 88` and
+`--color-civ-mark-gr`, a `[data-civ="gr"]` rule, and a `GR_HADES` entry in
+`CIVILIZATION_COLORS` in both themes. 88deg rather than the 138deg that would
+have maximised the gap to the other three, because 138 sits 12deg off
+`--color-karma-merit` / `--color-status-alive` / `--color-verdict-passed` — a
+civilization whose identity colour *is* the merit colour is read as the wrong
+thing, which is worse than being hard to tell apart. The reasoning is written
+out at the token in `globals.css`, and
+`src/__tests__/civilizationColourContract.test.ts` now enumerates the
+`[data-civ]` rules from `src/config/civilizations.ts`, so a *fifth* cosmology
+cannot slip through the same gap.
+
+**But the finding underneath it did not survive Stage 9 — see below.** Greek
+looking like European was blamed here on the missing `[data-civ]` rule and the
+240deg fallback sitting 8deg from European's 232deg. That diagnosis was wrong.
+Greek has its rule now and still looks like European, because *every* pair of
+civilizations does.
+
+### The surface ramp cannot carry identity, and the marks now do it alone
+
+Stage 9 measured the thing this addendum, `BRIEF.md` §4.9 and the Stage 5
+handoff all assumed was working: that each tenant tinting its own surface ramp
+is what makes a cosmology recognisable. It is not.
+
+At `hsl(h 13% 7%)` — surface-1 — Chinese (12deg) resolves to `rgb(20, 16, 16)`
+and European (232deg) to `rgb(16, 16, 20)`. **Four points out of 255 at the
+widest channel, between two hues 220deg apart** — the widest separation in the
+palette, and a deliberately chosen one. The rest of the ramp is no better:
+across surface-1 through surface-4, in both themes, no two tenants separate by
+more than 6/255. Light mode is flatter still (2-5/255), because HSL chroma
+collapses toward white. 13% saturation at 7% lightness simply cannot express a
+hue.
+
+So the retint that was supposed to answer §4.9 delivers, in practice, the same
+near-black for every tenant. `tokens.html` recorded the original complaint as
+"switching tenant changes one accent dot and nothing more". Measured, that is
+still true — and the dot is literal: `--color-civ-mark-*` is drawn at exactly
+one place in the application, the per-civilization swatch in
+`app/dashboard/page.tsx`.
+
+**The decision, taken by the owner.** There were two ways out and this was not
+ours to pick:
+
+1. Raise the ramp to ~35-40% saturation so it actually tints. This repaints
+   every screen in the app and is a design change with its own review.
+2. Accept the ramp as a near-neutral floor and move civilization recognition
+   onto the mark plus a little chrome.
+
+**Option 2.** The ramp's saturation is deliberately *not* being raised. Nothing
+in `globals.css` changed but its comments, which had claimed the surface was
+carrying identity and had named two consumers of the mark — "a 3px rule in a
+mixed-civilization list and the chart legend" — that do not exist and, as far
+as the history shows, never did. The only `border-left: 3px` in the frontend is
+in `src/components/ui/Toast.tsx` and is a feedback colour; no Recharts `Legend`
+is coloured by civilization.
+
+`src/__tests__/civilizationColourContract.test.ts` pins both halves of the
+decision, so that assuming the ramp works is a red test rather than a silent
+premise: no two tenants' surfaces may separate by more than 8/255 on any
+surface level in either theme, and the marks must separate tenants by at least
+three times whatever the ramp manages. Raising the ramp's saturation turns the
+first one red; flattening the marks on the theory that the ramp is doing the
+work turns the second red.
+
+**What is still open, and it is a design question.** Recognition now rests on
+the mark and on text. In *mixed*-civilization views that is adequate today:
+`app/actors/page.tsx` groups by cosmology under an emoji and a translated
+heading, and the ledger, realm and soul-detail views name the civilization in
+text. What has no replacement is the *single-tenant* case — a user inside one
+cosmology, on the souls list or the workflow board, has no persistent
+indication of which one. That is precisely the job the ramp was carrying and
+can no longer do; `AppLayout` shows the user but not the tenant, and the only
+screen that names the current civilization is the welcome page's info card.
+
+No visual element was added for this. Deciding what that indicator is — a
+marked element in the header, a wordmark, something else — is a design
+decision, and it is left here rather than guessed at in code.
 
 ### The colour documentation mirrors a token set that was deleted
 

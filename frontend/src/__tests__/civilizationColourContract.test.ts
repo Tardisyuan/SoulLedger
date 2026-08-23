@@ -51,9 +51,14 @@ import {
   TOKENS_BY_THEME,
   type ThemeName,
   asChartLiteral,
+  civPairs,
+  hslTripleToRgb,
+  maxChannelDelta,
   readCivAttrRules,
   readSoulStates,
+  resolveRampForCiv,
   suffixesOf,
+  SURFACE_TOKENS,
 } from "./support/globalsCssTokens";
 import { CHART_COLORS } from "@/lib/chart-colors";
 
@@ -130,6 +135,115 @@ describe("civilization identity: globals.css is the authority", () => {
     for (const tokens of [ROOT_TOKENS, LIGHT_TOKENS]) {
       const hue = tokens[`--color-civ-hue-${prefix}`];
       expect(tokens[`--color-civ-mark-${prefix}`].split(/\s+/)[0]).toBe(hue);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+/**
+ * The most any two tenants' surfaces may differ, as pixels, before the ramp is
+ * claiming to do a job it was measured as unable to do.
+ *
+ * Observed today: 6/255, at surface-2 and surface-4 in dark mode. The Stage 9
+ * headline figure is surface-1's 4/255 between Chinese (12deg) and European
+ * (232deg) — 220deg apart, the widest separation the palette has and a
+ * deliberately chosen one. Light mode is flatter still, 2-5/255, because HSL
+ * chroma collapses toward white.
+ *
+ * 8 is that worst case plus room to retune lightness. It is nowhere near the
+ * ~35-40% saturation that would make the ramp actually express a hue, which is
+ * the point: raising the ramp to carry identity repaints every screen in the
+ * app and is a design decision with its own review, not a token tweak. This
+ * number turning red IS that review being demanded.
+ */
+const RAMP_NEUTRALITY_CEILING = 8;
+
+/** How far above the ramp the marks must sit for "identity lives on the mark" to be true. */
+const MARK_SEPARATION_MULTIPLE = 3;
+
+function rampRgb(theme: ThemeName, prefix: string, token: string): [number, number, number] {
+  return hslTripleToRgb(resolveRampForCiv(theme, prefix, token));
+}
+
+function markRgb(theme: ThemeName, prefix: string): [number, number, number] {
+  return hslTripleToRgb(TOKENS_BY_THEME[theme][`--color-civ-mark-${prefix}`]);
+}
+
+/** Widest gap between any two tenants across the whole ramp, in one theme. */
+function widestRampGap(theme: ThemeName): number {
+  return Math.max(
+    ...SURFACE_TOKENS.flatMap((token) =>
+      civPairs().map(([a, b]) => maxChannelDelta(rampRgb(theme, a, token), rampRgb(theme, b, token)))
+    )
+  );
+}
+
+/** Narrowest gap between any two tenants' marks, in one theme. */
+function narrowestMarkGap(theme: ThemeName): number {
+  return Math.min(...civPairs().map(([a, b]) => maxChannelDelta(markRgb(theme, a), markRgb(theme, b))));
+}
+
+describe("the surface ramp is a near-neutral floor, and the mark is the identity", () => {
+  /**
+   * THE RULING THIS PINS. Stage 1 §4.9 asked for civilization identity to be
+   * surface-first, and globals.css was built that way. Stage 9 measured it and
+   * it does not work: at 13% saturation and 7% lightness the ramp cannot
+   * express a hue at all, so every tenant renders on what is in practice the
+   * same near-black. The owner's decision was to accept that — the ramp is a
+   * neutral floor, `--color-civ-mark-*` carries recognition on its own — rather
+   * than raise the ramp's saturation, which repaints the entire application.
+   *
+   * The failure mode this exists to catch is nobody reading that decision and
+   * assuming the ramp works. Two ways that shows up in a diff: someone raises
+   * the ramp's saturation so it "finally" tints per tenant (first pin), or
+   * someone flattens the marks toward each other on the theory that the ramp is
+   * already separating the tenants (second pin).
+   *
+   * NOT covered here, on purpose: the ramp losing its `var(--civ-hue)` wiring
+   * altogether. That collapses every tenant to one literal, which these
+   * assertions would read as *maximum* neutrality and pass. It is a different
+   * decision and `chartColourContract.test.ts` already pins it by name, in both
+   * themes — duplicating it here would give two checks nobody re-derives.
+   */
+  it.each(THEMES)("%s: no two tenants' surfaces separate by more than the ceiling", (theme) => {
+    // Collected rather than asserted one at a time so a red run names every
+    // offending surface and pair at once — "surface-2 cn/eu at 61" is a
+    // reviewable sentence; "expected 61 to be <= 8" is not.
+    const offenders = SURFACE_TOKENS.flatMap((token) =>
+      civPairs()
+        .map(([a, b]) => ({
+          where: `${token} ${a}/${b}`,
+          delta: maxChannelDelta(rampRgb(theme, a, token), rampRgb(theme, b, token)),
+        }))
+        .filter((row) => row.delta > RAMP_NEUTRALITY_CEILING)
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it.each(THEMES)("%s: the marks separate tenants by a wide multiple of what the ramp does", (theme) => {
+    const ramp = widestRampGap(theme);
+    const mark = narrowestMarkGap(theme);
+    // Derived, not a second magic number: the claim is a *relationship*. If the
+    // ramp ever out-separates the marks — either because it got louder or
+    // because they got quieter — the sentence "identity lives on the mark" has
+    // stopped being true and this file said so first.
+    expect(mark).toBeGreaterThanOrEqual(ramp * MARK_SEPARATION_MULTIPLE);
+  });
+
+  it("the ramp is measurably flatter than the marks, and neither figure is degenerate", () => {
+    // Guard the guard. If `resolveRampForCiv` silently started returning one
+    // colour for every civilization, the first pin would read 0 and pass; if
+    // `hslTripleToRgb` returned zeroes, both would. Assert the shape of the
+    // measurement, not only its verdict.
+    for (const theme of THEMES) {
+      expect(widestRampGap(theme)).toBeGreaterThan(0);
+      expect(narrowestMarkGap(theme)).toBeGreaterThan(RAMP_NEUTRALITY_CEILING);
+      // Two tenants 220deg apart still land within a few points of each other:
+      // this is the measurement the ruling rests on, restated as an assertion.
+      expect(rampRgb(theme, "cn", "--color-surface-1")).not.toEqual(
+        rampRgb(theme, "eu", "--color-surface-1")
+      );
     }
   });
 });

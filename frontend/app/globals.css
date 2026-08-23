@@ -35,12 +35,16 @@
 /* Dark theme is default - html element gets 'dark' class from ThemeContext on mount */
 
 :root {
-  /* Civilization identity — surface-first per Stage 1 §4.9. Neutral 240°
-     (the ramp's original fixed hue) is the fallback for logged-out screens
-     and any tenant this deployment doesn't map to a cosmology; TenantContext
-     overwrites this on the root element once a tenant is known, via the
-     [data-civ] rules below. Only surface-1..4 read it — canvas and every
-     semantic/status/karma/verdict token stay put regardless of tenant. */
+  /* The per-tenant surface ramp. It is NOT where civilization identity is
+     legible — that claim was measured and withdrawn; see the block above
+     --color-civ-hue-* below for the numbers and the decision. What this ramp
+     is: a near-neutral floor that shifts by a couple of RGB points per
+     tenant. Neutral 240° (the ramp's original fixed hue) is the fallback for
+     logged-out screens and any tenant this deployment doesn't map to a
+     cosmology; TenantContext overwrites this on the root element once a
+     tenant is known, via the [data-civ] rules below. Only surface-1..4 read
+     it — canvas and every semantic/status/karma/verdict token stay put
+     regardless of tenant. */
   --civ-hue: 240;
   --color-canvas: 240 15% 4%;
   --color-surface-1: var(--civ-hue) 13% 7%;
@@ -80,9 +84,11 @@
      grey (0%). HSL chroma collapses toward white (c = (1-|2L-1|)*S, near
      zero once L approaches 98%), so matching dark mode's saturation numbers
      verbatim measured out to a ~1/255 RGB delta at surface-1 — imperceptible.
-     14/13/12/11% is the same 10-14% band the retint targets, chosen to
-     actually clear a visible delta at these lightnesses instead of just
-     nominally sitting in range. */
+     14/13/12/11% is the same 10-14% band the retint targets. The nudge does
+     NOT buy a visible delta, which is what this comment used to claim: the
+     four tenants' light surface-1 values span 2/255 at the widest channel,
+     less separation than dark mode's 4/255. Both are inside the band the
+     ramp is now deliberately held to — see the civilization block below. */
   --color-surface-1: var(--civ-hue) 14% 98%;
   --color-surface-2: var(--civ-hue) 13% 96%;
   --color-surface-3: var(--civ-hue) 12% 94%;
@@ -147,12 +153,35 @@
   --color-status-error: 0 84% 62%;
   --color-status-warning: 38 88% 60%;
   --color-status-info: 215 80% 62%;
-  /* Civilization identity — surface-first per Stage 1 §4.9: each tenant
-     tints its own surface ramp (--civ-hue, wired to surface-1..4 above) at
-     10-14% saturation. --color-civ-hue-* is the bare hue degree the
-     [data-civ] rules below feed into --civ-hue; --color-civ-mark-* stays a
-     full HSL triple for the one place a flat colour is still needed: a 3px
-     rule in a mixed-civilization list and the chart legend. */
+  /* Civilization identity. Stage 1 §4.9 asked for it to be surface-first —
+     each tenant tinting its own ramp (--civ-hue, wired to surface-1..4
+     above) at 10-14% saturation — and the Stage 9 review measured what that
+     actually produces. At 13% saturation and 7% lightness the ramp cannot
+     express a hue at all: Chinese (12°) resolves to rgb(20,16,16) and
+     European (232°) to rgb(16,16,20), 4/255 apart at the widest channel,
+     and those two are 220° apart, the widest separation in the system and a
+     deliberately chosen one. The whole ramp, both themes, spans at most
+     6/255 between any two tenants. Every tenant renders on what is, in
+     practice, the same near-black (or the same near-white).
+
+     THE DECISION, taken by the owner rather than assumed here: accept the
+     ramp as a near-neutral floor and let --color-civ-mark-* carry
+     recognition on its own. Raising the ramp's saturation to ~35-40% is the
+     other way to honour §4.9 and it repaints every screen in the app, so it
+     is a design change needing its own review, not a token tweak.
+     src/__tests__/civilizationColourContract.test.ts pins both halves: the
+     ramp stays inside the band where it expresses nothing, and the marks
+     stay far enough apart to be told apart. Raise the saturation and that
+     test goes red — on purpose.
+
+     --color-civ-hue-* is the bare hue degree the [data-civ] rules below feed
+     into --civ-hue; --color-civ-mark-* is a full HSL triple. The mark is
+     read through lib/chart-colors.ts::CIVILIZATION_COLORS (Recharts props
+     cannot read custom properties) and, as of this writing, drawn at exactly
+     one place: the per-civilization swatch in app/dashboard/page.tsx. An
+     earlier version of this comment named "a 3px rule in a mixed-civilization
+     list and the chart legend"; neither existed. Grep --color-civ-mark and
+     CIVILIZATION_COLORS before trusting this sentence either. */
   --color-civ-hue-cn: 12;
   --color-civ-mark-cn: 12 55% 58%;
   --color-civ-hue-eu: 232;
