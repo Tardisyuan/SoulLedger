@@ -17,11 +17,19 @@ interface SoulReadingPanelProps {
 
 /**
  * The reading this soul's cosmology takes off its ledger — see
- * backend/apps/ledger/readings.py. Four mechanically different shapes
- * behind `reading.kind`, not one net-balance number rendered four ways:
+ * backend/apps/ledger/readings.py. Five mechanically different shapes
+ * behind `reading.kind`, not one net-balance number rendered five ways:
  * netting merit against demerit is the Chinese instrument specifically,
- * and showing it under an Egyptian or European verdict would let a
+ * and showing it under an Egyptian, European or Greek verdict would let a
  * familiar-looking number quietly overrule the actual reading.
+ *
+ * The `default` branch is not decoration. This component had four branches
+ * and no default for as long as the backend had four kinds and then five:
+ * `SENTENCE` fell through, the function returned `undefined`, React rendered
+ * it as nothing, and every Greek soul's ledger card was blank with no error
+ * anywhere. `tsc` was green the whole time, because a switch is exhaustive
+ * over the union declared in `lib/api/ledger.ts` and that union was the half
+ * that had not been updated. See the branch itself.
  *
  * `karmic_balance` is deliberately never displayed here for anything but
  * BALANCE — see the UNAVAILABLE branch for why the raw sums still show up
@@ -37,6 +45,8 @@ export function SoulReadingPanel({ reading, meritScore, demeritScore, karmicBala
       return <ThresholdReading reading={reading} t={t} />;
     case "GUILT_AND_PENALTY":
       return <GuiltAndPenaltyReading reading={reading} t={t} />;
+    case "SENTENCE":
+      return <SentenceReading reading={reading} t={t} />;
     case "UNAVAILABLE":
       return (
         <UnavailableReading
@@ -47,6 +57,27 @@ export function SoulReadingPanel({ reading, meritScore, demeritScore, karmicBala
           t={t}
         />
       );
+    default: {
+      // Two halves, guarding two different mistakes.
+      //
+      // Compile time: `never` fails to accept `reading` the moment a member is
+      // added to `LedgerReading` without a branch above. That is the half `tsc`
+      // could always have given us and did not, because there was no `default`
+      // for it to check — an exhaustive switch with no default silently returns
+      // `undefined` on a fall-through and React 18 renders `undefined` as
+      // nothing at all, with no warning and no error.
+      const unhandled: never = reading;
+      // Run time: the half that actually matters here, and the one `tsc` cannot
+      // ever provide. `f92ed35` added `kind: "SENTENCE"` on the backend; this
+      // file's union did not know about it, so the switch stayed exhaustive
+      // *over the union* and compiled clean while a Greek soul's panel rendered
+      // blank. A kind the union has never heard of is not a type error, it is
+      // data — so it has to be caught here, at run time, and said out loud.
+      // `apps/ledger/test_readings.py::TestFrontendMemberListsAgree` is what
+      // turns this from a silent blank into a red build; this is what the user
+      // sees in the window between a backend deploy and a frontend one.
+      return <UnrenderableReading kind={(unhandled as LedgerReading).kind} t={t} />;
+    }
   }
 }
 
@@ -179,6 +210,109 @@ function GuiltAndPenaltyReading({
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── GREEK (千年轮回) — a term owed, and a term served that nobody recorded ──
+//
+// Deliberately the same visual grammar as GuiltAndPenaltyReading above: a known
+// figure, then a dashed rule, then an em-dash where a number would go. The two
+// readings are the same problem — one fact the ledger holds and one it does not
+// — and this repository has already argued out how to draw that once. Drawing
+// it a second way would invite the reader to think the two absences differ.
+//
+// What is deliberately NOT here:
+//   * `wrongs × repayment_multiple` as a figure. Tenfold repayment is the rule
+//     Republic X states, not a balance it computes; printing "40" for four
+//     wrongs would read as "owes 40", a quantity no source asserts and this
+//     system has no unit for. The two numbers are shown side by side instead
+//     and the reader is left to hold them as what they are.
+//   * a progress bar or a percentage. The denominator is a term length nobody
+//     has computed and the numerator is `elapsed_years`, which is null. A bar
+//     would have to invent both.
+//   * `circuit_years` as a headline. 1000 is the length of one circuit — the
+//     unit the repayment is reckoned in — and rendering it large next to the
+//     word "sentence" would say this soul was sentenced to a thousand years.
+function SentenceReading({
+  reading,
+  t,
+}: {
+  reading: Extract<LedgerReading, { kind: "SENTENCE" }>;
+  t: TFunc;
+}) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-[hsl(var(--color-karma-demerit))]">
+            {t("souls.detail.reading.sentence_owed_label")}
+          </span>
+          <span className="text-xl font-bold text-[hsl(var(--color-karma-demerit))] tabular-nums">
+            {reading.wrongs}
+          </span>
+        </div>
+        <div className="text-xs text-[hsl(var(--color-ink-subtle))] text-right mt-0.5">
+          {t("souls.detail.reading.sentence_owed_detail", {
+            multiple: String(reading.repayment_multiple),
+          })}
+        </div>
+        <p className="text-[11px] text-[hsl(var(--color-ink-subtle))] mt-1">
+          {t("souls.detail.reading.sentence_circuit", { years: String(reading.circuit_years) })}
+        </p>
+      </div>
+
+      {/* Same dashed rule, em-dash and absent shared axis as poena, and for the
+          same reason: time served is not zero, it is unknown. A 0 here would
+          be a claim that the term has not begun, which is a fact about a
+          sentence and not a fact this ledger holds. */}
+      <div className="border-t border-dashed border-[hsl(var(--color-hairline))] pt-3">
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-[hsl(var(--color-ink-muted))]">
+            {t("souls.detail.reading.sentence_elapsed_label")}
+          </span>
+          <span
+            className="text-xl font-bold text-[hsl(var(--color-ink-subtle))]"
+            aria-label={t("souls.detail.reading.elapsed_unavailable_heading")}
+          >
+            —
+          </span>
+        </div>
+        <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
+          {t("souls.detail.reading.elapsed_unavailable_heading")}
+        </p>
+        {/* One bullet per member the backend sent, key derived from the member,
+            exactly as the poena list does it — including the failure mode: a
+            member with no copy shows its raw key rather than vanishing. */}
+        {reading.elapsed_missing.length > 0 && (
+          <ul className="text-[11px] text-[hsl(var(--color-ink-subtle))] mt-2 space-y-0.5 list-disc list-inside">
+            {reading.elapsed_missing.map((missing) => (
+              <li key={missing}>{t(`souls.detail.reading.elapsed_missing_${missing.toLowerCase()}`)}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── A kind this build has never heard of ────────────────────────────────
+//
+// Not a reading, a report that one could not be drawn. The alternative is what
+// this component was written to end: returning nothing and letting the card sit
+// empty, which looks identical to a soul with no ledger and tells nobody that a
+// payload arrived. The kind is printed because it is the one piece of
+// information that makes the miss actionable, and because an ugly visible
+// string is the failure mode this repository keeps choosing over a silent one.
+function UnrenderableReading({ kind, t }: { kind: string; t: TFunc }) {
+  return (
+    <div
+      role="status"
+      className="rounded border border-dashed border-[hsl(var(--color-status-warning))] p-3"
+    >
+      <p className="text-xs text-[hsl(var(--color-status-warning))]">
+        {t("souls.detail.reading.unrenderable_kind", { kind })}
+      </p>
     </div>
   );
 }

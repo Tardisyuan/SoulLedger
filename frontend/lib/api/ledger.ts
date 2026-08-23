@@ -66,6 +66,44 @@ export const UNAVAILABLE_REASON_CODES = ["TENANT_NOT_MAPPED"] as const;
 export type UnavailableReasonCode = (typeof UNAVAILABLE_REASON_CODES)[number];
 
 /**
+ * The facts elapsed time presupposes and which the ledger does not record,
+ * mirroring `SENTENCE_MISSING_INPUTS` in backend/apps/ledger/readings.py.
+ *
+ * Same device as POENA_MISSING_INPUTS above, and the panel renders them the
+ * same way: one bullet per member the backend sent, copy key derived as
+ * `souls.detail.reading.elapsed_missing_${member.toLowerCase()}`.
+ */
+export const SENTENCE_MISSING_INPUTS = ["TERM_START", "TIME_SERVED"] as const;
+export type SentenceMissingInput = (typeof SENTENCE_MISSING_INPUTS)[number];
+
+/**
+ * Every `kind` the reading endpoint can return.
+ *
+ * Declared as an array and not only as the union below because the union is
+ * unreadable from Python, and Python is the only side that can see the failure
+ * this list exists for. `f92ed35` added a fourth civilization whose reading
+ * carries `kind: "SENTENCE"`; the union here stayed at four members, the
+ * `switch` in SoulReadingPanel stayed at four branches with no `default`, and
+ * `tsc` was satisfied throughout — a switch is exhaustive over the union *this
+ * file* declares, so a kind this file has never heard of is not a type error,
+ * it is a component that returns `undefined` and renders as blank. Nothing was
+ * red for the whole time a Greek soul's ledger panel was empty.
+ *
+ * `apps/ledger/test_readings.py::TestFrontendMemberListsAgree` reads this array
+ * as text and compares it to the kinds the backend builders actually produce.
+ * READING_KINDS_AGREE below is what keeps the array honest about the union, so
+ * that the Python-side comparison is a comparison against what renders.
+ */
+export const READING_KINDS = [
+  "BALANCE",
+  "THRESHOLD",
+  "GUILT_AND_PENALTY",
+  "SENTENCE",
+  "UNAVAILABLE",
+] as const;
+export type LedgerReadingKind = (typeof READING_KINDS)[number];
+
+/**
  * What each cosmology reads off the ledger. Discriminated on `kind` —
  * apps/ledger/readings.py deliberately does not force one shape on all four.
  */
@@ -81,7 +119,43 @@ export type LedgerReading =
       /** Non-empty for as long as `poena` is null — see POENA_MISSING_INPUTS. */
       poena_missing: PoenaMissingInput[];
     }
+  | {
+      /** GREEK — Plato's thousand-year circuit, repaid tenfold (Republic X, 615a-b). */
+      kind: "SENTENCE";
+      civilization: string;
+      /** The number of recorded wrongs, counted as deeds. NOT the demerit sum:
+       *  Republic X multiplies per wrong done, and `weight` is this system's own
+       *  severity scale, which no source grades a term of years by. */
+      wrongs: number;
+      /** 10. A rule — what is owed per wrong — and not a balance. Multiplying it
+       *  by `wrongs` and printing the product would state a debt the source does
+       *  not, which is the "rule rendered as a balance" collapse this file's
+       *  other readings exist to stop. */
+      repayment_multiple: number;
+      /** 1000. The length of one circuit, i.e. the unit the repayment is
+       *  reckoned in — not the length of this soul's term. */
+      circuit_years: number;
+      /** Always null. The ledger records no sentence start and no time served. */
+      elapsed_years: null;
+      /** Non-empty for as long as `elapsed_years` is null — see
+       *  SENTENCE_MISSING_INPUTS. */
+      elapsed_missing: SentenceMissingInput[];
+    }
   | { kind: "UNAVAILABLE"; civilization: string; reason_code: UnavailableReasonCode };
+
+/** `true` only when READING_KINDS and the union enumerate the same kinds. */
+type KindsAgree<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
+
+/**
+ * Compile-time bridge between the two declarations above.
+ *
+ * Without it READING_KINDS is a list somebody has to remember to update, and
+ * the Python test that reads it would certify agreement with a list that no
+ * longer describes what the panel can render. With it, a union member added
+ * without an array entry (or the reverse) makes this type `never` and the
+ * assignment fails `tsc`. Exported so it is not an unused binding.
+ */
+export const READING_KINDS_AGREE: KindsAgree<LedgerReading["kind"], LedgerReadingKind> = true;
 
 /**
  * One entry of `LedgerSummary.records`, built by hand in
