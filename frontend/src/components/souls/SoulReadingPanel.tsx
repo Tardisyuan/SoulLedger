@@ -1,13 +1,12 @@
 "use client";
 
-import type { ReactNode } from "react";
-
+import type { LedgerReading, UnavailableReasonCode } from "@/lib/api/ledger";
 import {
   READING_QUANTITIES,
-  type LedgerReading,
+  SUMMARY_QUANTITIES,
   type QuantityKind,
-  type UnavailableReasonCode,
-} from "@/lib/api/ledger";
+} from "@/lib/api/ledgerQuantities";
+import { Figure } from "@/src/components/ledger/QuantityFigure";
 import { useI18n } from "@/src/contexts/I18nContext";
 
 type TFunc = (key: string, params?: Record<string, string>) => string;
@@ -88,74 +87,11 @@ export function SoulReadingPanel({ reading, meritScore, demeritScore, karmicBala
   }
 }
 
-// ── One number, drawn as the kind of quantity it is ─────────────────────
-//
-// The defect this exists for: European `culpa` and a Greek road's count were
-// both `text-xl font-bold`, so 22 and 4 sat side by side and read as two values
-// of one quantity — "this soul is worse". 22 is a sum of `SoulRecord.weight`
-// and 4 is a tally of ledger rows. Nothing relates them, and a cross-tenant
-// listing will sort them into one column anyway.
-//
-// `3fdbbba` left the two class strings no longer identical, but only because
-// the Greek fork had just been told to stop using the merit/demerit palette.
-// A distinction arrived at as a side effect can be lost as a side effect, so
-// the kind is now declared — `data-quantity` — rather than inferred from
-// whatever styling a panel happens to have.
-//
-// WHY THE MARKER IS A SCALE AND NOT A UNIT. Three of the four kinds already
-// say what they are inside the value or the caption next to it: a duration is
-// "{{years}} 年", a ratio ends in "×", a count has its noun ("5 项记录",
-// "桩在案过错"). Only magnitudes are mute, and they are mute because there is
-// no honest unit to print. `SoulRecord.weight` calls itself "Significance
-// weight (1-100)" — a scale this system invented. 分 is the 功過格's own unit
-// and borrowing it for Purgatorio or the Hall of Two Truths would be the
-// netting mistake in different clothes; "points" would sound like a score.
-// So the marker names the scale rather than claiming a unit, and it is the one
-// piece of copy on the panel whose job is to say "this number is not a tally".
-//
-// The marker is NOT `aria-hidden`, unlike the em-dash below it. The em-dash is
-// hidden because the sentence under it says the same thing; nothing else here
-// says what culpa is measured on, so hiding the marker would hand a screen
-// reader the bare "22" this component was fixed for.
-function Figure({
-  field,
-  quantity,
-  className,
-  numeralProps,
-  children,
-  t,
-}: {
-  /** The payload field this figure shows, or a name for a derived one. */
-  field: string;
-  quantity: QuantityKind;
-  className: string;
-  /** Extra attributes for the numeral itself — `Road` keeps its own
-   *  `data-road-count` hook on the styled element rather than on a wrapper, so
-   *  the fork's "both roads are drawn identically" assertions go on comparing
-   *  the classes that actually draw them. */
-  numeralProps?: Record<string, string>;
-  children: ReactNode;
-  t: TFunc;
-}) {
-  return (
-    <span className="inline-flex items-baseline gap-1">
-      {/* The numeral, and nothing but the numeral: `data-quantity` elements are
-          compared by text in the contract test, and a marker inside this span
-          would make a magnitude's text differ from the number it prints. */}
-      <span {...numeralProps} data-quantity={quantity} data-quantity-field={field} className={className}>
-        {children}
-      </span>
-      {quantity === "magnitude" && (
-        <span
-          data-quantity-scale={field}
-          className="text-[11px] font-normal text-[hsl(var(--color-ink-subtle))]"
-        >
-          {t("souls.detail.reading.figure_scale_weight")}
-        </span>
-      )}
-    </span>
-  );
-}
+// The figure primitive lives in `src/components/ledger/QuantityFigure.tsx`
+// now, because the same numbers are drawn directly beneath this panel (the
+// raw/decayed breakdown in `SoulKarmaLedgerCard`) and again in the judgment
+// queue's triage card. See that file for why the marker names a scale rather
+// than a unit, and why it is not `aria-hidden`.
 
 // ── CHINESE (功过格) — a cumulative net account ──────────────────────
 function BalanceReading({
@@ -260,7 +196,7 @@ function ThresholdReading({
           {t("souls.detail.reading.threshold_hint", {
             weight: String(reading.heart_weight),
             counterweight: String(reading.counterweight),
-            scale: t("souls.detail.reading.figure_scale_weight"),
+            scale: t("ledger.figure_scale_weight"),
           })}
         </span>
       </div>
@@ -731,8 +667,12 @@ function UnavailableReading({
           and reds, no "balance" framing. Those colors are what the other
           three readings use to render a verdict, and this state has none.
 
-          Still magnitudes, though, and marked as such. `LedgerSummary`'s three
-          sums are the same SoulRecord.weight totals the BALANCE panel reads;
+          Still magnitudes, though, and marked as such — read off
+          `SUMMARY_QUANTITIES` rather than written in by hand here, because
+          these are that payload's fields and a classification typed at the
+          call site is a fourth copy of an answer three tables already give.
+          `LedgerSummary`'s three sums are the same SoulRecord.weight totals
+          the BALANCE panel reads;
           neutral ink says "no verdict here", which is a different statement
           from "these are not weights". A reader who scrolls from a Greek soul's
           road count to this box is making exactly the comparison the review
@@ -743,19 +683,19 @@ function UnavailableReading({
         </p>
         <div className="flex justify-between text-sm">
           <span className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.merit")}</span>
-          <Figure field="merit_score" quantity="magnitude" t={t} className="tabular-nums text-[hsl(var(--color-ink))]">
+          <Figure field="merit_score" quantity={SUMMARY_QUANTITIES.merit_score} t={t} className="tabular-nums text-[hsl(var(--color-ink))]">
             {meritScore}
           </Figure>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.demerit")}</span>
-          <Figure field="demerit_score" quantity="magnitude" t={t} className="tabular-nums text-[hsl(var(--color-ink))]">
+          <Figure field="demerit_score" quantity={SUMMARY_QUANTITIES.demerit_score} t={t} className="tabular-nums text-[hsl(var(--color-ink))]">
             {demeritScore}
           </Figure>
         </div>
         <div className="flex justify-between text-sm border-t border-[hsl(var(--color-hairline))] pt-1">
           <span className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
-          <Figure field="karmic_balance" quantity="magnitude" t={t} className="tabular-nums text-[hsl(var(--color-ink))]">
+          <Figure field="karmic_balance" quantity={SUMMARY_QUANTITIES.karmic_balance} t={t} className="tabular-nums text-[hsl(var(--color-ink))]">
             {karmicBalance}
           </Figure>
         </div>

@@ -2,8 +2,10 @@
 
 import { DataGrid, EnumBadge, type DataGridColumn, type EnumTone } from "@/components/ui/data-grid";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { Figure } from "@/src/components/ledger/QuantityFigure";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { formatHistoricalDate } from "@/lib/utils";
+import { SUMMARY_QUANTITIES } from "@/lib/api/ledgerQuantities";
 import type { QueueLedger, QueueLedgerRecord, QueuePriorCycle, QueueRealm, QueueSoul } from "@/lib/api";
 
 /**
@@ -146,18 +148,54 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
       <h3 id="queue-ledger-heading" className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.ledger")}
       </h3>
+      {/* The same three weight sums the soul detail page draws, at the moment
+          of decision instead of after it, and until now the one place they were
+          drawn bare. This card sits next to a Greek soul's road counts in the
+          same operator's day; `185e70c` fixed the panel where those two meet
+          and left the triage card, where the operator is actually choosing,
+          saying nothing about what its numbers measure.
+
+          Classified from `SUMMARY_QUANTITIES` rather than from a table of this
+          file's own. `QueueLedger` and `LedgerSummary` are two declarations of
+          one backend payload, and `QUEUE_LEDGER_NUMBERS_ARE_SUMMARY_NUMBERS` in
+          lib/api/judgment.ts is what stops that from being an assumption.
+
+          The grid below is left alone on purpose: its weight column names the
+          scale in the column header, which is what a column can do and a lone
+          numeral cannot. */}
       <div className="flex gap-6 mb-4">
         <div>
           <div className="text-xs text-[hsl(var(--color-ink-muted))]">{t("judgment.queue.merit")}</div>
-          <div className="font-mono tabular-nums text-lg text-[hsl(var(--color-status-success))]">{signed(ledger.merit_score)}</div>
+          <Figure
+            field="merit_score"
+            quantity={SUMMARY_QUANTITIES.merit_score}
+            t={t}
+            className="font-mono tabular-nums text-lg text-[hsl(var(--color-status-success))]"
+          >
+            {signed(ledger.merit_score)}
+          </Figure>
         </div>
         <div>
           <div className="text-xs text-[hsl(var(--color-ink-muted))]">{t("judgment.queue.demerit")}</div>
-          <div className="font-mono tabular-nums text-lg text-[hsl(var(--color-status-error))]">{signed(-Math.abs(ledger.demerit_score))}</div>
+          <Figure
+            field="demerit_score"
+            quantity={SUMMARY_QUANTITIES.demerit_score}
+            t={t}
+            className="font-mono tabular-nums text-lg text-[hsl(var(--color-status-error))]"
+          >
+            {signed(-Math.abs(ledger.demerit_score))}
+          </Figure>
         </div>
         <div>
           <div className="text-xs text-[hsl(var(--color-ink-muted))]">{t("judgment.queue.balance")}</div>
-          <div className="font-mono tabular-nums text-lg font-bold text-[hsl(var(--color-ink))]">{signed(ledger.karmic_balance)}</div>
+          <Figure
+            field="karmic_balance"
+            quantity={SUMMARY_QUANTITIES.karmic_balance}
+            t={t}
+            className="font-mono tabular-nums text-lg font-bold text-[hsl(var(--color-ink))]"
+          >
+            {signed(ledger.karmic_balance)}
+          </Figure>
         </div>
       </div>
       <DataGrid<QueueLedgerRecord>

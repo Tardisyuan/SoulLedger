@@ -1,4 +1,6 @@
 import { api } from "./client";
+import type { LedgerSummary } from "./ledger";
+import type { NumericFields } from "./ledgerQuantities";
 import type { PaginatedResponse } from "./users";
 
 /**
@@ -146,6 +148,32 @@ export interface QueueLedger {
   records: QueueLedgerRecord[];
   reading?: { kind: string; civilization: string; [key: string]: unknown };
 }
+
+/** `true` only when two types have the same numeric fields. */
+type SameNumbers<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
+
+/**
+ * The triage card draws this payload's three sums with `SUMMARY_QUANTITIES`,
+ * which is declared over `LedgerSummary`. That is legitimate only for as long
+ * as the two payloads carry the same numbers under the same names — which they
+ * do, because both are `LedgerService.get_ledger_summary`'s body, declared
+ * twice because two feature slices type it separately.
+ *
+ * Declared twice is the whole risk. A number added to one declaration and not
+ * the other would leave the queue reading a classification table that has never
+ * heard of it, and `Record<NumericFields<LedgerSummary>, QuantityKind>` cannot
+ * notice: it is a statement about `LedgerSummary`, and nothing was asking it
+ * about `QueueLedger`. This makes it ask. A field on either side without a
+ * matching one on the other resolves this to `never` and the assignment fails
+ * to compile.
+ *
+ * Exported so it is not an unused binding, the same device as
+ * `READING_KINDS_AGREE`.
+ */
+export const QUEUE_LEDGER_NUMBERS_ARE_SUMMARY_NUMBERS: SameNumbers<
+  NumericFields<QueueLedger>,
+  NumericFields<LedgerSummary>
+> = true;
 
 export interface QueueLedgerRecord {
   id: string;
