@@ -184,14 +184,37 @@ Current copy (`souls.detail.reading.*`, all three locales):
 ```
 Term owed        4
                  recorded wrongs · repaid 10-fold
+Requited         2
+                 recorded benefactions · repaid 10-fold
                  Reckoned in circuits of 1000 years — the unit of
-                 repayment, not the length of this term.
+                 repayment, not the length of either road.
 - - - - - - - - - - - - - - - - - - - - - - - - -
 Served           —
                  Not recorded in this ledger
                    · When the term began
                    · How much of it has been served
 ```
+
+**The panel now carries two roads, and this changed after the Stage 8 brief
+went out.** `_greek_reading` modelled only the punished road; Republic X 615b
+sends the just up the right-hand road repaid by the same measure, so the payload
+gained `benefactions` beside `wrongs`. Both are counts of deeds, not sums.
+
+Three things follow for the design, and they are constraints rather than
+suggestions:
+
+- **The two roads never combine.** No difference, no sum, no ratio, nothing
+  derived from both. They are parallel repayments; a figure computed from the
+  pair converts Greece into the Chinese netting model, which is the one thing
+  this reading exists to avoid.
+- **One rule, one clock, shown once.** There is a single `repayment_multiple`
+  and a single `circuit_years` — 615b says *the same measure* — and a single
+  elapsed absence. Both roads leave the same judgment and meet on the same
+  meadow after the same thousand years. Drawing a second multiple, a second
+  circuit or a second em-dash would assert facts the source does not have.
+- **An empty road is `0`, not `—`.** A soul with no benefactions has a known
+  quantity of them. The em-dash is reserved for the clock, which is the one
+  thing the ledger genuinely does not know.
 
 The ledger heading for this cosmology is **Sentence to be Served** /
 偿还刑期 / Renpet Wehem, beside China's 功过格 and Egypt's 称心.
