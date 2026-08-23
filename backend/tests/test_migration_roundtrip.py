@@ -16,6 +16,7 @@ import importlib
 import uuid
 
 import pytest
+from django.utils import timezone
 
 from tests.migration_roundtrip import snapshot_rows
 
@@ -441,6 +442,100 @@ def test_disposition_0009_round_trip(migration_round_trip):
         seed=seed,
         snapshot=snapshot,
         check_forward=check_forward,
+    )
+
+
+# --------------------------------------------------------------------------
+# disposition/0011 — the term-start columns, and the backfill that is nothing
+# --------------------------------------------------------------------------
+
+#: What the snapshot reads when the column does not exist yet.
+#:
+#: `getattr(row, "term_start_year", ...)` against the *historical* model at
+#: 0010 has no such attribute, and this marker is what that reads as. It is
+#: what makes the round trip say anything at all here: 0011 adds three nullable
+#: columns and writes no data, so a snapshot of only the pre-existing columns
+#: would be identical before and after, and `run_round_trip` would (correctly)
+#: refuse it as a migration whose reverse cannot be proved to do anything.
+#:
+#: Reading the column's *presence* as data turns the no-op backfill into the
+#: assertion: absent -> NULL on every row -> absent again -> NULL again.
+NO_COLUMN = "<column does not exist>"
+
+
+def test_disposition_0011_round_trip(migration_round_trip):
+    """The backfill decision — leave every existing row NULL — asserted.
+
+    NULL means "no term start recorded", the convention `sentence_years` uses
+    one field up. Nothing in an existing row could supply a real one:
+    `executed_at` is when the paperwork moved (which is the whole reason
+    `term_start` is a separate column), `created_at` is when the row was
+    inserted, and the soul's `death_year` is the derivation
+    `_greek_reading` rules out by name.
+
+    So this test's job is to catch a future edit that quietly starts
+    backfilling *something* — the check below is `is None` on every seeded row,
+    not merely "the column exists".
+    """
+    def seed(state):
+        disposition = state.get_model("disposition", "Disposition")
+        soul = state.get_model("souls", "Soul")
+        tenants = _tenants(state)
+        dead = soul._base_manager.create(name="term start soul", death_year=-402)
+        # Three rows that differ in every column a backfill might be tempted
+        # to read: an executed one with a timestamp, an unexecuted one, and one
+        # carrying a sentence length.
+        disposition._base_manager.create(
+            soul=dead, notes="executed", tenant=tenants["CHINESE"],
+            is_executed=True, executed_at=timezone.now(),
+        )
+        disposition._base_manager.create(
+            soul=dead, notes="pending", tenant=tenants["CHINESE"],
+        )
+        disposition._base_manager.create(
+            soul=dead, notes="sentenced", tenant=tenants["CHINESE"],
+            sentence_years=1000,
+        )
+
+    def snapshot(state):
+        disposition = state.get_model("disposition", "Disposition")
+        return snapshot_rows(
+            disposition._base_manager.order_by("notes"),
+            key="notes",
+            fields={
+                "term_start_year": lambda d: getattr(d, "term_start_year", NO_COLUMN),
+                "term_start_month": lambda d: getattr(d, "term_start_month", NO_COLUMN),
+                "term_start_day": lambda d: getattr(d, "term_start_day", NO_COLUMN),
+                # Carried so that a reverse which dropped the columns *and*
+                # damaged something else would still be caught.
+                "is_executed": "is_executed",
+                "sentence_years": "sentence_years",
+            },
+            prefix="disposition:",
+        )
+
+    def check_forward(state):
+        rows = snapshot(state)
+        assert set(rows) == {
+            "disposition:executed", "disposition:pending", "disposition:sentenced",
+        }
+        for key, row in rows.items():
+            assert row["term_start_year"] is None, key
+            assert row["term_start_month"] is None, key
+            assert row["term_start_day"] is None, key
+
+    def check_reverse(state):
+        rows = snapshot(state)
+        for key, row in rows.items():
+            assert row["term_start_year"] == NO_COLUMN, key
+
+    migration_round_trip(
+        before=("disposition", "0010_sentence_years_help_text"),
+        after=("disposition", "0011_disposition_term_start"),
+        seed=seed,
+        snapshot=snapshot,
+        check_forward=check_forward,
+        check_reverse=check_reverse,
     )
 
 

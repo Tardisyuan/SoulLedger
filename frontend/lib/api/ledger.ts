@@ -79,6 +79,11 @@ export type UnavailableReasonCode = (typeof UNAVAILABLE_REASON_CODES)[number];
  * when the same thousand years are up. So the ledger is missing one start date
  * and one elapsed figure, and a second parallel list would claim four absences
  * where there are two.
+ *
+ * Both members or neither. TIME_SERVED is not a second stored fact beside
+ * TERM_START — it is what measuring from TERM_START produces — so a recorded
+ * term start supplies both at once and the backend sends `[]`. The list is the
+ * description of the absent case, and the absent case is all-or-nothing.
  */
 export const SENTENCE_MISSING_INPUTS = ["TERM_START", "TIME_SERVED"] as const;
 export type SentenceMissingInput = (typeof SENTENCE_MISSING_INPUTS)[number];
@@ -149,11 +154,23 @@ export type LedgerReading =
       /** 1000. The length of one circuit, i.e. the unit both roads' repayment is
        *  reckoned in — not the length of this soul's term. */
       circuit_years: number;
-      /** Always null. The ledger records no circuit start and no time served,
-       *  and that one missing clock is what both roads run on. */
-      elapsed_years: null;
-      /** Non-empty for as long as `elapsed_years` is null — see
-       *  SENTENCE_MISSING_INPUTS. */
+      /** Whole years of the term already run, or null when the ledger holds
+       *  no start to measure from. One clock for both roads: Republic X judges
+       *  the souls together and gathers them in the same meadow, so this is
+       *  one figure and not one per road.
+       *
+       *  It was `null` — the type, not the value — for as long as nothing
+       *  recorded when a term began. `Disposition.term_start` records it, and
+       *  the backend measures from there to today; a disposition without one
+       *  still reports null, which is every row written before that column
+       *  existed. NOT a fraction of `circuit_years` and never clamped to it: a
+       *  soul can have served longer than one circuit, and saying so is not the
+       *  same as saying it came back. */
+      elapsed_years: number | null;
+      /** Non-empty for exactly as long as `elapsed_years` is null, and empty
+       *  the moment it is a number — see SENTENCE_MISSING_INPUTS. The two are
+       *  one fact told twice, so a payload carrying both is contradicting
+       *  itself and the panel renders whichever the number decides. */
       elapsed_missing: SentenceMissingInput[];
     }
   | { kind: "UNAVAILABLE"; civilization: string; reason_code: UnavailableReasonCode };

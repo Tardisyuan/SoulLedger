@@ -247,6 +247,7 @@
         "sentence_requited_detail": "recorded good deeds · never against the term",
         "sentence_circuit": "Reckoned in circuits of {{years}} years — the unit of repayment, not the length of this term.",
         "sentence_elapsed_label": "Served",
+        "sentence_elapsed_years": "{{years}} years",
         "elapsed_unavailable_heading": "Not recorded in this ledger",
         "elapsed_missing_term_start": "When the term began",
         "elapsed_missing_time_served": "How much of it has been served",

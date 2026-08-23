@@ -3,6 +3,7 @@ Disposition model — where a soul goes after judgment.
 """
 import uuid
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.core.archive import ArchivableMixin
@@ -75,6 +76,47 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
         null=True,
         blank=True,
         help_text="Sentence duration in years; null = no term recorded (see is_eternal)",
+    )
+    # WHEN THE TERM BEGAN BEING COUNTED — and deliberately NOT `executed_at`.
+    #
+    # The two answer different questions and the difference is the reason this
+    # column exists rather than a property over the one below:
+    #
+    #   * `executed_at` is when this office carried the disposition out. It is
+    #     an operator's action stamped with the server's clock, it is always
+    #     recent and always CE, and it moves if the paperwork is re-done. It is
+    #     a fact about the record.
+    #   * `term_start` is when the soul's term started running. It is a fact
+    #     about the soul's afterlife, on the same historical calendar as its
+    #     birth and death — a soul judged in 399 BCE has a term that began in
+    #     399 BCE and a row somebody executed on a Tuesday afternoon.
+    #
+    # Deriving one from the other would have said the term began the day the
+    # paperwork moved, which is the shape of invention `_greek_reading` refuses
+    # when it declines to derive a start from `death_year`. "The disposition was
+    # executed" and "the soul began serving" are two events and they get two
+    # columns.
+    #
+    # This is the fact `SENTENCE_MISSING_INPUTS`' TERM_START member names (see
+    # apps/ledger/readings.py). With it set, `_greek_reading` reports elapsed
+    # years; without it, the reading is unchanged and still says what it lacks.
+    #
+    # Stored as signed year + optional month/day rather than a DateField, for
+    # the reason apps/souls/dates.py gives: `datetime.date` has MINYEAR = 1 and
+    # these dates are routinely BCE. `term_start` on the serializer is a
+    # HistoricalDateField over these three columns, not a real field.
+    #
+    # NULL MEANS NOT RECORDED, the same convention `sentence_years` above uses
+    # and for the same reason: no invented value. Every row written before this
+    # column existed is null (see disposition/0011) and stays null until someone
+    # records an actual start, because there is nothing in those rows to derive
+    # one from.
+    term_start_year = models.IntegerField(null=True, blank=True)
+    term_start_month = models.SmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(12)]
+    )
+    term_start_day = models.SmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(31)]
     )
     is_executed = models.BooleanField(default=False)
     executed_at = models.DateTimeField(null=True, blank=True)

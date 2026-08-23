@@ -517,11 +517,53 @@ class LedgerService:
                 # future edit transposes in silence.
                 merit_count=merit_count, demerit_count=demerit_count,
                 class_totals=class_totals,
+                term_start=cls._term_start_for(soul),
             ),
         }
 
         cache.set(cache_key, result, LEDGER_CACHE_TTL)
         return result
+
+    @classmethod
+    def _term_start_for(cls, soul: Soul):
+        """This soul's term start as a (year, month, day) triple, or all None.
+
+        WHICH DISPOSITION. A soul accumulates one per circuit — Republic X's
+        souls come back, and so do Diyu's — so "the" disposition is the most
+        recent live one, which is the row whose term the soul is serving or
+        last served. Soft-deleted and archived rows are excluded: both are
+        states an operator put a row in to take it out of the working set, and
+        reading a term start off a row somebody archived would let a withdrawn
+        record go on driving a number on the screen.
+
+        `all_objects` rather than `objects`, filtered explicitly. Disposition's
+        default manager is the tenant manager, whose `get_queryset` adds
+        `is_deleted=False` and nothing else (apps/tenants/managers.py says so
+        in its own docstring), so the two differ only in that this spells out
+        what it is excluding. The tenant scope here is the soul: a disposition
+        reached through `soul=soul` belongs to whatever tenant that soul does,
+        and the caller has already decided it may see this soul.
+
+        Returns the all-None triple rather than None for a soul with no
+        disposition, so that `sentence_elapsed_years` sees the same shape in
+        every case and there is one absent path instead of two.
+
+        STALENESS. `get_ledger_summary` caches for LEDGER_CACHE_TTL, and
+        nothing invalidates that cache when a disposition is written. So a term
+        start recorded now can take up to five minutes to reach the reading —
+        the same window every other figure in this payload already has, and the
+        figure it feeds is measured in years.
+        """
+        from apps.disposition.models import Disposition
+
+        disposition = (
+            Disposition.all_objects
+            .filter(soul=soul, is_deleted=False, is_archived=False)
+            .order_by("-created_at")
+            .values_list("term_start_year", "term_start_month", "term_start_day")
+            .first()
+        )
+        return disposition if disposition is not None else (None, None, None)
 
     @classmethod
     def get_unoffset_demerit(cls, soul: Soul) -> float | None:

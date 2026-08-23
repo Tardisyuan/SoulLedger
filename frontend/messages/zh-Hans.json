@@ -247,6 +247,7 @@
         "sentence_requited_detail": "桩在案善行 · 不冲抵刑期",
         "sentence_circuit": "以 {{years}} 年为一个周期计量——这是偿还的单位，不是本刑期的长度。",
         "sentence_elapsed_label": "已服",
+        "sentence_elapsed_years": "{{years}} 年",
         "elapsed_unavailable_heading": "本账本未记",
         "elapsed_missing_term_start": "刑期何时开始",
         "elapsed_missing_time_served": "已服了多少",

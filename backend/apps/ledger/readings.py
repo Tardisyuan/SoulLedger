@@ -95,7 +95,10 @@ sentence never was, and both are enumerated as module constants below so the
 full set is readable in one place instead of being reconstructed out of a
 paragraph.
 """
+import datetime
+
 from apps.ledger.fungibility import offset_within_classes
+from apps.souls.dates import whole_years_between
 from apps.souls.models import Civilization
 
 # What the heart is weighed against, in SoulRecord.weight units.
@@ -124,7 +127,8 @@ MAAT_FEATHER_WEIGHT = 1
 
 
 def _chinese_reading(merit: int, demerit: int, merit_count: int,
-                     demerit_count: int, class_totals: dict | None = None) -> dict:
+                     demerit_count: int, class_totals: dict | None = None,
+                     term_start: tuple | None = None) -> dict:
     """A cumulative account — but not a single interchangeable pool.
 
     `balance` stays merit minus demerit. It is the native instrument here (it is
@@ -154,6 +158,13 @@ def _chinese_reading(merit: int, demerit: int, merit_count: int,
     `merit_count` is what the Greek reading needs for the same reason. Received
     and unused, so that ignoring them stays a decision with a stated reason
     rather than an argument nobody offered this builder.
+
+    `term_start` is the same, and the reason is the strongest of the three
+    non-Greek ones. 功過格 imposes no term at all. It is a cumulative account
+    settled by 回向, not a sentence with a clock — nothing here starts, so there
+    is no start date to have. A Chinese soul's Disposition can perfectly well
+    carry one (the column is on the model, not on a cosmology), and this
+    reading still has nothing to say about it.
     """
     reading = {
         "kind": "BALANCE",
@@ -168,7 +179,8 @@ def _chinese_reading(merit: int, demerit: int, merit_count: int,
 
 
 def _egyptian_reading(merit: int, demerit: int, merit_count: int,
-                      demerit_count: int, class_totals: dict | None = None) -> dict:
+                      demerit_count: int, class_totals: dict | None = None,
+                      term_start: tuple | None = None) -> dict:
     """A threshold. The heart against a fixed counterweight — pass or fail.
 
     The heart's weight is the demerit total *alone*. Merit does not appear, and
@@ -188,6 +200,12 @@ def _egyptian_reading(merit: int, demerit: int, merit_count: int,
     wrongs either, because what goes on the pan is the heart's weight and not a
     list of charges. The 42 declarations of the Papyrus of Ani are denials, one
     per wrong, but they are the interrogation and not the measurement.
+
+    `term_start` is received and unused for a reason of the same kind. The
+    weighing happens once. Aaru and the Devourer are outcomes, not sentences
+    served, so there is no interval for a start date to be the start of — and
+    an Egyptian Disposition that carries one is recording something this
+    reading has no place to put rather than something it is failing to report.
     """
     return {
         "kind": "THRESHOLD",
@@ -218,7 +236,8 @@ POENA_MISSING_INPUTS = ("ABSOLUTION", "SATISFACTION", "PENANCE")
 
 
 def _european_reading(merit: int, demerit: int, merit_count: int,
-                      demerit_count: int, class_totals: dict | None = None) -> dict:
+                      demerit_count: int, class_totals: dict | None = None,
+                      term_start: tuple | None = None) -> dict:
     """Two unrelated numbers, because guilt and penalty are two facts here.
 
     *Culpa* is guilt: that a wrong was done, and how grave. It maps onto the
@@ -258,6 +277,17 @@ def _european_reading(merit: int, demerit: int, merit_count: int,
     cosmology does not perform. The Greek reading takes the same count and does
     report it, because there the good deeds have a road of their own to be
     repaid on; Purgatorio gives them none.
+
+    `term_start` is received and unused, and this is the one of the three
+    refusals worth stating carefully, because Purgatorio *does* have duration
+    and the temptation is real. What POENA_MISSING_INPUTS names are three
+    quantities — whether absolution has occurred, how much satisfaction is
+    owed, how much penance has been performed — and a start date is none of
+    them. Knowing when a soul entered Purgatorio says nothing about how much
+    it owes, and time-on-the-terrace is precisely the reading Indulgentiarum
+    Doctrina abolished the day-denominated indulgence for encouraging (see
+    CIVILIZATION_DECAY_RATE in services.py). If a start date ever becomes an
+    input to poena, it becomes a fourth member of that tuple first, on purpose.
     """
     return {
         "kind": "GUILT_AND_PENALTY",
@@ -325,11 +355,68 @@ GREEK_CIRCUIT_YEARS = 100 * GREEK_REPAYMENT_MULTIPLE
 #: *content* of the thousand years differs, which is what `wrongs` and
 #: `benefactions` are for. Renaming a stable wire identifier to soften a
 #: connotation would cost three message bundles and buy no fact.
+#:
+#: BOTH MEMBERS OR NEITHER, AND THAT IS DERIVED RATHER THAN ASSUMED.
+#: `Disposition.term_start` now exists, so the first of these two is a fact the
+#: system can hold — and the obvious next question is whether TIME_SERVED
+#: survives on its own once a start date is recorded. It does not, and the
+#: reason is the one the "Order is the order of the arithmetic" paragraph above
+#: already gives: TIME_SERVED is not a second stored fact sitting beside
+#: TERM_START, it is *the quantity that measuring from TERM_START produces*.
+#: Give the measurement its origin and it has both ends — the other end is
+#: today — so the quantity follows immediately and there is nothing left to
+#: report as missing. Hence `elapsed_missing` is either this whole tuple (no
+#: start recorded) or empty (a start recorded), and never one member.
+#:
+#: It would have been just as easy to assume the opposite — drop TERM_START,
+#: keep TIME_SERVED — and it would have been wrong: it would put on the wire a
+#: claim that some *further* fact is still absent when the reading has just
+#: computed the only thing that was.
+#:
+#: The tuple itself is unchanged. It is the description of the absent case, and
+#: the absent case is still every disposition that has no term start recorded,
+#: which is every row written before disposition/0011.
 SENTENCE_MISSING_INPUTS = ("TERM_START", "TIME_SERVED")
 
 
+def sentence_elapsed_years(term_start, today=None) -> int | None:
+    """Whole years of a term already run, or None if it never started counting.
+
+    `term_start` is a (year, month, day) triple — `Disposition.term_start_*` —
+    or None. The other end of the measurement is today, because "how much of
+    the term has been served" is a question asked from now: Republic X's souls
+    are gathered back into the meadow when the thousand years are up, and until
+    then the figure moves.
+
+    `today` is an argument with a default rather than a bare `date.today()`
+    call so that the arithmetic — the year-0 correction, the anniversary
+    subtraction — can be asserted against fixed dates instead of against
+    whatever day the suite happens to run on.
+
+    FLOORED AT ZERO. A term start in the future is a data-entry mistake, and
+    `whole_years_between` would answer it with a negative span. A negative
+    quantity of time served is not a fact about any soul; 0 is, and it says the
+    term has not begun to run. Reporting the negative instead would put a
+    number on the wire whose only true reading is "this row is wrong", which is
+    a validator's job (`apps.souls.dates.check_term_start`) and not this
+    reading's.
+
+    NOT CAPPED AT `GREEK_CIRCUIT_YEARS`. A soul whose term started 2637 years
+    ago reports 2637, not 1000. Clamping would assert that the circuit ended
+    and the soul came back, which is a fact about the disposition's execution
+    and the soul's state — neither of which this ledger reading is looking at.
+    """
+    if term_start is None or term_start[0] is None:
+        return None
+    if today is None:
+        today = datetime.date.today()
+    span = whole_years_between(term_start, (today.year, today.month, today.day))
+    return max(span, 0)
+
+
 def _greek_reading(merit: int, demerit: int, merit_count: int,
-                   demerit_count: int, class_totals: dict | None = None) -> dict:
+                   demerit_count: int, class_totals: dict | None = None,
+                   term_start: tuple | None = None) -> dict:
     """Two roads, one circuit — how much is owed on each, not what they net to.
 
     This is the one reading of the four whose verdict is not a quantity of
@@ -372,24 +459,45 @@ def _greek_reading(merit: int, demerit: int, merit_count: int,
     could be reported *as*. Here there is: its own road, its own tenfold, and no
     arithmetic connecting it to the term owed.
 
-    WHY `elapsed_years` IS None. The same shape as `poena` in the European
-    reading, and for the same kind of reason: this is not a lookup nobody has
-    written, it is data the ledger does not hold. SoulRecord records what was
-    done in life and when; nothing records when a sentence began or how much of
-    it has been served, and Soul has no such column. Deriving elapsed time from
-    `death_year` would be inventing a start date for a term this system has
-    never actually begun counting.
+    WHEN `elapsed_years` IS A NUMBER, AND WHEN IT IS STILL None. This used to
+    be unconditionally None, on the ground that the ledger held no start date:
+    SoulRecord records what was done in life and when, Soul has no such column,
+    and deriving elapsed time from `death_year` would be inventing a start date
+    for a term this system had never begun counting. That refusal stands
+    exactly as written for every soul whose term start is still unrecorded —
+    which is every disposition written before disposition/0011, and every one
+    since where nobody has said when the term began.
 
-    The two facts it does not hold are SENTENCE_MISSING_INPUTS, and the reading
-    reports them by name instead of describing them in a paragraph — the same
-    move `poena_missing` made, for the same reason, and now that the panel
-    exists the same reason applies here.
+    What changed is that there is now somewhere to say it.
+    `Disposition.term_start` is an explicit column and NOT a re-reading of
+    `executed_at`: when the office carried the paperwork out and when the soul
+    began serving are two events, and the model's own comment argues why they
+    could not share one column. When that date is present it is passed in here
+    as `term_start`, and `sentence_elapsed_years` measures from it to today.
+    The refusal was never to the arithmetic; it was to inventing the origin the
+    arithmetic needs. Given the origin, the answer follows.
 
-    That pair is reported once and covers both roads. The two roads share a
-    clock: one judgment starts them, one thousand years runs, one meadow ends
-    it. What the ledger lacks is a start date and an elapsed figure — two facts,
-    not four — and the constant's own note argues that out.
+    So this field is None for one reason only — no term start recorded — and
+    `elapsed_missing` carries SENTENCE_MISSING_INPUTS in exactly that case and
+    is empty otherwise. The two travel together in both directions, which is
+    what stops a client seeing a number beside a list of what is missing, or a
+    bare null beside nothing. See the constant's own note for why both members
+    come and go as a pair rather than TERM_START alone.
+
+    That pair is reported once and covers both roads, and so is the number that
+    replaces it. The two roads share a clock: one judgment starts them, one
+    thousand years runs, one meadow ends it. One start date, one elapsed
+    figure — two facts, not four.
+
+    ELAPSED TIME IS NOT DRAWN FROM EITHER ROAD, and nothing here relates it to
+    them. It is not a fraction of `circuit_years`, it is not multiplied by
+    `repayment_multiple`, and it is not compared against a term length — this
+    reading still computes no term length, because tenfold-per-deed is a rule
+    Republic X states and not a total it sums. A soul can have served more
+    years than the circuit is long and this reading will say so plainly rather
+    than clamping it into a progress figure.
     """
+    elapsed = sentence_elapsed_years(term_start)
     return {
         "kind": "SENTENCE",
         "civilization": Civilization.GREEK.value,
@@ -405,13 +513,16 @@ def _greek_reading(merit: int, demerit: int, merit_count: int,
         # anywhere: tenfold repayment is what is owed per deed, not a total.
         "repayment_multiple": GREEK_REPAYMENT_MULTIPLE,
         "circuit_years": GREEK_CIRCUIT_YEARS,
-        # One clock for both roads, and the ledger does not hold it.
-        "elapsed_years": None,
-        # Non-empty for as long as `elapsed_years` is None, exactly as
+        # One clock for both roads. A number when the term start is recorded,
+        # None when it is not — never derived from anything else.
+        "elapsed_years": elapsed,
+        # Non-empty for exactly as long as `elapsed_years` is None, exactly as
         # `poena_missing` is for `poena`. An absence that does not say what is
         # missing is the bare null the list exists to avoid handing a client,
-        # so the two travel together and test_readings.py pins the pair.
-        "elapsed_missing": list(SENTENCE_MISSING_INPUTS),
+        # and a list of missing facts beside a computed number is the same
+        # error in the other direction. So the two travel together in both
+        # directions and test_readings.py pins the pair on both sides.
+        "elapsed_missing": [] if elapsed is not None else list(SENTENCE_MISSING_INPUTS),
     }
 
 
@@ -442,7 +553,8 @@ UNAVAILABLE_REASON_CODES = (REASON_TENANT_NOT_MAPPED,)
 
 def get_civilization_reading(civilization: str, merit: int, demerit: int,
                              merit_count: int, demerit_count: int,
-                             class_totals: dict | None = None) -> dict:
+                             class_totals: dict | None = None,
+                             term_start: tuple | None = None) -> dict:
     """The reading this soul's cosmology uses, or an explicit refusal.
 
     Every builder takes the same five arguments and each one ignores some of
@@ -454,12 +566,21 @@ def get_civilization_reading(civilization: str, merit: int, demerit: int,
     what keeps each of those a stated decision, argued in the builder's own
     docstring, instead of a missing argument nobody had to defend.
 
-    `merit_count` is the newest of the five and the reason is worth keeping
-    here rather than only in `_greek_reading`: adding it touched four builders
-    to serve one, which is the cost of this shape and was paid deliberately.
-    The alternative — handing the Greek builder a sixth positional argument the
-    others do not take — is a table of callables that cannot be called
-    uniformly, i.e. the if/elif chain this dict replaced.
+    `term_start` is the newest, and it was added the same way and at the same
+    cost: four builders widened to serve one. That cost is the shape's, and it
+    is paid on purpose. The alternative — handing the Greek builder an argument
+    the others do not take — is a table of callables that cannot be called
+    uniformly, i.e. the if/elif chain this dict replaced. `merit_count` before
+    it made the same trade, and the same three docstrings say in their own
+    words why each ignores what it is given: 功過格 imposes no term, the
+    Egyptian weighing is not an interval, and poena's three missing quantities
+    are not a date.
+
+    `term_start` is a (year, month, day) triple from `Disposition.term_start_*`
+    or None — the caller's job is to find the right disposition, not this
+    module's. `LedgerService.get_ledger_summary` supplies it; every other
+    caller passes nothing and gets the reading unchanged from before the column
+    existed, which is what keeps this a widening rather than a break.
 
     `civilization` may be UNKNOWN_CIVILIZATION — a real value the API returns
     for a soul whose tenant code is not in TENANT_CIVILIZATION. It gets no
@@ -488,4 +609,4 @@ def get_civilization_reading(civilization: str, merit: int, demerit: int,
             # it as `unavailable_tenant_not_mapped_cta`.
             "reason_code": REASON_TENANT_NOT_MAPPED,
         }
-    return builder(merit, demerit, merit_count, demerit_count, class_totals)
+    return builder(merit, demerit, merit_count, demerit_count, class_totals, term_start)
