@@ -173,35 +173,56 @@ design question:
 
 ### What is on screen today, and why
 
-Rather than invent a form, the panel currently borrows §1's European grammar —
-a dashed rule, an em-dash where a number would go, and no shared axis between
-the two halves, so the absence can never read as a zero that offsets the debt.
-That reuse was deliberate, not a default, and it is exactly the decision worth a
-second opinion.
-
-Current copy (`souls.detail.reading.*`, all three locales):
+The panel is a fork: one shared rule at the apex, two counts diverging into
+their own columns, one shared clock below where the roads rejoin.
 
 ```
-Term owed        4
-                 recorded wrongs · repaid 10-fold
-Requited         2
-                 recorded benefactions · repaid 10-fold
-                 Reckoned in circuits of 1000 years — the unit of
-                 repayment, not the length of either road.
-- - - - - - - - - - - - - - - - - - - - - - - - -
-Served           —
-                 Not recorded in this ledger
-                   · When the term began
-                   · How much of it has been served
+        Every deed repaid 10-fold — one measure, both roads
+        ┌───────────────┴───────────────┐
+  Term owed                       Requital earned
+      4                                 0
+recorded wrongs          recorded good deeds · never against the term
+────────────────────────────────────────────────────────────
+Reckoned in circuits of 1000 years — the unit of repayment,
+not the length of this term.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Served                                                     —
+                                    Not recorded in this ledger
+                                      · When the term began
+                                      · How much of it has been served
 ```
 
-**The panel now carries two roads, and this changed after the Stage 8 brief
-went out.** `_greek_reading` modelled only the punished road; Republic X 615b
-sends the just up the right-hand road repaid by the same measure, so the payload
-gained `benefactions` beside `wrongs`. Both are counts of deeds, not sums.
+**The geometry is the enforcement, and that is the point of it.** An earlier
+version stacked the two roads as rows and left the no-arithmetic rule to a
+caption. A prohibition cannot live in prose here: both numbers are on screen,
+and the next person to open the file supplies the difference because it is the
+obvious missing cell. The fork leaves nowhere to put one — no row spans both
+roads, no shared axis, and the column between them is an empty gutter carrying
+no text node. A derived figure now requires *inventing a slot*, and inventing a
+slot is visible in review.
 
-Three things follow for the design, and they are constraints rather than
-suggestions:
+Two consequences, both arrived at the hard way:
+
+**Neither road is coloured.** Merit-green against demerit-red is netting however
+the boxes are arranged — the palette performs the subtraction the layout
+refuses. Both counts are plain ink at identical size and weight.
+
+**An empty road is drawn in full, and its zero carries no emphasis.** Hiding it
+was proposed and rejected: the ledger counts MERIT records exactly as it counts
+DEMERIT ones, so an empty right road is an *evaluated* fact rather than an
+unevaluated one — and hiding it would make the panel's shape depend on its data,
+leaving a reader unable to tell "no benefactions" from "this build predates the
+field". A styled zero fails the same way a coloured road does: it returns the
+verdict through the palette.
+
+`_greek_reading` modelled only the punished road until after the Stage 8 brief
+went out; Republic X 615b sends the just up the right-hand road repaid by the
+same measure, so the payload gained `benefactions` beside `wrongs`. Both are
+counts of deeds, not sums.
+
+Three things follow for the design. They are constraints rather than
+suggestions, and the first two are now carried by the layout rather than by this
+document:
 
 - **The two roads never combine.** No difference, no sum, no ratio, nothing
   derived from both. They are parallel repayments; a figure computed from the
@@ -212,6 +233,10 @@ suggestions:
   elapsed absence. Both roads leave the same judgment and meet on the same
   meadow after the same thousand years. Drawing a second multiple, a second
   circuit or a second em-dash would assert facts the source does not have.
+  Worth recording that this constraint was written here one commit *after* the
+  code shipped violating it — both road captions carried `{{multiple}}`, so the
+  one rule was drawn twice. The fork is what removed the second copy, by giving
+  the rule a single place to sit.
 - **An empty road is `0`, not `—`.** A soul with no benefactions has a known
   quantity of them. The em-dash is reserved for the clock, which is the one
   thing the ledger genuinely does not know.
@@ -300,6 +325,12 @@ against it. Which is authoritative is a question for you — the stylesheet is
 what ships, but the chart palette is what a reader of `tokens.md` would build
 against, and neither knows about the other.
 
-**What is needed:** a decision on which set is real, and — whichever way it
-goes — the other updated to match, so the fourth civilization is added once
-rather than to two systems that will drift again.
+**Answered, in Stage 9.** `globals.css` is authoritative and the documented set
+is *deleted* rather than corrected — the decisive point being that it is not a
+stale copy but the wrong shape: a finished HSL triple cannot be substituted into
+`hsl(var(--civ-hue) 13% 7%)`, so matching its values would leave a second set
+that still cannot paint a surface. `tokens.md` §Civilization identity is now a
+pointer at the stylesheet. `CIVILIZATION_COLORS` survives, because Recharts
+cannot read custom properties, but as a mirror with a contract test behind it
+rather than a second system — the "KEEP IN SYNC" comment it replaces had by then
+failed twice on civilization colours and five times on lifecycle states.
