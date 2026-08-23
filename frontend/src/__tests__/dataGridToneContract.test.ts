@@ -17,15 +17,12 @@
  * Pure functions and a CSS read — no DOM, no browser, no new dependency. The
  * WCAG relative-luminance and contrast formulas are implemented inline below.
  */
-import { readFileSync } from "node:fs";
-import path from "node:path";
+import { LIGHT_TOKENS } from "./support/globalsCssTokens";
 import { ENUM_TONE_CLASSES } from "@/components/ui/data-grid/columns";
 
 /** The cap the rest of the app already uses. Anything above this invalidates the light-mode token measurements. */
 const MAX_TINT_ALPHA = 0.1;
 const AA_TEXT_CONTRAST = 4.5;
-
-const GLOBALS_CSS = path.join(__dirname, "..", "..", "app", "globals.css");
 
 // ---------------------------------------------------------------------------
 // WCAG 2.x relative luminance + contrast ratio (hand-rolled, no dependency)
@@ -77,20 +74,20 @@ function composite(fg: Rgb, alpha: number, bg: Rgb): Rgb {
 // ---------------------------------------------------------------------------
 
 /**
- * Merges every `.light { ... }` block in globals.css (there are two — the base
- * override near the top and the re-measured status block further down) into one
- * token map, later declarations winning, exactly as the cascade resolves them.
+ * The `.light` tokens come from `./support/globalsCssTokens`, which merges every
+ * `.light { ... }` block in globals.css (there are two — the base override near
+ * the top and the re-measured status block further down) into one map, later
+ * declarations winning, exactly as the cascade resolves them.
+ *
+ * This file used to carry its own regex copy of that. Three readers of one
+ * stylesheet is the defect the colour contracts exist to close — the support
+ * module's own docstring says so — and the copy here would have kept passing
+ * against a stale idea of the file after a restructure, because it returned
+ * `{}` instead of throwing. `LIGHT_TOKENS` is the RAW `.light` block, which is
+ * the right map for this file: it measures the tokens `5e580e3` re-measured,
+ * and a tone whose token `.light` never declares should fail here rather than
+ * quietly borrow the dark value.
  */
-function readLightModeTokens(): Record<string, string> {
-  const css = readFileSync(GLOBALS_CSS, "utf8");
-  const tokens: Record<string, string> = {};
-  for (const block of css.matchAll(/\.light\s*\{([^}]*)\}/g)) {
-    for (const decl of block[1].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
-      tokens[decl[1]] = decl[2].trim();
-    }
-  }
-  return tokens;
-}
 
 /** `"150 62% 28%"` -> rgb. Returns null for anything not a literal HSL triple (e.g. a var() indirection). */
 function tokenToRgb(value: string | undefined): Rgb | null {
@@ -153,7 +150,7 @@ describe("data-grid enum badge token contract", () => {
     (tone, classes) => {
       const fill = parseBackground(classes)!;
       const inkToken = parseForegroundToken(classes)!;
-      const tokens = readLightModeTokens();
+      const tokens = LIGHT_TOKENS;
 
       const fillRgb = tokenToRgb(tokens[fill.token]);
       const inkRgb = tokenToRgb(tokens[inkToken]);

@@ -27,6 +27,12 @@
  * `backend/apps/ledger/test_readings.py::TestFrontendMemberListsAgree` uses to
  * hold the two ends of the ledger payload together.
  *
+ * BOTH THEMES. `lib/chart-colors.ts` exports one table per theme, and every pin
+ * below runs over `THEMES`. The earlier version pinned only `:root` — the dark
+ * block — while globals.css declares a separately measured value for each of
+ * these tokens under `.light`, so half the mirror was unpinned and charts drew
+ * dark colours on light pages.
+ *
  * SCOPE. This file covers the two tables keyed by a *domain enumeration* —
  * civilizations and lifecycle states — and the `[data-civ]` wiring that makes
  * the civilization tokens paint anything. `chartColourContract.test.ts` covers
@@ -41,12 +47,20 @@ import {
   LIGHT_TOKENS,
   ROOT_TOKENS,
   TENANT_CODES,
+  THEMES,
+  TOKENS_BY_THEME,
+  type ThemeName,
   asChartLiteral,
   readCivAttrRules,
   readSoulStates,
   suffixesOf,
 } from "./support/globalsCssTokens";
-import { CIVILIZATION_COLORS, STATE_COLORS } from "@/lib/chart-colors";
+import { CHART_COLORS } from "@/lib/chart-colors";
+
+/** Every `theme × key` pair, so `it.each` reads as one row per pin. */
+function pins(keys: readonly string[]): [ThemeName, string][] {
+  return THEMES.flatMap((theme) => keys.map((key) => [theme, key] as [ThemeName, string]));
+}
 
 // ---------------------------------------------------------------------------
 
@@ -121,28 +135,40 @@ describe("civilization identity: globals.css is the authority", () => {
 });
 
 describe("CIVILIZATION_COLORS mirrors --color-civ-mark-* exactly", () => {
-  it("keys off tenant codes — one per civilization, no more and no less", () => {
+  it.each(THEMES)("%s keys off tenant codes — one per civilization, no more and no less", (theme) => {
     // Forward AND reverse in one assertion: an extra key and a missing key are
     // both a failed set equality.
-    expect(Object.keys(CIVILIZATION_COLORS).sort()).toEqual([...TENANT_CODES].sort());
+    expect(Object.keys(CHART_COLORS[theme].CIVILIZATION_COLORS).sort()).toEqual([...TENANT_CODES].sort());
   });
 
-  it.each(TENANT_CODES)("%s carries the dark-mode mark token verbatim", (code) => {
+  it.each(pins(TENANT_CODES))("%s: %s carries the mark token verbatim", (theme, code) => {
     const prefix = CIV_PREFIX_BY_TENANT_CODE[code];
-    const token = ROOT_TOKENS[`--color-civ-mark-${prefix}`];
+    const token = TOKENS_BY_THEME[theme][`--color-civ-mark-${prefix}`];
     expect(token).toBeDefined();
-    expect(CIVILIZATION_COLORS[code]).toBe(asChartLiteral(token));
+    expect(CHART_COLORS[theme].CIVILIZATION_COLORS[code]).toBe(asChartLiteral(token));
   });
 
-  it("has no entry pointing at a token that does not exist", () => {
+  it.each(THEMES)("%s has no entry pointing at a token that does not exist", (theme) => {
     // The reverse direction, said the other way round: this is what would have
     // caught `CN_DIYU: hsl(38 92% 50%)` mirroring `--color-civ-cn` years after
     // `--color-civ-cn` stopped existing.
+    const tokens = TOKENS_BY_THEME[theme];
     const declared = new Set(
-      suffixesOf(ROOT_TOKENS, "--color-civ-mark").map((s) => asChartLiteral(ROOT_TOKENS[`--color-civ-mark-${s}`]))
+      suffixesOf(tokens, "--color-civ-mark").map((s) => asChartLiteral(tokens[`--color-civ-mark-${s}`]))
     );
-    for (const value of Object.values(CIVILIZATION_COLORS)) {
+    for (const value of Object.values(CHART_COLORS[theme].CIVILIZATION_COLORS)) {
       expect([...declared]).toContain(value);
+    }
+  });
+
+  it("does not paint two civilizations the same, in either theme", () => {
+    // The mark is tenant IDENTITY; two tenants sharing one is the whole
+    // failure the Greek hue was chosen to avoid. Checked per theme because the
+    // light marks are separately authored values, not a formula applied to the
+    // dark ones.
+    for (const theme of THEMES) {
+      const values = Object.values(CHART_COLORS[theme].CIVILIZATION_COLORS);
+      expect(new Set(values).size).toBe(values.length);
     }
   });
 });
@@ -150,28 +176,31 @@ describe("CIVILIZATION_COLORS mirrors --color-civ-mark-* exactly", () => {
 describe("STATE_COLORS mirrors --color-status-<state> exactly", () => {
   const SOUL_STATES = readSoulStates();
 
-  it("covers every state the payload can carry, and nothing else", () => {
-    expect(Object.keys(STATE_COLORS).sort()).toEqual([...SOUL_STATES].sort());
+  it.each(THEMES)("%s covers every state the payload can carry, and nothing else", (theme) => {
+    expect(Object.keys(CHART_COLORS[theme].STATE_COLORS).sort()).toEqual([...SOUL_STATES].sort());
   });
 
-  it.each(SOUL_STATES)("%s carries the dark-mode status token verbatim", (state) => {
-    const token = ROOT_TOKENS[`--color-status-${state.toLowerCase()}`];
+  it.each(pins(SOUL_STATES))("%s: %s carries the status token verbatim", (theme, state) => {
+    const token = TOKENS_BY_THEME[theme][`--color-status-${state.toLowerCase()}`];
     expect(token).toBeDefined();
-    expect(STATE_COLORS[state]).toBe(asChartLiteral(token));
+    expect(CHART_COLORS[theme].STATE_COLORS[state]).toBe(asChartLiteral(token));
   });
 
-  it.each(SOUL_STATES)("%s has a light-mode token too", (state) => {
-    // Charts do not follow `.light`, so this is not about the chart — it is
-    // about the badge that renders the same state elsewhere on the page.
+  it.each(SOUL_STATES)("%s is declared by `.light` itself, not inherited from `:root`", (state) => {
+    // NOT the same check as the pin above, and not made redundant by it. That
+    // one compares against the EFFECTIVE light value, which falls back to the
+    // `:root` declaration when `.light` is silent — so a state missing from
+    // `.light` would satisfy it while rendering the dark colour on a white
+    // page. This is the assertion that sees the omission.
     expect(LIGHT_TOKENS[`--color-status-${state.toLowerCase()}`]).toBeDefined();
   });
 
-  it("does not reuse one hue for two lifecycle states", () => {
+  it.each(THEMES)("%s does not reuse one hue for two lifecycle states", (theme) => {
     // The concrete regression: DISPOSED (220°) and REINCARNATING (217°) were
     // 3° apart in this map long after the tokens moved them 90° apart. Two
     // states rendered in one colour is the failure; identical *values* is the
     // symptom this can actually see.
-    const values = Object.values(STATE_COLORS);
+    const values = Object.values(CHART_COLORS[theme].STATE_COLORS);
     expect(new Set(values).size).toBe(values.length);
   });
 });

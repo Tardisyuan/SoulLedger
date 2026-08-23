@@ -1,6 +1,9 @@
 /**
- * The one parser that reads `app/globals.css`, shared by the two contract tests
- * that hold `lib/chart-colors.ts` to it.
+ * The one parser that reads `app/globals.css`, shared by every contract test
+ * that holds something else to it: `chartColourContract` and
+ * `civilizationColourContract` (the `lib/chart-colors.ts` mirror, both themes),
+ * `dataGridToneContract` (badge tint depth vs the light-mode measurements) and
+ * `statusTokenLayering` (which palette a domain enum may draw from).
  *
  * Not a test file — `jest.config.js` matches `**\/__tests__/**\/*.test.ts(x)`
  * only, and `collectCoverageFrom` excludes `src/__tests__/**`, so this module is
@@ -58,6 +61,55 @@ export function readTokens(selector: string): Record<string, string> {
 export const ROOT_TOKENS = readTokens(":root");
 export const LIGHT_TOKENS = readTokens("\\.light");
 
+/**
+ * Byte offset of the LAST block matching `selector` that declares `name`, or
+ * `-1`. Used to prove the cascade claim that `LIGHT_EFFECTIVE_TOKENS` rests on
+ * rather than assuming it — `:root` and `.light` have the same specificity
+ * (0,1,0), so which one wins is purely a question of source order, and
+ * globals.css interleaves them: `:root`, `.light`, `:root`, `.light`.
+ */
+export function lastDeclarationOffset(selector: string, name: string): number {
+  let offset = -1;
+  const decl = new RegExp(`${name}\\s*:\\s*[^;]+;`);
+  for (const block of css.matchAll(new RegExp(`${selector}\\s*\\{([^}]*)\\}`, "g"))) {
+    if (decl.test(block[1])) offset = block.index ?? -1;
+  }
+  return offset;
+}
+
+/**
+ * What a token actually resolves to when `<html>` carries `.light`.
+ *
+ * NOT the same thing as `LIGHT_TOKENS`. `.light` is an *override* block: it
+ * redeclares the tokens whose light value differs and stays silent on the rest,
+ * which then keep their `:root` value through the cascade. `--civ-hue` is the
+ * one that matters here — `.light` never redeclares it, so the light surface
+ * ramp interpolates the same neutral `240` fallback `:root` declares, and
+ * `resolveTriple(LIGHT_TOKENS, "--color-surface-1")` would throw on a dangling
+ * `var(--civ-hue)` rather than answer the question.
+ *
+ * Both maps are exported and both are load-bearing: `LIGHT_TOKENS` answers "did
+ * `.light` declare this itself" (a civilization missing from it inherits the
+ * DARK value and only breaks on one theme), while this map answers "what colour
+ * does the user see". Neither substitutes for the other.
+ */
+export const LIGHT_EFFECTIVE_TOKENS: Record<string, string> = { ...ROOT_TOKENS, ...LIGHT_TOKENS };
+
+export type ThemeName = "dark" | "light";
+
+/** The two themes, as `ThemeContext` names them. Iterate this, never a literal pair. */
+export const THEMES: ThemeName[] = ["dark", "light"];
+
+/**
+ * The resolved token map per theme. `dark` is the bare `:root` block because
+ * `ThemeProvider` puts `.dark` on `<html>` and globals.css declares nothing
+ * under `.dark` — dark IS `:root` here.
+ */
+export const TOKENS_BY_THEME: Record<ThemeName, Record<string, string>> = {
+  dark: ROOT_TOKENS,
+  light: LIGHT_EFFECTIVE_TOKENS,
+};
+
 /** Suffixes of every token matching a `--prefix-<suffix>` family, sorted. */
 export function suffixesOf(tokens: Record<string, string>, family: string): string[] {
   const hits = Object.keys(tokens)
@@ -96,9 +148,14 @@ export function resolveTriple(tokens: Record<string, string>, name: string): str
   return resolved;
 }
 
+/** The literal a mirror entry has to carry for the named token, in one theme. */
+export function literalOfIn(theme: ThemeName, name: string): string {
+  return asChartLiteral(resolveTriple(TOKENS_BY_THEME[theme], name));
+}
+
 /** The dark-theme literal a mirror entry has to carry for the named token. */
 export function literalOf(name: string): string {
-  return asChartLiteral(resolveTriple(ROOT_TOKENS, name));
+  return literalOfIn("dark", name);
 }
 
 /**
@@ -155,6 +212,28 @@ export function readRealmTypes(): string[] {
   }
   return types;
 }
+
+/**
+ * The `--color-status-*` tokens that belong to the SYSTEM-FEEDBACK layer rather
+ * than the soul lifecycle, derived as the set difference rather than listed.
+ *
+ * globals.css writes the rule on the block itself: "System-layer feedback:
+ * transient chrome only (toast, inline validation, banner), always beside an
+ * icon — never a row, a badge or a chart." The two groups share the
+ * `--color-status-` prefix but are different layers, and the only thing telling
+ * them apart in the stylesheet is a comment.
+ *
+ * Deriving this as "every `--color-status-*` suffix that is not a soul
+ * lifecycle state" means a fifth feedback token added tomorrow is covered
+ * without anyone editing this file, and a new *lifecycle* state added to
+ * `Soul.current_state` leaves the set alone. A new `--color-status-*` that is
+ * neither reddens `statusTokenLayering.test.ts`, which pins this set by name —
+ * on purpose, so that classifying a new token is a deliberate edit.
+ */
+export const FEEDBACK_STATUS_TOKENS: string[] = suffixesOf(ROOT_TOKENS, "--color-status")
+  .filter((suffix) => !readSoulStates().some((state) => state.toLowerCase() === suffix))
+  .map((suffix) => `--color-status-${suffix}`)
+  .sort();
 
 /**
  * The one prefix rule, written once. `TenantContext` derives the `[data-civ]`
