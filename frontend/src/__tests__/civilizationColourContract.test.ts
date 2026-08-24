@@ -110,7 +110,20 @@ describe("civilization identity: globals.css is the authority", () => {
     const rules = readCivAttrRules();
     expect(Object.keys(rules).sort()).toEqual(CIV_PREFIXES);
     for (const prefix of CIV_PREFIXES) {
-      expect(rules[prefix]).toBe(`--color-civ-hue-${prefix}`);
+      expect(rules[prefix].hue).toBe(`--color-civ-hue-${prefix}`);
+    }
+  });
+
+  it("gives every civilization a [data-civ] rule wired to its own mark token", () => {
+    // The hue's twin, and the one Stage 10 needs. The masthead draws the mark
+    // in three places — expanded lockup, collapsed rail, mobile chip — and none
+    // of them knows which tenant it is rendering; they read `hsl(var(--civ-mark))`
+    // and let this rule decide. A civilization with a hue alias and no mark
+    // alias therefore paints an identity dot with no colour, on the one element
+    // whose whole job is saying which cosmology this is.
+    const rules = readCivAttrRules();
+    for (const prefix of CIV_PREFIXES) {
+      expect(rules[prefix].mark).toBe(`--color-civ-mark-${prefix}`);
     }
   });
 

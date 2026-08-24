@@ -23,7 +23,7 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { CIVILIZATION_CODES } from "@/src/config/civilizations";
+import { CIVILIZATION_CODES, CIVILIZATION_SHORT_CODES } from "@/src/config/civilizations";
 
 export const FRONTEND_ROOT = path.join(__dirname, "..", "..", "..");
 export const GLOBALS_CSS = path.join(FRONTEND_ROOT, "app", "globals.css");
@@ -164,10 +164,34 @@ export function literalOf(name: string): string {
  * inert, which is precisely how GREEK rendered on the neutral 240° fallback
  * while looking, in the stylesheet, fully wired up.
  */
-export function readCivAttrRules(): Record<string, string> {
-  const rules: Record<string, string> = {};
-  const pattern = /\[data-civ="([\w-]+)"\]\s*\{\s*--civ-hue:\s*var\((--[\w-]+)\)\s*;?\s*\}/g;
-  for (const m of css.matchAll(pattern)) rules[m[1]] = m[2];
+export interface CivAttrRule {
+  /** The token `--civ-hue` is pointed at, or undefined if the rule omits it. */
+  hue?: string;
+  /** The token `--civ-mark` is pointed at, or undefined if the rule omits it. */
+  mark?: string;
+}
+
+/**
+ * The `[data-civ="…"]` rules, as {prefix: {hue, mark}}.
+ *
+ * Both aliases in one parser rather than one function per alias: two regex
+ * readers of one stylesheet is the defect this whole support file exists to
+ * stop, and a second reader is how the two would drift into disagreeing about
+ * what a rule even is. The declarations are read individually inside each
+ * rule body, so adding a third alias does not silently empty the map — which
+ * is what the previous whole-body regex would have done the moment
+ * `--civ-mark` was added beside `--civ-hue`.
+ */
+export function readCivAttrRules(): Record<string, CivAttrRule> {
+  const rules: Record<string, CivAttrRule> = {};
+  const blockPattern = /\[data-civ="([\w-]+)"\]\s*\{([^}]*)\}/g;
+  for (const block of css.matchAll(blockPattern)) {
+    const entry: CivAttrRule = {};
+    for (const decl of block[2].matchAll(/--civ-(hue|mark):\s*var\((--[\w-]+)\)\s*;/g)) {
+      entry[decl[1] as "hue" | "mark"] = decl[2];
+    }
+    rules[block[1]] = entry;
+  }
   return rules;
 }
 
@@ -236,15 +260,20 @@ export const FEEDBACK_STATUS_TOKENS: string[] = suffixesOf(ROOT_TOKENS, "--color
   .sort();
 
 /**
- * The one prefix rule, written once. `TenantContext` derives the `[data-civ]`
- * attribute as `tenantCode.split("_")[0].toLowerCase()`; the CSS token families
- * are keyed by that same prefix. Deriving it here from `CIVILIZATION_CODES`
- * rather than hardcoding `["cn","eu","eg","gr"]` is what makes a *fifth*
- * civilization turn the tests red the moment it is added to the config — which
- * is the enumeration point Greek slipped through.
+ * The one prefix rule, and it is now written once for real: this reads
+ * `CIVILIZATION_SHORT_CODES` from config/civilizations rather than re-deriving
+ * the split, which is what this comment used to claim while the production code
+ * kept its own copy. A helper under `__tests__/` cannot be imported by
+ * `TenantContext`, so "written once" was true of this file and of nothing else.
+ *
+ * Keyed by tenant code rather than by civilization because the CSS token
+ * families and the `[data-civ]` rules are keyed by the prefix, and the callers
+ * here start from a tenant. A *fifth* civilization turns these tests red the
+ * moment it is added to the config — the enumeration point Greek slipped
+ * through.
  */
 export const CIV_PREFIX_BY_TENANT_CODE = Object.fromEntries(
-  Object.values(CIVILIZATION_CODES).map((code) => [code, code.split("_")[0].toLowerCase()])
+  Object.entries(CIVILIZATION_CODES).map(([civ, code]) => [code, CIVILIZATION_SHORT_CODES[civ]])
 ) as Record<string, string>;
 
 export const TENANT_CODES = Object.values(CIVILIZATION_CODES) as string[];

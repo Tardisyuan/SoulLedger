@@ -1408,5 +1408,13 @@
       "group_social": "社交",
       "group_settings": "系统设置"
     }
+  },
+  "tenant": {
+    "civilizations": {
+      "CHINESE": "中国地府",
+      "EUROPEAN": "欧洲天堂地狱",
+      "EGYPTIAN": "埃及冥界",
+      "GREEK": "希腊冥界"
+    }
   }
 }

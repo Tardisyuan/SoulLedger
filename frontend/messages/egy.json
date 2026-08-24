@@ -1408,5 +1408,13 @@
       "group_social": "Sesh Sethet",
       "group_settings": "Sethet Aat"
     }
+  },
+  "tenant": {
+    "civilizations": {
+      "CHINESE": "Duat Sherer",
+      "EUROPEAN": "Kehat Ankh - Hetep",
+      "EGYPTIAN": "Duat Mesjet",
+      "GREEK": "Duat Haunebut"
+    }
   }
 }

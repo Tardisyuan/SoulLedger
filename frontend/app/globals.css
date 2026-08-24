@@ -46,6 +46,15 @@
      it — canvas and every semantic/status/karma/verdict token stay put
      regardless of tenant. */
   --civ-hue: 240;
+  /* The mark's fallback, and it is deliberately the ink-subtle grey rather
+     than a neutral hue at the marks' saturation. --civ-hue's 240° fallback is
+     a *ramp* value, and the ramp is a near-neutral floor, so falling back
+     there costs nothing. A mark is an identity claim: an unmapped tenant
+     rendering a coloured disc would be asserting a cosmology this deployment
+     does not have. Grey says "no civilization", which is the true statement,
+     and the components that draw the mark render no identity text at all in
+     that case — so the disc never appears alone. */
+  --civ-mark: 215 8% 57%;
   --color-canvas: 240 15% 4%;
   --color-surface-1: var(--civ-hue) 13% 7%;
   --color-surface-2: var(--civ-hue) 12% 9%;
@@ -212,11 +221,23 @@
    a civilization with tokens but no rule here silently renders on the
    neutral 240° fallback, which is how GREEK looked identical to a
    logged-out screen. src/__tests__/civilizationColourContract.test.ts
-   enumerates this list from that config and fails if the two disagree. */
-[data-civ="cn"] { --civ-hue: var(--color-civ-hue-cn); }
-[data-civ="eu"] { --civ-hue: var(--color-civ-hue-eu); }
-[data-civ="eg"] { --civ-hue: var(--color-civ-hue-eg); }
-[data-civ="gr"] { --civ-hue: var(--color-civ-hue-gr); }
+   enumerates this list from that config and fails if the two disagree.
+
+   TWO ALIASES, NOT ONE. --civ-hue feeds the surface ramp, which Stage 9
+   measured as a near-neutral floor: at most 6/255 of channel difference
+   between any two tenants, in either theme. --civ-mark is the identity, and
+   until Stage 10 it had exactly one consumer — a 12px dot on the dashboard —
+   reached by naming --color-civ-mark-cn directly. The masthead needs it in
+   three places (expanded lockup, collapsed rail, mobile chip) and none of
+   them knows which tenant it is drawing, so the mark gets the same
+   per-tenant alias the hue already had rather than three more lookups that
+   spell the four members out. A civilization with a hue rule and no mark
+   rule paints an identity dot with no colour at all, so the contract test
+   holds both aliases per prefix, not just the hue. */
+[data-civ="cn"] { --civ-hue: var(--color-civ-hue-cn); --civ-mark: var(--color-civ-mark-cn); }
+[data-civ="eu"] { --civ-hue: var(--color-civ-hue-eu); --civ-mark: var(--color-civ-mark-eu); }
+[data-civ="eg"] { --civ-hue: var(--color-civ-hue-eg); --civ-mark: var(--color-civ-mark-eg); }
+[data-civ="gr"] { --civ-hue: var(--color-civ-hue-gr); --civ-mark: var(--color-civ-mark-gr); }
 
 .light {
   /* alive/judging/reincarnating/settled/warning (and their karma/verdict/

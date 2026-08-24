@@ -34,13 +34,23 @@ const BUNDLES: Record<string, unknown> = { en, "zh-Hans": zhHans, egy };
 
 /** Every namespace whose keys are civilization members. `ledger.civ` is the
  *  odd one out by name and was the one that got missed; it is listed here so
- *  that being differently named stops being a way to be forgotten. */
+ *  that being differently named stops being a way to be forgotten.
+ *
+ *  `tenant.civilizations` is the masthead's, and it exists rather than reusing
+ *  one of the four above because those four are one fact written four times and
+ *  have already drifted twice — 埃及杜阿特 in realms/organization against
+ *  埃及冥界 in workflow/actors, and 欧洲天堂与地狱 in organization alone. The
+ *  masthead is the app's persistent answer to "which cosmology am I in", so it
+ *  borrows nobody's copy; `souls.civilizations` was the other candidate and is
+ *  the short form (「希腊」, "Greek"), which under the wordmark reads as a
+ *  language rather than an underworld. */
 const CIVILIZATION_NAMESPACES = [
   "souls.civilizations",
   "workflow.civilizations",
   "realms.civilizations",
   "organization.civilizations",
   "actors.civilizations",
+  "tenant.civilizations",
   "ledger.civ",
 ];
 
