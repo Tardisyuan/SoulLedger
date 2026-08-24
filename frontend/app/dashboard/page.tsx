@@ -228,7 +228,7 @@ function DashboardContent() {
                 ) : error ? (
                   <div className="h-[240px] flex items-center justify-center text-[hsl(var(--color-status-error))]">{error}</div>
                 ) : (
-                  <LazyDashboardPieChart data={stateData} />
+                  <LazyDashboardPieChart data={stateData} fallbackFill={CHART_SERIES.neutral} />
                 )}
               </div>
 
@@ -261,9 +261,21 @@ function DashboardContent() {
                     ) : stats?.tenants[i] ? (
                       <>
                         <div className="flex items-center gap-2 mb-3">
+                          {/* The same neutral the bars above fall back to, and
+                              that is the point. This swatch is the chart's
+                              legend; when it said `#6b7280` and the bar said
+                              CHART_SERIES.neutral, an unmapped tenant was drawn
+                              in two different greys — the legend disagreeing
+                              with its own chart in the smaller way, one
+                              viewport after the larger one was fixed. The
+                              literal was also fixed across both themes, where
+                              every other neutral in the app moves. */}
                           <div
                             className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: CIVILIZATION_COLORS[stats.tenants[i].tenant_code] || "#6b7280" }}
+                            style={{
+                              backgroundColor:
+                                CIVILIZATION_COLORS[stats.tenants[i].tenant_code] ?? CHART_SERIES.neutral,
+                            }}
                           />
                           <span className="font-medium text-[hsl(var(--color-ink))]">{stats.tenants[i].tenant_name || stats.tenants[i].tenant_code}</span>
                         </div>

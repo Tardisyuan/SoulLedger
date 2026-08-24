@@ -379,11 +379,69 @@ describe("no chart picks its own colour", () => {
     expect(DASHBOARD_SRC).toContain("const tenantData");
   });
 
-  it("gives no bar chart a default fill to fall back on", () => {
+  it("gives no chart a default fill to fall back on", () => {
     // `fill = "…"` anywhere in this file is a colour no caller chose. Making
     // the prop required is what turns "which colour is this series" into a
     // question with an answer at every call site.
     expect(CHARTS_SRC).not.toMatch(/\bfill\s*=\s*["'`]/);
+  });
+
+  it("leaves no colour literal in the chart components at all", () => {
+    // The general form of the rule above, and the one that catches the shape
+    // that survived it. `fill` was not the only hardcoded colour in this file:
+    // both pie wrappers ended their cell fallback chain in `"#6b7280"` — stock
+    // Tailwind gray-500, declared nowhere in globals.css, unreachable by every
+    // pin in this file, and a fixed value in both themes where every other
+    // neutral in the app moves between them.
+    //
+    // A per-datum colour with a literal at the end of the chain is the same
+    // defect as a defaulted prop wearing a different shape: the palette is
+    // consulted first and quietly abandoned when it has nothing to say. Both
+    // pies now take a required `fallbackFill`, so the palette is what answers
+    // when the datum does not.
+    //
+    // Matched as any hex literal rather than as that one value, because the
+    // next one to land will not be `#6b7280`. Chart fills cannot be `hsl(var(…))`
+    // — the dashboard's own comment records that recharts fills do not follow
+    // the `.light` cascade, which is why `useChartColors` resolves them in JS —
+    // so a literal here is always a colour that escaped the tables above.
+    // Comments stripped first, and the first run of this assertion is why:
+    // it went red on the two literals quoted in the paragraph above, which
+    // exist to explain the rule rather than to paint anything. This file has
+    // hit that before — `statusTokenLayering` carries a comment recording that
+    // quoting the offending shape reproduced the offence, because Tailwind
+    // scans `src/**` and a utility written inside a comment becomes a real CSS
+    // rule. Stripping comments narrows the assertion to what actually renders,
+    // which is what it was always about.
+    const code = CHARTS_SRC.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).toContain("fallbackFill");
+    expect(code.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []).toEqual([]);
+  });
+
+  it("makes the legend and the chart agree about an unmapped tenant", () => {
+    // The half the assertion above cannot see, and the half that stayed broken
+    // one round longer. The per-civilization swatch is the legend for the bars;
+    // when the bars fell back to CHART_SERIES.neutral and the swatch fell back
+    // to `"#6b7280"`, an unmapped tenant was drawn in two different greys — the
+    // legend contradicting its own chart in the smaller way, one viewport after
+    // the larger contradiction was fixed. `#6b7280` is gray-500 and fixed
+    // across both themes; the token moves between them, so they also diverged
+    // by theme.
+    //
+    // Asserted as "both name the same fallback" rather than "neither is a hex",
+    // because the failure is disagreement rather than literalness: two
+    // different tokens would be just as wrong and a hex-only check would pass.
+    const code = DASHBOARD_SRC.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    // `[^\n]*?` and not `[^\]]+`: one of the two subscripts is
+    // `stats.tenants[i].tenant_code`, so a class that stops at the first `]`
+    // matches the inner one, fails the `??` that follows, and finds a single
+    // fallback where there are two — which is a count assertion passing itself
+    // a wrong number rather than reporting a disagreement.
+    const fallbacks = code.match(/CIVILIZATION_COLORS\[[^\n]*?\]\s*\?\?\s*([A-Za-z_$][\w.$]*)/g) ?? [];
+    expect(fallbacks.length).toBe(2);
+    const named = fallbacks.map((f) => f.split("??")[1].trim());
+    expect(new Set(named).size).toBe(1);
+    expect(named[0]).toBe("CHART_SERIES.neutral");
   });
 
   it("colours the tenant comparison chart per tenant, from the mark table", () => {
