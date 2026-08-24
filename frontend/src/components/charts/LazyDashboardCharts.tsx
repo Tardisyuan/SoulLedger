@@ -34,11 +34,19 @@ const LazyPieChart = dynamic(
         Legend,
         ResponsiveContainer,
       } = mod;
+      // `fallbackFill` is required and has no default, for the reason spelled
+      // out on WrappedBarChart below: an optional colour prop with a hardcoded
+      // fallback is how a palette gets bypassed with nothing to catch it. This
+      // one was `"#6b7280"` — stock Tailwind gray-500, declared nowhere in the
+      // stylesheet, invisible to chartColourContract, and a fixed literal in
+      // both themes where every other neutral in the app moves between them.
       return function WrappedPieChart({
         data,
+        fallbackFill,
         height = 240,
       }: {
         data: ChartDataPoint[];
+        fallbackFill: string;
         height?: number;
       }) {
         return (
@@ -56,7 +64,7 @@ const LazyPieChart = dynamic(
                 {data.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={entry.color || entry.fill || "#6b7280"}
+                    fill={entry.color || entry.fill || fallbackFill}
                   />
                 ))}
               </Pie>
@@ -196,12 +204,20 @@ const LazyDashboardPieChart = dynamic(
         Legend,
         ResponsiveContainer,
       } = mod;
+      // `fallbackFill` is required and has no default, for the reason spelled
+      // out on WrappedBarChart below: an optional colour prop with a hardcoded
+      // fallback is how a palette gets bypassed with nothing to catch it. This
+      // one was `"#6b7280"` — stock Tailwind gray-500, declared nowhere in the
+      // stylesheet, invisible to chartColourContract, and a fixed literal in
+      // both themes where every other neutral in the app moves between them.
       return function WrappedDashboardPieChart({
         data,
         height = 240,
+        fallbackFill,
       }: {
         data: ChartDataPoint[];
         height?: number;
+        fallbackFill: string;
       }) {
         return (
           <ResponsiveContainer width="100%" height={height}>
@@ -222,7 +238,7 @@ const LazyDashboardPieChart = dynamic(
                 {data.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={entry.fill || entry.color || "#6b7280"}
+                    fill={entry.fill || entry.color || fallbackFill}
                   />
                 ))}
               </Pie>
