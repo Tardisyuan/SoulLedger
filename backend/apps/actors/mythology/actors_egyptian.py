@@ -85,7 +85,8 @@ EGYPTIAN_ACTORS = [
      "at; see EG_ANNIHILATION above"),
     # Horus was the worst-placed row in the file: GUARDIAN at the gate of the
     # Duat, a post the sources do not give him, and the deleted
-    # populate_egyptian_actors had him as a JUDGE instead. He is neither. In
+    # populate_egyptian_actors.py had him as a JUDGE instead; that script is
+    # deleted and this row is the surviving statement. He is neither. In
     # both the Ani and the Hunefer papyri, Horus son of Isis takes the
     # vindicated dead by the hand after the weighing and walks him to Osiris'
     # shrine. That is escort duty, and CONDUIT is the role for it.
@@ -160,12 +161,21 @@ EGYPTIAN_ACTORS = [
 # WHAT GOES IN AND WHAT DOES NOT. An entry here asserts *one being, two written
 # forms*. It is not a place to reconcile disagreements about who someone is:
 #
-#   * `Set` / `Seth` — `scripts/populate_egyptian_actors.py` seeds a Set with
-#     `name_egy='Seth'` (a Greek form in an Egyptian-name field, recorded in
-#     docs/lore-verification/verify-egyptian.md §row 10). No `Set` row exists in
-#     this cast at all, so there is nothing to alias; whether Set belongs in the
-#     judgment of the dead is a canon question, and that script already records
-#     it as an open item.
+#   * `Set` / `Seth` — no `Set` row exists in this cast at all, so there is
+#     nothing to alias. The only Set this system ever had was seeded by
+#     `scripts/populate_egyptian_actors.py`, as `JUDGE` in the Hall of Two
+#     Truths with `name_egy='Seth'` — a Greek form in an Egyptian-name field.
+#     That script is deleted (it was a second writer of actor canon, and the
+#     check that was supposed to forbid one was passing over it), so this note
+#     is now the record rather than a pointer to one.
+#
+#     The canon question it left open is already answered, and not by the
+#     script: docs/lore-verification/verify-egyptian.md rows 9 and 10 find that
+#     Set has no role in the judgment of the dead — the Contendings of Horus and
+#     Seth is a different story from BD 125 — and that `Seth` in `name_egy` is
+#     the Greek rendering. So Set stays out, deliberately, and
+#     tests/test_seed_mythology.py::test_set_stays_out_of_the_judgment holds
+#     that rather than leaving his absence to be read as an oversight.
 #   * `Ra` / `Atum` — `name_en` is "Ra (Atum)". Atum is a distinct god who is
 #     *identified with* Ra in some contexts, which is a theological claim and
 #     not a spelling. Recording it as an alias would assert the identification.
@@ -182,7 +192,8 @@ EGYPTIAN_ACTOR_ALIASES = {
     # Chinese renderings of the same god and the owner kept both.
     "Osiris": ["欧西里斯"],
     # ḥr transliterated two ways. `name_egy` here is "Hor";
-    # scripts/populate_egyptian_actors.py writes "Heru" for the same god, which
+    # scripts/populate_egyptian_actors.py wrote "Heru" for the same god before
+    # it was deleted, which
     # docs/lore-verification/verify-egyptian.md records as a known low-severity
     # inconsistency between the two seed paths rather than a second deity.
     "Horus": ["Heru"],
@@ -228,8 +239,10 @@ EGYPTIAN_ACTOR_ALIASES = {
 # #21/#22/#23 are the three places where the second witness disagrees. This
 # table replaced a 33-name list of major deities (Shu, Geb, Nut, Hathor, the
 # four sons of Horus...) that was assembled from a "nine great judges" sentence
-# in an encyclopedia article and was not a roster of assessors at all — see
-# backend/scripts/populate_egyptian_actors.py.
+# in an encyclopedia article and was not a roster of assessors at all. That
+# list lived in backend/scripts/populate_egyptian_actors.py, which is deleted;
+# docs/lore-verification/42-assessors.md is the surviving account of what it
+# held and why none of it was a bench.
 #
 # `name_zh` is left blank on all 42. These have no established Chinese
 # rendering; `get_localized_name()` already falls back to `name_en`. Inventing

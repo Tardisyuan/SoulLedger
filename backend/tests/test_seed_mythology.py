@@ -342,10 +342,12 @@ FORTY_TWO_ASSESSORS = [
     "An-a-f",
 ]
 
-# Every Egyptian actor that is NOT one of the Forty-Two. `Set` is seeded only by
-# backend/scripts/populate_egyptian_actors.py, never by the command, but it is
-# listed here so that a future decision to fold Set into the command cannot
-# silently create a name clash with the bench.
+# Every Egyptian actor that is NOT one of the Forty-Two. `Set` is seeded by
+# nothing: he existed only in backend/scripts/populate_egyptian_actors.py, which
+# is deleted. He stays on this list so that a future decision to fold Set into
+# the command cannot silently create a name clash with the bench — and his
+# absence from the seeded cast is asserted below rather than left to be read as
+# an oversight.
 EGYPTIAN_PRINCIPALS = [
     "Osiris", "Anubis", "Thoth", "Ma'at", "Ammit",
     "Horus", "Isis", "Nephthys", "Ra", "Set",
@@ -849,6 +851,42 @@ def test_the_weighing_cast_all_stands_in_the_hall(seeded):
 
 
 @pytest.mark.django_db
+def test_set_stays_out_of_the_judgment(seeded):
+    """Set is absent from the seeded cast, deliberately.
+
+    He was seeded once, by `backend/scripts/populate_egyptian_actors.py`, as
+    `JUDGE` in the Hall of Two Truths with `name_egy='Seth'`. That script was a
+    second writer of actor canon and is deleted; deleting it is what makes this
+    assertion necessary, because an absence with no test behind it reads as an
+    oversight and the obvious repair for an oversight is to add the row back.
+
+    The canon question is already answered and not by that script.
+    docs/lore-verification/verify-egyptian.md rows 9 and 10 find that Set has no
+    role in the judgment of the dead — the Contendings of Horus and Seth is a
+    different story from BD 125, and Horus's opponent there is not a party to
+    the weighing — and that `Seth` is the Greek rendering sitting in a field for
+    the Egyptian one.
+
+    Checked through `all_objects` for the same reason the unattested-realm check
+    is: a soft-deleted row plus a fresh insert would look clean through the
+    default manager.
+
+    If a source is ever found for Set at the weighing, add the row with its
+    citation and replace this test with one that asserts his placement. Do not
+    delete it and leave the cast to speak for itself.
+    """
+    present = sorted(
+        Actor.all_objects.filter(name="Set", is_deleted=False).values_list("name", flat=True)
+    )
+    assert not present, (
+        "Set is seeded again. He entered this system only through "
+        "scripts/populate_egyptian_actors.py, as a JUDGE at a weighing the "
+        "sources give him no part in; see docs/lore-verification/"
+        "verify-egyptian.md rows 9 and 10. If a citation has since been found, "
+        "record it rather than deleting this check."
+    )
+
+
 def test_no_unattested_realm_is_seeded(seeded):
     """A realm nobody could find a source for does not come back.
 
