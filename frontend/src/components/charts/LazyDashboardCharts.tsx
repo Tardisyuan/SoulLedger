@@ -22,83 +22,6 @@ function ChartSkeleton({ height = 240 }: { height?: number }) {
   );
 }
 
-// ── Lazy Recharts Base ───────────────────────────────────────────
-const LazyPieChart = dynamic(
-  () =>
-    import("recharts").then((mod) => {
-      const {
-        PieChart,
-        Pie,
-        Cell,
-        Tooltip,
-        Legend,
-        ResponsiveContainer,
-      } = mod;
-      // `fallbackFill` is required and has no default, for the reason spelled
-      // out on WrappedBarChart below: an optional colour prop with a hardcoded
-      // fallback is how a palette gets bypassed with nothing to catch it. This
-      // one was `"#6b7280"` — stock Tailwind gray-500, declared nowhere in the
-      // stylesheet, invisible to chartColourContract, and a fixed literal in
-      // both themes where every other neutral in the app moves between them.
-      return function WrappedPieChart({
-        data,
-        fallbackFill,
-        height = 240,
-      }: {
-        data: ChartDataPoint[];
-        fallbackFill: string;
-        height?: number;
-      }) {
-        return (
-          <ResponsiveContainer width="100%" height={height}>
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={50}
-                outerRadius={90}
-                paddingAngle={3}
-                dataKey="value"
-              >
-                {data.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.color || entry.fill || fallbackFill}
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  background: "hsl(var(--color-surface-1))",
-                  border: "1px solid hsl(var(--color-hairline))",
-                  borderRadius: "6px",
-                  fontSize: 12,
-                }}
-              />
-              <Legend
-                formatter={(value) => (
-                  <span
-                    style={{
-                      color: "hsl(var(--color-ink-muted))",
-                      fontSize: 12,
-                    }}
-                  >
-                    {value}
-                  </span>
-                )}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        );
-      };
-    }),
-  {
-    ssr: false,
-    loading: () => <ChartSkeleton />,
-  }
-);
-
 const LazyBarChart = dynamic(
   () =>
     import("recharts").then((mod) => {
@@ -269,85 +192,6 @@ const LazyDashboardPieChart = dynamic(
   }
 );
 
-// ── Admin Bar Chart (with grid + custom axis) ────────────────────
-const LazyAdminBarChart = dynamic(
-  () =>
-    import("recharts").then((mod) => {
-      const {
-        BarChart,
-        Bar,
-        Cell,
-        XAxis,
-        YAxis,
-        CartesianGrid,
-        Tooltip,
-        ResponsiveContainer,
-      } = mod;
-      // Same treatment as WrappedBarChart above, and for the same reason: the
-      // `"#f59e0b"` default was a colour no caller had chosen. This wrapper has
-      // no callers at all today — `grep AdminBarChart` finds only its own
-      // definition and the export list — so the literal was being carried by
-      // nothing, which is the shape that survives review.
-      return function WrappedAdminBarChart({
-        data,
-        dataKey = "count",
-        fill,
-        height = 280,
-      }: {
-        data: ChartDataPoint[];
-        dataKey?: string;
-        fill: string;
-        height?: number;
-      }) {
-        return (
-          <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={data}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="hsl(var(--color-hairline))"
-              />
-              <XAxis
-                dataKey="name"
-                tick={{
-                  fill: "hsl(var(--color-ink-muted))",
-                  fontSize: 10,
-                }}
-                axisLine={{ stroke: "hsl(var(--color-hairline))" }}
-                tickLine={{ stroke: "hsl(var(--color-hairline))" }}
-              />
-              <YAxis
-                tick={{
-                  fill: "hsl(var(--color-ink-muted))",
-                  fontSize: 10,
-                }}
-                axisLine={{ stroke: "hsl(var(--color-hairline))" }}
-                tickLine={{ stroke: "hsl(var(--color-hairline))" }}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "hsl(var(--color-surface-2))",
-                  border: "1px solid hsl(var(--color-hairline))",
-                  borderRadius: "6px",
-                  fontSize: 12,
-                }}
-              />
-              <Bar
-                dataKey={dataKey}
-                fill={fill}
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        );
-      };
-    }),
-  {
-    ssr: false,
-    loading: () => <ChartSkeleton height={280} />,
-  }
-);
-
-// ── Soul Detail Line Chart ───────────────────────────────────────
 const LazySoulLineChart = dynamic(
   () =>
     import("recharts").then((mod) => {
@@ -518,10 +362,8 @@ const LazyLifespanBarChart = dynamic(
 );
 
 export {
-  LazyPieChart,
   LazyBarChart,
   LazyDashboardPieChart,
-  LazyAdminBarChart,
   LazySoulLineChart,
   LazyLifespanBarChart,
   ChartSkeleton,

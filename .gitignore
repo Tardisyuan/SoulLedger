@@ -85,3 +85,5 @@ docker/postgres/
 docker/redis/
 infrastructure/docker/postgres/
 infrastructure/docker/redis/
+
+.prepush.env
