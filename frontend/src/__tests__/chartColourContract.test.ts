@@ -56,6 +56,9 @@ import {
   resolveTriple,
   suffixesOf,
 } from "./support/globalsCssTokens";
+import { readFileSync } from "fs";
+import { join } from "path";
+
 import { CHART_COLORS, type ChartColors } from "@/lib/chart-colors";
 
 const REALM_TYPES = readRealmTypes();
@@ -340,5 +343,56 @@ describe("every entry in lib/chart-colors.ts mirrors a declared token", () => {
     const tokens = TOKENS_BY_THEME[theme];
     expect(new Set(Object.keys(tokens).map((n) => literalOfIn(theme, n))).size).toBeGreaterThan(20);
     expect(Object.values(allMirrors(theme)).every((m) => Object.keys(m).length > 0)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe("no chart picks its own colour", () => {
+  // The tables above are pinned to globals.css, which is worth nothing for a
+  // series whose colour never came from a table. `LazyBarChart` defaulted
+  // `fill` to `"#f59e0b"` — a literal declared nowhere else, invisible to every
+  // assertion in this file, and inherited by whichever caller did not choose.
+  //
+  // That caller was the dashboard's tenant comparison chart, so four
+  // cosmologies were drawn as one amber series directly above four cards that
+  // each carried their own civilization mark: two views of the same four
+  // tenants on one screen, one of them saying they were a single category. The
+  // swatch on those cards was never the redundant half — it is the legend, and
+  // the chart is the thing it keys.
+  //
+  // Read as source rather than rendered: the wrappers are inside a
+  // `dynamic(() => import("recharts"))` factory, so there is no component to
+  // mount without pulling recharts into jsdom, and the regression is a default
+  // parameter — a property of the declaration, not of any render.
+  const CHARTS_SRC = readFileSync(
+    join(process.cwd(), "src/components/charts/LazyDashboardCharts.tsx"),
+    "utf8"
+  );
+  const DASHBOARD_SRC = readFileSync(join(process.cwd(), "app/dashboard/page.tsx"), "utf8");
+
+  it("the parser is looking at something", () => {
+    // Both files must actually contain the wrappers and the series this
+    // describe block reasons about, or every assertion below is vacuous.
+    expect(CHARTS_SRC).toContain("WrappedBarChart");
+    expect(CHARTS_SRC).toContain("WrappedAdminBarChart");
+    expect(DASHBOARD_SRC).toContain("const tenantData");
+  });
+
+  it("gives no bar chart a default fill to fall back on", () => {
+    // `fill = "…"` anywhere in this file is a colour no caller chose. Making
+    // the prop required is what turns "which colour is this series" into a
+    // question with an answer at every call site.
+    expect(CHARTS_SRC).not.toMatch(/\bfill\s*=\s*["'`]/);
+  });
+
+  it("colours the tenant comparison chart per tenant, from the mark table", () => {
+    // The positive half, and the one that would go red if someone deleted the
+    // per-datum colour and let the bars share one fill again. Asserted against
+    // CIVILIZATION_COLORS by name: a hand-written per-tenant palette here would
+    // be a sixth table for this file to pin, which is the whole failure above.
+    const tenantData = /const tenantData[\s\S]*?\}\)\) \?\? \[\];/.exec(DASHBOARD_SRC);
+    expect(tenantData).not.toBeNull();
+    expect(tenantData![0]).toContain("CIVILIZATION_COLORS[tenant.tenant_code]");
   });
 });
