@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { permApi } from "@/lib/api";
+import { CIVILIZATION_SHORT_CODE_SET } from "@/src/config/civilizations";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -95,9 +96,17 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   // through to `delete` cannot report its own gap, so
   // src/__tests__/TenantContext.test.tsx asserts one stamped attribute per
   // member of CIVILIZATION_CODES.
+  //
+  // The allowlist used to be the literal or-chain `civ === "cn" || civ ===
+  // "eu" || …`, which is the shape that was missing `gr`. It now tests
+  // membership of CIVILIZATION_SHORT_CODE_SET, derived in config/civilizations
+  // from the same CIVILIZATION_CODES map a fifth civilization has to be added
+  // to anyway — so the gap this comment describes can no longer be opened by
+  // forgetting a clause here. Adding the [data-civ] rule to globals.css is
+  // still a hand edit, and still the thing the colour contract test holds.
   useEffect(() => {
     const civ = tenantCode?.split("_")[0]?.toLowerCase();
-    if (civ === "cn" || civ === "eu" || civ === "eg" || civ === "gr") {
+    if (civ && CIVILIZATION_SHORT_CODE_SET.has(civ)) {
       document.documentElement.dataset.civ = civ;
     } else {
       delete document.documentElement.dataset.civ;

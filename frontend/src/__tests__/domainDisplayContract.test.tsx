@@ -113,6 +113,8 @@ const ENUM_STRING_CONTEXTS: Record<string, string> = {
     "Same status badge as the list; sets title={soul?.current_state} inline.",
   [path.join("src", "components", "judgment", "JudgmentQueueContext.tsx")]:
     "EnumBadge takes its label as a ReactNode prop on a value object, and the badge sets title from that same object; both call sites pass title={soul.current_state}/{soul.civilization} by hand.",
+  [path.join("src", "components", "layout", "TenantSignal.tsx")]:
+    "The masthead needs the civilization name as a string, not a span: it goes into title/aria-label on the two code-only variants and into a truncating flex child on the third. Carries title={civilization} — the raw member — on all three.",
   [path.join("src", "components", "judgment", "JudgmentQueueConsole.tsx")]:
     "Interpolated into t('judgment.queue.pending_verdict', { verdict }) as a parameter, not rendered. The one place this file DOES render a verdict (the verdict buttons) uses <DomainEnum>.",
 };

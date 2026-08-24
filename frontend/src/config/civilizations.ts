@@ -48,6 +48,41 @@ export const CIVILIZATION_CODES = {
   GREEK: "GR_HADES",
 } as const;
 
+/**
+ * The two-letter prefix each civilization is keyed by outside this file —
+ * `cn` / `eu` / `eg` / `gr` — derived from the tenant code rather than typed.
+ *
+ * This rule already existed three times and was declared "written once" in the
+ * only place it was actually derived. `TenantContext` computes it inline as
+ * `tenantCode.split("_")[0].toLowerCase()` and then checks the result against a
+ * literal or-chain; `globals.css` spells the four out as `[data-civ="cn"]` …
+ * rules; and `src/__tests__/support/globalsCssTokens.ts` derives it from
+ * `CIVILIZATION_CODES` under a comment reading "The one prefix rule, written
+ * once" — true of that file and of nothing else, because a helper under
+ * `__tests__/` cannot be imported by the code it describes.
+ *
+ * Deriving it here is what makes that comment a fact: the masthead reads this,
+ * `TenantContext` reads this, and the test helper reads this. A fifth
+ * civilization gets its prefix from the tenant code it already had to declare
+ * above, so the only place that still needs a hand edit is the stylesheet —
+ * which is exactly the enumeration `civilizationColourContract` holds against
+ * this list, and the gap GREEK slipped through.
+ *
+ * Not `as const`: the value is derived, so its keys are `string` and a caller
+ * that wants exhaustiveness should be iterating CIVILIZATION_OPTIONS.
+ */
+export const CIVILIZATION_SHORT_CODES: Record<string, string> = Object.fromEntries(
+  Object.entries(CIVILIZATION_CODES).map(([civ, tenantCode]) => [
+    civ,
+    tenantCode.split("_")[0].toLowerCase(),
+  ])
+);
+
+/** The same four prefixes as a set, for "is this a civilization we paint?". */
+export const CIVILIZATION_SHORT_CODE_SET: ReadonlySet<string> = new Set(
+  Object.values(CIVILIZATION_SHORT_CODES)
+);
+
 export const TENANT_CODE_TO_CIVILIZATION: Record<string, string> = {
   CN_DIYU: "CHINESE",
   EU_HEAVEN_HELL: "EUROPEAN",

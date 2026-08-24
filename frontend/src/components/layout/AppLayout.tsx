@@ -23,6 +23,7 @@ import { ConnectionStatus } from "@/src/components/connection-status";
 import { useSidebarMenus, isDirectory, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { menuGlossParts } from "@/src/lib/menuI18n";
 import { isMenuPathActive } from "@/src/lib/menuPath";
+import { TenantSignal } from "@/src/components/layout/TenantSignal";
 
 const NAV_MODE_KEY = "soulledger_nav_mode";
 
@@ -32,7 +33,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [navMode, setNavMode] = useState<"classic" | "compact">("classic");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
-  const { user, logout } = useTenant();
+  const { user, tenantCode, logout } = useTenant();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -120,16 +121,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <nav className={`h-16 border-b border-[hsl(var(--color-hairline))] shrink-0 flex items-center ${collapsed ? "justify-center px-0" : "justify-center px-5"}`}>
           <Link href="/" prefetch={true} className="flex items-center gap-2.5 overflow-hidden">
             {collapsed ? (
-              /* Collapsed: Scale icon */
-              <svg className="w-7 h-7 shrink-0 text-[hsl(var(--color-accent))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3v18" stroke="currentColor"/>
-                <path d="M5 8l7-5 7 5" stroke="currentColor"/>
-                <circle cx="5" cy="8" r="2" fill="currentColor" stroke="none"/>
-                <circle cx="19" cy="8" r="2" fill="currentColor" stroke="none"/>
-                <path d="M5 16l7 5 7-5" stroke="currentColor"/>
-                <circle cx="5" cy="16" r="2" fill="currentColor" stroke="none"/>
-                <circle cx="19" cy="16" r="2" fill="currentColor" stroke="none"/>
-              </svg>
+              /* Collapsed: Scale icon over the two-letter tenant code. The code
+                 is stacked rather than dropped because collapsing already takes
+                 the civilization name away, and colour alone is not a signal
+                 this palette can carry — see TenantSignal's header. */
+              <span className="flex flex-col items-center gap-1">
+                <svg className="w-7 h-7 shrink-0 text-[hsl(var(--color-accent))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3v18" stroke="currentColor"/>
+                  <path d="M5 8l7-5 7 5" stroke="currentColor"/>
+                  <circle cx="5" cy="8" r="2" fill="currentColor" stroke="none"/>
+                  <circle cx="19" cy="8" r="2" fill="currentColor" stroke="none"/>
+                  <path d="M5 16l7 5 7-5" stroke="currentColor"/>
+                  <circle cx="5" cy="16" r="2" fill="currentColor" stroke="none"/>
+                  <circle cx="19" cy="16" r="2" fill="currentColor" stroke="none"/>
+                </svg>
+                <TenantSignal tenantCode={tenantCode} variant="rail" />
+              </span>
             ) : (
               /* Expanded: Scale + text */
               <>
@@ -142,8 +149,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <circle cx="5" cy="16" r="2" fill="currentColor" stroke="none"/>
                   <circle cx="19" cy="16" r="2" fill="currentColor" stroke="none"/>
                 </svg>
-                <span className="text-[hsl(var(--color-accent-ink))] font-bold tracking-wide truncate">
-                  SoulLedger
+                {/* The wordmark gains a second line and the masthead does not
+                    grow: the <nav> is already h-16 around a single 15px line,
+                    so an 11px name fits inside the existing box. `min-w-0` is
+                    what lets the name truncate instead of pushing the scale
+                    icon out of a fixed 224px rail. */}
+                <span className="flex flex-col min-w-0">
+                  <span className="text-[hsl(var(--color-accent-ink))] font-bold tracking-wide truncate leading-tight">
+                    SoulLedger
+                  </span>
+                  <TenantSignal tenantCode={tenantCode} variant="line" />
                 </span>
               </>
             )}
@@ -227,6 +242,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
+
+          {/* The tenant chip, phone only. Below `md` the sidebar is
+              `-translate-x-full` — off-canvas until the hamburger opens it — so
+              the masthead's signal is not on screen at all, and a phone is
+              where someone is most likely to have been dropped into a link with
+              no context. It sits here, on the breadcrumb side, and never in the
+              right cluster below: that cluster's own comment records the 393px
+              wrapping overflow that made a button unreachable, and a chip there
+              would re-run it. This side already truncates by design, and the
+              chip is a fixed 52px whatever the tenant and whatever the locale. */}
+          <span className="md:hidden">
+            <TenantSignal tenantCode={tenantCode} variant="chip" />
+          </span>
 
           {/* Breadcrumb / Page title area */}
           <Breadcrumb menus={menus} />
