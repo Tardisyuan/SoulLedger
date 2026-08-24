@@ -97,23 +97,38 @@ const LazyBarChart = dynamic(
       const {
         BarChart,
         Bar,
+        Cell,
         XAxis,
         YAxis,
         CartesianGrid,
         Tooltip,
         ResponsiveContainer,
       } = mod;
+      // `fill` has no default, deliberately. It used to be `"#f59e0b"` — a
+      // literal nothing else in the app declares, invisible to
+      // `chartColourContract`, and picked up by whichever caller forgot to
+      // choose. That caller was the tenant comparison chart on the dashboard,
+      // which drew all four cosmologies in one amber directly above four cards
+      // giving each of them its own mark colour: two views of the same four
+      // tenants on one screen, one of which said they were a single category.
+      // A required prop makes "which colour is this series" a question every
+      // caller answers.
+      //
+      // `color` on a datum overrides it for that bar alone. The pie charts in
+      // this file already read `entry.color`; the bar path had a single series
+      // fill and no way to say "these bars are four different things", which is
+      // exactly what a per-civilization comparison is.
       return function WrappedBarChart({
         data,
         dataKey = "total",
-        fill = "#f59e0b",
+        fill,
         height = 240,
         name,
         showGrid = true,
       }: {
         data: ChartDataPoint[];
         dataKey?: string;
-        fill?: string;
+        fill: string;
         height?: number;
         name?: string;
         showGrid?: boolean;
@@ -153,7 +168,11 @@ const LazyBarChart = dynamic(
                 fill={fill}
                 radius={[4, 4, 0, 0]}
                 name={name}
-              />
+              >
+                {data.map((entry, i) => (
+                  <Cell key={i} fill={entry.color ?? fill} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         );
@@ -241,21 +260,27 @@ const LazyAdminBarChart = dynamic(
       const {
         BarChart,
         Bar,
+        Cell,
         XAxis,
         YAxis,
         CartesianGrid,
         Tooltip,
         ResponsiveContainer,
       } = mod;
+      // Same treatment as WrappedBarChart above, and for the same reason: the
+      // `"#f59e0b"` default was a colour no caller had chosen. This wrapper has
+      // no callers at all today — `grep AdminBarChart` finds only its own
+      // definition and the export list — so the literal was being carried by
+      // nothing, which is the shape that survives review.
       return function WrappedAdminBarChart({
         data,
         dataKey = "count",
-        fill = "#f59e0b",
+        fill,
         height = 280,
       }: {
         data: ChartDataPoint[];
         dataKey?: string;
-        fill?: string;
+        fill: string;
         height?: number;
       }) {
         return (
@@ -407,6 +432,7 @@ const LazyLifespanBarChart = dynamic(
       const {
         BarChart,
         Bar,
+        Cell,
         XAxis,
         YAxis,
         CartesianGrid,

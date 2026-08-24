@@ -126,9 +126,21 @@ function DashboardContent() {
     color: STATE_COLORS[s.state] || CHART_SERIES.neutral,
   })) ?? [];
 
+  // One colour per tenant, from the same map as the swatches on the cards
+  // below. This chart used to take LazyBarChart's own `"#f59e0b"` default, so
+  // four cosmologies were drawn as one amber series directly above four cards
+  // that each carried their own mark — the chart said "one category, four
+  // sizes" and the cards said "four categories". The swatch was never the
+  // redundant half: it is the legend, and this is the thing it keys.
+  //
+  // `CHART_SERIES.neutral` for a tenant this deployment has no mark for, the
+  // same refusal `CIVILIZATION_COLORS` makes by not having an entry — a grey
+  // bar says "unmapped", and borrowing a neighbour's hue would say something
+  // false about which cosmology it is.
   const tenantData = stats?.tenants?.map((tenant) => ({
     name: getDisplayNameForTenant(tenant.tenant_code),
     total: tenant.total_souls,
+    color: CIVILIZATION_COLORS[tenant.tenant_code] ?? CHART_SERIES.neutral,
     ...tenant.state_breakdown,
   })) ?? [];
 
@@ -228,7 +240,7 @@ function DashboardContent() {
                     <Skeleton className="h-full w-full" />
                   </div>
                 ) : (
-                  <LazyBarChart data={tenantData} dataKey="total" name={t("dashboard.total_souls")} />
+                  <LazyBarChart data={tenantData} dataKey="total" fill={CHART_SERIES.neutral} name={t("dashboard.total_souls")} />
                 )}
               </div>
             </div>
