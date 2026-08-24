@@ -190,26 +190,56 @@ export function SoulKarmaLedgerCard({
               -{demeritScore}
             </Figure>
           </div>
-          <div className="flex justify-between items-center pt-1">
-            <span className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
-            <Figure
-              field="karmic_balance"
-              quantity={SUMMARY_QUANTITIES.karmic_balance}
-              t={t}
-              className={`text-lg font-bold tabular-nums ${
-                karmicBalance >= 0 ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"
-              }`}
-            >
-              {karmicBalance >= 0 ? "+" : ""}
-              {karmicBalance}
-            </Figure>
-          </div>
-          {/* rawBalance is computed but intentionally not re-shown as a second
-              big number here — 余额 above is the decayed balance the cosmology
-              actually reads (see `reading` above it); showing two "balance"
-              figures the same size would make it look like a discrepancy to
-              resolve rather than two honest views of the same ledger. */}
-          <p className="sr-only">{tf("ledger.raw_balance_sr", "原始余额 {{n}}", { n: String(rawBalance) })}</p>
+          {/* WHY THE BALANCE ROW IS THE ONLY PART OF THIS BLOCK THAT IS GUARDED.
+              The four rows above are raw-against-decayed, which is a fact about
+              `SoulRecord.weight` and true whatever cosmology reads it. A balance
+              is not: netting merit against demerit is the 功過格's instrument
+              specifically, and `karmic_balance` is — in its own backend words —
+              "the Chinese reading served to everyone" (services.py:118).
+
+              Unguarded, this row undid the panel directly above it. An Egyptian
+              soul rendered「重于费斯之羽」and then, one row down in bold green,
+              「余额 +6 权重」— a heart carrying 18 points of wrongdoing reading
+              as passing once 24 points of merit were subtracted from it. That
+              subtraction is the exact failure `_egyptian_reading`'s docstring
+              was written about, and the Hall of Two Truths has no offsetting
+              step for it to be the result of. The refusal was stated in the
+              backend, restated in the panel, and then taken back here by a
+              block that had never heard of it.
+
+              `reading.kind === "BALANCE"` and not `civilization === "CHINESE"`
+              like the inheritance bars below: the bars are a rebirth mechanic
+              that belongs to a named cosmology, whereas this row exists because
+              the panel above nets — and the panel nets exactly when the kind is
+              BALANCE. A fifth cosmology reading a balance should get this row
+              without anyone remembering to add its tenant name here.
+
+              The sr-only raw balance goes with it. It reads out a netted sum
+              too, so leaving it behind would have kept the same claim and only
+              moved it to where a sighted reviewer could not see it. Its own
+              reason for being unseen still stands where it is drawn: rawBalance
+              is computed and deliberately not shown as a second big number,
+              because two same-sized balances read as a discrepancy to resolve
+              rather than two honest views of one ledger. */}
+          {reading.kind === "BALANCE" && (
+            <>
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.balance")}</span>
+                <Figure
+                  field="karmic_balance"
+                  quantity={SUMMARY_QUANTITIES.karmic_balance}
+                  t={t}
+                  className={`text-lg font-bold tabular-nums ${
+                    karmicBalance >= 0 ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"
+                  }`}
+                >
+                  {karmicBalance >= 0 ? "+" : ""}
+                  {karmicBalance}
+                </Figure>
+              </div>
+              <p className="sr-only">{tf("ledger.raw_balance_sr", "原始余额 {{n}}", { n: String(rawBalance) })}</p>
+            </>
+          )}
 
           <div className="rounded border border-dashed border-[hsl(var(--color-hairline))] p-2 mt-2">
             <p className="text-[11px] text-[hsl(var(--color-ink-subtle))]">

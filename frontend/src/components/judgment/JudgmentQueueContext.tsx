@@ -1,6 +1,7 @@
 "use client";
 
 import { DataGrid, EnumBadge, type DataGridColumn, type EnumTone } from "@/components/ui/data-grid";
+import { MissingValue } from "@/src/components/ui/DomainValue";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Figure } from "@/src/components/ledger/QuantityFigure";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -186,16 +187,46 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
             {signed(-Math.abs(ledger.demerit_score))}
           </Figure>
         </div>
+        {/* The balance is the one of the three that is not a fact about weight.
+            Merit and demerit are sums this ledger holds whatever cosmology
+            reads them; netting them is the 功過格's instrument, and
+            `karmic_balance` is "the Chinese reading served to everyone" in its
+            own backend words (apps/ledger/services.py:118).
+
+            This card has no reading panel — the three sums are all an operator
+            sees before choosing a verdict. So an Egyptian soul was triaged
+            against 「余额 +6」in bold, with nothing on screen to say the Hall of
+            Two Truths never subtracts; `_egyptian_reading`'s docstring is about
+            that number specifically, and +6 sits on the passing side of any
+            threshold. The soul list (app/souls/page.tsx) had already guarded
+            its own balance column for this reason, and the detail card was
+            guarded in the same change as this one. This was the third copy and
+            the one closest to the decision.
+
+            Marked "not applicable" rather than omitted, deliberately: the
+            operator is choosing, and a column that quietly disappears is
+            indistinguishable from a number nobody computed. The copy points at
+            the soul detail page, which after that card's guard is where the
+            instrument this cosmology actually reads on is shown.
+
+            Fails closed. `reading` is optional on `QueueLedger` while the
+            backend always sends it, so an absent reading is a payload nobody
+            expected — and the safe rendering of "which cosmology is this?" with
+            no answer is the one that does not net. */}
         <div>
           <div className="text-xs text-[hsl(var(--color-ink-muted))]">{t("judgment.queue.balance")}</div>
-          <Figure
-            field="karmic_balance"
-            quantity={SUMMARY_QUANTITIES.karmic_balance}
-            t={t}
-            className="font-mono tabular-nums text-lg font-bold text-[hsl(var(--color-ink))]"
-          >
-            {signed(ledger.karmic_balance)}
-          </Figure>
+          {ledger.reading?.kind === "BALANCE" ? (
+            <Figure
+              field="karmic_balance"
+              quantity={SUMMARY_QUANTITIES.karmic_balance}
+              t={t}
+              className="font-mono tabular-nums text-lg font-bold text-[hsl(var(--color-ink))]"
+            >
+              {signed(ledger.karmic_balance)}
+            </Figure>
+          ) : (
+            <MissingValue kind="inapplicable" reason={t("souls.balance_not_applicable")} />
+          )}
         </div>
       </div>
       <DataGrid<QueueLedgerRecord>

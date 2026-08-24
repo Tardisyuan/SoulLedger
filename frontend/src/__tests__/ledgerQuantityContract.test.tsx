@@ -118,6 +118,11 @@ const BALANCE_READING: LedgerReading = {
   kind: "BALANCE", civilization: "CHINESE", merit: 24, demerit: 9, balance: 15,
 };
 
+const THRESHOLD_READING: LedgerReading = {
+  kind: "THRESHOLD", civilization: "EGYPTIAN",
+  heart_weight: 18, counterweight: 1, heavier_than_feather: true,
+};
+
 const SENTENCE_READING: LedgerReading = {
   kind: "SENTENCE", civilization: "GREEK",
   wrongs: 4, benefactions: 3, repayment_multiple: 10, circuit_years: 1000,
@@ -132,6 +137,10 @@ const INHERITANCE: LedgerInheritance = {
   inheritance_demerit_rate: 1,
 };
 
+/** Carries `reading` because the payload does: `QueueLedger` declares it
+ *  optional, but it is `LedgerService.get_ledger_summary`'s body and that
+ *  function always builds one. A fixture without it exercised the fail-closed
+ *  path while claiming to be the ordinary case. */
 const QUEUE_LEDGER: QueueLedger = {
   soul_id: "soul-1",
   soul_name: "张三",
@@ -140,6 +149,13 @@ const QUEUE_LEDGER: QueueLedger = {
   karmic_balance: 42,
   record_count: 0,
   records: [],
+  reading: { kind: "BALANCE", civilization: "CHINESE" },
+};
+
+/** The same ledger under a cosmology that does not net. */
+const QUEUE_LEDGER_THRESHOLD: QueueLedger = {
+  ...QUEUE_LEDGER,
+  reading: { kind: "THRESHOLD", civilization: "EGYPTIAN" },
 };
 
 function renderCard(reading: LedgerReading, inheritance: LedgerInheritance | null) {
@@ -372,6 +388,48 @@ describe("SoulKarmaLedgerCard — every number says which kind it is", () => {
     expect(bars!.querySelectorAll("[data-quantity-scale]")).toHaveLength(0);
   });
 
+  it("draws no balance at all for a cosmology that does not net", () => {
+    // The defect: `karmic_balance` is the 功過格's instrument — "the Chinese
+    // reading served to everyone", in apps/ledger/services.py's own words — and
+    // this block drew it under every panel. An Egyptian card said 「重于费斯之
+    // 羽」and then, one row down in bold green, 「余额 +6 权重」: 18 points of
+    // recorded wrongdoing reading as passing once 24 points of merit were
+    // subtracted from it. `_egyptian_reading`'s docstring is about that exact
+    // number. The Hall of Two Truths has no subtraction for it to come from.
+    //
+    // Asserted as an absence *and* as a text, because absence alone is the
+    // weaker half: `figures()` would go on passing if the row lost its
+    // `data-quantity` attribute and kept printing +6 as a bare numeral, which
+    // is the shape this whole file exists to catch.
+    const { container } = renderCard(THRESHOLD_READING, null);
+
+    expect(figures(container).map((f) => f.field)).not.toContain("karmic_balance");
+    expect(container.textContent).not.toContain("+6");
+    // The raw/decayed rows are untouched: raw-against-decayed is a fact about
+    // `SoulRecord.weight`, true whatever reads it, and nothing about it nets.
+    expect(figures(container).map((f) => f.field)).toEqual(
+      expect.arrayContaining(["raw_merit", "raw_demerit", "merit_score", "demerit_score"])
+    );
+  });
+
+  it("does not read the netted balance out to a screen reader either", () => {
+    // The sr-only 原始余额 is a netted sum too. Guarding only the visible row
+    // would have kept the same claim and moved it somewhere a sighted reviewer
+    // could not see it — which is how it would have survived the next look.
+    const { container } = renderCard(THRESHOLD_READING, null);
+
+    expect(container.querySelector(".sr-only")).toBeNull();
+  });
+
+  it("keeps the balance for the cosmology whose instrument it is", () => {
+    // The other half of the guard, and the one that fails if `kind === "BALANCE"`
+    // is ever tightened into something narrower.
+    const { container } = renderCard(BALANCE_READING, null);
+
+    expect(figures(container).map((f) => f.field)).toContain("karmic_balance");
+    expect(container.querySelector(".sr-only")).not.toBeNull();
+  });
+
   it("gives a Greek soul the same three inheritance figures without the Chinese bars", () => {
     // `f92ed35` made GREEK rebirth-capable, so this card renders for two
     // cosmologies. The bars are the Chinese mechanic; the three sums are not.
@@ -401,6 +459,33 @@ describe("LedgerPanel — the numbers the operator decides on", () => {
       { field: "demerit_score", quantity: "magnitude", text: "-78", scaled: true },
       { field: "karmic_balance", quantity: "magnitude", text: "+42", scaled: true },
     ]);
+  });
+
+  it("shows no balance for a soul whose cosmology does not net", () => {
+    // The third copy of the same defect and the one nearest the decision: this
+    // card has no reading panel, so the three sums are all an operator sees
+    // before choosing a verdict. An Egyptian soul was triaged against 「余额
+    // +42」in bold with nothing on screen to say the weighing never subtracts.
+    const { container } = renderQueueLedger(QUEUE_LEDGER_THRESHOLD);
+
+    expect(figures(container).map((f) => f.field)).not.toContain("karmic_balance");
+    expect(container.textContent).not.toContain("+42");
+    // Marked inapplicable rather than dropped — an operator who is choosing
+    // cannot tell a vanished column from a number nobody computed.
+    expect(container.querySelector('[data-missing="inapplicable"]')).not.toBeNull();
+    // The two sums that are facts about weight stay.
+    expect(figures(container).map((f) => f.field)).toEqual(["merit_score", "demerit_score"]);
+  });
+
+  it("fails closed when the payload carries no reading at all", () => {
+    // `reading` is optional on `QueueLedger` while the backend always sends it,
+    // so an absent one is a payload nobody expected. The safe answer to "which
+    // cosmology is this?" with nothing in hand is the one that does not net.
+    const { reading: _omitted, ...noReading } = QUEUE_LEDGER;
+    const { container } = renderQueueLedger(noReading);
+
+    expect(figures(container).map((f) => f.field)).not.toContain("karmic_balance");
+    expect(container.querySelector('[data-missing="inapplicable"]')).not.toBeNull();
   });
 
   it("keeps the sign inside the numeral and the scale outside it", () => {
