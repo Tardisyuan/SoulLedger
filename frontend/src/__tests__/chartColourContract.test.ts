@@ -371,11 +371,33 @@ describe("no chart picks its own colour", () => {
   );
   const DASHBOARD_SRC = readFileSync(join(process.cwd(), "app/dashboard/page.tsx"), "utf8");
 
+  // Every chart wrapper this file declares, pinned by name.
+  //
+  // A count, or "contains WrappedBarChart", would leave the block below
+  // scanning a file it no longer describes. `WrappedAdminBarChart` and
+  // `WrappedPieChart` used to be here and had zero callers anywhere in the app
+  // — grep found only their own definitions and the export list — so their
+  // copies of `"#f59e0b"` and `"#6b7280"` were literals carried by nothing.
+  // Deleting them turned this pin red, which is the pin doing its job: the
+  // subject set changed and the check that examines it had to be told.
+  const WRAPPERS = [
+    "WrappedBarChart",
+    "WrappedDashboardPieChart",
+    "WrappedSoulLineChart",
+    "WrappedLifespanBarChart",
+  ];
+
   it("the parser is looking at something", () => {
     // Both files must actually contain the wrappers and the series this
     // describe block reasons about, or every assertion below is vacuous.
-    expect(CHARTS_SRC).toContain("WrappedBarChart");
-    expect(CHARTS_SRC).toContain("WrappedAdminBarChart");
+    const found = WRAPPERS.filter((name) => CHARTS_SRC.includes(name));
+    expect(found).toEqual(WRAPPERS);
+    // And nothing else: a fifth wrapper is a fifth place a colour can be
+    // chosen, and it has to be added here before the rules below cover it.
+    const declared = (CHARTS_SRC.match(/return function (Wrapped\w+)/g) ?? []).map((m) =>
+      m.replace("return function ", "")
+    );
+    expect(declared.sort()).toEqual([...WRAPPERS].sort());
     expect(DASHBOARD_SRC).toContain("const tenantData");
   });
 
