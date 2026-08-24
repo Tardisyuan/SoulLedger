@@ -57,9 +57,11 @@ DUPLICATE_NAMES = ["Isis", "Nephthys", "Ammit", "Charon", "Gabriel", "Ra"]
 # Ma'at: seed_mythology, scripts/seed_chinese_data.py, MISTAG_FIXES above,
 # tests/test_seed_mythology.py and frontend/messages/*.json all spell the
 # goddess "Ma'at" with the apostrophe; "Maat" appears only as a bare
-# transliteration — in the Actor.name_egy column, and as one entry in
-# scripts/populate_egyptian_actors.py's "42 Judges" roster, which is where the
-# second row came from. The apostrophe spelling is therefore canonical and the
+# transliteration — in the Actor.name_egy column, and as one entry in the
+# "42 Judges" roster that scripts/populate_egyptian_actors.py used to carry,
+# which is where the second row came from. That script is deleted; the row it
+# wrote outlives it in databases seeded before the deletion, which is why this
+# merge still has work to do. The apostrophe spelling is canonical and the
 # "Maat" row is the one that gets merged away.
 SPELLING_MERGES = [("Maat", "Ma'at", "EGYPTIAN")]
 

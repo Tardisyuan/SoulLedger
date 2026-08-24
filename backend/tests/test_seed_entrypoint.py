@@ -298,32 +298,95 @@ def test_pluto_stays_unseeded():
     )
 
 
-def test_the_second_copy_of_the_seed_tables_has_not_come_back():
-    """No module under backend/scripts/ may redeclare the seed tables.
+# Every `.py` directly under backend/scripts/, pinned.
+#
+# This list is the guard for the two checks below, and it is here because the
+# previous version of this file needed one and did not have it. Both checks are
+# `assert not <collection>` over `SCRIPTS_DIR.glob("*.py")`: with an empty or
+# renamed directory they scan nothing, find nothing, and report a clean pass —
+# indistinguishable at review time from a check that looked and was satisfied.
+# A pinned inventory turns "there was nothing to examine" from a silent green
+# into a stated fact, and makes a newly added script fail once, here, with a
+# message pointing at the rule it now has to satisfy.
+#
+# Empty today, and that is the whole intent: the seeding entry point is
+# `manage.py seed_mythology` and nothing else.
+SCRIPTS_TODAY: list[str] = []
 
-    The whole failure was two hand-maintained copies of the same rows. This is
-    the shape check for a third: a module-level ``*_REALMS`` / ``*_ACTORS``
-    table under scripts/ is a copy of what ``seed_mythology`` owns, wherever it
-    came from.
+# Writing canon means calling one of these on one of those.
+CANON_MODELS = {"Actor", "Realm"}
+WRITE_METHODS = {"create", "get_or_create", "update_or_create", "bulk_create"}
+
+
+def test_the_scripts_inventory_is_what_these_checks_believe_it_is():
+    """The guard for the two checks below — see SCRIPTS_TODAY."""
+    present = sorted(path.name for path in SCRIPTS_DIR.glob("*.py"))
+    assert present == SCRIPTS_TODAY, (
+        f"backend/scripts/ holds {present}; this file expects {SCRIPTS_TODAY}. "
+        f"A script here is a second place canon can be written from, which is "
+        f"the failure this whole file records. If the new one genuinely belongs, "
+        f"add its name above and make sure it satisfies "
+        f"test_no_script_writes_canon_rows and "
+        f"test_scripts_only_name_realm_codes_that_are_alive_after_seeding."
+    )
+
+
+def _canon_writes_in(tree):
+    """`Model.objects.<write>(...)` calls for a canon model, anywhere in the file.
+
+    `ast.walk`, not `tree.body`. The check this replaces looked only at
+    module-level assignments whose *name* ended in `_REALMS` / `_ACTORS`, and
+    both halves of that were escapable — the copy that was actually sitting in
+    this directory declared `actors_to_create` inside `main()`, so it matched
+    neither the scope nor the naming convention and the check stayed green over
+    five rows of actor canon that disagreed with the command on two of them.
+
+    Matching the write rather than the table is the point. A table is a shape
+    somebody has to have named a certain way; a call to
+    `Actor.objects.get_or_create` is what a second seeder unavoidably does, and
+    it does not care what the local variable holding its rows is called.
     """
-    copies = {}
-    for path in sorted(SCRIPTS_DIR.glob("*.py")):
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-        names = sorted({
-            target.id
-            for node in tree.body
-            if isinstance(node, ast.Assign)
-            for target in node.targets
-            if isinstance(target, ast.Name)
-            and target.id.endswith(("_REALMS", "_ACTORS"))
-        })
-        if names:
-            copies[str(path.relative_to(REPO_ROOT))] = names
+    writes = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not isinstance(func, ast.Attribute) or func.attr not in WRITE_METHODS:
+            continue
+        # <Model>.objects.<write> or <Model>.all_objects.<write>
+        manager = func.value
+        if not isinstance(manager, ast.Attribute):
+            continue
+        model = manager.value
+        if isinstance(model, ast.Name) and model.id in CANON_MODELS:
+            writes.add(f"{model.id}.{manager.attr}.{func.attr}")
+    return sorted(writes)
 
-    assert not copies, (
-        f"Seed tables have reappeared under backend/scripts/: {copies}. The realm "
-        f"and actor canon lives in apps/actors/management/commands/seed_mythology.py "
-        f"and nowhere else — a second copy has to be edited in step by hand, and "
-        f"the copy that gets forgotten is the one that silently overwrites the "
-        f"other on the next deploy."
+
+def test_no_script_writes_canon_rows():
+    """No module under backend/scripts/ may seed realms or actors.
+
+    The whole failure was two hand-maintained copies of the same rows, and the
+    copy nothing covered was the one the deploy path ran. This is the shape
+    check for a third — stated as "does it write canon" rather than "does it
+    declare a table named like a seed table", because the version that asked
+    the second question was passing while `populate_egyptian_actors.py` sat in
+    this directory writing five actors through `Actor.objects.get_or_create`,
+    two of which contradicted `apps/actors/mythology/actors_egyptian.py`
+    (Horus as JUDGE against a sourced CONDUIT, Ammit in EG_ANNIHILATION against
+    EG_HALL_TWO_TRUTHS).
+    """
+    offenders = {}
+    for path in sorted(SCRIPTS_DIR.glob("*.py")):
+        writes = _canon_writes_in(ast.parse(path.read_text(encoding="utf-8")))
+        if writes:
+            offenders[str(path.relative_to(REPO_ROOT))] = writes
+
+    assert not offenders, (
+        f"Scripts under backend/scripts/ write canon rows: {offenders}. The realm "
+        f"and actor canon lives in apps/actors/mythology/ and is seeded by "
+        f"apps/actors/management/commands/seed_mythology.py and nowhere else — a "
+        f"second writer has to be edited in step by hand, and the copy that gets "
+        f"forgotten is the one that silently overwrites the other on the next "
+        f"deploy."
     )

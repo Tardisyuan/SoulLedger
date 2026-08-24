@@ -47,7 +47,10 @@ EXPECTED_ALIASES = {
         # 「欧」 vs 「奥」 — the case this feature was built for.
         "Osiris": ["欧西里斯"],
         # ḥr transliterated two ways: `name_egy` is "Hor", and
-        # scripts/populate_egyptian_actors.py writes "Heru".
+        # scripts/populate_egyptian_actors.py wrote "Heru" before it was
+        # deleted. The alias outlives the script on purpose — a database seeded
+        # while it existed still holds "Heru", and an operator who searches the
+        # spelling they were given should still find the god.
         "Horus": ["Heru"],
     },
     "GREEK": {
