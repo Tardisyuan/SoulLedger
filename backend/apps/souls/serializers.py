@@ -100,6 +100,24 @@ def _reject_errors(problems) -> None:
         raise serializers.ValidationError(messages)
 
 
+#: The two Inferno circles no deed can reach, and why. Both carry
+#: `aristotle: None` in the EU-INF corpus — Virgil's tripartition at Inf. XI
+#: gives them no heading, which is the corpus saying they are not sins of a kind.
+NOT_A_DEED_CIRCLES = {
+    1: (
+        "Limbo (Inf. IV) holds virtuous pagans and the unbaptised — those who "
+        "'did not sin, and yet had merit'. It is not a punishment; Virgil is "
+        "there himself."
+    ),
+    6: (
+        "The sixth circle punishes a belief held in life — the Epicureans 'who "
+        "with the body make the spirit die' (Inf. X.13-15) — not a deed done. "
+        "It is also not blasphemy, which is Inf. XIV, the third ring of the "
+        "seventh circle."
+    ),
+}
+
+
 class SoulRecordSerializer(serializers.ModelSerializer):
     # Backed by event_year/event_month/event_day (BCE-capable) rather than a
     # single DateField — see apps.souls.fields.HistoricalDateField.
@@ -127,6 +145,9 @@ class SoulRecordSerializer(serializers.ModelSerializer):
             # the whole of souls/0028 would have been inert on the write path
             # that actually exists.
             "statute_clause", "occurrence_count",
+            # Which Inferno article a deed belongs under — see
+            # SoulRecord.inferno_article and DispositionService.
+            "inferno_article",
         ]
         read_only_fields = ["id", "recorded_at"]
 
@@ -209,6 +230,53 @@ class SoulRecordSerializer(serializers.ModelSerializer):
             }
             for p in problems
         ]
+
+    def validate_inferno_article(self, value):
+        """A citation must resolve, and must not name a circle that is not a deed.
+
+        `_deepest_cited_circle` reads the circle off the cited Statute, so an
+        unresolvable code contributes nothing and silently leaves the soul on
+        the culpa ladder — the ladder this field exists to replace. Refusing on
+        write is what makes "this deed is classified" mean it.
+
+        LIMBO AND HERESY ARE REFUSED BY NAME. Their articles exist in the corpus
+        and carry `aristotle: None`, because Virgil's tripartition at Inf. XI
+        gives them no heading: Limbo (Inf. IV) holds those who "did not sin, and
+        yet had merit" — it is not a punishment, Virgil is there himself — and
+        the sixth circle punishes a belief held in life, not a deed done. Both
+        are facts about a person and live on `Soul` as `baptism` and
+        `denied_immortality`.
+
+        Accepting them here would let a deed sort a soul into Limbo, which is
+        the exact contradiction `tests/test_european_hell_basis.py` pinned: a
+        petty fraud landing among the virtuous pagans because its weight was
+        small.
+        """
+        value = (value or "").strip()
+        if not value:
+            return ""
+
+        from apps.judgment.models import Statute
+
+        statute = Statute.all_objects.filter(code=value).first()
+        if statute is None:
+            raise serializers.ValidationError(
+                f"No Inferno article with code {value!r}. Codes come from the "
+                f"seeded EU-INF-* corpus — the nine circles (EU-INF-C1 … C9) "
+                f"and their subdivisions (EU-INF-C7-G1, EU-INF-C8-B2, "
+                f"EU-INF-C9-Z1 …). An unresolvable citation reads as "
+                f"unclassified and leaves the soul on the culpa ladder."
+            )
+
+        circle = (statute.payload_json or {}).get("circle")
+        if circle in NOT_A_DEED_CIRCLES:
+            raise serializers.ValidationError(
+                f"{value} is in circle {circle}, which is not something a deed "
+                f"can put a soul in. {NOT_A_DEED_CIRCLES[circle]} Record it on "
+                f"the soul instead — Soul.baptism for Limbo, "
+                f"Soul.denied_immortality for the sixth circle."
+            )
+        return value
 
     def validate(self, attrs):
         """Check the event date against the soul, and the granularity pair.
