@@ -51,6 +51,7 @@ import io
 import pytest
 from django.core.management import call_command
 
+from apps.actors.mythology.realms import GREEK_REALMS
 from apps.disposition.models import Disposition
 from apps.disposition.services import DispositionService
 from apps.judgment.models import Judgment, Verdict
@@ -262,6 +263,71 @@ def test_the_gongguoge_partition_does_not_reach_a_greek_soul(make_greek_soul):
 # --------------------------------------------------------------------------
 # 2. The circuit: Republic X's norm, wired to the two constants that carry it
 # --------------------------------------------------------------------------
+
+
+# The Greek realms this system seeds, and the ones it deliberately does not.
+#
+# Three rows, all from Gorgias 524a: the meadow the judging happens on and the
+# two roads out of it. `apps/actors/mythology/realms.py` states that basis on
+# the rows themselves — GR_TARTARUS says in as many words that it is "the
+# Gorgias one" and why it is not Virgil's.
+GREEK_REALM_CODES = ["EU_PLATO_MEADOW", "GR_ISLES_OF_THE_BLESSED", "GR_TARTARUS"]
+
+# Named here so their absence is a decision with a citation attached rather
+# than a gap someone fills in good faith. Each entry is (code, why not).
+GREEK_REALMS_DELIBERATELY_ABSENT = {
+    "GR_ASPHODEL": (
+        "Homer's asphodel field (Od. 11.538-540) is where Achilles' shade walks "
+        "— a hero, not a middling soul. Homer draws no line between it and "
+        "anywhere else, and the Tartarus/Asphodel/Elysium three-way split is a "
+        "later systematization, mostly modern; docs/lore-verification/"
+        "verify-greek.md records both findings and the source it cites for the "
+        "split self-declares the relationship as uncertain. Seeding it as a "
+        "NEUTRAL destination would invent a third road out of a fork whose own "
+        "sentence names two, which is the mistake EG_AM_TYAT was retired for."
+    ),
+    "GR_ELYSIUM": (
+        "Homer's Elysian plain (Od. 4.563-568) is an exemption from death "
+        "granted to particular men, not a reward a life earns; Pindar's Isles "
+        "(Ol. 2) require three just lives on either side of the grave. "
+        "GR_ISLES_OF_THE_BLESSED already carries the Gorgias destination and "
+        "records both variants in its description. A second row would be the "
+        "same place under a different author's name."
+    ),
+}
+
+
+def test_the_greek_realms_are_exactly_the_fork_and_its_two_roads():
+    """The subject set, pinned — not counted and not sampled.
+
+    `GREEK_REALMS` is where a fourth Greek realm would land, and a fourth realm
+    is a fourth destination a judge could send a soul to. Pinning the list by
+    name means adding one fails here first, with the basis stated above it,
+    rather than being noticed later as a routing surprise.
+    """
+    assert sorted(code for code, *_ in GREEK_REALMS) == sorted(GREEK_REALM_CODES)
+
+
+@pytest.mark.parametrize("code", sorted(GREEK_REALMS_DELIBERATELY_ABSENT))
+def test_a_greek_realm_this_system_refuses_stays_refused(code):
+    """An absence with no test behind it reads as an oversight.
+
+    And the obvious repair for an oversight is to add the row — which is
+    precisely the change the absence exists to prevent. Same device as
+    `test_set_stays_out_of_the_judgment` and the unattested-realm check: the
+    reason travels in the failure message, so whoever hits this reads the
+    evidence before deciding to overrule it.
+    """
+    seeded = [c for c, *_ in GREEK_REALMS]
+    assert code not in seeded, (
+        f"{code} is seeded. It is deliberately absent: "
+        f"{GREEK_REALMS_DELIBERATELY_ABSENT[code]} If a basis change has been "
+        f"decided — Gorgias plus Aeneid 6 is the live proposal in "
+        f"docs/lore-verification/verify-greek.md §8 route B — record that "
+        f"decision on the realm rows and update this test, rather than adding "
+        f"the row and leaving two documents disagreeing about which author "
+        f"this cosmology follows."
+    )
 
 
 def test_greek_souls_are_rebirth_capable():
