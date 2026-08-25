@@ -45,6 +45,7 @@ from apps.judgment.models import (
     StatutePolarity,
 )
 from apps.judgment.services import CitationRefusedError, StatuteCitationService
+from apps.judgment.views import StatuteViewSet
 from apps.souls.models import Civilization, Soul, SoulState
 from apps.tenants.models import Tenant
 
@@ -998,3 +999,180 @@ class TestWithdrawalMigration:
         migration.forward(registry, None)
         egyptian.refresh_from_db()
         assert egyptian.is_deleted is False
+
+
+# ---------------------------------------------------------------------------
+# How often an article has actually been relied on
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestCitationCount:
+    """`citation_count` — the corpus browser's one ranking signal.
+
+    WHAT IT IS FOR. 175 seeded articles are a list until you can see which ones
+    verdicts actually rest on. That number cannot be read off `Statute`:
+    `JudgmentCitation` is a through-model with its own rows, so it is an
+    annotation, and an annotation over a reverse relation is the one place in
+    this codebase where correct queryset scoping does not carry over.
+
+    HOW LOAD-BEARING THE TENANT FILTER IS — stated precisely, because the
+    tempting overstatement is that it closes a live leak, and it does not.
+    `citation_service` refuses a cross-tenant citation outright
+    (apps/judgment/services.py:50) and stamps the row with `judgment.tenant`
+    (:90), so every citation reachable through the API already shares its
+    article's tenant. What the filter defends against is the ORM-level write
+    that skips the service — a data migration, a management command, a
+    `JudgmentCitation.all_objects.create`, or a future endpoint that forgets
+    the check the service does. This module's own header records that the tenant
+    gaps in this codebase "kept appearing in batches" precisely because each
+    call site was an independent chance to drop a guard; an aggregate with no
+    filter is one such site, and its failure mode is a single wrong integer per
+    row, which is the shape that survives review.
+
+    So: `test_counts_only_this_tenants_citations` builds a state the service
+    would refuse. That is the point of it, and it is why the test says so here
+    rather than reading as though the API could produce that row.
+    """
+
+    @pytest.fixture
+    def cited_statute(self, cn_judgment, cn_statute):
+        JudgmentCitation.objects.create(
+            judgment=cn_judgment, statute=cn_statute, tenant=cn_judgment.tenant
+        )
+        return cn_statute
+
+    def test_reports_the_number_of_citations_for_the_calling_tenant(
+        self, api_client, judge_user, judge_headers, cited_statute
+    ):
+        response = api_client.get("/api/v1/judgment/statutes/", **judge_headers)
+
+        assert response.status_code == 200
+        rows = {row["code"]: row for row in response.data["results"]}
+        assert cited_statute.code in rows, (
+            "The judge's own tenant's article is missing from the corpus list; "
+            "this test cannot say anything about its count."
+        )
+        assert rows[cited_statute.code]["citation_count"] == 1
+
+    def test_counts_only_this_tenants_citations(
+        self, api_client, judge_headers, cited_statute, eg_tenant, cn_soul
+    ):
+        """A citation row stamped with another tenant must not inflate the count.
+
+        The row is written straight through the ORM because the service refuses
+        to write it (see the class docstring). Without the filter on the
+        annotation the count reads 2 — the caller is shown a number computed
+        partly from rows their own queryset correctly excludes.
+        """
+        other = Judgment.objects.create(
+            soul=cn_soul,
+            civilization=Civilization.CHINESE,
+            court="別殿",
+            tenant=eg_tenant,
+        )
+        JudgmentCitation.objects.create(
+            judgment=other, statute=cited_statute, tenant=eg_tenant
+        )
+
+        response = api_client.get("/api/v1/judgment/statutes/", **judge_headers)
+
+        assert response.status_code == 200
+        rows = {row["code"]: row for row in response.data["results"]}
+        assert rows[cited_statute.code]["citation_count"] == 1, (
+            "citation_count included another tenant's citation. A reverse "
+            "aggregate resolves against the relation, not the related model's "
+            "manager, so scoping the statute queryset does not scope this — "
+            "apps/core/tenant.py::tenant_aggregate_filter has to be passed to "
+            "Count(filter=...)."
+        )
+
+    def test_an_uncited_article_reads_zero_not_absent(
+        self, api_client, judge_headers, cn_statute
+    ):
+        """Zero is a real answer here and must be distinguishable from absent.
+
+        `get_citation_count` returns `None` when the annotation is missing —
+        the nested `JudgmentCitationSerializer.statute` path — so the list
+        endpoint returning `None` would be a wiring failure that a truthiness
+        check would read as "uncited".
+        """
+        response = api_client.get("/api/v1/judgment/statutes/", **judge_headers)
+
+        rows = {row["code"]: row for row in response.data["results"]}
+        assert rows[cn_statute.code]["citation_count"] == 0
+        assert rows[cn_statute.code]["citation_count"] is not None
+
+    def test_the_nested_serializer_reports_absent_rather_than_raising(
+        self, cited_statute, cn_judgment
+    ):
+        """Reading a citation must not blow up on the missing annotation.
+
+        `StatuteSerializer` is nested at `JudgmentCitationSerializer.statute`,
+        where the row arrives through the FK with no annotation on it. Declared
+        as an `IntegerField` this would raise `AttributeError` on every citation
+        read; as a method field it reports `None`, which is the true statement.
+        """
+        from apps.judgment.serializers import JudgmentCitationSerializer
+
+        citation = JudgmentCitation.objects.get(
+            judgment=cn_judgment, statute=cited_statute
+        )
+        data = JudgmentCitationSerializer(citation).data
+
+        assert data["statute"]["citation_count"] is None
+
+    def test_the_annotated_list_is_still_ordered(self, rf, judge_user):
+        """Annotating must not cost the corpus its order.
+
+        `annotate()` with an aggregate **discards** `Meta.ordering`: Django
+        drops the model default rather than let it enter the GROUP BY, so the
+        queryset comes back with `.ordered == False` and no ORDER BY in the
+        SQL. DRF then paginates an unordered set — page 2 is a fresh
+        LIMIT/OFFSET over rows the database may hand back in a different order,
+        so articles repeat on one page and vanish from another. For a browser
+        paging through 175 articles that is the feature failing, not a warning.
+
+        Asserted on the viewset's own queryset rather than on two HTTP pages:
+        with a handful of fixture rows both pages fit in one response, so a
+        request-level test would pass against an unordered queryset and prove
+        nothing.
+        """
+        request = rf.get("/api/v1/judgment/statutes/")
+        request.user = judge_user
+        request.tenant = judge_user.tenant
+
+        view = StatuteViewSet()
+        view.request = request
+        view.format_kwarg = None
+
+        qs = view.get_queryset()
+
+        assert qs.ordered is True, (
+            "StatuteViewSet.get_queryset() returns an unordered queryset. "
+            "annotate() discarded Statute.Meta.ordering and nothing restored "
+            "it, so paginating the corpus repeats and drops articles."
+        )
+        assert "ORDER BY" in str(qs.query)
+
+    def test_the_explicit_order_by_is_still_load_bearing(self):
+        """If Django stops discarding Meta.ordering, say so instead of drifting.
+
+        The `order_by` in `get_queryset` exists only because `annotate()`
+        currently throws the model default away. Pinning that premise means a
+        Django upgrade that changes it fails here — with a message saying the
+        line became redundant — rather than leaving a restatement of
+        `Meta.ordering` that silently has to be kept in sync forever for no
+        reason.
+        """
+        from django.db.models import Count as _Count
+
+        assert Statute.objects.all().ordered is True
+        annotated = Statute.objects.all().annotate(
+            _n=_Count("citations", distinct=True)
+        )
+        assert annotated.ordered is False, (
+            "annotate() no longer discards Meta.ordering. The explicit "
+            "order_by in StatuteViewSet.get_queryset is now redundant rather "
+            "than load-bearing — re-read it before keeping or deleting it."
+        )

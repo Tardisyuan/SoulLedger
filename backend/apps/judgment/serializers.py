@@ -33,6 +33,7 @@ class StatuteSerializer(serializers.ModelSerializer):
     display_title = serializers.SerializerMethodField()
     display_text = serializers.SerializerMethodField()
     is_derived = serializers.SerializerMethodField()
+    citation_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Statute
@@ -40,9 +41,27 @@ class StatuteSerializer(serializers.ModelSerializer):
             "id", "code", "civilization", "corpus", "ordinal", "polarity",
             "title_zh", "title_en", "title_egy",
             "text_zh", "text_en", "text_egy",
-            "display_title", "display_text", "is_derived",
+            "display_title", "display_text", "is_derived", "citation_count",
             "source", "source_notes", "payload_json",
         ]
+
+    def get_citation_count(self, obj):
+        """How many times this tenant has cited the article — or ``None``.
+
+        A method field rather than ``IntegerField`` because the annotation is
+        only present on one of this serializer's two paths.
+        ``StatuteViewSet.get_queryset`` adds it; the nested use at
+        ``JudgmentCitationSerializer.statute`` reaches the row through the FK,
+        where no annotation exists and a declared ``IntegerField`` would raise
+        ``AttributeError`` on every citation read.
+
+        ``None``, not ``0``. "Nobody has cited this" and "this response does
+        not carry the count" are different facts, and collapsing them puts a
+        confident zero next to an article that may be the most-cited one in the
+        corpus. The frontend renders the absent case through ``MissingValue``
+        for the same reason.
+        """
+        return getattr(obj, "citation_count", None)
 
     def get_display_title(self, obj):
         return obj.get_localized_title(_locale_from(self.context))
