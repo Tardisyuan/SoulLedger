@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workflowApi, type ApprovalWorkflow, type ApprovalNode, type WorkflowTemplateNode } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -74,7 +73,6 @@ export default function WorkflowPage() {
   const { t } = useI18n();
   const { showToast } = useToast();
 
-  const router = useRouter();
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>("CHINESE_ROUTINE");
   const [workflowInstance, setWorkflowInstance] = useState<ApprovalWorkflow | null>(null);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
@@ -487,10 +485,23 @@ export default function WorkflowPage() {
               </div>
             ) : (
               workflows.map((wf) => (
-                <div
+                /* This row used to be a <div onClick={router.push}> with
+                   cursor-pointer and nothing else: no role, no tabIndex, no
+                   key handler. It looked clickable and was clickable, but Tab
+                   never reached it and Enter was bound to nothing, so the
+                   instance detail page had no keyboard route in at all. A
+                   <Link> is the fix rather than role="button" + tabIndex +
+                   onKeyDown, because this is navigation: the anchor is
+                   focusable natively, announces as a link, and restores
+                   middle-click-to-new-tab and copy-link-address, none of which
+                   a keyboard-emulating div gives back. The card holds no other
+                   interactive element, so there is no nested-<a> problem.
+                   `block` is what keeps the layout identical — an <a> is
+                   inline by default and p-4 would collapse. */
+                <Link
                   key={wf.id}
-                  className="bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))] hover:border-[hsl(var(--color-accent))]/50 transition-colors cursor-pointer"
-                  onClick={() => router.push(`/workflow/${wf.id}`)}
+                  href={`/workflow/${wf.id}`}
+                  className="block bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))] hover:border-[hsl(var(--color-accent))]/50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -518,7 +529,7 @@ export default function WorkflowPage() {
                       )}
                     </div>
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </div>

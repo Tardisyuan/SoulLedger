@@ -415,15 +415,27 @@ describe("WorkflowPage instances tab", () => {
     expect(screen.getAllByText("workflow.appeal_badge")).toHaveLength(1);
   });
 
-  it("navigates to the instance detail when a row is clicked", async () => {
+  /**
+   * The row used to be a <div onClick={router.push}>, and the old version of
+   * this test asserted `mockPush` — which a mouse click satisfies and a
+   * keyboard user never can. Asserting the anchor instead is the point: an
+   * <a href> is the only shape here that Tab reaches and Enter activates, so
+   * checking `href` on an <a> checks the accessibility fix, not just that
+   * something navigates. `closest("a")` would also match a wrapper further up,
+   * so the tab-order assertion below pins that the row itself is focusable.
+   */
+  it("renders each instance row as a focusable link to its detail page", async () => {
     mockedWorkflows.mockResolvedValue({
       data: { results: [{ id: "w9", workflow_name: "Trial A", soul: "Meng", status: "COMPLETED", is_appeal: false }] },
     });
     await openInstances();
 
-    fireEvent.click(await screen.findByText("Trial A"));
-
-    expect(mockPush).toHaveBeenCalledWith("/workflow/w9");
+    const row = (await screen.findByText("Trial A")).closest("a");
+    expect(row).not.toBeNull();
+    expect(row).toHaveAttribute("href", "/workflow/w9");
+    // A negative tabIndex would put the anchor back out of tab order and
+    // re-create the bug behind a tag that looks correct.
+    expect(row).not.toHaveAttribute("tabindex", "-1");
   });
 });
 
