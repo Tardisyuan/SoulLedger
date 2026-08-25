@@ -129,8 +129,8 @@ EUROPEAN_ACTORS = [
     # ferryman of the dead belongs on the mountain of penance. The title also
     # said Styx, which is the Roman poets' river and contradicts this repo's own
     # docs/04; Virgil, Aeneid 6.295-297 and Dante both put him on Acheron.
-    ("Charon", "卡戎", "Charon", "Kharos", ActorRole.CONDUIT, "EU_ACHERON",
-     "冥河渡神卡戎", "冥河渡神卡戎", "Charon - Ferryman of Acheron", "Kharos",
+    ("Charon", "卡戎", "Charon", "Kharon", ActorRole.CONDUIT, "EU_ACHERON",
+     "冥河渡神卡戎", "冥河渡神卡戎", "Charon - Ferryman of Acheron", "Kharon",
      "Ferryman of Acheron - takes the dead across at the threshold of the "
      "underworld (Virgil, Aeneid 6.295-297; Dante, Inferno III; Euripides, "
      "Alcestis 252-256 has the same crossing as a lake). Roman poets often "
