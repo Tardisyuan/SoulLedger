@@ -660,10 +660,19 @@ class TestSeededCorpora:
         )
         assert reused == []
 
-    def test_the_four_seeded_corpora_are_the_whole_inventory(self):
-        """States the whole seeded inventory, so a fifth corpus appearing
+    def test_the_six_seeded_corpora_are_the_whole_inventory(self):
+        """States the whole seeded inventory, so a seventh corpus appearing
         anywhere — under a new enum value, or smuggled in under an existing
         one — fails here rather than being noticed by nobody.
+
+        GORGIAS and REPUBLIC_ER hold 11 each and are TWO because Gorgias and
+        Republic X are two eschatologies: one stamps a soul and stops, the
+        other sentences it to a thousand-year circuit and sends it back to be
+        born. Neither source enumerates anything, so a Greek article is a rule
+        of the court rather than an offence — exactly one of the twenty-two
+        carries OFFENCE polarity, Republic X 615b, which names three wrongs
+        after "for example" and then declines to continue. See
+        tests/test_greek_corpora.py, which holds the substance.
 
         GONGGUOGE holds 73 and not 75: 救濟門 is titled 十二條 and both
         independent transcriptions segment it into 11, 不軌門 is titled 六條 and
@@ -686,6 +695,8 @@ class TestSeededCorpora:
             StatuteCorpus.NEGATIVE_CONFESSION: 42,
             StatuteCorpus.DEADLY_SIN: 7,
             StatuteCorpus.INFERNO: 26,
+            StatuteCorpus.GORGIAS: 11,
+            StatuteCorpus.REPUBLIC_ER: 11,
         }
 
     def test_every_seeded_article_carries_its_provenance(self):
@@ -798,21 +809,30 @@ class TestTranscriptionMechanism:
             Stats,
         )
 
-        # Three corpora are transcribed: the seven capital sins on the terraces
-        # of Purgatorio, 《太微仙君功過格》 under GONGGUOGE, and the circles of
-        # the Inferno. Written out per civilization rather than as a flat set,
-        # because the value is now a TUPLE of corpora — Europe has two, and the
-        # whole finding behind 8308204 is that its two are separate structures.
-        # If a fourth appears here, read the withdrawal note in
-        # apps/actors/mythology/__init__.py first: HELL_LAW is empty because the
-        # text behind it has no articles, not because nobody has got round to
-        # typing them in, and neither the 功過格 nor the Inferno changed that.
+        # Five corpora are transcribed: 《太微仙君功過格》 under GONGGUOGE, the
+        # seven capital sins on the terraces of Purgatorio, the circles of the
+        # Inferno, and Plato's two — the judgement in Gorgias and the circuit
+        # in Republic X. Written out per civilization rather than as a flat
+        # set, because the value is a TUPLE of corpora: two cosmologies here
+        # have two apiece, and in both cases for the same reason — the whole
+        # finding behind 8308204 is that Europe's two are separate structures,
+        # and Greece's two are separate for the identical reason one dialogue
+        # ends where the other circles back.
+        #
+        # If a SIXTH appears here, read the withdrawal note in
+        # apps/actors/mythology/__init__.py first: HELL_LAW is empty because
+        # the text behind it has no articles, not because nobody has got round
+        # to typing them in, and neither the 功過格 nor the Inferno nor Plato
+        # changed that. Egypt is absent from this map on purpose — its 42 are
+        # DERIVED and seeded by `_seed_derived_statutes`, which is the next
+        # test.
         assert {
             label: [entry[0] for entry in entries]
             for label, entries in CIVILIZATION_STATUTES.items()
         } == {
             "chinese": [StatuteCorpus.GONGGUOGE],
             "european": [StatuteCorpus.DEADLY_SIN, StatuteCorpus.INFERNO],
+            "greek": [StatuteCorpus.GORGIAS, StatuteCorpus.REPUBLIC_ER],
         }
 
         row = {

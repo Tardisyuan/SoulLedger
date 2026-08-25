@@ -197,6 +197,35 @@ class StatuteCorpus(models.TextChoices):
         infernal law, which is exactly how the withdrawn HELL_LAW corpus
         started.
 
+      * GORGIAS and REPUBLIC_ER are the GREEK pair, and they are two for the
+        same reason DEADLY_SIN and INFERNO are two. Both are Plato, both are
+        the judgement of the dead, and they do not describe one afterlife:
+        Gorgias 526b-c stamps a soul, sends it to Tartarus or the Isles, and
+        stops — no term, no return, no arithmetic anywhere in it — while
+        Republic X 615a-b sentences it to a thousand-year circuit at tenfold
+        the wrong, and 621a-b sends it back to be born again. A single Greek
+        corpus would assert a terminal sentence AND a return, which is neither
+        dialogue.
+
+        NEITHER SOURCE ENUMERATES, and that is the fact these two were built
+        around. The other four corpora all inherit a series from their
+        document — 73 numbered articles, 42 assessors, 7 terraces, 9 circles.
+        The Platonic myths inherit none, so the article here is a RULE OF THE
+        COURT (see StatutePolarity.PROCEDURE): the reform, the bench, the
+        venue, the rule of evidence, the purpose of punishment, the rate and
+        the unit. Twenty-two articles under GR-GRG-* and GR-ER-*, of which
+        exactly one carries OFFENCE polarity — Republic X 615b, which names
+        three wrongs after "for example" and closes with "any other evil
+        behaviour". That catch-all is NOT a gap to be filled; expanding it is
+        precisely how the withdrawn HELL_LAW corpus was written.
+
+        GREEK'S EMPTINESS WAS THE ONLY UNDECLARED ONE. HELL_LAW is empty and
+        says so. GREEK had no corpus at all, so it had no entry in
+        CORPUS_PROVENANCE and could not have had one — the guard walked
+        StatuteCorpus members, and a civilization that appears in no corpus is
+        invisible to a check that iterates corpora. That guard now walks
+        civilizations.
+
     THE EMPTY VALUE IS KEPT ON PURPOSE. Rows still carry it — the ones 0012
     soft-deleted, and any it refused to touch because a judgment had already
     cited them — and a value that has left the enum is a row whose `corpus` no
@@ -225,6 +254,8 @@ class StatuteCorpus(models.TextChoices):
     NEGATIVE_CONFESSION = "NEGATIVE_CONFESSION", "Declaration of Innocence (Egyptian)"
     DEADLY_SIN = "DEADLY_SIN", "Seven Deadly Sins (European)"
     INFERNO = "INFERNO", "Inferno — the Circles of Dante's Hell (European)"
+    GORGIAS = "GORGIAS", "Gorgias — the Judgement of the Dead (Greek)"
+    REPUBLIC_ER = "REPUBLIC_ER", "Republic X — the Myth of Er (Greek)"
 
 
 #: The one civilization each corpus belongs to. A dict rather than a naming
@@ -236,6 +267,8 @@ CORPUS_CIVILIZATION = {
     StatuteCorpus.NEGATIVE_CONFESSION: Civilization.EGYPTIAN,
     StatuteCorpus.DEADLY_SIN: Civilization.EUROPEAN,
     StatuteCorpus.INFERNO: Civilization.EUROPEAN,
+    StatuteCorpus.GORGIAS: Civilization.GREEK,
+    StatuteCorpus.REPUBLIC_ER: Civilization.GREEK,
 }
 #: Two corpora may share a civilization — Chinese has both the empty HELL_LAW
 #: and the seeded GONGGUOGE, and Europe has both DEADLY_SIN (the terraces) and
@@ -264,10 +297,25 @@ class StatutePolarity(models.TextChoices):
     DENIAL is the Egyptian case and is deliberately not folded into OFFENCE:
     "I have not stolen" is a claim the deceased makes, and what a judgment
     cites is the failure of that claim, not a prohibition on theft.
+
+    PROCEDURE is the Greek case and it answers a different question from the
+    other three. Those three all say which way an article cuts; this one says
+    that it does not cut, because it is not about the soul's account at all.
+    "The judge too shall be naked, that is to say, dead" (Gorg. 523e) is a rule
+    the court is bound by. Filing it as OFFENCE would read as an accusation and
+    filing it as MERIT as a credit; both would be a claim about the soul, and
+    the article makes none.
+
+    IT WAS ADDED BECAUSE A WHOLE COSMOLOGY NEEDED IT, not to round the enum
+    out. Twenty of the twenty-two Greek articles are procedural, because
+    Plato's two myths describe a court and a circuit and never a code of
+    offences — see StatuteCorpus. A Greek judgment cites what the court is
+    obliged to do; there is no Greek equivalent of 殺生 to cite instead.
     """
     OFFENCE = "OFFENCE", "Offence — counts against the soul"
     MERIT = "MERIT", "Merit — counts for the soul"
     DENIAL = "DENIAL", "Denial the deceased must sustain"
+    PROCEDURE = "PROCEDURE", "Rule of the court — neither for nor against"
 
 
 class Statute(AuditUserFields, models.Model):

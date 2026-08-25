@@ -61,7 +61,17 @@ DECAY_RATE = 0.01  # per year — the rate for any cosmology not listed below.
 # weight: `_greek_reading` counts wrongs (Republic X 615a-b repays tenfold per
 # wrong done, and `weight` is this house's own severity scale, not Plato's),
 # and `DispositionService._route_greek` reads the verdict alone, because a fork
-# has two roads and no depth to grade. An entry would be a rate governing
+# has two roads and no depth to grade.
+#
+# THAT SENTENCE OF PLATO'S IS NOW A ROW. It is corpus REPUBLIC_ER, article
+# GR-ER-03, seeded with its Stephanus reference and its multiplier — and
+# GR-ER-05 is the companion that refuses 功過相抵 here, requiting good-doing
+# tenfold on its own road rather than as a subtraction from the term owed on
+# the other. Cited so a reader of this comment can find the text it rests on.
+# NEITHER IS AN INPUT: this function reads SoulRecord rows and never queries
+# Statute, and tests/test_greek_corpora.py holds that boundary behaviourally
+# rather than in prose, because the identical promise in statutes_inferno.py's
+# docstring did not survive `_deepest_cited_circle`. An entry would be a rate governing
 # nothing, and choosing 0.0 for it would additionally assert that Greek deeds
 # do not fade — a doctrine nobody here has argued for, on a mechanic no Greek
 # reading consults.

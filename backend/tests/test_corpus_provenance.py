@@ -49,6 +49,7 @@ from django.core.management import call_command
 
 from apps.actors import mythology
 from apps.judgment.models import Statute, StatuteCorpus
+from apps.souls.models import Civilization
 
 # --------------------------------------------------------------------------
 # The comparison, written out a second time by hand. If this disagrees with
@@ -88,6 +89,18 @@ EXPECTED = {
         "civilization": "european",
         "count": 26,
         "marker": "A SECOND EUROPEAN CORPUS AND NOT MORE ARTICLES IN THE FIRST,",
+    },
+    "GORGIAS": {
+        "nature": "TRANSCRIBED",
+        "civilization": "greek",
+        "count": 11,
+        "marker": "THE SOURCE ITSELF ENUMERATES",
+    },
+    "REPUBLIC_ER": {
+        "nature": "TRANSCRIBED",
+        "civilization": "greek",
+        "count": 11,
+        "marker": "WHY A SECOND GREEK CORPUS AND NOT MORE ARTICLES IN THE FIRST.",
     },
     "HELL_LAW": {
         "nature": "ABSENT",
@@ -131,6 +144,44 @@ def test_every_corpus_in_the_enum_declares_its_provenance():
         f"is transcribed into this repo, derived from a row this repo seeds, or "
         f"absent on purpose — the fabricated HELL_LAW articles were written "
         f"because that question was never asked of a new corpus."
+    )
+
+
+def test_every_civilization_is_accounted_for_by_some_corpus():
+    """The other direction, and the one that was missing.
+
+    The test above walks ``StatuteCorpus`` and asks each member to declare
+    itself. That question cannot be asked of a civilization that appears in no
+    corpus at all — there is no member to iterate — so GREEK sat with zero
+    statutes and no entry anywhere while the suite stayed green. It was the
+    only undeclared emptiness in the system: HELL_LAW is empty too, but it is
+    empty and SAYS SO, and the finding is held in place three lines down.
+
+    An enumeration is only as good as its subject list, and this file had the
+    wrong one. Walking civilizations is what makes "which rulebook does this
+    cosmology judge by" a question the suite asks of all four rather than of
+    however many corpora happen to exist.
+
+    NOT SATISFIED BY A ROW COUNT. A corpus may legitimately have no articles —
+    that is exactly what ABSENT means. What a civilization may not have is no
+    ENTRY: no statement, anywhere, of whether its rulebook was transcribed,
+    derived from other rows, or investigated and found not to exist.
+    """
+    declared = {
+        entry["civilization"] for entry in mythology.CORPUS_PROVENANCE.values()
+    }
+    missing = {
+        member.value for member in Civilization
+        if member.value.lower() not in declared
+    }
+
+    assert not missing, (
+        f"These civilizations judge by no declared rulebook: {sorted(missing)}. "
+        f"Every cosmology needs an entry in CORPUS_PROVENANCE even when it has "
+        f"no articles — HELL_LAW has none and declares ABSENT, and that "
+        f"declaration is the difference between a finding and an oversight. "
+        f"Add a corpus for it, or add an ABSENT entry saying what was looked "
+        f"for and not found."
     )
 
 

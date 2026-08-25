@@ -288,3 +288,33 @@
 ---
 
 *非希腊侧但顺带发现（留给基督教侧代理）*：`seed_mythology.py:156` `EU_HELL_2ND` 的中文别名写作「贪食深渊」（暴食），而英文是「Second Circle - Lust」（色欲）——但丁第二圈是色欲、第三圈才是暴食，中英文对不上。
+
+---
+
+## 附录（2026-08-25）：§7「未能取证」中的一条已取证
+
+本节是**后加的**，不改上面任何一行。上面的报告日期是 2026-08-14，其结论是那一次
+所见；这里只记录后来补上的证据，以免读者据一条已过期的「未取证」判断当前代码在
+无据引用。
+
+- **柏拉图《理想国》10.621a（忘川平原）—— 已取证**，出处：Perseus canonical XML
+  `tlg0059.tlg030.perseus-eng2`（Loeb, Paul Shorey），`<milestone unit="section">`
+  标记逐节定位。文本作 **the Plain of Oblivion（Λήθης πεδίον）** 与
+  **the River of Forgetfulness（Ἀμέλης）**，与 §6 所记「忘川平原的 Ameles 河」相符。
+
+  **并且补上一条 §6 未记的分辨**：Shorey 在 621a 的注中写明，*把那条河本身叫作
+  Lethe 是后世文献的用法*——柏拉图那里，**平原**属于勒忒，**河**叫阿墨勒斯。本系统
+  `GREEK_REALMS` 的 `memory_reset_mechanism="LETHE"` 是本系统枚举成员的名字，不是在
+  主张《理想国》如此称呼那条河；此点记在 `GR-ER-11` 的 `source_notes` 上。
+
+  另有一处 §6 未记而与「一刀切」相关：621a 说众魂**都必须饮下定量**，而
+  「没有被智慧所救的，饮得比必需的多」——**强制但不等量**。`MemoryResetMechanism`
+  只记机制、没有份量的位置，所以这个程度差**没有被建模**，也不应从已播种的值里读出来。
+
+- 其余各条（《神谱》769-773 / 720-745 / 775-806、《奥德赛》10.513-514、
+  《伊利亚特》14.321-322、「品达说 Cerberus 一百头」）**本次仍未取证**，维持不采信。
+
+取证动机：`GORGIAS` 与 `REPUBLIC_ER` 两套 corpus 于本日落库，共 22 条，
+转录英文用 Jowett（Gutenberg 公版），Stephanus 分节用 Perseus/Loeb 定位。
+Gorgias 侧同样按此法逐节核对（Lamb 1925）。详见
+`backend/apps/actors/mythology/statutes_gorgias.py` 与 `statutes_republic.py`。

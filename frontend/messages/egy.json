@@ -804,13 +804,18 @@
     },
     "statute_corpus": {
       "HELL_LAW": "Hell Law (Diyu)",
+      "GONGGUOGE": "Ledger of Merit and Demerit",
       "NEGATIVE_CONFESSION": "Declaration of Innocence",
-      "DEADLY_SIN": "Deadly Sins"
+      "DEADLY_SIN": "Deadly Sins",
+      "INFERNO": "Circles of the Inferno",
+      "GORGIAS": "Gorgias — the Judgement",
+      "REPUBLIC_ER": "Republic X — the Myth of Er"
     },
     "statute_polarity": {
       "OFFENCE": "Offence",
       "MERIT": "Merit",
-      "DENIAL": "Denial"
+      "DENIAL": "Denial",
+      "PROCEDURE": "Rule of the court"
     }
   },
   "audit": {

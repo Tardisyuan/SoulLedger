@@ -43,6 +43,16 @@ const POLARITY_TONE: Record<StatutePolarity, EnumTone> = {
   OFFENCE: "error",
   MERIT: "success",
   DENIAL: "info",
+  // Neither for the soul nor against it. A Greek article is usually a rule the
+  // court is bound by — who judges, where, on what evidence, to what purpose —
+  // so colouring it `error` would read as an accusation the article does not
+  // make. `neutral` is the same tone the `?? "neutral"` fallback below gives an
+  // unknown member, and that is deliberate rather than lazy: a rule of
+  // procedure genuinely carries no charge, so the two cases look alike on
+  // purpose. What distinguishes them is the LABEL, which resolves through
+  // `judgment.statute_polarity` for a known member and reads "unrecognized"
+  // for one no bundle knows.
+  PROCEDURE: "neutral",
 };
 
 export function JudgmentGroundsPanel({ citations }: { citations: JudgmentCitation[] }) {
