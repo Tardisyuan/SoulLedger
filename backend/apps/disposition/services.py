@@ -486,7 +486,15 @@ class DispositionService:
         and the other to Tartarus」. That is the whole geography this method
         has, and it is the whole geography it is allowed to have — the two
         destination rows exist in `GREEK_REALMS` *because* that sentence names
-        them, and nothing else of the Greek underworld is seeded.
+        them.
+
+        The map has since gained one row this passage does not name —
+        `GR_ACHERON`, the crossing, from Aeneid 6 — and that changes nothing
+        here: a crossing is passed through before the judging and no verdict
+        sends a soul to it, so it is not a `_route_greek` outcome and must not
+        become one. See the basis note at the top of `GREEK_REALMS`, which
+        divides the two texts by what each is asked for: Plato supplies the
+        judgment this method performs, Virgil the ground it happens on.
 
         WHY THERE IS NO SEVERITY INPUT. `_route_chinese` takes an unoffset
         demerit figure and `_route_european` takes culpa because both
