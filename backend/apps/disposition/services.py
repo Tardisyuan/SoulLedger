@@ -2,7 +2,7 @@
 Disposition service — creates disposition from judgment verdict.
 Routes to the correct realm based on civilization and verdict.
 """
-from apps.disposition.models import Disposition
+from apps.disposition.models import Disposition, MemoryResetMechanism
 from apps.judgment.models import Judgment, JudgmentMethod, Verdict
 from apps.ledger.services import REBIRTH_CAPABLE_CIVILIZATIONS, LedgerService
 from apps.realms.models import Realm
@@ -137,6 +137,26 @@ class DispositionService:
                 judgment=judgment,
                 destination_realm=realm,
                 is_eternal=(realm.is_eternal if realm else False),
+                # THE REALM SAYS WHAT HAPPENS TO THE MEMORY, AND UNTIL NOW
+                # NOBODY ASKED IT. `is_eternal` was copied off the realm here
+                # and `memory_reset_mechanism` was not, so every auto-created
+                # disposition took the field's default of NONE — which made
+                # 孟婆汤 on twelve Chinese realms, the Egyptian SPELL on five
+                # and Dante's LETHE on two into seed data that nothing read.
+                # `apps/reincarnation/services.py`'s `if disposition
+                # .memory_reset != "NONE"` branch could not fire, so a soul
+                # that drank the broth at the tenth court was reborn carrying
+                # the description of the life it had just left.
+                #
+                # A disposition with no realm keeps NONE, which is the same
+                # answer as before for the case realms/0018 documents: an
+                # unmapped tenant produces `destination_realm=None`, and
+                # inventing a mechanism for a destination that does not exist
+                # would be worse than the gap this fixes.
+                memory_reset=(
+                    realm.memory_reset_mechanism if realm
+                    else MemoryResetMechanism.NONE
+                ),
                 notes=f"Auto-created from {civilization} judgment {judgment.id}",
                 tenant=soul.tenant,
             )

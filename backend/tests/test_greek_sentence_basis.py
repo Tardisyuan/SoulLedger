@@ -348,6 +348,88 @@ def test_a_greek_realm_this_system_refuses_stays_refused(code):
     )
 
 
+@pytest.mark.django_db
+def test_a_disposition_carries_its_realms_memory_reset(make_greek_soul):
+    """The copy that was missing, and it was missing for every civilization.
+
+    `create_from_judgment` copied `is_eternal` off the destination realm and
+    not `memory_reset_mechanism`, so every auto-created disposition took the
+    field's default of NONE. That made 孟婆汤 on twelve Chinese realms, the
+    Egyptian SPELL on five and Dante's LETHE on two into seed data nothing
+    read: `apps/reincarnation/services.py`'s `if disposition.memory_reset !=
+    "NONE"` branch could never fire, so a soul that drank the broth at the
+    tenth court was reborn carrying the description of the life it had left.
+
+    Asserted as EQUALITY WITH THE REALM rather than as `== "LETHE"`, and over
+    TWO ROUTES with different mechanisms. The first version of this test used
+    one verdict, and its own docstring claimed the equality form would catch a
+    disposition that hardcoded the right answer while ignoring the realm — it
+    would not have. FAILED routes to GR_TARTARUS, which is LETHE, so a
+    hardcoded `memory_reset=LETHE` satisfied the equality by coincidence and
+    mutation showed it passing. One route can only ever compare a constant to
+    itself; the second route is what makes the comparison mean anything.
+    """
+    call_command("seed_mythology", stdout=io.StringIO(), stderr=io.StringIO())
+
+    # FAILED → GR_TARTARUS (LETHE); PURGATORY → the meadow (NONE). Two
+    # mechanisms, so no single hardcoded value satisfies both.
+    seen = {}
+    for label, verdict in (("failed", Verdict.FAILED), ("unsettled", Verdict.PURGATORY)):
+        soul = make_greek_soul(f"忘川探针·{label}")
+        judgment = Judgment.objects.create(
+            soul=soul, verdict=verdict, tenant=soul.tenant
+        )
+        disposition = DispositionService.create_from_judgment(judgment)
+
+        assert disposition.destination_realm is not None, (
+            f"{label}: no realm was routed to, so this asserts nothing"
+        )
+        realm = disposition.destination_realm
+        assert disposition.memory_reset == realm.memory_reset_mechanism, (
+            f"{label}: disposition.memory_reset is {disposition.memory_reset!r} "
+            f"while its realm {realm.realm_code} says "
+            f"{realm.memory_reset_mechanism!r}. The realm is what states the "
+            f"mechanism; a disposition that does not carry it leaves every "
+            f"seeded mechanism unread."
+        )
+        seen[label] = realm.memory_reset_mechanism
+
+    assert len(set(seen.values())) == 2, (
+        f"both routes landed on the same mechanism ({seen}), so this test is "
+        f"comparing a constant to itself again. Pick verdicts whose realms "
+        f"differ, or the equality above proves nothing."
+    )
+
+
+@pytest.mark.django_db
+def test_both_greek_roads_reset_memory_and_the_two_thresholds_do_not(db):
+    """Which Greek realms carry the drink, and which deliberately do not.
+
+    Both destinations do, because both roads end in rebirth (`is_eternal` is
+    False on each, GREEK is rebirth-capable) and both halves of this
+    cosmology's basis put a forgetting-drink on that path — Republic X 621a-b
+    at the river Ameles, Aeneid 6.713-715 at Lethe. It is the one place the
+    two texts agree without needing the division rule.
+
+    The meadow and the crossing do not, and that is the same shape the Chinese
+    table already uses: 孟婆汤 sits on every court a soul can be sentenced to
+    and DY_01_HEAVEN — the one destination that sends nobody back — is NONE.
+    Nobody is sentenced to the meadow or the crossing, so no rebirth follows
+    from either.
+    """
+    call_command("seed_mythology", stdout=io.StringIO(), stderr=io.StringIO())
+    mechanisms = dict(
+        Realm.objects.filter(civilization="GREEK")
+        .values_list("realm_code", "memory_reset_mechanism")
+    )
+    assert mechanisms == {
+        "EU_PLATO_MEADOW": "NONE",
+        "GR_ACHERON": "NONE",
+        "GR_ISLES_OF_THE_BLESSED": "LETHE",
+        "GR_TARTARUS": "LETHE",
+    }, mechanisms
+
+
 def test_greek_souls_are_rebirth_capable():
     """Republic X 617d-620d: the soul chooses a new life at the Spindle.
 
