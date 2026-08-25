@@ -227,13 +227,23 @@ def test_the_two_granularities_are_indistinguishable_to_this_system(
 
 
 @pytest.mark.django_db
-def test_the_reading_admits_the_rule_is_not_applied(scattered_giver_and_thief):
-    """The absence is reported, not omitted.
+def test_the_reading_says_the_rule_did_not_reach_this_ledger(scattered_giver_and_thief):
+    """A False here means "nothing was recorded finely enough", not "no rule".
 
-    A reading that quoted both halves of the 凡例 sentence in `rule_zh` and said
-    nothing further would be read as applying both. This is the same shape
-    `_european_reading` uses for `poena`: report what cannot be computed, with
-    the reason, rather than substitute a proxy for it.
+    The name of this test used to be `..._admits_the_rule_is_not_applied`, and
+    that was accurate while a SoulRecord could not carry granularity at all.
+    souls/0028 added the two columns, so the same False now has TWO possible
+    meanings and only one of them is this fixture's: these records carry neither
+    `statute_clause` nor `occurrence_count`, so the rule had nothing to bite on.
+    The other meaning — recorded, tested, and did not bite — is the four cases
+    lower down this file.
+
+    `granularity_unavailable` is what keeps them apart, and that is why it is
+    still reported after the columns landed. Deleting it on the day they arrived
+    would have made the two indistinguishable in exactly the databases where the
+    distinction matters most: the ones that have not begun filling them in. Same
+    shape `_european_reading` uses for `poena` — report what could not be
+    computed, with the reason, rather than substitute a proxy.
     """
     non_fungible = LedgerService.get_ledger_summary(
         scattered_giver_and_thief
