@@ -151,8 +151,30 @@
   --color-ink-subtle: 220 8% 50%;
   --color-ink-tertiary: 220 6% 60%;
   --color-accent: 38 92% 50%;
-  /* 32% lightness: 4.83:1 against light-mode white, vs 2.14:1 for
-     --color-accent at the same hue. */
+  /* 34% lightness: 5.05:1 against light-mode white, vs 2.13:1 for
+     --color-accent at the same hue.
+
+     BOTH NUMBERS IN THE PREVIOUS VERSION OF THIS NOTE WERE WRONG, IN
+     DIFFERENT WAYS, AND THE VALUE IS THE HALF THAT WAS RIGHT. It read
+     "32% lightness: 4.83:1", while the token declares 34% and 34% measures
+     5.05:1. There is no reading that reconciles them: 32% measures 5.53:1 and
+     4.83:1 belongs to 35% (4.80:1). The token was left at 34% rather than
+     moved to 35%, because 34% is the value that shipped and the more
+     accessible of the two — "fixing" the token to match the comment would
+     have LOWERED contrast to satisfy a sentence.
+
+     WHERE 4.83 CAME FROM, since it is not arbitrary: it appears four more
+     times in this file, on the `150 62% 28%` tokens below, whose own note says
+     those figures were "re-measured against the tinted background, not the
+     flat swatch". Against white those tokens measure 5.78:1, so 4.83 is a
+     tinted-background figure that arrived here with its background silently
+     changed to "light-mode white".
+
+     The companion figure was never wrong: --color-accent hsl(38 92% 50%)
+     measures 2.1328:1 against white, which the old note gave as 2.14. So the
+     original measurement was sound and only this line drifted — which is why
+     src/__tests__/inkOnSurfaceContract.test.ts reproduces BOTH figures from
+     the stylesheet rather than trusting either. */
   --color-accent-ink: 32 92% 34%;
   --color-accent-hover: 43 96% 58%;
   /* Same 258deg hue, dropped from 76% to 48% lightness for light surfaces.

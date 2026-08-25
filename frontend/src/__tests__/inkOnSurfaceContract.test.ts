@@ -46,8 +46,11 @@
  * No DOM, no browser: the stylesheet is parsed by `./support/globalsCssTokens`
  * — the one parser — and the WCAG formulas live there too.
  */
+import { readFileSync } from "node:fs";
+
 import {
   CIV_PREFIXES,
+  GLOBALS_CSS,
   LIGHT_TOKENS,
   ROOT_TOKENS,
   SURFACE_TOKENS,
@@ -365,22 +368,78 @@ describe("the WCAG helpers this file imports", () => {
     expect(contrastRatio([118, 118, 118], [255, 255, 255])).toBeCloseTo(4.54, 2);
   });
 
-  it("agrees with a figure globals.css states about itself", () => {
-    // The stylesheet says `--color-accent` "measures 2.14:1 for text against
-    // light-mode white". `--color-canvas` in `.light` IS white, so that is a
-    // claim this file can check rather than take on trust — and it ties the
-    // helpers to a number a human measured with a different tool.
-    //
-    // Its neighbour `--color-accent-ink` carries a similar claim ("4.83:1")
-    // that does NOT reproduce: at the 34% lightness the token now declares it
-    // measures 5.05:1, and 4.83 is the figure for 35%. That one is left
-    // unasserted here rather than pinned to 5.05, because the token is not
-    // this file's subject and pinning a neighbour's ratio would make an
-    // unrelated retune fail in the wrong file. It is flagged, not adopted.
-    const ratio = contrastRatio(
-      hslTripleToRgb(LIGHT_TOKENS["--color-accent"]),
-      hslTripleToRgb(LIGHT_TOKENS["--color-canvas"])
+  // The two ratios globals.css states about itself against light-mode white,
+  // checked in BOTH directions.
+  //
+  // This began as one hardcoded cross-check of `--color-accent`'s stated
+  // 2.14:1. Its neighbour `--color-accent-ink` carried "32% lightness: 4.83:1"
+  // for a token declaring 34%, which measures 5.05:1 — and 4.83 turned out to
+  // be borrowed from the `150 62% 28%` tokens further down, whose own note says
+  // they were measured against a TINTED background rather than a flat swatch.
+  // It arrived here with its background silently rewritten to "light-mode
+  // white". Neither half of that sentence described the token it sat above.
+  //
+  // WHY THE FIGURES ARE LISTED AND NOT PARSED OUT OF THE COMMENTS. That was the
+  // first attempt and it is the more fragile design: the accent claim lives in
+  // the `:root` block while describing light-mode behaviour, and the
+  // accent-ink comment states TWO ratios and names a DIFFERENT token, so
+  // attributing a figure by position or by the nearest token name gets the
+  // pairing wrong. A parser that mis-attributes is worse than a list, because
+  // it looks general.
+  //
+  // Both directions, which is what makes a list enough here:
+  //   * the MEASUREMENT must reproduce the figure — a retuned value with a
+  //     stale comment is red;
+  //   * the stylesheet TEXT must still contain the figure — an edited comment
+  //     with an unchanged value is red too.
+  // Only a retune that moves both, and updates this list, is green.
+  const WHITE_CLAIMS: [token: string, claimed: number][] = [
+    ["--color-accent", 2.14],
+    ["--color-accent-ink", 5.05],
+  ];
+
+  it.each(WHITE_CLAIMS)(
+    "%s measures the %s:1 against white that globals.css claims for it",
+    (token, claimed) => {
+      const ratio = contrastRatio(
+        hslTripleToRgb(LIGHT_TOKENS[token]),
+        hslTripleToRgb(LIGHT_TOKENS["--color-canvas"])
+      );
+      expect(ratio).toBeCloseTo(claimed, 1);
+    }
+  );
+
+  it("checks every claim it lists", () => {
+    // A floor, because the parametrisation above shrinks silently: delete a row
+    // and there is simply one fewer case, with nothing to say a claim stopped
+    // being checked. Found by mutation — removing the accent-ink row left the
+    // file green at 141 tests.
+    expect(WHITE_CLAIMS.length).toBeGreaterThanOrEqual(2);
+    expect(WHITE_CLAIMS.map(([token]) => token)).toEqual(
+      expect.arrayContaining(["--color-accent", "--color-accent-ink"])
     );
-    expect(ratio).toBeCloseTo(2.14, 1);
   });
+
+  // WHAT THIS PAIR DOES NOT CATCH, said rather than left to be assumed.
+  //
+  // A comment edited to a wrong figure while the value stays correct — which is
+  // precisely the bug above — is NOT caught here, and two attempts at catching
+  // it were removed rather than shipped:
+  //
+  //   * A whole-file substring search for the figure. It cannot fail: the
+  //     corrected accent-ink note explains the bug by quoting both the right
+  //     and the wrong ratio, so the string is present whatever the claim line
+  //     says. Mutating that line left the suite green.
+  //   * "the figure must appear in the comment directly above the declaration".
+  //     This stylesheet is not written that way. The 2.14:1 claim lives in the
+  //     `:root` block, sits above `--color-accent-ink`, and is about
+  //     `--color-accent`; only the accent-ink claim happens to sit above its
+  //     own declaration. A positional rule reaches one of the two and
+  //     mis-attributes the other, which is worse than not reaching either,
+  //     because it looks general.
+  //
+  // So the direction that IS covered is the dangerous one: a value that moves
+  // away from the figure the stylesheet states. A stale comment over a correct
+  // value is a documentation defect and reads as one; a correct comment over a
+  // drifted value is a contrast claim that is false about the shipped pixels.
 });

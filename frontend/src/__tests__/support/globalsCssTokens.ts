@@ -43,6 +43,31 @@ const css = readFileSync(GLOBALS_CSS, "utf8");
  * test that silently stops finding what it compares is worse than no test, and
  * `{}` would make every "both sides agree" assertion vacuously green.
  */
+/**
+ * A block body with its CSS comments removed.
+ *
+ * THE BUG THIS EXISTS FOR. `readTokens` scanned block bodies for
+ * `(--[\w-]+)\s*:\s*([^;]+);` including their comments. In `app/globals.css`
+ * the note above `--color-karma-merit` reads "Renamed from
+ * --color-merit/--color-demerit: this pair now has its own semantic identity
+ * …". The regex matched `--color-demerit:` INSIDE that comment, and `[^;]+`
+ * then ran forward to the next semicolon — the one ending the real
+ * `--color-karma-merit: 150 62% 46%;` declaration.
+ *
+ * So `ROOT_TOKENS` carried a phantom `--color-demerit` holding a paragraph of
+ * prose, and `--color-karma-merit` was `undefined` — invisible to every
+ * contract test importing this module. Any assertion shaped "every karma token
+ * is X" skipped merit silently, which is the clean-pass-over-nothing-examined
+ * class this repository is built around.
+ *
+ * Only the DARK declaration was swallowed, because only it carries that
+ * comment; `.light` had the token all along. So the two themes disagreed about
+ * whether a token existed, and nothing said so.
+ */
+function stripComments(body: string): string {
+  return body.replace(/\/\*[\s\S]*?\*\//g, "");
+}
+
 export function readTokens(selector: string): Record<string, string> {
   const blocks = [...css.matchAll(new RegExp(`${selector}\\s*\\{([^}]*)\\}`, "g"))];
   if (blocks.length === 0) {
@@ -53,7 +78,7 @@ export function readTokens(selector: string): Record<string, string> {
   }
   const tokens: Record<string, string> = {};
   for (const block of blocks) {
-    for (const decl of block[1].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
+    for (const decl of stripComments(block[1]).matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
       tokens[decl[1]] = decl[2].trim();
     }
   }
@@ -74,7 +99,10 @@ export function lastDeclarationOffset(selector: string, name: string): number {
   let offset = -1;
   const decl = new RegExp(`${name}\\s*:\\s*[^;]+;`);
   for (const block of css.matchAll(new RegExp(`${selector}\\s*\\{([^}]*)\\}`, "g"))) {
-    if (decl.test(block[1])) offset = block.index ?? -1;
+    // Comments stripped for the same reason as in `readTokens` above: a
+    // comment naming `--some-token:` would make this report an offset for a
+    // declaration that is not there.
+    if (decl.test(stripComments(block[1]))) offset = block.index ?? -1;
   }
   return offset;
 }
