@@ -18,7 +18,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
-from apps.ledger.fungibility import class_for_category
+from apps.ledger.fungibility import class_for_category, granularity_of
 from apps.ledger.models import SoulRecord  # noqa: F401 — re-exported from souls for BC
 from apps.ledger.readings import get_civilization_reading
 from apps.souls.dates import year_span
@@ -447,16 +447,33 @@ class LedgerService:
             fungibility_class = class_for_category(r.category)
             if r.record_type in ("MERIT", "DEMERIT"):
                 pool = class_totals.setdefault(
-                    fungibility_class, {"merit": 0.0, "demerit": 0.0}
+                    fungibility_class,
+                    {
+                        "merit": 0.0, "demerit": 0.0,
+                        # 零積不抵整發 needs to know which part of each total was
+                        # earned or incurred 一次 — at one stroke — and which was
+                        # reached over several occasions. A pool that carries
+                        # only two sums cannot say, which is why the rule could
+                        # not be applied before these buckets existed: by the
+                        # time `offset_within_classes` sees a class the records
+                        # are gone. See `granularity_of` below for what puts a
+                        # record in which bucket, and why "unknown" is a bucket
+                        # rather than a default.
+                        "merit_by_grain": {"lump": 0.0, "scattered": 0.0, "unknown": 0.0},
+                        "demerit_by_grain": {"lump": 0.0, "scattered": 0.0, "unknown": 0.0},
+                    },
                 )
+                grain = granularity_of(r)
                 if r.record_type == "MERIT":
                     merit += effective_weight
                     merit_count += 1
                     pool["merit"] += effective_weight
+                    pool["merit_by_grain"][grain] += effective_weight
                 else:
                     demerit += effective_weight
                     demerit_count += 1
                     pool["demerit"] += effective_weight
+                    pool["demerit_by_grain"][grain] += effective_weight
 
             record_summaries.append({
                 "id": str(r.id),

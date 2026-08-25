@@ -238,6 +238,98 @@ def class_for_category(category: str) -> str:
     return CATEGORY_FUNGIBILITY.get(category, DEFAULT_CLASS)
 
 
+def granularity_of(record) -> str:
+    """Which of `lump` / `scattered` / `unknown` a SoulRecord is.
+
+    一次 is "on one occasion", so `occurrence_count == 1` is lump and anything
+    greater is scattered. Both inputs are required for either answer, and the
+    reason is the one this module spent its investigation on: `occurrence_count`
+    alone is a number somebody typed, and `statute_clause` is what says the
+    number is a count of the *clause's* occasions rather than of anything else.
+    A row with a count and no clause is asserting a granularity against no
+    stated per-occasion value, which is the invented marker the four refused
+    proxies would each have been.
+
+    UNKNOWN IS A THIRD ANSWER AND NOT A DEFAULT. Every row written before
+    souls/0028 has neither field, and treating those as lump would apply the
+    rule to a whole database on no evidence, while treating them as scattered
+    would refuse offsets nobody has grounds to refuse. They are reported as
+    unknown and net exactly as they did before, which the reading states.
+    """
+    clause = (getattr(record, "statute_clause", "") or "").strip()
+    count = getattr(record, "occurrence_count", None)
+    if not clause or count is None:
+        return "unknown"
+    return "lump" if count <= 1 else "scattered"
+
+
+def _offset_with_grain(merit_by_grain: dict, demerit_by_grain: dict) -> tuple:
+    """Net merit against fault inside one pool, applying 零積不抵整發.
+
+    Returns ``(offset, merit_left, demerit_left, applied)`` where `applied` says
+    whether the rule actually constrained anything — a pool with nothing on
+    both sides to constrain reports False, so "the rule ran" and "the rule bit"
+    are different statements in the reading.
+
+    THE RULE, AND ONLY THE RULE. 「零積之十功不能折一次之十過也」 forbids one
+    pairing: scattered merit against a lump fault. It says nothing about lump
+    merit against a scattered fault, and inventing that symmetry would refuse
+    offsets the text permits. So of the four merit×fault pairings, three are
+    allowed and one is not.
+
+    ORDER MATTERS, AND TWO SEPARATE THINGS PROTECT IT. The waste to avoid is a
+    lump merit consuming a scattered fault, leaving the scattered merit facing a
+    lump fault it may not discharge — a soul worse off for the order of a loop
+    rather than for anything it did. Two mechanisms each prevent it, and either
+    alone is sufficient:
+
+      1. Scattered merit is spent first, so the scattered faults it is allowed
+         to meet are gone before an unconstrained merit reaches them.
+      2. Lump and unknown merit try `lump` faults before `scattered` ones — they
+         prefer the target the constrained merit cannot serve.
+
+    Both are here deliberately and neither is redundant belt-and-braces: this
+    was verified by mutation, and removing *either* one alone leaves the result
+    unchanged. Only removing both loses an offset. That is worth stating,
+    because a reader who deletes one as duplication will find every test still
+    green and will have left the other carrying a property alone.
+
+    UNKNOWN NETS BOTH WAYS, WHICH IS THE LEAK AND IT IS DELIBERATE. A record
+    missing either input is not evidence of anything, so it is not used as
+    evidence — against it the rule does not apply, in either direction. That
+    means a database with no granularity recorded behaves exactly as it did
+    before souls/0028, which is the property that let this ship without a
+    backfill nobody could justify.
+    """
+    m = dict(merit_by_grain)
+    d = dict(demerit_by_grain)
+    offset = 0.0
+    applied = False
+
+    def spend(mk: str, dk: str) -> None:
+        nonlocal offset
+        take = min(m[mk], d[dk])
+        if take > 0:
+            m[mk] -= take
+            d[dk] -= take
+            offset += take
+
+    # Scattered merit first, and only against what it may meet.
+    for dk in ("scattered", "unknown"):
+        spend("scattered", dk)
+    # Then the two kinds that may meet anything.
+    for mk in ("lump", "unknown"):
+        for dk in ("lump", "scattered", "unknown"):
+            spend(mk, dk)
+
+    # The rule bit if scattered merit is left over while a lump fault still
+    # stands — that pair, and only that pair, is what it forbids.
+    if m["scattered"] > 0 and d["lump"] > 0:
+        applied = True
+
+    return offset, sum(m.values()), sum(d.values()), applied
+
+
 def offset_within_classes(class_totals: dict) -> dict:
     """Net merit against fault WITHIN each pool, never across.
 
@@ -269,11 +361,26 @@ def offset_within_classes(class_totals: dict) -> dict:
     unoffset_demerit = 0.0
     unusable_merit = 0.0
 
+    granularity_applied = False
+
     for name in sorted(class_totals):
         totals = class_totals[name]
         merit = float(totals.get("merit", 0) or 0)
         demerit = float(totals.get("demerit", 0) or 0)
-        offset = min(merit, demerit)
+
+        # The buckets are optional on the way in, and that is what keeps every
+        # existing caller working: a `class_totals` built before souls/0028 —
+        # or by a test that only cares about pools — has two sums and no
+        # grain, and falls through to the granularity-blind `min`. A caller
+        # that supplies buckets gets the rule. Neither path guesses.
+        mg = totals.get("merit_by_grain")
+        dg = totals.get("demerit_by_grain")
+        if mg is not None and dg is not None:
+            offset, _m_left, _d_left, applied = _offset_with_grain(mg, dg)
+            granularity_applied = granularity_applied or applied
+        else:
+            offset = min(merit, demerit)
+
         by_class[name] = {
             "merit": _tidy(merit),
             "demerit": _tidy(demerit),
@@ -291,11 +398,20 @@ def offset_within_classes(class_totals: dict) -> dict:
         "rule_zh": FUNGIBILITY_RULE_ZH,
         "rule_source": FUNGIBILITY_RULE_SOURCE,
         "attested_classes": list(ATTESTED_CLASSES),
-        # The half of `rule_zh` that the numbers above do not implement,
-        # reported rather than quietly omitted. A reader handed both sentences
-        # and no flag would reasonably assume both were applied.
+        # The second half of `rule_zh`. It used to be reported as permanently
+        # unapplied, because it was — the inputs did not exist. souls/0028 added
+        # them, so `granularity_applied` is now an answer about THIS ledger
+        # rather than about the system: True when scattered merit was actually
+        # left facing a lump fault in some pool, and False when it was not,
+        # which for a ledger with no granularity recorded is every time.
+        #
+        # `granularity_unavailable` stays and still says why a False can mean
+        # "not recorded" rather than "recorded and did not bite". Deleting it on
+        # the day the columns landed would have made those two indistinguishable
+        # in exactly the databases where the distinction matters most — the ones
+        # that have not started filling the columns in.
         "granularity_rule_zh": GRANULARITY_RULE_ZH,
-        "granularity_applied": False,
+        "granularity_applied": granularity_applied,
         "granularity_unavailable": GRANULARITY_UNAVAILABLE,
         "granularity_missing_inputs": list(GRANULARITY_MISSING_INPUTS),
     }

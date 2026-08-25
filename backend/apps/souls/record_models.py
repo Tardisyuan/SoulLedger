@@ -95,6 +95,54 @@ class SoulRecord(AuditUserFields, models.Model):
     event_day = models.SmallIntegerField(
         null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(31)]
     )
+    # ── 零積不抵整發: the two inputs the rule needs, and nothing more ────────
+    #
+    # 《太微仙君功過格·凡例》 second sentence: 「零積之十功不能折一次之十過也」
+    # — ten merits earned a fraction at a time do not discharge one fault worth
+    # ten at a stroke. `apps/ledger/fungibility.py` implements the first half of
+    # that 凡例 (offset only within a pool) and could not implement this half,
+    # because 一次 is a count of occasions and nothing here counted them. These
+    # are the two fields its `GRANULARITY_MISSING_INPUTS` named, added under the
+    # names it chose so the join it described is the join that exists.
+    #
+    # BOTH NULLABLE, AND THE RULE ONLY FIRES WHEN BOTH ARE PRESENT ON BOTH
+    # SIDES OF AN OFFSET. Every row written before this migration has neither,
+    # and there is no backfill that would not be an invention — the reason four
+    # proxies were refused in fungibility.py is that no existing column implies
+    # an occasion count. A record missing either field is granularity-unknown
+    # and nets exactly as it did before, which is stated in the reading rather
+    # than left for a reader to infer.
+    #
+    # WHY THE CLAUSE AND NOT THE STATUTE. 救濟門#7 carries two granularities in
+    # one article — 「百錢為一功」 against 「一錢散施，積至百錢為一功」 — so an
+    # article reference cannot say which reading scored this deed. The clause
+    # can: `payload_json["clauses"]` on the seeded Statute is a list of
+    # {condition_zh, points}, and `points` is the per-occasion value that 一次
+    # means.
+    #
+    # WHY `condition_zh` AND NOT AN INDEX. A positional index into that list
+    # shifts if the corpus is re-transcribed, silently repointing every record
+    # that used it. The condition text is verbatim from 正統道藏; it changes
+    # only when the reading of the source changes, which is exactly when a
+    # reference to it *should* break rather than quietly follow.
+    statute_clause = models.CharField(
+        max_length=200, blank=True, default="",
+        help_text=(
+            "Which scoring clause this deed was scored under, as "
+            "'<Statute.code>:<clause condition_zh>' — e.g. '救濟門#7:賑濟窮民百錢'. "
+            "Blank means unknown, which makes this record granularity-blind."
+        ),
+    )
+    occurrence_count = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text=(
+            "How many separate occasions this row's weight covers. NOT a row "
+            "count: one row may document a year of alms or three rows one "
+            "killing. 1 means 一次 — earned or incurred at a stroke. Null means "
+            "unknown, which makes this record granularity-blind."
+        ),
+    )
+
     is_milestone = models.BooleanField(
         default=False,
         help_text=(
