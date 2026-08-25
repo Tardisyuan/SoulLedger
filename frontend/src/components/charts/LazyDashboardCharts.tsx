@@ -16,7 +16,7 @@ interface ChartDataPoint {
 // ── Chart Skeletons ──────────────────────────────────────────────
 function ChartSkeleton({ height = 240 }: { height?: number }) {
   return (
-    <div className="h-[${height}px] flex items-center justify-center">
+    <div className="flex items-center justify-center" style={{ height }}>
       <Skeleton className="h-full w-full" />
     </div>
   );
