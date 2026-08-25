@@ -33,7 +33,13 @@ async function fetchAllOrganizations(): Promise<Organization[]> {
 const CIVILIZATION_ICONS: Record<string, string> = {
   CHINESE: "🏯",
   EUROPEAN: "⛪",
-  EGYPTIAN: "𓋴",
+  // U+132F4 (hieroglyph S029) sat here and rendered as tofu anywhere
+  // `Noto Sans Egyptian Hieroglyphs` is absent — measured: it is in none of
+  // Apple Color Emoji, Apple Symbols, Arial Unicode or DejaVu Sans. U+26B1 is
+  // RGI emoji, so it is in every colour-emoji font; the trailing U+FE0F is
+  // load-bearing because DejaVu Sans *does* cover bare U+26B1 and would draw
+  // it monochrome next to three colour neighbours.
+  EGYPTIAN: "⚱️",
   GREEK: "🏛",
 };
 
