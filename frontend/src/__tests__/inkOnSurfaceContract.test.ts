@@ -179,41 +179,22 @@ function measuredBelowAA(): Record<string, number> {
  * and collapsing would hide the day a tenant hue diverges enough to matter.
  */
 const BELOW_AA: Record<string, number> = {
-  "dark eg --color-surface-4 --color-ink-tertiary": 4.4047,
-  "dark gr --color-surface-3 --color-ink-tertiary": 4.4971,
-  "dark gr --color-surface-4 --color-ink-tertiary": 4.3649,
-  "light cn --color-surface-1 --color-ink-subtle": 3.9989,
-  "light cn --color-surface-1 --color-ink-tertiary": 2.793,
-  "light cn --color-surface-2 --color-ink-subtle": 3.8257,
-  "light cn --color-surface-2 --color-ink-tertiary": 2.6721,
-  "light cn --color-surface-3 --color-ink-subtle": 3.6666,
-  "light cn --color-surface-3 --color-ink-tertiary": 2.561,
-  "light cn --color-surface-4 --color-ink-subtle": 3.4799,
-  "light cn --color-surface-4 --color-ink-tertiary": 2.4305,
-  "light eg --color-surface-1 --color-ink-subtle": 4.0236,
-  "light eg --color-surface-1 --color-ink-tertiary": 2.8103,
-  "light eg --color-surface-2 --color-ink-subtle": 3.8498,
-  "light eg --color-surface-2 --color-ink-tertiary": 2.6889,
-  "light eg --color-surface-3 --color-ink-subtle": 3.7137,
-  "light eg --color-surface-3 --color-ink-tertiary": 2.5938,
-  "light eg --color-surface-4 --color-ink-subtle": 3.5483,
-  "light eg --color-surface-4 --color-ink-tertiary": 2.4783,
-  "light eu --color-surface-1 --color-ink-subtle": 3.9891,
-  "light eu --color-surface-1 --color-ink-tertiary": 2.7862,
-  "light eu --color-surface-2 --color-ink-subtle": 3.8115,
-  "light eu --color-surface-2 --color-ink-tertiary": 2.6621,
-  "light eu --color-surface-3 --color-ink-subtle": 3.6248,
-  "light eu --color-surface-3 --color-ink-tertiary": 2.5318,
-  "light eu --color-surface-4 --color-ink-subtle": 3.4575,
-  "light eu --color-surface-4 --color-ink-tertiary": 2.4149,
-  "light gr --color-surface-1 --color-ink-subtle": 4.0411,
-  "light gr --color-surface-1 --color-ink-tertiary": 2.8225,
-  "light gr --color-surface-2 --color-ink-subtle": 3.8668,
-  "light gr --color-surface-2 --color-ink-tertiary": 2.7008,
-  "light gr --color-surface-3 --color-ink-subtle": 3.7233,
-  "light gr --color-surface-3 --color-ink-tertiary": 2.6006,
-  "light gr --color-surface-4 --color-ink-subtle": 3.5577,
-  "light gr --color-surface-4 --color-ink-tertiary": 2.4849,
+  // EMPTY, AND THAT IS THE CURRENT FINDING RATHER THAN AN OVERSIGHT.
+  //
+  // This table held 35 of the 128 combinations when the matrix was first
+  // measured: dark `--color-ink-tertiary` on the deepest surfaces under the two
+  // warmest hues (eg 44°, gr 88°), and the whole of light-mode
+  // `--color-ink-subtle` and `--color-ink-tertiary` on every surface for every
+  // tenant. All 35 were fixed by three token moves — light subtle 50%→42%,
+  // light tertiary 60%→42%, dark tertiary 52%→54% — each recorded on its
+  // declaration in globals.css with the worst-case figure it now clears.
+  //
+  // An empty table says "the answer today is none", which is a different claim
+  // from there being no rule. The rule is the point, and it is asserted in both
+  // directions: a combination that drops below AA is not in this table and goes
+  // red, and an entry left here after its combination was fixed goes red too.
+  // Adding a row is how a regression gets excused, so a row arriving without a
+  // measured ratio and a reason beside it is the thing to refuse in review.
 };
 
 describe("the matrix is the matrix we think it is", () => {
@@ -339,7 +320,19 @@ describe("ink on surface clears AA, or is recorded with the ratio it measures", 
       expect(ratio).toBeLessThan(AA_NORMAL_TEXT);
       expect(MATRIX.some((c) => c.key === key)).toBe(true);
     }
-    expect(Object.keys(BELOW_AA).length).toBeGreaterThan(0);
+
+    // `expect(Object.keys(BELOW_AA).length).toBeGreaterThan(0)` stood here and
+    // was right for as long as the table had 35 rows: it stopped somebody
+    // emptying the table instead of fixing the tokens. All 35 are now fixed, so
+    // that guard would forbid the state the work was for.
+    //
+    // Removing it costs nothing, and the reason is worth writing down rather
+    // than assuming: emptying this table without fixing anything is already
+    // caught, one test up, by the set equality against `measuredBelowAA()`. The
+    // `> 0` was belt-and-braces over that, not the mechanism. What replaces it
+    // is the same claim stated for the current state — the measurement finds
+    // nothing below AA, which is what an empty table is asserting.
+    expect(Object.keys(measuredBelowAA())).toEqual([]);
   });
 });
 

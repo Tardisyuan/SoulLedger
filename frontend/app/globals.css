@@ -74,7 +74,16 @@
      (4.91:1); raising surface-1 from 7% to 8% for the elevation ramp cost
      ~0.1 of a ratio point, and 50% would have landed at 4.58:1. Nothing
      dimmer than this exists — use ink-subtle above surface-1. */
-  --color-ink-tertiary: 215 6% 52%;
+  /* 54%, was 52%. WHY IT MOVED, and why the figure is per-tenant.
+     At 52% this cleared AA on most backgrounds and failed on two: the deepest
+     surfaces under the two warmest civilization hues — eg (44°) surface-4 at
+     4.40:1 and gr (88°) surface-3/-4 at 4.50/4.36:1. cn (12°) and eu (232°)
+     passed the same surfaces, which is the whole point: `--color-surface-*` is
+     `var(--civ-hue) …`, so an ink figure is not one number but one per tenant,
+     and measuring against a single "the surface" hides the two that fail.
+     54% clears every tenant at 4.73:1 worst (gr surface-4).
+     src/__tests__/inkOnSurfaceContract.test.ts measures all 128. */
+  --color-ink-tertiary: 215 6% 54%;
   --color-accent: 38 92% 50%;
   /* Text/links only. --color-accent (identical in both themes) measures
      2.14:1 for text against light-mode white — every amber heading and link
@@ -148,8 +157,27 @@
   --color-hairline-tertiary: 220 8% 80%;
   --color-ink: 220 15% 10%;
   --color-ink-muted: 220 10% 35%;
-  --color-ink-subtle: 220 8% 50%;
-  --color-ink-tertiary: 220 6% 60%;
+  /* 42%, was 50%. Every tenant × every surface failed AA in light mode —
+     3.46:1 at worst (eu surface-4), 4.04:1 at best (gr surface-1), so the
+     tenant hue moved it by 0.06 of a ratio point and the gap to 4.5 was not a
+     tenant problem at all. 42% is the lightest value that clears all sixteen
+     (4.60:1 worst).
+
+     THIS IS THE TOKEN ~225 CALL SITES USE, and darkening it by 8 points
+     narrows the step between secondary and primary text. That is a real cost
+     and it was taken deliberately: the previous value did not meet AA anywhere
+     in light mode, so the hierarchy it bought was drawn in text a reader with
+     low vision could not resolve. */
+  --color-ink-subtle: 220 8% 42%;
+  /* 42%, was 60% — the largest move of the three, because it started furthest
+     out: 2.41:1 to 2.82:1 across the sixteen combinations, roughly half of AA.
+     ~15 real call sites. Now 4.53:1 at worst.
+
+     It lands on the same lightness as --color-ink-subtle above, which is not a
+     mistake and not a merge: the two keep different saturations (8% vs 6%), so
+     they remain distinguishable, and neither has room to be lighter. If they
+     need to separate again, the room is below 42%, not above it. */
+  --color-ink-tertiary: 220 6% 42%;
   --color-accent: 38 92% 50%;
   /* 34% lightness: 5.05:1 against light-mode white, vs 2.13:1 for
      --color-accent at the same hue.
