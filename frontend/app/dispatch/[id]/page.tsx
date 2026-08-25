@@ -3,13 +3,19 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { dispatchApi, type DispatchRecord } from "@/lib/api";
+import { dispatchApi } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Button } from "@/src/components/ui/Button";
+import { TextAreaField } from "@/src/components/ui/Field";
+import { EmptyState } from "@/src/components/ui/EmptyState";
+import { badgeVariants } from "@/src/components/ui/Badge";
 
 const STATUS_COLORS: Record<string, string> = {
   PROPOSED: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))]",
@@ -26,6 +32,28 @@ const STATUS_LABELS: Record<string, string> = {
   EXECUTED: "Executed",
   CANCELLED: "Cancelled",
 };
+
+/**
+ * Badge geometry from `Badge`, fill from the table above.
+ *
+ * `tone: null` skips the variant *and* its default, so the five token pairs
+ * above are the only colours in the class list — nothing to lose a merge
+ * against. `border-transparent` because those pairs name no border colour
+ * while `Badge`'s base carries `border`, which is a width: without it the
+ * badge inherits `borderColor.DEFAULT` and grows a hairline this row never
+ * had. Same helper, same reasoning as `app/death-sync/page.tsx`.
+ *
+ * The table stays a `--color-status-*` map rather than moving to a tone.
+ * `src/__tests__/statusTokenLayering.test.ts` registers it by name —
+ * "PROPOSED/APPROVED/REJECTED/EXECUTED/CANCELLED — the state of a request
+ * being processed, not a judgement about a soul" — and that register is
+ * checked in both directions, so quietly converting it here would delete a
+ * recorded decision as a side effect of a layout change. The two lists on
+ * `app/dispatch/page.tsx` are new code and go through tones instead.
+ */
+function statusBadgeClass(status: string): string {
+  return cn(badgeVariants({ tone: null }), "border-transparent", STATUS_COLORS[status] || "");
+}
 
 export default function DispatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -74,23 +102,32 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     onError: () => showToast(t("dispatch.execute_error"), "error"),
   });
 
+  /* The back control goes in PageShell's `backLink` slot as a real <Link>.
+     It was a bare `←` glued to the label in a flex row above the title; the
+     slot puts it on the same line as the eyebrow, where every detail page's
+     back control now sits. */
+  const backLink = (
+    <Link
+      href="/dispatch"
+      className="text-03 text-[hsl(var(--color-accent-ink))] hover:underline"
+    >
+      ← {t("common.back_to_list")}
+    </Link>
+  );
+
   if (isLoading) {
     return (
-      <div className="p-6 max-w-3xl">
-        <Skeleton className="h-8 w-64 mb-6" />
+      <PageShell variant="prose" backLink={backLink} title={t("dispatch.detail_title")}>
         <Skeleton className="h-48 w-full" />
-      </div>
+      </PageShell>
     );
   }
 
   if (!dispatch) {
     return (
-      <div className="p-6 max-w-3xl">
-        <p className="text-[hsl(var(--color-ink-muted))]">Dispatch not found.</p>
-        <Link href="/dispatch" className="text-[hsl(var(--color-accent-ink))] hover:underline mt-2 inline-block">
-          {t("common.back_to_list")}
-        </Link>
-      </div>
+      <PageShell variant="prose" backLink={backLink} title={t("dispatch.detail_title")}>
+        <EmptyState title="Dispatch not found." />
+      </PageShell>
     );
   }
 
@@ -104,110 +141,109 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       ? statusResolved.label
       : STATUS_LABELS[dispatch.status] || statusResolved.label || t("common.value.unrecorded");
 
+  /* Hoisted out of the `actions=` slot deliberately. The §4.6 contract test
+     reads the three lines above a string-form enum render looking for
+     `title={rawMember}`, and inside the slot the nearest `title=` above
+     `{statusLabel}` was PageShell's own `title` PROP — a page heading, not an
+     HTML attribute, and `t(...)` rather than the member. The check reported it
+     and was right to: two different things spelled `title=` within three lines
+     is exactly as ambiguous to a reader as to the regex. */
+  const statusBadge = (
+    <span title={dispatch.status} className={statusBadgeClass(dispatch.status)}>
+      {statusLabel}
+    </span>
+  );
+
   return (
-    <div className="p-6 max-w-3xl">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/dispatch" className="text-[hsl(var(--color-accent-ink))] hover:underline">
-          ← {t("common.back_to_list")}
-        </Link>
-      </div>
-
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))]">
-          {t("dispatch.detail_title")}
-        </h1>
-        <span title={dispatch.status} className={`px-3 py-1 rounded text-sm font-medium ${STATUS_COLORS[dispatch.status] || ""}`}>
-          {statusLabel}
-        </span>
-      </div>
-
+    <PageShell
+      variant="prose"
+      backLink={backLink}
+      title={t("dispatch.detail_title")}
+      actions={statusBadge}
+    >
       {/* Info Card */}
-      <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-6 mb-6">
+      <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6 mb-6">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.soul")}</p>
-            <p className="font-medium text-[hsl(var(--color-ink))]">{dispatch.soul_name || dispatch.soul}</p>
+            <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("dispatch.soul")}</p>
+            <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{dispatch.soul_name || dispatch.soul}</p>
           </div>
           <div>
-            <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.status")}</p>
-            <p title={dispatch.status} className="font-medium text-[hsl(var(--color-ink))]">{statusLabel}</p>
+            <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("dispatch.status")}</p>
+            <p title={dispatch.status} className="text-04 font-medium text-[hsl(var(--color-ink))]">{statusLabel}</p>
           </div>
           <div>
-            <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.source_tenant")}</p>
-            <p className="font-medium text-[hsl(var(--color-ink))]">{dispatch.source_tenant_code}</p>
+            <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("dispatch.source_tenant")}</p>
+            <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{dispatch.source_tenant_code}</p>
           </div>
           <div>
-            <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.target_tenant")}</p>
-            <p className="font-medium text-[hsl(var(--color-ink))]">{dispatch.target_tenant_code}</p>
+            <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("dispatch.target_tenant")}</p>
+            <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{dispatch.target_tenant_code}</p>
           </div>
           <div>
-            <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.proposed_by")}</p>
-            <p className="font-medium text-[hsl(var(--color-ink))]">{dispatch.dispatched_by_name || dispatch.dispatched_by}</p>
+            <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("dispatch.proposed_by")}</p>
+            <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{dispatch.dispatched_by_name || dispatch.dispatched_by}</p>
           </div>
           <div>
-            <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.proposed_at")}</p>
-            <p className="font-medium text-[hsl(var(--color-ink))]">{formatDateTime(dispatch.proposed_at)}</p>
+            <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("dispatch.proposed_at")}</p>
+            {/* Timestamps take the meta slot (text-02) and tabular figures, so
+                three of them stacked in a grid line up digit for digit. */}
+            <p className="text-02 font-mono tabular-nums text-[hsl(var(--color-ink))]">{formatDateTime(dispatch.proposed_at)}</p>
           </div>
           {dispatch.decided_at && (
             <div>
-              <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.decided_at")}</p>
-              <p className="font-medium text-[hsl(var(--color-ink))]">{formatDateTime(dispatch.decided_at)}</p>
+              <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("dispatch.decided_at")}</p>
+              <p className="text-02 font-mono tabular-nums text-[hsl(var(--color-ink))]">{formatDateTime(dispatch.decided_at)}</p>
             </div>
           )}
           {dispatch.executed_at && (
             <div>
-              <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("dispatch.executed_at")}</p>
-              <p className="font-medium text-[hsl(var(--color-ink))]">{formatDateTime(dispatch.executed_at)}</p>
+              <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("dispatch.executed_at")}</p>
+              <p className="text-02 font-mono tabular-nums text-[hsl(var(--color-ink))]">{formatDateTime(dispatch.executed_at)}</p>
             </div>
           )}
         </div>
 
         {dispatch.reason && (
           <div className="mt-4 pt-4 border-t border-[hsl(var(--color-hairline))]">
-            <p className="text-sm text-[hsl(var(--color-ink-subtle))] mb-1">{t("dispatch.reason")}</p>
-            <p className="text-[hsl(var(--color-ink))]">{dispatch.reason}</p>
+            <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mb-1">{t("dispatch.reason")}</p>
+            <p className="text-04 text-[hsl(var(--color-ink))]">{dispatch.reason}</p>
           </div>
         )}
       </div>
 
       {/* Actions */}
       {isProposed && (
-        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-6">
-          <h2 className="font-semibold text-[hsl(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
+        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6">
+          <h2 className="text-06 font-semibold text-[hsl(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
           <div className="flex gap-3">
             <RequirePermission permissions="dispatch.approve">
-              <button
+              <Button
+                type="button"
+                variant="primary"
                 onClick={() => approveMutation.mutate()}
-                disabled={approveMutation.isPending}
-                className="bg-[hsl(var(--color-status-success))] text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                loading={approveMutation.isPending}
               >
-                {approveMutation.isPending ? t("common.loading") : t("dispatch.approve")}
-              </button>
+                {t("dispatch.approve")}
+              </Button>
             </RequirePermission>
 
             <RequirePermission permissions="dispatch.reject">
-              <button
-                onClick={() => setShowRejectModal(true)}
-                className="bg-[hsl(var(--color-status-error))] text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90"
-              >
+              <Button type="button" variant="danger" onClick={() => setShowRejectModal(true)}>
                 {t("dispatch.reject")}
-              </button>
+              </Button>
             </RequirePermission>
           </div>
         </div>
       )}
 
       {isApproved && (
-        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-6">
-          <h2 className="font-semibold text-[hsl(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
+        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6">
+          <h2 className="text-06 font-semibold text-[hsl(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
           <RequirePermission permissions="dispatch.execute">
-            <button
-              onClick={() => setShowExecuteModal(true)}
-              className="bg-[hsl(var(--color-status-info))] text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90"
-            >
+            <Button type="button" variant="primary" onClick={() => setShowExecuteModal(true)}>
               {t("dispatch.execute")}
-            </button>
+            </Button>
           </RequirePermission>
         </div>
       )}
@@ -215,29 +251,32 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       {/* Reject Modal */}
       {showRejectModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-6 w-full max-w-md border border-[hsl(var(--color-hairline))]">
-            <h3 className="font-semibold text-[hsl(var(--color-ink))] mb-4">{t("dispatch.reject_reason")}</h3>
-            <textarea
+          <div className="bg-[hsl(var(--color-surface-1))] p-6 w-full max-w-md border border-[hsl(var(--color-hairline))]">
+            <h3 className="text-05 font-semibold text-[hsl(var(--color-ink))] mb-4">{t("dispatch.reject_reason")}</h3>
+            <TextAreaField
+              label={t("dispatch.reason")}
               value={rejectReason}
               onChange={e => setRejectReason(e.target.value)}
-              className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))] mb-4"
               rows={3}
               placeholder={t("dispatch.reject_placeholder")}
+              className="mb-4"
             />
             <div className="flex gap-3 justify-end">
-              <button
+              <Button
+                type="button"
+                variant="secondary"
                 onClick={() => { setShowRejectModal(false); setRejectReason(""); }}
-                className="px-4 py-2 rounded-lg text-sm bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))]"
               >
                 {t("common.cancel")}
-              </button>
-              <button
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
                 onClick={() => { rejectMutation.mutate(); setShowRejectModal(false); }}
-                disabled={rejectMutation.isPending}
-                className="px-4 py-2 rounded-lg text-sm bg-[hsl(var(--color-status-error))] text-white hover:opacity-90 disabled:opacity-50"
+                loading={rejectMutation.isPending}
               >
                 {t("dispatch.confirm_reject")}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -246,29 +285,27 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       {/* Execute Modal */}
       {showExecuteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-6 w-full max-w-md border border-[hsl(var(--color-hairline))]">
-            <h3 className="font-semibold text-[hsl(var(--color-ink))] mb-2">{t("dispatch.confirm_execute")}</h3>
-            <p className="text-sm text-[hsl(var(--color-ink-muted))] mb-4">
+          <div className="bg-[hsl(var(--color-surface-1))] p-6 w-full max-w-md border border-[hsl(var(--color-hairline))]">
+            <h3 className="text-05 font-semibold text-[hsl(var(--color-ink))] mb-2">{t("dispatch.confirm_execute")}</h3>
+            <p className="text-04 text-[hsl(var(--color-ink-muted))] mb-4">
               {t("dispatch.execute_warning")}
             </p>
             <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowExecuteModal(false)}
-                className="px-4 py-2 rounded-lg text-sm bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))]"
-              >
+              <Button type="button" variant="secondary" onClick={() => setShowExecuteModal(false)}>
                 {t("common.cancel")}
-              </button>
-              <button
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
                 onClick={() => { executeMutation.mutate(); setShowExecuteModal(false); }}
-                disabled={executeMutation.isPending}
-                className="px-4 py-2 rounded-lg text-sm bg-[hsl(var(--color-status-info))] text-white hover:opacity-90 disabled:opacity-50"
+                loading={executeMutation.isPending}
               >
                 {t("dispatch.confirm_execute")}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

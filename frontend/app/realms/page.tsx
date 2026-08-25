@@ -4,9 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { realmsApi, type Realm } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { PageSection } from "@/components/ui/page-section";
 import { CardSkeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Castle, Cloud, Flame, CircleDot, Columns } from "lucide-react";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Badge } from "@/src/components/ui/Badge";
+import { Button } from "@/src/components/ui/Button";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 
@@ -56,7 +58,10 @@ const CIVILIZATION_CONFIG: Record<string, { nameKey: string; icon: React.ReactNo
  * floor at 4.47:1 on the card and 4.27:1 on its hover state.
  *
  * src/__tests__/statusTokenLayering.test.ts holds this map to the rule, and to
- * every other domain-enum-keyed badge map in the app.
+ * every other domain-enum-keyed badge map in the app. It reads these four
+ * entries AS TEXT, one line per key, and parses the `x-[hsl(var(--t)/a)]`
+ * utilities out of each — so the four lines below stay one-line literals and
+ * the alphas stay 0.1 / 0.3 / 1.
  */
 const REALM_TYPE_CONFIG: Record<string, { icon: React.ReactNode; className: string }> = {
   HELL: { icon: <Flame className="w-4 h-4" />, className: 'bg-[hsl(var(--color-verdict-failed)/0.1)] border-[hsl(var(--color-verdict-failed)/0.3)] text-[hsl(var(--color-verdict-failed))]' },
@@ -89,86 +94,87 @@ export default function RealmsPage() {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent-ink))]">
+    <PageShell
+      variant="full"
+      title={
+        <>
           {t("realms.title")}
           <MenuGloss path="/realms" />
-        </h1>
-        <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("realms.subtitle")}</p>
-      </div>
+        </>
+      }
+      subtitle={t("realms.subtitle")}
+      isLoading={isLoading}
+      skeleton={
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
+      }
+    >
+      <div className="space-y-10">
+        {Object.entries(grouped).map(([civ, civRealms]) => {
+          const config = CIVILIZATION_CONFIG[civ] || { nameKey: `realms.civilizations.${civ}`, icon: <Castle className="w-6 h-6" /> };
+          const isCollapsed = collapsed[civ];
 
-      <PageSection title={t("realms.listTitle") || "Realms"} isLoading={isLoading}>
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <CardSkeleton key={i} />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {Object.entries(grouped).map(([civ, civRealms]) => {
-              const config = CIVILIZATION_CONFIG[civ] || { nameKey: `realms.civilizations.${civ}`, icon: <Castle className="w-6 h-6" /> };
-              const isCollapsed = collapsed[civ];
+          return (
+            <div key={civ}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="lg"
+                onClick={() => toggleCollapse(civ)}
+                className="w-full justify-start mb-4 text-left"
+              >
+                <span aria-hidden="true" className="text-ink-muted">{config.icon}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-06 text-ink truncate">{t(config.nameKey)}</span>
+                  <span className="block text-04 text-ink-subtle">{civRealms.length} {t("realms.count")}</span>
+                </span>
+                <ChevronDown aria-hidden="true" className={`w-5 h-5 text-ink-muted transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+              </Button>
 
-              return (
-                <div key={civ}>
-                  <button
-                    onClick={() => toggleCollapse(civ)}
-                    className="w-full flex items-center gap-3 mb-4 px-4 py-3 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg hover:bg-[hsl(var(--color-surface-3))] transition-colors text-left"
-                  >
-                    <span className="text-[hsl(var(--color-ink-muted))]">{config.icon}</span>
-                    <div className="flex-1">
-                      <h2 className="font-semibold text-[hsl(var(--color-ink))]">{t(config.nameKey)}</h2>
-                      <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{civRealms.length} {t("realms.count")}</p>
-                    </div>
-                    <ChevronDown className={`w-5 h-5 text-[hsl(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
-                  </button>
-
-                  {!isCollapsed && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {civRealms.map((realm) => {
-                        const typeConfig = REALM_TYPE_CONFIG[realm.realm_type] || REALM_TYPE_CONFIG.NEUTRAL;
-                        return (
-                          <div key={realm.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4 hover:border-[hsl(var(--color-accent))]/50 hover:bg-[hsl(var(--color-surface-2))] transition-colors">
-                            <div className="flex items-start gap-3">
-                              <div className="text-[hsl(var(--color-ink-muted))]">{typeConfig.icon}</div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-[hsl(var(--color-ink))] truncate">{t(`realms.names.${realm.realm_code}`) || realm.name_en}</h3>
-                                <p className="text-sm text-[hsl(var(--color-ink-tertiary))] truncate">{t(`realms.codes.${realm.realm_code}`) || realm.name_local}</p>
-                              </div>
-                            </div>
-                            <div className="mt-2 flex items-center justify-between">
-                              <span className={`px-2 py-1 rounded text-xs font-medium border flex items-center gap-1 ${typeConfig.className}`}>
-                                {typeConfig.icon}
-                                <DomainEnum namespace="realms.types" value={realm.realm_type} />
-                              </span>
-                            </div>
-                            {/* DECIDED, not pending: `Realm.description` stays off this
-                                card, and the API is right to keep it off the list row.
-                                The TODO that used to sit here was half accurate — the
-                                field is on the model and in RealmSerializer, but
-                                RealmListSerializer (what `action == "list"` returns, and
-                                this page fetches the list) does not carry it — and wrong
-                                about the remedy. What it holds is maintainer prose in
-                                English with citations in it, and in one row a source
-                                review addressed to the next editor of the seed table;
-                                this page defaults to zh-Hans. Realm text that is product
-                                copy is already keyed on realm_code in the three bundles,
-                                which is where a blurb would go if one is ever wanted.
-                                Pinned by tests/test_realm_actor_api.py::
-                                TestRealmDescriptionStaysOffTheCard. */}
+              {!isCollapsed && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {civRealms.map((realm) => {
+                    const typeConfig = REALM_TYPE_CONFIG[realm.realm_type] || REALM_TYPE_CONFIG.NEUTRAL;
+                    return (
+                      <div key={realm.id} className="bg-surface-1 border border-hairline p-4 hover:border-[hsl(var(--color-accent)/0.5)] hover:bg-surface-2 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div aria-hidden="true" className="text-ink-muted">{typeConfig.icon}</div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-04 font-semibold text-ink truncate">{t(`realms.names.${realm.realm_code}`) || realm.name_en}</h3>
+                            <p className="text-03 text-ink-tertiary truncate">{t(`realms.codes.${realm.realm_code}`) || realm.name_local}</p>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <Badge glyph={typeConfig.icon} className={typeConfig.className}>
+                            <DomainEnum namespace="realms.types" value={realm.realm_type} />
+                          </Badge>
+                        </div>
+                        {/* DECIDED, not pending: `Realm.description` stays off this
+                            card, and the API is right to keep it off the list row.
+                            The TODO that used to sit here was half accurate — the
+                            field is on the model and in RealmSerializer, but
+                            RealmListSerializer (what `action == "list"` returns, and
+                            this page fetches the list) does not carry it — and wrong
+                            about the remedy. What it holds is maintainer prose in
+                            English with citations in it, and in one row a source
+                            review addressed to the next editor of the seed table;
+                            this page defaults to zh-Hans. Realm text that is product
+                            copy is already keyed on realm_code in the three bundles,
+                            which is where a blurb would go if one is ever wanted.
+                            Pinned by tests/test_realm_actor_api.py::
+                            TestRealmDescriptionStaysOffTheCard. */}
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </PageSection>
-    </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </PageShell>
   );
 }

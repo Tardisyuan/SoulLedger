@@ -128,10 +128,19 @@ describe("size", () => {
 });
 
 describe("PageSpinner is the whole-route shape those 20 files hand-roll", () => {
-  it("fills the viewport on the canvas and centres one lg spinner", () => {
+  it("fills AppLayout's slot exactly — never a whole viewport inside it", () => {
     const { container } = render(<PageSpinner label="载入中" />);
     const root = container.firstElementChild!;
-    expect(root.className).toContain("min-h-screen");
+    // This used to assert `min-h-screen`, which pinned the defect rather than
+    // the requirement. A route's loading.tsx renders inside AppLayout.tsx:418's
+    // `min-h-[calc(100vh-4rem)]` slot, so 100vh here is 100vh nested inside
+    // 100vh−4rem — the same 64px of dead scroll 46 files were carrying and that
+    // PageShell exists to delete, reintroduced through the one component all 21
+    // loading files adopt. Asserting the absence matters as much as asserting
+    // the presence: "the right value is shown" stays green while the wrong one
+    // sits beside it.
+    expect(root.className).toContain("min-h-[calc(100vh-4rem)]");
+    expect(root.className).not.toContain("min-h-screen");
     expect(root.className).toContain("bg-canvas");
     expect(classesIn(container)).toEqual(expect.arrayContaining(["w-16", "h-16", "border-4"]));
     expect(screen.getByRole("status")).toBeInTheDocument();

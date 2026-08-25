@@ -114,7 +114,18 @@ export function Spinner({ size = "md", label, className, ...rest }: SpinnerProps
  */
 export function PageSpinner({ label }: { label?: string }) {
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center">
+    // `min-h-[calc(100vh-4rem)]`, matching AppLayout.tsx:418's slot exactly —
+    // NOT `min-h-screen`. A route's `loading.tsx` renders inside that slot, so
+    // a full 100vh here is 100vh nested in 100vh−4rem: the same 64px of dead
+    // scroll PageShell exists to delete, handed back through the component all
+    // 21 loading files adopt. One class in one file, 21 routes.
+    //
+    // The two routes outside AppLayout (`/` and `(auth)/login` — see
+    // AppLayoutWrapper's PUBLIC_PATHS) get a busy screen 64px shorter than the
+    // viewport. For a centred spinner that is invisible, and it is the right
+    // trade: being 64px short on two routes costs nothing, while being 64px
+    // long on nineteen costs a scrollbar on every one of them.
+    <div className="min-h-[calc(100vh-4rem)] bg-canvas flex items-center justify-center">
       <Spinner size="lg" label={label} />
     </div>
   );

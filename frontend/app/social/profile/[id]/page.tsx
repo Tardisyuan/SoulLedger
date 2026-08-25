@@ -9,6 +9,9 @@ import { ProfileCard } from "@/src/components/social/ProfileCard";
 import { PostCard } from "@/src/components/social/PostCard";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { EmptyState } from "@/src/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function UserProfilePage() {
   const { t } = useI18n();
@@ -22,45 +25,80 @@ export default function UserProfilePage() {
   const posts = postsData?.results ?? [];
   const totalPages = postsData ? Math.ceil(postsData.count / PAGE_SIZE) : 0;
 
+  /**
+   * Same split as app/social/page.tsx, for the same reason: `Pagination` is
+   * imported directly here (no DataTable renders a second bar), and
+   * `Pagination.tsx:19` is itself a `flex items-center justify-between`.
+   * Dropping the whole component into `controls` would nest that inside
+   * PageShell's `shrink-0` half, collapsing it to content width so the record
+   * count sits flush against the ← → buttons with the `count` half empty. So:
+   * count on the left, `showInfo={false}` component on the right. `-mt-4`
+   * cancels Pagination's standalone top margin, which the slot's
+   * `border-t-2 pt-3` already supplies.
+   */
+  const pagination = postsData
+    ? {
+        count: (
+          <p className="text-03 text-ink-muted">
+            {t("pagination.info", {
+              page: String(page),
+              total: String(totalPages),
+              count: String(postsData.count),
+            })}
+          </p>
+        ),
+        controls: (
+          <div className="-mt-4">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              count={postsData.count}
+              onPageChange={setPage}
+              showInfo={false}
+            />
+          </div>
+        ),
+      }
+    : undefined;
+
   return (
-    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
+    <PageShell
+      variant="prose"
+      title={t("social.profile")}
+      backLink={
         <Link
           href="/social"
-          className="text-[hsl(var(--color-accent-ink))] hover:underline text-sm"
+          className="text-03 text-[hsl(var(--color-accent-ink))] hover:underline"
         >
-          ← {t("social.back") || "Back"}
+          ← {t("social.back")}
         </Link>
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
-          {t("social.profile") || "Profile"}
-        </h1>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
+      }
+      pagination={pagination}
+    >
+      <div className="space-y-6">
         {profileLoading ? (
-          <div className="animate-pulse h-32 bg-[hsl(var(--color-surface-1))] rounded-xl" />
+          <Skeleton className="h-32" />
         ) : profileError ? (
-          <div className="text-center text-red-400 py-12">
+          /* An error is not an empty state — see app/social/[id]/page.tsx.
+             `--color-status-error` replaces `text-red-400`, which was a raw
+             palette value and went pale in light mode. */
+          <p role="alert" className="text-04 text-[hsl(var(--color-status-error))]">
             {String(profileError)}
-          </div>
+          </p>
         ) : profile ? (
           <ProfileCard profile={profile} />
         ) : null}
 
-        <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))]">
-          {t("social.user_posts") || "Posts"}
-        </h2>
+        <h2 className="text-06 text-ink">{t("social.user_posts")}</h2>
 
         {postsLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="animate-pulse h-28 bg-[hsl(var(--color-surface-1))] rounded-xl" />
+              <Skeleton key={i} className="h-28" />
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <div className="text-center py-8 text-[hsl(var(--color-ink-subtle))]">
-            {t("social.no_posts") || "No posts yet"}
-          </div>
+          <EmptyState title={t("social.posts")} reason={t("social.no_posts")} />
         ) : (
           <div className="space-y-3">
             {posts.map((post) => (
@@ -68,16 +106,7 @@ export default function UserProfilePage() {
             ))}
           </div>
         )}
-
-        {totalPages > 1 && (
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            count={postsData?.count ?? 0}
-            onPageChange={setPage}
-          />
-        )}
       </div>
-    </div>
+    </PageShell>
   );
 }

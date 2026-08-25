@@ -12,7 +12,11 @@ import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-t
 import { DomainEnum, DomainNumber, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
 import { isColumnUninformative, resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PAGE_SIZE, soulsApi, type SoulListItem } from "@/lib/api";
-import { formatHistoricalDate } from "@/lib/utils";
+import { cn, formatHistoricalDate } from "@/lib/utils";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Button } from "@/src/components/ui/Button";
+import { Badge } from "@/src/components/ui/Badge";
+import { fieldControl } from "@/src/components/ui/Field";
 
 /**
  * ⊘ (red) for any ERROR-severity date problem — either the soul's own
@@ -148,33 +152,37 @@ export default function SoulsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
-      {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">{t("souls.title")}</h1>
+    /* `page` (1200px), up from the `max-w-5xl` (1024) this page chose for
+       itself. The column count is variable — the death column comes and goes
+       with the rows — so the wider column is what stops a page of dead souls
+       from being narrower per-column than a page of living ones. */
+    <PageShell
+      variant="page"
+      title={t("souls.title")}
+      actions={
         <RequirePermission permissions="soul.create">
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] rounded-md text-sm font-medium transition-colors"
-          >
+          <Button type="button" variant="primary" onClick={() => setIsCreateModalOpen(true)}>
             + {t("souls.create")}
-          </button>
+          </Button>
         </RequirePermission>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-6 py-6">
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 mb-6 items-center">
-          {/* Filter bar: visible labels would crowd the row, so each control
-              carries an aria-label instead — a placeholder is not an
-              accessible name and disappears once the user types. */}
+      }
+      filters={
+        /* Filter bar: visible labels would crowd the row — and the sticky slot
+           is 32px of content height, which a `Field`'s stacked label does not
+           fit in — so each control carries an aria-label instead. A placeholder
+           is not an accessible name and disappears once the user types. What is
+           new is that the skin is `fieldControl`, the same one `Field` puts on
+           every form control, so this row and `app/users/page.tsx` no longer
+           disagree about the surface (`surface-2` vs `surface-1`), the corner
+           (`rounded-md` vs `rounded`) or the gap (3 vs 4). */
+        <>
           <input
             type="text"
             placeholder={t("souls.search_placeholder")}
             aria-label={t("souls.search_placeholder")}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[160px]")}
           />
           <select
             value={stateFilter}
@@ -183,7 +191,7 @@ export default function SoulsPage() {
               setStateFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className={cn(fieldControl({ size: "md" }), "w-auto shrink-0")}
           >
             {states.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
@@ -196,13 +204,13 @@ export default function SoulsPage() {
               setCivilizationFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className={cn(fieldControl({ size: "md" }), "w-auto shrink-0")}
           >
             {civilizations.map((c) => (
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <input
               type="number"
               placeholder={t("souls.balance_min")}
@@ -210,9 +218,9 @@ export default function SoulsPage() {
               value={balanceMin}
               onChange={(e) => setBalanceMin(e.target.value)}
               onBlur={() => setPage(1)}
-              className="w-20 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-2 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+              className={cn(fieldControl({ size: "md" }), "w-20")}
             />
-            <span className="text-[hsl(var(--color-ink-muted))] text-sm">-</span>
+            <span className="text-03 text-ink-muted">-</span>
             <input
               type="number"
               placeholder={t("souls.balance_max")}
@@ -220,125 +228,132 @@ export default function SoulsPage() {
               value={balanceMax}
               onChange={(e) => setBalanceMax(e.target.value)}
               onBlur={() => setPage(1)}
-              className="w-20 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-2 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+              className={cn(fieldControl({ size: "md" }), "w-20")}
             />
           </div>
           {/* Server-side filter (SoulFilter.has_date_problem), not a
               client-side slice of the current page — the badge count and
               the toggle's own result set both come from the same query
               param, so they agree even across pages. */}
-          <button
+          <Button
             type="button"
             onClick={() => {
               setProblemsOnly((v) => !v);
               setPage(1);
             }}
             aria-pressed={problemsOnly}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm border transition-colors ${
-              problemsOnly
-                ? "bg-[hsl(var(--color-status-warning)/0.1)] border-[hsl(var(--color-status-warning)/0.4)] text-[hsl(var(--color-status-warning))]"
-                : "bg-[hsl(var(--color-surface-2))] border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
-            }`}
+            className={cn(
+              "shrink-0",
+              problemsOnly &&
+                "bg-[hsl(var(--color-status-warning)/0.1)] border-[hsl(var(--color-status-warning)/0.4)] text-[hsl(var(--color-status-warning))] hover:bg-[hsl(var(--color-status-warning)/0.2)] hover:border-[hsl(var(--color-status-warning)/0.4)]"
+            )}
           >
             {t("souls.date_problem_filter")}
             {typeof problemCountQuery.data === "number" && (
-              <span className="bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink))] text-xs px-1.5 py-0.5 rounded">
+              <Badge className="bg-[hsl(var(--color-surface-3))] text-ink">
                 {problemCountQuery.data}
-              </span>
+              </Badge>
             )}
-          </button>
-        </div>
-
-        <DataTable<SoulListItem>
-          caption={t("souls.title")}
-          columns={[
-            { key: "name", header: t("souls.name"), sortable: true },
-            { key: "civilization", header: t("souls.civilization") },
-            { key: "state", header: t("souls.state") },
-            { key: "karmic_balance", header: t("souls.balance"), sortable: true, align: "right" as const },
-            ...(showsDeathColumn ? [{ key: "death", header: t("souls.death") }] : []),
-            { key: "action", header: t("souls.action") },
-          ]}
-          data={souls}
-          isLoading={isLoading}
-          isError={isError}
-          onRetry={() => refetch()}
-          keyExtractor={(soul) => String(soul.id)}
-          renderRow={(soul) => {
-            const marker = dateProblemMarker(soul);
-            // karmic_balance (merit − demerit) is the CHINESE/BALANCE
-            // instrument specifically — see SoulReadingPanel and
-            // backend/apps/ledger/readings.py. Showing it for every
-            // civilization used to put a netted number next to an
-            // Egyptian or European soul that reads on a completely
-            // different mechanic; this column now only claims a balance
-            // for the one civilization where that claim is true, and
-            // points elsewhere for the rest rather than guessing at their
-            // headline figure without the actual reading in hand.
-            const showsBalance = soul.civilization === "CHINESE";
-            return (
-            <>
-              <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">
-                <span className="flex items-center gap-1.5">
-                  {marker && (
-                    <span className={marker.className} aria-hidden="true" title={t(marker.labelKey)}>
-                      {marker.glyph}
-                    </span>
-                  )}
-                  {soul.name}
-                </span>
+          </Button>
+        </>
+      }
+    >
+      {/* No `pagination` slot — DataTable renders its own <Pagination>
+          (components/ui/data-table.tsx:288) from the four props at the end. */}
+      <DataTable<SoulListItem>
+        caption={t("souls.title")}
+        columns={[
+          { key: "name", header: t("souls.name"), sortable: true },
+          { key: "civilization", header: t("souls.civilization") },
+          { key: "state", header: t("souls.state") },
+          { key: "karmic_balance", header: t("souls.balance"), sortable: true, align: "right" as const },
+          ...(showsDeathColumn ? [{ key: "death", header: t("souls.death") }] : []),
+          { key: "action", header: t("souls.action") },
+        ]}
+        data={souls}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        keyExtractor={(soul) => String(soul.id)}
+        renderRow={(soul) => {
+          const marker = dateProblemMarker(soul);
+          // karmic_balance (merit − demerit) is the CHINESE/BALANCE
+          // instrument specifically — see SoulReadingPanel and
+          // backend/apps/ledger/readings.py. Showing it for every
+          // civilization used to put a netted number next to an
+          // Egyptian or European soul that reads on a completely
+          // different mechanic; this column now only claims a balance
+          // for the one civilization where that claim is true, and
+          // points elsewhere for the rest rather than guessing at their
+          // headline figure without the actual reading in hand.
+          const showsBalance = soul.civilization === "CHINESE";
+          return (
+          <>
+            <td className="px-4 py-3 font-medium text-ink">
+              <span className="flex items-center gap-1">
+                {marker && (
+                  <span className={marker.className} aria-hidden="true" title={t(marker.labelKey)}>
+                    {marker.glyph}
+                  </span>
+                )}
+                {soul.name}
+              </span>
+            </td>
+            <td className="px-4 py-3 text-ink-muted">
+              <DomainEnum namespace="souls.civilizations" value={soul.civilization} />
+            </td>
+            <td className="px-4 py-3">
+              {/* STATE_COLORS keeps its own tints: these are soul-lifecycle
+                  tokens (`--color-status-alive` / `-judging` / `-settled`),
+                  not the system-feedback four, and `Badge`'s tone table is
+                  the feedback layer. Only the geometry moves. */}
+              <Badge
+                title={soul.current_state}
+                className={STATE_COLORS[soul.current_state] ?? "bg-[hsl(var(--color-surface-3))] text-ink-muted"}
+              >
+                {resolveEnumDisplay(t, "souls.states", soul.current_state).label ?? t("common.value.unrecorded")}
+              </Badge>
+            </td>
+            {/* §4.6: this column was `+0` on every row. A sign is only ever
+                attached to a value that has one, so a zero balance now
+                prints a bare neutral `0` — a recorded fact — while a soul
+                whose cosmology does not net merit against demerit gets the
+                "not applicable" dot, visibly different from both. */}
+            <td className="px-4 py-3 text-right">
+              {showsBalance
+                ? <DomainNumber value={soul.karmic_balance ?? 0} signed toned />
+                : <MissingValue kind="inapplicable" reason={t("souls.balance_not_applicable")} />}
+            </td>
+            {showsDeathColumn && (
+              /* 02 档：日期是元数据，不是正文。 */
+              <td className="px-4 py-3 text-02 text-ink-muted">
+                <DomainText value={formatHistoricalDate(soul.death_date)} />
               </td>
-              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
-                <DomainEnum namespace="souls.civilizations" value={soul.civilization} />
-              </td>
-              <td className="px-4 py-3">
-                <span
-                  title={soul.current_state}
-                  className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul.current_state] ?? "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}
-                >
-                  {resolveEnumDisplay(t, "souls.states", soul.current_state).label ?? t("common.value.unrecorded")}
-                </span>
-              </td>
-              {/* §4.6: this column was `+0` on every row. A sign is only ever
-                  attached to a value that has one, so a zero balance now
-                  prints a bare neutral `0` — a recorded fact — while a soul
-                  whose cosmology does not net merit against demerit gets the
-                  "not applicable" dot, visibly different from both. */}
-              <td className="px-4 py-3 text-right text-sm">
-                {showsBalance
-                  ? <DomainNumber value={soul.karmic_balance ?? 0} signed toned />
-                  : <MissingValue kind="inapplicable" reason={t("souls.balance_not_applicable")} />}
-              </td>
-              {showsDeathColumn && (
-                <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs">
-                  <DomainText value={formatHistoricalDate(soul.death_date)} />
-                </td>
-              )}
-              <td className="px-4 py-3">
-                <Link
-                  href={`/souls/${soul.id}`}
-                  className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-ink))] text-sm"
-                >
-                  {t("souls.view")} →
-                </Link>
-              </td>
-            </>
-            );
-          }}
-          sort={parseOrdering(ordering)}
-          onSortChange={(next) => {
-            setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
-            setPage(1);
-          }}
-          isFiltered={isFiltered}
-          onClearFilters={resetFilters}
-          emptyMessage={t("souls.no_souls")}
-          page={page}
-          totalPages={totalPages}
-          totalCount={data?.count}
-          onPageChange={setPage}
-        />
-      </div>
+            )}
+            <td className="px-4 py-3">
+              <Link
+                href={`/souls/${soul.id}`}
+                className="text-03 text-[hsl(var(--color-accent-ink))] hover:underline"
+              >
+                {t("souls.view")} →
+              </Link>
+            </td>
+          </>
+          );
+        }}
+        sort={parseOrdering(ordering)}
+        onSortChange={(next) => {
+          setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
+          setPage(1);
+        }}
+        isFiltered={isFiltered}
+        onClearFilters={resetFilters}
+        emptyMessage={t("souls.no_souls")}
+        page={page}
+        totalPages={totalPages}
+        totalCount={data?.count}
+        onPageChange={setPage}
+      />
 
       <SoulCreateModal
         isOpen={isCreateModalOpen}
@@ -348,6 +363,6 @@ export default function SoulsPage() {
           refetch();
         }}
       />
-    </div>
+    </PageShell>
   );
 }

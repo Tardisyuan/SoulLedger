@@ -5,9 +5,40 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { api, PAGE_SIZE, type Tenant, type PaginatedResponse } from "@/lib/api";
 import { ListSkeleton } from "@/components/ui/skeleton";
-import { PageSection } from "@/components/ui/page-section";
-import { Pagination } from "@/src/components/ui/Pagination";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Badge } from "@/src/components/ui/Badge";
+import { Button } from "@/src/components/ui/Button";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import {
+  CIVILIZATION_SHORT_CODES,
+  TENANT_CODE_TO_CIVILIZATION,
+} from "@/src/config/civilizations";
+
+/**
+ * The 3px identity rule down the left edge of a tenant row.
+ *
+ * `tailwind.config.js` reserves `border-3` for exactly two things — "文明身份线
+ * 与判决落印带" — and a tenant IS a civilization here (`tenants.subtitle` reads
+ * 各文明体系的租户配置), so this is that line rather than a new decoration.
+ *
+ * Derived through `TENANT_CODE_TO_CIVILIZATION` → `CIVILIZATION_SHORT_CODES`
+ * rather than written as a four-member map, because a fifth civilization added
+ * to `src/config/civilizations.ts` already carries its own prefix and would get
+ * the rule for free. The colour has to arrive as an inline custom-property
+ * reference and not a class: `--civ-mark` is stamped per *logged-in* tenant by
+ * the `[data-civ]` rules in globals.css, and this list shows every tenant at
+ * once, so each row names its own `--color-civ-mark-*` directly — the same
+ * direct naming globals.css records for the dashboard swatch.
+ *
+ * An unmapped code gets no rule at all rather than a grey one: 3px of hairline
+ * would read as an identity that happens to be dull.
+ */
+function civMark(tenantCode: string): string | undefined {
+  const civilization = TENANT_CODE_TO_CIVILIZATION[tenantCode];
+  const prefix = civilization ? CIVILIZATION_SHORT_CODES[civilization] : undefined;
+  return prefix ? `hsl(var(--color-civ-mark-${prefix}))` : undefined;
+}
 
 export default function TenantsPage() {
   const { t } = useI18n();
@@ -23,49 +54,97 @@ export default function TenantsPage() {
   });
 
   const tenants = data?.results ?? [];
-  const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
+  const count = data?.count ?? 0;
+  const totalPages = data ? Math.ceil(count / PAGE_SIZE) : 0;
+  const showPagination = !isLoading && tenants.length > 0;
 
   return (
-    <div className="p-6 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent-ink))]">
+    <PageShell
+      variant="page"
+      title={
+        <>
           {t("tenants.title") || "Tenants"}
           <MenuGloss path="/tenants" />
-        </h1>
-        <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("tenants.subtitle") || "Tenant management"}</p>
-      </div>
-
-      <PageSection title={t("tenants.list") || "All Tenants"} isLoading={isLoading}>
-        {isLoading ? (
-          <ListSkeleton count={5} />
-        ) : tenants.length === 0 ? (
-          <p className="text-[hsl(var(--color-ink-muted))] bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">
-            {t("tenants.no_tenants") || "No tenants found."}
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {tenants.map((tenant: Tenant) => (
-              <div key={tenant.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-[hsl(var(--color-ink))]">{tenant.display_name}</p>
-                    <p className="text-sm text-[hsl(var(--color-ink-subtle))]">
-                      {t("tenants.code") || "Code"}: {tenant.code}
-                    </p>
-                  </div>
-                  <span className="px-2 py-1 rounded text-xs font-medium bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]">
-                    Active
-                  </span>
+        </>
+      }
+      subtitle={t("tenants.subtitle") || "Tenant management"}
+      isLoading={isLoading}
+      skeleton={<ListSkeleton count={5} />}
+      isEmpty={tenants.length === 0}
+      empty={
+        <EmptyState
+          title={t("tenants.list") || "All Tenants"}
+          reason={t("tenants.no_tenants") || "No tenants found."}
+        />
+      }
+      pagination={
+        showPagination
+          ? {
+              // The two halves are supplied separately rather than handing the
+              // slot a whole `<Pagination>`: that component is one atomic row
+              // (`src/components/ui/Pagination.tsx:19` — `flex items-center
+              // justify-between mt-4 px-2`) and this slot is already that row.
+              // See the report; the short version is that nesting them either
+              // collapses the inner `justify-between` inside the slot's
+              // `shrink-0` controls cell, or drags `mt-4` in and drops the
+              // buttons 8px below the count text it is supposed to sit level
+              // with. Pagination.tsx is off-limits this wave, so the page gives
+              // the slot what the slot asks for.
+              count: (
+                <p className="text-03 text-ink-muted">
+                  {t("pagination.info", {
+                    page: String(page),
+                    total: String(totalPages),
+                    count: String(count),
+                  })}
+                </p>
+              ),
+              controls: (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    ← {t("common.prev")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={page >= totalPages}
+                  >
+                    {t("common.next")} →
+                  </Button>
                 </div>
+              ),
+            }
+          : undefined
+      }
+    >
+      <div className="space-y-3">
+        {tenants.map((tenant: Tenant) => {
+          const mark = civMark(tenant.code);
+          return (
+            <div
+              key={tenant.id}
+              className={`bg-surface-1 border border-hairline p-4 flex items-center justify-between gap-4${mark ? " border-l-3" : ""}`}
+              style={mark ? { borderLeftColor: mark } : undefined}
+            >
+              <div className="min-w-0">
+                <p className="text-03 font-medium text-ink truncate">{tenant.display_name}</p>
+                <p className="text-02 font-mono text-ink-subtle mt-1 truncate">
+                  {t("tenants.code") || "Code"}: {tenant.code}
+                </p>
               </div>
-            ))}
-          </div>
-        )}
-      </PageSection>
-
-      {!isLoading && tenants.length > 0 && (
-        <Pagination page={page} totalPages={totalPages} count={data?.count ?? 0} onPageChange={setPage} />
-      )}
-    </div>
+              <Badge tone="success">Active</Badge>
+            </div>
+          );
+        })}
+      </div>
+    </PageShell>
   );
 }

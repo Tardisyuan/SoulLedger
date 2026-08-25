@@ -37,6 +37,11 @@ import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { formatHistoricalDate } from "@/lib/utils";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Button } from "@/src/components/ui/Button";
+
+/** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
+const BADGE_SHAPE = "px-2 py-1 text-01";
 
 const STATE_COLORS: Record<string, string> = {
   ALIVE: "bg-[hsl(var(--color-status-alive)/0.1)] text-[hsl(var(--color-status-alive))]",
@@ -243,10 +248,17 @@ export default function SoulDetailPage() {
   // Error state - only show when we have actual data fetch error, not during initial load
   if (error && !soul) {
     return (
-      <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4">
-        <div className="text-[hsl(var(--color-status-error))]">{error || t("souls.detail.not_found")}</div>
-        <a href="/souls/" className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-ink))]">{t("souls.detail.back_to_list")}</a>
-      </div>
+      <PageShell
+        variant="page"
+        title={t("souls.detail.not_found")}
+        backLink={
+          <a href="/souls" className="text-03 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]">
+            ← {t("souls.detail.back_to_list")}
+          </a>
+        }
+      >
+        <p className="text-04 text-[hsl(var(--color-status-error))]">{error || t("souls.detail.not_found")}</p>
+      </PageShell>
     );
   }
 
@@ -274,151 +286,150 @@ export default function SoulDetailPage() {
       : `${birthDisplay} —`
     : null;
 
-  return (
-    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
-      {/* Header - always render, show skeleton if loading */}
-      <div className="border-b border-[hsl(var(--color-hairline))] px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <a href="/souls" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">← {t("souls.detail.back_to_list")}</a>
-          {loading ? (
-            <div className="space-y-1.5">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-3 w-48" />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              {/* Title line: current-life name is what the soul is called
-                  today, so it stays the headline. State and generation are
-                  both translated badges — no raw enum text next to them. */}
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-[hsl(var(--color-accent-ink))]">{soul?.name}</h1>
-                {/* §4.6 verbatim: this badge read "ALIVE — 存活", the raw
-                    enum and its translation side by side. The enum now lives
-                    in `title` only — visible to anyone diagnosing, invisible
-                    to everyone reading. */}
-                <span
-                  title={soul?.current_state}
-                  className={`px-2 py-0.5 rounded text-xs font-bold ${STATE_COLORS[soul?.current_state || "ALIVE"]}`}
-                >
-                  {resolveEnumDisplay(t, "souls.states", soul?.current_state).label ?? t("common.value.unrecorded")}
-                </span>
-                {generation !== null && (
-                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-[hsl(var(--color-status-reincarnating)/0.1)] text-[hsl(var(--color-status-reincarnating))]">
-                    {tf("souls.detail.generation", "Life {{n}}", { n: String(generation) })}
-                  </span>
-                )}
-              </div>
-              {/* Subtitle: civilization, the prior-life name this soul was
-                  born under (only when it differs from the headline — same
-                  name would just be noise), the birth/death span that
-                  belongs to that same origin identity, and a copyable ID. */}
-              <div className="flex items-center gap-2 text-xs text-[hsl(var(--color-ink-muted))] flex-wrap">
-                <DomainEnum namespace="souls.civilizations" value={soul?.civilization} />
-                {/* previous_identity and dateRangeText are merged into one
-                    clause (defect #4, Stage 3 doc) — birth/death dates
-                    belong to birth_name's life, not the current headline
-                    name, and showing them as two independent trailing
-                    segments made that ownership ambiguous. The per-life
-                    cycle-band rows on the lifecycle spine below carry the
-                    full multi-life breakdown; this stays a compact summary. */}
-                {soul?.birth_name && soul.birth_name !== soul.name && (
-                  <>
-                    <span aria-hidden="true">·</span>
-                    <span>
-                      {tf("souls.detail.previous_identity", "Formerly {{name}}", { name: soul.birth_name })}
-                      {dateRangeText ? ` (${dateRangeText})` : ""}
-                    </span>
-                  </>
-                )}
-                {(!soul?.birth_name || soul.birth_name === soul.name) && dateRangeText && (
-                  <>
-                    <span aria-hidden="true">·</span>
-                    <span>{dateRangeText}</span>
-                  </>
-                )}
-                {/* The one place a UUID is shown — see IDENTIFIER_POLICY in
-                    src/lib/domainDisplay.ts: the entity the page is about,
-                    once, in the header, copyable, never standing in for a
-                    name. */}
-                {soul?.id && (
-                  <>
-                    <span aria-hidden="true">·</span>
-                    <IdentifierChip id={soul.id} ariaLabel={tf("souls.detail.copy_id_aria", "Copy soul ID")} />
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          {!loading && soul && (
+  // 下面这四块提到 `return` 之前存成 const,理由是机械的而不是审美的:
+  // src/__tests__/domainDisplayContract.test.tsx 的 §4.6 规则找的是枚举渲染
+  // **上方最近的 `title=`**,而 PageShell 有一个叫 `title` 的 **prop** ——
+  // 它是页面标题,不是 HTML 属性。把带枚举的节点直接内联进 PageShell 的插槽,
+  // 那个 prop 就成了窗口里最近的 `title=`,规则会判定「原始成员没走 title」
+  // 而报红 —— 而且那不是误报,真正的 `title={soul?.current_state}` 确实在它
+  // 够不到的地方。提出来之后,每个窗口里唯一的 `title=` 都是 HTML 属性。
+  const backLink = (
+    <a href="/souls" className="text-03 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]">
+      ← {t("souls.detail.back_to_list")}
+    </a>
+  );
+
+  // 标题行:当前世的名字是这个灵魂今天被叫作什么,所以它是标题;状态与世数
+  // 是两个已翻译的徽章,身边不再有裸枚举文本。
+  const headerTitle = loading ? (
+    <Skeleton className="h-8 w-48" />
+  ) : (
+    <span className="flex items-center gap-3 flex-wrap">
+      <span>{soul?.name}</span>
+      {/* §4.6 逐字:这个徽章曾经写着「ALIVE — 存活」,原始枚举和它的译名并排。
+          枚举现在只住在 `title` 里 —— 排查的人看得见,读页面的人看不见。 */}
+      <span
+        title={soul?.current_state}
+        className={`${BADGE_SHAPE} ${STATE_COLORS[soul?.current_state || "ALIVE"]}`}
+      >
+        {resolveEnumDisplay(t, "souls.states", soul?.current_state).label ?? t("common.value.unrecorded")}
+      </span>
+      {generation !== null && (
+        <span className={`${BADGE_SHAPE} bg-[hsl(var(--color-status-reincarnating)/0.1)] text-[hsl(var(--color-status-reincarnating))]`}>
+          {tf("souls.detail.generation", "Life {{n}}", { n: String(generation) })}
+        </span>
+      )}
+    </span>
+  );
+
+  // 副标题:文明、这个灵魂出生时用的那个名字(只在它与标题不同时出现 ——
+  // 同名就只是噪音)、属于那同一个出生身份的生卒区间,以及一个可复制的 ID。
+  const headerSubtitle = loading ? (
+    <Skeleton className="h-4 w-64" />
+  ) : (
+    <span className="flex items-center gap-2 flex-wrap">
+      <DomainEnum namespace="souls.civilizations" value={soul?.civilization} />
+      {/* previous_identity 与 dateRangeText 合并成一句(Stage 3 文档缺陷 #4)
+          —— 生卒日期属于 birth_name 那一世,不属于标题上那个当前名字,拆成
+          两段独立的尾巴会让这份归属变得含糊。下面生命周期脊柱上的分世带负责
+          完整的多世拆分;这里只是一句摘要。 */}
+      {soul?.birth_name && soul.birth_name !== soul.name && (
+        <>
+          <span aria-hidden="true">·</span>
+          <span>
+            {tf("souls.detail.previous_identity", "Formerly {{name}}", { name: soul.birth_name })}
+            {dateRangeText ? ` (${dateRangeText})` : ""}
+          </span>
+        </>
+      )}
+      {(!soul?.birth_name || soul.birth_name === soul.name) && dateRangeText && (
+        <>
+          <span aria-hidden="true">·</span>
+          <span>{dateRangeText}</span>
+        </>
+      )}
+      {/* 全站唯一展示 UUID 的地方 —— 见 src/lib/domainDisplay.ts 的
+          IDENTIFIER_POLICY:页面所讲的那个实体,一次,在页头,可复制,
+          且永不代替名字。 */}
+      {soul?.id && (
+        <>
+          <span aria-hidden="true">·</span>
+          <IdentifierChip id={soul.id} ariaLabel={tf("souls.detail.copy_id_aria", "Copy soul ID")} />
+        </>
+      )}
+    </span>
+  );
+
+  const headerActions = !loading && soul ? (
+    <div className="flex items-center gap-3">
+      <RequirePermission permissions="soul.update">
+        <Button type="button" variant="secondary" onClick={() => setIsEditModalOpen(true)}>
+          {t("souls.detail.edit")}
+        </Button>
+      </RequirePermission>
+      {/* 破坏性动作住在溢出菜单里,而不是紧挨编辑的一个足量红按钮
+          (Stage 3 文档缺陷 #3)—— 删除既少见又后果重大,不该和日常的编辑
+          分享同一份视觉权重。 */}
+      <RequirePermission permissions="soul.delete">
+        <div className="relative">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setIsOverflowMenuOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={isOverflowMenuOpen}
+            aria-label={tf("souls.detail.more_actions", "更多操作")}
+          >
+            ⋯
+          </Button>
+          {isOverflowMenuOpen && (
             <>
-              <RequirePermission permissions="soul.update">
+              <button
+                type="button"
+                aria-hidden="true"
+                tabIndex={-1}
+                className="fixed inset-0 z-10 cursor-default"
+                onClick={() => setIsOverflowMenuOpen(false)}
+              />
+              <div
+                role="menu"
+                className="absolute right-0 mt-1 w-40 z-20 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-lg py-1"
+              >
                 <button
-                  onClick={() => setIsEditModalOpen(true)}
-                  className="px-3 py-1.5 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] rounded-md text-sm transition-colors"
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsOverflowMenuOpen(false);
+                    handleDeleteConfirm();
+                  }}
+                  className="w-full text-left px-3 py-1 text-03 text-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.1)] transition-colors"
                 >
-                  {t("souls.detail.edit")}
+                  {t("souls.detail.delete")}
                 </button>
-              </RequirePermission>
-              {/* The destructive action lives behind an overflow menu rather
-                  than as a full-strength red button next to Edit (defect #3,
-                  Stage 3 doc) — delete is rare and consequential; it
-                  shouldn't share visual weight with the routine edit action. */}
-              <RequirePermission permissions="soul.delete">
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsOverflowMenuOpen((v) => !v)}
-                    aria-haspopup="menu"
-                    aria-expanded={isOverflowMenuOpen}
-                    aria-label={tf("souls.detail.more_actions", "更多操作")}
-                    className="px-2.5 py-1.5 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] rounded-md text-sm transition-colors"
-                  >
-                    ⋯
-                  </button>
-                  {isOverflowMenuOpen && (
-                    <>
-                      <button
-                        type="button"
-                        aria-hidden="true"
-                        tabIndex={-1}
-                        className="fixed inset-0 z-10 cursor-default"
-                        onClick={() => setIsOverflowMenuOpen(false)}
-                      />
-                      <div
-                        role="menu"
-                        className="absolute right-0 mt-1 w-40 z-20 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-md shadow-lg py-1"
-                      >
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            setIsOverflowMenuOpen(false);
-                            handleDeleteConfirm();
-                          }}
-                          className="w-full text-left px-3 py-1.5 text-sm text-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.1)] transition-colors"
-                        >
-                          {t("souls.detail.delete")}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </RequirePermission>
+              </div>
             </>
           )}
         </div>
-      </div>
+      </RequirePermission>
+    </div>
+  ) : null;
 
-      <div className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+  return (
+    <PageShell
+      variant="page"
+      backLink={backLink}
+      title={headerTitle}
+      subtitle={headerSubtitle}
+      actions={headerActions}
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column: Soul info + ledger */}
         <div className="lg:col-span-1 space-y-6">
           {/* Soul Card */}
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{t("souls.detail.soul_info")}</h2>
+          <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
+            <h2 className="text-03 font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{t("souls.detail.soul_info")}</h2>
             {loading ? (
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2 text-03">
                 {[1,2,3,4,5].map(i => (
                   <div key={i} className="flex justify-between">
                     <Skeleton className="h-3 w-16" />
@@ -427,7 +438,7 @@ export default function SoulDetailPage() {
                 ))}
               </div>
             ) : (
-              <dl className="space-y-2 text-sm">
+              <dl className="space-y-2 text-03">
                 {/* Soul ID now lives in the header as a copyable chip —
                     a second, non-interactive, truncated copy here was
                     redundant and couldn't be pasted into anything. */}
@@ -474,7 +485,7 @@ export default function SoulDetailPage() {
               lifespan chart, and next-life inheritance preview, all moved
               out of this ad hoc box into their own component. */}
           {loading ? (
-            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))] space-y-3">
+            <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))] space-y-3">
               <div className="flex justify-between items-center">
                 <Skeleton className="h-4 w-12" />
                 <Skeleton className="h-6 w-12" />
@@ -501,15 +512,15 @@ export default function SoulDetailPage() {
               inheritance={inheritanceQuery.data ?? null}
             />
           ) : (
-            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-              <h2 title={soul?.civilization} className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
-              <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
+            <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
+              <h2 title={soul?.civilization} className="text-03 font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
+              <p className="text-03 text-[hsl(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{t("souls.detail.actions")}</h2>
+          <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
+            <h2 className="text-03 font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{t("souls.detail.actions")}</h2>
             {loading ? (
               <div className="space-y-2">
                 <Skeleton className="h-8 w-full" />
@@ -527,7 +538,7 @@ export default function SoulDetailPage() {
                     <button
                       onClick={handleDie}
                       disabled={!!actionLoading}
-                      className="w-full py-2 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
+                      className="w-full py-2 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black disabled:opacity-50 text-03 font-medium transition-colors"
                     >
                       {actionLoading === "die" ? t("souls.detail.processing") : t("souls.detail.mark_dead")}
                     </button>
@@ -535,12 +546,12 @@ export default function SoulDetailPage() {
                 )}
                 {soul?.current_state === "JUDGING" && (
                   <div className="space-y-2">
-                    <p className="text-xs text-[hsl(var(--color-ink-muted))] text-center">{t("souls.detail.render_judgment")}</p>
+                    <p className="text-02 text-[hsl(var(--color-ink-muted))] text-center">{t("souls.detail.render_judgment")}</p>
                     <RequirePermission permissions="judgment.create">
                       <button
                         onClick={handleStartJudgment}
                         disabled={!!actionLoading}
-                        className="w-full py-2 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent)/0.8)] disabled:opacity-50 text-black text-sm font-medium rounded-md transition-colors"
+                        className="w-full py-2 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent)/0.8)] disabled:opacity-50 text-black text-03 font-medium transition-colors"
                       >
                         {actionLoading === "judge" ? t("souls.detail.processing") : t("souls.detail.start_judgment")}
                       </button>
@@ -570,7 +581,7 @@ export default function SoulDetailPage() {
                         key={disp.id}
                         onClick={() => handleReincarnate(disp.id)}
                         disabled={!!actionLoading}
-                        className="w-full py-2 px-4 bg-[hsl(var(--color-status-info))] hover:bg-[hsl(var(--color-status-info)/0.8)] disabled:opacity-50 rounded-md text-sm font-medium transition-colors"
+                        className="w-full py-2 px-4 bg-[hsl(var(--color-status-info))] hover:bg-[hsl(var(--color-status-info)/0.8)] disabled:opacity-50 text-03 font-medium transition-colors"
                       >
                         {actionLoading === "reincarnate" ? t("souls.detail.processing") : `${t("souls.detail.reincarnate")} ${disp.realm_name || disp.realm_code || t("souls.detail.destination")}`}
                       </button>
@@ -578,12 +589,12 @@ export default function SoulDetailPage() {
                   </RequirePermission>
                 )}
                 {soul?.current_state === "REINCARNATING" && (
-                  <div className="text-center text-[hsl(var(--color-status-info))] text-sm py-2">
+                  <div className="text-center text-[hsl(var(--color-status-info))] text-03 py-2">
                     {t("souls.detail.being_reborn")}
                   </div>
                 )}
                 {soul?.current_state === "ALIVE" && reincarnations.length > 0 && (
-                  <div className="text-center text-[hsl(var(--color-ink-subtle))] text-xs pt-2">
+                  <div className="text-center text-[hsl(var(--color-ink-subtle))] text-02 pt-2">
                     {reincarnations.length} {t("souls.detail.previous_reincarnations")}
                   </div>
                 )}
@@ -616,7 +627,7 @@ export default function SoulDetailPage() {
               opt-in toggle) the raw system event feed, plus dashed
               placeholder rows for stages the soul hasn't reached yet. */}
           {loading ? (
-            <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))] space-y-3">
+            <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))] space-y-3">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
@@ -664,7 +675,7 @@ export default function SoulDetailPage() {
               type="button"
               onClick={() => setIsDeleteModalOpen(false)}
               disabled={deleteSoulMutation.isPending}
-              className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 rounded text-sm transition-colors"
+              className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 text-03 transition-colors"
             >
               {t("souls.detail.cancel_delete")}
             </button>
@@ -672,14 +683,14 @@ export default function SoulDetailPage() {
               type="button"
               onClick={handleDelete}
               disabled={deleteSoulMutation.isPending}
-              className="flex-1 px-4 py-2 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 text-white rounded text-sm font-medium transition-colors"
+              className="flex-1 px-4 py-2 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 text-white text-03 font-medium transition-colors"
             >
               {deleteSoulMutation.isPending ? t("souls.detail.deleting") : t("souls.detail.confirm_delete_action")}
             </button>
           </div>
         }
       >
-        <p className="text-[hsl(var(--color-ink))] text-sm">{t("souls.detail.delete_confirm_message")}</p>
+        <p className="text-[hsl(var(--color-ink))] text-03">{t("souls.detail.delete_confirm_message")}</p>
       </BaseModal>
 
       {/* Custom Confirm Dialog */}
@@ -694,7 +705,7 @@ export default function SoulDetailPage() {
         onCancel={() => setIsConfirmOpen(false)}
         variant="warning"
       />
-    </div>
+    </PageShell>
   );
 }
 

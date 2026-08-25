@@ -14,10 +14,28 @@ import { IconPicker } from "@/src/components/ui/IconPicker";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable } from "@/components/ui/data-table";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Button, buttonVariants } from "@/src/components/ui/Button";
+import { Badge } from "@/src/components/ui/Badge";
+import { SelectField, TextField } from "@/src/components/ui/Field";
 
 type LucideIconName = keyof typeof LucideIcons;
 
 const ROLE_OPTIONS = ["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"];
+
+/**
+ * The five visibility gates, as i18n keys. Five near-identical `<tr>` blocks
+ * became one loop when the row height and the header spelling were unified —
+ * the copy is the only thing that differed between them, and now that is the
+ * only thing written down per row.
+ */
+const GATE_ROWS = [
+  { name: "menus.active", effect: "menus.gate_is_active_effect", nonadmin: "menus.gate_is_active_nonadmin" },
+  { name: "menus.visible_label", effect: "menus.gate_visible_effect", nonadmin: "menus.gate_visible_nonadmin" },
+  { name: "menus.permission_field", effect: "menus.gate_permission_effect", nonadmin: "menus.gate_permission_nonadmin" },
+  { name: "menus.roles", effect: "menus.gate_roles_effect", nonadmin: "menus.gate_roles_nonadmin" },
+  { name: "menus.type", effect: "menus.gate_menu_type_effect", nonadmin: "menus.gate_menu_type_nonadmin" },
+] as const;
 const MENU_TYPE_OPTIONS = ["DIRECTORY", "MENU", "BUTTON"] as const;
 type MenuTypeOption = (typeof MENU_TYPE_OPTIONS)[number];
 
@@ -250,208 +268,207 @@ export default function MenusPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
-      {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
+    /* `page` (1200px), up from `max-w-5xl` (1024). Seven columns, one of them a
+       wrapping list of role chips. */
+    <PageShell
+      variant="page"
+      title={
+        <>
           {t("menus.title")}
           <MenuGloss path="/menus" />
-        </h1>
-        <Link
-          href="/menus/buttons"
-          className="px-4 py-1.5 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] rounded-md text-sm text-[hsl(var(--color-ink-muted))] transition-colors"
-        >
-          {t("menu_buttons.title")}
-        </Link>
-        <RequirePermission permissions="menu.create">
-          <button
-            onClick={openCreate}
-            className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] rounded-md text-sm font-medium transition-colors"
-          >
-            + {t("menus.create")}
-          </button>
-        </RequirePermission>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-6 py-6">
-        {/* Five-gate reference: an entry can be invisible for five unrelated
-            reasons (is_active, visible, permission, roles, menu_type), none
-            of them named anywhere in the UI. This names them. Left open to
-            anyone who can reach this page — menu.read is granted to every
-            role — since the ADMIN-only write gate (menu.manage) doesn't mean
-            only ADMIN benefits from knowing why an entry is missing. */}
-        <details className="mb-4 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md">
-          <summary className="cursor-pointer px-4 py-2.5 text-sm font-medium text-[hsl(var(--color-ink))]">
-            {t("menus.gates_title")}
-          </summary>
-          <div className="px-4 pb-4">
-            <p className="text-sm text-[hsl(var(--color-ink-muted))] mb-3">{t("menus.gates_intro")}</p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="text-left text-[hsl(var(--color-ink-subtle))] border-b border-[hsl(var(--color-hairline))]">
-                    <th className="py-1.5 pr-3 font-medium">{t("menus.gate_col_name")}</th>
-                    <th className="py-1.5 pr-3 font-medium">{t("menus.gate_col_effect")}</th>
-                    <th className="py-1.5 font-medium">{t("menus.gate_col_nonadmin")}</th>
-                  </tr>
-                </thead>
-                <tbody className="text-[hsl(var(--color-ink-muted))]">
-                  <tr className="border-b border-[hsl(var(--color-hairline))]/50">
-                    <td className="py-2 pr-3 font-medium text-[hsl(var(--color-ink))] whitespace-nowrap">{t("menus.active")}</td>
-                    <td className="py-2 pr-3">{t("menus.gate_is_active_effect")}</td>
-                    <td className="py-2">{t("menus.gate_is_active_nonadmin")}</td>
-                  </tr>
-                  <tr className="border-b border-[hsl(var(--color-hairline))]/50">
-                    <td className="py-2 pr-3 font-medium text-[hsl(var(--color-ink))] whitespace-nowrap">{t("menus.visible_label")}</td>
-                    <td className="py-2 pr-3">{t("menus.gate_visible_effect")}</td>
-                    <td className="py-2">{t("menus.gate_visible_nonadmin")}</td>
-                  </tr>
-                  <tr className="border-b border-[hsl(var(--color-hairline))]/50">
-                    <td className="py-2 pr-3 font-medium text-[hsl(var(--color-ink))] whitespace-nowrap">{t("menus.permission_field")}</td>
-                    <td className="py-2 pr-3">{t("menus.gate_permission_effect")}</td>
-                    <td className="py-2">{t("menus.gate_permission_nonadmin")}</td>
-                  </tr>
-                  <tr className="border-b border-[hsl(var(--color-hairline))]/50">
-                    <td className="py-2 pr-3 font-medium text-[hsl(var(--color-ink))] whitespace-nowrap">{t("menus.roles")}</td>
-                    <td className="py-2 pr-3">{t("menus.gate_roles_effect")}</td>
-                    <td className="py-2">{t("menus.gate_roles_nonadmin")}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 pr-3 font-medium text-[hsl(var(--color-ink))] whitespace-nowrap">{t("menus.type")}</td>
-                    <td className="py-2 pr-3">{t("menus.gate_menu_type_effect")}</td>
-                    <td className="py-2">{t("menus.gate_menu_type_nonadmin")}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-2">{t("menus.gates_footnote")}</p>
-          </div>
-        </details>
-
-        {/* Recycle bin (Stage 4 §4.7): absent by default — a deleted row
-            only ever renders when this is on. See /recycle-bin for the
-            cross-entity-type view; this toggle is the per-list pattern
-            example the design doc asks for. */}
-        <div className="flex items-center gap-2 mb-3">
+        </>
+      }
+      actions={
+        <div className="flex items-center gap-3">
+          <Link href="/menus/buttons" className={buttonVariants({ variant: "secondary", size: "md" })}>
+            {t("menu_buttons.title")}
+          </Link>
+          <RequirePermission permissions="menu.create">
+            <Button type="button" variant="primary" onClick={openCreate}>
+              + {t("menus.create")}
+            </Button>
+          </RequirePermission>
+        </div>
+      }
+      filters={
+        /* Recycle bin (Stage 4 §4.7): absent by default — a deleted row only
+           ever renders when this is on. It is a filter over the list, so it
+           lives in the filter slot rather than floating above the table. */
+        <div className="flex items-center gap-2">
           <input
             type="checkbox"
             id="menus-show-deleted"
             checked={showDeleted}
             onChange={(e) => setShowDeleted(e.target.checked)}
           />
-          <label htmlFor="menus-show-deleted" className="text-sm text-[hsl(var(--color-ink-muted))]">
+          <label htmlFor="menus-show-deleted" className="text-03 text-ink-muted">
             {t("menus.show_deleted")}
           </label>
         </div>
+      }
+    >
+      {/* Five-gate reference: an entry can be invisible for five unrelated
+          reasons (is_active, visible, permission, roles, menu_type), none
+          of them named anywhere in the UI. This names them. Left open to
+          anyone who can reach this page — menu.read is granted to every
+          role — since the ADMIN-only write gate (menu.manage) doesn't mean
+          only ADMIN benefits from knowing why an entry is missing.
 
-        <DataTable<MenuItemFull>
-          caption={t("menus.title")}
-          columns={[
-            { key: "name", header: t("menus.name") },
-            { key: "path", header: t("menus.path") },
-            { key: "type", header: t("menus.type") },
-            { key: "roles", header: t("menus.roles") },
-            { key: "order", header: t("menus.order") },
-            { key: "status", header: t("menus.status") },
-            { key: "action", header: t("menus.action"), align: "right" },
-          ]}
-          data={menus}
-          isLoading={isLoading}
-          isError={Boolean(error)}
-          keyExtractor={(menu) => String(menu.id)}
-          renderRow={(menu) => {
-            const MenuIcon = menu.icon
-              ? (LucideIcons[menu.icon as LucideIconName] as unknown as LucideIcon)
-              : null;
-            // Deleted-row state (Stage 4 §4.7): ink-subtle text, strikethrough
-            // on the name only, plus a "已删除" badge — never hidden data,
-            // just de-emphasized. Only reachable when showDeleted is on,
-            // since the backend only returns these rows with ?show_deleted=true.
-            const isDeleted = Boolean(menu.is_deleted);
-            return (
-              <>
-                <td className={`px-4 py-3 ${isDeleted ? "text-[hsl(var(--color-ink-subtle))]" : ""}`}>
-                  <div className="flex items-center gap-2">
-                    {MenuIcon ? (
-                      <MenuIcon className="w-4 h-4 text-[hsl(var(--color-accent-ink))]" />
-                    ) : null}
-                    <span className={`font-medium ${isDeleted ? "line-through text-[hsl(var(--color-ink-subtle))]" : "text-[hsl(var(--color-ink))]"}`}>
-                      {menu.name}
-                    </span>
-                    {isDeleted && (
-                      <span className="px-1.5 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-subtle))] rounded text-xs shrink-0">
-                        {t("menus.deleted_badge")}
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs font-mono">{menu.path}</td>
-                <td className="px-4 py-3">
-                  <span className="px-1.5 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
-                    {t(`menus.menu_types.${menu.menu_type ?? "MENU"}`)}
+          WHY THIS STAYS A HAND-WRITTEN <table> AND DOES NOT BECOME A DataTable.
+          DataTable's contract is `data: T[]` + `keyExtractor` + `renderRow`,
+          with loading / error / empty / sort / pagination states attached. None
+          of those has a referent here: there is no request, no page, no row
+          identity and no possible empty state — the five gates are five facts
+          about the schema, spelled out in copy. Passing it a literal array of
+          five i18n keys would invent a data source in order to satisfy a
+          signature, and would hang a `<caption class="sr-only">`, a bordered
+          card and a pagination-capable footer off a paragraph.
+
+          What WAS wrong is the part that is fixed below. The brief counted
+          three header spellings across the app's hand-written tables; this one
+          was the "no background at all" variant, with `text-ink-subtle` heads
+          and a `py-1.5` row height on nobody's ladder. Its `<thead>` is now
+          character-for-character DataTable's own — `bg-surface-2
+          text-ink-muted`, `px-4 py-3 font-medium`, hairline rule under the row
+          — so the two tables on this page read as one table style even though
+          only one of them is the component. */}
+      <details className="mb-4 bg-surface-2 border border-hairline">
+        <summary className="cursor-pointer px-4 py-3 text-03 font-medium text-ink">
+          {t("menus.gates_title")}
+        </summary>
+        <div className="px-4 pb-4">
+          <p className="text-03 text-ink-muted mb-3">{t("menus.gates_intro")}</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-03 border-collapse">
+              <thead className="bg-surface-2 text-ink-muted">
+                <tr className="text-left border-b border-hairline">
+                  <th className="px-4 py-3 font-medium">{t("menus.gate_col_name")}</th>
+                  <th className="px-4 py-3 font-medium">{t("menus.gate_col_effect")}</th>
+                  <th className="px-4 py-3 font-medium">{t("menus.gate_col_nonadmin")}</th>
+                </tr>
+              </thead>
+              <tbody className="text-ink-muted">
+                {GATE_ROWS.map((row) => (
+                  <tr key={row.name} className="border-b border-hairline last:border-0">
+                    <td className="px-4 py-3 font-medium text-ink whitespace-nowrap">{t(row.name)}</td>
+                    <td className="px-4 py-3">{t(row.effect)}</td>
+                    <td className="px-4 py-3">{t(row.nonadmin)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-02 text-ink-subtle mt-2">{t("menus.gates_footnote")}</p>
+        </div>
+      </details>
+
+      {/* No `pagination` slot — DataTable renders its own <Pagination>
+          (components/ui/data-table.tsx:288) from the four props at the end. */}
+      <DataTable<MenuItemFull>
+        caption={t("menus.title")}
+        columns={[
+          { key: "name", header: t("menus.name") },
+          { key: "path", header: t("menus.path") },
+          { key: "type", header: t("menus.type") },
+          { key: "roles", header: t("menus.roles") },
+          { key: "order", header: t("menus.order") },
+          { key: "status", header: t("menus.status") },
+          { key: "action", header: t("menus.action"), align: "right" },
+        ]}
+        data={menus}
+        isLoading={isLoading}
+        isError={Boolean(error)}
+        keyExtractor={(menu) => String(menu.id)}
+        renderRow={(menu) => {
+          const MenuIcon = menu.icon
+            ? (LucideIcons[menu.icon as LucideIconName] as unknown as LucideIcon)
+            : null;
+          // Deleted-row state (Stage 4 §4.7): ink-subtle text, strikethrough
+          // on the name only, plus a "已删除" badge — never hidden data,
+          // just de-emphasized. Only reachable when showDeleted is on,
+          // since the backend only returns these rows with ?show_deleted=true.
+          const isDeleted = Boolean(menu.is_deleted);
+          return (
+            <>
+              <td className={`px-4 py-3 ${isDeleted ? "text-ink-subtle" : ""}`}>
+                <div className="flex items-center gap-2">
+                  {MenuIcon ? (
+                    <MenuIcon className="w-4 h-4 text-[hsl(var(--color-accent-ink))]" />
+                  ) : null}
+                  <span className={`font-medium ${isDeleted ? "line-through text-ink-subtle" : "text-ink"}`}>
+                    {menu.name}
                   </span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {menu.roles.map((role) => (
-                      <span key={role} className="px-1.5 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] rounded text-xs">
-                        {t(`users.roles.${role}`)}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{menu.order}</td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-col gap-1">
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold w-fit ${menu.is_active ? "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
-                      {menu.is_active ? t("menus.active") : t("menus.inactive")}
+                  {isDeleted && (
+                    <Badge className="shrink-0 text-ink-subtle">
+                      {t("menus.deleted_badge")}
+                    </Badge>
+                  )}
+                </div>
+              </td>
+              {/* Paths are identifiers — the 02 step, and monospaced. */}
+              <td className="px-4 py-3 text-02 font-mono text-ink-muted">{menu.path}</td>
+              <td className="px-4 py-3">
+                <Badge>{t(`menus.menu_types.${menu.menu_type ?? "MENU"}`)}</Badge>
+              </td>
+              <td className="px-4 py-3">
+                <div className="flex flex-wrap gap-1">
+                  {menu.roles.map((role) => (
+                    /* `pill`, and this is the one place on the page that
+                       earns it: a role IS an identity token, which is the
+                       documented meaning of a round badge here. */
+                    <Badge key={role} tone="accent" shape="pill">
+                      {t(`users.roles.${role}`)}
+                    </Badge>
+                  ))}
+                </div>
+              </td>
+              <td className="px-4 py-3 text-ink-muted">{menu.order}</td>
+              <td className="px-4 py-3">
+                <div className="flex flex-col items-start gap-1">
+                  {/* is_active and visible are gates being in force or not —
+                      a system state, so the tone table applies here. */}
+                  <Badge tone={menu.is_active ? "success" : "neutral"}>
+                    {menu.is_active ? t("menus.active") : t("menus.inactive")}
+                  </Badge>
+                  <Badge className={menu.visible !== false ? undefined : "text-ink-subtle"}>
+                    {menu.visible !== false ? t("menus.shown_label") : t("menus.hidden_label")}
+                  </Badge>
+                </div>
+              </td>
+              <td className="px-4 py-3 text-right">
+                {/* See app/permissions/page.tsx: inline siblings concatenate
+                    their labels in the accessibility tree and on copy. */}
+                <div className="flex justify-end gap-2">
+                  {!isDeleted && (
+                    <>
+                      <RequirePermission permissions="menu.update">
+                        <Button type="button" size="sm" onClick={() => openEdit(menu)}>
+                          {t("menus.edit")}
+                        </Button>
+                      </RequirePermission>
+                      <RequirePermission permissions="menu.delete">
+                        <Button type="button" size="sm" variant="danger" onClick={() => setPendingDelete(menu)}>
+                          {t("menus.delete")}
+                        </Button>
+                      </RequirePermission>
+                    </>
+                  )}
+                  {isDeleted && (
+                    <span className="text-02 text-ink-subtle">
+                      {t("recycle_bin.manage_from_bin")}
                     </span>
-                    <span className={`px-2 py-0.5 rounded text-xs w-fit ${menu.visible !== false ? "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-subtle))]"}`}>
-                      {menu.visible !== false ? t("menus.shown_label") : t("menus.hidden_label")}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {/* See app/permissions/page.tsx: inline siblings concatenate
-                      their labels in the accessibility tree and on copy. */}
-                  <div className="flex justify-end gap-3">
-                    {!isDeleted && (
-                      <>
-                        <RequirePermission permissions="menu.update">
-                          <button
-                            onClick={() => openEdit(menu)}
-                            className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-hover))] text-sm"
-                          >
-                            {t("menus.edit")}
-                          </button>
-                        </RequirePermission>
-                        <RequirePermission permissions="menu.delete">
-                          <button
-                            onClick={() => setPendingDelete(menu)}
-                            className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-sm"
-                          >
-                            {t("menus.delete")}
-                          </button>
-                        </RequirePermission>
-                      </>
-                    )}
-                    {isDeleted && (
-                      <span className="text-xs text-[hsl(var(--color-ink-subtle))]">
-                        {t("recycle_bin.manage_from_bin")}
-                      </span>
-                    )}
-                  </div>
-                </td>
-              </>
-            );
-          }}
-          emptyMessage={t("menus.no_menus")}
-          page={page}
-          totalPages={totalPages}
-          totalCount={data?.count}
-          onPageChange={setPage}
-        />
-      </div>
+                  )}
+                </div>
+              </td>
+            </>
+          );
+        }}
+        emptyMessage={t("menus.no_menus")}
+        page={page}
+        totalPages={totalPages}
+        totalCount={data?.count}
+        onPageChange={setPage}
+      />
 
       {/* Create/Edit Modal */}
       <Modal
@@ -460,77 +477,66 @@ export default function MenusPage() {
         title={editingMenu ? t("menus.edit") : t("menus.create")}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Every control in this form was a hand-written `label` + `input`
+              pair carrying the same class string, spelled slightly differently
+              each time. They are `TextField` / `SelectField` now — which also
+              supplies the wiring the pairs never had: `aria-required` on the
+              control, and `aria-describedby` pointing at the hint below it. */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor={menuTypeId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.type")}</label>
-              <select
-                id={menuTypeId}
-                value={form.menu_type}
-                onChange={(e) => {
-                  const menu_type = e.target.value as MenuTypeOption;
-                  setForm((f) => ({
-                    ...f,
-                    menu_type,
-                    // A DIRECTORY is a pure navigation grouping with no page
-                    // (backend/apps/menus/models.py's own docstring) — clear
-                    // the fields that stop applying rather than leave stale
-                    // values sitting behind a hidden input.
-                    ...(menu_type === "DIRECTORY" ? { path: "", component: "", permission: "" } : {}),
-                  }));
-                }}
-                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-              >
-                {MENU_TYPE_OPTIONS.map((mt) => (
-                  <option key={mt} value={mt}>{t(`menus.menu_types.${mt}`)}</option>
-                ))}
-              </select>
-              {form.menu_type === "DIRECTORY" && (
-                <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">{t("menus.menu_type_directory_hint")}</p>
-              )}
-            </div>
-            <div>
-              <label htmlFor={parentSelectId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.parent_label")}</label>
-              <select
-                id={parentSelectId}
-                value={form.parent ?? ""}
-                onChange={(e) => setForm({ ...form, parent: e.target.value ? Number(e.target.value) : null })}
-                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-              >
-                <option value="">{t("menus.parent_none")}</option>
-                {parentOptions.map((m) => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label htmlFor={nameId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.name")}</label>
-            <input
-              id={nameId}
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            <SelectField
+              id={menuTypeId}
+              label={t("menus.type")}
+              value={form.menu_type}
+              onChange={(e) => {
+                const menu_type = e.target.value as MenuTypeOption;
+                setForm((f) => ({
+                  ...f,
+                  menu_type,
+                  // A DIRECTORY is a pure navigation grouping with no page
+                  // (backend/apps/menus/models.py's own docstring) — clear
+                  // the fields that stop applying rather than leave stale
+                  // values sitting behind a hidden input.
+                  ...(menu_type === "DIRECTORY" ? { path: "", component: "", permission: "" } : {}),
+                }));
+              }}
+              description={form.menu_type === "DIRECTORY" ? t("menus.menu_type_directory_hint") : undefined}
+              options={MENU_TYPE_OPTIONS.map((mt) => ({ value: mt, label: t(`menus.menu_types.${mt}`) }))}
+            />
+            <SelectField
+              id={parentSelectId}
+              label={t("menus.parent_label")}
+              value={form.parent ?? ""}
+              onChange={(e) => setForm({ ...form, parent: e.target.value ? Number(e.target.value) : null })}
+              options={[
+                { value: "", label: t("menus.parent_none") },
+                ...parentOptions.map((m) => ({ value: String(m.id), label: m.name })),
+              ]}
             />
           </div>
+          <TextField
+            id={nameId}
+            label={t("menus.name")}
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            required
+          />
           {form.menu_type !== "DIRECTORY" && (
-            <div>
-              <label htmlFor={pathId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.path")}</label>
-              <input
-                id={pathId}
-                value={form.path}
-                onChange={(e) => setForm({ ...form, path: e.target.value })}
-                required
-                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-              />
-            </div>
+            <TextField
+              id={pathId}
+              label={t("menus.path")}
+              value={form.path}
+              onChange={(e) => setForm({ ...form, path: e.target.value })}
+              required
+            />
           )}
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className="flex flex-col gap-1">
               {/* IconPicker (src/components/ui/IconPicker.tsx) renders its own trigger button
                   and is out of scope for this pass, so this label can't be wired via htmlFor —
-                  it stays a visual label only. */}
-              <span id={iconLabelId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">
+                  it stays a visual label only. Its typography is `Field`'s label
+                  spelling (`text-01 uppercase text-ink-subtle`) so it does not
+                  read as a different kind of label from the ones beside it. */}
+              <span id={iconLabelId} className="text-01 uppercase text-ink-subtle">
                 {t("menus.icon")} <span className="text-[hsl(var(--color-status-error))]">*</span>
               </span>
               <IconPicker
@@ -538,85 +544,85 @@ export default function MenusPage() {
                 onChange={(icon) => { setForm({ ...form, icon }); setIconError(false); }}
               />
               {iconError ? (
-                <p className="text-xs text-[hsl(var(--color-status-error))] mt-1">{t("menus.icon_missing_error")}</p>
+                <p className="text-02 text-[hsl(var(--color-status-error))]">{t("menus.icon_missing_error")}</p>
               ) : (
-                <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">{t("menus.icon_required_hint")}</p>
+                <p className="text-02 text-ink-tertiary">{t("menus.icon_required_hint")}</p>
               )}
               {iconCollision && (
-                <p className="text-xs text-[hsl(var(--color-status-warning))] mt-1">
+                <p className="text-02 text-[hsl(var(--color-status-warning))]">
                   {t("menus.icon_collision_warning", { name: iconCollision.name })}
                 </p>
               )}
             </div>
-            <div>
-              <label htmlFor={orderId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.order")}</label>
-              <input
-                id={orderId}
-                type="number"
-                value={form.order}
-                onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
-                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-              />
-            </div>
+            <TextField
+              id={orderId}
+              label={t("menus.order")}
+              type="number"
+              value={form.order}
+              onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
+            />
           </div>
           {form.menu_type !== "DIRECTORY" && (
-            <div>
-              <label htmlFor={componentId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.component")}</label>
-              <input
-                id={componentId}
-                value={form.component}
-                onChange={(e) => setForm({ ...form, component: e.target.value })}
-                placeholder={t("menus.component_placeholder")}
-                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-              />
-            </div>
+            <TextField
+              id={componentId}
+              label={t("menus.component")}
+              value={form.component}
+              onChange={(e) => setForm({ ...form, component: e.target.value })}
+              placeholder={t("menus.component_placeholder")}
+            />
           )}
           {form.menu_type !== "DIRECTORY" && (
-            <div>
-              <label htmlFor={permissionId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.permission_field")}</label>
-              <input
+            <div className="flex flex-col gap-1">
+              <TextField
                 id={permissionId}
+                label={t("menus.permission_field")}
                 value={form.permission}
                 onChange={(e) => setForm({ ...form, permission: e.target.value })}
                 placeholder={t("menus.permission_codename_placeholder")}
-                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+                /* The derivation note is help text, and `description` is where
+                   help text goes — it gets an id and lands in the control's
+                   `aria-describedby`, which the loose `<p>` below it never did. */
+                description={
+                  !form.permission.trim()
+                    ? derivedCodename
+                      ? t("menus.permission_derived_as", { codename: derivedCodename })
+                      : t("menus.permission_derived_none")
+                    : undefined
+                }
               />
-              {!form.permission.trim() && (
-                <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
-                  {derivedCodename
-                    ? t("menus.permission_derived_as", { codename: derivedCodename })
-                    : t("menus.permission_derived_none")}
-                </p>
-              )}
+              {/* Still a sibling and not `error`: a codename that resolves to
+                  nothing is a warning — the form submits either way, and a red
+                  field would claim a rejection that is not going to happen. */}
               {effectiveCodename && codenameIsReal === false && (
-                <p className="text-xs text-[hsl(var(--color-status-warning))] mt-1">
+                <p className="text-02 text-[hsl(var(--color-status-warning))]">
                   {t("menus.permission_mismatch_warning", { codename: effectiveCodename })}
                 </p>
               )}
             </div>
           )}
-          <div>
-            <span id={rolesLabelId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.roles")}</span>
+          <div className="flex flex-col gap-1">
+            <span id={rolesLabelId} className="text-01 uppercase text-ink-subtle">{t("menus.roles")}</span>
             <div role="group" aria-labelledby={rolesLabelId} className="flex flex-wrap gap-2">
               {ROLE_OPTIONS.map((role) => (
-                <button
+                /* A pressed toggle is the accent fill, which is exactly
+                   `Button`'s primary — including the `text-black` its contrast
+                   note derives (9.82:1; `text-white` here would have been
+                   2.14:1). Unpressed is the default secondary. */
+                <Button
                   key={role}
                   type="button"
+                  size="sm"
+                  variant={form.roles.includes(role) ? "primary" : "secondary"}
                   aria-pressed={form.roles.includes(role)}
                   onClick={() => toggleRole(role)}
-                  className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                    form.roles.includes(role)
-                      ? "bg-[hsl(var(--color-accent))] text-black font-medium"
-                      : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] border border-hairline hover:border-[hsl(var(--color-accent))]"
-                  }`}
                 >
                   {t(`users.roles.${role}`)}
-                </button>
+                </Button>
               ))}
             </div>
-            <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">{t("menus.roles_empty_hint")}</p>
+            <p className="text-02 text-ink-tertiary">{t("menus.roles_empty_hint")}</p>
           </div>
-          <div>
+          <div className="flex flex-col gap-1">
             {isAdmin ? (
               <div className="flex items-center gap-2">
                 <input
@@ -625,24 +631,24 @@ export default function MenusPage() {
                   checked={form.is_active}
                   onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
                 />
-                <label htmlFor={isActiveId} className="text-sm text-[hsl(var(--color-ink))]">{t("menus.active")}</label>
+                <label htmlFor={isActiveId} className="text-03 text-ink">{t("menus.active")}</label>
               </div>
             ) : (
               // Per design review: no greyed-out checkbox for a control the
               // viewer can never use — a disabled control advertises a
               // capability that's permanently out of reach. Plain text instead.
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-[hsl(var(--color-ink-muted))]">{t("menus.active")}:</span>
-                <span className={form.is_active ? "text-[hsl(var(--color-status-success))]" : "text-[hsl(var(--color-ink-subtle))]"}>
+              <div className="flex items-center gap-2 text-03">
+                <span className="text-ink-muted">{t("menus.active")}:</span>
+                <span className={form.is_active ? "text-[hsl(var(--color-status-success))]" : "text-ink-subtle"}>
                   {form.is_active ? t("menus.active") : t("menus.inactive")}
                 </span>
               </div>
             )}
-            <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
+            <p className="text-02 text-ink-tertiary">
               {isAdmin ? t("menus.active_hint") : t("menus.active_readonly_note")}
             </p>
           </div>
-          <div>
+          <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -650,24 +656,21 @@ export default function MenusPage() {
                 checked={form.visible}
                 onChange={(e) => setForm({ ...form, visible: e.target.checked })}
               />
-              <label htmlFor={visibleId} className="text-sm text-[hsl(var(--color-ink))]">{t("menus.visible_label")}</label>
+              <label htmlFor={visibleId} className="text-03 text-ink">{t("menus.visible_label")}</label>
             </div>
-            <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">{t("menus.visible_hint")}</p>
+            <p className="text-02 text-ink-tertiary">{t("menus.visible_hint")}</p>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => { setIsCreateModalOpen(false); setEditingMenu(null); }}
-              className="px-4 py-2 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] rounded-md text-sm text-[hsl(var(--color-ink-muted))] transition-colors"
             >
               {t("common.cancel")}
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] rounded-md text-sm font-medium text-black transition-colors"
-            >
+            </Button>
+            <Button type="submit" variant="primary">
               {editingMenu ? t("menus.save") : t("menus.create")}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -690,6 +693,6 @@ export default function MenusPage() {
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => pendingDelete && deleteMutation.mutate(pendingDelete.id)}
       />
-    </div>
+    </PageShell>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/src/contexts/I18nContext";
+import { Button } from "@/src/components/ui/Button";
 
 export default function Error({
   error,
@@ -12,23 +13,28 @@ export default function Error({
   const { t } = useI18n();
 
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center">
+    // 不是 `min-h-screen`:这个错误边界渲染在 AppLayout 的槽位里,那一层已经
+    // 是 min-h-[calc(100vh-4rem)]。`min-h-[60vh]` 只是给这块内容一个够居中的
+    // 高度,不再额外造 64px 死滚动。
+    <div className="bg-canvas min-h-[60vh] flex items-center justify-center px-6">
       <div className="text-center">
-        <div className="text-6xl font-bold text-red-500 mb-4">500</div>
-        <h1 className="text-xl font-bold text-[hsl(var(--color-ink))] mb-2">{t("error.title")}</h1>
-        <p className="text-[hsl(var(--color-ink-muted))] mb-6">{t("error.description")}</p>
-        <button
-          onClick={reset}
-          className="px-4 py-2 bg-[hsl(var(--color-accent))] text-black rounded-lg font-medium hover:opacity-90 transition-opacity mr-3"
-        >
-          {t("error.retry")}
-        </button>
-        <a
-          href="/"
-          className="px-4 py-2 bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] rounded-lg font-medium hover:opacity-90 transition-opacity"
-        >
-          {t("error.home")}
-        </a>
+        {/* `text-red-500` 是 Tailwind 原生调色板 —— 它在深色下能看,浅色下
+            那一档偏亮偏淡。`--color-status-error` 是两套主题各自量过的那一个
+            (深 `0 84% 62%`,浅 `0 78% 44%`)。 */}
+        <div className="text-08 tabular-nums text-[hsl(var(--color-status-error))]">500</div>
+        <h1 className="text-06 text-[hsl(var(--color-ink))] mt-4">{t("error.title")}</h1>
+        <p className="text-04 text-[hsl(var(--color-ink-muted))] mt-2">{t("error.description")}</p>
+        <div className="flex items-center justify-center gap-3 mt-6">
+          <Button type="button" variant="primary" onClick={reset}>
+            {t("error.retry")}
+          </Button>
+          <a
+            href="/"
+            className="inline-flex items-center justify-center px-3 py-2 text-03 font-medium bg-surface-2 text-ink border border-hairline hover:bg-surface-3 transition-colors"
+          >
+            {t("error.home")}
+          </a>
+        </div>
       </div>
     </div>
   );

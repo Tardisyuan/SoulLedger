@@ -6,6 +6,9 @@ import { usePost } from "@/src/hooks/useSocial";
 import { PostCard } from "@/src/components/social/PostCard";
 import { CommentThread } from "@/src/components/social/CommentThread";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { EmptyState } from "@/src/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PostDetailPage() {
   const { t } = useI18n();
@@ -14,46 +17,44 @@ export default function PostDetailPage() {
   const { data: post, isLoading, error } = usePost(id);
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
+    <PageShell
+      variant="prose"
+      title={t("social.post_detail")}
+      backLink={
         <Link
           href="/social"
-          className="text-[hsl(var(--color-accent-ink))] hover:underline text-sm"
+          className="text-03 text-[hsl(var(--color-accent-ink))] hover:underline"
         >
-          ← {t("social.back") || "Back"}
+          ← {t("social.back")}
         </Link>
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
-          {t("social.post_detail") || "Post"}
-        </h1>
-      </div>
+      }
+    >
+      {isLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-40" />
+          <Skeleton className="h-24" />
+        </div>
+      ) : error ? (
+        /* Not an EmptyState. "This request failed" and "there is nothing
+           here" are different facts, and the empty state says the second
+           one — so a fetch failure would read as a post that does not
+           exist. `--color-status-error` replaces the `text-red-400` that
+           went dead in light mode. */
+        <p role="alert" className="text-04 text-[hsl(var(--color-status-error))]">
+          {String(error)}
+        </p>
+      ) : !post ? (
+        <EmptyState title={t("social.post")} reason={t("social.post_not_found")} />
+      ) : (
+        <>
+          <PostCard post={post} />
 
-      <div className="max-w-2xl mx-auto px-6 py-6">
-        {isLoading ? (
-          <div className="space-y-4">
-            <div className="animate-pulse h-40 bg-[hsl(var(--color-surface-1))] rounded-xl" />
-            <div className="animate-pulse h-24 bg-[hsl(var(--color-surface-1))] rounded-xl" />
+          <div className="mt-6">
+            <h2 className="text-06 text-ink mb-3">{t("social.comments")}</h2>
+            <CommentThread postId={id} />
           </div>
-        ) : error ? (
-          <div className="text-center text-red-400 py-12">
-            {String(error)}
-          </div>
-        ) : !post ? (
-          <div className="text-center py-12 text-[hsl(var(--color-ink-subtle))]">
-            {t("social.post_not_found") || "Post not found"}
-          </div>
-        ) : (
-          <>
-            <PostCard post={post} />
-
-            <div className="mt-6">
-              <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] mb-3">
-                {t("social.comments") || "Comments"}
-              </h2>
-              <CommentThread postId={id} />
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+        </>
+      )}
+    </PageShell>
   );
 }

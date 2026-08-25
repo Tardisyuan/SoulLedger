@@ -6,9 +6,11 @@ import { dispatchApi, soulsApi, ledgerApi } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Button } from "@/src/components/ui/Button";
+import { SelectField, TextAreaField, type SelectOption } from "@/src/components/ui/Field";
 
 export default function ProposeDispatchPage() {
   const { t } = useI18n();
@@ -39,6 +41,38 @@ export default function ProposeDispatchPage() {
   });
 
   const tenants = statsData?.data?.tenants || [];
+
+  /**
+   * An `<option>` can hold no child element, so the soul's lifecycle state is
+   * the one place on this page where the enum stays a bare string — the
+   * exception `src/__tests__/domainDisplayContract.test.tsx` records for this
+   * file. Moving from a hand-written `<select>` to `<SelectField>` does not
+   * change that: the label is still a string, it is just assembled here rather
+   * than between the option tags.
+   */
+  const soulOptions: SelectOption[] = [
+    { value: "", label: t("dispatch.select_soul") },
+    ...souls.map((s) => ({
+      value: String(s.id),
+      label: `${s.name} (${resolveEnumDisplay(t, "souls.states", s.current_state).label ?? t("common.value.unrecorded")})`,
+    })),
+  ];
+
+  /**
+   * `tn`, not `t`. The old spelling shadowed the i18n `t` inside both the
+   * filter and the map — it happened to be harmless because neither callback
+   * translated anything, but a single `t("…")` added inside one of them would
+   * have called a tenant record.
+   */
+  const tenantOptions: SelectOption[] = [
+    { value: "", label: t("dispatch.select_tenant") },
+    ...tenants
+      .filter((tn: { tenant_code: string }) => tn.tenant_code !== user?.tenant?.code)
+      .map((tn: { tenant_code: string; tenant_name: string }) => ({
+        value: tn.tenant_code,
+        label: `${tn.tenant_name} (${tn.tenant_code})`,
+      })),
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,87 +106,51 @@ export default function ProposeDispatchPage() {
   };
 
   return (
-    <div className="p-6 max-w-2xl">
-      <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))] mb-6">{t("dispatch.propose")}</h1>
-
+    <PageShell variant="prose" title={t("dispatch.propose")}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("dispatch.target_soul")}</label>
-          {soulsLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : (
-            <select
-              value={form.soul_id}
-              onChange={e => setForm({ ...form, soul_id: e.target.value })}
-              className="w-full bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))]"
-              required
-            >
-              <option value="">{t("dispatch.select_soul")}</option>
-              {souls.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {/* An <option> can hold no child element, so this is one of the
-                      few places the enum stays a bare string. */}
-                  {s.name} ({resolveEnumDisplay(t, "souls.states", s.current_state).label ?? t("common.value.unrecorded")})
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
+        {/* While the list is in flight the control stays in place, disabled,
+            holding a single "Loading…" option. The skeleton it replaces sat
+            *beside* the label rather than under it, so the field's own label
+            vanished for as long as the query took and the row changed height
+            when it came back. */}
+        <SelectField
+          label={t("dispatch.target_soul")}
+          required
+          disabled={soulsLoading}
+          value={form.soul_id}
+          onChange={e => setForm({ ...form, soul_id: e.target.value })}
+          options={soulsLoading ? [{ value: "", label: t("common.loading") }] : soulOptions}
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("dispatch.target_tenant")}</label>
-          {tenantsLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : (
-            <select
-              value={form.target_tenant_code}
-              onChange={e => setForm({ ...form, target_tenant_code: e.target.value })}
-              className="w-full bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))]"
-              required
-            >
-              <option value="">{t("dispatch.select_tenant")}</option>
-              {tenants
-                .filter((t: { tenant_code: string }) => t.tenant_code !== user?.tenant?.code)
-                .map((t: { tenant_code: string; tenant_name: string }) => (
-                  <option key={t.tenant_code} value={t.tenant_code}>
-                    {t.tenant_name} ({t.tenant_code})
-                  </option>
-                ))}
-            </select>
-          )}
-        </div>
+        <SelectField
+          label={t("dispatch.target_tenant")}
+          required
+          disabled={tenantsLoading}
+          value={form.target_tenant_code}
+          onChange={e => setForm({ ...form, target_tenant_code: e.target.value })}
+          options={tenantsLoading ? [{ value: "", label: t("common.loading") }] : tenantOptions}
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("dispatch.reason")}</label>
-          <textarea
-            value={form.reason}
-            onChange={e => setForm({ ...form, reason: e.target.value })}
-            className="w-full bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg px-3 py-2 text-[hsl(var(--color-ink))]"
-            rows={4}
-            placeholder={t("dispatch.reason_placeholder")}
-            required
-          />
-        </div>
+        <TextAreaField
+          label={t("dispatch.reason")}
+          required
+          value={form.reason}
+          onChange={e => setForm({ ...form, reason: e.target.value })}
+          rows={4}
+          placeholder={t("dispatch.reason_placeholder")}
+        />
 
         <div className="flex gap-3">
           <RequirePermission permissions="dispatch.create">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent))] disabled:opacity-50"
-          >
-            {loading ? t("dispatch.submitting") : t("dispatch.submit_proposal")}
-          </button>
+            <Button type="submit" variant="primary" loading={loading}>
+              {loading ? t("dispatch.submitting") : t("dispatch.submit_proposal")}
+            </Button>
           </RequirePermission>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] px-4 py-2 rounded-lg text-sm hover:bg-[hsl(var(--color-surface-3))]"
-          >
+          <Button type="button" variant="secondary" onClick={() => router.back()}>
             {t("common.cancel")}
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </PageShell>
   );
 }

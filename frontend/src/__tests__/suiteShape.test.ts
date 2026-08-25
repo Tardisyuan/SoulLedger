@@ -97,6 +97,7 @@ const COLLECTED_FILES = [
   "dataGridToneContract.test.ts",
   "designGuardContract.test.ts",
   "domainDisplayContract.test.tsx",
+  "domainNamespaceContract.test.ts",
   "eventRegistry.test.ts",
   "inkOnSurfaceContract.test.ts",
   "ledgerQuantityContract.test.tsx",

@@ -1361,7 +1361,14 @@
     "bio_placeholder": "介绍一下自己…",
     "avatar_url_label": "头像链接",
     "profile_updated": "资料已更新",
-    "profile_update_error": "资料更新失败"
+    "profile_update_error": "资料更新失败",
+    "visibility": {
+      "PUBLIC": "公开",
+      "TENANT": "本域可见",
+      "FOLLOWERS": "仅关注者",
+      "PRIVATE": "私密"
+    },
+    "visibility_label": "帖子可见范围"
   },
   "tenants": {
     "title": "租户管理",

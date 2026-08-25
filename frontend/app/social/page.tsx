@@ -141,11 +141,20 @@ export default function SocialFeedPage() {
                  in this justify-between row would eat every pixel the Post
                  button is not using. */
               className={cn(fieldControl({ size: "sm" }), "w-auto")}
+              aria-label={t("social.visibility_label")}
             >
-              <option value="PUBLIC">Public</option>
-              <option value="TENANT">Tenant Only</option>
-              <option value="FOLLOWERS">Followers</option>
-              <option value="PRIVATE">Private</option>
+              {/* Was four hardcoded English strings. `social.visibility.*` did
+                  not exist in any of the three bundles, which also meant
+                  PostCard's `<DomainEnum namespace="social.visibility">` had
+                  nothing to resolve and every post's badge rendered as
+                  MissingValue — in production, not only under the test stub.
+                  The keys exist now, so the same four labels serve both the
+                  control that sets the value and the badge that displays it. */}
+              {(["PUBLIC", "TENANT", "FOLLOWERS", "PRIVATE"] as const).map((v) => (
+                <option key={v} value={v}>
+                  {t(`social.visibility.${v}`)}
+                </option>
+              ))}
             </select>
             <Button
               type="button"

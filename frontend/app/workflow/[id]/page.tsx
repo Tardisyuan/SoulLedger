@@ -10,6 +10,12 @@ import Link from "next/link";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Button } from "@/src/components/ui/Button";
+import { Badge } from "@/src/components/ui/Badge";
+import { TextAreaField } from "@/src/components/ui/Field";
+import { Spinner } from "@/src/components/ui/Spinner";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.5)]",
@@ -98,19 +104,26 @@ export default function WorkflowDetailPage() {
     });
   }
 
+  const backLink = (
+    <Link href="/workflow" className="text-03 text-ink-muted hover:text-ink">
+      ← {t("workflow.detail.back_to_list")}
+    </Link>
+  );
+
   if (isLoading) {
     return (
-      <div className="text-[hsl(var(--color-ink))] flex items-center justify-center py-12">
-        <div className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.loading")}</div>
+      <div className="flex items-center justify-center gap-3 py-10 text-03 text-ink-muted">
+        <Spinner label={t("workflow.detail.loading")} />
+        {t("workflow.detail.loading")}
       </div>
     );
   }
 
   if (error || !workflow) {
     return (
-      <div className="text-[hsl(var(--color-ink))] flex flex-col items-center justify-center gap-4 py-12">
-        <div className="text-[hsl(var(--color-status-error))]">{t("workflow.detail.not_found")}</div>
-        <Link href="/workflow" className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-hover))]">
+      <div className="flex flex-col items-center justify-center gap-4 py-10">
+        <div className="text-03 text-[hsl(var(--color-status-error))]">{t("workflow.detail.not_found")}</div>
+        <Link href="/workflow" className="text-03 text-[hsl(var(--color-accent-ink))] hover:underline">
           {t("workflow.detail.back_to_list")}
         </Link>
       </div>
@@ -119,85 +132,121 @@ export default function WorkflowDetailPage() {
 
   const statusColor = STATUS_COLORS[workflow.status] || STATUS_COLORS.PENDING;
 
-  return (
-    <div className="text-[hsl(var(--color-ink))]">
-      {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <Link href="/workflow" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
-          ← {t("workflow.detail.back_to_list")}
-        </Link>
-        <h1 className="text-lg font-bold text-[hsl(var(--color-ink))] flex-1">{workflow.workflow_name}</h1>
-        <DomainEnum
-          namespace="workflow.status"
-          value={workflow.status}
-          className={`px-2 py-0.5 rounded text-xs font-bold border ${statusColor}`}
-        />
-        {workflow.is_appeal && (
-          <span className="px-2 py-0.5 rounded text-xs bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]">
-            {t("workflow.detail.appeal")}
-          </span>
-        )}
-      </div>
+  /**
+   * Hoisted out of the JSX rather than written inline in `actions`, and the
+   * reason is a live trap rather than taste. `PageShell` takes a prop called
+   * `title`, which is the page's heading — not the HTML attribute. The §4.6
+   * rule in `src/__tests__/domainDisplayContract.test.tsx:328` looks for the
+   * nearest `title={…}` in a five-line window above a string-form enum render
+   * and reds if that title is a `t(…)` call, on the grounds that a translated
+   * title cannot carry the raw member. A status badge sitting three lines under
+   * `title={…}` in a shell slot is close enough to be read against the wrong
+   * `title`. Naming it here puts it outside any such window, and the rule's own
+   * `const` guard skips this line.
+   *
+   * STATUS_COLORS itself is untouched: it is one of the four enum-keyed maps
+   * `statusTokenLayering.test.ts` records as still drawing on system-feedback
+   * tokens, together with the reason (ESCALATED already sits on
+   * `--color-verdict-retry`, so the map straddles two palettes and has to be
+   * decided whole). Re-tinting it here would either go stale against that
+   * record or half-move the map. Only the geometry changes.
+   */
+  const statusBadge = (
+    /* Nested rather than given the badge classes directly: `py-0.5` is the 2px
+       a 12px badge needs, and `eslint.config.mjs` grants that class to exactly
+       one file — `src/components/ui/Badge.tsx` — by name, so a hand-rolled
+       badge anywhere else is a spacing violation by construction. That is the
+       exemption working: the geometry has one home. `DomainEnum` still renders
+       its own span inside, and that span is what carries `title={raw}`. */
+    <Badge className={statusColor}>
+      <DomainEnum namespace="workflow.status" value={workflow.status} />
+    </Badge>
+  );
 
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-        {/* Workflow Info Card */}
-        <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-          <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
+  return (
+    /* `page` (1200px), up from `max-w-5xl` (1024). */
+    <PageShell
+      variant="page"
+      title={workflow.workflow_name}
+      backLink={backLink}
+      actions={
+        <div className="flex items-center gap-2">
+          {statusBadge}
+          {workflow.is_appeal && (
+            <Badge className="bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]">
+              {t("workflow.detail.appeal")}
+            </Badge>
+          )}
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        {/* Workflow Info Card. `p-5` (20px) was off the spacing ladder in all
+            three cards on this page; `p-4` is the step below it. */}
+        <div className="bg-surface-1 p-4 border border-hairline">
+          {/* 01 是 uppercase 小标签那一档 —— 区块标题原本用 `text-sm` +
+              `font-semibold` + `uppercase` 三个类拼出这个效果。 */}
+          <h2 className="text-01 uppercase text-ink-muted mb-3">
             {t("workflow.detail.info")}
           </h2>
-          <dl className="grid grid-cols-2 gap-4 text-sm">
+          <dl className="grid grid-cols-2 gap-4 text-03">
             <div>
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.soul")}</dt>
-              <dd className="text-[hsl(var(--color-ink))] font-medium">{workflow.soul_name || workflow.soul}</dd>
+              <dt className="text-ink-muted">{t("workflow.detail.soul")}</dt>
+              <dd className="text-ink font-medium">{workflow.soul_name || workflow.soul}</dd>
             </div>
             <div>
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.case_type")}</dt>
-              <dd className="text-[hsl(var(--color-ink))]"><DomainEnum namespace="workflow.case_types" value={workflow.case_type} /></dd>
+              <dt className="text-ink-muted">{t("workflow.detail.case_type")}</dt>
+              <dd className="text-ink"><DomainEnum namespace="workflow.case_types" value={workflow.case_type} /></dd>
             </div>
             <div>
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.judgment_verdict")}</dt>
-              <dd className="text-[hsl(var(--color-ink))]"><DomainEnum namespace="workflow.verdicts" value={workflow.judgment_verdict} /></dd>
+              <dt className="text-ink-muted">{t("workflow.detail.judgment_verdict")}</dt>
+              <dd className="text-ink"><DomainEnum namespace="workflow.verdicts" value={workflow.judgment_verdict} /></dd>
             </div>
             <div>
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.priority")}</dt>
-              <dd className="text-[hsl(var(--color-ink))]">
+              <dt className="text-ink-muted">{t("workflow.detail.priority")}</dt>
+              <dd className="text-ink">
                 {workflow.priority === 0 ? t("workflow.detail.normal") :
                  workflow.priority === 1 ? t("workflow.detail.urgent") :
                  t("workflow.detail.critical")}
               </dd>
             </div>
             <div>
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.created_at")}</dt>
-              <dd className="text-[hsl(var(--color-ink))]">{formatDateTime(workflow.created_at)}</dd>
+              <dt className="text-ink-muted">{t("workflow.detail.created_at")}</dt>
+              <dd className="text-ink">{formatDateTime(workflow.created_at)}</dd>
             </div>
             <div>
-              <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.completed_at")}</dt>
-              <dd className="text-[hsl(var(--color-ink))]"><DomainText value={workflow.completed_at ? formatDateTime(workflow.completed_at) : null} missingKind={workflow.status === "COMPLETED" ? "unrecorded" : "inapplicable"} missingReason={statusLabel(workflow.status)} /></dd>
+              <dt className="text-ink-muted">{t("workflow.detail.completed_at")}</dt>
+              <dd className="text-ink"><DomainText value={workflow.completed_at ? formatDateTime(workflow.completed_at) : null} missingKind={workflow.status === "COMPLETED" ? "unrecorded" : "inapplicable"} missingReason={statusLabel(workflow.status)} /></dd>
             </div>
           </dl>
         </div>
 
         {/* Current Node Action Card */}
         {currentNode && workflow.status !== "COMPLETED" && (
-          <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-accent-ink))] uppercase mb-3">
+          <div className="bg-surface-1 p-4 border border-hairline">
+            <h2 className="text-01 uppercase text-[hsl(var(--color-accent-ink))] mb-3">
               {t("workflow.detail.current_node")}
             </h2>
-            <div className="mb-4 p-3 bg-[hsl(var(--color-surface-2))] rounded border border-[hsl(var(--color-hairline))]">
-              <div className="font-medium text-[hsl(var(--color-ink))]">{currentNode.node_name}</div>
-              <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
+            <div className="mb-4 p-3 bg-surface-2 border border-hairline">
+              <div className="text-03 font-medium text-ink">{currentNode.node_name}</div>
+              <div className="text-02 text-ink-muted mt-1">
                 <DomainEnum namespace="workflow.node_type" value={currentNode.node_type} /> · <DomainText value={currentNode.court_code} />
               </div>
-              <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
+              <div className="text-02 text-ink-subtle mt-1">
                 {t("workflow.detail.order")}: {currentNode.node_order}
               </div>
             </div>
 
-            {/* Verdict Selection */}
-            <div className="space-y-2 mb-4">
-              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-2">
+            {/* Verdict Selection. A radio group is the one control `Field` has
+                no form of, so it stays hand-rolled — but its group label now
+                takes Field's label spelling, and it is a <fieldset>/<legend>
+                rather than a stray <label> pointing at nothing. That bare
+                <label> named no control at all: five radios share the group,
+                so there was no single `htmlFor` it could ever have carried. */}
+            <fieldset className="space-y-2 mb-4">
+              <legend className="text-01 uppercase text-ink-subtle mb-2">
                 {t("workflow.detail.select_verdict")}
-              </label>
+              </legend>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { key: "PASSED", label: t("workflow.verdicts.passed") },
@@ -208,10 +257,10 @@ export default function WorkflowDetailPage() {
                 ].map((opt) => (
                   <label
                     key={opt.key}
-                    className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition-colors text-sm ${
+                    className={`flex items-center gap-2 p-2 border cursor-pointer transition-colors text-03 ${
                       selectedVerdict === opt.key
-                        ? "border-[hsl(var(--color-accent))] bg-[hsl(var(--color-accent))]/10"
-                        : "border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))]"
+                        ? "border-accent bg-[hsl(var(--color-accent))]/10"
+                        : "border-hairline hover:bg-surface-2"
                     }`}
                   >
                     <input
@@ -222,49 +271,49 @@ export default function WorkflowDetailPage() {
                       onChange={(e) => setSelectedVerdict(e.target.value)}
                       className="accent-[hsl(var(--color-accent))]"
                     />
-                    <span className="text-[hsl(var(--color-ink))]">{opt.label}</span>
+                    <span className="text-ink">{opt.label}</span>
                   </label>
                 ))}
               </div>
-            </div>
+            </fieldset>
 
             {/* Notes */}
-            <div className="mb-4">
-              <label className="block text-sm text-[hsl(var(--color-ink-muted))] mb-2">
-                {t("workflow.detail.notes")}
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded p-3 text-sm text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]/50"
-                placeholder={t("workflow.detail.notes_placeholder")}
-              />
-            </div>
+            <TextAreaField
+              className="mb-4"
+              label={t("workflow.detail.notes")}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder={t("workflow.detail.notes_placeholder")}
+            />
 
             {/* Action Buttons */}
             <div className="flex gap-3">
               <RequirePermission permissions="workflow.approve">
-                <button
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  className="flex-1"
                   onClick={handleApproveNode}
-                  disabled={approveMutation.isPending}
-                  className="flex-1 py-2.5 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-black"
+                  loading={approveMutation.isPending}
                 >
                   {approveMutation.isPending
                     ? t("workflow.detail.processing")
                     : t("workflow.detail.submit_decision")}
-                </button>
+                </Button>
               </RequirePermission>
               <RequirePermission permissions="workflow.advance">
-                <button
+                <Button
+                  type="button"
+                  size="lg"
                   onClick={() => advanceMutation.mutate()}
-                  disabled={advanceMutation.isPending}
-                  className="py-2.5 px-4 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded-md text-sm font-medium transition-colors text-[hsl(var(--color-ink))] border border-[hsl(var(--color-hairline))]"
+                  loading={advanceMutation.isPending}
                 >
                   {advanceMutation.isPending
                     ? t("workflow.detail.advancing")
                     : t("workflow.detail.advance")}
-                </button>
+                </Button>
               </RequirePermission>
             </div>
           </div>
@@ -272,39 +321,55 @@ export default function WorkflowDetailPage() {
 
         {/* Completed State */}
         {workflow.status === "COMPLETED" && (
-          <div className="bg-[hsl(var(--color-status-success)/0.1)] rounded-lg p-5 border border-[hsl(var(--color-status-success)/0.3)]">
-            <h2 className="text-sm font-semibold text-[hsl(var(--color-status-success))] uppercase mb-2">
+          <div className="bg-[hsl(var(--color-status-success)/0.1)] p-4 border border-[hsl(var(--color-status-success)/0.3)]">
+            <h2 className="text-01 uppercase text-[hsl(var(--color-status-success))] mb-2">
               {t("workflow.detail.completed")}
             </h2>
-            <p className="text-sm text-[hsl(var(--color-ink-muted))]">
+            <p className="text-03 text-ink-muted">
               {t("workflow.detail.completed_message")}
             </p>
             {workflow.completed_at && (
-              <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-2">
+              <p className="text-02 text-ink-subtle mt-2">
                 {t("workflow.detail.completed_at")}: {formatDateTime(workflow.completed_at)}
               </p>
             )}
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex gap-1 border-b border-[hsl(var(--color-hairline))]/50">
+        {/* Tabs — and these deliberately do NOT go into PageShell's `tabs`
+            slot, unlike the two page-level tab strips on /judgment and
+            /workflow.
+
+            The shell renders that slot directly beneath the header, above
+            everything else. These tabs do not partition the page; they
+            partition its bottom half. The three cards above them — the info
+            grid, the current-node decision form, the completion notice — belong
+            to the workflow as a whole and are identical under either tab.
+            Hoisting the strip would put all three underneath a tab bar, which
+            says "this is the contents of the Nodes tab" about a decision form
+            that is nothing of the sort, and would imply the form disappears on
+            switching to History. What does move is the spelling: same gap, same
+            hairline rule, same 03 label as the two strips that are in the slot,
+            so they read as one control even though only two of them sit in it. */}
+        <div className="flex gap-1 border-b border-hairline">
           <button
+            type="button"
             onClick={() => setActiveTab("nodes")}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            className={`px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px ${
               activeTab === "nodes"
-                ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
-                : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
+                ? "text-[hsl(var(--color-accent-ink))] border-accent"
+                : "text-ink-muted border-transparent hover:text-ink"
             }`}
           >
             {t("workflow.detail.nodes")} ({sortedNodes.length})
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab("history")}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            className={`px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px ${
               activeTab === "history"
-                ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
-                : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
+                ? "text-[hsl(var(--color-accent-ink))] border-accent"
+                : "text-ink-muted border-transparent hover:text-ink"
             }`}
           >
             {t("workflow.detail.history")}
@@ -324,15 +389,17 @@ export default function WorkflowDetailPage() {
               return (
                 <div
                   key={node.id}
-                  className={`bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border ${
-                    isCurrent ? "border-[hsl(var(--color-accent))]/50 shadow-lg shadow-[hsl(var(--color-accent))]/10" : "border-[hsl(var(--color-hairline))]"
+                  className={`bg-surface-1 p-4 border ${
+                    isCurrent ? "border-[hsl(var(--color-accent))]/50 shadow-lg shadow-[hsl(var(--color-accent))]/10" : "border-hairline"
                   }`}
                 >
                   <div className="flex items-start gap-4">
-                    {/* Node indicator */}
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${nodeColor}`}>
+                    {/* Node indicator. `rounded-full` survives the corner purge
+                        on purpose: it is one of the two shapes that still mean
+                        something — a round mark is an identity token. */}
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-02 font-medium ${nodeColor}`}>
                       {isPast ? (
-                        <span className="text-xs">{node.verdict?.[0] || "D"}</span>
+                        <span>{node.verdict?.[0] || "D"}</span>
                       ) : (
                         <span>{idx + 1}</span>
                       )}
@@ -341,35 +408,42 @@ export default function WorkflowDetailPage() {
                     {/* Node details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</span>
+                        <span className="text-03 font-medium text-ink">{node.node_name}</span>
                         {isCurrent && (
-                          <span className="px-1.5 py-0.5 rounded text-xs bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] border border-[hsl(var(--color-accent))]/30">
-                            {t("workflow.detail.current")}
-                          </span>
+                          <Badge tone="accent">{t("workflow.detail.current")}</Badge>
                         )}
                       </div>
-                      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
+                      <div className="text-02 text-ink-muted mt-1">
                         <DomainEnum namespace="workflow.node_type" value={node.node_type} /> · <DomainText value={node.court_code} />
                       </div>
 
                       {/* Verdict and notes for completed nodes */}
                       {isPast && (
-                        <div className="mt-3 pt-3 border-t border-[hsl(var(--color-hairline))]/50">
+                        <div className="mt-3 pt-3 border-t border-hairline">
                           <div className="flex items-center gap-2 mb-2">
-                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict ?? ""] || ""}`}>
-                              <span title={node.verdict ?? undefined}>{nodeVerdictLabel}</span>
-                            </span>
+                            {/* `title` stays on the element that directly wraps
+                                the label string, and stays within three lines
+                                of it — that adjacency is what
+                                domainDisplayContract.test.tsx:328 measures, and
+                                it is the whole reason the raw member is still
+                                recoverable from this badge. */}
+                            <Badge
+                              title={node.verdict ?? undefined}
+                              className={VERDICT_COLORS[node.verdict ?? ""] || ""}
+                            >
+                              {nodeVerdictLabel}
+                            </Badge>
                             {node.decided_at && (
-                              <span className="text-xs text-[hsl(var(--color-ink-subtle))]">
+                              <span className="text-02 text-ink-subtle">
                                 {formatDateTime(node.decided_at)}
                               </span>
                             )}
                           </div>
                           {node.notes && (
-                            <p className="text-sm text-[hsl(var(--color-ink-muted))] italic">&ldquo;{node.notes}&rdquo;</p>
+                            <p className="text-03 text-ink-muted italic">&ldquo;{node.notes}&rdquo;</p>
                           )}
                           {node.approver && (
-                            <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
+                            <p className="text-02 text-ink-subtle mt-1">
                               {t("workflow.detail.approver")}: {node.approver}
                             </p>
                           )}
@@ -378,14 +452,14 @@ export default function WorkflowDetailPage() {
                     </div>
 
                     {/* Status badge */}
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium border ${nodeColor}`}>
-                      <span title={node.status}>{nodeStatusLabel}</span>
-                    </span>
+                    <Badge title={node.status} className={`border ${nodeColor}`}>
+                      {nodeStatusLabel}
+                    </Badge>
                   </div>
 
                   {/* Connector line */}
                   {idx < sortedNodes.length - 1 && (
-                    <div className="ml-4 mt-2 pl-4 border-l-2 border-[hsl(var(--color-hairline))]/50 h-4" />
+                    <div className="ml-4 mt-2 pl-4 border-l-2 border-hairline h-4" />
                   )}
                 </div>
               );
@@ -404,36 +478,40 @@ export default function WorkflowDetailPage() {
                 return aTime - bTime;
               })
               .map((node) => (
-                <div key={node.id} className="bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">
+                <div key={node.id} className="bg-surface-1 p-4 border border-hairline">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</span>
-                    <DomainEnum
-                      namespace="workflow.verdicts"
-                      value={node.verdict}
-                      className={`px-2 py-0.5 rounded text-xs font-bold ${VERDICT_COLORS[node.verdict ?? ""] || ""}`}
-                    />
+                    <span className="text-03 font-medium text-ink">{node.node_name}</span>
+                    {/* <DomainEnum> sets its own `title` from the raw member —
+                        that is the whole point of the component — so this one
+                        needs no hand-rolled attribute, unlike the string-form
+                        badge in the Nodes tab above. It nests inside Badge for
+                        the same reason the status badge does. */}
+                    <Badge className={VERDICT_COLORS[node.verdict ?? ""] || ""}>
+                      <DomainEnum namespace="workflow.verdicts" value={node.verdict} />
+                    </Badge>
                   </div>
-                  <div className="text-xs text-[hsl(var(--color-ink-muted))]">
+                  <div className="text-02 text-ink-muted">
                     {t("workflow.detail.decided_at")}: <DomainText value={node.decided_at ? formatDateTime(node.decided_at) : null} />
                   </div>
                   {node.notes && (
-                    <p className="text-sm text-[hsl(var(--color-ink-muted))] mt-2 italic">&ldquo;{node.notes}&rdquo;</p>
+                    <p className="text-03 text-ink-muted mt-2 italic">&ldquo;{node.notes}&rdquo;</p>
                   )}
                   {node.approver && (
-                    <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
+                    <p className="text-02 text-ink-subtle mt-1">
                       {t("workflow.detail.approver")}: {node.approver}
                     </p>
                   )}
                 </div>
               ))}
             {sortedNodes.filter((n) => n.status !== "PENDING").length === 0 && (
-              <div className="text-center text-[hsl(var(--color-ink-subtle))] py-8">
-                {t("workflow.detail.no_history")}
-              </div>
+              /* Was a centred `py-8` (32px — not a step on the ladder) div.
+                 EmptyState is left-aligned by design: "nothing has been decided
+                 yet" is a note in the file, not a poster. */
+              <EmptyState title={t("workflow.detail.no_history")} />
             )}
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }
