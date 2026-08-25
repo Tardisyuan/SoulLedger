@@ -1361,7 +1361,14 @@
     "bio_placeholder": "Djed Aha Netjer...",
     "avatar_url_label": "Wenut Twt",
     "profile_updated": "Aha Pepi Kheme Seth",
-    "profile_update_error": "Ma Kheme Aha Pepi Seth"
+    "profile_update_error": "Ma Kheme Aha Pepi Seth",
+    "visibility": {
+      "PUBLIC": "Er Bu Neb",
+      "TENANT": "Em Duat Set",
+      "FOLLOWERS": "Shemsu Neb",
+      "PRIVATE": "Imen"
+    },
+    "visibility_label": "Set Medu Maa"
   },
   "tenants": {
     "title": "Per Hemes",

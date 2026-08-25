@@ -162,8 +162,16 @@ export function DataTable<T>({
 
   return (
     <div className={cn('w-full', className)}>
-      <div className="overflow-x-auto rounded-lg border border-[hsl(var(--color-hairline))]">
-        <table className="w-full text-sm" aria-busy={isLoading || undefined}>
+      {/* `rounded-lg` used to sit here. borderRadius.lg is 0 now, so it emitted
+          nothing and only told the next reader this box had a corner radius. */}
+      <div className="overflow-x-auto border border-[hsl(var(--color-hairline))]">
+        {/* `text-03` (13px), not `text-sm` (14px). Every body cell that does not
+            set its own size inherits from here, so this one class is the base
+            size of thirteen pages' tables — and it was the single largest block
+            of text still outside the eight-step scale. 13px is tighter than what
+            it replaces: the scale buys hierarchy from the span between steps,
+            not by growing rows, and the table is where density is defended. */}
+        <table className="w-full text-03" aria-busy={isLoading || undefined}>
           <caption className="sr-only">{caption}</caption>
           {columns.some((c) => c.width) && (
             <colgroup>

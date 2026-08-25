@@ -13,6 +13,11 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Button } from "@/src/components/ui/Button";
+import { Badge } from "@/src/components/ui/Badge";
+import { fieldControl } from "@/src/components/ui/Field";
+import { cn } from "@/lib/utils";
 
 export default function UsersPage() {
   const { t } = useI18n();
@@ -64,46 +69,57 @@ export default function UsersPage() {
   const users = data?.results ?? [];
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
-      {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <Link href="/" className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] text-sm">
-          ← {t("nav.home")}
-        </Link>
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
+    /* `page` (1200px), up from the `max-w-6xl` (1152) this page picked for
+       itself. Six columns, one of which is a three-button action group. */
+    <PageShell
+      variant="page"
+      title={
+        <>
           {t("users.title")}
           <MenuGloss path="/users" />
-        </h1>
+        </>
+      }
+      backLink={
+        <Link href="/" className="text-03 text-ink-muted hover:text-ink">
+          ← {t("nav.home")}
+        </Link>
+      }
+      actions={
         <RequirePermission permissions="user.create">
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="px-3 py-1 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] text-black rounded text-xs font-medium transition-colors"
-          >
+          <Button type="button" variant="primary" onClick={() => setIsModalOpen(true)}>
             + {t("users.create_user")}
-          </button>
+          </Button>
         </RequirePermission>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-6 py-6">
-        {/* Search and filters */}
-        <div className="flex gap-4 mb-6 flex-wrap">
+      }
+      filters={
+        /* Both controls take the shared `fieldControl` skin rather than
+           `Field`: the row is 32px of content height and a `Field` stacks a
+           visible label above its control, which does not fit and would push
+           the sticky bar to twice its height. The accessible name therefore
+           rides on `aria-label` — the same call `app/souls/page.tsx` already
+           documents for its own filter row, now spelled the same way in both
+           places instead of two (`bg-surface-1 rounded` here, `bg-surface-2
+           rounded-md` there). */
+        <>
           <input
             type="text"
             placeholder={t("users.search_placeholder")}
+            aria-label={t("users.search_placeholder")}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="flex-1 min-w-[200px] bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] transition-colors"
+            className={cn(fieldControl({ size: "md" }), "flex-1 min-w-[200px]")}
           />
           <select
             value={roleFilter}
+            aria-label={t("users.role")}
             onChange={(e) => {
               setRoleFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] transition-colors"
+            className={cn(fieldControl({ size: "md" }), "w-auto shrink-0")}
           >
             <option value="">{t("users.all_roles")}</option>
             <option value="ADMIN">{t("users.roles.ADMIN")}</option>
@@ -111,33 +127,47 @@ export default function UsersPage() {
             <option value="GUARDIAN">{t("users.roles.GUARDIAN")}</option>
             <option value="VIEWER">{t("users.roles.VIEWER")}</option>
           </select>
-        </div>
-
-        <DataTable<User>
-          caption={t("users.title")}
-          columns={[
-            { key: "username", header: t("users.username"), sortable: true },
-            { key: "email", header: t("users.email"), sortable: true },
-            { key: "role", header: t("users.role"), sortable: true },
-            { key: "tenant", header: t("users.tenant") },
-            { key: "status", header: t("users.status") },
-            { key: "actions", header: t("users.actions"), align: "right" },
-          ]}
-          data={users}
-          isLoading={isLoading}
-          isError={isError}
-          onRetry={() => refetch()}
-          keyExtractor={(user) => String(user.id)}
-          renderRow={(user) => (
-            <>
-              <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink))] font-medium">
-                {user.username}
-              </td>
-              <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))]">
-                {user.email}
-              </td>
-              <td className="px-4 py-3 text-sm">
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+        </>
+      }
+    >
+      {/* No `pagination` slot — DataTable renders its own <Pagination>
+          (components/ui/data-table.tsx:288) from the four props at the end. */}
+      <DataTable<User>
+        caption={t("users.title")}
+        columns={[
+          { key: "username", header: t("users.username"), sortable: true },
+          { key: "email", header: t("users.email"), sortable: true },
+          { key: "role", header: t("users.role"), sortable: true },
+          { key: "tenant", header: t("users.tenant") },
+          { key: "status", header: t("users.status") },
+          { key: "actions", header: t("users.actions"), align: "right" },
+        ]}
+        data={users}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        keyExtractor={(user) => String(user.id)}
+        renderRow={(user) => (
+          <>
+            <td className="px-4 py-3 text-ink font-medium">
+              {user.username}
+            </td>
+            <td className="px-4 py-3 text-ink-muted">
+              {user.email}
+            </td>
+            <td className="px-4 py-3">
+              {/* The four role tints are unchanged, only re-housed: `Badge`
+                  owns the 2px vertical padding a badge needs (it is the one
+                  file `eslint.config.mjs` exempts from the spacing rhythm for
+                  exactly that class), so a hand-rolled `py-0.5` span is the
+                  one shape this row cannot keep. Which palette a *role*
+                  should draw from is a live question — see the
+                  `ROLE_BADGE_CLASSES` entry in statusTokenLayering.test.ts —
+                  and answering it is not this pass's job, so the tints stay
+                  put and stay inline rather than becoming a named map that
+                  would enrol this page as a fifth recorded offender. */}
+              <Badge
+                className={
                   user.role === "ADMIN"
                     ? "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]"
                     : user.role === "JUDGE"
@@ -145,70 +175,65 @@ export default function UsersPage() {
                     : user.role === "GUARDIAN"
                     ? "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]"
                     : "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]"
-                }`}>
-                  <DomainEnum namespace="users.roles" value={user.role} />
-                </span>
-              </td>
-              <td className="px-4 py-3 text-sm text-[hsl(var(--color-ink-muted))]">
-                {user.tenant?.display_name || user.tenant?.code || "-"}
-              </td>
-              <td className="px-4 py-3 text-sm">
-                <span className={user.is_active ? "text-[hsl(var(--color-status-success))]" : "text-[hsl(var(--color-status-error))]"}>
-                  {user.is_active ? t("users.active") : t("users.inactive")}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-sm text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <RequirePermission permissions="user.update">
-                    <button
-                      onClick={() => setEditingUser(user)}
-                      className="px-2 py-1 text-xs bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
-                    >
-                      {t("common.edit")}
-                    </button>
-                  </RequirePermission>
-                  <RequirePermission permissions={["user.update", "user.activate"]}>
-                    <button
-                      onClick={() => toggleStatusMutation.mutate({
-                        id: String(user.id),
-                        isActive: !user.is_active,
-                      })}
-                      disabled={toggleStatusMutation.isPending}
-                      className="px-2 py-1 text-xs bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors disabled:opacity-50"
-                    >
-                      {user.is_active ? t("users.deactivate") : t("users.activate")}
-                    </button>
-                  </RequirePermission>
-                  <RequirePermission permissions="user.delete">
-                    <button
-                      onClick={() => setDeleteUser(user)}
-                      className="px-2 py-1 text-xs bg-[hsl(var(--color-status-error)/0.1)] hover:bg-[hsl(var(--color-status-error)/0.3)] border border-[hsl(var(--color-status-error)/0.3)] rounded text-[hsl(var(--color-status-error))] transition-colors"
-                    >
-                      {t("common.delete")}
-                    </button>
-                  </RequirePermission>
-                </div>
-              </td>
-            </>
-          )}
-          sort={parseOrdering(ordering)}
-          onSortChange={(next) => {
-            setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
-            setPage(1);
-          }}
-          isFiltered={Boolean(search || roleFilter)}
-          onClearFilters={() => {
-            setSearch("");
-            setRoleFilter("");
-            setPage(1);
-          }}
-          emptyMessage={t("users.no_users")}
-          page={page}
-          totalPages={Math.ceil((data?.count || 0) / PAGE_SIZE)}
-          totalCount={data?.count}
-          onPageChange={setPage}
-        />
-      </div>
+                }
+              >
+                <DomainEnum namespace="users.roles" value={user.role} />
+              </Badge>
+            </td>
+            <td className="px-4 py-3 text-ink-muted">
+              {user.tenant?.display_name || user.tenant?.code || "-"}
+            </td>
+            <td className="px-4 py-3">
+              <span className={user.is_active ? "text-[hsl(var(--color-status-success))]" : "text-[hsl(var(--color-status-error))]"}>
+                {user.is_active ? t("users.active") : t("users.inactive")}
+              </span>
+            </td>
+            <td className="px-4 py-3 text-right">
+              <div className="flex items-center justify-end gap-2">
+                <RequirePermission permissions="user.update">
+                  <Button type="button" size="sm" onClick={() => setEditingUser(user)}>
+                    {t("common.edit")}
+                  </Button>
+                </RequirePermission>
+                <RequirePermission permissions={["user.update", "user.activate"]}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => toggleStatusMutation.mutate({
+                      id: String(user.id),
+                      isActive: !user.is_active,
+                    })}
+                    disabled={toggleStatusMutation.isPending}
+                  >
+                    {user.is_active ? t("users.deactivate") : t("users.activate")}
+                  </Button>
+                </RequirePermission>
+                <RequirePermission permissions="user.delete">
+                  <Button type="button" size="sm" variant="danger" onClick={() => setDeleteUser(user)}>
+                    {t("common.delete")}
+                  </Button>
+                </RequirePermission>
+              </div>
+            </td>
+          </>
+        )}
+        sort={parseOrdering(ordering)}
+        onSortChange={(next) => {
+          setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
+          setPage(1);
+        }}
+        isFiltered={Boolean(search || roleFilter)}
+        onClearFilters={() => {
+          setSearch("");
+          setRoleFilter("");
+          setPage(1);
+        }}
+        emptyMessage={t("users.no_users")}
+        page={page}
+        totalPages={Math.ceil((data?.count || 0) / PAGE_SIZE)}
+        totalCount={data?.count}
+        onPageChange={setPage}
+      />
 
       {/* Create/Edit Modal */}
       <UserModal
@@ -226,6 +251,6 @@ export default function UsersPage() {
         isOpen={!!deleteUser}
         onClose={() => setDeleteUser(null)}
       />
-    </div>
+    </PageShell>
   );
 }

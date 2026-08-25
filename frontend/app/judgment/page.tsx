@@ -114,13 +114,13 @@ export default function JudgmentQueuePage() {
         keyExtractor={(judgment) => String(judgment.id)}
         renderRow={(judgment) => (
           <>
-            <td className="px-4 py-3 text-03 font-medium text-ink">
+            <td className="px-4 py-3 font-medium text-ink">
               {judgment.soul_name || judgment.soul}
             </td>
-            <td className="px-4 py-3 text-03 text-ink-muted">
+            <td className="px-4 py-3 text-ink-muted">
               <DomainEnum namespace="souls.civilizations" value={judgment.civilization} />
             </td>
-            <td className="px-4 py-3 text-03 text-ink-muted">
+            <td className="px-4 py-3 text-ink-muted">
               {judgment.court}
             </td>
             <td className="px-4 py-3">

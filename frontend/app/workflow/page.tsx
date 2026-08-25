@@ -14,6 +14,10 @@ import { nodeTypeFor } from "@/src/config/workflow-node-types";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Button } from "@/src/components/ui/Button";
+import { Badge } from "@/src/components/ui/Badge";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 
 // ── Types for template data ──────────────────────────────────────
 
@@ -139,51 +143,59 @@ export default function WorkflowPage() {
   const [tab, setTab] = useState<"existing" | "editor" | "instances">("existing");
 
   return (
-    <div className="text-[hsl(var(--color-ink))]">
-      {/* Page header */}
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
+    /* `page` (1200px), up from the `max-w-6xl` (1152) this page chose for
+       itself. */
+    <PageShell
+      variant="page"
+      title={
+        <>
           {t("workflow.title")}
           <MenuGloss path="/workflow" />
-        </h1>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-6 py-6">
-        {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-[hsl(var(--color-hairline))]/50">
-          {tabs.map((tabItem) => (
-            <button
-              key={tabItem.key}
-              onClick={() => setTab(tabItem.key)}
-              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                tab === tabItem.key
-                  ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
-                  : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
-              }`}
-            >
-              {tabItem.label}
-            </button>
-          ))}
-        </div>
-
+        </>
+      }
+      /* These three ARE page-level tabs — they decide what the whole page is
+         showing — so unlike the strip on /workflow/[id] they belong in the
+         shell's slot. They stay plain <button>s rather than becoming `Button`:
+         that cva writes `border` on all four sides and an `active:translate-y-px`
+         press nudge, both of which fight a strip whose entire visual language
+         is a single 2px bottom rule that has to line up with the container's
+         hairline. */
+      tabs={tabs.map((tabItem) => (
+        <button
+          key={tabItem.key}
+          type="button"
+          onClick={() => setTab(tabItem.key)}
+          className={`px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px ${
+            tab === tabItem.key
+              ? "text-[hsl(var(--color-accent-ink))] border-accent"
+              : "text-ink-muted border-transparent hover:text-ink"
+          }`}
+        >
+          {tabItem.label}
+        </button>
+      ))}
+    >
         {tab === "existing" ? (
           <>
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <div>
-                <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{t("workflow.templates")}</h2>
-                <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("workflow.select_template")}</p>
+                {/* 06 是区块标题那一档。 */}
+                <h2 className="text-06 text-ink">{t("workflow.templates")}</h2>
+                <p className="text-03 text-ink-muted">{t("workflow.select_template")}</p>
               </div>
               <RequirePermission permissions="workflow.create">
-                <button
+                <Button
+                  type="button"
+                  variant="primary"
+                  className="shrink-0"
                   onClick={() => {
                     setEditingTemplateId(null);
                     setTab("editor");
                   }}
-                  className="shrink-0 whitespace-nowrap px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium transition-colors"
                 >
                   + {t("workflow.new_template")}
-                </button>
+                </Button>
               </RequirePermission>
             </div>
 
@@ -199,21 +211,30 @@ export default function WorkflowPage() {
                   <ListSkeleton count={3} />
                 ) : templates.length > 0 ? (
                   <div className="space-y-2">
-                    <div className="text-xs font-semibold text-[hsl(var(--color-ink-muted))] px-2">{t("workflow.custom_templates")}</div>
+                    {/* 01 是 uppercase 小标签那一档，这两行原本是 `text-xs
+                        font-semibold` 拼出来的同一个东西。 */}
+                    <div className="text-01 uppercase text-ink-muted px-2">{t("workflow.custom_templates")}</div>
                     {templates.map((tmpl: BackendTemplate) => (
+                      /* Stays a plain <button>, not `Button`. These are
+                         selectable list rows: full-width, left-aligned, two
+                         lines of content with a truncating title. `Button`'s
+                         base is `inline-flex justify-center` on one line — the
+                         three overrides it would take to undo that are the
+                         signal that this is not the same control. */
                       <button
                         key={tmpl.id}
+                        type="button"
                         onClick={() => {
                           setEditingTemplateId(String(tmpl.id));
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
+                        className={`w-full text-left px-3 py-2 border transition-colors ${
                           editingTemplateId === String(tmpl.id)
-                            ? "bg-[hsl(var(--color-accent))]/10 border-[hsl(var(--color-accent))] text-[hsl(var(--color-ink))]"
-                            : "bg-[hsl(var(--color-surface-1))] border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:border-[hsl(var(--color-accent))]/50"
+                            ? "bg-[hsl(var(--color-accent))]/10 border-accent text-ink"
+                            : "bg-surface-1 border-hairline text-ink-muted hover:border-[hsl(var(--color-accent))]/50"
                         }`}
                       >
-                        <div className="text-sm font-medium truncate">{tmpl.name}</div>
-                        <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-0.5">
+                        <div className="text-03 font-medium truncate">{tmpl.name}</div>
+                        <div className="text-02 text-ink-subtle mt-1">
                           <DomainEnum namespace="workflow.civilizations" value={tmpl.civilization} /> · <DomainEnum namespace="workflow.case_types" value={tmpl.case_type} />
                         </div>
                       </button>
@@ -223,23 +244,24 @@ export default function WorkflowPage() {
 
                 {/* 预定义模板列表 */}
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-[hsl(var(--color-ink-muted))] px-2">{t("workflow.predefined_templates")}</div>
+                  <div className="text-01 uppercase text-ink-muted px-2">{t("workflow.predefined_templates")}</div>
                   {Object.entries(templatesByCiv).map(([civ, civTemplates]) => (
                     <div key={civ} className="space-y-1">
-                      <div className="text-xs text-[hsl(var(--color-accent-ink))] px-2 py-1 font-medium">
+                      <div className="text-02 text-[hsl(var(--color-accent-ink))] px-2 py-1 font-medium">
                         {t(`workflow.civilizations.${civ}`)}
                       </div>
                       {civTemplates.map((tmpl) => (
                         <button
                           key={tmpl.key}
+                          type="button"
                           onClick={() => {
                             setSelectedTemplate(tmpl.key);
                             setEditingTemplateId(null); // 预定义模板用selectedTemplate
                           }}
-                          className={`w-full text-left px-3 py-1.5 rounded border transition-colors text-sm ${
+                          className={`w-full text-left px-3 py-2 border transition-colors text-03 ${
                             selectedTemplate === tmpl.key && !editingTemplateId
-                              ? "bg-[hsl(var(--color-accent))]/10 border-[hsl(var(--color-accent))] text-[hsl(var(--color-ink))]"
-                              : "bg-[hsl(var(--color-surface-1))] border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:border-[hsl(var(--color-accent))]/50"
+                              ? "bg-[hsl(var(--color-accent))]/10 border-accent text-ink"
+                              : "bg-surface-1 border-hairline text-ink-muted hover:border-[hsl(var(--color-accent))]/50"
                           }`}
                         >
                           {tmpl.name}
@@ -254,7 +276,7 @@ export default function WorkflowPage() {
               <div className="flex-1 min-w-0">
                 {/* 预览内容 */}
                 {(editingTemplateId || selectedTemplate) && (
-                  <div className="bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))] p-4">
+                  <div className="bg-surface-1 border border-hairline p-4">
                     {/* 后端模板预览 */}
                     {editingTemplateId && templates.find((tpl: BackendTemplate) => String(tpl.id) === editingTemplateId) && (() => {
                       const tmpl = templates.find((tpl: BackendTemplate) => String(tpl.id) === editingTemplateId)!;
@@ -262,18 +284,22 @@ export default function WorkflowPage() {
                         <>
                           <div className="flex items-start justify-between mb-4">
                             <div>
-                              <h3 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{tmpl.name}</h3>
+                              <h3 className="text-06 text-ink">{tmpl.name}</h3>
                               <div className="flex gap-2 mt-1">
-                                <span className="px-2 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] rounded text-xs">
+                                {/* A civilization is an identity, which is the
+                                    documented meaning of `pill` here; the case
+                                    type is a classification and stays square. */}
+                                <Badge tone="accent" shape="pill">
                                   <DomainEnum namespace="workflow.civilizations" value={tmpl.civilization} />
-                                </span>
-                                <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
+                                </Badge>
+                                <Badge>
                                   <DomainEnum namespace="workflow.case_types" value={tmpl.case_type} />
-                                </span>
+                                </Badge>
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <button
+                              <Button
+                                type="button"
                                 onClick={async () => {
                                   try {
                                     const res = await workflowApi.templates.get(String(tmpl.id));
@@ -284,50 +310,54 @@ export default function WorkflowPage() {
                                     setViewModalOpen(true);
                                   }
                                 }}
-                                className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink-muted))]"
                               >
                                 {t("workflow.view")}
-                              </button>
+                              </Button>
                               <RequirePermission permissions="workflow.update">
-                                <button
+                                <Button
+                                  type="button"
+                                  variant="primary"
                                   onClick={() => {
                                     setEditingTemplateId(String(tmpl.id));
                                     setTab("editor");
                                   }}
-                                  className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium"
                                 >
                                   {t("common.edit")}
-                                </button>
+                                </Button>
                               </RequirePermission>
                               <RequirePermission permissions="workflow.delete">
-                                <button
+                                <Button
+                                  type="button"
+                                  variant="danger"
                                   onClick={() => {
                                     setConfirmingTemplate(tmpl);
                                     setConfirmModalOpen(true);
                                   }}
-                                  className="px-3 py-1.5 bg-[hsl(var(--color-status-error)/0.1)] hover:bg-[hsl(var(--color-status-error)/0.3)] text-[hsl(var(--color-status-error))] border border-[hsl(var(--color-status-error)/0.3)] rounded text-sm font-medium"
                                 >
                                   {t("common.delete")}
-                                </button>
+                                </Button>
                               </RequirePermission>
                             </div>
                           </div>
-                          <p className="text-sm text-[hsl(var(--color-ink-muted))] mb-4">{tmpl.description || t("workflow.no_description")}</p>
-                          <div className="text-xs text-[hsl(var(--color-ink-subtle))] mb-3">
+                          <p className="text-03 text-ink-muted mb-4">{tmpl.description || t("workflow.no_description")}</p>
+                          <div className="text-02 text-ink-subtle mb-3">
                             {t("workflow.nodes_count", { count: String(tmpl.node_count ?? (tmpl.nodes_json || []).length) })}
                           </div>
                           {tmpl.nodes_json ? (
                             <div className="space-y-2 max-h-80 overflow-y-auto">
                               {tmpl.nodes_json.map((node: FlowNode, idx: number) => (
-                                <div key={idx} className="flex items-center gap-3 p-2 bg-[hsl(var(--color-surface-2))] rounded">
-                                  <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] flex items-center justify-center text-xs font-bold shrink-0">
+                                <div key={idx} className="flex items-center gap-3 p-2 bg-surface-2">
+                                  {/* `rounded-full` survives the corner purge:
+                                      a round mark is an identity token, which
+                                      an ordinal step number is. */}
+                                  <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] flex items-center justify-center text-02 font-medium shrink-0">
                                     {idx + 1}
                                   </span>
-                                  <span className="text-sm text-[hsl(var(--color-ink))]">{node.node_name}</span>
-                                  <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-                                  <span className="text-xs text-[hsl(var(--color-ink-muted))]">{node.court_code}</span>
-                                  <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-                                  <span className="text-xs text-[hsl(var(--color-ink-muted))]"><DomainEnum namespace="workflow.node_type" value={node.node_type} /></span>
+                                  <span className="text-03 text-ink">{node.node_name}</span>
+                                  <span className="text-ink-subtle">·</span>
+                                  <span className="text-02 text-ink-muted">{node.court_code}</span>
+                                  <span className="text-ink-subtle">·</span>
+                                  <span className="text-02 text-ink-muted"><DomainEnum namespace="workflow.node_type" value={node.node_type} /></span>
                                 </div>
                               ))}
                             </div>
@@ -337,7 +367,7 @@ export default function WorkflowPage() {
                             // node breakdown would mean shipping every template's full graph on one
                             // list request. Predefined (not-yet-saved) templates still come with
                             // nodes_json inline and keep the detail list above.
-                            <p className="text-xs text-[hsl(var(--color-ink-subtle))]">
+                            <p className="text-02 text-ink-subtle">
                               {t("workflow.view_to_see_nodes")}
                             </p>
                           )}
@@ -350,18 +380,19 @@ export default function WorkflowPage() {
                       <>
                         <div className="flex items-start justify-between mb-4">
                           <div>
-                            <h3 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{currentTemplate.name}</h3>
+                            <h3 className="text-06 text-ink">{currentTemplate.name}</h3>
                             <div className="flex gap-2 mt-1">
-                              <span className="px-2 py-0.5 bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] rounded text-xs">
+                              <Badge tone="accent" shape="pill">
                                 <DomainEnum namespace="workflow.civilizations" value={currentTemplate.civilization} />
-                              </span>
-                              <span className="px-2 py-0.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] rounded text-xs">
+                              </Badge>
+                              <Badge>
                                 <DomainEnum namespace="workflow.case_types" value={currentTemplate.caseType} />
-                              </span>
+                              </Badge>
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <button
+                            <Button
+                              type="button"
                               onClick={() => {
                                 setViewingTemplate({
                                   ...currentTemplate,
@@ -379,12 +410,13 @@ export default function WorkflowPage() {
                                 });
                                 setViewModalOpen(true);
                               }}
-                              className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink-muted))]"
                             >
                               {t("workflow.view")}
-                            </button>
+                            </Button>
                             <RequirePermission permissions="workflow.update">
-                              <button
+                              <Button
+                                type="button"
+                                variant="primary"
                                 onClick={() => {
                                   setEditingTemplateData({
                                     name: currentTemplate.name,
@@ -411,34 +443,33 @@ export default function WorkflowPage() {
                                   });
                                   setTab("editor");
                                 }}
-                                className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium"
                               >
                                 {t("common.edit")}
-                              </button>
+                              </Button>
                             </RequirePermission>
                           </div>
                         </div>
-                        <p className="text-sm text-[hsl(var(--color-ink-muted))] mb-4">{currentTemplate.description}</p>
-                        <div className="text-xs text-[hsl(var(--color-ink-subtle))] mb-3">
+                        <p className="text-03 text-ink-muted mb-4">{currentTemplate.description}</p>
+                        <div className="text-02 text-ink-subtle mb-3">
                           {t("workflow.nodes_count", { count: String(currentTemplate.nodes.length) })}
                         </div>
                         <div className="space-y-2 max-h-80 overflow-y-auto">
                           {currentTemplate.nodes.map((node: FrontendNode, idx: number) => (
-                            <div key={idx} className="flex items-center gap-3 p-2 bg-[hsl(var(--color-surface-2))] rounded">
-                              <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] flex items-center justify-center text-xs font-bold shrink-0">
+                            <div key={idx} className="flex items-center gap-3 p-2 bg-surface-2">
+                              <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] flex items-center justify-center text-02 font-medium shrink-0">
                                 {idx + 1}
                               </span>
-                              <span className="text-sm text-[hsl(var(--color-ink))]">{node.name}</span>
-                              <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-                              <span className="text-xs text-[hsl(var(--color-ink-muted))]">{node.court}</span>
-                              <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
+                              <span className="text-03 text-ink">{node.name}</span>
+                              <span className="text-ink-subtle">·</span>
+                              <span className="text-02 text-ink-muted">{node.court}</span>
+                              <span className="text-ink-subtle">·</span>
                               {/* `workflow.node_type` 这个 bundle 只有 trial/
                                   evaluation/appeal/final/execution 五个键，所以
                                   直接传 `node.type`（「分流」…）时 <DomainEnum> 一律
                                   判为 unrecognized，这一格 56 个预设节点全部显示
                                  「未识别取值」。映射之后它显示的是真正的类型，也和
                                   保存下去的值是同一个。 */}
-                              <span className="text-xs text-[hsl(var(--color-ink-muted))]"><DomainEnum namespace="workflow.node_type" value={nodeTypeFor(node.type)} /></span>
+                              <span className="text-02 text-ink-muted"><DomainEnum namespace="workflow.node_type" value={nodeTypeFor(node.type)} /></span>
                             </div>
                           ))}
                         </div>
@@ -449,8 +480,8 @@ export default function WorkflowPage() {
 
                 {/* 未选中状态 */}
                 {!editingTemplateId && !selectedTemplate && (
-                  <div className="text-center text-[hsl(var(--color-ink-muted))] py-16 bg-[hsl(var(--color-surface-1))] rounded-lg border border-[hsl(var(--color-hairline))]">
-                    {t("workflow.select_from_left")}
+                  <div className="bg-surface-1 border border-hairline px-4">
+                    <EmptyState title={t("workflow.select_from_left")} />
                   </div>
                 )}
               </div>
@@ -480,9 +511,10 @@ export default function WorkflowPage() {
             {isWorkflowsLoading ? (
               <ListSkeleton count={5} />
             ) : workflows.length === 0 ? (
-              <div className="text-center text-[hsl(var(--color-ink-subtle))] py-12">
-                {t("workflow.no_instances")}
-              </div>
+              /* `py-12` (48px) is not a step on the ladder, and a centred
+                 "nothing here" reads as the page's subject rather than as the
+                 absence of one. EmptyState is left-aligned for that reason. */
+              <EmptyState title={t("workflow.no_instances")} />
             ) : (
               workflows.map((wf) => (
                 /* This row used to be a <div onClick={router.push}> with
@@ -501,31 +533,37 @@ export default function WorkflowPage() {
                 <Link
                   key={wf.id}
                   href={`/workflow/${wf.id}`}
-                  className="block bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))] hover:border-[hsl(var(--color-accent))]/50 transition-colors cursor-pointer"
+                  className="block bg-surface-1 p-4 border border-hairline hover:border-[hsl(var(--color-accent))]/50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium text-[hsl(var(--color-ink))]">{wf.workflow_name}</div>
-                      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
+                      <div className="text-03 font-medium text-ink">{wf.workflow_name}</div>
+                      <div className="text-02 text-ink-muted mt-1">
                         <DomainEnum namespace="workflow.case_types" value={wf.case_type} /> · {wf.soul}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2 py-0.5 rounded text-xs font-bold ${
+                      {/* Tints unchanged, geometry moved onto Badge — which is
+                          also what keeps the row's `py-0.5` legal, since that
+                          class is granted to Badge.tsx alone. <DomainEnum>
+                          still renders the inner span carrying title={raw},
+                          which `WorkflowPage.test.tsx` selects on
+                          (`getByTitle("IN_PROGRESS")`). */}
+                      <Badge
+                        className={
                           wf.status === "COMPLETED"
                             ? "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]"
                             : wf.status === "IN_PROGRESS"
                             ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
-                            : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
-                        }`}
+                            : "bg-[hsl(var(--color-surface-3))] text-ink-muted"
+                        }
                       >
                         <DomainEnum namespace="workflow.status" value={wf.status} />
-                      </span>
+                      </Badge>
                       {wf.is_appeal && (
-                        <span className="px-2 py-0.5 rounded text-xs bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]">
+                        <Badge className="bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]">
                           {t("workflow.appeal_badge")}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   </div>
@@ -545,42 +583,43 @@ export default function WorkflowPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <span className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.civilization")}</span>
-                  <p className="text-sm text-[hsl(var(--color-ink))] font-medium"><DomainEnum namespace="workflow.civilizations" value={viewingTemplate.civilization} /></p>
+                  {/* 01 是 uppercase 小标签那一档 —— 这些是字段名，不是正文。 */}
+                  <span className="text-01 uppercase text-ink-subtle">{t("souls.civilization")}</span>
+                  <p className="text-03 text-ink font-medium"><DomainEnum namespace="workflow.civilizations" value={viewingTemplate.civilization} /></p>
                 </div>
                 <div>
-                  <span className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("workflow.detail.case_type")}</span>
-                  <p className="text-sm text-[hsl(var(--color-ink))] font-medium">
+                  <span className="text-01 uppercase text-ink-subtle">{t("workflow.detail.case_type")}</span>
+                  <p className="text-03 text-ink font-medium">
                     <DomainEnum namespace="workflow.case_types" value={viewingTemplate.case_type || viewingTemplate.caseType} />
                   </p>
                 </div>
               </div>
               <div>
-                <span className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("workflow.detail.notes")}</span>
-                <p className="text-sm text-[hsl(var(--color-ink))]"><DomainText value={viewingTemplate.description} /></p>
+                <span className="text-01 uppercase text-ink-subtle">{t("workflow.detail.notes")}</span>
+                <p className="text-03 text-ink"><DomainText value={viewingTemplate.description} /></p>
               </div>
               <div>
-                <span className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("workflow.detail.nodes")}</span>
+                <span className="text-01 uppercase text-ink-subtle">{t("workflow.detail.nodes")}</span>
                 <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
                   {/* Backend templates arrive here via WorkflowTemplateSerializer's
                       `nodes` (source='nodes_json'); predefined templates are
                       built locally with a `nodes_json` key. Read both. */}
                   {((viewingTemplate.nodes_json || viewingTemplate.nodes || []) as FlowNode[]).map((node: FlowNode, idx: number) => (
-                    <div key={idx} className="bg-[hsl(var(--color-surface-3))] rounded p-2 text-sm">
-                      <div className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</div>
-                      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
+                    <div key={idx} className="bg-surface-3 p-2 text-03">
+                      <div className="font-medium text-ink">{node.node_name}</div>
+                      <div className="text-02 text-ink-muted mt-1">
                         {node.court_code && <span>🏛 {node.court_code}</span>}
                         <span className="ml-2"><DomainEnum namespace="workflow.node_type" value={node.node_type} /></span>
                       </div>
                       {node.approver_role && (
-                        <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
+                        <div className="text-02 text-ink-subtle mt-1">
                           {node.approver_role}
                         </div>
                       )}
                     </div>
                   ))}
                   {(viewingTemplate.nodes_json || viewingTemplate.nodes || []).length === 0 && (
-                    <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("workflow.no_node_data")}</p>
+                    <p className="text-03 text-ink-muted">{t("workflow.no_node_data")}</p>
                   )}
                 </div>
               </div>
@@ -595,13 +634,16 @@ export default function WorkflowPage() {
           title={t("common.confirm_delete")}
           footer={
             <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setConfirmModalOpen(false)}
-                className="px-4 py-2 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink-muted))]"
-              >
+              <Button type="button" variant="ghost" onClick={() => setConfirmModalOpen(false)}>
                 {t("common.cancel")}
-              </button>
-              <button
+              </Button>
+              {/* Was `bg-status-error` + `text-white`, which measures 3.59:1 in
+                  the dark theme — under AA, on the one control in this dialog
+                  that destroys something. `Button`'s danger variant is the
+                  10%-tint recipe that clears AA in both themes. */}
+              <Button
+                type="button"
+                variant="danger"
                 onClick={() => {
                   if (confirmingTemplate) {
                     deleteMutation.mutate(String(confirmingTemplate.id));
@@ -609,19 +651,17 @@ export default function WorkflowPage() {
                   setConfirmModalOpen(false);
                 }}
                 disabled={deleteMutation.isPending}
-                className="px-4 py-2 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] text-white rounded text-sm font-medium disabled:opacity-50"
               >
                 {deleteMutation.isPending ? (t("common.deleting")) : (t("common.confirm_delete"))}
-              </button>
+              </Button>
             </div>
           }
         >
           <div className="space-y-3">
-            <p className="text-[hsl(var(--color-ink))]">{t("workflow.delete_confirm_msg", { name: confirmingTemplate?.name || "" })}</p>
-            <p className="text-sm text-[hsl(var(--color-status-error))]">{t("workflow.delete_irreversible")}</p>
+            <p className="text-03 text-ink">{t("workflow.delete_confirm_msg", { name: confirmingTemplate?.name || "" })}</p>
+            <p className="text-03 text-[hsl(var(--color-status-error))]">{t("workflow.delete_irreversible")}</p>
           </div>
         </BaseModal>
-      </div>
-    </div>
+    </PageShell>
   );
 }

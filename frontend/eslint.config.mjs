@@ -255,44 +255,10 @@ const LEGACY = {
     "space": 5,
     "type": 5
   },
-  "app/actors/loading.tsx": {
-    "palette": 2
-  },
   "app/admin/stats/error.tsx": {
     "palette": 1,
     "radius": 2,
     "type": 2
-  },
-  "app/cross-judgments/loading.tsx": {
-    "palette": 2
-  },
-  "app/dashboard/loading.tsx": {
-    "palette": 2
-  },
-  "app/dashboard/page.tsx": {
-    "radius": 12,
-    "space": 12,
-    "type": 19
-  },
-  "app/dispatch/[id]/page.tsx": {
-    "radius": 14,
-    "type": 19
-  },
-  "app/dispatch/loading.tsx": {
-    "palette": 2
-  },
-  "app/dispatch/propose/error.tsx": {
-    "palette": 1,
-    "radius": 2,
-    "type": 2
-  },
-  "app/dispatch/propose/page.tsx": {
-    "radius": 5,
-    "type": 6
-  },
-  "app/disposition/page.tsx": {
-    "radius": 8,
-    "type": 9
   },
   "app/error.tsx": {
     "palette": 1,
@@ -313,114 +279,9 @@ const LEGACY = {
     "space": 2,
     "type": 16
   },
-  "app/menus/buttons/page.tsx": {
-    "radius": 10,
-    "space": 3,
-    "type": 23
-  },
-  "app/menus/page.tsx": {
-    "radius": 18,
-    "space": 15,
-    "type": 48
-  },
   "app/not-found.tsx": {
     "radius": 1,
     "type": 2
-  },
-  "app/notifications/loading.tsx": {
-    "palette": 2
-  },
-  "app/notifications/page.tsx": {
-    "radius": 5,
-    "space": 4,
-    "type": 9
-  },
-  "app/organizations/page.tsx": {
-    "radius": 4,
-    "space": 2,
-    "type": 6
-  },
-  "app/page.tsx": {
-    "radius": 4,
-    "space": 9,
-    "type": 22
-  },
-  "app/permissions/loading.tsx": {
-    "palette": 2
-  },
-  "app/permissions/page.tsx": {
-    "radius": 21,
-    "space": 12,
-    "type": 42
-  },
-  "app/realms/loading.tsx": {
-    "palette": 2
-  },
-  "app/realms/page.tsx": {
-    "radius": 3,
-    "space": 1,
-    "type": 4
-  },
-  "app/recycle-bin/page.tsx": {
-    "palette": 2,
-    "radius": 4,
-    "space": 5,
-    "type": 11
-  },
-  "app/social/[id]/page.tsx": {
-    "palette": 1,
-    "radius": 2,
-    "space": 2,
-    "type": 3
-  },
-  "app/social/profile/[id]/page.tsx": {
-    "palette": 1,
-    "radius": 2,
-    "space": 2,
-    "type": 3
-  },
-  "app/souls/[id]/page.tsx": {
-    "radius": 15,
-    "space": 13,
-    "type": 23
-  },
-  "app/souls/page.tsx": {
-    "radius": 9,
-    "space": 6,
-    "type": 14
-  },
-  "app/tenants/page.tsx": {
-    "radius": 3,
-    "type": 3
-  },
-  "app/users/page.tsx": {
-    "radius": 7,
-    "space": 1,
-    "type": 15
-  },
-  "app/welcome/error.tsx": {
-    "palette": 1,
-    "radius": 2,
-    "type": 2
-  },
-  "app/welcome/loading.tsx": {
-    "radius": 4
-  },
-  "app/welcome/page.tsx": {
-    "palette": 27,
-    "radius": 16,
-    "space": 5,
-    "type": 26
-  },
-  "app/workflow/[id]/page.tsx": {
-    "radius": 16,
-    "space": 16,
-    "type": 33
-  },
-  "app/workflow/page.tsx": {
-    "radius": 22,
-    "space": 14,
-    "type": 52
   },
   "src/components/charts/LazyWorkflowEditor.tsx": {
     "radius": 1

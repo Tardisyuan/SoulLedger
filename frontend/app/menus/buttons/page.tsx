@@ -9,6 +9,11 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { Modal } from "@/src/components/ui/Modal";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable } from "@/components/ui/data-table";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Button } from "@/src/components/ui/Button";
+import { Badge } from "@/src/components/ui/Badge";
+import { SelectField, TextField, fieldControl } from "@/src/components/ui/Field";
+import { cn } from "@/lib/utils";
 
 export default function MenuButtonsPage() {
   const { t } = useI18n();
@@ -113,9 +118,35 @@ export default function MenuButtonsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">{t("menu_buttons.title")}</h1>
+    /* `page` (1200px), up from `max-w-5xl` (1024). */
+    <PageShell
+      variant="page"
+      title={t("menu_buttons.title")}
+      /* MenuButton only carries one of the menu editor's five visibility gates
+         (is_active) — roles, `visible`, the permission/derivation ambiguity and
+         menu_type all live on the parent Menu, not here. That is a standing
+         fact about this page, which is what `subtitle` is for; it used to be a
+         `text-xs` paragraph floating above the table. */
+      subtitle={
+        <>
+          {t("menu_buttons.gates_note")}{" "}
+          <Link href="/menus" className="text-[hsl(var(--color-accent-ink))] hover:underline">
+            {t("menus.title")}
+          </Link>
+        </>
+      }
+      actions={
+        <RequirePermission permissions="menu.create">
+          <Button type="button" variant="primary" onClick={openCreate}>
+            + {t("menu_buttons.create")}
+          </Button>
+        </RequirePermission>
+      }
+      filters={
+        /* This select was sitting in the title bar next to the create button,
+           where it read as a page action rather than as what it is — the one
+           filter this list has. It belongs in the sticky slot with every other
+           page's filters, on the shared `fieldControl` skin. */
         <select
           id={menuFilterId}
           value={selectedMenuId ?? ""}
@@ -124,161 +155,134 @@ export default function MenuButtonsPage() {
             setPage(1);
           }}
           aria-label={t("menu_buttons.filter_by_menu") === "menu_buttons.filter_by_menu" ? "Filter by menu" : t("menu_buttons.filter_by_menu")}
-          className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-1.5 text-sm text-[hsl(var(--color-ink))]"
+          className={cn(fieldControl({ size: "md" }), "w-auto")}
         >
           <option value="">{t("menu_buttons.all_menus")}</option>
           {menus.map((m) => (
             <option key={m.id} value={m.id}>{m.name}</option>
           ))}
         </select>
-        <RequirePermission permissions="menu.create">
-          <button
-            onClick={openCreate}
-            className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] rounded-md text-sm font-medium transition-colors"
-          >
-            + {t("menu_buttons.create")}
-          </button>
-        </RequirePermission>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-6 py-6">
-        {/* MenuButton only carries one of the menu editor's five visibility
-            gates (is_active) — roles, `visible`, the permission/derivation
-            ambiguity, and menu_type all live on the parent Menu, not here.
-            See the reference table on /menus for what each of those does. */}
-        <p className="text-xs text-[hsl(var(--color-ink-subtle))] mb-4">
-          {t("menu_buttons.gates_note")}{" "}
-          <Link href="/menus" className="text-[hsl(var(--color-accent-ink))] hover:underline">
-            {t("menus.title")}
-          </Link>
-        </p>
-        <DataTable<MenuButton>
-          caption={t("menu_buttons.title")}
-          columns={[
-            { key: "name", header: t("menu_buttons.name") },
-            { key: "code", header: t("menu_buttons.code") },
-            { key: "permission", header: t("menu_buttons.permission") },
-            { key: "order", header: t("menus.order") },
-            { key: "status", header: t("menus.status") },
-            { key: "action", header: t("menus.action"), align: "right" },
-          ]}
-          data={buttons}
-          isLoading={isLoading}
-          isError={isError}
-          keyExtractor={(btn) => String(btn.id)}
-          renderRow={(btn) => (
-            <>
-              <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">{btn.name}</td>
-              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs font-mono">{btn.code}</td>
-              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))] text-xs font-mono">{btn.permission}</td>
-              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{btn.order}</td>
-              <td className="px-4 py-3">
-                <span className={`px-2 py-0.5 rounded text-xs font-bold ${btn.is_active ? "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]" : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}`}>
-                  {btn.is_active ? t("menus.active") : t("menus.inactive")}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-right">
-                {/* See app/permissions/page.tsx: inline siblings concatenate
-                    their labels in the accessibility tree and on copy. */}
-                <div className="flex justify-end gap-3">
-                  <RequirePermission permissions="menu.update">
-                    <button
-                      onClick={() => openEdit(btn)}
-                      className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-hover))] text-sm"
-                    >
-                      {t("menus.edit")}
-                    </button>
-                  </RequirePermission>
-                  <RequirePermission permissions="menu.delete">
-                    <button
-                      onClick={() => deleteMutation.mutate(btn.id)}
-                      className="text-[hsl(var(--color-status-error))] hover:text-[hsl(var(--color-status-error)/0.8)] text-sm"
-                    >
-                      {t("menus.delete")}
-                    </button>
-                  </RequirePermission>
-                </div>
-              </td>
-            </>
-          )}
-          emptyMessage={t("menu_buttons.no_buttons")}
-          page={page}
-          totalPages={totalPages}
-          totalCount={data?.count}
-          onPageChange={setPage}
-        />
-      </div>
+      }
+    >
+      {/* No `pagination` slot — DataTable renders its own <Pagination>
+          (components/ui/data-table.tsx:288) from the four props at the end. */}
+      <DataTable<MenuButton>
+        caption={t("menu_buttons.title")}
+        columns={[
+          { key: "name", header: t("menu_buttons.name") },
+          { key: "code", header: t("menu_buttons.code") },
+          { key: "permission", header: t("menu_buttons.permission") },
+          { key: "order", header: t("menus.order") },
+          { key: "status", header: t("menus.status") },
+          { key: "action", header: t("menus.action"), align: "right" },
+        ]}
+        data={buttons}
+        isLoading={isLoading}
+        isError={isError}
+        keyExtractor={(btn) => String(btn.id)}
+        renderRow={(btn) => (
+          <>
+            <td className="px-4 py-3 font-medium text-ink">{btn.name}</td>
+            {/* Codenames are identifiers, which is what the 02 step is for. */}
+            <td className="px-4 py-3 text-02 font-mono text-ink-muted">{btn.code}</td>
+            <td className="px-4 py-3 text-02 font-mono text-ink-muted">{btn.permission}</td>
+            <td className="px-4 py-3 text-ink-muted">{btn.order}</td>
+            <td className="px-4 py-3">
+              {/* is_active IS a system state — the gate is either in force or
+                  it is not — so this one legitimately takes a Badge tone
+                  rather than a domain palette. */}
+              <Badge tone={btn.is_active ? "success" : "neutral"}>
+                {btn.is_active ? t("menus.active") : t("menus.inactive")}
+              </Badge>
+            </td>
+            <td className="px-4 py-3 text-right">
+              {/* See app/permissions/page.tsx: inline siblings concatenate
+                  their labels in the accessibility tree and on copy. */}
+              <div className="flex justify-end gap-2">
+                <RequirePermission permissions="menu.update">
+                  <Button type="button" size="sm" onClick={() => openEdit(btn)}>
+                    {t("menus.edit")}
+                  </Button>
+                </RequirePermission>
+                <RequirePermission permissions="menu.delete">
+                  <Button type="button" size="sm" variant="danger" onClick={() => deleteMutation.mutate(btn.id)}>
+                    {t("menus.delete")}
+                  </Button>
+                </RequirePermission>
+              </div>
+            </td>
+          </>
+        )}
+        emptyMessage={t("menu_buttons.no_buttons")}
+        page={page}
+        totalPages={totalPages}
+        totalCount={data?.count}
+        onPageChange={setPage}
+      />
 
       <Modal
         isOpen={isCreateModalOpen || editingButton !== null}
         onClose={() => { setIsCreateModalOpen(false); setEditingButton(null); }}
         title={editingButton ? t("menu_buttons.edit") : t("menu_buttons.create")}
       >
+        {/* Every control below was a hand-written `label` + `input` pair with
+            the same 42-signature class string this pass exists to remove; they
+            are `TextField` / `SelectField` now, which also brings the wiring
+            those pairs never had — `aria-required` on the control, and
+            `aria-describedby` pointing at the help text. */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor={nameId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menu_buttons.name")}</label>
-            <input
-              id={nameId}
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-            />
-          </div>
-          <div>
-            <label htmlFor={codeId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menu_buttons.code")}</label>
-            <input
-              id={codeId}
-              value={form.code}
-              onChange={(e) => setForm({ ...form, code: e.target.value })}
-              required
-              placeholder={t("menu_buttons.code_placeholder")}
-              className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-            />
-          </div>
-          <div>
-            <label htmlFor={permissionId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menu_buttons.permission")}</label>
-            <input
+          <TextField
+            id={nameId}
+            label={t("menu_buttons.name")}
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            required
+          />
+          <TextField
+            id={codeId}
+            label={t("menu_buttons.code")}
+            value={form.code}
+            onChange={(e) => setForm({ ...form, code: e.target.value })}
+            required
+            placeholder={t("menu_buttons.code_placeholder")}
+          />
+          <div className="flex flex-col gap-1">
+            <TextField
               id={permissionId}
+              label={t("menu_buttons.permission")}
               value={form.permission}
               onChange={(e) => setForm({ ...form, permission: e.target.value })}
               required
               placeholder={t("menu_buttons.permission_placeholder")}
-              className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
             />
+            {/* Not `error`: an unknown codename is a warning, not a rejection —
+                the form still submits, and a red field would say otherwise. */}
             {permissionsLoaded && form.permission.trim() && !realCodenames.has(form.permission.trim()) && (
-              <p className="text-xs text-[hsl(var(--color-status-warning))] mt-1">
+              <p className="text-02 text-[hsl(var(--color-status-warning))]">
                 {t("menu_buttons.permission_mismatch_warning", { codename: form.permission.trim() })}
               </p>
             )}
           </div>
           {!editingButton && (
-            <div>
-              <label htmlFor={bindMenuId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menu_buttons.bind_menu")}</label>
-              <select
-                id={bindMenuId}
-                value={form.menu ?? ""}
-                onChange={(e) => setForm({ ...form, menu: e.target.value ? Number(e.target.value) : null })}
-                required
-                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-              >
-                <option value="">{t("menu_buttons.select_menu")}</option>
-                {menus.map((m) => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div>
-            <label htmlFor={orderId} className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">{t("menus.order")}</label>
-            <input
-              id={orderId}
-              type="number"
-              value={form.order}
-              onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
-              className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            <SelectField
+              id={bindMenuId}
+              label={t("menu_buttons.bind_menu")}
+              value={form.menu ?? ""}
+              onChange={(e) => setForm({ ...form, menu: e.target.value ? Number(e.target.value) : null })}
+              required
+              options={[
+                { value: "", label: t("menu_buttons.select_menu") },
+                ...menus.map((m) => ({ value: String(m.id), label: m.name })),
+              ]}
             />
-          </div>
+          )}
+          <TextField
+            id={orderId}
+            label={t("menus.order")}
+            type="number"
+            value={form.order}
+            onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
+          />
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -286,25 +290,22 @@ export default function MenuButtonsPage() {
               checked={form.is_active}
               onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
             />
-            <label htmlFor={isActiveId} className="text-sm text-[hsl(var(--color-ink))]">{t("menus.active")}</label>
+            <label htmlFor={isActiveId} className="text-03 text-ink">{t("menus.active")}</label>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => { setIsCreateModalOpen(false); setEditingButton(null); }}
-              className="px-4 py-2 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] rounded-md text-sm text-[hsl(var(--color-ink-muted))] transition-colors"
             >
               {t("common.cancel")}
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] rounded-md text-sm font-medium text-black transition-colors"
-            >
+            </Button>
+            <Button type="submit" variant="primary">
               {editingButton ? t("menus.save") : t("menu_buttons.create")}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
-    </div>
+    </PageShell>
   );
 }

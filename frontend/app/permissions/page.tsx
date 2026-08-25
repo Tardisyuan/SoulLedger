@@ -15,6 +15,8 @@ import { PermissionFormModal } from "@/src/components/permissions/PermissionForm
 import { RoleFormModal } from "@/src/components/permissions/RoleFormModal";
 import { DataGrid, type DataGridColumn } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Button } from "@/src/components/ui/Button";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Pure helpers — no React/DOM dependency, exported so
@@ -175,7 +177,23 @@ function MatrixCell({
       aria-label={label}
       disabled={disabled}
       onClick={onToggle}
-      className={`flex items-center justify-center w-full h-8 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-accent))] ${
+      // 这里原先是 `focus:outline-none focus-visible:ring-2
+      // focus-visible:ring-[hsl(var(--color-accent))]` —— 全仓唯一一处把焦点环
+      // 指向 --color-accent 的地方,而那正是 globals.css 用 40 行(:96-134)
+      // 论证**不能**做的事:--color-accent 被 SettingsDrawer 的 useAccentColor
+      // 以**内联样式**写在 document.documentElement 上,取值是用户在抽屉里随手
+      // 挑的六位十六进制。内联样式压过样式表里的一切,所以一个挑了浅琥珀的用户
+      // 会静默删掉自己**唯一**的键盘焦点指示器,而且无从察觉。第二条独立理由是
+      // 它本身就不合格:hsl(38 92% 50%) 在浅色模式白底上是 2.14:1,连非文字
+      // UI 的 3:1 底线都够不到。
+      //
+      // 两条 `outline-none` 也一起删了 —— 它们是全局规则要越过的那 69 处之一。
+      // 删掉之后接管的是 globals.css:459 那条
+      // `:focus-visible { outline: 2px solid hsl(var(--color-focus)) !important }`,
+      // --color-focus 是字面量三元组(深 258 95% 76% / 浅 258 85% 48%),抽屉
+      // 够不着它。本组件不写 outline-none,就是它参与全局焦点环的全部要求
+      // (Button.tsx 的「FOCUS: deliberately not here」一节说的是同一件事)。
+      className={`flex items-center justify-center w-full h-8 transition-colors ${
         disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:bg-[hsl(var(--color-surface-3))]"
       }`}
     >
@@ -537,35 +555,45 @@ export default function PermissionsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
-      <div className="px-6 pt-6 pb-4">
-        <h1 className="text-2xl lg:text-3xl font-bold text-[hsl(var(--color-accent-ink))]">
+    // `full`,不是 `page` —— 这一页的主体是角色 × 权限矩阵,**列数随角色数
+    // 增长**。迁移前它被 `max-w-6xl`(1152px)夹着:今天 5 个角色还算宽裕,
+    // 第 8 个角色进来时列宽就开始被压。1200px 的 `page` 只是把同一个天花板
+    // 抬高 48px,并没有换掉那个天花板。副标题仍然收在 `max-w-prose` 里
+    // (PageShell 自己给的),所以「不设列宽」不会让那一句铺满 1800px。
+    <PageShell
+      variant="full"
+      title={
+        <>
           {t("permissions.title")}
           <MenuGloss path="/permissions" />
-        </h1>
-        <p className="text-sm sm:text-base text-[hsl(var(--color-ink-subtle))] mt-1 hidden sm:block">{t("permissions.subtitle")}</p>
-      </div>
-
-      <RequirePermission permissions="ADMIN" fallback={<div className="px-6"><PermissionDenied /></div>}>
-        <div className="max-w-6xl mx-auto px-6 py-6 space-y-8">
+        </>
+      }
+      // 原先这一句是 `hidden sm:block` —— 在手机上整句消失。它解释的是这一页
+      // 在做什么,而手机正是最需要那句解释的地方。
+      subtitle={t("permissions.subtitle")}
+    >
+      <RequirePermission permissions="ADMIN" fallback={<PermissionDenied />}>
+        <div className="space-y-10">
           {/* ── Conflict banner ── */}
           {conflict && (
-            <div role="alert" className="bg-[hsl(var(--color-status-error))]/10 border border-[hsl(var(--color-status-error))]/40 rounded-lg p-4 flex items-center justify-between gap-4">
-              <p className="text-sm text-[hsl(var(--color-status-error))]">
+            <div role="alert" className="bg-[hsl(var(--color-status-error))]/10 border border-[hsl(var(--color-status-error))]/40 p-4 flex items-center justify-between gap-4">
+              <p className="text-03 text-[hsl(var(--color-status-error))]">
                 {t("permissions.matrix.conflict_message", {
                   role: roleMeta[conflict.role]?.display_name || conflict.role,
                   expected: String(conflict.expected),
                   current: String(conflict.current),
                 })}
               </p>
-              <button
+              <Button
                 type="button"
+                variant="danger"
+                size="sm"
                 onClick={resolveConflict}
                 disabled={conflictRoleQuery?.isFetching}
-                className="shrink-0 px-3 py-1.5 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 text-white rounded text-xs font-medium transition-colors"
+                className="shrink-0"
               >
                 {conflictRoleQuery?.isFetching ? t("permissions.matrix.conflict_reloading") : t("permissions.matrix.conflict_reload_button")}
-              </button>
+              </Button>
             </div>
           )}
 
@@ -576,7 +604,7 @@ export default function PermissionsPage() {
             error={permsQuery.isError || rolesQuery.isError || rolePermsError ? t("permissions.matrix.load_error") : undefined}
           >
             {(nonSubsetPair || countParadox) && (
-              <div className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg p-4 mb-4 text-sm space-y-1.5">
+              <div className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] p-4 mb-4 text-03 space-y-2">
                 <h3 className="font-semibold text-[hsl(var(--color-ink))]">{t("permissions.matrix.legend_title")}</h3>
                 <p className="text-[hsl(var(--color-ink-muted))]">{t("permissions.matrix.legend_intro")}</p>
                 {nonSubsetPair && (
@@ -610,9 +638,9 @@ export default function PermissionsPage() {
                 onChange={(e) => setFilterText(e.target.value)}
                 placeholder={t("permissions.matrix.filter_placeholder")}
                 aria-label={t("permissions.matrix.filter_placeholder")}
-                className="flex-1 min-w-[200px] px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+                className="flex-1 min-w-[200px] px-3 py-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
               />
-              <label className="flex items-center gap-2 text-sm text-[hsl(var(--color-ink-muted))] cursor-pointer">
+              <label className="flex items-center gap-2 text-03 text-[hsl(var(--color-ink-muted))] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={onlyDifferences}
@@ -622,19 +650,19 @@ export default function PermissionsPage() {
                 {t("permissions.matrix.only_differences")}
               </label>
               <div className="flex-1" />
-              <span className="text-xs text-[hsl(var(--color-ink-subtle))]">
+              <span className="text-02 text-[hsl(var(--color-ink-subtle))]">
                 {liveDiffs.length > 0
                   ? t("permissions.matrix.pending_count", { count: String(liveDiffs.length) })
                   : t("permissions.matrix.no_changes")}
               </span>
-              <button
+              <Button
                 type="button"
+                variant="primary"
                 onClick={handleSaveClick}
                 disabled={liveDiffs.length === 0 || isSaving || !matrixReady}
-                className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-40 disabled:cursor-not-allowed text-black rounded text-sm font-medium transition-colors"
               >
                 {isSaving ? t("permissions.matrix.saving") : t("permissions.matrix.save_button")}
-              </button>
+              </Button>
             </div>
 
             {!matrixReady ? (
@@ -644,19 +672,42 @@ export default function PermissionsPage() {
                 ))}
               </div>
             ) : roleNames.length === 0 ? (
-              <p className="text-sm text-[hsl(var(--color-ink-muted))]">{t("permissions.matrix.no_roles")}</p>
+              <p className="text-03 text-[hsl(var(--color-ink-muted))]">{t("permissions.matrix.no_roles")}</p>
             ) : (
-              <div className="overflow-y-auto max-h-[65vh] border border-[hsl(var(--color-hairline))] rounded-lg">
-                <table className="w-full border-collapse text-sm">
+              /* 窄屏上真正坏掉的东西,和它不是什么。
+                 
+                 **原先那句 `overflow-y-auto` 已经能横向滚。** CSS Overflow 3
+                 规定:overflow-x/y 之一不是 visible 而另一个是 visible 时,
+                 visible 计算成 auto。所以 `overflow-y: auto` 会把 overflow-x
+                 一并算成 auto。实测(Playwright + Chromium,把这张表的结构
+                 照搬成静态页):`overflow-y:auto` 与 `overflow-x:auto;
+                 overflow-y:auto` 两个容器的 computed overflow-x 都是 "auto",
+                 scrollWidth 都是 1128 / clientWidth 400,把 scrollLeft 设成
+                 999 之后两边都停在 728。右边的角色一直够得到。
+
+                 坏的是**够到之后不知道自己在看哪一行**:第一列跟着一起滚走,
+                 于是滚到第 8 个角色时,那一列勾选框对应的是哪条 codename 没有
+                 任何东西还在说。所以修法不是加一个已经生效的 `overflow-x-auto`,
+                 是把第一列冻住。
+
+                 sticky 从 `<tr>` 挪到了单元格:sticky 元素各自开一个层叠上下文,
+                 挂在 <tr> 上时表头行、分类行、正文行是三个互不比较 z-index 的
+                 上下文,冻结列的角单元格无法可靠地压在表头之上。挂在单元格上时
+                 它们是同一个上下文里的兄弟,z-40 / z-30 / z-20 / z-10 直接可比。
+                 表格也从 border-collapse 换成 border-separate + border-spacing-0:
+                 collapse 下边框归表格而不归单元格,sticky 单元格滚动时边框会
+                 留在原地。 */
+              <div className="overflow-auto max-h-[65vh] border border-[hsl(var(--color-hairline))]">
+                <table className="w-full border-separate border-spacing-0 text-03">
                   <thead>
-                    <tr className="sticky top-0 z-30 h-11 bg-[hsl(var(--color-surface-1))] border-b border-[hsl(var(--color-hairline))]">
-                      <th className="text-left px-3 font-medium text-[hsl(var(--color-ink-muted))]">
+                    <tr className="h-11">
+                      <th className="sticky top-0 left-0 z-40 bg-[hsl(var(--color-surface-1))] border-b border-[hsl(var(--color-hairline))] text-left px-3 font-medium text-[hsl(var(--color-ink-muted))] min-w-[200px]">
                         {t("permissions.matrix.codename_col")}
                       </th>
                       {roleNames.map((role) => (
-                        <th key={role} className="px-2 font-medium text-[hsl(var(--color-ink))] min-w-[110px] text-center">
+                        <th key={role} className="sticky top-0 z-30 bg-[hsl(var(--color-surface-1))] border-b border-[hsl(var(--color-hairline))] px-2 font-medium text-[hsl(var(--color-ink))] min-w-[110px] text-center">
                           <div>{roleMeta[role]?.display_name || role}</div>
-                          <div className="text-[11px] font-normal text-[hsl(var(--color-ink-subtle))] font-mono">
+                          <div className="text-02 font-normal text-[hsl(var(--color-ink-subtle))] font-mono">
                             {categoryTally(permsQuery.data ?? [], role)}
                           </div>
                         </th>
@@ -696,12 +747,9 @@ export default function PermissionsPage() {
             actions={
               !permsQuery.isLoading ? (
                 <RequirePermission permissions="system.settings">
-                  <button
-                    onClick={() => setIsCreateOpen(true)}
-                    className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium transition-colors"
-                  >
+                  <Button type="button" variant="primary" onClick={() => setIsCreateOpen(true)}>
                     + {t("permissions.create")}
-                  </button>
+                  </Button>
                 </RequirePermission>
               ) : undefined
             }
@@ -723,19 +771,16 @@ export default function PermissionsPage() {
               isLoading={rolesQuery.isLoading}
               actions={
                 !rolesQuery.isLoading ? (
-                  <button
-                    onClick={() => setIsRoleCreateOpen(true)}
-                    className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded text-sm font-medium transition-colors"
-                  >
+                  <Button type="button" variant="primary" onClick={() => setIsRoleCreateOpen(true)}>
                     + {t("permissions.create_role")}
-                  </button>
+                  </Button>
                 ) : undefined
               }
             >
               {rolesQuery.isLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
+                    <div key={i} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
                       <Skeleton className="h-4 w-2/3 mb-2" />
                       <Skeleton className="h-3 w-1/2" />
                     </div>
@@ -744,25 +789,31 @@ export default function PermissionsPage() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {(rolesQuery.data ?? []).map((role) => (
-                    <div key={role.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-3 hover:border-[hsl(var(--color-accent))]/30 transition-colors">
+                    <div key={role.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-3 hover:border-[hsl(var(--color-accent))]/30 transition-colors">
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-medium text-[hsl(var(--color-ink))] truncate text-sm">{role.display_name || role.name}</h3>
-                        <p className="text-xs text-[hsl(var(--color-ink-muted))] font-mono truncate">{role.name}</p>
-                        <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-0.5">{t("permissions.matrix.role_users", { count: String(role.user_count) })}</p>
+                        <h3 className="font-medium text-[hsl(var(--color-ink))] truncate text-03">{role.display_name || role.name}</h3>
+                        <p className="text-02 text-[hsl(var(--color-ink-muted))] font-mono truncate">{role.name}</p>
+                        <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">{t("permissions.matrix.role_users", { count: String(role.user_count) })}</p>
                       </div>
                       <div className="flex gap-2 mt-2">
-                        <button
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
                           onClick={() => { setEditingRole(role); setIsRoleEditOpen(true); }}
-                          className="flex-1 px-2 py-1 text-xs text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-accent))]/10 rounded transition-colors border border-[hsl(var(--color-accent))]/30"
+                          className="flex-1"
                         >
                           {t("permissions.edit_role")}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="danger"
+                          size="sm"
                           onClick={() => { setDeletingRole(role); setIsRoleDeleteOpen(true); }}
-                          className="flex-1 px-2 py-1 text-xs text-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.1)] rounded transition-colors border border-[hsl(var(--color-status-error)/0.3)]"
+                          className="flex-1"
                         >
                           {t("permissions.delete_role")}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -800,26 +851,28 @@ export default function PermissionsPage() {
           title={t("permissions.confirm_delete")}
           footer={
             <div className="flex gap-3">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => { setIsDeleteOpen(false); setDeletingPerm(null); }}
                 disabled={deleteMutation.isPending}
-                className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 rounded text-sm transition-colors"
+                className="flex-1"
               >
                 {t("permissions.cancel_delete")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="danger"
                 onClick={() => deletingPerm && deleteMutation.mutate(deletingPerm.id)}
                 disabled={deleteMutation.isPending}
-                className="flex-1 px-4 py-2 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 text-white rounded text-sm font-medium transition-colors"
+                className="flex-1"
               >
                 {deleteMutation.isPending ? t("permissions.deleting") : t("permissions.confirm_delete_action")}
-              </button>
+              </Button>
             </div>
           }
         >
-          <p className="text-[hsl(var(--color-ink))] text-sm">{t("permissions.confirm_delete_message")}</p>
+          <p className="text-[hsl(var(--color-ink))] text-03">{t("permissions.confirm_delete_message")}</p>
         </BaseModal>
 
         {/* ── Role Modals ── */}
@@ -846,26 +899,28 @@ export default function PermissionsPage() {
           title={t("permissions.confirm_delete_role")}
           footer={
             <div className="flex gap-3">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => { setIsRoleDeleteOpen(false); setDeletingRole(null); }}
                 disabled={roleDeleteMutation.isPending}
-                className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 rounded text-sm transition-colors"
+                className="flex-1"
               >
                 {t("permissions.cancel_delete")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="danger"
                 onClick={() => deletingRole && roleDeleteMutation.mutate(deletingRole.id)}
                 disabled={roleDeleteMutation.isPending}
-                className="flex-1 px-4 py-2 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 text-white rounded text-sm font-medium transition-colors"
+                className="flex-1"
               >
                 {roleDeleteMutation.isPending ? t("permissions.deleting") : t("permissions.confirm_delete_action")}
-              </button>
+              </Button>
             </div>
           }
         >
-          <p className="text-[hsl(var(--color-ink))] text-sm">{t("permissions.confirm_delete_role_message")}</p>
+          <p className="text-[hsl(var(--color-ink))] text-03">{t("permissions.confirm_delete_role_message")}</p>
         </BaseModal>
 
         {/* ── Three-tier save confirmation (tier 2 and tier 3 diffs) ── */}
@@ -875,58 +930,60 @@ export default function PermissionsPage() {
           title={t("permissions.matrix.confirm_title")}
           footer={
             <div className="flex gap-3">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => { setConfirmOpen(false); setPendingDiffs([]); }}
                 disabled={isSaving}
-                className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 rounded text-sm transition-colors"
+                className="flex-1"
               >
                 {t("permissions.matrix.confirm_cancel")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="danger"
                 onClick={() => void runSave(pendingDiffs)}
                 disabled={isSaving || !canConfirmSave}
-                className="flex-1 px-4 py-2 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded text-sm font-medium transition-colors"
+                className="flex-1"
               >
                 {isSaving ? t("permissions.matrix.confirm_submitting") : t("permissions.matrix.confirm_submit")}
-              </button>
+              </Button>
             </div>
           }
         >
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-            <p className="text-sm text-[hsl(var(--color-status-warning))]">{t("permissions.matrix.confirm_replace_notice")}</p>
+            <p className="text-03 text-[hsl(var(--color-status-warning))]">{t("permissions.matrix.confirm_replace_notice")}</p>
             {pendingDiffs.map((diff) => (
-              <div key={diff.role} className="border border-[hsl(var(--color-hairline))] rounded-lg p-3 space-y-2">
+              <div key={diff.role} className="border border-[hsl(var(--color-hairline))] p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-[hsl(var(--color-ink))] text-sm">{roleMeta[diff.role]?.display_name || diff.role}</h4>
-                  <span className="text-xs font-mono text-[hsl(var(--color-ink-muted))]">{diff.beforeCount} → {diff.afterCount}</span>
+                  <h4 className="font-semibold text-[hsl(var(--color-ink))] text-03">{roleMeta[diff.role]?.display_name || diff.role}</h4>
+                  <span className="text-02 font-mono text-[hsl(var(--color-ink-muted))]">{diff.beforeCount} → {diff.afterCount}</span>
                 </div>
                 {diff.tier >= 2 && (
-                  <p className="text-xs text-[hsl(var(--color-ink-muted))]">
+                  <p className="text-02 text-[hsl(var(--color-ink-muted))]">
                     {t("permissions.matrix.confirm_user_count", { count: String(roleMeta[diff.role]?.user_count ?? 0) })}
                   </p>
                 )}
                 {diff.addedCodenames.length > 0 && (
-                  <p className="text-xs text-[hsl(var(--color-status-success))] font-mono">+ {diff.addedCodenames.join(", ")}</p>
+                  <p className="text-02 text-[hsl(var(--color-status-success))] font-mono">+ {diff.addedCodenames.join(", ")}</p>
                 )}
                 {diff.removedCodenames.length > 0 && (
                   <div>
-                    <p className="text-xs text-[hsl(var(--color-status-error))] mb-1">{t("permissions.matrix.confirm_removed_label")}</p>
-                    <ul className="text-xs font-mono text-[hsl(var(--color-status-error))] list-disc list-inside space-y-0.5">
+                    <p className="text-02 text-[hsl(var(--color-status-error))] mb-1">{t("permissions.matrix.confirm_removed_label")}</p>
+                    <ul className="text-02 font-mono text-[hsl(var(--color-status-error))] list-disc list-inside space-y-1">
                       {diff.removedCodenames.map((c) => <li key={c}>{c}</li>)}
                     </ul>
                   </div>
                 )}
                 {diff.tier === 3 && (
                   <div className="mt-2 space-y-2 border-t border-[hsl(var(--color-hairline))] pt-2">
-                    <p className="text-xs text-[hsl(var(--color-status-error))] font-medium">
+                    <p className="text-02 text-[hsl(var(--color-status-error))] font-medium">
                       {t("permissions.matrix.confirm_clear_warning", { role: diff.role })}
                     </p>
                     {diff.removesMenuRead && (
-                      <p className="text-xs text-[hsl(var(--color-status-error))]">{t("permissions.matrix.confirm_menu_read_warning")}</p>
+                      <p className="text-02 text-[hsl(var(--color-status-error))]">{t("permissions.matrix.confirm_menu_read_warning")}</p>
                     )}
-                    <label htmlFor={`type-confirm-${diff.role}`} className="block text-xs text-[hsl(var(--color-ink-muted))]">
+                    <label htmlFor={`type-confirm-${diff.role}`} className="block text-02 text-[hsl(var(--color-ink-muted))]">
                       {t("permissions.matrix.confirm_type_role_label", { role: diff.role })}
                     </label>
                     <input
@@ -935,7 +992,7 @@ export default function PermissionsPage() {
                       value={typedRoleNames[diff.role] ?? ""}
                       onChange={(e) => setTypedRoleNames((prev) => ({ ...prev, [diff.role]: e.target.value }))}
                       placeholder={diff.role}
-                      className="w-full px-2 py-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-sm font-mono text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+                      className="w-full px-2 py-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 font-mono text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
                     />
                   </div>
                 )}
@@ -944,7 +1001,7 @@ export default function PermissionsPage() {
           </div>
         </BaseModal>
       </RequirePermission>
-    </div>
+    </PageShell>
   );
 }
 
@@ -975,24 +1032,31 @@ function FragmentCategory({
 }) {
   return (
     <>
-      <tr className="sticky top-[44px] z-20 bg-[hsl(var(--color-surface-2))] border-b border-[hsl(var(--color-hairline))]">
-        <td className="px-3 py-1.5 text-xs uppercase tracking-wide text-[hsl(var(--color-ink-muted))] font-semibold">
+      {/* `top-[44px]` 对着表头那一行的 h-11。z 值与表头同在一个层叠上下文里
+          比较(sticky 挂在单元格上,不挂在 <tr> 上),所以角单元格 z-30 稳定地
+          压在同行其它分类格 z-20 之上,而整行仍在表头 z-30/z-40 之下。 */}
+      <tr>
+        <td className="sticky top-[44px] left-0 z-30 bg-[hsl(var(--color-surface-2))] border-b border-[hsl(var(--color-hairline))] px-3 py-1 text-02 uppercase text-[hsl(var(--color-ink-muted))] font-semibold">
           {category}
         </td>
         {roleNames.map((role) => (
-          <td key={role} className="px-2 py-1.5 text-xs text-center text-[hsl(var(--color-ink-subtle))] font-mono">
+          <td key={role} className="sticky top-[44px] z-20 bg-[hsl(var(--color-surface-2))] border-b border-[hsl(var(--color-hairline))] px-2 py-1 text-02 text-center text-[hsl(var(--color-ink-subtle))] font-mono">
             {categoryTally(perms, role)}
           </td>
         ))}
       </tr>
       {visiblePerms.map((perm) => (
-        <tr key={perm.id} className="border-b border-[hsl(var(--color-hairline))]/50 hover:bg-[hsl(var(--color-surface-2))]/40">
-          <td className="px-3 py-1.5">
-            <div className="font-mono text-xs text-[hsl(var(--color-ink))]">{perm.codename}</div>
-            <div className="text-[11px] text-[hsl(var(--color-ink-subtle))]">{perm.name}</div>
+        /* 行悬停从 `surface-2/40` 换成不透明的 surface-2。冻结的那一列必须有
+           不透明底色(否则横向滚过去的单元格会从它底下透出来),而一个不透明的
+           格子拿不到 <tr> 的半透明底 —— 两边不同色就等于把「这一行」画成两段。
+           所以整行改用同一个不透明值,冻结格靠 group-hover 跟上。 */
+        <tr key={perm.id} className="group hover:bg-[hsl(var(--color-surface-2))]">
+          <td className="sticky left-0 z-10 bg-[hsl(var(--color-canvas))] group-hover:bg-[hsl(var(--color-surface-2))] border-b border-[hsl(var(--color-hairline))]/50 px-3 py-1 transition-colors">
+            <div className="font-mono text-02 text-[hsl(var(--color-ink))]">{perm.codename}</div>
+            <div className="text-02 text-[hsl(var(--color-ink-subtle))]">{perm.name}</div>
           </td>
           {roleNames.map((role) => (
-            <td key={role} className="px-1 py-1 text-center">
+            <td key={role} className="border-b border-[hsl(var(--color-hairline))]/50 px-1 py-1 text-center">
               <MatrixCell
                 granted={checked?.[role]?.has(perm.id) ?? false}
                 disabled={isSaving}

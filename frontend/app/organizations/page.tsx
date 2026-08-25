@@ -4,9 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type Organization, type PaginatedResponse } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { PageSection } from "@/components/ui/page-section";
 import { CardSkeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Badge } from "@/src/components/ui/Badge";
+import { Button } from "@/src/components/ui/Button";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
 // organizationsApi.list() (lib/api/organizations.ts) doesn't forward a `page` param and
@@ -30,6 +32,14 @@ async function fetchAllOrganizations(): Promise<Organization[]> {
 // GREEK: 冥界/HADES and 希腊冥界/HADES_GREEK were `category="EUROPEAN"` until
 // org/0007 refiled them. Without an entry here the badge renders with no icon
 // and no colour, which reads as a tree nobody owns rather than as a missing map.
+//
+// This map and CATEGORY_COLORS below stay hand-written four-member literals on
+// purpose: `src/__tests__/civilizationMapCoverage.test.ts` reads BOTH of them
+// out of this file AS TEXT (`const NAME … = {`, two-space keys) and holds their
+// key sets against CIVILIZATION_OPTIONS. Deriving them from
+// `CIVILIZATION_SHORT_CODES` would read better and would delete the guard —
+// the parser throws "Could not find `const CATEGORY_COLORS`" rather than
+// checking anything.
 const CIVILIZATION_ICONS: Record<string, string> = {
   CHINESE: "🏯",
   EUROPEAN: "⛪",
@@ -43,11 +53,31 @@ const CIVILIZATION_ICONS: Record<string, string> = {
   GREEK: "🏛",
 };
 
+/**
+ * MOVED OFF RAW HSL, onto the civilization identity tokens.
+ *
+ * Every value here used to be a literal triple — `bg-[hsl(38,92%,50%,0.2)]`
+ * and seven more like it. Two things were wrong with that beyond the spelling.
+ * The hues were the CHART palette's (38 amber / 217 blue / 271 purple / 174
+ * teal), so a civilization's colour on this page and its colour anywhere else
+ * agreed only by coincidence; and a literal triple is one value for two themes,
+ * while `--color-civ-mark-*` is measured separately for each (`12 55% 58%` dark
+ * against `12 58% 38%` light — the light one darker precisely so it stays
+ * legible as text on a light canvas).
+ *
+ * 38° amber was the worse offender of the four: that is `--color-accent`, the
+ * colour of every button and link in the app, standing in for "Chinese".
+ *
+ * The 10%/20%/40% fill-text-border ladder is Badge's `accent` tone recipe, not
+ * a new invention. Feedback tokens (`--color-status-*`) are deliberately absent
+ * — `statusTokenLayering.test.ts` polices exactly that for enum-keyed maps like
+ * this one, and a civilization is a domain identity, not a system state.
+ */
 const CATEGORY_COLORS: Record<string, string> = {
-  CHINESE: "bg-[hsl(38,92%,50%,0.2)] text-[hsl(38,92%,50%)]",
-  EUROPEAN: "bg-[hsl(217,91%,52%,0.2)] text-[hsl(217,91%,52%)]",
-  EGYPTIAN: "bg-[hsl(271,81%,56%,0.2)] text-[hsl(271,81%,56%)]",
-  GREEK: "bg-[hsl(174,72%,40%,0.2)] text-[hsl(174,72%,40%)]",
+  CHINESE: "bg-[hsl(var(--color-civ-mark-cn)/0.2)] text-[hsl(var(--color-civ-mark-cn))] border-[hsl(var(--color-civ-mark-cn)/0.4)]",
+  EUROPEAN: "bg-[hsl(var(--color-civ-mark-eu)/0.2)] text-[hsl(var(--color-civ-mark-eu))] border-[hsl(var(--color-civ-mark-eu)/0.4)]",
+  EGYPTIAN: "bg-[hsl(var(--color-civ-mark-eg)/0.2)] text-[hsl(var(--color-civ-mark-eg))] border-[hsl(var(--color-civ-mark-eg)/0.4)]",
+  GREEK: "bg-[hsl(var(--color-civ-mark-gr)/0.2)] text-[hsl(var(--color-civ-mark-gr))] border-[hsl(var(--color-civ-mark-gr)/0.4)]",
 };
 
 export default function OrganizationsPage() {
@@ -91,18 +121,18 @@ export default function OrganizationsPage() {
   const renderOrg = (org: Organization, depth: number = 0) => (
     <div
       key={org.id}
-      className="flex items-center gap-3 py-2 px-3 hover:bg-[hsl(var(--color-surface-2))] rounded transition-colors"
+      className="flex items-center gap-3 py-2 px-3 hover:bg-surface-2 transition-colors"
       style={{ paddingLeft: `${depth * 20 + 12}px` }}
     >
-      <span className="text-lg">{depth === 0 ? "🏛️" : depth === 1 ? "⚖️" : "📋"}</span>
+      <span aria-hidden="true" className="text-05">{depth === 0 ? "🏛️" : depth === 1 ? "⚖️" : "📋"}</span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h4 className="font-medium text-[hsl(var(--color-ink))] truncate">{org.name}</h4>
-          <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${CATEGORY_COLORS[org.category ?? ""] || "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]"}`}>
+          <h3 className="text-03 font-medium text-ink truncate">{org.name}</h3>
+          <Badge className={`shrink-0 ${CATEGORY_COLORS[org.category ?? ""] ?? ""}`}>
             {org.level === 0 ? t("organization.root") : `L${org.level}`}
-          </span>
+          </Badge>
         </div>
-        <p className="text-sm text-[hsl(var(--color-ink-subtle))] truncate">{org.code}</p>
+        <p className="text-02 font-mono text-ink-subtle truncate">{org.code}</p>
       </div>
     </div>
   );
@@ -120,55 +150,57 @@ export default function OrganizationsPage() {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent-ink))]">
+    <PageShell
+      variant="full"
+      title={
+        <>
           {t("organization.title")}
           <MenuGloss path="/organizations" />
-        </h1>
-        <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("organization.subtitle")}</p>
-      </div>
+        </>
+      }
+      subtitle={t("organization.subtitle")}
+      isLoading={isLoading}
+      skeleton={
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
+      }
+    >
+      <div className="space-y-10">
+        {Object.entries(grouped).map(([category, orgs]) => {
+          const info = { name: t(`organization.civilizations.${category}`) || category, icon: CIVILIZATION_ICONS[category] || "🌍" };
+          const isCollapsed = collapsed[category];
 
-      <PageSection title={t("organization.listTitle") || "Organizations"} isLoading={isLoading}>
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <CardSkeleton key={i} />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {Object.entries(grouped).map(([category, orgs]) => {
-              const info = { name: t(`organization.civilizations.${category}`) || category, icon: CIVILIZATION_ICONS[category] || "🌍" };
-              const isCollapsed = collapsed[category];
+          return (
+            <div key={category}>
+              {/* Category Header */}
+              <Button
+                type="button"
+                variant="secondary"
+                size="lg"
+                onClick={() => toggleCollapse(category)}
+                className="w-full justify-start mb-4 text-left"
+              >
+                <span aria-hidden="true" className="text-06">{info.icon}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-06 text-ink truncate">{info.name}</span>
+                  <span className="block text-04 text-ink-subtle">{t("organization.organizations_count", { count: String(orgs.length) })}</span>
+                </span>
+                <ChevronDown aria-hidden="true" className={`w-5 h-5 text-ink-muted transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+              </Button>
 
-              return (
-                <div key={category}>
-                  {/* Category Header */}
-                  <button
-                    onClick={() => toggleCollapse(category)}
-                    className="w-full flex items-center gap-3 mb-4 px-4 py-3 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg hover:bg-[hsl(var(--color-surface-3))] transition-colors text-left"
-                  >
-                    <span className="text-2xl">{info.icon}</span>
-                    <div className="flex-1">
-                      <h2 className="font-semibold text-[hsl(var(--color-ink))]">{info.name}</h2>
-                      <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{t("organization.organizations_count", { count: String(orgs.length) })}</p>
-                    </div>
-                    <ChevronDown className={`w-5 h-5 text-[hsl(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
-                  </button>
-
-                  {/* Organization Tree */}
-                  {!isCollapsed && (
-                    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg overflow-hidden">
-                      {renderTree(orgs, null, 0)}
-                    </div>
-                  )}
+              {/* Organization Tree */}
+              {!isCollapsed && (
+                <div className="bg-surface-1 border border-hairline overflow-hidden">
+                  {renderTree(orgs, null, 0)}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </PageSection>
-    </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </PageShell>
   );
 }
