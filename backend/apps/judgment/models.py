@@ -20,7 +20,7 @@ class Verdict(models.TextChoices):
 
 
 class JudgmentMethod(models.TextChoices):
-    STANDARD = "STANDARD", "Standard Trial (Chinese/European)"
+    STANDARD = "STANDARD", "Standard Trial (Chinese/European/Greek)"
     HEART_WEIGHING = "HEART_WEIGHING", "Heart Weighing (Egyptian)"
     DIABOLICAL_TRIAL = "DIABOLICAL_TRIAL", "Diabolical Trial (European Hell)"
 

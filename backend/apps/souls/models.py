@@ -504,10 +504,29 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
             from apps.judgment.models import Judgment, JudgmentMethod
 
+            # ALL FOUR NAMED, and GREEK's entry changes no behaviour — the
+            # `.get(..., STANDARD)` below already produced it. What it changes
+            # is that it stops being an accident. This map had three members
+            # and a fallback, so a Greek soul took `STANDARD` because nobody
+            # had written anything else, and `STANDARD`'s own label reads
+            # "Standard Trial (Chinese/European)" — a method whose name
+            # excludes the civilization it was silently handing out.
+            #
+            # STANDARD is right: Gorgias 524a is a trial. Three judges hear the
+            # case at the fork and Minos decides when the other two are in
+            # doubt, which is a proceeding, not a weighing and not a
+            # disputation with a devil. The label is widened to say so.
+            #
+            # The fallback stays for a FIFTH civilization, which will hit it
+            # the same way Greek did — see `apps/ledger/services.py`'s decay
+            # map for the shape that does this better: it is also incomplete,
+            # and `apps/ledger/test_decay.py` pins the absence so the omission
+            # is a statement rather than a gap.
             method_map = {
                 Civilization.CHINESE: JudgmentMethod.STANDARD,
                 Civilization.EUROPEAN: JudgmentMethod.STANDARD,
                 Civilization.EGYPTIAN: JudgmentMethod.HEART_WEIGHING,
+                Civilization.GREEK: JudgmentMethod.STANDARD,
             }
             judgment = Judgment.objects.create(
                 soul=self,

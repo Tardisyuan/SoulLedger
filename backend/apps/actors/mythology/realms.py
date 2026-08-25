@@ -47,7 +47,7 @@ from apps.realms.models import RealmType
 # repoints anything that referenced them onto the court whose 大地狱 covers the
 # same offence and tombstones the rows; see that migration for the mapping.
 CHINESE_REALMS = [
-    ("DY_01_HEAVEN", "天堂", "第一层天界", "First Heaven", "TLITLITLI", RealmType.BLISS, 1,
+    ("DY_01_HEAVEN", "天堂", "第一层天界", "First Heaven", "Tianjie", RealmType.BLISS, 1,
      "Pure merit souls - highest bliss, no reincarnation", "NONE", True, None),
     # SOURCE NOT FOUND. 「杨柳宫」 could not be located as an underworld place in
     # 《玉历宝钞》, in 《佛说预修十王生七经》, or in the general folklore material
@@ -65,16 +65,36 @@ CHINESE_REALMS = [
      "Souls awaiting reunion with loved ones. SOURCE UNKNOWN: no underworld "
      "place by this name appears in 《玉历宝钞》 or 《十王经》; treat as this "
      "project's own element until a source is produced",
-     "MENGPO", False, None),
+     # NONE, and this one is settled on the row's own terms rather than on a
+     # source, because it has none. A realm whose stated purpose is reunion
+     # with loved ones cannot also wipe the memory of them; the two halves of
+     # this row contradicted each other. Since the place is this project's
+     # invention the question is a design one, and the design already answered
+     # it in the description.
+     "NONE", False, None),
     # "washed by Mengpo broth" was struck from this description. 《玉历宝钞》
     # 「孟婆神」 puts the 醧忘台 「居第十殿，冥王殿前六桥之外」 and has the broth
     # drunk after sentence and before rebirth — so a soul that has drunk it
     # here, before being judged, would face its court with no memory of the
     # life being judged. The tenth court's row below already says this
     # correctly; only the holding pen and the 孟婆 actor row disagreed.
+    # …and the mechanism column is now NONE, which is what the paragraph above
+    # said and this row did not. That commit struck the description text and
+    # moved the 孟婆 actor, and left `memory_reset_mechanism="MENGPO"` behind —
+    # so the row went on asserting, in the one field a machine reads, exactly
+    # the thing its own comment had just refuted.
+    #
+    # It was decoration until `2e354f8`, which made `create_from_judgment` copy
+    # the realm's mechanism onto the disposition. From then on a Chinese soul
+    # held for retrial — `_route_chinese` sends PURGATORY and RETRY here —
+    # carried a record saying its memory had been wiped before its case was
+    # heard. Found by reading the four tenants side by side: the Greek table
+    # solved the identical question the other way and its comment describes the
+    # Chinese pattern as "on every court a soul can be sentenced to", which the
+    # holding pen is not.
     ("DY_00_PURGATORY", "待审所", "待审所", "Purgatory Holding", "Daishensuo", RealmType.PURGATORY, 1,
      "Souls awaiting judgment - held before the first court reads the ledger",
-     "MENGPO", False, None),
+     "NONE", False, None),
     ("DY_COURT_01_QINGUANG", "第一殿", "第一殿秦广王", "First Court Qinguang", "Qinguang",
      RealmType.HELL, 1,
      "Intake court - the Ledger of Life and Death is read and the soul's case "

@@ -851,6 +851,68 @@ def test_the_weighing_cast_all_stands_in_the_hall(seeded):
 
 
 @pytest.mark.django_db
+def test_only_the_ten_courts_wash_a_chinese_soul(seeded):
+    """孟婆汤 is drunk after sentence, so only a court may carry it.
+
+    《玉历宝钞》「孟婆神」 puts the 醧忘台 「居第十殿，冥王殿前六桥之外」 and has
+    the broth drunk after sentence and before rebirth. `DY_00_PURGATORY` — the
+    holding pen, where `_route_chinese` sends PURGATORY and RETRY verdicts —
+    carried MENGPO anyway: a soul held for retrial had a record saying its
+    memory was wiped before its case was heard. `DY_02_YANGLIU` carried it too,
+    while its own description says souls wait there to be reunited with people
+    they would no longer remember.
+
+    It was decoration until `2e354f8` made `create_from_judgment` copy the
+    realm's mechanism onto the disposition, and live from then on.
+
+    ASSERTED AS AN EXACT SET, not as "the holding pen is NONE". The bug was one
+    row too many, so the shape that catches the next one is the whole list.
+    """
+    washed = sorted(
+        Realm.objects.filter(civilization="CHINESE", memory_reset_mechanism="MENGPO")
+        .values_list("realm_code", flat=True)
+    )
+    courts = sorted(
+        Realm.objects.filter(civilization="CHINESE", realm_code__startswith="DY_COURT_")
+        .values_list("realm_code", flat=True)
+    )
+    assert len(courts) == 10, courts
+    assert washed == courts, (
+        f"realms carrying 孟婆汤 are {washed}; expected exactly the ten courts. "
+        f"A non-court with the mechanism records a memory wipe on a soul that "
+        f"has not been sentenced — see the note on DY_00_PURGATORY."
+    )
+
+
+def test_no_seeded_name_is_placeholder_junk(seeded):
+    """`DY_01_HEAVEN.name_egy` was "TLITLITLI" for three months.
+
+    Keyboard junk from the first i18n commit (89094de), and not inert: the
+    Egyptian locale resolves `name_egy` FIRST for a realm's display name
+    (`apps/realms/models.py`), so it reached the screen. Every other Chinese
+    realm's `name_egy` is pinyin.
+
+    Checked as a shape rather than as a blacklist of one string: a name that is
+    a single run of capitals with no vowel pattern, or that repeats one short
+    syllable three times, is not a transliteration of anything.
+    """
+    import re
+
+    suspicious = []
+    for model, fields in ((Realm, ("name_local", "name_zh", "name_en", "name_egy")),
+                          (Actor, ("name", "name_zh", "name_en", "name_egy"))):
+        for row in model.objects.all():
+            for field in fields:
+                value = (getattr(row, field) or "").strip()
+                if not value:
+                    continue
+                if re.fullmatch(r"(?i)([a-z]{2,4})\1{2,}", value):
+                    suspicious.append(f"{row.pk} {field}={value!r}")
+    assert suspicious == [], (
+        f"seeded names that look like placeholder junk: {suspicious}"
+    )
+
+
 def test_set_stays_out_of_the_judgment(seeded):
     """Set is absent from the seeded cast, deliberately.
 

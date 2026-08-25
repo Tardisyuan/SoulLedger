@@ -118,6 +118,18 @@ if [ "$TOUCHES_BACKEND" -gt 0 ]; then
     echo "  → ruff";  "$RUFF" check .          || fail "ruff failed"
     PY="${PYTHON_BIN:-python}"
     command -v "$PY" >/dev/null 2>&1 || fail "\`$PY\` not found. Set PYTHON_BIN in .prepush.env if it lives elsewhere."
+    # `makemigrations --check` BEFORE pytest, because it is the cheap one and
+    # because it catches a class the suite does not: a model `choices` list
+    # losing a member alters a field, and Django notices while every test that
+    # only reads today's members stays green. Verified by dropping GREEK from
+    # the org category choices — this exits 1 and names the missing migration.
+    #
+    # It ran only in CI, and both workflows are `workflow_dispatch` now, so
+    # nothing ran it at all.
+    echo "  → makemigrations --check"
+    "$PY" manage.py makemigrations --check --dry-run >/dev/null 2>&1 \
+        || fail "makemigrations --check: a model changed without a migration. Run \`manage.py makemigrations\` and read what it generated before committing it."
+
     echo "  → pytest"
     # PYTEST_PREPUSH_ARGS lets one machine exclude tests its environment cannot
     # run (this repo's websocket tests need a reachable Redis). It is an
