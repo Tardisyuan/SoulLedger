@@ -121,8 +121,65 @@ class SoulRecordSerializer(serializers.ModelSerializer):
             "id", "record_type", "category", "civilization", "description",
             "weight", "event_date", "is_milestone", "evidence_json", "recorded_at",
             "date_problems",
+            # 零積不抵整發's two inputs. Added here rather than left to the admin
+            # because a rule that can only be fed through SQL is a rule nobody
+            # feeds — and `granularity_of` treats an unfed record as unknown, so
+            # the whole of souls/0028 would have been inert on the write path
+            # that actually exists.
+            "statute_clause", "occurrence_count",
         ]
         read_only_fields = ["id", "recorded_at"]
+
+    def validate_statute_clause(self, value):
+        """A citation must resolve, or it is worse than a blank.
+
+        `granularity_of` asks only whether the string is non-empty, so an
+        unresolvable citation does not fail loudly — it silently promotes a
+        record to lump or scattered and lets 零積不抵整發 act on a per-occasion
+        value that does not exist. That is the shape of the four proxies
+        `apps/ledger/fungibility.py` refused with evidence, arriving through the
+        write path instead of through a column.
+
+        The format is `<Statute.code>:<clause condition_zh>` — the clause and
+        not the article, because 救濟門#7 carries two granularities in one
+        sentence and an article reference cannot say which one scored a deed.
+        """
+        value = (value or "").strip()
+        if not value:
+            return ""
+
+        code, _, condition = value.partition(":")
+        code, condition = code.strip(), condition.strip()
+        if not code or not condition:
+            raise serializers.ValidationError(
+                "Expected '<statute code>:<clause condition>', e.g. "
+                "'救濟門#7:賑濟窮民百錢'. The clause is the unit, not the "
+                "article — one article can state several per-occasion values."
+            )
+
+        from apps.judgment.models import Statute
+
+        statute = Statute.objects.filter(code=code).first()
+        if statute is None:
+            raise serializers.ValidationError(
+                f"No statute with code {code!r}. A citation that resolves to "
+                f"nothing still reads as a granularity to the offset rule, "
+                f"which would then apply 零積不抵整發 against a per-occasion "
+                f"value nobody can look up."
+            )
+
+        clauses = (statute.payload_json or {}).get("clauses") or []
+        conditions = [c.get("condition_zh") for c in clauses]
+        if condition not in conditions:
+            raise serializers.ValidationError(
+                f"{code} has no clause {condition!r}. Its clauses are "
+                f"{conditions}. Cited by condition text rather than by index "
+                f"deliberately: an index silently repoints when the corpus is "
+                f"re-transcribed, and the condition is verbatim from 正統道藏 — "
+                f"it changes only when the reading of the source changes, which "
+                f"is exactly when this reference should break."
+            )
+        return value
 
     def get_date_problems(self, obj):
         soul = obj.soul
@@ -154,16 +211,57 @@ class SoulRecordSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, attrs):
-        """Check the event date against the soul, when the soul is known here.
+        """Check the event date against the soul, and the granularity pair.
 
         On an update the soul comes off the instance; a caller that has one
         in hand can pass it in the serializer context. The create path is
         the awkward one and is handled in ``save`` below.
+
+        THE GRANULARITY CHECK LIVES HERE AND NOT IN A SECOND `validate`.
+        It was written as one and ruff caught it: a class may define the
+        method once, so the later definition silently wins and the earlier
+        one never runs. Two `validate` methods is a validator that looks
+        present in review and is dead at runtime — the shape this repository
+        keeps finding, arriving this time in the fix for it.
         """
         soul = self.context.get("soul") or getattr(self.instance, "soul", None)
         if soul is not None:
             self._check_against_soul(attrs, soul)
+        self._check_granularity_pair(attrs)
         return attrs
+
+    def _check_granularity_pair(self, attrs) -> None:
+        """The two granularity inputs travel together or not at all.
+
+        `apps.ledger.fungibility.granularity_of` needs both and reads
+        either-missing as unknown, so a row carrying a count and no clause is
+        not *wrong* — it is inert. That is the problem: an operator who entered
+        "12 occasions" sees 12 on the record while the offset rule ignores it,
+        which is a screen and a computation disagreeing with nothing to report
+        it.
+
+        Deliberately NOT reconciling `points × occurrence_count` against
+        `weight`. `SoulRecord.weight` is an operator-supplied significance
+        figure (1-100) by its own help text, and `apps/ledger/fungibility.py`
+        records in as many words that nothing binds it to a clause's value.
+        Requiring the product to match would assert a relationship this system
+        has already written down as absent.
+        """
+
+        def resolved(field):
+            if field in attrs:
+                return attrs[field]
+            return getattr(self.instance, field, None) if self.instance else None
+
+        clause = (resolved("statute_clause") or "").strip()
+        count = resolved("occurrence_count")
+        if bool(clause) != (count is not None):
+            raise serializers.ValidationError(
+                "statute_clause and occurrence_count are the two halves of one "
+                "statement and must be given together or left together. One "
+                "without the other reads as unknown to the offset rule while "
+                "still showing on the record."
+            )
 
     def save(self, **kwargs):
         """
