@@ -41,15 +41,54 @@ export interface Judgment {
 }
 
 /**
- * `apps.judgment.models.StatuteCorpus`. Three rulebooks, not one taxonomy:
- * `HELL_LAW` is 冥律 statute, `NEGATIVE_CONFESSION` is the Forty-Two's
- * declarations of innocence, `DEADLY_SIN` is Gregory's seven with Dante's
- * circles. Each belongs to exactly one civilization.
+ * `apps.judgment.models.StatuteCorpus`. Six rulebooks, not one taxonomy, and
+ * two civilizations carry two apiece because their two are separate
+ * structures rather than one longer list:
+ *
+ *   - `HELL_LAW` (Chinese) is EMPTY and stays empty. There is no codified 冥律
+ *     to transcribe; the corpus written against that shape was withdrawn. The
+ *     value is kept because rows may still carry it.
+ *   - `GONGGUOGE` (Chinese) is 《太微仙君功過格》, 73 point-valued articles, and
+ *     the only corpus here whose articles can be MERIT.
+ *   - `NEGATIVE_CONFESSION` (Egyptian) is the Forty-Two's declarations of
+ *     innocence — denials, not prohibitions.
+ *   - `DEADLY_SIN` (European) is the seven terraces of Purgatorio.
+ *   - `INFERNO` (European) is the nine circles and their subdivisions. NOT the
+ *     same structure as the terraces: joining them makes a chart that exists
+ *     nowhere in Dante.
+ *   - `GORGIAS` and `REPUBLIC_ER` (Greek) are Plato's two, and likewise not one
+ *     corpus: Gorgias stamps a soul and stops, Republic X sentences it to a
+ *     thousand-year circuit and sends it back to be born.
+ *
+ * THIS UNION DRIFTED ONCE ALREADY, and silently, which is why it now has a
+ * mechanism behind it. It listed three members while the backend had five —
+ * `GONGGUOGE` and `INFERNO` landed and this file was not touched — and nothing
+ * failed, because the value arrives from JSON and TypeScript cannot check a
+ * runtime string against a union it was never given. What the reader saw was a
+ * badge reading "unrecognized" where the rulebook's name belongs.
+ * `backend/tests/test_frontend_statute_enums.py` reads this declaration and
+ * compares it to the Python enum, in that direction.
  */
-export type StatuteCorpus = "HELL_LAW" | "NEGATIVE_CONFESSION" | "DEADLY_SIN";
+export type StatuteCorpus =
+  | "HELL_LAW"
+  | "GONGGUOGE"
+  | "NEGATIVE_CONFESSION"
+  | "DEADLY_SIN"
+  | "INFERNO"
+  | "GORGIAS"
+  | "REPUBLIC_ER";
 
-/** `apps.judgment.models.StatutePolarity` — which way the article cuts. */
-export type StatutePolarity = "OFFENCE" | "MERIT" | "DENIAL";
+/**
+ * `apps.judgment.models.StatutePolarity` — which way the article cuts, and for
+ * `PROCEDURE`, that it does not cut at all.
+ *
+ * The first three answer "does citing this count for the soul or against it".
+ * `PROCEDURE` is the Greek case and answers neither: "the judge too shall be
+ * naked, that is to say, dead" (Gorg. 523e) is a rule the court is bound by
+ * and a claim about no soul. Twenty of the twenty-two Greek articles are
+ * procedural, because neither Platonic myth contains a code of offences.
+ */
+export type StatutePolarity = "OFFENCE" | "MERIT" | "DENIAL" | "PROCEDURE";
 
 export interface Statute {
   id: string;

@@ -804,13 +804,18 @@
     },
     "statute_corpus": {
       "HELL_LAW": "冥律",
+      "GONGGUOGE": "功過格",
       "NEGATIVE_CONFESSION": "否定告白",
-      "DEADLY_SIN": "七宗罪"
+      "DEADLY_SIN": "七宗罪",
+      "INFERNO": "地狱九圈",
+      "GORGIAS": "高尔吉亚篇 — 死者的审判",
+      "REPUBLIC_ER": "理想国·厄尔神话"
     },
     "statute_polarity": {
       "OFFENCE": "罪责",
       "MERIT": "功德",
-      "DENIAL": "告白"
+      "DENIAL": "告白",
+      "PROCEDURE": "庭规"
     }
   },
   "audit": {

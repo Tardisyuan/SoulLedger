@@ -86,6 +86,38 @@ FOUR CORPORA ARE SEEDED, AND THE LARGEST ONE IS NOT WRITTEN IN THIS FILE.
               that joining them produces a chart existing nowhere in Dante.
               No article in either cites the other's coordinate.
 
+  GREEK     — here, as GORGIAS_STATUTES: 11 articles from Plato's Gorgias
+              523a-526d, and separately as REPUBLIC_ER_STATUTES: 11 from
+              Republic X 614b-621b. WHY A SECOND GREEK CORPUS AND NOT MORE
+              ARTICLES IN THE FIRST. The same reason Europe has two. Both are
+              Plato and both are the judgement of the dead, and they describe
+              different afterlives: Gorgias stamps a soul, sends it to
+              Tartarus or the Isles, and stops — no term, no return, no
+              arithmetic in it anywhere — while Republic X sentences it to a
+              thousand-year circuit at tenfold the wrong and then sends it
+              back to be born again. One corpus would assert a terminal
+              sentence AND a return, which is neither dialogue. No article in
+              either cites the other.
+
+              THE SOURCE ITSELF ENUMERATES — that is the property the four
+              older corpora share and neither Platonic myth has. 73 numbered
+              articles, 42 assessors, 7 terraces, 9 circles: each inherits a
+              series from its document. Plato's myths inherit none, so a Greek
+              article is a RULE OF THE COURT rather than an offence — the
+              reform, the bench, the venue, the rule of evidence, the purpose
+              of punishment, the rate and the unit — and carries the polarity
+              PROCEDURE, added with these two. Twenty of the twenty-two do.
+              Exactly one is an OFFENCE: Republic X 615b, which names three
+              wrongs after "for example" and closes with "any other evil
+              behaviour". That catch-all is a refusal to enumerate, not a lost
+              list, and filling it is precisely how HELL_LAW was written.
+
+              GREEK'S EMPTINESS WAS THE ONLY UNDECLARED ONE. HELL_LAW is empty
+              and says so. GREEK had no corpus at all, hence no entry, and the
+              guard could not notice because it walked StatuteCorpus members —
+              a civilization appearing in no corpus is invisible to a check
+              that iterates corpora. It walks civilizations now.
+
 WITHDRAWN: THE CHINESE (HELL_LAW) CORPUS.
 RE-ANCHORED: THE EUROPEAN (DEADLY_SIN) ONE.
 
@@ -233,10 +265,18 @@ from apps.actors.mythology.statutes_european import (
     DEADLY_SIN_SOURCE,
     EUROPEAN_STATUTES,
 )
+from apps.actors.mythology.statutes_gorgias import (
+    GORGIAS_SOURCE,
+    GORGIAS_STATUTES,
+)
 from apps.actors.mythology.statutes_inferno import (
     DIS_WALL,
     INFERNO_SOURCE,
     INFERNO_STATUTES,
+)
+from apps.actors.mythology.statutes_republic import (
+    REPUBLIC_ER_SOURCE,
+    REPUBLIC_ER_STATUTES,
 )
 from apps.souls.models import Civilization
 
@@ -314,6 +354,58 @@ CORPUS_PROVENANCE = {
         ),
         "docstring_marker": "A SECOND EUROPEAN CORPUS AND NOT MORE ARTICLES IN THE FIRST,",
     },
+    "GORGIAS": {
+        "civilization": "greek",
+        "nature": TRANSCRIBED,
+        "module": "apps.actors.mythology.statutes_gorgias",
+        "article_count": 11,
+        "source": (
+            "Plato, Gorgias 523a-526d — the myth of the judgement, in Benjamin "
+            "Jowett's translation (Project Gutenberg #1672, public domain); "
+            "Stephanus sections located against the Perseus canonical Loeb "
+            "text (W. R. M. Lamb, 1925)"
+        ),
+        "known_gap": (
+            "The dialogue's closing exhortation (526d-527e) is NOT "
+            "transcribed. Socrates' resolve to present his soul whole before "
+            "the judge, and his charge to Callicles, are what the myth is told "
+            "FOR; they are not rules the court is bound by, and this corpus "
+            "holds rules. The boundary is deliberate and the omission is not a "
+            "backlog item."
+        ),
+        "docstring_marker": "THE SOURCE ITSELF ENUMERATES",
+    },
+    "REPUBLIC_ER": {
+        "civilization": "greek",
+        "nature": TRANSCRIBED,
+        "module": "apps.actors.mythology.statutes_republic",
+        "article_count": 11,
+        "source": (
+            "Plato, Republic X 614b-621b — the myth of Er, in Benjamin "
+            "Jowett's translation (Project Gutenberg #1497, public domain); "
+            "Stephanus sections located against the Perseus canonical Loeb "
+            "text (Paul Shorey)"
+        ),
+        "known_gap": (
+            "Three, and two of them are the SOURCE's. (1) 615b names three "
+            "wrongs after 'for example' and closes with 'any other evil "
+            "behaviour' — a refusal to enumerate, not a lost list, recorded on "
+            "GR-ER-04. (2) 615c says impiety toward gods and parents, murder, "
+            "and children dying at birth draw retributions 'other and greater "
+            "far' and never states them; recorded on GR-ER-06 and left open. "
+            "(3) This repo's own: the cosmological apparatus at 616c-617c (the "
+            "shaft of light, the spindle of Necessity, the whorls, the sirens, "
+            "the Fates) and the catalogue of individual choices running "
+            "through 620d (Orpheus, Ajax, Odysseus) are not transcribed. Of "
+            "618a only the clause GR-ER-09 cites is taken — 'far more "
+            "numerous than the assembly', which is why that article's "
+            "reference spans two sections. All are within the cited range and "
+            "none states a rule."
+        ),
+        "docstring_marker": (
+            "WHY A SECOND GREEK CORPUS AND NOT MORE ARTICLES IN THE FIRST."
+        ),
+    },
     "HELL_LAW": {
         "civilization": "chinese",
         "nature": ABSENT,
@@ -384,6 +476,10 @@ CIVILIZATION_STATUTES = {
         ("DEADLY_SIN", DEADLY_SIN_SOURCE, EUROPEAN_STATUTES),
         ("INFERNO", INFERNO_SOURCE, INFERNO_STATUTES),
     ),
+    "greek": (
+        ("GORGIAS", GORGIAS_SOURCE, GORGIAS_STATUTES),
+        ("REPUBLIC_ER", REPUBLIC_ER_SOURCE, REPUBLIC_ER_STATUTES),
+    ),
 }
 
 # CLI label -> (Civilization, realms, actors). The CLI label is lowercase for
@@ -420,20 +516,24 @@ __all__ = [
     "DEADLY_SIN_SOURCE",
     "DERIVED",
     "DIS_WALL",
-    "EGYPTIAN_ACTOR_ALIASES",
     "EGYPTIAN_ACTORS",
+    "EGYPTIAN_ACTOR_ALIASES",
     "EGYPTIAN_ASSESSORS",
     "EGYPTIAN_REALMS",
     "EUROPEAN_ACTORS",
     "EUROPEAN_REALMS",
     "EUROPEAN_STATUTES",
     "GONGGUOGE_SOURCE",
-    "GREEK_ACTOR_ALIASES",
+    "GORGIAS_SOURCE",
+    "GORGIAS_STATUTES",
     "GREEK_ACTORS",
+    "GREEK_ACTOR_ALIASES",
     "GREEK_REALMS",
     "INFERNO_SOURCE",
     "INFERNO_STATUTES",
     "REALM_PARENTS",
+    "REPUBLIC_ER_SOURCE",
+    "REPUBLIC_ER_STATUTES",
     "TENANTS",
     "TRANSCRIBED",
 ]
