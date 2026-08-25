@@ -6,6 +6,26 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Button } from "@/src/components/ui/Button";
+import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
+
+/**
+ * Case state → badge tone, the same table the list page carries.
+ *
+ * Restated rather than imported for the reason `Badge` restates
+ * `ENUM_TONE_CLASSES`: an import here would make a detail route depend on a
+ * list route's module, which is an edge nobody wants to keep pointing the
+ * right way. It is a tone map and not a token map so that
+ * `src/__tests__/statusTokenLayering.test.ts` keeps reading a domain
+ * enumeration as a domain enumeration — see the note on the list page.
+ */
+const STATUS_TONES: Record<string, BadgeTone> = {
+  PROPOSED: "warning",
+  ACTIVE: "info",
+  CONCLUDED: "success",
+  CANCELLED: "neutral",
+};
 
 export default function CrossJudgmentDetailPage() {
   const { t } = useI18n();
@@ -37,108 +57,94 @@ export default function CrossJudgmentDetailPage() {
     loadData();
   }, [user, id, loadData]);
 
+  /* The back control is a <Button variant="ghost">, not a bare `←`: it calls
+     router.back() rather than navigating to a known route, so it is a control
+     and not a link, and PageShell's own note asks for one of the two. */
+  const backLink = (
+    <Button variant="ghost" size="sm" onClick={() => router.back()}>
+      {t("common.back")}
+    </Button>
+  );
+
   if (error && !judgment) {
     return (
-      <div className="p-6">
-        <button
-          onClick={() => router.back()}
-          className="mb-4 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] text-sm"
-        >
-          {t("common.back")}
-        </button>
-        <div className="text-[hsl(var(--color-status-error))]">{error}</div>
-      </div>
+      <PageShell variant="prose" title={t("crossJudgments.title")} backLink={backLink}>
+        <p className="text-04 text-[hsl(var(--color-status-error))]">{error}</p>
+      </PageShell>
     );
   }
 
-  const statusColors: Record<string, string> = {
-    PROPOSED: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))]",
-    ACTIVE: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]",
-    CONCLUDED: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]",
-    CANCELLED: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]",
-  };
-
   return (
-    <div className="p-6">
-      <button
-        onClick={() => router.back()}
-        className="mb-4 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] text-sm"
-      >
-        {t("common.back")}
-      </button>
+    <PageShell
+      variant="prose"
+      backLink={backLink}
+      title={loading ? <Skeleton className="h-8 w-64" /> : judgment?.title}
+      subtitle={
+        loading ? (
+          <Skeleton className="h-4 w-32" />
+        ) : (
+          <>
+            {t("crossJudgments.initiated_by")}: {judgment?.initiating_tenant}
+          </>
+        )
+      }
+      actions={
+        loading ? (
+          <Skeleton className="h-6 w-20" />
+        ) : (
+          <DomainEnum
+            namespace="crossJudgments.states"
+            value={judgment?.status}
+            className={badgeVariants({ tone: STATUS_TONES[judgment?.status ?? ""] ?? "neutral" })}
+          />
+        )
+      }
+    >
+      {loading ? (
+        <Skeleton className="h-4 w-full mb-6" />
+      ) : judgment?.description && (
+        <p className="text-04 text-[hsl(var(--color-ink-muted))] mb-6">{judgment.description}</p>
+      )}
 
-      <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            {loading ? (
-              <>
-                <Skeleton className="h-8 w-64 mb-2" />
-                <Skeleton className="h-4 w-32" />
-              </>
-            ) : (
-              <>
-                <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))]">{judgment?.title}</h1>
-                <p className="text-[hsl(var(--color-ink-subtle))] mt-1">
-                  {t("crossJudgments.initiated_by")}: {judgment?.initiating_tenant}
-                </p>
-              </>
-            )}
-          </div>
-          {loading ? (
-            <Skeleton className="h-6 w-20" />
-          ) : (
-            <span className={`px-3 py-1 rounded text-sm font-medium ${statusColors[judgment?.status ?? ""] || "bg-[hsl(var(--color-status-lost)/0.1)]"}`}>
-              <DomainEnum namespace="crossJudgments.states" value={judgment?.status} />
-            </span>
-          )}
-        </div>
-
+      {/* Participants */}
+      <div className="mb-6">
+        <h2 className="text-06 font-semibold text-[hsl(var(--color-ink))] mb-3">{t("crossJudgments.participants")}</h2>
         {loading ? (
-          <Skeleton className="h-4 w-full mb-6" />
-        ) : judgment?.description && (
-          <p className="text-[hsl(var(--color-ink-muted))] mb-6">{judgment.description}</p>
-        )}
-
-        {/* Participants */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))] mb-3">{t("crossJudgments.participants")}</h2>
-          {loading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-            </div>
-          ) : judgment?.participants && judgment.participants.length > 0 ? (
-            <div className="space-y-2">
-              {judgment.participants.map((p: import("@/lib/api").CrossTenantJudgmentParticipant, i: number) => (
-                <div key={i} className="flex items-center gap-3 bg-[hsl(var(--color-surface-2))] rounded-lg px-4 py-2">
-                  <span className="text-lg">👤</span>
-                  <div>
-                    <p className="font-medium text-[hsl(var(--color-ink))]">{p.participant_actor_name || p.participant_actor}</p>
-                    <p className="text-xs text-[hsl(var(--color-ink-subtle))]">
-                      {p.participant_tenant} — {p.role}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-[hsl(var(--color-ink-muted))]">{t("crossJudgments.no_participants")}</p>
-          )}
-        </div>
-
-        {/* Conclusion (if concluded) */}
-        {!loading && judgment?.status === "CONCLUDED" && (
-          <div className="bg-[hsl(var(--color-surface-2))] rounded-lg p-4">
-            <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))] mb-2">{t("crossJudgments.verdict")}</h2>
-            <p className={`text-lg font-bold ${
-              judgment.conclusion_type === "PASS" ? "text-[hsl(var(--color-status-success))]" :
-              judgment.conclusion_type === "FAIL" ? "text-[hsl(var(--color-status-error))]" : "text-[hsl(var(--color-ink))]"
-            }`}>
-              {judgment.conclusion_type}
-            </p>
+          <div className="space-y-2">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
           </div>
+        ) : judgment?.participants && judgment.participants.length > 0 ? (
+          <div className="space-y-2">
+            {judgment.participants.map((p: import("@/lib/api").CrossTenantJudgmentParticipant, i: number) => (
+              <div key={i} className="flex items-center gap-3 bg-[hsl(var(--color-surface-2))] px-4 py-2">
+                <span className="text-05" aria-hidden="true">👤</span>
+                <div>
+                  <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{p.participant_actor_name || p.participant_actor}</p>
+                  <p className="text-02 text-[hsl(var(--color-ink-subtle))]">
+                    {p.participant_tenant} — {p.role}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-04 text-[hsl(var(--color-ink-muted))]">{t("crossJudgments.no_participants")}</p>
         )}
       </div>
-    </div>
+
+      {/* Conclusion (if concluded) */}
+      {!loading && judgment?.status === "CONCLUDED" && (
+        <div className="bg-[hsl(var(--color-surface-2))] p-4">
+          <h2 className="text-06 font-semibold text-[hsl(var(--color-ink))] mb-2">{t("crossJudgments.verdict")}</h2>
+          <p className={`text-06 font-bold ${
+            judgment.conclusion_type === "PASS" ? "text-[hsl(var(--color-status-success))]" :
+            judgment.conclusion_type === "FAIL" ? "text-[hsl(var(--color-status-error))]" : "text-[hsl(var(--color-ink))]"
+          }`}>
+            {judgment.conclusion_type}
+          </p>
+        </div>
+      )}
+    </PageShell>
   );
 }

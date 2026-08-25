@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { actorsApi, Actor } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
@@ -9,6 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDown } from "lucide-react";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { badgeVariants } from "@/src/components/ui/Badge";
 
 const CIVILIZATION_ICONS: Record<string, string> = {
   CHINESE: "🏯",
@@ -39,7 +42,25 @@ const ROLE_BADGE_CLASSES: Record<string, string> = {
 };
 const ROLE_BADGE_FALLBACK =
   "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] border-[hsl(var(--color-hairline-tertiary))]";
-const BADGE_SHAPE = "px-2 py-0.5 rounded border text-xs shrink-0";
+
+/**
+ * Badge geometry from `Badge`, fill from the table above.
+ *
+ * `tone: null` and not a tone name: cva reads `null` as "skip this variant
+ * *including* its default", so the base geometry arrives with no fill at all
+ * and the caller's own token classes are the only ones present. Passing the
+ * fill as `className` over the default `neutral` tone would work too — the
+ * repo's `cn` deduplicates arbitrary colours correctly — but it would leave
+ * two competing decisions in the class list and one of them silently losing.
+ *
+ * The geometry is borrowed rather than restated because the `py-0.5` a 12px
+ * badge needs is off the spacing rhythm; `eslint.config.mjs` exempts that one
+ * class in `Badge.tsx` and nowhere else, which is the same statement as "the
+ * badge's height is decided in one file".
+ */
+function roleBadgeClass(fill: string): string {
+  return cn(badgeVariants({ tone: null }), "shrink-0", fill);
+}
 
 /**
  * The seat an actor holds on the Forty-Two Assessors of Ma'at, or null for a
@@ -63,14 +84,14 @@ function ActorCard({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
   return (
     <div
       data-actor-card={actor.name}
-      className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4 hover:border-[hsl(var(--color-accent))]/30 transition-colors"
+      className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:border-[hsl(var(--color-accent))]/30 transition-colors"
     >
       <div className="flex items-start gap-3">
-        <span className="text-2xl" aria-hidden="true">{actor.icon || "👤"}</span>
+        <span className="text-06" aria-hidden="true">{actor.icon || "👤"}</span>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-[hsl(var(--color-ink))] truncate">{actor.name}</h3>
-          <p className="text-sm text-[hsl(var(--color-ink-subtle))]">{actor.name_zh || actor.name}</p>
-          <p className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">
+          <h3 className="text-04 font-semibold text-[hsl(var(--color-ink))] truncate">{actor.name}</h3>
+          <p className="text-03 text-[hsl(var(--color-ink-subtle))]">{actor.name_zh || actor.name}</p>
+          <p className="text-02 text-[hsl(var(--color-ink-muted))] mt-1">
             <DomainText value={actor.title} />
           </p>
         </div>
@@ -80,17 +101,17 @@ function ActorCard({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
           <DomainEnum
             namespace="actors.roles"
             value={actor.role}
-            className={`${BADGE_SHAPE} ${ROLE_BADGE_CLASSES[actor.role] ?? ROLE_BADGE_FALLBACK}`}
+            className={roleBadgeClass(ROLE_BADGE_CLASSES[actor.role] ?? ROLE_BADGE_FALLBACK)}
           />
           {seatLabel && (
-            <span className={`${BADGE_SHAPE} font-mono tabular-nums ${ROLE_BADGE_FALLBACK}`}>
+            <span className={cn(roleBadgeClass(ROLE_BADGE_FALLBACK), "font-mono tabular-nums")}>
               {seatLabel}
             </span>
           )}
         </div>
       </div>
       {actor.description && (
-        <p className="mt-2 text-sm text-[hsl(var(--color-ink-muted))] line-clamp-2">{actor.description}</p>
+        <p className="mt-2 text-03 text-[hsl(var(--color-ink-muted))] line-clamp-2">{actor.description}</p>
       )}
     </div>
   );
@@ -143,21 +164,21 @@ export default function ActorsPage() {
   };
 
   return (
-    <div className="p-6">
-      {/* Page header - realms style */}
-      <div className="mb-6">
-        <h1 className="text-2xl lg:text-3xl font-bold text-[hsl(var(--color-accent-ink))]">
+    <PageShell
+      variant="full"
+      title={
+        <>
           {t("actors.title")}
           <MenuGloss path="/actors" />
-        </h1>
-        <p className="text-sm sm:text-base text-[hsl(var(--color-ink-subtle))] mt-1 hidden sm:block">{t("actors.subtitle")}</p>
-      </div>
-
+        </>
+      }
+      subtitle={t("actors.subtitle")}
+    >
       <PageSection title={t("actors.section.actors")} isLoading={isLoading}>
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-              <div key={i} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4">
+              <div key={i} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
                 <div className="flex items-start gap-3">
                   <Skeleton className="h-8 w-8" />
                   <div className="flex-1 min-w-0 space-y-2">
@@ -171,7 +192,7 @@ export default function ActorsPage() {
             ))}
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-10">
             {groups.map(({ civ, principals, bench }) => {
               const isCollapsed = collapsed[civ];
               const isBenchOpen = benchOpen[civ];
@@ -183,14 +204,14 @@ export default function ActorsPage() {
                   <button
                     onClick={() => toggleCollapse(civ)}
                     aria-expanded={!isCollapsed}
-                    className="w-full flex items-center gap-3 mb-4 px-4 py-3 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg hover:bg-[hsl(var(--color-surface-3))] transition-colors text-left"
+                    className="w-full flex items-center gap-3 mb-4 px-4 py-3 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-3))] transition-colors text-left"
                   >
-                    <span className="text-2xl" aria-hidden="true">{CIVILIZATION_ICONS[civ] || "🌍"}</span>
+                    <span className="text-06" aria-hidden="true">{CIVILIZATION_ICONS[civ] || "🌍"}</span>
                     <div className="flex-1">
-                      <h2 className="font-semibold text-[hsl(var(--color-ink))]">
+                      <h2 className="text-06 font-semibold text-[hsl(var(--color-ink))]">
                         <DomainEnum namespace="actors.civilizations" value={civ} />
                       </h2>
-                      <p className="text-sm text-[hsl(var(--color-ink-subtle))]">
+                      <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
                         {t("actors.count", { count: String(total) })}
                       </p>
                     </div>
@@ -215,15 +236,15 @@ export default function ActorsPage() {
                             onClick={() => toggleBench(civ)}
                             aria-expanded={!!isBenchOpen}
                             aria-label={t("actors.assessors.toggle")}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 bg-[hsl(var(--color-surface-1))] border border-dashed border-[hsl(var(--color-hairline))] rounded-lg hover:bg-[hsl(var(--color-surface-2))] transition-colors text-left"
+                            className="w-full flex items-center gap-3 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-dashed border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] transition-colors text-left"
                           >
-                            <span className="text-xl" aria-hidden="true">⚖️</span>
+                            <span className="text-05" aria-hidden="true">⚖️</span>
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-semibold text-[hsl(var(--color-ink))] truncate">
+                              <h3 className="text-04 font-semibold text-[hsl(var(--color-ink))] truncate">
                                 {t("actors.assessors.title")}
                               </h3>
                             </div>
-                            <span className={`${BADGE_SHAPE} font-mono tabular-nums ${ROLE_BADGE_FALLBACK}`}>
+                            <span className={cn(roleBadgeClass(ROLE_BADGE_FALLBACK), "font-mono tabular-nums")}>
                               {t("actors.assessors.count", { count: String(bench.length) })}
                             </span>
                             <ChevronDown className={`w-4 h-4 text-[hsl(var(--color-ink-muted))] transition-transform ${isBenchOpen ? "" : "-rotate-90"}`} />
@@ -250,6 +271,6 @@ export default function ActorsPage() {
           </div>
         )}
       </PageSection>
-    </div>
+    </PageShell>
   );
 }

@@ -109,10 +109,16 @@ describe("DashboardPage overview", () => {
     renderPage();
 
     await screen.findByTestId("pie");
-    const cardValues = screen
-      .getAllByText(/^\d+$/)
-      .filter((el) => el.className.includes("text-2xl font-bold"))
-      .map((el) => el.textContent);
+    // Selected by `data-kpi`, not by class name. This used to filter on
+    // `text-2xl font-bold`, which pinned the test to one rung of the old type
+    // scale: when Stage 11 moved KPI values to `text-08` (56px) the filter
+    // matched none of the four cards, silently fell through to two unrelated
+    // numbers elsewhere on the page, and reported a data bug that did not
+    // exist. A test for "the payload reaches the cards" must not fail because
+    // the cards changed size.
+    const cardValues = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-kpi]"),
+    ).map((el) => el.textContent);
     // The four summary cards come first: total / alive / judging / disposed.
     expect(cardValues.slice(0, 4)).toEqual(["4", "2", "1", "1"]);
   });

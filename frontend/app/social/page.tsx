@@ -7,6 +7,14 @@ import { PostCard } from "@/src/components/social/PostCard";
 import { Pagination } from "@/src/components/ui/Pagination";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Button } from "@/src/components/ui/Button";
+import { EmptyState } from "@/src/components/ui/EmptyState";
+import { TextAreaField, fieldControl } from "@/src/components/ui/Field";
+import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const TAB_KEYS = ["feed", "all"] as const;
 
 export default function SocialFeedPage() {
   const { t } = useI18n();
@@ -27,8 +35,8 @@ export default function SocialFeedPage() {
   const data = tab === "feed" ? feedData : allData;
   const posts = Array.isArray(data) ? data : (data?.results ?? []);
   const isLoading = tab === "feed" ? feedLoading : allLoading;
-  const totalPages =
-    data && !Array.isArray(data) ? Math.ceil(data.count / PAGE_SIZE) : 0;
+  const paged = data && !Array.isArray(data) ? data : null;
+  const totalPages = paged ? Math.ceil(paged.count / PAGE_SIZE) : 0;
 
   const handleCreate = () => {
     if (!content.trim()) return;
@@ -38,78 +46,131 @@ export default function SocialFeedPage() {
     );
   };
 
-  return (
-    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
-          {t("social.title") || "Social"}
-          <MenuGloss path="/social" />
-        </h1>
-      </div>
+  /**
+   * The `pagination` slot is filled directly here rather than left to a
+   * DataTable: this list renders <PostCard>s, so `Pagination` is imported on
+   * its own and there is no second pagination bar to collide with
+   * (PageShell.tsx:90).
+   *
+   * SPLIT, not whole. `Pagination.tsx:19` is a self-contained
+   * `flex items-center justify-between`, and PageShell's slot is already that
+   * same two-ended row — dropping the whole component into `controls` would
+   * nest a justify-between inside a `shrink-0` box, which collapses to content
+   * width and parks the record count hard against the ← → buttons while the
+   * `count` half sits empty. So the count is written on the left (the same
+   * `pagination.info` string the component would have rendered) and the
+   * component goes on the right with `showInfo={false}`. The `-mt-4` cancels
+   * Pagination's own standalone `mt-4`, which the slot's `border-t-2 pt-3`
+   * already provides.
+   *
+   * The object is passed whenever the response is paginated at all, even on a
+   * single page, so the rule line does not appear and disappear between pages.
+   */
+  const pagination = paged
+    ? {
+        count: (
+          <p className="text-03 text-ink-muted">
+            {t("pagination.info", {
+              page: String(page),
+              total: String(totalPages),
+              count: String(paged.count),
+            })}
+          </p>
+        ),
+        controls: (
+          <div className="-mt-4">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              count={paged.count}
+              onPageChange={setPage}
+              showInfo={false}
+            />
+          </div>
+        ),
+      }
+    : undefined;
 
-      <div className="max-w-2xl mx-auto px-6 py-6 space-y-4">
+  return (
+    <PageShell
+      variant="prose"
+      title={
+        <>
+          {t("social.title")}
+          <MenuGloss path="/social" />
+        </>
+      }
+      tabs={TAB_KEYS.map((key) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => { setTab(key); setPage(1); }}
+          className={`px-3 py-2 -mb-px text-03 font-medium border-b-2 transition-colors ${
+            tab === key
+              ? "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent-ink))]"
+              : "border-transparent text-ink-muted hover:text-ink"
+          }`}
+        >
+          {key === "feed" ? t("social.feed") : t("social.all")}
+        </button>
+      ))}
+      pagination={pagination}
+    >
+      <div className="space-y-4">
         {/* Post creation */}
-        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-xl p-4">
-          <textarea
+        <div className="bg-surface-1 border border-hairline p-4">
+          <TextAreaField
+            label={t("social.post")}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder={
-              t("social.placeholder") || "What's on your mind?"
-            }
-            className="w-full resize-none bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg p-3 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            placeholder={t("social.placeholder")}
             rows={3}
           />
           <div className="flex items-center justify-between mt-3">
+            {/* Bare <select> rather than <SelectField>: this control sits in a
+                row beside the submit button, and SelectField stacks its label
+                above the control. It also has no label to stack — the bundles
+                carry no `social.visibility` namespace at all (grep: zero hits
+                in all three), which is the same gap that makes PostCard's
+                visibility badge render as "unrecorded". Reported to main; not
+                fixable here without adding keys to three bundles. */}
             <select
               value={visibility}
               onChange={(e) => setVisibility(e.target.value)}
-              className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-1.5 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+              /* `w-auto` undoes fieldControl's `w-full`: a full-width control
+                 in this justify-between row would eat every pixel the Post
+                 button is not using. */
+              className={cn(fieldControl({ size: "sm" }), "w-auto")}
             >
               <option value="PUBLIC">Public</option>
               <option value="TENANT">Tenant Only</option>
               <option value="FOLLOWERS">Followers</option>
               <option value="PRIVATE">Private</option>
             </select>
-            <button
+            <Button
+              type="button"
+              variant="primary"
               onClick={handleCreate}
-              disabled={!content.trim() || createPost.isPending}
-              className="px-4 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+              disabled={!content.trim()}
+              loading={createPost.isPending}
             >
-              {createPost.isPending ? "..." : (t("social.post") || "Post")}
-            </button>
+              {t("social.post")}
+            </Button>
           </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 border-b border-[hsl(var(--color-hairline))]">
-          {(["feed", "all"] as const).map((key) => (
-            <button
-              key={key}
-              onClick={() => { setTab(key); setPage(1); }}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                tab === key
-                  ? "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent-ink))]"
-                  : "border-transparent text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
-              }`}
-            >
-              {key === "feed"
-                ? (t("social.feed") || "Feed")
-                : (t("social.all") || "All Posts")}
-            </button>
-          ))}
         </div>
 
         {/* Posts */}
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="animate-pulse h-32 bg-[hsl(var(--color-surface-1))] rounded-xl" />
+              <Skeleton key={i} className="h-32" />
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <div className="text-center py-12 text-[hsl(var(--color-ink-subtle))]">
-            {t("social.no_posts") || "No posts yet"}
-          </div>
+          <EmptyState
+            title={t("social.posts")}
+            reason={t("social.no_posts")}
+          />
         ) : (
           <div className="space-y-3">
             {posts.map((post) => (
@@ -117,16 +178,7 @@ export default function SocialFeedPage() {
             ))}
           </div>
         )}
-
-        {totalPages > 1 && (
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            count={!Array.isArray(data) ? data?.count ?? 0 : 0}
-            onPageChange={setPage}
-          />
-        )}
       </div>
-    </div>
+    </PageShell>
   );
 }

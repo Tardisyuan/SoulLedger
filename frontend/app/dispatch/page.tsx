@@ -4,10 +4,32 @@ import Link from "next/link";
 import { dispatchApi, type DispatchRecord } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { Skeleton, CardSkeleton, ListSkeleton } from "@/components/ui/skeleton";
+import { ListSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { EmptyState } from "@/src/components/ui/EmptyState";
+import { buttonVariants } from "@/src/components/ui/Button";
+import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
+
+/**
+ * Dispatch state → badge tone, for the two lists on this page.
+ *
+ * The detail route keeps a `--color-status-*` map instead, because that one is
+ * registered by name in `src/__tests__/statusTokenLayering.test.ts` and moving
+ * it would delete a record rather than settle it. This map is new, so it takes
+ * the route the tone table exists for. The two render the same colours: a tone
+ * is the same token at the same 10% fill, plus the border the detail page's
+ * pairs never named.
+ */
+const STATUS_TONES: Record<string, BadgeTone> = {
+  PROPOSED: "warning",
+  APPROVED: "success",
+  REJECTED: "error",
+  EXECUTED: "info",
+  CANCELLED: "neutral",
+};
 
 export default function DispatchPage() {
   const { t } = useI18n();
@@ -26,30 +48,29 @@ export default function DispatchPage() {
   });
 
   return (
-    <div className="p-6">
-      {/* Page Header - rendered immediately */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--color-accent-ink))]">
-            {t("dispatch.title")}
-            <MenuGloss path="/dispatch" />
-          </h1>
-          <p className="text-[hsl(var(--color-ink-subtle))] mt-1">{t("dispatch.subtitle")}</p>
-        </div>
-        <Link
-          href="/dispatch/propose"
-          className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent-hover))] hover:!text-black transition-colors"
-        >
+    <PageShell
+      variant="full"
+      title={
+        <>
+          {t("dispatch.title")}
+          <MenuGloss path="/dispatch" />
+        </>
+      }
+      subtitle={t("dispatch.subtitle")}
+      actions={
+        /* `buttonVariants` and not `<Button>`: this navigates, so it has to be
+           an anchor. The skin is shared; the element is not. */
+        <Link href="/dispatch/propose" className={buttonVariants({ variant: "primary" })}>
           {t("dispatch.propose")}
         </Link>
-      </div>
-
+      }
+    >
       {/* Pending Proposals - skeleton while loading */}
-      <PageSection title={t("dispatch.pending")} isLoading={loadingProposed} className="mb-8">
+      <PageSection title={t("dispatch.pending")} isLoading={loadingProposed} className="mb-6">
         {loadingProposed ? (
           <ListSkeleton count={3} />
         ) : proposed.length === 0 ? (
-          <p className="text-[hsl(var(--color-ink-muted))] bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">{t("dispatch.no_pending")}</p>
+          <EmptyState title={t("dispatch.no_pending")} />
         ) : (
           <div className="space-y-3">
             {proposed.map((d: DispatchRecord) => (
@@ -64,7 +85,7 @@ export default function DispatchPage() {
         {loadingHistory ? (
           <ListSkeleton count={5} />
         ) : history.length === 0 ? (
-          <p className="text-[hsl(var(--color-ink-muted))] bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">{t("dispatch.no_history")}</p>
+          <EmptyState title={t("dispatch.no_history")} />
         ) : (
           <div className="space-y-3">
             {history.map((d: DispatchRecord) => (
@@ -73,27 +94,20 @@ export default function DispatchPage() {
           </div>
         )}
       </PageSection>
-    </div>
+    </PageShell>
   );
 }
 
 function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
   const { t } = useI18n();
-  const statusColors: Record<string, string> = {
-    PROPOSED: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))]",
-    APPROVED: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]",
-    REJECTED: "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]",
-    EXECUTED: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]",
-    CANCELLED: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]",
-  };
 
   return (
     <Link href={`/dispatch/${dispatch.id}`} className="block">
-      <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-4 hover:border-[hsl(var(--color-accent))] transition-colors cursor-pointer">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium text-[hsl(var(--color-ink))]">{t("dispatch.soul_prefix")}{dispatch.soul}</p>
-            <p className="text-sm text-[hsl(var(--color-ink-subtle))]">
+      <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:border-[hsl(var(--color-accent))] transition-colors cursor-pointer">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{t("dispatch.soul_prefix")}{dispatch.soul}</p>
+            <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
               {dispatch.source_tenant_code} → {dispatch.target_tenant_code}
             </p>
           </div>
@@ -103,11 +117,11 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
           <DomainEnum
             namespace="dispatch.states"
             value={dispatch.status}
-            className={`px-2 py-1 rounded text-xs font-medium ${statusColors[dispatch.status] || "bg-[hsl(var(--color-status-lost)/0.1)]"}`}
+            className={badgeVariants({ tone: STATUS_TONES[dispatch.status] ?? "neutral" })}
           />
         </div>
         {dispatch.reason && (
-          <p className="mt-2 text-sm text-[hsl(var(--color-ink-muted))]">{dispatch.reason}</p>
+          <p className="mt-2 text-03 text-[hsl(var(--color-ink-muted))]">{dispatch.reason}</p>
         )}
       </div>
     </Link>
