@@ -553,6 +553,19 @@ GREEK_REALMS = [
      "for the reason realms/0018 keeps Dante's Minos apart from Plato's. "
      "Nobody is sentenced here.",
      "NONE", False, None),
+     # LETHE. Both roads out of the fork end in rebirth — `is_eternal` is False
+     # on each and GREEK is in REBIRTH_CAPABLE_CIVILIZATIONS — and both halves
+     # of this table's basis put a forgetting-drink on that path: Republic X
+     # 621a-b camps the souls by the river Ameles on the plain of Lethe before
+     # they return, and Aeneid 6.713-715 has them at Lethe before going back to
+     # bodies. The two texts agree here, so this is the one place the basis
+     # needs no division rule.
+     #
+     # It is the destination that carries it, following the twelve Chinese
+     # realms: 孟婆汤 is on every court a soul can be sentenced to and NONE on
+     # DY_01_HEAVEN, the one that does not send anyone back. Same shape here —
+     # the meadow and the crossing stay NONE because nobody is sentenced to
+     # either, so no rebirth follows from them.
     ("GR_ISLES_OF_THE_BLESSED", "至福岛", "至福岛", "The Isles of the Blessed",
      "IslesOfTheBlest", RealmType.BLISS, 1,
      "Plato, Gorgias 524a: one of the two roads out of the meadow, taken by "
@@ -562,7 +575,13 @@ GREEK_REALMS = [
      "condition than the Gorgias states, and one this row does not model. Not "
      "Homer's Elysian plain (Od. 4.563-568), which is an exemption from death "
      "granted to particular men rather than a reward for a life.",
-     "NONE", False, None),
+     "LETHE", False, None),
+     # LETHE, for the reason given on GR_ISLES_OF_THE_BLESSED above. Republic X
+     # is explicit that the road to punishment also returns: 615a-b sets the
+     # thousand-year term and 617d-620d has the same souls choosing new lives
+     # afterwards. A Tartarus that reset no memory would be asserting the 525c
+     # exception — the incurable, who stay — as the norm, which this table's
+     # `is_eternal=False` already refuses.
     ("GR_TARTARUS", "塔尔塔罗斯", "塔尔塔罗斯", "Tartarus", "Tartaros",
      RealmType.HELL, 1,
      "Plato, Gorgias 524a: the other road out of the meadow — that is what "
@@ -576,7 +595,7 @@ GREEK_REALMS = [
      "exception to it: the contradiction is in the judgment, so Plato keeps it. "
      "Hesiod (Theogony 720ff) is a third account — the pit the Titans are "
      "imprisoned in, not a destination for human dead — and is not seeded.",
-     "NONE", False, None),
+     "LETHE", False, None),
 ]
 
 # child realm_code -> the realm it is a part of. `Realm.parent_realm` has
