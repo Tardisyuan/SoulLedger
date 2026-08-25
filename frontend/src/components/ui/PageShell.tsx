@@ -67,13 +67,33 @@ export interface PageShellProps {
    * **不是面包屑** —— 面包屑归 AppLayout，见文件头第 1 条。
    */
   eyebrow?: React.ReactNode;
+  /**
+   * 返回链接（`← 返回队列` 一类）。与 `eyebrow` 同一行，但**不是** eyebrow：
+   * eyebrow 说「这一页是什么」，返回链接说「离开这一页」。七个详情页现在各自
+   * 手写它。给 `<Link>` 或 `<Button variant="ghost">`，不要给纯文本 `←`。
+   */
+  backLink?: React.ReactNode;
+  /**
+   * 标签页条。在页头之下、筛选栏之上，**不 sticky**——切换标签改变的是这一页
+   * 在看什么，属于页头；钉在视口上会让页面身份跟着滚动条走。
+   */
+  tabs?: React.ReactNode;
   /** 副标题，`text-04` + `text-ink-subtle`。 */
   subtitle?: React.ReactNode;
   /** 标题行右侧的动作区（「+ 创建灵魂」一类）。 */
   actions?: React.ReactNode;
   /** 筛选栏。唯一 sticky 的一段，`top-16`，高 56（上下各 12 padding）。 */
   filters?: React.ReactNode;
-  /** 分页位。见 `PageShellPagination`。 */
+  /**
+   * 分页位。见 `PageShellPagination`。
+   *
+   * **走 DataTable / DataGrid 的页面不要填这一槽。**
+   * `components/ui/data-table.tsx:288` 自己在内部渲染 `<Pagination>`，而
+   * `src/components/ui/Pagination.tsx:19` 是一个自带 `justify-between` 的整块
+   * ——两边都给就会出现两条分页条。这一槽是给**不经 DataTable 的**列表用的
+   * （social、tenants 那几处直接引 Pagination 的页面）。
+   * 这条不是组件能自己判断的：PageShell 看不见 children 里有没有 DataTable。
+   */
   pagination?: PageShellPagination;
   /** 空态。`isEmpty` 为真且给了它时代替 children。 */
   empty?: React.ReactNode;
@@ -90,6 +110,8 @@ export function PageShell({
   title,
   variant = "page",
   eyebrow,
+  backLink,
+  tabs,
   subtitle,
   actions,
   filters,
@@ -118,13 +140,29 @@ export function PageShell({
         className="border-b border-hairline"
       >
         <div className={cn(width, "px-6 pt-10 pb-6")}>
-          {eyebrow ? (
-            <p
-              data-page-shell-eyebrow=""
-              className="text-01 font-mono uppercase text-ink-subtle mb-3"
-            >
-              {eyebrow}
-            </p>
+          {/* 返回链接与 eyebrow 共用标题上方那一行，但它们不是一回事，所以是
+              两个槽而不是让页面把 `←` 塞进 eyebrow。eyebrow 是**这一页是什么**
+              （卷宗号、租户、状态），返回链接是**离开这一页**。七个详情页现在
+              各自手写这条链接（judgment/[id]:127、dispatch/[id]:112、
+              souls/[id]:282、social/[id]:23、social/profile/[id]:32、
+              social/follows:29、users:71）；塞进 eyebrow 会让一个导航控件继承
+              一个纯排版位的 uppercase + 字距，读起来像标签而不是链接。 */}
+          {backLink || eyebrow ? (
+            <div className="flex items-baseline gap-3 mb-3">
+              {backLink ? (
+                <div data-page-shell-back="" className="shrink-0">
+                  {backLink}
+                </div>
+              ) : null}
+              {eyebrow ? (
+                <p
+                  data-page-shell-eyebrow=""
+                  className="text-01 font-mono uppercase text-ink-subtle min-w-0"
+                >
+                  {eyebrow}
+                </p>
+              ) : null}
+            </div>
           ) : null}
 
           <div className="flex items-start gap-4">
@@ -149,6 +187,21 @@ export function PageShell({
           ) : null}
         </div>
       </header>
+
+      {/* 标签页条：在页头之下、筛选栏之上，且**不 sticky**。
+          五个页面有这一条（judgment:72、workflow:155、dashboard:168、
+          notifications:107、social/follows:39），迁移前它们的写法分成两派
+          （gap-1 + hairline/50 与 gap-2 + 实线 hairline）。
+          为什么不复用 `filters` 槽：那一槽是 sticky 的，而标签页切换的是
+          **这一页在看什么**，属于页头的一部分——把它钉在视口上等于让页面
+          的身份跟着滚动条走，而滚动时真正还需要的只有筛选。
+          为什么不塞进 children：它必须在筛选栏之上，否则筛选看起来像作用于
+          所有标签页而不是当前这个。 */}
+      {tabs ? (
+        <div data-page-shell-tabs="" className="border-b border-hairline">
+          <div className={cn(width, "px-6 flex items-center gap-1")}>{tabs}</div>
+        </div>
+      ) : null}
 
       {/* 筛选栏：全站唯一贴在 AppLayout h-16 头下沿的一段。
           `h-14 py-3` 不冲突 —— border-box 下总高 56、内容 32，正是规格里的

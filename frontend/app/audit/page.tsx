@@ -7,6 +7,8 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { DataGrid, FilterBar, parseOrdering, type DataGridColumn, type EnumValue } from "@/components/ui/data-grid";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 import { groupAuditLogsByTrace, type AuditGroup } from "@/lib/auditGrouping";
 
 const ACTION_OPTIONS = [
@@ -153,10 +155,12 @@ export default function AuditPage() {
       header: t("audit.affected"),
       value: (g) => (
         <div>
-          <div className="text-[hsl(var(--color-ink))]">
+          <div className="text-ink">
             {g.descriptions.length > 0 ? g.descriptions.join(" · ") : g.resources.join(" + ")}
           </div>
-          <div className="font-mono text-xs text-[hsl(var(--color-ink-tertiary))] mt-0.5">{g.resourceDetail}</div>
+          {/* 02 档正是 ID / 时间戳 / 资源标识那一档。`mt-0.5`(2px) 不在节奏
+              阶梯上，收到最小的一格 `mt-1`(4px)。 */}
+          <div className="font-mono text-02 text-ink-tertiary mt-1">{g.resourceDetail}</div>
         </div>
       ),
     },
@@ -169,40 +173,38 @@ export default function AuditPage() {
     },
   ];
 
-  // Access denied for non-admin
+  const title = (
+    <>
+      {t("audit.title")}
+      <MenuGloss path="/audit" />
+    </>
+  );
+
+  // Access denied for non-admin. A refusal is a note in the file, not a poster,
+  // so it goes through EmptyState (left-aligned, civ-marked) instead of the
+  // centred `h-64` box — and the page keeps its header, so the operator can
+  // still see *which* page refused them.
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
-        <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-          <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
-            {t("audit.title")}
-            <MenuGloss path="/audit" />
-          </h1>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <p className="text-[hsl(var(--color-ink-muted))] text-lg">{t("audit.access_denied")}</p>
-            <p className="text-[hsl(var(--color-ink-subtle))] text-sm mt-2">
-              {t("audit.admin_only")}
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageShell variant="full" title={title}>
+        <EmptyState title={t("audit.access_denied")} reason={t("audit.admin_only")} />
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]">
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
-          {t("audit.title")}
-          <MenuGloss path="/audit" />
-        </h1>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 py-6">
+    /* `full`, not `page`. This is the audit trail: its column count grows with
+       whatever the backend decides to log, and a 1200px clamp is what turns a
+       five-column ledger into a horizontally-scrolling one. */
+    <PageShell
+      variant="full"
+      title={title}
+      filters={
         <FilterBar
-          className="mb-4"
+          /* The slot supplies the surface, the rule line and the padding, so
+             the component's own card chrome comes off — otherwise it is a
+             bordered panel sitting inside a bordered bar. */
+          className="w-full p-0 border-0 bg-transparent"
           searchValue={search}
           onSearchChange={(v) => { setSearch(v); setPage(1); }}
           searchPlaceholder={t("audit.search_placeholder")}
@@ -244,30 +246,33 @@ export default function AuditPage() {
           clearAllLabel={t("audit.clear_filters")}
           density={{ compact, onToggle: () => setCompact((c) => !c), label: t("audit.compact") }}
         />
-
-        <DataGrid<AuditGroup>
-          caption={t("audit.title")}
-          columns={columns}
-          data={groups}
-          density={compact ? "compact" : "comfortable"}
-          isLoading={isLoading}
-          isError={isError}
-          onRetry={() => refetch()}
-          keyExtractor={(g) => g.key}
-          sort={parseOrdering(ordering)}
-          onSortChange={(next) => {
-            setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
-            setPage(1);
-          }}
-          isFiltered={isFiltered}
-          onClearFilters={clearFilters}
-          emptyMessage={t("audit.no_logs")}
-          page={page}
-          totalPages={totalPages}
-          totalCount={data?.count}
-          onPageChange={setPage}
-        />
-      </div>
-    </div>
+      }
+    >
+      {/* The shell's `pagination` slot stays empty on purpose: DataGrid renders
+          its own <Pagination> off the four props below, and filling both would
+          put two pagination bars on the page. */}
+      <DataGrid<AuditGroup>
+        caption={t("audit.title")}
+        columns={columns}
+        data={groups}
+        density={compact ? "compact" : "comfortable"}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        keyExtractor={(g) => g.key}
+        sort={parseOrdering(ordering)}
+        onSortChange={(next) => {
+          setOrdering(next ? `${next.direction === "desc" ? "-" : ""}${next.key}` : "");
+          setPage(1);
+        }}
+        isFiltered={isFiltered}
+        onClearFilters={clearFilters}
+        emptyMessage={t("audit.no_logs")}
+        page={page}
+        totalPages={totalPages}
+        totalCount={data?.count}
+        onPageChange={setPage}
+      />
+    </PageShell>
   );
 }

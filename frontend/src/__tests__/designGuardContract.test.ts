@@ -49,6 +49,18 @@ const RUNNER = `
 // 实测:把 `RHYTHM_EXEMPT[file]` 改成一个未定义变量 → eslint REAL_EXIT=2、
 // 管道后 $?=0、而这里 jest REAL_EXIT=1(七条规则测试同时红)。所以这套契约
 // 测试对「配置根本没跑起来」也是红的,不只对「规则失效」。
+//
+// 顺带钉死一个「修法本身会静默失效」的坑,因为它在本仓的 shell 里成立:
+// 想保留管道又拿真退出码时最常被复制的 `${PIPESTATUS[0]}` 是 **bash** 的写法,
+// 而这里的 shell 是 zsh 5.9。zsh 用小写、下标从 1 起的 `pipestatus`,写大写
+// 那个不报错,只求值成**空串**。实测三档:
+//   exit 0 → PIPESTATUS[0]=[]  pipestatus[1]=[0]   pipefail $?=[0]
+//   exit 1 → PIPESTATUS[0]=[]  pipestatus[1]=[1]   pipefail $?=[1]
+//   exit 2 → PIPESTATUS[0]=[]  pipestatus[1]=[2]   pipefail $?=[2]
+// 空串再喂给 `[ "$x" -ne 0 ]` 会炸或被当成假 —— 一个到处被抄的稳妥写法,在这里
+// 静默失效。可移植的只有两条:`set -o pipefail`,或者根本不用管道:
+// `cmd > /tmp/out 2>&1; echo $?` 然后 grep 那个文件。`${pipestatus[1]}` 只在
+// zsh 对,别写进给别人抄的地方。(zsh 行为由 controls 指出,上表是复跑的。)
 function lintAll(snippets: string[]): Msg[][] {
   const raw = execFileSync(process.execPath, ["-e", RUNNER, JSON.stringify(snippets)], {
     cwd: ROOT,

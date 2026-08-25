@@ -19,8 +19,29 @@ import { useChartColors } from "@/src/hooks/useChartColors";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
+import { PageShell } from "@/src/components/ui/PageShell";
+import { Button } from "@/src/components/ui/Button";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 
 type DashboardTab = "overview" | "ledger";
+
+/**
+ * 千位分隔用窄不断行空格 U+202F,不用逗号。
+ *
+ * KPI 走 `tabular-nums`,那让**数字**等宽,对标点不作任何承诺 —— 逗号的宽度
+ * 仍由字族决定,于是「1,234」与「9,999」之间那一格是唯一一处宽度不确定的
+ * 字形,四张卡片右对齐时它会把整列推歪。U+202F 是排版里专门给数字分组的那个
+ * 空格(不断行,所以「12 345」不会在换行处被劈成两半)。
+ *
+ * 只分组整数部分:小数位不分组,而这里唯一的小数是均值余额。
+ */
+const GROUP_SEPARATOR = "\u202F";
+
+function groupDigits(value: number): string {
+  const negative = value < 0;
+  const digits = String(Math.trunc(Math.abs(value)));
+  return (negative ? "-" : "") + digits.replace(/\B(?=(\d{3})+(?!\d))/g, GROUP_SEPARATOR);
+}
 
 /** Parses karma_distribution bucket labels ("< -50", "-5 to 5", "> 50", ...) into a midpoint. */
 function bucketMidpoint(label: string): number {
@@ -82,31 +103,55 @@ function DashboardContent() {
     }
   };
 
-  // Page header renders immediately
-  const pageHeader = (
-    <div className="border-b border-[hsl(var(--color-hairline))] pb-4 flex justify-between items-start">
-      <div>
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-accent-ink))]">
-          {t("dashboard.title")}
-          <MenuGloss path="/dashboard" />
-        </h1>
-        <p className="text-[hsl(var(--color-ink-muted))] text-sm mt-1">{t("dashboard.subtitle")}</p>
-      </div>
-      <RequirePermission permissions="karma.export">
-        <button
-          onClick={handleExport}
-          className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] text-black font-medium rounded transition-colors text-sm"
-        >
-          {t("dashboard.export_stats")}
-        </button>
-      </RequirePermission>
-    </div>
+  // 标题、副标题、动作三样各进 PageShell 的一个槽。原先它们挤在一条页面自己
+  // 画的 `border-b pb-4` 里,那条线与 PageShell 页头的下边框是同一条。
+  const pageTitle = (
+    <>
+      {t("dashboard.title")}
+      <MenuGloss path="/dashboard" />
+    </>
+  );
+
+  const pageActions = (
+    <RequirePermission permissions="karma.export">
+      <Button type="button" variant="primary" onClick={handleExport}>
+        {t("dashboard.export_stats")}
+      </Button>
+    </RequirePermission>
   );
 
   const tabs: { key: DashboardTab; label: string }[] = [
     { key: "overview", label: t("dashboard.tab_overview") },
     { key: "ledger", label: t("admin.ledger_stats") },
   ];
+
+  // 交给 PageShell 的 `tabs` 槽。外层那条 `border-b border-hairline/50` 和
+  // `gap-1` 都由槽自己给了 —— 这里只剩按钮,顺带把站里两派写法(gap-1 + 半透明
+  // 线 / gap-2 + 实线)中的这一派也收掉。
+  const pageTabs = tabs.map((tabItem) => {
+    const button = (
+      <button
+        key={tabItem.key}
+        type="button"
+        onClick={() => setTab(tabItem.key)}
+        className={`px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px ${
+          activeTab === tabItem.key
+            ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
+            : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
+        }`}
+      >
+        {tabItem.label}
+      </button>
+    );
+    // The ledger tab surfaces admin-only stats — hide the tab itself from non-admins.
+    return tabItem.key === "ledger" ? (
+      <RequirePermission key={tabItem.key} permissions="ADMIN">
+        {button}
+      </RequirePermission>
+    ) : (
+      button
+    );
+  });
 
   // The API hands back an English `label` per state ("Alive", "Judging", ...).
   // Prefer the translated enum so the chart legend and the compact list follow
@@ -159,38 +204,14 @@ function DashboardContent() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-canvas text-[hsl(var(--color-ink))] p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header - renders immediately */}
-        {pageHeader}
-
-        {/* Tabs */}
-        <div className="flex gap-1 border-b border-[hsl(var(--color-hairline))]/50">
-          {tabs.map((tabItem) => {
-            const button = (
-              <button
-                key={tabItem.key}
-                onClick={() => setTab(tabItem.key)}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                  activeTab === tabItem.key
-                    ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
-                    : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
-                }`}
-              >
-                {tabItem.label}
-              </button>
-            );
-            // The ledger tab surfaces admin-only stats — hide the tab itself from non-admins.
-            return tabItem.key === "ledger" ? (
-              <RequirePermission key={tabItem.key} permissions="ADMIN">
-                {button}
-              </RequirePermission>
-            ) : (
-              button
-            );
-          })}
-        </div>
-
+    <PageShell
+      variant="page"
+      title={pageTitle}
+      subtitle={t("dashboard.subtitle")}
+      actions={pageActions}
+      tabs={pageTabs}
+    >
+      <div className="space-y-6">
         {activeTab === "overview" ? (
           <>
             {/* Summary cards - each loads independently */}
@@ -452,13 +473,15 @@ function DashboardContent() {
           </RequirePermission>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }
 
 export default function DashboardPage() {
+  // 不是 `min-h-screen`:AppLayout 给的槽位已经是 min-h-[calc(100vh-4rem)],
+  // 再写一次就永远多出 64px 死滚动(PageShell 文件头第 3 条)。
   return (
-    <Suspense fallback={<div className="min-h-screen bg-canvas" />}>
+    <Suspense fallback={<div className="min-h-[60vh] bg-canvas" />}>
       <DashboardContent />
     </Suspense>
   );
@@ -476,12 +499,20 @@ function StatCardInner({
   color?: string;
 }) {
   return (
-    <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-4 border border-[hsl(var(--color-hairline))]">
-      <div className="text-xs text-[hsl(var(--color-ink-muted))] uppercase mb-1">{label}</div>
+    <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
+      <div className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{label}</div>
       {isLoading ? (
-        <Skeleton className="h-8 w-16" />
+        // 骨架屏得和它替换的东西一样高,否则数据落地时整行会往下跳一格。
+        // text-08 是 56px / line-height 1,所以 h-14。
+        <Skeleton className="h-14 w-24 mt-2" />
       ) : (
-        <div className={`text-2xl font-bold ${color}`}>{value ?? 0}</div>
+        // `data-kpi` 是给测试用的锚:DashboardPage.test.tsx 原先靠
+        // `className.includes("text-2xl font-bold")` 认出这四张卡,那把断言
+        // 钉在了一个这轮改版**就是要改**的字号上。属性说的是「这是一个 KPI」,
+        // 字号说的是「它现在多大」——只有前者是测试真正关心的。
+        <div data-kpi="" className={`text-08 tabular-nums ${color}`}>
+          {groupDigits(value ?? 0)}
+        </div>
       )}
     </div>
   );

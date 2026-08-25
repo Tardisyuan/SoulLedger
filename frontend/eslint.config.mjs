@@ -250,94 +250,329 @@ const designSystem = {
 // 不存在的文件,那条额度会永远静默地留在配置里)。
 // @design-guard-baseline-start
 const LEGACY = {
-  "app/(auth)/login/page.tsx": { "type": 5, "space": 5, "radius": 4 },
-  "app/actors/loading.tsx": { "palette": 2 },
-  "app/actors/page.tsx": { "type": 13, "space": 3, "radius": 5 },
-  "app/admin/stats/error.tsx": { "type": 2, "radius": 2, "palette": 1 },
-  "app/audit/loading.tsx": { "palette": 2 },
-  "app/audit/page.tsx": { "type": 5, "space": 1 },
-  "app/cross-judgments/[id]/page.tsx": { "type": 9, "radius": 4 },
-  "app/cross-judgments/loading.tsx": { "palette": 2 },
-  "app/cross-judgments/page.tsx": { "type": 3, "radius": 2, "palette": 9 },
-  "app/dashboard/loading.tsx": { "palette": 2 },
-  "app/dashboard/page.tsx": { "type": 25, "space": 12, "radius": 14 },
-  "app/death-sync/page.tsx": { "type": 5, "radius": 3 },
-  "app/dispatch/[id]/page.tsx": { "type": 19, "radius": 14 },
-  "app/dispatch/loading.tsx": { "palette": 2 },
-  "app/dispatch/page.tsx": { "type": 5, "space": 1, "radius": 5 },
-  "app/dispatch/propose/error.tsx": { "type": 2, "radius": 2, "palette": 1 },
-  "app/dispatch/propose/page.tsx": { "type": 6, "radius": 5 },
-  "app/disposition/page.tsx": { "type": 9, "radius": 8 },
-  "app/error.tsx": { "type": 2, "radius": 2, "palette": 1 },
-  "app/judgment/[id]/page.tsx": { "type": 29, "space": 15, "radius": 13, "palette": 21 },
-  "app/judgment/loading.tsx": { "palette": 2 },
-  "app/judgment/page.tsx": { "type": 7, "space": 3, "radius": 3 },
-  "app/ledger/loading.tsx": { "palette": 2 },
-  "app/ledger/page.tsx": { "type": 16, "space": 2, "radius": 4 },
-  "app/menus/buttons/error.tsx": { "type": 2, "radius": 2, "palette": 1 },
-  "app/menus/buttons/page.tsx": { "type": 23, "space": 3, "radius": 10 },
-  "app/menus/loading.tsx": { "palette": 2 },
-  "app/menus/page.tsx": { "type": 48, "space": 15, "radius": 18 },
-  "app/not-found.tsx": { "type": 2, "radius": 1 },
-  "app/notifications/loading.tsx": { "palette": 2 },
-  "app/notifications/page.tsx": { "type": 9, "space": 4, "radius": 5 },
-  "app/organizations/page.tsx": { "type": 6, "space": 2, "radius": 4 },
-  "app/page.tsx": { "type": 22, "space": 9, "radius": 4 },
-  "app/permissions/loading.tsx": { "palette": 2 },
-  "app/permissions/page.tsx": { "type": 42, "space": 12, "radius": 21 },
-  "app/profile/loading.tsx": { "palette": 2 },
-  "app/profile/page.tsx": { "type": 34, "space": 3, "radius": 16 },
-  "app/realms/loading.tsx": { "palette": 2 },
-  "app/realms/page.tsx": { "type": 4, "space": 1, "radius": 3 },
-  "app/recycle-bin/page.tsx": { "type": 11, "space": 5, "radius": 4, "palette": 2 },
-  "app/social/[id]/page.tsx": { "type": 3, "space": 2, "radius": 2, "palette": 1 },
-  "app/social/follows/page.tsx": { "type": 4, "space": 1, "radius": 2 },
-  "app/social/page.tsx": { "type": 5, "space": 3, "radius": 5 },
-  "app/social/profile/[id]/page.tsx": { "type": 3, "space": 2, "radius": 2, "palette": 1 },
-  "app/souls/[id]/page.tsx": { "type": 23, "space": 13, "radius": 15 },
-  "app/souls/loading.tsx": { "palette": 2 },
-  "app/souls/page.tsx": { "type": 14, "space": 6, "radius": 9 },
-  "app/tenants/page.tsx": { "type": 3, "radius": 3 },
-  "app/users/loading.tsx": { "palette": 2 },
-  "app/users/page.tsx": { "type": 15, "space": 1, "radius": 7 },
-  "app/welcome/error.tsx": { "type": 2, "radius": 2, "palette": 1 },
-  "app/welcome/loading.tsx": { "radius": 4 },
-  "app/welcome/page.tsx": { "type": 26, "space": 5, "radius": 16, "palette": 27 },
-  "app/workflow/[id]/page.tsx": { "type": 33, "space": 16, "radius": 16 },
-  "app/workflow/loading.tsx": { "palette": 2 },
-  "app/workflow/page.tsx": { "type": 52, "space": 14, "radius": 22 },
-  "src/components/charts/LazyWorkflowEditor.tsx": { "radius": 1 },
-  "src/components/connection-status.tsx": { "type": 1, "space": 1, "palette": 5 },
-  "src/components/judgment/JudgmentGroundsPanel.tsx": { "type": 9, "space": 5, "radius": 1 },
-  "src/components/judgment/JudgmentQueueConsole.tsx": { "type": 32, "space": 6, "radius": 16 },
-  "src/components/judgment/JudgmentQueueContext.tsx": { "type": 16, "space": 1, "radius": 4 },
-  "src/components/layout/AppLayout.tsx": { "type": 17, "space": 3, "radius": 16 },
-  "src/components/layout/MenuGloss.tsx": { "type": 1 },
-  "src/components/layout/TenantSignal.tsx": { "space": 2 },
-  "src/components/permissions/PermissionFormModal.tsx": { "type": 10, "radius": 5, "palette": 1 },
-  "src/components/permissions/RoleFormModal.tsx": { "type": 7, "radius": 4, "palette": 1 },
-  "src/components/rbac/PermissionDenied.tsx": { "type": 2 },
-  "src/components/settings/SettingsDrawer.tsx": { "type": 11, "radius": 7, "palette": 6 },
-  "src/components/social/CommentThread.tsx": { "type": 9, "radius": 3, "palette": 1 },
-  "src/components/social/FollowButton.tsx": { "type": 1, "space": 1, "radius": 1 },
-  "src/components/social/PostCard.tsx": { "type": 4, "space": 1, "radius": 1, "palette": 17 },
-  "src/components/social/ProfileCard.tsx": { "type": 6, "space": 1, "radius": 2 },
-  "src/components/social/ProfileEditModal.tsx": { "type": 6, "radius": 4 },
-  "src/components/social/ReactionBar.tsx": { "type": 1, "radius": 1 },
-  "src/components/souls/DateProblemsPanel.tsx": { "type": 5, "space": 5, "radius": 5 },
-  "src/components/souls/RebirthFormSelect.tsx": { "type": 2, "space": 3, "radius": 1 },
-  "src/components/souls/SoulEditModal.tsx": { "type": 11, "radius": 6, "palette": 5 },
-  "src/components/souls/SoulKarmaLedgerCard.tsx": { "type": 12, "space": 5, "radius": 3 },
-  "src/components/souls/SoulLifecycleTimeline.tsx": { "type": 15, "space": 13, "radius": 8 },
-  "src/components/souls/SoulReadingPanel.tsx": { "type": 29, "space": 6, "radius": 3 },
-  "src/components/ui/DomainValue.tsx": { "space": 2, "radius": 1 },
-  "src/components/ui/IconPicker.tsx": { "type": 6, "radius": 4, "palette": 6 },
-  "src/components/ui/Modal.tsx": { "type": 18, "space": 4, "radius": 10, "palette": 12 },
-  "src/components/ui/PageError.tsx": { "type": 4, "radius": 1 },
-  "src/components/ui/Pagination.tsx": { "type": 3, "space": 2, "radius": 2 },
-  "src/components/users/UserDeleteDialog.tsx": { "type": 6, "radius": 3, "palette": 2 },
-  "src/components/users/UserModal.tsx": { "type": 14, "radius": 8, "palette": 2 },
-  "src/components/workflow/WorkflowEditor.tsx": { "type": 19, "space": 7, "radius": 18, "palette": 10 }
+  "app/(auth)/login/page.tsx": {
+    "radius": 4,
+    "space": 5,
+    "type": 5
+  },
+  "app/actors/loading.tsx": {
+    "palette": 2
+  },
+  "app/admin/stats/error.tsx": {
+    "palette": 1,
+    "radius": 2,
+    "type": 2
+  },
+  "app/cross-judgments/loading.tsx": {
+    "palette": 2
+  },
+  "app/dashboard/loading.tsx": {
+    "palette": 2
+  },
+  "app/dashboard/page.tsx": {
+    "radius": 12,
+    "space": 12,
+    "type": 19
+  },
+  "app/dispatch/[id]/page.tsx": {
+    "radius": 14,
+    "type": 19
+  },
+  "app/dispatch/loading.tsx": {
+    "palette": 2
+  },
+  "app/dispatch/propose/error.tsx": {
+    "palette": 1,
+    "radius": 2,
+    "type": 2
+  },
+  "app/dispatch/propose/page.tsx": {
+    "radius": 5,
+    "type": 6
+  },
+  "app/disposition/page.tsx": {
+    "radius": 8,
+    "type": 9
+  },
+  "app/error.tsx": {
+    "palette": 1,
+    "radius": 2,
+    "type": 2
+  },
+  "app/judgment/[id]/page.tsx": {
+    "palette": 21,
+    "radius": 13,
+    "space": 15,
+    "type": 29
+  },
+  "app/ledger/loading.tsx": {
+    "palette": 2
+  },
+  "app/ledger/page.tsx": {
+    "radius": 4,
+    "space": 2,
+    "type": 16
+  },
+  "app/menus/buttons/page.tsx": {
+    "radius": 10,
+    "space": 3,
+    "type": 23
+  },
+  "app/menus/page.tsx": {
+    "radius": 18,
+    "space": 15,
+    "type": 48
+  },
+  "app/not-found.tsx": {
+    "radius": 1,
+    "type": 2
+  },
+  "app/notifications/loading.tsx": {
+    "palette": 2
+  },
+  "app/notifications/page.tsx": {
+    "radius": 5,
+    "space": 4,
+    "type": 9
+  },
+  "app/organizations/page.tsx": {
+    "radius": 4,
+    "space": 2,
+    "type": 6
+  },
+  "app/page.tsx": {
+    "radius": 4,
+    "space": 9,
+    "type": 22
+  },
+  "app/permissions/loading.tsx": {
+    "palette": 2
+  },
+  "app/permissions/page.tsx": {
+    "radius": 21,
+    "space": 12,
+    "type": 42
+  },
+  "app/realms/loading.tsx": {
+    "palette": 2
+  },
+  "app/realms/page.tsx": {
+    "radius": 3,
+    "space": 1,
+    "type": 4
+  },
+  "app/recycle-bin/page.tsx": {
+    "palette": 2,
+    "radius": 4,
+    "space": 5,
+    "type": 11
+  },
+  "app/social/[id]/page.tsx": {
+    "palette": 1,
+    "radius": 2,
+    "space": 2,
+    "type": 3
+  },
+  "app/social/profile/[id]/page.tsx": {
+    "palette": 1,
+    "radius": 2,
+    "space": 2,
+    "type": 3
+  },
+  "app/souls/[id]/page.tsx": {
+    "radius": 15,
+    "space": 13,
+    "type": 23
+  },
+  "app/souls/page.tsx": {
+    "radius": 9,
+    "space": 6,
+    "type": 14
+  },
+  "app/tenants/page.tsx": {
+    "radius": 3,
+    "type": 3
+  },
+  "app/users/page.tsx": {
+    "radius": 7,
+    "space": 1,
+    "type": 15
+  },
+  "app/welcome/error.tsx": {
+    "palette": 1,
+    "radius": 2,
+    "type": 2
+  },
+  "app/welcome/loading.tsx": {
+    "radius": 4
+  },
+  "app/welcome/page.tsx": {
+    "palette": 27,
+    "radius": 16,
+    "space": 5,
+    "type": 26
+  },
+  "app/workflow/[id]/page.tsx": {
+    "radius": 16,
+    "space": 16,
+    "type": 33
+  },
+  "app/workflow/page.tsx": {
+    "radius": 22,
+    "space": 14,
+    "type": 52
+  },
+  "src/components/charts/LazyWorkflowEditor.tsx": {
+    "radius": 1
+  },
+  "src/components/connection-status.tsx": {
+    "palette": 5,
+    "space": 1,
+    "type": 1
+  },
+  "src/components/judgment/JudgmentGroundsPanel.tsx": {
+    "radius": 1,
+    "space": 5,
+    "type": 9
+  },
+  "src/components/judgment/JudgmentQueueConsole.tsx": {
+    "radius": 16,
+    "space": 6,
+    "type": 32
+  },
+  "src/components/judgment/JudgmentQueueContext.tsx": {
+    "radius": 4,
+    "space": 1,
+    "type": 16
+  },
+  "src/components/layout/AppLayout.tsx": {
+    "radius": 16,
+    "space": 3,
+    "type": 17
+  },
+  "src/components/layout/MenuGloss.tsx": {
+    "type": 1
+  },
+  "src/components/layout/TenantSignal.tsx": {
+    "space": 2
+  },
+  "src/components/permissions/PermissionFormModal.tsx": {
+    "palette": 1,
+    "radius": 5,
+    "type": 10
+  },
+  "src/components/permissions/RoleFormModal.tsx": {
+    "palette": 1,
+    "radius": 4,
+    "type": 7
+  },
+  "src/components/rbac/PermissionDenied.tsx": {
+    "type": 2
+  },
+  "src/components/settings/SettingsDrawer.tsx": {
+    "palette": 6,
+    "radius": 7,
+    "type": 11
+  },
+  "src/components/social/CommentThread.tsx": {
+    "palette": 1,
+    "radius": 3,
+    "type": 9
+  },
+  "src/components/social/FollowButton.tsx": {
+    "radius": 1,
+    "space": 1,
+    "type": 1
+  },
+  "src/components/social/PostCard.tsx": {
+    "palette": 17,
+    "radius": 1,
+    "space": 1,
+    "type": 4
+  },
+  "src/components/social/ProfileCard.tsx": {
+    "radius": 2,
+    "space": 1,
+    "type": 6
+  },
+  "src/components/social/ProfileEditModal.tsx": {
+    "radius": 4,
+    "type": 6
+  },
+  "src/components/social/ReactionBar.tsx": {
+    "radius": 1,
+    "type": 1
+  },
+  "src/components/souls/DateProblemsPanel.tsx": {
+    "radius": 5,
+    "space": 5,
+    "type": 5
+  },
+  "src/components/souls/RebirthFormSelect.tsx": {
+    "radius": 1,
+    "space": 3,
+    "type": 2
+  },
+  "src/components/souls/SoulEditModal.tsx": {
+    "palette": 5,
+    "radius": 6,
+    "type": 11
+  },
+  "src/components/souls/SoulKarmaLedgerCard.tsx": {
+    "radius": 3,
+    "space": 5,
+    "type": 12
+  },
+  "src/components/souls/SoulLifecycleTimeline.tsx": {
+    "radius": 8,
+    "space": 13,
+    "type": 15
+  },
+  "src/components/souls/SoulReadingPanel.tsx": {
+    "radius": 3,
+    "space": 6,
+    "type": 29
+  },
+  "src/components/ui/DomainValue.tsx": {
+    "radius": 1,
+    "space": 2
+  },
+  "src/components/ui/IconPicker.tsx": {
+    "palette": 6,
+    "radius": 4,
+    "type": 6
+  },
+  "src/components/ui/Modal.tsx": {
+    "palette": 12,
+    "radius": 10,
+    "space": 4,
+    "type": 18
+  },
+  "src/components/ui/PageError.tsx": {
+    "radius": 1,
+    "type": 4
+  },
+  "src/components/ui/Pagination.tsx": {
+    "radius": 2,
+    "space": 2,
+    "type": 3
+  },
+  "src/components/users/UserDeleteDialog.tsx": {
+    "palette": 2,
+    "radius": 3,
+    "type": 6
+  },
+  "src/components/users/UserModal.tsx": {
+    "palette": 2,
+    "radius": 8,
+    "type": 14
+  },
+  "src/components/workflow/WorkflowEditor.tsx": {
+    "palette": 10,
+    "radius": 18,
+    "space": 7,
+    "type": 19
+  }
 };
 // @design-guard-baseline-end
 
