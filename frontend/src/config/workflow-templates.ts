@@ -453,50 +453,6 @@ export const WORKFLOW_TEMPLATES: Record<string, WorkflowTemplate> = {
       { id: "n3", name: "Osiris · 终审", court: "两真之殿", type: "终审", order: 3 },
     ],
   },
-  EGYPTIAN_AFTERLIFE: {
-    civilization: "EGYPTIAN",
-    // SPECIAL → ROUTINE。埃及集合是 {HEART_WEIGHING, DIVINE_TRIAL, ROUTINE,
-    // APPEAL}，SPECIAL 不在其中，与 EGYPTIAN_TRIALS 同病：存得进去，
-    // `create_from_judgment` 对 (EGYPTIAN, SPECIAL) 抛 ValueError。
-    //
-    // 这一套此前被登记成「无处可归的考据问题」，理由是「按功德分流」既不是
-    // DIVINE_TRIAL 也不是 HEART_WEIGHING。**那两条否定仍然成立**：
-    //   · DIVINE_TRIAL 命名的是「神明不经称量直接裁断」（见 EGYPTIAN_TRIALS 与
-    //     EGYPTIAN_EMERGENCY），而这里的裁断跟在 n1 的评定之后，不是不经程序。
-    //   · HEART_WEIGHING 不能挂：本流程里没有秤、没有羽毛、没有否定告白，也没有
-    //     托特。而且真正演出称心的那一套（EGYPTIAN_ROUTINE「心脏称重流程」，五个
-    //     节点全在两真之殿）自己挂的是 ROUTINE——把**没有**秤的这套判成
-    //     HEART_WEIGHING、让**有**秤的那套留在 ROUTINE，是把两者对调。
-    //
-    // 被漏掉的第三个候选是 ROUTINE，而它成立，理由是考据本身：埃及文献里**没有**
-    // 独立于称心之外的「按功德分流」仪轨。本套的地点（两真之殿）与两个结局
-    //（芦苇原 ／ 阿米特吞噬即第二次死亡）逐项就是称心的地点与称心的两个结局
-    //（Budge《亚尼纸草》1895 图版 III–IV；docs/lore-verification/verify-egyptian.md
-    // §3.3）。也就是说它不是另一类程序，而是**同一个常规程序按结局写的低分辨率
-    // 版本**，`ROUTINE`（常规审判）正是这个。仓库里已有一模一样的形状照此归档：
-    // CHINESE_REINCARNATION（功德核定 → 轮回分流，两个节点，按功德分流）挂的就是
-    // ROUTINE。
-    //
-    // 顺带留一条**未修**的观察，别让它随归档一起消失：既然本套与 EGYPTIAN_ROUTINE
-    // 是同一程序的两个分辨率，它是否还该作为独立预设存在，是产品问题而不是
-    // case_type 问题。归到 ROUTINE 让这个问题显形（同文明同 case_type 由
-    // `.first()` 取模板），比让它挂着一个永远路由不到的 SPECIAL 把问题藏起来好。
-    caseType: "ROUTINE",
-    name: "死后世界分流",
-    description: "根据生前功德分流",
-    priority: 0,
-    nodes: [
-      // 分流的**裁定**在两真之殿作出；芦苇原只是通过者的去向。n2/n3 是同一个
-      // 判决的两条分支，不是两个先后步骤。
-      { id: "n1", name: "功德评定", court: "两真之殿", type: "功德分类", order: 1 },
-      { id: "n2", name: "Osiris · 判入芦苇原", court: "两真之殿", type: "天堂分流", order: 2 },
-      // 埃及没有可去的地狱：心脏未通过则被阿米特吞噬，是「第二次死亡」——停止
-      // 存在，不是迁往某个冥界。依据：Budge/亚尼 p.258 及其注（阿米特立于天平
-      // 旁）；docs/lore-verification/verify-egyptian.md §3.3。原值的
-      //「Ammit · 冥界分流 @ 冥界 / 地狱分流」把湮灭实体化成了一个目的地。
-      { id: "n3", name: "Ammit · 吞噬（第二次死亡）", court: "两真之殿", type: "失败分支", order: 3 },
-    ],
-  },
   EGYPTIAN_TRIALS: {
     civilization: "EGYPTIAN",
     // SPECIAL → DIVINE_TRIAL。这一套叫「神判流程」、描述写「神明直接审判」，而
@@ -593,7 +549,6 @@ export const NODES_THAT_NAME_NO_ACTOR: Record<string, string> = {
   "阿鼻地狱入狱": "执行动作；阿鼻地狱是地方不是人。",
   "功德核定": "名字说的是一件事。",
   "轮回分流": "名字说的是一件事。",
-  "功德评定": "名字说的是一件事。",
   "紧急受理": "受理动作。中国 / 欧洲 / 埃及三套紧急流程共用这个节点名，理由相同。",
   "申诉受理": "受理动作。原来这里写的是「Gabriel · 受理」，见欧洲一节顶部为什么传信天使不受理亡魂案件。",
   // ── 埃及 ──────────────────────────────────────────────

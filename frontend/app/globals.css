@@ -78,11 +78,52 @@
   --color-accent: 38 92% 50%;
   /* Text/links only. --color-accent (identical in both themes) measures
      2.14:1 for text against light-mode white — every amber heading and link
-     in light mode fails AA today. Buttons, fills, active-nav and the focus
-     ring keep using --color-accent; anything rendering the brand colour AS
-     TEXT must use this instead. */
+     in light mode fails AA today. Buttons, fills and active-nav keep using
+     --color-accent; the KEYBOARD FOCUS RING no longer does, for the same
+     reason plus one more — see --color-focus below. Anything rendering the
+     brand colour AS TEXT must use this instead. */
   --color-accent-ink: 38 92% 50%;
   --color-accent-hover: 43 96% 58%;
+  /* The keyboard focus ring. Deliberately NOT --color-accent, on two
+     independent grounds, both measured rather than assumed.
+
+     (1) IT CANNOT BE A TOKEN THE USER OWNS. --color-accent is configurable
+     at runtime: useAccentColor in src/components/settings/SettingsDrawer.tsx
+     writes it onto document.documentElement as an INLINE style, from a
+     localStorage preference the drawer will accept as an arbitrary 6-digit
+     hex. An inline style on the root element beats every declaration in this
+     file, so a user who picks a pale amber silently deletes their own focus
+     indicator and has no way to tell. The drawer writes that one property
+     and nothing else, so a ring naming its own token is out of that reach —
+     and stays out only while this value is a literal triple. Point it at
+     var(--color-accent) as a tidy-up and the inline style owns it again.
+
+     (2) THE ACCENT RING FAILED WCAG 1.4.11 (3:1, non-text UI) in light mode
+     outright. hsl(38 92% 50%) measures 2.14:1 against light-mode white and
+     1.75:1 against the deepest light surface, hsl(240 11% 92%). Dark mode was
+     never the problem — 7.82:1 at its worst there — which is exactly why this
+     needed measuring in both themes and not one.
+
+     MEASURED FOR THIS VALUE, over canvas plus surface-1..4, for the neutral
+     240deg fallback ramp and all four civilization ramps:
+       dark  hsl(258 95% 76%) — 7.25:1 on canvas, worst 6.08:1 on Greek
+                                surface-4 hsl(88 11% 11%)
+       light hsl(258 85% 48%) — 8.29:1 on white, worst 6.78:1 on surface-4
+                                hsl(240 11% 92%)
+     Both are about double the 3:1 floor, and the margin is the point rather
+     than luxury: outline-offset is 2px, so the ring lands on whatever sits
+     BEHIND the focused control, which is any of those five surfaces in
+     either theme, and 3:1 has to hold for all of them.
+
+     258deg is the middle of the widest unoccupied arc in this palette — from
+     232 (--color-civ-mark-eu) to 285 (--color-status-disposed) — so the ring
+     reads as chrome and not as a status that leaked onto a border. Nearest
+     semantic hue is 27deg away, wider than several pairs already in here.
+
+     src/__tests__/statusTokenLayering.test.ts re-derives every ratio above
+     from this file, checks both themes declare the token, and fails if the
+     rule stops naming it or starts naming the accent again. */
+  --color-focus: 258 95% 76%;
 }
 
 /* Light theme override */
@@ -114,6 +155,16 @@
      --color-accent at the same hue. */
   --color-accent-ink: 32 92% 34%;
   --color-accent-hover: 43 96% 58%;
+  /* Same 258deg hue, dropped from 76% to 48% lightness for light surfaces.
+     Declared HERE and not only in :root on purpose: a token :root declares
+     and .light stays silent about inherits its DARK value through the
+     cascade, which for a ring means hsl(258 95% 76%) landing on white at
+     2.74:1 and on light surface-4 at 2.25:1 — under the 3:1 floor in both
+     places, a fail that reads as a pass in dark mode and is invisible to
+     anyone testing one theme. civilizationColourContract.test.ts pins the
+     same both-themes rule for the civilization marks after that exact shape
+     of bug; statusTokenLayering.test.ts now pins it for this token. */
+  --color-focus: 258 85% 48%;
 }
 
 /* Semantic status colors (theme-aware).
@@ -339,15 +390,24 @@
   fill: hsl(var(--color-hairline)) !important;
 }
 /* ── Keyboard focus ──────────────────────────────────────────────────────
-   Nothing in the app defined a focus style, while ~20 files cleared the
-   native one with `outline-none`, leaving keyboard users with no visible
-   caret at all. This restores a single consistent ring.
+   Nothing in the app defined a focus style, while 69 uses of the Tailwind
+   `outline-none` utility across 22 files under app/, src/ and components/
+   cleared the native one, leaving keyboard users with no visible caret at
+   all. This restores a single consistent ring.
 
    `:focus-visible` only matches keyboard/programmatic focus, so mouse
-   clicks stay clean. The `!important` overrides the Tailwind `outline-none`
-   utilities already scattered through the components. */
+   clicks stay clean. The `!important` is what beats those 69 utilities —
+   drop it and every one of them wins on specificity and the ring is gone
+   again, with no test, no type error and no visual diff anywhere a mouse
+   is doing the clicking.
+
+   The colour is --color-focus and must not be --color-accent: the token's
+   own comment in `:root` carries the measurements and the runtime-clobber
+   argument. All three claims here — that the rule exists, that it is
+   `!important`, and which token it names — are held by
+   src/__tests__/statusTokenLayering.test.ts. */
 :focus-visible {
-  outline: 2px solid hsl(var(--color-accent)) !important;
+  outline: 2px solid hsl(var(--color-focus)) !important;
   outline-offset: 2px;
   border-radius: 2px;
 }

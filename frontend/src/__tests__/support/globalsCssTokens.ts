@@ -2,8 +2,10 @@
  * The one parser that reads `app/globals.css`, shared by every contract test
  * that holds something else to it: `chartColourContract` and
  * `civilizationColourContract` (the `lib/chart-colors.ts` mirror, both themes),
- * `dataGridToneContract` (badge tint depth vs the light-mode measurements) and
- * `statusTokenLayering` (which palette a domain enum may draw from).
+ * `dataGridToneContract` (badge tint depth vs the light-mode measurements),
+ * `statusTokenLayering` (which palette a domain enum may draw from) and
+ * `inkOnSurfaceContract` (every ink token against every surface token, per
+ * tenant, per theme).
  *
  * Not a test file — `jest.config.js` matches `**\/__tests__/**\/*.test.ts(x)`
  * only, and `collectCoverageFrom` excludes `src/__tests__/**`, so this module is
@@ -360,4 +362,50 @@ export function civPairs(): [string, string][] {
   }
   if (out.length === 0) throw new Error("No civilization pairs — CIV_PREFIXES is too short to compare.");
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// WCAG 2.x contrast.
+//
+// `hslTripleToRgb` above answers "what colour is this token". These answer
+// "can anyone read that ink on that surface", which is a different question
+// from every comparison in this file so far: the ramp assertions ask whether
+// two tenants look ALIKE, and these ask whether two layers look DIFFERENT
+// enough. Both are measured in sRGB, and neither can be asked in HSL.
+//
+// NOTE FOR WHOEVER TOUCHES `dataGridToneContract.test.ts` NEXT. That file
+// carries its own private `relativeLuminance`/`contrastRatio` (plus a
+// `composite`, which nothing else needs yet) written before this pair existed.
+// Two implementations of one formula is the same defect this module was
+// created to close, and the reason the copy is still there is scheduling, not
+// design: the file was owned by another change in flight when
+// `inkOnSurfaceContract` landed. Fold it onto these — its own "reproduces the
+// reference black-on-white ratio" test moves with it — rather than adding a
+// third.
+//
+// One deliberate difference from that copy, stated because a silent one would
+// be worse: this pair is fed by `hslTripleToRgb`, which ROUNDS to whole sRGB
+// channels, while the copy's `hslToRgb` keeps fractions. Rounding is what a
+// browser rasterises, and the gap is under 0.01 of a ratio point — but it is
+// not zero, so a figure measured here and a figure measured there may differ
+// in the third decimal.
+// ---------------------------------------------------------------------------
+
+export type Rgb = readonly [number, number, number];
+
+/** WCAG relative luminance: linearise each sRGB channel, then weight. */
+export function relativeLuminance([r, g, b]: Rgb): number {
+  const linear = (channel: number): number => {
+    const v = channel / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+}
+
+/** WCAG contrast ratio, 1:1 to 21:1. Order-independent. */
+export function contrastRatio(a: Rgb, b: Rgb): number {
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  const [hi, lo] = la > lb ? [la, lb] : [lb, la];
+  return (hi + 0.05) / (lo + 0.05);
 }

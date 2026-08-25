@@ -345,7 +345,8 @@ def test_the_migration_backfills_exactly_the_presets_marked_urgent():
         if int(priority.group(1)) != 0:
             marked.add((fields["name"], fields["civilization"], fields["caseType"]))
 
-    assert seen_priorities == len(starts) == 17, (
+    # EGYPTIAN_AFTERLIFE 已合并进 EGYPTIAN_ROUTINE（它是同一次称心的低分辨率写法，Budge《亚尼纸草》1895 图版 III–IV），17→16。
+    assert seen_priorities == len(starts) == 16, (
         f"parsed {seen_priorities} priorities across {len(starts)} presets"
     )
     assert marked == {tuple(row) for row in EMERGENCY_TEMPLATES}, (
