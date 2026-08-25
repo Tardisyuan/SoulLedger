@@ -72,6 +72,45 @@ function pins(keys: readonly string[]): [ThemeName, string][] {
 describe("the parser is looking at something", () => {
   // If any of these break, every assertion below goes vacuously green. They are
   // the "mutate the thing it guards" guard for the guard itself.
+  it("reads a token whose comment names another token", () => {
+    // THE SWALLOW, PINNED. `readTokens` used to scan block bodies INCLUDING
+    // their comments. The note above `--color-karma-merit` says "Renamed from
+    // --color-merit/--color-demerit: this pair now has its own semantic
+    // identity …" — the declaration regex matched `--color-demerit:` inside
+    // that prose and `[^;]+` ran on to the semicolon ending the real
+    // declaration. `--color-karma-merit` came back `undefined` and a phantom
+    // `--color-demerit` held a paragraph.
+    //
+    // Every contract test importing this module was blind to that token, so an
+    // assertion shaped "every karma token is X" skipped merit and passed.
+    //
+    // Only the DARK declaration carries that comment, so `.light` had the token
+    // all along — the two themes disagreed about whether it existed and nothing
+    // said so. Both are asserted.
+    //
+    // Checked by KEY PRESENCE and not by value: merit shares `150 62% 46%` with
+    // --color-verdict-passed, --color-status-alive and --color-status-success
+    // in dark, so a value comparison cannot tell a token that was read from one
+    // that was never seen.
+    expect(ROOT_TOKENS).toHaveProperty("--color-karma-merit");
+    expect(LIGHT_TOKENS).toHaveProperty("--color-karma-merit");
+  });
+
+  it("gives every token a value shaped like a value", () => {
+    // The general form, and it is NOT a name check. The phantom this caught was
+    // called `--color-demerit` — squarely inside the `--color-*` family — so
+    // "no token outside the known families" would have passed it happily. What
+    // gives a swallowed comment away is its VALUE: prose spans lines and runs
+    // long, and no real token value does either.
+    //
+    // Proven independent: with the key-presence assertion above neutered, this
+    // one still goes red on its own when the comment stripping is removed.
+    const misshapen = Object.entries({ ...ROOT_TOKENS, ...LIGHT_TOKENS })
+      .filter(([, value]) => value.includes("\n") || value.length > 60)
+      .map(([name, value]) => `${name} = ${value.slice(0, 40)}…`);
+    expect(misshapen).toEqual([]);
+  });
+
   it("found more than one civilization", () => {
     expect(CIV_PREFIXES.length).toBeGreaterThan(1);
     expect(TENANT_CODES.length).toBe(CIV_PREFIXES.length);
