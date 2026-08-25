@@ -66,12 +66,23 @@ What this does not do
   property would disagree with every queryset computing the same name in the
   database. The raw net stays the raw net, and what changed is which number
   routing reads.
-* It does NOT implement 零積不抵整發, the second half of the same 凡例 sentence:
+* It DOES implement 零積不抵整發, the second half of the same 凡例 sentence:
   「零積之十功不能折一次之十過也。」 Ten merits earned a fraction at a time do not
   discharge one fault worth ten at a stroke. The two rules are cumulative rather
-  than alternatives — a discharge must clear both — so applying this one would
-  only ever narrow what `offset_within_classes` permits, never widen it. The
-  investigation behind the decision not to apply it, and its evidence:
+  than alternatives — a discharge must clear both — so this one only ever
+  narrows what `offset_within_classes` permits, never widens it.
+
+  BUT ONLY WHERE THE RECORD SAYS ENOUGH TO APPLY IT, and that condition is the
+  substance rather than a caveat. Granularity is not a property of a deed; it is
+  a property of (which clause scored it, over how many occasions). A record
+  carrying neither falls through to the granularity-blind `min`, and the reading
+  says which happened — `granularity_applied` distinguishes "the rule bit" from
+  "nothing here was recorded finely enough for it to bite".
+
+  This bullet used to open "It does NOT implement", and that was true when it
+  was written: souls/0028 had not added the two columns. The investigation
+  below is kept in full, because it is still the reason those two columns are
+  the right inputs and the four obvious proxies are not:
 
   THE TEXT DOES GIVE A CRITERION, AND IT IS PER-CLAUSE. 一次 means "on one
   occasion", and every scoring clause in 太微 states its own per-occasion value —
@@ -83,12 +94,15 @@ What this does not do
   (clause, number of occasions) and not of an article, and no tag attached to an
   article could carry it.
 
-  WHAT IS MISSING IS ON THIS SIDE OF THE JOIN. A `SoulRecord` cites no clause and
-  counts no occasions. `weight` is an operator-supplied integer whose own help
-  text calls it a "significance weight (1-100)"; nothing binds it to a clause's
-  value and nothing says one row is one occasion. Those two absent inputs are
-  named in GRANULARITY_MISSING_INPUTS so that the next attempt adds data rather
-  than inventing a marker.
+  WHAT WAS MISSING WAS ON THIS SIDE OF THE JOIN, and it is what got added. A
+  `SoulRecord` cited no clause and counted no occasions; `weight` is an
+  operator-supplied integer whose own help text calls it a "significance weight
+  (1-100)", and nothing binds it to a clause's value or says one row is one
+  occasion. Those two inputs were named in GRANULARITY_MISSING_INPUTS before
+  they existed, so that closing the gap would add data rather than invent a
+  marker — and that is how it was closed. The tuple still exists and is still
+  reported, because a record may carry neither: it now names what a row NEEDS
+  rather than what the schema lacks.
 
   WHY NOT THE PROXIES THAT SUGGEST THEMSELVES:
 
@@ -110,11 +124,16 @@ What this does not do
     distinction it does not draw is the repair docs/lore-verification/README.md
     §1 forbids by name, and `8308204` is what it looks like when it is tried.
 
-  So the reading states the rule and states that it is not applied, the way
-  `_european_reading` reports `poena: None` with a reason instead of a proxy.
-  `tests/test_ledger_granularity.py` pins the gap open: it builds the soul the
-  rule is about and asserts this system still treats 零積 and 一次 alike, so
-  closing the gap has to be done deliberately.
+  So the reading states the rule AND states whether it reached this ledger,
+  which is a different report from the one it used to make. `granularity_applied`
+  False no longer means "this system cannot tell 零積 from 一次"; it means "no
+  pool in this ledger had scattered merit facing a lump fault", and for a
+  database that has not begun filling the two columns that is every time.
+  `granularity_unavailable` is what keeps those two readings of a False apart,
+  the way `_european_reading` reports `poena: None` with a reason instead of a
+  proxy. `tests/test_ledger_granularity.py` holds both sides: the four
+  granularity cases with buckets supplied, and the older fixture without them
+  still netting exactly as it always did.
 * It does NOT decay, cap, or otherwise re-score anything. Decay is applied
   upstream by LedgerService and 功過格 has none of it (see the note on
   CIVILIZATION_DECAY_RATE in services.py); this module partitions numbers it is
@@ -149,14 +168,17 @@ ATTESTED_CLASSES = (MONEY, LIFE)
 #: The first 凡例 rule — the class limit, which this module applies.
 CLASS_RULE_ZH = "功過有不可折者。如用財之百功，不可折致死人之百過。"
 
-#: The second — the granularity limit, quoted on its own because it is the one
-#: this module does NOT apply. See "What this does not do" in the docstring.
+#: The second — the granularity limit, quoted on its own because it is reported
+#: on its own: a caller has to be able to tell which half of the 凡例 sentence
+#: a given discharge was tested against. See the module docstring.
 GRANULARITY_RULE_ZH = "零積之十功不能折一次之十過也。"
 
-#: What a `SoulRecord` would have to carry before 零積不抵整發 could be applied
-#: to it. Named as data rather than described as prose so that the next attempt
-#: adds the join the corpus already has one side of, instead of inventing a
-#: granularity marker on the deed. See the module docstring.
+#: What a `SoulRecord` must carry before 零積不抵整發 can be applied to it. It
+#: was written when a SoulRecord carried NEITHER, naming the two columns as data
+#: rather than describing them in prose so that closing the gap would add the
+#: join the corpus already had one side of instead of inventing a granularity
+#: marker on the deed. souls/0028 added exactly these two. It is still reported,
+#: because a row may still carry neither, and then this names what it needs.
 GRANULARITY_MISSING_INPUTS = (
     # Which scoring clause the deed was scored under. Every clause states its
     # own per-occasion value; that value is what 一次 means.
@@ -181,13 +203,15 @@ GRANULARITY_MISSING_INPUTS = (
 #: same question is already answered beside it, by `granularity_applied` and
 #: GRANULARITY_MISSING_INPUTS.
 GRANULARITY_UNAVAILABLE = (
-    "零積不抵整發 is not applied. Telling a total reached at one stroke from one "
-    "reached a fraction at a time needs the clause a deed was scored under and "
-    "the number of occasions its weight covers; a SoulRecord carries neither, "
-    "and `weight` is an operator-supplied significance figure that may bundle "
-    "any number of occasions of any clause. Every offset reported here is "
-    "therefore granularity-blind and may discharge a lump fault with scattered "
-    "merit."
+    "零積不抵整發 is applied only to records that say enough for it to bite. "
+    "Telling a total reached at one stroke from one reached a fraction at a "
+    "time needs the clause a deed was scored under and the number of occasions "
+    "its weight covers; a record carrying neither is granularity-unknown, and "
+    "`weight` is an operator-supplied significance figure that may bundle any "
+    "number of occasions of any clause, so it is not a substitute. Offsets "
+    "involving such records are granularity-blind and may discharge a lump "
+    "fault with scattered merit. This is why `granularity_applied` False does "
+    "not by itself mean the rule was tested and did not bite."
 )
 
 #: Both halves, composed rather than retyped so the pair cannot drift apart.
@@ -352,10 +376,12 @@ def offset_within_classes(class_totals: dict) -> dict:
 
     WITHIN a class the netting is still granularity-blind: `min(merit, demerit)`
     cannot tell ten merits scraped together from one worth ten, so scattered
-    merit discharges a lump fault of its own kind in full. That is the half of
-    the 凡例 sentence this module does not apply, and the returned reading says
-    so — `granularity_applied` is False and `granularity_unavailable` gives the
-    reason. See the module docstring for why the available proxies were refused.
+    merit discharges a lump fault of its own kind in full — because that is what
+    a caller WITHOUT grain buckets gets, and it is the pre-souls/0028 behaviour
+    kept deliberately so no existing caller changed answers. A caller that
+    supplies `merit_by_grain`/`demerit_by_grain` gets 零積不抵整發 applied, and
+    `granularity_applied` says which of the two happened. See the module
+    docstring for why the available proxies were refused as inputs.
     """
     by_class = {}
     unoffset_demerit = 0.0
