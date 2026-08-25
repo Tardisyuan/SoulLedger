@@ -36,6 +36,8 @@ wrong" — and `8308204` is what happened the last time it was tried. What is
 missing is a join on the ledger side, and apps/ledger/fungibility.py names the
 two inputs it needs.
 """
+from types import SimpleNamespace
+
 import pytest
 
 from apps.actors.mythology.gongguoge_entries import GONGGUOGE_ENTRIES
@@ -48,6 +50,8 @@ from apps.ledger.fungibility import (
     GRANULARITY_RULE_ZH,
     MONEY,
     class_for_category,
+    granularity_of,
+    offset_within_classes,
 )
 from apps.ledger.services import LedgerService
 from apps.souls.models import Soul, SoulState
@@ -285,29 +289,45 @@ def test_the_granularity_note_is_confined_to_the_chinese_reading(db):
 # --------------------------------------------------------------------------
 
 
-def test_no_field_on_a_soul_record_carries_granularity():
-    """CONTRADICTION, PINNED: the missing data, named field by field.
+def test_the_soul_record_carries_exactly_the_two_inputs_the_rule_named():
+    """WAS A CONTRADICTION, NOW A CONTRACT: the two fields, and only those two.
 
-    A field matching one of these fragments is the signal that somebody has
-    started recording which clause a deed was scored under, or how many
-    occasions its weight covers — the two things 零積不抵整發 needs. It is also
-    the signal to check they are not reviving `is_milestone` for the job.
+    This test used to assert that `SoulRecord` carried NO granularity field at
+    all, and it was right to: `offset_within_classes` reported 零積不抵整發 as
+    unimplementable, and a field appearing without the rule following would have
+    been a marker somebody invented. souls/0028 added both inputs under the
+    names `GRANULARITY_MISSING_INPUTS` had already chosen for them, so the
+    assertion inverts — but it stays an exact set rather than becoming a
+    presence check.
+
+    WHY EXACT AND NOT "AT LEAST THESE TWO". A third granularity-shaped field is
+    the shape the four refused proxies would take on a second attempt: an
+    `is_lump` boolean, an `occasions_estimated` figure, a `granularity` enum
+    somebody backfilled. Any of those would let the rule fire on data whose
+    provenance the module spent its investigation refusing. The set is the
+    statement.
     """
-    forbidden = (
+    fragments = (
         "granularity", "occurrence", "occasion", "clause", "statute",
         "lump", "at_once", "scattered",
     )
     names = {field.name for field in SoulRecord._meta.get_fields()}
-    for fragment in forbidden:
-        offenders = sorted(name for name in names if fragment in name)
-        assert not offenders, (
-            f"SoulRecord now carries {offenders}. If this is a real clause "
-            f"citation or occasion count, 零積不抵整發 can stop being "
-            f"unimplementable — see apps/ledger/fungibility.py."
-        )
+    matching = sorted(name for name in names if any(f in name for f in fragments))
+    assert matching == sorted(GRANULARITY_MISSING_INPUTS), (
+        f"SoulRecord's granularity-shaped fields are {matching}; the rule reads "
+        f"{sorted(GRANULARITY_MISSING_INPUTS)} and nothing else. A third one is "
+        f"how a refused proxy comes back — see the four rejected in "
+        f"apps/ledger/fungibility.py before adding it."
+    )
 
-    # Everything the rule would need is missing, and `weight` is not a stand-in:
-    # its own help text calls it a significance figure, not a clause value.
+    # Both nullable, because there is no backfill and inventing one was the
+    # thing every proxy was refused for. A required field here would have forced
+    # a value onto 100% of existing rows on the day the column landed.
+    assert SoulRecord._meta.get_field("occurrence_count").null is True
+    assert SoulRecord._meta.get_field("statute_clause").blank is True
+
+    # `weight` is still not a stand-in: its own help text calls it a
+    # significance figure, not a clause value.
     assert "significance" in SoulRecord._meta.get_field("weight").help_text.lower()
 
 
@@ -376,3 +396,124 @@ def test_the_corpus_draws_no_granularity_line():
         if key in GRANULARITY_MISSING_INPUTS or "granularity" in key
     )
     assert tagged == [], f"granularity tags appeared on the corpus: {tagged}"
+
+
+# --------------------------------------------------------------------------
+# The rule, now that both inputs exist
+# --------------------------------------------------------------------------
+
+
+def _pool(m_lump=0.0, m_scattered=0.0, m_unknown=0.0,
+          d_lump=0.0, d_scattered=0.0, d_unknown=0.0):
+    """One fungibility pool with its grain buckets, as services.py builds it."""
+    return {
+        "SPEECH": {
+            "merit": m_lump + m_scattered + m_unknown,
+            "demerit": d_lump + d_scattered + d_unknown,
+            "merit_by_grain": {"lump": m_lump, "scattered": m_scattered, "unknown": m_unknown},
+            "demerit_by_grain": {"lump": d_lump, "scattered": d_scattered, "unknown": d_unknown},
+        }
+    }
+
+
+def test_scattered_merit_does_not_discharge_a_lump_fault():
+    """The sentence, as arithmetic. 「零積之十功不能折一次之十過也」."""
+    reading = offset_within_classes(_pool(m_scattered=10, d_lump=10))
+
+    assert reading["by_class"]["SPEECH"]["offset"] == 0, (
+        "ten merits earned a fraction at a time discharged a fault worth ten at "
+        "a stroke — which is the sentence this rule is."
+    )
+    assert reading["unoffset_demerit"] == 10
+    assert reading["unusable_merit"] == 10
+    assert reading["granularity_applied"] is True
+
+
+def test_lump_merit_does_discharge_a_scattered_fault():
+    """The symmetry the text does NOT assert, and which is therefore not applied.
+
+    524a-style over-reading would forbid this too. 凡例 forbids one pairing —
+    scattered merit against a lump fault — and refusing the reverse would deny
+    an offset the source permits.
+    """
+    reading = offset_within_classes(_pool(m_lump=10, d_scattered=10))
+
+    assert reading["by_class"]["SPEECH"]["offset"] == 10
+    assert reading["unoffset_demerit"] == 0
+    assert reading["granularity_applied"] is False
+
+
+def test_scattered_merit_still_discharges_a_scattered_fault():
+    reading = offset_within_classes(_pool(m_scattered=10, d_scattered=10))
+    assert reading["by_class"]["SPEECH"]["offset"] == 10
+    assert reading["granularity_applied"] is False
+
+
+def test_a_ledger_with_no_granularity_recorded_nets_as_it_always_did():
+    """The property that let this ship without a backfill.
+
+    Every row written before souls/0028 is `unknown` on both sides, and unknown
+    is not evidence in either direction — so the reading for such a database is
+    bit-for-bit what it was.
+    """
+    reading = offset_within_classes(_pool(m_unknown=10, d_unknown=10))
+    assert reading["by_class"]["SPEECH"]["offset"] == 10
+    assert reading["granularity_applied"] is False
+
+
+def test_the_constrained_side_is_spent_first_so_the_result_is_order_independent():
+    """A pool holding both grains on both sides.
+
+    The waste this guards against is a lump merit consuming a scattered fault,
+    stranding the scattered merit in front of a lump fault it may not discharge.
+
+    WHAT THIS TEST CAN AND CANNOT TELL YOU, stated because the first version of
+    this docstring named one cause and there are two. `_offset_with_grain`
+    prevents the waste twice over — scattered merit is spent first, AND
+    unconstrained merit prefers lump faults — and mutation shows each alone is
+    sufficient: reversing only the outer order keeps this green, and reversing
+    only the inner preference keeps it green too. Both reversed together turns
+    it red. So this asserts the outcome and not either mechanism, and a reader
+    deleting one of them as duplication will see no failure here.
+    """
+    reading = offset_within_classes(_pool(m_lump=10, m_scattered=10, d_lump=10, d_scattered=10))
+
+    assert reading["by_class"]["SPEECH"]["offset"] == 20, (
+        "both faults are dischargeable — scattered merit against the scattered "
+        "fault, lump merit against the lump one — and only an unstated spending "
+        "order loses one of them."
+    )
+    assert reading["unoffset_demerit"] == 0
+    assert reading["granularity_applied"] is False
+
+
+def test_a_caller_that_supplies_no_buckets_gets_the_old_blind_netting():
+    """Backwards compatibility, asserted rather than assumed.
+
+    `class_totals` built before souls/0028 — or by anything that only cares
+    about pools — has two sums and no grain. That path must still net, or every
+    caller of this function outside the ledger summary breaks silently.
+    """
+    reading = offset_within_classes({"SPEECH": {"merit": 10.0, "demerit": 10.0}})
+    assert reading["by_class"]["SPEECH"]["offset"] == 10
+    assert reading["granularity_applied"] is False
+
+
+@pytest.mark.parametrize(
+    "clause,count,expected",
+    [
+        ("救濟門#7:賑濟窮民百錢", 1, "lump"),
+        ("救濟門#7:賑濟窮民百錢", 12, "scattered"),
+        ("救濟門#7:賑濟窮民百錢", None, "unknown"),
+        ("", 1, "unknown"),
+        ("", None, "unknown"),
+    ],
+)
+def test_granularity_needs_both_inputs_and_says_unknown_otherwise(clause, count, expected):
+    """A count with no clause is a number against no stated per-occasion value.
+
+    That is the invented marker each of the four refused proxies would have
+    been, so it reads as unknown rather than as a granularity.
+    """
+    record = SimpleNamespace(statute_clause=clause, occurrence_count=count)
+    assert granularity_of(record) == expected
