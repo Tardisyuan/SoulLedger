@@ -3,6 +3,7 @@ REST views for Judgment app.
 """
 import uuid
 
+from django.db.models import Count
 from django_filters import rest_framework as filters
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -11,7 +12,7 @@ from rest_framework.response import Response
 from apps.core.archive import DeletionNotAllowedError
 from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.tenant import scope_to_tenant
+from apps.core.tenant import scope_to_tenant, tenant_aggregate_filter
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.judgment.models import Judgment, Statute
 from apps.judgment.serializers import (
@@ -430,4 +431,52 @@ class StatuteViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSet
     serializer_class = StatuteSerializer
     filterset_fields = ["civilization", "corpus", "polarity", "code"]
     search_fields = ["code", "title_zh", "title_en", "text_zh", "text_en"]
-    ordering_fields = ["ordinal", "code"]
+    ordering_fields = ["ordinal", "code", "citation_count"]
+
+    def get_queryset(self):
+        """Scoped articles, each carrying how many times *this tenant* cited it.
+
+        The corpus browser ranks articles by how often they have actually been
+        relied on, which is the one number that separates a rulebook from a
+        list. It has to be an annotation: `JudgmentCitation` is a through-model
+        with its own rows, so there is nothing on `Statute` to read it from.
+
+        `super()` is `TenantQuerySetMixin`, so the article rows are scoped
+        through `apps/core/tenant.py` — `tests/test_tenant_scoping_contract.py`
+        walks every routed viewset and fails a tenant-bearing model whose
+        `get_queryset` does not. The annotation needs its own filter for a
+        reason that scoping the queryset does not cover: a reverse aggregate is
+        resolved against the relation, not through the related model's manager,
+        so a bare `Count("citations")` would report every tenant's citations on
+        a correctly-scoped row. `tenant_aggregate_filter` is that filter, kept
+        in the same module for the same reason the scoping is.
+
+        `distinct=True` because `filterset_fields`/`search_fields` can add a
+        join before the aggregate runs, and a multiplied join silently inflates
+        a COUNT rather than failing.
+
+        `order_by` restates `Statute.Meta.ordering` because **`annotate()` with
+        an aggregate discards it**. Django drops the model default rather than
+        let it join the GROUP BY, so the annotated queryset comes back with
+        `.ordered == False` and no ORDER BY in the SQL — measured, not assumed.
+        Un-ordered pagination is not a cosmetic warning: page 2 of the corpus
+        is computed from a fresh LIMIT/OFFSET over a set the database may order
+        differently each time, so articles repeat on one page and vanish from
+        another. With 175 rows and a browser that pages through them, that is
+        the whole feature. Keep this list identical to `Meta.ordering`;
+        `tests/test_judgment_statutes.py::TestCitationCount` pins the pair.
+        """
+        return (
+            super()
+            .get_queryset()
+            .annotate(
+                citation_count=Count(
+                    "citations",
+                    filter=tenant_aggregate_filter(
+                        self.request, field="citations__tenant"
+                    ),
+                    distinct=True,
+                )
+            )
+            .order_by(*Statute._meta.ordering)
+        )

@@ -156,3 +156,57 @@ def _model_has_field(model, name: str) -> bool:
     except FieldDoesNotExist:
         return False
     return True
+
+
+def tenant_aggregate_filter(request, *, field: str) -> "Q":
+    """A ``Q`` that narrows an *aggregate* to the same rows ``scope_to_tenant``
+    would return. Fails closed.
+
+    WHY THIS EXISTS SEPARATELY. ``scope_to_tenant`` narrows a queryset; it has
+    nothing to say about ``Count(..., filter=...)``, and that gap is not
+    cosmetic. A reverse aggregate is resolved by the ORM against the *relation*,
+    not through the related model's manager, so
+
+        Statute.objects.annotate(n=Count("citations"))
+
+    counts every tenant's citations on a statute row even when the statute
+    queryset itself is correctly scoped. The page renders one tenant's articles
+    with a number computed from all of them. Nothing raises, nothing is missing
+    from the response, and the leak is a single integer per row — which is
+    exactly the shape that survives review.
+
+    There is no ORM-level backstop to catch it either: ``TenantManager``
+    stopped filtering by tenant (see this module's header), so the annotation
+    has no second line of defence. The filter has to be written, and writing it
+    at each call site is how the copy-paste isolation gaps in this codebase
+    happened the first time. Hence: here, once.
+
+    Args:
+        request: the DRF/Django request, as for ``scope_to_tenant``.
+        field: the lookup path **from the annotated model** to ``Tenant``,
+            through the relation being aggregated — e.g. ``"citations__tenant"``
+            when annotating ``Statute`` over ``JudgmentCitation``. Required and
+            has no default on purpose: the correct path depends on the join
+            being counted, and a default would invite the wrong one.
+
+    Returns:
+        ``Q()`` — matches everything — for the one tenant-exempt role, so an
+        ADMIN's count matches the ADMIN's unscoped queryset. ``Q(pk__in=[])``
+        — matches nothing, so every count is 0 — for an unauthenticated user
+        and for a non-ADMIN with no resolvable tenant. Never an unfiltered
+        aggregate for someone who cannot see the rows.
+    """
+    from django.db.models import Q
+
+    user = getattr(request, "user", None)
+    if user is None or not getattr(user, "is_authenticated", False):
+        return Q(pk__in=[])
+
+    if is_tenant_exempt(user):
+        return Q()
+
+    tenant = getattr(request, "tenant", None)
+    if tenant is None:
+        return Q(pk__in=[])
+
+    return Q(**{field: tenant})
