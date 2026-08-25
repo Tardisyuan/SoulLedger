@@ -182,6 +182,63 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
     description = models.TextField(blank=True)
 
     # Karma summary (denormalised for performance, updated via signal/service)
+    # ── The two Inferno circles that are not about anything a soul DID ─────
+    #
+    # `SoulRecord.inferno_article` cites the corpus for deeds, which reaches
+    # seven of the nine circles. Two are not deed classifications and the
+    # corpus says so by carrying `aristotle: None` for both — Virgil's Inf. XI
+    # tripartition gives them no heading, because one is not a sin and the
+    # other is a belief.
+    #
+    # BOTH ARE FACTS ABOUT A PERSON, WHICH IS WHY THEY ARE HERE. On a record
+    # they would let two deeds of one soul disagree about whether that soul was
+    # baptised, which is not a thing that can be true.
+
+    #: Limbo (Inf. IV) holds "those who did not sin, and yet had merit" —
+    #: virtuous pagans who lived before Christ, and the unbaptised. Not a
+    #: punishment: Virgil is there himself. So this records whether baptism was
+    #: HAD, not whether it was refused, and NOT_APPLICABLE is for the souls
+    #: Dante puts there by era rather than by choice.
+    #:
+    #: UNRECORDED is the default and the only honest one for existing rows.
+    #: Nothing in this database has ever asked, and inferring it from a death
+    #: date would be inventing a baptismal record from a calendar.
+    class Baptism(models.TextChoices):
+        UNRECORDED = "UNRECORDED", "未记录"
+        BAPTISED = "BAPTISED", "已受洗"
+        UNBAPTISED = "UNBAPTISED", "未受洗"
+        BEFORE_CHRIST = "BEFORE_CHRIST", "生于基督之前"
+
+    baptism = models.CharField(
+        max_length=16, choices=Baptism.choices, default=Baptism.UNRECORDED,
+        help_text=(
+            "Whether this soul was baptised. Limbo (Inf. IV) is the only "
+            "circle this reaches, and it is not a punishment — Virgil is there. "
+            "UNRECORDED means nobody asked, which is every row written before "
+            "this column existed."
+        ),
+    )
+
+    #: Dante's heretics (Inf. IX-XI) are not the generally heterodox. They are
+    #: the Epicureans, "who with the body make the spirit die" (Inf. X.13-15,
+    #: Longfellow) — Farinata and Cavalcante are there for that specific claim.
+    #: `RecordCategory.BLASPHEMY` is NOT this: blasphemy is violence against
+    #: God, the third ring of the seventh circle (Inf. XIV), and reading one as
+    #: the other is the shape of the mistake 8308204 was withdrawn for.
+    #:
+    #: Named for the claim rather than for the label, so that "was this person
+    #: a heretic" — a question this system cannot answer and Dante does not ask
+    #: — never gets typed into it.
+    denied_immortality = models.BooleanField(
+        null=True, blank=True, default=None,
+        help_text=(
+            "Whether this soul held, in life, that the spirit dies with the "
+            "body (Inf. X.13-15) — the specific claim Dante's sixth circle "
+            "punishes. NOT a general heresy flag, and not blasphemy, which is "
+            "Inf. XIV. Null means unrecorded."
+        ),
+    )
+
     merit_score = models.IntegerField(default=0)
     demerit_score = models.IntegerField(default=0)
 

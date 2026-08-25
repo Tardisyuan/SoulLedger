@@ -143,6 +143,46 @@ class SoulRecord(AuditUserFields, models.Model):
         ),
     )
 
+    # ── Which circle of Dante's Hell this deed belongs to, if any ──────────
+    #
+    # `_route_european` sorts by culpa — a magnitude ladder — and its own
+    # docstring §3 says why: Dante does not layer Hell by how much wrong was
+    # done. Virgil states the basis at Inf. XI.79-84 as Aristotle's
+    # tripartition, and the wall of Dis is the poem's only real divider. The
+    # ladder could not be replaced because nothing recorded a KIND.
+    #
+    # This is that field, and it cites rather than classifies. `EU-INF-*` is a
+    # seeded corpus of 26 articles — the nine circles plus their seventeen
+    # subdivisions — carrying `circle`, `kind` (girone/bolgia/zona), `index`,
+    # the canto range, and the Aristotelian heading Virgil gives each. Citing
+    # `EU-INF-C8-B2` says "eighth circle, second bolgia"; citing
+    # `EU-INF-C9-Z1` says "Caina", which IS "treachery to kin". So the
+    # vocabulary is the poem's, read off the corpus, and no taxonomy is
+    # invented here.
+    #
+    # THAT DISTINCTION IS THE WHOLE POINT. docs/lore-verification/README.md §1
+    # says completing the missing categories is "the one repair that is
+    # certainly wrong", and 8308204 is what happened when it was tried — seven
+    # Purgatorio terraces fitted to nine Inferno circles, three of them to
+    # circles Dante gives them nowhere. A citation cannot make that mistake:
+    # an article either exists in the corpus or the write is refused.
+    #
+    # TWO CIRCLES ARE DELIBERATELY NOT REACHABLE THIS WAY, and the corpus says
+    # so itself by carrying `aristotle: None` for them. Limbo (C1) is not a sin
+    # — it holds virtuous pagans and the unbaptised — and heresy (C6) is a
+    # belief held in life rather than a deed done. Both are facts about a
+    # person, so they live on `Soul`; see `baptism` and `denied_immortality`
+    # there. A record citing either is refused on write.
+    inferno_article = models.CharField(
+        max_length=32, blank=True, default="",
+        help_text=(
+            "Which Inferno article this deed belongs under, as a Statute code "
+            "in the EU-INF-* corpus — e.g. 'EU-INF-C7-G1' (seventh circle, "
+            "first girone) or 'EU-INF-C9-Z1' (Caina). Blank means unclassified, "
+            "which leaves the European router on its culpa ladder for this deed."
+        ),
+    )
+
     is_milestone = models.BooleanField(
         default=False,
         help_text=(

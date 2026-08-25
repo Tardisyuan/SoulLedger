@@ -415,6 +415,27 @@ class DispositionService:
         if verdict == Verdict.PASSED:
             return cls.EU_HEAVEN
         if verdict == Verdict.FAILED:
+            # BY KIND WHERE THE KIND IS RECORDED, BY THE LADDER WHERE IT IS NOT.
+            #
+            # `SoulRecord.inferno_article` cites the seeded EU-INF-* corpus,
+            # which carries each article's circle. A soul with any classified
+            # deed is sorted by the GRAVEST circle its deeds cite, and that word
+            # is the poem's own arithmetic rather than a threshold invented
+            # here: Inf. XI.22-27 has fraud graver than violence "because it is
+            # a fault peculiar to man", and the order of the nine is the order
+            # of the descent. A soul who both killed and swindled is a swindler
+            # as far as the eighth circle is concerned.
+            #
+            # NOT a total replacement, deliberately. Every row written before
+            # souls/0029 is unclassified and falls through to the ladder below,
+            # exactly as before. Inferring a circle from `RecordCategory`
+            # instead would be the mapping the EU-INF corpus exists to avoid —
+            # that vocabulary is Chinese, mapped onto 功過格 gates, with no
+            # member for five of the nine circles.
+            deepest = cls._deepest_cited_circle(soul)
+            if deepest is not None:
+                return cls.EU_HELL_CIRCLES[deepest]
+
             # culpa / 15 → circle 1-9. A stopgap ladder on the right number,
             # not Dante's basis; see §2 and §3 above. culpa is a demerit total
             # and so is never negative — there is no magnitude to take and no
@@ -424,6 +445,58 @@ class DispositionService:
         # PURGATORY and RETRY: inconclusive verdict, soul waits regardless
         # of what the ledger says.
         return cls.EU_PURGATORY
+
+    @classmethod
+    def _deepest_cited_circle(cls, soul: Soul) -> int | None:
+        """The lowest circle any of this soul's DEMERIT deeds cites, or None.
+
+        Reads the circle off the cited Statute's payload rather than parsing it
+        out of the code. `EU-INF-C8-B2` looks like it says 8, and it does — but
+        a parser that believed the string would be a second reader of a fact the
+        corpus already states, and the two would be free to disagree the first
+        time a code is renamed. `apps/actors/mythology/statutes_inferno.py`
+        writes `circle` into `payload_json` for exactly this.
+
+        MERIT RECORDS ARE NOT CONSULTED. Dante's circles hold the damned;
+        `apps/ledger/readings.py` already rules for this cosmology that a good
+        deed does not retire a sin, and letting a cited merit pull a soul upward
+        would be that netting under another name.
+
+        LIMBO AND HERESY ARE NOT REACHABLE HERE, which is not an oversight —
+        their articles carry `aristotle: None` because Virgil's tripartition at
+        Inf. XI gives them no heading. They are facts about a person, not about
+        a deed; see `Soul.baptism` and `Soul.denied_immortality`. A record
+        citing either is refused on write, so this never has to decide what to
+        do with one.
+        """
+        from apps.judgment.models import Statute
+
+        # `_route_european` is called with soul=None by callers that have a
+        # culpa figure and no row — apps/disposition/tests.py does it directly
+        # to exercise the ladder at chosen totals. Found by that suite going
+        # red, not by reading: a soul is where the citations live, so no soul
+        # is no citation and the ladder answers, which is what those callers
+        # were already asking for.
+        if soul is None:
+            return None
+
+        codes = [
+            code
+            for code in soul.records.filter(record_type="DEMERIT").values_list(
+                "inferno_article", flat=True
+            )
+            if code
+        ]
+        if not codes:
+            return None
+        circles = [
+            circle
+            for circle in Statute.all_objects.filter(code__in=codes).values_list(
+                "payload_json__circle", flat=True
+            )
+            if isinstance(circle, int)
+        ]
+        return max(circles) if circles else None
 
     @classmethod
     def _route_egyptian(

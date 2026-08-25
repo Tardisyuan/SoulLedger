@@ -42,7 +42,10 @@ three sins is the one repair that is certainly wrong." `8308204` is what happene
 the last time it was tried — seven sins fitted to nine circles, three of them to
 circles Dante gives them nowhere, one punishment invented outright.
 """
+import io
+
 import pytest
+from django.core.management import call_command
 
 from apps.actors.mythology import EUROPEAN_STATUTES, INFERNO_STATUTES
 from apps.disposition.services import DispositionService
@@ -416,3 +419,192 @@ def test_the_european_corpora_are_citable_text_and_still_route_nothing():
             f"_route_european §3 before wiring it up, and delete these tests on "
             f"purpose if it is real."
         )
+
+
+# --------------------------------------------------------------------------
+# The half that is no longer a contradiction: routing by kind, where a kind is
+# recorded. The CONTRADICTION tests above still pass, and that is the design —
+# they describe an UNCLASSIFIED soul, which is every soul written before
+# souls/0029 and every soul nobody has classified since.
+# --------------------------------------------------------------------------
+
+VIOLENCE_ARTICLE = "EU-INF-C7"
+FRAUD_ARTICLE = "EU-INF-C8"
+CAINA = "EU-INF-C9-Z1"
+LIMBO_ARTICLE = "EU-INF-C1"
+HERESY_ARTICLE = "EU-INF-C6"
+VIOLENCE = DispositionService.EU_HELL_CIRCLES[7]
+
+
+@pytest.fixture
+def seeded_corpus(db):
+    """The EU-INF articles have to exist for a citation to resolve."""
+    call_command("seed_mythology", stdout=io.StringIO(), stderr=io.StringIO())
+
+
+def _cite(soul, category, article, weight=KILLING_POINTS):
+    record = _record(soul, "DEMERIT", category, weight, f"cited {article}")
+    SoulRecord.all_objects.filter(pk=record.pk).update(inferno_article=article)
+    return record
+
+
+def test_the_corpus_carries_the_articles_these_tests_cite(seeded_corpus):
+    """Guard for the guard. Every assertion below is about a citation
+    resolving; if the corpus stopped carrying these codes they would all be
+    asserting that an unresolvable citation falls back to the ladder, which is
+    a different claim and a passing one."""
+    from apps.judgment.models import Statute
+
+    for code, circle in [
+        (VIOLENCE_ARTICLE, 7), (FRAUD_ARTICLE, 8), (CAINA, 9),
+        (LIMBO_ARTICLE, 1), (HERESY_ARTICLE, 6),
+    ]:
+        statute = Statute.all_objects.filter(code=code).first()
+        assert statute is not None, f"{code} is not seeded"
+        assert (statute.payload_json or {}).get("circle") == circle, code
+
+
+@pytest.mark.django_db
+def test_violence_and_fraud_of_equal_weight_now_land_in_different_circles(
+    make_european_soul, seeded_corpus
+):
+    """Inf. XI puts these two on opposite sides of Dis, and now so does this.
+
+    The contradiction test of the same name above still passes, because it
+    weighs two UNCLASSIFIED deeds. This is the same pair with the kind
+    recorded, and it is the whole point of the field: same weight, different
+    circle, because Dante divides malizia into violence and fraud rather than
+    into more and less.
+    """
+    killer = make_european_soul("violent")
+    swindler = make_european_soul("fraudulent")
+    with SoulRecord.batch():
+        _cite(killer, RecordCategory.MURDER, VIOLENCE_ARTICLE)
+        _cite(swindler, RecordCategory.DECEPTION, FRAUD_ARTICLE)
+    killer.refresh_from_db()
+    swindler.refresh_from_db()
+
+    assert killer.demerit_score == swindler.demerit_score, (
+        "the weights differ, so this would prove nothing about kind"
+    )
+    assert DispositionService._route_to_realm(killer, Verdict.FAILED) == VIOLENCE
+    assert DispositionService._route_to_realm(swindler, Verdict.FAILED) == FRAUD
+
+
+@pytest.mark.django_db
+def test_a_petty_fraud_and_a_grave_one_land_in_the_same_circle(
+    make_european_soul, seeded_corpus
+):
+    """The other contradiction, inverted. Both belong in Malebolge and nowhere
+    else; the ladder sent the small one to Limbo, which is not a punishment."""
+    petty = make_european_soul("petty swindler")
+    grave = make_european_soul("grave swindler")
+    with SoulRecord.batch():
+        _cite(petty, RecordCategory.DECEPTION, FRAUD_ARTICLE, weight=1)
+        _cite(grave, RecordCategory.DECEPTION, FRAUD_ARTICLE, weight=BAND * 8)
+    petty.refresh_from_db()
+    grave.refresh_from_db()
+
+    assert DispositionService._route_to_realm(petty, Verdict.FAILED) == FRAUD
+    assert DispositionService._route_to_realm(grave, Verdict.FAILED) == FRAUD
+
+
+@pytest.mark.django_db
+def test_the_gravest_cited_circle_wins(make_european_soul, seeded_corpus):
+    """A soul who both killed and swindled is a swindler as far as the eighth
+    circle is concerned — Inf. XI.22-27 has fraud the graver, "because it is a
+    fault peculiar to man". The rule is the poem's ordering, not a threshold
+    invented here."""
+    both = make_european_soul("both")
+    with SoulRecord.batch():
+        _cite(both, RecordCategory.MURDER, VIOLENCE_ARTICLE)
+        _cite(both, RecordCategory.DECEPTION, FRAUD_ARTICLE)
+    both.refresh_from_db()
+
+    assert DispositionService._route_to_realm(both, Verdict.FAILED) == FRAUD
+
+
+@pytest.mark.django_db
+def test_a_zone_of_cocytus_names_the_trust_that_was_betrayed(
+    make_european_soul, seeded_corpus
+):
+    """Treachery is not a deed type but a relationship betrayed — kin, country,
+    guest, benefactor. `test_nothing_in_this_system_classifies_a_sin_the_way_
+    dante_does` says no amount of categorising deeds produces it, and that is
+    still true: what produces it is CITING the zone, whose own title is
+    "Caina — Treachery to Kin". The vocabulary is the poem's."""
+    traitor = make_european_soul("traitor")
+    with SoulRecord.batch():
+        _cite(traitor, RecordCategory.DECEPTION, CAINA)
+    traitor.refresh_from_db()
+
+    assert DispositionService._route_to_realm(traitor, Verdict.FAILED) == TREACHERY
+
+
+@pytest.mark.django_db
+def test_an_unclassified_soul_still_takes_the_culpa_ladder(
+    make_european_soul, seeded_corpus
+):
+    """The compatibility half, asserted rather than assumed. Every row written
+    before souls/0029 is unclassified, and inferring a circle from
+    `RecordCategory` would be the mapping the EU-INF corpus exists to avoid."""
+    unclassified = make_european_soul("unclassified")
+    with SoulRecord.batch():
+        _fraud(unclassified, weight=1)
+    unclassified.refresh_from_db()
+
+    assert DispositionService._route_to_realm(unclassified, Verdict.FAILED) == LIMBO, (
+        "an unclassified petty fraud should still take the ladder — including "
+        "to Limbo, which is the contradiction the ladder has and the citation "
+        "path does not"
+    )
+
+
+@pytest.mark.django_db
+def test_merit_citations_do_not_pull_a_soul_upward(make_european_soul, seeded_corpus):
+    """Dante's circles hold the damned. `apps/ledger/readings.py` rules for this
+    cosmology that a good deed does not retire a sin; letting a cited MERIT
+    change where a soul lands would be that netting under another name.
+
+    THE MERIT CITES A DEEPER CIRCLE THAN THE SIN, AND THAT IS THE POINT. The
+    first version of this test gave the merit circle 7 against a demerit in
+    circle 8 — and `max()` would have discarded it anyway, so removing the
+    DEMERIT filter entirely left the test green. It was asserting a result the
+    arithmetic produced for a different reason, which is the shape of a test
+    that has data it cannot fail on. Citing Caina (circle 9) on the merit means
+    only the filter can keep it out.
+    """
+    soul = make_european_soul("mixed")
+    with SoulRecord.batch():
+        _cite(soul, RecordCategory.DECEPTION, FRAUD_ARTICLE)
+        merit = _record(soul, "MERIT", RecordCategory.CHARITY, ALMS_POINTS, "alms")
+        SoulRecord.all_objects.filter(pk=merit.pk).update(inferno_article=CAINA)
+    soul.refresh_from_db()
+
+    assert DispositionService._route_to_realm(soul, Verdict.FAILED) == FRAUD, (
+        "a cited MERIT reached the router — a good deed moved a damned soul, "
+        "which is the netting apps/ledger/readings.py rules out for this "
+        "cosmology by name"
+    )
+
+
+@pytest.mark.parametrize("article,circle", [(LIMBO_ARTICLE, 1), (HERESY_ARTICLE, 6)])
+@pytest.mark.django_db
+def test_a_deed_may_not_cite_a_circle_that_is_not_about_deeds(
+    seeded_corpus, article, circle
+):
+    """Limbo and heresy carry `aristotle: None` in the corpus — Virgil's
+    tripartition gives them no heading, because one is not a sin and the other
+    is a belief. Accepting either here would let a deed sort a soul into Limbo,
+    which is the contradiction the ladder already has."""
+    from apps.souls.serializers import SoulRecordSerializer
+
+    serializer = SoulRecordSerializer(data={
+        "record_type": "DEMERIT",
+        "category": RecordCategory.DECEPTION,
+        "description": "x",
+        "weight": 10,
+        "inferno_article": article,
+    })
+    assert not serializer.is_valid(), f"{article} (circle {circle}) was accepted"
+    assert "inferno_article" in serializer.errors, serializer.errors
