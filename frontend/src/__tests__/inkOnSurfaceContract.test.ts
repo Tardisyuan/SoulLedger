@@ -1,0 +1,386 @@
+/**
+ * Every ink token measured against every surface token — per tenant, per theme.
+ *
+ * ── WHY THIS WAS MISSING FOR SO LONG ──────────────────────────────────────
+ * globals.css already carries per-token contrast figures in its comments
+ * (`--color-ink-tertiary` "4.91:1", `--color-civ-mark-gr` "7.78:1",
+ * `--color-accent-ink` "4.83:1"). Every one of them is a single number, and a
+ * single number is not what the stylesheet produces. `--color-surface-1..4`
+ * are declared as `var(--civ-hue) 13% 7%`, and the `[data-civ]` rules point
+ * `--civ-hue` at a different degree per tenant, so the real answer is one
+ * figure per (theme × tenant × surface × ink) — 128 of them today. The
+ * comments record the best case of each family and read as if they were the
+ * whole answer.
+ *
+ * `dataGridToneContract` measures badge INK on a tinted badge FILL, and
+ * `civilizationColourContract` measures how far apart two tenants' surfaces
+ * are. Nothing measured ink against the surface it sits on. That is the gap
+ * this file closes.
+ *
+ * ── WHAT IT ASSERTS ───────────────────────────────────────────────────────
+ * Every combination either clears WCAG AA for normal text (4.5:1) or appears
+ * in `BELOW_AA` below with the ratio it actually measures. The failing set is
+ * compared to that table as an EXACT SET, so it is red in both directions:
+ * a NEW combination dropping under AA is red, and a recorded one being fixed
+ * is red until its line is deleted. The recorded ratio is checked too, so a
+ * token nudged from 3.99 to 4.20 — still failing, differently — has to be
+ * re-recorded rather than drifting away from what this file claims.
+ *
+ * ── WHAT IT DOES NOT COVER, said plainly ──────────────────────────────────
+ *   - The NEUTRAL fallback. With no `[data-civ]` attribute (logged out, or a
+ *     tenant this deployment maps to no cosmology) `--civ-hue` stays at 240,
+ *     and that state is not in this matrix — the axis here is the tenants
+ *     `src/config/civilizations.ts` declares. Measured by hand while writing
+ *     this file, the fallback fails in exactly the same eight light-mode
+ *     places the four tenants do, at 3.43-3.99 and 2.40-2.79; it introduces
+ *     no new shape, which is why it is a note rather than eight more rows.
+ *   - Large text (3:1) and non-text (3:1). Every ratio here is judged against
+ *     the 4.5:1 normal-text floor, which is the stricter claim; a heading
+ *     rendered at 24px in a recorded combination may in fact be compliant.
+ *   - Ink over a TINT rather than over a bare surface — a badge, a hover
+ *     state, a selected row. That is `dataGridToneContract`'s subject.
+ *   - Which surface each ink is actually PAINTED on. This measures the whole
+ *     matrix, including pairs no screen renders. A recorded row is a fact
+ *     about the tokens, not proof that a user hit it.
+ *
+ * No DOM, no browser: the stylesheet is parsed by `./support/globalsCssTokens`
+ * — the one parser — and the WCAG formulas live there too.
+ */
+import {
+  CIV_PREFIXES,
+  LIGHT_TOKENS,
+  ROOT_TOKENS,
+  SURFACE_TOKENS,
+  THEMES,
+  contrastRatio,
+  hslTripleToRgb,
+  readCivAttrRules,
+  resolveRampForCiv,
+  suffixesOf,
+  type ThemeName,
+} from "./support/globalsCssTokens";
+
+/** WCAG 2.x AA for normal-size text. */
+const AA_NORMAL_TEXT = 4.5;
+
+/**
+ * The ink family, derived rather than listed: the bare `--color-ink` plus
+ * every `--color-ink-*` the stylesheet declares. A fifth ink token joins the
+ * matrix without anyone editing this file — which is the whole point, because
+ * the token that would be added is by definition a dimmer one.
+ */
+const INK_TOKENS: string[] = [
+  "--color-ink",
+  ...suffixesOf(ROOT_TOKENS, "--color-ink").map((suffix) => `--color-ink-${suffix}`),
+];
+
+interface Combo {
+  key: string;
+  theme: ThemeName;
+  civ: string;
+  surface: string;
+  ink: string;
+  ratio: number;
+}
+
+/**
+ * The full matrix, built eagerly.
+ *
+ * `resolveRampForCiv` throws on a token it cannot resolve — an unknown civ
+ * prefix, a dangling `var()`, a triple that is not `H S% L%`. That throw is
+ * deliberate and it is why no case below has an escape hatch in it: a
+ * combination that cannot be measured fails the whole file loudly at import,
+ * rather than becoming a case that returns early and reports green.
+ */
+function buildMatrix(): Combo[] {
+  const out: Combo[] = [];
+  for (const theme of THEMES) {
+    for (const civ of CIV_PREFIXES) {
+      for (const surface of SURFACE_TOKENS) {
+        for (const ink of INK_TOKENS) {
+          const surfaceRgb = hslTripleToRgb(resolveRampForCiv(theme, civ, surface));
+          const inkRgb = hslTripleToRgb(resolveRampForCiv(theme, civ, ink));
+          out.push({
+            key: `${theme} ${civ} ${surface} ${ink}`,
+            theme,
+            civ,
+            surface,
+            ink,
+            ratio: contrastRatio(inkRgb, surfaceRgb),
+          });
+        }
+      }
+    }
+  }
+  return out;
+}
+
+const MATRIX = buildMatrix();
+
+/** The failing half of the matrix, as `{key: measured ratio}`. */
+function measuredBelowAA(): Record<string, number> {
+  return Object.fromEntries(
+    MATRIX.filter((c) => c.ratio < AA_NORMAL_TEXT).map((c) => [c.key, c.ratio])
+  );
+}
+
+/**
+ * Every combination that is under AA today, with the ratio it measures.
+ *
+ * ── THIS IS A RECORD, NOT A PERMISSION ────────────────────────────────────
+ * Nothing here is fixed by this file, on purpose. `--color-ink-subtle` is
+ * named 225 times across the frontend and `--color-ink-tertiary` 20 times
+ * (counted with, from `frontend/`:
+ *
+ *   grep -rIohE --include='*.ts' --include='*.tsx' --include='*.css' \
+ *     --exclude-dir='__tests__' -- \
+ *     '(--color-|(text|bg|border|placeholder|fill|stroke|ring|divide|decoration|caret|accent|outline|from|via|to)-)ink(-muted|-subtle|-tertiary)?' \
+ *     app components lib src | sed -E 's/^(--color-|[a-z]+-)//' | sort | uniq -c
+ *
+ * which gives ink 478 / ink-muted 370 / ink-subtle 225 / ink-tertiary 20 at
+ * the commit this file was added; the ink-tertiary figure includes its two
+ * declarations in globals.css and three mentions in prose, so ~15 are real
+ * uses. Both spellings are counted because tailwind.config.js aliases the
+ * family, so half the uses never name the custom property at all — a count of
+ * `--color-ink-subtle` alone reads about a third of the truth.)
+ *
+ * Raising `--color-ink-subtle`'s lightness repaints 225 places. Which of
+ * these combinations should be fixed by darkening a token, which by moving a
+ * caller onto a lighter ink, and which are pairs no screen actually renders,
+ * is the owner's call and it is a design decision, not a token tweak. What
+ * this file guarantees is that the decision is taken deliberately: the set
+ * cannot grow silently, and it cannot shrink silently either.
+ *
+ * ── THE THREE DARK ROWS ───────────────────────────────────────────────────
+ * `--color-ink-tertiary` on the two darkest tenants' upper surfaces. The
+ * comment on that token in globals.css says "this is the surface-1 figure
+ * only (4.91:1)... nothing dimmer than this exists — use ink-subtle above
+ * surface-1", so the rule is already written down; these three rows are where
+ * the ramp's own per-tenant hue pushes it under AA anyway. Egyptian (44°) and
+ * Greek (88°) are the warm hues, and a warm hue at 11% saturation lifts the
+ * surface's luminance slightly more than a blue one — which is why cn (12°)
+ * and eu (232°) clear it on the same surfaces and these two do not.
+ *
+ * The external audit that prompted this file named only `dark eg surface-4`
+ * (as "4.41"). It missed both Greek rows entirely. That is the reason every
+ * figure below was re-measured here rather than copied.
+ *
+ * ── THE THIRTY-TWO LIGHT ROWS ─────────────────────────────────────────────
+ * The whole of `--color-ink-subtle` and `--color-ink-tertiary`, on every
+ * surface, for every tenant. Not a per-tenant defect: the tenant hue moves
+ * these by ~0.06 of a ratio point, so the spread across all four is narrower
+ * than the gap to AA. `--color-ink-subtle` in light mode is `220 8% 50%` and
+ * needs to be near 42% to clear 4.5:1 on surface-4; `--color-ink-tertiary` at
+ * 60% is not close at any surface. They are enumerated per tenant rather than
+ * collapsed to "the light-mode pair" because the matrix is what is asserted,
+ * and collapsing would hide the day a tenant hue diverges enough to matter.
+ */
+const BELOW_AA: Record<string, number> = {
+  "dark eg --color-surface-4 --color-ink-tertiary": 4.4047,
+  "dark gr --color-surface-3 --color-ink-tertiary": 4.4971,
+  "dark gr --color-surface-4 --color-ink-tertiary": 4.3649,
+  "light cn --color-surface-1 --color-ink-subtle": 3.9989,
+  "light cn --color-surface-1 --color-ink-tertiary": 2.793,
+  "light cn --color-surface-2 --color-ink-subtle": 3.8257,
+  "light cn --color-surface-2 --color-ink-tertiary": 2.6721,
+  "light cn --color-surface-3 --color-ink-subtle": 3.6666,
+  "light cn --color-surface-3 --color-ink-tertiary": 2.561,
+  "light cn --color-surface-4 --color-ink-subtle": 3.4799,
+  "light cn --color-surface-4 --color-ink-tertiary": 2.4305,
+  "light eg --color-surface-1 --color-ink-subtle": 4.0236,
+  "light eg --color-surface-1 --color-ink-tertiary": 2.8103,
+  "light eg --color-surface-2 --color-ink-subtle": 3.8498,
+  "light eg --color-surface-2 --color-ink-tertiary": 2.6889,
+  "light eg --color-surface-3 --color-ink-subtle": 3.7137,
+  "light eg --color-surface-3 --color-ink-tertiary": 2.5938,
+  "light eg --color-surface-4 --color-ink-subtle": 3.5483,
+  "light eg --color-surface-4 --color-ink-tertiary": 2.4783,
+  "light eu --color-surface-1 --color-ink-subtle": 3.9891,
+  "light eu --color-surface-1 --color-ink-tertiary": 2.7862,
+  "light eu --color-surface-2 --color-ink-subtle": 3.8115,
+  "light eu --color-surface-2 --color-ink-tertiary": 2.6621,
+  "light eu --color-surface-3 --color-ink-subtle": 3.6248,
+  "light eu --color-surface-3 --color-ink-tertiary": 2.5318,
+  "light eu --color-surface-4 --color-ink-subtle": 3.4575,
+  "light eu --color-surface-4 --color-ink-tertiary": 2.4149,
+  "light gr --color-surface-1 --color-ink-subtle": 4.0411,
+  "light gr --color-surface-1 --color-ink-tertiary": 2.8225,
+  "light gr --color-surface-2 --color-ink-subtle": 3.8668,
+  "light gr --color-surface-2 --color-ink-tertiary": 2.7008,
+  "light gr --color-surface-3 --color-ink-subtle": 3.7233,
+  "light gr --color-surface-3 --color-ink-tertiary": 2.6006,
+  "light gr --color-surface-4 --color-ink-subtle": 3.5577,
+  "light gr --color-surface-4 --color-ink-tertiary": 2.4849,
+};
+
+describe("the matrix is the matrix we think it is", () => {
+  it("measures every theme, tenant, surface and ink — and the product of the four", () => {
+    // The floor for the whole file. Every assertion below is either a set
+    // comparison or an `it.each` over MATRIX, and both are vacuously green on
+    // an empty list. The lists come from four independent derivations, so an
+    // exact product is asserted as well as a floor: a surface silently
+    // dropping out of `SURFACE_TOKENS` would halve the matrix without moving
+    // the failing set, because the rows it removes all pass.
+    expect(THEMES.length).toBe(2);
+    expect(CIV_PREFIXES.length).toBeGreaterThanOrEqual(4);
+    expect(SURFACE_TOKENS.length).toBeGreaterThanOrEqual(4);
+    expect(INK_TOKENS.length).toBeGreaterThanOrEqual(4);
+    expect(MATRIX.length).toBe(
+      THEMES.length * CIV_PREFIXES.length * SURFACE_TOKENS.length * INK_TOKENS.length
+    );
+    expect(MATRIX.length).toBeGreaterThanOrEqual(128);
+    expect(new Set(MATRIX.map((c) => c.key)).size).toBe(MATRIX.length);
+  });
+
+  it("derives the ink family from the stylesheet, bare token included", () => {
+    // `suffixesOf` only sees `--color-ink-*`; the bare `--color-ink` has no
+    // suffix and would be silently absent from a family derived by prefix
+    // alone. It is the ink most of the app is painted in — 478 of the 1093
+    // ink references — so its absence would be the loudest possible hole in a
+    // matrix that reported "no failures".
+    expect(ROOT_TOKENS["--color-ink"]).toBeDefined();
+    expect(INK_TOKENS).toContain("--color-ink");
+    expect(INK_TOKENS.length).toBe(suffixesOf(ROOT_TOKENS, "--color-ink").length + 1);
+    // And nothing that merely CONTAINS "ink" got swept in: `--color-accent-ink`
+    // is a text/link colour, not a member of the ramp's ink family.
+    expect(INK_TOKENS).not.toContain("--color-accent-ink");
+  });
+
+  it("gives every tenant a rule that actually retints the ramp", () => {
+    // Without this the matrix is a lie of the exact shape GREEK already shipped
+    // once: `resolveRampForCiv` reads `--color-civ-hue-gr` whether or not any
+    // rule feeds it into `--civ-hue`, so a tenant with tokens and no
+    // `[data-civ]` rule would be measured on a surface no user ever sees. It
+    // fails here rather than being skipped, because a tenant that cannot be
+    // resolved is the finding, not an excused case.
+    const rules = readCivAttrRules();
+    for (const prefix of CIV_PREFIXES) {
+      expect(rules[prefix]).toBeDefined();
+      expect(rules[prefix].hue).toBe(`--color-civ-hue-${prefix}`);
+    }
+  });
+
+  it("resolves a different surface per tenant, so the tenant axis is real", () => {
+    // The guard for the guard above. If `resolveRampForCiv` ever stopped
+    // substituting `--civ-hue`, all four tenants would collapse onto the
+    // neutral fallback, the matrix would still be 128 rows long, and the
+    // failing set would still match the table — because these tokens fail on
+    // every hue. Four identical rows repeated is the failure mode a row count
+    // cannot see.
+    for (const theme of THEMES) {
+      const resolved = SURFACE_TOKENS.map((surface) =>
+        CIV_PREFIXES.map((civ) => resolveRampForCiv(theme, civ, surface))
+      );
+      for (const perCiv of resolved) {
+        expect(new Set(perCiv).size).toBe(CIV_PREFIXES.length);
+      }
+    }
+  });
+
+  it("has a light-mode value of its own for every ink and every surface", () => {
+    // `LIGHT_TOKENS` is the RAW `.light` block, not the effective cascade. A
+    // token `.light` forgets to redeclare keeps its DARK value under a white
+    // canvas — near-white ink on a near-white surface — and the measurement
+    // below would faithfully report that as a failure without ever saying why.
+    // Naming the cause here means the diagnosis is one line, not an
+    // investigation.
+    for (const token of [...INK_TOKENS, ...SURFACE_TOKENS]) {
+      expect(LIGHT_TOKENS[token]).toBeDefined();
+    }
+  });
+});
+
+describe("ink on surface clears AA, or is recorded with the ratio it measures", () => {
+  it.each(MATRIX.map((c) => [c.key, c] as [string, Combo]))("%s", (_key, combo) => {
+    const recorded = BELOW_AA[combo.key];
+    if (recorded === undefined) {
+      expect(combo.ratio).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    } else {
+      // Both halves asserted. The first pins the figure this file publishes —
+      // a token nudged so the ratio moves but still fails has to be
+      // re-measured, not left claiming a number it no longer produces. The
+      // second is the absence half: a row cannot sit in the exception table
+      // while quietly passing.
+      expect(combo.ratio).toBeCloseTo(recorded, 2);
+      expect(combo.ratio).toBeLessThan(AA_NORMAL_TEXT);
+    }
+  });
+
+  it("the combinations under AA are exactly the ones recorded", () => {
+    // The set comparison the per-case assertions cannot make: a recorded key
+    // that names no combination in the matrix — a typo, a renamed token, a
+    // civilization removed — is invisible to `it.each` over MATRIX, because
+    // nothing iterates it.
+    expect(Object.keys(measuredBelowAA()).sort()).toEqual(Object.keys(BELOW_AA).sort());
+  });
+
+  it("the two inks the app is mostly written in fail nowhere", () => {
+    // Said separately from the set comparison because these are the two that
+    // matter most and a reader should not have to diff two lists to see it.
+    // `--color-ink` and `--color-ink-muted` are 848 of the 1093 ink references;
+    // if either ever drops under AA on any surface, on any tenant, in either
+    // theme, that should be a named failure rather than a new line appearing
+    // in a 35-row table.
+    const failing = Object.keys(measuredBelowAA());
+    expect(failing.filter((key) => key.endsWith(" --color-ink"))).toEqual([]);
+    expect(failing.filter((key) => key.endsWith(" --color-ink-muted"))).toEqual([]);
+  });
+
+  it("records nothing that is comfortably passing, and nothing impossible", () => {
+    // Keeps the table from turning into scenery in the other direction: every
+    // recorded ratio has to be a plausible sub-AA measurement. A `0` or a `21`
+    // pasted in by hand would still satisfy the per-case `toBeCloseTo` only if
+    // the measurement agreed, but this says the intent out loud.
+    for (const [key, ratio] of Object.entries(BELOW_AA)) {
+      expect(ratio).toBeGreaterThan(1);
+      expect(ratio).toBeLessThan(AA_NORMAL_TEXT);
+      expect(MATRIX.some((c) => c.key === key)).toBe(true);
+    }
+    expect(Object.keys(BELOW_AA).length).toBeGreaterThan(0);
+  });
+});
+
+describe("the WCAG helpers this file imports", () => {
+  // `contrastRatio` and `relativeLuminance` were added to the support module
+  // by this pass. A formula nobody checked would make every number above a
+  // confident fiction, and the whole table is only as good as these four
+  // lines.
+  it("reproduces the reference black-on-white ratio", () => {
+    expect(contrastRatio([0, 0, 0], [255, 255, 255])).toBeCloseTo(21, 5);
+  });
+
+  it("returns 1 for a colour against itself, in both argument orders", () => {
+    expect(contrastRatio([18, 52, 86], [18, 52, 86])).toBeCloseTo(1, 10);
+    const a: [number, number, number] = [10, 200, 30];
+    const b: [number, number, number] = [240, 12, 90];
+    expect(contrastRatio(a, b)).toBeCloseTo(contrastRatio(b, a), 10);
+  });
+
+  it("reproduces the published reference grey", () => {
+    // #767676 on white is 4.54:1 — the canonical "dimmest grey that still
+    // passes AA on white", quoted in every contrast tool there is. An anchor
+    // from OUTSIDE this repository, so the helpers cannot be self-consistently
+    // wrong: everything else here is measured by the same four lines being
+    // checked.
+    expect(contrastRatio([118, 118, 118], [255, 255, 255])).toBeCloseTo(4.54, 2);
+  });
+
+  it("agrees with a figure globals.css states about itself", () => {
+    // The stylesheet says `--color-accent` "measures 2.14:1 for text against
+    // light-mode white". `--color-canvas` in `.light` IS white, so that is a
+    // claim this file can check rather than take on trust — and it ties the
+    // helpers to a number a human measured with a different tool.
+    //
+    // Its neighbour `--color-accent-ink` carries a similar claim ("4.83:1")
+    // that does NOT reproduce: at the 34% lightness the token now declares it
+    // measures 5.05:1, and 4.83 is the figure for 35%. That one is left
+    // unasserted here rather than pinned to 5.05, because the token is not
+    // this file's subject and pinning a neighbour's ratio would make an
+    // unrelated retune fail in the wrong file. It is flagged, not adopted.
+    const ratio = contrastRatio(
+      hslTripleToRgb(LIGHT_TOKENS["--color-accent"]),
+      hslTripleToRgb(LIGHT_TOKENS["--color-canvas"])
+    );
+    expect(ratio).toBeCloseTo(2.14, 1);
+  });
+});

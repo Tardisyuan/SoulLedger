@@ -355,7 +355,6 @@ PRESET_NODES_THAT_NAME_NO_ACTOR = frozenset({
     "阿鼻地狱入狱",
     "功德核定",
     "轮回分流",
-    "功德评定",
     "紧急受理",
     "申诉受理",
     # 埃及

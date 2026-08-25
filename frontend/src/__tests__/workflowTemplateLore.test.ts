@@ -52,7 +52,11 @@ describe("Egyptian templates: Osiris judges in the Hall of Two Truths", () => {
   it("covers every Egyptian template, so a sixth one cannot slip past", () => {
     // All five were wrong at once. If a template is added, this count fails
     // and whoever adds it has to decide where its Osiris sits.
-    expect(egyptian).toHaveLength(5);
+    expect(egyptian).// EGYPTIAN_AFTERLIFE 已合并进 EGYPTIAN_ROUTINE:埃及文献里没有独立于称心之外的
+    // 「按功德分流」仪轨,它的地点与两个结局逐项就是称心的(Budge《亚尼纸草》1895
+    // 图版 III–IV;docs/lore-verification/verify-egyptian.md §3.3)。两套同文明同
+    // case_type,`.first()` 只取得到一套,另一套在界面上可见而永远路由不到。
+    toHaveLength(4);
   });
 
   it.each(egyptian)("%s seats every Osiris node in the Hall", (_key, template) => {

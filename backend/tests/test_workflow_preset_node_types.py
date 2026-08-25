@@ -251,7 +251,8 @@ def test_the_preset_file_parses_into_every_node_it_contains():
     presets = _presets()
     parsed = sum(len(preset["nodes"]) for preset in presets.values())
 
-    assert len(presets) == 17, f"parsed {len(presets)} presets: {sorted(presets)}"
+    # EGYPTIAN_AFTERLIFE 已合并进 EGYPTIAN_ROUTINE（它是同一次称心的低分辨率写法，Budge《亚尼纸草》1895 图版 III–IV），17→16。
+    assert len(presets) == 16, f"parsed {len(presets)} presets: {sorted(presets)}"
     assert parsed == len(_ORDER.findall(_read(PRESETS_TS))), (
         f"{parsed} node literals matched but "
         f"{len(_ORDER.findall(_read(PRESETS_TS)))} `order:` values are present "

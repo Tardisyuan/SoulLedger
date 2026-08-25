@@ -317,7 +317,8 @@ def test_every_preset_saves_through_the_api(seeded):  # noqa: F811  (imported fi
     }
 
     presets = _presets()
-    assert len(presets) == 17, f"parsed {len(presets)} presets, not 17"
+    # EGYPTIAN_AFTERLIFE 已合并进 EGYPTIAN_ROUTINE（它是同一次称心的低分辨率写法，Budge《亚尼纸草》1895 图版 III–IV），17→16。
+    assert len(presets) == 16, f"parsed {len(presets)} presets, not 16"
 
     rejected = {}
     saved = {}
@@ -340,7 +341,7 @@ def test_every_preset_saves_through_the_api(seeded):  # noqa: F811  (imported fi
             saved[key] = response.data["id"]
 
     assert rejected == {}, f"presets the API refused: {rejected}"
-    assert len(saved) == 17
+    assert len(saved) == 16
 
     # Absence as well as presence: what came back is the case type that was
     # sent, on a row that carries a tenant. A 201 that stored something else,

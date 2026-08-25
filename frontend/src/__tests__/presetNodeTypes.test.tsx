@@ -95,8 +95,12 @@ describe("preset step names map onto NodeType", () => {
   it("reads every preset node, so the assertions below are not over a subset", () => {
     // 17 套预设、56 个节点。数字写死是故意的：新增一套预设必须有人来改这一行，
     // 而改这一行的人会看到下面三条断言。
-    expect(Object.keys(WORKFLOW_TEMPLATES)).toHaveLength(17);
-    expect(allNodes).toHaveLength(56);
+    expect(Object.keys(WORKFLOW_TEMPLATES)).// EGYPTIAN_AFTERLIFE 已合并进 EGYPTIAN_ROUTINE:埃及文献里没有独立于称心之外的
+    // 「按功德分流」仪轨,它的地点与两个结局逐项就是称心的(Budge《亚尼纸草》1895
+    // 图版 III–IV;docs/lore-verification/verify-egyptian.md §3.3)。两套同文明同
+    // case_type,`.first()` 只取得到一套,另一套在界面上可见而永远路由不到。
+    toHaveLength(16);
+    expect(allNodes).toHaveLength(53)  // 56 − EGYPTIAN_AFTERLIFE 的三个节点;
     expect(stepNames.length).toBeGreaterThan(0);
   });
 

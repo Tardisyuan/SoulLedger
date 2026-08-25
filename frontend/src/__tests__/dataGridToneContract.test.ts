@@ -17,7 +17,13 @@
  * Pure functions and a CSS read — no DOM, no browser, no new dependency. The
  * WCAG relative-luminance and contrast formulas are implemented inline below.
  */
-import { LIGHT_TOKENS } from "./support/globalsCssTokens";
+import {
+  CIV_PREFIXES,
+  LIGHT_TOKENS,
+  THEMES,
+  resolveRampForCiv,
+  type ThemeName,
+} from "./support/globalsCssTokens";
 import { ENUM_TONE_CLASSES } from "@/components/ui/data-grid/columns";
 
 /** The cap the rest of the app already uses. Anything above this invalidates the light-mode token measurements. */
@@ -97,6 +103,54 @@ function tokenToRgb(value: string | undefined): Rgb | null {
   return hslToRgb(Number(m[1]), Number(m[2]), Number(m[3]));
 }
 
+/**
+ * `tokenToRgb`, but a failure is a FAILURE.
+ *
+ * The AA case below used to end its resolution step with `if (!fillRgb ||
+ * !inkRgb) return;`. A `return` inside an `it.each` case is not a skip that any
+ * runner reports — the case passes, having asserted nothing, and the summary
+ * says "4 passed" whether four tones were measured or one was quietly dropped.
+ * `neutral` was the one being dropped, and it is the only tone whose fill
+ * varies by tenant, i.e. the one that most needed measuring.
+ *
+ * Every resolution in this file now goes through here or `rampRgb`, so a token
+ * that stops resolving names itself instead of disappearing.
+ */
+function requireRgb(label: string, value: string | undefined): Rgb {
+  const rgb = tokenToRgb(value);
+  if (rgb === null) {
+    throw new Error(
+      `${label} did not resolve to a literal \`H S% L%\` triple — got ` +
+        `${JSON.stringify(value ?? null)}. Either the token moved, or it is now ` +
+        `an indirection that needs resolving before it can be measured. Fix the ` +
+        `resolution; do not skip the measurement.`
+    );
+  }
+  return rgb;
+}
+
+/**
+ * A token as the named civilization renders it, in the named theme.
+ *
+ * `resolveRampForCiv` binds `--civ-hue` to that tenant's `--color-civ-hue-*`
+ * exactly as the `[data-civ]` rule does, which is what turns
+ * `var(--civ-hue) 12% 94%` into something measurable. Literal tokens (the ink,
+ * the canvas) pass through it unchanged, so one helper covers every token in a
+ * tone's class string rather than two code paths that could disagree.
+ */
+function rampRgb(theme: ThemeName, prefix: string, token: string): Rgb {
+  let triple: string;
+  try {
+    triple = resolveRampForCiv(theme, prefix, token);
+  } catch (cause) {
+    throw new Error(
+      `\`${token}\` could not be resolved for tenant \`${prefix}\` in ${theme} ` +
+        `mode: ${(cause as Error).message}`
+    );
+  }
+  return requireRgb(`\`${token}\` (${theme}, ${prefix})`, triple);
+}
+
 interface ToneFill {
   /** e.g. `--color-status-success` */
   token: string;
@@ -121,9 +175,78 @@ function parseForegroundToken(classes: string): string | null {
 // held to the same contract without anyone remembering to edit this file.
 const TONES = Object.entries(ENUM_TONE_CLASSES);
 
+/**
+ * Does this tone's fill resolve to a literal colour, or does it depend on which
+ * tenant is rendering?
+ *
+ * Derived from the token's DECLARATION, never from the tone's name. The status
+ * tints are literal HSL triples and mean the same thing on every screen; the
+ * surface ramp is written `var(--civ-hue) 12% 94%` and means four different
+ * colours. A tone that switches from a status tint to a surface fill tomorrow
+ * moves itself into the per-tenant group without anyone editing this file —
+ * which is the whole point, because `neutral` is here precisely because a name
+ * check is what nobody remembered to write.
+ */
+function fillIsLiteral([, classes]: [string, string]): boolean {
+  const fill = parseBackground(classes);
+  return fill !== null && tokenToRgb(LIGHT_TOKENS[fill.token]) !== null;
+}
+
+const LITERAL_TONES = TONES.filter(fillIsLiteral);
+const PER_TENANT_TONES = TONES.filter((tone) => !fillIsLiteral(tone));
+
+/** tone × theme × tenant, for the tones with no single answer. */
+type PerTenantCase = [tone: string, theme: ThemeName, prefix: string, classes: string];
+
+const PER_TENANT_CASES: PerTenantCase[] = PER_TENANT_TONES.flatMap(([tone, classes]) =>
+  THEMES.flatMap((theme) =>
+    CIV_PREFIXES.map((prefix): PerTenantCase => [tone, theme, prefix, classes])
+  )
+);
+
+/**
+ * Combinations measured below 4.5:1, each recorded with the ratio that was
+ * measured and the argument for leaving the token alone.
+ *
+ * Empty, and asserted as an exact set rather than as "no unexpected failures",
+ * so that BOTH directions turn this file red: a combination that starts failing
+ * is not in the table, and a combination that gets fixed is one the table still
+ * names. Same shape as `ENUM_MAPS_STILL_ON_FEEDBACK_TOKENS` in
+ * statusTokenLayering.test.ts, and for the same reason — which combinations are
+ * allowed to fail is a decision, and a decision belongs in source with its
+ * argument beside it, not in a `toBeGreaterThan` that quietly moved.
+ *
+ * Keys are `tone/theme/tenant`.
+ */
+const TONE_COMBINATIONS_BELOW_AA: Record<string, string> = {};
+
 describe("data-grid enum badge token contract", () => {
   it("declares at least one tone (guards against the map being renamed away)", () => {
     expect(TONES.length).toBeGreaterThan(0);
+  });
+
+  it("measures every tone in one group or the other, and neither group is empty", () => {
+    // The floor under the parametrisation. A check that reports a clean pass
+    // over nothing examined is the defect this file was edited to remove, so
+    // the counts are asserted rather than assumed: five tones today, four of
+    // them literal status tints and one — `neutral` — on the per-tenant surface
+    // ramp. If `LITERAL_TONES` silently emptied, every AA case below would pass
+    // by not existing.
+    expect(TONES.length).toBeGreaterThanOrEqual(5);
+    expect(LITERAL_TONES.length + PER_TENANT_TONES.length).toBe(TONES.length);
+    expect(LITERAL_TONES.length).toBeGreaterThanOrEqual(4);
+    expect(PER_TENANT_TONES.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("produces a per-tenant case for every tone × theme × civilization", () => {
+    expect(THEMES.length).toBe(2);
+    expect(CIV_PREFIXES.length).toBeGreaterThanOrEqual(4); // cn, eu, eg, gr
+    expect(PER_TENANT_CASES.length).toBe(
+      PER_TENANT_TONES.length * THEMES.length * CIV_PREFIXES.length
+    );
+    // Stated as an absolute floor as well, so the identity above cannot go
+    // vacuously true by both sides collapsing to zero.
+    expect(PER_TENANT_CASES.length).toBeGreaterThanOrEqual(8);
   });
 
   it.each(TONES)("tone %s fills with a status tint the CSS can resolve", (tone, classes) => {
@@ -140,32 +263,68 @@ describe("data-grid enum badge token contract", () => {
     "tone %s tints at no more than 10%% — the depth the light-mode tokens were measured against",
     (tone, classes) => {
       const fill = parseBackground(classes)!;
-      if (fill.token.startsWith("--color-surface-")) return; // opaque surface, not a tint
+      if (fill.token.startsWith("--color-surface-")) {
+        // Not a tint, so there is no tint depth to cap — but the case still
+        // has to assert something, or it is the same silent pass this file was
+        // edited to remove. A surface fill that grew an alpha would be a tint
+        // over the canvas that nobody measured.
+        expect(fill.alpha).toBe(1);
+        return;
+      }
       expect(fill.alpha).toBeLessThanOrEqual(MAX_TINT_ALPHA);
     }
   );
 
-  it.each(TONES)(
+  it.each(LITERAL_TONES)(
     "tone %s clears AA in light mode at the tint it actually declares",
     (tone, classes) => {
       const fill = parseBackground(classes)!;
       const inkToken = parseForegroundToken(classes)!;
       const tokens = LIGHT_TOKENS;
 
-      const fillRgb = tokenToRgb(tokens[fill.token]);
-      const inkRgb = tokenToRgb(tokens[inkToken]);
-      const canvasRgb = tokenToRgb(tokens["--color-canvas"]);
-      expect(canvasRgb).not.toBeNull();
+      // No `return` anywhere below. These tones were selected for this list
+      // BECAUSE their fill resolves; anything that stops resolving — the ink or
+      // the canvas included — names itself and reddens the run.
+      const fillRgb = requireRgb(`tone \`${tone}\` fill \`${fill.token}\` in .light`, tokens[fill.token]);
+      const inkRgb = requireRgb(`tone \`${tone}\` ink \`${inkToken}\` in .light`, tokens[inkToken]);
+      const canvasRgb = requireRgb("`--color-canvas` in .light", tokens["--color-canvas"]);
 
-      // Surface tokens resolve through var(--civ-hue) and are per-tenant; the
-      // status tints are literal triples and are what 5e580e3 re-measured.
-      if (!fillRgb || !inkRgb) return;
-
-      const background = composite(fillRgb, fill.alpha, canvasRgb!);
+      const background = composite(fillRgb, fill.alpha, canvasRgb);
       const ratio = contrastRatio(inkRgb, background);
       expect(ratio).toBeGreaterThanOrEqual(AA_TEXT_CONTRAST);
     }
   );
+
+  it.each(PER_TENANT_CASES)(
+    "tone %s clears AA in %s mode for tenant %s",
+    (tone, theme, prefix, classes) => {
+      const fill = parseBackground(classes)!;
+      const inkToken = parseForegroundToken(classes)!;
+
+      const fillRgb = rampRgb(theme, prefix, fill.token);
+      const inkRgb = rampRgb(theme, prefix, inkToken);
+      const canvasRgb = rampRgb(theme, prefix, "--color-canvas");
+
+      const background = composite(fillRgb, fill.alpha, canvasRgb);
+      const ratio = contrastRatio(inkRgb, background);
+      const recorded = TONE_COMBINATIONS_BELOW_AA[`${tone}/${theme}/${prefix}`];
+      if (recorded !== undefined) {
+        // Recorded as an argued exception; still measured, and still has to
+        // stay below AA, so fixing the token reddens this instead of drifting.
+        expect(ratio).toBeLessThan(AA_TEXT_CONTRAST);
+        return;
+      }
+      expect(ratio).toBeGreaterThanOrEqual(AA_TEXT_CONTRAST);
+    }
+  );
+
+  it("records no exception that is not a real per-tenant case", () => {
+    // The other half of the exact-set assertion. A key left behind after a tone
+    // is renamed would otherwise sit in the table forever, silently excusing a
+    // combination that no longer exists.
+    const known = new Set(PER_TENANT_CASES.map(([tone, theme, prefix]) => `${tone}/${theme}/${prefix}`));
+    expect(Object.keys(TONE_COMBINATIONS_BELOW_AA).filter((key) => !known.has(key))).toEqual([]);
+  });
 });
 
 describe("WCAG helpers", () => {
