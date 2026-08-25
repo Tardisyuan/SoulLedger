@@ -15,7 +15,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   return (
-    <div className="bg-[hsl(var(--color-surface))] border border-[hsl(var(--color-hairline))] rounded-xl p-6">
+    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-xl p-6">
       <div className="flex items-start gap-4">
         {/* Avatar */}
         <div className="w-16 h-16 rounded-full bg-[hsl(var(--color-surface-2))] flex items-center justify-center text-xl font-bold text-[hsl(var(--color-accent-ink))] overflow-hidden flex-shrink-0">

@@ -86,6 +86,7 @@ const COLLECTED_FILES = [
   "civilizationColourContract.test.ts",
   "civilizationCopyCoverage.test.ts",
   "civilizationMapCoverage.test.ts",
+  "cssTokenReferenceContract.test.ts",
   "dataGridToneContract.test.ts",
   "domainDisplayContract.test.tsx",
   "eventRegistry.test.ts",
