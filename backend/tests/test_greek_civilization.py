@@ -54,11 +54,19 @@ EUROPEAN_TENANT_CODE = "EU_HEAVEN_HELL"
 MEADOW = "EU_PLATO_MEADOW"
 ISLES = "GR_ISLES_OF_THE_BLESSED"
 TARTARUS = "GR_TARTARUS"
+#: The crossing, added when the basis became Gorgias plus Aeneid 6. Not a move:
+#: `EU_ACHERON` and Dante's Charon stay EUROPEAN exactly as realms/0018 argues,
+#: and this is a second row for the same figure under the other poem — the move
+#: that migration already made for Minos.
+ACHERON = "GR_ACHERON"
 
-#: The three rows that moved out of EUROPEAN, and the one that was added.
+#: The three rows that moved out of EUROPEAN, and the two that were added.
 #: Written out rather than derived, per rule 1.
 MOVED_ACTORS = ["Aeacus", "Hades", "Rhadamanthus"]
-ADDED_ACTOR = "Minos"
+#: Plato's Minos, added by the split. The Greek Charon, added by the basis
+#: change — both are second rows beside a EUROPEAN one holding Dante's reading
+#: of the same name, and neither took anything away from it.
+ADDED_ACTORS = ["Minos", "Charon"]
 
 #: The three the split deliberately left behind, because every anchor their
 #: rows cite is Dante's rather than a Greek author's.
@@ -122,12 +130,17 @@ def test_the_greek_actors_are_greek_and_are_not_also_european(seeded):
     greek = sorted(
         Actor.objects.filter(civilization="GREEK").values_list("name", flat=True)
     )
-    assert greek == sorted([*MOVED_ACTORS, ADDED_ACTOR]), (
+    assert greek == sorted([*MOVED_ACTORS, *ADDED_ACTORS]), (
         f"the GREEK cast is {greek}. Expected Hades, Aeacus, Rhadamanthus — "
         f"who moved out of EUROPEAN, two of them carrying 'He does not appear "
-        f"in Dante' in their own descriptions — plus Plato's Minos, the one "
-        f"name the split added. Anyone else was invented; anyone missing means "
-        f"the move did not reach the database."
+        f"in Dante' in their own descriptions — plus Plato's Minos, added by "
+        f"the split, and the Greek Charon, added when the basis became Gorgias "
+        f"plus Aeneid 6. Anyone else was invented; anyone missing means the "
+        f"move did not reach the database. Note what the two additions have in "
+        f"common: each is a SECOND row beside a EUROPEAN one holding Dante's "
+        f"reading of the same name. Neither is a move, and 'resolving the "
+        f"duplicate' by emptying the EUROPEAN row would delete the borrowing "
+        f"this database keeps deliberately distinct from the original."
     )
 
     strays = sorted(
@@ -166,6 +179,60 @@ def test_the_three_dante_borrowed_stay_european(seeded):
 
 
 @pytest.mark.django_db
+def test_every_greek_actor_stands_on_a_greek_realm(seeded):
+    """The half the cast list cannot see.
+
+    Found by mutation: moving the Greek Charon onto `EU_ACHERON` — the European
+    crossing, Dante's — left every other assertion in this file green. The cast
+    check counts names and the realm check counts codes; neither looks at the
+    edge between them, so a Greek actor standing in another cosmology's realm
+    was invisible to both.
+
+    That placement is not a typo-shaped mistake. It is the *plausible* one: the
+    two crossings have nearly the same name, one of them already existed, and
+    the whole point of realms/0018 is that they are different rows for different
+    poems. An actor filed across that line would put Plato's ferryman at Dante's
+    gate — where the passengers are already damned — while every list in this
+    file still read correctly.
+    """
+    placements = {
+        actor.name: actor.realm
+        for actor in Actor.objects.filter(civilization="GREEK").select_related("realm")
+    }
+    assert placements, "no GREEK actors were seeded at all"
+
+    # BOTH HALVES, AND THE FIRST ONE IS WHAT THE MUTATION ACTUALLY PRODUCES.
+    # The first version of this check read `if actor.realm is not None and
+    # actor.realm.civilization != "GREEK"` and stayed green under exactly the
+    # edit it was written for. Pointing a GREEK actor at `EU_ACHERON` does not
+    # create a cross-cosmology placement: the seeder cannot resolve a realm
+    # outside the actor's own tenant, so it writes the row with **no realm at
+    # all** — and the `is not None` guard then excused the case. An actor
+    # standing nowhere is the failure; standing in the wrong place is the one
+    # that cannot happen.
+    homeless = sorted(name for name, realm in placements.items() if realm is None)
+    assert not homeless, (
+        f"GREEK actors with no realm: {homeless}. A seeded actor whose "
+        f"realm_code names a realm in another cosmology cannot be resolved "
+        f"across the tenant boundary, so the row lands with realm=NULL rather "
+        f"than failing — the actor is in the cast, reads correctly in every "
+        f"name list, and stands nowhere."
+    )
+
+    misplaced = {
+        name: (realm.realm_code, realm.civilization)
+        for name, realm in placements.items()
+        if realm.civilization != "GREEK"
+    }
+    assert not misplaced, (
+        f"GREEK actors standing in realms of another cosmology: {misplaced}. A "
+        f"realm_code's prefix records where the row was written, not what it "
+        f"belongs to (EU_PLATO_MEADOW is GREEK), so the check is the realm's "
+        f"own civilization and never the spelling of its code."
+    )
+
+
+@pytest.mark.django_db
 def test_the_greek_realms_are_greek_and_the_crossing_is_not(seeded):
     """Three Greek places, and the one that stayed behind with Charon.
 
@@ -185,12 +252,18 @@ def test_the_greek_realms_are_greek_and_the_crossing_is_not(seeded):
         Realm.objects.filter(civilization="GREEK")
         .values_list("realm_code", "realm_type")
     )
-    assert sorted(greek) == sorted([MEADOW, ISLES, TARTARUS]), (
-        f"the GREEK realms are {sorted(greek)}. Expected exactly the fork and "
-        f"the two roads out of it that Gorgias 524a names — 'the two ways "
-        f"leading, one to the Isles of the Blest, and the other to Tartarus'. "
-        f"A fourth row means somebody completed the geography from a textbook; "
-        f"a missing one means the seed table and realms/0018 disagree."
+    assert sorted(greek) == sorted([MEADOW, ACHERON, ISLES, TARTARUS]), (
+        f"the GREEK realms are {sorted(greek)}. Expected the fork and the two "
+        f"roads out of it that Gorgias 524a names — 'the two ways leading, one "
+        f"to the Isles of the Blest, and the other to Tartarus' — plus "
+        f"GR_ACHERON, the crossing, from Aeneid 6.295-297 under the two-text "
+        f"basis stated at the top of GREEK_REALMS: Plato supplies the "
+        f"judgment, Virgil the ground it happens on. A FIFTH row still means "
+        f"somebody completed the geography from a textbook, and the basis "
+        f"change licenses none — Virgil's borderland sorts by manner of death, "
+        f"which this system does not record, and Asphodel is in neither text "
+        f"as a destination. A missing one means the seed table and "
+        f"realms/0018 disagree."
     )
     # The two roads are opposite outcomes, and a row that says otherwise would
     # make a soul sent to Tartarus indistinguishable from one sent to the

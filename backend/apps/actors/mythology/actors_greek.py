@@ -133,6 +133,22 @@ GREEK_ACTORS = [
     # and is deliberately NOT seeded. One sourced office per row is the rule
     # this table follows; a third Minos would need a third realm to stand in,
     # and Homer's house of Hades is not modelled here.
+    ("Charon", "卡戎", "Charon", "Kharon", ActorRole.CONDUIT, "GR_ACHERON",
+     "冥河摆渡人卡戎", "冥河摆渡人卡戎", "Charon - Ferryman of Acheron", "Kharon",
+     "THIS ROW IS THE GREEK CHARON, not Dante's. He carries the buried dead "
+     "across Acheron before any judging happens, and turns back the unburied to "
+     "wander the bank a hundred years (Virgil, Aeneid 6.295-330). The office is "
+     "attested in Greek before Virgil fixes its place on the map: Euripides has "
+     "him calling from the lake with his hand on the oar (Alcestis 252-256) and "
+     "Aristophanes has him working the crossing and shouting the stops (Frogs "
+     "180-270). A separate EUROPEAN row carries Dante's Charon, who ferries "
+     "across Acheron at the gate of hell and whose passengers are already "
+     "damned (Inferno III.82-99) — the same figure in a cosmology where the "
+     "crossing comes after the sentence rather than before the trial. Homer has "
+     "no ferryman at all (Odyssey 11 has the dead simply present), which is why "
+     "no third row exists. CONDUIT and not GUARDIAN: he carries, he does not "
+     "decide — the refusal of the unburied is a rule he applies, not a verdict "
+     "he reaches"),
     ("Minos", "米诺斯", "Minos", "Mino", ActorRole.JUDGE, "EU_PLATO_MEADOW",
      "终裁判官米诺斯", "终裁判官米诺斯", "Minos - Final Arbiter", "Mino",
      "THIS ROW IS PLATO'S MINOS, not Dante's. At the fork in the meadow "

@@ -267,11 +267,17 @@ def test_the_gongguoge_partition_does_not_reach_a_greek_soul(make_greek_soul):
 
 # The Greek realms this system seeds, and the ones it deliberately does not.
 #
-# Three rows, all from Gorgias 524a: the meadow the judging happens on and the
-# two roads out of it. `apps/actors/mythology/realms.py` states that basis on
-# the rows themselves — GR_TARTARUS says in as many words that it is "the
-# Gorgias one" and why it is not Virgil's.
-GREEK_REALM_CODES = ["EU_PLATO_MEADOW", "GR_ISLES_OF_THE_BLESSED", "GR_TARTARUS"]
+# Four rows on a two-text basis, divided by what each text is asked for:
+# Gorgias 524a supplies the judgment — the meadow and the two roads out of it —
+# and Aeneid 6 supplies the topography, which here is the crossing a soul
+# arrives by. `apps/actors/mythology/realms.py` states the division at the top
+# of GREEK_REALMS and each row says which half it comes from.
+GREEK_REALM_CODES = [
+    "EU_PLATO_MEADOW",
+    "GR_ACHERON",
+    "GR_ISLES_OF_THE_BLESSED",
+    "GR_TARTARUS",
+]
 
 # Named here so their absence is a decision with a citation attached rather
 # than a gap someone fills in good faith. Each entry is (code, why not).
@@ -285,6 +291,16 @@ GREEK_REALMS_DELIBERATELY_ABSENT = {
         "split self-declares the relationship as uncertain. Seeding it as a "
         "NEUTRAL destination would invent a third road out of a fork whose own "
         "sentence names two, which is the mistake EG_AM_TYAT was retired for."
+    ),
+    "GR_LUGENTES_CAMPI": (
+        "Virgil's borderland sorts by manner of death — infants, the falsely "
+        "condemned, suicides, and the Fields of Mourning for those who died of "
+        "love (Aen. 6.426-476). Adopting Aeneid 6 for the topography does not "
+        "make these reachable: `Judgment` produces a verdict and `Soul` carries "
+        "a death date, not a death kind, so nothing in this system could route "
+        "a soul to one. A realm no router can reach is what EG_AM_TYAT was "
+        "retired for. The missing input is a cause-of-death field, and adding "
+        "the regions before it exists would put the map ahead of the data."
     ),
     "GR_ELYSIUM": (
         "Homer's Elysian plain (Od. 4.563-568) is an exemption from death "
@@ -322,11 +338,13 @@ def test_a_greek_realm_this_system_refuses_stays_refused(code):
     assert code not in seeded, (
         f"{code} is seeded. It is deliberately absent: "
         f"{GREEK_REALMS_DELIBERATELY_ABSENT[code]} If a basis change has been "
-        f"decided — Gorgias plus Aeneid 6 is the live proposal in "
-        f"docs/lore-verification/verify-greek.md §8 route B — record that "
-        f"decision on the realm rows and update this test, rather than adding "
-        f"the row and leaving two documents disagreeing about which author "
-        f"this cosmology follows."
+        f"decided, record it on the realm rows and update this test, rather "
+        f"than adding the row and leaving two documents disagreeing about "
+        f"which author this cosmology follows. The basis IS now Gorgias plus "
+        f"Aeneid 6 — verify-greek.md §8 route B, taken — but it is divided by "
+        f"what each text is asked for, and neither half puts this row on the "
+        f"map. Read the basis note at the top of GREEK_REALMS before "
+        f"overruling this."
     )
 
 

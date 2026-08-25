@@ -387,7 +387,36 @@ EUROPEAN_REALMS = [
 ]
 
 # --------------------------------------------------------------------------
-# GREEK — Plato's fork and the two roads out of it.
+# GREEK — Plato's fork, and Virgil's ground it stands on.
+#
+# THE BASIS IS TWO TEXTS, DIVIDED BY WHAT EACH IS ASKED FOR. Gorgias 524a
+# supplies the *judgment*: who tries whom, and the two roads a verdict sends a
+# soul down. Aeneid 6 supplies the *topography*: what a soul crosses to get
+# there, and what the place it arrives at is like. The owner took this basis
+# knowing what it costs, and the division is what keeps it a basis rather than
+# a blend — the two texts contradict each other precisely where their judgment
+# scenes meet, and nowhere else.
+#
+# WHERE THEY CONTRADICT, PLATO WINS, BECAUSE THE CONTRADICTIONS ARE ALL IN THE
+# JUDGMENT. Virgil has Minos shaking an urn over the silent court (6.431-433)
+# and **no Aeacus at all**; his Rhadamanthus is not a judge at a fork but the
+# warden of Tartarus, hearing confessions and scourging (6.566-569). Plato has
+# all three at the meadow with a stated division of labour — Rhadamanthus for
+# those from Asia, Aeacus for those from Europe, Minos deciding when the other
+# two are in doubt. This system seeds Plato's three and its workflow runs them
+# in that order, so adopting Virgil's judgment would mean deleting one seeded
+# judge and reassigning another to a role his own row denies. The topography
+# carries none of that: a crossing and a walled pit are places, and Plato names
+# neither, so taking them from Virgil overwrites nothing.
+#
+# WHAT IS STILL NOT SEEDED, AND WHY THE BASIS DID NOT CHANGE IT. Virgil's
+# borderland — infants, the falsely condemned, suicides, the Fields of Mourning
+# (6.426-476) — sorts souls by *manner of death*. This system records no such
+# thing: `Judgment` reads a verdict and `Soul` has a death date, not a death
+# kind. Those regions would be realms no router could reach, which is the shape
+# `EG_AM_TYAT` was retired for. They are named in
+# `tests/test_greek_sentence_basis.py` so their absence is a decision with a
+# reason rather than a gap.
 #
 # WHY THIS TABLE EXISTS AT ALL. These rows were EUROPEAN until the split, which
 # put Plato's judgment ground in the same cosmology as Dante's circles and the
@@ -407,13 +436,33 @@ EUROPEAN_REALMS = [
 # Asphodel is the case that proves the rule and it is deliberately absent.
 # Homer's ἀσφοδελὸς λειμών (Od. 11.538-540) is where Achilles walks — a hero,
 # not a middling soul — and the neat Tartarus/Asphodel/Elysium triad is a modern
-# textbook systematisation, not a division any ancient author makes. The five
-# rivers are absent for the same reason: Styx, Acheron, Cocytus, Phlegethon and
-# Lethe come from four authors who do not agree about them, and seeding them as
-# one geography would assert a consensus that does not exist. See
-# docs/lore-verification/verify-greek.md §2.6 and §6, which say in as many words
-# not to synthesise a standard version, and the EU_ACHERON comment above, which
-# says the same thing about the crossing.
+# textbook systematisation, not a division any ancient author makes. Adopting
+# Aeneid 6 does not rescue it: Virgil has no asphodel region either. It stays out
+# under both halves of the basis, which is a stronger statement than it was.
+#
+# THE RIVERS ARE NOW PLACED BY ONE AUTHOR RATHER THAN SYNTHESISED FROM FOUR,
+# which is what changed when the basis did. This paragraph used to refuse all
+# five together, on the ground that Styx, Acheron, Cocytus, Phlegethon and Lethe
+# come from authors who disagree and seeding them would assert a consensus
+# nobody holds. That reasoning was right about a synthesis and does not apply to
+# a stated source:
+#
+#   * Acheron is the crossing, and it is `GR_ACHERON` below — Aeneid 6.295-297,
+#     with Euripides (Alcestis 252-256) and Aristophanes (Frogs 180-270) as the
+#     Greek witnesses that it is not merely a Roman import.
+#   * Phlegethon rings Tartarus (Aeneid 6.550-551) and stays a sentence in
+#     `GR_TARTARUS`'s description. It is a feature of that place, not a place.
+#   * Styx and Cocytus are named in Aeneid 6 (6.295-297, 6.323) but nothing is
+#     ferried across them or sentenced beside them in this system, so a row for
+#     either would be a name with no traffic.
+#   * Lethe is the live one and is deliberately left for a separate change.
+#     Virgil has souls drink it before returning to bodies (6.713-715) and
+#     Republic X has the same act at the river Ameles on the plain of Lethe
+#     (621a-b) — so both halves of the basis agree, and Greek souls in this
+#     system *are* rebirth-capable. But every Greek realm carries
+#     `memory_reset_mechanism="NONE"`, and changing that is a statement about
+#     the rebirth path rather than about the map. Recorded here so the next
+#     reader finds a decision rather than an oversight.
 #
 # CODES. The meadow keeps `EU_PLATO_MEADOW`. Its code records where the row was
 # first written, not what it now belongs to, and renaming a `realm_code` is not
@@ -440,8 +489,10 @@ GREEK_REALMS = [
      "road, one way leading to the Isles of the Blessed and the other to "
      "Tartarus. This is a sorting point that stands BEFORE any punishment, "
      "which is the whole reason the three judges cannot be housed in a circle "
-     "of Dante's hell. Both roads out of it are now seeded, because the same "
-     "sentence names them; nothing else of the Greek geography is.",
+     "of Dante's hell. Both roads out of it are seeded, because the same "
+     "sentence names them, and GR_ACHERON is the crossing a soul reaches it "
+     "by — the one piece of the map that comes from Aeneid 6 rather than "
+     "from this passage. See the basis note at the top of GREEK_REALMS.",
      "NONE", False, None),
     # `is_eternal` IS STILL FALSE ON BOTH ROADS, AND IT NOW MEANS SOMETHING.
     # It was written as a recorded limitation: Gorgias 524a says where the roads
@@ -469,6 +520,39 @@ GREEK_REALMS = [
     # ἀνίατος, which is the smaller of the two populations and the one Plato
     # treats as remarkable. See `DispositionService._route_greek` and
     # tests/test_greek_sentence_basis.py.
+    # THE CROSSING, AND WHY IT IS A SECOND ROW RATHER THAN A MOVE.
+    # `EU_ACHERON` already exists and Charon stands on it — but realms/0018 says
+    # in as many words why that row stays EUROPEAN: "every anchor those rows
+    # cite is Dante's ... they are Greek figures Dante borrowed, and what this
+    # database holds of them is the borrowing." That is correct and this row
+    # does not disturb it. It is the same move the same migration made for the
+    # judges: Plato's Minos was written as a *new* GREEK row beside Dante's
+    # EUROPEAN one, because the two are different offices in different
+    # underworlds. This is that, for the ferryman.
+    #
+    # A crossing is topography, so it comes from Aeneid 6.295-297 under the
+    # division stated at the top of this table — and it is not a Roman import
+    # smuggled in: Euripides has Charon calling from the lake (Alcestis
+    # 252-256) and Aristophanes has him working the oar (Frogs 180-270). What
+    # Virgil supplies is the *placement* the Greek witnesses leave vague.
+    #
+    # NOT A DESTINATION, AND NOT AN OUTCOME. Nobody is sentenced here — the
+    # crossing happens before the judging, which is why `_route_greek` does not
+    # name it and why it carries tier 0 alongside the meadow. It is reachable in
+    # the sense a threshold is: a soul passes through, and no verdict puts it
+    # there.
+    ("GR_ACHERON", "阿刻戎渡口", "冥河渡口", "The Crossing of Acheron", "Acheron",
+     RealmType.NEUTRAL, 0,
+     "Where the dead are ferried into the underworld, before any judging. "
+     "Virgil, Aeneid 6.295-297 places the crossing on Acheron and 6.298-304 "
+     "puts Charon at it; Euripides (Alcestis 252-256) has Charon summoning from "
+     "the lake and Aristophanes (Frogs 180-270) has him rowing, so the ferryman "
+     "is Greek and it is his position in the map that Virgil fixes. A separate "
+     "EUROPEAN row, EU_ACHERON, carries Dante's crossing (Inferno III) with "
+     "Dante's Charon on it — the same figure under a different poem, kept apart "
+     "for the reason realms/0018 keeps Dante's Minos apart from Plato's. "
+     "Nobody is sentenced here.",
+     "NONE", False, None),
     ("GR_ISLES_OF_THE_BLESSED", "至福岛", "至福岛", "The Isles of the Blessed",
      "IslesOfTheBlest", RealmType.BLISS, 1,
      "Plato, Gorgias 524a: one of the two roads out of the meadow, taken by "
@@ -481,13 +565,17 @@ GREEK_REALMS = [
      "NONE", False, None),
     ("GR_TARTARUS", "塔尔塔罗斯", "塔尔塔罗斯", "Tartarus", "Tartaros",
      RealmType.HELL, 1,
-     "Plato, Gorgias 524a: the other road out of the meadow. In Hesiod "
-     "(Theogony 720ff) Tartarus is the pit the Titans are imprisoned in rather "
-     "than a destination for human dead, and in Virgil (Aeneid 6.548-579) it is "
-     "walled three times about, ringed by the Phlegethon and ruled by "
-     "Rhadamanthus — who in Plato is a judge at the fork and not a warden. "
-     "Three incompatible accounts of one name; this row is the Gorgias one, "
-     "which is the only one the judges seeded beside it belong to.",
+     "Plato, Gorgias 524a: the other road out of the meadow — that is what "
+     "sends a soul here, and it is the half of this row Virgil does not touch. "
+     "The place itself is Virgil's (Aeneid 6.548-551): walled three times "
+     "about, ringed by the Phlegethon, its gate held by Tisiphone. What this "
+     "row still refuses is Virgil's 6.566-569, where Rhadamanthus presides over "
+     "it and scourges — because Rhadamanthus is seeded next door as a judge at "
+     "the fork with Plato's division of labour, and one actor cannot hold both "
+     "offices. That refusal is the basis rule doing its work rather than an "
+     "exception to it: the contradiction is in the judgment, so Plato keeps it. "
+     "Hesiod (Theogony 720ff) is a third account — the pit the Titans are "
+     "imprisoned in, not a destination for human dead — and is not seeded.",
      "NONE", False, None),
 ]
 
