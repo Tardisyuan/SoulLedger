@@ -19,7 +19,10 @@ export const LOCALE_LABELS: Record<Locale, string> = {
   // Kemet ("the black land") is what ancient Egypt called itself. This label
   // used to read "𓋴 العربية" — literally "Arabic" — which is a language that
   // reached Egypt some 1400 years after the period this locale evokes.
-  egy: "𓋴 Kemet",
+  // The hieroglyph that survived that fix is gone as well: U+132F4 needs a
+  // font no default Windows or Linux install ships, and the two labels above
+  // it are plain words carrying no glyph at all.
+  egy: "Kemet",
 };
 
 const LOCALE_COOKIE = "soulledger-locale";
