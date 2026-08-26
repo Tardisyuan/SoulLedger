@@ -5,9 +5,22 @@ The two souls behind `27-soul-detail-full-history.png` and
 `GET /souls/{id}/karma/`.
 
 Every record carries a written description, a category, an event date and a
-decay factor computed from that date. None of it reaches the screen today —
-the detail page renders totals and a sparkline, never an individual record —
-which is why the Stage 3 spine had to invent labels. These are the real ones.
+decay factor computed from that date.
+
+> **2026-08-26 更正。** 本段此前写着「None of it reaches the screen today — the
+> detail page renders totals and a sparkline, never an individual record」。
+> 那在 2026-08-03 是真的,现在不是:`src/components/souls/SoulLedgerBook.tsx`
+> (「功过台账 —— 逐条账页」,Stage 12 C2)逐条渲染 `description`、`event_date`、
+> `recorded_at`,画成一张有竖线的账页。
+>
+> 有意思的是那个组件的文件头写着和本段**同一句观察**,并把它作为自己存在的理由:
+> 《太微仙君功過格》是一本有格线的账簿,善行入功、恶行入過,两边逐條銷算 ——
+> 产品把这件事的每一部分都做了,唯独没有那些行。本文件当初记下的正是这个缺口,
+> 而它现在被填上了。
+>
+> 「Stage 3 的骨架不得不自己编标签」那句仍然成立,它描述的是当时的处境。
+
+These are the real ones.
 
 
 ## 崔明远 → 沈砚秋 — complete cycle

@@ -94,6 +94,23 @@ feel like raw CRUD over database tables.
 **Peripheral** — `21-notifications`, `22-social`, `23-profile`, `24-welcome`, `00-login`
 **Theme check** — `26-dashboard-light` (light mode, same screen as `01`)
 
+> **2026-08-26 实核。** 附件行写「27 full-page screenshots」,上面这份清单也正好是 27 张,
+> 但 `screens/` 里现在有 **29 张** —— 多出的 `27-soul-detail-full-history` 与
+> `28-soul-detail-awaiting-judgment` 由 `tables/karma-records.md` 引用,不在本清单里。
+>
+> 「34 routes」现在是 **37 条**。更值得知道的是:**本简报索要的四个东西已经建好,
+> 却一张截图都没有** —— 设计方拿到的这份包里看不到它们:
+>
+> | 路由 | 是什么 | 回应本简报 |
+> |---|---|---|
+> | `/judgment/queue` | 审判队列,含键盘映射与撤销倒计时 | **§4.2 的交付物** |
+> | `/recycle-bin` | 全局回收站,级联软删与恢复 | **§4.7 的交付物** |
+> | `/judgment/[id]` | 判决卷宗(Stage 12) | §4.1 |
+> | `/corpus` | 典籍浏览器,四文明 170 条 | 简报之后新增 |
+>
+> 另有 `/ledger` 对应 `06-karma-stats`(同一个页面,租户级功德统计,**不是**功过台账)。
+> 其余无截图的是详情页与 social 子路由。
+
 ---
 
 ## 4. What is wrong today
@@ -273,9 +290,14 @@ in every screenshot), English, and `egy` — the Egyptian civilization's theming
 layout assumptions** — Chinese strings are typically 40–60% the width of their English
 equivalents, and `egy` runs longer than both.
 
-`egy` is transliterated Ancient Egyptian in Latin script throughout, with three strings
-carrying hieroglyphs as ornament and the locale labelled `𓋴 Kemet`. It is left-to-right
+`egy` is transliterated Ancient Egyptian in Latin script throughout. It is left-to-right
 everywhere; there is no bidirectional text in this app.
+
+> **2026-08-26 更正。** 本段此前还写着「with three strings carrying hieroglyphs as
+> ornament and the locale labelled `𓋴 Kemet`」。实测两句都已不成立:三份 bundle 里
+> U+13000–U+1342F 区段的字符 **0 个**,区域标签是纯文本 `Kemet`。`𓋴`(U+132F4)在
+> `7bd1e8c` 被删,因为它需要一个 Windows/Linux 默认都不装的字体。左到右与无双向文本
+> 这两句仍然成立(egy.json 1275 条里阿拉伯字符 0 个)。
 
 What does mix is **script, not direction**: database content stays Chinese in every
 locale, so an `egy` table renders transliterated headers over Chinese rows with Latin
