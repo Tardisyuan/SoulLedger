@@ -66,6 +66,22 @@ export interface StatuteRef {
    * Chinese, so it is passed through rather than numbered.
    */
   readonly division?: string;
+  /**
+   * `payload_json.gate_ordinal` — the article's place **within its 門**.
+   *
+   * NOT `ordinal`. The two exist separately on purpose, and
+   * `backend/apps/actors/mythology/statutes_chinese.py:116` says why:
+   * `Statute.Meta.ordering` sorts on `ordinal`, so `ordinal` has to be
+   * continuous across the whole 功過格 — a per-gate numbering would interleave
+   * 救濟門一 with 不仁門一. `gate_ordinal` is therefore the only number that
+   * means anything beside a 門 name.
+   *
+   * Rendering `ordinal` here produces a sigil that is confidently wrong rather
+   * than missing: 救濟門 holds ordinals 1–11, so a 教典門 article at ordinal 17
+   * printed 教典門 · 十七 — the seventeenth article of a 門 whose own heading
+   * says it has seven. No `??  ordinal` fallback for that reason.
+   */
+  readonly gateOrdinal?: number;
   /** `payload_json.circle` — the Inferno circle, 1–9. Absent on the seven terraces. */
   readonly circle?: number;
   /**
@@ -169,9 +185,13 @@ const SIGIL_SPECS: Record<CivilizationOption, SigilSpec> = {
   CHINESE: {
     system: "功過格 門條",
     namesOffences: true,
-    format: ({ ordinal, division }) => {
-      if (ordinal === undefined) return null;
-      const numeral = toHanNumeral(ordinal);
+    format: ({ gateOrdinal, division }) => {
+      // `gateOrdinal`, never `ordinal` — see StatuteRef.gateOrdinal. Falling
+      // back to `ordinal` would put a corpus-wide count where a within-門 count
+      // belongs, which reads as a real citation and is not one. An article with
+      // no transcribed gate number has no sigil; MissingValue is the true answer.
+      if (gateOrdinal === undefined) return null;
+      const numeral = toHanNumeral(gateOrdinal);
       if (numeral === null) return null;
       const gate = division?.trim();
       return gate ? `${gate}${LEVEL_SEPARATOR}${numeral}` : numeral;

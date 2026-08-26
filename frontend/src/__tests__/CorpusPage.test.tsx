@@ -268,7 +268,11 @@ describe("the Greek table carries one column fewer", () => {
 
 describe("each corpus is numbered in its own system", () => {
   it("numbers a 功過格 article by 門 and Han numeral — not by 卷, which the text does not have", () => {
-    expect(sigilOf("GONGGUOGE")).toBe("救濟門 · 十七");
+    // 六, from `gate_ordinal: 6` — NOT 十七 from `ordinal: 17`. This fixture
+    // already carried both numbers and the expectation used the wrong one.
+    // 門 are contiguous ranges of the corpus-wide count, so an `ordinal`
+    // printed beside a 門 name is a citation that resolves to nothing.
+    expect(sigilOf("GONGGUOGE")).toBe("救濟門 · 六");
   });
 
   it("numbers an Inferno article in roman with the circle first, and a terrace article bare", () => {

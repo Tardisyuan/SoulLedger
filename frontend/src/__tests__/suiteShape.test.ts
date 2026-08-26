@@ -77,6 +77,7 @@ const COLLECTED_FILES = [
   "SoulDetailPage.inheritance.test.tsx",
   "SoulDetailPage.rebirthForm.test.tsx",
   "SoulEditModal.test.tsx",
+  "SoulLedgerBook.test.tsx",
   "SoulLifecycleTimeline.test.tsx",
   "SoulReadingPanel.test.tsx",
   "Spinner.test.tsx",
