@@ -29,10 +29,28 @@ const LOCALE_COOKIE = "soulledger-locale";
 const DEFAULT_LOCALE: Locale = "zh-Hans";
 
 // `egy` is an internal-only pseudo-locale used for the Egyptian civilization
-// theme copy — it is not a valid BCP-47 language tag, so passing it straight
-// to Intl.DateTimeFormat/NumberFormat throws a RangeError. There is no real
-// "ancient Egyptian" ICU locale to map it to, so number/date formatting
-// falls back to "en" whenever the UI language is set to egy.
+// theme copy. There is no "ancient Egyptian" ICU locale, so number and date
+// formatting has to be pointed somewhere real — this map points it at "en".
+//
+// 这段注释此前写的是「`egy` 不是合法的 BCP-47 标签,直接传给
+// Intl.DateTimeFormat/NumberFormat 会抛 RangeError」。**两半都是错的**,而且
+// 错的方向让这张表看起来只是个便利。实测(node 18.20.8 / ICU 74.2 与 22.22.1,
+// 两个构造器都测):
+//   Intl.getCanonicalLocales("egy")        → ["egy"]      合法,三字母语言子标签
+//   new Intl.DateTimeFormat("egy")         → 不抛
+//   new Intl.NumberFormat("egy")           → 不抛
+//   new Intl.DateTimeFormat("e_gy")        → 才抛 RangeError(真正畸形的标签)
+//
+// 真实行为比抛错糟:没有 `egy` 的 ICU 数据时,它回退到**观看者的系统默认区域**,
+// 不是 "en"。同一段代码在不同机器上实测:
+//   LANG=de-DE → 解析为 de-DE,日期渲染 "1. Januar 1970"
+//   LANG=zh-CN → 解析为 zh-CN,日期渲染 "1970年1月1日"
+//   LANG=ja-JP → 解析为 ja-JP
+//
+// 也就是说,没有这张表,一个 egy 界面的日期会跟着**用户的操作系统**变语言,
+// 而不是跟着界面语言 —— 一个只在别人机器上出现的 bug。这张表不是便利,
+// 它是唯一挡住这件事的东西。`docs/design-handoff/tables/README.md` 也照抄了
+// 那个 RangeError 的说法,已一并更正。
 const INTL_LOCALE: Record<Locale, string> = {
   "zh-Hans": "zh-Hans",
   en: "en",
