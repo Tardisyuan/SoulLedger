@@ -1,4 +1,5 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import eslintParser from "@typescript-eslint/parser";
 import reactHooks from "eslint-plugin-react-hooks";
 import jsxA11y from "eslint-plugin-jsx-a11y";
@@ -24,7 +25,20 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 //   删掉整行 —— 这是机械操作,且无法被悄悄绕过。
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ROOT = import.meta.dirname;
+// `fileURLToPath(import.meta.url)`, NOT `import.meta.dirname`.
+//
+// `import.meta.dirname` landed in Node 20.11. On anything older it is
+// `undefined`, so `rel()` calls `path.relative(undefined, file)` and every rule
+// throws `ERR_INVALID_ARG_TYPE` before it examines a single line. ESLint reports
+// that as **exit code 2** — a fatal config error, not the exit 1 a violation
+// produces — and `eslint … | tail; echo $?` collapses 2, 1 and 0 into the same
+// 0. So on an older Node this whole file silently stops being a check while
+// reading, through a pipe, exactly like a clean pass.
+//
+// This was not hypothetical: it was written and verified under Node 22, and the
+// first run under this machine's default shell (v18.20.8) crashed on the first
+// file. `fileURLToPath` has been stable since Node 10 and costs one import.
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const rel = (f) => path.relative(ROOT, f).split(path.sep).join("/");
 
 // 八档字号是**新增**的,旧档仍可解析 —— 这些是被禁的旧档。
