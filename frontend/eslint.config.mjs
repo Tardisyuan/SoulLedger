@@ -72,6 +72,22 @@ const LEGACY = JSON.parse(fs.readFileSync(path.join(ROOT, BASELINE_FILE), "utf8"
 // 八档字号是**新增**的,旧档仍可解析 —— 这些是被禁的旧档。
 const LEGACY_TYPE = /^-?text-(?:xs|sm|base|lg|xl|[2-9]xl)$/;
 
+// 八档字号的第二个绕道:**任意值**。`text-sm` 抓得到,`text-[11px]` 抓不到 ——
+// 后者绕开具名档位,直接把像素写进方括号,拿到的却是同一个「不在这套系统里的字号」。
+// 这不是假想:全仓曾有 28 处,而基线诚实地报 `type: 0`,因为规则确实一次也没匹配上。
+// 那不是漏报,是这条规则当时根本看不见那种形状 —— 和 `bg-[hsl(38,92%,50%)]` 绕开
+// RAW_PALETTE 是同一件事,同一份配置里已经为颜色写过一次这个教训。
+//
+// 判据是**方括号里是不是一个长度字面量**,不是有没有方括号:
+//   text-[11px] / text-[0.8rem]        → 红,写死的字号
+//   text-[hsl(var(--color-ink))]       → 绿,这是**颜色**,`text-` 前缀在 Tailwind 里
+//                                        同时管字号和字色,唯一的区分就是括号里的东西
+//   text-[hsl(var(--x)/0.2)]           → 绿,同上
+//
+// 匹配 `chunk` 而不是 `bare`:bare 被 `split("/")[0]` 削过,会把带不透明度的颜色
+// 从斜杠处截断,于是前缀锚不住 —— 所以变体前缀与 `!` 在正则里自己处理。
+const ARBITRARY_TYPE = /(?:^|:)!?-?text-\[[\d.]+(?:px|r?em|pt|ch|vh|vw|%)\]/;
+
 // 设计稿的间距节奏:{1:4px 2:8px 3:12px 4:16px 6:24px 10:40px 16:64px}。
 // `0` / `px` / `auto` 不是节奏值,是「无」和「发丝」,放行。
 // 只管**节奏类**工具(padding / margin / gap / space),不管尺寸类
@@ -254,6 +270,8 @@ const designSystem = {
       for (const { bare, chunk, at } of classTokens(raw)) {
         if (LEGACY_TYPE.test(bare)) {
           report(chunk, at, `\`${bare}\` 不在八档字号里。用 text-01…text-08(11/12/13/15/18/22/32/56px),见 tailwind.config.js 的 fontSize`);
+        } else if (ARBITRARY_TYPE.test(chunk)) {
+          report(chunk, at, `\`${chunk}\` 把字号写死在任意值里,绕开了八档。用 text-01…text-08(11/12/13/15/18/22/32/56px);没有恰好对应的档位,说明这里该重新选一档,而不是新造一个字号。注意 \`text-[hsl(var(--…))]\` 是**颜色**不是字号,不受这条限制`);
         }
       }
     }),

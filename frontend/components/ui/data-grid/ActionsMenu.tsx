@@ -77,7 +77,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
           type="button"
           onClick={primary.onSelect}
           disabled={primary.disabled}
-          className="px-2.5 py-1 rounded text-[13px] text-[hsl(var(--color-ink-muted))] border border-[hsl(var(--color-hairline-strong))] hover:text-[hsl(var(--color-ink))] hover:border-[hsl(var(--color-hairline-tertiary))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="px-2.5 py-1 rounded text-03 text-[hsl(var(--color-ink-muted))] border border-[hsl(var(--color-hairline-strong))] hover:text-[hsl(var(--color-ink))] hover:border-[hsl(var(--color-hairline-tertiary))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {primary.label}
         </button>
@@ -117,7 +117,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
                       item.onSelect()
                     }}
                     className={cn(
-                      'w-full text-left px-3 py-1.5 text-[13px] transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
+                      'w-full text-left px-3 py-1.5 text-03 transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
                       item.tone === 'danger'
                         ? 'text-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.1)]'
                         : 'text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] hover:text-[hsl(var(--color-ink))]'
