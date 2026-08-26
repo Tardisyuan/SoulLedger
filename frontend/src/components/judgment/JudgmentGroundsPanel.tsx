@@ -91,11 +91,13 @@ const POLARITY_TONE: Record<StatutePolarity, BadgeTone> = {
 function statuteRef(statute: Statute): StatuteRef {
   const payload: Record<string, unknown> = statute.payload_json ?? {};
   const gate = payload.gate;
+  const gateOrdinal = payload.gate_ordinal;
   const circle = payload.circle;
   const stephanus = payload.stephanus;
   return {
     ordinal: typeof statute.ordinal === "number" ? statute.ordinal : undefined,
     division: typeof gate === "string" ? gate : undefined,
+    gateOrdinal: typeof gateOrdinal === "number" ? gateOrdinal : undefined,
     circle: typeof circle === "number" ? circle : undefined,
     stephanus: typeof stephanus === "string" ? stephanus : undefined,
   };

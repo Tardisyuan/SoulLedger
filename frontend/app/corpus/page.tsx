@@ -116,6 +116,11 @@ function sigilRef(statute: Statute): StatuteRef {
   return {
     ordinal: statute.ordinal,
     division: typeof payload.gate === "string" ? payload.gate : undefined,
+    // `gate_ordinal`, not `ordinal`: the 門 is a contiguous range of the
+    // corpus-wide count, so `ordinal` beside a 門 name is a real-looking
+    // citation that points nowhere. See StatuteRef.gateOrdinal.
+    gateOrdinal:
+      typeof payload.gate_ordinal === "number" ? payload.gate_ordinal : undefined,
     circle: typeof payload.circle === "number" ? payload.circle : undefined,
     stephanus: typeof payload.stephanus === "string" ? payload.stephanus : undefined,
   };

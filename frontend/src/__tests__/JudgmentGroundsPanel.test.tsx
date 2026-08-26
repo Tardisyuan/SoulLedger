@@ -179,10 +179,10 @@ describe("JudgmentGroundsPanel", () => {
     it("CHINESE — 門 · 條 in Han numerals, with the 門 passed through", () => {
       expect(
         sigilOf(
-          { civilization: "CHINESE", corpus: "GONGGUOGE", ordinal: 17, payload_json: { gate: "救濟門" } },
+          { civilization: "CHINESE", corpus: "GONGGUOGE", ordinal: 17, payload_json: { gate: "救濟門", gate_ordinal: 6 } },
           "功過格 門條"
         ).textContent
-      ).toBe("救濟門 · 十七");
+      ).toBe("救濟門 · 六");
     });
 
     it("EUROPEAN — roman, circle first", () => {

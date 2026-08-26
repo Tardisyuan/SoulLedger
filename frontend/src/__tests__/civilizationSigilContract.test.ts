@@ -129,27 +129,27 @@ describe("roman numerals, to the ceiling the Inferno needs", () => {
 
 describe("中國 · 功過格 numbers by 門 and 條, in Han", () => {
   it("puts the 門 first and the article in Han numerals", () => {
-    expect(formatSigil("CHINESE", { ordinal: 17, division: "救濟門" })).toBe(
+    expect(formatSigil("CHINESE", { gateOrdinal: 17, division: "救濟門" })).toBe(
       "救濟門 · 十七"
     );
   });
 
   it("prints the last article of the corpus", () => {
-    expect(formatSigil("CHINESE", { ordinal: 73, division: "不軌門" })).toBe(
+    expect(formatSigil("CHINESE", { gateOrdinal: 73, division: "不軌門" })).toBe(
       "不軌門 · 七十三"
     );
   });
 
   it("prints the numeral alone when no 門 is carried", () => {
-    expect(formatSigil("CHINESE", { ordinal: 17 })).toBe("十七");
-    expect(formatSigil("CHINESE", { ordinal: 17, division: "  " })).toBe("十七");
+    expect(formatSigil("CHINESE", { gateOrdinal: 17 })).toBe("十七");
+    expect(formatSigil("CHINESE", { gateOrdinal: 17, division: "  " })).toBe("十七");
   });
 
   it("never prints an arabic numeral", () => {
     // The whole point of this civilization's system. A digit reaching the
     // screen means the Han conversion was skipped, not that it failed.
-    for (let ordinal = 1; ordinal <= 73; ordinal += 1) {
-      expect(formatSigil("CHINESE", { ordinal, division: "救濟門" })).not.toMatch(
+    for (let gateOrdinal = 1; gateOrdinal <= 73; gateOrdinal += 1) {
+      expect(formatSigil("CHINESE", { gateOrdinal, division: "救濟門" })).not.toMatch(
         /[0-9]/
       );
     }
@@ -157,6 +157,12 @@ describe("中國 · 功過格 numbers by 門 and 條, in Han", () => {
 
   it("has nothing to print without an ordinal", () => {
     expect(formatSigil("CHINESE", { division: "救濟門" })).toBeNull();
+    // And an `ordinal` is not a substitute for the missing `gateOrdinal`.
+    // 門 are contiguous ranges of the corpus-wide count — 救濟門 is ordinals
+    // 1–11 — so falling back would print 教典門 · 十七 for a 門 whose heading
+    // says it holds seven. A number in the right place meaning nothing is
+    // worse than no number: MissingValue says "not recorded", 十七 asserts.
+    expect(formatSigil("CHINESE", { ordinal: 17, division: "教典門" })).toBeNull();
   });
 });
 
