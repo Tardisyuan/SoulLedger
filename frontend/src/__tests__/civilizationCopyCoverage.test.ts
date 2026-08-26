@@ -52,6 +52,16 @@ const CIVILIZATION_NAMESPACES = [
   "actors.civilizations",
   "tenant.civilizations",
   "ledger.civ",
+  // The three the landing page uses. Added because a civilization went missing
+  // there and this guard could not see it: `app/page.tsx` held its copy as flat
+  // keys (`home.chinese_title`, `home.european_title`, `home.egyptian_title`),
+  // so GREEK's absence left no key absent from anything and the most public
+  // screen in the product announced three cosmologies out of four. The page now
+  // renders from CIVILIZATION_OPTIONS against these three maps, so the omission
+  // is expressible as a missing key — which is the only form this test can read.
+  "home.civilizations",
+  "home.civ_subtitle",
+  "home.civ_desc",
 ];
 
 function at(bundle: unknown, path: string): Record<string, unknown> | undefined {

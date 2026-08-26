@@ -18,6 +18,7 @@
 import { render, screen } from "@testing-library/react";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { JudgmentGroundsPanel } from "@/src/components/judgment/JudgmentGroundsPanel";
+import { MISSING_GLYPH } from "@/src/lib/domainDisplay";
 import type { JudgmentCitation, Statute } from "@/lib/api";
 
 function statute(overrides: Partial<Statute> = {}): Statute {
@@ -153,6 +154,85 @@ describe("JudgmentGroundsPanel", () => {
     ]);
     expect(screen.getByText(/docs\/03 §1/)).toBeInTheDocument();
     expect(screen.getByText(/do not correspond one-to-one/)).toBeInTheDocument();
+  });
+
+  /**
+   * The sigil column — four numbering systems, one component, no branch on a
+   * civilization name anywhere in it.
+   *
+   * These run through `formatSigil`, so they fail if the panel starts printing
+   * `statute.ordinal` instead. That substitution is the failure worth pinning:
+   * it renders, it is a number, it sits where a number belongs, and it is
+   * wrong in three of the four systems — a 功過格 article is cited by 門 and
+   * 條, an Inferno article by circle, and Plato by Stephanus page, whose
+   * relationship to the seeder's insertion order is nil.
+   */
+  describe("numbers each article in its own civilization's system", () => {
+    function sigilOf(statuteOverrides: Partial<Statute>, system: string): HTMLElement {
+      renderPanel([citation({ statute: statute(statuteOverrides) })]);
+      // The system's name is on the sigil's own element (it is also what a
+      // reader gets as a tooltip), so this addresses the cell without
+      // depending on any class name.
+      return screen.getByTitle(system);
+    }
+
+    it("CHINESE — 門 · 條 in Han numerals, with the 門 passed through", () => {
+      expect(
+        sigilOf(
+          { civilization: "CHINESE", corpus: "GONGGUOGE", ordinal: 17, payload_json: { gate: "救濟門" } },
+          "功過格 門條"
+        ).textContent
+      ).toBe("救濟門 · 十七");
+    });
+
+    it("EUROPEAN — roman, circle first", () => {
+      expect(
+        sigilOf(
+          { civilization: "EUROPEAN", corpus: "INFERNO", ordinal: 26, payload_json: { circle: 9 } },
+          "Roman, circle first"
+        ).textContent
+      ).toBe("IX · XXVI");
+    });
+
+    it("EGYPTIAN — the denominator is the doctrine, so it is always printed", () => {
+      expect(
+        sigilOf(
+          { civilization: "EGYPTIAN", corpus: "NEGATIVE_CONFESSION", ordinal: 4, payload_json: {} },
+          "§ n / 42"
+        ).textContent
+      ).toBe("§ 4 / 42");
+    });
+
+    it("GREEK — the transcribed Stephanus page, verbatim", () => {
+      expect(
+        sigilOf(
+          { civilization: "GREEK", corpus: "GORGIAS", ordinal: 3, payload_json: { stephanus: "523a-b" } },
+          "Stephanus"
+        ).textContent
+      ).toBe("523a-b");
+    });
+
+    it("shows a MISS rather than the ordinal when the system's own key is absent", () => {
+      // A Greek article with no transcribed page has no sigil. `22` is not a
+      // degraded answer — it is the seeder's row number wearing a citation's
+      // clothes. Asserting the glyph asserts the ABSENCE of that fallback:
+      // the ordinal is 3 here and must not appear.
+      const cell = sigilOf(
+        { civilization: "GREEK", corpus: "REPUBLIC_ER", ordinal: 3, payload_json: {} },
+        "Stephanus"
+      );
+      expect(cell.textContent).toBe(MISSING_GLYPH.unrecorded);
+      expect(cell.textContent).not.toContain("3");
+    });
+
+    it("renders a miss, not a crash, for a civilization with no numbering system", () => {
+      // `formatSigil` throws for an unknown civilization, which is right for a
+      // programming error — but this value arrives as a wire string, and this
+      // union has drifted from the backend before. One unmapped row must not
+      // take the judgment page down.
+      renderPanel([citation({ statute: statute({ civilization: "ATLANTEAN" }) })]);
+      expect(screen.getByText("CN-HL-O01")).toBeInTheDocument();
+    });
   });
 
   it("counts the grounds, since 功過相抵 turns on there being more than one", () => {

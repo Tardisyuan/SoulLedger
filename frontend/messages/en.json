@@ -46,17 +46,26 @@
     "console": "Console",
     "hero_title": "SoulLedger",
     "hero_subtitle": "Cross-civilization soul management system",
-    "hero_description": "Manage souls across Chinese Diyu, European Heaven & Hell, and Egyptian Duat — from a single unified platform.",
+    "hero_description": "One operating system for the souls of four cosmologies: the Chinese Diyu, European Heaven and Hell, the Egyptian Duat and the Greek Underworld.",
     "civilizations_title": "Civilizations",
-    "chinese_title": "Chinese Diyu",
-    "chinese_subtitle": "China",
-    "chinese_desc": "Ten Courts of Yama, Mengpo Soup, Six Realms of Reincarnation",
-    "european_title": "European Heaven & Hell",
-    "european_subtitle": "Europe",
-    "european_desc": "Christian Tribunal, Purgatory, Dante's Circles, Lethe River",
-    "egyptian_title": "Egyptian Duat",
-    "egyptian_subtitle": "Egypt",
-    "egyptian_desc": "Osiris Judgment, Heart Weighing against Ma'at Feather, Field of Reeds"
+    "civilizations": {
+      "CHINESE": "Chinese Diyu",
+      "EUROPEAN": "European Heaven and Hell",
+      "EGYPTIAN": "Egyptian Duat",
+      "GREEK": "Greek Underworld"
+    },
+    "civ_subtitle": {
+      "CHINESE": "China",
+      "EUROPEAN": "Europe",
+      "EGYPTIAN": "Egypt",
+      "GREEK": "Greece"
+    },
+    "civ_desc": {
+      "CHINESE": "Ten Yama Kings, Meng Po's broth, the six paths of rebirth",
+      "EUROPEAN": "Christian judgement, purgatory, Dante's Inferno, Lethe",
+      "EGYPTIAN": "The judgement of Osiris, the weighing of the heart, the Field of Reeds",
+      "GREEK": "Three judges parting the ways, Er's thousand-year cycle, the water of Lethe"
+    }
   },
   "footer": {
     "built_with": "Built with Django + DRF + Next.js",
@@ -678,6 +687,17 @@
       "EGYPTIAN": "Weighing of the Heart",
       "GREEK": "Sentence to be Served",
       "UNKNOWN": "Deed Record"
+    },
+    "book": {
+      "title": "Merit-and-Demerit Ledger",
+      "col_n": "No.",
+      "col_date": "Date",
+      "col_item": "Entry",
+      "col_merit": "Merit",
+      "col_demerit": "Demerit",
+      "col_balance": "Net",
+      "total": "Total",
+      "empty": "No entries recorded."
     }
   },
   "judgment": {
@@ -816,6 +836,19 @@
       "MERIT": "Merit",
       "DENIAL": "Denial",
       "PROCEDURE": "Rule of the court"
+    },
+    "corpus": {
+      "title": "Corpus",
+      "subtitle": "The articles a verdict may rest on. 175 transcribed across four cosmologies.",
+      "col_sigil": "Sigil",
+      "col_offence": "Offence",
+      "col_text": "Article",
+      "col_citations": "Cited",
+      "filter_corpus": "Corpus",
+      "article_count": "{{n}} articles",
+      "empty_reason": "No article in this corpus has been transcribed.",
+      "citations_absent": "This response does not carry a citation count.",
+      "sigil_absent": "This article has no transcribed number."
     }
   },
   "audit": {

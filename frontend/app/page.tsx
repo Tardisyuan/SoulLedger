@@ -1,6 +1,7 @@
 "use client";
 
 import { useTenant } from "@/src/contexts/TenantContext";
+import { CIVILIZATION_OPTIONS } from "@/src/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ExternalLink } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -100,23 +101,39 @@ export default function HomePage() {
           <h2 className="text-06 text-center mb-6 md:mb-10 text-[hsl(var(--color-ink-muted))]">
             {t("home.civilizations_title")}
           </h2>
-          <div className="grid md:grid-cols-3 gap-4 md:gap-6 max-w-4xl mx-auto">
-            <CivilizationCard
-              title={t("home.chinese_title")}
-              subtitle={t("home.chinese_subtitle")}
-              description={t("home.chinese_desc")}
-            />
-            <CivilizationCard
-              title={t("home.european_title")}
-              subtitle={t("home.european_subtitle")}
-              description={t("home.european_desc")}
-            />
-            <CivilizationCard
-              title={t("home.egyptian_title")}
-              subtitle={t("home.egyptian_subtitle")}
-              description={t("home.egyptian_desc")}
-              isEgyptian
-            />
+          {/* Rendered from CIVILIZATION_OPTIONS, not from three hand-written
+              cards. Until this change the page showed CHINESE, EUROPEAN and
+              EGYPTIAN — and said so, in `home.hero_description`: 「三大文明体系」.
+              GREEK has been a first-class civilization everywhere else for some
+              time: four tenants, 22 transcribed Plato articles, a --civ-mark
+              colour with its own measured contrast. The most public screen in
+              the product was telling every visitor the system covers three
+              cosmologies.
+
+              `civilizationCopyCoverage` did not catch it and structurally could
+              not have. That guard walks seven namespaces of the shape
+              `X.civilizations[MEMBER]` and asserts a non-empty string for every
+              member of CIVILIZATION_OPTIONS. This page's copy was flat keys —
+              `home.chinese_title`, `home.european_title` — so a missing
+              civilization left no key missing from anything. The check ran, it
+              reddens correctly for what it watches, and its subject list simply
+              did not include the landing page.
+
+              So the fix is the shape, not the card: the copy now lives in
+              `home.civilizations` / `home.civ_subtitle` / `home.civ_desc`, keyed
+              by member, and those three namespaces are added to that guard. A
+              fifth civilization now fails the test rather than quietly getting
+              no card. */}
+          <div className="grid md:grid-cols-2 gap-4 md:gap-6 max-w-4xl mx-auto">
+            {CIVILIZATION_OPTIONS.map((civ) => (
+              <CivilizationCard
+                key={civ}
+                title={t(`home.civilizations.${civ}`)}
+                subtitle={t(`home.civ_subtitle.${civ}`)}
+                description={t(`home.civ_desc.${civ}`)}
+                isEgyptian={civ === "EGYPTIAN"}
+              />
+            ))}
           </div>
         </section>
 

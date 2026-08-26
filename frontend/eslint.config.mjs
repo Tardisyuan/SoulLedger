@@ -265,20 +265,6 @@ const LEGACY = {
     "radius": 2,
     "type": 2
   },
-  "app/judgment/[id]/page.tsx": {
-    "palette": 21,
-    "radius": 13,
-    "space": 15,
-    "type": 29
-  },
-  "app/ledger/loading.tsx": {
-    "palette": 2
-  },
-  "app/ledger/page.tsx": {
-    "radius": 4,
-    "space": 2,
-    "type": 16
-  },
   "app/not-found.tsx": {
     "radius": 1,
     "type": 2
@@ -290,11 +276,6 @@ const LEGACY = {
     "palette": 5,
     "space": 1,
     "type": 1
-  },
-  "src/components/judgment/JudgmentGroundsPanel.tsx": {
-    "radius": 1,
-    "space": 5,
-    "type": 9
   },
   "src/components/judgment/JudgmentQueueConsole.tsx": {
     "radius": 16,

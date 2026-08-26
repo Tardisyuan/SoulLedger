@@ -214,10 +214,20 @@ describe("LedgerPage with a sparse payload", () => {
     renderPage();
 
     await screen.findByText("5");
-    // active + judging overview cards both fall back to 0
+    // active + judging overview figures both fall back to 0.
+    //
+    // Selected by `data-overview-figure` rather than by the figure's size
+    // class, which is what this line used to do (`text-3xl`). That coupling
+    // broke on the eight-step type migration for a reason worth keeping out of
+    // the next selector: `text-3xl` is not merely a different size, it is one
+    // of the classes `design-system/type-scale` now forbids, so the assertion
+    // was pinned to a class the design system had committed to deleting. Naming
+    // `text-07` here would buy the same debt at the next scale change. The hook
+    // says "this element is an overview figure", which is the thing the
+    // assertion is actually about and is stable across restyling.
     const overviewZeros = screen
       .getAllByText("0")
-      .filter((el) => el.className.includes("text-3xl"));
+      .filter((el) => el.hasAttribute("data-overview-figure"));
     expect(overviewZeros).toHaveLength(2);
   });
 

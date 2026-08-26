@@ -115,6 +115,30 @@ export interface Statute {
   source: string;
   source_notes: string[];
   payload_json: Record<string, unknown>;
+  /**
+   * How many times **this tenant** has cited this article, annotated by
+   * `StatuteViewSet.get_queryset` through `apps/core/tenant.py`'s
+   * `tenant_aggregate_filter`. It is the one number that separates a rulebook
+   * from a list: an article nobody has ever relied on is a different thing
+   * from one that founds thirty verdicts.
+   *
+   * `null` IS NOT `0`, and conflating them is the whole reason this field is
+   * nullable rather than defaulted. `0` is a fact about the corpus — this
+   * article exists and has never been cited. `null` means the response did not
+   * carry a count at all: `StatuteSerializer` reads the annotation off the
+   * instance and hands back `None` when it is absent, which is the nested path
+   * (`JudgmentCitationSerializer.statute`, where the statute arrives through a
+   * citation rather than through the annotated list queryset). The list
+   * endpoint always annotates, so a reader on /corpus should never see the
+   * miss — and if one appears, it means the annotation was dropped, which is
+   * exactly the thing a rendered `0` would hide.
+   *
+   * Optional because the property is genuinely absent on payloads serialized
+   * before this field existed, which is a third state again from either.
+   * Render through `<DomainNumber>`: it prints the digit for `0` and a typed
+   * `<MissingValue>` for both absences.
+   */
+  citation_count?: number | null;
 }
 
 export interface JudgmentCitation {
