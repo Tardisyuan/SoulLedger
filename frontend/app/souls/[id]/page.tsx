@@ -24,22 +24,18 @@ import { ledgerApi, type LedgerInheritance } from "@/lib/api/ledger";
 import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { SoulKarmaLedgerCard } from "@/src/components/souls/SoulKarmaLedgerCard";
-import { SoulLedgerBook } from "@/src/components/souls/SoulLedgerBook";
-import { SoulLifecycleTimeline } from "@/src/components/souls/SoulLifecycleTimeline";
-import {
-  RebirthFormSelect,
-  DEFAULT_REBIRTH_FORM,
-  type RebirthFormValue,
-} from "@/src/components/souls/RebirthFormSelect";
-import { DateProblemsPanel } from "@/src/components/souls/DateProblemsPanel";
-import { DomainEnum, DomainText, IdentifierChip } from "@/src/components/ui/DomainValue";
+import { DEFAULT_REBIRTH_FORM, type RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
+import { SoulInfoCard } from "@/src/components/souls/detail/SoulInfoCard";
+import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
+import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActions";
+import { SoulTimelineColumn } from "@/src/components/souls/detail/SoulTimelineColumn";
+import { SoulDeleteModal } from "@/src/components/souls/detail/SoulDeleteModal";
+import { DomainEnum, IdentifierChip } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
-import { BaseModal, ConfirmDialog } from "@/src/components/ui/Modal";
+import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { formatHistoricalDate } from "@/lib/utils";
 import { PageShell } from "@/src/components/ui/PageShell";
-import { Button } from "@/src/components/ui/Button";
 
 /** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
 const BADGE_SHAPE = "px-2 py-1 text-01";
@@ -362,57 +358,13 @@ export default function SoulDetailPage() {
   );
 
   const headerActions = !loading && soul ? (
-    <div className="flex items-center gap-3">
-      <RequirePermission permissions="soul.update">
-        <Button type="button" variant="secondary" onClick={() => setIsEditModalOpen(true)}>
-          {t("souls.detail.edit")}
-        </Button>
-      </RequirePermission>
-      {/* 破坏性动作住在溢出菜单里,而不是紧挨编辑的一个足量红按钮
-          (Stage 3 文档缺陷 #3)—— 删除既少见又后果重大,不该和日常的编辑
-          分享同一份视觉权重。 */}
-      <RequirePermission permissions="soul.delete">
-        <div className="relative">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setIsOverflowMenuOpen((v) => !v)}
-            aria-haspopup="menu"
-            aria-expanded={isOverflowMenuOpen}
-            aria-label={tf("souls.detail.more_actions", "更多操作")}
-          >
-            ⋯
-          </Button>
-          {isOverflowMenuOpen && (
-            <>
-              <button
-                type="button"
-                aria-hidden="true"
-                tabIndex={-1}
-                className="fixed inset-0 z-10 cursor-default"
-                onClick={() => setIsOverflowMenuOpen(false)}
-              />
-              <div
-                role="menu"
-                className="absolute right-0 mt-1 w-40 z-20 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-lg py-1"
-              >
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setIsOverflowMenuOpen(false);
-                    handleDeleteConfirm();
-                  }}
-                  className="w-full text-left px-3 py-1 text-03 text-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.1)] transition-colors"
-                >
-                  {t("souls.detail.delete")}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </RequirePermission>
-    </div>
+    <SoulHeaderActions
+      onEdit={() => setIsEditModalOpen(true)}
+      onDelete={handleDeleteConfirm}
+      isOverflowMenuOpen={isOverflowMenuOpen}
+      setIsOverflowMenuOpen={setIsOverflowMenuOpen}
+      tf={tf}
+    />
   ) : null;
 
   return (
@@ -427,59 +379,13 @@ export default function SoulDetailPage() {
         {/* Left column: Soul info + ledger */}
         <div className="lg:col-span-1 space-y-6">
           {/* Soul Card */}
-          <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-03 font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{t("souls.detail.soul_info")}</h2>
-            {loading ? (
-              <div className="space-y-2 text-03">
-                {[1,2,3,4,5].map(i => (
-                  <div key={i} className="flex justify-between">
-                    <Skeleton className="h-3 w-16" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <dl className="space-y-2 text-03">
-                {/* Soul ID now lives in the header as a copyable chip —
-                    a second, non-interactive, truncated copy here was
-                    redundant and couldn't be pasted into anything. */}
-                <div className="flex justify-between">
-                  <dt className="text-[hsl(var(--color-ink-muted))]">{t("souls.civilization")}</dt>
-                  <dd className="text-[hsl(var(--color-ink))]"><DomainEnum namespace="souls.civilizations" value={soul?.civilization} /></dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-[hsl(var(--color-ink-muted))] shrink-0">
-                    {/* birth_date belongs to the soul's original identity
-                        (birth_name), not necessarily the name in the header
-                        above — label it explicitly whenever the two differ
-                        so the date isn't misread as the current life's. */}
-                    {soul?.birth_name && soul.birth_name !== soul.name
-                      ? tf("souls.detail.birth_of", "Birth ({{name}})", { name: soul.birth_name })
-                      : t("souls.detail.birth")}
-                  </dt>
-                  <dd className="text-[hsl(var(--color-ink))] text-right"><DomainText value={birthDisplay} /></dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.death")}</dt>
-                  {/* A soul that has not died has no death date, and that is
-                      "not applicable while alive", not "nobody wrote it down
-                      yet" — the two are different facts and now read
-                      differently (BRIEF §4.6). */}
-                  <dd className="text-[hsl(var(--color-ink))]">
-                    <DomainText
-                      value={deathDisplay}
-                      missingKind={soul?.current_state === "ALIVE" ? "inapplicable" : "unrecorded"}
-                      missingReason={soul?.current_state === "ALIVE" ? t("souls.states.ALIVE") : undefined}
-                    />
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-[hsl(var(--color-ink-muted))]">{t("souls.detail.location_label")}</dt>
-                  <dd className="text-[hsl(var(--color-ink))]"><DomainText value={soul?.origin_location} /></dd>
-                </div>
-              </dl>
-            )}
-          </div>
+          <SoulInfoCard
+            soul={soul}
+            loading={loading}
+            birthDisplay={birthDisplay}
+            deathDisplay={deathDisplay}
+            tf={tf}
+          />
 
           {/* 业力总账 — Stage 3 doc's left-column ledger card: the existing
               SoulReadingPanel (unchanged) plus the raw-vs-decayed breakdown,
@@ -520,151 +426,34 @@ export default function SoulDetailPage() {
           )}
 
           {/* Action Buttons */}
-          <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-03 font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{t("souls.detail.actions")}</h2>
-            {loading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {soul?.current_state === "ALIVE" && (
-                  <RequirePermission permissions="soul.die">
-                    {/* Accent, not status-error. Recording a death is the
-                        central verb of this product, not a failure — and the
-                        error token is what genuinely destructive actions
-                        (删除, below) use, so spending it here drains the
-                        signal from both. */}
-                    <button
-                      onClick={handleDie}
-                      disabled={!!actionLoading}
-                      className="w-full py-2 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black disabled:opacity-50 text-03 font-medium transition-colors"
-                    >
-                      {actionLoading === "die" ? t("souls.detail.processing") : t("souls.detail.mark_dead")}
-                    </button>
-                  </RequirePermission>
-                )}
-                {soul?.current_state === "JUDGING" && (
-                  <div className="space-y-2">
-                    <p className="text-02 text-[hsl(var(--color-ink-muted))] text-center">{t("souls.detail.render_judgment")}</p>
-                    <RequirePermission permissions="judgment.create">
-                      <button
-                        onClick={handleStartJudgment}
-                        disabled={!!actionLoading}
-                        className="w-full py-2 px-4 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent)/0.8)] disabled:opacity-50 text-black text-03 font-medium transition-colors"
-                      >
-                        {actionLoading === "judge" ? t("souls.detail.processing") : t("souls.detail.start_judgment")}
-                      </button>
-                    </RequirePermission>
-                  </div>
-                )}
-                {soul?.current_state === "DISPOSED" && (
-                  <RequirePermission permissions="reincarnation.reborn">
-                    {/* The form is chosen before the destination realm, not
-                        after: each button below commits the rebirth
-                        immediately, so there is no later screen on which to
-                        pick 道. Rendered only when there is something to
-                        commit — a soul with no pending disposition has no
-                        rebirth to configure. */}
-                    {dispositions.some(d => !d.is_executed) && (
-                      <div className="pb-3 mb-3 border-b border-[hsl(var(--color-hairline))]">
-                        <RebirthFormSelect
-                          value={rebirthForm}
-                          onChange={setRebirthForm}
-                          disabled={!!actionLoading}
-                          tf={tf}
-                        />
-                      </div>
-                    )}
-                    {dispositions.filter(d => !d.is_executed).map((disp) => (
-                      <button
-                        key={disp.id}
-                        onClick={() => handleReincarnate(disp.id)}
-                        disabled={!!actionLoading}
-                        className="w-full py-2 px-4 bg-[hsl(var(--color-status-info))] hover:bg-[hsl(var(--color-status-info)/0.8)] disabled:opacity-50 text-03 font-medium transition-colors"
-                      >
-                        {actionLoading === "reincarnate" ? t("souls.detail.processing") : `${t("souls.detail.reincarnate")} ${disp.realm_name || disp.realm_code || t("souls.detail.destination")}`}
-                      </button>
-                    ))}
-                  </RequirePermission>
-                )}
-                {soul?.current_state === "REINCARNATING" && (
-                  <div className="text-center text-[hsl(var(--color-status-info))] text-03 py-2">
-                    {t("souls.detail.being_reborn")}
-                  </div>
-                )}
-                {soul?.current_state === "ALIVE" && reincarnations.length > 0 && (
-                  <div className="text-center text-[hsl(var(--color-ink-subtle))] text-02 pt-2">
-                    {reincarnations.length} {t("souls.detail.previous_reincarnations")}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <SoulActionsCard
+            soul={soul}
+            loading={loading}
+            actionLoading={actionLoading}
+            dispositions={dispositions}
+            reincarnations={reincarnations}
+            rebirthForm={rebirthForm}
+            onRebirthFormChange={setRebirthForm}
+            onDie={handleDie}
+            onStartJudgment={handleStartJudgment}
+            onReincarnate={handleReincarnate}
+            tf={tf}
+          />
         </div>
 
         {/* Right column: Timeline */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Date Problems — renders nothing when there are none, see
-              DateProblemsPanel. Placed first: a bad date undermines every
-              reading and record below it, so it's the thing worth seeing
-              before anything else on this soul. */}
-          {!loading && soul && (
-            <DateProblemsPanel
-              soulId={soul.id}
-              soulProblems={soul.date_problems}
-              records={records}
-              onChanged={loadSoulData}
-            />
-          )}
-
-          {/* 功过台账 —— 逐条账页。这一页原本有功过格的每一个部分,唯独没有
-              「条」:左栏那张卡片收下 `records` 之后画的是五个合计数和一张图,
-              于是一个逐条销算的账簿制度在整个产品里没有一处显示过它的条目。
-              放在宽栏而不是左栏,因为六列定宽账页在 1/3 栏里会永远横向滚动;
-              放在日期问题之下、生平脊线之上,因为一个坏日期会动摇它下面每一
-              条账的日与序,而生平脊线讲的是比账簿更大的故事。 */}
-          {!loading && ledger && (
-            <div className="bg-surface-1 p-4 border border-hairline">
-              <SoulLedgerBook records={ledger.records} />
-            </div>
-          )}
-
-          {/* Soul lifecycle spine — replaces the four judgment/disposition/
-              reincarnation/event-log boxes that used to stack here, each with
-              its own "暂无记录" empty state (docs/design-handoff/BRIEF.md
-              §4.1, "clearest layout defect" per the Stage 3 design doc). One
-              reverse-chronological timeline instead: karma entries, judgment/
-              disposition/reincarnation transition markers, and (behind an
-              opt-in toggle) the raw system event feed, plus dashed
-              placeholder rows for stages the soul hasn't reached yet. */}
-          {loading ? (
-            <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))] space-y-3">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : (
-            soul && (
-              <SoulLifecycleTimeline
-                soul={soul}
-                judgments={judgments}
-                dispositions={dispositions}
-                reincarnations={reincarnations}
-                events={events}
-                ledgerRecords={ledger?.records ?? []}
-                // The label says "open in the judgment queue", and until the
-                // queue existed this went to the read-only detail page
-                // instead. `?at=` enters the real queue on this case; the
-                // backend falls through to the head of the queue if it has
-                // since been concluded, so a stale link is never a dead end.
-                onOpenJudgmentQueue={(judgmentId) => router.push(`/judgment/queue?at=${judgmentId}`)}
-              />
-            )
-          )}
-        </div>
+        <SoulTimelineColumn
+          soul={soul}
+          loading={loading}
+          records={records}
+          ledger={ledger}
+          judgments={judgments}
+          dispositions={dispositions}
+          reincarnations={reincarnations}
+          events={events}
+          onChanged={loadSoulData}
+          onOpenJudgmentQueue={(judgmentId) => router.push(`/judgment/queue?at=${judgmentId}`)}
+        />
       </div>
 
       {/* Edit Modal */}
@@ -677,34 +466,12 @@ export default function SoulDetailPage() {
         />
       )}
 
-      {/* Delete Confirmation Modal */}
-      <BaseModal
+      <SoulDeleteModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title={t("souls.detail.confirm_delete")}
-        footer={
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => setIsDeleteModalOpen(false)}
-              disabled={deleteSoulMutation.isPending}
-              className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 text-03 transition-colors"
-            >
-              {t("souls.detail.cancel_delete")}
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleteSoulMutation.isPending}
-              className="flex-1 px-4 py-2 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 text-white text-03 font-medium transition-colors"
-            >
-              {deleteSoulMutation.isPending ? t("souls.detail.deleting") : t("souls.detail.confirm_delete_action")}
-            </button>
-          </div>
-        }
-      >
-        <p className="text-[hsl(var(--color-ink))] text-03">{t("souls.detail.delete_confirm_message")}</p>
-      </BaseModal>
+        onConfirm={handleDelete}
+        isPending={deleteSoulMutation.isPending}
+      />
 
       {/* Custom Confirm Dialog */}
       <ConfirmDialog

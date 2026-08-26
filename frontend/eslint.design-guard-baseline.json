@@ -37,12 +37,23 @@
     "type": 16
   },
   "src/components/layout/AppLayout.tsx": {
-    "radius": 16,
+    "radius": 9,
     "space": 3,
-    "type": 17
+    "type": 10
+  },
+  "src/components/layout/Breadcrumb.tsx": {
+    "type": 1
+  },
+  "src/components/layout/LogoutConfirmDialog.tsx": {
+    "radius": 3,
+    "type": 4
   },
   "src/components/layout/MenuGloss.tsx": {
     "type": 1
+  },
+  "src/components/layout/SidebarMenuItem.tsx": {
+    "radius": 4,
+    "type": 2
   },
   "src/components/layout/TenantSignal.tsx": {
     "space": 2
@@ -114,15 +125,23 @@
     "space": 5,
     "type": 12
   },
+  "src/components/souls/SoulLifecycleRowShell.tsx": {
+    "radius": 2,
+    "space": 4
+  },
   "src/components/souls/SoulLifecycleTimeline.tsx": {
-    "radius": 8,
-    "space": 13,
+    "radius": 6,
+    "space": 9,
     "type": 15
   },
   "src/components/souls/SoulReadingPanel.tsx": {
     "radius": 3,
-    "space": 6,
-    "type": 29
+    "space": 4,
+    "type": 21
+  },
+  "src/components/souls/SoulSentenceReading.tsx": {
+    "space": 2,
+    "type": 8
   },
   "src/components/ui/DomainValue.tsx": {
     "radius": 1,
@@ -158,10 +177,19 @@
     "radius": 8,
     "type": 14
   },
+  "src/components/workflow/EditableNode.tsx": {
+    "palette": 4,
+    "radius": 1,
+    "type": 4
+  },
+  "src/components/workflow/NodeEditModal.tsx": {
+    "radius": 7,
+    "type": 7
+  },
   "src/components/workflow/WorkflowEditor.tsx": {
-    "palette": 10,
-    "radius": 14,
+    "palette": 6,
+    "radius": 6,
     "space": 7,
-    "type": 15
+    "type": 4
   }
 }

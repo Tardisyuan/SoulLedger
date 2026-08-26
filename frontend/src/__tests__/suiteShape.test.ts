@@ -87,6 +87,7 @@ const COLLECTED_FILES = [
   "WebSocketContext.test.tsx",
   "WelcomePage.test.tsx",
   "WorkflowEditor.test.tsx",
+  "WorkflowPage.instances.test.tsx",
   "WorkflowPage.test.tsx",
   "api.test.ts",
   "auditGrouping.test.ts",
@@ -99,9 +100,11 @@ const COLLECTED_FILES = [
   "dataGridToneContract.test.ts",
   "designGuardContract.test.ts",
   "domainDisplayContract.test.tsx",
+  "domainDisplayRendering.test.tsx",
   "domainNamespaceContract.test.ts",
   "drawerFocusTrap.test.tsx",
   "eventRegistry.test.ts",
+  "focusRingContract.test.ts",
   "inkOnSurfaceContract.test.ts",
   "ledgerQuantityContract.test.tsx",
   "presetNodeTypes.test.tsx",
@@ -125,6 +128,7 @@ const COLLECTED_FILES = [
   "useSouls.test.ts",
   "viewportHeightContract.test.ts",
   "workflowTemplateLore.test.ts",
+  "wsClient.reconnect.test.ts",
   "wsClient.test.ts",
 ];
 

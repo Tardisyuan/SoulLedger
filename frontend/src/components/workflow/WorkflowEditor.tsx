@@ -10,9 +10,6 @@ import {
   useNodesState,
   useEdgesState,
   MarkerType,
-  NodeTypes,
-  Handle,
-  Position,
   Connection,
   addEdge,
   NodeChange,
@@ -29,18 +26,28 @@ import {
   type CivilizationOption,
 } from "@/src/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { Modal } from "@/src/components/ui/Modal";
+// Both stay under src/components/workflow/ deliberately: xyflow renders
+// `markerEnd` into a standalone <marker> defs tree where `hsl(var(--…))` does
+// not resolve, so the literal hex values here are a ruled exception — and
+// eslint.config.mjs's HEX_ALLOW grants it by PATH PREFIX. A file of this
+// editor's moved anywhere else goes red on its first arrow colour.
+import { nodeTypes } from "@/src/components/workflow/EditableNode";
+import {
+  NodeEditModal,
+  type NodeDataUpdates,
+  type NodeEditData,
+} from "@/src/components/workflow/NodeEditModal";
 import { useToast } from "@/src/contexts/ToastContext";
+import {
+  edgeArrow,
+  presetTemplateToFlow,
+  savedTemplateToFlow,
+  type TemplateNode,
+} from "@/src/components/workflow/workflowEditorGraph";
 
-export interface TemplateNode {
-  id?: string;
-  node_name: string;
-  node_type: "TRIAL" | "EVALUATION" | "APPEAL" | "FINAL" | "EXECUTION";
-  court_code: string;
-  approver_role: string;
-  approver_type: "ACTOR" | "ROLE" | "SYSTEM";
-  node_order: number;
-}
+// Re-exported, not relocated as far as callers are concerned: `TemplateNode`
+// has been part of this module's surface since before the split.
+export type { TemplateNode };
 
 export interface WorkflowTemplateInput {
   name: string;
@@ -58,66 +65,6 @@ export interface WorkflowTemplateInput {
    */
   priority: number;
   nodes: TemplateNode[];
-}
-
-// Custom editable node component
-function EditableNodeComponent({
-  data,
-  selected,
-}: {
-  data: { label: string; nodeType: string; courtCode: string; approverRole: string; [key: string]: unknown };
-  selected: boolean;
-}) {
-  const nodeTypeColors: Record<string, string> = {
-    TRIAL: "border-[hsl(var(--color-accent))] bg-[hsl(var(--color-surface-3))]",
-    EVALUATION: "border-blue-500 bg-[hsl(var(--color-surface-3))]",
-    APPEAL: "border-purple-500 bg-[hsl(var(--color-surface-3))]",
-    FINAL: "border-green-500 bg-[hsl(var(--color-surface-3))]",
-    EXECUTION: "border-red-500 bg-[hsl(var(--color-surface-3))]",
-  };
-
-  const colorClass = nodeTypeColors[data.nodeType] || nodeTypeColors.TRIAL;
-
-  return (
-    <div
-      className={`px-4 py-3 rounded-lg border-2 min-w-[180px] cursor-pointer transition-all ${
-        selected ? "ring-2 ring-[hsl(var(--color-accent))] ring-offset-2 ring-offset-[hsl(var(--color-surface-2))]" : ""
-      } ${colorClass}`}
-    >
-      <Handle type="target" position={Position.Top} className="!bg-[hsl(var(--color-accent))]" />
-      <div className="text-sm font-semibold text-[hsl(var(--color-ink))]">{data.label}</div>
-      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">{data.nodeType}</div>
-      {data.courtCode && (
-        <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">🏛 {data.courtCode}</div>
-      )}
-      {data.approverRole && (
-        <div className="text-xs text-[hsl(var(--color-ink-subtle))]">👤 {data.approverRole}</div>
-      )}
-      <Handle type="source" position={Position.Bottom} className="!bg-[hsl(var(--color-accent))]" />
-    </div>
-  );
-}
-
-const nodeTypes: NodeTypes = {
-  editableNode: EditableNodeComponent,
-};
-
-interface NodeEditData {
-  id: string;
-  node_name: string;
-  node_type: "TRIAL" | "EVALUATION" | "APPEAL" | "FINAL" | "EXECUTION";
-  court_code: string;
-  approver_role: string;
-  approver_type: "ACTOR" | "ROLE" | "SYSTEM";
-}
-
-// Node data stored in React Flow nodes (camelCase for data field)
-interface NodeDataUpdates {
-  label?: string;
-  nodeType?: string;
-  courtCode?: string;
-  approverRole?: string;
-  approverType?: string;
 }
 
 export default function WorkflowEditor({
@@ -138,11 +85,6 @@ export default function WorkflowEditor({
   // Unique prefix so field ids never collide across multiple
   // WorkflowEditor instances mounted at once.
   const formId = useId();
-  const nodeNameId = `${formId}-node-name`;
-  const nodeTypeId = `${formId}-node-type`;
-  const courtCodeId = `${formId}-court-code`;
-  const approverTypeId = `${formId}-approver-type`;
-  const approverRoleId = `${formId}-approver-role`;
   const templatePriorityId = `${formId}-template-priority`;
 
   // State
@@ -203,37 +145,9 @@ export default function WorkflowEditor({
       // priority is exactly the place a silent 0 costs the most.
       setTemplatePriority(existingTemplate.priority ?? 0);
 
-      const flowNodes = (existingTemplate.nodes || []).map(
-        (n: TemplateNode, idx: number) => ({
-          id: n.id || `node-${idx}`,
-          type: "editableNode",
-          position: { x: 250, y: idx * 160 },
-          data: {
-            id: n.id || `node-${idx}`,
-            label: n.node_name,
-            nodeType: n.node_type,
-            courtCode: n.court_code || "",
-            approverRole: n.approver_role || "",
-            approverType: n.approver_type,
-          },
-        })
-      );
-
-      const flowEdges = (existingTemplate.nodes || [])
-        .filter((_: unknown, idx: number) => idx > 0)
-        .map((n: TemplateNode, idx: number) => {
-          const prevNode = (existingTemplate.nodes || [])[idx];
-          return {
-            id: `e${prevNode.id}-${n.id}`,
-            source: prevNode.id || `node-${idx}`,
-            target: n.id || `node-${idx + 1}`,
-            markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
-            style: { stroke: "#f59e0b", strokeWidth: 2 },
-          };
-        });
-
-      setNodes(flowNodes);
-      setEdges(flowEdges);
+      const flow = savedTemplateToFlow(existingTemplate.nodes || []);
+      setNodes(flow.nodes);
+      setEdges(flow.edges);
     }
   }, [existingTemplate, templateId, setNodes, setEdges]);
 
@@ -255,37 +169,9 @@ export default function WorkflowEditor({
       setTemplatePriority(initialTemplateData.priority ?? 0);
 
       const nodesData = initialTemplateData.nodes_json || initialTemplateData.nodes || [];
-      const flowNodes = nodesData.map(
-        (n: Record<string, unknown>, idx: number) => ({
-          id: n.id || `node-${idx}`,
-          type: "editableNode",
-          position: { x: 250, y: idx * 160 },
-          data: {
-            id: n.id || `node-${idx}`,
-            label: n.node_name || n.label || "",
-            nodeType: n.node_type || n.nodeType || "TRIAL",
-            courtCode: n.court_code || n.courtCode || "",
-            approverRole: n.approver_role || n.approverRole || "",
-            approverType: n.approver_type || n.approverType || "ROLE",
-          },
-        })
-      );
-
-      const flowEdges = nodesData
-        .filter((_: unknown, idx: number) => idx > 0)
-        .map((n: Record<string, unknown>, idx: number) => {
-          const prevNode = nodesData[idx];
-          return {
-            id: `e${prevNode.id}-${n.id}`,
-            source: prevNode.id || `node-${idx}`,
-            target: n.id || `node-${idx + 1}`,
-            markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
-            style: { stroke: "#f59e0b", strokeWidth: 2 },
-          };
-        });
-
-      setNodes(flowNodes);
-      setEdges(flowEdges);
+      const flow = presetTemplateToFlow(nodesData);
+      setNodes(flow.nodes);
+      setEdges(flow.edges);
     }
   }, [initialTemplateData, templateId, setNodes, setEdges]);
 
@@ -413,8 +299,7 @@ export default function WorkflowEditor({
         addEdge(
           {
             ...connection,
-            markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
-            style: { stroke: "#f59e0b", strokeWidth: 2 },
+            ...edgeArrow(),
           },
           eds
         )
@@ -453,21 +338,6 @@ export default function WorkflowEditor({
     };
     saveMutation.mutate(templateData);
   }, [templateName, templateDescription, templateCiv, templateCaseType, templatePriority, getTemplateNodes, saveMutation]);
-
-  // Node type options
-  const nodeTypeOptions = [
-    { value: "TRIAL", label: t("workflow.node_type.trial") },
-    { value: "EVALUATION", label: t("workflow.node_type.evaluation") },
-    { value: "APPEAL", label: t("workflow.node_type.appeal") },
-    { value: "FINAL", label: t("workflow.node_type.final") },
-    { value: "EXECUTION", label: t("workflow.node_type.execution") },
-  ];
-
-  const approverTypeOptions = [
-    { value: "ROLE", label: t("workflow.approver_types.ROLE") },
-    { value: "ACTOR", label: t("workflow.approver_types.ACTOR") },
-    { value: "SYSTEM", label: t("workflow.approver_types.SYSTEM") },
-  ];
 
   // 三档急缓的文案复用 `workflow.detail.*`——`app/workflow/[id]/page.tsx` 用同一
   // 组键把 `ApprovalWorkflow.priority` 的 0/1/2 显示成普通/紧急/危急，三份 bundle
@@ -578,8 +448,7 @@ export default function WorkflowEditor({
           fitView
           className="bg-[hsl(var(--color-surface-2))]"
           defaultEdgeOptions={{
-            markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },
-            style: { stroke: "#f59e0b", strokeWidth: 2 },
+            ...edgeArrow(),
           }}
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
@@ -591,117 +460,15 @@ export default function WorkflowEditor({
       </div>
 
       {/* Node edit modal */}
-      <Modal
+      <NodeEditModal
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
-        title={t("workflow.editor.edit_node")}
-      >
-        {editData && (
-          <div className="space-y-4">
-            <div>
-              <label htmlFor={nodeNameId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.node_name")}</label>
-              <input
-                id={nodeNameId}
-                type="text"
-                value={editData.node_name}
-                onChange={(e) =>
-                  setEditData({ ...editData, node_name: e.target.value })
-                }
-                className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-              />
-            </div>
-            <div>
-              <label htmlFor={nodeTypeId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.node_type")}</label>
-              <select
-                id={nodeTypeId}
-                value={editData.node_type}
-                onChange={(e) =>
-                  setEditData({
-                    ...editData,
-                    node_type: e.target.value as NodeEditData["node_type"],
-                  })
-                }
-                className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-              >
-                {nodeTypeOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor={courtCodeId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.court_code")}</label>
-              <input
-                id={courtCodeId}
-                type="text"
-                value={editData.court_code}
-                onChange={(e) =>
-                  setEditData({ ...editData, court_code: e.target.value })
-                }
-                placeholder={t("workflow.editor.court_placeholder")}
-                className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-              />
-            </div>
-            <div>
-              <label htmlFor={approverTypeId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.approver_type")}</label>
-              <select
-                id={approverTypeId}
-                value={editData.approver_type}
-                onChange={(e) =>
-                  setEditData({
-                    ...editData,
-                    approver_type: e.target.value as NodeEditData["approver_type"],
-                  })
-                }
-                className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-              >
-                {approverTypeOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor={approverRoleId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.approver_role")}</label>
-              <input
-                id={approverRoleId}
-                type="text"
-                value={editData.approver_role}
-                onChange={(e) =>
-                  setEditData({ ...editData, approver_role: e.target.value })
-                }
-                placeholder={t("workflow.editor.approver_placeholder")}
-                className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
-              />
-            </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={() => setEditModalOpen(false)}
-                className="px-4 py-2 bg-[hsl(var(--color-surface-3))] hover:bg-[hsl(var(--color-surface-4))] text-[hsl(var(--color-ink))] text-sm rounded transition-colors"
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                onClick={() => {
-                  updateNodeData(editData.id, {
-                    label: editData.node_name,
-                    nodeType: editData.node_type,
-                    courtCode: editData.court_code,
-                    approverRole: editData.approver_role,
-                    approverType: editData.approver_type,
-                  });
-                  setEditModalOpen(false);
-                }}
-                className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-sm font-medium rounded transition-colors"
-              >
-                {t("common.save")}
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
+        formId={formId}
+        editData={editData}
+        setEditData={setEditData}
+        onSave={updateNodeData}
+        t={t}
+      />
     </div>
   );
 }
