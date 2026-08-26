@@ -5,9 +5,12 @@
 This folder holds three different kinds of material, and the mix is unusual
 enough to be worth explaining up front:
 
-1. **神话领域研究（中文）** — 三套死后世界体系的一手整理。这不是背景资料，是领域模型
-   的来源。 *Chinese-language research on three afterlife systems. Not background
-   colour — this is where the domain model came from.*
+1. **神话领域研究（中文）** — 死后世界体系的一手整理，按三个研究小节归档（中国／欧洲／
+   埃及），而代码从中长出了**四个**文明——希腊后来从「欧洲」里拆了出去，见下面那一节。
+   这不是背景资料，是领域模型的来源。 *Chinese-language research, filed in three sections
+   (Chinese / European / Egyptian); the code grew **four** civilizations out of it — Greek
+   was later split out of "European." Not background colour: this is where the domain
+   model came from.*
 2. **工程文档** — 架构、规约、API、里程碑，以及一批带日期的评审与审计报告。
    *Engineering docs plus a set of dated review/audit reports.*
 3. **`design-handoff/`** — 交付给外部设计师的设计简报包。
@@ -70,10 +73,16 @@ copies fork on the first correction — the problem raised in
 | [04_希腊冥界详解.md](04_希腊冥界详解.md) | 哈迪斯、塔尔塔罗斯、极乐岛 |
 | [05_北欧死后世界.md](05_北欧死后世界.md) | 瓦尔哈拉、海姆冥界、福尔克范格 |
 
-系统里的 `EUROPEAN` 是把基督教、希腊、北欧三支归为一个租户的结果——这是产品上的取舍，
-不是这些体系本身相容。
-*`EUROPEAN` in the code groups the Christian, Greek and Norse material into one
-tenant. That is a product compromise, not a claim that they are one system.*
+**希腊已经不在这一组里了。** 这一节的分档是研究阶段的分法；代码此后把希腊拆成了第四个
+文明——`Civilization.GREEK`，租户 `GR_HADES`，语料是柏拉图的两个神话（《高尔吉亚》11 条 +
+《理想国》厄尔 11 条）。所以 `04_希腊冥界详解.md` 虽然仍归档在这一节，它喂的是 `GREEK`
+而不是 `EUROPEAN`。`EUROPEAN` 现在是基督教与北欧两支合一个租户，仍是产品上的取舍。
+*Greek is no longer in this group.* The filing here is the research-phase split; the
+code has since made Greek the fourth civilization — `Civilization.GREEK`, tenant
+`GR_HADES`, its corpus Plato's two myths (Gorgias 11 + Republic/Er 11). So
+`04_希腊冥界详解.md` still lives in this section but feeds `GREEK`, not `EUROPEAN`.
+`EUROPEAN` now groups the Christian and Norse material, and that is still a product
+compromise rather than a claim that they are one system.
 
 ### 埃及冥界 / Egyptian Duat
 
@@ -88,10 +97,11 @@ tenant. That is a product compromise, not a claim that they are one system.*
 这一段是这批文档存在的理由。
 *This is why the research folder exists at all.*
 
-- [`backend/apps/ledger/readings.py`](../backend/apps/ledger/readings.py) — 三套宇宙论
-  给出三种**结构不同**的读数：中国是可抵消的累积账户，埃及是不可抵消的阈值检验，
-  欧洲是罪责与补赎两个互不相关的量（其中补赎明确标为不可得）。模块内的注释直接引用了
-  上面这些研究的结论。
+- [`backend/apps/ledger/readings.py`](../backend/apps/ledger/readings.py) — 四套宇宙论
+  给出四种**结构不同**的读数：中国是可抵消的累积账户，埃及是不可抵消的阈值检验，
+  欧洲是罪责与补赎两个互不相关的量（其中补赎明确标为不可得），希腊给的是一段程序而不是
+  一个量——柏拉图两个神话本身就不一致（盖印即终局 vs 千年循环后重生），所以 22 条条文里
+  20 条的极性是 `PROCEDURE`。模块内的注释直接引用了上面这些研究的结论。
 - [`backend/apps/ledger/services.py`](../backend/apps/ledger/services.py) — 按文明的
   衰减率；欧洲为 0。
 - [`backend/apps/souls/models.py`](../backend/apps/souls/models.py) — `TENANT_CIVILIZATION`，
