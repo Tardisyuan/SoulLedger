@@ -125,7 +125,7 @@ describe("SoulReadingPanel — the Greek sentence renders at all", () => {
     // say the soul was sentenced to a thousand years, which is a claim about
     // this soul that the circuit length is not.
     const headline = screen.getByText("4");
-    expect(headline.className).toContain("text-xl");
+    expect(headline.className).toContain("text-06");
     expect(screen.queryByText("1000")).not.toBeInTheDocument();
   });
 

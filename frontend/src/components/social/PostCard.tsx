@@ -36,16 +36,16 @@ export function PostCard({ post }: { post: Post }) {
       <div className="flex items-center gap-3 mb-3">
         <Link
           href={`/social/profile/${post.author}`}
-          className="font-medium text-[hsl(var(--color-ink))] hover:underline"
+          className="text-04 font-medium text-[hsl(var(--color-ink))] hover:underline"
         >
           {post.author_name || post.author_username}
         </Link>
         <span
-          className={`text-xs px-2 py-0.5 rounded-full ${VISIBILITY_COLORS[post.visibility] ?? ""}`}
+          className={`text-02 px-2 py-0.5 rounded-full ${VISIBILITY_COLORS[post.visibility] ?? ""}`}
         >
           <DomainEnum namespace="social.visibility" value={post.visibility} />
         </span>
-        <span className="text-xs text-[hsl(var(--color-ink-muted))] ml-auto">
+        <span className="text-02 font-mono tabular-nums text-[hsl(var(--color-ink-muted))] ml-auto">
           {formatDate(post.create_time)}
         </span>
         {isAuthor && (
@@ -53,7 +53,7 @@ export function PostCard({ post }: { post: Post }) {
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
             aria-label={t("common.delete") || "Delete"}
-            className="text-xs text-[hsl(var(--color-ink-subtle))] hover:text-red-500 transition-colors"
+            className="text-02 text-[hsl(var(--color-ink-subtle))] hover:text-red-500 transition-colors"
           >
             {t("common.delete") || "Delete"}
           </button>
@@ -61,12 +61,12 @@ export function PostCard({ post }: { post: Post }) {
       </div>
 
       <Link href={`/social/${post.id}`} className="block">
-        <p className="text-[hsl(var(--color-ink))] whitespace-pre-wrap">
+        <p className="text-04 text-[hsl(var(--color-ink))] whitespace-pre-wrap">
           {post.content}
         </p>
       </Link>
 
-      <div className="flex items-center gap-4 mt-3 text-sm text-[hsl(var(--color-ink-muted))]">
+      <div className="flex items-center gap-4 mt-3 text-02 font-mono tabular-nums text-[hsl(var(--color-ink-muted))]">
         <span className="flex items-center gap-1">
           💬 {post.comment_count}
         </span>

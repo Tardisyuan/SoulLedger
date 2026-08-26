@@ -188,7 +188,7 @@ export function DataGrid<T>({
           an explicit second step, never implied by the header checkbox. */}
       {selection && selectedCount > 0 && (
         <div className="flex items-center gap-4 px-4 h-12 mb-2 rounded-lg bg-[hsl(var(--color-accent)/0.1)] border border-[hsl(var(--color-accent)/0.3)]">
-          <span className="text-sm font-medium text-[hsl(var(--color-ink))]">{selection.labels.selectedCount(selectedCount)}</span>
+          <span className="text-03 font-medium text-[hsl(var(--color-ink))]">{selection.labels.selectedCount(selectedCount)}</span>
           {selection.bulkActions && (
             <>
               <span aria-hidden="true" className="w-px h-[18px] bg-[hsl(var(--color-hairline-strong))]" />
@@ -202,13 +202,13 @@ export function DataGrid<T>({
               <button
                 type="button"
                 onClick={selection.onSelectAllMatching}
-                className="text-sm font-medium text-[hsl(var(--color-accent-ink))] hover:underline"
+                className="text-03 font-medium text-[hsl(var(--color-accent-ink))] hover:underline"
               >
                 {selection.labels.selectAllMatching(selection.totalMatchingCount)}
               </button>
             )}
           <div className="flex-1" />
-          <button type="button" onClick={selection.onClear} className="text-sm text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))]">
+          <button type="button" onClick={selection.onClear} className="text-03 text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))]">
             {selection.labels.clearSelection}
           </button>
         </div>

@@ -210,7 +210,7 @@ describe("SoulReadingPanel — the Greek reading forks", () => {
     const requited = container.querySelector<HTMLElement>('[data-road-count="requited"]')!;
 
     expect(requited.className).toBe(owed.className);
-    expect(owed.className).toContain("text-xl");
+    expect(owed.className).toContain("text-06");
   });
 
   it("draws the whole structure for an empty road, with no emphasis on the zero", () => {

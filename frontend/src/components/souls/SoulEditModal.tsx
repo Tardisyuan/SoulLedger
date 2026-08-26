@@ -103,7 +103,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
         type="button"
         onClick={onClose}
         disabled={updateMutation.isPending}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 rounded text-sm transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 rounded text-04 transition-colors"
       >
         {t("common.cancel")}
       </button>
@@ -111,7 +111,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
         type="submit"
         form="soul-edit-form"
         disabled={updateMutation.isPending || !name.trim()}
-        className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] rounded text-sm font-medium text-black transition-colors"
+        className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] rounded text-04 font-medium text-black transition-colors"
       >
         {updateMutation.isPending ? (
           <span className="flex items-center justify-center gap-2">
@@ -136,7 +136,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
       <form id="soul-edit-form" onSubmit={handleSubmit} className="space-y-4">
         {/* Name */}
         <div className="flex flex-col gap-1">
-          <label htmlFor={nameId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.name_label")}</label>
+          <label htmlFor={nameId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("souls.form.name_label")}</label>
           <input
             id={nameId}
             type="text"
@@ -149,52 +149,52 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
             disabled={updateMutation.isPending}
             aria-invalid={!!getError('name')}
             aria-describedby={getError('name') ? nameErrorId : undefined}
-            className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none disabled:opacity-50 transition-colors ${
+            className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none disabled:opacity-50 transition-colors ${
               getError('name') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
             placeholder={t("souls.form.name_placeholder")}
           />
           {getError('name') && (
-            <span id={nameErrorId} role="alert" className="text-xs text-red-500">{getError('name')}</span>
+            <span id={nameErrorId} role="alert" className="text-02 text-red-500">{getError('name')}</span>
           )}
         </div>
 
         {/* Birth Date */}
         <div className="flex flex-col gap-1">
-          <label htmlFor={birthDateId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.birth_date_label")}</label>
+          <label htmlFor={birthDateId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("souls.form.birth_date_label")}</label>
           <input
             id={birthDateId}
             type="date"
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
             disabled={updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-04 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
           />
         </div>
 
         {/* Origin Location */}
         <div className="flex flex-col gap-1">
-          <label htmlFor={locationId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.location_edit_label")}</label>
+          <label htmlFor={locationId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("souls.form.location_edit_label")}</label>
           <input
             id={locationId}
             type="text"
             value={originLocation}
             onChange={(e) => setOriginLocation(e.target.value)}
             disabled={updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder={t("souls.form.location_placeholder")}
           />
         </div>
 
         {/* Current State */}
         <div className="flex flex-col gap-1">
-          <label htmlFor={stateId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.state_label")}</label>
+          <label htmlFor={stateId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("souls.form.state_label")}</label>
           <select
             id={stateId}
             value={currentState}
             onChange={(e) => setCurrentState(e.target.value as Soul["current_state"])}
             disabled={updateMutation.isPending || isSettled}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-04 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
           >
             {isSettled ? (
               <option value="SETTLED">{t("souls.states.SETTLED")}</option>

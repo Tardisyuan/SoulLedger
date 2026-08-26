@@ -243,7 +243,7 @@ export function DataTable<T>({
                     <button
                       type="button"
                       onClick={onRetry}
-                      className="mt-3 text-sm text-[hsl(var(--color-accent-ink))] hover:underline"
+                      className="mt-3 text-[hsl(var(--color-accent-ink))] hover:underline"
                     >
                       {t('common.retry')}
                     </button>
@@ -267,7 +267,7 @@ export function DataTable<T>({
                         <button
                           type="button"
                           onClick={onClearFilters}
-                          className="mt-3 text-sm text-[hsl(var(--color-accent-ink))] hover:underline"
+                          className="mt-3 text-[hsl(var(--color-accent-ink))] hover:underline"
                         >
                           {t('filter.clear_all')}
                         </button>

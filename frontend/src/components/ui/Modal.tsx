@@ -39,10 +39,10 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-[hsl(var(--color-hairline))]">
-            <DialogTitle className="text-[hsl(var(--color-ink))] font-semibold text-base">{title}</DialogTitle>
+            <DialogTitle className="text-[hsl(var(--color-ink))] text-06">{title}</DialogTitle>
             <button
               onClick={onClose}
-              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))] transition-colors text-lg leading-none"
+              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))] transition-colors text-06 leading-none"
               aria-label="Close"
             >
               ×
@@ -145,7 +145,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         type="button"
         onClick={onClose}
         disabled={loading}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded text-sm transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded text-03 transition-colors"
       >
         {t("common.cancel")}
       </button>
@@ -153,7 +153,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         type="submit"
         form="soul-create-form"
         disabled={loading || !name.trim()}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] rounded text-sm font-medium text-black transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] rounded text-03 font-medium text-black transition-colors"
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
@@ -177,7 +177,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
     >
       <form id="soul-create-form" onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-1">
-          <label htmlFor={nameId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.name_label")}</label>
+          <label htmlFor={nameId} className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("souls.form.name_label")}</label>
           <input
             id={nameId}
             type="text"
@@ -190,17 +190,17 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             disabled={loading}
             aria-invalid={!!getError('name')}
             aria-describedby={getError('name') ? nameErrorId : undefined}
-            className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none disabled:opacity-50 transition-colors ${
+            className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none disabled:opacity-50 transition-colors ${
               getError('name') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
             placeholder={t("souls.form.name_placeholder")}
           />
           {getError('name') && (
-            <span id={nameErrorId} role="alert" className="text-xs text-red-500">{getError('name')}</span>
+            <span id={nameErrorId} role="alert" className="text-02 text-red-500">{getError('name')}</span>
           )}
         </div>
         <div className="flex flex-col gap-1">
-          <label htmlFor={civilizationId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.civilization_label")}</label>
+          <label htmlFor={civilizationId} className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("souls.form.civilization_label")}</label>
           <select
             id={civilizationId}
             value={civilization}
@@ -211,7 +211,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             disabled={loading}
             aria-invalid={!!getError('civilization')}
             aria-describedby={getError('civilization') ? civilizationErrorId : undefined}
-            className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none disabled:opacity-50 transition-colors ${
+            className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none disabled:opacity-50 transition-colors ${
               getError('civilization') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
           >
@@ -222,29 +222,29 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             ))}
           </select>
           {getError('civilization') && (
-            <span id={civilizationErrorId} role="alert" className="text-xs text-red-500">{getError('civilization')}</span>
+            <span id={civilizationErrorId} role="alert" className="text-02 text-red-500">{getError('civilization')}</span>
           )}
         </div>
         <div className="flex flex-col gap-1">
-          <label htmlFor={birthDateId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.birth_date_label")}</label>
+          <label htmlFor={birthDateId} className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("souls.form.birth_date_label")}</label>
           <input
             id={birthDateId}
             type="date"
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
             disabled={loading}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label htmlFor={locationId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("souls.form.location_label")}</label>
+          <label htmlFor={locationId} className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("souls.form.location_label")}</label>
           <input
             id={locationId}
             type="text"
             value={originLocation}
             onChange={(e) => setOriginLocation(e.target.value)}
             disabled={loading}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder={t("souls.form.location_placeholder")}
           />
         </div>
@@ -296,19 +296,19 @@ export function ConfirmDialog({
           className="w-full max-w-sm bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg duration-200 ease-out data-closed:scale-95 data-closed:opacity-0"
         >
           <div className="px-6 py-5">
-            <h3 className="text-lg font-semibold text-[hsl(var(--color-ink))] mb-2">{title}</h3>
-            <p className="text-sm text-[hsl(var(--color-ink-muted))]">{message}</p>
+            <h3 className="text-06 text-[hsl(var(--color-ink))] mb-2">{title}</h3>
+            <p className="text-04 text-[hsl(var(--color-ink-muted))]">{message}</p>
           </div>
           <div className="px-6 pb-5 flex gap-3">
             <button
               onClick={onCancel}
-              className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] rounded text-sm transition-colors"
+              className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] rounded text-03 transition-colors"
             >
               {cancelText || t("common.cancel")}
             </button>
             <button
               onClick={onConfirm}
-              className={`flex-1 px-4 py-2 text-white rounded text-sm font-medium transition-colors ${variantColors[variant]}`}
+              className={`flex-1 px-4 py-2 text-white rounded text-03 font-medium transition-colors ${variantColors[variant]}`}
             >
               {confirmText || t("common.confirm")}
             </button>

@@ -414,21 +414,21 @@ export default function WorkflowEditor({
         <div className="flex items-center gap-2">
           <button
             onClick={addNode}
-            className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-sm font-medium rounded transition-colors"
+            className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-03 font-medium rounded transition-colors"
           >
             + {t("workflow.editor.add_node")}
           </button>
           <button
             onClick={deleteSelectedNode}
             disabled={!selectedNodeId}
-            className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm font-medium rounded border border-red-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-03 font-medium rounded border border-red-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {t("workflow.editor.delete_selected")}
           </button>
           <button
             onClick={handleSave}
             disabled={saveMutation.isPending}
-            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-03 font-medium rounded transition-colors disabled:opacity-50"
           >
             {saveMutation.isPending ? t("workflow.editor.saving") : t("workflow.editor.save_template")}
           </button>
@@ -453,7 +453,7 @@ export default function WorkflowEditor({
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
           <Controls className="!bg-[hsl(var(--color-surface-1))] !border-[hsl(var(--color-hairline))] !rounded" />
-          <Panel position="top-left" className="bg-[hsl(var(--color-surface-1))]/90 backdrop-blur px-3 py-2 rounded border border-[hsl(var(--color-hairline))] text-xs text-[hsl(var(--color-ink-muted))]">
+          <Panel position="top-left" className="bg-[hsl(var(--color-surface-1))]/90 backdrop-blur px-3 py-2 rounded border border-[hsl(var(--color-hairline))] text-02 text-[hsl(var(--color-ink-muted))]">
             {t("workflow.editor.hint")}
           </Panel>
         </ReactFlow>

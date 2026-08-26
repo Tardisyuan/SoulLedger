@@ -191,7 +191,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Menu */}
         <nav className="flex-1 overflow-y-auto py-3 px-2">
           {menus.length === 0 && !collapsed && (
-            <p className="text-xs text-[hsl(var(--color-ink-subtle))] px-2 py-4 text-center">
+            <p className="text-02 text-[hsl(var(--color-ink-subtle))] px-2 py-4 text-center">
               {t("menus.no_menus")}
             </p>
           )}
@@ -234,7 +234,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
               <div className="w-3/4 flex justify-center pr-4">
-                <div className="text-xs text-[hsl(var(--color-ink-subtle))]">
+                <div className="text-02 text-[hsl(var(--color-ink-subtle))]">
                   {t("footer.version")}
                 </div>
               </div>
@@ -314,7 +314,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                   </svg>
                   {notifications.length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[hsl(var(--color-accent))] text-black text-xs font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[hsl(var(--color-accent))] text-black text-01 rounded-full flex items-center justify-center">
                       {notifications.length > 9 ? "9+" : notifications.length}
                     </span>
                   )}
@@ -332,20 +332,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-[hsl(var(--color-ink))]">{t("notifications.title")}</h3>
-                        <Link href="/notifications" className="text-xs text-[hsl(var(--color-accent-ink))] hover:underline">
+                        <Link href="/notifications" className="text-02 text-[hsl(var(--color-accent-ink))] hover:underline">
                           {t("notifications.view_all")}
                         </Link>
                       </div>
                       {notifications.length === 0 ? (
-                        <p className="text-sm text-[hsl(var(--color-ink-subtle))] text-center py-4">
+                        <p className="text-03 text-[hsl(var(--color-ink-subtle))] text-center py-4">
                           {t("notifications.empty")}
                         </p>
                       ) : (
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                           {notifications.slice(0, 5).map((n: Notification) => (
                             <div key={n.id} className="p-2 rounded hover:bg-[hsl(var(--color-surface-2))] cursor-pointer">
-                              <p className="text-sm text-[hsl(var(--color-ink))]">{n.message || n.title}</p>
-                              <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
+                              <p className="text-03 text-[hsl(var(--color-ink))]">{n.message || n.title}</p>
+                              <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
                                 {formatDateTime(n.created_at)}
                               </p>
                             </div>
@@ -414,14 +414,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     fixed for. */}
                 <Link
                   href="/profile"
-                  className="hidden sm:block max-w-[10rem] truncate text-[hsl(var(--color-ink-muted))] text-sm hover:text-[hsl(var(--color-accent-ink))] transition-colors"
+                  className="hidden sm:block max-w-[10rem] truncate text-[hsl(var(--color-ink-muted))] text-03 hover:text-[hsl(var(--color-accent-ink))] transition-colors"
                 >
                   {t("nav.greeting", { username: user.display_name || user.username })}
                 </Link>
                 <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
                 <button
                   onClick={() => setLogoutConfirmOpen(true)}
-                  className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-status-error))] text-sm transition-colors"
+                  className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-status-error))] text-03 transition-colors"
                 >
                   {t("auth.logout")}
                 </button>
@@ -429,7 +429,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ) : (
               <Link
                 href="/login"
-                className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-[hsl(var(--color-accent))] hover:!text-black transition-colors"
+                className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-03 font-medium hover:bg-[hsl(var(--color-accent))] hover:!text-black transition-colors"
               >
                 {t("auth.login")}
               </Link>

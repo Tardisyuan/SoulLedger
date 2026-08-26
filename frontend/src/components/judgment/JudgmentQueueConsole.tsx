@@ -164,11 +164,11 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   return (
     <div className="text-[hsl(var(--color-ink))]">
       <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-lg font-bold text-[hsl(var(--color-accent-ink))] flex-1">
+        <h1 className="text-06 text-[hsl(var(--color-accent-ink))] flex-1">
           {t("judgment.queue.title")}
         </h1>
         <p
-          className="text-sm font-mono tabular-nums text-[hsl(var(--color-ink-muted))]"
+          className="text-02 font-mono tabular-nums text-[hsl(var(--color-ink-muted))]"
           aria-live="polite"
         >
           {progressText}
@@ -177,14 +177,14 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           type="button"
           onClick={() => setShowKeys((prev) => !prev)}
           aria-expanded={showKeys}
-          className="text-sm text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] underline"
+          className="text-03 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] underline"
         >
           {t("judgment.queue.keyboard_help")}
         </button>
         <button
           type="button"
           onClick={leave}
-          className="text-sm text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
+          className="text-03 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
         >
           {t("judgment.queue.leave")}
         </button>
@@ -207,7 +207,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           />
         </div>
 
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[hsl(var(--color-ink-muted))]">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-02 text-[hsl(var(--color-ink-muted))]">
           <span>{t("judgment.queue.stat_decided", { n: String(progress.decided) })}</span>
           <span>{t("judgment.queue.stat_deferred", { n: String(progress.deferred) })}</span>
           <span>{t("judgment.queue.stat_remaining", { n: String(progress.remaining) })}</span>
@@ -229,7 +229,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
             role="status"
             className="flex flex-wrap items-center gap-3 rounded-lg border border-[hsl(var(--color-accent)/0.3)] bg-[hsl(var(--color-accent)/0.1)] px-4 py-3"
           >
-            <span className="text-sm text-[hsl(var(--color-ink))]">
+            <span className="text-03 text-[hsl(var(--color-ink))]">
               {/* The verdict name is interpolated INTO another translation, so
                   it has to be a string and cannot be <DomainEnum>. It still
                   must not be a bare `t()` template: t() echoes its key back on
@@ -240,13 +240,13 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 verdict: resolveEnumDisplay(t, "judgment.verdicts", pending.verdict).label ?? "",
               })}
             </span>
-            <span className="font-mono tabular-nums text-sm text-[hsl(var(--color-ink-muted))]">
+            <span className="font-mono tabular-nums text-02 text-[hsl(var(--color-ink-muted))]">
               {t("judgment.queue.undo_countdown", { seconds: String(secondsLeft) })}
             </span>
             <button
               type="button"
               onClick={undo}
-              className="px-3 py-1 rounded-md border border-[hsl(var(--color-hairline-strong))] text-sm font-medium text-[hsl(var(--color-ink))] hover:bg-[hsl(var(--color-surface-2))]"
+              className="px-3 py-1 rounded-md border border-[hsl(var(--color-hairline-strong))] text-03 font-medium text-[hsl(var(--color-ink))] hover:bg-[hsl(var(--color-surface-2))]"
             >
               {t("judgment.queue.undo")}
             </button>
@@ -261,7 +261,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
               <button
                 type="button"
                 onClick={() => queue.refetch()}
-                className="px-3 py-1.5 rounded-md bg-[hsl(var(--color-accent))] text-black text-sm font-medium"
+                className="px-3 py-1.5 rounded-md bg-[hsl(var(--color-accent))] text-black text-03 font-medium"
               >
                 {t("common.retry")}
               </button>
@@ -282,7 +282,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 <button
                   type="button"
                   onClick={restoreDeferred}
-                  className="px-3 py-1.5 rounded-md bg-[hsl(var(--color-accent))] text-black text-sm font-medium"
+                  className="px-3 py-1.5 rounded-md bg-[hsl(var(--color-accent))] text-black text-03 font-medium"
                 >
                   {t("judgment.queue.restore_deferred")}
                 </button>
@@ -290,7 +290,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 <button
                   type="button"
                   onClick={leave}
-                  className="px-3 py-1.5 rounded-md bg-[hsl(var(--color-accent))] text-black text-sm font-medium"
+                  className="px-3 py-1.5 rounded-md bg-[hsl(var(--color-accent))] text-black text-03 font-medium"
                 >
                   {t("judgment.queue.leave")}
                 </button>
@@ -315,10 +315,10 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
               aria-labelledby="queue-verdict-heading"
               className="rounded-lg border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4"
             >
-              <h2 id="queue-verdict-heading" className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--color-ink-muted))] mb-3">
+              <h2 id="queue-verdict-heading" className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-3">
                 {t("judgment.queue.render_verdict")}
               </h2>
-              <label htmlFor="queue-notes" className="block text-xs text-[hsl(var(--color-ink-muted))] mb-1">
+              <label htmlFor="queue-notes" className="block text-02 text-[hsl(var(--color-ink-muted))] mb-1">
                 {t("judgment.queue.notes")}
               </label>
               <textarea
@@ -327,9 +327,9 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 onChange={(event) => setNotes(event.target.value)}
                 rows={2}
                 placeholder={t("judgment.queue.notes_placeholder")}
-                className="w-full rounded-md border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-2))] px-3 py-2 text-sm text-[hsl(var(--color-ink))] mb-3"
+                className="w-full rounded-md border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-2))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] mb-3"
               />
-              <label className="flex items-center gap-2 text-sm text-[hsl(var(--color-ink-muted))] mb-3">
+              <label className="flex items-center gap-2 text-03 text-[hsl(var(--color-ink-muted))] mb-3">
                 <input
                   type="checkbox"
                   checked={createWorkflow}
@@ -337,7 +337,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                   className="accent-[hsl(var(--color-accent))]"
                 />
                 {t("judgment.queue.create_workflow")}
-                <kbd className="font-mono text-xs px-1 rounded bg-[hsl(var(--color-surface-3))]">W</kbd>
+                <kbd className="font-mono text-02 px-1 rounded bg-[hsl(var(--color-surface-3))]">W</kbd>
               </label>
               <div className="flex flex-wrap gap-2">
                 {VERDICTS.map((verdict) => (
@@ -345,10 +345,10 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                     key={verdict.code}
                     type="button"
                     onClick={() => rule(verdict.code)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-md border text-sm font-semibold transition-colors border-[hsl(var(--color-hairline-strong))] hover:bg-[hsl(var(--color-surface-2))]"
+                    className="flex items-center gap-2 px-4 py-2 rounded-md border text-03 font-semibold transition-colors border-[hsl(var(--color-hairline-strong))] hover:bg-[hsl(var(--color-surface-2))]"
                     style={{ color: `hsl(var(${verdict.token}))` }}
                   >
-                    <kbd className="font-mono text-xs px-1.5 rounded bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]">
+                    <kbd className="font-mono text-02 px-1.5 rounded bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]">
                       {verdict.key}
                     </kbd>
                     {/* A JSX position, so the component rather than the string
@@ -363,16 +363,16 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 <button
                   type="button"
                   onClick={defer}
-                  className="flex items-center gap-2 px-4 py-2 rounded-md border border-[hsl(var(--color-hairline-strong))] text-sm font-medium text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))]"
+                  className="flex items-center gap-2 px-4 py-2 rounded-md border border-[hsl(var(--color-hairline-strong))] text-03 font-medium text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))]"
                 >
-                  <kbd className="font-mono text-xs px-1.5 rounded bg-[hsl(var(--color-surface-3))]">S</kbd>
+                  <kbd className="font-mono text-02 px-1.5 rounded bg-[hsl(var(--color-surface-3))]">S</kbd>
                   {t("judgment.queue.defer")}
                 </button>
               </div>
               {/* The one place the two correction paths are named side by
                   side, so an operator learns the rule at the moment it
                   applies rather than after they need it. */}
-              <p className="mt-3 text-xs text-[hsl(var(--color-ink-subtle))]">
+              <p className="mt-3 text-02 text-[hsl(var(--color-ink-subtle))]">
                 {t("judgment.queue.undo_scope_note", { seconds: String(Math.round(UNDO_WINDOW_MS / 1000)) })}
               </p>
             </section>
@@ -387,20 +387,20 @@ function CaseFactsPanel({ court, confession }: { court: string; confession: stri
   const { t } = useI18n();
   return (
     <section aria-labelledby="queue-case-heading" className="rounded-lg border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
-      <h3 id="queue-case-heading" className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--color-ink-muted))] mb-3">
+      <h3 id="queue-case-heading" className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.case")}
       </h3>
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs text-[hsl(var(--color-ink-muted))]">{t("judgment.court")}</span>
+        <span className="text-02 text-[hsl(var(--color-ink-muted))]">{t("judgment.court")}</span>
         {court ? (
           <EnumBadge value={{ tone: "info", label: court }} />
         ) : (
-          <span className="text-sm text-[hsl(var(--color-ink-tertiary))]">{t("judgment.queue.not_recorded")}</span>
+          <span className="text-03 text-[hsl(var(--color-ink-tertiary))]">{t("judgment.queue.not_recorded")}</span>
         )}
       </div>
       <div>
-        <div className="text-xs text-[hsl(var(--color-ink-muted))] mb-1">{t("judgment.detail.confession")}</div>
-        <p className={confession ? "text-sm text-[hsl(var(--color-ink))] whitespace-pre-line" : "text-sm text-[hsl(var(--color-ink-tertiary))]"}>
+        <div className="text-02 text-[hsl(var(--color-ink-muted))] mb-1">{t("judgment.detail.confession")}</div>
+        <p className={confession ? "text-03 text-[hsl(var(--color-ink))] whitespace-pre-line" : "text-03 text-[hsl(var(--color-ink-tertiary))]"}>
           {confession || t("judgment.queue.no_confession")}
         </p>
       </div>
@@ -411,8 +411,8 @@ function CaseFactsPanel({ court, confession }: { court: string; confession: stri
 function ConsoleNotice({ title, body, action }: { title: string; body: string; action?: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] px-6 py-12 text-center">
-      <p className="text-base font-medium text-[hsl(var(--color-ink))]">{title}</p>
-      {body && <p className="mt-1 text-sm text-[hsl(var(--color-ink-muted))]">{body}</p>}
+      <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{title}</p>
+      {body && <p className="mt-1 text-03 text-[hsl(var(--color-ink-muted))]">{body}</p>}
       {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
   );
@@ -431,13 +431,13 @@ function KeyboardMap() {
   ];
   return (
     <div className="rounded-lg border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-2))] p-4">
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--color-ink-muted))] mb-2">
+      <h2 className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-2">
         {t("judgment.queue.keyboard_map")}
       </h2>
       <dl className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
         {rows.map(([keys, label]) => (
-          <div key={keys} className="flex items-baseline gap-3 text-sm">
-            <dt className="font-mono text-xs text-[hsl(var(--color-ink))] min-w-[7ch]">{keys}</dt>
+          <div key={keys} className="flex items-baseline gap-3 text-03">
+            <dt className="font-mono text-02 text-[hsl(var(--color-ink))] min-w-[7ch]">{keys}</dt>
             <dd className="text-[hsl(var(--color-ink-muted))]">{label}</dd>
           </div>
         ))}

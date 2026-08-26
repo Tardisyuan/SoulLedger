@@ -418,7 +418,19 @@ const eslintConfig = [
 
   // ── 设计系统守卫 ────────────────────────────────────────────────────────
   {
-    files: ["app/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
+    // `components/**` 是第三个源根,此前**整个不在这五条规则的视野里**。
+    //
+    // 实证:往 `components/ui/skeleton.tsx` 注入 `text-sm p-5 rounded-lg bg-red-500`,
+    // eslint 退出码 1(别的规则报的),而 design-system 规则报了 **0 条**。那个目录装着
+    // `data-table.tsx`(13 个页面的表格基准)、`data-grid/*`、`page-section.tsx` ——
+    // 全站最共享的几块,一条设计系统规则都没看过。基线 JSON 里也因此没有任何
+    // `components/` 开头的键,所以「44 个文件 / 287 处」那个统计从一开始就漏了它们。
+    //
+    // 这是第六次同一个形状:检查在跑、会报红、主体清单却选错了。前五次分别是
+    // jsx-a11y 那个 6 文件 × 3 规则的合并豁免、Badge 的 `{space:1}` 额度、
+    // `domainDisplayContract` 把注释读成调用、`civilizationCopyCoverage` 看不见散文
+    // 形态的文案、以及 `readingQuantityContract` 自留的过期正则副本。
+    files: ["app/**/*.{ts,tsx}", "src/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
     plugins: { "design-system": designSystem },
     rules: {
       "design-system/type-scale": "error",

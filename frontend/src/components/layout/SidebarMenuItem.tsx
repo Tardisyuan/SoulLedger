@@ -53,7 +53,7 @@ function SidebarMenuItemInner({
           </span>
           {!collapsed && (
             <>
-              <span className="flex-1 text-left text-sm truncate">
+              <span className="flex-1 text-left text-03 truncate">
                 {menu.path === "/" ? t("nav.welcome") : menu.name}
               </span>
               {hasChildren && (
@@ -95,7 +95,7 @@ function SidebarMenuItemInner({
         })()}
       </span>
       {!collapsed && (
-        <span className="text-sm truncate">{menu.name}</span>
+        <span className="text-03 truncate">{menu.name}</span>
       )}
     </Link>
   );
