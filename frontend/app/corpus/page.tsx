@@ -24,7 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * The corpus browser — 175 transcribed articles, previously reachable from
+ * The corpus browser — 170 transcribed articles, previously reachable from
  * nowhere.
  *
  * They existed before this page did: `judgmentApi.statutes` has been wired

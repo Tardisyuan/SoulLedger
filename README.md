@@ -3,24 +3,24 @@
 [English](README.en.md) | **中文**
 
 > SoulLedger is a working full-stack web application (Django + Next.js) that tracks
-> souls through the afterlife pipelines of three different mythologies — Chinese,
-> European and Egyptian — each with a genuinely different data model. It is an
+> souls through the afterlife pipelines of four different mythologies — Chinese,
+> European, Egyptian and Greek — each with a genuinely different data model. It is an
 > application, not a documentation repository. Full English README:
 > [README.en.md](README.en.md).
 
 SoulLedger 是一个可运行的全栈 Web 应用（Django + Next.js），在同一套系统里追踪灵魂
-在三种神话体系中的流转：中国地府、以基督教/希腊/北欧为一组的「欧洲」死后世界，
-以及埃及杜阿特。
+在四种神话体系中的流转：中国地府、以基督教与但丁为主的「欧洲」死后世界、埃及杜阿特，
+以及柏拉图的希腊冥府。
 
 本仓库是应用代码，不是资料库。`docs/` 里的神话研究是这套领域模型的来源，而且是真正
 起作用的来源。
 
-最有意思的地方在于：三种文明不是同一个数据模型换三套配色。它们计算的是结构上不同的
+最有意思的地方在于：四种文明不是同一个数据模型换四套配色。它们计算的是结构上不同的
 量，代码拒绝把它们抹平成一个数。
 
 ---
 
-## 三种文明为什么不是同一套系统
+## 四种文明为什么不是同一套系统
 
 大多数「多文明」演示会挑一套机制再换皮。这里没有。见
 [`backend/apps/ledger/readings.py`](backend/apps/ledger/readings.py)：
@@ -30,6 +30,7 @@ SoulLedger 是一个可运行的全栈 Web 应用（Django + Next.js），在同
 | **中国** | 累积账户（功過格）。功与过相互抵消，运行总额本身就是结论。 | 一个带符号的数 |
 | **埃及** | 阈值检验。心脏与玛特羽毛称量一次，必须「不重于」它。功德根本不出现——这里没有抵消这一步。 | 相对固定砝码的通过/不通过 |
 | **欧洲** | 两个互不相关的事实。*culpa*（罪责）与 *poena*（赦罪后仍需的补赎）互不削减，而本系统没有任何数据能诚实地推出 poena。 | 两个独立量，其中一个明确标注为不可得 |
+| **希腊** | 柏拉图的两个神话本身就不一致：《高尔吉亚》盖印即终局，《理想国》的厄尔千年循环后重生。所以 22 条语料里 20 条的极性是 `PROCEDURE`——**它们是庭规，不是罪名**。 | 一段程序，而不是一个量 |
 
 若某灵魂所属租户没有映射到任何文明，系统不会给出任何读数——是一次带理由的明确拒绝，
 而不是回落到别人的算术。
@@ -74,6 +75,11 @@ python manage.py runserver 0.0.0.0:8000
 Celery 需要，REST API 没有它也能运行。
 
 ### 前端
+
+> **Node ≥ 20.9**（`frontend/package.json` 的 `engines`）。Next 16 自己在 build 时就要求它，
+> 而 `eslint.config.mjs` 用到的 `import.meta.url` 派生需要 ES 模块语义——在 Node 18 上，
+> 这套 lint 配置曾经**在加载阶段整个崩掉并返回退出码 2**，而退出码 2 经过管道之后与 0
+> 无法区分。若 `npm run lint` 行为诡异，先 `node --version`。
 
 ```bash
 cd frontend
@@ -213,7 +219,9 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE（下一轮）
 
 ## 测试与 CI
 
-`.github/workflows/ci.yml` 在推送到 `main`/`develop` 及向 `main` 提 PR 时运行三个 job：
+`.github/workflows/ci.yml` 定义了三个 job。**它现在只有 `workflow_dispatch` 触发**——
+没有任何 push 或 PR 会自动跑它（GitHub Actions 额度耗尽，`security.yml` 的周 cron 也一并
+关掉了）。所以「CI 是绿的」在这个仓库里目前不是一句自动成立的话，本地门禁才是。
 
 | Job | 步骤 |
 |---|---|
@@ -229,7 +237,7 @@ workflow 文件里各自步骤旁边；若要收紧，请先读那些注释。
 本地：
 
 ```bash
-cd backend && python -m pytest --tb=short -q     # pytest.ini：--cov=apps，--cov-fail-under=40
+cd backend && python -m pytest --tb=short -q     # 仓库根 pytest.ini：--cov=apps，--cov-fail-under=80
 cd backend && ruff check .
 cd frontend && npx tsc --noEmit && npm run lint && npm test
 cd frontend && npx playwright test --project=chromium
@@ -306,11 +314,66 @@ docs/               神话研究、工程文档、设计交付包——见 docs/
 
 ---
 
+## 前端设计系统
+
+界面此前用的是操作系统自带的 UI 字体，没有加载任何字族——中西文混排落在两套无关字库上，
+基线对不齐。现在有一套写下来的版式系统。
+
+| 层 | 内容 |
+|---|---|
+| 字体 | Archivo（UI）· Source Serif 4（引文）· IBM Plex Mono（数字/ID），各配 Noto Sans SC / Noto Serif SC，全部 SIL OFL 可商用 |
+| 字号 | 八档 `text-01`…`text-08`（11/12/13/15/18/22/32/56px）。最大与正文之比从 1.71 拉到 3.7；表格正文反而收紧到 13px，密度不降 |
+| 圆角 | **全部方角**。`rounded-full` 只留给身份物（头像、7px 文明点），`rounded-focus` 留给焦点环 |
+| 线宽 | 四级：1px 行线 / 1px 区块边界 / 2px 章节下划线 / 3px 文明身份线与判决落印带 |
+| 外壳 | 一个 `PageShell` 替掉 36 个手写页面外壳，八种内容宽度收到三种 |
+| 原语 | `Button` `Field` `Badge` `Spinner` `EmptyState` `PageShell` |
+
+**衬线只出现在「有人说过的话」上**——170 条古典语料、忏悔录正文、判决理由、跨文明会审的
+合议意见。UI 的标签、表格、按钮、数字一律无衬线。所以「衬线 = 引文」是一条可读的规则，
+而不是装饰选择；忏悔录也因此不再需要 `italic` 加引号来提示这是引文。
+
+**四个文明的差异化走各自的编号法，不走颜色**：功过格是 `救濟門 · 十七`（門/條 二级 +
+汉字数字，**注意不是「卷」**——《太微仙君功過格》没有卷）；地狱篇是 `IX · XXVI`；否定告白是
+`§ 27 / 42`（**分母必须印出来**，这套体系的意义在于四十二则全数应答）；柏拉图是斯特方
+页码 `523a`。见 [`frontend/src/config/civilizationSigil.ts`](frontend/src/config/civilizationSigil.ts)。
+
+`/corpus` 是浏览这 170 条语料的页面（中国功过格 73、埃及否定告白 42、
+欧洲七宗罪 7 + 地狱篇 26、希腊高尔吉亚 11 + 厄尔神话 11 —— 实跑 `seed_mythology` 后数出来的，
+不是估的）。在此之前它们只在判决页的引用选择器里露过面——
+考据做了 170 条，界面上没有一个地方能看。
+
+### 这些规矩由 lint 施加，不是靠自觉
+
+Tailwind 的 `theme.extend` 只能新增或覆盖，不能删除：`text-sm` 仍然解析，`rounded-lg` 仍然
+解析（只是解析成 0）。所以八档、六档间距、两种圆角全都是**限制**，而限制在 Tailwind 里
+没有表达方式——只能由 lint 施加。`frontend/eslint.config.mjs` 里有五条自定义规则加上
+jsx-a11y，全部 `error` 级：
+
+`npm run lint` 是裸 `eslint .`，ESLint 在只有 warning 时退出码是 0，所以一条 warn 级规则
+在这个仓库里等于零。迁移期的出路是**基线**：`frontend/eslint.design-guard-baseline.json`
+记下每个文件当前的违规条数，超出报红，**低于也报红**——基线过期同样是静默失效的一种。
+
+### 两条会咬人的约定
+
+**`frontend/src/config/workflow-templates.ts` 的缩进是后端契约。** 三个后端测试
+（`test_workflow_template_cast.py` / `test_workflow_preset_node_types.py` /
+`test_workflow_template_priority.py`）按硬编码路径打开这个前端文件，用正则匹配它的
+**排版**——两空格的键、四空格的字段、单行节点字面量。491 行是承重文本。**跑一遍
+`prettier` 会静默炸掉那三个后端测试。**
+
+**`min-h-screen` 只准出现在 AppLayout 之外的路由上。** `AppLayout` 把页面放进一个
+`min-h-[calc(100vh-4rem)]` 的槽位，页面再写一次 `min-h-screen` 就是 100vh 嵌在
+100vh−4rem 里——内容再短也永远多出 64px 死滚动，而且不报错、不报类型、不影响任何断言。
+`src/__tests__/viewportHeightContract.test.ts` 守着它。
+
+---
+
 ## 技术栈
 
 | 层级 | 技术 |
 |---|---|
-| 前端 | Next.js 16、React 18、TypeScript 5、Tailwind CSS 3、TanStack Query v5、@xyflow/react（流程画布）、Recharts |
+| 前端 | Next.js 16、React 18、TypeScript 5、Tailwind CSS 3、TanStack Query v5、@xyflow/react（流程画布）、Recharts、class-variance-authority |
+| 字体 | next/font + Archivo / Source Serif 4 / IBM Plex Mono；`@fontsource-variable/noto-sans-sc`、`-serif-sc` 自托管切片（各 101 片带 `unicode-range`，浏览器只取用到的那几片） |
 | 后端 | Django 5、Django REST Framework、drf-spectacular、channels + daphne |
 | 数据库 | PostgreSQL 16（Docker/生产）、SQLite（本地默认） |
 | 实时 | channels + channels-redis 的 WebSocket |
