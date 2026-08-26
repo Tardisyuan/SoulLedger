@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import type { DataTableColumn } from '@/components/ui/data-table'
 import { MissingValue } from '@/src/components/ui/DomainValue'
 import type { MissingKind } from '@/src/lib/domainDisplay'
+import { Badge, BADGE_TONE_CLASSES } from '@/src/components/ui/Badge'
 import { ActionsMenu, type OverflowMenuItem } from './ActionsMenu'
 
 /**
@@ -126,19 +127,40 @@ export function columnAlign(type: DataGridColumnType): 'left' | 'right' {
 }
 
 /**
+ * The grid's five tones, PROJECTED from `BADGE_TONE_CLASSES` — not restated.
+ *
+ * This table used to hold its own copy of the five strings, with
+ * src/__tests__/Badge.test.tsx pinning the two copies byte-for-byte. That pin
+ * was the interim measure: `Badge` was written to restate the strings so that
+ * this edge could later be added without a cycle, and this is that edge. There
+ * is now one table of colour strings in the app, in
+ * `src/components/ui/Badge.tsx`, and this is a view onto the five of its six
+ * tones the data grid uses. `accent` is deliberately not projected: it is an
+ * identity marker at a 20% fill, and the AA measurements below are written for
+ * the 10% status tints.
+ *
+ * `EnumBadge` no longer reads this map — `Badge` applies the tone. What the map
+ * is now is the grid's tone ROSTER: which of Badge's six the grid may use, and
+ * the subject the AA contract measures. The roster is tied back to what
+ * actually renders by src/__tests__/Badge.test.tsx, which iterates these keys
+ * and compares a cell built through `renderGridCell` against `<Badge tone=…>`
+ * class for class. A roster nothing renders would be drift; this one is
+ * projected from the source of truth and checked against the render path.
+ *
  * Badge fills are capped at a 10% tint of the status token — NOT 16%.
  * The light-mode `--color-status-*` values were re-measured against a 10%
  * tint over the canvas (see app/globals.css `.light`, and the same note in
  * src/components/ui/Toast.tsx); a 16% tint of the error token drops to
- * 4.37:1, under the 4.5:1 AA floor for text. Exported so
- * src/__tests__/dataGridToneContract.test.ts can hold new tones to it.
+ * 4.37:1, under the 4.5:1 AA floor for text. Still exported, and still an
+ * object literal keyed by tone, so src/__tests__/dataGridToneContract.test.ts
+ * measures exactly what the grid renders and holds new tones to it.
  */
 export const ENUM_TONE_CLASSES: Record<EnumTone, string> = {
-  neutral: 'bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] border-[hsl(var(--color-hairline-tertiary))]',
-  success: 'bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.3)]',
-  warning: 'bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.3)]',
-  error: 'bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.3)]',
-  info: 'bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))] border-[hsl(var(--color-status-info)/0.3)]',
+  neutral: BADGE_TONE_CLASSES.neutral,
+  success: BADGE_TONE_CLASSES.success,
+  warning: BADGE_TONE_CLASSES.warning,
+  error: BADGE_TONE_CLASSES.error,
+  info: BADGE_TONE_CLASSES.info,
 }
 
 const NUMERIC_TONE_CLASSES: Record<'success' | 'error' | 'neutral', string> = {
@@ -147,18 +169,27 @@ const NUMERIC_TONE_CLASSES: Record<'success' | 'error' | 'neutral', string> = {
   neutral: 'text-[hsl(var(--color-ink))]',
 }
 
+/**
+ * The grid's enum cell, now a thin call to the shared `Badge`.
+ *
+ * Nothing about the geometry is restated here — that is the point. What this
+ * used to carry beyond Badge's own classes was `rounded` (a dead class:
+ * borderRadius.DEFAULT is 0, so it emitted `border-radius: 0` and only made a
+ * reader think a decision had been taken — Badge deliberately writes no radius
+ * at all), `text-xs` (12px, the size `text-02` also is, minus the 0.04em
+ * tracking short badge labels want), and a hand-written tone lookup. Badge
+ * replaces the last two and drops the first, and adds the `whitespace-nowrap`
+ * this one lacked and every hand-rolled badge in the app rediscovered on its
+ * own.
+ *
+ * `title` still carries the raw enum member (IDENTIFIER_POLICY) — it goes to
+ * Badge as an ordinary span attribute, so a localised label stays recoverable.
+ */
 export function EnumBadge({ value }: { value: EnumValue }) {
   return (
-    <span
-      title={value.title}
-      className={cn(
-        'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border',
-        ENUM_TONE_CLASSES[value.tone]
-      )}
-    >
-      {value.glyph && <span aria-hidden="true">{value.glyph}</span>}
+    <Badge tone={value.tone} glyph={value.glyph} title={value.title}>
       {value.label}
-    </span>
+    </Badge>
   )
 }
 

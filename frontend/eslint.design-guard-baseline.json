@@ -1,0 +1,167 @@
+{
+  "app/(auth)/login/page.tsx": {
+    "radius": 4,
+    "space": 5,
+    "type": 5
+  },
+  "app/admin/stats/error.tsx": {
+    "palette": 1,
+    "radius": 2,
+    "type": 2
+  },
+  "app/error.tsx": {
+    "palette": 1,
+    "radius": 2,
+    "type": 2
+  },
+  "app/not-found.tsx": {
+    "radius": 1,
+    "type": 2
+  },
+  "src/components/charts/LazyWorkflowEditor.tsx": {
+    "radius": 1
+  },
+  "src/components/connection-status.tsx": {
+    "palette": 5,
+    "space": 1,
+    "type": 1
+  },
+  "src/components/judgment/JudgmentQueueConsole.tsx": {
+    "radius": 16,
+    "space": 6,
+    "type": 32
+  },
+  "src/components/judgment/JudgmentQueueContext.tsx": {
+    "radius": 4,
+    "space": 1,
+    "type": 16
+  },
+  "src/components/layout/AppLayout.tsx": {
+    "radius": 16,
+    "space": 3,
+    "type": 17
+  },
+  "src/components/layout/MenuGloss.tsx": {
+    "type": 1
+  },
+  "src/components/layout/TenantSignal.tsx": {
+    "space": 2
+  },
+  "src/components/permissions/PermissionFormModal.tsx": {
+    "palette": 1,
+    "radius": 5,
+    "type": 10
+  },
+  "src/components/permissions/RoleFormModal.tsx": {
+    "palette": 1,
+    "radius": 4,
+    "type": 7
+  },
+  "src/components/rbac/PermissionDenied.tsx": {
+    "type": 2
+  },
+  "src/components/settings/SettingsDrawer.tsx": {
+    "palette": 6,
+    "radius": 7,
+    "type": 11
+  },
+  "src/components/social/CommentThread.tsx": {
+    "palette": 1,
+    "radius": 3,
+    "type": 9
+  },
+  "src/components/social/FollowButton.tsx": {
+    "radius": 1,
+    "space": 1,
+    "type": 1
+  },
+  "src/components/social/PostCard.tsx": {
+    "palette": 17,
+    "radius": 1,
+    "space": 1,
+    "type": 4
+  },
+  "src/components/social/ProfileCard.tsx": {
+    "radius": 2,
+    "space": 1,
+    "type": 6
+  },
+  "src/components/social/ProfileEditModal.tsx": {
+    "radius": 4,
+    "type": 6
+  },
+  "src/components/social/ReactionBar.tsx": {
+    "radius": 1,
+    "type": 1
+  },
+  "src/components/souls/DateProblemsPanel.tsx": {
+    "radius": 5,
+    "space": 5,
+    "type": 5
+  },
+  "src/components/souls/RebirthFormSelect.tsx": {
+    "radius": 1,
+    "space": 3,
+    "type": 2
+  },
+  "src/components/souls/SoulEditModal.tsx": {
+    "palette": 5,
+    "radius": 6,
+    "type": 11
+  },
+  "src/components/souls/SoulKarmaLedgerCard.tsx": {
+    "radius": 3,
+    "space": 5,
+    "type": 12
+  },
+  "src/components/souls/SoulLifecycleTimeline.tsx": {
+    "radius": 8,
+    "space": 13,
+    "type": 15
+  },
+  "src/components/souls/SoulReadingPanel.tsx": {
+    "radius": 3,
+    "space": 6,
+    "type": 29
+  },
+  "src/components/ui/DomainValue.tsx": {
+    "radius": 1,
+    "space": 2
+  },
+  "src/components/ui/IconPicker.tsx": {
+    "palette": 6,
+    "radius": 4,
+    "type": 6
+  },
+  "src/components/ui/Modal.tsx": {
+    "palette": 12,
+    "radius": 10,
+    "space": 4,
+    "type": 18
+  },
+  "src/components/ui/PageError.tsx": {
+    "radius": 1,
+    "type": 4
+  },
+  "src/components/ui/Pagination.tsx": {
+    "radius": 2,
+    "space": 2,
+    "type": 3
+  },
+  "src/components/users/UserDeleteDialog.tsx": {
+    "palette": 2,
+    "radius": 3,
+    "type": 6
+  },
+  "src/components/users/UserModal.tsx": {
+    "palette": 2,
+    "radius": 8,
+    "type": 14
+  },
+  "src/components/workflow/WorkflowEditor.tsx": {
+    "palette": 10,
+    "radius": 14,
+    "space": 7,
+    "type": 15
+  }
+}

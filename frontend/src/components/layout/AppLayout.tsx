@@ -24,6 +24,7 @@ import { useSidebarMenus, isDirectory, type SidebarMenu } from "@/src/hooks/useS
 import { menuGlossParts } from "@/src/lib/menuI18n";
 import { isMenuPathActive } from "@/src/lib/menuPath";
 import { TenantSignal } from "@/src/components/layout/TenantSignal";
+import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 
 const NAV_MODE_KEY = "soulledger_nav_mode";
 
@@ -102,11 +103,37 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sidebarWidth = collapsed ? "w-16" : "w-56";
 
+  // The drawer's accessible name. `nav.mobile_menu` is not in the three
+  // messages bundles yet — adding a key is a three-file change with a parity
+  // contract over it (`domainNamespaceContract`), so it is being requested
+  // rather than smuggled in here. Until it lands, `t()` returns the key
+  // unchanged, and this falls back the same way `Breadcrumb` below already
+  // does for its own keys: compare against the key, and supply real copy when
+  // they match. The day the key exists, all three locales start working with
+  // no further edit.
+  const mobileMenuName = t("nav.mobile_menu");
+  const drawerLabel = mobileMenuName === "nav.mobile_menu" ? "导航菜单" : mobileMenuName;
+
+  // Escape, focus trap, focus return — see useDrawerA11y's header for why the
+  // scrim alone was never the fix.
+  const { drawerRef, drawerProps } = useDrawerA11y<HTMLElement>({
+    open: mobileMenuOpen,
+    onClose: () => setMobileMenuOpen(false),
+    label: drawerLabel,
+  });
+
   return (
     <div className="min-h-screen bg-[hsl(var(--color-canvas))]">
-      {/* Mobile overlay */}
+      {/* Mobile scrim. A `<button>` rather than a `<div onClick>`: this is a
+          click target, and spelling it as one is what makes it announce and
+          behave like the control it already was. It is not the keyboard's way
+          out — Escape is, and the trap above keeps Tab from ever reaching this
+          — but a scrim carrying a click handler and no role is precisely the
+          shape `jsx-a11y/no-static-element-interactions` exists to catch. */}
       {mobileMenuOpen && (
-        <div
+        <button
+          type="button"
+          aria-label={t("common.close")}
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
@@ -114,6 +141,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Sidebar */}
       <aside
+        ref={drawerRef}
+        {...drawerProps}
         className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-[hsl(var(--color-surface-1))] border-r border-[hsl(var(--color-hairline))] z-50 transition-all duration-200 flex flex-col
           ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >

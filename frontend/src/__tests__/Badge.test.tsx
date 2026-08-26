@@ -1,12 +1,47 @@
 import { render, screen } from "@testing-library/react";
 import { Badge, BADGE_TONES, BADGE_TONE_CLASSES, type BadgeTone } from "@/src/components/ui/Badge";
-import { ENUM_TONE_CLASSES, EnumBadge } from "@/components/ui/data-grid/columns";
+import {
+  ENUM_TONE_CLASSES,
+  EnumBadge,
+  renderGridCell,
+  type DataGridColumn,
+  type EnumTone,
+} from "@/components/ui/data-grid/columns";
 
 function classesOf(node: React.ReactElement): string[] {
   const { container, unmount } = render(node);
   const classes = (container.firstElementChild?.className ?? "").split(/\s+/).filter(Boolean);
   unmount();
   return classes;
+}
+
+/**
+ * An enum cell as the app actually produces one.
+ *
+ * `EnumBadge` is exported, but no page imports it — it is reachable only
+ * through `renderGridCell`, which is the whole reason 66 hand-rolled badges
+ * grew up beside it. So the comparison below goes through that function with a
+ * real column definition, not through the exported component: a delegation that
+ * works when you call `EnumBadge` yourself and breaks in the grid would pass a
+ * test written against the export.
+ */
+const GRID_TONES = Object.keys(ENUM_TONE_CLASSES) as EnumTone[];
+
+interface ToneRow {
+  state: EnumTone;
+}
+
+function enumColumn(extra: Partial<{ glyph: string; title: string }> = {}): DataGridColumn<ToneRow> {
+  return {
+    key: "state",
+    header: "State",
+    type: "enum",
+    value: (row) => ({ tone: row.state, label: "FAILED", title: "FAILED", ...extra }),
+  };
+}
+
+function enumCell(tone: EnumTone, extra?: Partial<{ glyph: string; title: string }>) {
+  return <>{renderGridCell(enumColumn(extra), { state: tone })}</>;
 }
 
 describe("Badge and EnumBadge cannot drift apart", () => {
@@ -22,10 +57,45 @@ describe("Badge and EnumBadge cannot drift apart", () => {
    * cycle. Restating is only safe if something holds the two copies equal. This
    * is that something, and it imports BOTH.
    */
-  it.each(Object.keys(ENUM_TONE_CLASSES))("tone %s is byte-identical to EnumBadge's", (tone) => {
-    expect(BADGE_TONE_CLASSES[tone as BadgeTone]).toBe(
-      ENUM_TONE_CLASSES[tone as keyof typeof ENUM_TONE_CLASSES]
-    );
+  /**
+   * WHAT REPLACED THE BYTE-IDENTITY ASSERTION, AND WHY IT HAD TO GO.
+   *
+   * This used to be `expect(BADGE_TONE_CLASSES[tone]).toBe(ENUM_TONE_CLASSES[tone])`,
+   * over two independently written copies of the same five strings. Now that
+   * `ENUM_TONE_CLASSES` is a projection of `BADGE_TONE_CLASSES`, that assertion
+   * compares a value with itself: no edit anywhere in the repo could turn it
+   * red. An assertion nothing can falsify is worse than no assertion, because
+   * the green is read as coverage. It is deleted, not weakened.
+   *
+   * The property it was a proxy for survives, and is stated directly: an enum
+   * cell rendered through the grid must carry EXACTLY the classes `Badge`
+   * renders for that tone — same set, same order, nothing extra. `toEqual` on
+   * the arrays, not `toContain` per class, so a `rounded` or a `text-xs`
+   * creeping back into `EnumBadge` fails here rather than passing a subset
+   * check. This IS falsifiable: hand-roll a className into `EnumBadge` and it
+   * goes red.
+   */
+  it("parametrises over the grid's real tone set", () => {
+    // The floor under the it.each below: five keys projected today. If
+    // ENUM_TONE_CLASSES ever empties, the per-tone cases vanish silently and
+    // the suite still reports a pass.
+    expect(GRID_TONES).toHaveLength(5);
+  });
+
+  it.each(GRID_TONES)("an enum cell for tone %s renders exactly Badge's classes", (tone) => {
+    expect(classesOf(enumCell(tone))).toEqual(classesOf(<Badge tone={tone}>FAILED</Badge>));
+  });
+
+  it("keeps the raw enum member on title through the delegation", () => {
+    // IDENTIFIER_POLICY: the label is localisable, `title` is not. Forwarding
+    // `title` to Badge is exactly the kind of prop a thin wrapper drops.
+    const { container } = render(enumCell("error"));
+    expect(container.firstElementChild).toHaveAttribute("title", "FAILED");
+  });
+
+  it("keeps the decorative glyph, hidden, through the delegation", () => {
+    render(enumCell("warning", { glyph: "\u25c6" }));
+    expect(screen.getByText("\u25c6")).toHaveAttribute("aria-hidden", "true");
   });
 
   it("covers every tone EnumBadge has, and says which extra ones it adds", () => {

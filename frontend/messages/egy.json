@@ -21,7 +21,8 @@
     "welcome": "Per Djew",
     "language": "Medew Seth",
     "theme_light": "Sekhem Pepy Sethet",
-    "theme_dark": "Sekhem Khefere Sethet"
+    "theme_dark": "Sekhem Khefere Sethet",
+    "mobile_menu": "Wat Medu"
   },
   "auth": {
     "login": "Sesen Pert",
@@ -1431,7 +1432,6 @@
       "souls": "Iri Aba Hemsu",
       "judgment": "Sheemtet Wu",
       "cross_judgments": "Sheemtet Mekher",
-      "karma": "Iri Ka",
       "disposition": "Iri Kheperu",
       "workflow": "Em Her Sethet",
       "dispatch": "Iri Pert Abuf",
@@ -1451,7 +1451,9 @@
       "group_workflow": "Em Her Shemsu",
       "group_org_realm": "Shemsu Mekher",
       "group_social": "Sesh Sethet",
-      "group_settings": "Sethet Aat"
+      "group_settings": "Sethet Aat",
+      "corpus": "Medu Sesh",
+      "ledger": "Sesh Maat"
     }
   },
   "tenant": {

@@ -21,7 +21,8 @@
     "welcome": "Welcome",
     "language": "Interface language",
     "theme_light": "Switch to light mode",
-    "theme_dark": "Switch to dark mode"
+    "theme_dark": "Switch to dark mode",
+    "mobile_menu": "Navigation menu"
   },
   "auth": {
     "login": "Login",
@@ -1431,7 +1432,6 @@
       "souls": "Soul Management",
       "judgment": "Judgment Queue",
       "cross_judgments": "Cross-Realm Judgment",
-      "karma": "Karma Management",
       "disposition": "Reincarnation Disposition",
       "workflow": "Approval Workflow",
       "dispatch": "Dispatch Management",
@@ -1451,7 +1451,9 @@
       "group_workflow": "Process & Collaboration",
       "group_org_realm": "Organizations & Realms",
       "group_social": "Social",
-      "group_settings": "System Settings"
+      "group_settings": "System Settings",
+      "corpus": "Corpus",
+      "ledger": "Merit Ledger"
     }
   },
   "tenant": {

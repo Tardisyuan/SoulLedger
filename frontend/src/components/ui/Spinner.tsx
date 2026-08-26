@@ -2,6 +2,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/src/contexts/I18nContext";
 
 /**
  * The one busy indicator.
@@ -108,11 +109,30 @@ export function Spinner({ size = "md", label, className, ...rest }: SpinnerProps
 }
 
 /**
- * The whole-route busy screen — the shape all 21 `loading.tsx` files actually
+ * The whole-route busy screen — the shape all 32 `loading.tsx` files actually
  * want. Kept here rather than in each route so the centring, the canvas fill
  * and the spinner size are decided once.
+ *
+ * THE LABEL IS NOT OPTIONAL HERE, and that is the difference between this and
+ * `Spinner`. An unlabelled `Spinner` is the right call inside `<Button
+ * loading>`, where the button's own text already says what is happening. A
+ * whole route replaced by a spinner has no such neighbour: there is nothing
+ * else on the screen. 32 files import this and exactly one of them was passing
+ * `label`, so 31 routes were replacing their entire contents with silence.
+ *
+ * Fixing that per-route would have meant 31 edits plus a convention every
+ * future `loading.tsx` has to remember — and the failure mode of a forgotten
+ * convention is silence, which is not a state a test run reports. So the
+ * default lives here, once. The `label` prop stays, as the override for a
+ * route that can say something more specific than "loading" (see
+ * `app/judgment/[id]/page.tsx`, which passes `judgment.detail.loading`).
+ *
+ * The i18n cost is nil: every one of those 32 `loading.tsx` files is already
+ * `"use client"`, so no client boundary moves, and `I18nProvider` sits in
+ * `app/layout.tsx` above every route's loading slot.
  */
 export function PageSpinner({ label }: { label?: string }) {
+  const { t } = useI18n();
   return (
     // `min-h-[calc(100vh-4rem)]`, matching AppLayout.tsx:418's slot exactly —
     // NOT `min-h-screen`. A route's `loading.tsx` renders inside that slot, so
@@ -126,7 +146,7 @@ export function PageSpinner({ label }: { label?: string }) {
     // trade: being 64px short on two routes costs nothing, while being 64px
     // long on nineteen costs a scrollbar on every one of them.
     <div className="min-h-[calc(100vh-4rem)] bg-canvas flex items-center justify-center">
-      <Spinner size="lg" label={label} />
+      <Spinner size="lg" label={label ?? t("common.loading")} />
     </div>
   );
 }
