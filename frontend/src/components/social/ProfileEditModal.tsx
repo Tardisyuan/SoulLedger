@@ -48,7 +48,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
         type="button"
         onClick={onClose}
         disabled={updateMutation.isPending}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 rounded text-sm transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 rounded text-03 transition-colors"
       >
         {t("common.cancel")}
       </button>
@@ -56,7 +56,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
         type="submit"
         form="profile-edit-form"
         disabled={updateMutation.isPending}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:opacity-50 text-black rounded text-sm font-medium transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:opacity-50 text-black rounded text-03 font-medium transition-colors"
       >
         {updateMutation.isPending ? (t("common.loading") || "Loading...") : (t("common.save") || "Save")}
       </button>
@@ -73,7 +73,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
       <form id="profile-edit-form" onSubmit={handleSubmit} className="space-y-4">
         {/* Bio */}
         <div className="flex flex-col gap-1">
-          <label htmlFor={bioId} className="text-xs text-[hsl(var(--color-ink-subtle))]">
+          <label htmlFor={bioId} className="text-02 text-[hsl(var(--color-ink-subtle))]">
             {t("social.bio_label") || "Bio"}
           </label>
           <textarea
@@ -82,14 +82,14 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
             onChange={(e) => setBio(e.target.value)}
             disabled={updateMutation.isPending}
             rows={3}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors resize-none"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors resize-none"
             placeholder={t("social.bio_placeholder") || "Tell others about yourself…"}
           />
         </div>
 
         {/* Avatar URL */}
         <div className="flex flex-col gap-1">
-          <label htmlFor={avatarUrlId} className="text-xs text-[hsl(var(--color-ink-subtle))]">
+          <label htmlFor={avatarUrlId} className="text-02 text-[hsl(var(--color-ink-subtle))]">
             {t("social.avatar_url_label") || "Avatar URL"}
           </label>
           <input
@@ -98,7 +98,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
             value={avatarUrl}
             onChange={(e) => setAvatarUrl(e.target.value)}
             disabled={updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-02 font-mono text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder="https://…"
           />
         </div>

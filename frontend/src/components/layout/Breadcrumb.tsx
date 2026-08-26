@@ -112,7 +112,7 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
       aria-label={label("breadcrumb.aria_label", "面包屑导航")}
       className="flex-1 min-w-0"
     >
-      <ol className="flex items-center gap-1 text-sm min-w-0 overflow-hidden">
+      <ol className="flex items-center gap-1 text-03 min-w-0 overflow-hidden">
         <li className="shrink-0">
           <Link
             href="/dashboard"

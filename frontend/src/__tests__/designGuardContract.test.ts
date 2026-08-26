@@ -192,8 +192,18 @@ describe("LEGACY 基线", () => {
   const PENDING_DECISION: Record<string, string> = {};
 
   it("基线里没有本波新建的文件(新文件额度必须是 0)", () => {
+    // pathspec 必须与 eslint.config.mjs 的 `files` glob 覆盖同样的三个源根。
+    //
+    // 这里原本只写 `app` 与 `src`。glob 扩到 `components/**` 之后,那 7 个根
+    // `components/` 文件的基线键在这条断言眼里全成了「未跟踪」—— 它们其实
+    // `git ls-files` 逐个列得出来,是已跟踪的旧文件,只是新近才被守卫看见。
+    // 于是一条用来抓「新文件混进基线」的检查,报的是一批老文件。
+    //
+    // 同一套机制的第三条腿漏了同一个目录:glob 漏过一次(规则根本没看),
+    // 基线漏过一次(没有 components/ 开头的键),这里是第三次。三处各自
+    // 维护一份「哪些目录算数」的清单,而它们之间没有任何东西强制一致。
     const tracked = new Set(
-      execFileSync("git", ["ls-files", "--", "app", "src"], { cwd: ROOT, encoding: "utf8" })
+      execFileSync("git", ["ls-files", "--", "app", "src", "components"], { cwd: ROOT, encoding: "utf8" })
         .split("\n")
         .filter(Boolean),
     );

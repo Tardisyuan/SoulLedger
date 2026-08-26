@@ -67,7 +67,7 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          'flex items-center gap-2 h-9 px-3 rounded border text-sm transition-colors',
+          'flex items-center gap-2 h-9 px-3 rounded border text-03 transition-colors',
           active
             ? 'bg-[hsl(var(--color-accent)/0.12)] border-[hsl(var(--color-accent)/0.4)] text-[hsl(var(--color-ink))]'
             : 'bg-[hsl(var(--color-surface-2))] border-[hsl(var(--color-hairline-strong))] text-[hsl(var(--color-ink))] hover:border-[hsl(var(--color-hairline-tertiary))]'
@@ -136,7 +136,7 @@ export function FilterBar({
             value={searchValue ?? ''}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
-            className="flex-1 bg-transparent text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-tertiary))] focus:outline-none"
+            className="flex-1 bg-transparent text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-tertiary))] focus:outline-none"
           />
         </div>
       )}
@@ -145,7 +145,7 @@ export function FilterBar({
       ))}
       <div className="flex-1" />
       {isFiltered && (
-        <button type="button" onClick={onClearAll} className="text-sm text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))]">
+        <button type="button" onClick={onClearAll} className="text-03 text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))]">
           {clearAllLabel}
         </button>
       )}
@@ -155,7 +155,7 @@ export function FilterBar({
           onClick={density.onToggle}
           aria-pressed={density.compact}
           className={cn(
-            'h-9 px-3 rounded border text-sm transition-colors',
+            'h-9 px-3 rounded border text-03 transition-colors',
             density.compact
               ? 'bg-[hsl(var(--color-accent)/0.12)] border-[hsl(var(--color-accent)/0.4)] text-[hsl(var(--color-ink))]'
               : 'bg-[hsl(var(--color-surface-2))] border-[hsl(var(--color-hairline-strong))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]'

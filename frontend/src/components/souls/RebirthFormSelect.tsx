@@ -82,7 +82,7 @@ export function RebirthFormSelect({ value, onChange, disabled, tf }: RebirthForm
       aria-label={tf("reincarnation.form_label", "轮回形态")}
       className="space-y-3"
     >
-      <p className="text-xs font-semibold uppercase text-[hsl(var(--color-ink-muted))]">
+      <p className="text-01 uppercase text-[hsl(var(--color-ink-muted))]">
         {tf("reincarnation.form_label", "轮回形态")}
       </p>
       {groups.map((group) => (
@@ -99,7 +99,7 @@ export function RebirthFormSelect({ value, onChange, disabled, tf }: RebirthForm
                   aria-checked={selected}
                   disabled={disabled}
                   onClick={() => onChange(form)}
-                  className={`px-2 py-1.5 rounded-md border text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`px-2 py-1.5 rounded-md border text-03 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     selected ? GROUP_TONE[group.key].selected : UNSELECTED
                   }`}
                 >

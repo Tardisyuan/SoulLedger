@@ -78,7 +78,7 @@ export function NodeEditModal({
     {editData && (
       <div className="space-y-4">
         <div>
-          <label htmlFor={nodeNameId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.node_name")}</label>
+          <label htmlFor={nodeNameId} className="block text-02 font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.node_name")}</label>
           <input
             id={nodeNameId}
             type="text"
@@ -90,7 +90,7 @@ export function NodeEditModal({
           />
         </div>
         <div>
-          <label htmlFor={nodeTypeId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.node_type")}</label>
+          <label htmlFor={nodeTypeId} className="block text-02 font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.node_type")}</label>
           <select
             id={nodeTypeId}
             value={editData.node_type}
@@ -110,7 +110,7 @@ export function NodeEditModal({
           </select>
         </div>
         <div>
-          <label htmlFor={courtCodeId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.court_code")}</label>
+          <label htmlFor={courtCodeId} className="block text-02 font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.court_code")}</label>
           <input
             id={courtCodeId}
             type="text"
@@ -123,7 +123,7 @@ export function NodeEditModal({
           />
         </div>
         <div>
-          <label htmlFor={approverTypeId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.approver_type")}</label>
+          <label htmlFor={approverTypeId} className="block text-02 font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.approver_type")}</label>
           <select
             id={approverTypeId}
             value={editData.approver_type}
@@ -143,7 +143,7 @@ export function NodeEditModal({
           </select>
         </div>
         <div>
-          <label htmlFor={approverRoleId} className="block text-sm font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.approver_role")}</label>
+          <label htmlFor={approverRoleId} className="block text-02 font-medium text-[hsl(var(--color-ink))] mb-1">{t("workflow.editor.approver_role")}</label>
           <input
             id={approverRoleId}
             type="text"
@@ -158,7 +158,7 @@ export function NodeEditModal({
         <div className="flex justify-end gap-3 pt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-[hsl(var(--color-surface-3))] hover:bg-[hsl(var(--color-surface-4))] text-[hsl(var(--color-ink))] text-sm rounded transition-colors"
+            className="px-4 py-2 bg-[hsl(var(--color-surface-3))] hover:bg-[hsl(var(--color-surface-4))] text-[hsl(var(--color-ink))] text-03 rounded transition-colors"
           >
             {t("common.cancel")}
           </button>
@@ -173,7 +173,7 @@ export function NodeEditModal({
               });
               onClose();
             }}
-            className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-sm font-medium rounded transition-colors"
+            className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-03 font-medium rounded transition-colors"
           >
             {t("common.save")}
           </button>

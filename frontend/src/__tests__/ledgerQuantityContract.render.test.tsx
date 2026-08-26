@@ -308,9 +308,20 @@ describe("no unclassified headline number", () => {
   // its own subject set: how many figure-sized bold slots the card drew at all.
   it("soul card: every bold figure-sized slot declares itself", () => {
     // Adding a numeral at figure size without saying what it measures is how
-    // the defect got in. The soul name and section headings are not numerals
-    // and are not bold-and-figure-sized here; anything that becomes both has
-    // to declare a kind.
+    // the defect got in. Anything drawn at figure size **that contains digits**
+    // has to declare a kind.
+    //
+    // 这段原本写的是「The soul name and section headings are not numerals and
+    // are not bold-and-figure-sized here」。那句在旧档下为真 —— 标题当时用
+    // `font-semibold`,而 BOLD 只认 `font-bold`,所以标题进不了主体集合。
+    // 八档字号之后它**按构造为假**:`text-06` 是标题档,而它同时落在 BOLD 与
+    // FIGURE_SIZE 里,于是每个被正确迁到 text-06 的面板标题都会自己走进来。
+    // 实测:往这张卡里注入一个 `text-06` 的标题和一个 `text-08` 的 🔒,旧判据
+    // 把两者都报成「未分类头条数字」,其中一条的 textContent 就是「🔒」。
+    //
+    // 这句话读起来像已核实的结论,所以没有人再推导一遍 —— 它替一段没跑过的
+    // 逻辑作了保证,而那正是本仓记过多次的形状。现在主体集合由**有没有数字**
+    // 决定,这句注释才重新成立。
     const { container } = renderCard(BALANCE_READING, INHERITANCE).container
       ? renderCard(BALANCE_READING, INHERITANCE)
       : renderCard(BALANCE_READING, INHERITANCE);

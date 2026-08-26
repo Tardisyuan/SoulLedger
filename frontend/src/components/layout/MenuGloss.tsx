@@ -25,7 +25,7 @@ export function MenuGloss({ path }: { path: string }) {
   if (!gloss) return null;
 
   return (
-    <span className="ml-2 align-middle text-sm font-normal text-[hsl(var(--color-ink-subtle))]">
+    <span className="ml-2 align-middle text-03 font-normal text-[hsl(var(--color-ink-subtle))]">
       {gloss}
     </span>
   );

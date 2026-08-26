@@ -246,20 +246,20 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md text-sm text-[hsl(var(--color-ink))] hover:border-[hsl(var(--color-accent))] transition-colors min-w-[120px]"
+          className="flex items-center gap-2 px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md text-03 text-[hsl(var(--color-ink))] hover:border-[hsl(var(--color-accent))] transition-colors min-w-[120px]"
         >
           {SelectedIcon ? (
             <SelectedIcon className="w-4 h-4 text-amber-400" />
           ) : (
             <span className="text-[hsl(var(--color-ink-muted))]">{t("icon_picker.select")}</span>
           )}
-          {value && <span className="text-[hsl(var(--color-ink-subtle))] ml-auto text-xs">{value}</span>}
+          {value && <span className="text-[hsl(var(--color-ink-subtle))] ml-auto text-02">{value}</span>}
         </button>
         {value && (
           <button
             type="button"
             onClick={() => onChange("")}
-            className="text-[hsl(var(--color-ink-muted))] hover:text-red-400 text-xs"
+            className="text-[hsl(var(--color-ink-muted))] hover:text-red-400 text-02"
           >
             {t("icon_picker.clear")}
           </button>
@@ -278,7 +278,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("icon_picker.search")}
             aria-label={t("icon_picker.search")}
-            className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
 
           {!search && (
@@ -288,7 +288,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                   key={cat.label}
                   type="button"
                   onClick={() => setActiveCategory(cat.label)}
-                  className={`px-2 py-1 rounded text-xs transition-colors ${
+                  className={`px-2 py-1 rounded text-02 transition-colors ${
                     activeCategory === cat.label
                       ? "bg-amber-500 text-black"
                       : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
@@ -330,7 +330,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
           </div>
 
           {displayIcons.length === 0 && (
-            <p className="text-center text-[hsl(var(--color-ink-muted))] text-sm py-4">{t("icon_picker.no_results")}</p>
+            <p className="text-center text-[hsl(var(--color-ink-muted))] text-04 py-4">{t("icon_picker.no_results")}</p>
           )}
         </div>
       </BaseModal>

@@ -116,7 +116,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 id={titleId} className="text-lg font-semibold text-[hsl(var(--color-ink))]">{t("settings.title") || "Settings"}</h2>
+            <h2 id={titleId} className="text-06 text-[hsl(var(--color-ink))]">{t("settings.title") || "Settings"}</h2>
             <button
               onClick={onClose}
               aria-label={t("common.close")}
@@ -128,11 +128,11 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Theme Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-[hsl(var(--color-ink-muted))] mb-3">{t("settings.theme") || "Theme"}</h3>
+            <h3 className="text-03 font-medium text-[hsl(var(--color-ink-muted))] mb-3">{t("settings.theme") || "Theme"}</h3>
             <div className="flex gap-2">
               <button
                 onClick={toggleTheme}
-                className={`flex-1 py-2 px-3 rounded-md text-sm transition-colors ${
+                className={`flex-1 py-2 px-3 rounded-md text-03 transition-colors ${
                   theme === "light"
                     ? "bg-[hsl(var(--color-accent))] text-black"
                     : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
@@ -145,7 +145,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
               </button>
               <button
                 onClick={toggleTheme}
-                className={`flex-1 py-2 px-3 rounded-md text-sm transition-colors ${
+                className={`flex-1 py-2 px-3 rounded-md text-03 transition-colors ${
                   theme === "dark"
                     ? "bg-[hsl(var(--color-accent))] text-black"
                     : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
@@ -161,7 +161,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Accent Color Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-[hsl(var(--color-ink-muted))] mb-3">{t("settings.accent_color") || "Accent Color"}</h3>
+            <h3 className="text-03 font-medium text-[hsl(var(--color-ink-muted))] mb-3">{t("settings.accent_color") || "Accent Color"}</h3>
             <div className="grid grid-cols-3 gap-2 mb-3">
               {ACCENT_COLORS.map((color) => (
                 <button
@@ -182,11 +182,11 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 value={customHex}
                 onChange={(e) => setCustomHex(e.target.value)}
                 placeholder="#ff5500"
-                className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+                className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
               />
               <button
                 onClick={handleCustomHex}
-                className="px-4 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md text-sm text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] hover:text-[hsl(var(--color-ink))] transition-colors"
+                className="px-4 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md text-03 text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] hover:text-[hsl(var(--color-ink))] transition-colors"
               >
                 {t("settings.apply") || "Apply"}
               </button>
@@ -195,11 +195,11 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Navigation Mode Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-[hsl(var(--color-ink-muted))] mb-3">{t("settings.nav_mode") || "Navigation Mode"}</h3>
+            <h3 className="text-03 font-medium text-[hsl(var(--color-ink-muted))] mb-3">{t("settings.nav_mode") || "Navigation Mode"}</h3>
             <div className="flex gap-2">
               <button
                 onClick={() => onNavModeChange("classic")}
-                className={`flex-1 py-2 px-3 rounded-md text-sm transition-colors ${
+                className={`flex-1 py-2 px-3 rounded-md text-03 transition-colors ${
                   navMode === "classic"
                     ? "bg-[hsl(var(--color-accent))] text-black"
                     : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
@@ -209,7 +209,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
               </button>
               <button
                 onClick={() => onNavModeChange("compact")}
-                className={`flex-1 py-2 px-3 rounded-md text-sm transition-colors ${
+                className={`flex-1 py-2 px-3 rounded-md text-03 transition-colors ${
                   navMode === "compact"
                     ? "bg-[hsl(var(--color-accent))] text-black"
                     : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
@@ -218,7 +218,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 {t("settings.compact") || "Compact"}
               </button>
             </div>
-            <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-2">
+            <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-2">
               {navMode === "compact"
                 ? (t("settings.compact_desc") || "Icons only with tooltips on hover")
                 : (t("settings.classic_desc") || "Full sidebar with icons and labels")}

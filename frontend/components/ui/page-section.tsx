@@ -22,12 +22,12 @@ export function PageSection({
     <div className={cn('bg-surface-1 border border-hairline rounded-lg p-4', className)}>
       {title && (
         <div className="flex items-center justify-between mb-4 px-1">
-          <h3 className="text-base font-semibold text-[hsl(var(--color-ink))]">{title}</h3>
+          <h3 className="text-06 text-[hsl(var(--color-ink))]">{title}</h3>
           {actions}
         </div>
       )}
       {error ? (
-        <div className="text-red-400 text-sm py-4 text-center">{String(error)}</div>
+        <div className="text-red-400 text-04 py-4 text-center">{String(error)}</div>
       ) : isLoading ? (
         <div className="space-y-2">{children}</div>
       ) : (
@@ -51,11 +51,11 @@ export function DataRow({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-sm text-ink">{label}</span>
+      <span className="text-03 text-ink">{label}</span>
       {isLoading ? (
         <Skeleton className="h-4 w-12" />
       ) : (
-        <span className={cn('text-sm font-mono text-ink-muted', color)}>{value}</span>
+        <span className={cn('text-02 font-mono text-ink-muted', color)}>{value}</span>
       )}
     </div>
   )
@@ -114,11 +114,11 @@ export function StatCard({
 }) {
   return (
     <div className="bg-surface-1 rounded-lg p-4 border border-hairline">
-      <div className="text-xs text-ink-muted uppercase mb-1">{label}</div>
+      <div className="text-01 text-ink-muted uppercase mb-1">{label}</div>
       {isLoading ? (
         <Skeleton className="h-8 w-16" />
       ) : (
-        <div className={cn('text-2xl font-bold', valueColor)}>{value ?? 0}</div>
+        <div className={cn('text-08', valueColor)}>{value ?? 0}</div>
       )}
     </div>
   )
@@ -140,7 +140,7 @@ export function ChartSection({
 }) {
   return (
     <div className="bg-surface-1 rounded-lg p-5 border border-hairline">
-      {title && <h3 className="text-sm font-semibold text-ink-muted uppercase mb-4">{title}</h3>}
+      {title && <h3 className="text-01 text-ink-muted uppercase mb-4">{title}</h3>}
       {isLoading ? (
         <div className="flex items-center justify-center" style={{ height }}>
           <Skeleton className="h-full w-full" />

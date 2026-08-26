@@ -131,7 +131,7 @@ export function SentenceReading({
           clock. */}
       <div className="border-t border-dashed border-[hsl(var(--color-hairline))] pt-3">
         <div className="flex justify-between items-center">
-          <span className="text-sm text-[hsl(var(--color-ink-muted))]">
+          <span className="text-04 text-[hsl(var(--color-ink-muted))]">
             {t("souls.detail.reading.sentence_elapsed_label")}
           </span>
           {reading.elapsed_years !== null ? (
@@ -148,7 +148,7 @@ export function SentenceReading({
               field="elapsed_years"
               quantity={READING_QUANTITIES.SENTENCE.elapsed_years}
               t={t}
-              className="text-xl font-bold tabular-nums text-[hsl(var(--color-ink))]"
+              className="text-06 tabular-nums text-[hsl(var(--color-ink))]"
             >
               {t("souls.detail.reading.sentence_elapsed_years", {
                 years: String(reading.elapsed_years),
@@ -163,7 +163,7 @@ export function SentenceReading({
                all, and naming a kind there would invent one. */
             <span
               data-quantity-absent="elapsed_years"
-              className="text-xl font-bold text-[hsl(var(--color-ink-subtle))]"
+              className="text-06 text-[hsl(var(--color-ink-subtle))]"
               aria-hidden="true"
             >
               —
@@ -172,7 +172,7 @@ export function SentenceReading({
         </div>
         {reading.elapsed_years === null && (
           <>
-            <p className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">
+            <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
               {t("souls.detail.reading.elapsed_unavailable_heading")}
             </p>
             {/* One bullet per member the backend sent, key derived from the
@@ -245,7 +245,7 @@ function Fork({
           615b gives both roads the same measure and this panel states it once. */}
       <p
         data-fork-rule=""
-        className="text-xs text-center text-[hsl(var(--color-ink-muted))]"
+        className="text-02 text-center text-[hsl(var(--color-ink-muted))]"
       >
         {rule}
       </p>
@@ -307,17 +307,17 @@ function Fork({
 function Road({ road, label, count, quantity, detail, t }: RoadProps & { road: string; t: TFunc }) {
   return (
     <div data-road={road} className="flex flex-col items-center text-center">
-      <span className="text-sm text-[hsl(var(--color-ink-muted))]">{label}</span>
+      <span className="text-04 text-[hsl(var(--color-ink-muted))]">{label}</span>
       <Figure
         field={road === "owed" ? "wrongs" : "benefactions"}
         quantity={quantity}
         t={t}
         numeralProps={{ "data-road-count": road }}
-        className="text-xl font-bold tabular-nums text-[hsl(var(--color-ink))]"
+        className="text-06 tabular-nums text-[hsl(var(--color-ink))]"
       >
         {count}
       </Figure>
-      <span className="text-xs text-[hsl(var(--color-ink-subtle))] mt-0.5">{detail}</span>
+      <span className="text-02 text-[hsl(var(--color-ink-subtle))] mt-0.5">{detail}</span>
     </div>
   );
 }

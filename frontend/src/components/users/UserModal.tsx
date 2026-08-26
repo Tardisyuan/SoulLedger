@@ -128,7 +128,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
         type="button"
         onClick={onClose}
         disabled={createMutation.isPending || updateMutation.isPending}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded text-sm transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded text-03 transition-colors"
       >
         {t("common.cancel") || "取消"}
       </button>
@@ -136,7 +136,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
         type="submit"
         form="user-form"
         disabled={createMutation.isPending || updateMutation.isPending}
-        className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] rounded text-sm font-medium text-black transition-colors"
+        className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] rounded text-03 font-medium text-black transition-colors"
       >
         {createMutation.isPending || updateMutation.isPending ? (
           <span className="flex items-center justify-center gap-2">
@@ -160,7 +160,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
     >
       <form id="user-form" onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-1">
-          <label htmlFor={usernameId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.username") || "用户名"}</label>
+          <label htmlFor={usernameId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("users.username") || "用户名"}</label>
           <input
             id={usernameId}
             type="text"
@@ -169,13 +169,13 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
             value={formData.username}
             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
             disabled={isEditing || createMutation.isPending || updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder={t("users.username_placeholder") || "输入用户名"}
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor={emailId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.email") || "邮箱"}</label>
+          <label htmlFor={emailId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("users.email") || "邮箱"}</label>
           <input
             id={emailId}
             type="email"
@@ -183,13 +183,13 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             disabled={createMutation.isPending || updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder={t("users.email_placeholder") || "输入邮箱"}
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor={passwordId} className="text-xs text-[hsl(var(--color-ink-subtle))]">
+          <label htmlFor={passwordId} className="text-02 text-[hsl(var(--color-ink-subtle))]">
             {t("users.password") || "密码"}
             {isEditing && <span className="text-[hsl(var(--color-ink-muted))]"> ({t("users.optional") || "可选"})</span>}
           </label>
@@ -200,19 +200,19 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             disabled={createMutation.isPending || updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder={isEditing ? (t("users.password_edit_placeholder") || "留空则不修改") : (t("users.password_placeholder") || "输入密码")}
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor={roleId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.role") || "角色"}</label>
+          <label htmlFor={roleId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("users.role") || "角色"}</label>
           <select
             id={roleId}
             value={formData.role}
             onChange={(e) => setFormData({ ...formData, role: e.target.value as CreateUserInput["role"] })}
             disabled={createMutation.isPending || updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
           >
             <option value="ADMIN">{t("users.role_admin") || "管理员"}</option>
             <option value="JUDGE">{t("users.role_judge") || "审判者"}</option>
@@ -223,26 +223,26 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
 
         <div className="flex gap-3">
           <div className="flex flex-col gap-1 flex-1">
-            <label htmlFor={firstNameId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.first_name") || "名"}</label>
+            <label htmlFor={firstNameId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("users.first_name") || "名"}</label>
             <input
               id={firstNameId}
               type="text"
               value={formData.first_name}
               onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+              className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
               placeholder={t("users.first_name_placeholder") || "名"}
             />
           </div>
           <div className="flex flex-col gap-1 flex-1">
-            <label htmlFor={lastNameId} className="text-xs text-[hsl(var(--color-ink-subtle))]">{t("users.last_name") || "姓"}</label>
+            <label htmlFor={lastNameId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("users.last_name") || "姓"}</label>
             <input
               id={lastNameId}
               type="text"
               value={formData.last_name}
               onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+              className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
               placeholder={t("users.last_name_placeholder") || "姓"}
             />
           </div>

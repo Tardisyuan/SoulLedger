@@ -18,7 +18,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
     <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-xl p-6">
       <div className="flex items-start gap-4">
         {/* Avatar */}
-        <div className="w-16 h-16 rounded-full bg-[hsl(var(--color-surface-2))] flex items-center justify-center text-xl font-bold text-[hsl(var(--color-accent-ink))] overflow-hidden flex-shrink-0">
+        <div className="w-16 h-16 rounded-full bg-[hsl(var(--color-surface-2))] flex items-center justify-center text-06 text-[hsl(var(--color-accent-ink))] overflow-hidden flex-shrink-0">
           {profile.avatar_url ? (
             <img
               src={profile.avatar_url}
@@ -33,14 +33,14 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-[hsl(var(--color-ink))] truncate">
+            <h2 className="text-06 text-[hsl(var(--color-ink))] truncate">
               {profile.username}
             </h2>
             {isOwnProfile ? (
               <button
                 type="button"
                 onClick={() => setIsEditOpen(true)}
-                className="px-4 py-1.5 rounded-md text-sm font-medium border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))] transition-colors"
+                className="px-4 py-1.5 rounded-md text-03 font-medium border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))] transition-colors"
               >
                 {t("social.edit_profile") || "Edit profile"}
               </button>
@@ -49,21 +49,21 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
             )}
           </div>
           {profile.bio && (
-            <p className="text-sm text-[hsl(var(--color-ink-muted))] mt-1 whitespace-pre-wrap">
+            <p className="text-04 text-[hsl(var(--color-ink-muted))] mt-1 whitespace-pre-wrap">
               {profile.bio}
             </p>
           )}
-          <div className="flex gap-4 mt-3 text-sm">
+          <div className="flex gap-4 mt-3 text-02">
             <span className="text-[hsl(var(--color-ink-muted))]">
-              <strong className="text-[hsl(var(--color-ink))]">{profile.post_count}</strong>{" "}
+              <strong className="font-mono tabular-nums text-[hsl(var(--color-ink))]">{profile.post_count}</strong>{" "}
               {t("social.posts") || "posts"}
             </span>
             <span className="text-[hsl(var(--color-ink-muted))]">
-              <strong className="text-[hsl(var(--color-ink))]">{profile.followers_count}</strong>{" "}
+              <strong className="font-mono tabular-nums text-[hsl(var(--color-ink))]">{profile.followers_count}</strong>{" "}
               {t("social.followers") || "followers"}
             </span>
             <span className="text-[hsl(var(--color-ink-muted))]">
-              <strong className="text-[hsl(var(--color-ink))]">{profile.following_count}</strong>{" "}
+              <strong className="font-mono tabular-nums text-[hsl(var(--color-ink))]">{profile.following_count}</strong>{" "}
               {t("social.following_count") || "following"}
             </span>
           </div>
@@ -73,7 +73,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
       <div className="mt-4 pt-3 border-t border-[hsl(var(--color-hairline))]/50">
         <Link
           href={`/social/profile/${profile.user}`}
-          className="text-sm text-[hsl(var(--color-accent-ink))] hover:underline"
+          className="text-03 text-[hsl(var(--color-accent-ink))] hover:underline"
         >
           {t("social.view_all_posts") || "View all posts"} →
         </Link>

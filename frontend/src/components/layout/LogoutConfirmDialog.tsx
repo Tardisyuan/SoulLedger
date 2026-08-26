@@ -50,23 +50,23 @@ export function LogoutConfirmDialog({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel className="w-full max-w-md rounded-xl bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6 shadow-2xl">
-                <Dialog.Title className="text-lg font-semibold text-[hsl(var(--color-ink))]">
+                <Dialog.Title className="text-05 font-semibold text-[hsl(var(--color-ink))]">
                   {t("auth.confirm_logout")}
                 </Dialog.Title>
-                <Dialog.Description className="mt-2 text-sm text-[hsl(var(--color-ink-muted))]">
+                <Dialog.Description className="mt-2 text-04 text-[hsl(var(--color-ink-muted))]">
                   {t("auth.confirm_logout_desc")}
                 </Dialog.Description>
 
                 <div className="mt-6 flex justify-end gap-3">
                   <button
                     onClick={() => onClose()}
-                    className="px-4 py-2 rounded-md bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] text-sm hover:bg-[hsl(var(--color-surface-3))] transition-colors"
+                    className="px-4 py-2 rounded-md bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] text-03 hover:bg-[hsl(var(--color-surface-3))] transition-colors"
                   >
                     {t("common.cancel")}
                   </button>
                   <button
                     onClick={onConfirm}
-                    className="px-4 py-2 rounded-md bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] text-sm hover:bg-[hsl(var(--color-status-error)/0.3)] transition-colors"
+                    className="px-4 py-2 rounded-md bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] text-03 hover:bg-[hsl(var(--color-status-error)/0.3)] transition-colors"
                   >
                     {t("auth.confirm_logout_btn")}
                   </button>

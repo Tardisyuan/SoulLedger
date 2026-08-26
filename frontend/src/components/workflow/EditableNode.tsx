@@ -27,13 +27,13 @@ function EditableNodeComponent({
       } ${colorClass}`}
     >
       <Handle type="target" position={Position.Top} className="!bg-[hsl(var(--color-accent))]" />
-      <div className="text-sm font-semibold text-[hsl(var(--color-ink))]">{data.label}</div>
-      <div className="text-xs text-[hsl(var(--color-ink-muted))] mt-1">{data.nodeType}</div>
+      <div className="text-03 font-semibold text-[hsl(var(--color-ink))]">{data.label}</div>
+      <div className="text-02 text-[hsl(var(--color-ink-muted))] mt-1">{data.nodeType}</div>
       {data.courtCode && (
-        <div className="text-xs text-[hsl(var(--color-ink-subtle))] mt-1">🏛 {data.courtCode}</div>
+        <div className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">🏛 {data.courtCode}</div>
       )}
       {data.approverRole && (
-        <div className="text-xs text-[hsl(var(--color-ink-subtle))]">👤 {data.approverRole}</div>
+        <div className="text-02 text-[hsl(var(--color-ink-subtle))]">👤 {data.approverRole}</div>
       )}
       <Handle type="source" position={Position.Bottom} className="!bg-[hsl(var(--color-accent))]" />
     </div>

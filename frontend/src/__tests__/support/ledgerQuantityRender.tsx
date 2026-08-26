@@ -93,11 +93,36 @@ export function figures(root: HTMLElement): Figure[] {
 // asserted separately — and why the floor alone is not enough if the selector
 // itself can go stale.
 //
-// `SoulKarmaLedgerCard.tsx` is still on the legacy classes today; 287 legacy
-// type classes remain under `src/components/`, against 10 under `app/`, because
-// Stage 11 migrated pages and not shared components.
+// 迁移完成后这条注释里的「287 处」已是历史:`src/components/` 下的旧档现在是 0。
+// 两档并列的写法要留着 —— 见下面 DIGITS 那段。
 const FIGURE_SIZE = /(^|\s)(text-(lg|xl|2xl|3xl)|text-0[678])(\s|$)/;
 const BOLD = /(^|\s)(font-bold|text-0[678])(\s|$)/;
+
+// 尺寸与字重合起来说的是「这东西画得像个头条」,**不是**「这东西是个数字」。
+// 八档字号把这两件事彻底分开了:`text-06` 在 tailwind.config.js 里是**区块/面板
+// 标题**那一档(22px,自带 600),而它同时落在上面两个正则里。于是每有一个面板标题
+// 被**正确地**迁到 text-06,这个数字契约就白收进一个非数字 —— 遵守设计系统本身
+// 就会把标题走进来,这不是迁移期残留,是随迁移推进而增长的。
+//
+// 三个 agent 各自独立撞出同一形状,合计 10 处冒名者:两个对话框标题、一个关闭 `×`、
+// 三个 <h1>、两个 <h2>、一个区块标题,外加两个纯装饰字形 —— PageError 的 `!` 与
+// PermissionDenied 的 🔒。后两个尤其能说明问题:它们原本是 text-6xl,而 FIGURE_SIZE
+// 只列到 3xl,所以它们本来在 band 外,是迁到 text-08 之后**走进来的**。
+// 若有东西渲染它们,这个契约会报出一条 textContent 为「🔒」的「未分类头条数字」。
+//
+// 为什么判据不是「收窄到 text-07/08」:🔒 和 `!` 都是 text-08,收窄一个都拦不住。
+// 尺寸永远分不开「一个大数字」和「一个大字形」。
+//
+// 为什么判据**也不是**「有 data-quantity 才算」—— 这是三个 agent 都提的方向,而它
+// 会把这个检查变成空转。unclassifiedHeadlines 的违规定义就是**缺**这个属性;拿它
+// 当入选条件,过滤器就恒为空,永远抓不到任何东西。那不是补上漏检,是换成一个
+// 什么都不看的检查 —— 本仓已经记了八次的同一个失败形状。
+//
+// 判据是**里面有没有阿拉伯数字**。头条数值有,标题和装饰字形没有。
+// 或上 data-quantity-absent:声明为「无值」的格子画的是「—」,没有数字,但它必须
+// 留在主体集合里,否则 FIGURE_FLOOR 会因为一个格子恰好无值而被判成没渲染。
+// 这一条只**放宽**入选,不收紧:带数字而未声明的元素照样在集合里,照样被抓。
+const DIGITS = /\d/;
 
 /**
  * Every slot drawn at figure size and weight — classified or not.
@@ -110,7 +135,8 @@ const BOLD = /(^|\s)(font-bold|text-0[678])(\s|$)/;
 export function figureSlots(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>("*")).filter((el) => {
     const cls = el.className.toString();
-    return BOLD.test(cls) && FIGURE_SIZE.test(cls);
+    if (!BOLD.test(cls) || !FIGURE_SIZE.test(cls)) return false;
+    return DIGITS.test(el.textContent ?? "") || el.hasAttribute("data-quantity-absent");
   });
 }
 

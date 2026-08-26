@@ -108,7 +108,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
 
   return (
     <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
-      <h2 className="text-sm font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">
+      <h2 className="text-01 text-[hsl(var(--color-ink-muted))] uppercase mb-3">
         {t("souls.detail.date_problems.title")}
       </h2>
       <div className="space-y-2">
@@ -124,7 +124,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                 aria-expanded={isOpen}
                 className="w-full flex items-center justify-between px-3 py-2 text-left"
               >
-                <span className="flex items-center gap-2 text-sm">
+                <span className="flex items-center gap-2 text-03">
                   <span
                     aria-hidden="true"
                     className={
@@ -140,10 +140,10 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                   </span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <span className="bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink))] text-xs px-1.5 py-0.5 rounded">
+                  <span className="bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink))] text-02 px-1.5 py-0.5 rounded">
                     {group.length}
                   </span>
-                  <span className="text-[hsl(var(--color-ink-subtle))] text-xs" aria-hidden="true">
+                  <span className="text-[hsl(var(--color-ink-subtle))] text-02" aria-hidden="true">
                     {isOpen ? "▲" : "▼"}
                   </span>
                 </span>
@@ -151,7 +151,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
               {isOpen && (
                 <div className="px-3 pb-3 space-y-3 border-t border-[hsl(var(--color-hairline))] pt-2">
                   {group.map((occ, idx) => (
-                    <div key={`${occ.recordId ?? "soul"}-${idx}`} className="text-xs text-[hsl(var(--color-ink-muted))] space-y-1">
+                    <div key={`${occ.recordId ?? "soul"}-${idx}`} className="text-03 text-[hsl(var(--color-ink-muted))] space-y-1">
                       {occ.recordLabel && (
                         <div className="text-[hsl(var(--color-ink))] font-medium">{occ.recordLabel}</div>
                       )}

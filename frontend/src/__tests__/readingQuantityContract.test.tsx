@@ -359,9 +359,48 @@ describe("SoulReadingPanel — a magnitude names its scale and nothing else does
 // No number escapes classification
 // ---------------------------------------------------------------------------
 
-/** The sizes this component draws a figure at. */
-const FIGURE_SIZE = /(^|\s)text-(lg|xl|2xl|3xl)(\s|$)/;
-const BOLD = /(^|\s)font-bold(\s|$)/;
+/**
+ * The sizes this component draws a figure at — both scales, deliberately.
+ *
+ * `text-lg|xl|2xl|3xl` + `font-bold` is what a headline figure looked like
+ * before the type migration; `text-06|07|08` is what it looks like after, and
+ * those three carry `fontWeight: 600` in `tailwind.config.js`'s fontSize table,
+ * so a migrated figure needs no separate weight class and would not match a
+ * `font-bold` requirement at all.
+ *
+ * Matching only the old names left this scan blind the moment the component it
+ * watches was migrated: it found nothing, `unclassified` came back `[]`, and
+ * "every bold figure-sized slot declares itself" passed over a panel it never
+ * looked at. That was measured, not guessed — the scan reported 0 subjects for
+ * all five kinds. `support/ledgerQuantityRender.tsx` had already been widened
+ * for the same reason; this file kept its own stale copy.
+ *
+ * Hence FIGURE_FLOOR below: a scan for offenders is clean when it scans
+ * nothing, so the subject set has to be floored separately or the rule goes
+ * quiet again the next time these class names move.
+ */
+const FIGURE_SIZE = /(^|\s)(text-(lg|xl|2xl|3xl)|text-0[678])(\s|$)/;
+const BOLD = /(^|\s)(font-bold|text-0[678])(\s|$)/;
+
+/**
+ * How many figure-sized slots each reading actually draws. Measured by running
+ * the scan and printing its subject count, not estimated: BALANCE 3 (merit,
+ * demerit, balance), THRESHOLD 1 (the ratio), GUILT_AND_PENALTY 2 (culpa and
+ * the poena em-dash slot), SENTENCE 3 (two road counts and the elapsed slot).
+ *
+ * UNAVAILABLE is 0 on purpose and is the one kind this rule cannot speak for.
+ * That panel draws its three sums in plain ink at body size — "no verdict here"
+ * is the whole point of it — so it has no headline figure to classify. The
+ * entry is written out rather than omitted so that the zero reads as a decision
+ * someone made, not as a kind that fell out of the table.
+ */
+const FIGURE_FLOOR: Record<string, number> = {
+  BALANCE: 3,
+  THRESHOLD: 1,
+  GUILT_AND_PENALTY: 2,
+  SENTENCE: 3,
+  UNAVAILABLE: 0,
+};
 
 describe("SoulReadingPanel — no unclassified headline number", () => {
   it.each([...READING_KINDS])("%s: every bold figure-sized slot declares itself", (kind) => {
@@ -373,11 +412,19 @@ describe("SoulReadingPanel — no unclassified headline number", () => {
     // one in has to be told which kind belongs there.
     const { container } = renderPanel(kind === "SENTENCE" ? SENTENCE_SERVED : SAMPLES[kind]);
 
-    const unclassified = Array.from(container.querySelectorAll<HTMLElement>("*")).filter((el) => {
+    const slots = Array.from(container.querySelectorAll<HTMLElement>("*")).filter((el) => {
       const cls = el.className.toString();
-      if (!BOLD.test(cls) || !FIGURE_SIZE.test(cls)) return false;
-      return !el.hasAttribute("data-quantity") && !el.hasAttribute("data-quantity-absent");
+      return BOLD.test(cls) && FIGURE_SIZE.test(cls);
     });
+
+    // The subject set, floored. A scan for offenders is clean when it scans
+    // nothing, so "no unclassified headline" is only worth reading beside a
+    // count of what was actually looked at.
+    expect(slots.length).toBeGreaterThanOrEqual(FIGURE_FLOOR[kind]);
+
+    const unclassified = slots.filter(
+      (el) => !el.hasAttribute("data-quantity") && !el.hasAttribute("data-quantity-absent")
+    );
 
     expect(unclassified.map((el) => (el.textContent ?? "").trim())).toEqual([]);
   });

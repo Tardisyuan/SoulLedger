@@ -27,16 +27,16 @@ function CommentItem({ comment, postId, depth, onReply }: {
     <div className={depth > 0 ? "ml-6 border-l-2 border-[hsl(var(--color-hairline))]/50 pl-4" : ""}>
       <div className="py-2">
         <div className="flex items-center gap-2 mb-1">
-          <Link href={`/social/profile/${comment.author}`} className="text-sm font-medium text-[hsl(var(--color-ink))] hover:underline">
+          <Link href={`/social/profile/${comment.author}`} className="text-03 font-medium text-[hsl(var(--color-ink))] hover:underline">
             {comment.author_name || comment.author_username}
           </Link>
-          <span className="text-xs text-[hsl(var(--color-ink-muted))]">
+          <span className="text-02 font-mono tabular-nums text-[hsl(var(--color-ink-muted))]">
             {formatDate(comment.create_time)}
           </span>
         </div>
-        <p className="text-sm text-[hsl(var(--color-ink))] whitespace-pre-wrap">{comment.content}</p>
+        <p className="text-04 text-[hsl(var(--color-ink))] whitespace-pre-wrap">{comment.content}</p>
         <div className="flex items-center gap-3 mt-1">
-          <button onClick={() => onReply(comment.id)} className="text-xs text-[hsl(var(--color-accent-ink))] hover:underline">
+          <button onClick={() => onReply(comment.id)} className="text-02 text-[hsl(var(--color-accent-ink))] hover:underline">
             Reply
           </button>
           <ReactionBar commentId={comment.id} />
@@ -45,7 +45,7 @@ function CommentItem({ comment, postId, depth, onReply }: {
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
               aria-label={t("common.delete") || "Delete"}
-              className="text-xs text-[hsl(var(--color-ink-subtle))] hover:text-red-500 transition-colors"
+              className="text-02 text-[hsl(var(--color-ink-subtle))] hover:text-red-500 transition-colors"
             >
               {t("common.delete") || "Delete"}
             </button>
@@ -112,7 +112,7 @@ export function CommentThread({ postId }: { postId: string }) {
     <div>
       <form onSubmit={handleSubmit} className="mb-4">
         {replyTo && (
-          <div className="flex items-center gap-2 mb-2 text-xs text-[hsl(var(--color-ink-muted))]">
+          <div className="flex items-center gap-2 mb-2 text-02 text-[hsl(var(--color-ink-muted))]">
             <span>Replying to comment</span>
             <button type="button" onClick={() => setReplyTo(null)} className="text-[hsl(var(--color-accent-ink))] hover:underline">Cancel</button>
           </div>
@@ -121,11 +121,11 @@ export function CommentThread({ postId }: { postId: string }) {
           <input
             type="text" value={newComment} onChange={(e) => setNewComment(e.target.value)}
             placeholder={t("social.add_comment") || "Write a comment..."}
-            className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-sm text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
           <button
             type="submit" disabled={!newComment.trim() || createComment.isPending}
-            className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] rounded-md text-03 font-medium transition-colors disabled:opacity-50"
           >
             {createComment.isPending ? "..." : t("social.send") || "Send"}
           </button>
@@ -139,7 +139,7 @@ export function CommentThread({ postId }: { postId: string }) {
           ))}
         </div>
       ) : comments.length === 0 ? (
-        <p className="text-sm text-[hsl(var(--color-ink-subtle))] text-center py-4">
+        <p className="text-04 text-[hsl(var(--color-ink-subtle))] text-center py-4">
           {t("social.no_comments") || "No comments yet"}
         </p>
       ) : (
