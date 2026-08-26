@@ -99,7 +99,7 @@ export function SentenceReading({
           the unit of both and 615b gives them one. Prose, and outside `Fork`:
           the fork's own subtree holds the apex and the two columns and nothing
           else, which is what keeps a derived figure homeless. */}
-      <p className="text-[11px] text-[hsl(var(--color-ink-subtle))]">
+      <p className="text-02 text-[hsl(var(--color-ink-subtle))]">
         {t("souls.detail.reading.sentence_circuit", { years: String(reading.circuit_years) })}
       </p>
 
@@ -180,7 +180,7 @@ export function SentenceReading({
                 failure mode: a member with no copy shows its raw key rather
                 than vanishing. */}
             {reading.elapsed_missing.length > 0 && (
-              <ul className="text-[11px] text-[hsl(var(--color-ink-subtle))] mt-2 space-y-0.5 list-disc list-inside">
+              <ul className="text-02 text-[hsl(var(--color-ink-subtle))] mt-2 space-y-0.5 list-disc list-inside">
                 {reading.elapsed_missing.map((missing) => (
                   <li key={missing}>{t(`souls.detail.reading.elapsed_missing_${missing.toLowerCase()}`)}</li>
                 ))}

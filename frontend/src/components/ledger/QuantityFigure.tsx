@@ -84,7 +84,7 @@ export function Figure({
       {quantity === "magnitude" && (
         <span
           data-quantity-scale={field}
-          className="text-[11px] font-normal text-[hsl(var(--color-ink-subtle))]"
+          className="text-02 font-normal text-[hsl(var(--color-ink-subtle))]"
         >
           {t("ledger.figure_scale_weight")}
         </span>

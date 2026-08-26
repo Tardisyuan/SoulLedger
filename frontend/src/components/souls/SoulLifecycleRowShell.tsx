@@ -41,7 +41,7 @@ export function RowShell({ date, dotClassName, dashed, hideConnector, highlight,
         highlight ? "bg-[hsl(var(--color-accent)/0.1)] rounded-md border border-[hsl(var(--color-accent)/0.4)]" : ""
       }`}
     >
-      <div className="w-16 shrink-0 text-[11px] text-[hsl(var(--color-ink-subtle))] text-right pt-2">{date ?? <MissingValue kind="unrecorded" />}</div>
+      <div className="w-16 shrink-0 text-02 text-[hsl(var(--color-ink-subtle))] text-right pt-2">{date ?? <MissingValue kind="unrecorded" />}</div>
       <div className="flex flex-col items-center shrink-0">
         {terminalVariant === "flush" ? (
           <span className="w-2.5 h-px mt-3 bg-[hsl(var(--color-hairline-strong))]" aria-hidden="true" />

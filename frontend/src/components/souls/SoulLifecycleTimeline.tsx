@@ -269,7 +269,7 @@ export function SoulLifecycleTimeline({
           return (
             <div key={step} className="flex items-center flex-1 min-w-[72px]">
               <div
-                className={`px-2 py-1 rounded text-[11px] font-medium whitespace-nowrap text-center flex-1 ${
+                className={`px-2 py-1 rounded text-02 font-medium whitespace-nowrap text-center flex-1 ${
                   state === "now"
                     ? "bg-[hsl(var(--color-accent))] text-black"
                     : state === "done"
@@ -315,7 +315,7 @@ export function SoulLifecycleTimeline({
                         {positive ? "+" : ""}
                         {row.effectiveSigned}
                       </div>
-                      <div className="text-[10px] text-[hsl(var(--color-ink-subtle))]">
+                      <div className="text-02 text-[hsl(var(--color-ink-subtle))]">
                         ×{row.decayFactor.toFixed(3)} · {row.yearsElapsed.toFixed(1)} {tf("souls.detail.timeline.years", "年")}
                       </div>
                     </div>
@@ -351,7 +351,7 @@ export function SoulLifecycleTimeline({
                   {row.metadata && <div className="text-02 text-[hsl(var(--color-ink-muted))] truncate">{row.metadata}</div>}
                   {isTerminalRow && (
                     <div
-                      className={`text-[10px] font-mono mt-0.5 ${isAnnihilated ? "text-[hsl(var(--color-ink-tertiary))]" : "text-[hsl(var(--color-ink-muted))]"}`}
+                      className={`text-02 font-mono mt-0.5 ${isAnnihilated ? "text-[hsl(var(--color-ink-tertiary))]" : "text-[hsl(var(--color-ink-muted))]"}`}
                     >
                       {isAnnihilated
                         ? tf("souls.detail.timeline.terminal_flush", "── 其人已无")
@@ -359,7 +359,7 @@ export function SoulLifecycleTimeline({
                     </div>
                   )}
                   {row.idChip && (
-                    <span className="inline-block mt-0.5 font-mono text-[10px] px-1 py-0.5 rounded bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-subtle))]">
+                    <span className="inline-block mt-0.5 font-mono text-02 px-1 py-0.5 rounded bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-subtle))]">
                       {row.idChip.slice(0, 8)}
                     </span>
                   )}
@@ -393,7 +393,7 @@ export function SoulLifecycleTimeline({
                   {isOpen && (
                     <div className="mt-1 space-y-0.5 pl-2 border-l border-[hsl(var(--color-hairline))]">
                       {row.items.map((item) => (
-                        <div key={item.id} className="text-[10px] text-[hsl(var(--color-ink-subtle))] font-mono truncate">
+                        <div key={item.id} className="text-02 text-[hsl(var(--color-ink-subtle))] font-mono truncate">
                           {describeSystemEvent(item, systemEventLabels)}
                         </div>
                       ))}
@@ -433,7 +433,7 @@ export function SoulLifecycleTimeline({
             // cycle-band divider
             return (
               <div key={row.id} className="my-2 pl-16">
-                <div className="flex items-center gap-2 py-1 px-2 rounded bg-[hsl(var(--color-surface-2))] text-[11px] text-[hsl(var(--color-ink-muted))]">
+                <div className="flex items-center gap-2 py-1 px-2 rounded bg-[hsl(var(--color-surface-2))] text-02 text-[hsl(var(--color-ink-muted))]">
                   <span className="font-semibold text-[hsl(var(--color-ink))]">
                     {tf("souls.detail.timeline.cycle_band", "第 {{n}} 世", { n: String(row.cycleNumber) })}
                   </span>

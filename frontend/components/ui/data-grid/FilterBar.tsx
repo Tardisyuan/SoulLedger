@@ -74,7 +74,7 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
         )}
       >
         <span>{activeOption ? activeOption.label : config.label}</span>
-        <span className={cn('font-mono text-[11px]', active ? 'text-[hsl(var(--color-accent-ink))]' : 'text-[hsl(var(--color-ink-tertiary))]')}>▾</span>
+        <span className={cn('font-mono text-02', active ? 'text-[hsl(var(--color-accent-ink))]' : 'text-[hsl(var(--color-ink-tertiary))]')}>▾</span>
       </button>
       {open && (
         <div
@@ -93,7 +93,7 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
                 setOpen(false)
               }}
               className={cn(
-                'w-full text-left px-3 py-1.5 text-[13px] transition-colors',
+                'w-full text-left px-3 py-1.5 text-03 transition-colors',
                 option.value === config.value
                   ? 'text-[hsl(var(--color-accent-ink))] bg-[hsl(var(--color-accent)/0.1)]'
                   : 'text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] hover:text-[hsl(var(--color-ink))]'
@@ -128,7 +128,7 @@ export function FilterBar({
     >
       {onSearchChange && (
         <div className="flex items-center gap-2 h-9 px-3 rounded border border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-surface-2))] min-w-[220px]">
-          <span aria-hidden="true" className="font-mono text-[13px] text-[hsl(var(--color-ink-tertiary))]">
+          <span aria-hidden="true" className="font-mono text-03 text-[hsl(var(--color-ink-tertiary))]">
             ⌕
           </span>
           <input

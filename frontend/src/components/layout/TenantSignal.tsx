@@ -144,7 +144,7 @@ export function TenantSignal({
         title={civilization}
       >
         {dot}
-        <span className="text-[11px] leading-tight text-[hsl(var(--color-ink-muted))] truncate">
+        <span className="text-02 leading-tight text-[hsl(var(--color-ink-muted))] truncate">
           {name}
         </span>
       </span>
@@ -161,7 +161,7 @@ export function TenantSignal({
         data-tenant-signal="rail"
         title={civilization}
         aria-label={name}
-        className="font-mono text-[11px] leading-none tracking-widest uppercase"
+        className="font-mono text-01 leading-none uppercase"
         style={{ color: "hsl(var(--civ-mark))" }}
       >
         {shortCode}
@@ -196,7 +196,7 @@ export function TenantSignal({
     >
       {dot}
       <span
-        className="font-mono text-[11px] leading-none tracking-wide uppercase"
+        className="font-mono text-01 leading-none uppercase"
         style={{ color: "hsl(var(--civ-mark))" }}
       >
         {shortCode}

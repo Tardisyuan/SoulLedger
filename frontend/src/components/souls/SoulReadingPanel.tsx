@@ -290,7 +290,7 @@ function GuiltAndPenaltyReading({
             derived from the member so a member with no copy shows the raw key
             — ugly, and therefore self-reporting — instead of vanishing. */}
         {reading.poena_missing.length > 0 && (
-          <ul className="text-[11px] text-[hsl(var(--color-ink-subtle))] mt-2 space-y-0.5 list-disc list-inside">
+          <ul className="text-02 text-[hsl(var(--color-ink-subtle))] mt-2 space-y-0.5 list-disc list-inside">
             {reading.poena_missing.map((missing) => (
               <li key={missing}>{t(`souls.detail.reading.poena_missing_${missing.toLowerCase()}`)}</li>
             ))}
@@ -363,7 +363,7 @@ function UnavailableReading({
           road count to this box is making exactly the comparison the review
           caught, and the box is the place it is least defended against. */}
       <div className="rounded border border-dashed border-[hsl(var(--color-hairline))] p-3 space-y-1.5">
-        <p className="text-[11px] uppercase tracking-wide text-[hsl(var(--color-ink-subtle))]">
+        <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">
           {t("souls.detail.reading.unavailable_raw_data")}
         </p>
         <div className="flex justify-between text-03">

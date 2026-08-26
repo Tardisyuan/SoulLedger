@@ -132,7 +132,7 @@ export function SoulKarmaLedgerCard({
         />
 
         <div className="mt-4 pt-3 border-t border-[hsl(var(--color-hairline))] space-y-1.5">
-          <p className="text-[11px] uppercase tracking-wide text-[hsl(var(--color-ink-subtle))] mb-1.5">
+          <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mb-1.5">
             {tf("ledger.raw_vs_decayed", "原始 / 衰减后")}
           </p>
           {/* Five weight sums, and until now five bare numerals — directly under
@@ -242,7 +242,7 @@ export function SoulKarmaLedgerCard({
           )}
 
           <div className="rounded border border-dashed border-[hsl(var(--color-hairline))] p-2 mt-2">
-            <p className="text-[11px] text-[hsl(var(--color-ink-subtle))]">
+            <p className="text-02 text-[hsl(var(--color-ink-subtle))]">
               {tf(
                 "ledger.advisory_disclaimer",
                 "仅供裁决参考 · 业力不参与判定计算，裁决由判官作出"
@@ -311,7 +311,7 @@ export function SoulKarmaLedgerCard({
           {reading.civilization === "CHINESE" && (
             <div data-inheritance-bars="" className="space-y-2.5 mb-3">
               <div>
-                <div className="flex justify-between text-[11px] font-mono text-[hsl(var(--color-karma-merit))] mb-1">
+                <div className="flex justify-between text-02 font-mono text-[hsl(var(--color-karma-merit))] mb-1">
                   <span>{t("souls.detail.merit")} {meritScore}</span>
                   <span>→ {inheritance.inherited_merit}</span>
                 </div>
@@ -323,7 +323,7 @@ export function SoulKarmaLedgerCard({
                 </div>
               </div>
               <div>
-                <div className="flex justify-between text-[11px] font-mono text-[hsl(var(--color-karma-demerit))] mb-1">
+                <div className="flex justify-between text-02 font-mono text-[hsl(var(--color-karma-demerit))] mb-1">
                   <span>{t("souls.detail.demerit")} {demeritScore}</span>
                   <span>→ {inheritance.inherited_demerit}</span>
                 </div>
@@ -384,7 +384,7 @@ export function SoulKarmaLedgerCard({
               {inheritance.inherited_merit - inheritance.inherited_demerit}
             </Figure>
           </div>
-          <p className="text-[10px] text-[hsl(var(--color-ink-subtle))] mt-2">
+          <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-2">
             {/* Now a real bundle key in all three catalogues rather than a
                 Chinese `tf` fallback that shipped untranslated to every
                 locale, and the numbers are the API's rather than this file's.
@@ -401,7 +401,7 @@ export function SoulKarmaLedgerCard({
               demerit: String(ratePct(inheritance.inheritance_demerit_rate)),
             })}
           </p>
-          <p className="text-[10px] text-[hsl(var(--color-ink-subtle))] mt-1">{t("ledger.inheritance_note")}</p>
+          <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">{t("ledger.inheritance_note")}</p>
         </div>
       )}
     </div>

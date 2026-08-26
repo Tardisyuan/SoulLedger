@@ -87,7 +87,7 @@ export function RebirthFormSelect({ value, onChange, disabled, tf }: RebirthForm
       </p>
       {groups.map((group) => (
         <div key={group.key} className="space-y-1.5">
-          <p className={`text-[11px] font-medium ${GROUP_TONE[group.key].label}`}>{group.label}</p>
+          <p className={`text-02 font-medium ${GROUP_TONE[group.key].label}`}>{group.label}</p>
           <div className="grid grid-cols-3 gap-1.5">
             {group.forms.map((form) => {
               const selected = form === value;
