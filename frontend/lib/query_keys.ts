@@ -24,6 +24,13 @@ export const judgmentKeys = {
    * that list — walks straight back to a cached response.
    */
   queue: (skip: string[], at?: string) => [...judgmentKeys.all, "queue", { skip, at: at ?? null }] as const,
+  /**
+   * A page of the corpus. Under `judgmentKeys.all` rather than a key family of
+   * its own because `citation_count` is annotated from `JudgmentCitation`:
+   * filing a verdict's grounds changes a statute row's number, so an
+   * invalidate of `judgmentKeys.all` has to reach these pages too.
+   */
+  statutes: (params?: Record<string, string>) => [...judgmentKeys.all, "statutes", params] as const,
 };
 
 export const workflowKeys = {

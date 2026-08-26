@@ -46,17 +46,26 @@
     "console": "控制台",
     "hero_title": "灵魂账本",
     "hero_subtitle": "跨文明灵魂管理系统",
-    "hero_description": "统一管理中国地府、欧洲天堂地狱、埃及冥界三大文明体系的灵魂操作系统。",
+    "hero_description": "统一管理中国地府、欧洲天堂地狱、埃及冥界、希腊冥界四大文明体系的灵魂操作系统。",
     "civilizations_title": "文明体系",
-    "chinese_title": "中国地府",
-    "chinese_subtitle": "中国",
-    "chinese_desc": "十殿阎王、孟婆汤、六道轮回",
-    "european_title": "欧洲天堂与地狱",
-    "european_subtitle": "欧洲",
-    "european_desc": "基督教审判、炼狱、但丁地狱、忘川河",
-    "egyptian_title": "埃及冥界",
-    "egyptian_subtitle": "埃及",
-    "egyptian_desc": "奥西里斯审判、心脏称重、芦苇之地"
+    "civilizations": {
+      "CHINESE": "中国地府",
+      "EUROPEAN": "欧洲天堂与地狱",
+      "EGYPTIAN": "埃及冥界",
+      "GREEK": "希腊冥界"
+    },
+    "civ_subtitle": {
+      "CHINESE": "中国",
+      "EUROPEAN": "欧洲",
+      "EGYPTIAN": "埃及",
+      "GREEK": "希腊"
+    },
+    "civ_desc": {
+      "CHINESE": "十殿阎王、孟婆汤、六道轮回",
+      "EUROPEAN": "基督教审判、炼狱、但丁地狱、忘川河",
+      "EGYPTIAN": "奥西里斯审判、心脏称重、芦苇之地",
+      "GREEK": "三判官分道、厄尔的千年循环、勒忒之水"
+    }
   },
   "footer": {
     "built_with": "使用 Django + DRF + Next.js 构建",
@@ -678,6 +687,17 @@
       "EGYPTIAN": "称心",
       "GREEK": "偿还刑期",
       "UNKNOWN": "功过记录"
+    },
+    "book": {
+      "title": "功过台账",
+      "col_n": "条",
+      "col_date": "日",
+      "col_item": "事目",
+      "col_merit": "功",
+      "col_demerit": "过",
+      "col_balance": "销算余",
+      "total": "合计",
+      "empty": "尚无账目。"
     }
   },
   "judgment": {
@@ -816,6 +836,19 @@
       "MERIT": "功德",
       "DENIAL": "告白",
       "PROCEDURE": "庭规"
+    },
+    "corpus": {
+      "title": "语料条文",
+      "subtitle": "判决可以据以成立的条文。四套体系共转录 175 条。",
+      "col_sigil": "节号",
+      "col_offence": "罪目",
+      "col_text": "条文",
+      "col_citations": "引",
+      "filter_corpus": "语料",
+      "article_count": "{{n}} 条",
+      "empty_reason": "这套语料尚无转录条文。",
+      "citations_absent": "本次响应不带引用计数。",
+      "sigil_absent": "此条无转录节号。"
     }
   },
   "audit": {

@@ -54,11 +54,15 @@ const TEXT_MAPS: { file: string; name: string; keyedBy: "civilization" | "tenant
     keyedBy: "civilization",
     costs: "an organization subtree renders uncoloured, beside coloured siblings",
   },
-  {
-    file: "app/judgment/[id]/page.tsx", name: "CIVILIZATION_ICONS",
-    keyedBy: "civilization",
-    costs: "the judgment page shows a blank civilization badge",
-  },
+  // REMOVED, and the map with it: `app/judgment/[id]/page.tsx` carried a
+  // `CIVILIZATION_ICONS` of two-letter stand-ins (CN / EU / EG / GR) painted
+  // into a round avatar beside the soul's name. The Stage 12 rewrite of that
+  // page shows the civilization through <DomainEnum namespace="souls.civilizations">
+  // instead — translated copy with the raw member in `title` — so there is no
+  // hand-written civilization-keyed map on that page left to check. The entry
+  // is deleted rather than repointed because `keysOf` THROWS on a map it
+  // cannot find, which would have turned a real deletion into a parser error
+  // that reads like a broken test.
   {
     file: "app/realms/page.tsx", name: "CIVILIZATION_CONFIG",
     keyedBy: "civilization",
@@ -99,7 +103,12 @@ describe("the parser is looking at something", () => {
   });
 
   it("names every map it believes exists, and finds each one", () => {
-    expect(TEXT_MAPS.length).toBeGreaterThanOrEqual(5);
+    // Four, not five: the judgment detail page's CIVILIZATION_ICONS is gone
+    // (see the note in TEXT_MAPS). The floor exists so the assertions below
+    // cannot compare two empty lists, and four maps still gives them subjects
+    // — but it is now flush against the real count, so the NEXT map to
+    // disappear has to be argued for here rather than absorbed by slack.
+    expect(TEXT_MAPS.length).toBeGreaterThanOrEqual(4);
     for (const { file, name } of TEXT_MAPS) {
       expect(keysOf(file, name).length).toBeGreaterThan(0);
     }
@@ -133,15 +142,21 @@ describe("every civilization-keyed map covers every civilization", () => {
     expect(missing).toEqual([]);
   });
 
-  it("names all seven addresses at once when one is short", () => {
+  it("names all six addresses at once when one is short", () => {
     // The message is the point. A fifth civilization turns exactly one file red
     // and needs to be told every place it has to be added, or it will be added
-    // in one and forgotten in six.
+    // in one and forgotten in five.
+    //
+    // Six, not seven: the judgment detail page's CIVILIZATION_ICONS was deleted
+    // along with the two-letter avatar it painted (see the note in TEXT_MAPS),
+    // so there is one fewer address to name. This number is the count of places
+    // a fifth civilization has to be added — leaving it at seven would have the
+    // failure message promise an address that no longer exists.
     const addresses = [
       ...TEXT_MAPS.map((m) => `${m.file}::${m.name}`),
       "src/config/civilizations.ts::CIVILIZATION_LABELS",
       "src/config/civilizations.ts::CIVILIZATION_DISPLAY_NAMES",
     ];
-    expect(addresses).toHaveLength(7);
+    expect(addresses).toHaveLength(6);
   });
 });

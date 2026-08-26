@@ -46,6 +46,7 @@ const COLLECTED_FILES = [
   "Badge.test.tsx",
   "Button.test.tsx",
   "CommentThread.test.tsx",
+  "CorpusPage.test.tsx",
   "DashboardPage.test.tsx",
   "DataGrid.test.tsx",
   "DataTable.test.tsx",

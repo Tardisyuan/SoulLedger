@@ -24,6 +24,7 @@ import { ledgerApi, type LedgerInheritance } from "@/lib/api/ledger";
 import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { SoulKarmaLedgerCard } from "@/src/components/souls/SoulKarmaLedgerCard";
+import { SoulLedgerBook } from "@/src/components/souls/SoulLedgerBook";
 import { SoulLifecycleTimeline } from "@/src/components/souls/SoulLifecycleTimeline";
 import {
   RebirthFormSelect,
@@ -616,6 +617,18 @@ export default function SoulDetailPage() {
               records={records}
               onChanged={loadSoulData}
             />
+          )}
+
+          {/* 功过台账 —— 逐条账页。这一页原本有功过格的每一个部分,唯独没有
+              「条」:左栏那张卡片收下 `records` 之后画的是五个合计数和一张图,
+              于是一个逐条销算的账簿制度在整个产品里没有一处显示过它的条目。
+              放在宽栏而不是左栏,因为六列定宽账页在 1/3 栏里会永远横向滚动;
+              放在日期问题之下、生平脊线之上,因为一个坏日期会动摇它下面每一
+              条账的日与序,而生平脊线讲的是比账簿更大的故事。 */}
+          {!loading && ledger && (
+            <div className="bg-surface-1 p-4 border border-hairline">
+              <SoulLedgerBook records={ledger.records} />
+            </div>
           )}
 
           {/* Soul lifecycle spine — replaces the four judgment/disposition/

@@ -46,17 +46,26 @@
     "console": "Wetep Khet",
     "hero_title": "Medew Aba Hemsu Seth",
     "hero_subtitle": "Aba Hemst - Amset Netjeru em Kehat - A Set",
-    "hero_description": "Aba Hemst - Amset Netjeru em Diyu Hanacht, Aset Menkhat we Aaru em Kemet - Aba em Kehat Setep.",
+    "hero_description": "Sesh en ba em fedu Duat: Kemet-Shen, Europa, Kemet, Yunan.",
     "civilizations_title": "Aset Ahamet Wets Khet",
-    "chinese_title": "Diyu Hanacht",
-    "chinese_subtitle": "𓂋𓈖𓏏",
-    "chinese_desc": "Seh Mech Wer - Meng Po She Men - Aru Hemsu Petow Ru - A Setep",
-    "european_title": "Aset Menkhat Wu Pet - Set",
-    "european_subtitle": "𓇳𓋹𓎛𓋴",
-    "european_desc": "Hemsu Khet Wenu - Per Djew Her - Seth Mech Dante - Lethe Ru Setep",
-    "egyptian_title": "Duaut",
-    "egyptian_subtitle": "𓂀𓍯𓂋𓃀",
-    "egyptian_desc": "Wsir Sheemtet - Unemu Her tepy Ma'at - Aaru Em Per Djewet"
+    "civilizations": {
+      "CHINESE": "Diyu en Kemet-Shen",
+      "EUROPEAN": "Pet Duat en Europa",
+      "EGYPTIAN": "Duat en Kemet",
+      "GREEK": "Duat en Yunan"
+    },
+    "civ_subtitle": {
+      "CHINESE": "Kemet-Shen",
+      "EUROPEAN": "Europa",
+      "EGYPTIAN": "Kemet",
+      "GREEK": "Yunan"
+    },
+    "civ_desc": {
+      "CHINESE": "Medu Yama, Mu Meng Po, Sesh Wehem-Ankh",
+      "EUROPEAN": "Wedja Meseh, Duat Sekhem, Duat en Dante, Itru Lethe",
+      "EGYPTIAN": "Wedja Wesir, Fai Ib, Sekhet Iaru",
+      "GREEK": "Khemet Wedja, Sesh Er, Mu Lethe"
+    }
   },
   "footer": {
     "built_with": "Aha Seth Web Em Django + DRF + Next.js",
@@ -678,6 +687,17 @@
       "EGYPTIAN": "Unemu Ib",
       "GREEK": "Renpet Wehem",
       "UNKNOWN": "Sesh Unemu"
+    },
+    "book": {
+      "title": "Sesh Maat",
+      "col_n": "Tep",
+      "col_date": "Hru",
+      "col_item": "Medu",
+      "col_merit": "Maat",
+      "col_demerit": "Isfet",
+      "col_balance": "Wedja",
+      "total": "Dema",
+      "empty": "Nen medu."
     }
   },
   "judgment": {
@@ -816,6 +836,19 @@
       "MERIT": "Merit",
       "DENIAL": "Denial",
       "PROCEDURE": "Rule of the court"
+    },
+    "corpus": {
+      "title": "Medu Sesh",
+      "subtitle": "Medu neb er wedja-medu. 175 em fedu Duat.",
+      "col_sigil": "Tep Medu",
+      "col_offence": "Isfet",
+      "col_text": "Medu",
+      "col_citations": "Dema",
+      "filter_corpus": "Sesh",
+      "article_count": "{{n}} medu",
+      "empty_reason": "Nen medu em sesh pen.",
+      "citations_absent": "Nen dema em wepet ten.",
+      "sigil_absent": "Nen tep medu en medu pen."
     }
   },
   "audit": {
