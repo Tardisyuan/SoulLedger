@@ -6,7 +6,7 @@ export default function NotFound() {
   const { t } = useI18n();
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--color-canvas))] flex items-center justify-center">
+    <div className="min-h-[calc(100vh-4rem)] bg-[hsl(var(--color-canvas))] flex items-center justify-center">
       <div className="text-center">
         <div className="text-8xl font-bold text-[hsl(var(--color-accent-ink))] mb-4">404</div>
         <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))] mb-2">{t("not_found.title")}</h1>

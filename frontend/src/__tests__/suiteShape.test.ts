@@ -122,6 +122,7 @@ const COLLECTED_FILES = [
   "useSocial.test.ts",
   "useSouls.lifecycle.test.ts",
   "useSouls.test.ts",
+  "viewportHeightContract.test.ts",
   "workflowTemplateLore.test.ts",
   "wsClient.test.ts",
 ];

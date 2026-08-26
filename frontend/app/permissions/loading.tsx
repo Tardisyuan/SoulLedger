@@ -10,10 +10,13 @@
  *  1. 这一页的主体是一张矩阵表,页面**自己**在数据到达前也渲染骨架行
  *     (page.tsx 的 `!matrixReady` 分支)。路由级也给骨架,两段加载态是同一种
  *     语言;给转圈则是先转一下再跳成骨架。
- *  2. `PageSpinner`(src/components/ui/Spinner.tsx:115)里写着 `min-h-screen`,
- *     而它渲染在 AppLayout 的 `min-h-[calc(100vh-4rem)]` 槽位里 —— 那正是
- *     PageShell 文件头第 3 条点名的 64px 死滚动。那个文件不在本次改动的所有权
- *     范围内,所以只挂账不动手。
+ *
+ * 曾经还有第二个理由:`PageSpinner` 当时写着 `min-h-screen`,而它渲染在
+ * AppLayout 的 `min-h-[calc(100vh-4rem)]` 槽位里 —— 那正是 PageShell 文件头
+ * 第 3 条点名的 64px 死滚动。**那条已经修好了**,`PageSpinner` 现在用的是槽位
+ * 高度,`Spinner.test.tsx` 同时钉住正值与 `min-h-screen` 的缺席。所以留骨架屏
+ * 的理由只剩上面第 1 条 —— 它本身就足够,但它是一条设计判断,不是一个缺陷的
+ * 权宜之计,两者要求的后续动作不同。
  */
 export default function Loading() {
   return (
