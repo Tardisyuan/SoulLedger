@@ -231,7 +231,7 @@ function makeGuard(key, scan) {
             // 有 13 处旧字号时,新增 1 处应该得到 1 条红字而不是 14 条 ——
             // 一条淹没在 13 条噪音里的红字,和没有这条红字是一回事。
             const tail = budget
-              ? ` —— 本文件遗留额度 ${budget} 条,现在 ${hits.length} 条;标出的是超额的 ${hits.length - budget} 处(按出现顺序取末尾,不一定正是你刚写的那处)。不要抬高 eslint.config.mjs 的 LEGACY 数字。`
+              ? ` —— 本文件遗留额度 ${budget} 条,现在 ${hits.length} 条;标出的是超额的 ${hits.length - budget} 处(按出现顺序取末尾,不一定正是你刚写的那处)。不要抬高 ${BASELINE_FILE} 里的数字。`
               : "";
             for (const h of hits.slice(budget)) {
               context.report({ ...locOf(context, h.node, h.chunk, h.at), message: h.msg + tail });
@@ -239,7 +239,7 @@ function makeGuard(key, scan) {
           } else if (hits.length < budget) {
             context.report({
               node: program,
-              message: `LEGACY 基线过期:eslint.config.mjs 给本文件的 ${key} 留了 ${budget} 条额度,实际只剩 ${hits.length} 条。把数字改成 ${hits.length}${hits.length === 0 ? "(或删掉整行)" : ""} —— 留着高位等于给回归留了一个无人看守的缺口。`,
+              message: `LEGACY 基线过期:${BASELINE_FILE} 给本文件的 ${key} 留了 ${budget} 条额度,实际只剩 ${hits.length} 条。把数字改成 ${hits.length}${hits.length === 0 ? "(或删掉整行)" : ""} —— 留着高位等于给回归留了一个无人看守的缺口。`,
             });
           }
         },
