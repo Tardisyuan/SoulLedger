@@ -3,19 +3,19 @@
 **English** | [中文](README.md)
 
 SoulLedger is a working full-stack web application — Django + Next.js — that tracks
-souls through an afterlife pipeline in three different mythologies at once: the
-Chinese Diyu, the Christian/Greek/Norse afterlives grouped here as "European," and
-the Egyptian Duat. It is an application, not a documentation repository: the
+souls through an afterlife pipeline in four different mythologies at once: the
+Chinese Diyu, the Christian and Dantean afterlives grouped here as "European," the
+Egyptian Duat, and Plato's Greek underworld. It is an application, not a documentation repository: the
 `docs/` folder holds the domain research that the code was built from, and the
 research is genuinely load-bearing.
 
-The interesting part is that the three cosmologies are not one data model in three
+The interesting part is that the four cosmologies are not one data model in four
 colour schemes. They compute structurally different quantities, and the code
 refuses to average them.
 
 ---
 
-## Why the three civilizations are not the same system
+## Why the four civilizations are not the same system
 
 Most "multi-culture" demos pick one mechanic and restyle it. This one does not.
 See [`backend/apps/ledger/readings.py`](backend/apps/ledger/readings.py):
@@ -25,6 +25,7 @@ See [`backend/apps/ledger/readings.py`](backend/apps/ledger/readings.py):
 | **Chinese** | A cumulative account (功過格). Merit and demerit offset each other; the running total *is* the verdict. | One signed number |
 | **Egyptian** | A threshold test. The heart is weighed once against Ma'at's feather and must be "not heavier than" it. Merit does not appear — there is no offsetting step. | Pass/fail against a fixed counterweight |
 | **European** | Two unrelated facts. *Culpa* (guilt) and *poena* (penalty remaining after absolution) do not reduce each other, and this system holds no data from which poena could honestly be derived. | Two independent quantities, one of them explicitly unavailable |
+| **Greek** | Plato's two myths disagree with each other: the *Gorgias* stamps a soul and stops, the *Republic*'s Er returns it after a thousand years. So 20 of the 22 transcribed articles have polarity `PROCEDURE` — **they are rules of the court, not names of offences**. | A procedure, not a quantity |
 
 A soul whose tenant is not mapped to a cosmology gets no reading at all — an
 explicit refusal rather than a fallback to somebody else's arithmetic.
@@ -80,6 +81,12 @@ so this works with nothing else running. (SQLite is rejected outright when
 runs without it.
 
 ### Frontend
+
+> **Node ≥ 20.9** (`frontend/package.json` `engines`). Next 16 requires it at build
+> time, and `eslint.config.mjs` derives its root from `import.meta.url`. On Node 18
+> this lint config once **crashed during rule loading and exited 2** — and exit 2 is
+> indistinguishable from 0 once it passes through a pipe. If `npm run lint` behaves
+> strangely, check `node --version` first.
 
 ```bash
 cd frontend
@@ -234,8 +241,10 @@ are authoritative; the table above is a map, not a contract.
 
 ## Testing and CI
 
-`.github/workflows/ci.yml` runs three jobs on push to `main`/`develop` and on PRs
-into `main`:
+`.github/workflows/ci.yml` defines three jobs. **It is now `workflow_dispatch` only**
+— no push or PR triggers it (GitHub Actions quota exhausted; `security.yml`'s weekly
+cron is off for the same reason). So "CI is green" is not a statement this repository
+makes automatically any more. The local gate is.
 
 | Job | Steps |
 |---|---|
@@ -252,7 +261,7 @@ each step; if you are hardening this, read those comments first.
 Locally:
 
 ```bash
-cd backend && python -m pytest --tb=short -q     # pytest.ini: --cov=apps, --cov-fail-under=40
+cd backend && python -m pytest --tb=short -q     # repo-root pytest.ini: --cov=apps, --cov-fail-under=80
 cd backend && ruff check .
 cd frontend && npx tsc --noEmit && npm run lint && npm test
 cd frontend && npx playwright test --project=chromium
@@ -339,11 +348,75 @@ the workflow, [`SECURITY.md`](SECURITY.md) the disclosure policy.
 
 ---
 
+## Frontend design system
+
+The interface used to render in whatever UI font the reader's OS supplied — no
+family was loaded at all, so mixed Latin/CJK runs sat on two unrelated baselines.
+There is now a written-down type system.
+
+| Layer | What it is |
+|---|---|
+| Type | Archivo (UI) · Source Serif 4 (quotation) · IBM Plex Mono (figures, identifiers), each paired with Noto Sans SC / Noto Serif SC. All SIL OFL. |
+| Scale | Eight steps, `text-01`…`text-08` (11/12/13/15/18/22/32/56px). Largest-to-body goes from 1.71 to 3.7; table body *tightens* to 13px, so density is not the price. |
+| Radius | **Square everywhere.** `rounded-full` is reserved for identity objects (avatars, the 7px civilization dot), `rounded-focus` for the focus ring. |
+| Rules | Four weights: 1px row rule / 1px block edge / 2px section underline / 3px civilization line and sealed-verdict band. |
+| Shell | One `PageShell` replaces 36 hand-written page shells; eight content widths collapse to three. |
+| Primitives | `Button` `Field` `Badge` `Spinner` `EmptyState` `PageShell` |
+
+**Serif marks what someone said** — the 170 transcribed articles, confession text,
+the reasoning of a judgment, the opinion of a cross-civilization panel. Every label,
+table, button and figure is sans. That makes "serif = quotation" a readable rule
+rather than a decorative choice, and it is why confession no longer needs `italic`
+plus quote marks to announce itself.
+
+**The four cosmologies are told apart by how each numbers its own articles, not by
+colour**: 功過格 is `救濟門 · 十七` (gate and article in Han numerals — *not* 卷, which
+《太微仙君功過格》 does not have); the *Inferno* is `IX · XXVI`; the Negative Confession
+is `§ 27 / 42` (**the denominator is printed** — the system means nothing unless all
+forty-two are answered); Plato is a Stephanus page, `523a`. See
+[`frontend/src/config/civilizationSigil.ts`](frontend/src/config/civilizationSigil.ts).
+
+`/corpus` browses those 170 articles (Chinese 功過格 73, Egyptian Negative
+Confession 42, European Deadly Sins 7 + Inferno 26, Greek Gorgias 11 + Republic/Er
+11 — counted by running `seed_mythology`, not estimated). Before it they surfaced only inside the
+judgment page's citation picker — 170 researched articles with nowhere to read them.
+
+### The rules are enforced by lint, not by discipline
+
+Tailwind's `theme.extend` can add and override but not remove: `text-sm` still
+resolves, `rounded-lg` still resolves (to 0). So the eight steps, the six spacing
+steps and the two radii are all **restrictions**, and a restriction has no
+expression in Tailwind — only lint can impose it. `frontend/eslint.config.mjs`
+carries five custom rules plus jsx-a11y, all at `error`.
+
+`npm run lint` is a bare `eslint .`, and ESLint exits 0 when only warnings exist, so
+a warn-level rule here is worth nothing. Migration relief is a **baseline** instead:
+`frontend/eslint.design-guard-baseline.json` records each file's current violation
+count, and it fires in **both** directions — a count that drops below its budget is
+as red as one that exceeds it, because a stale baseline is an unwatched gap.
+
+### Two conventions that bite
+
+**The indentation of `frontend/src/config/workflow-templates.ts` is a backend
+contract.** Three backend tests (`test_workflow_template_cast.py`,
+`test_workflow_preset_node_types.py`, `test_workflow_template_priority.py`) open
+this frontend file by hardcoded path and regex its *layout* — two-space keys,
+four-space fields, one-line node literals. 491 of its lines are load-bearing text.
+**Running `prettier` over it silently breaks those three backend tests.**
+
+**`min-h-screen` belongs only to routes outside `AppLayout`.** `AppLayout` hands a
+page a `min-h-[calc(100vh-4rem)]` slot; writing `min-h-screen` inside it nests 100vh
+in 100vh−4rem, which is 64px of dead scroll on every route — no error, no type
+error, no failing assertion. `src/__tests__/viewportHeightContract.test.ts` guards it.
+
+---
+
 ## Tech stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 16, React 18, TypeScript 5, Tailwind CSS 3, TanStack Query v5, @xyflow/react (workflow canvas), Recharts |
+| Frontend | Next.js 16, React 18, TypeScript 5, Tailwind CSS 3, TanStack Query v5, @xyflow/react (workflow canvas), Recharts, class-variance-authority |
+| Type | next/font + Archivo / Source Serif 4 / IBM Plex Mono; `@fontsource-variable/noto-sans-sc` and `-serif-sc` self-hosted (101 `unicode-range` slices each, so a browser fetches only what a page uses) |
 | Backend | Django 5, Django REST Framework, drf-spectacular, channels + daphne |
 | Database | PostgreSQL 16 (Docker/production), SQLite (local default) |
 | Realtime | WebSocket via channels with channels-redis |
