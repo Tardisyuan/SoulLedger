@@ -2,76 +2,29 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { workflowApi, type ApprovalWorkflow, type ApprovalNode, type WorkflowTemplateNode } from "@/lib/api";
+import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import Link from "next/link";
 import { LazyWorkflowEditor } from "@/src/components/charts/LazyWorkflowEditor";
 import { Skeleton, ListSkeleton } from "@/components/ui/skeleton";
-import { BaseModal } from "@/src/components/ui/Modal";
 import { WORKFLOW_TEMPLATES, type TemplateKey } from "@/src/config/workflow-templates";
 import { nodeTypeFor } from "@/src/config/workflow-node-types";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
-import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
+import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { EmptyState } from "@/src/components/ui/EmptyState";
-
-// ── Types for template data ──────────────────────────────────────
-
-// Node that can be rendered in React Flow - unified shape
-interface FlowNode {
-  // Optional: WorkflowTemplateNode.id is `required=False` on the serializer,
-  // so a node persisted without one comes back without the key.
-  id?: string | number;
-  node_name: string;
-  status?: string;
-  node_type?: string;
-  court_code?: string;
-  approver_role?: string;
-}
-
-// Backend template from workflow API.
-// NOTE: `nodes_json` is the WorkflowTemplate *model* field name. The API
-// exposes that data as `nodes` (source='nodes_json'), so `nodes_json` is
-// always undefined here and every node list rendered off it is empty.
-interface BackendTemplate {
-  id: string | number;
-  name: string;
-  description?: string;
-  civilization: string;
-  case_type?: string;
-  nodes_json?: FlowNode[];
-}
-
-// Frontend template node (from WORKFLOW_TEMPLATES)
-interface FrontendNode {
-  id: string;
-  name: string;
-  court: string;
-  type: string;
-  order: number;
-}
-
-// Flexible template type for preview/display (handles both backend and frontend shapes)
-interface TemplatePreviewData {
-  id?: string | number;
-  name: string;
-  description?: string;
-  civilization: string;
-  case_type?: string;
-  caseType?: string;
-  // The template-level default urgency (0/1/2). Optional here because this
-  // shape also stands in for backend templates fetched before the column
-  // existed; `WorkflowEditor` treats undefined as 0.
-  priority?: number;
-  nodes_json?: FlowNode[];
-  // Either shape: the preset templates in WORKFLOW_TEMPLATES use FrontendNode,
-  // while a template fetched from the API uses the serializer's node shape.
-  nodes?: FrontendNode[] | WorkflowTemplateNode[];
-}
+import { WorkflowInstanceList } from "@/src/components/workflow/page/WorkflowInstanceList";
+import { TemplateDetailModal } from "@/src/components/workflow/page/TemplateDetailModal";
+import { DeleteTemplateModal } from "@/src/components/workflow/page/DeleteTemplateModal";
+import type {
+  BackendTemplate,
+  FlowNode,
+  FrontendNode,
+  TemplatePreviewData,
+} from "@/src/components/workflow/page/types";
 
 export default function WorkflowPage() {
   const { t } = useI18n();
@@ -507,161 +460,24 @@ export default function WorkflowPage() {
           </div>
         ) : (
           /* Instances tab */
-          <div className="space-y-4">
-            {isWorkflowsLoading ? (
-              <ListSkeleton count={5} />
-            ) : workflows.length === 0 ? (
-              /* `py-12` (48px) is not a step on the ladder, and a centred
-                 "nothing here" reads as the page's subject rather than as the
-                 absence of one. EmptyState is left-aligned for that reason. */
-              <EmptyState title={t("workflow.no_instances")} />
-            ) : (
-              workflows.map((wf) => (
-                /* This row used to be a <div onClick={router.push}> with
-                   cursor-pointer and nothing else: no role, no tabIndex, no
-                   key handler. It looked clickable and was clickable, but Tab
-                   never reached it and Enter was bound to nothing, so the
-                   instance detail page had no keyboard route in at all. A
-                   <Link> is the fix rather than role="button" + tabIndex +
-                   onKeyDown, because this is navigation: the anchor is
-                   focusable natively, announces as a link, and restores
-                   middle-click-to-new-tab and copy-link-address, none of which
-                   a keyboard-emulating div gives back. The card holds no other
-                   interactive element, so there is no nested-<a> problem.
-                   `block` is what keeps the layout identical — an <a> is
-                   inline by default and p-4 would collapse. */
-                <Link
-                  key={wf.id}
-                  href={`/workflow/${wf.id}`}
-                  className="block bg-surface-1 p-4 border border-hairline hover:border-[hsl(var(--color-accent))]/50 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-03 font-medium text-ink">{wf.workflow_name}</div>
-                      <div className="text-02 text-ink-muted mt-1">
-                        <DomainEnum namespace="workflow.case_types" value={wf.case_type} /> · {wf.soul}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {/* Tints unchanged, geometry moved onto Badge — which is
-                          also what keeps the row's `py-0.5` legal, since that
-                          class is granted to Badge.tsx alone. <DomainEnum>
-                          still renders the inner span carrying title={raw},
-                          which `WorkflowPage.test.tsx` selects on
-                          (`getByTitle("IN_PROGRESS")`). */}
-                      <Badge
-                        className={
-                          wf.status === "COMPLETED"
-                            ? "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]"
-                            : wf.status === "IN_PROGRESS"
-                            ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
-                            : "bg-[hsl(var(--color-surface-3))] text-ink-muted"
-                        }
-                      >
-                        <DomainEnum namespace="workflow.status" value={wf.status} />
-                      </Badge>
-                      {wf.is_appeal && (
-                        <Badge className="bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]">
-                          {t("workflow.appeal_badge")}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              ))
-            )}
-          </div>
+          <WorkflowInstanceList workflows={workflows} isLoading={isWorkflowsLoading} />
         )}
 
         {/* 查看模板详情弹窗 */}
-        <BaseModal
+        <TemplateDetailModal
           isOpen={viewModalOpen}
           onClose={() => setViewModalOpen(false)}
-          title={viewingTemplate?.name || t("workflow.template_detail")}
-        >
-          {viewingTemplate && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  {/* 01 是 uppercase 小标签那一档 —— 这些是字段名，不是正文。 */}
-                  <span className="text-01 uppercase text-ink-subtle">{t("souls.civilization")}</span>
-                  <p className="text-03 text-ink font-medium"><DomainEnum namespace="workflow.civilizations" value={viewingTemplate.civilization} /></p>
-                </div>
-                <div>
-                  <span className="text-01 uppercase text-ink-subtle">{t("workflow.detail.case_type")}</span>
-                  <p className="text-03 text-ink font-medium">
-                    <DomainEnum namespace="workflow.case_types" value={viewingTemplate.case_type || viewingTemplate.caseType} />
-                  </p>
-                </div>
-              </div>
-              <div>
-                <span className="text-01 uppercase text-ink-subtle">{t("workflow.detail.notes")}</span>
-                <p className="text-03 text-ink"><DomainText value={viewingTemplate.description} /></p>
-              </div>
-              <div>
-                <span className="text-01 uppercase text-ink-subtle">{t("workflow.detail.nodes")}</span>
-                <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
-                  {/* Backend templates arrive here via WorkflowTemplateSerializer's
-                      `nodes` (source='nodes_json'); predefined templates are
-                      built locally with a `nodes_json` key. Read both. */}
-                  {((viewingTemplate.nodes_json || viewingTemplate.nodes || []) as FlowNode[]).map((node: FlowNode, idx: number) => (
-                    <div key={idx} className="bg-surface-3 p-2 text-03">
-                      <div className="font-medium text-ink">{node.node_name}</div>
-                      <div className="text-02 text-ink-muted mt-1">
-                        {node.court_code && <span>🏛 {node.court_code}</span>}
-                        <span className="ml-2"><DomainEnum namespace="workflow.node_type" value={node.node_type} /></span>
-                      </div>
-                      {node.approver_role && (
-                        <div className="text-02 text-ink-subtle mt-1">
-                          {node.approver_role}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {(viewingTemplate.nodes_json || viewingTemplate.nodes || []).length === 0 && (
-                    <p className="text-03 text-ink-muted">{t("workflow.no_node_data")}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </BaseModal>
+          template={viewingTemplate}
+        />
 
         {/* 删除确认弹窗 */}
-        <BaseModal
+        <DeleteTemplateModal
           isOpen={confirmModalOpen}
           onClose={() => setConfirmModalOpen(false)}
-          title={t("common.confirm_delete")}
-          footer={
-            <div className="flex justify-end gap-3">
-              <Button type="button" variant="ghost" onClick={() => setConfirmModalOpen(false)}>
-                {t("common.cancel")}
-              </Button>
-              {/* Was `bg-status-error` + `text-white`, which measures 3.59:1 in
-                  the dark theme — under AA, on the one control in this dialog
-                  that destroys something. `Button`'s danger variant is the
-                  10%-tint recipe that clears AA in both themes. */}
-              <Button
-                type="button"
-                variant="danger"
-                onClick={() => {
-                  if (confirmingTemplate) {
-                    deleteMutation.mutate(String(confirmingTemplate.id));
-                  }
-                  setConfirmModalOpen(false);
-                }}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? (t("common.deleting")) : (t("common.confirm_delete"))}
-              </Button>
-            </div>
-          }
-        >
-          <div className="space-y-3">
-            <p className="text-03 text-ink">{t("workflow.delete_confirm_msg", { name: confirmingTemplate?.name || "" })}</p>
-            <p className="text-03 text-[hsl(var(--color-status-error))]">{t("workflow.delete_irreversible")}</p>
-          </div>
-        </BaseModal>
+          onConfirm={(id) => deleteMutation.mutate(id)}
+          template={confirmingTemplate}
+          isPending={deleteMutation.isPending}
+        />
     </PageShell>
   );
 }

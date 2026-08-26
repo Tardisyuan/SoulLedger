@@ -4,14 +4,7 @@ import React, { useState, useEffect, Fragment } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Popover, Transition, Dialog } from "@headlessui/react";
-import {
-  Globe, Users, ArrowRightLeft, Scale, Gem, UserCog, User, Settings,
-  Folder, FileText, Home, Shield, ShieldCheck, ShieldAlert, ShieldQuestion,
-  Scroll, BookOpen, Bell, ChevronRight, ChevronDown, Sun, Moon, LogOut,
-  type LucideIcon
-} from "lucide-react";
-import { getIconByName, DEFAULT_ICON } from "../../lib/icons";
+import { Popover, Transition } from "@headlessui/react";
 import { notificationsApi, type Notification, type PaginatedResponse } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -20,11 +13,12 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { authApi } from "@/lib/api";
 import { SettingsDrawer, useAccentColor } from "@/src/components/settings/SettingsDrawer";
 import { ConnectionStatus } from "@/src/components/connection-status";
-import { useSidebarMenus, isDirectory, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
-import { menuGlossParts } from "@/src/lib/menuI18n";
-import { isMenuPathActive } from "@/src/lib/menuPath";
+import { useSidebarMenus } from "@/src/hooks/useSidebarMenus";
 import { TenantSignal } from "@/src/components/layout/TenantSignal";
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
+import { Breadcrumb } from "@/src/components/layout/Breadcrumb";
+import { SidebarMenuItem } from "@/src/components/layout/SidebarMenuItem";
+import { LogoutConfirmDialog } from "@/src/components/layout/LogoutConfirmDialog";
 
 const NAV_MODE_KEY = "soulledger_nav_mode";
 
@@ -458,294 +452,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       />
 
       {/* Logout Confirmation Dialog */}
-      <Transition appear show={logoutConfirmOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-[99998]" onClose={() => setLogoutConfirmOpen(false)}>
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
-          </Transition.Child>
-
-          <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4">
-              <Transition.Child
-                as={Fragment}
-                enter="ease-out duration-300"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="ease-in duration-200"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
-              >
-                <Dialog.Panel className="w-full max-w-md rounded-xl bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6 shadow-2xl">
-                  <Dialog.Title className="text-lg font-semibold text-[hsl(var(--color-ink))]">
-                    {t("auth.confirm_logout")}
-                  </Dialog.Title>
-                  <Dialog.Description className="mt-2 text-sm text-[hsl(var(--color-ink-muted))]">
-                    {t("auth.confirm_logout_desc")}
-                  </Dialog.Description>
-
-                  <div className="mt-6 flex justify-end gap-3">
-                    <button
-                      onClick={() => setLogoutConfirmOpen(false)}
-                      className="px-4 py-2 rounded-md bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] text-sm hover:bg-[hsl(var(--color-surface-3))] transition-colors"
-                    >
-                      {t("common.cancel")}
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      className="px-4 py-2 rounded-md bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] text-sm hover:bg-[hsl(var(--color-status-error)/0.3)] transition-colors"
-                    >
-                      {t("auth.confirm_logout_btn")}
-                    </button>
-                  </div>
-                </Dialog.Panel>
-              </Transition.Child>
-            </div>
-          </div>
-        </Dialog>
-      </Transition>
+      <LogoutConfirmDialog
+        open={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={handleLogout}
+      />
     </div>
   );
 }
 
-/** 形如 42 或 uuid 的路径段，面包屑里显示为「详情」而不是原始 id。 */
-const ID_SEGMENT = /^(\d+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-)/i;
-
-/**
- * 在菜单树里找出与当前路径最匹配的一条链路（从分组到叶子）。
- * 取 path 最长的匹配项，这样 /social/follows 命中「关注」而不是「动态」。
- */
-function matchTrail(items: SidebarMenu[], pathname: string): SidebarMenu[] {
-  let best: SidebarMenu[] = [];
-  let bestLen = -1;
-
-  const walk = (nodes: SidebarMenu[], trail: SidebarMenu[]) => {
-    for (const node of nodes) {
-      const next = [...trail, node];
-      const p = node.path;
-      if (p && (pathname === p || pathname.startsWith(p + "/"))) {
-        if (p.length > bestLen) {
-          best = next;
-          bestLen = p.length;
-        }
-      }
-      const kids = node.children as SidebarMenu[] | undefined;
-      if (kids?.length) walk(kids, next);
-    }
-  };
-
-  walk(items, []);
-  return best;
-}
-
-// 面包屑段落的中文原名旁边配的译名（见 src/lib/menuI18n.ts 里的解释：菜单名
-// 是数据库自由文本，没有 i18n 字段，导航本身永远保持中文原文；面包屑和页面
-// H1 是仅有的两处例外，补一个"译名 中文原名"的对照）。
-type Crumb = { label: string; gloss?: string; href?: string };
-
-export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
-  const pathname = usePathname();
-  const { t, locale } = useI18n();
-
-  // t() 找不到 key 时会原样返回 key，这里补一个真正的兜底。
-  const label = (key: string, fallback: string) => {
-    const value = t(key);
-    return value === key ? fallback : value;
-  };
-
-  const segmentLabel = (segment: string) =>
-    ID_SEGMENT.test(segment)
-      ? label("breadcrumb.detail", "详情")
-      : label(`breadcrumb.${segment}`, segment);
-
-  const trail = matchTrail(menus, pathname);
-  const crumbs: Crumb[] = [];
-
-  if (trail.length > 0) {
-    for (const node of trail) {
-      const { primary, gloss } = menuGlossParts(node, locale, t);
-      crumbs.push({
-        // 分组目录没有页面，不给链接
-        label: primary,
-        gloss,
-        href: isDirectory(node) ? undefined : node.path,
-      });
-    }
-    // 菜单里没有登记的更深层路由（/menus/buttons、/dispatch/propose、
-    // /souls/<id> …）按剩余的路径段补上，避免"进去了看不出自己在哪"。
-    const matched = trail[trail.length - 1];
-    if (matched.path && pathname !== matched.path) {
-      const rest = pathname.slice(matched.path.length).split("/").filter(Boolean);
-      rest.forEach((segment, i) => {
-        crumbs.push({
-          label: segmentLabel(segment),
-          href:
-            i < rest.length - 1
-              ? `${matched.path}/${rest.slice(0, i + 1).join("/")}`
-              : undefined,
-        });
-      });
-    }
-  } else {
-    // 菜单树里完全没有的路径（例如已移出侧边栏的 /profile、/notifications）
-    pathname
-      .split("/")
-      .filter(Boolean)
-      .forEach((segment, i, all) => {
-        crumbs.push({
-          label: segmentLabel(segment),
-          href: i < all.length - 1 ? `/${all.slice(0, i + 1).join("/")}` : undefined,
-        });
-      });
-  }
-
-  if (crumbs.length === 0) return <div className="flex-1" />;
-
-  return (
-    <nav
-      aria-label={label("breadcrumb.aria_label", "面包屑导航")}
-      className="flex-1 min-w-0"
-    >
-      <ol className="flex items-center gap-1 text-sm min-w-0 overflow-hidden">
-        <li className="shrink-0">
-          <Link
-            href="/dashboard"
-            prefetch={true}
-            className="flex items-center text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors"
-            title={label("breadcrumb.home", "仪表盘")}
-          >
-            <Home className="w-4 h-4" />
-          </Link>
-        </li>
-        {crumbs.map((crumb, i) => {
-          const isLast = i === crumbs.length - 1;
-          return (
-            <li key={`${crumb.label}-${i}`} className="flex items-center gap-1 min-w-0">
-              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-[hsl(var(--color-ink-subtle))]" />
-              {crumb.href && !isLast ? (
-                <Link
-                  href={crumb.href}
-                  prefetch={true}
-                  className="truncate text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] transition-colors"
-                >
-                  {crumb.label}
-                  {crumb.gloss && (
-                    <span className="ml-1 text-[hsl(var(--color-ink-subtle))]">{crumb.gloss}</span>
-                  )}
-                </Link>
-              ) : (
-                <span
-                  className={`truncate ${
-                    isLast
-                      ? "text-[hsl(var(--color-ink))] font-medium"
-                      : "text-[hsl(var(--color-ink-subtle))]"
-                  }`}
-                  aria-current={isLast ? "page" : undefined}
-                >
-                  {crumb.label}
-                  {crumb.gloss && (
-                    <span className="ml-1 font-normal text-[hsl(var(--color-ink-subtle))]">{crumb.gloss}</span>
-                  )}
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
-  );
-}
-
-function SidebarMenuItemInner({
-  menu,
-  collapsed,
-  depth = 0,
-}: {
-  menu: SidebarMenu;
-  collapsed: boolean;
-  depth?: number;
-}) {
-  const pathname = usePathname();
-  const [expanded, setExpanded] = useState(false);
-  const hasChildren = menu.children && menu.children.length > 0;
-  const { t } = useI18n();
-
-  const active = isMenuPathActive(pathname, menu.path);
-
-  const indent = collapsed ? "" : depth > 0 ? "ml-4" : "";
-
-  if (hasChildren) {
-    return (
-      <div className={indent}>
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className={`w-full flex items-center ${collapsed ? "justify-center px-0" : "gap-3 px-3"} h-12 rounded-lg transition-colors ${
-            active
-              ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
-              : "text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]"
-          }`}
-        >
-          <span className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${active ? "bg-[hsl(var(--color-accent))]/20" : ""}`}>
-            {(() => {
-              const IconComponent = getIconByName(menu.icon);
-              return <IconComponent className="w-5 h-5" />;
-            })()}
-          </span>
-          {!collapsed && (
-            <>
-              <span className="flex-1 text-left text-sm truncate">
-                {menu.path === "/" ? t("nav.welcome") : menu.name}
-              </span>
-              {hasChildren && (
-                <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`} />
-              )}
-            </>
-          )}
-        </button>
-        {expanded && !collapsed && (
-          <div className="mt-1">
-            {menu.children!.map((child) => (
-              <SidebarMenuItem
-                key={child.id}
-                menu={child}
-                collapsed={collapsed}
-                depth={depth + 1}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <Link
-      href={menu.path}
-      prefetch={true}
-      className={`flex items-center ${collapsed ? "justify-center w-full px-0" : "gap-3 px-3"} h-12 rounded-lg transition-colors ${indent} ${
-        active
-          ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
-          : "text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]"
-      }`}
-    >
-      <span className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${active ? "bg-[hsl(var(--color-accent))]/20" : ""}`}>
-        {(() => {
-          const IconComponent = getIconByName(menu.icon);
-          return <IconComponent className="w-5 h-5" />;
-        })()}
-      </span>
-      {!collapsed && (
-        <span className="text-sm truncate">{menu.name}</span>
-      )}
-    </Link>
-  );
-}
-
-const SidebarMenuItem = React.memo(SidebarMenuItemInner);
+// `Breadcrumb` 的实现搬到了 ./Breadcrumb.tsx（本文件当时是 751 行，超过仓库
+// 500 行的上限）。这一行是**转发**，不是搬家没搬干净：
+// src/__tests__/AppLayout.test.tsx 用
+// `require("@/src/components/layout/AppLayout")` 取 Breadcrumb，而测试文件不在
+// 这次拆分的改动范围里。入口留在原处、实现搬走，测试一行都不用改。
+// 要删掉这一行，先去改那条 require。
+export { Breadcrumb } from "./Breadcrumb";

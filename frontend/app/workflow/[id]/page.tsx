@@ -16,6 +16,8 @@ import { Badge } from "@/src/components/ui/Badge";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { Spinner } from "@/src/components/ui/Spinner";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { WorkflowInfoCard } from "@/src/components/workflow/detail/WorkflowInfoCard";
+import { WorkflowNodeHistory } from "@/src/components/workflow/detail/WorkflowNodeHistory";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.5)]",
@@ -181,46 +183,7 @@ export default function WorkflowDetailPage() {
       }
     >
       <div className="space-y-6">
-        {/* Workflow Info Card. `p-5` (20px) was off the spacing ladder in all
-            three cards on this page; `p-4` is the step below it. */}
-        <div className="bg-surface-1 p-4 border border-hairline">
-          {/* 01 是 uppercase 小标签那一档 —— 区块标题原本用 `text-sm` +
-              `font-semibold` + `uppercase` 三个类拼出这个效果。 */}
-          <h2 className="text-01 uppercase text-ink-muted mb-3">
-            {t("workflow.detail.info")}
-          </h2>
-          <dl className="grid grid-cols-2 gap-4 text-03">
-            <div>
-              <dt className="text-ink-muted">{t("workflow.detail.soul")}</dt>
-              <dd className="text-ink font-medium">{workflow.soul_name || workflow.soul}</dd>
-            </div>
-            <div>
-              <dt className="text-ink-muted">{t("workflow.detail.case_type")}</dt>
-              <dd className="text-ink"><DomainEnum namespace="workflow.case_types" value={workflow.case_type} /></dd>
-            </div>
-            <div>
-              <dt className="text-ink-muted">{t("workflow.detail.judgment_verdict")}</dt>
-              <dd className="text-ink"><DomainEnum namespace="workflow.verdicts" value={workflow.judgment_verdict} /></dd>
-            </div>
-            <div>
-              <dt className="text-ink-muted">{t("workflow.detail.priority")}</dt>
-              <dd className="text-ink">
-                {workflow.priority === 0 ? t("workflow.detail.normal") :
-                 workflow.priority === 1 ? t("workflow.detail.urgent") :
-                 t("workflow.detail.critical")}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-ink-muted">{t("workflow.detail.created_at")}</dt>
-              <dd className="text-ink">{formatDateTime(workflow.created_at)}</dd>
-            </div>
-            <div>
-              <dt className="text-ink-muted">{t("workflow.detail.completed_at")}</dt>
-              <dd className="text-ink"><DomainText value={workflow.completed_at ? formatDateTime(workflow.completed_at) : null} missingKind={workflow.status === "COMPLETED" ? "unrecorded" : "inapplicable"} missingReason={statusLabel(workflow.status)} /></dd>
-            </div>
-          </dl>
-        </div>
-
+        <WorkflowInfoCard workflow={workflow} statusLabel={statusLabel} />
         {/* Current Node Action Card */}
         {currentNode && workflow.status !== "COMPLETED" && (
           <div className="bg-surface-1 p-4 border border-hairline">
@@ -469,47 +432,7 @@ export default function WorkflowDetailPage() {
 
         {/* History Tab */}
         {activeTab === "history" && (
-          <div className="space-y-3">
-            {sortedNodes
-              .filter((n) => n.status !== "PENDING")
-              .sort((a, b) => {
-                const aTime = a.decided_at ? new Date(a.decided_at).getTime() : 0;
-                const bTime = b.decided_at ? new Date(b.decided_at).getTime() : 0;
-                return aTime - bTime;
-              })
-              .map((node) => (
-                <div key={node.id} className="bg-surface-1 p-4 border border-hairline">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-03 font-medium text-ink">{node.node_name}</span>
-                    {/* <DomainEnum> sets its own `title` from the raw member —
-                        that is the whole point of the component — so this one
-                        needs no hand-rolled attribute, unlike the string-form
-                        badge in the Nodes tab above. It nests inside Badge for
-                        the same reason the status badge does. */}
-                    <Badge className={VERDICT_COLORS[node.verdict ?? ""] || ""}>
-                      <DomainEnum namespace="workflow.verdicts" value={node.verdict} />
-                    </Badge>
-                  </div>
-                  <div className="text-02 text-ink-muted">
-                    {t("workflow.detail.decided_at")}: <DomainText value={node.decided_at ? formatDateTime(node.decided_at) : null} />
-                  </div>
-                  {node.notes && (
-                    <p className="text-03 text-ink-muted mt-2 italic">&ldquo;{node.notes}&rdquo;</p>
-                  )}
-                  {node.approver && (
-                    <p className="text-02 text-ink-subtle mt-1">
-                      {t("workflow.detail.approver")}: {node.approver}
-                    </p>
-                  )}
-                </div>
-              ))}
-            {sortedNodes.filter((n) => n.status !== "PENDING").length === 0 && (
-              /* Was a centred `py-8` (32px — not a step on the ladder) div.
-                 EmptyState is left-aligned by design: "nothing has been decided
-                 yet" is a note in the file, not a poster. */
-              <EmptyState title={t("workflow.detail.no_history")} />
-            )}
-          </div>
+          <WorkflowNodeHistory nodes={sortedNodes} verdictColors={VERDICT_COLORS} />
         )}
       </div>
     </PageShell>

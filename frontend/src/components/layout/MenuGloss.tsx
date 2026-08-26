@@ -5,7 +5,7 @@ import { useSidebarMenus } from "@/src/hooks/useSidebarMenus";
 import { findMenuByPath, menuGlossParts } from "@/src/lib/menuI18n";
 
 /**
- * 页面 H1 旁边的中文原名小字对照 —— 见 Breadcrumb（AppLayout.tsx）里同样的
+ * 页面 H1 旁边的中文原名小字对照 —— 见 Breadcrumb（src/components/layout/Breadcrumb.tsx）里同样的
  * "译名 中文原名"逻辑，这是它在页面标题这一侧的对应实现。
  *
  * 只在 locale != zh-Hans、且能在菜单树里按 path 找到对应节点和译名时才渲染；
