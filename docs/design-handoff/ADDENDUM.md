@@ -409,3 +409,38 @@ pointer at the stylesheet. `CIVILIZATION_COLORS` survives, because Recharts
 cannot read custom properties, but as a mirror with a contract test behind it
 rather than a second system — the "KEEP IN SYNC" comment it replaces had by then
 failed twice on civilization colours and five times on lifecycle states.
+
+---
+
+## 7. 这份追补停在 2026-08-23,其后又落地了 35 个 frontend 提交
+
+> 2026-08-26 加。本节不是新发现,是**这份文档自己的边界**。
+
+开篇写着「Everything below landed after that and is not reflected in either」——
+那句话给这份文档定了一项义务:做 `BRIEF.md` 之后所有变化的追补层。它最后一次改动是
+2026-08-23(`cf2ea06`)。此后 `frontend/` 又有 **35 个提交**,其中包含 Stage 11 与
+Stage 12 的全部内容 —— 也就是 `BRIEF.md` §4.8 索要的那套东西本身。
+
+不逐条转述,只说清读这份文档时会踩到哪里:
+
+- **`BRIEF.md` §4.8 索要的五套 scale,现在有三套已经落地。** 八档字号
+  (`text-01`…`text-08`,11/12/13/15/18/22/32/56px,其中四档自带 600 字重)、三族字体
+  (Archivo / Source Serif 4 / IBM Plex Mono,各配 Noto Sans/Serif SC)、圆角整表塌成 0
+  (只留 `full` 与 `focus`)、四档规则线宽。间距**刻意不进 config**:六档节奏由
+  `eslint.config.mjs` 的 `spacing-rhythm` 规则施加,因为 `theme.extend` 只能新增不能
+  删除,而节奏是一种**限制**,限制在 Tailwind 里没有表达方式。
+  **仍然没有的是层级(elevation)与动效**,`tokens.md` 里那句「四层表面几乎无法分辨」
+  依然成立。
+- **36 个页面外壳收敛成一个 `PageShell`,八种宽度收敛成三种。** 本文档与 `BRIEF.md`
+  提到具体页面布局的地方,描述的都是收敛之前的形态。
+- **`tokens.md` 已于 2026-08-26 与 `globals.css` 对账**(31 行表格里 21 行的值当时是
+  错的)。本文档 §6 末尾说「`tokens.md` §Civilization identity 现在是一个指向样式表的
+  指针」—— 那句仍然准确,对账没有动它。
+- **`tokens.html` 是刻意冻结的评审快照**,顶部自己写着 "Do not build against this page"。
+  它里面的旧值是记录不是错误。三份文件三种时效姿态,别混着读:
+  `tokens.md` 自称当前态(必须对账)、`tokens.html` 自称快照(必须不动)、
+  `BRIEF.md` 与本文档是定点材料(靠 §4 的状态表与本节标注时点)。
+
+**§1 的三行表在 §5 里已经自我修正过一次**(四个文明,不是三个)。本节是同一件事的
+下一次:一份追补层如果不追到当下,它的读者拿到的仍然是一个已经不存在的系统 ——
+只是过期的位置从被追补的文档,移到了追补本身。

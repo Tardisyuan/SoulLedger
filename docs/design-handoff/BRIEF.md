@@ -98,6 +98,29 @@ feel like raw CRUD over database tables.
 
 ## 4. What is wrong today
 
+> **状态:2026-08-26 逐条实核。这份缺陷表写于 2026-08-02,九条里六条已经交付;
+> 4.3 部分交付,4.8 五项要求交付了三项,4.4 无从判定 —— 三者各不相同,没有合并成一个数。截图仍是 8 月 2 日的界面,不是现在的界面。**
+> 本节以下正文一字未改 —— 它记录的是当初为什么提这些要求,那部分仍然成立。
+>
+> | | 状态 | 实核依据 |
+> |---|---|---|
+> | 4.1 | **已交付** | `SoulLifecycleTimeline.tsx` 与两个测试;5 个文件的注释引用本节号 |
+> | 4.2 | **已交付** | `/judgment/queue` 队列、键盘映射、撤销倒计时;12 个文件引用 |
+> | 4.3 | **部分** | `dashboard/StatCard.tsx` 有数字分组与空状态,但**未找到最近活动的分组/去重**;无任何代码引用本节号 |
+> | 4.4 | **未标注** | Stage 11 的 `PageShell` 与八档字号处理了层级问题,但没有代码引用本节号,无法据此断言 |
+> | 4.5 | **已交付** | 每个 token 都有双主题值;`chartColourContract.test.ts` 守着 |
+> | 4.6 | **已交付** | `DomainEnum`/`DomainValue` + `domainDisplayContract` 42 条;**19 个文件引用** |
+> | 4.7 | **已交付** | `backend/apps/core/recycle_bin.py` 级联软删/恢复、`/recycle-bin` 页、权限三分;**19 个文件引用** |
+> | 4.8 | **五要三** | 字号、间距、圆角三套已落地(间距刻意由 lint 而非 config 施加);**层级规则仍然没有**;表格规范部分落在 `components/ui/data-table.tsx` |
+> | 4.9 | **已交付** | `--color-civ-mark-*` 四文明 + 文明钤印 + `civilizationColourContract.test.ts` |
+>
+> 「已交付」的判据不是我读了代码觉得像,而是**代码注释里写着本节号**,外加实际文件存在。
+> 4.3/4.4/4.8 三条没有任何代码引用 —— 那不等于没做(引用是自愿的),所以这三条是直接查
+> 代码得出的,并且只写查到了什么。
+>
+> 另见 `ADDENDUM.md`,它补的是 8/2–8/23 之间的变化;8/23 之后又落地了 35 个 frontend
+> 提交(整个 Stage 11 与 Stage 12),那部分两份文档都没有覆盖。
+
 Every item below is visible in the attached screenshots. This is not a wishlist; it
 is a defect list.
 
