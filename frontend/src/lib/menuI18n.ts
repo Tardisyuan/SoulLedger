@@ -18,8 +18,16 @@ const LEAF_KEYS: Record<string, string> = {
   "/admin/stats": "breadcrumb.menu.admin_stats",
   "/souls": "breadcrumb.menu.souls",
   "/judgment": "breadcrumb.menu.judgment",
+  "/corpus": "breadcrumb.menu.corpus",
   "/cross-judgments": "breadcrumb.menu.cross_judgments",
-  "/karma": "breadcrumb.menu.karma",
+  // `/ledger`, not `/karma`. Migration 0011 moved the menu's path when the
+  // backend app was renamed, and this key was not followed — so the ledger
+  // breadcrumb has been falling back to its Chinese name alone in en and egy
+  // ever since, which is the exact rename failure this file's own docstring
+  // predicts. The gloss is "Merit Ledger" rather than the old "Karma
+  // Management": 0011 argues at length that 功過格 is a net-value ledger, not
+  // Buddhist karma, and the old wording was the word it was moving away from.
+  "/ledger": "breadcrumb.menu.ledger",
   "/disposition": "breadcrumb.menu.disposition",
   "/workflow": "breadcrumb.menu.workflow",
   "/dispatch": "breadcrumb.menu.dispatch",

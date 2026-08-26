@@ -20,15 +20,21 @@ import { cn } from "@/lib/utils";
  * signatures instead of 1: the shared thing was never callable from where the
  * badges are.
  *
- * TONES ARE NOT RE-DERIVED HERE. `BADGE_TONE_CLASSES` restates the five
- * `ENUM_TONE_CLASSES` entries verbatim rather than importing them, on purpose:
- * importing would put a runtime edge from `src/components/ui/` into
- * `components/ui/data-grid/`, and the whole point of the recommendation this
- * component carries — that `EnumBadge` should become a thin call to `Badge` —
- * is that the edge should run the other way. Two copies with no test is drift;
- * two copies with `src/__tests__/Badge.test.tsx` asserting them equal, key for
- * key and string for string, is a pin. The test imports both. If either moves,
- * it goes red.
+ * THIS IS NOW THE ONLY TONE TABLE. It was written restating the five
+ * `ENUM_TONE_CLASSES` entries verbatim rather than importing them, so that the
+ * dependency edge could later be added in the other direction without a cycle
+ * — and it has been: `components/ui/data-grid/columns.tsx` imports
+ * `BADGE_TONE_CLASSES` from here and `ENUM_TONE_CLASSES` is a five-key
+ * projection of it, while `EnumBadge` is a thin call to `Badge`. Nothing
+ * imports the other way, so there is no cycle.
+ *
+ * The interim pin — `src/__tests__/Badge.test.tsx` asserting the two tables
+ * equal key for key — was retired with the copy it guarded, because a derived
+ * table compared against its own source is an assertion nothing can falsify.
+ * What replaced it is a render-path comparison: an enum cell built through
+ * `renderGridCell` must produce the same class list as `<Badge tone=…>`, for
+ * every tone the grid uses. Hand-rolling a class string back into `EnumBadge`
+ * turns that red; re-deriving `ENUM_TONE_CLASSES` from itself could not.
  *
  * The 10% fill is a measurement, not a taste. columns.tsx records that a 16%
  * tint of the error token drops light-mode badge text to 4.37:1, under the
@@ -42,7 +48,7 @@ import { cn } from "@/lib/utils";
  * for that. Reaching for `pill` because it looks softer is the misuse.
  */
 
-/** Verbatim twin of `ENUM_TONE_CLASSES`; equality is held by Badge.test.tsx. */
+/** The app's one badge tone table. `ENUM_TONE_CLASSES` is a view onto five of these six. */
 export const BADGE_TONE_CLASSES = {
   neutral:
     "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] border-[hsl(var(--color-hairline-tertiary))]",
@@ -54,9 +60,11 @@ export const BADGE_TONE_CLASSES = {
     "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.3)]",
   info: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))] border-[hsl(var(--color-status-info)/0.3)]",
   /**
-   * Sixth tone, with no counterpart in `ENUM_TONE_CLASSES` — the data grid has
-   * no use for it, but 4 of the 66 badges do: the "current tenant" / "this one"
-   * marker written by hand as `bg-[hsl(var(--color-accent))]/20
+   * Sixth tone, deliberately NOT projected into `ENUM_TONE_CLASSES` — the data
+   * grid has no use for it, and its 20% fill is outside the 10% cap
+   * src/__tests__/dataGridToneContract.test.ts enforces on the grid's tones.
+   * 4 of the 66 badges do use it: the "current tenant" / "this one" marker
+   * written by hand as `bg-[hsl(var(--color-accent))]/20
    * text-[hsl(var(--color-accent-ink))]`.
    *
    * Note the foreground is `--color-accent-ink`, NOT `--color-accent`. They are
@@ -77,8 +85,10 @@ const badge = cva(
     // `inline-flex` + `gap-1` so a leading glyph needs no wrapper. `align-middle`
     // keeps it off the baseline when it sits inside a run of text.
     "inline-flex items-center gap-1 align-middle",
-    // Same geometry as EnumBadge, so swapping one for the other is not a
-    // visual diff: 8px/2px padding, 12px type, medium weight, hairline border.
+    // The geometry EnumBadge used to restate, and now receives: 8px/2px
+    // padding, 12px type, medium weight, hairline border. Changing the vertical
+    // padding here changes every table row in the app, which is why
+    // eslint.config.mjs exempts it by class name rather than by budget.
     // `text-02` IS 12px — it is the eight-step scale's slot for IDs and meta,
     // which is what a badge is — but it also brings 0.04em tracking, which a
     // bare `text-xs` did not, and short uppercase-ish labels need it.

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { render, screen } from "@testing-library/react";
 import {
@@ -15,8 +15,11 @@ const SOURCE = readFileSync(
   path.join(__dirname, "..", "components", "ui", "Field.tsx"),
   "utf8"
 );
-/** Comments stripped — this file documents the spellings it forbids. */
-const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+/** Comments stripped — the files that forbid a spelling have to quote it. */
+const strip = (src: string) =>
+  src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+
+const CODE = strip(SOURCE);
 
 const OPTIONS = [
   { value: "CHINESE", label: "中国" },
@@ -140,14 +143,19 @@ describe("focus-visible, not focus", () => {
 
 describe("the placeholder spelling is written down correctly, once", () => {
   /**
-   * `src/components/workflow/WorkflowEditor.tsx:488` contains
+   * `src/components/workflow/WorkflowEditor.tsx` used to contain
    * `placeholder:[hsl(var(--color-ink-subtle))]`, which produces NO CSS:
    * `placeholder:` is a variant, and Tailwind's arbitrary-property form needs
    * `[property:value]`, so a bare bracketed value has no property to set. That
-   * input's placeholder therefore renders at full-strength inherited ink,
+   * input's placeholder rendered at full-strength inherited ink,
    * indistinguishable from a real value — with no build error, no type error
-   * and no failing test. That file is not ours to edit; this is the reference
-   * spelling the migration should copy.
+   * and no failing test.
+   *
+   * It has since been migrated to the spelling below, which was verified by
+   * building Tailwind over a file containing BOTH spellings: only
+   * `placeholder:text-…` produced a `::placeholder` rule; the bare bracketed
+   * form emitted no selector at all. The last case in this block is what keeps
+   * it from coming back anywhere in the app, not just here.
    */
   it("uses placeholder:text-, the form that emits a declaration", () => {
     expect(fieldControl({}).split(/\s+/)).toContain(
@@ -167,6 +175,49 @@ describe("the placeholder spelling is written down correctly, once", () => {
   it("reaches the rendered control, not just the class string", () => {
     render(<TextField label="Name" placeholder="孟婆" />);
     expect(control().className).toContain("placeholder:text-[hsl(var(--color-ink-subtle))]");
+  });
+
+  /**
+   * The spelling is written down once here; this is what makes "once" true of
+   * the whole app rather than of this file.
+   *
+   * COMMENTS ARE STRIPPED FIRST, and that is not an optimisation. Two files —
+   * this one's subject `Field.tsx` and `Button.tsx` — quote the malformed form
+   * in prose precisely to say they refuse it. A scan of raw source flags both,
+   * and the cheapest way to make such a scan green is to delete the sentence
+   * explaining the defect. A check whose easiest fix is deleting the
+   * explanation is a check that destroys the thing it guards.
+   */
+  const SOURCE_ROOTS = ["app", "src", "components"];
+
+  function sourceFiles(dir: string): string[] {
+    const out: string[] = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) out.push(...sourceFiles(full));
+      else if (/\.tsx?$/.test(entry.name)) out.push(full);
+    }
+    return out;
+  }
+
+  const REPO = path.join(__dirname, "..", "..");
+  const ALL_SOURCES = SOURCE_ROOTS.flatMap((root) => sourceFiles(path.join(REPO, root)));
+
+  it("scanned a real tree (an empty scan makes the next case vacuously green)", () => {
+    expect(ALL_SOURCES.length).toBeGreaterThan(100);
+    // And the stripper is doing its job in both directions: Field.tsx names the
+    // malformed form in a comment, so raw source must hit and stripped must not.
+    const field = readFileSync(path.join(REPO, "src", "components", "ui", "Field.tsx"), "utf8");
+    expect(field).toMatch(/placeholder:\[/);
+    expect(strip(field)).not.toMatch(/placeholder:\[/);
+  });
+
+  it("no file in app/ src/ components/ writes the no-op variant form", () => {
+    const offenders = ALL_SOURCES.filter((file) =>
+      /placeholder:\[/.test(strip(readFileSync(file, "utf8")))
+    ).map((file) => path.relative(REPO, file));
+    expect(offenders).toEqual([]);
   });
 });
 

@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import eslintParser from "@typescript-eslint/parser";
@@ -40,6 +41,33 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 // file. `fileURLToPath` has been stable since Node 10 and costs one import.
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const rel = (f) => path.relative(ROOT, f).split(path.sep).join("/");
+
+// ── LEGACY 基线 ──────────────────────────────────────────────────────────────
+// 每个键是**当前**该文件的违规条数,由 `npx eslint app src` 实测得出,不是估计。
+// 超过 → 报红(有人在遗留文件里新增了违规);低于 → 也报红(基线过期)。
+// 没有条目的文件额度是 0 —— 这就是「新文件一律 error」的实现。
+// 第三波迁移完一个文件,把对应数字改小,或整行删掉。
+//
+// 数据搬到了 BASELINE_FILE(35 个文件 / 564 条),因为这份配置本身有 500 行上限,
+// 而那 167 行是**数据**,不是逻辑 —— 读配置的人要读的是规则怎么算,不是逐行的
+// 数字。论证留在这里,理由同样明确:JSON 写不了注释,而上面那段「为什么是 error
+// 不是 warn」「为什么低于基线也报红」是这套机制唯一的说明书,搬进数据文件就没了。
+// 所以分界是:**为什么**在 .mjs 里,**多少**在 .json 里。
+//
+// 为什么是 .json 而不是 .mjs:src/__tests__/designGuardContract.test.ts 也要读它,
+// 而那个测试跑在 jest 的 CJS 运行时里(没开 --experimental-vm-modules),
+// `import()` 一个 .mjs 会直接抛 —— 该文件顶部那段注释就是为这件事写的。JSON 让
+// 两边用**同一种方式读同一份字节**:fs.readFileSync + JSON.parse,没有第二条路径
+// 可以和第一条产生分歧。
+//
+// 搬家引入了一个跨文件同步点,而这正是本仓反复出问题的形状,所以两个方向都堵死:
+//   文件读不出来 / 不是合法 JSON → readFileSync 或 JSON.parse 当场抛 → ESLint
+//     退出码 **2**(致命配置错误),几百个文件一个都没 lint。响的,不是静默的。
+//   文件读成了 `{}` → 每个文件额度变 0,35 个遗留文件立刻爆红。同样是响的。
+//   测试读的是**另一份**基线 → designGuardContract 有一条断言 eslint.config.mjs
+//     的源码里确实出现了它读的那个文件名,所以两边不可能各读各的。
+const BASELINE_FILE = "eslint.design-guard-baseline.json";
+const LEGACY = JSON.parse(fs.readFileSync(path.join(ROOT, BASELINE_FILE), "utf8"));
 
 // 八档字号是**新增**的,旧档仍可解析 —— 这些是被禁的旧档。
 const LEGACY_TYPE = /^-?text-(?:xs|sm|base|lg|xl|[2-9]xl)$/;
@@ -102,6 +130,40 @@ const HEX_ALLOW = [
   "src/components/charts/",
   "src/components/settings/SettingsDrawer.tsx",
 ];
+
+// 同一份清单要给**两条**规则用(no-hex-colour 与 no-raw-palette 的任意值分支),
+// 所以抽成一个函数而不是各写各的 `HEX_ALLOW.some(...)`。理由不是省三行:这三处
+// 论证的是「这个文件里真值颜色是合法的」,而不是「这个文件里 `#` 开头的写法是
+// 合法的」。要是任意值分支不认这份清单,`#f59e0b` 在 SettingsDrawer 里放行、
+// 同一个颜色写成 `hsl(38 92% 50%)` 就报红 —— 两条规则对同一个已经裁定过的例外
+// 给出相反的答案,而下一个人只会挑那条不报红的写法绕过去。
+const literalColourAllowed = (file) => HEX_ALLOW.some((p) => file.startsWith(p));
+
+// RAW_PALETTE 的盲区:**任意值**。
+//
+// `bg-amber-500` 匹配得到,`bg-[hsl(38,92%,50%,0.2)]` 匹配不到 —— 后者绕开
+// 具名色阶,直接把三元组写进方括号,拿到的却是同一个「不随主题走的死颜色」。
+// app/organizations/page.tsx 曾经有 8 处这种写法,而 38° 正是 `--color-accent`:
+// 中国文明被画成了全站按钮的颜色,整整一段时间里基线诚实地报 `palette: 0`,
+// 因为规则确实一次也没匹配上。那不是漏报,是这条规则当时根本看不见那种形状。
+//
+// 判据是**方括号里有没有字面数字**,不是有没有 `hsl(`:
+//   bg-[hsl(38,92%,50%,0.2)]              → 红,写死的三元组
+//   bg-[hsl(var(--color-civ-mark-cn))]    → 绿,token,主题切换跟着走
+//   shadow-[0_0_0_1px_hsl(var(--x))]      → 绿,同上
+// 这正是 app/ 下几百处 `[hsl(var(--…))]` 的形状 —— 任意值本身不是问题,
+// **任意值里锁死的颜色**才是。
+//
+// 匹配的是 `chunk`(整个空白分隔的 token)而不是 `bare`。bare 被
+// `split(":").pop()` 和 `split("/")[0]` 削过:前者会把 `bg-[color:hsl(…)]` 削成
+// `hsl(…)]`(前缀没了,锚不住),后者会把 `bg-[hsl(38_92%_50%/0.2)]` 从斜杠处
+// 截断。所以前缀在正则里自己处理变体(`(?:^|:)`)与 `!` 重要标记。
+//
+// 不管 `#`:`bg-[#f59e0b]` 已经归 no-hex-colour —— 那条规则扫的是整个字符串,
+// 不经过 classTokens,方括号拦不住它。两条规则各报一次同一处,只会让人以为
+// 有两个问题。
+const ARBITRARY_LITERAL_COLOUR =
+  /(?:^|:)!?(?:bg|text|border|ring|ring-offset|divide|outline|fill|stroke|from|via|to|shadow|decoration|accent|caret|placeholder)(?:-(?:t|r|b|l|x|y|s|e|tl|tr|br|bl))?-\[[^\]]*?\b(?:hsla?|rgba?|oklch|oklab|lch|lab)\(\s*[.\d]/;
 
 function classTokens(raw) {
   const out = [];
@@ -218,10 +280,16 @@ const designSystem = {
       }
     }),
 
-    "no-raw-palette": makeGuard("palette", (raw, report) => {
+    "no-raw-palette": makeGuard("palette", (raw, report, file) => {
+      const literalOK = literalColourAllowed(file);
       for (const { bare, chunk, at } of classTokens(raw)) {
         if (RAW_PALETTE.test(bare)) {
           report(chunk, at, `\`${bare}\` 是 Tailwind 原生调色板,不是主题 token —— 它在深色下能看,切到浅色就失效或过淡。用 canvas / surface-1…4 / hairline / ink / accent`);
+        } else if (!literalOK && ARBITRARY_LITERAL_COLOUR.test(chunk)) {
+          // else if:一个 token 只报一次。具名色阶和任意值互斥,这里主要是把
+          // 「两条分支都命中」这种将来才可能出现的形状挡在外面 —— 同一处报两条
+          // 红,会让人以为要改两个地方。
+          report(chunk, at, `\`${chunk}\` 把颜色写死在任意值里。方括号绕开了具名色阶,但拿到的还是一个不随主题走的死颜色 —— 浅色模式下它不会变。写成 token:\`bg-[hsl(var(--color-accent))]\`、\`text-[hsl(var(--color-ink))]\`,带不透明度就 \`hsl(var(--color-x)/0.2)\`;真需要真值的地方(xyflow markerEnd / recharts prop / 强调色选择器数据)已在 eslint.config.mjs 的 HEX_ALLOW 里列明`);
         }
       }
     }),
@@ -253,184 +321,6 @@ const designSystem = {
   },
 };
 
-// ── LEGACY 基线 ──────────────────────────────────────────────────────────────
-// 每个键是**当前**该文件的违规条数,由 `npx eslint app src` 实测得出,不是估计。
-// 超过 → 报红(有人在遗留文件里新增了违规);低于 → 也报红(基线过期)。
-// 没有条目的文件额度是 0 —— 这就是「新文件一律 error」的实现。
-// 第三波迁移完一个文件,把对应数字改小,或整行删掉。
-// 下面这段必须保持合法 JSON:src/__tests__/designGuardContract.test.ts 会
-// 按标记切出来 JSON.parse,并逐条核对文件仍然存在(删了文件却留着基线,
-// 是这套机制唯一无法自己发现的漏洞 —— 因为 ESLint 根本不会去 lint 一个
-// 不存在的文件,那条额度会永远静默地留在配置里)。
-// @design-guard-baseline-start
-const LEGACY = {
-  "app/(auth)/login/page.tsx": {
-    "radius": 4,
-    "space": 5,
-    "type": 5
-  },
-  "app/admin/stats/error.tsx": {
-    "palette": 1,
-    "radius": 2,
-    "type": 2
-  },
-  "app/error.tsx": {
-    "palette": 1,
-    "radius": 2,
-    "type": 2
-  },
-  "app/not-found.tsx": {
-    "radius": 1,
-    "type": 2
-  },
-  "src/components/charts/LazyWorkflowEditor.tsx": {
-    "radius": 1
-  },
-  "src/components/connection-status.tsx": {
-    "palette": 5,
-    "space": 1,
-    "type": 1
-  },
-  "src/components/judgment/JudgmentQueueConsole.tsx": {
-    "radius": 16,
-    "space": 6,
-    "type": 32
-  },
-  "src/components/judgment/JudgmentQueueContext.tsx": {
-    "radius": 4,
-    "space": 1,
-    "type": 16
-  },
-  "src/components/layout/AppLayout.tsx": {
-    "radius": 16,
-    "space": 3,
-    "type": 17
-  },
-  "src/components/layout/MenuGloss.tsx": {
-    "type": 1
-  },
-  "src/components/layout/TenantSignal.tsx": {
-    "space": 2
-  },
-  "src/components/permissions/PermissionFormModal.tsx": {
-    "palette": 1,
-    "radius": 5,
-    "type": 10
-  },
-  "src/components/permissions/RoleFormModal.tsx": {
-    "palette": 1,
-    "radius": 4,
-    "type": 7
-  },
-  "src/components/rbac/PermissionDenied.tsx": {
-    "type": 2
-  },
-  "src/components/settings/SettingsDrawer.tsx": {
-    "palette": 6,
-    "radius": 7,
-    "type": 11
-  },
-  "src/components/social/CommentThread.tsx": {
-    "palette": 1,
-    "radius": 3,
-    "type": 9
-  },
-  "src/components/social/FollowButton.tsx": {
-    "radius": 1,
-    "space": 1,
-    "type": 1
-  },
-  "src/components/social/PostCard.tsx": {
-    "palette": 17,
-    "radius": 1,
-    "space": 1,
-    "type": 4
-  },
-  "src/components/social/ProfileCard.tsx": {
-    "radius": 2,
-    "space": 1,
-    "type": 6
-  },
-  "src/components/social/ProfileEditModal.tsx": {
-    "radius": 4,
-    "type": 6
-  },
-  "src/components/social/ReactionBar.tsx": {
-    "radius": 1,
-    "type": 1
-  },
-  "src/components/souls/DateProblemsPanel.tsx": {
-    "radius": 5,
-    "space": 5,
-    "type": 5
-  },
-  "src/components/souls/RebirthFormSelect.tsx": {
-    "radius": 1,
-    "space": 3,
-    "type": 2
-  },
-  "src/components/souls/SoulEditModal.tsx": {
-    "palette": 5,
-    "radius": 6,
-    "type": 11
-  },
-  "src/components/souls/SoulKarmaLedgerCard.tsx": {
-    "radius": 3,
-    "space": 5,
-    "type": 12
-  },
-  "src/components/souls/SoulLifecycleTimeline.tsx": {
-    "radius": 8,
-    "space": 13,
-    "type": 15
-  },
-  "src/components/souls/SoulReadingPanel.tsx": {
-    "radius": 3,
-    "space": 6,
-    "type": 29
-  },
-  "src/components/ui/DomainValue.tsx": {
-    "radius": 1,
-    "space": 2
-  },
-  "src/components/ui/IconPicker.tsx": {
-    "palette": 6,
-    "radius": 4,
-    "type": 6
-  },
-  "src/components/ui/Modal.tsx": {
-    "palette": 12,
-    "radius": 10,
-    "space": 4,
-    "type": 18
-  },
-  "src/components/ui/PageError.tsx": {
-    "radius": 1,
-    "type": 4
-  },
-  "src/components/ui/Pagination.tsx": {
-    "radius": 2,
-    "space": 2,
-    "type": 3
-  },
-  "src/components/users/UserDeleteDialog.tsx": {
-    "palette": 2,
-    "radius": 3,
-    "type": 6
-  },
-  "src/components/users/UserModal.tsx": {
-    "palette": 2,
-    "radius": 8,
-    "type": 14
-  },
-  "src/components/workflow/WorkflowEditor.tsx": {
-    "palette": 10,
-    "radius": 18,
-    "space": 7,
-    "type": 19
-  }
-};
-// @design-guard-baseline-end
 
 const SHARED_GLOBALS = {
   console: "readonly",
@@ -495,19 +385,8 @@ const eslintConfig = [
     },
   },
   {
-    // 遗留豁免之一:遮罩层。已报主会话排期,不是「关掉规则求绿」。
-    // (no-autofocus 是另一类、另一份清单,在下一个块;两类的名单不重合,
-    //  所以是两个 object —— 见下面那段关于为什么不能合并的记录。)
-    //
-    // AppLayout.tsx:109 / SettingsDrawer.tsx:88 —— 各有一个纯 onClick 的
-    // <div> 遮罩层。这正是 click-events-have-key-events 与
-    // no-static-element-interactions 要抓的形状(和工作流那个 bug 同款)。
-    // 修法是把遮罩换成 <button type="button" aria-label={关闭} className=…>,
-    // 或补 role="button" tabIndex={0} onKeyDown={Esc/Enter}。这两个文件不
-    // 属于本次改动的所有权范围,所以只挂账不动手。
-    //
     // 为什么这里是两个 object 而不是一个 —— flat config 的一个 object 会把它
-    // `rules` 里的每条规则施加到 `files` 里的每个文件。这里原先是 6 个文件 ×
+    // `rules` 里的每条规则施加到 `files` 里的每个文件。曾经是 6 个文件 ×
     // 3 条规则写在一起,于是 `src/components/ui/Modal.tsx`(全站共享的对话框
     // 组件)也被关掉了那两条 onClick 规则,而它只需要 no-autofocus。后果不是
     // 多一条红,是少一条:下一个在 Modal 里加 `<div onClick>` 遮罩的人不会被
@@ -517,16 +396,6 @@ const eslintConfig = [
     //   合并时 Modal / UserModal / SoulEditModal / profile → 四个全 SILENT
     //   拆开后 同样四个 → 全 RED;AppLayout / SettingsDrawer 仍按理由 SILENT
     //   再合回去 → 又全部 SILENT。双向都跑过。
-    files: [
-      "src/components/layout/AppLayout.tsx",
-      "src/components/settings/SettingsDrawer.tsx",
-    ],
-    rules: {
-      "jsx-a11y/click-events-have-key-events": "off",
-      "jsx-a11y/no-static-element-interactions": "off",
-    },
-  },
-  {
     // no-autofocus 单独一份清单:这 6 处 autoFocus 全部是对话框/内联编辑打开时
     // 把焦点送进第一个输入框,即 WAI-ARIA APG 对 dialog 的规定动作,不是页面
     // 加载时抢焦点。清单是 `grep -n autoFocus` 的实际命中,只有四个文件:

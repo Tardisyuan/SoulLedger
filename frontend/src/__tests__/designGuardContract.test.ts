@@ -81,14 +81,30 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
     ["design-system/spacing-rhythm", "节奏外间距", '<div className="p-5" />'],
     ["design-system/dead-radius", "归零的死圆角", '<div className="rounded-lg" />'],
     ["design-system/no-raw-palette", "裸调色板", '<div className="bg-red-500" />'],
+    // 具名色阶之外的第二种形状。这条规则原本只认 `bg-amber-500`,任意值里的
+    // 三元组它一次也没匹配上 —— 而 app/organizations/page.tsx 那 8 处正是这种
+    // 写法,基线当时诚实地记着 `palette: 0`。现在代码里这一类是零命中,所以
+    // 这条探针是它唯一会被跑到的地方:没有它,规则改坏了没人会知道。
+    [
+      "design-system/no-raw-palette",
+      "任意值里写死的三元组",
+      '<div className="bg-[hsl(38,92%,50%,0.2)]" />',
+    ],
     ["design-system/no-hex-colour", "写死的十六进制", '<div style={{ color: "#abcdef" }} />'],
     ["jsx-a11y/click-events-have-key-events", "只能点不能敲", "<div onClick={() => {}}>x</div>"],
     ["jsx-a11y/no-static-element-interactions", "非交互元素接交互", "<div onClick={() => {}}>x</div>"],
   ];
 
   // 全部违规片段 + 一个「全部合规」片段,一次子进程跑完。
+  // `bg-[hsl(var(--…))]` 这三种形状必须留在这里,而且必须和上面那条任意值探针
+  // 一起读:两条合起来才钉住了判据是「方括号里有没有**字面数字**」,而不是
+  // 「有没有 `[hsl(`」。少了这半边,把正则收紧成匹配所有 `-[hsl(` 会照样让上面
+  // 那条探针变红、测试全绿 —— 而 app/ 下几百处正当的 token 任意值会一起爆红,
+  // 到那时最省事的做法就是把整条规则删掉。带斜杠的不透明度写法要一并钉住:
+  // classTokens 会在 `/` 处截断,截断后的残段不能被误判成字面颜色。
   const CLEAN =
-    'export const P = () => (<div className="p-4 gap-6 mx-auto text-04 text-01 rounded-full rounded-focus bg-surface-1 text-ink border-hairline" />);\n';
+    'export const P = () => (<div className="p-4 gap-6 mx-auto text-04 text-01 rounded-full rounded-focus bg-surface-1 text-ink border-hairline ' +
+    'bg-[hsl(var(--color-accent))] border-[hsl(var(--color-civ-mark-cn)/0.4)] shadow-[0_0_0_1px_hsl(var(--color-hairline))]" />);\n';
   let fired: Array<Array<string | null>>;
   let clean: Msg[];
 
@@ -123,12 +139,26 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
 });
 
 describe("LEGACY 基线", () => {
+  // 基线原本是 eslint.config.mjs 里 `@design-guard-baseline-start/-end` 之间的一段,
+  // 这里靠切标记拿到它。数据搬进独立文件后,切法换成直接读那份文件 —— 这消掉了
+  // 一个真实的失效模式(标记被改名或被格式化掉,slice 得到空串或 `{}`,下面几条
+  // it.each 就变成空遍历、恒绿),但换来一个新的:**两边可能读的不是同一份基线**。
+  //
+  // 所以下面第一条断言 eslint.config.mjs 的源码里确实出现了这个文件名。少了它,
+  // 有人新增 eslint.design-guard-baseline.v2.json、只把配置改过去,这里会继续读
+  // 那份没人用的旧文件,把一份僵尸基线核对得干干净净 —— 每条测试都绿,而绿的是
+  // 一个已经不参与 lint 的对象。
+  const BASELINE_FILE = "eslint.design-guard-baseline.json";
   const config = fs.readFileSync(path.join(ROOT, "eslint.config.mjs"), "utf8");
-  const slice = config.split("@design-guard-baseline-start")[1]?.split("@design-guard-baseline-end")[0] ?? "";
-  const json = slice.slice(slice.indexOf("{"), slice.lastIndexOf("}") + 1);
-  const baseline: Record<string, Record<string, number>> = JSON.parse(json);
+  const baseline: Record<string, Record<string, number>> = JSON.parse(
+    fs.readFileSync(path.join(ROOT, BASELINE_FILE), "utf8"),
+  );
 
-  it("被切得出来,而且非空", () => {
+  it("eslint.config.mjs 读的就是这一份基线", () => {
+    expect(config).toContain(BASELINE_FILE);
+  });
+
+  it("读得出来,而且非空", () => {
     expect(Object.keys(baseline).length).toBeGreaterThan(0);
   });
 

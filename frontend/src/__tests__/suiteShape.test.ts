@@ -100,6 +100,7 @@ const COLLECTED_FILES = [
   "designGuardContract.test.ts",
   "domainDisplayContract.test.tsx",
   "domainNamespaceContract.test.ts",
+  "drawerFocusTrap.test.tsx",
   "eventRegistry.test.ts",
   "inkOnSurfaceContract.test.ts",
   "ledgerQuantityContract.test.tsx",

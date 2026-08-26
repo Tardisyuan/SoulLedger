@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { X, Sun, Moon } from "lucide-react";
 
 const ACCENT_COLORS = [
@@ -51,6 +52,17 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
   const [accentColor, setAccentColor] = useState("#f59e0b");
   const [customHex, setCustomHex] = useState("");
 
+  // The drawer's name comes from the heading it already renders, not from a
+  // second copy of the same string: `aria-labelledby` cannot drift from what
+  // is on screen, an `aria-label` beside an `<h2>` can. Declared above the
+  // `open` early-return because hooks cannot be conditional.
+  const titleId = useId();
+  const { drawerRef, drawerProps } = useDrawerA11y<HTMLDivElement>({
+    open,
+    onClose,
+    labelledBy: titleId,
+  });
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(ACCENT_COLOR_KEY);
@@ -84,20 +96,30 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
   return (
     <>
-      {/* Backdrop */}
-      <div
+      {/* Backdrop. A `<button>`, for the same reason AppLayout's scrim is one:
+          it carries a click handler, so it is a control and should say so.
+          Escape is the keyboard's way out; the trap keeps Tab inside the
+          drawer, so this never becomes a stray tab stop while it is open. */}
+      <button
+        type="button"
+        aria-label={t("common.close")}
         className="fixed inset-0 bg-black/50 z-[99998]"
         onClick={onClose}
       />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 h-full w-80 bg-[hsl(var(--color-surface-1))] border-l border-[hsl(var(--color-hairline))] z-[99998] shadow-xl overflow-y-auto">
+      <div
+        ref={drawerRef}
+        {...drawerProps}
+        className="fixed right-0 top-0 h-full w-80 bg-[hsl(var(--color-surface-1))] border-l border-[hsl(var(--color-hairline))] z-[99998] shadow-xl overflow-y-auto"
+      >
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-[hsl(var(--color-ink))]">{t("settings.title") || "Settings"}</h2>
+            <h2 id={titleId} className="text-lg font-semibold text-[hsl(var(--color-ink))]">{t("settings.title") || "Settings"}</h2>
             <button
               onClick={onClose}
+              aria-label={t("common.close")}
               className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
             >
               <X className="w-5 h-5" />

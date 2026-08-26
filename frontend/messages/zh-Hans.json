@@ -21,7 +21,8 @@
     "settings": "设置",
     "language": "界面语言",
     "theme_light": "切换到浅色模式",
-    "theme_dark": "切换到深色模式"
+    "theme_dark": "切换到深色模式",
+    "mobile_menu": "导航菜单"
   },
   "auth": {
     "login": "登录",
@@ -1431,7 +1432,6 @@
       "souls": "灵魂管理",
       "judgment": "审判队列",
       "cross_judgments": "跨域审判",
-      "karma": "功德管理",
       "disposition": "轮回处置",
       "workflow": "审批流程",
       "dispatch": "调度管理",
@@ -1451,7 +1451,9 @@
       "group_workflow": "流程协作",
       "group_org_realm": "组织与领域",
       "group_social": "社交",
-      "group_settings": "系统设置"
+      "group_settings": "系统设置",
+      "corpus": "语料条文",
+      "ledger": "功过格"
     }
   },
   "tenant": {

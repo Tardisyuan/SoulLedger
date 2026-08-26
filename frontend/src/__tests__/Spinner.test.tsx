@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { render, screen } from "@testing-library/react";
 import { Spinner, PageSpinner } from "@/src/components/ui/Spinner";
+import { I18nProvider } from "@/src/contexts/I18nContext";
 
 const SOURCE = readFileSync(
   path.join(__dirname, "..", "components", "ui", "Spinner.tsx"),
@@ -144,5 +145,54 @@ describe("PageSpinner is the whole-route shape those 20 files hand-roll", () => 
     expect(root.className).toContain("bg-canvas");
     expect(classesIn(container)).toEqual(expect.arrayContaining(["w-16", "h-16", "border-4"]));
     expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+});
+
+describe("a whole-route busy screen is never silent", () => {
+  /**
+   * 32 files import `PageSpinner`; exactly one of them passed `label`. An
+   * unlabelled `Spinner` is `aria-hidden` by design — correct inside `<Button
+   * loading>`, where the button's own text is the announcement — so 31 routes
+   * were replacing everything on screen with an element assistive tech is told
+   * to ignore. There is no neighbouring text on a route that has been replaced
+   * by its spinner; the label has to come from the component.
+   *
+   * The real `I18nProvider` is used here, not a `t: (key) => key` stub. The
+   * claim under test is that `common.loading` resolves in the shipped bundles,
+   * and a stub that echoes its argument would pass whether the key exists or
+   * not — a double that behaves like the bug.
+   */
+  const inProvider = (node: React.ReactElement) => render(<I18nProvider>{node}</I18nProvider>);
+
+  it("announces a default label when the route supplies none", () => {
+    inProvider(<PageSpinner />);
+    const status = screen.getByRole("status");
+    // zh-Hans is DEFAULT_LOCALE and no cookie is set, so this is the real
+    // bundle's copy, resolved through the real lookup.
+    expect(status).toHaveTextContent("加载中...");
+  });
+
+  it("does not announce the raw key", () => {
+    // Absence, asserted separately: `t()` returns the key unchanged when it
+    // misses, so "a status exists and has text" stays green while a screen
+    // reader says "common dot loading".
+    inProvider(<PageSpinner />);
+    expect(screen.getByRole("status")).not.toHaveTextContent("common.loading");
+    expect(screen.queryByText("common.loading")).not.toBeInTheDocument();
+  });
+
+  it("is never aria-hidden, whether or not the route named it", () => {
+    const { container } = inProvider(<PageSpinner />);
+    const spinner = container.querySelector("[role='status']");
+    expect(spinner).toBeTruthy();
+    expect(spinner).not.toHaveAttribute("aria-hidden");
+  });
+
+  it("still lets a route say something more specific than 'loading'", () => {
+    // `app/judgment/[id]/page.tsx` passes `judgment.detail.loading`. The
+    // default is a floor, not a ceiling.
+    inProvider(<PageSpinner label="载入判词" />);
+    expect(screen.getByRole("status")).toHaveTextContent("载入判词");
+    expect(screen.getByRole("status")).not.toHaveTextContent("加载中");
   });
 });
