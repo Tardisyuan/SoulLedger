@@ -121,11 +121,11 @@ export function CommentThread({ postId }: { postId: string }) {
           <input
             type="text" value={newComment} onChange={(e) => setNewComment(e.target.value)}
             placeholder={t("social.add_comment") || "Write a comment..."}
-            className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
           />
           <button
             type="submit" disabled={!newComment.trim() || createComment.isPending}
-            className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] rounded-md text-03 font-medium transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] text-03 font-medium transition-colors disabled:opacity-50"
           >
             {createComment.isPending ? "..." : t("social.send") || "Send"}
           </button>
@@ -135,7 +135,7 @@ export function CommentThread({ postId }: { postId: string }) {
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="animate-pulse h-12 bg-[hsl(var(--color-surface-2))] rounded" />
+            <div key={i} className="animate-pulse h-12 bg-[hsl(var(--color-surface-2))]" />
           ))}
         </div>
       ) : comments.length === 0 ? (
