@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin
 
+from .access import menu_is_visible_to, visible_menus
 from .models import Menu, MenuButton
 from .serializers import (
     MenuButtonCreateUpdateSerializer,
@@ -65,7 +66,12 @@ class MenuViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         show_deleted = self.request.query_params.get('show_deleted', '').lower() in ('1', 'true', 'yes')
         if getattr(user, 'role', None) == 'ADMIN':
             return Menu.all_objects.all() if show_deleted else Menu.objects.all()
-        return Menu.objects.filter(is_active=True)
+        # `roles` was consulted by `tree` and ignored here — and here is what the
+        # sidebar calls (`useSidebarMenus` -> `menusApi.list()`), so a VIEWER was
+        # served /tenants and /organizations, both roles=["ADMIN"]. Measured, not
+        # inferred: 200 with 15 rows. Only ADMIN holds `menu.manage`, so no
+        # non-ADMIN write path narrows with it.
+        return visible_menus(Menu.objects.filter(is_active=True), user)
 
     def destroy(self, request, *args, **kwargs):
         """Soft-delete, recording who and why. The default ModelViewSet
@@ -101,7 +107,6 @@ class MenuViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         非 ADMIN 用户：菜单按 roles 过滤，按钮按 permission codename 过滤。
         """
         user = request.user
-        is_authenticated = getattr(user, 'is_authenticated', False)
         user_role = getattr(user, 'role', None)
 
         # ADMIN sees everything
@@ -124,20 +129,19 @@ class MenuViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         top_menus = Menu.objects.filter(
             parent__isnull=True, is_active=True
         ).order_by("order")
-        accessible = []
-        for menu in top_menus:
-            is_public = not menu.roles
-            if is_public:
-                accessible.append(menu)
-            elif is_authenticated and user_role:
-                if user_role in menu.roles:
-                    accessible.append(menu)
+        # Same rule as get_queryset, from the same function. Written twice it
+        # would drift, which is how this gap opened in the first place: `tree`
+        # honoured `roles` and `get_queryset` did not.
+        accessible = [m for m in top_menus if menu_is_visible_to(m, user)]
 
         # Pre-fetch all menus to avoid N+1 queries
         all_menus = Menu.objects.filter(is_active=True).prefetch_related('buttons')
         children_map = {}
         for menu in all_menus:
-            if menu.parent_id:
+            # Children were attached unfiltered, so an ADMIN-only child under a
+            # shared parent reached every role that could see the parent. The
+            # top-level filter alone was never the whole rule.
+            if menu.parent_id and menu_is_visible_to(menu, user):
                 children_map.setdefault(menu.parent_id, []).append(menu)
 
         serializer = MenuTreeSerializer(
