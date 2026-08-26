@@ -15,7 +15,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   return (
-    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-xl p-6">
+    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6">
       <div className="flex items-start gap-4">
         {/* Avatar */}
         <div className="w-16 h-16 rounded-full bg-[hsl(var(--color-surface-2))] flex items-center justify-center text-06 text-[hsl(var(--color-accent-ink))] overflow-hidden flex-shrink-0">
@@ -40,7 +40,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
               <button
                 type="button"
                 onClick={() => setIsEditOpen(true)}
-                className="px-4 py-1.5 rounded-md text-03 font-medium border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))] transition-colors"
+                className="px-4 py-1.5 text-03 font-medium border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))] transition-colors"
               >
                 {t("social.edit_profile") || "Edit profile"}
               </button>

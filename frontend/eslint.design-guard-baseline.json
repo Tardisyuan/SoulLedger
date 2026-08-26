@@ -38,9 +38,8 @@
     "space": 3
   },
   "components/ui/page-section.tsx": {
-    "palette": 3,
-    "radius": 4,
-    "space": 1
+    "palette": 1,
+    "radius": 1
   },
   "components/ui/skeleton.tsx": {
     "radius": 3,
@@ -88,27 +87,17 @@
     "radius": 7
   },
   "src/components/social/CommentThread.tsx": {
-    "palette": 1,
-    "radius": 3
+    "palette": 1
   },
   "src/components/social/FollowButton.tsx": {
-    "radius": 1,
     "space": 1
   },
   "src/components/social/PostCard.tsx": {
     "palette": 17,
-    "radius": 1,
     "space": 1
   },
   "src/components/social/ProfileCard.tsx": {
-    "radius": 2,
     "space": 1
-  },
-  "src/components/social/ProfileEditModal.tsx": {
-    "radius": 4
-  },
-  "src/components/social/ReactionBar.tsx": {
-    "radius": 1
   },
   "src/components/souls/DateProblemsPanel.tsx": {
     "radius": 5,

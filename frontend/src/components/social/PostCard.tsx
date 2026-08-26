@@ -32,7 +32,7 @@ export function PostCard({ post }: { post: Post }) {
   };
 
   return (
-    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-xl p-4 hover:shadow-sm transition-shadow">
+    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:shadow-sm transition-shadow">
       <div className="flex items-center gap-3 mb-3">
         <Link
           href={`/social/profile/${post.author}`}
