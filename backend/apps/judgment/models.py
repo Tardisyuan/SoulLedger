@@ -192,7 +192,7 @@ class StatuteCorpus(models.TextChoices):
         overstated as a claim about every text that has ever existed. HELL_LAW stays empty, and refilling it with the 功過格
         articles would re-assert the very thing 8308204 withdrew.
       * GONGGUOGE (功過格) is 《太微仙君功過格》 (1171, Daozang 洞真部戒律類),
-        73 transcribed articles under CN-GGG-*: 35 功 and 38 過, in four gates
+        74 transcribed articles under CN-GGG-*: 35 功 and 39 過, in four gates
         each. Signed, enumerated, point-valued — the shape `polarity` was built
         for — and the ONLY corpus here whose articles carry positive entries.
         It is also the one corpus this system uses for something its own text
@@ -216,7 +216,7 @@ class StatuteCorpus(models.TextChoices):
 
         NEITHER SOURCE ENUMERATES, and that is the fact these two were built
         around. The other four corpora all inherit a series from their
-        document — 73 numbered articles, 42 assessors, 7 terraces, 9 circles.
+        document — 74 numbered articles, 42 assessors, 7 terraces, 9 circles.
         The Platonic myths inherit none, so the article here is a RULE OF THE
         COURT (see StatutePolarity.PROCEDURE): the reform, the bench, the
         venue, the rule of evidence, the purpose of punishment, the rate and

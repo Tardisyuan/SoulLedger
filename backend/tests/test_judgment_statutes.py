@@ -682,10 +682,13 @@ class TestSeededCorpora:
         count cannot see: every article present was correct, and the number
         was still wrong.
 
-        GONGGUOGE holds 73 and not 75: 救濟門 is titled 十二條 and both
-        independent transcriptions segment it into 11, 不軌門 is titled 六條 and
-        both give 5. The two missing articles are NOT supplied. See
-        tests/test_gongguoge.py, which holds the substance.
+        GONGGUOGE holds 74 and not 75: 救濟門 is titled 十二條 and both
+        independent transcriptions segment it into 11. That one missing article
+        is NOT supplied. 不軌門 was the second shortfall until 2026-08-27, on
+        the stated ground that both transcriptions gave 5 against a titled
+        六條 — which was false; it was split in judgment/0018 and 過律 now adds
+        up to its own 三十九條. See tests/test_gongguoge.py, which holds the
+        substance.
 
         INFERNO holds 26 and not 24: verify-christian-structure.md §6 counts
         the poem's distinct PLACES at 24 by including the Antinferno and by not
@@ -699,7 +702,7 @@ class TestSeededCorpora:
         for corpus in Statute.all_objects.values_list("corpus", flat=True):
             by_corpus[corpus] = by_corpus.get(corpus, 0) + 1
         assert by_corpus == {
-            StatuteCorpus.GONGGUOGE: 73,
+            StatuteCorpus.GONGGUOGE: 74,
             StatuteCorpus.NEGATIVE_CONFESSION: 42,
             StatuteCorpus.DEADLY_SIN: 7,
             StatuteCorpus.INFERNO: 26,

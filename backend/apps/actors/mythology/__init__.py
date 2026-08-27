@@ -52,7 +52,7 @@ Statutes — the articles a verdict can cite (apps.judgment.models.Statute)
 FOUR CORPORA ARE SEEDED, AND THE LARGEST ONE IS NOT WRITTEN IN THIS FILE.
 
   CHINESE   — here, below, as CHINESE_STATUTES: 《太微仙君功過格》 (1171),
-              73 transcribed articles under corpus GONGGUOGE. This is the
+              74 transcribed articles under corpus GONGGUOGE. This is the
               SECOND attempt at the Chinese side too, and it is a different
               kind of document from the one that was withdrawn — not a penal
               code but a ledger the living keep on themselves. Read the block
@@ -307,15 +307,21 @@ CORPUS_PROVENANCE = {
         "civilization": "chinese",
         "nature": TRANSCRIBED,
         "module": "apps.actors.mythology.statutes_chinese",
-        "article_count": 73,
+        "article_count": 74,
         "source": "《太微仙君功過格》 (1171), 正統道藏 洞真部戒律類雨字號",
         "known_gap": (
-            "救濟門 is titled 十二條 and both independent transcriptions segment it "
-            "into 11; 不軌門 is titled 六條 and both give 5. 73 transcribed against a "
-            "claimed 75. The two gaps are recorded in payload.transcription_gap and "
-            "deliberately NOT filled."
+            "救濟門 is titled 十二條 and both independent transcriptions segment "
+            "it into 11. 74 transcribed against a claimed 75, and the one "
+            "remaining gap is recorded in payload.transcription_gap and "
+            "deliberately NOT filled — no split point in that gate is supported "
+            "by either transcription. 不軌門 WAS the second gap, on the stated "
+            "ground that both transcriptions gave 5 against a titled 六條; that "
+            "ground was false, ctext gives 6 and the woodblock's own column "
+            "layout confirms the break. It was split in judgment/0018 and the "
+            "gate is now complete, which is also what makes 過律 add up to the "
+            "三十九條 its own heading claims."
         ),
-        "docstring_marker": "73 transcribed articles under corpus GONGGUOGE",
+        "docstring_marker": "74 transcribed articles under corpus GONGGUOGE",
     },
     "NEGATIVE_CONFESSION": {
         "civilization": "egyptian",
