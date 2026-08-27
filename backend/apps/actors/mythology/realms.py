@@ -118,7 +118,8 @@ CHINESE_REALMS = [
      "合大地狱 - fraud, withheld dues, falsified accounts", "MENGPO", False, 60),
     ("DY_COURT_05_YANLUO", "第五殿", "第五殿阎罗王", "Fifth Court Yama", "Yanluo",
      RealmType.HELL, 5,
-     "叫唤大地狱 - the gravest sins, tried by Yama himself; the 望乡台 stands here",
+     "叫唤大地狱 and the 十六诛心小地狱 - the court that tries the intent behind "
+     "the act: malice, ingratitude, envy, miserliness. The 望乡台 stands here",
      "MENGPO", False, 50),
     ("DY_COURT_06_BIANCHENG", "第六殿", "第六殿卞城王", "Sixth Court Biancheng", "Biancheng",
      RealmType.HELL, 6,
@@ -606,8 +607,9 @@ GREEK_REALMS = [
      RealmType.HELL, 1,
      "Plato, Gorgias 524a: the other road out of the meadow — that is what "
      "sends a soul here, and it is the half of this row Virgil does not touch. "
-     "The place itself is Virgil's (Aeneid 6.548-551): walled three times "
-     "about, ringed by the Phlegethon, its gate held by Tisiphone. What this "
+     "The place itself is Virgil's (Aeneid 6.549-556): walled three times "
+     "about (6.549), ringed by the Phlegethon (6.551), its gate held by "
+     "Tisiphone (6.555-556, sedens ... vestibulum exsomnis servat). What this "
      "row still refuses is Virgil's 6.566-569, where Rhadamanthus presides over "
      "it and scourges — because Rhadamanthus is seeded next door as a judge at "
      "the fork with Plato's division of labour, and one actor cannot hold both "

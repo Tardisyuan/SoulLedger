@@ -106,7 +106,7 @@ FOUR CORPORA ARE SEEDED, AND THE LARGEST ONE IS NOT WRITTEN IN THIS FILE.
               article is a RULE OF THE COURT rather than an offence — the
               reform, the bench, the venue, the rule of evidence, the purpose
               of punishment, the rate and the unit — and carries the polarity
-              PROCEDURE, added with these two. Twenty of the twenty-two do.
+              PROCEDURE, added with these two. 21 of the 23 do.
               Exactly one is an OFFENCE: Republic X 615b, which names three
               wrongs after "for example" and closes with "any other evil
               behaviour". That catch-all is a refusal to enumerate, not a lost
@@ -137,8 +137,12 @@ that decides what may be done about it:
     律. `article_number` and `min_punishment_years` were therefore a modern
     statute-book shell fitted over a text that has no statutes, and the
     citation codes CN-HL-* asserted an article numbering that no source
-    contains. docs/11 §1.2 additionally cites 《太上老君律》 — a book that
-    does not exist; the Daozang has no work under that title. The §4.1 list
+    contains. docs/11 §1.2 additionally cites 《太上老君律》 — no work stands
+    under that exact title in the Daozang. What does stand there, one
+    character away, is 《太上老君經律》 (洞神部戒律類), which is a discipline
+    code for the LIVING and not an infernal one; it is the likeliest thing
+    docs/11 was misremembering, and naming it is more useful to a later
+    reader than the flat claim that nothing exists. The §4.1 list
     was not "十恶 with four missing" either: 饮酒 is not one of Buddhism's
     ten evils at all, so the list held five wrong absences plus one entry
     that does not belong, and §4.2's seven had no correspondence to the
@@ -358,7 +362,7 @@ CORPUS_PROVENANCE = {
         "civilization": "greek",
         "nature": TRANSCRIBED,
         "module": "apps.actors.mythology.statutes_gorgias",
-        "article_count": 11,
+        "article_count": 12,
         "source": (
             "Plato, Gorgias 523a-526d — the myth of the judgement, in Benjamin "
             "Jowett's translation (Project Gutenberg #1672, public domain); "
@@ -366,12 +370,16 @@ CORPUS_PROVENANCE = {
             "text (W. R. M. Lamb, 1925)"
         ),
         "known_gap": (
-            "The dialogue's closing exhortation (526d-527e) is NOT "
-            "transcribed. Socrates' resolve to present his soul whole before "
-            "the judge, and his charge to Callicles, are what the myth is told "
-            "FOR; they are not rules the court is bound by, and this corpus "
-            "holds rules. The boundary is deliberate and the omission is not a "
-            "backlog item."
+            "The dialogue's closing exhortation (from ἐγὼ μὲν οὖν, ὦ "
+            "Καλλίκλεις in 526d, through 527e) is NOT transcribed. Socrates' "
+            "resolve to present his soul whole before the judge, and his "
+            "charge to Callicles, are what the myth is told FOR; they are not "
+            "rules the court is bound by, and this corpus holds rules. The "
+            "boundary is deliberate and the omission is not a backlog item. "
+            "This field used to read '526d-527e' and thereby declared the "
+            "wrong boundary: 526c-d — Minos seated with the golden sceptre — "
+            "was also untranscribed and was NOT declared, an undeclared gap "
+            "inside a declared range. It is now GR-GRG-12."
         ),
         "docstring_marker": "THE SOURCE ITSELF ENUMERATES",
     },
