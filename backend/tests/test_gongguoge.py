@@ -33,6 +33,7 @@ the ledger's arithmetic and never touches a Statute; this one tests the data and
 never computes a balance. A red run should say which of the two broke.
 """
 import io
+import re
 
 import pytest
 from django.core.management import call_command
@@ -401,6 +402,82 @@ def test_a_faults_points_are_negative_and_a_merits_are_positive(articles):
             if not want_positive and points >= 0:
                 faults.append(f"{code}: 過 clause {clause['condition_zh']!r} = {points}")
     assert not faults, "\n  ".join(["Signs disagree with polarity:", *faults])
+
+
+#: 賑濟窮民 states the same rate twice — 「百錢為一功」 and then 「如一錢散施，
+#: 積至百錢為一功」, which is the first clause restated for small change rather
+#: than a fourth priced act. It is the ONLY article in the corpus whose text
+#: prices something the clause list does not separately carry, and it is listed
+#: here by code so that a second one cannot join it silently.
+RESTATED_RATE = {"CN-GGG-F-JJ-07": 1}
+
+_PRICE = re.compile("為(?:半|[一二三四五六七八九十百千]+)[功過]")
+
+
+@pytest.mark.django_db
+def test_every_priced_act_in_the_text_is_a_clause(articles):
+    """A 「為X功／過」 in the prose with no clause behind it is a value the
+    ledger cannot award, and nothing else here would notice.
+
+    THIS TEST EXISTS BECAUSE OF WHAT IT DID NOT CATCH. Four articles were
+    transcribed with a 「…」 standing in for material the transcriber had not
+    reached, and two of those elisions had priced acts inside them: 不善門#5
+    lost four (誤違科律格式／威儀有失／唱念不專／宣科讀狀奏對詞表差錯一字) and
+    不善門#8 lost seven, together 34 過 that could never be assessed. Every
+    count guard in this repository passed throughout, because they all pin the
+    number of ARTICLES — 73 in three independent hand-written copies — and an
+    article stays one article no matter how much of it is missing.
+
+    The check is not a total. A total goes stale the moment the corpus grows
+    and tells a later reader nothing about what broke. This compares each
+    article against ITSELF: the source prices an act, so a clause must carry
+    it. 72 of 73 hold exactly; the exception is declared in RESTATED_RATE with
+    its reason.
+
+    `〔〕` is stripped first because those are the source's own inline glosses
+    — 不善門#8's 「但一過去功一分，十過去功十分」 explains the offset rule and
+    prices nothing new — and 為無功／為無過 is a nullifier, which is carried in
+    `nullifiers` rather than `clauses`.
+    """
+    faults = []
+    for code, statute in sorted(articles.items()):
+        body = re.sub(r"〔[^〕]*〕", "", statute.text_zh or "")
+        priced = len(_PRICE.findall(body))
+        carried = len((statute.payload_json or {}).get("clauses", []))
+        expected = priced - RESTATED_RATE.get(code, 0)
+        if carried != expected:
+            faults.append(
+                f"{code}: text prices {priced} act(s), clauses carry {carried}"
+                f"{' (RESTATED_RATE allows ' + str(RESTATED_RATE[code]) + ')' if code in RESTATED_RATE else ''}"
+                f" — {statute.text_zh}"
+            )
+    assert not faults, "\n  ".join(
+        ["A priced act in the prose has no clause behind it:", *faults]
+    )
+
+
+@pytest.mark.django_db
+def test_no_article_is_still_abridged(articles):
+    """The four 「…」 elisions are closed. This keeps them closed.
+
+    A transcription that stops mid-article is not wrong, it is short — and
+    short is exactly what `assert not faults` cannot see. The ellipsis is the
+    one mark that says so out loud, so it is the one thing worth pinning.
+    """
+    elided = sorted(
+        code for code, statute in articles.items() if "…" in (statute.text_zh or "")
+    )
+    assert elided == [], (
+        f"Articles still carrying an elision: {elided}. If a transcription gap "
+        f"is genuinely reopened, say so in payload rather than in the prose — "
+        f"a 「…」 in text_zh is invisible to every other check in this file."
+    )
+    flagged = sorted(
+        code
+        for code, statute in articles.items()
+        if (statute.payload_json or {}).get("text_abridged_in_transcription")
+    )
+    assert flagged == [], f"Articles still flagged abridged: {flagged}"
 
 
 @pytest.mark.django_db
