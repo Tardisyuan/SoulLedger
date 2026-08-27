@@ -50,18 +50,31 @@ treatment 救濟門's missing article gets in GONGGUOGE and the Antinferno gets 
 INFERNO. Filling them is how the withdrawn HELL_LAW corpus was written.
 
 TEXT AND SOURCE. The transcribed English is Jowett (Gutenberg #1497), public
-domain. Stephanus sections were located against the Perseus canonical XML of
-the Loeb Republic (Paul Shorey), whose ``<milestone unit="section">`` markers
-place them exactly; Shorey's wording is NOT reproduced here, and unlike Lamb's
-Gorgias his Republic volume ii is 1935 and not in the public domain. A section
-number is a fact about where a passage sits. A translation is an expression.
+domain. Stephanus sections were located against the Perseus canonical-greekLit
+XML of the Republic (tlg0059.tlg030), whose ``<milestone unit="section">``
+markers place them exactly; Shorey's wording is NOT reproduced here, and
+unlike Lamb's Gorgias his Republic volume ii is 1935 and not in the public
+domain. A section number is a fact about where a passage sits. A translation
+is an expression.
+
+This used to say "the Perseus canonical XML of the Loeb Republic", and the
+Gorgias module carried the same conflation; see its docstring for the full
+account. In short: the canonical GREEK file (perseus-grc2) is Burnet,
+Clarendon 1905, and Shorey's Loeb 1935-37 is the English file beside it. Both
+carry 1355 ``unit="section"`` milestones in an identical sequence (verified
+2026-08-27), so the attribution was wrong and no section number depends on it.
+The COPYRIGHT half of the paragraph is unaffected and still holds: Shorey's
+volume ii is 1935, which is why only his section numbers are used here and
+never his words.
 """
 
 REPUBLIC_ER_SOURCE = (
     "Plato, Republic X 614b-621b — the myth of Er, in Benjamin Jowett's "
     "translation (Project Gutenberg #1497, public domain). Stephanus sections "
-    "located against the Perseus canonical text of the Loeb edition (Paul "
-    "Shorey); Shorey's wording is not reproduced."
+    "located against the Perseus canonical-greekLit XML (tlg0059.tlg030; "
+    "Burnet's Greek, Clarendon 1905, and Shorey's Loeb translation, 1935-37, "
+    "carry identical section milestones); Shorey's wording is not "
+    "reproduced."
 )
 
 from apps.actors.mythology.statutes_republic_entries import (  # noqa: F401
