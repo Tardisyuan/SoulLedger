@@ -385,7 +385,19 @@ class Statute(AuditUserFields, models.Model):
     #: Where this article comes from, in enough detail to check it. Never
     #: blank on a seeded row — an article with no provenance is the failure
     #: this whole feature exists to avoid.
-    source = models.CharField(max_length=500, blank=True)
+    #: TextField and not CharField(500). The 500-char cap was silently violated
+    #: from the day INFERNO arrived: `INFERNO_SOURCE` is 524 characters and
+    #: `DEADLY_SIN_SOURCE` is 492, and neither is padding — the Inferno's
+    #: provenance has to say, in the citation itself, that the layering is
+    #: Aristotle's tripartition and NOT the seven capital sins, because that
+    #: confusion is exactly what the corpus exists to prevent.
+    #:
+    #: Nothing caught it because SQLite does not enforce varchar length and the
+    #: whole suite runs on SQLite. It surfaced the first time seed_mythology met
+    #: a real PostgreSQL (2026-08-27): `DataError: value too long for type
+    #: character varying(500)`, with no column named. A cap that only one of the
+    #: two engines enforces is not a constraint, it is a landmine.
+    source = models.TextField(blank=True)
     #: Verbatim caveats, carried rather than smoothed over — the same
     #: discipline as the assessors' `source_notes`. A list of strings.
     source_notes = models.JSONField(default=list, blank=True)
