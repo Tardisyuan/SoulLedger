@@ -59,10 +59,14 @@ INFERNO_ENTRIES = [
         "cantos": "Inf. IV",
         "guardian": None,
         "aristotle": None,
-        "sinners_zh": "未受洗的婴儿，以及生于基督之前、无罪而未受洗的有德异教徒（荷马、亚里士多德、萨拉丁、阿维森纳等）",
+        "sinners_zh": "未受洗的婴儿；无罪而未受洗的有德异教徒（荷马、亚里士多德）；"
+                      "以及但丁破例安置于此的几位基督之后的非基督徒"
+                      "（萨拉丁 IV.129、阿维森纳 IV.143、阿威罗伊 IV.144）",
         "sinners_en": (
-            "The unbaptized infants, and the virtuous pagans who lived before "
-            "Christ — Homer, Aristotle, Saladin, Avicenna among them."
+            "The unbaptized infants; the virtuous pagans who lived before "
+            "Christ — Homer, Aristotle; and the non-Christians of Dante's own "
+            "era whom he places here by exception — Saladin (IV.129, d. 1193), "
+            "Avicenna (IV.143, d. 1037), Averroes (IV.144, d. 1198)."
         ),
         "contrapasso_zh": "没有肉体刑罚。此处唯一的苦是无望而仍有欲（Inf. IV.42「我们无望地活在渴望中」）。",
         "contrapasso_en": (

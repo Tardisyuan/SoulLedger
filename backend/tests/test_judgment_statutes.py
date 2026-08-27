@@ -666,19 +666,29 @@ class TestSeededCorpora:
         anywhere — under a new enum value, or smuggled in under an existing
         one — fails here rather than being noticed by nobody.
 
-        GORGIAS and REPUBLIC_ER hold 11 each and are TWO because Gorgias and
-        Republic X are two eschatologies: one stamps a soul and stops, the
+        GORGIAS holds 12 and REPUBLIC_ER 11, and they are TWO because Gorgias
+        and Republic X are two eschatologies: one stamps a soul and stops, the
         other sentences it to a thousand-year circuit and sends it back to be
         born. Neither source enumerates anything, so a Greek article is a rule
-        of the court rather than an offence — exactly one of the twenty-two
+        of the court rather than an offence — exactly one of the twenty-three
         carries OFFENCE polarity, Republic X 615b, which names three wrongs
         after "for example" and then declines to continue. See
         tests/test_greek_corpora.py, which holds the substance.
 
-        GONGGUOGE holds 73 and not 75: 救濟門 is titled 十二條 and both
-        independent transcriptions segment it into 11, 不軌門 is titled 六條 and
-        both give 5. The two missing articles are NOT supplied. See
-        tests/test_gongguoge.py, which holds the substance.
+        GORGIAS held 11 until 2026-08-27. GR-GRG-12 transcribes 526c-d, Minos
+        seated with the golden sceptre — a passage inside the range the corpus
+        already declared (523a-526d) whose omission no `known_gap` recorded.
+        A declared range with an undeclared hole in it is the failure this
+        count cannot see: every article present was correct, and the number
+        was still wrong.
+
+        GONGGUOGE holds 74 and not 75: 救濟門 is titled 十二條 and both
+        independent transcriptions segment it into 11. That one missing article
+        is NOT supplied. 不軌門 was the second shortfall until 2026-08-27, on
+        the stated ground that both transcriptions gave 5 against a titled
+        六條 — which was false; it was split in judgment/0018 and 過律 now adds
+        up to its own 三十九條. See tests/test_gongguoge.py, which holds the
+        substance.
 
         INFERNO holds 26 and not 24: verify-christian-structure.md §6 counts
         the poem's distinct PLACES at 24 by including the Antinferno and by not
@@ -692,11 +702,11 @@ class TestSeededCorpora:
         for corpus in Statute.all_objects.values_list("corpus", flat=True):
             by_corpus[corpus] = by_corpus.get(corpus, 0) + 1
         assert by_corpus == {
-            StatuteCorpus.GONGGUOGE: 73,
+            StatuteCorpus.GONGGUOGE: 74,
             StatuteCorpus.NEGATIVE_CONFESSION: 42,
             StatuteCorpus.DEADLY_SIN: 7,
             StatuteCorpus.INFERNO: 26,
-            StatuteCorpus.GORGIAS: 11,
+            StatuteCorpus.GORGIAS: 12,
             StatuteCorpus.REPUBLIC_ER: 11,
         }
 

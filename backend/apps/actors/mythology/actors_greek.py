@@ -92,8 +92,12 @@ GREEK_ACTORS = [
     #
     # The division of labour is Gorgias 524a (Rhadamanthus tries those from
     # Asia, Aeacus those from Europe, Minos decides when they are in doubt).
-    # Note 524a, not 523e: 523e is Zeus announcing the reform, and the
-    # assignment of the three is the passage after it.
+    # The naming of the three straddles the section break and the docket
+    # assignment does not: 523e ends mid-sentence with δύο μὲν ἐκ τῆς Ἀσίας,
+    # Μίνω τε καὶ Ῥαδάμανθυν, and 524a picks it up at ἕνα δὲ ἐκ τῆς
+    # Εὐρώπης, Αἰακόν. Who tries whom is wholly in 524a. An earlier
+    # version of this note said 523e was only Zeus announcing the reform and
+    # that the assignment came after it; the appointment itself begins in 523e.
     #
     # Their two destinations are modelled now — GR_ISLES_OF_THE_BLESSED and
     # GR_TARTARUS — because the same sentence of 524a names them. Nothing else
@@ -101,9 +105,11 @@ GREEK_ACTORS = [
     ("Aeacus", "艾亚哥斯", "Aeacus", "Aiakos", ActorRole.JUDGE, "EU_PLATO_MEADOW",
      "冥界判官艾亚哥斯", "冥界判官艾亚哥斯", "Judge Aeacus", "Aiakos",
      "One of the three judges of the dead - tries those who come from Europe "
-     "(Plato, Gorgias 524a) and holds the keys of the underworld (Pindar, "
-     "Isthmian 7.47; Apollodorus 3.12.6). Son of Zeus and the nymph Aegina, and "
-     "grandfather of Achilles. He does not appear in Dante"),
+     "(Plato, Gorgias 524a) and keeps the keys of Hades (Apollodorus 3.12.6, "
+     "καὶ τὰς κλεῖς τοῦ Ἅιδου φυλάττει). Pindar has him settling disputes "
+     "for the gods themselves (Isthmian 8.23-24) - that is the judging, not "
+     "the keys. Son of Zeus and the nymph Aegina, and grandfather of Achilles. "
+     "He does not appear in Dante"),
     ("Rhadamanthus", "拉达曼提斯", "Rhadamanthus", "Rhadamanthys", ActorRole.JUDGE,
      "EU_PLATO_MEADOW",
      "冥界判官拉达曼提斯", "冥界判官拉达曼提斯", "Judge Rhadamanthus", "Rhadamanthys",
@@ -119,14 +125,37 @@ GREEK_ACTORS = [
     #
     # The office here is *final arbiter*, and it is a narrow one. Gorgias 524a
     # gives Rhadamanthus and Aeacus the two standing dockets and gives Minos
-    # τὴν δίκην τὴν τελευταίαν κρινεῖν — the deciding vote when the other two are
-    # in doubt. He is not a first instance and he is not a supervisor: nothing in
-    # the passage routes an ordinary soul past him. That is why the frontend's
-    # old EUROPEAN_GREEK preset (Minos 初审 → Aeacus 复核 → Rhadamanthus 终审)
-    # was recorded as wrong in docs/lore-verification/verify-greek.md §3 — it
-    # inverts the one thing the passage is specific about — and why nothing here
-    # promotes him to OVERSEER to express seniority. ActorRole.OVERSEER is
-    # administration, Hades holds it, and a tie-breaking judge is a JUDGE.
+    # πρεσβεῖα … ἐπιδιακρίνειν, ἐὰν ἀπορῆτόν τι τὼ ἑτέρω — the prerogative of
+    # deciding between them if the other two are at a loss. He is not a first
+    # instance: nothing in the passage routes an ordinary soul past him. That is
+    # why the frontend's old EUROPEAN_GREEK preset (Minos 初审 → Aeacus 复核 →
+    # Rhadamanthus 终审) was recorded as wrong in
+    # docs/lore-verification/verify-greek.md §3 — it inverts the one thing the
+    # passage is specific about.
+    #
+    # TWO CORRECTIONS TO WHAT THIS NOTE USED TO SAY, both found by re-reading
+    # the myth against the Perseus canonical text (Burnet) rather than against
+    # the note itself.
+    #
+    # First, it quoted Minos' grant as τὴν δίκην τὴν τελευταίαν κρινεῖν. That
+    # phrase is in no part of the Gorgias — τελευταίαν does not occur in the
+    # dialogue at all. The sense was right and the Greek was invented, which is
+    # the worse of the two failures: a reader checking the office would have
+    # found it correct and had no reason to check the quotation carrying it.
+    #
+    # Second, it said he "is not a supervisor". 526c says he is: ὁ δὲ Μίνως
+    # ἐπισκοπῶν κάθηται, μόνος ἔχων χρυσοῦν σκῆπτρον — Lamb, the translation this
+    # corpus uses to locate sections, renders it "Minos sits as supervisor,
+    # distinguished by the golden sceptre". The claim was refuted by a passage
+    # inside the range GORGIAS declares it covers (523a-526d) and left
+    # untranscribed; see the known_gap note in this package's __init__.
+    #
+    # He still carries JUDGE, but now as a modelling choice rather than because
+    # the text withholds the seat. ActorRole.OVERSEER in this schema is
+    # administration of a realm — Hades holds it — and ἐπισκοπῶν κάθηται is
+    # presiding over a court, not running the meadow. The only decision the
+    # myth gives him is the tie-break of 524a, and a tie-breaking judge is a
+    # JUDGE.
     #
     # Homer's Minos, Odyssey 11.568-571, is a third office again — sole
     # judgment, sceptre in hand, with no moral sorting anywhere in the poem —
@@ -139,7 +168,9 @@ GREEK_ACTORS = [
      "across Acheron before any judging happens, and turns back the unburied to "
      "wander the bank a hundred years (Virgil, Aeneid 6.295-330). The office is "
      "attested in Greek before Virgil fixes its place on the map: Euripides has "
-     "him calling from the lake with his hand on the oar (Alcestis 252-256) and "
+     "him calling from the lake with his hand on the punt-pole (Alcestis "
+     "252-256, ἔχων χέρ' ἐπὶ κοντῷ - a pole, not an oar; the boat two lines "
+     "earlier is δίκωπον) and "
      "Aristophanes has him working the crossing and shouting the stops (Frogs "
      "180-270). A separate EUROPEAN row carries Dante's Charon, who ferries "
      "across Acheron at the gate of hell and whose passengers are already "

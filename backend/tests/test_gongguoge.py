@@ -33,6 +33,7 @@ the ledger's arithmetic and never touches a Statute; this one tests the data and
 never computes a balance. A red run should say which of the two broke.
 """
 import io
+import re
 
 import pytest
 from django.core.management import call_command
@@ -53,13 +54,18 @@ GATES = {
     "G-BR": {"gate": "不仁門", "polarity": "OFFENCE", "titled": "十五條", "transcribed": 15},
     "G-BS": {"gate": "不善門", "polarity": "OFFENCE", "titled": "八條", "transcribed": 8},
     "G-BY": {"gate": "不義門", "polarity": "OFFENCE", "titled": "十條", "transcribed": 10},
-    "G-BG": {"gate": "不軌門", "polarity": "OFFENCE", "titled": "六條", "transcribed": 5},
+    "G-BG": {"gate": "不軌門", "polarity": "OFFENCE", "titled": "六條", "transcribed": 6},
 }
 
-TOTAL = 73          # 35 功 + 38 過
+TOTAL = 74          # 35 功 + 39 過
 TITLED_TOTAL = 75   # what the 門 headings add up to
-#: The two 門 whose heading and segmentation disagree, and by how much.
-SHORT_GATES = {"F-JJ": 1, "G-BG": 1}
+#: The 門 whose heading and segmentation disagree, and by how much. 不軌門 was
+#: the second entry here until 2026-08-27, on the stated ground that both
+#: transcriptions gave 5 against a titled 六條. ctext gives 6, and its
+#: page-image view shows the break in the woodblock's own column layout — so
+#: the gate was never short and 過律 always did add up to its 三十九條. See
+#: judgment/0018 and the 不軌門 header in gongguoge_entries.py.
+SHORT_GATES = {"F-JJ": 1}
 
 #: The withdrawn Chinese citation keys. judgment/0012 deliberately left any
 #: cited article live, so re-using one of these would rewrite the recorded
@@ -116,7 +122,7 @@ NULLIFIER_ARTICLES = {
     "CN-GGG-F-YS-11": 1,   # 著紈帛者無功
     "CN-GGG-F-YS-12": 1,   # 素食上味為無功
     "CN-GGG-G-BS-03": 1,   # 因公務不及無過
-    "CN-GGG-G-BG-03": 4,   # 為和合事理／祭酒／待賓／服藥，皆不坐
+    "CN-GGG-G-BG-04": 4,   # 為和合事理／祭酒／待賓／服藥，皆不坐
 }
 
 #: The three substantive variants between the two transcriptions, and the
@@ -165,6 +171,32 @@ def _expected_codes():
     ]
 
 
+@pytest.fixture
+def registry_apps():
+    """The live app registry, standing in for the historical one a migration
+    is handed. Both migration test classes use it."""
+    from django.apps import apps as django_apps
+
+    return django_apps
+
+
+def _migration_0013_codes():
+    """The codes judgment/0013 creates — read off the migration, not the corpus.
+
+    These two lists were the same thing until 不軌門 was split into six
+    articles; 0013 still writes the five it was authored with, because a
+    migration is a record of what happened and not a view of the present. A
+    test that asks "did 0013 create the corpus?" and builds its expectation
+    from the LIVE corpus is asking a question about today's data of a function
+    frozen in 2026-08. It went red on the split, correctly, and the repair is
+    to point it at the right list rather than to loosen the assertion.
+    """
+    from importlib import import_module
+
+    module = import_module("apps.judgment.migrations.0013_gongguoge_corpus")
+    return [row[0] for row in module._skeleton()]
+
+
 def _clause_points(statute):
     return {
         clause["condition_zh"]: clause["points"]
@@ -193,11 +225,15 @@ def test_the_corpus_is_seeded_whole(articles):
 
 
 @pytest.mark.django_db
-def test_thirty_five_merits_and_thirty_eight_faults(articles):
+def test_thirty_five_merits_and_thirty_nine_faults(articles):
+    """過律 is titled 三十九條 and now holds thirty-nine. It held thirty-eight
+    while 不軌門 was seeded five articles against its own 六條; splitting that
+    gate closed the shortfall, so the 過 side matches its heading exactly and
+    only 功格 is still one short of its 三十六條."""
     counts = {"MERIT": 0, "OFFENCE": 0}
     for statute in articles.values():
         counts[statute.polarity] = counts.get(statute.polarity, 0) + 1
-    assert counts == {"MERIT": 35, "OFFENCE": 38}, (
+    assert counts == {"MERIT": 35, "OFFENCE": 39}, (
         f"{counts} — 功格 and 過律 are two halves of one fascicle and the split "
         f"between them is not a rounding."
     )
@@ -231,7 +267,7 @@ def test_each_gate_holds_its_own_articles_and_its_own_polarity(articles):
 
 @pytest.mark.django_db
 def test_the_articles_read_in_document_order(articles):
-    """`ordinal` is continuous 1..73, 功格 then 過律.
+    """`ordinal` is continuous 1..74, 功格 then 過律.
 
     `Statute.Meta.ordering` sorts on it, so a per-gate numbering would put
     救濟門一 next to 不仁門一 and print the corpus in an order the fascicle does
@@ -254,13 +290,20 @@ def test_the_articles_read_in_document_order(articles):
 
 
 @pytest.mark.django_db
-def test_the_two_short_gates_are_short_and_say_why(articles):
-    """門題 vs transcription: 十二條/11 and 六條/5.
+def test_the_short_gate_is_short_and_says_why(articles):
+    """門題 vs transcription: 十二條 against 11.
 
-    Both directions matter. Seeding 12 and 6 would mean two articles nobody has
-    a source for — the exact repair that must not be made, and the one the
+    Both directions matter. Seeding 12 would mean an article nobody has a
+    source for — the exact repair that must not be made, and the one the
     withdrawn CN-HL-* corpus was built out of. Dropping the note would leave a
-    73-article corpus that silently claims to be complete.
+    74-article corpus that silently claims to be complete.
+
+    THE OTHER DIRECTION HAS NOW BEEN EXERCISED TOO, which is why this test no
+    longer says "two gates". 不軌門 sat here for the same reason 救濟門 does,
+    and its reason was false: both transcriptions did NOT give 5. Refusing to
+    split was the cautious move and it was still wrong, because the caution was
+    resting on a claim about the sources that nobody had checked. A gap
+    declared is not a gap verified.
     """
     faults = []
     for segment, short_by in SHORT_GATES.items():
@@ -298,16 +341,17 @@ def test_the_two_short_gates_are_short_and_say_why(articles):
 
 @pytest.mark.django_db
 def test_the_gaps_are_not_quietly_reconciled(articles):
-    """73 seeded against 75 titled, and nothing pretends otherwise."""
+    """74 seeded against 75 titled, and nothing pretends otherwise."""
     assert len(articles) == TOTAL
-    assert TITLED_TOTAL - TOTAL == sum(SHORT_GATES.values()) == 2
+    assert TITLED_TOTAL - TOTAL == sum(SHORT_GATES.values()) == 1
     gapped = sorted(
         code for code, statute in articles.items()
         if "transcription_gap" in (statute.payload_json or {})
     )
-    assert gapped == ["CN-GGG-F-JJ-07", "CN-GGG-G-BG-01"], (
-        f"Conjectured split points recorded: {gapped}. Exactly two 門 are short "
-        f"and exactly two articles should carry the marker."
+    assert gapped == ["CN-GGG-F-JJ-07"], (
+        f"Conjectured split points recorded: {gapped}. Exactly one 門 is short "
+        f"and exactly one article should carry the marker. CN-GGG-G-BG-01 "
+        f"carried the second one until 不軌門 turned out not to be short."
     )
 
 
@@ -401,6 +445,84 @@ def test_a_faults_points_are_negative_and_a_merits_are_positive(articles):
             if not want_positive and points >= 0:
                 faults.append(f"{code}: 過 clause {clause['condition_zh']!r} = {points}")
     assert not faults, "\n  ".join(["Signs disagree with polarity:", *faults])
+
+
+#: 賑濟窮民 states the same rate twice — 「百錢為一功」 and then 「如一錢散施，
+#: 積至百錢為一功」, which is the first clause restated for small change rather
+#: than a fourth priced act. It is the ONLY article in the corpus whose text
+#: prices something the clause list does not separately carry, and it is listed
+#: here by code so that a second one cannot join it silently.
+RESTATED_RATE = {"CN-GGG-F-JJ-07": 1}
+
+_PRICE = re.compile("為(?:半|[一二三四五六七八九十百千]+)[功過]")
+
+
+@pytest.mark.django_db
+def test_every_priced_act_in_the_text_is_a_clause(articles):
+    """A 「為X功／過」 in the prose with no clause behind it is a value the
+    ledger cannot award, and nothing else here would notice.
+
+    THIS TEST EXISTS BECAUSE OF WHAT IT DID NOT CATCH. Four articles were
+    transcribed with a 「…」 standing in for material the transcriber had not
+    reached, and two of those elisions had priced acts inside them: 不善門#5
+    lost four (誤違科律格式／威儀有失／唱念不專／宣科讀狀奏對詞表差錯一字) and
+    不善門#8 lost seven, together 34 過 that could never be assessed. Every
+    count guard in this repository passed throughout, because they all pin the
+    number of ARTICLES — 73 at the time, in FOUR independent hand-written
+    copies, one of which (tests/test_ledger_granularity.py) was missed by the
+    first sweep that went looking for them — and an
+    article stays one article no matter how much of it is missing.
+
+    The check is not a total. A total goes stale the moment the corpus grows
+    and tells a later reader nothing about what broke. This compares each
+    article against ITSELF: the source prices an act, so a clause must carry
+    it. 73 of 74 hold exactly; the exception is declared in RESTATED_RATE with
+    its reason.
+
+    `〔〕` is stripped first because those are the source's own inline glosses
+    — 不善門#8's 「但一過去功一分，十過去功十分」 explains the offset rule and
+    prices nothing new — and 為無功／為無過 is a nullifier, which is carried in
+    `nullifiers` rather than `clauses`.
+    """
+    faults = []
+    for code, statute in sorted(articles.items()):
+        body = re.sub(r"〔[^〕]*〕", "", statute.text_zh or "")
+        priced = len(_PRICE.findall(body))
+        carried = len((statute.payload_json or {}).get("clauses", []))
+        expected = priced - RESTATED_RATE.get(code, 0)
+        if carried != expected:
+            faults.append(
+                f"{code}: text prices {priced} act(s), clauses carry {carried}"
+                f"{' (RESTATED_RATE allows ' + str(RESTATED_RATE[code]) + ')' if code in RESTATED_RATE else ''}"
+                f" — {statute.text_zh}"
+            )
+    assert not faults, "\n  ".join(
+        ["A priced act in the prose has no clause behind it:", *faults]
+    )
+
+
+@pytest.mark.django_db
+def test_no_article_is_still_abridged(articles):
+    """The four 「…」 elisions are closed. This keeps them closed.
+
+    A transcription that stops mid-article is not wrong, it is short — and
+    short is exactly what `assert not faults` cannot see. The ellipsis is the
+    one mark that says so out loud, so it is the one thing worth pinning.
+    """
+    elided = sorted(
+        code for code, statute in articles.items() if "…" in (statute.text_zh or "")
+    )
+    assert elided == [], (
+        f"Articles still carrying an elision: {elided}. If a transcription gap "
+        f"is genuinely reopened, say so in payload rather than in the prose — "
+        f"a 「…」 in text_zh is invisible to every other check in this file."
+    )
+    flagged = sorted(
+        code
+        for code, statute in articles.items()
+        if (statute.payload_json or {}).get("text_abridged_in_transcription")
+    )
+    assert flagged == [], f"Articles still flagged abridged: {flagged}"
 
 
 @pytest.mark.django_db
@@ -645,7 +767,13 @@ def test_reseeding_changes_nothing(seeded):
 @pytest.mark.django_db
 class TestGongguogeMigration:
     """judgment/0013 puts the 73 citation keys on a database that already has a
-    corpus, and writes nothing at all to one that does not."""
+    corpus, and writes nothing at all to one that does not.
+
+    73, not the corpus's current 74: 0013 predates the 不軌門 split and creates
+    the five 不軌門 keys it was written with. judgment/0018 renames the four
+    that moved. Expectations here come from `_migration_0013_codes()` for that
+    reason — see its docstring.
+    """
 
     @pytest.fixture
     def migration(self):
@@ -670,7 +798,7 @@ class TestGongguogeMigration:
     def test_it_creates_the_skeleton_on_a_populated_database(
         self, migration, registry, seeded
     ):
-        codes = _expected_codes()
+        codes = _migration_0013_codes()
         Statute.all_objects.filter(code__in=codes).delete()
         assert not Statute.all_objects.filter(code__in=codes).exists()
 
@@ -688,7 +816,7 @@ class TestGongguogeMigration:
         """Identifying columns only — the division realms/0012, 0013 and 0014
         all use. A migration carrying the 73 article texts would be a second
         copy of the corpus that nothing keeps in step."""
-        codes = _expected_codes()
+        codes = _migration_0013_codes()
         Statute.all_objects.filter(code__in=codes).delete()
         migration.forwards(registry, None)
 
@@ -735,8 +863,123 @@ class TestGongguogeMigration:
         assert Statute.all_objects.filter(code="CN-GGG-G-BR-07").exists(), (
             "The rollback deleted an article a judgment had cited."
         )
-        survivors = Statute.all_objects.filter(code__in=_expected_codes()).count()
+        survivors = Statute.all_objects.filter(
+            code__in=_migration_0013_codes()
+        ).count()
         assert survivors == 1, f"{survivors} articles survived, expected only the cited one"
+
+
+@pytest.mark.django_db
+class TestBuguiSplitMigration:
+    """judgment/0018 renames four articles so the split does not repoint them.
+
+    The danger it exists for is not visible in the data afterwards. Codes are
+    positional and `_upsert` matches on `code`, so inserting 注撰煙粉 at BG-02
+    and reseeding would have rewritten the CONTENT of the row that has always
+    been 食肉 — and `JudgmentCitation.statute` is a ForeignKey to that row. Every
+    recorded citation of 食肉 would have come to cite 注撰煙粉, with the judgment
+    prose around it still reading perfectly sensibly. That is the failure the
+    tests below make visible: they follow a citation across the rename and ask
+    what it points at, not whether the codes look tidy.
+    """
+
+    @pytest.fixture
+    def migration(self):
+        from importlib import import_module
+
+        return import_module("apps.judgment.migrations.0018_split_bugui_gate_article")
+
+    @pytest.fixture
+    def cited_meat(self, seeded):
+        """A judgment citing 食肉, which is BG-03 after the split and was BG-02
+        before it. The row is what matters; the code is what moves."""
+        from apps.judgment.models import Judgment, JudgmentCitation
+        from apps.souls.models import Soul, SoulState
+        from apps.tenants.models import Tenant
+
+        tenant = Tenant.objects.get(code="CN_DIYU")
+        soul = Soul.objects.create(
+            name="食肉者", current_state=SoulState.JUDGING, tenant=tenant
+        )
+        judgment = Judgment.objects.create(
+            soul=soul, civilization="CHINESE", tenant=tenant
+        )
+        meat = Statute.objects.get(code="CN-GGG-G-BG-03")
+        assert meat.title_zh.endswith("食肉"), meat.title_zh
+        citation = JudgmentCitation.objects.create(
+            judgment=judgment, statute=meat, tenant=tenant
+        )
+        return citation, meat
+
+    def test_a_citation_follows_its_article_across_the_rename(
+        self, migration, registry_apps, cited_meat
+    ):
+        citation, meat = cited_meat
+
+        migration.backwards(registry_apps, None)
+        citation.refresh_from_db()
+        assert citation.statute_id == meat.id
+        assert citation.statute.code == "CN-GGG-G-BG-02", (
+            "the reverse did not move 食肉 back to the code it had before the "
+            "split"
+        )
+        assert citation.statute.title_zh.endswith("食肉"), (
+            f"the citation now points at {citation.statute.title_zh} — this is "
+            f"the silent repoint 0018 exists to prevent"
+        )
+
+        migration.forwards(registry_apps, None)
+        citation.refresh_from_db()
+        assert citation.statute_id == meat.id
+        assert citation.statute.code == "CN-GGG-G-BG-03"
+        assert citation.statute.title_zh.endswith("食肉")
+
+    def test_the_reverse_drops_the_inserted_article_when_nothing_cites_it(
+        self, migration, registry_apps, seeded
+    ):
+        assert Statute.all_objects.filter(code="CN-GGG-G-BG-02").exists()
+        migration.backwards(registry_apps, None)
+        remaining = sorted(
+            Statute.all_objects.filter(code__startswith="CN-GGG-G-BG-").values_list(
+                "code", flat=True
+            )
+        )
+        assert remaining == [f"CN-GGG-G-BG-{n:02d}" for n in range(1, 6)], remaining
+        assert Statute.all_objects.get(code="CN-GGG-G-BG-02").title_zh.endswith("食肉")
+
+    def test_the_reverse_refuses_to_drop_a_cited_new_article(
+        self, migration, registry_apps, seeded
+    ):
+        """Rolling back must not decide, on its own, that a recorded ground
+        no longer exists. judgment/0012 made the same refusal."""
+        from apps.judgment.models import Judgment, JudgmentCitation
+        from apps.souls.models import Soul, SoulState
+        from apps.tenants.models import Tenant
+
+        tenant = Tenant.objects.get(code="CN_DIYU")
+        soul = Soul.objects.create(
+            name="注撰者", current_state=SoulState.JUDGING, tenant=tenant
+        )
+        judgment = Judgment.objects.create(
+            soul=soul, civilization="CHINESE", tenant=tenant
+        )
+        JudgmentCitation.objects.create(
+            judgment=judgment,
+            statute=Statute.objects.get(code="CN-GGG-G-BG-02"),
+            tenant=tenant,
+        )
+
+        with pytest.raises(RuntimeError, match="cited by a recorded judgment"):
+            migration.backwards(registry_apps, None)
+
+        assert Statute.all_objects.filter(code="CN-GGG-G-BG-02").exists()
+
+    def test_it_writes_nothing_to_a_database_with_no_bugui_articles(
+        self, migration, registry_apps, db
+    ):
+        assert Statute.all_objects.count() == 0
+        migration.forwards(registry_apps, None)
+        assert Statute.all_objects.count() == 0
 
 
 def test_judgment_0013_round_trip(migration_round_trip):
@@ -749,7 +992,7 @@ def test_judgment_0013_round_trip(migration_round_trip):
     """
     from tests.migration_roundtrip import snapshot_rows
 
-    codes = _expected_codes()
+    codes = _migration_0013_codes()
 
     def seed(state):
         tenant = state.get_model("tenants", "Tenant")

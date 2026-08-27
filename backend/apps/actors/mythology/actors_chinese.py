@@ -40,14 +40,26 @@ from apps.actors.models import ActorRole
 CHINESE_ACTORS = [
     ("阎罗王", "阎罗王", "Yama King", "Yanluo", ActorRole.JUDGE, "DY_COURT_05_YANLUO",
      "第五殿阎罗王", "第五殿阎罗王", "Fifth Court Yama", "Yanluo",
-     "Fifth court judge - the best-known of the ten kings, tries the gravest sins"),
+     "Fifth court judge - the best-known of the ten kings. He sat at the first "
+     "court and was demoted here for leniency, by his own account: 「吾本前居第一"
+     "殿，因憐屈死，屢放還陽伸雪；降調司掌…叫喚大地獄、並十六誅心小地獄」. His "
+     "court tries the intent behind the act, and the 望乡台 stands in it"),
     ("秦广王", "秦广王", "Qinguang Wang", "Qinguang", ActorRole.JUDGE, "DY_COURT_01_QINGUANG",
      "第一殿秦广王", "第一殿秦广王", "First Court Qinguang", "Qinguang",
      "First court judge - evaluates the Ledger of Life and Death"),
     # FOUR OF THESE DESCRIPTIONS CONTRADICTED THE COURT THEY SIT IN. The realm
-    # rows above were right in every case and the actor rows had never been
-    # updated to match, so the same court described itself two ways depending
-    # on which table you read. 楚江王 "awards merit for good deeds" against a
+    # rows above were right in *those four* cases and the actor rows had never
+    # been updated to match, so the same court described itself two ways
+    # depending on which table you read.
+    #
+    # A FIFTH ROW WAS WRONG AND THIS PASS COULD NOT SEE IT. 阎罗王 above said
+    # "tries the gravest sins" and so did DY_COURT_05_YANLUO, so the two tables
+    # agreed and the row looked settled. They were agreeing on something neither
+    # of them had a source for: 阿鼻 — the deepest hell — is the ninth court, as
+    # the ninth realm row says on its own line. Agreement between two rows is
+    # not evidence when nothing checked either against 《玉历》; the method that
+    # caught the four could not catch the fifth, because it was looking for
+    # disagreement. 楚江王 "awards merit for good deeds" against a
     # 活大地狱; 卞城王 "manages reincarnation scheduling", which is the *tenth*
     # king's work and the one thing the sixth court does not do; 都市王 "judge
     # of merchants and craftsmen", reading 「都市」 as a marketplace when it is
