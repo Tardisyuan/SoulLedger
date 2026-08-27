@@ -14,7 +14,7 @@ declaration, and could not have had one, because the guard iterated
 is invisible to a check that walks corpora. That guard now walks civilizations.
 
 WHAT AN ARTICLE IS HERE, AND WHY IT IS A NEW KIND. The four older corpora share
-one property: THE SOURCE ITSELF ENUMERATES. 《太微仙君功過格》 numbers 73
+one property: THE SOURCE ITSELF ENUMERATES. 《太微仙君功過格》 numbers 74
 articles and prices each. The Book of the Dead gives 42 assessors, one denial
 apiece. Purgatorio climbs seven terraces and the Inferno descends nine circles.
 Neither Platonic myth enumerates anything. So the honest question — the one

@@ -24,7 +24,7 @@ What is asserted, and why in this order
    here, which is the exact omission that let a corpus be invented from a
    template.
 2. The declarations still say what they said: 3 transcribed, 1 derived, 1
-   absent, with the counts and the two deliberate gaps named — 功過格's 73
+   absent, with the counts and the deliberate gap named — 功過格's 74
    against a claimed 75, and INFERNO's 26 articles against the 24 places the
    report counts.
 3. The prose is still in the package docstring. A table nobody reads is not the
@@ -64,8 +64,8 @@ EXPECTED = {
     "GONGGUOGE": {
         "nature": "TRANSCRIBED",
         "civilization": "chinese",
-        "count": 73,
-        "marker": "73 transcribed articles under corpus GONGGUOGE",
+        "count": 74,
+        "marker": "74 transcribed articles under corpus GONGGUOGE",
     },
     "NEGATIVE_CONFESSION": {
         "nature": "DERIVED",
@@ -221,11 +221,11 @@ def test_the_declared_civilizations_and_counts_still_hold():
 
 
 def test_the_gongguoge_gap_is_declared_rather_than_closed():
-    """73 against a claimed 75, and the shortfall is named, not filled."""
+    """74 against a claimed 75, and the shortfall is named, not filled."""
     gap = mythology.CORPUS_PROVENANCE["GONGGUOGE"]["known_gap"]
 
     assert gap, (
-        "GONGGUOGE's `known_gap` was emptied. The corpus transcribes 73 articles "
+        "GONGGUOGE's `known_gap` was emptied. The corpus transcribes 74 articles "
         "against a document that titles its gates at 75; a declaration that says "
         "nothing about the shortfall reads as a complete transcription."
     )
@@ -443,7 +443,7 @@ def test_the_absent_corpus_seeds_nothing_at_all():
 def test_the_transcription_gap_survived_into_the_database():
     """The two 功過格 gaps are carried on the rows, not smoothed away.
 
-    Declaring the gap in CORPUS_PROVENANCE and then seeding 73 tidy articles
+    Declaring the gap in CORPUS_PROVENANCE and then seeding 74 tidy articles
     that say nothing about it would put the caveat somewhere no query reaches.
     """
     flagged = {
@@ -457,7 +457,7 @@ def test_the_transcription_gap_survived_into_the_database():
 
     assert flagged, (
         "No seeded 功過格 article carries payload.transcription_gap. The corpus "
-        "transcribes 73 articles from a document whose gate titles total 75; the "
+        "transcribes 74 articles from a document whose gate titles total 75; the "
         "shortfall is recorded on the rows it falls in, and a database with no "
         "trace of it presents an incomplete transcription as a complete one."
     )

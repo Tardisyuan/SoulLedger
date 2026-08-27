@@ -1,4 +1,4 @@
-"""The 73 transcribed segments of 《太微仙君功過格》, and nothing else.
+"""The 74 transcribed segments of 《太微仙君功過格》, and nothing else.
 
 Split out of ``statutes_chinese.py`` only for length; that module holds the
 corpus header, the gate table and the row builder, and is where to start
@@ -455,38 +455,58 @@ GONGGUOGE_ENTRIES = [
           "（祖父母、繼母每功加倍等），太微沒有；不要把文昌的倍率搬到本語料上。",
       )}),
 
-    # ---------------- 過律 · 不軌門 (5 transcribed of 六條) ---------------
-    ("BG", 1, "傳法出偽、注撰煙粉", "False transmission; writing erotica",
-     "傳教法，隱真出偽，欺罔弟子，一事為五過；如受法信，百錢為一過，得人不傳為一過，傳非其人為十過。"
+    # ---------------- 過律 · 不軌門 (6 of 六條) ---------------------------
+    # SPLIT 2026-08-27, AND THE EVIDENCE IS THE PAGE'S OWN LAYOUT. These two
+    # were seeded as one article on the stated ground that "both transcriptions
+    # give 5 segments", which was not true of ctext and is not true of the
+    # woodblock. ctext's page-24 view transcribes the block COLUMN BY COLUMN,
+    # and the columns settle it:
+    #
+    #   　　　不軌門〈六條〉          gate heading, indented, 六條 as 小字
+    #   傳教法隱真出偽欺罔弟子一事為五過如     17 chars, starts flush at the top
+    #   　受法信百錢為一過得人不傳為一過傳非   18, LEADING BLANK = continuation
+    #   其人為十過                            5 chars — the column stops short
+    #   注撰煙粉傳記詩詞歌行一篇為二過傳與     17, starts flush at the top
+    #   　一人為二過簡編一篇為一過傳與一人為   18, leading blank = continuation
+    #   　一過自己記念一篇為一過               12 — stops short
+    #   食肉故殺性命食之為六過買肉食之為三     17, starts flush at the top
+    #
+    # A new article begins flush at the head of a fresh column; a continuation
+    # column carries a leading blank; the column before a new article stops
+    # short. 食肉 is the control — nobody has ever doubted that it is its own
+    # article, and it behaves exactly as 注撰煙粉 does. So 注撰煙粉 begins an
+    # article, 不軌門 really is 六條, and this gate has no gap at all.
+    #
+    # The scan image itself could not be read (library.ctext.org returns 404
+    # for it while leaking an x-sendfile path, i.e. the asset is missing on
+    # their server, not withheld). What is used here is the layout ctext
+    # transcribed FROM that image — the indents and short columns are features
+    # of the page that no plain-text transcription carries.
+    #
+    # THE RENUMBERING IS NOT FREE, which is why judgment/0018 exists. Codes are
+    # positional, so inserting here pushes 食肉/飲酒/五辛/受觸 from BG-02..05 to
+    # BG-03..06. `_upsert` matches on `code`, and JudgmentCitation points at the
+    # Statute ROW — so reseeding alone would have left every citation of 食肉
+    # attached to a row that now reads 注撰煙粉, with the prose still perfectly
+    # sensible. The migration renames the rows first, in reverse order, so each
+    # article keeps its own row and its own citations.
+    ("BG", 1, "傳法出偽", "False transmission of the teaching",
+     "傳教法，隱真出偽，欺罔弟子，一事為五過；如受法信，百錢為一過，得人不傳為一過，傳非其人為十過。",
+     (("隱真出偽欺罔弟子一事", -5), ("受法信百錢", -1),
+      ("得人不傳", -1), ("傳非其人", -10)),
+     {"money_rate": RATE_100_CASH}),
+    ("BG", 2, "注撰煙粉", "Writing erotica",
      "注撰煙粉傳記、詩詞、歌行，一篇為二過，傳與一人為二過，簡編一篇為一過，傳與一人為一過，"
      "自己記念一篇為一過。",
-     (("隱真出偽欺罔弟子一事", -5), ("受法信百錢", -1),
-      ("得人不傳", -1), ("傳非其人", -10),
-      ("注撰煙粉傳記詩詞歌行一篇", -2), ("傳與一人", -2),
+     (("注撰煙粉傳記詩詞歌行一篇", -2), ("傳與一人", -2),
       ("簡編一篇", -1), ("簡編傳與一人", -1), ("自己記念一篇", -1)),
-     {"money_rate": RATE_100_CASH,
-      "transcription_gap": {
-          "gate_titled": "六條", "gate_transcribed": 5,
-          "conjectured_split_here": True,
-          "conjecture": "門題六條，本系統照轉錄本作一條，不拆——**而這個決定的前提已經不成立**。"
-                        "原註寫「兩個轉錄本都只有 5 段」。2026-08-27 實查 ctext"
-                        "（chapter=199527）：不軌門下是 **6 個獨立段落**（p87–p92），"
-                        "而 p87「傳教法，隱真出偽…」與 p88「注撰煙粉傳記…」的切分點，"
-                        "正是報告當年標為「編輯判斷」的那一處。也就是說那不是編輯判斷，"
-                        "是 ctext 轉錄本自己的分段，且 6 段恰好對上門題的「六條」。"
-                        "維基文庫仍作 5 段。未改為 6 條，因為這會把語料從 73 條變成 74 條，"
-                        "是一個需要人來拍板的決定；另 ctext wiki 可被編輯，"
-                        "無法排除該分段是上一輪審計之後才有的。"
-                        "定讞只需影印本一頁：ctext.org/library.pl?if=gb&file=98751&page=24"
-                        "（需登入帳號，本輪未能讀到）。",
-      },
-      "notes": (TRANSCRIPTION_GAP_NOTE,)}),
-    ("BG", 2, "食肉", "Eating meat",
+     {}),
+    ("BG", 3, "食肉", "Eating meat",
      "食肉，故殺性命食之為六過，買肉食之為三過，違禁肉故食為六過，誤食為三過，"
      "過齋日食之為十過，食後入壇念善為十過。",
      (("故殺性命食之", -6), ("買肉食之", -3), ("違禁肉故食", -6),
       ("違禁肉誤食", -3), ("過齋日食之", -10), ("食後入壇念善", -10)), {}),
-    ("BG", 3, "飲酒", "Drinking",
+    ("BG", 4, "飲酒", "Drinking",
      "飲酒為評議惡事，與人飲一升為六過，無故與不良人飲一升為二過，無故與常人飲一升為一過，"
      "助婬懽飲一升為十過；為和合事理，與友人飲，祭酒、待賓、服藥，皆不坐；"
      "過齋日飲致醉，或酒後入壇念善為五過。",
@@ -505,12 +525,12 @@ GONGGUOGE_ENTRIES = [
           "功過格是「飲酒」這一條在本系統中唯一站得住的出處，"
           "且必須連同豁免條款一起用：「為和合事理，與友人飲，祭酒、待賓、服藥，皆不坐」。",
       )}),
-    ("BG", 4, "食五辛", "Eating the five pungent roots",
+    ("BG", 5, "食五辛", "Eating the five pungent roots",
      "五辛無故食之，一食為一過，食後持念經一大卷為十過，一小經為五過，一聖號為一過，"
      "齋日食之為五過。",
      (("無故食之一食", -1), ("食後持念大經一卷", -10), ("食後持念小經", -5),
       ("食後持念聖號", -1), ("齋日食之", -5)), {}),
-    ("BG", 5, "受觸", "Ritual defilement",
+    ("BG", 6, "受觸", "Ritual defilement",
      "受觸極親為五十過，近親為三十過，遠親為二十過，良家為十五過，"
      "受觸之後，入壇念道、朝真、禮聖及齋日犯觸隨儀，每一過為五過。",
      (("受觸極親", -50), ("受觸近親", -30), ("受觸遠親", -20), ("受觸良家", -15),
