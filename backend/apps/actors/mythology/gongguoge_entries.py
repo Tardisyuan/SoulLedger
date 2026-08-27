@@ -1,4 +1,4 @@
-"""The 73 transcribed segments of 《太微仙君功過格》, and nothing else.
+"""The 74 transcribed segments of 《太微仙君功過格》, and nothing else.
 
 Split out of ``statutes_chinese.py`` only for length; that module holds the
 corpus header, the gate table and the row builder, and is where to start
@@ -40,6 +40,10 @@ RATE_1000_CASH = {"per": 1000, "currency_zh": "錢", "points": 1}
 #
 # 〔 〕 marks the original's double-column interlinear notes, except at 不仁門#4
 # where it marks an UNRESOLVED variant — the note on that row says which.
+FILLED_FROM_TWO_TRANSCRIPTIONS = (
+    "轉錄補全（2026-08-27）：此處原有「…」省略，註明「需影印本補全」。全量校勘時發現維基文庫與 ctext 兩個獨立轉錄本在此處逐字互同（ctext 僅有已知的 OCR 訛字），據此補全。影印本仍未核；補全依據是兩本互證，不是原刻。"
+)
+
 GONGGUOGE_ENTRIES = [
     # ---------------- 功格 · 救濟門 (11 transcribed of 十二條) -------------
     ("JJ", 1, "符法針藥救疾", "Healing the sick by talisman, needle or medicine",
@@ -66,7 +70,10 @@ GONGGUOGE_ENTRIES = [
       ("救人笞刑", 5), ("免人笞刑", 4), ("減人笞刑", 3)),
      {"nullifiers": (("依法定罪", "no_merit"),),
       "notes": (
-          "校勘：本條四處作「減」，維基文庫轉錄本作「滅」，此處從 ctext 本。"
+          "校勘：本條五處作「減」（減死刑／減人徒刑／減人杖刑／減人笞刑／私家減免婢僕），"
+          "維基文庫轉錄本五處均作「滅」，此處從 ctext 本。"
+          "此註原寫「四處」——2026-08-27 實查 ctext 該段「減」5 次、「滅」0 次，"
+          "數目本身數錯了，而校勘決定不受影響。"
           "理由是文義——救／免／減三級遞降（救為非自己主事而竭力救之、免為自己主事而特爽原免、"
           "減為減輕刑等）自洽，「滅」為形近訛字。這是文義校勘意見，不是版本學結論；未核影印本。",
       )}),
@@ -219,12 +226,17 @@ GONGGUOGE_ENTRIES = [
      {"nullifiers": (("著紈帛", "no_merit"),)}),
     ("YS", 12, "飲膳節制", "Abstinence at table",
      "自己飲膳，有而不食者為三功，晚而不食者為二功，素食下味為一功，素食中味為半功，"
-     "素食上味為無功。〔謂有上味及素饌佳餚而故不食者…蓋有而故不食者為功。〕",
+     "素食上味為無功。"
+     "〔謂有上味及素饌佳餚而故不食者，止甘淡薄麄糲中下之味者為功；"
+     "若無上味而食中等之味者，非為功；若無中味而食下味者，亦非為功。"
+     "蓋有而故不食者為功。〕",
      (("有而不食", 3), ("晚而不食", 2), ("素食下味", 1), ("素食中味", 0.5)),
      {"nullifiers": (("素食上味", "no_merit"),),
       "notes": (
           "非整數分值：「素食中味為半功」＝0.5 功。另見焚修門#1。",
-          "本條夾注在核實報告的轉錄中有省略（「…」處）；未補，需影印本。",
+          FILLED_FROM_TWO_TRANSCRIPTIONS,
+          "補回的夾注是本條的適用條件：「有而不食」之所以為功，前提是有上味可食而故不食；"
+          "若本無上味而食中味、本無中味而食下味，皆不為功。不含計分子句，clauses 不變。",
       )}),
 
     # ---------------- 過律 · 不仁門 (15 of 十五條) ------------------------
@@ -247,7 +259,12 @@ GONGGUOGE_ENTRIES = [
      (("欲害於人", -10), ("害人性命", -100), ("害人不死而病", -50),
       ("害人六畜一命", -10), ("令病", -5), ("舉意欲害", -1),
       ("厭禳人家欲取財賄", -10), ("得財百錢", -1), ("得財貫錢", -10)),
-     {"money_rate": RATE_100_CASH}),
+     {"money_rate": RATE_100_CASH,
+      "notes": (
+          "校勘：「令見惟異」從維基文庫；ctext 作「令見恎異」。"
+          "「恎」是僻字，不像典型 OCR 訛字，可能是真異文。未定，照維基文庫錄。"
+          "2026-08-27 全量校勘時發現，此前兩本分歧處未註。",
+      )}),
     ("BR", 4, "謀人入罪", "Contriving another's punishment",
      "謀人死刑，成者為百過，不成為五十過，舉意不作為十過；"
      "謀人徒刑，成者為四十過，不成為二十過，舉意不作為八過；"
@@ -298,7 +315,12 @@ GONGGUOGE_ENTRIES = [
       )}),
     ("BR", 10, "救得而不救", "Able to save and not saving",
      "若救得而不救者為十過，無門可救，不生慈念者為一過。",
-     (("救得而不救", -10), ("無門可救不生慈念", -1)), {}),
+     (("救得而不救", -10), ("無門可救不生慈念", -1)),
+     {"notes": (
+          "校勘：ctext 句首多一「見」字（「見若救得而不救者」）。"
+          "或涉上條「見殺不救」而衍，或維基文庫脫。未定，照維基文庫錄。"
+          "2026-08-27 全量校勘時發現，此前兩本分歧處未註。",
+      )}),
     ("BR", 11, "幸災", "Taking pleasure in another's trouble",
      "見人有憂，不行解釋而故暢快者為五過。", (("見人有憂而故暢快", -5),),
      {"fungibility_class": "CONDUCT"}),
@@ -316,16 +338,18 @@ GONGGUOGE_ENTRIES = [
 
     # ---------------- 過律 · 不善門 (8 of 八條) ---------------------------
     ("BS", 1, "毀壞功德聖像", "Destroying sacred objects",
-     "毀壞功德、聖像、壇宇…及諸獻供之物，百錢之直為一過，貫錢之直為十過，"
+     "毀壞功德、聖像、壇宇、幢蓋、幡花、器皿、床具及諸獻供之物，"
+     "百錢之直為一過，貫錢之直為十過，"
      "以巧言說人，毀壞百錢之直為半過，貫錢之直為五過，見而不觀為一過，讚助為五過。",
      (("毀壞百錢之直", -1), ("毀壞貫錢之直", -10),
       ("以巧言說人毀壞百錢之直", -0.5), ("以巧言說人毀壞貫錢之直", -5),
       ("見而不觀", -1), ("讚助", -5)),
      {"money_rate": RATE_100_CASH,
-      "abridged": True,
       "notes": (
           "非整數分值：「以巧言說人，毀壞百錢之直為半過」＝-0.5 過。",
-          "轉錄省略：本條原文在核實報告的轉錄中有「…」省略處，未補。需影印本補全。",
+          FILLED_FROM_TWO_TRANSCRIPTIONS,
+          "此處省略的是受毀之物的清單（幢蓋、幡花、器皿、床具），不含計分子句，"
+          "所以 clauses 不變。",
       )}),
     ("BS", 2, "指斥聖像經教", "Reviling images and scripture",
      "以言指斥，毀天尊聖像為二十過，真人為十五過，神君為十過，見毀滅不勸為一過，"
@@ -346,12 +370,20 @@ GONGGUOGE_ENTRIES = [
      "遇節辰食晚食為二過，常日晚食為一過。",
      (("節辰食晚食", -2), ("常日晚食", -1)), {}),
     ("BS", 5, "齋醮不備", "Faults in the conduct of a rite",
-     "齋醮供聖鎮信之物，一物不備為一過，章詞一字差錯為一過…三時朝真，一時有失為五過，"
+     "齋醮供聖鎮信之物，一物不備為一過，章詞一字差錯為一過，誤違科律格式，一事為一過，"
+     "威儀有失，一事為一過，唱念不專為一過，宣科讀狀，奏對詞表，差錯一字為一過，"
+     "三時朝真，一時有失為五過，"
      "供養進獻之物，一物不備為一過，一物不潔為一過，及不如法為一過。",
-     (("一物不備", -1), ("章詞一字差錯", -1), ("三時朝真一時有失", -5),
+     (("一物不備", -1), ("章詞一字差錯", -1),
+      ("誤違科律格式", -1), ("威儀有失", -1), ("唱念不專", -1),
+      ("宣科讀狀奏對詞表差錯一字", -1),
+      ("三時朝真一時有失", -5),
       ("供養進獻一物不備", -1), ("一物不潔", -1), ("不如法", -1)),
-     {"abridged": True,
-      "notes": ("轉錄省略：本條原文在核實報告的轉錄中有「…」省略處，未補。需影印本補全。",)}),
+     {"notes": (
+          FILLED_FROM_TWO_TRANSCRIPTIONS,
+          "補全帶回 4 個計分子句（誤違科律格式／威儀有失／唱念不專／宣科讀狀奏對詞表差錯一字，"
+          "各 -1）。在補全之前本條少算 4 過——省略號吃掉的不只是文字。",
+      )}),
     ("BS", 6, "妄用法信錢物", "Misusing a donor's offering",
      "應受施主法信錢物，非理使用，百錢為一過，貫錢為十過。",
      (("非理使用百錢", -1), ("非理使用貫錢", -10)),
@@ -360,17 +392,25 @@ GONGGUOGE_ENTRIES = [
      "薦亡符簡文字等，一字差錯為一過，脫漏一字為一過，符文差錯脫漏為十過，修寫書篆不如法為五過。",
      (("一字差錯", -1), ("脫漏一字", -1), ("符文差錯脫漏", -10), ("修寫書篆不如法", -5)), {}),
     ("BS", 8, "誦經有失", "Faults in recitation",
-     "誦念經典，漏一字為一過，漏一句為五過…心意不專為五過，邪婬雜想及思惡事為十過…"
+     "誦念經典，漏一字為一過，漏一句為五過，音釋乖背，字音交差，一字為一過，"
+     "念誦語句錯亂，有失文意，一句為五過，若念誦之時，心意不專為五過，"
+     "邪婬雜想及思惡事為十過，住經語惡事訖續念經為十過，語常事為五過，"
+     "接陪賓侶為三過，語善事為一過，不依誦經法式為五過，"
      "念經發嗔怒為十過，凌辱他人為十過。"
      "〔凡言十過，其功全無，並是虛念。但一過去功一分，十過去功十分，所以不用也。〕",
-     (("漏一字", -1), ("漏一句", -5), ("心意不專", -5),
-      ("邪婬雜想及思惡事", -10), ("念經發嗔怒", -10), ("凌辱他人", -10)),
-     {"abridged": True,
-      "notes": (
+     (("漏一字", -1), ("漏一句", -5),
+      ("音釋乖背字音交差一字", -1), ("念誦語句錯亂有失文意一句", -5),
+      ("心意不專", -5), ("邪婬雜想及思惡事", -10),
+      ("住經語惡事訖續念經", -10), ("語常事", -5), ("接陪賓侶", -3),
+      ("語善事", -1), ("不依誦經法式", -5),
+      ("念經發嗔怒", -10), ("凌辱他人", -10)),
+     {"notes": (
           "本條夾注是全書唯一一處把功過相抵寫成算術的地方：「但一過去功一分，十過去功十分」"
           "——過直接抵銷功，一比一。這是 apps/ledger/readings.py 的中國側淨額讀數的原文依據；"
           "抵銷的類別限制另見《文昌帝君功過格·凡例》，記在 payload.fungibility_class。",
-          "轉錄省略：本條原文在核實報告的轉錄中有兩處「…」省略，未補。需影印本補全。",
+          FILLED_FROM_TWO_TRANSCRIPTIONS,
+          "兩處省略共帶回 7 個計分子句（-1／-5／-10／-5／-3／-1／-5）。"
+          "本條原有 6 條、現有 13 條；補全之前它少算 30 過。",
       )}),
 
     # ---------------- 過律 · 不義門 (10 of 十條) --------------------------
@@ -415,30 +455,58 @@ GONGGUOGE_ENTRIES = [
           "（祖父母、繼母每功加倍等），太微沒有；不要把文昌的倍率搬到本語料上。",
       )}),
 
-    # ---------------- 過律 · 不軌門 (5 transcribed of 六條) ---------------
-    ("BG", 1, "傳法出偽、注撰煙粉", "False transmission; writing erotica",
-     "傳教法，隱真出偽，欺罔弟子，一事為五過；如受法信，百錢為一過，得人不傳為一過，傳非其人為十過。"
+    # ---------------- 過律 · 不軌門 (6 of 六條) ---------------------------
+    # SPLIT 2026-08-27, AND THE EVIDENCE IS THE PAGE'S OWN LAYOUT. These two
+    # were seeded as one article on the stated ground that "both transcriptions
+    # give 5 segments", which was not true of ctext and is not true of the
+    # woodblock. ctext's page-24 view transcribes the block COLUMN BY COLUMN,
+    # and the columns settle it:
+    #
+    #   　　　不軌門〈六條〉          gate heading, indented, 六條 as 小字
+    #   傳教法隱真出偽欺罔弟子一事為五過如     17 chars, starts flush at the top
+    #   　受法信百錢為一過得人不傳為一過傳非   18, LEADING BLANK = continuation
+    #   其人為十過                            5 chars — the column stops short
+    #   注撰煙粉傳記詩詞歌行一篇為二過傳與     17, starts flush at the top
+    #   　一人為二過簡編一篇為一過傳與一人為   18, leading blank = continuation
+    #   　一過自己記念一篇為一過               12 — stops short
+    #   食肉故殺性命食之為六過買肉食之為三     17, starts flush at the top
+    #
+    # A new article begins flush at the head of a fresh column; a continuation
+    # column carries a leading blank; the column before a new article stops
+    # short. 食肉 is the control — nobody has ever doubted that it is its own
+    # article, and it behaves exactly as 注撰煙粉 does. So 注撰煙粉 begins an
+    # article, 不軌門 really is 六條, and this gate has no gap at all.
+    #
+    # The scan image itself could not be read (library.ctext.org returns 404
+    # for it while leaking an x-sendfile path, i.e. the asset is missing on
+    # their server, not withheld). What is used here is the layout ctext
+    # transcribed FROM that image — the indents and short columns are features
+    # of the page that no plain-text transcription carries.
+    #
+    # THE RENUMBERING IS NOT FREE, which is why judgment/0018 exists. Codes are
+    # positional, so inserting here pushes 食肉/飲酒/五辛/受觸 from BG-02..05 to
+    # BG-03..06. `_upsert` matches on `code`, and JudgmentCitation points at the
+    # Statute ROW — so reseeding alone would have left every citation of 食肉
+    # attached to a row that now reads 注撰煙粉, with the prose still perfectly
+    # sensible. The migration renames the rows first, in reverse order, so each
+    # article keeps its own row and its own citations.
+    ("BG", 1, "傳法出偽", "False transmission of the teaching",
+     "傳教法，隱真出偽，欺罔弟子，一事為五過；如受法信，百錢為一過，得人不傳為一過，傳非其人為十過。",
+     (("隱真出偽欺罔弟子一事", -5), ("受法信百錢", -1),
+      ("得人不傳", -1), ("傳非其人", -10)),
+     {"money_rate": RATE_100_CASH}),
+    ("BG", 2, "注撰煙粉", "Writing erotica",
      "注撰煙粉傳記、詩詞、歌行，一篇為二過，傳與一人為二過，簡編一篇為一過，傳與一人為一過，"
      "自己記念一篇為一過。",
-     (("隱真出偽欺罔弟子一事", -5), ("受法信百錢", -1),
-      ("得人不傳", -1), ("傳非其人", -10),
-      ("注撰煙粉傳記詩詞歌行一篇", -2), ("傳與一人", -2),
+     (("注撰煙粉傳記詩詞歌行一篇", -2), ("傳與一人", -2),
       ("簡編一篇", -1), ("簡編傳與一人", -1), ("自己記念一篇", -1)),
-     {"money_rate": RATE_100_CASH,
-      "transcription_gap": {
-          "gate_titled": "六條", "gate_transcribed": 5,
-          "conjectured_split_here": True,
-          "conjecture": "門題六條，兩個轉錄本都只有 5 段。報告推測本段實含兩個不相干主題"
-                        "（「傳教法，隱真出偽…」與「注撰煙粉傳記…」）並在報告的表中拆成兩行，"
-                        "但明確註明那是編輯判斷而非原刻分段。本系統照轉錄本作一條，不拆。",
-      },
-      "notes": (TRANSCRIPTION_GAP_NOTE,)}),
-    ("BG", 2, "食肉", "Eating meat",
+     {}),
+    ("BG", 3, "食肉", "Eating meat",
      "食肉，故殺性命食之為六過，買肉食之為三過，違禁肉故食為六過，誤食為三過，"
      "過齋日食之為十過，食後入壇念善為十過。",
      (("故殺性命食之", -6), ("買肉食之", -3), ("違禁肉故食", -6),
       ("違禁肉誤食", -3), ("過齋日食之", -10), ("食後入壇念善", -10)), {}),
-    ("BG", 3, "飲酒", "Drinking",
+    ("BG", 4, "飲酒", "Drinking",
      "飲酒為評議惡事，與人飲一升為六過，無故與不良人飲一升為二過，無故與常人飲一升為一過，"
      "助婬懽飲一升為十過；為和合事理，與友人飲，祭酒、待賓、服藥，皆不坐；"
      "過齋日飲致醉，或酒後入壇念善為五過。",
@@ -448,17 +516,21 @@ GONGGUOGE_ENTRIES = [
      {"nullifiers": (("為和合事理與友人飲", "no_demerit"), ("祭酒", "no_demerit"),
                      ("待賓", "no_demerit"), ("服藥", "no_demerit")),
       "notes": (
+          "校勘：「過齋日」從維基文庫；ctext 作「遇齋日」。"
+          "本門上一條兩本均作「過齋日食之」，但參 BS#3「每遇齋日」，"
+          "「遇」文義反而更順。未定，照維基文庫錄。"
+          "2026-08-27 全量校勘時發現，此前兩本分歧處未註。",
           "撤回的 CN-HL-* 語料把「飲酒」列為十惡之一，那是錯的——飲酒不在佛教十惡中"
           "（見 docs/lore-verification/verify-cn-structure.md §4 錯誤 #1）。"
           "功過格是「飲酒」這一條在本系統中唯一站得住的出處，"
           "且必須連同豁免條款一起用：「為和合事理，與友人飲，祭酒、待賓、服藥，皆不坐」。",
       )}),
-    ("BG", 4, "食五辛", "Eating the five pungent roots",
+    ("BG", 5, "食五辛", "Eating the five pungent roots",
      "五辛無故食之，一食為一過，食後持念經一大卷為十過，一小經為五過，一聖號為一過，"
      "齋日食之為五過。",
      (("無故食之一食", -1), ("食後持念大經一卷", -10), ("食後持念小經", -5),
       ("食後持念聖號", -1), ("齋日食之", -5)), {}),
-    ("BG", 5, "受觸", "Ritual defilement",
+    ("BG", 6, "受觸", "Ritual defilement",
      "受觸極親為五十過，近親為三十過，遠親為二十過，良家為十五過，"
      "受觸之後，入壇念道、朝真、禮聖及齋日犯觸隨儀，每一過為五過。",
      (("受觸極親", -50), ("受觸近親", -30), ("受觸遠親", -20), ("受觸良家", -15),

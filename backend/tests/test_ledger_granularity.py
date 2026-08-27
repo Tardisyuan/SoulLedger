@@ -367,13 +367,13 @@ def test_the_corpus_draws_no_granularity_line():
     The criterion is not absent from the text — every clause states its own
     per-occasion value, and that is what 一次 means. What is absent is any
     article-level distinction that could be lifted onto a record: 「一次」 occurs
-    nowhere in the 73 segments, and the only article that discusses accumulation
+    nowhere in the 74 segments, and the only article that discusses accumulation
     grants it full value rather than marking it down.
 
     Expectations hand-written rather than derived from the table, per the rule
     tests/test_purgatorio_terraces.py states.
     """
-    assert len(GONGGUOGE_ENTRIES) == 73
+    assert len(GONGGUOGE_ENTRIES) == 74
 
     marked = [
         (gate, ordinal) for gate, ordinal, _tz, _te, text, _c, _x in GONGGUOGE_ENTRIES

@@ -106,8 +106,11 @@ EUROPEAN_ACTORS = [
      "Messenger angel - carries announcements to the living (Dan 8:16, 9:21; "
      "Luke 1:11-20, 1:26-38). CONDUIT in the sense of bearing word, not of "
      "escorting the dead: 'guides souls to judgment and heaven' was Michael's "
-     "office (see above) written onto Gabriel, and the last-trumpet image "
-     "attached to him is Islamic and later folk tradition, not biblical"),
+     "office (see above) written onto Gabriel. The last-trumpet image attached "
+     "to him is not biblical either - 1 Thess 4:16 has the trumpet of God and "
+     "names no angel - but it is not Islamic, as this row used to say: the "
+     "eschatological trumpeter of Islam is Israfil, not Jibril. Gabriel's horn "
+     "is a Christian and later folk attribution"),
     # Satan was cast as JUDGE, which neither tradition supports. In theology he
     # is the accuser — ὁ κατήγωρ, "the accuser of our brethren" (Rev 12:10), the
     # prosecuting figure of Job 1-2 — and he is himself judged (Rev 20:10). In
@@ -146,9 +149,11 @@ EUROPEAN_ACTORS = [
     # tempting reading is that Dante's Minos only *sorts* — that he routes a soul
     # to a circle already decided by the sin it confessed, which would make him a
     # CONDUIT and would leave EUROPEAN with exactly one judge, Christ, and a
-    # tidier test. The poem does not support it. Inf. V.9 is 「giudica e manda
-    # secondo ch'avvinghia」 — *judges* and sends, in that order, after 「essamina
-    # le colpe ne l'intrata」, examines the transgressions at the entrance. The
+    # tidier test. The poem does not support it. Inf. V.6 is 「giudica e manda
+    # secondo ch'avvinghia」 — *judges* and sends, in that order, after V.5's
+    # 「essamina le colpe ne l'intrata」, examines the transgressions at the
+    # entrance. (This note used to cite V.9 for the first of those; V.9 is 「e
+    # quel conoscitor de le peccata」. The range cited below, V.4-15, was right.) The
     # examining and the judging are the work; the tail is only how the sentence
     # is pronounced. Demoting him would have meant contradicting the one verb the
     # source is explicit about in order to make an assertion elsewhere in the

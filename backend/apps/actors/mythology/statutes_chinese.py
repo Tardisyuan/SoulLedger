@@ -44,14 +44,24 @@ from apps.actors.mythology.gongguoge_entries import GONGGUOGE_ENTRIES
 # preface says a self-kept tally and heaven's audit agree exactly —
 # 「與上天真司考校之數，昭然相契，悉無異焉」.
 #
-# 73 ROWS, NOT 75, AND THE GAP IS NOT FILLED. 救濟門 is titled 十二條 and both
-# independent digital transcriptions segment it into 11; 不軌門 is titled 六條
-# and both give 5. So the transcribed total is 35 + 38 = 73 against a claimed
-# 75. The verification report marks the two likeliest split points and marks
-# them as CONJECTURE. They are recorded here in `source_notes` and in
-# `payload["transcription_gap"]`, and NOT acted on. Inventing the two missing
-# articles — or splitting a paragraph to make the arithmetic come out — is the
-# identical move that produced the fabricated 冥律: a more convincing forgery.
+# 74 ROWS, NOT 75, AND THE REMAINING GAP IS NOT FILLED. 救濟門 is titled 十二條
+# and both independent digital transcriptions segment it into 11, so the
+# transcribed total is 35 + 39 = 74 against a claimed 75. The verification
+# report marks the likeliest split point and marks it as CONJECTURE. It is
+# recorded in `source_notes` and in `payload["transcription_gap"]`, and NOT
+# acted on. Inventing the missing article — or splitting a paragraph to make
+# the arithmetic come out — is the identical move that produced the fabricated
+# 冥律: a more convincing forgery.
+#
+# 不軌門 USED TO BE THE SECOND GAP, AND IT WAS NOT A GAP. It is titled 六條 and
+# this corpus seeded 5 because, it said, both transcriptions gave 5. ctext
+# gives 6, and ctext's page-image view — which lays the block out column by
+# column — shows 「注撰煙粉傳記…」 beginning flush at the head of a fresh column
+# after a short one, exactly as the uncontested 「食肉…」 does. The split was
+# real and the arithmetic was never short: see gongguoge_entries.py's 不軌門
+# header and judgment/0018. Note which way the correction ran. Refusing to
+# split was the cautious move and it was still wrong, because the caution was
+# resting on a claim about the sources that nobody had checked.
 #
 # THE DECAY QUESTION IS ALREADY ANSWERED AND IS NOT REOPENED HERE. 功過格 has
 # no decay of any kind; the monthly settlement carries the balance forward at

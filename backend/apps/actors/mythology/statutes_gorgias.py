@@ -14,7 +14,7 @@ declaration, and could not have had one, because the guard iterated
 is invisible to a check that walks corpora. That guard now walks civilizations.
 
 WHAT AN ARTICLE IS HERE, AND WHY IT IS A NEW KIND. The four older corpora share
-one property: THE SOURCE ITSELF ENUMERATES. 《太微仙君功過格》 numbers 73
+one property: THE SOURCE ITSELF ENUMERATES. 《太微仙君功過格》 numbers 74
 articles and prices each. The Book of the Dead gives 42 assessors, one denial
 apiece. Purgatorio climbs seven terraces and the Inferno descends nine circles.
 Neither Platonic myth enumerates anything. So the honest question — the one
@@ -51,10 +51,21 @@ TEXT AND SOURCE ARE NOT THE SAME QUESTION HERE.
     Longfellow 1867 for the Commedia, Evelyn-White 1914 for Hesiod.
   * The STEPHANUS SECTIONS are not Jowett's. His prose is continuous and
     carries no inline numbers, so every citation below was located against the
-    Perseus canonical XML of the Loeb Gorgias (W. R. M. Lamb, 1925), whose
+    Perseus canonical-greekLit XML of the Gorgias (tlg0059.tlg023), whose
     ``<milestone unit="section">`` markers place them exactly. Lamb's WORDS are
     not reproduced here. A section number is a fact about where a passage sits;
     a translation is an expression, and the two need different permissions.
+
+    WHICH FILE, AND WHY IT TURNS OUT NOT TO MATTER. This used to say "the
+    Perseus canonical XML of the Loeb Gorgias", which welds two things that
+    are not the same file: the canonical GREEK text (perseus-grc2) is Burnet's
+    Oxford Classical Text, Clarendon 1903, and Lamb's Loeb 1925 is the English
+    file (perseus-eng2) beside it. Which of the two was open when these
+    citations were placed is not recorded anywhere and cannot now be
+    established — but it does not bear on the numbers: both files carry 404
+    ``unit="section"`` milestones and the two sequences are identical item for
+    item (verified 2026-08-27). The version attribution was wrong; no section
+    number depends on it.
 
   Both are recorded on every row, because "which translation" and "which
   numbering" are the two questions a later reader of a citation will ask.
@@ -63,8 +74,10 @@ TEXT AND SOURCE ARE NOT THE SAME QUESTION HERE.
 GORGIAS_SOURCE = (
     "Plato, Gorgias 523a-526d — the myth of the judgement, in Benjamin "
     "Jowett's translation (Project Gutenberg #1672, public domain). Stephanus "
-    "sections located against the Perseus canonical text of the Loeb edition "
-    "(W. R. M. Lamb, 1925); Lamb's wording is not reproduced."
+    "sections located against the Perseus canonical-greekLit XML "
+    "(tlg0059.tlg023; Burnet's Greek, Clarendon 1903, and Lamb's Loeb "
+    "translation, 1925, carry identical section milestones); Lamb's wording "
+    "is not reproduced."
 )
 
 from apps.actors.mythology.statutes_gorgias_entries import (  # noqa: F401
