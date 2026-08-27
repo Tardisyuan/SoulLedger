@@ -181,8 +181,15 @@ class StatuteCorpus(models.TextChoices):
 
         GONGGUOGE ARRIVING DOES NOT CHANGE THIS. The finding was about 冥律,
         not about the Chinese side having nothing: 《太微仙君功過格》 is real
-        and is now seeded, and a codified 冥律 is still a document nobody has
-        ever produced. HELL_LAW stays empty, and refilling it with the 功過格
+        and is now seeded, and no codified 冥律 stands in the transmitted
+        canon this system draws on. That claim is narrower than the one this
+        paragraph used to make ("a document nobody has ever produced"). Qing
+        spirit-writing morality books do include texts presenting themselves
+        as infernal codes with schedules of penalty — 《冥罰淫律》 and the
+        《金科輯要》 family — and whether any of them is "codified" in the
+        sense meant here has not been checked against their own text. The
+        finding holds for the Daozang and the standard tracts; it was
+        overstated as a claim about every text that has ever existed. HELL_LAW stays empty, and refilling it with the 功過格
         articles would re-assert the very thing 8308204 withdrew.
       * GONGGUOGE (功過格) is 《太微仙君功過格》 (1171, Daozang 洞真部戒律類),
         73 transcribed articles under CN-GGG-*: 35 功 and 38 過, in four gates
@@ -307,7 +314,7 @@ class StatutePolarity(models.TextChoices):
     the article makes none.
 
     IT WAS ADDED BECAUSE A WHOLE COSMOLOGY NEEDED IT, not to round the enum
-    out. Twenty of the twenty-two Greek articles are procedural, because
+    out. Twenty-one of the twenty-three Greek articles are procedural, because
     Plato's two myths describe a court and a circuit and never a code of
     offences — see StatuteCorpus. A Greek judgment cites what the court is
     obliged to do; there is no Greek equivalent of 殺生 to cite instead.

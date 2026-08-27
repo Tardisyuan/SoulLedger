@@ -93,7 +93,7 @@ EXPECTED = {
     "GORGIAS": {
         "nature": "TRANSCRIBED",
         "civilization": "greek",
-        "count": 11,
+        "count": 12,
         "marker": "THE SOURCE ITSELF ENUMERATES",
     },
     "REPUBLIC_ER": {

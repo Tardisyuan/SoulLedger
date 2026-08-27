@@ -205,14 +205,14 @@ GORGIAS_STATUTES = [
         "title_zh": "法庭：分区、地点与终裁",
         "title_en": "The bench, the venue, and the appeal",
         "text_zh": (
-            "《高尔吉亚》524a。「两位来自亚细亚，弥诺斯与拉达曼提斯，一位来自欧罗巴，"
+            "《高尔吉亚》523e-524a。「两位来自亚细亚，弥诺斯与拉达曼提斯，一位来自欧罗巴，"
             "埃阿科斯。他们死后，将在岔路口的草地上审判，两条路由此分出，"
             "一条通往至福群岛，另一条通往塔尔塔罗斯。拉达曼提斯审来自亚细亚的，"
             "埃阿科斯审来自欧罗巴的。我要给弥诺斯首席之权，"
             "在另两位有疑难时由他终审。」"
         ),
         "text_en": (
-            "Gorgias 524a. \"Two from Asia, Minos and Rhadamanthus, and one "
+            "Gorgias 523e-524a. \"Two from Asia, Minos and Rhadamanthus, and one "
             "from Europe, Aeacus. And these, when they are dead, shall give "
             "judgment in the meadow at the parting of the ways, whence the two "
             "roads lead, one to the Islands of the Blessed, and the other to "
@@ -230,9 +230,15 @@ GORGIAS_STATUTES = [
             "are in doubt. docs/lore-verification/verify-greek.md §2.1 records "
             "that a frontend preset once ordered them 初审 → 复核 → 终审, "
             "which is a chain this sentence does not describe.",
+            "THE CITATION STRADDLES THE SECTION BREAK and used to read plain "
+            "524a. 523e ends mid-sentence at δύο μὲν ἐκ τῆς Ἀσίας, Μίνω τε "
+            "καὶ Ῥαδάμανθυν and 524a opens at ἕνα δὲ ἐκ τῆς Εὐρώπης, Αἰακόν, "
+            "so the first clause transcribed above is 523e. The division of "
+            "labour proper — who tries whom, and Minos deciding — is wholly "
+            "inside 524a.",
         ],
         "payload": {
-            "stephanus": "524a",
+            "stephanus": "523e-524a",
             "venue_realm_code": "EU_PLATO_MEADOW",
             "judges": {
                 "Rhadamanthus": "Asia",
@@ -425,6 +431,55 @@ GORGIAS_STATUTES = [
             "stephanus": "526b-c",
             "both_stamps_go_to": "GR_TARTARUS",
             "isles_realm_code": "GR_ISLES_OF_THE_BLESSED",
+        },
+    },
+    # ADDED 2026-08-27, AND THE REASON IT WAS MISSING IS THE POINT. This corpus
+    # declares 523a-526d and declared one gap in it, the closing exhortation.
+    # 526c-d was a second gap that nothing declared — and it happens to be the
+    # one passage in the myth that contradicted what actors_greek.py said about
+    # Minos ("he is not a supervisor"). An undeclared omission and a wrong
+    # assertion elsewhere were the same hole seen from two sides: the text that
+    # would have corrected the note was inside the range the corpus claimed to
+    # cover, so nobody reading either file had reason to go look.
+    {
+        "code": "GR-GRG-12",
+        "ordinal": 12,
+        "polarity": "PROCEDURE",
+        "title_zh": "金杖与监临：三判官的席位不相同",
+        "title_en": "The golden sceptre: the three seats are not alike",
+        "text_zh": (
+            "《高尔吉亚》526c-d。「埃阿科斯也如此行；两人都持杖而审判；"
+            "唯独弥诺斯持一根金杖，坐而监临——正如荷马笔下的奥德修斯"
+            "说他见到他那样：『手持黄金权杖，为亡者立法。』」"
+        ),
+        "text_en": (
+            "Gorgias 526c-d. \"Aeacus does the same; and they both have "
+            "sceptres, and judge; but Minos alone has a golden sceptre and is "
+            "seated looking on, as Odysseus in Homer declares that he saw "
+            "him: 'Holding a sceptre of gold, and giving laws to the dead.'\""
+        ),
+        "notes": [
+            NOT_AN_OFFENCE_NOTE,
+            NOT_A_ROUTING_INPUT_NOTE,
+            "THIS DOES NOT PROMOTE MINOS TO A THIRD INSTANCE. ἐπισκοπῶν "
+            "κάθηται — Lamb has \"sits as supervisor\" — gives him a seat "
+            "over the court, not a docket in it; the only decision the myth "
+            "assigns him is still the tie-break of GR-GRG-06. The two facts "
+            "sit together: he presides and he decides only when asked. "
+            "actors_greek.py used to deny the first in order to protect the "
+            "second, which was not necessary and was not true.",
+            "The sentence straddles the section break — ἐπισκοπῶν κάθηται, "
+            "μόνος ἔχων χρυσοῦν ends 526c and σκῆπτρον opens 526d — so the "
+            "citation is 526c-d and not either alone.",
+            "Homer's line is quoted BY Plato and is not a separate authority "
+            "here: Od. 11.569, θεμιστεύοντα νέκυσσιν. Homer's Minos is a "
+            "different office and is deliberately not seeded; see the note on "
+            "the Minos row in actors_greek.py.",
+        ],
+        "payload": {
+            "stephanus": "526c-d",
+            "applies_to_the_bench": True,
+            "presiding_judge": "Minos",
         },
     },
 ]

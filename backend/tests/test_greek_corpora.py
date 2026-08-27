@@ -20,7 +20,7 @@ distrust:
      the two under one enum value, would look like housekeeping and would
      assert a terminal sentence AND a return.
 
-  2. THE POLARITY DISTRIBUTION. Twenty of twenty-two articles are PROCEDURE
+  2. THE POLARITY DISTRIBUTION. 21 of 23 articles are PROCEDURE
      because neither myth contains a code of offences. Re-filing procedural
      rules as OFFENCE is the single most likely "improvement" here — it makes
      the corpus look like the other four — and it is exactly the HELL_LAW
@@ -76,7 +76,7 @@ def test_both_corpora_actually_seeded(seeded):
     civilization key mistyped in CIVILIZATION_STATUTES, a seeder that silently
     skipped GREEK — each leaves the rest of this file green.
     """
-    assert _greek(StatuteCorpus.GORGIAS).count() == 11
+    assert _greek(StatuteCorpus.GORGIAS).count() == 12
     assert _greek(StatuteCorpus.REPUBLIC_ER).count() == 11
 
 
@@ -93,7 +93,7 @@ def test_the_codes_are_stable_and_mnemonic(seeded):
     that cited an article — silently, because the prose would still read
     correctly. Written out rather than generated for that reason."""
     assert list(_greek(StatuteCorpus.GORGIAS).values_list("code", flat=True)) == [
-        f"GR-GRG-{index:02d}" for index in range(1, 12)
+        f"GR-GRG-{index:02d}" for index in range(1, 13)
     ]
     assert list(_greek(StatuteCorpus.REPUBLIC_ER).values_list("code", flat=True)) == [
         f"GR-ER-{index:02d}" for index in range(1, 12)
@@ -266,7 +266,7 @@ def test_exactly_one_greek_article_is_an_offence_and_exactly_one_a_merit(seeded)
         census[row.polarity] = census.get(row.polarity, 0) + 1
 
     assert census == {
-        StatutePolarity.PROCEDURE: 20,
+        StatutePolarity.PROCEDURE: 21,
         StatutePolarity.OFFENCE: 1,
         StatutePolarity.MERIT: 1,
     }, census
@@ -356,7 +356,7 @@ def test_the_greek_router_gives_the_same_answer_with_no_statutes_at_all(seeded):
     ``statutes_inferno.py`` says in its docstring that it routes nothing, and
     then `_deepest_cited_circle` made ``payload["circle"]`` a routing input.
     The docstring did not notice. This does: every verdict is routed twice,
-    once with all 22 Greek articles present and once with the statute table
+    once with all 23 Greek articles present and once with the statute table
     emptied, and the two must agree.
 
     If a future change makes a Greek article route something, this fails and
@@ -374,7 +374,7 @@ def test_the_greek_router_gives_the_same_answer_with_no_statutes_at_all(seeded):
 
     assert Statute.all_objects.filter(
         corpus__in=[StatuteCorpus.GORGIAS, StatuteCorpus.REPUBLIC_ER]
-    ).count() == 22
+    ).count() == 23
     with_statutes = route_all()
 
     Statute.all_objects.all().delete()

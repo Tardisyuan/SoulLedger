@@ -236,7 +236,13 @@ EGYPTIAN_ACTOR_ALIASES = {
 # home town (that is what the text says, so the field is empty, not guessed),
 # #32's clause is partly unreadable in the scan, #37's name reading is Budge's
 # own query, #38 and #39 carry Budge's own question marks on the place, and
-# #21/#22/#23 are the three places where the second witness disagrees. This
+# #21, #22, #38, #39 and #42 are the five places where the second witness
+# disagrees. This line used to read "#21/#22/#23 are the three places", which
+# was wrong twice: #23 is not a disagreement (see its own note — Budge's 'Urit'
+# and UCL's 'the shrine' are the same wryt transliterated and translated), and
+# #42 is one that nothing recorded. The undercount survived because the summary
+# and the rows it summarizes were never added up against each other: #38's own
+# note already said "one of the two slots", which does not fit a total of three. This
 # table replaced a 33-name list of major deities (Shu, Geb, Nut, Hathor, the
 # four sons of Horus...) that was assembled from a "nine great judges" sentence
 # in an encyclopedia article and was not a roster of assessors at all. That
@@ -339,8 +345,12 @@ EGYPTIAN_ASSESSORS = [
                "query is kept."]},
     {"index": 23, "name": "Shet-kheru", "meaning": "who orderest speech",
      "home_place": "Urit", "denies": "being a man of anger",
-     "notes": ["Home place differs between witnesses: Budge/Nebseni 'Urit' vs "
-               "UCL/Maiherperi 'the shrine'."]},
+     "notes": ["NOT a witness disagreement, though this note used to say it "
+               "was. Maiherperi has i.sd-xrw pr m wryt and Budge's 'Urit' is "
+               "his own romanization of that same wryt; UCL's 'the shrine' is "
+               "Quirke translating it rather than transliterating it. The two "
+               "witnesses agree here — what differed was transcription against "
+               "translation."]},
     {"index": 24, "name": "Nekhen", "meaning": "the Child",
      "home_place": "the Lake of Heq-at (13th Lower Egyptian nome)",
      "denies": "deafness to the words of truth"},
@@ -401,5 +411,10 @@ EGYPTIAN_ASSESSORS = [
      "notes": ["Budge's text gives the place as '[thy] habitation' — bracket his."]},
     {"index": 42, "name": "An-a-f", "meaning": "who bringest thine own arm",
      "home_place": "Aukert (the underworld)",
-     "denies": "contempt for the god of one's own town"},
+     "denies": "contempt for the god of one's own town",
+     "notes": ["Home place differs between witnesses: Budge/Nebseni 'Aukert' vs "
+               "UCL/Maiherperi i.inn-a.f pr m niwt, 'from the town'. The "
+               "Nebseni value is recorded; the variant is not silently "
+               "resolved. This slot went unrecorded until the 2026-08-27 "
+               "audit."]},
 ]
