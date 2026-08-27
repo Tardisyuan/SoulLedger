@@ -314,7 +314,13 @@ EGYPTIAN_ASSESSORS = [
     {"index": 14, "name": "Am-beseku", "meaning": "who dost consume the entrails",
      "home_place": "the mābet chamber", "denies": "acting deceitfully"},
     {"index": 15, "name": "Neb-Maat", "meaning": "god of Right and Truth",
-     "home_place": "the city of double Maati", "denies": "laying waste ploughed land"},
+     "home_place": "the city of double Maati", "denies": "laying waste ploughed land",
+     "notes": ["The RENDERING is uncertain and the query is Budge's: 1901 prints "
+               "'I have not laid waste the lands which have been ploughed (?)'. "
+               "His 1895 version has no query ('laid waste the ploughed lands'), "
+               "so the doubt attaches to the 1901 wording. Recorded because this "
+               "table's policy is to keep Budge's queries — #22, #37, #38 and #39 "
+               "already do; this one and #36 had been missed."]},
     {"index": 16, "name": "Thenemi", "meaning": "who goest backwards",
      "home_place": "the city of Bast (Bubastis)", "denies": "prying / making mischief",
      "notes": ["Dropped entirely by one Internet Archive scan of Budge 1904 "
@@ -357,11 +363,26 @@ EGYPTIAN_ASSESSORS = [
     {"index": 25, "name": "Ser-kheru", "meaning": "disposer of speech",
      "home_place": "the city of Unes (19th Upper Egyptian nome)",
      "denies": "stirring up strife",
-     "notes": ["Budge also prints the name as 'Ser-khera'."]},
+     "notes": ["'Budge also prints the name as Ser-khera' — WITHDRAWN as a "
+               "variant reading, kept as a record of the mistake. 'Ser-khera' "
+               "occurs exactly once, in the `godsofegyptianso00budg` scan of "
+               "1904 p. 419 — the scan #16's note already identifies as "
+               "defective — while the `cu31924092320500` scan of the SAME PAGE "
+               "reads 'Ser-kheru'. One page, two scans, one letter apart: that "
+               "is OCR noise recorded as an edition variant. Compare #23, which "
+               "had the mirror-image error (one word's transliteration and "
+               "translation recorded as two witnesses disagreeing). Page images "
+               "could not be fetched to settle it outright."]},
     {"index": 26, "name": "Basti", "meaning": "",
      "home_place": "the Secret city", "denies": "making anyone weep"},
     {"index": 27, "name": "Hra-f-ha-f", "meaning": "whose face is turned backwards",
-     "home_place": "the Dwelling", "denies": "impurity"},
+     "home_place": "the Dwelling",
+     "denies": "acts of impurity, and lying with men",
+     "notes": ["Budge 1901 gives two coordinate offences here — 'I have not "
+               "committed acts of impurity, neither have I lain with men' — and "
+               "this row used to carry only the first. #34 keeps both halves of "
+               "its pair ('deceit / wickedness'), so folding one away here was "
+               "inconsistent as well as lossy."]},
     {"index": 28, "name": "Ta-ret", "meaning": "Leg of fire",
      "home_place": "Akhekhu", "denies": "\"eating my heart\" (losing one's temper)"},
     {"index": 29, "name": "Kenemti", "meaning": "",
@@ -383,9 +404,18 @@ EGYPTIAN_ASSESSORS = [
     {"index": 34, "name": "Nefer-Tem", "meaning": "",
      "home_place": "Het-ka-Ptah (Memphis)", "denies": "deceit / wickedness"},
     {"index": 35, "name": "Tem-sep", "meaning": "",
-     "home_place": "Tattu (Busiris)", "denies": "cursing the king"},
+     "home_place": "Tattu (Busiris)", "denies": "cursing the king",
+     "notes": ["'(Busiris)' is an editorial identification, not Budge's. 1901 "
+               "says only 'from Tattu'; Budge's own 1895 footnote records that "
+               "the name served TWO cities — Busiris (9th Lower Egyptian nome) "
+               "and Mendes (16th). Busiris is the modern consensus for Djedu "
+               "and is very probably right, but the source offers two candidates "
+               "and this table picked one silently."]},
     {"index": 36, "name": "Ari-em-ab-f", "meaning": "whose heart doth labour",
-     "home_place": "the city of Tebti", "denies": "fouling water"},
+     "home_place": "the city of Tebti", "denies": "fouling water",
+     "notes": ["The RENDERING is uncertain and the query is Budge's: 1901 prints "
+               "'I have not fouled (?) water'. His 1895 version has no query "
+               "('never befouled the water'). Kept for the same reason as #15."]},
     {"index": 37, "name": "Ahi-mu", "meaning": "Ahi of the water",
      "home_place": "Nu", "denies": "raising the voice haughtily",
      "notes": ["Name reading is UNCERTAIN — Budge himself prints it as "
