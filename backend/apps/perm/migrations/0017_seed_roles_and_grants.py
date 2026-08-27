@@ -129,13 +129,41 @@ GRANTS = {
 
 
 def _invalidate_cache():
-    """迁移期间自动失效钩子被短路（见 0013 的说明），这里手动兜底。"""
+    """迁移期间自动失效钩子被短路（见 0013 的说明），这里手动兜底。
+
+    SAVEPOINT 是必需的，不是保险。`invalidate_role_permissions` 会走到
+    apps/perm/cache.py 的 `Role.objects.filter(...)` —— 那是**真实模型**，
+    而本迁移运行时 `perm_role.delete_cascade_id` 还不存在（perm/0018 才加）。
+    于是那条 SELECT 必然失败。
+
+    裸 `except Exception: pass` 在 PostgreSQL 上不足以兜住它：失败的语句会让
+    整个事务进入 aborted 状态，此后每一条语句都抛 InFailedSqlTransaction ——
+    包括 Django 自己写 django_migrations 的那条 INSERT。结果是迁移的数据全部
+    写完、然后在**记录**这一步整体回滚，而报错信息只说「current transaction
+    is aborted」，指向的位置与真正的故障毫无关系。2026-08-27 实跑 192.168.2.115
+    的库时正是这样卡住的。
+
+    cache.py 那一侧的注释早就把这个机制写清楚了，并且**特意不在那里捕获**
+    （「Let it surface」，由 test_a_database_error_is_not_swallowed 钉住）。
+    这里的 try/except 把那个修复在调用方又抵消掉了一次。
+
+    `transaction.atomic()` 在已有事务内创建 SAVEPOINT，异常时只回滚到
+    SAVEPOINT，外层事务仍然可用 —— 这样 except 才真的只是「缓存失效失败不
+    阻塞迁移」，而不是悄悄毁掉整个迁移。
+
+    SQLite 上这个 bug 不复现（失败语句不中止事务），所以全套测试对它零反应。
+    唯一的证据只能来自真的对着 PostgreSQL 跑一遍。
+    """
+    from django.db import transaction
+
     try:
-        from apps.perm.cache import invalidate_role_permissions
-        for role_name, _ in ROLES:
-            invalidate_role_permissions(role_name)
+        with transaction.atomic():
+            from apps.perm.cache import invalidate_role_permissions
+            for role_name, _ in ROLES:
+                invalidate_role_permissions(role_name)
     except Exception:
-        # 缓存不可用（如测试库没有 Redis）不应阻塞迁移本身。
+        # 缓存不可用（如测试库没有 Redis），或 schema 尚未追平 —— 都不应阻塞
+        # 迁移本身。SAVEPOINT 已经把损害限制在这个块内。
         pass
 
 
