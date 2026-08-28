@@ -25,8 +25,16 @@ Named agents coordinate via `SendMessage`, not polling or shared state.
 
 ```bash
 # Backend — matches CI pipeline exactly
-cd backend && python manage.py makemigrations --check --dry-run
-cd backend && python -m pytest --tb=short -q
+# ISOLATE BOTH BACKING SERVICES. `.env` points DATABASE_URL *and* REDIS_URL at
+# the shared box (192.168.2.115). Overriding only the database still lets the
+# suite write permission-cache keys into the real Redis — verified 2026-08-27.
+# Throwaway Redis first:
+#   redis-server --port 6399 --daemonize yes --save '' --appendonly no
+cd backend && DATABASE_URL="sqlite:///:memory:" REDIS_URL="redis://127.0.0.1:6399/0" \
+  CELERY_BROKER_URL="redis://127.0.0.1:6399/1" \
+  CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
+  python -m pytest --tb=short -q
+cd backend && DATABASE_URL="sqlite:///:memory:" python manage.py makemigrations --check --dry-run
 cd backend && ruff check .
 cd backend && pip-audit --strict --desc
 
@@ -39,6 +47,23 @@ cd frontend && npm test
 # E2E
 cd frontend && npx playwright test --project=chromium
 ```
+
+**SQLITE HIDES A WHOLE CLASS OF DEFECT, AND THE SUITE ONLY RUNS ON SQLITE.**
+Two shipped bugs surfaced the first time this code met a real PostgreSQL
+(2026-08-27), with 2665 tests green throughout:
+
+- A failed statement **aborts the transaction** on PostgreSQL and does not on
+  SQLite. So `except Exception: pass` around a query is a no-op in tests and a
+  migration-killer in production — see `apps/perm/migrations/0017`, where it
+  turned a missing column into `current transaction is aborted` reported
+  against a line that had nothing to do with the fault.
+- `varchar(n)` length is **enforced** on PostgreSQL and ignored by SQLite.
+  `Statute.source` was `CharField(500)` while `INFERNO_SOURCE` was 524
+  characters, from the day that corpus landed.
+
+Neither is testable on SQLite: an assertion added there would be one of the
+checks that can never fire. Before trusting a green suite on anything touching
+transactions, constraints, or column widths, run it against PostgreSQL.
 
 **CI/Local Differences:**
 - CI runs `python manage.py migrate` before tests (local uses existing DB)
