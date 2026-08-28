@@ -85,7 +85,7 @@ export type StatuteCorpus =
  * The first three answer "does citing this count for the soul or against it".
  * `PROCEDURE` is the Greek case and answers neither: "the judge too shall be
  * naked, that is to say, dead" (Gorg. 523e) is a rule the court is bound by
- * and a claim about no soul. Twenty of the twenty-two Greek articles are
+ * and a claim about no soul. 21 of the 23 Greek articles are
  * procedural, because neither Platonic myth contains a code of offences.
  */
 export type StatutePolarity = "OFFENCE" | "MERIT" | "DENIAL" | "PROCEDURE";

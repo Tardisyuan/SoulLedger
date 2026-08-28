@@ -104,7 +104,7 @@ export interface SigilSpec {
    * Whether this civilization's corpus names offences at all.
    *
    * `false` for GREEK alone, and it is a fact about Plato rather than about
-   * seeding: twenty of the twenty-two Greek articles are `PROCEDURE`, because
+   * seeding: 21 of the 23 Greek articles are `PROCEDURE`, because
    * neither the Gorgias myth nor the Myth of Er contains a code of offences.
    * They describe who judges, when, naked of the body, and what happens after —
    * court rules, not charges. A statute table for GREEK therefore carries one

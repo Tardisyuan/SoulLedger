@@ -5,7 +5,7 @@
  * about the component, and each one has a plausible "tidier" implementation
  * that is wrong:
  *
- *   1. GREECE HAS ONE COLUMN FEWER. Twenty of the twenty-two Greek articles are
+ *   1. GREECE HAS ONE COLUMN FEWER. 21 of the 23 Greek articles are
  *      PROCEDURE, because neither the Gorgias myth nor the Myth of Er contains
  *      a code of offences. A table that keeps the column and leaves it blank
  *      asserts that Plato has offences and this deployment failed to transcribe

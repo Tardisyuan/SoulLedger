@@ -24,7 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * The corpus browser — 170 transcribed articles, previously reachable from
+ * The corpus browser — 172 transcribed articles, previously reachable from
  * nowhere.
  *
  * They existed before this page did: `judgmentApi.statutes` has been wired
@@ -373,7 +373,7 @@ function CorpusCard({ group }: { group: CorpusGroup }) {
               {t("judgment.corpus.col_sigil")}
             </th>
             {/* ONE COLUMN FEWER FOR GREECE, and not a column left blank.
-                Twenty of the twenty-two Greek articles are PROCEDURE because
+                21 of the 23 Greek articles are PROCEDURE because
                 neither Platonic myth contains a code of offences: the Gorgias
                 and the Myth of Er say who judges, when, stripped of the body,
                 and what follows — court rules, not charges. A blank 罪名 column

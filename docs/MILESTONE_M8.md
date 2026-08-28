@@ -1,5 +1,24 @@
 # M8 — DDD Refactoring Milestones
 
+> ### 后续 — 2026-08-28
+>
+> **编号冲突**：本文的 M8 是「DDD Refactoring」，而 [`docs/MILESTONES.md`](MILESTONES.md)
+> 的 M8 是「Release Candidate Closure」；本文的 M8-2/M8-3/M8-4 对应的是那份文档里 M7 的
+> P2/P3/P4。下面的复选框从未回勾，逐条核实（2026-08-28）：
+>
+> - **M8-1 统一角色系统 — 未做。** `User.role` 仍是 CharField；另加了 `rbac_role` 外键作桥，
+>   `apps/authentication/models.py:40` 的注释写着「Once fully migrated, `role` CharField can be
+>   deprecated」——迁移没有完成。
+> - **M8-2 Karma BC 归位 — 已决定不做（2026-08-23）。** 理由与代价记在
+>   `backend/apps/ledger/models.py` 的模块 docstring 里，并由 `apps/ledger/test_models.py` 钉住。
+>   `SoulRecord` 仍定义在 `apps/souls/record_models.py`，`apps/ledger/models.py` 原样再导出。
+> - **M8-3 DispatchRecord 状态机 — 已做。** `can_transition_to()` / `transition_to()` 在
+>   `apps/dispatch/models.py:113,116`。
+> - **M8-4 Domain Events — 未逐条复核。**
+>
+> 「成功标准」里的测试基线（383 backend + 126 frontend）也已过期：后端 2026-08-28 实跑
+> **2,694 passed, 9 skipped**（无排除；2,672 是排除 websocket 测试时的数字，那个排除已作废）。
+
 **目标**: DDD 成熟度从 6.5 → 8.0
 **前置条件**: M7 全部完成 (已满足)
 **总工作量**: 4.5-5.5 天

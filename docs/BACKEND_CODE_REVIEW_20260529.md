@@ -1,5 +1,14 @@
 # 后端代码验证报告
 
+> ### 后续 — 2026-08-28
+>
+> 抽查了「七、待处理问题汇总」里的三条，均已修复：P0 `DispatchProposeSerializer` 现在同时接受
+> `source_tenant`/`source_tenant_code`（`apps/dispatch/serializers.py:117`）；P1
+> `AuditLogViewSet.permission_codename` 已是 `"audit"`；P1 重复路由只剩
+> `config/urls.py:43` 一条。其余各条**未逐条复核**，没有注记不等于已修。
+>
+> 另：文中的 `apps/karma/*` 路径已不存在，该 app 在 2026-08 更名 `ledger`。
+
 **日期**: 2026-05-29
 **验证范围**: 后端代码审查 (Django + DRF)
 **验证模块**: Model定义、权限系统、信号、URL路由、Serializer一致性、Service层、API对称性、Schema文档

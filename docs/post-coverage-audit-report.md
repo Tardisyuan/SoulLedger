@@ -1,5 +1,20 @@
 # Post-Coverage Stabilization Audit Report
 
+
+> ### Follow-up — 2026-08-28
+>
+> Two things below no longer describe the repository:
+>
+> - The **70.24%** figure is superseded — see [`docs/coverage-roadmap.md`](coverage-roadmap.md).
+>   The per-app table also predates the `karma` → `ledger` rename.
+> - Section C's root cause (`TenantManager.get_queryset()` applying a contextvar
+>   `WHERE tenant=…` filter) **no longer holds**: `apps/tenants/managers.py` was changed so the
+>   manager applies no implicit tenant filtering at all; filtering is done by
+>   `DataScopeViewSetMixin` and service-layer code. The `_base_manager` workarounds in section B
+>   were introduced against the old behaviour.
+>
+> Kept as the record of Task #291. The current state is `git log`.
+
 **Task**: #291 — Increase Backend Test Coverage from 23% to 40%
 **Date**: 2026-06-09
 **Status**: Complete
