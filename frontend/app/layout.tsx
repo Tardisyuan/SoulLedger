@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 // CJK 两支:包自带的 index.css 各含 101 条 @font-face,每条带自己的 unicode-range,
 // 浏览器只取页面真正用到的分片。必须在 globals.css 之前 import,让 Tailwind 的
@@ -16,6 +16,23 @@ import { WebSocketProvider } from "@/src/contexts/WebSocketContext";
 import { SocialEventBusProvider } from "@/hooks/useSocialEventBus";
 import { QueryProvider } from "@/src/components/providers/QueryProvider";
 import { AppLayoutWrapper } from "@/src/components/layout/AppLayoutWrapper";
+
+/** 没有这个,真机上整个应用按约 980px 的默认布局视口渲染,再整体缩小塞进屏幕
+ * —— 字号全部缩水、点击目标低于可用下限,而在桌面浏览器里一切正常,所以它一直
+ * 没被发现。
+ *
+ * 实测(2026-08-28,Playwright `devices["Pixel 5"]`,设备宽 393):加这段之前
+ * `window.innerWidth` 报 **738**;Pixel 5 的 393 与它对不上,差的就是这一段。
+ * mobile-chrome 上那三条长期失败的 E2E 也源于此 —— 布局视口与设备视口不一致时,
+ * 点击坐标映射会和实际绘制位置错开。
+ *
+ * `initialScale: 1` 与 `width: "device-width"` 必须成对:只给宽度,iOS Safari 在
+ * 横竖屏切换后仍会自己缩放。刻意**不**设 `maximumScale` 或 `userScalable: false`
+ * —— 禁用缩放是无障碍倒退,而这份配置本来就是为修无障碍缺陷而加的。 */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "SoulLedger",
