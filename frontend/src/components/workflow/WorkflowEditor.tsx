@@ -351,10 +351,19 @@ export default function WorkflowEditor({
 
   return (
     <div className="flex flex-col h-full bg-[hsl(var(--color-surface-2))] rounded-lg">
-      {/* Toolbar */}
-      <div className="flex items-center gap-3 p-3 border-b border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))]">
+      {/* Toolbar
+       *
+       * `overflow-x-auto` + `min-w-0`,与 `ui/PageShell.tsx` 的筛选栏同一个理由:
+       * 这是一条不换行的 flex,而它装着名称输入、案件类型下拉、文明下拉、优先级
+       * 下拉和两个按钮。窄屏放不下时,撑宽的不是工具栏而是**整个文档**,所有
+       * `fixed inset-0` 的遮罩与弹窗都会跟着摊开,于是按钮「可见、可用」却点不动。
+       *
+       * 具体到这里:mobile-chrome 上「保存模板」被案件类型下拉挡住,E2E 稳定超时。
+       * `min-w-0` 是必需的 —— flex 子项默认 `min-width:auto`,不加它 `flex-1`
+       * 不会收缩,`overflow-x-auto` 也就永远没有可滚动的余量。 */}
+      <div className="flex items-center gap-3 p-3 border-b border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] overflow-x-auto">
         {/* Template info inputs */}
-        <div className="flex-1 flex items-center gap-3">
+        <div className="flex-1 min-w-0 flex items-center gap-3">
           <input
             type="text"
             value={templateName}
