@@ -1,11 +1,21 @@
 "use client";
 
+import {
+  DEFAULT_LOCALE,
+  HTML_LANG as HTML_LANG_MAP,
+  type Locale,
+  LOCALE_COOKIE as LOCALE_COOKIE_NAME,
+} from "@/src/config/locale";
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import zhMessages from "../../messages/zh-Hans.json";
 import enMessages from "../../messages/en.json";
 import egyMessages from "../../messages/egy.json";
 
-export type Locale = "zh-Hans" | "en" | "egy";
+// Locale 的类型与常量在 src/config/locale.ts —— 那个模块不带 "use client",
+// 所以服务端的 app/layout.tsx 也能 import。这里 re-export 是为了不打断既有引用。
+export type { Locale } from "@/src/config/locale";
+export { HTML_LANG, isLocale, LOCALE_COOKIE } from "@/src/config/locale";
 
 const messages: Record<Locale, Record<string, unknown>> = {
   "zh-Hans": zhMessages,
@@ -25,8 +35,7 @@ export const LOCALE_LABELS: Record<Locale, string> = {
   egy: "Kemet",
 };
 
-const LOCALE_COOKIE = "soulledger-locale";
-const DEFAULT_LOCALE: Locale = "zh-Hans";
+
 
 // `egy` is an internal-only pseudo-locale used for the Egyptian civilization
 // theme copy. There is no "ancient Egyptian" ICU locale, so number and date
@@ -118,24 +127,40 @@ const I18nContext = createContext<I18nContextType>({
   formatNumber: (value, options) => formatNumberWith(DEFAULT_LOCALE, value, options),
 });
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
-  const [hydrated, setHydrated] = useState(false);
+export function I18nProvider({
+  children,
+  initialLocale,
+}: {
+  children: React.ReactNode;
+  /** 服务端从 cookie 读到的 locale。
+   *
+   * 有了它,首帧的 `<html lang>` 与首帧的文案出自同一个值。此前服务端固定渲染
+   * `zh-Hans`、客户端 mount 后再从 cookie 纠正,于是一个 en 用户的首帧是中文,
+   * 而 `<html lang>` 永远停在 zh-Hans —— 文案会自愈,lang 不会。 */
+  initialLocale?: Locale;
+}) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? DEFAULT_LOCALE);
+  const [hydrated, setHydrated] = useState(initialLocale !== undefined);
 
   useEffect(() => {
+    // 服务端已经给了值就不必再读 cookie —— 两者同源,重读只会多一次渲染。
+    if (initialLocale !== undefined) return;
     const match = document.cookie
       .split("; ")
-      .find((row) => row.startsWith(`${LOCALE_COOKIE}=`));
+      .find((row) => row.startsWith(`${LOCALE_COOKIE_NAME}=`));
     const saved = match?.split("=")[1] as Locale;
     if (saved && messages[saved]) {
       setLocaleState(saved);
     }
     setHydrated(true);
-  }, []);
+  }, [initialLocale]);
 
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);
-    document.cookie = `${LOCALE_COOKIE}=${newLocale};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
+    document.cookie = `${LOCALE_COOKIE_NAME}=${newLocale};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
+    // 切语言不刷新页面(AGENTS.md 明确要求),所以服务端渲染的 `lang` 不会重算 ——
+    // 这里必须自己同步,否则切到 en 之后 `<html lang>` 仍是 zh-Hans。
+    document.documentElement.lang = HTML_LANG_MAP[newLocale];
   }, []);
 
   const t = useCallback(

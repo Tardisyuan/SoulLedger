@@ -80,8 +80,10 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # 只有这一个 request-context 中间件。`apps.core.middleware` 曾经并排挂在下面
+    # 一行,做的事是这一个的严格子集(它的 __call__ 少一次 set_current_request,
+    # process_view 完全相同且同样从不触发),2026-08-28 整个模块删除。
     "apps.core.request_local.RequestContextMiddleware",
-    "apps.core.middleware.PermissionMiddleware",
     "apps.tenants.middleware.TenantMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",

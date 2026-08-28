@@ -1,9 +1,7 @@
 """
-Tests for CodenameViewSetMixin + PermissionMiddleware integration.
+Tests for CodenameViewSetMixin and the permission checker it feeds.
 """
-from unittest.mock import MagicMock, patch
-
-from django.test import RequestFactory, TestCase
+from django.test import TestCase
 
 from apps.core.viewsets import CodenameViewSetMixin
 
@@ -66,59 +64,12 @@ class TestCodenameViewSetMixin(TestCase):
         self.assertEqual(vs.get_required_permissions(), [])
 
 
-class TestPermissionMiddlewareFallback(TestCase):
-    """Integration test: PermissionMiddleware calls get_required_permissions() when _required_permissions is absent."""
-
-    def setUp(self):
-        self.factory = RequestFactory()
-
-    def test_middleware_calls_get_required_permissions(self):
-        """Middleware should call view.get_required_permissions() when _required_permissions is not set."""
-        from apps.core.middleware import PermissionMiddleware
-
-        # Mock view with get_required_permissions but no _required_permissions
-        mock_view = MagicMock(spec=CodenameViewSetMixin)
-        mock_view._required_permissions = None
-        mock_view.get_required_permissions.return_value = ["soul.read"]
-
-        # Mock user with role
-        mock_user = MagicMock()
-        mock_user.is_authenticated = True
-        mock_user.role = "JUDGE"
-
-        request = self.factory.get("/api/v1/souls/")
-        request.user = mock_user
-        request.view = mock_view
-
-        middleware = PermissionMiddleware(lambda r: MagicMock(status_code=200))
-
-        with patch.object(middleware, '_has_permission', return_value=True):
-            middleware(request)
-
-        # get_required_permissions should have been called
-        mock_view.get_required_permissions.assert_called_once()
-
-    def test_middleware_skips_when_both_absent(self):
-        """Middleware passes through when neither _required_permissions nor get_required_permissions exist."""
-        from apps.core.middleware import PermissionMiddleware
-
-        mock_view = MagicMock()
-        mock_view._required_permissions = None
-        # No get_required_permissions method
-        del mock_view.get_required_permissions
-
-        mock_user = MagicMock()
-        mock_user.is_authenticated = True
-        mock_user.role = "JUDGE"
-
-        request = self.factory.get("/api/v1/souls/")
-        request.user = mock_user
-        request.view = mock_view
-
-        mock_response = MagicMock(status_code=200)
-        middleware = PermissionMiddleware(lambda r: mock_response)
-        response = middleware(request)
-        self.assertEqual(response.status_code, 200)
+# TestPermissionMiddlewareFallback 曾经在这里,2026-08-28 删除。
+# 它做 `request.view = mock_view` 之后断言中间件读到了 `get_required_permissions()`。
+# Django 从不设置 `request.view`(实测:真实认证请求里 `hasattr(request, "view")`
+# 每次都是 False),所以那两个测试亲手制造了生产环境永远不存在的前提,然后证明了
+# 前提之后的分支可以工作。分支本身已随 `apps/core/middleware.py` 的改写一起删除。
+# 现在钉住事实本身的是 tests/test_request_context_middleware.py。
 
 
 class TestSoulViewSetCodename(TestCase):
@@ -336,11 +287,20 @@ class TestUserViewSetCodename(TestCase):
 
 
 class TestHasPermissionFallback(TestCase):
-    """Verify _has_permission fallback to ROLE_PERMISSIONS dict when codename not in DB."""
+    """DB 优先于 ROLE_PERMISSIONS 字典回退。
 
-    def setUp(self):
-        from apps.core.middleware import PermissionMiddleware
-        self.middleware = PermissionMiddleware(lambda r: MagicMock(status_code=200))
+    这些断言原先走 `PermissionMiddleware._has_permission`,而那个方法只是把参数
+    包成一个假 user 转发给 `apps.perm.checker.check_permission`。中间件那条路径
+    2026-08-28 删除(它从来不可达),断言直接指向真正做判断的那个函数——测的是
+    同一个行为,少了一层从未被生产代码调用过的转发。
+    """
+
+    @staticmethod
+    def _granted(role, codename):
+        from types import SimpleNamespace
+
+        from apps.perm.checker import check_permission
+        return check_permission(SimpleNamespace(is_authenticated=True, role=role), codename)
 
     def test_fallback_to_dict_when_permission_not_in_db(self):
         """When Permission object doesn't exist, fall back to ROLE_PERMISSIONS dict."""
@@ -349,7 +309,7 @@ class TestHasPermissionFallback(TestCase):
         Permission.objects.filter(codename="nonexistent.action").delete()
 
         # No role has "nonexistent.action" in ROLE_PERMISSIONS
-        result = self.middleware._has_permission("JUDGE", "nonexistent.action")
+        result = self._granted("JUDGE", "nonexistent.action")
         self.assertFalse(result)
 
     def test_granted_when_in_dict_and_not_in_db(self):
@@ -359,7 +319,7 @@ class TestHasPermissionFallback(TestCase):
         Permission.objects.filter(codename="soul.read").delete()
 
         # ADMIN has "soul.read" in ROLE_PERMISSIONS
-        result = self.middleware._has_permission("ADMIN", "soul.read")
+        result = self._granted("ADMIN", "soul.read")
         self.assertTrue(result)
 
     def test_db_takes_priority_over_dict(self):
@@ -376,29 +336,14 @@ class TestHasPermissionFallback(TestCase):
         RolePermission.objects.get_or_create(role=role, permission=perm)
 
         # Even if ROLE_PERMISSIONS dict doesn't have it for this role, DB grants it
-        result = self.middleware._has_permission("JUDGE", "soul.read")
+        result = self._granted("JUDGE", "soul.read")
         self.assertTrue(result)
 
-    def test_admin_bypass_in_middleware_call(self):
-        """ADMIN role bypasses all permission checks in __call__."""
-        from apps.core.middleware import PermissionMiddleware
-
-        mock_user = MagicMock()
-        mock_user.is_authenticated = True
-        mock_user.role = "ADMIN"
-
-        factory = RequestFactory()
-        request = factory.get("/api/v1/souls/")
-        request.user = mock_user
-        request.view = MagicMock()
-        request.view._required_permissions = ["nonexistent.perm"]
-        request.view.get_required_permissions = MagicMock(return_value=["nonexistent.perm"])
-
-        mock_response = MagicMock(status_code=200)
-        middleware = PermissionMiddleware(lambda r: mock_response)
-        response = middleware(request)
-        # ADMIN bypasses — response should be 200, not 403
-        self.assertEqual(response.status_code, 200)
+    # test_admin_bypass_in_middleware_call 曾经在这里,2026-08-28 删除。
+    # 它验证的是 `PermissionMiddleware.__call__` 里的 ADMIN 短路,而那段代码在
+    # `request.view` 之后,永远不可达;测试同样是自己设 `request.view` 才让它跑起来。
+    # ADMIN 的真实短路在 `apps/perm/checker.py::check_permission` 里,由该模块自己的
+    # 测试覆盖。
 
     def test_dict_fallback_for_unseeded_codename(self):
         """Codename generated by CodenameViewSetMixin but not seeded in DB falls back to dict."""
@@ -406,11 +351,11 @@ class TestHasPermissionFallback(TestCase):
         # "soul.create" is in ROLE_PERMISSIONS for ADMIN
         Permission.objects.filter(codename="soul.create").delete()
 
-        result = self.middleware._has_permission("ADMIN", "soul.create")
+        result = self._granted("ADMIN", "soul.create")
         self.assertTrue(result)
 
         # "soul.create" is NOT in ROLE_PERMISSIONS for VIEWER
-        result = self.middleware._has_permission("VIEWER", "soul.create")
+        result = self._granted("VIEWER", "soul.create")
         self.assertFalse(result)
 
 
