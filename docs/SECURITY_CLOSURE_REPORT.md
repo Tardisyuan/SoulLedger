@@ -1,5 +1,17 @@
 # Security Closure Report
 
+
+> ### Follow-up — 2026-08-28
+>
+> The "Tenant bypass for non-ADMIN ✅ Clean — No bypass paths found" row was **overturned on
+> 2026-08-07** by the multi-tenant audit in [`docs/MILESTONE_M15.md`](MILESTONE_M15.md), which
+> found 4 CRITICAL, 4 HIGH and 15 MEDIUM tenant-isolation findings in this same codebase. This
+> closure only looked at DRF ViewSets and `AllowAny`; the gaps were in the **service layer and
+> Celery tasks**, which it never examined — including `death_sync.cleanup_old_requests`, a
+> physical `DELETE` with no tenant boundary.
+>
+> Kept as the record of what was checked on 2026-05-30. The current state is `git log`.
+
 **Date**: 2026-05-30
 **Status**: ✅ All P0 Security Items Resolved
 

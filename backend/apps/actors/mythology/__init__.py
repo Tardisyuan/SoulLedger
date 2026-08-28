@@ -10,7 +10,7 @@ in one of the sibling modules:
     actors_greek.py       Plato's three judges, Hades, and Plato's Minos
     actors_egyptian.py    the nine principals of the Hall, and the bench of 42
     statutes_chinese.py   GONGGUOGE — provenance, gates, row builder
-    gongguoge_entries.py  GONGGUOGE — the 73 transcribed segments
+    gongguoge_entries.py  GONGGUOGE — the 74 transcribed segments
     statutes_european.py  DEADLY_SIN — the seven terraces
     statutes_inferno.py   INFERNO — provenance, the wall of Dis, row builder
     statutes_inferno_entries.py
@@ -35,7 +35,7 @@ in. Nothing they say about the data changed; only the addresses did. Every
 table named in one of them is importable from this package (see __all__), and
 the ones the note below points at resolve like this:
 
-    "here, below, as CHINESE_STATUTES"   -> statutes_chinese.py (73 rows),
+    "here, below, as CHINESE_STATUTES"   -> statutes_chinese.py (74 rows),
                                             gongguoge_entries.py (the text)
     "the block above CHINESE_STATUTES"   -> the module docstring and header
                                             comment of statutes_chinese.py
@@ -86,7 +86,7 @@ FOUR CORPORA ARE SEEDED, AND THE LARGEST ONE IS NOT WRITTEN IN THIS FILE.
               that joining them produces a chart existing nowhere in Dante.
               No article in either cites the other's coordinate.
 
-  GREEK     — here, as GORGIAS_STATUTES: 11 articles from Plato's Gorgias
+  GREEK     — here, as GORGIAS_STATUTES: 12 articles from Plato's Gorgias
               523a-526d, and separately as REPUBLIC_ER_STATUTES: 11 from
               Republic X 614b-621b. WHY A SECOND GREEK CORPUS AND NOT MORE
               ARTICLES IN THE FIRST. The same reason Europe has two. Both are
@@ -100,17 +100,26 @@ FOUR CORPORA ARE SEEDED, AND THE LARGEST ONE IS NOT WRITTEN IN THIS FILE.
               either cites the other.
 
               THE SOURCE ITSELF ENUMERATES — that is the property the four
-              older corpora share and neither Platonic myth has. 73 numbered
+              older corpora share and neither Platonic myth has. 74 numbered
               articles, 42 assessors, 7 terraces, 9 circles: each inherits a
               series from its document. Plato's myths inherit none, so a Greek
               article is a RULE OF THE COURT rather than an offence — the
               reform, the bench, the venue, the rule of evidence, the purpose
               of punishment, the rate and the unit — and carries the polarity
-              PROCEDURE, added with these two. 21 of the 23 do.
-              Exactly one is an OFFENCE: Republic X 615b, which names three
+              PROCEDURE, added with these two. 21 of the 23 do, and the
+              other two are both from the Er myth — 21 + 1 + 1, not 21 + 1.
+
+              GR-ER-04 is the OFFENCE: Republic X 615b, which names three
               wrongs after "for example" and closes with "any other evil
               behaviour". That catch-all is a refusal to enumerate, not a lost
               list, and filling it is precisely how HELL_LAW was written.
+
+              GR-ER-05 is the MERIT, and this paragraph used to omit it while
+              saying "exactly one" — 21 + 1 leaves a row unaccounted for, which
+              is the same arithmetic failure the 175-vs-170 corpus count had.
+              615b credits good deeds on the same tenfold scale it debits bad
+              ones, so the Er myth is the one Greek text that scores in both
+              directions.
 
               GREEK'S EMPTINESS WAS THE ONLY UNDECLARED ONE. HELL_LAW is empty
               and says so. GREEK had no corpus at all, hence no entry, and the

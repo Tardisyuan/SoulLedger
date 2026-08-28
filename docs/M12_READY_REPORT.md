@@ -1,5 +1,16 @@
 # SoulLedger M12 Architecture Readiness Review Report
 
+
+> ### Follow-up — 2026-08-28
+>
+> The CONDITIONAL GO's five blockers were all cleared and M12 shipped on 2026-06-06. Verified in
+> the tree today: `channels`/`daphne`/`channels-redis` in `backend/requirements.txt`,
+> `backend/config/asgi.py`, `backend/apps/notifications/consumers.py`, and the WebSocket
+> `Upgrade` proxy headers in `infrastructure/nginx.conf`.
+>
+> The scores and the technical-debt matrix are a 2026-06-04 snapshot and are not the current
+> state — see `git log`.
+
 **Date:** 2026-06-04
 **Scope:** Full M1-M11 system audit for M12 WebSocket readiness
 **Method:** 6-Agent parallel review + Cross-Agent verification

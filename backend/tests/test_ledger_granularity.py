@@ -28,7 +28,7 @@ and a red run here means the granularity question moved — in the ledger, in th
 model, or in the text.
 
 WHAT NOT TO DO WHEN SOMEBODY COMES TO CLOSE THIS. Do not backfill a granularity
-tag onto the 73 transcribed segments. 「一次」 does not appear in any of them
+tag onto the 74 transcribed segments. 「一次」 does not appear in any of them
 (asserted below), and the one article that speaks about accumulation at all
 grants it full value. docs/lore-verification/README.md §1 is about this exact
 material — "Do not complete these lists… the one repair that is certainly

@@ -318,3 +318,39 @@
 转录英文用 Jowett（Gutenberg 公版），Stephanus 分节用 Perseus/Loeb 定位。
 Gorgias 侧同样按此法逐节核对（Lamb 1925）。详见
 `backend/apps/actors/mythology/statutes_gorgias.py` 与 `statutes_republic.py`。
+
+---
+
+## 附录二（2026-08-28）：GORGIAS 新增一条、一句撤回的伪造引文，与两处出处更正
+
+同附录一：本节只追加，不改上面任何一行。以下是 2026-08-27 考据审计（commit `6ec90e5`）
+落在希腊侧的变化，落点 `backend/apps/actors/mythology/actors_greek.py`、
+`statutes_gorgias_entries.py` 与 `__init__.py` 的 `CORPUS_PROVENANCE`：
+
+- **新增 GR-GRG-12（《高尔吉亚》526c-d），GORGIAS 11 → 12 条**，两套希腊 corpus 现共
+  23 条——附录一末尾的「共 22 条」写的是 2026-08-25 落库时的数目。526c-d（埃阿科斯与
+  拉达曼提斯持杖而判，弥诺斯独持金杖、ἐπισκοπῶν κάθηται「坐而监临」，引 Od. 11.569）
+  落在 GORGIAS 自称覆盖的 523a-526d 之内，却此前既未转录、也未申报缺口：known_gap
+  原写「526d-527e」，等于把一个未申报的缺口藏进已申报的范围。现 known_gap 改为准确
+  边界（自 526d 的 ἐγὼ μὲν οὖν 起，至 527e），526c-d 转录为 GR-GRG-12。
+- **一句伪造的希腊文引文被撤回。** `actors_greek.py` 曾把弥诺斯的授权引作
+  τὴν δίκην τὴν τελευταίαν κρινεῖν——整部《高尔吉亚》没有 τελευταίαν 一词。语义方向
+  对、引文是编的；现注释改引 524a 原文（πρεσβεῖα … ἐπιδιακρίνειν, ἐὰν ἀπορῆτόν τι
+  τὼ ἑτέρω）与 526c 的 ἐπισκοπῶν κάθηται，并把这次失败本身记录在注里。
+- **§2.1「出处确认：524a（不是 523e；523e 是宙斯宣布改革的铺垫，具体分工在 524a）」
+  需修正一半**：按 Perseus canonical 文本，判官名单整句**起于 523e**（……δύο μὲν ἐκ
+  τῆς Ἀσίας, Μίνω τε καὶ Ῥαδάμανθυν 收在 523e，524a 接 ἕνα δὲ ἐκ τῆς Εὐρώπης,
+  Αἰακόν）——任命始于 523e，「谁审谁」的分工才整句在 524a。GR-GRG-06 的 stephanus
+  引域已相应改注。
+- **§2.1 与 §7 第 17 条转引英文维基的「持权杖与冥府钥匙引 Pindar *Isthm.* 7.47」不成立**：
+  《地峡颂》该处既无 Aeacus 也无钥匙（对全部地峡颂 grep 无一处）。钥匙的出处是
+  Apollodorus 3.12.6（τὰς κλεῖς τοῦ Ἅιδου φυλάττει）；品达给 Aeacus 的是为诸神断
+  争讼（Isthmian 8.23-24）。`actors_greek.py` 的 Aeacus 行现将两者分开记。
+
+另一处措辞更正（commit `7b6d5d2`）：statutes_gorgias.py / statutes_republic.py 曾称分节
+定位用「Perseus canonical XML 的 Loeb 本」——实测 canonical 的**希腊文**（perseus-grc2）
+是 Burnet 牛津本（1903/1905），Loeb 是旁边的英译（perseus-eng2：Lamb 1925 / Shorey
+1935-37）。两份文件的 `unit="section"` milestone 序列逐项相同（Gorgias 404/404、
+Republic 1355/1355），23 处 stephanus 引用的节号不受影响；改的是归属措辞，不是引用。
+附录一引 `tlg030.perseus-eng2（Loeb, Paul Shorey）`的那条不受此影响——它引的本来就是
+eng2。

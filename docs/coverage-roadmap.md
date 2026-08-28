@@ -1,17 +1,45 @@
 # Backend Test Coverage Roadmap
 
-## Current State (Updated: 2026-08-13)
+## Current State (Updated: 2026-08-28)
 
 | Metric | Value |
 |--------|-------|
-| **Coverage** | **87.04%** |
+| **Coverage** | **91.43%** |
 | CI threshold (`--cov-fail-under` in `pytest.ini`) | 80% |
 | Status | Threshold met ✅ |
-| Suite | 1,949 passed, 16 skipped, 6 xpassed |
+| Suite | 2,694 passed, 9 skipped, 0 failed |
 
-Measured by the full backend suite from the repo root:
-`python -m pytest` (config in `pytest.ini`: `--cov=apps --cov-branch`). Individual runs land
-between 86.3% and 87.0% depending on working-tree state.
+Measured 2026-08-28, exit code 0, **nothing excluded**:
+
+```
+redis-server --port 6399 --daemonize yes --save '' --appendonly no
+cd backend && DATABASE_URL="sqlite:///:memory:" REDIS_URL="redis://127.0.0.1:6399/0" \
+  CELERY_BROKER_URL="redis://127.0.0.1:6399/1" \
+  CELERY_RESULT_BACKEND="redis://127.0.0.1:6399/2" \
+  python -m pytest
+```
+
+THE WEBSOCKET EXCLUSION IS RETIRED, AND HOW IT SURVIVED IS THE POINT. Earlier
+revisions of this file — and every measurement quoted in this repository through
+2026-08-28 — ran with
+`--ignore=tests/test_websocket.py --ignore=tests/test_websocket_m12.py`, on the stated
+ground that those tests need a Redis the sandbox could not reach. That ground was
+**disproved on 2026-08-27**: both `192.168.2.115:6379` and `:5432` answered in 0.00s.
+The reason was struck from the project notes and the `--ignore` was left in place, so
+the numbers kept being quoted from a deliberately narrowed suite for another day.
+
+The two files hold **22 tests, not 18**, and they pass in twelve seconds against any
+reachable Redis — including the throwaway local one above. `notifications/consumers.py`
+is no longer an artefact row: it is measured.
+
+**When a justification is withdrawn, withdraw what it was justifying.** Deleting only the
+reason leaves a practice that now rests on nothing, and looks exactly like one that was
+re-examined.
+
+`DATABASE_URL="sqlite:///:memory:"` is still required locally; the default `.env` points at
+the shared PostgreSQL and a stale `test_soulledger` database produces a wall of errors.
+`REDIS_URL` needs overriding for a different reason — without it the suite writes
+permission-cache keys into the production Redis. See `CLAUDE.md` → Build & Test.
 
 These are a snapshot, not a live figure — re-measure before quoting them. `git log` is the
 accurate record of project state (`README.md:339`).
@@ -29,31 +57,32 @@ above measures the whole `apps` package.
 
 | App | Statements | Missed | Coverage |
 |-----|-----------|--------|----------|
-| judgment | 229 | 7 | 97% |
-| authentication | 495 | 31 | 94% |
+| judgment | 450 | 16 | 96% |
+| workflow | 543 | 22 | 96% |
+| ledger | 428 | 25 | 94% |
+| authentication | 491 | 31 | 94% |
+| realms | 125 | 8 | 94% |
 | permissions | 31 | 2 | 94% |
-| souls | 1,565 | 111 | 93% |
-| social | 583 | 43 | 93% |
-| perm | 1,331 | 99 | 93% |
+| social | 568 | 42 | 93% |
+| menus | 227 | 17 | 93% |
+| disposition | 249 | 19 | 92% |
 | events | 418 | 32 | 92% |
 | dispatch | 525 | 41 | 92% |
-| menus | 217 | 19 | 91% |
-| reincarnation | 155 | 16 | 90% |
-| disposition | 193 | 21 | 89% |
-| realms | 124 | 16 | 87% |
-| workflow | 462 | 60 | 87% |
-| audit | 495 | 78 | 84% |
-| death_sync | 637 | 108 | 83% |
-| ledger | 728 | 127 | 83% |
-| core | 676 | 139 | 79% |
-| notifications | 190 | 42 | 78% |
-| tenants | 188 | 77 | 59% |
-| org | 112 | 52 | 54% |
-| actors | 398 | 265 | 33% |
-| **Total (production)** | **9,752** | **1,386** | **86%** |
+| reincarnation | 173 | 15 | 91% |
+| souls | 1,004 | 91 | 91% |
+| actors | 756 | 73 | 90% |
+| perm | 657 | 88 | 87% |
+| core | 617 | 90 | 85% |
+| audit | 480 | 71 | 85% |
+| org | 112 | 17 | 85% |
+| death_sync | 623 | 107 | 83% |
+| notifications | 188 | 75 | 60% |
+| tenants | 183 | 76 | 58% |
+| **Total (production)** | **8,848** | **958** | **89%** |
 
 The earlier "views/serializers/services are at 0% across most apps" pattern no longer holds —
-those layers now carry API integration tests in every app.
+those layers now carry API integration tests in every app. `actors` no longer reads low either:
+it was 33% while its management commands were untested, and is now 90%.
 
 ## Remaining Gaps
 
@@ -61,24 +90,24 @@ Ranked by uncovered statements. Not all of these are worth closing.
 
 | Module | Stmts | Missed | Cover | Note |
 |--------|-------|--------|-------|------|
-| `actors/management/commands/*` | 254 | 254 | 0% | One-off data-seeding/migration commands; low value to test |
-| `tenants/management/commands/migrate_to_multitenant.py` | 53 | 53 | 0% | Same — a one-time migration script |
-| `org/management/commands/init_organizations.py` | 36 | 36 | 0% | Same |
-| `ledger/serializers.py` | 62 | 62 | 0% | **Real gap** — serializer validation untested |
-| `ledger/filters.py` | 40 | 40 | 0% | **Real gap** |
-| `audit/signals.py` | 290 | 51 | 81% | Signal branches not exercised |
-| `notifications/consumers.py` | 98 | 40 | 59% | WebSocket consumer paths |
+| `notifications/consumers.py` | 98 | 40 | 59% | Measured with the WebSocket tests included. The 22% this row used to show was an artefact of excluding them — the exclusion is retired, so this is now a real figure |
+| `tenants/management/commands/migrate_to_multitenant.py` | 53 | 53 | 0% | One-time migration script; low value to test |
+| `audit/signals.py` | 290 | 53 | 80% | Signal branches not exercised |
 | `death_sync/webhook_service.py` | 83 | 39 | 48% | **Real gap** — outbound webhook retry/failure paths |
-| `workflow/views.py` | 141 | 39 | 68% | Custom actions |
 | `perm/export.py` | 57 | 35 | 29% | Export path |
-| `souls/filters.py` / `souls/querysets.py` | 129 | 56 | 43-53% | Filter/queryset branches |
+| `souls/filters.py` | 77 | 30 | 53% | Filter branches |
+| `actors/mythology/seeding.py` | 150 | 29 | 78% | Seed-writer branches |
+| `souls/querysets.py` | 52 | 26 | 42% | Queryset branches |
+| `core/middleware.py` | 72 | 22 | 66% | Permission-decorator paths |
+| `core/ws_permissions.py` | 35 | 19 | 44% | Same WebSocket exclusion as above |
+| `disposition/views.py` | 45 | 16 | 59% | Custom actions |
 
-`actors` reads low (33%) almost entirely because of the untested management commands; its
-models and views are covered.
+The two entries this table carried on 2026-08-13 as its top **real** gaps — `ledger/serializers.py`
+and `ledger/filters.py`, both listed at 0% — **no longer exist**; neither file is in
+`backend/apps/ledger/`. Do not go looking for them.
 
-Priority order if this is picked up: `ledger/serializers.py` + `ledger/filters.py` (untested
-validation on a core app), then `death_sync/webhook_service.py` (failure paths in an external
-integration), then `notifications/consumers.py`.
+Priority order if this is picked up: `death_sync/webhook_service.py` (failure paths in an
+external integration), then `perm/export.py`, then `souls/querysets.py` / `souls/filters.py`.
 
 ## Test Pattern Reference
 

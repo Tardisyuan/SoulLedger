@@ -490,3 +490,51 @@ existing `_upsert`.
 `sacred-texts.com` is behind a Cloudflare bot check; I did not attempt to work
 around it. Its Budge text is in any case the same 1895 edition already obtained
 from the Internet Archive.
+
+---
+
+## Addendum (2026-08-28): the divergence list in §3/§8 was wrong twice, and four flags were missing
+
+This section is appended; nothing above it has been changed. The report above is
+dated 2026-08-14 and its roster was adopted into
+`backend/apps/actors/mythology/actors_egyptian.py` (`EGYPTIAN_ASSESSORS`). The
+2026-08-27 full-collation audit (commits `6ec90e5` and `f675015`) re-checked all
+42 rows against Budge 1901 vol. II pp. 366-371 itself (the
+`bookofdeadenglis0002unse` scan) and against UCL/Maiherperi, with these
+corrections — each is recorded on the affected row's `notes` in
+`actors_egyptian.py`:
+
+- **#23 is NOT a witness divergence.** §3 and §8 list it among the towns that
+  "differ between the two witnesses". Maiherperi has `i.sd-xrw pr m wryt`;
+  Budge's "Urit" is his romanization of that same *wryt*, and UCL's "the
+  shrine" is Quirke translating the same word. Transcription against
+  translation, not two readings.
+- **#42 IS a divergence, and nothing recorded it.** Budge/Nebseni "Aukert" vs
+  Maiherperi `pr m niwt` ("the town") — visible in this report's own §3 sample
+  table, which prints both values on the #42 row without flagging them. The
+  divergence set is therefore **#21, #22, #38, #39, #42** (five), not
+  #21/#22/#23(/#39) (the counts §3 and §8 imply).
+- **#15 and #36 carry Budge's own 1901 queries and were not flagged.** 1901
+  prints "laid waste the lands which have been ploughed (?)" and "fouled (?)
+  water"; the policy of keeping Budge's queries (#22, #37, #38, #39) had missed
+  these two.
+- **#27's clause is a coordinate pair, and the roster kept half.** Budge 1901:
+  "I have not committed acts of impurity, neither have I lain with men". The §2
+  table's "impurity" (and the seeded row) carried only the first half; #34
+  keeps both halves of its own pair, so the fold was inconsistent as well as
+  lossy. The row now carries both.
+- **#25's "var. Ser-khera" is withdrawn as a variant.** "Ser-khera" occurs
+  exactly once, in the `godsofegyptianso00budg` scan — the same scan §2's #16
+  note identifies as defective — while the Cornell scan of the same 1904 page
+  reads "Ser-kheru". OCR noise recorded as an edition variant; kept in the
+  row's notes as a record of the mistake.
+- **#35's "Tattu (Busiris)" is an editorial identification, not Budge's.**
+  Budge 1901 says only "from Tattu", and his own 1895 footnote records the name
+  served two cities (Busiris and Mendes). The row now says so.
+
+Beyond these, the full pass confirmed the roster itself: 42/42
+denies/meaning/home_place checked against Budge 1901 directly, zero confirmed
+errors, zero off-by-one slips (#7 and #14's repeated clause is the source's own
+repetition). The machine-readable current state is
+`CORPUS_PROVENANCE["NEGATIVE_CONFESSION"]` in
+`backend/apps/actors/mythology/__init__.py` (42, DERIVED, no known gap).

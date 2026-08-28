@@ -423,8 +423,10 @@ EGYPTIAN_ASSESSORS = [
     {"index": 38, "name": "Utu-rekhit", "meaning": "who givest commands to mankind",
      "home_place": "[Sau (?)]", "denies": "cursing the god",
      "notes": ["Home place is UNCERTAIN — Budge prints '[Sau (?)]' with his own "
-               "query, and this is one of the two slots where the Maiherperi "
-               "witness disagrees. Recorded exactly as Budge has it, brackets "
+               "query, and this is one of the FIVE slots where the Maiherperi "
+               "witness disagrees (#21, #22, #38, #39, #42; this note said "
+               "\"two\" while the table header said \"three\", and both were "
+               "wrong -- see the header). Recorded exactly as Budge has it, brackets "
                "and question mark included."]},
     {"index": 39, "name": "Neheb-nefert", "meaning": "",
      "home_place": "the Lake of Nefer (?)", "denies": "insolence",

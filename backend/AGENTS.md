@@ -5,6 +5,18 @@
 ## 优化日期
 2026-05-12
 
+> **2026-08-28 追加——本文是 2026-05-12 那一次优化的记录，不是现状描述。**
+> 正文保留原样。已知与现在的代码分叉的一处：下面第 2 条写「支持三文明
+> （中国/欧洲/埃及）之间的灵魂转移和审判授权」，而希腊此后从欧洲租户里拆了出来
+> （`realms/0018_split_greek_from_european`），成为第四个文明
+> `Civilization.GREEK` / 租户 `GR_HADES`。`CrossTenantPermission` 的模型本身
+> 不枚举租户，所以模型没有变化，变的是它现在跨的是四个租户。
+> 租户的权威清单是 `manage.py seed_tenants`，文明的是
+> `apps/souls/models.py::Civilization` 与 `TENANT_CIVILIZATION`。
+> 文末「待完成」清单同样是当时的，不要当成今天的 backlog 读——例如第一条
+> 「User CRUD API 实现」已由 `apps/authentication/views.py::UserViewSet`
+> （`ModelViewSet`）交付，清单却从未回来勾过。
+
 ---
 
 ## P0 - 关键风险修复

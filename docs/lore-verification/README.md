@@ -141,3 +141,39 @@ Nothing below is done. Each has its evidence in these reports already.
 at the fifth court and 孟婆 at the tenth; `docs/09` reverses them. `docs/03` §5
 describes Ammit correctly while the database does not. Anything reading these
 documents as authoritative — as the statute seeding did — should stop.
+
+---
+
+## Since then (appended 2026-08-28)
+
+Everything above is the 2026-08-14/15 snapshot and is kept as written. The
+reports themselves are also snapshots: later findings are **appended** to them
+as dated addenda, never edited into the original text. Current state, verified
+against the code on 2026-08-28:
+
+- **The "Outstanding" list is done.** Audits and tests now lock realm as well
+  as role (`backend/tests/test_seed_mythology.py` carries `(role, realm_code)`
+  placement tables); Christ is seeded as the European JUDGE and Michael is
+  CONDUIT (`backend/apps/actors/mythology/actors_european.py`); the frontend
+  Greek preset routes Rhadamanthus/Aeacus as parallel dockets with Minos last
+  (`frontend/src/config/workflow-templates.ts`); and the Chinese side is
+  re-anchored to the 功过格 under a new corpus value, `GONGGUOGE` (CN-GGG-*),
+  with `HELL_LAW` left empty and declared ABSENT.
+- **The corpus landscape outgrew this page.** Six corpora, 172 articles:
+  GONGGUOGE 74 (35 功 + 39 過 — the 不軌門 gate was split to six articles on
+  the evidence of ctext's column layout, see `gongguoge.md`'s addendum),
+  NEGATIVE_CONFESSION 42 (derived), DEADLY_SIN 7, INFERNO 26, GORGIAS 12,
+  REPUBLIC_ER 11. The machine-readable inventory, with each corpus's known
+  gaps, is `CORPUS_PROVENANCE` in
+  `backend/apps/actors/mythology/__init__.py`, and
+  `backend/tests/test_corpus_provenance.py` checks it against what
+  `seed_mythology` actually writes.
+- **Two of the model gaps named above are now carried in the data.** The
+  GONGGUOGE entries store half-point clauses (0.5 功/過) and a
+  `fungibility_class` marker per article
+  (`backend/apps/actors/mythology/gongguoge_entries.py`); what the ledger does
+  with them is the ledger's own story (`apps/ledger/`).
+- A 2026-08-27 audit pass (commits `6ec90e5`..`ca65fae`) corrected a dozen
+  claims that had been standing in the seed comments and in these reports —
+  each affected report now ends with a dated addendum saying what changed and
+  where the code records it.

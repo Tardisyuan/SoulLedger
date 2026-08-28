@@ -117,7 +117,7 @@ What this does not do
   - `is_milestone`. Display-only by explicit decision, and SoulRecord states the
     reason in as many words — ticking a display checkbox is a surprising way to
     move an audited balance.
-  - A granularity tag backfilled onto the 73 transcribed segments. 「一次」 does
+  - A granularity tag backfilled onto the 74 transcribed segments. 「一次」 does
     not occur anywhere in the corpus, and the one place 太微 discusses
     accumulation at all is 救濟門#7 above, where it grants the accumulated merit
     its full value rather than marking it down. Completing that corpus against a
