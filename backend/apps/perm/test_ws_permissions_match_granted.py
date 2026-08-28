@@ -87,19 +87,42 @@ class WebSocketPermissionsMatchTheCheckerTest(TransactionTestCase):
     commit/truncate-based lifecycle instead of a shared savepoint, which
     is what this cross-thread pattern actually needs.
 
-    ``serialized_rollback = True`` because the ``Role`` catalogue
-    (ADMIN/JUDGE/GUARDIAN/VIEWER/...) is seeded by a data migration
-    (``apps/perm/migrations/0017_seed_roles_and_grants.py``), not by this
-    class's own ``setUp``. Plain ``TransactionTestCase`` truncates every
-    table after each test method and does not re-run migrations, so
-    without this flag the second test method onward finds an empty
-    ``Role`` table — Django serializes DB state right after migrations
-    apply and restores it before each test method specifically to cover
-    this case.
+    THE ``Role`` CATALOGUE IS BUILT HERE, NOT INHERITED FROM A SNAPSHOT.
+    Only one test below touches the table at all —
+    ``test_the_rbac_role_fk_does_not_change_the_answer`` needs a ``Role`` row
+    per ``ROLE_PERMISSIONS`` key so it can set the FK — and the rows are seeded
+    by a data migration (``apps/perm/migrations/0017_seed_roles_and_grants.py``),
+    which plain ``TransactionTestCase`` truncates away after the first test
+    method. ``setUp`` re-creates them.
+
+    THIS CLASS USED TO SET ``serialized_rollback = True`` INSTEAD, AND THAT
+    COST THE SUITE SEVEN PERMANENT ERRORS. The flag makes Django restore, before
+    every test method, a snapshot of the whole database taken once at session
+    start — and it restores it WITHOUT clearing first. Any preceding
+    ``transaction=True`` test flushes the tables and lets ``post_migrate``
+    repopulate ``django_content_type``; the snapshot then tries to insert the
+    same rows again and every method in this class dies in setup with
+    ``UNIQUE constraint failed: django_content_type.app_label,
+    django_content_type.model``.
+
+    The failure was near-unattributable. It pointed at Django's internal
+    ``deserialize_db_from_string``, named no test of ours, and vanished the
+    moment this file was run on its own — so it read as an environment quirk
+    for months and was written off as one in the project notes. It is not:
+    2026-08-28 bisection showed a single ``@pytest.mark.django_db(transaction=True)``
+    test whose whole body is ``assert True``, placed anywhere before this class,
+    reproduces all seven. Under Django's own runner the ordering hides it
+    (TestCase runs before TransactionTestCase); pytest offers no such promise.
+
+    Building the two rows this class actually needs costs a millisecond and
+    depends on nothing outside the method.
     """
-    serialized_rollback = True
 
     def setUp(self):
+        for role_name in ROLE_PERMISSIONS:
+            Role.objects.get_or_create(
+                name=role_name, defaults={"display_name": role_name}
+            )
         invalidate_all_permissions()
         self.addCleanup(invalidate_all_permissions)
         self.users = {
