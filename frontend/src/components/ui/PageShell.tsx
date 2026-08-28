@@ -211,7 +211,25 @@ export function PageShell({
           data-page-shell-filters=""
           className="sticky top-16 z-30 bg-canvas border-b border-hairline"
         >
-          <div className={cn(width, "px-6 h-14 py-3 flex items-center gap-3")}>
+          {/* `overflow-x-auto` 不是装饰。这一行是固定高度、不换行的 flex —— 而
+              筛选控件的数量由每个页面自己决定。灵魂页放了搜索框、两个数字输入、
+              一个下拉和一个开关,在 393px 的手机上总宽 738px。
+              
+              没有这一行的话,撑宽的不是这个容器,是**整个文档**:实测
+              `documentElement.scrollWidth` 738 而 `clientWidth` 393。后果远不止
+              横向滚动条 —— 所有 `fixed inset-0` 的东西(遮罩、弹窗容器)都会跟着
+              摊到 738,于是弹窗居中在 369、一半落在可视区外,里面的提交按钮
+              「可见、可用、可滚动到」却点不动。mobile-chrome 上三条 E2E 长期
+              超时失败,根因就在这里,而它看起来完全不像一个筛选栏的问题。
+              
+              滚动而不是换行:`h-14`(56px = 上下各 12 padding + 32 内容)是规格里
+              写死的高度,换行会破坏它。 */}
+          <div
+            className={cn(
+              width,
+              "px-6 h-14 py-3 flex items-center gap-3 overflow-x-auto"
+            )}
+          >
             {filters}
           </div>
         </div>
