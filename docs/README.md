@@ -74,12 +74,12 @@ copies fork on the first correction — the problem raised in
 | [05_北欧死后世界.md](05_北欧死后世界.md) | 瓦尔哈拉、海姆冥界、福尔克范格 |
 
 **希腊已经不在这一组里了。** 这一节的分档是研究阶段的分法；代码此后把希腊拆成了第四个
-文明——`Civilization.GREEK`，租户 `GR_HADES`，语料是柏拉图的两个神话（《高尔吉亚》11 条 +
+文明——`Civilization.GREEK`，租户 `GR_HADES`，语料是柏拉图的两个神话（《高尔吉亚》12 条 +
 《理想国》厄尔 11 条）。所以 `04_希腊冥界详解.md` 虽然仍归档在这一节，它喂的是 `GREEK`
 而不是 `EUROPEAN`。`EUROPEAN` 现在是基督教与北欧两支合一个租户，仍是产品上的取舍。
 *Greek is no longer in this group.* The filing here is the research-phase split; the
 code has since made Greek the fourth civilization — `Civilization.GREEK`, tenant
-`GR_HADES`, its corpus Plato's two myths (Gorgias 11 + Republic/Er 11). So
+`GR_HADES`, its corpus Plato's two myths (Gorgias 12 + Republic/Er 11). So
 `04_希腊冥界详解.md` still lives in this section but feeds `GREEK`, not `EUROPEAN`.
 `EUROPEAN` now groups the Christian and Norse material, and that is still a product
 compromise rather than a claim that they are one system.
@@ -100,8 +100,8 @@ compromise rather than a claim that they are one system.
 - [`backend/apps/ledger/readings.py`](../backend/apps/ledger/readings.py) — 四套宇宙论
   给出四种**结构不同**的读数：中国是可抵消的累积账户，埃及是不可抵消的阈值检验，
   欧洲是罪责与补赎两个互不相关的量（其中补赎明确标为不可得），希腊给的是一段程序而不是
-  一个量——柏拉图两个神话本身就不一致（盖印即终局 vs 千年循环后重生），所以 22 条条文里
-  20 条的极性是 `PROCEDURE`。模块内的注释直接引用了上面这些研究的结论。
+  一个量——柏拉图两个神话本身就不一致（盖印即终局 vs 千年循环后重生），所以 23 条条文里
+  21 条的极性是 `PROCEDURE`。模块内的注释直接引用了上面这些研究的结论。
 - [`backend/apps/ledger/services.py`](../backend/apps/ledger/services.py) — 按文明的
   衰减率；欧洲为 0。
 - [`backend/apps/souls/models.py`](../backend/apps/souls/models.py) — `TENANT_CIVILIZATION`，
@@ -183,8 +183,9 @@ history, not as a description of the code today.*
 
 - [`BRIEF.md`](design-handoff/BRIEF.md) — 产品说明、灵魂生命周期、逐屏讲解
 - [`ADDENDUM.md`](design-handoff/ADDENDUM.md) — 打包**之后**发生的变化。最重要的一条是
-  三种文明现在在数据层就不同了（见 `readings.py`），因此需要三种不同的呈现，而不是一个
-  带 variant 的组件。**必须与 BRIEF 一起读。**
+  四种文明现在在数据层就不同了（见 `readings.py`），因此需要四种不同的呈现，而不是一个
+  带 variant 的组件——ADDENDUM §1 写的是三种，§5 补了第四种（希腊）及其第四种读数形状。
+  **必须与 BRIEF 一起读。**
 - [`screens/`](design-handoff/screens/) — 29 张实际界面全页截图
 - [`tokens.md`](design-handoff/tokens.md) / [`tokens.html`](design-handoff/tokens.html) — 设计 token 清单
 - [`tables/`](design-handoff/tables/) — 三语（zh-Hans / en / egy）表格样本与字符串导出

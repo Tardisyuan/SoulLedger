@@ -1,5 +1,13 @@
 # 前端代码验证报告
 
+> ### 后续 — 2026-08-28
+>
+> 「二、API 端点一致性」与「三、TypeScript 类型一致性」两条已由后端解决：
+> `DispatchProposeSerializer` 现在同时接受 `source_tenant`（int）与 `source_tenant_code`（str），
+> 不再需要 `tenant_id`。其余各条**未逐条复核**。
+>
+> 另：文中按三个文明立论，代码里现在是**四个**（GREEK 于 2026-08-18 加入）。
+
 **日期**: 2026-05-28
 **验证范围**: 前端页面与后端API对比、代码错误检查
 **验证模块**: API端点一致性、组件导出、TypeScript类型、动态路由、TanStack Query、翻译文件、API覆盖

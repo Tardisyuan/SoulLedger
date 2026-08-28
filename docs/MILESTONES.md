@@ -20,7 +20,10 @@
 
 ### M7 DDD 重构 (2026-05-29)
 - P1: 统一权限检查 (`apps/perm/checker.py`)
-- P2: SoulRecord 归位 (`karma/models.py`)
+- P2: SoulRecord 归位 (`karma/models.py`) —— **路径不成立**（2026-08-28 核实）：
+  `SoulRecord` 至今定义在 `apps/souls/record_models.py`；`apps/ledger/models.py`
+  （`karma` 已更名 `ledger`）只是再导出同一个类。物理搬迁于 2026-08-23 评估后
+  决定不做，理由与代价记在该模块的 docstring 里
 - P3: DispatchRecord + CrossTenantJudgment 状态机
 - P4: Domain Events 补发 (JUDGMENT_CONCLUDED, KARMA_RECALCULATED, 等)
 - P5: JudgmentConclusionService 拆分 God method
@@ -82,6 +85,9 @@
 
 ## 待开发
 
+*标题保留原样。实际状态：M15 已于 2026-08-07 全部落地，M16 四项里三项已交付——
+逐项状态见下表。（2026-08-28 核实）*
+
 ### M15 多租户安全加固 (2026-06-09 审计, 2026-08-07 修复) ✅
 **目标**: 审计并加固跨服务层、后台任务、异步执行路径的租户隔离
 **工作量**: 5-7 天（估）
@@ -95,6 +101,14 @@ TenantMiddleware/TenantPermission加了JWT租户与用户真实租户的交叉�
 tenant、API层4处补上租户过滤或换掉用错的权限类。过程中额外发现两个不在审计范围内的问题，
 已分别开了独立任务跟进：social序列化器的post/comment字段可跨租户提交、death_sync的API Key
 认证端点因权限类配置错误导致所有合法请求都被拒绝（功能性故障，不是数据泄露）。
+
+> **下面三张表是 2026-06-09 的计划表，从未回勾**（2026-08-28 核实：全是 ⏳）。活干完了，
+> 表没动。实际收口结果见上一段与 [`docs/MILESTONE_M15.md`](MILESTONE_M15.md) 顶部的修复记录：
+> 16 条真实缺口已修，3 条判定为有意为之的设计（Menu/`perm` 端点全局共享、dispatch 的
+> `_base_manager` 跨租户查重），其余在两个月里的其他改动中顺带修好。**不要按这三张表的
+> ⏳ 判断当前状态**——其中 #294（`task_prerun`/`task_postrun` 信号处理器）确实没有实现，
+> 但那是因为最终改用了「按租户扇出子任务 + 任务内 `set_current_tenant()`」的做法
+> （见 `apps/ledger/tasks.py`、`apps/judgment/tasks.py`、`apps/death_sync/tasks.py`）。
 
 #### Phase 1: Celery 基础设施 + CRITICAL 修复 (Day 1-3)
 | 任务 | Task | 优先级 | 状态 |
@@ -133,15 +147,17 @@ tenant、API层4处补上租户过滤或换掉用错的权限类。过程中额�
 | 审计报告 | #299 | P1 | ⏳ |
 | 跨租户访问测试 | #299 | P1 | ⏳ |
 
-### M16 i18n 与 UX 完善
+### M16 i18n 与 UX 完善 (3/4 已交付)
 **目标**: 国际化翻译 + 社交功能完善
 
-| 任务 | 优先级 | 状态 |
-|------|--------|------|
-| i18n 翻译文件 (中/英) | P1 | ⏳ |
-| Profile 编辑 UI | P1 | ⏳ |
-| Delete post/comment UI | P1 | ⏳ |
-| Social MenuButton permissions | P2 | ⏳ |
+逐项核实于 2026-08-28：
+
+| 任务 | 优先级 | 状态 | 依据 |
+|------|--------|------|------|
+| i18n 翻译文件 (中/英) | P1 | ✅ | `frontend/messages/{zh-Hans,en,egy}.json` 三份键集对齐 |
+| Profile 编辑 UI | P1 | ✅ | `src/components/social/ProfileEditModal.tsx`，由 `ProfileCard.tsx:83` 挂载 |
+| Delete post/comment UI | P1 | ✅ | `useDeletePost`/`useDeleteComment`（`src/hooks/useSocial.ts:85,130`），带确认弹窗 |
+| Social MenuButton permissions | P2 | ⏳ | `apps/menus/migrations/` 里 `/social` 只有 Menu 行，没有 MenuButton 行 |
 
 ---
 
@@ -160,8 +176,12 @@ tenant、API层4处补上租户过滤或换掉用错的权限类。过程中额�
 | M13 | 社交功能 | ✅ 完成 |
 | M14 | 测试覆盖率 + 租户修复 | ✅ 完成 |
 | M15 | 多租户安全加固 | ✅ 完成 |
-| M16 | i18n 与 UX 完善 | 📋 规划中 |
+| M16 | i18n 与 UX 完善 | 🔸 3/4 已交付 |
 
 ---
 
-*更新日期: 2026-06-09*
+*更新日期: 2026-08-28（M15/M16 状态核实、M16 逐项取证）。M1–M14 各段仍是各自完成当时的
+记录，未回填后续变更。*
+
+*本文件不是事实来源——落后于代码，且 M7/M8 的编号与 `docs/MILESTONE_M7.md`、
+`docs/MILESTONE_M8.md` 指的不是同一件事。以 `git log` 为准。*

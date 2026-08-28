@@ -1,5 +1,18 @@
 # SoulLedger Backend Code Review
 
+> ### Follow-up — 2026-08-28
+>
+> A 2026-05-27 snapshot. Two things to know before reading it:
+>
+> - Every `apps/karma/*` path below is gone — the app was renamed **`ledger`** in 2026-08.
+>   The `TenantManager` praised under "Positive Patterns" no longer applies contextvar
+>   filtering either (`apps/tenants/managers.py`).
+> - **Finding #2 is still open.** `require_permission` in `apps/core/middleware.py` still reads
+>   `view_instance` at line 181, outside the `wrapped_view` closure that defines it — exactly as
+>   described here, fifteen months on.
+>
+> The other findings were not re-verified for this note. Do not read a missing note as "fixed".
+
 > Date: 2026-05-27
 > Scope: All backend apps — models, views, services, middleware
 

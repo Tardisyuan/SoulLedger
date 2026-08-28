@@ -177,13 +177,18 @@ t("nav.greeting", { username: user.username })
 
 ## 4. 多租户规范
 
-### 三个租户
+### 四个租户
 
 | Code | 文明 | 数据库 |
 |------|------|--------|
 | `CN_DIYU` | 中国 | 共享 PostgreSQL，通过 tenant_id 隔离 |
 | `EU_HEAVEN_HELL` | 欧洲 | 同上 |
 | `EG_DUAT` | 埃及 | 同上 |
+| `GR_HADES` | 希腊 | 同上 |
+
+`GR_HADES` 是后来从 `EU_HEAVEN_HELL` 里拆出来的独立租户（`realms/0018_split_greek_from_european`），
+不是欧洲的一个子区域：`Civilization.GREEK` 是第四个枚举成员，`TENANT_CIVILIZATION`
+把 `GR_HADES` 单独映射过去。权威清单是 `manage.py seed_tenants`。
 
 ### 后端多租户
 

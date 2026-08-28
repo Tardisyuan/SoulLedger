@@ -251,7 +251,7 @@ describe("希臘 · Plato is cited by Stephanus page and by nothing else", () =>
 
 describe("only the Greek corpus declines to name offences", () => {
   it("is false for GREEK and true for the other three", () => {
-    // Twenty of the twenty-two Greek articles are PROCEDURE: neither Platonic
+    // 21 of the 23 Greek articles are PROCEDURE: neither Platonic
     // myth contains a code of offences, so the Greek statute table carries one
     // column fewer. This flag is that fact, and the table reads it instead of
     // testing `civilization === "GREEK"`.

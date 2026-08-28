@@ -36,7 +36,7 @@ from apps.actors.mythology.gongguoge_entries import GONGGUOGE_ENTRIES
 # descendants (太微's preface opens by quoting 《易》 on exactly that). The word
 # for any hell appears nowhere in the text. Using it as a basis for judging the
 # dead is this system's APPROPRIATION, it is deliberate, and APPROPRIATION_NOTE
-# below is carried by all 73 rows so it can never be quietly forgotten — which
+# below is carried by all 74 rows so it can never be quietly forgotten — which
 # is precisely how the withdrawn HELL_LAW corpus began.
 #
 # There is one primary sentence that licenses the appropriation, and it is the
