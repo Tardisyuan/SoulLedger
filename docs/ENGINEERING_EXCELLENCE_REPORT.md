@@ -1,5 +1,17 @@
 # M9 Engineering Excellence Report
 
+
+> ### Follow-up — 2026-08-28
+>
+> The "Status: Production Ready" conclusion and the Security 8.5/10 score were **overturned on
+> 2026-08-07** by the multi-tenant audit in [`docs/MILESTONE_M15.md`](MILESTONE_M15.md)
+> (4 CRITICAL / 4 HIGH / 15 MEDIUM tenant-isolation findings in this same codebase).
+>
+> The test counts below (366 backend / 119 frontend) are a 2026-05-30 snapshot; the backend
+> suite is **2,694 passed, 9 skipped** as of 2026-08-28, with nothing excluded. (2,672 was
+> the count with `tests/test_websocket*.py` excluded; that exclusion has been retired — the
+> Redis-unreachable premise behind it was disproved by measurement.)
+
 **Date**: 2026-05-30
 **Status**: In Progress
 

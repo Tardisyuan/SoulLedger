@@ -25,7 +25,7 @@ See [`backend/apps/ledger/readings.py`](backend/apps/ledger/readings.py):
 | **Chinese** | A cumulative account (功過格). Merit and demerit offset each other; the running total *is* the verdict. | One signed number |
 | **Egyptian** | A threshold test. The heart is weighed once against Ma'at's feather and must be "not heavier than" it. Merit does not appear — there is no offsetting step. | Pass/fail against a fixed counterweight |
 | **European** | Two unrelated facts. *Culpa* (guilt) and *poena* (penalty remaining after absolution) do not reduce each other, and this system holds no data from which poena could honestly be derived. | Two independent quantities, one of them explicitly unavailable |
-| **Greek** | Plato's two myths disagree with each other: the *Gorgias* stamps a soul and stops, the *Republic*'s Er returns it after a thousand years. So 20 of the 22 transcribed articles have polarity `PROCEDURE` — **they are rules of the court, not names of offences**. | A procedure, not a quantity |
+| **Greek** | Plato's two myths disagree with each other: the *Gorgias* stamps a soul and stops, the *Republic*'s Er returns it after a thousand years. So 21 of the 23 transcribed articles have polarity `PROCEDURE` — **they are rules of the court, not names of offences**. | A procedure, not a quantity |
 
 A soul whose tenant is not mapped to a cosmology gets no reading at all — an
 explicit refusal rather than a fallback to somebody else's arithmetic.
@@ -111,12 +111,12 @@ docker compose up    # root docker-compose.yml: db, redis, backend, celery, cele
 ```
 
 Requires `DB_PASSWORD` and `SECRET_KEY` in the environment. This path runs
-migrations and seeds all three civilizations on boot.
+migrations and seeds all four civilizations on boot.
 
 ### Seed data
 
 The root compose file's boot sequence is `python manage.py migrate` then
-`python manage.py seed_mythology`, which loads realms and actors for all three
+`python manage.py seed_mythology`, which loads realms and actors for all four
 civilizations. It used to run `python scripts/seed_chinese_data.py` — a second
 hand-maintained copy of the same tables, where every edit had to be remembered
 twice and the copy docker ran was the one no test covered. That script is gone;
@@ -124,8 +124,8 @@ the command is the only seeding entry point. Further seeding also lives in
 Django management commands:
 
 ```bash
-python manage.py seed_tenants               # CN_DIYU, EU_HEAVEN_HELL, EG_DUAT
-python manage.py seed_mythology             # realms + actors, all three (idempotent)
+python manage.py seed_tenants               # CN_DIYU, EU_HEAVEN_HELL, EG_DUAT, GR_HADES
+python manage.py seed_mythology             # realms + actors, all four (idempotent)
 python manage.py consolidate_eu_pantheon
 python manage.py seed_workflow_templates
 python manage.py seed_field_permissions
@@ -250,18 +250,25 @@ makes automatically any more. The local gate is.
 |---|---|
 | **backend** | `makemigrations --check --dry-run`, `migrate`, `pytest`, `ruff check`, `pip-audit` |
 | **frontend** | `tsc --noEmit`, `eslint`, `next build`, `jest`, `npm audit` |
-| **e2e** | Playwright, `--project=chromium`, artifacts uploaded |
+| **e2e** | Playwright matrix: one leg each for chromium / firefox / mobile-chrome, `fail-fast: false`, a separate report artifact per leg |
 
 Backend CI runs against real PostgreSQL 16 and Redis 7 service containers.
 
-Both `pip-audit` and `npm audit` are currently `continue-on-error: true` — they
-report but do not block. The reasons are written into the workflow file next to
-each step; if you are hardening this, read those comments first.
+Both `pip-audit` and `npm audit` **block** now — neither is `continue-on-error`
+any more. The backend scan is scoped to `-r requirements.txt` rather than the whole
+runner environment, the frontend one is `npm audit --audit-level=high`, and the
+accepted-advisory count is none on both sides. The reasons are written into the
+workflow file next to each step, including an explicit instruction not to put
+`continue-on-error` back; read those before loosening anything.
 
 Locally:
 
 ```bash
 cd backend && python -m pytest --tb=short -q     # repo-root pytest.ini: --cov=apps, --cov-fail-under=80
+                                                 # Isolate DATABASE_URL *and* REDIS_URL first:
+                                                 # overriding only the database still lets the
+                                                 # suite write into the shared Redis.
+                                                 # Full recipe: CLAUDE.md, Build & Test.
 cd backend && ruff check .
 cd frontend && npx tsc --noEmit && npm run lint && npm test
 cd frontend && npx playwright test --project=chromium
@@ -363,7 +370,7 @@ There is now a written-down type system.
 | Shell | One `PageShell` replaces 36 hand-written page shells; eight content widths collapse to three. |
 | Primitives | `Button` `Field` `Badge` `Spinner` `EmptyState` `PageShell` |
 
-**Serif marks what someone said** — the 170 transcribed articles, confession text,
+**Serif marks what someone said** — the 172 transcribed articles, confession text,
 the reasoning of a judgment, the opinion of a cross-civilization panel. Every label,
 table, button and figure is sans. That makes "serif = quotation" a readable rule
 rather than a decorative choice, and it is why confession no longer needs `italic`
@@ -376,10 +383,12 @@ is `§ 27 / 42` (**the denominator is printed** — the system means nothing unl
 forty-two are answered); Plato is a Stephanus page, `523a`. See
 [`frontend/src/config/civilizationSigil.ts`](frontend/src/config/civilizationSigil.ts).
 
-`/corpus` browses those 170 articles (Chinese 功過格 73, Egyptian Negative
-Confession 42, European Deadly Sins 7 + Inferno 26, Greek Gorgias 11 + Republic/Er
-11 — counted by running `seed_mythology`, not estimated). Before it they surfaced only inside the
-judgment page's citation picker — 170 researched articles with nowhere to read them.
+`/corpus` browses those 172 articles (Chinese 功過格 74, Egyptian Negative
+Confession 42, European Deadly Sins 7 + Inferno 26, Greek Gorgias 12 + Republic/Er
+11 — each count matches `CORPUS_PROVENANCE` in
+`backend/apps/actors/mythology/__init__.py`, which
+`backend/tests/test_corpus_provenance.py` checks against a real seed run). Before it they surfaced only inside the
+judgment page's citation picker — 172 researched articles with nowhere to read them.
 
 ### The rules are enforced by lint, not by discipline
 

@@ -255,8 +255,10 @@ Seraphim Cherubim Thrones Dominions Virtues Powers Principalities Archangels Ang
 > 3. **波纳文图拉一系**：米迦勒是**炽天使之首**，即第一级。
 >
 > 罗马礼仪倾向第 2 派，称他 *Princeps militiae caelestis*（天军之君）。
-> **本项目 seeder 把 Michael 的 title 写成「大天使长米迦勒 / Leader of the archangels」，
+> **本项目 seeder 曾把 Michael 的 title 写成「大天使长米迦勒 / Leader of the archangels」，
 > 是三派中的一派，不是无据；但呈现为唯一答案是错的。**
+> **✅ 2026-08 已改**：现题「掌旗者圣米迦勒 / Michael the Standard-Bearer」，
+> 依据安魂弥撒奉献经 *signifer sanctus Michael*——绕开了定级争议（`actors_european.py`）。
 >
 > ### ⚠️ 米迦勒「称量灵魂」是中世纪图像学，不是圣经也不是教义
 >
@@ -268,8 +270,10 @@ Seraphim Cherubim Thrones Dominions Virtues Powers Principalities Archangels Ang
 > *"sed signifer sanctus Michael repraesentet eas in lucem sanctam"*
 > （愿掌旗者圣米迦勒引他们进入圣光）——**掌旗者、引路者**。
 >
-> 本项目把 Michael 的 role 设为 JUDGE 并写「weighs souls at the heavenly throne」，
+> 本项目曾把 Michael 的 role 设为 JUDGE 并写「weighs souls at the heavenly throne」，
 > 在传统上站不住；更贴切的是 CONDUIT（礼仪文本支持）或 GUARDIAN（天军之君，启 12:7）。
+> **✅ 2026-08 已采纳 CONDUIT**：行描述明写「他不称量灵魂——那是从埃及称心经希腊
+> psychostasia 借来的中世纪图像学，非圣经非教义」（`actors_european.py`）。
 >
 > ### ⚠️ 基督教的审判者是**基督**，本文档整篇没有提到他
 >
@@ -291,8 +295,11 @@ Seraphim Cherubim Thrones Dominions Virtues Powers Principalities Archangels Ang
 > 唯一带「多人审判」意味的两处经文（太 19:28／路 22:30 十二使徒坐十二宝座；
 > 林前 6:2-3 圣徒审判世界）都**不是判官名录**。
 >
-> **这不是资料没找到，是这套神学根本不用这个结构。** 本项目的三文明同模板设计在这一格
+> **这不是资料没找到，是这套神学根本不用这个结构。** 本项目的多文明同模板设计在这一格
 > 应当**显式为空并说明原因**，而不是用米迦勒、撒旦或希腊的米诺斯去填。
+> **✅ 2026-08 已照此落地**（`actors_european.py`）：Christ 入库为欧洲侧唯一 JUDGE，
+> 空判官席由 `test_the_christian_side_seats_one_judge_and_no_bench` 显式断言（「空缺
+> 即发现」）；希腊三判官已随 realms/0018 拆为独立的 GREEK 文明，不再计入欧洲的席位。
 
 ### 9. 天使（Angels）
 
@@ -394,9 +401,10 @@ Seraphim Cherubim Thrones Dominions Virtues Powers Principalities Archangels Ang
 
 ---
 
-*文档版本：v2.0*
+*文档版本：v2.1*
 *创建时间：2026-05-08*
-*更新时间：2026-08-15*
+*更新时间：2026-08-28*
+*v2.1 修改说明：§四的三条数据侧批评已被代码兑现，补记现状——Michael 改题「掌旗者圣米迦勒」、role CONDUIT；Christ 入库为唯一 JUDGE 且空判官席由测试断言；希腊判官拆出为 GREEK 文明（realms/0018）*
 *修改说明：v2.0 依 `docs/lore-verification/verify-christian-cast.md` 校订。*
 *(1) 第 5/6/7 级中文译名整体错位一格，已归位为 力天使(Virtues)/能天使(Powers)/权天使(Principalities)——根子是 δυνάμεις→virtutes→"Virtues" 的英译陷阱；§一的图与正文原本自相矛盾，一并修正；v1.1 另造的「掌权天使」是错位的连锁后果，已撤；*
 *(2) 删除「Archangels 希伯来语 Sarafim（领袖）」——Sarafim 就是撒拉弗，且 Archangel 是希腊文；*

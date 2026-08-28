@@ -1,5 +1,16 @@
 # SoulLedger Frontend Code Review
 
+> ### Follow-up — 2026-08-28
+>
+> A 2026-05-27 snapshot. Two things to know before reading it:
+>
+> - The `CIVILIZATION_LABELS` tables below list **three** civilizations. There are **four** —
+>   GREEK was added on 2026-08-18 (`48a5e74`).
+> - **Finding #1 is still open.** `frontend/app/layout.tsx:29` still hardcodes
+>   `<html lang="zh-Hans" className={`dark …`}>`.
+>
+> The other findings were not re-verified for this note. Do not read a missing note as "fixed".
+
 > Date: 2026-05-27
 > Scope: All frontend pages, components, hooks, contexts
 

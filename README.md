@@ -30,7 +30,7 @@ SoulLedger 是一个可运行的全栈 Web 应用（Django + Next.js），在同
 | **中国** | 累积账户（功過格）。功与过相互抵消，运行总额本身就是结论。 | 一个带符号的数 |
 | **埃及** | 阈值检验。心脏与玛特羽毛称量一次，必须「不重于」它。功德根本不出现——这里没有抵消这一步。 | 相对固定砝码的通过/不通过 |
 | **欧洲** | 两个互不相关的事实。*culpa*（罪责）与 *poena*（赦罪后仍需的补赎）互不削减，而本系统没有任何数据能诚实地推出 poena。 | 两个独立量，其中一个明确标注为不可得 |
-| **希腊** | 柏拉图的两个神话本身就不一致：《高尔吉亚》盖印即终局，《理想国》的厄尔千年循环后重生。所以 22 条语料里 20 条的极性是 `PROCEDURE`——**它们是庭规，不是罪名**。 | 一段程序，而不是一个量 |
+| **希腊** | 柏拉图的两个神话本身就不一致：《高尔吉亚》盖印即终局，《理想国》的厄尔千年循环后重生。所以 23 条语料里 21 条的极性是 `PROCEDURE`——**它们是庭规，不是罪名**。 | 一段程序，而不是一个量 |
 
 若某灵魂所属租户没有映射到任何文明，系统不会给出任何读数——是一次带理由的明确拒绝，
 而不是回落到别人的算术。
@@ -103,20 +103,20 @@ docker compose up -d   # postgres:16-alpine :5432，redis:7-alpine :6379
 docker compose up    # 根目录 docker-compose.yml：db、redis、backend、celery、celery-beat、frontend
 ```
 
-需要在环境中提供 `DB_PASSWORD` 与 `SECRET_KEY`。该路径会在启动时执行迁移并灌入三种
+需要在环境中提供 `DB_PASSWORD` 与 `SECRET_KEY`。该路径会在启动时执行迁移并灌入四种
 文明的领域与角色。
 
 ### 种子数据
 
 根 compose 的启动顺序是 `python manage.py migrate` 再 `python manage.py
-seed_mythology`，后者会载入三种文明的领域与角色。它曾经调用
+seed_mythology`，后者会载入四种文明的领域与角色。它曾经调用
 `python scripts/seed_chinese_data.py` —— 同一批数据的第二份手工副本，改一处就得记得
 改另一处，而 docker 跑的恰好是没有测试覆盖的那一份。该脚本已删除，种子数据只有管理
 命令这一个入口。其余种子数据同样由 Django 管理命令提供：
 
 ```bash
-python manage.py seed_tenants               # CN_DIYU、EU_HEAVEN_HELL、EG_DUAT
-python manage.py seed_mythology             # 三种文明的领域与角色（幂等）
+python manage.py seed_tenants               # CN_DIYU、EU_HEAVEN_HELL、EG_DUAT、GR_HADES
+python manage.py seed_mythology             # 四种文明的领域与角色（幂等）
 python manage.py consolidate_eu_pantheon
 python manage.py seed_workflow_templates
 python manage.py seed_field_permissions
@@ -227,17 +227,22 @@ ALIVE → JUDGING → DISPOSED → REINCARNATING → ALIVE（下一轮）
 |---|---|
 | **backend** | `makemigrations --check --dry-run`、`migrate`、`pytest`、`ruff check`、`pip-audit` |
 | **frontend** | `tsc --noEmit`、`eslint`、`next build`、`jest`、`npm audit` |
-| **e2e** | Playwright，`--project=chromium`，上传报告 artifact |
+| **e2e** | Playwright 矩阵：chromium / firefox / mobile-chrome 各一条腿，`fail-fast: false`，每条腿单独上传报告 artifact |
 
 后端 CI 跑在真实的 PostgreSQL 16 与 Redis 7 service container 上。
 
-`pip-audit` 与 `npm audit` 目前都是 `continue-on-error: true`——只报告不阻断。原因写在
-workflow 文件里各自步骤旁边；若要收紧，请先读那些注释。
+`pip-audit` 与 `npm audit` 现在都是**阻断性**的，不再是 `continue-on-error`：后端扫的是
+`-r requirements.txt`（而不是整个运行环境），前端是 `npm audit --audit-level=high`，两处
+的已接受公告数都是 none。要接受某条公告的话请先读 workflow 文件里各自步骤旁边的注释——
+它明确写了不要把 `continue-on-error` 加回来。
 
 本地：
 
 ```bash
 cd backend && python -m pytest --tb=short -q     # 仓库根 pytest.ini：--cov=apps，--cov-fail-under=80
+                                                 # 但要先隔离 DATABASE_URL 与 REDIS_URL：
+                                                 # 只覆盖数据库，权限缓存键仍会写进共享 Redis。
+                                                 # 完整跑法见 CLAUDE.md 的 Build & Test
 cd backend && ruff check .
 cd frontend && npx tsc --noEmit && npm run lint && npm test
 cd frontend && npx playwright test --project=chromium
@@ -328,7 +333,7 @@ docs/               神话研究、工程文档、设计交付包——见 docs/
 | 外壳 | 一个 `PageShell` 替掉 36 个手写页面外壳，八种内容宽度收到三种 |
 | 原语 | `Button` `Field` `Badge` `Spinner` `EmptyState` `PageShell` |
 
-**衬线只出现在「有人说过的话」上**——170 条古典语料、忏悔录正文、判决理由、跨文明会审的
+**衬线只出现在「有人说过的话」上**——172 条古典语料、忏悔录正文、判决理由、跨文明会审的
 合议意见。UI 的标签、表格、按钮、数字一律无衬线。所以「衬线 = 引文」是一条可读的规则，
 而不是装饰选择；忏悔录也因此不再需要 `italic` 加引号来提示这是引文。
 
@@ -337,10 +342,11 @@ docs/               神话研究、工程文档、设计交付包——见 docs/
 `§ 27 / 42`（**分母必须印出来**，这套体系的意义在于四十二则全数应答）；柏拉图是斯特方
 页码 `523a`。见 [`frontend/src/config/civilizationSigil.ts`](frontend/src/config/civilizationSigil.ts)。
 
-`/corpus` 是浏览这 170 条语料的页面（中国功过格 73、埃及否定告白 42、
-欧洲七宗罪 7 + 地狱篇 26、希腊高尔吉亚 11 + 厄尔神话 11 —— 实跑 `seed_mythology` 后数出来的，
-不是估的）。在此之前它们只在判决页的引用选择器里露过面——
-考据做了 170 条，界面上没有一个地方能看。
+`/corpus` 是浏览这 172 条语料的页面（中国功过格 74、埃及否定告白 42、
+欧洲七宗罪 7 + 地狱篇 26、希腊高尔吉亚 12 + 厄尔神话 11 —— 与
+`backend/apps/actors/mythology/__init__.py::CORPUS_PROVENANCE` 逐条对上，
+那张表由 `backend/tests/test_corpus_provenance.py` 比对真实 seed 结果）。在此之前它们只在判决页的引用选择器里露过面——
+考据做了 172 条，界面上没有一个地方能看。
 
 ### 这些规矩由 lint 施加，不是靠自觉
 

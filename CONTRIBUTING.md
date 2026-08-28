@@ -17,6 +17,8 @@ cd frontend && npm install && npm run dev
 2. Create a feature branch: `git checkout -b feature/your-feature`
 3. Make changes and add tests
 4. Run tests: `cd backend && pytest` / `cd frontend && npm test`
+   (the backend suite needs `DATABASE_URL` **and** `REDIS_URL` pointed at throwaway
+   services first — see `CLAUDE.md`, Build & Test, for the exact invocation)
 5. Commit: `git commit -m "feat: description"`
 6. Push and create a Pull Request
 
@@ -41,7 +43,7 @@ Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`
 
 ## Testing
 
-- Backend: `cd backend && pytest --cov=apps`
+- Backend: `cd backend && pytest --cov=apps` (isolate `DATABASE_URL` and `REDIS_URL` — see `CLAUDE.md`)
 - Frontend unit: `cd frontend && npm test`
 - Frontend E2E: `cd frontend && npm run test:e2e`
 - TypeScript: `cd frontend && npx tsc --noEmit`
