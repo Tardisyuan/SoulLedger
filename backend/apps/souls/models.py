@@ -424,7 +424,28 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             old_state = locked_soul.current_state
             locked_soul.current_state = new_state
 
-            if new_state == SoulState.JUDGING and not locked_soul.death_date:
+            # `death_date` is a legacy compatibility property, not a column.
+            # `apps/souls/dates.py::to_legacy_date` returns None for anything
+            # `datetime.date` cannot express -- every BCE year, and every
+            # partial date missing a month or a day. Testing it here read
+            # "Python cannot represent this" as "no death date was recorded",
+            # and overwrote the real one with today.
+            #
+            # Measured 2026-08-29 through the API: a soul created with
+            # death_date {"year": -399, "month": 5, "day": 7} read back
+            # correctly and stored death_year=-399/5/7, while the legacy
+            # property was None. One transition to JUDGING rewrote it to
+            # 2026-08-29. Nothing was missing; the date was complete.
+            #
+            # This is the second consumer to disagree with the validator that
+            # accepts these dates (the first was LedgerService._day_of_year and
+            # February 29th). Egyptian and Greek material is BCE by nature, and
+            # the ledger's decay anchor is the death date -- so the whole decay
+            # baseline moved with it.
+            #
+            # `death_year` is the column. A year of 0 is a real year in this
+            # project's convention, so the test is `is None`, not falsiness.
+            if new_state == SoulState.JUDGING and locked_soul.death_year is None:
                 from django.utils import timezone as tz
                 locked_soul.death_date = tz.now().date()
 
