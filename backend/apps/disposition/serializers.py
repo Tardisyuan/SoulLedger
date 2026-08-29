@@ -26,6 +26,54 @@ class DispositionSerializer(FieldPermissionMixin, serializers.ModelSerializer):
             "sentence_years", "term_start", "is_executed", "executed_at",
             "notes", "created_at",
         ]
+        # This serializer had no `read_only_fields` at all. Measured
+        # 2026-08-29, a MODERATOR could `PATCH {"is_executed": true,
+        # "executed_at": ...}` and get a 200: the row then reads EXECUTED while
+        # the soul was never routed, never SETTLED, never REINCARNATING -- and
+        # the real `POST .../execute/` afterwards returns 400 "Already
+        # executed", so the soul is stuck in DISPOSED permanently. The same
+        # PATCH could re-point `destination_realm` after the fact, i.e. change
+        # where a sentence was served after it was served.
+        #
+        # `apps/reincarnation/views.py` already documented this exact shape for
+        # ReincarnationSerializer and characterized it in
+        # tests/test_perm_write_snapshot_outside_matrix.py. Disposition's copy
+        # was never written down. A shape that has been diagnosed once is worth
+        # grepping for.
+        read_only_fields = ["id", "is_executed", "executed_at", "created_at"]
+
+    def validate_soul(self, value):
+        """A disposition may only be recorded against a soul in this tenant.
+
+        Re-pointing a disposition at a different soul is a supported operation
+        -- `test_repointing_a_disposition_at_another_soul_is_checked` exists
+        because a mis-filed sentence gets corrected, and the term-start rules
+        below are what guard it. What was never checked is whether the new soul
+        belongs to the caller's tenant: `soul` is a plain
+        PrimaryKeyRelatedField whose queryset is a TenantManager, and that
+        manager is evaluated with no tenant contextvar at serializer-validation
+        time, so it scopes nothing. Same shape as ApprovalNodeSerializer's
+        `workflow` (apps/workflow/serializers.py).
+
+        ADMIN is exempt, as it is everywhere else (apps/core/tenant.py names it
+        the one globally scoped role). The fallback to the user's own tenant
+        column matters because `force_authenticate` never sets
+        `request.tenant`.
+        """
+        request = self.context.get("request")
+        if request is None:
+            # Serializer used directly, outside a request -- the term-start
+            # rules still apply; there is no tenant to check against.
+            return value
+        user = getattr(request, "user", None)
+        if getattr(user, "role", None) == "ADMIN":
+            return value
+        tenant = getattr(request, "tenant", None) or getattr(user, "tenant", None)
+        if tenant is None or value.tenant_id != tenant.pk:
+            raise serializers.ValidationError(
+                "No such soul in this tenant."
+            )
+        return value
 
     def validate(self, attrs):
         """Refuse a term start that contradicts the soul it is recorded against.

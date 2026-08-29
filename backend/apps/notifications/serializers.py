@@ -23,7 +23,24 @@ class UserNotificationSerializer(serializers.ModelSerializer):
         # `user` stays read-only from the client's perspective: it is always
         # forced to request.user by NotificationViewSet.perform_create, never
         # taken from the payload. See that method for why self-notify only.
-        read_only_fields = ["id", "user", "created_at"]
+        read_only_fields = [
+            "id",
+            "user",
+            "created_at",
+            # The body of a notification is written by whatever raised it, not
+            # by its recipient. Measured 2026-08-29: a user could PATCH their
+            # own notification's `title`, `message`, `notification_type`
+            # (SYSTEM -> ROLE_ASSIGNED) and `related_resource`/`related_id`.
+            # Only their own inbox is affected, but `related_resource` and
+            # `related_id` drive the deep link, so a recipient could aim their
+            # own notification at an arbitrary target. `is_read` stays writable
+            # -- marking something read is the one thing a recipient does.
+            "title",
+            "message",
+            "notification_type",
+            "related_resource",
+            "related_id",
+        ]
 
 
 class UserNotificationListSerializer(serializers.ModelSerializer):
