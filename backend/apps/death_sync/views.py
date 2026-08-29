@@ -20,6 +20,7 @@ from apps.death_sync.models import (
     WebhookConfig,
     WebhookDeliveryLog,
 )
+from apps.death_sync.permissions import CanManageWebhooks, CanQueryStatus
 from apps.death_sync.serializers import (
     DeathRegistrationCreateSerializer,
     DeathRegistrationRequestSerializer,
@@ -198,7 +199,10 @@ class WebhookViewSet(viewsets.ModelViewSet):
     authentication_classes = [APIKeyAuthentication]
     # See DeathRegistrationViewSet above / apps/core/permissions.py for why
     # the default IsAuthenticated cannot be used here.
-    permission_classes = [HasValidApiKey]
+    # `can_manage_webhooks` was declared on the model, migrated and serialized,
+    # and read by nothing: a key with it set False POSTed here and got 201.
+    # A WebhookConfig decides where this system sends outbound HTTP.
+    permission_classes = [CanManageWebhooks]
     queryset = WebhookConfig.objects.all()
     serializer_class = WebhookConfigSerializer
 
@@ -224,7 +228,8 @@ class DeathSyncHealthView(APIView):
     authentication_classes = [APIKeyAuthentication]
     # See DeathRegistrationViewSet above / apps/core/permissions.py for why
     # the default IsAuthenticated cannot be used here.
-    permission_classes = [HasValidApiKey]
+    # `can_query_status` was the other declared-and-never-read flag.
+    permission_classes = [CanQueryStatus]
 
     def get(self, request):
         from datetime import timedelta
