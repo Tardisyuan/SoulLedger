@@ -3,7 +3,7 @@ REST views for Realms app.
 """
 from rest_framework import viewsets
 
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.realms.filters import RealmFilter
 from apps.realms.models import Realm
@@ -15,7 +15,8 @@ class RealmViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnl
     Read-only realm listing and detail.
     Use '?localized=true' query param to get display_name resolved by Accept-Language.
     """
-    permission_classes = [TenantPermission]
+    # Same shape as apps/actors/views.py: declared `realms`, enforced nothing.
+    permission_classes = [TenantPermission, CodenamePermission]
     # Plural, matching the seeded `realms.read` in DEFAULT_PERMISSIONS. This
     # used to read "realm", which generated realm.read — a codename no role
     # holds and no migration ever seeded, so the view could only ever have
