@@ -9,7 +9,7 @@ from rest_framework import viewsets
 from apps.actors.filters import ActorFilter
 from apps.actors.models import Actor
 from apps.actors.serializers import ActorListSerializer, ActorLocalizedSerializer, ActorSerializer
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
 
 
@@ -18,7 +18,11 @@ class ActorViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnl
     Read-only actor listing and detail.
     Use '?localized=true' query param to get display_name resolved by Accept-Language.
     """
-    permission_classes = [TenantPermission]
+    # Declared `actors` and enforced nothing. Latent rather than leaking today
+    # -- every role holds `actors.read` -- but "the codename happens to be
+    # universal" is not a permission check. See apps/audit/views.py for the
+    # sibling that was leaking.
+    permission_classes = [TenantPermission, CodenamePermission]
     # Plural, matching the seeded `actors.read` in DEFAULT_PERMISSIONS — same
     # singular/plural mismatch as realms had. Renaming the view is free;
     # renaming the Permission rows would need another data migration.

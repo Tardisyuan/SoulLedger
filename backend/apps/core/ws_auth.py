@@ -95,7 +95,22 @@ class JWTAuthMiddleware(BaseMiddleware):
             if not user_id:
                 return None
             from apps.authentication.models import User
-            return User.objects.select_related("rbac_role", "tenant").get(id=user_id)
+            user = User.objects.select_related("rbac_role", "tenant").get(id=user_id)
+            # HTTP enforces this and WebSocket did not.
+            # `rest_framework_simplejwt`'s own authentication checks
+            # CHECK_USER_IS_ACTIVE (on by default); this method did a bare
+            # `.get(id=...)`. Measured 2026-08-29: a deactivated user got 401
+            # over HTTP and authenticated fine over WS. So
+            # `POST /users/{id}/deactivate/` revoked REST immediately and left
+            # the event feed -- notifications, dispatch, judgment, workflow --
+            # running for the rest of the access token's life, and an
+            # already-open socket running indefinitely.
+            if not user.is_active:
+                logger.debug(
+                    "JWTAuthMiddleware: user %s is deactivated", user_id
+                )
+                return None
+            return user
         except (TokenError, InvalidToken):
             logger.debug("JWTAuthMiddleware: invalid token")
             return None

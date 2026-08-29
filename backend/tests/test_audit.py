@@ -676,31 +676,52 @@ class TestAuditApiEndpoint:
         # TenantPermission denies access when tenant is None for non-ADMIN
         assert response.status_code == 403
 
-    def test_non_admin_with_tenant_can_access(self, db, cn_tenant):
-        """Non-admin users with tenant context can access audit logs (tenant-scoped)."""
+    def test_audit_read_is_what_decides_access_not_merely_having_a_tenant(
+        self, db, cn_tenant
+    ):
+        """This used to assert that any non-admin with a tenant got 200.
+
+        It was named `test_non_admin_with_tenant_can_access` and it was
+        recording a leak: `AuditLogViewSet` declared `permission_codename =
+        "audit"` and listed `TenantPermission` alone, so the codename was
+        decorative and a VIEWER could read the whole tenant's audit log --
+        including `/timeline/`, the permission-change timeline. Having a
+        tenant is what tenant scoping is for; it is not an authorisation.
+
+        `audit.read` is granted to ADMIN and MODERATOR. Both sides are checked
+        here: asserting only the refusal would pass against a viewset that
+        refuses everyone.
+        """
         from django.contrib.auth import get_user_model
         from django.test import RequestFactory
         from rest_framework.test import force_authenticate
 
-        User = get_user_model()
-        non_admin = User.objects.create_user(
-            username="non_admin_tenant_user",
-            password="test123",
-            role="JUDGE",
-            tenant=cn_tenant
-        )
-
-        factory = RequestFactory()
-        request = factory.get("/api/v1/audit-logs/")
-        force_authenticate(request, user=non_admin)
-        request.tenant = cn_tenant  # Inject tenant context
-
         from apps.audit.views import AuditLogViewSet
+
+        User = get_user_model()
         view = AuditLogViewSet.as_view({"get": "list"})
-        response = view(request)
-        response.render()
-        # Non-admin with tenant context should get 200 (tenant-scoped results)
-        assert response.status_code == 200
+
+        def _status(role):
+            user = User.objects.create_user(
+                username=f"audit_probe_{role.lower()}",
+                password="test123", role=role, tenant=cn_tenant,
+            )
+            request = RequestFactory().get("/api/v1/audit-logs/")
+            force_authenticate(request, user=user)
+            request.tenant = cn_tenant
+            response = view(request)
+            response.render()
+            return response.status_code
+
+        assert _status("JUDGE") == 403, (
+            "JUDGE does not hold `audit.read`; having a tenant is not an "
+            "authorisation"
+        )
+        assert _status("VIEWER") == 403
+        assert _status("MODERATOR") == 200, (
+            "MODERATOR holds `audit.read` and must still get in -- a viewset "
+            "that refuses everyone would satisfy the assertions above"
+        )
 
     def test_unauthenticated_cannot_access(self, api_client):
         """Unauthenticated users cannot access /api/v1/audit-logs/ endpoint."""
