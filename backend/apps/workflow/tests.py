@@ -256,16 +256,21 @@ class TestWorkflowAdvance:
         assert resp.status_code == status.HTTP_201_CREATED
         wf_pk = resp.data["id"]
         # Create nodes via API (ApprovalNodeViewSet)
-        self.client.post(
+        resp = self.client.post(
             f"{NODES}/",
-            {"workflow": wf_pk, "node_name": "Node1", "node_order": 1, "status": "APPROVED"},
+            {"workflow": wf_pk, "node_name": "Node1", "node_order": 1},
             format="json",
         )
-        self.client.post(
+        assert resp.status_code == status.HTTP_201_CREATED
+        # Decided through the ORM — the endpoint no longer accepts a decision.
+        from apps.workflow.models import ApprovalNode
+        ApprovalNode.objects.filter(pk=resp.data["id"]).update(status="APPROVED")
+        resp = self.client.post(
             f"{NODES}/",
             {"workflow": wf_pk, "node_name": "Node2", "node_order": 2},
             format="json",
         )
+        assert resp.status_code == status.HTTP_201_CREATED
         resp = self.client.post(f"{WORKFLOWS}/{wf_pk}/advance/")
         assert resp.status_code == status.HTTP_200_OK
 
@@ -277,12 +282,15 @@ class TestWorkflowAdvance:
         )
         assert resp.status_code == status.HTTP_201_CREATED
         wf_pk = resp.data["id"]
-        # Create a single completed node
-        self.client.post(
+        # Create a single completed node — decided through the ORM.
+        resp = self.client.post(
             f"{NODES}/",
-            {"workflow": wf_pk, "node_name": "Node1", "node_order": 1, "status": "APPROVED"},
+            {"workflow": wf_pk, "node_name": "Node1", "node_order": 1},
             format="json",
         )
+        assert resp.status_code == status.HTTP_201_CREATED
+        from apps.workflow.models import ApprovalNode
+        ApprovalNode.objects.filter(pk=resp.data["id"]).update(status="APPROVED")
         resp = self.client.post(f"{WORKFLOWS}/{wf_pk}/advance/")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -342,11 +350,23 @@ class TestWorkflowApproveNode:
                 "approver_type": "ACTOR",
                 "approver_actor": str(self.actor.pk),
             }
-            if status_val:
-                data["status"] = status_val
             resp = self.client.post(f"{NODES}/", data, format="json")
             assert resp.status_code == status.HTTP_201_CREATED
             node_pks.append(resp.data["id"])
+            if status_val:
+                from apps.workflow.models import ApprovalNode
+
+                # Seeded through the ORM, not the API. `status` used to be
+                # POSTable here, and that convenience was the stated reason
+                # ApprovalNodeSerializer left the four decision fields writable
+                # on create — which let a MODERATOR who gets 403 from
+                # approve_node mint an APPROVED node with any approver and any
+                # timestamp instead. Setting up an already-decided node is a
+                # fixture's job; it is not a reason for the endpoint to accept
+                # one. See tests/test_node_decisions_are_not_postable.py.
+                ApprovalNode.objects.filter(pk=resp.data["id"]).update(
+                    status=status_val
+                )
         return wf_pk, node_pks
 
     def test_approve_pending_node(self):
