@@ -123,6 +123,12 @@ export default function UsersPage() {
           >
             <option value="">{t("users.all_roles")}</option>
             <option value="ADMIN">{t("users.roles.ADMIN")}</option>
+            {/* MODERATOR was missing from this list and from all three message
+                bundles, while the backend granted it a larger permission set
+                than JUDGE. A MODERATOR's row rendered as "unrecognised value"
+                and the filter could not select them. The bundles agreed with
+                each other, so the key-parity guard stayed green throughout. */}
+            <option value="MODERATOR">{t("users.roles.MODERATOR")}</option>
             <option value="JUDGE">{t("users.roles.JUDGE")}</option>
             <option value="GUARDIAN">{t("users.roles.GUARDIAN")}</option>
             <option value="VIEWER">{t("users.roles.VIEWER")}</option>

@@ -1150,6 +1150,7 @@
     "actions": "Aha Seth",
     "roles": {
       "ADMIN": "Netjer Em Tepy",
+      "MODERATOR": "Realm Lead",
       "JUDGE": "Hemsu Seth",
       "GUARDIAN": "Smen Khet",
       "VIEWER": "Smen Pepy"
