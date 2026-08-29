@@ -2,7 +2,7 @@
 REST views for dispatch app.
 """
 from django.db import IntegrityError
-from rest_framework import status, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -368,7 +368,34 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
         return qs.none()
 
     def perform_create(self, serializer):
-        serializer.save(tenant=getattr(self.request, "tenant", None))
+        """Stamp both tenant columns from the requester, never from the body.
+
+        `initiating_tenant` used to be a plain writable field while this method
+        pinned only `tenant`. Since `get_queryset` filters on
+        `initiating_tenant` and object permissions compare `tenant`, a caller
+        could set the two to different tenants and land a row in someone
+        else's list that that tenant could not open and the creator could not
+        see. Both columns now come from the same place, so they cannot
+        disagree.
+
+        The fallback to `request.user.tenant` matters: `request.tenant` is set
+        by TenantMiddleware from the token's `tenant_code` claim, and any
+        caller that reaches a view without passing through the middleware
+        (DRF's `force_authenticate`, used by a good deal of this suite) has it
+        as None. Reading the user's own tenant column is the same answer by a
+        route that cannot be skipped.
+        """
+        tenant = getattr(self.request, "tenant", None) or getattr(
+            self.request.user, "tenant", None
+        )
+        if tenant is None:
+            raise serializers.ValidationError({
+                "initiating_tenant": (
+                    "No tenant on the request or the user. A cross-tenant "
+                    "judgment has to be opened by some tenant."
+                )
+            })
+        serializer.save(tenant=tenant, initiating_tenant=tenant)
 
     @action(detail=True, methods=["post"])
     def participate(self, request, pk=None):
