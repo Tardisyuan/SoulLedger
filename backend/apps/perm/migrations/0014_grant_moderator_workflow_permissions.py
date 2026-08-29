@@ -58,10 +58,32 @@ GRANTS = [
 
 
 def _invalidate_cache():
-    """迁移期间自动失效钩子被短路（见 0013 的说明），这里手动兜底。"""
+    """迁移期间自动失效钩子被短路（见 0013 的说明），这里手动兜底。
+
+    Wrapped in `transaction.atomic()`, which opens a SAVEPOINT inside the
+    migration's transaction. Without it a bare `except Exception: pass` does
+    not contain the failure on PostgreSQL: the failed statement puts the whole
+    transaction into an aborted state, and every statement after it raises
+    InFailedSqlTransaction -- including Django's own INSERT into
+    django_migrations. The migration's data is written, then the *recording*
+    step rolls the lot back, and the error says "current transaction is
+    aborted" while pointing somewhere unrelated to the actual fault.
+
+    Measured 2026-08-29: `manage.py migrate` against an empty PostgreSQL 16
+    database fails here, so no fresh deployment of this project could ever
+    have worked. 192.168.2.115 was migrated incrementally and has never done a
+    from-scratch run, which is why nothing noticed.
+
+    SQLite does not abort the transaction on a failed statement, so the whole
+    suite is blind to this. `perm/0017` carries the same fix and the long-form
+    version of this explanation; these three were left behind when it was made.
+    """
+    from django.db import transaction
+
     try:
-        from apps.perm.cache import invalidate_role_permissions
-        invalidate_role_permissions(ROLE_NAME)
+        with transaction.atomic():
+            from apps.perm.cache import invalidate_role_permissions
+            invalidate_role_permissions(ROLE_NAME)
     except Exception:
         # 缓存不可用（如测试库没有 Redis）不应阻塞迁移本身。
         pass
