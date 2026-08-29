@@ -1,6 +1,7 @@
 """
 Soul core model + state machine.
 """
+import logging
 import uuid
 
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -11,6 +12,8 @@ from apps.core.archive import ArchivableMixin
 from apps.core.models import AuditUserFields
 from apps.souls.dates import parse_historical_date, to_legacy_date
 from apps.souls.querysets import SoulManager
+
+logger = logging.getLogger(__name__)
 
 
 class Civilization(models.TextChoices):
@@ -423,6 +426,38 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
 
             old_state = locked_soul.current_state
             locked_soul.current_state = new_state
+
+            # A terminal cosmology has no next life. `SoulState.SETTLED`
+            # exists to say so, and `apps/reincarnation/views.py` states
+            # plainly that writing REINCARNATING onto such a soul "is the
+            # outcome SoulState.SETTLED exists to prevent" -- which is why
+            # complete() and reborn() both call `assert_rebirth_capable`
+            # first.
+            #
+            # That gate was installed on those two doors only.
+            # `POST /souls/{id}/transition/` drove the same edge with no check
+            # at all: measured 2026-08-29, an EG_DUAT soul in DISPOSED went
+            # REINCARNATING then ALIVE in two 200s, ending with
+            # reincarnations=0, merit and demerit uninherited, and its previous
+            # life's description intact -- no Meng Po, no Lethe, no spell of
+            # forgetting. GUARDIAN, JUDGE and MODERATOR all managed it.
+            #
+            # The check belongs here rather than on the action, because "which
+            # doors have the gate" is the question that produced the hole. Any
+            # future writer of this edge inherits it.
+            if new_state == SoulState.REINCARNATING:
+                from apps.ledger.services import (
+                    REBIRTH_CAPABLE_CIVILIZATIONS,
+                )
+
+                if self.civilization not in REBIRTH_CAPABLE_CIVILIZATIONS:
+                    logger.warning(
+                        "Refused REINCARNATING for %s: %s is a terminal "
+                        "cosmology.",
+                        self.pk,
+                        self.civilization,
+                    )
+                    return False
 
             # `death_date` is a legacy compatibility property, not a column.
             # `apps/souls/dates.py::to_legacy_date` returns None for anything
