@@ -67,8 +67,13 @@ class APIKeyAuthentication(BaseAuthentication):
 
     @staticmethod
     def _get_client_ip(request):
-        """Extract client IP from request."""
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            return x_forwarded_for.split(",")[0].strip()
-        return request.META.get("REMOTE_ADDR")
+        """Delegates to the one validated implementation.
+
+        `allowed_ips` was bypassable by sending the address it wanted:
+        measured, a key restricted to 203.0.113.9 accepted a request from
+        198.51.100.7 carrying `X-Forwarded-For: 203.0.113.9`. See
+        apps/core/client_ip.py.
+        """
+        from apps.core.client_ip import get_client_ip
+
+        return get_client_ip(request)

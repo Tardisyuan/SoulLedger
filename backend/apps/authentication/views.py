@@ -368,11 +368,16 @@ class LoginLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
 
 
 def _get_client_ip(request):
-    """Extract client IP from request, handling proxies."""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        return x_forwarded_for.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR', None)
+    """Delegates to the one validated implementation.
+
+    This keys the login brute-force limiter (5 attempts / 15 minutes). It used
+    to return `X-Forwarded-For`'s first entry unchecked, so rotating that
+    header reset the counter and the limiter counted nothing. See
+    apps/core/client_ip.py.
+    """
+    from apps.core.client_ip import get_client_ip
+
+    return get_client_ip(request)
 
 
 class LoginView(TokenObtainPairView):
