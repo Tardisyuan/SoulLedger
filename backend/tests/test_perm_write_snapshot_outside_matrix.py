@@ -958,19 +958,41 @@ def test_notification_create_cannot_succeed_for_anyone(role_clients, snapshot_te
 @pytest.mark.django_db
 @pytest.mark.parametrize("role", ROLES)
 def test_notification_partial_update(role_clients, snapshot_tenants, role):
-    """notification.read, held by all five, so enforcement moved nothing. Own-inbox only."""
+    """notification.read, held by all five, so enforcement moved nothing. Own-inbox only.
+
+    This used to PATCH `title` and assert the new value was stored -- i.e. it
+    pinned the recipient's ability to rewrite the body of a notification the
+    system sent them. `title`, `message`, `notification_type`,
+    `related_resource` and `related_id` are now read-only: the body is written
+    by whatever raised the notification, and `related_resource`/`related_id`
+    drive the deep link, so a recipient could aim their own notification at an
+    arbitrary target. `is_read` stays writable -- marking something read is the
+    one thing a recipient does.
+
+    The status codes in NOTIFICATION_PATCH are unchanged; PATCH is still
+    permitted for every role. What changed is which fields it moves.
+    """
     from apps.notifications.models import UserNotification
 
     clients, users = role_clients
     notification = _notification(users[role])
     response = clients[role].patch(
-        f"/api/v1/notifications/{notification.id}/", {"title": f"EDITED_BY_{role}"}, format="json"
+        f"/api/v1/notifications/{notification.id}/",
+        {"is_read": True, "title": f"EDITED_BY_{role}"},
+        format="json",
     )
     assert response.status_code == NOTIFICATION_PATCH[role], _msg(
         role, "PATCH /notifications/{id}/", response
     )
-    expected = f"EDITED_BY_{role}" if NOTIFICATION_PATCH[role] == 200 else "wsnap"
-    assert UserNotification.objects.get(pk=notification.pk).title == expected
+    stored = UserNotification.objects.get(pk=notification.pk)
+    assert stored.title == "wsnap", (
+        f"{role} rewrote the title of a notification the system sent it "
+        f"(now {stored.title!r})"
+    )
+    assert stored.is_read is (NOTIFICATION_PATCH[role] == 200), (
+        "is_read must remain writable -- a read-only fix that also stops a "
+        "recipient marking their inbox read is an outage, not a fix"
+    )
 
 
 @pytest.mark.django_db
