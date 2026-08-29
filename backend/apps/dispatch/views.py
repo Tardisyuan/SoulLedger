@@ -7,11 +7,12 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.actors.models import Actor
-from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.permissions import CodenamePermission
 from apps.core.request_local import clear_current_user, set_current_request, set_current_user
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.dispatch.filters import DispatchFilter
 from apps.dispatch.models import CrossTenantJudgment, DispatchRecord, DispatchStatus
+from apps.dispatch.permissions import CrossJudgmentPartyPermission, DispatchPartyPermission
 from apps.dispatch.serializers import (
     CrossTenantJudgmentConcludeSerializer,
     CrossTenantJudgmentListSerializer,
@@ -67,7 +68,7 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
     # See backend/tests/test_perm_write_snapshot_outside_matrix.py, "THE
     # DENIAL THAT CAN BE WALKED AROUND (dispatch)", for how this was
     # characterized before the fix, and its replacement assertions after.
-    permission_classes = [TenantPermission, CodenamePermission]
+    permission_classes = [DispatchPartyPermission, CodenamePermission]
     # BINARY read / manage, plus the three named approval actions. The dict
     # defines dispatch.read and dispatch.manage as the pair, then
     # dispatch.approve / .reject / .execute on top; it has never had a
@@ -309,7 +310,7 @@ class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, vi
     # also a permission bypass. Closed the same way (read-only + explicit
     # validate()), so it can't become one the moment `conclude` gets its own
     # narrower codename. See CrossTenantJudgmentSerializer's docstring.
-    permission_classes = [TenantPermission, CodenamePermission]
+    permission_classes = [CrossJudgmentPartyPermission, CodenamePermission]
     permission_codename = "cross_judgment"
     extra_permissions = {
         'participate': ['cross_judgment.create'],
