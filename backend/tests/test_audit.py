@@ -204,22 +204,54 @@ class TestAuditLogSignals:
         assert delete_log is not None, "Should have a DELETE audit log"
 
     def test_audit_log_captures_ip_and_user_agent(self, auth_client):
-        """AuditLog should capture IP address and user agent."""
+        """AuditLog captures the *observed* address, not the claimed one.
+
+        This test used to assert `ip_address == "192.168.1.1"` from a
+        client-supplied `X-Forwarded-For`, i.e. it pinned the behaviour that
+        let a caller write whatever address they liked into the audit column --
+        and, with an unparseable value, delete the audit row outright on
+        PostgreSQL (`invalid input syntax for type inet`). Honouring that
+        header is only correct when the request provably came through a proxy
+        we control, so it is now gated on `TRUSTED_PROXY_COUNT`.
+
+        Both halves are asserted here. Keeping only the default case would
+        leave "the header is honoured when it should be" untested, and a
+        helper that always returns REMOTE_ADDR would pass.
+        """
+        from django.test import override_settings
+
         from apps.audit.models import AuditLog
 
         create_count = AuditLog.objects.count()
-
         auth_client.post("/api/v1/souls/", {
             "name": "IP Test Soul",
             "birth_date": "1990-01-01",
         }, HTTP_USER_AGENT="TestClient/1.0", HTTP_X_FORWARDED_FOR="192.168.1.1")
-
-        # Should have at least one more audit log
         assert AuditLog.objects.count() >= create_count + 1
 
         log = AuditLog.objects.order_by("-timestamp").first()
-        assert log.ip_address == "192.168.1.1", f"Should capture IP from X-Forwarded-For, got: {log.ip_address}"
+        assert log.ip_address != "192.168.1.1", (
+            "the audit column took a client-supplied address; with no trusted "
+            "proxy configured the header carries no information"
+        )
+        assert log.ip_address == "127.0.0.1", (
+            f"expected the observed peer address, got {log.ip_address!r}"
+        )
         assert log.user_agent == "TestClient/1.0", "Should capture User-Agent"
+
+        with override_settings(TRUSTED_PROXY_COUNT=1):
+            count = AuditLog.objects.count()
+            auth_client.post("/api/v1/souls/", {
+                "name": "IP Test Soul 2",
+                "birth_date": "1990-01-01",
+            }, HTTP_USER_AGENT="TestClient/1.0",
+               HTTP_X_FORWARDED_FOR="192.168.1.1, 10.0.0.9")
+            assert AuditLog.objects.count() >= count + 1
+            log = AuditLog.objects.order_by("-timestamp").first()
+            assert log.ip_address == "192.168.1.1", (
+                f"with one trusted proxy the client address is the entry left "
+                f"of the proxy's own; got {log.ip_address!r}"
+            )
 
     def test_audit_log_anonymous_action(self, db, cn_tenant):
         """Anonymous operations (no user) should still create audit logs."""
