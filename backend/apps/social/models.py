@@ -166,12 +166,27 @@ class Reaction(AuditUserFields, models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "post"],
-                condition=models.Q(post__isnull=False),
+                # Scoped to live rows. Without this, soft-deleting a row leaves
+                # its key occupied by something no filtered queryset can see:
+                # re-creating the same key then fails a uniqueness check
+                # against a row that is invisible to every read path.
+                # See tests/test_soft_delete_frees_unique_keys.py.
+                # The `post__isnull` half was here; `is_deleted` was not. Measured
+                # 2026-08-29: like -> unlike -> like returned 500, permanently,
+                # and so did switching reaction type afterwards. DRF generates
+                # a uniqueness validator for `unique_together` but not for
+                # `Meta.constraints`, so there was no 400 in front of it.
+                condition=models.Q(post__isnull=False, is_deleted=False),
                 name="unique_reaction_per_post",
             ),
             models.UniqueConstraint(
                 fields=["user", "comment"],
-                condition=models.Q(comment__isnull=False),
+                # Scoped to live rows. Without this, soft-deleting a row leaves
+                # its key occupied by something no filtered queryset can see:
+                # re-creating the same key then fails a uniqueness check
+                # against a row that is invisible to every read path.
+                # See tests/test_soft_delete_frees_unique_keys.py.
+                condition=models.Q(comment__isnull=False, is_deleted=False),
                 name="unique_reaction_per_comment",
             ),
             models.CheckConstraint(
@@ -231,6 +246,18 @@ class Follow(AuditUserFields, models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["follower", "following"],
+                # Scoped to live rows. Without this, soft-deleting a row leaves
+                # its key occupied by something no filtered queryset can see:
+                # re-creating the same key then fails a uniqueness check
+                # against a row that is invisible to every read path.
+                # See tests/test_soft_delete_frees_unique_keys.py.
+                # `POST /follows/toggle/` was unaffected because
+                # `FollowService.unfollow` uses a queryset `.delete()`, which
+                # bypasses the model's soft delete entirely. `DELETE
+                # /follows/{id}/` went through the model and soft-deleted, so
+                # re-following afterwards raised IntegrityError. One meaning,
+                # two paths, opposite behaviour.
+                condition=models.Q(is_deleted=False),
                 name="unique_follow_relationship",
             ),
             models.CheckConstraint(

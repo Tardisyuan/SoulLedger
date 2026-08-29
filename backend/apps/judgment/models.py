@@ -445,6 +445,15 @@ class Statute(AuditUserFields, models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["tenant", "code"],
+                # Scoped to live rows. Without this, soft-deleting a row leaves
+                # its key occupied by something no filtered queryset can see:
+                # re-creating the same key then fails a uniqueness check
+                # against a row that is invisible to every read path.
+                # See tests/test_soft_delete_frees_unique_keys.py.
+                # This one has already bitten once: migration 0018 had to stop
+                # using `row.delete()` because the soft-deleted row kept the
+                # code and the rename then failed a UNIQUE check.
+                condition=models.Q(is_deleted=False),
                 name="unique_statute_tenant_code",
             ),
         ]
@@ -555,6 +564,12 @@ class JudgmentCitation(AuditUserFields, models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["judgment", "statute"],
+                # Scoped to live rows. Without this, soft-deleting a row leaves
+                # its key occupied by something no filtered queryset can see:
+                # re-creating the same key then fails a uniqueness check
+                # against a row that is invisible to every read path.
+                # See tests/test_soft_delete_frees_unique_keys.py.
+                condition=models.Q(is_deleted=False),
                 name="unique_citation_judgment_statute",
             ),
         ]
