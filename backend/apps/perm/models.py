@@ -176,7 +176,20 @@ class RolePermission(AuditUserFields):
     )
 
     class Meta:
-        unique_together = ["role", "permission"]
+        # Was `unique_together`. In practice grants are removed with a queryset
+        # `.delete()`, which bypasses the model's soft delete and really does
+        # remove the row -- so this has not bitten. It is here because the one
+        # path that would bite (a grant removed through the instance, e.g. from
+        # a shell or the admin) leaves a key occupied by a row `objects` cannot
+        # see, and re-granting then fails against something invisible. Scoping
+        # it costs nothing and removes the trap.
+        constraints = [
+            models.UniqueConstraint(
+                fields=["role", "permission"],
+                condition=models.Q(is_deleted=False),
+                name="unique_rolepermission_role_permission",
+            ),
+        ]
         verbose_name = "Role Permission"
         verbose_name_plural = "Role Permissions"
 

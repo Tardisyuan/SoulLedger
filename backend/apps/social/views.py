@@ -243,6 +243,27 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
     permission_classes = [TenantPermission, IsFollowOwnerOrReadOnly]
     # EXEMPT — see the module note at the top of this file.
     permission_codename = None
+
+    def perform_destroy(self, instance):
+        """Route DELETE through the service, the way `toggle` already does.
+
+        Without this, DELETE fell through to ModelViewSet's default, which
+        calls `instance.delete()` — the model's *soft* delete — and touched no
+        counters. `toggle` calls `FollowService.unfollow`, which uses a
+        queryset `.delete()` (a hard delete, since SoftDeleteQuerySet does not
+        override it) and decrements both profiles. One meaning, two paths,
+        opposite behaviour: measured 2026-08-29, `POST` then `DELETE` left
+        `followers_count` at 1 with zero rows, and the next `POST` raised
+        IntegrityError against the soft-deleted row.
+
+        The constraint is now scoped to live rows so re-following would work
+        either way; this exists so the counters stay true.
+        """
+        FollowService.unfollow(
+            follower=instance.follower,
+            following=instance.following,
+            tenant=instance.tenant,
+        )
     queryset = Follow.objects.select_related("follower", "following").all()
     http_method_names = ["get", "post", "delete", "head", "options"]
 

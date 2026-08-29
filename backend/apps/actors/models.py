@@ -72,6 +72,12 @@ class Actor(AuditUserFields, models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['tenant', 'civilization', 'name'],
+                # Scoped to live rows. Without this, soft-deleting a row leaves
+                # its key occupied by something no filtered queryset can see:
+                # re-creating the same key then fails a uniqueness check
+                # against a row that is invisible to every read path.
+                # See tests/test_soft_delete_frees_unique_keys.py.
+                condition=models.Q(is_deleted=False),
                 name='unique_actor_tenant_civ_name'
             ),
         ]

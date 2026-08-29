@@ -111,7 +111,21 @@ class MenuButton(AuditUserFields, models.Model):
 
     class Meta:
         ordering = ["order", "id"]
-        unique_together = [("menu", "code")]
+        # Was `unique_together = [("menu", "code")]`. That form cannot carry a
+        # condition, and without one a soft-deleted button kept its code
+        # occupied by a row no filtered queryset can see: create -> delete ->
+        # create-with-the-same-code answered 400 "already exists" while GET
+        # showed nothing. Measured 2026-08-29 (alive=0, all=1). Unlike the
+        # social constraints it degraded politely rather than 500ing, because
+        # DRF generates a uniqueness validator for `unique_together` and not
+        # for `Meta.constraints` -- the same root cause wearing a nicer face.
+        constraints = [
+            models.UniqueConstraint(
+                fields=["menu", "code"],
+                condition=models.Q(is_deleted=False),
+                name="unique_menubutton_menu_code",
+            ),
+        ]
         verbose_name = "Menu Button"
         verbose_name_plural = "Menu Buttons"
 
