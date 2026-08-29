@@ -80,7 +80,11 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
             "updated_at",
             "tenant",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        # `tenant` is set by TenantCreateMixin.perform_create from the request
+        # (a save() kwarg, so read-only here does not disturb creation). It was
+        # writable, and a MODERATOR could PATCH a template into another tenant
+        # in one request -- measured 2026-08-29.
+        read_only_fields = ["id", "created_at", "updated_at", "tenant"]
 
 
 class WorkflowTemplateListSerializer(serializers.ModelSerializer):
@@ -134,20 +138,33 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
     closes that with an explicit 400, the same shape as
     DispatchRecordSerializer.validate() in apps/dispatch/serializers.py.
 
-    Deliberately NOT in `read_only_fields`, unlike that dispatch precedent:
-    ApprovalNodeViewSet.create() (via TenantCreateMixin.perform_create) calls
-    `serializer.save()` directly with these fields as ordinary input, and node
-    fixtures across apps/workflow/tests.py rely on POSTing a node with
-    `status="APPROVED"` already set (to seed an already-decided node for
-    advance/stats/approve_node scenarios) — DispatchRecordSerializer could make
-    its equivalent fields fully read-only because DispatchRecordViewSet.create()
-    never touches them at all (it routes through DispatchService.propose()
-    instead). Making these four read-only here would have silently stripped
-    them from every such POST instead of raising anything, defaulting every
-    fixture node to PENDING and breaking that test file's assumptions. Guarding
-    only the update path (`self.instance is not None`) keeps node creation
-    exactly as permissive as before while closing the PATCH route onto an
-    existing node.
+    The paragraph above used to end by saying these four were guarded on the
+    update path only, because "node fixtures across apps/workflow/tests.py
+    rely on POSTing a node with status='APPROVED' already set". That was true
+    and it was not a reason. Closing PATCH while leaving POST open left the
+    same forgery one request away by another door: measured 2026-08-29, a
+    MODERATOR who gets 403 from approve_node can POST to /api/v1/nodes/ with
+    status=APPROVED, verdict=PASSED, approver=<any user id> and
+    decided_at=<any timestamp> and receive a 201. Nothing downstream
+    distinguishes the resulting row from one complete_node() wrote. A test
+    fixture's convenience is not a reason to leave a decision field writable —
+    the fixtures now seed decided nodes through the ORM, which is where
+    fixtures should be setting them anyway.
+
+    So all four are read-only now, and validate() raises on create as well as
+    update. Raising rather than silently stripping matters here for the same
+    reason it does everywhere else in this file: a client that sends
+    {"status": "APPROVED"} has to learn nothing was approved.
+
+    `workflow` is validated against the requester's tenant rather than being
+    left to the field's default queryset. That default is
+    `ApprovalWorkflow.objects` — a TenantManager — but at serializer-validation
+    time the tenant contextvar is not set, so it returned rows from every
+    tenant: measured, `ApprovalNodeSerializer().fields["workflow"].queryset`
+    handed back 2 rows across 2 tenants. `scope_to_tenant` is applied in
+    `get_queryset()`, which covers PATCH and GET (a cross-tenant PATCH
+    correctly 404s) and does not cover POST — so a MODERATOR in tenant A could
+    POST a node into tenant B's live approval chain and get a 201.
     """
 
     class Meta:
@@ -172,35 +189,69 @@ class ApprovalNodeSerializer(serializers.ModelSerializer):
             "decided_at",
             "created_at",
         ]
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            # A decision is recorded by complete_node(), never by a client.
+            # See the class docstring for the forged-approval POST this closes.
+            "status",
+            "verdict",
+            "approver",
+            "decided_at",
+        ]
+
+    def validate_workflow(self, value):
+        """A node may only be attached to a workflow the requester can reach.
+
+        See the class docstring: the field's own queryset is a TenantManager
+        evaluated with no tenant contextvar, so it does not scope anything at
+        validation time, and `get_queryset()` scoping never runs on POST.
+        ADMIN is exempt here for the same reason it is exempt everywhere else
+        in this codebase (apps/core/tenant.py documents it as the one globally
+        scoped role); every non-ADMIN caller is checked against the tenant on
+        the request, falling back to the user's own tenant column because
+        `force_authenticate` leaves `request.tenant` unset.
+        """
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if getattr(user, "role", None) == "ADMIN":
+            return value
+        tenant = getattr(request, "tenant", None) or getattr(user, "tenant", None)
+        if tenant is None or value.tenant_id != tenant.pk:
+            raise serializers.ValidationError(
+                "No such workflow in this tenant. A node cannot be attached to "
+                "another tenant's approval chain."
+            )
+        return value
 
     def validate(self, attrs):
-        """Reject an attempt to move `status`/`verdict`/`approver`/`decided_at` via PATCH.
+        """Reject an attempt to set `status`/`verdict`/`approver`/`decided_at`.
 
-        Only applies to updates (`self.instance is not None`); creation is
-        untouched — see the class docstring for why these fields stay writable
-        on POST. Checked against `self.initial_data` rather than `attrs` so an
-        attempted write is caught even if the field would also fail its own
-        validation for an unrelated reason (e.g. an `approver` id that doesn't
-        exist) — the client still needs to learn this endpoint refuses the
-        write, not receive whichever error surfaces first.
+        Applies to create as well as update. Guarding update alone left the
+        forgery one request away by another door — see the class docstring.
+        Checked against `self.initial_data` rather than `attrs` so an attempted
+        write is caught even if the field would also fail its own validation
+        for an unrelated reason (e.g. an `approver` id that doesn't exist) —
+        the client still needs to learn this endpoint refuses the write, not
+        receive whichever error surfaces first.
         """
-        if self.instance is not None:
-            blocked = [
-                field
-                for field in ("status", "verdict", "approver", "decided_at")
-                if field in self.initial_data
-            ]
-            if blocked:
-                raise serializers.ValidationError({
-                    field: (
-                        "Not settable through this endpoint once the node exists. "
-                        "Use ApprovalWorkflowViewSet.approve_node (workflow.approve), "
-                        "which also advances the workflow and sets completed_at — a "
-                        "plain field write would skip both."
-                    )
-                    for field in blocked
-                })
+        blocked = [
+            field
+            for field in ("status", "verdict", "approver", "decided_at")
+            if field in self.initial_data
+        ]
+        if blocked:
+            raise serializers.ValidationError({
+                field: (
+                    "A decision is not settable through this endpoint, at "
+                    "creation or afterwards. Use "
+                    "ApprovalWorkflowViewSet.approve_node (workflow.approve), "
+                    "which also advances the workflow and sets completed_at — a "
+                    "plain field write would skip both and leave a row nothing "
+                    "downstream can tell from a real approval."
+                )
+                for field in blocked
+            })
         return attrs
 
 
@@ -262,6 +313,18 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
             "id",
             "status",
             "current_node",
+            # Which tenant owns a workflow is not a client-supplied field.
+            # TenantCreateMixin.perform_create passes it as a save() kwarg, so
+            # this does not affect creation. It was writable, and a MODERATOR
+            # -- a role deliberately denied `workflow.approve` and
+            # `workflow.advance` -- could PATCH {"tenant": <other>} and hand the
+            # row over in one request. The workflow keeps its original `soul`
+            # FK while this serializer exposes `soul_name` and the whole `nodes`
+            # list, so the receiving tenant reads a foreign soul's name and its
+            # entire approval history and the owning tenant loses the row.
+            # Measured 2026-08-29. The docstring above reasons carefully about
+            # `status` and `current_node` and never mentions `tenant`.
+            "tenant",
             "created_at",
             "updated_at",
             "completed_at",
@@ -276,8 +339,15 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
         nothing here to guard.
         """
         if self.instance is not None:
+            # `soul` and `judgment` are what a workflow is *about*. They must
+            # stay settable at creation (the POST body carries `soul`) and be
+            # fixed afterwards -- re-pointing a live approval chain at a
+            # different soul carries every decision already recorded on it
+            # across to someone else's case.
             blocked = [
-                field for field in ("status", "current_node") if field in self.initial_data
+                field
+                for field in ("status", "current_node", "soul", "judgment")
+                if field in self.initial_data
             ]
             if blocked:
                 raise serializers.ValidationError({
