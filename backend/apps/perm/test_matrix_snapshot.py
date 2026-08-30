@@ -845,9 +845,12 @@ def test_perm_assign_snapshot(role_clients, snapshot_tenant, role):
 # The rollout therefore straddles both paths, and neither is the "normal" one.
 #
 # A deployed database is not migrate-only. Dev has Permission rows for soul.*
-# and ledger.* (created by apps/perm/views.py's init endpoint, which no
-# migration owns) and 49 RolePermission rows, so there the DB decides and the
-# dict is never consulted. The matrix frozen above therefore pins the path CI
+# and ledger.* and 49 RolePermission rows, so there the DB decides and the dict
+# is never consulted. Those rows came from `POST /perm/init/`, which no
+# migration owned — that endpoint was **deleted on 2026-08-30** (it revoked
+# every configured grant on the way to re-seeding). Nothing has replaced it, so
+# a freshly deployed database no longer acquires those rows at all, which makes
+# the divergence below wider, not narrower. The matrix frozen above therefore pins the path CI
 # happens to exercise and says nothing about the path production runs on.
 #
 # These cases close that gap: seed the codenames, grant them from
