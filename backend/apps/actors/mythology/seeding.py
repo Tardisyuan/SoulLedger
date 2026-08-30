@@ -33,6 +33,21 @@ REALM_FIELDS = (
 ACTOR_FIELDS = (
     "name_zh", "name_en", "name_egy", "role", "realm",
     "title", "title_zh", "title_en", "title_egy", "description",
+    # `is_active` 在比对集合里,因为有两处真实消费方读它(2026-08-30 全仓核实):
+    #   apps/actors/views.py:31                       queryset = filter(is_active=True)
+    #   .../commands/migrate_actors_to_users.py:152   is_active=actor.is_active
+    # 一个 `is_active=False` 的种子行,会让 Actor 接口**返回空**,并且在
+    # Actor→User 迁移里产出一个**被停用的用户账号**。
+    #
+    # 它此前既不在 values 里也不在这个元组里,于是 `--update` 修不了它,变异测试
+    # 也看不见它:往 values 注入 `"is_active": False`,13 个作用域测试文件
+    # **92 passed,0 红**。
+    #
+    # (审计账本 H45 还写了「`apps/workflow/services.py:704` 的审批人解析同样过滤
+    # 它」——**那一句是错的**。704 行过滤的是 `WorkflowTemplate.is_active`,而
+    # `_resolve_approver` 用 `Actor._base_manager.filter(civilization, tenant_id,
+    # is_deleted=False)`,根本不看 `is_active`。行号对、字段名对、模型不对。)
+    "is_active",
     # `powers_json` is in the comparison set for ordinary actors too, because
     # it is where a row's recorded aliases live (see EGYPTIAN_ACTOR_ALIASES) and
     # an actor whose set of names changed is a changed row. It was previously
@@ -238,6 +253,12 @@ class MythologySeeder:
                 "powers_json": (
                     {ALIASES_KEY: list(aliases[name])} if name in aliases else {}
                 ),
+                # 显式写出来,而不是靠模型默认值。默认值只在**创建**时生效:
+                # 一个此前被停用的行,`--update` 不会把它启用回来,除非这个字段
+                # 既在 values 里、又在 compare_fields 里。种子行的定义是「这个
+                # 语料声明存在的角色」,而语料里没有「已退役」这个概念 ——
+                # 退役走的是 `actors/0010` 那种显式迁移,不是种子命令。
+                "is_active": True,
             }
             self._upsert(
                 model=Actor,
