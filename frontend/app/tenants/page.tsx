@@ -9,6 +9,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import {
   CIVILIZATION_SHORT_CODES,
@@ -47,7 +48,7 @@ export default function TenantsPage() {
 
   // tenantsApi.list() (lib/api/tenants.ts) doesn't forward a `page` param, so this
   // calls the shared `api` client directly to reach `/tenants/?page=`.
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["tenants", page],
     queryFn: () => api.get<PaginatedResponse<Tenant>>("/tenants/", { params: { page } }).then(r => r.data),
     enabled: !!user,
@@ -70,12 +71,20 @@ export default function TenantsPage() {
       subtitle={t("tenants.subtitle") || "Tenant management"}
       isLoading={isLoading}
       skeleton={<ListSkeleton count={5} />}
-      isEmpty={tenants.length === 0}
+      // A failed request used to fall straight through to the empty state,
+      // so "the server is down" and "there are no tenants" rendered the same
+      // words. Measured 2026-08-29: identical page text, character for
+      // character, between a 500 and an empty list.
+      isEmpty={isError || tenants.length === 0}
       empty={
-        <EmptyState
-          title={t("tenants.list") || "All Tenants"}
-          reason={t("tenants.no_tenants") || "No tenants found."}
-        />
+        isError ? (
+          <QueryError onRetry={() => refetch()} />
+        ) : (
+          <EmptyState
+            title={t("tenants.list")}
+            reason={t("tenants.no_tenants")}
+          />
+        )
       }
       pagination={
         showPagination

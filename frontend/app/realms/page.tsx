@@ -11,6 +11,7 @@ import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { QueryError } from "@/src/components/ui/PageError";
 
 const CIVILIZATION_CONFIG: Record<string, { nameKey: string; icon: React.ReactNode }> = {
   CHINESE: { nameKey: "realms.civilizations.CHINESE", icon: <Castle className="w-6 h-6" /> },
@@ -75,7 +76,7 @@ export default function RealmsPage() {
   const { user } = useTenant();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
-  const { data: realms = [], isLoading, error } = useQuery({
+  const { data: realms = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["realms", user?.tenant?.code, user?.role],
     queryFn: () => realmsApi.list().then(r => r.data.results || []),
     enabled: !!user,
@@ -112,6 +113,11 @@ export default function RealmsPage() {
         </div>
       }
     >
+      {/* This page destructured `error` from useQuery and never read it, so a
+          failed request rendered the heading and an empty grid -- the same
+          thing "no realms exist" renders. Measured 2026-08-29: identical page
+          text between a 500 and an empty list. */}
+      {isError && <QueryError onRetry={() => refetch()} />}
       <div className="space-y-10">
         {Object.entries(grouped).map(([civ, civRealms]) => {
           const config = CIVILIZATION_CONFIG[civ] || { nameKey: `realms.civilizations.${civ}`, icon: <Castle className="w-6 h-6" /> };

@@ -12,6 +12,7 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { badgeVariants } from "@/src/components/ui/Badge";
+import { QueryError } from "@/src/components/ui/PageError";
 
 const CIVILIZATION_ICONS: Record<string, string> = {
   CHINESE: "🏯",
@@ -129,7 +130,7 @@ export default function ActorsPage() {
    */
   const [benchOpen, setBenchOpen] = useState<Record<string, boolean>>({});
 
-  const { data: actors = [], isLoading } = useQuery({
+  const { data: actors = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["actors"],
     queryFn: () => actorsApi.list().then(r => r.data.results || []),
     enabled: !!user,
@@ -175,7 +176,11 @@ export default function ActorsPage() {
       subtitle={t("actors.subtitle")}
     >
       <PageSection title={t("actors.section.actors")} isLoading={isLoading}>
-        {isLoading ? (
+        {/* A failed request used to fall through to the empty state, so
+            "the server is down" and "there is nothing here" read the same. */}
+        {isError ? (
+          <QueryError onRetry={() => refetch()} />
+        ) : isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
               <div key={i} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
