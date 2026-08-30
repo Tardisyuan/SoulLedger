@@ -320,7 +320,16 @@ class TestDecayIsPerCivilization:
         assert record["decay_factor"] == 1.0
         assert record["effective_weight"] == 100.0
 
-    @pytest.mark.parametrize("civ", [Civilization.CHINESE, Civilization.EGYPTIAN])
+    # EGYPTIAN moved out of this list on 2026-08-30 and now sits with EUROPEAN.
+    # `MAAT_FEATHER_WEIGHT` promises that "a heart with any recorded wrongdoing
+    # beyond a single minimal deed is heavier than the feather", and
+    # `heart_weight` is the *decayed* demerit total -- so any rate at all meant
+    # a wrong committed long enough before death weighed nothing. Measured:
+    # three recorded wrongs of weight 1 passed the weighing. The argument this
+    # file already made for EUROPEAN ("a label that contradicts the arithmetic
+    # under it is worse than either alone") applies unchanged; nobody had
+    # carried it across. See tests/test_the_egyptian_scale_matches_its_own_description.py.
+    @pytest.mark.parametrize("civ", [Civilization.CHINESE])
     def test_every_other_cosmology_still_decays_at_one_percent(self, civ):
         soul = self._soul_with_an_old_deed(self.tenants[civ])
         record = LedgerService.get_ledger_summary(soul)["records"][0]
@@ -371,7 +380,9 @@ class TestDecayIsPerCivilization:
         assert isinstance(CIVILIZATION_DECAY_RATE, dict)
         assert CIVILIZATION_DECAY_RATE[Civilization.EUROPEAN] == 0.0
         assert CIVILIZATION_DECAY_RATE[Civilization.CHINESE] == DECAY_RATE
-        assert CIVILIZATION_DECAY_RATE[Civilization.EGYPTIAN] == DECAY_RATE
+        # EGYPTIAN joined EUROPEAN at 0.0 on 2026-08-30 -- see the comment on
+        # test_every_other_cosmology_still_decays_at_one_percent above.
+        assert CIVILIZATION_DECAY_RATE[Civilization.EGYPTIAN] == 0.0
         assert Civilization.GREEK not in CIVILIZATION_DECAY_RATE
 
 
