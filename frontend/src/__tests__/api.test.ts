@@ -207,13 +207,85 @@ describe('API Client — lib/api.ts', () => {
       expect(sessionStorage.getItem('soulledger_access')).toBe('new-access');
     });
 
+    /* 这三条此前喂的是 `/api/v1/auth/...`,而 `baseURL` 已经含 `/api/v1` ——
+       axios 交给拦截器的 `config.url` 是 `/auth/login/`。于是它们三条同时:
+       用一个应用不会产生的 URL,去测一条正则,而那条正则对真实 URL 永远不匹配。
+       同一个文件五十行之下就断言真实调用是 `mockInstance.post('/auth/login/')`
+       —— **这份测试自带反驳材料,相隔五十行。**
+       换成真实形状之后,它们守的才是那个「跳过认证端点」的保护。 */
     it('should reject without refresh attempt for auth endpoints', async () => {
+      // cookie 必须在。没有它,`if (refresh)` 是假,拦截器无论如何都不会去刷新
+      // —— 于是这条断言在正则完全失效时**照样通过**。实测:把正则改回带
+      // `/api/v1` 前缀的那一版(它对真实 URL 永远不匹配),这三条一条不红。
+      // **一条因为错误的理由而绿的断言,等价于不存在。**
+      document.cookie = 'soulledger_refresh=present; path=/';
       const error = {
         response: { status: 401 },
-        config: { _retry: false, url: '/api/v1/auth/login/', headers: {} },
+        config: { _retry: false, url: '/auth/login/', headers: {} },
       };
       await expect(applyResponseErrorInterceptor(error)).rejects.toBe(error);
       expect(axios.post).not.toHaveBeenCalled();
+    });
+
+    it('two requests failing at once trigger exactly ONE refresh', async () => {
+      /* `error.config._retry` 是**每个请求自己的 config** 上的标志。两个同时 401
+         的请求各自看到 `_retry === false`、各自读到同一个 refresh token、
+         各自 POST `/auth/refresh/`。后端跑
+         `ROTATE_REFRESH_TOKENS: True` + `BLACKLIST_AFTER_ROTATION: True`,
+         于是第一个成功**并把第二个手上那个 token 拉黑** —— 第二个必然 401、
+         落进 catch、清 cookie、跳 `/login`。
+
+         access 寿命 30 分钟,任何同时发多个查询的页面(也就是大部分页面)在
+         token 过期后第一次加载就满足这个条件。
+
+         断言的是 `axios.post` 的**调用次数**。只断言「两个请求最后都成功」的话,
+         一个各刷各的实现在测试里也会通过 —— 因为测试里的 mock 不会拉黑任何东西。
+         次数是唯一能把这两件事分开的量。 */
+      document.cookie = 'soulledger_refresh=shared-refresh; path=/';
+      (axios.post as jest.Mock).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () => resolve({ data: { access: 'rotated', refresh: 'next' } }),
+              5
+            )
+          )
+      );
+      mockInstance.mockResolvedValue({ data: { ok: true } });
+
+      await Promise.all([
+        applyResponseErrorInterceptor({
+          response: { status: 401 },
+          config: { _retry: false, url: '/souls/', headers: {}, method: 'get' },
+        }),
+        applyResponseErrorInterceptor({
+          response: { status: 401 },
+          config: { _retry: false, url: '/judgment/', headers: {}, method: 'get' },
+        }),
+      ]);
+
+      expect(axios.post).toHaveBeenCalledTimes(1);
+    });
+
+    it('a later 401 starts a fresh refresh, not a stale shared one', async () => {
+      /* 反对照。没有它,一个「第一次刷完就永远不再刷」的实现同样满足上面那条,
+         而那会让 token 第二次过期时全站卡死。 */
+      document.cookie = 'soulledger_refresh=r1; path=/';
+      (axios.post as jest.Mock).mockResolvedValue({
+        data: { access: 'a', refresh: 'r2' },
+      });
+      mockInstance.mockResolvedValue({ data: { ok: true } });
+
+      await applyResponseErrorInterceptor({
+        response: { status: 401 },
+        config: { _retry: false, url: '/souls/', headers: {}, method: 'get' },
+      });
+      await applyResponseErrorInterceptor({
+        response: { status: 401 },
+        config: { _retry: false, url: '/souls/', headers: {}, method: 'get' },
+      });
+
+      expect(axios.post).toHaveBeenCalledTimes(2);
     });
 
     it('should reject non-401 errors immediately', async () => {
@@ -235,18 +307,20 @@ describe('API Client — lib/api.ts', () => {
     });
 
     it('should skip refresh for register endpoint', async () => {
+      document.cookie = 'soulledger_refresh=present; path=/';
       const error = {
         response: { status: 401 },
-        config: { _retry: false, url: '/api/v1/auth/register/', headers: {} },
+        config: { _retry: false, url: '/auth/register/', headers: {} },
       };
       await expect(applyResponseErrorInterceptor(error)).rejects.toBe(error);
       expect(axios.post).not.toHaveBeenCalled();
     });
 
     it('should skip refresh for refresh endpoint itself', async () => {
+      document.cookie = 'soulledger_refresh=present; path=/';
       const error = {
         response: { status: 401 },
-        config: { _retry: false, url: '/api/v1/auth/refresh/', headers: {} },
+        config: { _retry: false, url: '/auth/refresh/', headers: {} },
       };
       await expect(applyResponseErrorInterceptor(error)).rejects.toBe(error);
       expect(axios.post).not.toHaveBeenCalled();

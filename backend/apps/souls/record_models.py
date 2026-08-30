@@ -82,6 +82,26 @@ class SoulRecord(AuditUserFields, models.Model):
     description = models.TextField()
     weight = models.IntegerField(
         default=1,
+        # The validators the help_text has been promising since this column
+        # landed. `event_month` and `event_day` immediately below carry
+        # Min/Max validators; `weight` -- the one field on this model that
+        # arithmetic is done with -- carried none, and
+        # `apps/souls/serializers.py` writes it straight through.
+        #
+        # Measured before this change:
+        #     full_clean() accepted weight=-500   (help_text says 1-100)
+        #     merit_score=-495  demerit_score=99  balance=-594
+        #     LIFE pool = {'merit': -495.02, ..., 'unusable_merit': -495.02}
+        # A negative-weight DEMERIT record drives `demerit_score` negative,
+        # which makes the Egyptian `heart_weight` negative and
+        # `heavier_than_feather` False -- a soul weighed lighter than the
+        # feather by adding sins to it. There was no upper bound either, which
+        # fed the bucket-overflow finding next door.
+        #
+        # 115 holds 64 records, weights 5..22, so this closes an input gap
+        # rather than repairing live damage -- which is why no data migration
+        # accompanies it.
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
         help_text="Significance weight (1-100). Affects karma calculation.",
     )
     # Historical (possibly BCE) event date — see apps.souls.dates.
