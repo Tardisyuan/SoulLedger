@@ -67,6 +67,7 @@ const COLLECTED_FILES = [
   "PermissionFormModal.test.tsx",
   "PermissionsMatrixDiff.test.ts",
   "PostCard.test.tsx",
+  "permissionGatesActuallyWithhold.test.tsx",
   "ProfileCard.test.tsx",
   "RebirthFormSelect.test.tsx",
   "RequireButton.test.tsx",
@@ -205,6 +206,46 @@ describe("the suite is the suite we think it is", () => {
         offenders.push(`${file}: .${match[1]}`);
       }
     }
+    expect(offenders).toEqual([]);
+  });
+
+  it("never stubs the permission gate itself", () => {
+    // Three suites used to carry this:
+    //
+    //     jest.mock("@/src/components/rbac/RequirePermission", () => ({
+    //       RequirePermission: ({ children }) => children,
+    //     }));
+    //
+    // The stub ignores the `permissions` prop and renders children
+    // unconditionally, so inside those files a gate could be **deleted
+    // outright** — or pointed at a codename that does not exist — and all
+    // 1689 tests stayed green. Verified, not assumed: removing
+    // `<RequirePermission permissions="soul.delete">` from SoulHeaderActions
+    // failed nothing until `permissionGatesActuallyWithhold.test.tsx` existed.
+    //
+    // E2E does not compensate. `e2e/fixtures.ts` authenticates as ADMIN, and
+    // `usePermissions` returns true for ADMIN before it reads the string — on
+    // that path a gate and its absence are behaviourally identical.
+    //
+    // The rule is the whole module, not "the passthrough shape". A stub that
+    // does consult the prop is a reimplementation of the thing under test, and
+    // the repo has already been bitten by a stub that reproduced the defect it
+    // was standing in for (see docs/design-handoff/BRIEF.md §4.6 on the
+    // `DomainEnum` stub). Mock `@/src/contexts/TenantContext` instead and let
+    // the real gate run — that is what the three suites do now.
+    // 逐行判断,不用正则:这份文件和那份守卫都在**注释里**引用了那段桩代码,
+    // 而注释行以 `//` 或 ` * ` 开头。第一版用正则扫全文,把两份说明这条规则的
+    // 文件自己报成了违规者 —— 一个连自己的文档都读成违规的扫描器,说明它读的
+    // 不是代码。
+    const offenders = PRESENT.filter((file) =>
+      readFileSync(path.join(TESTS_DIR, file), "utf8")
+        .split("\n")
+        .some(
+          (line) =>
+            line.trimStart().startsWith("jest.mock(") &&
+            line.includes("rbac/RequirePermission")
+        )
+    );
     expect(offenders).toEqual([]);
   });
 });
