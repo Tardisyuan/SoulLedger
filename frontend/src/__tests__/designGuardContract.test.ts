@@ -32,10 +32,10 @@ const RUNNER = `
 (async () => {
   const { ESLint } = require("eslint");
   const e = new ESLint({ cwd: process.cwd(), overrideConfig: { languageOptions: { parserOptions: { project: null } } } });
-  const snippets = JSON.parse(process.argv[1]);
+  const { snippets, filePath } = JSON.parse(process.argv[1]);
   const out = [];
   for (const code of snippets) {
-    const [r] = await e.lintText(code, { filePath: "src/__design_guard_probe__.tsx" });
+    const [r] = await e.lintText(code, { filePath });
     out.push(r.messages);
   }
   process.stdout.write(JSON.stringify(out));
@@ -61,8 +61,16 @@ const RUNNER = `
 // 静默失效。可移植的只有两条:`set -o pipefail`,或者根本不用管道:
 // `cmd > /tmp/out 2>&1; echo $?` 然后 grep 那个文件。`${pipestatus[1]}` 只在
 // zsh 对,别写进给别人抄的地方。(zsh 行为由 controls 指出,上表是复跑的。)
-function lintAll(snippets: string[]): Msg[][] {
-  const raw = execFileSync(process.execPath, ["-e", RUNNER, JSON.stringify(snippets)], {
+/** `filePath` 是有意留出来的参数,不是通用化。规则挂在 eslint.config.mjs 的一个
+ *  `files:` glob 上,而这套探针一直只从 `src/__design_guard_probe__.tsx` 这一条
+ *  路径打进去 —— 于是「glob 被收窄」这件事本身没有任何测试。它已经发生过两次:
+ *  `components/**` 曾整个在名单外,`lib/**` 与 `hooks/**` 到 2026-08-30 才补上。
+ *  下面「规则覆盖到每个源码目录」那一段就是靠这个参数写的。 */
+function lintAll(
+  snippets: string[],
+  filePath = "src/__design_guard_probe__.tsx"
+): Msg[][] {
+  const raw = execFileSync(process.execPath, ["-e", RUNNER, JSON.stringify({ snippets, filePath })], {
     cwd: ROOT,
     encoding: "utf8",
     maxBuffer: 8 * 1024 * 1024,
@@ -74,6 +82,51 @@ function lintAll(snippets: string[]): Msg[][] {
   }
   return all;
 }
+
+describe("设计系统规则覆盖到每一个存放源码的目录", () => {
+  /** 规则本身有没有效,上面那一段管;这一段管的是它**被指向了哪里**。
+   *
+   *  两次实证,同一个形状:
+   *    - `components/**` 曾不在 glob 里。往 `components/ui/skeleton.tsx` 注入
+   *      `text-sm p-5 rounded-lg bg-red-500`,五条设计系统规则报 0 条。
+   *    - `lib/**` 与 `hooks/**` 同样不在。往 `lib/utils.ts` 加一个 `#ef4444`
+   *      和一个裸调色板 class,`npm run lint` exit 0;同一段放进
+   *      `src/components/ui/Badge.tsx` 就红。
+   *
+   *  两次都不是规则坏了,是名单选错了。所以这里断言的是**路径**,而每条断言
+   *  用的是一段五条规则都会命中的代码 —— 只要 glob 漏掉这个目录,五条一起哑。 */
+  const OFFENDING =
+    '<div className="text-sm p-5 rounded-lg bg-red-500" style={{ color: "#ef4444" }} />';
+  const DIRECTORIES = [
+    "app/__design_guard_probe__.tsx",
+    "src/__design_guard_probe__.tsx",
+    "components/__design_guard_probe__.tsx",
+    "lib/__design_guard_probe__.tsx",
+    "hooks/__design_guard_probe__.tsx",
+  ];
+
+  it.each(DIRECTORIES)("%s 受五条规则约束", (filePath) => {
+    const [msgs] = lintAll([OFFENDING], filePath);
+    const fired = new Set(
+      msgs.map((m) => m.ruleId).filter((r): r is string => !!r?.startsWith("design-system/"))
+    );
+    expect([...fired].sort()).toEqual([
+      "design-system/dead-radius",
+      "design-system/no-hex-colour",
+      "design-system/no-raw-palette",
+      "design-system/spacing-rhythm",
+      "design-system/type-scale",
+    ]);
+  });
+
+  it("换成一个不该被覆盖的目录时探针确实会哑(反对照)", () => {
+    // 没有这一条,一个「对任何路径都报错」的配置也能让上面五条全绿,
+    // 而那意味着上面测的根本不是 glob。
+    const [msgs] = lintAll([OFFENDING], "e2e/__design_guard_probe__.tsx");
+    const fired = msgs.filter((m) => m.ruleId?.startsWith("design-system/"));
+    expect(fired).toEqual([]);
+  });
+});
 
 describe("设计系统守卫:每条规则单独可证伪", () => {
   const cases: Array<[string, string, string]> = [
