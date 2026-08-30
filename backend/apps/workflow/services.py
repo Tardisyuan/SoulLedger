@@ -895,7 +895,65 @@ class WorkflowService:
             # half-built workflow behind.
             cls._create_nodes(workflow, template, civilization)
 
+        # Inside the request's own transaction but outside the atomic block
+        # above, so a template that refuses to build leaves no event behind.
+        cls.announce(workflow, created=True)
         return workflow
+
+    @staticmethod
+    def announce(workflow, created: bool = False, node=None) -> None:
+        """Emit the workflow's own events onto the soul's timeline, and tell the
+        approver a node is waiting for them.
+
+        WHY THIS EXISTS AS OF 2026-08-30. `apps/events/services.py` has carried
+        `log_workflow_created`, `log_workflow_approved`, `log_workflow_rejected`
+        and `notify_workflow_assigned` since M12 Phase 2, and **`apps/workflow/`
+        imported nothing from `apps/events/` at all**. Excluding tests, the four
+        were definitions with no callers; `RealtimeEventPublisher.publish_workflow`
+        and `event_bus.publish_workflow` had none either.
+
+        The visible consequence was a hole in the record: `EventType.WORKFLOW_*`
+        never appeared in `SoulEvent`, so a soul's timeline ran from
+        JUDGMENT_CONCLUDED straight to DISPOSITION_CREATED with the ten-court
+        approval chain -- the part with the names and the verdicts in it --
+        absent. And no approver was ever told a node was waiting.
+
+        Six tests in `tests/test_workflow_events.py` and
+        `test_event_bus_integration.py` called these methods directly and
+        passed. That is the shape this repo keeps finding: **a test exercising a
+        function that production never calls.** The tests were honest about the
+        function; nothing was checking that anybody called it.
+
+        Called from the two places a workflow's state actually changes: here,
+        and `approve_node` in views.py. Deliberately NOT from `complete_node` in
+        models.py -- that method is invoked inside a `select_for_update` block,
+        and an event emitted there would be published from inside a lock the
+        caller might still roll back.
+        """
+        from apps.events.services import EventService
+
+        if created:
+            EventService.log_workflow_created(workflow)
+        elif node is not None:
+            from apps.workflow.models import NodeStatus
+
+            if node.status == NodeStatus.APPROVED:
+                EventService.log_workflow_approved(workflow, node=node)
+            elif node.status == NodeStatus.REJECTED:
+                EventService.log_workflow_rejected(workflow, node=node)
+
+        # Whoever the now-current node names. `None` after a terminal decision,
+        # which is the correct time to tell nobody.
+        current = workflow.current_node
+        if current is None or current.approver_actor_id is None:
+            return
+        from apps.authentication.models import User
+
+        assignee = User.objects.filter(
+            actor_id=current.approver_actor_id, is_active=True
+        ).first()
+        if assignee is not None:
+            EventService.notify_workflow_assigned(assignee, workflow)
 
     @classmethod
     def create_appeal_workflow(
