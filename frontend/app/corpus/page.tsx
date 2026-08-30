@@ -168,7 +168,13 @@ export default function CorpusPage() {
          which is the one thing a statute column must not do. */
       variant="full"
       title={t("judgment.corpus.title")}
-      subtitle={t("judgment.corpus.subtitle")}
+      // The count comes from the response, not from the translation. All
+      // three bundles said 175 while the real figure is 172 -- and the file
+      // header of this very page had already been corrected to 172, so the
+      // comment was right and the words on screen were wrong, one file apart.
+      // Key parity across the bundles could not catch it: all three were
+      // wrong together.
+      subtitle={t("judgment.corpus.subtitle", { n: String(total) })}
       filters={
         /* Visible labels do not fit: the sticky slot is 32px of content height
            and a `Field`'s stacked label is taller than that. Each control
@@ -293,7 +299,15 @@ export default function CorpusPage() {
            height of a 26-row one and manufacture an alignment nobody meant. */
         <div data-corpus-grid="" className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
           {groups.map((group) => (
-            <CorpusCard key={group.key} group={group} />
+            <CorpusCard
+              key={group.key}
+              group={group}
+              // `data.count` is the count of the *filtered* query. It equals
+              // this corpus's size only when the filter names one corpus;
+              // otherwise it is every corpus added together and would be a
+              // worse answer than "how many are listed".
+              corpusTotal={corpus ? total : null}
+            />
           ))}
         </div>
       )}
@@ -301,7 +315,20 @@ export default function CorpusPage() {
   );
 }
 
-function CorpusCard({ group }: { group: CorpusGroup }) {
+function CorpusCard({
+  group,
+  corpusTotal,
+}: {
+  group: CorpusGroup;
+  /** How many articles this corpus has in total, or null if unknown.
+   *
+   * Only the page component knows: it is `data.count` from the response, and
+   * it only means "this corpus" when the list is filtered to one corpus. With
+   * no filter the response counts every corpus together, so there is no
+   * honest per-corpus figure on this page and the card says how many are
+   * listed instead. */
+  corpusTotal: number | null;
+}) {
   const { t } = useI18n();
 
   /**
@@ -343,7 +370,20 @@ function CorpusCard({ group }: { group: CorpusGroup }) {
           <DomainEnum namespace="souls.civilizations" value={group.civilization} />
         </p>
         <p className="text-02 font-mono tabular-nums text-ink-subtle ml-auto">
-          {t("judgment.corpus.article_count", { n: String(group.statutes.length) })}
+          {/* `group.statutes` holds only the rows on *this page* (PAGE_SIZE
+              20, both ends). Rendering that as "N articles" reported 功過格
+              as 20 when it has 74, and split any corpus that straddles a page
+              boundary into two groups each reporting a fraction. A number
+              that looks entirely reasonable, about the wrong subject.
+
+              Shown only when the list is filtered to a single corpus, where
+              "how many are on screen" and "how big is this corpus" coincide
+              -- and even then labelled as a count of what is listed. */}
+          {corpusTotal !== null
+            ? t("judgment.corpus.article_count", { n: String(corpusTotal) })
+            : t("judgment.corpus.listed_count", {
+                n: String(group.statutes.length),
+              })}
         </p>
       </header>
 

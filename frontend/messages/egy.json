@@ -840,13 +840,14 @@
     },
     "corpus": {
       "title": "Medu Sesh",
-      "subtitle": "Medu neb er wedja-medu. 175 em fedu Duat.",
+      "subtitle": "Medu neb er wedja-medu. {{n}} em fedu Duat.",
       "col_sigil": "Tep Medu",
       "col_offence": "Isfet",
       "col_text": "Medu",
       "col_citations": "Dema",
       "filter_corpus": "Sesh",
       "article_count": "{{n}} medu",
+      "listed_count": "{{n}} em seshet",
       "empty_reason": "Nen medu em sesh pen.",
       "citations_absent": "Nen dema em wepet ten.",
       "sigil_absent": "Nen tep medu en medu pen."
