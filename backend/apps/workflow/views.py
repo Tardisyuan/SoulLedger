@@ -256,6 +256,24 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         success = workflow.complete_node(node.id, verdict, notes, user=request.user)
         if success:
             return Response(ApprovalWorkflowSerializer(workflow).data)
+        # `complete_node` now re-checks the node's status under a row lock, so
+        # the common reason to land here is that another decision was recorded
+        # between this request's guard and that lock. "Failed to complete node"
+        # would leave the caller unable to tell a lost race from a bad request
+        # -- and the whole point of the lock is that the loser must find out.
+        node.refresh_from_db()
+        if node.status != NodeStatus.PENDING:
+            return Response(
+                {
+                    "error": "This node was already decided.",
+                    "detail": (
+                        f"Its verdict is {node.verdict or node.status}. Your "
+                        f"decision was not recorded."
+                    ),
+                    "node_status": node.status,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
         return Response({"error": "Failed to complete node"}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=["get"])
