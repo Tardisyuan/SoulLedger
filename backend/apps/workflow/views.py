@@ -107,6 +107,10 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     def advance(self, request, pk=None):
         """
         Manually advance workflow to next pending node.
+
+        Moves the pointer only; the node being left is not decided and stays
+        PENDING, so it can be returned to. Getting *past* an undecided node is
+        `escalate`, which records the skip.
         """
         workflow = self.get_object()
         if workflow.advance_to_next():
@@ -142,9 +146,13 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             )
 
         node = workflow.current_node
-        if not workflow.advance_to_next():
+        # Marks the node ESCALATED before moving on. Calling `advance_to_next`
+        # here left it PENDING, so `get_next_node()` handed it straight back
+        # and the audit row below recorded a skip that had not happened -- its
+        # `skipped_node` and `advanced_to` were measured to be the same id.
+        if not workflow.escalate_current_node(user=request.user, reason=reason):
             return Response(
-                {"error": "No next node available or workflow already completed"},
+                {"error": "No pending node to escalate past"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

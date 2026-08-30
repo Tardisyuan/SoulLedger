@@ -194,13 +194,96 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         return True
 
     def advance_to_next(self) -> bool:
-        """Manually advance to the next pending node."""
-        next_node = self.get_next_node()
-        if next_node:
-            self.current_node = next_node
+        """Move `current_node` on to the next pending node, if there is one.
+
+        This used to be a no-op that reported success. `get_next_node()`
+        returns the first PENDING node, and `current_node` *is* the first
+        PENDING node -- `_create_nodes` sets it to node 1 and `complete_node`
+        resets it to `get_next_node()` after deciding one. So this computed
+        `next_node == self.current_node`, assigned it to itself, saved, and
+        returned True.
+
+        Measured 2026-08-29: `POST /workflows/{id}/advance/` returned 200 with
+        `current_node` unmoved, and `POST /escalate/` wrote an audit row whose
+        `skipped_node` and `advanced_to` were the same id -- the record
+        carrying its own refutation. Nothing in the product could get past a
+        stuck node, while `can_approve` pointed every refusal at `escalate` as
+        "the sanctioned way past".
+
+        Excluding the current node is the whole fix. The node we are standing
+        on is not somewhere to advance *to*.
+        """
+        candidates = self.nodes.filter(status=NodeStatus.PENDING)
+        if self.current_node_id:
+            candidates = candidates.exclude(id=self.current_node_id)
+        next_node = candidates.order_by("node_order").first()
+        if next_node is None:
+            return False
+        self.current_node = next_node
+        self.status = ApprovalWorkflowStatus.IN_PROGRESS
+        self.save(update_fields=["current_node", "status"])
+        return True
+
+    def escalate_current_node(self, user=None, reason: str = "") -> bool:
+        """Mark the node we are stuck on as escalated, then move past it.
+
+        `escalate` used to call `advance_to_next()` and nothing else, so the
+        node it claimed to skip stayed PENDING -- which meant
+        `get_next_node()` would hand it straight back, and
+        `NodeStatus.ESCALATED` was a declared value that no code ever assigned
+        (neither did `SKIPPED`). Recording the skip is what makes the audit
+        row true and what stops the flow returning to the same node.
+
+        Mirrors `complete_node`'s tail deliberately: a skip is a way of
+        finishing with a node, so escalating the last one completes the
+        workflow rather than failing with "no next node" and leaving the flow
+        stuck on the node the caller was trying to get past.
+        """
+        from django.db import transaction
+        from django.utils import timezone
+
+        with transaction.atomic():
+            # "The node we are stuck on" is `get_current_node()`, not
+            # `current_node`: that column is only populated by
+            # `_create_nodes`/`complete_node`, and a workflow whose nodes were
+            # POSTed to /api/v1/nodes/ has it as None while still having a
+            # perfectly real first pending node. Requiring the column made
+            # escalate answer "no pending node to escalate past" on exactly
+            # the hand-built flows it exists for.
+            stuck = self.get_current_node()
+            node = (
+                ApprovalNode.objects.select_for_update().filter(pk=stuck.pk).first()
+                if stuck is not None
+                else None
+            )
+            if node is None or node.status != NodeStatus.PENDING:
+                return False
+
+            node.status = NodeStatus.ESCALATED
+            node.decided_at = timezone.now()
+            if user is not None:
+                node.approver = user
+            if reason:
+                node.notes = reason[:500]
+            node.save(
+                update_fields=["status", "decided_at", "approver", "notes"]
+            )
+
+            next_node = (
+                self.nodes.filter(status=NodeStatus.PENDING)
+                .exclude(pk=node.pk)
+                .order_by("node_order")
+                .first()
+            )
+            if next_node:
+                self.current_node = next_node
+                self.status = ApprovalWorkflowStatus.IN_PROGRESS
+            else:
+                self.current_node = None
+                self.status = ApprovalWorkflowStatus.COMPLETED
+                self.completed_at = timezone.now()
             self.save()
-            return True
-        return False
+        return True
 
 
 class WorkflowTemplate(AuditUserFields, models.Model):
