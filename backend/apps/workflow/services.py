@@ -2,8 +2,9 @@
 Workflow service — creates ApprovalWorkflow instances from judgment verdicts.
 Routes to civilization-specific approval templates.
 """
+import logging
 
-from django.db import transaction
+from django.db import DatabaseError, transaction
 
 from apps.judgment.models import Judgment
 from apps.souls.models import Civilization
@@ -17,6 +18,8 @@ from apps.workflow.models import (
     WorkflowTemplate,
 )
 from apps.workflow.node_shape import normalize_template_node
+
+logger = logging.getLogger(__name__)
 
 # Workflow templates by civilization and case type
 #
@@ -696,24 +699,57 @@ class WorkflowService:
         every ``(civilization, case_type)`` pair the validator admits — not
         only the ones that happen to have entries today.
         """
+        # THE SAVEPOINT IS LOAD-BEARING, AND SO IS THE NARROWED EXCEPT.
+        #
+        # This used to be a bare `except Exception: pass` around the query.
+        # `apps/judgment/services.py` wraps its steps 1-4 in
+        # `transaction.atomic()` and step 3 calls `create_from_judgment`, which
+        # calls this **before** its own inner atomic -- so this query runs
+        # inside the judgment's transaction. On PostgreSQL a failed statement
+        # poisons that transaction, and swallowing the failure only defers the
+        # report to an unrelated line. Reproduced on a PostgreSQL clone:
+        #
+        #     inner except swallowed: DataError
+        #     FOLLOW-UP QUERY RAISED TransactionManagementError:
+        #         An error occurred in the current transaction.
+        #
+        # The error surfaces against a statement that had nothing to do with
+        # the fault -- the same shape as `apps/perm/migrations/0017`, where a
+        # missing column was reported as "current transaction is aborted"
+        # against an innocent line. On SQLite the swallow is a genuine no-op,
+        # which is why the whole suite is blind to it.
+        #
+        # `atomic()` here opens a savepoint: a failure rolls back to it and the
+        # outer transaction stays usable. `DatabaseError` rather than
+        # `Exception`, because a TypeError or an AttributeError in this block is
+        # a bug in this code and must not be turned into "fall back to the
+        # built-in template" -- that fallback would produce a workflow with the
+        # wrong nodes and no indication anything went wrong.
         try:
-            db_template = (
-                WorkflowTemplate.objects.filter(
-                    civilization=civilization,
-                    case_type=case_type,
-                    is_active=True,
-                    tenant=tenant,
+            with transaction.atomic():
+                db_template = (
+                    WorkflowTemplate.objects.filter(
+                        civilization=civilization,
+                        case_type=case_type,
+                        is_active=True,
+                        tenant=tenant,
+                    )
+                    .exclude(nodes_json=[])
+                    .first()
                 )
-                .exclude(nodes_json=[])
-                .first()
-            )
             if db_template and db_template.nodes_json:
                 return (
                     {"name": db_template.name, "nodes": db_template.nodes_json},
                     db_template.priority,
                 )
-        except Exception:
-            pass
+        except DatabaseError:
+            logger.warning(
+                "Stored workflow template lookup failed for "
+                "(%s, %s); falling back to the built-in template",
+                civilization,
+                case_type,
+                exc_info=True,
+            )
 
         template = WORKFLOW_TEMPLATES.get((civilization, case_type))
         if template and template["nodes"]:
