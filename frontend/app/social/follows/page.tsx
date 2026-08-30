@@ -8,6 +8,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const TAB_KEYS = ["following", "followers"] as const;
@@ -15,12 +16,24 @@ const TAB_KEYS = ["following", "followers"] as const;
 export default function FollowsPage() {
   const { t } = useI18n();
   const [tab, setTab] = useState<"following" | "followers">("following");
-  const { data: followingData, isLoading: followingLoading } = useFollowing();
-  const { data: followersData, isLoading: followersLoading } = useFollowers();
+  const {
+    data: followingData,
+    isLoading: followingLoading,
+    isError: followingError,
+    refetch: refetchFollowing,
+  } = useFollowing();
+  const {
+    data: followersData,
+    isLoading: followersLoading,
+    isError: followersError,
+    refetch: refetchFollowers,
+  } = useFollowers();
 
   const followingList = followingData ?? [];
   const followersList = followersData ?? [];
   const isLoading = tab === "following" ? followingLoading : followersLoading;
+  const isError = tab === "following" ? followingError : followersError;
+  const refetch = tab === "following" ? refetchFollowing : refetchFollowers;
   const list = tab === "following" ? followingList : followersList;
 
   return (
@@ -56,7 +69,12 @@ export default function FollowsPage() {
         </button>
       ))}
     >
-      {isLoading ? (
+      {/* A failed request fell through to `list.length === 0` and rendered
+          "you follow nobody" -- which is a claim about the world, not about
+          the request. */}
+      {isError ? (
+        <QueryError onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-14" />

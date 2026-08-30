@@ -10,6 +10,7 @@ import { ListSkeleton } from "@/components/ui/skeleton";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
 import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
 
 /**
@@ -37,7 +38,7 @@ export default function CrossJudgmentsPage() {
   const { t } = useI18n();
   const { user } = useTenant();
 
-  const { data: judgments = [], isLoading } = useQuery({
+  const { data: judgments = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["cross-judgments"],
     queryFn: () => crossTenantJudgmentsApi.list().then(r => r.data.results),
     enabled: !!user,
@@ -58,7 +59,11 @@ export default function CrossJudgmentsPage() {
         title={t("crossJudgments.list_title") || "Cross-Judgment Cases"}
         isLoading={isLoading}
       >
-        {isLoading ? (
+        {/* A failed request used to fall through to the empty state, so
+            "the server is down" and "there is nothing here" read the same. */}
+        {isError ? (
+          <QueryError onRetry={() => refetch()} />
+        ) : isLoading ? (
           <ListSkeleton count={3} />
         ) : judgments.length === 0 ? (
           <EmptyState title={t("crossJudgments.no_judgments") || "No cross-tenant judgments yet"} />
