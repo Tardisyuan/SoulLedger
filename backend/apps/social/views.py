@@ -54,6 +54,7 @@ from apps.social.serializers import (
     UserProfileUpdateSerializer,
 )
 from apps.social.services import CommentService, FollowService, PostService, ReactionService
+from apps.social.visibility import visible_posts
 
 
 class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
@@ -87,21 +88,9 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         # resolved request.tenant fell through to the unfiltered queryset —
         # every tenant's posts, not just their own.
         qs = scope_to_tenant(super().get_queryset(), self.request)
-        user = self.request.user
-        tenant = getattr(self.request, "tenant", None)
-        # Filter by visibility
-        if user.is_authenticated:
-            from django.db.models import Q
-            following_ids = Follow.objects.filter(
-                follower=user, tenant=tenant
-            ).values_list("following_id", flat=True) if tenant else []
-            qs = qs.filter(
-                Q(visibility="PUBLIC")
-                | Q(visibility="TENANT", tenant=tenant)
-                | Q(author=user)
-                | Q(visibility="FOLLOWERS", author_id__in=following_ids)
-            )
-        return qs.order_by("-create_time")
+        # The visibility clause lived here and only here. See
+        # apps/social/visibility.py for what that cost.
+        return visible_posts(self.request, qs).order_by("-create_time")
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -155,6 +144,11 @@ class CommentViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Model
         # caller with no resolved request.tenant must get qs.none(), not
         # every tenant's comments.
         qs = scope_to_tenant(super().get_queryset(), self.request)
+        # Comments inherit their post's visibility. Without this, a PRIVATE
+        # post's whole comment thread was readable by any member of the tenant
+        # holding its UUID -- measured, `GET /comments/?post=<private>` came
+        # back 200 with the contents.
+        qs = qs.filter(post__in=visible_posts(self.request))
         # Allow filtering by post
         post_id = self.request.query_params.get("post")
         if post_id:
@@ -202,6 +196,15 @@ class ReactionViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.Mode
         # caller with no resolved request.tenant must get qs.none(), not
         # every tenant's reactions.
         qs = scope_to_tenant(super().get_queryset(), self.request)
+        # Same as comments: a reaction is visible only where its post is.
+        # `Q(post__isnull=True)` keeps reactions on comments, whose own
+        # visibility is filtered by the comment clause below it.
+        from django.db.models import Q
+
+        visible = visible_posts(self.request)
+        qs = qs.filter(
+            Q(post__in=visible) | Q(post__isnull=True, comment__post__in=visible)
+        )
         # Allow filtering by post or comment
         post_id = self.request.query_params.get("post")
         comment_id = self.request.query_params.get("comment")

@@ -167,6 +167,21 @@ class CommentCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Cannot reply to a comment from another tenant."
             )
+        # Same tenant is not the same as visible. This whole guard reasoned
+        # about tenants and stopped there, so within one tenant any member
+        # holding a PRIVATE post's UUID could comment on it -- measured, a 201,
+        # and it incremented the author's comment counter. `PRIVATE` and
+        # `FOLLOWERS` existed on the post and nowhere below it.
+        from apps.social.visibility import may_see_post
+
+        if post is not None and not may_see_post(request, post):
+            raise serializers.ValidationError(
+                "No such post."
+            )
+        if parent is not None and not may_see_post(request, parent.post):
+            raise serializers.ValidationError(
+                "No such comment."
+            )
         return attrs
 
 
@@ -265,6 +280,16 @@ class ReactionCreateSerializer(serializers.ModelSerializer):
         if comment is not None and str(comment.tenant_id) != str(tenant.pk):
             raise serializers.ValidationError(
                 "Cannot react to a comment from another tenant."
+            )
+        # Same tenant is not the same as visible -- see the equivalent note in
+        # CommentCreateSerializer.validate. Reacting to a PRIVATE post was a
+        # 201 and it moved the author's reaction counter.
+        from apps.social.visibility import may_see_post
+
+        target_post = post if post is not None else getattr(comment, "post", None)
+        if target_post is not None and not may_see_post(request, target_post):
+            raise serializers.ValidationError(
+                "No such post."
             )
         return attrs
 
