@@ -570,6 +570,8 @@
       "advance": "推进",
       "completed": "流程已完成",
       "completed_message": "此审批流程已完成。",
+      "completed_with_rejection": "流程已终止",
+      "completed_with_rejection_message": "此审批流程因存在拒绝裁决而终止。",
       "nodes": "节点",
       "history": "历史",
       "current": "当前",
@@ -1407,6 +1409,8 @@
     "visibility_label": "帖子可见范围"
   },
   "tenants": {
+    "active": "启用",
+    "inactive": "停用",
     "title": "租户管理",
     "subtitle": "各文明体系的租户配置",
     "list": "租户列表",

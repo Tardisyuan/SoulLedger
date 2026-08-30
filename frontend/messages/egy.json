@@ -570,6 +570,8 @@
       "advance": "Khemen Seth",
       "completed": "Em Kheme Seth Seth",
       "completed_message": "Em Kheme Seth Seth Abuf.",
+      "completed_with_rejection": "Rejected",
+      "completed_with_rejection_message": "This approval flow ended with a rejection.",
       "nodes": "Mekher Wu",
       "history": "Medew Sethet",
       "current": "Em Tepy",
@@ -1407,6 +1409,8 @@
     "visibility_label": "Set Medu Maa"
   },
   "tenants": {
+    "active": "Active",
+    "inactive": "Inactive",
     "title": "Per Hemes",
     "subtitle": "Per Hemes Aset Ahamet",
     "list": "Wu Per Hemes",

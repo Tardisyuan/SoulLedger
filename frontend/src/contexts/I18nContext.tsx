@@ -72,9 +72,60 @@ function toIntlLocale(locale: Locale): string {
 
 type DateInput = Date | string | number;
 
+/** What a formatter shows when it was handed something it cannot read.
+ *
+ * Not an empty string: a blank cell says "this record has no date", which is a
+ * claim about the data. An em dash says "nothing renderable here", which is a
+ * claim about this cell.
+ */
+const UNRENDERABLE_DATE = "—";
+
+/** `Intl.DateTimeFormat.format` throws `RangeError: Invalid time value` on an
+ * unparseable date, and neither formatter caught it.
+ *
+ * Measured 2026-08-29: opening `/judgment/{id}` with a payload whose date key
+ * did not match the serializer's put `undefined` through here, and the
+ * `RangeError` propagated out of a render into the route's error boundary --
+ * the entire page became "服务器错误 / Invalid time value". One bad timestamp
+ * in one field took out everything around it, including the parts that had
+ * nothing to do with dates.
+ *
+ * That particular undefined came from a fixture and is fixed at the source.
+ * The guard stays because the input is a wire value: a null column, a
+ * half-migrated row or a field renamed on the backend all arrive the same way,
+ * and none of them should be able to blank a screen.
+ */
+function safeFormat(
+  format: () => string,
+  value: DateInput
+): string {
+  // Each input type has to be tested the way `new Date()` reads it. My first
+  // version ran `Date.parse(String(value))` for everything, which turns a
+  // perfectly good epoch-millisecond number into a NaN -- the existing
+  // "accepts string and number inputs" test went red on it immediately.
+  const time =
+    value instanceof Date
+      ? value.getTime()
+      : typeof value === "number"
+        ? value
+        : Date.parse(value);
+  if (!Number.isFinite(time)) return UNRENDERABLE_DATE;
+  try {
+    return format();
+  } catch {
+    // Reached only if Intl rejects the *options*, which is a programming
+    // error rather than bad data -- but a wrong option should still not take
+    // the page down with it.
+    return UNRENDERABLE_DATE;
+  }
+}
+
 function formatDateWith(locale: Locale, value: DateInput, options?: Intl.DateTimeFormatOptions): string {
   const date = value instanceof Date ? value : new Date(value);
-  return new Intl.DateTimeFormat(toIntlLocale(locale), options).format(date);
+  return safeFormat(
+    () => new Intl.DateTimeFormat(toIntlLocale(locale), options).format(date),
+    value
+  );
 }
 
 // Intl rejects dateStyle/timeStyle mixed with individual component options
@@ -97,7 +148,10 @@ function formatDateTimeWith(locale: Locale, value: DateInput, options?: Intl.Dat
   const resolved: Intl.DateTimeFormatOptions = hasComponentOptions(options)
     ? { ...options }
     : { dateStyle: "medium", timeStyle: "medium", ...options };
-  return new Intl.DateTimeFormat(toIntlLocale(locale), resolved).format(date);
+  return safeFormat(
+    () => new Intl.DateTimeFormat(toIntlLocale(locale), resolved).format(date),
+    value
+  );
 }
 
 function formatNumberWith(locale: Locale, value: number, options?: Intl.NumberFormatOptions): string {

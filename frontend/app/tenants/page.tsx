@@ -149,7 +149,14 @@ export default function TenantsPage() {
                   {t("tenants.code") || "Code"}: {tenant.code}
                 </p>
               </div>
-              <Badge tone="success">Active</Badge>
+              {/* `is_active` is in the same response and was going unread: every
+                  tenant rendered a hardcoded green "Active", so a disabled
+                  tenant looked enabled. The literal was not translated either,
+                  which put a bare English word in the 简体中文 and Kemet
+                  interfaces. */}
+              <Badge tone={tenant.is_active ? "success" : "neutral"}>
+                {tenant.is_active ? t("tenants.active") : t("tenants.inactive")}
+              </Badge>
             </div>
           );
         })}

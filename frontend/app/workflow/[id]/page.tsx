@@ -63,6 +63,12 @@ export default function WorkflowDetailPage() {
     queryFn: () => workflowApi.get(id).then((res) => res.data),
   });
 
+  // Any node that was rejected makes the outcome a rejection, however many
+  // others passed: the ten courts divide the decision, they do not vote.
+  const hasRejection = (workflow?.nodes ?? []).some(
+    (n: { status?: string }) => n.status === "REJECTED"
+  );
+
   // Approve node mutation
   const approveMutation = useMutation({
     mutationFn: (payload: { node_id: string; verdict: string; notes: string }) =>
@@ -284,12 +290,41 @@ export default function WorkflowDetailPage() {
 
         {/* Completed State */}
         {workflow.status === "COMPLETED" && (
-          <div className="bg-[hsl(var(--color-status-success)/0.1)] p-4 border border-[hsl(var(--color-status-success)/0.3)]">
-            <h2 className="text-01 uppercase text-[hsl(var(--color-status-success))] mb-2">
-              {t("workflow.detail.completed")}
+          /* Coloured by what the nodes decided, not by the fact that they are
+             all decided.
+             
+             `complete_node` advances on any verdict, so a soul rejected at
+             every one of the ten courts finishes COMPLETED -- the same status
+             as one approved at every court. The node rows do differ
+             (通过/已批准 vs 拒绝/已拒绝), so this was never "the two look
+             identical"; it was narrower and worse: the page-level summary, the
+             part read first, printed a unanimous rejection in success green.
+             
+             `ApprovalWorkflowStatus.REJECTED` exists and is assigned nowhere
+             (four of its seven members are), so the status field cannot answer
+             this. The nodes can. */
+          <div
+            className={
+              hasRejection
+                ? "bg-[hsl(var(--color-status-error)/0.1)] p-4 border border-[hsl(var(--color-status-error)/0.3)]"
+                : "bg-[hsl(var(--color-status-success)/0.1)] p-4 border border-[hsl(var(--color-status-success)/0.3)]"
+            }
+          >
+            <h2
+              className={`text-01 uppercase mb-2 ${
+                hasRejection
+                  ? "text-[hsl(var(--color-status-error))]"
+                  : "text-[hsl(var(--color-status-success))]"
+              }`}
+            >
+              {hasRejection
+                ? t("workflow.detail.completed_with_rejection")
+                : t("workflow.detail.completed")}
             </h2>
             <p className="text-03 text-ink-muted">
-              {t("workflow.detail.completed_message")}
+              {hasRejection
+                ? t("workflow.detail.completed_with_rejection_message")
+                : t("workflow.detail.completed_message")}
             </p>
             {workflow.completed_at && (
               <p className="text-02 text-ink-subtle mt-2">

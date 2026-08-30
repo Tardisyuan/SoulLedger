@@ -570,6 +570,8 @@
       "advance": "Advance",
       "completed": "Workflow Completed",
       "completed_message": "This workflow has been completed.",
+      "completed_with_rejection": "Rejected",
+      "completed_with_rejection_message": "This approval flow ended with a rejection.",
       "nodes": "Nodes",
       "history": "History",
       "current": "Current",
@@ -1407,6 +1409,8 @@
     "visibility_label": "Post visibility"
   },
   "tenants": {
+    "active": "Active",
+    "inactive": "Inactive",
     "title": "Tenants",
     "subtitle": "Tenant configuration per civilization",
     "list": "Tenant list",
