@@ -137,7 +137,31 @@ export function TenantProvider({ children }: { children: ReactNode }) {
           .myRolePermissions()
           .then(({ data }) => {
             setUserState((prev) =>
-              prev ? { ...prev, permissions: data?.permissions ?? [] } : prev
+              prev
+                ? {
+                    ...prev,
+                    permissions: data?.permissions ?? [],
+                    // The role comes back in the same response and used to be
+                    // **dropped on the floor** — only `data.permissions` was
+                    // read. `role` therefore stayed whatever the localStorage
+                    // envelope said, and that envelope has a 24-hour TTL with
+                    // nothing else correcting it.
+                    //
+                    // That matters more than a stale label, because
+                    // `usePermissions.hasPermission` opens with
+                    // `if (user?.role === "ADMIN") return true`. An ADMIN
+                    // demoted to VIEWER kept sailing through **every**
+                    // `<RequirePermission>` in the app for up to 24 hours,
+                    // across reloads. The backend answers 403, so nothing is
+                    // leaked — what the user gets is a screenful of 403s
+                    // instead of a UI that simply does not offer the feature.
+                    //
+                    // `?? prev.role`: on the one hand a server that omits the
+                    // field must not blank the role; on the other, when it
+                    // does send one, the server's answer wins.
+                    role: (data?.role as AuthUser["role"]) ?? prev.role,
+                  }
+                : prev
             );
           })
           .catch(() => {

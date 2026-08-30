@@ -116,7 +116,19 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({"type": "pong"}))
 
         elif msg_type == "permission.refresh":
-            self.permissions = await self._resolve_permissions()
+            # Unreachable on the main authentication path: `PermissionMiddleware`
+            # intercepts `permission.refresh` in `wrapped_receive` and never
+            # forwards it here. Kept for the query-token-less path where the
+            # consumer authenticates itself, and it now writes through to the
+            # scope so the gate above sees the same set.
+            fresh = await self._resolve_permissions()
+            # In place, for the same reason the middleware does it that way:
+            # the scope is shallow-copied between here and whoever else holds
+            # a reference to this set.
+            current = self.scope.setdefault("permissions", set())
+            current.clear()
+            current.update(fresh)
+            self.permissions = current
             await self.send(text_data=json.dumps({
                 "type": "permission.refreshed",
                 "permissions": sorted(self.permissions),
@@ -136,7 +148,26 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         data = event.get("data", {})
 
         required_permission = data.get("_permission")
-        if required_permission and required_permission not in self.permissions:
+        # Reads the scope rather than `self.permissions` because the scope is
+        # where the answer lives. Be clear about what is and is not load-bearing
+        # here, because the audit got it wrong and so did the first fix:
+        #
+        # The audit proposed "have the consumer read `self.scope["permissions"]`
+        # instead of its `connect()`-time copy". **That alone does not work.**
+        # The scope is shallow-copied at least twice on the way in
+        # (`BaseMiddleware.__call__`, then `URLRouter`), so the dict the
+        # middleware rebinds is not the dict read here. Measured: with the
+        # middleware re-reading the user *and* this line reading the scope, the
+        # gated event still arrived after a demotion.
+        #
+        # What actually fixes it is that `PermissionMiddleware` keeps **one set
+        # object** and mutates it in place -- shallow copies all point at it. So
+        # `self.permissions` and `self.scope["permissions"]` are now the same
+        # object and either read works. This line prefers the scope because it
+        # names the source of truth; swapping it back to `self.permissions`
+        # would not break anything today, and a mutation test confirms that.
+        current = self.scope.get("permissions", set())
+        if required_permission and required_permission not in current:
             return  # user lacks the required permission — drop silently
 
         await self.send(text_data=json.dumps(data))
