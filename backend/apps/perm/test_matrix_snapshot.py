@@ -1264,6 +1264,25 @@ def test_moderator_denied_workflow_advance_now_stays_denied_through_patch_workfl
     # And the thing escalate exists to guarantee still did not happen.
     assert not AuditLog.objects.filter(resource="workflow.escalate").exists()
 
+    # The positive control for the line above, and the reason it is here: a
+    # `not ... exists()` assertion is satisfied by an empty table, and this
+    # test does nothing else that would put a row in one. It reads as "the
+    # bypass left no trace" while what it actually says is "this table is
+    # empty" — true no matter what the PATCH did.
+    #
+    # So take the sanctioned door and watch a row appear. Now the assertion
+    # above has a demonstrated way to fail: escalate's audit write is
+    # synchronous, so had the PATCH gone through escalate's path the row would
+    # already have been there.
+    escalated = moderator.post(
+        f"/api/v1/workflows/{workflow.id}/escalate/",
+        {"reason": "守卫的正对照:走被允许的那扇门"},
+        format="json",
+    )
+    assert escalated.status_code == 200, escalated.data
+    assert AuditLog.objects.filter(resource="workflow.escalate").count() == 1
+    assert ApprovalWorkflow.objects.get(pk=workflow.pk).current_node_id == second.pk
+
 
 def _write_snapshot_test_names():
     """Every write-half snapshot test defined in this module, by name.
