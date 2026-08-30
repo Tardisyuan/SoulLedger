@@ -101,6 +101,7 @@
     },
     "events": {
       "SOUL_CREATED": "Aba Seshem Seth",
+      "SETTLEMENT_CORRECTED": "Settlement corrected",
       "SOUL_DIED": "Mut Aba Sesh Seth",
       "STATE_CHANGED": "Set Medu Khemen Seth",
       "RECORD_ADDED": "Sesh Seth Wehem",
@@ -188,6 +189,7 @@
       "verdict_passed": "Sethet",
       "verdict_failed": "Ma Sethet",
       "verdict_purgatory": "Khet Her Tepy",
+      "verdict_retry": "Retry",
       "reincarnate": "Aru Her Tepy →",
       "being_reborn": "Aba Em Aru Her Tepy...",
       "previous_reincarnations": "Aru Sethet Wu",
@@ -570,6 +572,8 @@
       "advance": "Khemen Seth",
       "completed": "Em Kheme Seth Seth",
       "completed_message": "Em Kheme Seth Seth Abuf.",
+      "completed_with_rejection": "Rejected",
+      "completed_with_rejection_message": "This approval flow ended with a rejection.",
       "nodes": "Mekher Wu",
       "history": "Medew Sethet",
       "current": "Em Tepy",
@@ -840,13 +844,14 @@
     },
     "corpus": {
       "title": "Medu Sesh",
-      "subtitle": "Medu neb er wedja-medu. 175 em fedu Duat.",
+      "subtitle": "Medu neb er wedja-medu. {{n}} em fedu Duat.",
       "col_sigil": "Tep Medu",
       "col_offence": "Isfet",
       "col_text": "Medu",
       "col_citations": "Dema",
       "filter_corpus": "Sesh",
       "article_count": "{{n}} medu",
+      "listed_count": "{{n}} em seshet",
       "empty_reason": "Nen medu em sesh pen.",
       "citations_absent": "Nen dema em wepet ten.",
       "sigil_absent": "Nen tep medu en medu pen."
@@ -1406,6 +1411,8 @@
     "visibility_label": "Set Medu Maa"
   },
   "tenants": {
+    "active": "Active",
+    "inactive": "Inactive",
     "title": "Per Hemes",
     "subtitle": "Per Hemes Aset Ahamet",
     "list": "Wu Per Hemes",

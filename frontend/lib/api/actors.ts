@@ -1,8 +1,25 @@
 import { api, fetchAllPages } from "./client";
 
+/** NOTE ON WHICH FIELDS THE *LIST* ENDPOINT ACTUALLY SENDS.
+ *
+ * `ActorListSerializer` emits exactly: id, name, civilization, role,
+ * realm_code, display_name, display_title, is_active, assessor_index.
+ * Everything else below belongs to the detail or localized serializers, and
+ * is optional here for that reason -- `/actors` was reading `title`,
+ * `name_zh` and `description` off list rows and getting undefined for all
+ * 130 of them, while `display_title` (already localized by the backend) sat
+ * unread in the same payload.
+ *
+ * `icon` is on no serializer at all; the model column is `icon_url`. Both are
+ * kept optional because the interface also covers detail responses.
+ */
 export interface Actor {
   id: string;
   name: string;
+  /** Localized by the backend. Present on the list endpoint. */
+  display_name?: string;
+  /** Localized by the backend. Present on the list endpoint. */
+  display_title?: string;
   name_zh?: string;
   name_en?: string;
   name_egy?: string;

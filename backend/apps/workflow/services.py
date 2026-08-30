@@ -1013,8 +1013,15 @@ class WorkflowService:
         """Get statistics about a workflow's progress."""
         nodes = workflow.nodes.all()
         total = nodes.count()
-        approved = nodes.filter(status__in=[NodeStatus.APPROVED, NodeStatus.REJECTED, NodeStatus.SKIPPED]).count()
+        # `pending` is derived from `total`, not counted independently.
+        # ESCALATED was in neither bucket, so completed + pending did not sum
+        # to total -- measured: {'total_nodes': 3, 'completed_nodes': 0,
+        # 'pending_nodes': 2} with one escalated node. It was latent only
+        # because nothing assigned ESCALATED, and something does now
+        # (ApprovalWorkflow.escalate_current_node). Deriving it means a status
+        # added later cannot reopen the same gap.
         pending = nodes.filter(status=NodeStatus.PENDING).count()
+        approved = total - pending
 
         return {
             "total_nodes": total,

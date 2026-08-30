@@ -85,7 +85,7 @@ export default function UsersPage() {
         </Link>
       }
       actions={
-        <RequirePermission permissions="user.create">
+        <RequirePermission permissions="user.manage">
           <Button type="button" variant="primary" onClick={() => setIsModalOpen(true)}>
             + {t("users.create_user")}
           </Button>
@@ -196,12 +196,12 @@ export default function UsersPage() {
             </td>
             <td className="px-4 py-3 text-right">
               <div className="flex items-center justify-end gap-2">
-                <RequirePermission permissions="user.update">
+                <RequirePermission permissions="user.manage">
                   <Button type="button" size="sm" onClick={() => setEditingUser(user)}>
                     {t("common.edit")}
                   </Button>
                 </RequirePermission>
-                <RequirePermission permissions={["user.update", "user.activate"]}>
+                <RequirePermission permissions="user.manage">
                   <Button
                     type="button"
                     size="sm"
@@ -214,7 +214,7 @@ export default function UsersPage() {
                     {user.is_active ? t("users.deactivate") : t("users.activate")}
                   </Button>
                 </RequirePermission>
-                <RequirePermission permissions="user.delete">
+                <RequirePermission permissions="user.manage">
                   <Button type="button" size="sm" variant="danger" onClick={() => setDeleteUser(user)}>
                     {t("common.delete")}
                   </Button>

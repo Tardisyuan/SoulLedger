@@ -14,6 +14,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
 
 type FilterType = "all" | "unread";
 
@@ -37,7 +38,7 @@ export default function NotificationsPage() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<FilterType>("all");
 
-  const { data: notifications = [], isLoading, error } = useQuery({
+  const { data: notifications = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["notifications", filter],
     queryFn: async () => {
       const params: Record<string, string> | undefined = filter === "unread" ? { is_read: "false" } : undefined;
@@ -169,7 +170,9 @@ export default function NotificationsPage() {
           ))}
         </div>
       }
-      isEmpty={notifications.length === 0}
+      // A failed request used to fall through to the empty state. This page
+      // even destructured `error` from useQuery and never read it.
+      isEmpty={isError || notifications.length === 0}
       empty={
         /* The only complete empty state in the repo before this pass — a 48px
            Bell over a centred reason. It is not being downgraded to a bare
@@ -180,17 +183,21 @@ export default function NotificationsPage() {
            list is the case where a way out exists and means something, so the
            action is offered there and withheld on `all`, where "show
            everything" is already what you are looking at. */
-        <EmptyState
-          title={t("notifications.title")}
-          reason={t("notifications.empty")}
-          action={
-            filter === "unread" ? (
-              <Button type="button" variant="secondary" size="sm" onClick={() => setFilter("all")}>
-                {t("notifications.all")}
-              </Button>
-            ) : undefined
-          }
-        />
+        isError ? (
+          <QueryError onRetry={() => refetch()} />
+        ) : (
+          <EmptyState
+            title={t("notifications.title")}
+            reason={t("notifications.empty")}
+            action={
+              filter === "unread" ? (
+                <Button type="button" variant="secondary" size="sm" onClick={() => setFilter("all")}>
+                  {t("notifications.all")}
+                </Button>
+              ) : undefined
+            }
+          />
+        )
       }
     >
       <div className="space-y-3">

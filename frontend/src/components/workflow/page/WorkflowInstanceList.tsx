@@ -4,7 +4,7 @@ import Link from "next/link";
 import { type ApprovalWorkflowListItem } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ListSkeleton } from "@/components/ui/skeleton";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { Badge } from "@/src/components/ui/Badge";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 
@@ -58,7 +58,10 @@ export function WorkflowInstanceList({
               <div>
                 <div className="text-03 font-medium text-ink">{wf.workflow_name}</div>
                 <div className="text-02 text-ink-muted mt-1">
-                  <DomainEnum namespace="workflow.case_types" value={wf.case_type} /> · {wf.soul}
+                  <DomainEnum namespace="workflow.case_types" value={wf.case_type} />{" · "}
+                  {/* `wf.soul` is the primary key. This row used to print the
+                      UUID as though it were the soul's name. */}
+                  {wf.soul_name || <MissingValue kind="unrecorded" />}
                 </div>
               </div>
               <div className="flex items-center gap-2">

@@ -109,6 +109,7 @@
     },
     "events": {
       "SOUL_CREATED": "Soul registered",
+      "SETTLEMENT_CORRECTED": "Settlement corrected",
       "SOUL_DIED": "Death recorded",
       "STATE_CHANGED": "State changed",
       "RECORD_ADDED": "Deed recorded",
@@ -196,6 +197,7 @@
       "verdict_passed": "Passed",
       "verdict_failed": "Failed",
       "verdict_purgatory": "Purgatory",
+      "verdict_retry": "Retry",
       "reincarnate": "Reincarnate →",
       "being_reborn": "Soul is being reborn...",
       "previous_reincarnations": "previous reincarnation(s)",
@@ -570,6 +572,8 @@
       "advance": "Advance",
       "completed": "Workflow Completed",
       "completed_message": "This workflow has been completed.",
+      "completed_with_rejection": "Rejected",
+      "completed_with_rejection_message": "This approval flow ended with a rejection.",
       "nodes": "Nodes",
       "history": "History",
       "current": "Current",
@@ -840,13 +844,14 @@
     },
     "corpus": {
       "title": "Corpus",
-      "subtitle": "The articles a verdict may rest on. 175 transcribed across four cosmologies.",
+      "subtitle": "The articles a verdict may rest on. {{n}} transcribed across four cosmologies.",
       "col_sigil": "Sigil",
       "col_offence": "Offence",
       "col_text": "Article",
       "col_citations": "Cited",
       "filter_corpus": "Corpus",
       "article_count": "{{n}} articles",
+      "listed_count": "{{n}} listed",
       "empty_reason": "No article in this corpus has been transcribed.",
       "citations_absent": "This response does not carry a citation count.",
       "sigil_absent": "This article has no transcribed number."
@@ -1406,6 +1411,8 @@
     "visibility_label": "Post visibility"
   },
   "tenants": {
+    "active": "Active",
+    "inactive": "Inactive",
     "title": "Tenants",
     "subtitle": "Tenant configuration per civilization",
     "list": "Tenant list",

@@ -11,7 +11,12 @@ import type { PaginatedResponse } from "./users";
 export interface ApprovalWorkflowListItem {
   id: string;
   workflow_name: string;
+  /** Primary key. Not a name -- see `soul_name`. */
   soul: string;
+  /** Added to the list serializer 2026-08-30. The list row printed `soul`
+   *  (a UUID) as though it were the soul's name; the dispatch list serializer
+   *  beside it had always sent this field. */
+  soul_name?: string;
   case_type: string;
   priority: number;
   status: string;
@@ -25,7 +30,6 @@ export interface ApprovalWorkflowListItem {
 export interface ApprovalWorkflow extends ApprovalWorkflowListItem {
   judgment: string | null;
   judgment_verdict?: string | null;
-  soul_name?: string;
   current_node?: string | null;
   current_node_detail?: ApprovalNode | null;
   original_workflow?: string | null;

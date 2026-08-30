@@ -339,12 +339,34 @@ class LedgerExportStatsView(APIView):
             "Death Date", "Created At"
         ])
 
-        tenant = getattr(request, 'tenant', None)
-        # Admin exports all souls, others export only their tenant's souls
-        if getattr(user, 'role', None) == 'ADMIN':
-            qs = Soul.objects.select_related("tenant").all()
-        else:
-            qs = Soul.objects.select_related("tenant").filter(tenant=tenant) if tenant else Soul.objects.none()
+        # `request.tenant` is set by TenantMiddleware from the token's
+        # `tenant_code` claim; a caller reaching a view without passing through
+        # the middleware (`force_authenticate`, used widely in this suite) has
+        # it as None. Reading the user's own tenant column is the same answer
+        # by a route that cannot be skipped -- the same fallback used in
+        # apps/dispatch/views.py and apps/workflow/serializers.py.
+        tenant = getattr(request, 'tenant', None) or getattr(user, 'tenant', None)
+        # Scoped to the requester's tenant, ADMIN included -- matching
+        # LedgerOverviewStatsView above, which sits on the same dashboard.
+        #
+        # These two disagreed. `overview` filtered by tenant; `export` was
+        # `Soul.objects.all()` for ADMIN unconditionally. Same role, same
+        # permission, same screen, opposite scope -- and the one that crossed
+        # tenants was the one that emits names, civilizations, death dates and
+        # scores as a downloadable file. Measured 2026-08-29: a CN_DIYU admin's
+        # overview reported 1 soul in 1 tenant while its export contained
+        # EG-SOUL-SECRET.
+        #
+        # `apps/core/tenant.py` does name ADMIN as the globally-exempt role, so
+        # the old behaviour was defensible policy rather than an outright bug.
+        # Unified downward deliberately: a reader of either function would draw
+        # the wrong conclusion about the other, and the exemption is least
+        # defensible on the endpoint that produces a file.
+        qs = (
+            Soul.objects.select_related("tenant").filter(tenant=tenant)
+            if tenant
+            else Soul.objects.none()
+        )
         # Use iterator() to stream results without loading all into memory
         for soul in qs.iterator(chunk_size=1000):
             writer.writerow([

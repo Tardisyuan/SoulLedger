@@ -25,7 +25,13 @@ urlpatterns = [
     ),
     path("roles/<int:pk>/", views.update_delete_role, name="detail-role"),
     path("roles/init/", views.init_roles, name="init-roles"),
-    path("init/", views.init_permissions, name="init"),
+    # `init/` (views.init_permissions) removed 2026-08-30. It seeded
+    # Permission rows without the matching RolePermission grants, and
+    # `check_permission` treats the database as authoritative the moment a
+    # row exists -- so "initialising permissions" revoked 69 grants and
+    # answered 200. `role-permissions/init/` below does the whole job and
+    # is the only entry point now. See
+    # tests/test_perm_init_does_not_revoke.py.
     path("export/", views.export_permissions, name="export"),
     path("import/", views.import_permissions, name="import"),
 ]

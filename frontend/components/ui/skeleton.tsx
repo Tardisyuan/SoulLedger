@@ -2,11 +2,20 @@ import { cn } from '@/lib/utils'
 
 interface SkeletonProps {
   className?: string
+  /** Element to render. Default 'div'; use 'span' inside a <p> or other
+   *  phrasing-content parent. */
+  as?: 'div' | 'span' 
 }
 
-export function Skeleton({ className }: SkeletonProps) {
+export function Skeleton({ className, as: Tag = 'div' }: SkeletonProps) {
+  // `as` exists because a <div> is not legal everywhere a placeholder is
+  // wanted. PageShell's subtitle slot renders a <p>, and putting the default
+  // <div> in it made React report "In HTML, <div> cannot be a descendant of
+  // <p>" followed by a hydration mismatch -- the subtree discarded and
+  // re-rendered on every load of /souls/[id]. Callers in inline contexts pass
+  // `as="span"` and add `inline-block` for the height to apply.
   return (
-    <div
+    <Tag
       className={cn(
         'animate-pulse rounded-md bg-[hsl(var(--color-surface-2))]',
         className

@@ -52,6 +52,15 @@ const LazyBarChart = dynamic(
       return function WrappedBarChart({
         data,
         dataKey = "total",
+        // Which key holds the category label. Defaulted rather than hardcoded
+        // because two callers feed `/ledger/stats/overview/`'s
+        // `karma_distribution`, whose items are `{label, count}` -- no `name`.
+        // The axis therefore resolved nothing, and recharts draws no <path>
+        // for a bar whose category is undefined. Measured 2026-08-29: the
+        // 「功过分布」card on /dashboard and the only chart on /ledger rendered
+        // 0 bars from 7 data points, looking exactly like "no data". Adding a
+        // `name` key to the same 7 rows produced 7 bars and 7 ticks.
+        nameKey = "name",
         fill,
         height = 240,
         name,
@@ -59,6 +68,7 @@ const LazyBarChart = dynamic(
       }: {
         data: ChartDataPoint[];
         dataKey?: string;
+        nameKey?: string;
         fill: string;
         height?: number;
         name?: string;
@@ -74,7 +84,7 @@ const LazyBarChart = dynamic(
                 />
               )}
               <XAxis
-                dataKey="name"
+                dataKey={nameKey}
                 tick={{
                   fill: "hsl(var(--color-ink-muted))",
                   fontSize: 11,
