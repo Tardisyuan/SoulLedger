@@ -448,7 +448,19 @@ const eslintConfig = [
     // jsx-a11y 那个 6 文件 × 3 规则的合并豁免、Badge 的 `{space:1}` 额度、
     // `domainDisplayContract` 把注释读成调用、`civilizationCopyCoverage` 看不见散文
     // 形态的文案、以及 `readingQuantityContract` 自留的过期正则副本。
-    files: ["app/**/*.{ts,tsx}", "src/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
+    //
+    // 第七次。`lib/**` 与 `hooks/**` 同样在名单外:`lib/` 下 34 个 `.ts`,其中
+    // `lib/chart-colors.ts` 有约 20 处在用的 `hsl()` 字面量。实证:往
+    // `lib/utils.ts` 加 `export const NEW_ACCENT = "#ef4444";` 和一个裸调色板
+    // class,`npm run lint` exit 0;同一段 hex 放进 `src/components/ui/Badge.tsx`
+    // 就红。规则一直是好的,它只是没被指着那两个目录。
+    files: [
+      "app/**/*.{ts,tsx}",
+      "src/**/*.{ts,tsx}",
+      "components/**/*.{ts,tsx}",
+      "lib/**/*.{ts,tsx}",
+      "hooks/**/*.{ts,tsx}",
+    ],
     plugins: { "design-system": designSystem },
     rules: {
       "design-system/type-scale": "error",
