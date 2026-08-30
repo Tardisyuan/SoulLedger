@@ -48,10 +48,20 @@ def _invalidate_cache():
     PermissionCache 的键是 (role, codename)，改名后旧键成了没人问的孤儿，
     但新键此前可能被 checker 以 False 缓存过（旧名下不存在的 codename），
     所以整体清一次比按角色清更稳妥。
+
+    Wrapped in a SAVEPOINT for the reason `perm/0017` documents at length: a
+    bare `except Exception: pass` around a query does not contain the failure
+    on PostgreSQL, it poisons the surrounding transaction and the migration
+    dies while *recording* itself. Measured 2026-08-29: `migrate` against an
+    empty PostgreSQL database failed at 0013, the sibling of this one, so no
+    fresh deployment of this project could ever have come up.
     """
+    from django.db import transaction
+
     try:
-        from apps.perm.cache import invalidate_all_permissions
-        invalidate_all_permissions()
+        with transaction.atomic():
+            from apps.perm.cache import invalidate_all_permissions
+            invalidate_all_permissions()
     except Exception:
         # 缓存不可用（如测试库没有 Redis）不应阻塞迁移本身。
         pass

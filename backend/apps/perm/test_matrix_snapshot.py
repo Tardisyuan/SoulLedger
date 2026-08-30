@@ -118,6 +118,9 @@ JUDGMENT_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 403, 
 DISPOSITION_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 200, "VIEWER": 403}
 # `workflow.read` — ADMIN, MODERATOR, JUDGE. Not GUARDIAN, not VIEWER.
 WORKFLOW_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 200, "GUARDIAN": 403, "VIEWER": 403}
+# `audit.read` is granted to ADMIN and MODERATOR (apps/perm/models.py
+# ROLE_PERMISSIONS). Nobody else.
+AUDIT_READ = {"ADMIN": 200, "MODERATOR": 200, "JUDGE": 403, "GUARDIAN": 403, "VIEWER": 403}
 # The one tranche 3 introduces.
 #
 # `dispatch.read` — ADMIN, MODERATOR, GUARDIAN. Not JUDGE, not VIEWER: JUDGE
@@ -196,7 +199,14 @@ READ_MATRIX = {
     "/api/v1/tenants/": OPEN_TO_ALL,
     "/api/v1/events/": OPEN_TO_ALL,
     # likewise tenant-filtered in get_queryset
-    "/api/v1/audit-logs/": OPEN_TO_ALL,
+    # ENFORCED (tranche 3): declares `audit.read`, held by ADMIN and MODERATOR
+    # only -- and enforced nothing, because `permission_classes` listed
+    # `TenantPermission` alone. Was OPEN_TO_ALL, and that was not a policy
+    # decision: it was this snapshot faithfully recording that a VIEWER could
+    # read the whole tenant's audit log, `/timeline/` (the permission-change
+    # timeline) included. `stats` was the only protected action, and only
+    # because someone hand-wrote a role check inside it.
+    "/api/v1/audit-logs/": AUDIT_READ,
     # apps/audit/views.py:136, hardcoded
     "/api/v1/audit-logs/stats/": ADMIN_ONLY,
     # ENFORCED (tranche 3): declares `notification.read`, held by all five

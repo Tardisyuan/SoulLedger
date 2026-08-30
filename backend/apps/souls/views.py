@@ -269,7 +269,24 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
                 {"error": f"Invalid transition from {soul.current_state} to {new_state}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        soul.transition_to(new_state, reason)
+        # The return value used to be discarded. `can_transition_to` above runs
+        # outside the row lock and `transition_to` re-decides inside it, so a
+        # refusal there -- a concurrent transition, or now a terminal cosmology
+        # being asked to reincarnate -- produced a 200 carrying a serialized
+        # soul that had not moved. An interface that answers "done" to a
+        # request it declined is worse than one that declines loudly.
+        if not soul.transition_to(new_state, reason):
+            soul.refresh_from_db()
+            return Response(
+                {
+                    "error": (
+                        f"Transition to {new_state} was refused. The soul is in "
+                        f"{soul.current_state}."
+                    ),
+                    "current_state": soul.current_state,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
         return Response(SoulSerializer(soul).data)
 
     @action(detail=True, methods=["get"])

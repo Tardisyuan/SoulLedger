@@ -32,6 +32,14 @@ _BLOCKED_NETWORKS = [
     ipaddress.ip_network("192.168.0.0/16"),    # private class C
     ipaddress.ip_network("169.254.0.0/16"),    # link-local
     ipaddress.ip_network("::ffff:0:0/96"),     # IPv4-mapped IPv6
+    # The four below were missing. Verified 2026-08-29 by running the list
+    # above against probe addresses: each of these was ALLOWED.
+    ipaddress.ip_network("0.0.0.0/8"),         # "this network" -- 0.0.0.0 routes
+                                               # to localhost on Linux, so this
+                                               # was a loopback bypass
+    ipaddress.ip_network("fc00::/7"),          # IPv6 unique local (fd00::/8 etc.)
+    ipaddress.ip_network("100.64.0.0/10"),     # CGNAT / carrier-grade NAT
+    ipaddress.ip_network("192.0.0.0/24"),      # IETF protocol assignments
 ]
 
 
@@ -146,6 +154,13 @@ class WebhookService:
                 data=payload_bytes,
                 headers=headers,
                 timeout=webhook.timeout_seconds,
+                # `requests` follows redirects by default, and
+                # `_validate_webhook_url` only ever saw the URL we were given.
+                # A webhook pointed at a public host that answers
+                # `302 -> http://169.254.169.254/latest/meta-data/` reached the
+                # metadata service, carrying this tenant's HMAC signature.
+                # The validator never saw the second URL.
+                allow_redirects=False,
             )
             duration_ms = int((time.time() - start_time) * 1000)
 

@@ -1172,6 +1172,7 @@
     "role_viewer": "查看者",
     "roles": {
       "ADMIN": "管理员",
+      "MODERATOR": "殿主",
       "JUDGE": "审判者",
       "GUARDIAN": "守护者",
       "VIEWER": "查看者"

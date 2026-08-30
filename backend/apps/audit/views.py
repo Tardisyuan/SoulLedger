@@ -5,7 +5,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.core.permissions import TenantPermission
+from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 
@@ -28,7 +28,19 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         GET /api/v1/audit-logs/?user=1&action=CREATE&resource=soul
         GET /api/v1/audit-logs/?start_date=2024-01-01&end_date=2024-12-31
     """
-    permission_classes = [TenantPermission]
+    # `permission_codename = "audit"` and the extra_permissions below declared
+    # what this viewset needs and nothing enforced it: the codename was
+    # decorative. Measured 2026-08-29, a VIEWER -- which does not hold
+    # `audit.read` -- got 200 from `GET /api/v1/audit-logs/` and from
+    # `/timeline/`, the permission-change timeline. Only `stats` was safe, and
+    # only because someone hand-wrote a role check inside it.
+    #
+    # `apps/perm/test_codename_coverage.py` could not catch this: it asserts
+    # that a declared codename is defined and held by someone, never that the
+    # class which enforces it is attached. The 48-line docstring below reasons
+    # carefully about *which* codenames belong here and never asks whether
+    # anything reads them.
+    permission_classes = [TenantPermission, CodenamePermission]
     # BINARY on `audit.read`, which is what the module already is: a
     # ReadOnlyModelViewSet, so every routed action is a read and there is no
     # write codename to want. `audit.read` is seeded and held by ADMIN and

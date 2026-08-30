@@ -33,6 +33,16 @@ else:
         )
     ALLOWED_HOSTS = [h.strip() for h in _hosts.split(",") if h.strip()]
 
+# How many proxies sit in front of this application.
+#
+# 0 means `X-Forwarded-For` is ignored entirely and REMOTE_ADDR is the client
+# address -- correct for a directly-exposed service, and the safe default for
+# one whose deployment shape is not written down anywhere. The header is
+# client-supplied; honouring it without knowing the chain is what let a
+# restricted API key be used from any address and let a login brute-force
+# limiter be reset at will. See apps/core/client_ip.py.
+TRUSTED_PROXY_COUNT = int(os.environ.get("TRUSTED_PROXY_COUNT", "0"))
+
 INSTALLED_APPS = [
     "daphne",
     "channels",

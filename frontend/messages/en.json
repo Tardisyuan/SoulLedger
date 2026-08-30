@@ -1172,6 +1172,7 @@
     "role_viewer": "Viewer",
     "roles": {
       "ADMIN": "Administrator",
+      "MODERATOR": "Realm Lead",
       "JUDGE": "Judge",
       "GUARDIAN": "Guardian",
       "VIEWER": "Viewer"

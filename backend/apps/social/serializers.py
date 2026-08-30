@@ -96,7 +96,22 @@ class CommentSerializer(serializers.ModelSerializer):
             "create_time",
             "update_time",
         ]
-        read_only_fields = ["id", "author", "tenant", "create_time", "update_time"]
+        # `post` and `parent` belong here for the reason
+        # CommentCreateSerializer.validate() spends thirty lines explaining:
+        # they are unscoped PrimaryKeyRelatedFields, so they can be pointed at
+        # another tenant's row and produce a comment whose `tenant` column and
+        # `post` FK disagree. That guard was written on the create path only.
+        # Measured 2026-08-29: `PATCH {"post": <another tenant's post>}` -> 200,
+        # and the stored comment then had exactly the shape that docstring
+        # describes. `parent` could also be set to the comment's own id, which
+        # makes any tree walk recurse forever.
+        #
+        # This serializer is only used for retrieve/update (see
+        # CommentViewSet.get_serializer_class), so read-only here costs
+        # creation nothing.
+        read_only_fields = [
+            "id", "author", "tenant", "post", "parent", "create_time", "update_time",
+        ]
 
 
 class CommentCreateSerializer(serializers.ModelSerializer):

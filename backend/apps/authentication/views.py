@@ -15,6 +15,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
+from apps.authentication.models import UserRole
 from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
@@ -206,7 +207,11 @@ class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         """分配角色给用户"""
         user = self.get_object()
         new_role = request.data.get('role')
-        valid_roles = ['ADMIN', 'JUDGE', 'GUARDIAN', 'VIEWER']
+        # Derived, not restated. This list and its twin below were two
+        # hand-written copies of UserRole that both missed MODERATOR, so a
+        # role the permission layer fully honoured could not be assigned
+        # through any API path.
+        valid_roles = list(UserRole.values)
         if new_role not in valid_roles:
             return Response(
                 {'error': f'Invalid role. Must be one of: {valid_roles}'},
@@ -293,7 +298,7 @@ class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
                         errors.append(f"Row {i+2}: invalid email '{email}'")
                         continue
 
-                if role not in ['ADMIN', 'JUDGE', 'GUARDIAN', 'VIEWER']:
+                if role not in UserRole.values:
                     errors.append(f"Row {i+2}: invalid role '{role}'")
                     continue
 
@@ -368,11 +373,16 @@ class LoginLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
 
 
 def _get_client_ip(request):
-    """Extract client IP from request, handling proxies."""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        return x_forwarded_for.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR', None)
+    """Delegates to the one validated implementation.
+
+    This keys the login brute-force limiter (5 attempts / 15 minutes). It used
+    to return `X-Forwarded-For`'s first entry unchecked, so rotating that
+    header reset the counter and the limiter counted nothing. See
+    apps/core/client_ip.py.
+    """
+    from apps.core.client_ip import get_client_ip
+
+    return get_client_ip(request)
 
 
 class LoginView(TokenObtainPairView):

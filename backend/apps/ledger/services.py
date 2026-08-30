@@ -238,16 +238,41 @@ class LedgerService:
     def _day_of_year(month, day) -> int:
         """Ordinal day-of-year for a (possibly partial) month/day.
 
-        Uses a fixed non-leap reference year (2001) — this is only used to
-        estimate the sub-year fraction of a decay calculation, not to
-        validate the date, so leap-day correctness doesn't matter here.
-        Falls back to day 183 (~mid-year) when there's no month/day
-        precision at all, which is the least-biased guess for a
-        year-only historical record.
+        The reference year must be a LEAP year. This used to say 2001 and
+        explain that "leap-day correctness doesn't matter here" because the
+        result only estimates a sub-year fraction. That reasoning is about the
+        *output*; the problem is the *input*. `datetime.date(2001, 2, 29)`
+        raises ValueError, and February 29th is a date this project accepts:
+        `apps/souls/dates.py::validate_historical_date` checks month length
+        with `calendar.monthrange` against the real year, so 2020-02-29 passes
+        validation and is stored.
+
+        What followed, measured 2026-08-29:
+
+            validate_historical_date(2020, 2, 29)  -> accepted
+            SoulRecord with event date 2020-02-29  -> ValueError: day is out of
+                                                      range for month
+            Soul with death 2020-02-29             -> same
+
+        and the death-date case is unrecoverable: the decay anchor is
+        recomputed on every call, so balance, effective ledger, inheritance,
+        recalculate and `next_pending` all raise for that soul forever, and
+        every later SoulRecord write on it does too. `recalculate_tenant` dies
+        mid-iteration and abandons the rest of that tenant's fan-out.
+
+        2004 is a leap year, so every (month, day) the validator admits can be
+        constructed. The ordinal for dates after February differs by one from
+        the 2001 answer; that shift is uniform across both ends of every
+        subtraction this feeds, and it is a fraction-of-a-year estimate either
+        way.
+
+        Falls back to day 183 (~mid-year) when there's no month/day precision
+        at all, which is the least-biased guess for a year-only historical
+        record.
         """
         if month is None:
             return 183
-        return datetime.date(2001, month, day or 15).timetuple().tm_yday
+        return datetime.date(2004, month, day or 15).timetuple().tm_yday
 
     @staticmethod
     def _get_decay_anchor(soul: Soul) -> tuple:

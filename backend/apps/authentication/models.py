@@ -15,7 +15,33 @@ class SoftDeleteUserManager(UserManager):
 
 
 class UserRole(models.TextChoices):
+    """The roles a `User.role` may hold.
+
+    MODERATOR was missing here while three other places already knew about it:
+    `apps/perm/models.py::ROLE_PERMISSIONS` grants it a strictly larger set
+    than JUDGE (dispatch.approve/reject/execute, ledger.manage, org.manage,
+    soul.create), `apps/authentication/serializers.py::ROLE_HIERARCHY` ranks it
+    at 10, and migration 0017 seeds its grants. `check_permission` honoured all
+    of that, because it reads the `Role` table.
+
+    What did not honour it was every path that validates the field: this
+    enum, and two hand-written copies of it in `views.py`. So
+    `POST /users/{id}/assign_roles/ {"role": "MODERATOR"}` answered
+    400 "Invalid role", `import_csv` rejected it identically, and any write
+    through `full_clean()`/a ModelForm/a DRF ChoiceField refused it -- while
+    192.168.2.115 carried two MODERATOR users that no API path could have
+    created. The role worked and could not be legitimately assigned.
+
+    Adding it here rather than deleting it from ROLE_PERMISSIONS: several of
+    the cross-tenant defects this audit measured were demonstrated *as*
+    MODERATOR precisely because it is the role deliberately denied
+    `workflow.approve` and `workflow.advance` while holding `workflow.update`.
+    That distinction is doing real work in the permission design; removing it
+    would mean conceding that design.
+    """
+
     ADMIN = "ADMIN", "Administrator (阎罗王)"
+    MODERATOR = "MODERATOR", "Realm Lead (殿主)"
     JUDGE = "JUDGE", "Judge (判官)"
     GUARDIAN = "GUARDIAN", "Guardian (牛头马面)"
     VIEWER = "VIEWER", "Viewer (访客)"

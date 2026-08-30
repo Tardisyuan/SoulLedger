@@ -38,6 +38,10 @@ def api_key(cn_tenant):
     return ExternalApiKey.objects.create(
         tenant=cn_tenant, name="Test Key", system_type="HOSPITAL",
         key_hash=key_hash, key_prefix=key_prefix,
+        # `can_manage_webhooks` is now enforced. It defaults to False, which is
+        # the right default and was previously read by nothing; a suite about
+        # webhook CRUD needs the capability it is exercising.
+        can_manage_webhooks=True,
     )
 
 
@@ -225,6 +229,7 @@ class TestWebhookViewSetPermissionFix:
         self.key = ExternalApiKey.objects.create(
             tenant=cn_tenant, name="C11 Webhook Key", system_type="HOSPITAL",
             key_hash=key_hash, key_prefix=key_prefix,
+            can_manage_webhooks=True,
         )
         self.raw_key = raw_key
         self.webhook = WebhookConfig.objects.create(
@@ -281,6 +286,7 @@ class TestWebhookConfigSerializerFieldName:
         self.key = ExternalApiKey.objects.create(
             tenant=cn_tenant, name="Serializer Fix Key", system_type="HOSPITAL",
             key_hash=key_hash, key_prefix=key_prefix,
+            can_manage_webhooks=True,
         )
         self.raw_key = raw_key
         self.webhook = WebhookConfig.objects.create(
