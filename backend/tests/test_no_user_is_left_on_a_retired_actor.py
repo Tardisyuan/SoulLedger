@@ -98,6 +98,38 @@ def test_a_merge_with_accounts_on_both_rows_is_refused_outright(eu):
 
 
 @pytest.mark.django_db
+def test_a_referenced_pluto_never_causes_hades_to_be_retired(eu):
+    """恢复被合并掉的那一行之后,这条命令不许反过来把幸存者删掉。
+
+    这是 2026-08-31 处置 115 上那条数据时发现的:`tenant_actors` **跨两个租户**取行,
+    所以把 EU 的 Pluto 取消软删之后,下一次 `--execute` 会看到两行都活着;
+    Pluto 被一个账号引用、Hades 没有,而旧的排序键第一项是 `-refs` ——
+    **于是 Pluto 成为幸存者,Hades 被软删**,一次有据可查的合并被悄悄反转,
+    留下来的那行还带着罗马名字。
+
+    现在幸存者恒为 `MERGE_SURVIVOR`,而「要退役的那行被账号引用」由**拒绝**处理,
+    不是由改变谁幸存来处理 —— 把账号改指到另一个租户的行,正是这个代码库一直在
+    关的那种跨租户链接。
+    """
+    pluto, hades = make_pair(eu)
+    User.objects.create_user(
+        username="on_pluto_only", password="x", role="ADMIN", tenant=eu, actor=pluto
+    )
+
+    out = StringIO()
+    call_command("consolidate_eu_pantheon", "--execute", stdout=out, stderr=out)
+
+    pluto.refresh_from_db()
+    hades.refresh_from_db()
+    assert hades.is_deleted is False, (
+        f"幸存者被删了 —— 一个账号的引用不该决定哪个名字活下来:\n{out.getvalue()}"
+    )
+    assert pluto.is_deleted is False, "被引用的那行也不该被删,应当拒绝并交回给人"
+    assert "ACTION REQUIRED" in out.getvalue()
+    assert orphaned_users() == []
+
+
+@pytest.mark.django_db
 def test_the_merge_actually_happens_when_nothing_references_either_row(eu):
     """正对照。
 
