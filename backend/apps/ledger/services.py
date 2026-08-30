@@ -389,30 +389,70 @@ class LedgerService:
         """
         Recalculate merit/demerit totals with time decay from all records.
         Updates soul's denormalised merit/demerit scores.
+
+        THE LOCK IS THE POINT. This is a read-modify-write over every record a
+        soul has, and it is triggered from two places at once:
+        `apps/souls/record_models.py` on every record insert, and
+        `LedgerRecalculateView.post`. It had no `select_for_update`, no
+        `atomic()` and no version column; `grep select_for_update apps/ledger
+        apps/judgment` matched nothing.
+
+        Measured on a PostgreSQL 16 clone of the shared box (`zz_audit_probe`,
+        dropped afterwards, original verified untouched):
+
+            baseline merit_score = 10
+            records committed (weights): [10, 100, 1000]  raw sum = 1110
+            STORED merit_score left by two concurrent writers: 1010
+            TRUTH  from a clean re-run:                        1110
+            >>> LOST UPDATE: True
+
+        `merit_score`/`demerit_score` are the denormalised columns the whole
+        system routes and sorts on -- **a score silently too low changes which
+        court a soul is sent to.** Nothing detects it; only a later recalculation
+        repairs it, by accident.
+
+        `ATOMIC_REQUESTS` is not set, so in production the INSERT/SELECT/UPDATE
+        were three separate autocommitted statements. Interleaving differently
+        does not make the defect different.
+
+        The lock is taken on the `Soul` row before the records are summed, so
+        two recalculations of the same soul serialise. `select_for_update` needs
+        a transaction, hence the `atomic()`. **SQLite serialises writers
+        anyway**, so this suite cannot reproduce the race -- see
+        `tests/test_ledger_recalculation_is_serialised.py` for what is testable
+        here and what is not.
         """
-        old_merit = soul.merit_score
+        from django.db import transaction
 
-        records = soul.records.all()
-        anchor = cls._get_decay_anchor(soul)
-        rate = cls._decay_rate_for(soul)
+        with transaction.atomic():
+            # Re-read under the lock. The caller's `soul` may be a stale copy
+            # read before another writer committed, and summing records is only
+            # half the job -- the row this writes back to has to be the one it
+            # locked.
+            soul = Soul.all_objects.select_for_update().get(pk=soul.pk)
+            old_merit = soul.merit_score
 
-        merit = 0
-        demerit = 0
+            records = soul.records.all()
+            anchor = cls._get_decay_anchor(soul)
+            rate = cls._decay_rate_for(soul)
 
-        for r in records:
-            years = cls._get_record_age_years(
-                r.event_year, r.event_month, r.event_day, r.recorded_at, anchor
-            )
-            effective_weight = cls._decay_weight(r.weight, years, rate)
+            merit = 0
+            demerit = 0
 
-            if r.record_type == "MERIT":
-                merit += effective_weight
-            elif r.record_type == "DEMERIT":
-                demerit += effective_weight
+            for r in records:
+                years = cls._get_record_age_years(
+                    r.event_year, r.event_month, r.event_day, r.recorded_at, anchor
+                )
+                effective_weight = cls._decay_weight(r.weight, years, rate)
 
-        soul.merit_score = round(merit)
-        soul.demerit_score = round(demerit)
-        soul.save(update_fields=["merit_score", "demerit_score", "update_time"])
+                if r.record_type == "MERIT":
+                    merit += effective_weight
+                elif r.record_type == "DEMERIT":
+                    demerit += effective_weight
+
+            soul.merit_score = round(merit)
+            soul.demerit_score = round(demerit)
+            soul.save(update_fields=["merit_score", "demerit_score", "update_time"])
 
         # Invalidate cache
         cls._invalidate_cache(soul)
