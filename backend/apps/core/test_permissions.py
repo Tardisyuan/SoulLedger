@@ -14,7 +14,7 @@ machinery that has nothing to do with what's being verified here.
 import pytest
 from django.test import RequestFactory
 
-from apps.authentication.models import User
+from apps.authentication.models import User, UserRole
 from apps.core.permissions import HasValidApiKey, TenantPermission
 from apps.tenants.models import Tenant
 
@@ -71,6 +71,105 @@ class TestTenantPermissionCrossCheck:
 
         request = self._request(AnonymousUser(), self.tenant_a)
         assert self.permission.has_permission(request, None) is False
+
+    # -- the other half of the bypass --------------------------------------
+    #
+    # `test_admin_bypasses_the_cross_check_entirely` above says ADMIN gets
+    # through. Nothing said that *only* ADMIN does, and that omission is not
+    # theoretical: changing the bypass from `== "ADMIN"` to
+    # `in ("ADMIN", "MODERATOR")` -- handing a second role a global
+    # cross-tenant exemption -- left the **entire backend suite green**, 2694
+    # passed, 0 failed, 259 seconds.
+    #
+    # Two things had to line up for that. This class parametrized only VIEWER
+    # and ADMIN, so no other role's behaviour was stated anywhere. And
+    # `apps/perm/test_matrix_snapshot.py`'s `role_clients` puts every role's
+    # user in one tenant with a matching token, so the mismatch branch is
+    # never taken there either -- instrumenting the whole suite found 328 test
+    # functions reaching `has_object_permission`, 224 of which take the ADMIN
+    # short-circuit on every single call, and **zero** that exercise both
+    # paths.
+    #
+    # Derived from `UserRole.values` rather than listed, so a role added later
+    # is covered without anyone remembering to come back here.
+
+    @pytest.mark.parametrize(
+        "role", [r for r in UserRole.values if r != UserRole.ADMIN]
+    )
+    def test_no_other_role_bypasses_the_cross_check(self, role):
+        user = User.objects.create_user(
+            username=f"tpx_only_{role.lower()}",
+            password="x",
+            role=role,
+            tenant=self.tenant_a,
+        )
+        request = self._request(user, self.tenant_b)
+        assert self.permission.has_permission(request, None) is False, (
+            f"{role} was let through a tenant mismatch. ADMIN is the one "
+            f"globally-scoped role in this codebase; a second one is a "
+            f"cross-tenant exemption nobody declared."
+        )
+
+    @pytest.mark.parametrize(
+        "role", [r for r in UserRole.values if r != UserRole.ADMIN]
+    )
+    def test_no_other_role_bypasses_the_object_check(self, role):
+        """The object layer separately -- it has its own copy of the bypass."""
+
+        class _Obj:
+            pass
+
+        obj = _Obj()
+        obj.tenant = self.tenant_b
+
+        user = User.objects.create_user(
+            username=f"tpx_obj_{role.lower()}",
+            password="x",
+            role=role,
+            tenant=self.tenant_a,
+        )
+        request = self._request(user, self.tenant_a)
+        assert self.permission.has_object_permission(request, None, obj) is False, (
+            f"{role} reached an object belonging to another tenant"
+        )
+
+    def test_admin_still_bypasses_the_object_check(self):
+        """The positive control. Without it, a permission class that refuses
+        everyone satisfies both assertions above."""
+
+        class _Obj:
+            pass
+
+        obj = _Obj()
+        obj.tenant = self.tenant_b
+
+        admin = User.objects.create_user(
+            username="tpx_obj_admin", password="x", role="ADMIN", tenant=self.tenant_a
+        )
+        request = self._request(admin, self.tenant_a)
+        assert self.permission.has_object_permission(request, None, obj) is True
+
+    def test_exactly_one_role_holds_the_bypass(self):
+        """Stated as a count, so a second exemption is visible as a number.
+
+        The per-role tests above would each fail individually; this one says
+        what the invariant is, which is the sentence someone reads when they
+        are deciding whether to add a role to that tuple.
+        """
+        bypassing = []
+        for role in UserRole.values:
+            user = User.objects.create_user(
+                username=f"tpx_count_{role.lower()}",
+                password="x",
+                role=role,
+                tenant=self.tenant_a,
+            )
+            if self.permission.has_permission(self._request(user, self.tenant_b), None):
+                bypassing.append(role)
+        assert bypassing == [UserRole.ADMIN], (
+            f"roles bypassing the tenant cross-check: {bypassing}. "
+            f"Exactly one role is meant to be globally scoped."
+        )
 
 
 class TestHasValidApiKey:
