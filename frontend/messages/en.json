@@ -109,6 +109,7 @@
     },
     "events": {
       "SOUL_CREATED": "Soul registered",
+      "SETTLEMENT_CORRECTED": "Settlement corrected",
       "SOUL_DIED": "Death recorded",
       "STATE_CHANGED": "State changed",
       "RECORD_ADDED": "Deed recorded",
@@ -196,6 +197,7 @@
       "verdict_passed": "Passed",
       "verdict_failed": "Failed",
       "verdict_purgatory": "Purgatory",
+      "verdict_retry": "Retry",
       "reincarnate": "Reincarnate →",
       "being_reborn": "Soul is being reborn...",
       "previous_reincarnations": "previous reincarnation(s)",

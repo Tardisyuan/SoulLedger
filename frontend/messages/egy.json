@@ -101,6 +101,7 @@
     },
     "events": {
       "SOUL_CREATED": "Aba Seshem Seth",
+      "SETTLEMENT_CORRECTED": "Settlement corrected",
       "SOUL_DIED": "Mut Aba Sesh Seth",
       "STATE_CHANGED": "Set Medu Khemen Seth",
       "RECORD_ADDED": "Sesh Seth Wehem",
@@ -188,6 +189,7 @@
       "verdict_passed": "Sethet",
       "verdict_failed": "Ma Sethet",
       "verdict_purgatory": "Khet Her Tepy",
+      "verdict_retry": "Retry",
       "reincarnate": "Aru Her Tepy →",
       "being_reborn": "Aba Em Aru Her Tepy...",
       "previous_reincarnations": "Aru Sethet Wu",

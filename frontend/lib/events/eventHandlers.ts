@@ -28,6 +28,7 @@ import type {
 export const EVENT_LABELS: Record<string, string> = {
   // Soul events
   SOUL_CREATED: "Soul created",
+  SETTLEMENT_CORRECTED: "Settlement corrected",
   STATE_CHANGED: "Soul state changed",
   RECORD_ADDED: "Record added",
   JUDGMENT_INITIATED: "Judgment initiated",
