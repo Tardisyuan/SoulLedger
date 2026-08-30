@@ -845,9 +845,12 @@ def test_perm_assign_snapshot(role_clients, snapshot_tenant, role):
 # The rollout therefore straddles both paths, and neither is the "normal" one.
 #
 # A deployed database is not migrate-only. Dev has Permission rows for soul.*
-# and ledger.* (created by apps/perm/views.py's init endpoint, which no
-# migration owns) and 49 RolePermission rows, so there the DB decides and the
-# dict is never consulted. The matrix frozen above therefore pins the path CI
+# and ledger.* and 49 RolePermission rows, so there the DB decides and the dict
+# is never consulted. Those rows came from `POST /perm/init/`, which no
+# migration owned — that endpoint was **deleted on 2026-08-30** (it revoked
+# every configured grant on the way to re-seeding). Nothing has replaced it, so
+# a freshly deployed database no longer acquires those rows at all, which makes
+# the divergence below wider, not narrower. The matrix frozen above therefore pins the path CI
 # happens to exercise and says nothing about the path production runs on.
 #
 # These cases close that gap: seed the codenames, grant them from
@@ -1263,6 +1266,25 @@ def test_moderator_denied_workflow_advance_now_stays_denied_through_patch_workfl
     assert ApprovalWorkflow.objects.get(pk=workflow.pk).current_node_id == first.pk
     # And the thing escalate exists to guarantee still did not happen.
     assert not AuditLog.objects.filter(resource="workflow.escalate").exists()
+
+    # The positive control for the line above, and the reason it is here: a
+    # `not ... exists()` assertion is satisfied by an empty table, and this
+    # test does nothing else that would put a row in one. It reads as "the
+    # bypass left no trace" while what it actually says is "this table is
+    # empty" — true no matter what the PATCH did.
+    #
+    # So take the sanctioned door and watch a row appear. Now the assertion
+    # above has a demonstrated way to fail: escalate's audit write is
+    # synchronous, so had the PATCH gone through escalate's path the row would
+    # already have been there.
+    escalated = moderator.post(
+        f"/api/v1/workflows/{workflow.id}/escalate/",
+        {"reason": "守卫的正对照:走被允许的那扇门"},
+        format="json",
+    )
+    assert escalated.status_code == 200, escalated.data
+    assert AuditLog.objects.filter(resource="workflow.escalate").count() == 1
+    assert ApprovalWorkflow.objects.get(pk=workflow.pk).current_node_id == second.pk
 
 
 def _write_snapshot_test_names():
