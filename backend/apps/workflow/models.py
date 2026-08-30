@@ -168,8 +168,35 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
         from django.utils import timezone
 
         with transaction.atomic():
-            node = self.nodes.filter(id=node_id).first()
+            # Locked and re-checked inside the transaction. The view's
+            # `node.status != PENDING` guard runs outside any lock, so two
+            # judges deciding the same node both passed it and both wrote.
+            # Measured on real PostgreSQL 2026-08-29, with a barrier placed
+            # between the guard and this call so both threads were provably
+            # inside the window:
+            #
+            #     A: read node status=PENDING gate_passed=True
+            #     B: read node status=PENDING gate_passed=True
+            #     complete_node returns: {'B': True, 'A': True}
+            #     stored: status=APPROVED verdict=PASSED approver=A
+            #
+            # B's REJECTION was discarded and B was told it had succeeded.
+            # Nothing recorded that a rejection had been overwritten.
+            #
+            # `apps/souls/models.py` already does exactly this -- takes the
+            # row lock, re-reads, re-decides -- and was measured correct under
+            # the same experiment. This is that pattern, applied here.
+            node = (
+                ApprovalNode.objects.select_for_update()
+                .filter(id=node_id, workflow=self)
+                .first()
+            )
             if not node:
+                return False
+            if node.status != NodeStatus.PENDING:
+                # Somebody decided it between the view's check and this lock.
+                # Returning False rather than overwriting is the whole point:
+                # the second caller has to learn its decision was not recorded.
                 return False
 
             node.status = NodeStatus.APPROVED if verdict in ["PASSED", "CONFIRMED"] else NodeStatus.REJECTED
