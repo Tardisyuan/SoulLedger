@@ -365,12 +365,22 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
 class ApprovalWorkflowListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing workflows."""
 
+    # `soul` on this serializer is the primary key, a UUID, and the workflow
+    # list rendered it straight into the row as though it were a name --
+    # `十殿审判流程 常规审判 · 11111111-1111-4111-8111-111111111111`. The
+    # dispatch list serializer beside it has always sent `soul_name` for
+    # exactly this reason; this one did not, so the page had nothing else to
+    # show. One string per row is not the payload a list serializer exists to
+    # avoid.
+    soul_name = serializers.CharField(source="soul.name", read_only=True)
+
     class Meta:
         model = ApprovalWorkflow
         fields = [
             "id",
             "workflow_name",
             "soul",
+            "soul_name",
             "case_type",
             "priority",
             "status",

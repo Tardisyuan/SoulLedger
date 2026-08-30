@@ -178,6 +178,29 @@ export const SOULS = [
 ];
 
 /** A PROPOSED cross-civilization dispatch: Chinese Diyu → Egyptian Duat. */
+/** Exactly the fields `DispatchRecordListSerializer` sends, and no others.
+ *
+ * It used to carry `reason`, `dispatched_by`, `dispatched_by_name`,
+ * `decided_at`, `create_time` and `update_time` -- none of which the *list*
+ * serializer emits. `e2e/critical-paths.spec.ts` then asserted that the
+ * pending card shows `PROPOSED_DISPATCH.reason`, and it passed, because the
+ * fixture supplied a field production does not. On a real list response that
+ * card has no reason on it at all.
+ *
+ * (The assertion on the *detail* page in the same file is correct: detail goes
+ * through `DispatchRecordSerializer`, which does send `reason`.)
+ *
+ * A fixture wider than the contract does not merely fail to catch a bug -- it
+ * manufactures the behaviour the test then certifies. */
+export const PROPOSED_DISPATCH_DETAIL_ONLY = {
+  reason: "此魂的罪业需由杜阿特的天平复核。",
+  dispatched_by: "5",
+  dispatched_by_name: "崔判官",
+  decided_at: null,
+  create_time: "2026-08-10T02:00:00Z",
+  update_time: "2026-08-10T02:00:00Z",
+};
+
 export const PROPOSED_DISPATCH = {
   id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   source_tenant: 1,
@@ -186,15 +209,9 @@ export const PROPOSED_DISPATCH = {
   target_tenant_code: "EG_DUAT",
   soul: SOULS[0].id,
   soul_name: SOULS[0].name,
-  dispatched_by: "5",
-  dispatched_by_name: "崔判官",
   status: "PROPOSED",
-  reason: "此魂的罪业需由杜阿特的天平复核。",
   proposed_at: "2026-08-10T02:00:00Z",
-  decided_at: null,
   executed_at: null,
-  create_time: "2026-08-10T02:00:00Z",
-  update_time: "2026-08-10T02:00:00Z",
 };
 
 export const EXECUTED_DISPATCH = {
@@ -250,7 +267,14 @@ export const OPENED_JUDGMENT = {
   is_final: false,
   notes: "",
   concluded_at: null,
-  create_time: "2026-08-13T02:00:00Z",
+  /** `created_at`, not `create_time`.
+   *
+   * `JudgmentSerializer` sends `created_at`. With `create_time` the detail
+   * page's `formatDate(judgment.created_at)` received undefined, threw
+   * `RangeError: Invalid time value`, and the whole page rendered the error
+   * boundary -- so every existing e2e that opened `/judgment/{id}` was
+   * looking at "服务器错误", not at a judgment. */
+  created_at: "2026-08-13T02:00:00Z",
 };
 
 /**
@@ -273,15 +297,33 @@ export const LEDGER_STATS = {
 };
 
 /** One row for the workflow screen's "审批实例" tab. */
+/** Exactly the fields `ApprovalWorkflowListSerializer` sends.
+ *
+ * `soul` used to hold `SOULS[0].name` -- a Chinese personal name. On that
+ * serializer `soul` is the primary key, a UUID. `e2e/workflow.spec.ts` then
+ * asserted that the row displays `WORKFLOW_INSTANCE.soul` and passed, while
+ * the real page shows the UUID: the fixture supplied the behaviour the test
+ * certified. The list serializer sends no `soul_name` at all, which is the
+ * defect the corrected fixture exposes.
+ *
+ * It also carried `create_time` and `current_node`, which that serializer does
+ * not send, and omitted `priority`, `cross_civilization`, `created_at` and
+ * `completed_at`, which it does. */
 export const WORKFLOW_INSTANCE = {
   id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
   workflow_name: "十殿审判流程",
   case_type: "ROUTINE",
-  soul: SOULS[0].name,
+  soul: SOULS[0].id,
+  // Added to the list serializer 2026-08-30, for the reason the corrected
+  // `soul` above exposed: with only the primary key to hand, the row printed
+  // a UUID where a name belongs.
+  soul_name: SOULS[0].name,
   status: "IN_PROGRESS",
   is_appeal: false,
-  current_node: 3,
-  create_time: "2026-08-09T01:00:00Z",
+  priority: 0,
+  cross_civilization: false,
+  created_at: "2026-08-09T01:00:00Z",
+  completed_at: null,
 };
 
 /**
@@ -465,7 +507,17 @@ export class ApiMock {
         ? { body: paginated([PROPOSED_DISPATCH]) }
         : { body: paginated([PROPOSED_DISPATCH, EXECUTED_DISPATCH]) }
     );
-    this.on("GET", "/dispatch/records/:id/", { ...PROPOSED_DISPATCH });
+    // Detail goes through `DispatchRecordSerializer`, which sends everything
+    // the list serializer does *and* `reason`, `dispatched_by` and the
+    // timestamps. The two fixtures are separate so that a list assertion
+    // cannot silently borrow a detail-only field -- which is exactly what
+    // happened: `critical-paths.spec.ts` asserted the pending *card* showed
+    // the proposal's reason, and passed, because the single fixture supplied
+    // one.
+    this.on("GET", "/dispatch/records/:id/", {
+      ...PROPOSED_DISPATCH,
+      ...PROPOSED_DISPATCH_DETAIL_ONLY,
+    });
     this.on("POST", "/dispatch/records/:id/approve/", {
       ...PROPOSED_DISPATCH,
       status: "APPROVED",
