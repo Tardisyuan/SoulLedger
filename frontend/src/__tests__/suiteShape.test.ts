@@ -110,6 +110,7 @@ const COLLECTED_FILES = [
   "focusRingContract.test.ts",
   "inkOnSurfaceContract.test.ts",
   "ledgerQuantityContract.render.test.tsx",
+  "middlewareAuthGate.test.ts",
   "ledgerQuantityContract.test.tsx",
   "presetNodeTypes.test.tsx",
   "readingQuantityContract.test.tsx",
