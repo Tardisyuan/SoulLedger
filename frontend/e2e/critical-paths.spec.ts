@@ -5,6 +5,7 @@ import {
   setupAuthenticatedPage,
   OPENED_JUDGMENT,
   PROPOSED_DISPATCH,
+  PROPOSED_DISPATCH_DETAIL_ONLY,
   ROLE_GRANTS,
   ROLES,
   SOULS,
@@ -185,8 +186,25 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
     await expect(pendingCard).toContainText("待审批");
     await expect(domainEnum(pendingCard, "PROPOSED")).toBeVisible();
     await expect(pendingCard.getByText("PROPOSED", { exact: true })).toHaveCount(0);
-    await expect(pendingCard).toContainText(`灵魂 #${PROPOSED_DISPATCH.soul}`);
-    await expect(pendingCard).toContainText(PROPOSED_DISPATCH.reason);
+    // The card names the soul; it must not print the primary key. This line
+    // used to assert the opposite -- `灵魂 #<uuid>` -- and passed, because
+    // that is what the card did. `soul_name` was in the same response the
+    // whole time and was going unread.
+    await expect(pendingCard).toContainText(PROPOSED_DISPATCH.soul_name);
+    await expect(
+      pendingCard.getByText(PROPOSED_DISPATCH.soul, { exact: false })
+    ).toHaveCount(0);
+    // The proposal's reason is NOT on this card, and cannot be: the list goes
+    // through `DispatchRecordListSerializer`, which does not send `reason`.
+    // This line used to assert the opposite and passed, because the fixture
+    // carried a field the list response never has. Asserting the absence is
+    // what stops that coming back -- and it is also a real finding about the
+    // product: the card a reviewer scans first does not say why the dispatch
+    // was proposed. That is a design question, not a bug, and it belongs in
+    // the open list rather than being papered over by a fixture.
+    await expect(
+      pendingCard.getByText(PROPOSED_DISPATCH_DETAIL_ONLY.reason)
+    ).toHaveCount(0);
 
     await pendingCard.click();
 
@@ -195,8 +213,15 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
     await expect(page.locator("h1")).toContainText("调度详情");
     await expect(page.getByText(PROPOSED_DISPATCH.source_tenant_code)).toBeVisible();
     await expect(page.getByText(PROPOSED_DISPATCH.target_tenant_code)).toBeVisible();
-    await expect(page.getByText(PROPOSED_DISPATCH.reason)).toBeVisible();
-    await expect(page.getByText(PROPOSED_DISPATCH.dispatched_by_name)).toBeVisible();
+    // Detail goes through `DispatchRecordSerializer`, which does send these --
+    // so these two assertions were always right, and they are why the fixture
+    // is split rather than trimmed.
+    await expect(
+      page.getByText(PROPOSED_DISPATCH_DETAIL_ONLY.reason)
+    ).toBeVisible();
+    await expect(
+      page.getByText(PROPOSED_DISPATCH_DETAIL_ONLY.dispatched_by_name)
+    ).toBeVisible();
 
     // ── Approve ──
     await page.getByRole("button", { name: "批准" }).click();
@@ -208,7 +233,11 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
   });
 
   test("only PROPOSED dispatches offer approve/reject", async ({ page }) => {
-    api.on("GET", "/dispatch/records/:id/", { ...PROPOSED_DISPATCH, status: "EXECUTED" });
+    api.on("GET", "/dispatch/records/:id/", {
+      ...PROPOSED_DISPATCH,
+      ...PROPOSED_DISPATCH_DETAIL_ONLY,
+      status: "EXECUTED",
+    });
     await page.goto(`/dispatch/${PROPOSED_DISPATCH.id}`);
 
     await expect(page.locator("h1")).toContainText("调度详情");
