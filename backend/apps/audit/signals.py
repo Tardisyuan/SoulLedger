@@ -339,11 +339,16 @@ def _create_audit_log(action, instance, changes=None):
 
 
 def _get_client_ip(request):
-    """Extract client IP from request, handling proxies."""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        return x_forwarded_for.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR', None)
+    """Delegates to the one validated implementation.
+
+    This used to return `X-Forwarded-For`'s first entry unchecked, straight
+    into a `GenericIPAddressField`. On PostgreSQL an unparseable value raised
+    DataError inside the audit write and the mutation committed *without* an
+    audit row -- one header, no record. See apps/core/client_ip.py.
+    """
+    from apps.core.client_ip import get_client_ip
+
+    return get_client_ip(request)
 
 
 def _on_post_save(sender, instance, created, **kwargs):

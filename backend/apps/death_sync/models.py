@@ -192,6 +192,12 @@ class DeathRegistrationRequest(AuditUserFields, models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["source_system", "idempotency_key"],
+                # Scoped to live rows. Without this, soft-deleting a row leaves
+                # its key occupied by something no filtered queryset can see:
+                # re-creating the same key then fails a uniqueness check
+                # against a row that is invisible to every read path.
+                # See tests/test_soft_delete_frees_unique_keys.py.
+                condition=models.Q(is_deleted=False),
                 name="uniq_death_reg_idempotency",
             ),
         ]

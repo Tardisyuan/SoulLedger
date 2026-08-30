@@ -1,6 +1,7 @@
 """
 Soul core model + state machine.
 """
+import logging
 import uuid
 
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -11,6 +12,8 @@ from apps.core.archive import ArchivableMixin
 from apps.core.models import AuditUserFields
 from apps.souls.dates import parse_historical_date, to_legacy_date
 from apps.souls.querysets import SoulManager
+
+logger = logging.getLogger(__name__)
 
 
 class Civilization(models.TextChoices):
@@ -424,7 +427,60 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
             old_state = locked_soul.current_state
             locked_soul.current_state = new_state
 
-            if new_state == SoulState.JUDGING and not locked_soul.death_date:
+            # A terminal cosmology has no next life. `SoulState.SETTLED`
+            # exists to say so, and `apps/reincarnation/views.py` states
+            # plainly that writing REINCARNATING onto such a soul "is the
+            # outcome SoulState.SETTLED exists to prevent" -- which is why
+            # complete() and reborn() both call `assert_rebirth_capable`
+            # first.
+            #
+            # That gate was installed on those two doors only.
+            # `POST /souls/{id}/transition/` drove the same edge with no check
+            # at all: measured 2026-08-29, an EG_DUAT soul in DISPOSED went
+            # REINCARNATING then ALIVE in two 200s, ending with
+            # reincarnations=0, merit and demerit uninherited, and its previous
+            # life's description intact -- no Meng Po, no Lethe, no spell of
+            # forgetting. GUARDIAN, JUDGE and MODERATOR all managed it.
+            #
+            # The check belongs here rather than on the action, because "which
+            # doors have the gate" is the question that produced the hole. Any
+            # future writer of this edge inherits it.
+            if new_state == SoulState.REINCARNATING:
+                from apps.ledger.services import (
+                    REBIRTH_CAPABLE_CIVILIZATIONS,
+                )
+
+                if self.civilization not in REBIRTH_CAPABLE_CIVILIZATIONS:
+                    logger.warning(
+                        "Refused REINCARNATING for %s: %s is a terminal "
+                        "cosmology.",
+                        self.pk,
+                        self.civilization,
+                    )
+                    return False
+
+            # `death_date` is a legacy compatibility property, not a column.
+            # `apps/souls/dates.py::to_legacy_date` returns None for anything
+            # `datetime.date` cannot express -- every BCE year, and every
+            # partial date missing a month or a day. Testing it here read
+            # "Python cannot represent this" as "no death date was recorded",
+            # and overwrote the real one with today.
+            #
+            # Measured 2026-08-29 through the API: a soul created with
+            # death_date {"year": -399, "month": 5, "day": 7} read back
+            # correctly and stored death_year=-399/5/7, while the legacy
+            # property was None. One transition to JUDGING rewrote it to
+            # 2026-08-29. Nothing was missing; the date was complete.
+            #
+            # This is the second consumer to disagree with the validator that
+            # accepts these dates (the first was LedgerService._day_of_year and
+            # February 29th). Egyptian and Greek material is BCE by nature, and
+            # the ledger's decay anchor is the death date -- so the whole decay
+            # baseline moved with it.
+            #
+            # `death_year` is the column. A year of 0 is a real year in this
+            # project's convention, so the test is `is None`, not falsiness.
+            if new_state == SoulState.JUDGING and locked_soul.death_year is None:
                 from django.utils import timezone as tz
                 locked_soul.death_date = tz.now().date()
 

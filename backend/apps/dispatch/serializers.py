@@ -23,6 +23,24 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
     Status now only moves through approve()/reject()/execute() on the view,
     which carry those checks; validate() below turns an attempted PATCH of
     either field into an explicit 400 instead of a silently-ignored no-op.
+
+    `soul`, `source_tenant` and `target_tenant` are read-only for a separate
+    reason, and the paragraph above is exactly why it was missed: that
+    argument is about `status`, and it is correct about `status`. Locking
+    down how a record's state moves does nothing about *which* record it is.
+    The three parties are fixed at proposal and were plain writable fields,
+    so a MODERATOR could seed a self-dispatch (source == target == own
+    tenant, which is what keeps `obj.tenant` pointing at itself for
+    TenantPermission), then PATCH `soul` to a foreign tenant's soul and
+    `source_tenant` to that tenant, and approve/execute it. Both of those
+    actions do check the tenant — they check `target_tenant`, which the
+    attacker set. Measured 2026-08-29: a four-request chain moved a soul
+    from tenant 1 to tenant 2 end to end, every response 2xx.
+
+    `DispatchService.propose()` validates `soul.tenant_id == source_tenant.id`
+    and is the only place that link is ever checked. PATCH does not go
+    through it. That is the whole defect: the invariant lives in the create
+    path and the update path was never told about it.
     """
     soul_name = serializers.CharField(source="soul.name", read_only=True)
     source_tenant_code = serializers.CharField(source="source_tenant.code", read_only=True)
@@ -53,6 +71,16 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
             "id",
             "status",
             "dispatched_by",
+            # NOTE: `soul`, `source_tenant` and `target_tenant` are deliberately
+            # NOT listed here, even though they must not change after creation.
+            # They are the arguments `DispatchRecordViewSet.create()` reads out
+            # of `validated_data` to hand to `DispatchService.propose()` --
+            # marking them read-only strips them before create() ever sees
+            # them, and every proposal 400s with "soul is required". (Measured:
+            # doing exactly that turned test_create_dispatch_record and
+            # test_dispatch_propose red.) They are fixed at proposal by
+            # `validate()` below instead, which raises on update only -- the
+            # same shape `status` uses two fields up.
             "proposed_at",
             "decided_at",
             "executed_at",
@@ -77,11 +105,21 @@ class DispatchRecordSerializer(serializers.ModelSerializer):
         None for POST and there is nothing here to guard.
         """
         if self.instance is not None:
-            blocked = [field for field in ("status", "dispatched_by") if field in self.initial_data]
+            _party_fields = ("soul", "source_tenant", "target_tenant")
+            blocked = [
+                field
+                for field in ("status", "dispatched_by") + _party_fields
+                if field in self.initial_data
+            ]
             if blocked:
                 raise serializers.ValidationError({
                     field: (
-                        "Not settable through this endpoint. `status` only moves "
+                        "The parties to a dispatch are fixed when it is proposed. "
+                        "Re-pointing one of them after the fact is how a record "
+                        "whose target-tenant checks all pass can still move a "
+                        "soul that never belonged to the source tenant."
+                        if field in _party_fields
+                        else "Not settable through this endpoint. `status` only moves "
                         "through the approve/reject/execute actions, which carry "
                         "the target-tenant and state-machine checks a plain field "
                         "write would skip; `dispatched_by` is set once by "
@@ -213,7 +251,24 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
             "create_time",
             "update_time",
         ]
-        read_only_fields = ["id", "status", "conclusion_type", "concluded_at", "create_time", "update_time"]
+        read_only_fields = [
+            "id",
+            "status",
+            "conclusion_type",
+            "concluded_at",
+            # Who opened the judgment is decided by who is making the request,
+            # not by what they put in the body. It was writable, and
+            # `perform_create` only pinned `tenant` -- so a JUDGE in tenant B
+            # could POST {"initiating_tenant": <A>} and get a 201, planting a
+            # row that shows up in tenant A's list (get_queryset filters on
+            # `initiating_tenant`, not `tenant`) with create_user NULL, that A
+            # cannot open and B cannot see. Neither party could delete it.
+            # Measured 2026-08-29. PATCH could re-point an honest one the same
+            # way, losing it into another tenant.
+            "initiating_tenant",
+            "create_time",
+            "update_time",
+        ]
 
     def validate(self, attrs):
         """Reject an attempt to move `status`/`conclusion_type` through CRUD.
@@ -225,11 +280,19 @@ class CrossTenantJudgmentSerializer(serializers.ModelSerializer):
         so `self.instance` is None for POST and there is nothing to guard.
         """
         if self.instance is not None:
-            blocked = [field for field in ("status", "conclusion_type") if field in self.initial_data]
+            blocked = [
+                field
+                for field in ("status", "conclusion_type", "initiating_tenant")
+                if field in self.initial_data
+            ]
             if blocked:
                 raise serializers.ValidationError({
                     field: (
-                        "Not settable through this endpoint. Use the participate/"
+                        "The initiating tenant is taken from the request, not the "
+                        "body. Setting it here is how a row lands in another "
+                        "tenant's list that neither side can open or remove."
+                        if field == "initiating_tenant"
+                        else "Not settable through this endpoint. Use the participate/"
                         "conclude actions, which also set `concluded_at` and "
                         "notify participants — a plain field write would skip both."
                     )

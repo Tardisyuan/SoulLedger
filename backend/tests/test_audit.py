@@ -204,22 +204,54 @@ class TestAuditLogSignals:
         assert delete_log is not None, "Should have a DELETE audit log"
 
     def test_audit_log_captures_ip_and_user_agent(self, auth_client):
-        """AuditLog should capture IP address and user agent."""
+        """AuditLog captures the *observed* address, not the claimed one.
+
+        This test used to assert `ip_address == "192.168.1.1"` from a
+        client-supplied `X-Forwarded-For`, i.e. it pinned the behaviour that
+        let a caller write whatever address they liked into the audit column --
+        and, with an unparseable value, delete the audit row outright on
+        PostgreSQL (`invalid input syntax for type inet`). Honouring that
+        header is only correct when the request provably came through a proxy
+        we control, so it is now gated on `TRUSTED_PROXY_COUNT`.
+
+        Both halves are asserted here. Keeping only the default case would
+        leave "the header is honoured when it should be" untested, and a
+        helper that always returns REMOTE_ADDR would pass.
+        """
+        from django.test import override_settings
+
         from apps.audit.models import AuditLog
 
         create_count = AuditLog.objects.count()
-
         auth_client.post("/api/v1/souls/", {
             "name": "IP Test Soul",
             "birth_date": "1990-01-01",
         }, HTTP_USER_AGENT="TestClient/1.0", HTTP_X_FORWARDED_FOR="192.168.1.1")
-
-        # Should have at least one more audit log
         assert AuditLog.objects.count() >= create_count + 1
 
         log = AuditLog.objects.order_by("-timestamp").first()
-        assert log.ip_address == "192.168.1.1", f"Should capture IP from X-Forwarded-For, got: {log.ip_address}"
+        assert log.ip_address != "192.168.1.1", (
+            "the audit column took a client-supplied address; with no trusted "
+            "proxy configured the header carries no information"
+        )
+        assert log.ip_address == "127.0.0.1", (
+            f"expected the observed peer address, got {log.ip_address!r}"
+        )
         assert log.user_agent == "TestClient/1.0", "Should capture User-Agent"
+
+        with override_settings(TRUSTED_PROXY_COUNT=1):
+            count = AuditLog.objects.count()
+            auth_client.post("/api/v1/souls/", {
+                "name": "IP Test Soul 2",
+                "birth_date": "1990-01-01",
+            }, HTTP_USER_AGENT="TestClient/1.0",
+               HTTP_X_FORWARDED_FOR="192.168.1.1, 10.0.0.9")
+            assert AuditLog.objects.count() >= count + 1
+            log = AuditLog.objects.order_by("-timestamp").first()
+            assert log.ip_address == "192.168.1.1", (
+                f"with one trusted proxy the client address is the entry left "
+                f"of the proxy's own; got {log.ip_address!r}"
+            )
 
     def test_audit_log_anonymous_action(self, db, cn_tenant):
         """Anonymous operations (no user) should still create audit logs."""
@@ -644,31 +676,52 @@ class TestAuditApiEndpoint:
         # TenantPermission denies access when tenant is None for non-ADMIN
         assert response.status_code == 403
 
-    def test_non_admin_with_tenant_can_access(self, db, cn_tenant):
-        """Non-admin users with tenant context can access audit logs (tenant-scoped)."""
+    def test_audit_read_is_what_decides_access_not_merely_having_a_tenant(
+        self, db, cn_tenant
+    ):
+        """This used to assert that any non-admin with a tenant got 200.
+
+        It was named `test_non_admin_with_tenant_can_access` and it was
+        recording a leak: `AuditLogViewSet` declared `permission_codename =
+        "audit"` and listed `TenantPermission` alone, so the codename was
+        decorative and a VIEWER could read the whole tenant's audit log --
+        including `/timeline/`, the permission-change timeline. Having a
+        tenant is what tenant scoping is for; it is not an authorisation.
+
+        `audit.read` is granted to ADMIN and MODERATOR. Both sides are checked
+        here: asserting only the refusal would pass against a viewset that
+        refuses everyone.
+        """
         from django.contrib.auth import get_user_model
         from django.test import RequestFactory
         from rest_framework.test import force_authenticate
 
-        User = get_user_model()
-        non_admin = User.objects.create_user(
-            username="non_admin_tenant_user",
-            password="test123",
-            role="JUDGE",
-            tenant=cn_tenant
-        )
-
-        factory = RequestFactory()
-        request = factory.get("/api/v1/audit-logs/")
-        force_authenticate(request, user=non_admin)
-        request.tenant = cn_tenant  # Inject tenant context
-
         from apps.audit.views import AuditLogViewSet
+
+        User = get_user_model()
         view = AuditLogViewSet.as_view({"get": "list"})
-        response = view(request)
-        response.render()
-        # Non-admin with tenant context should get 200 (tenant-scoped results)
-        assert response.status_code == 200
+
+        def _status(role):
+            user = User.objects.create_user(
+                username=f"audit_probe_{role.lower()}",
+                password="test123", role=role, tenant=cn_tenant,
+            )
+            request = RequestFactory().get("/api/v1/audit-logs/")
+            force_authenticate(request, user=user)
+            request.tenant = cn_tenant
+            response = view(request)
+            response.render()
+            return response.status_code
+
+        assert _status("JUDGE") == 403, (
+            "JUDGE does not hold `audit.read`; having a tenant is not an "
+            "authorisation"
+        )
+        assert _status("VIEWER") == 403
+        assert _status("MODERATOR") == 200, (
+            "MODERATOR holds `audit.read` and must still get in -- a viewset "
+            "that refuses everyone would satisfy the assertions above"
+        )
 
     def test_unauthenticated_cannot_access(self, api_client):
         """Unauthenticated users cannot access /api/v1/audit-logs/ endpoint."""
