@@ -164,7 +164,25 @@ export function DataTable<T>({
     <div className={cn('w-full', className)}>
       {/* `rounded-lg` used to sit here. borderRadius.lg is 0 now, so it emitted
           nothing and only told the next reader this box had a corner radius. */}
-      <div className="overflow-x-auto border border-[hsl(var(--color-hairline))]">
+      {/* `relative` 不是装饰,它决定绝对定位的后代被谁裁剪。
+          没有它,这个滚动容器的 `position` 是 `static`,于是里面每一个
+          `sr-only`(Tailwind 把它实现成 `position: absolute`)都以**初始包含块**
+          为定位参照 —— 它逃出了 `overflow-x-auto` 的裁剪,按自己在滚动内容里的
+          位置落到文档坐标上。
+
+          实测:mobile-chrome(393px)的 `/permissions`,一个 `srOnlyHeader` 的
+          `<span class="sr-only">` 落在 x=456,把 `documentElement.scrollWidth`
+          撑到 **457**,而 `body.scrollWidth` 还是 393。
+
+          这一处此前被记成「根因未知」,因为排查用的是「哪个元素看起来超出去了」——
+          那个判据在这里给出**零个**答案:127 个超宽元素每一个都有 overflow-x
+          祖先,而真正的元凶宽 **1px**、`clip: rect(0,0,0,0)`,肉眼和截图都看不见。
+          正确的判据是 `documentElement.scrollWidth` vs `clientWidth`,以及
+          「哪个元素隐藏后文档缩回去」。
+
+          后果不止一条横向滚动条:所有 `fixed inset-0` 的遮罩与弹窗按 457 铺开、
+          居中在 228,一半落在可视区外,里面的按钮「可见、可用、可滚动到」却点不动。 */}
+      <div className="relative overflow-x-auto border border-[hsl(var(--color-hairline))]">
         {/* `text-03` (13px), not `text-sm` (14px). Every body cell that does not
             set its own size inherits from here, so this one class is the base
             size of thirteen pages' tables — and it was the single largest block

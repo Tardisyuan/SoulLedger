@@ -38,8 +38,16 @@ jest.mock("@/src/hooks/useSouls", () => ({
   useDeleteSoul: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));
 
-jest.mock("@/src/components/rbac/RequirePermission", () => ({
-  RequirePermission: ({ children }: { children: React.ReactNode }) => children,
+// 这里曾把 `RequirePermission` 桩成透传。那个桩不看 `permissions` 这个 prop,
+// 于是本文件覆盖到的每一道权限门都可以被整个删掉而本套件全绿。改成桩它下面
+// 那层 `useTenant`:真实的门跑起来,身份是一个「什么都有」的 ADMIN,所以本文件
+// 原有的断言语义不变,而门本身不再被绕过。
+// 门**扣住东西**这件事由 `permissionGatesActuallyWithhold.test.tsx` 用非 ADMIN
+// 身份正反两面守;那份守卫已用变异证实会红。
+jest.mock("@/src/contexts/TenantContext", () => ({
+  useTenant: () => ({
+    user: { id: 1, username: "admin", role: "ADMIN", tenant: null, permissions: [] },
+  }),
 }));
 
 jest.mock("@/src/components/charts/LazyDashboardCharts", () => ({
