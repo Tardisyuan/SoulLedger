@@ -13,7 +13,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
 import { getDisplayNameForTenant } from "@/src/config/civilizations";
-import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { useChartColors } from "@/src/hooks/useChartColors";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -96,12 +96,16 @@ function DashboardContent() {
     </>
   );
 
+  // The backend's /ledger/stats/export/ is a hardcoded `role == "ADMIN"` check,
+  // not a codename. `karma.export` never existed, and the whole `karma.*`
+  // family was renamed to `ledger.*` by perm/0016 -- so the string was doubly
+  // dead and the gate worked only because hasPermission short-circuits ADMIN.
   const pageActions = (
-    <RequirePermission permissions="karma.export">
+    <RequireAdmin>
       <Button type="button" variant="primary" onClick={handleExport}>
         {t("dashboard.export_stats")}
       </Button>
-    </RequirePermission>
+    </RequireAdmin>
   );
 
   const tabs: { key: DashboardTab; label: string }[] = [
@@ -129,9 +133,9 @@ function DashboardContent() {
     );
     // The ledger tab surfaces admin-only stats — hide the tab itself from non-admins.
     return tabItem.key === "ledger" ? (
-      <RequirePermission key={tabItem.key} permissions="ADMIN">
+      <RequireAdmin key={tabItem.key}>
         {button}
-      </RequirePermission>
+      </RequireAdmin>
     ) : (
       button
     );
@@ -396,7 +400,7 @@ function DashboardContent() {
             </div>
           </>
         ) : (
-          <RequirePermission permissions="ADMIN" fallback={<PermissionDenied />}>
+          <RequireAdmin fallback={<PermissionDenied />}>
             {/* Ledger-only cards that don't already appear on the Overview tab */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
@@ -452,7 +456,7 @@ function DashboardContent() {
                 emptyMessage={t("admin.no_realm_data")}
               />
             </div>
-          </RequirePermission>
+          </RequireAdmin>
         )}
       </div>
     </PageShell>

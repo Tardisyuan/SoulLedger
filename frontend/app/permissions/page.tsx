@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import { permApi, Permission, Role, RolePermissions } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { usePermissions } from "@/src/hooks/usePermissions";
 import { PageSection } from "@/components/ui/page-section";
@@ -245,7 +245,7 @@ export default function PermissionsPage() {
       // 在做什么,而手机正是最需要那句解释的地方。
       subtitle={t("permissions.subtitle")}
     >
-      <RequirePermission permissions="ADMIN" fallback={<PermissionDenied />}>
+      <RequireAdmin fallback={<PermissionDenied />}>
         <div className="space-y-10">
           {/* ── Conflict banner ── */}
           {conflict && (
@@ -413,7 +413,7 @@ export default function PermissionsPage() {
           onCancel={cancelConfirm}
           onConfirm={confirmSave}
         />
-      </RequirePermission>
+      </RequireAdmin>
     </PageShell>
   );
 }
