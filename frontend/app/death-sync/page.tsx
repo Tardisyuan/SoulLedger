@@ -59,7 +59,7 @@ export default function DeathSyncPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["death-sync", "registrations"],
-    queryFn: () => api.get("/death-sync/register/").then(r => r.data),
+    queryFn: () => api.get("/death-sync/registrations/").then(r => r.data),
     enabled: !!user,
   });
   const registrations = data?.results ?? [];

@@ -132,6 +132,8 @@ export default function LedgerPage() {
               <LazyBarChart
                 data={ledgerStats?.karma_distribution ?? []}
                 dataKey="count"
+                // The API sends `{label, count}` -- see LazyBarChart's nameKey.
+                nameKey="label"
                 fill="hsl(var(--color-accent))"
                 height={192}
                 showGrid={false}

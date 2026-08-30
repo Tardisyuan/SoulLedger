@@ -192,6 +192,54 @@ class DeathRegistrationViewSet(viewsets.ModelViewSet):
         return request.META.get("REMOTE_ADDR")
 
 
+class DeathRegistrationReadViewSet(viewsets.ReadOnlyModelViewSet):
+    """Browser-facing, read-only view of this tenant's death registrations.
+
+    `DeathRegistrationViewSet` above replaces `authentication_classes` with
+    `[APIKeyAuthentication]`, which means it does not accept a JWT at all --
+    by design, it is the machine-to-machine write endpoint. The
+    `/death-sync` page was calling it with a Bearer token. Measured
+    2026-08-29 with a real login token:
+
+        [ADMIN]     GET /api/v1/death-sync/register/ -> 401
+        [MODERATOR] -> 401     [VIEWER] -> 401
+        (same client: GET /audit-logs/ -> 200, GET /workflows/ -> 200)
+
+    So that page showed "No death registrations found." to **every** user
+    including ADMIN, permanently -- an empty state where the truth was "this
+    endpoint cannot be opened from a browser". The 500-renders-as-empty
+    family's worst member: not a failure mode, a wholly unreachable screen.
+
+    Separate viewset rather than adding JWT auth to the one above, because the
+    split those classes encode is real: external systems write with a key and
+    are scoped by that key (`scope_to_api_key`, deliberately fail-closed);
+    operators read in a browser and are scoped by tenant. Merging them would
+    have meant weakening one of the two scoping rules to cover the other's
+    callers.
+
+    ADMIN-only, matching `ExternalApiKeyViewSet` beside it: there is no
+    `death_sync.*` codename in the catalogue, and inventing one here would put
+    a permission in the matrix that no migration grants to anybody.
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminPermission, TenantPermission]
+    queryset = DeathRegistrationRequest.objects.all()
+    serializer_class = DeathRegistrationRequestSerializer
+
+    def get_queryset(self):
+        # `admin_bypass=False`: an ADMIN sees their own tenant's registrations,
+        # not everyone's. `apps/core/tenant.py` does name ADMIN as the globally
+        # exempt role, and that exemption was left in place where it is
+        # long-standing -- but this endpoint is new, and the same call made on
+        # 2026-08-30 for `/ledger/stats/export/` applies: a screen that lists
+        # names and death dates is the last place to hand one tenant another's
+        # rows by default. Nothing has ever depended on the wider behaviour
+        # here, so there is nothing to migrate.
+        return scope_to_tenant(
+            super().get_queryset(), self.request, admin_bypass=False
+        )
+
+
 class WebhookViewSet(viewsets.ModelViewSet):
     """
     CRUD for webhook configurations (API key authenticated).

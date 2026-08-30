@@ -840,13 +840,14 @@
     },
     "corpus": {
       "title": "Corpus",
-      "subtitle": "The articles a verdict may rest on. 175 transcribed across four cosmologies.",
+      "subtitle": "The articles a verdict may rest on. {{n}} transcribed across four cosmologies.",
       "col_sigil": "Sigil",
       "col_offence": "Offence",
       "col_text": "Article",
       "col_citations": "Cited",
       "filter_corpus": "Corpus",
       "article_count": "{{n}} articles",
+      "listed_count": "{{n}} listed",
       "empty_reason": "No article in this corpus has been transcribed.",
       "citations_absent": "This response does not carry a citation count.",
       "sigil_absent": "This article has no transcribed number."
