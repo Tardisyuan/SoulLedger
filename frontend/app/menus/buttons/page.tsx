@@ -136,7 +136,7 @@ export default function MenuButtonsPage() {
         </>
       }
       actions={
-        <RequirePermission permissions="menu.create">
+        <RequirePermission permissions="menu.manage">
           <Button type="button" variant="primary" onClick={openCreate}>
             + {t("menu_buttons.create")}
           </Button>
@@ -199,12 +199,12 @@ export default function MenuButtonsPage() {
               {/* See app/permissions/page.tsx: inline siblings concatenate
                   their labels in the accessibility tree and on copy. */}
               <div className="flex justify-end gap-2">
-                <RequirePermission permissions="menu.update">
+                <RequirePermission permissions="menu.manage">
                   <Button type="button" size="sm" onClick={() => openEdit(btn)}>
                     {t("menus.edit")}
                   </Button>
                 </RequirePermission>
-                <RequirePermission permissions="menu.delete">
+                <RequirePermission permissions="menu.manage">
                   <Button type="button" size="sm" variant="danger" onClick={() => deleteMutation.mutate(btn.id)}>
                     {t("menus.delete")}
                   </Button>

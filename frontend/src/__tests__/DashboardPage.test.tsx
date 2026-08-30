@@ -241,8 +241,20 @@ describe("DashboardPage permission gate", () => {
     expect(screen.queryByTestId("pie")).not.toBeInTheDocument();
   });
 
-  it("hides the export button from a user lacking karma.export", async () => {
-    mockUser = { role: "JUDGE", permissions: ["souls.read"] };
+  // These two used to gate on `karma.export`. That string is not in the
+  // backend's 46-codename catalogue and no role holds it -- the whole `karma.*`
+  // family was renamed to `ledger.*` by perm/0016, and there was never a
+  // `.export` member. `/ledger/stats/export/` checks `role == "ADMIN"` in the
+  // view body.
+  //
+  // So the second test constructed a user production cannot produce (a JUDGE
+  // holding a codename nobody can hold) and asserted the button appeared --
+  // which it did, but only because `hasPermission` short-circuits ADMIN... no:
+  // because the *mocked* hook was told the permission was present. The test
+  // exercised its own stub. The real gate was "ADMIN only" by accident, and
+  // it is now `<RequireAdmin>` by intent.
+  it("hides the export button from a non-admin", async () => {
+    mockUser = { role: "JUDGE", permissions: ["souls.read", "ledger.read"] };
 
     renderPage();
 
@@ -250,8 +262,22 @@ describe("DashboardPage permission gate", () => {
     expect(screen.queryByText("dashboard.export_stats")).not.toBeInTheDocument();
   });
 
-  it("shows the export button to a user holding karma.export without being admin", async () => {
-    mockUser = { role: "JUDGE", permissions: ["karma.export"] };
+  it("hides it from a non-admin however many codenames they hold", async () => {
+    // The point of RequireAdmin: no codename opens this gate, so no future
+    // grant can open it by accident either.
+    mockUser = {
+      role: "MODERATOR",
+      permissions: ["ledger.read", "ledger.manage", "karma.export"],
+    };
+
+    renderPage();
+
+    await screen.findByText("dashboard.tab_overview");
+    expect(screen.queryByText("dashboard.export_stats")).not.toBeInTheDocument();
+  });
+
+  it("shows the export button to an admin", async () => {
+    mockUser = { role: "ADMIN", permissions: [] };
 
     renderPage();
 

@@ -141,7 +141,7 @@ export default function ProposeDispatchPage() {
         />
 
         <div className="flex gap-3">
-          <RequirePermission permissions="dispatch.create">
+          <RequirePermission permissions="dispatch.manage">
             <Button type="submit" variant="primary" loading={loading}>
               {loading ? t("dispatch.submitting") : t("dispatch.submit_proposal")}
             </Button>

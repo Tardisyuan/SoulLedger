@@ -25,6 +25,10 @@ export function usePermissions() {
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
+    // Exposed so a gate that really is about the role can say so, instead of
+    // passing the string "ADMIN" to a codename check and relying on the
+    // short-circuit above. See RequireAdmin.
+    isAdmin: user?.role === "ADMIN",
     permissions: user?.permissions ?? [],
   };
 }

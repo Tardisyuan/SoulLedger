@@ -160,7 +160,7 @@ export default function MenusPage() {
           <Link href="/menus/buttons" className={buttonVariants({ variant: "secondary", size: "md" })}>
             {t("menu_buttons.title")}
           </Link>
-          <RequirePermission permissions="menu.create">
+          <RequirePermission permissions="menu.manage">
             <Button type="button" variant="primary" onClick={openCreate}>
               + {t("menus.create")}
             </Button>
