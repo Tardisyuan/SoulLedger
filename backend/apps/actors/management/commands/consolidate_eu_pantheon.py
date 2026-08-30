@@ -340,26 +340,53 @@ class Command(BaseCommand):
                     "User.actor row should be re-pointed, then re-run. No changes made to either row."
                 ))
             else:
-                # Most-referenced row wins; on a tie (usually 0 refs on both)
-                # the Greek name wins outright. Falling through to created_at
-                # would let seed insertion order decide, which could soft-delete
-                # Hades and leave a row named Pluto carrying a delete reason
-                # that says "merged into Hades".
+                # The survivor is always MERGE_SURVIVOR. It used to be
+                # "most-referenced row wins, Greek name breaks the tie", and
+                # that ordering is unstable in a way that only shows up once
+                # somebody restores the retired row:
+                #
+                #   Pluto restored and referenced by one account, Hades
+                #   referenced by none -> `-refs` puts Pluto first -> **Hades
+                #   is soft-deleted**, reversing a documented merge, and the
+                #   row left standing carries the Roman name.
+                #
+                # The Greek name winning outright is the decision this command
+                # was written to carry out; letting a reference count override
+                # it means an account can decide lore. So the order is fixed,
+                # and a reference on the row being retired is handled by
+                # refusing rather than by changing who survives -- repointing
+                # an account onto a row in another tenant is exactly the kind
+                # of cross-tenant link this codebase spends its effort closing.
                 scored = sorted(
                     active_rows.values(),
-                    key=lambda a: (-refs[a.name], a.name != MERGE_SURVIVOR, a.created_at),
+                    key=lambda a: (a.name != MERGE_SURVIVOR, a.created_at),
                 )
                 keeper, loser = scored[0], scored[1]
-                self.stdout.write(
-                    f"  KEEP   id={keeper.id} name={keeper.name} refs={refs[keeper.name]}"
-                )
-                before = _snapshot(loser)
-                affected.append({"action": "soft_delete_merge", "before": before, "kept_id": str(keeper.id)})
-                plan.append(f"SOFT-DELETE Actor(id={loser.id}, name={loser.name!r}) — merged into {keeper.id}")
-                self.stdout.write(
-                    f"  DELETE id={loser.id} name={loser.name} refs={refs[loser.name]} (merged into {keeper.name})"
-                )
-                merge_delete = loser
+
+                if refs[loser.name] > 0:
+                    users = _referencing_users(loser)
+                    self.stdout.write(self.style.ERROR(
+                        f"  [CONFLICT] {loser.name} (id={loser.id}) is referenced by "
+                        f"users {users} and is the row this merge would retire."
+                    ))
+                    self.stdout.write(self.style.ERROR(
+                        "  ACTION REQUIRED: decide where those accounts should point "
+                        f"(note that {keeper.name} lives in a different tenant), then "
+                        "clear the reference and re-run. No changes made to either row."
+                    ))
+                    merge_delete = None
+                    keeper = loser = None
+                elif keeper is not None:
+                    self.stdout.write(
+                        f"  KEEP   id={keeper.id} name={keeper.name} refs={refs[keeper.name]}"
+                    )
+                    before = _snapshot(loser)
+                    affected.append({"action": "soft_delete_merge", "before": before, "kept_id": str(keeper.id)})
+                    plan.append(f"SOFT-DELETE Actor(id={loser.id}, name={loser.name!r}) — merged into {keeper.id}")
+                    self.stdout.write(
+                        f"  DELETE id={loser.id} name={loser.name} refs={refs[loser.name]} (merged into {keeper.name})"
+                    )
+                    merge_delete = loser
 
         # ------------------------------------------------------------------
         # Step 2: Greco-Roman completeness audit (read-only)
