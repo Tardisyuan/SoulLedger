@@ -126,7 +126,7 @@ export default function ProfilePage() {
           {isLoading ? (
             <Skeleton className="h-4 w-32" />
           ) : (
-            <span className="text-04 text-ink font-medium">
+            <span className="text-04 text-ink font-medium truncate">
               {profile?.username || user?.username}
             </span>
           )}
@@ -138,7 +138,7 @@ export default function ProfilePage() {
             {t("profile.email")}
           </label>
           {editingField === "email" ? (
-            <div className="flex-1 flex gap-2">
+            <div className="flex-1 min-w-0 flex gap-2">
               <input
                 type="email"
                 value={editValue}
@@ -154,11 +154,11 @@ export default function ProfilePage() {
               </Button>
             </div>
           ) : (
-            <div className="flex-1 flex items-center gap-2">
+            <div className="flex-1 min-w-0 flex items-center gap-2">
               {isLoading ? (
                 <Skeleton className="h-4 w-48" />
               ) : (
-                <span className="text-04 text-ink">
+                <span className="text-04 text-ink truncate">
                   {profile?.email || user?.email || "-"}
                 </span>
               )}
@@ -186,7 +186,7 @@ export default function ProfilePage() {
             {t("profile.first_name")}
           </label>
           {editingField === "first_name" ? (
-            <div className="flex-1 flex gap-2">
+            <div className="flex-1 min-w-0 flex gap-2">
               <input
                 type="text"
                 value={editValue}
@@ -202,11 +202,11 @@ export default function ProfilePage() {
               </Button>
             </div>
           ) : (
-            <div className="flex-1 flex items-center gap-2">
+            <div className="flex-1 min-w-0 flex items-center gap-2">
               {isLoading ? (
                 <Skeleton className="h-4 w-24" />
               ) : (
-                <span className="text-04 text-ink">
+                <span className="text-04 text-ink truncate">
                   {profile?.first_name || "-"}
                 </span>
               )}
@@ -234,7 +234,7 @@ export default function ProfilePage() {
             {t("profile.last_name")}
           </label>
           {editingField === "last_name" ? (
-            <div className="flex-1 flex gap-2">
+            <div className="flex-1 min-w-0 flex gap-2">
               <input
                 type="text"
                 value={editValue}
@@ -250,11 +250,11 @@ export default function ProfilePage() {
               </Button>
             </div>
           ) : (
-            <div className="flex-1 flex items-center gap-2">
+            <div className="flex-1 min-w-0 flex items-center gap-2">
               {isLoading ? (
                 <Skeleton className="h-4 w-24" />
               ) : (
-                <span className="text-04 text-ink">
+                <span className="text-04 text-ink truncate">
                   {profile?.last_name || "-"}
                 </span>
               )}
@@ -298,7 +298,7 @@ export default function ProfilePage() {
           {isLoading ? (
             <Skeleton className="h-4 w-32" />
           ) : (
-            <span className="text-04 text-ink">
+            <span className="text-04 text-ink truncate">
               {/* /auth/profile/ is UserSerializer, which has no `tenant`
                   field at all — the two leading branches this expression
                   used to start with were dead. */}
