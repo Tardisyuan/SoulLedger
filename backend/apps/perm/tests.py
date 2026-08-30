@@ -274,16 +274,21 @@ class PermissionAPITest(TestCase):
 
     # -- init endpoints --
 
-    def test_init_permissions(self):
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.post("/api/v1/perm/init/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(response.json()["total"], 0)
-
-    def test_init_permissions_non_admin(self):
-        self.client.force_authenticate(user=self.viewer)
-        response = self.client.post("/api/v1/perm/init/")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    # `test_init_permissions` and `test_init_permissions_non_admin` lived here
+    # and asserted that `POST /api/v1/perm/init/` returned 200 with a non-zero
+    # `total`. Both were true of an endpoint that seeded Permission rows
+    # without the matching RolePermission grants -- and since `check_permission`
+    # treats the database as authoritative the moment a row exists, that
+    # revoked 69 role-codename grants on a freshly migrated database while
+    # answering success. `total` counted rows, and the row count was never the
+    # thing that broke.
+    #
+    # The endpoint was removed on 2026-08-30;
+    # `POST /perm/role-permissions/init/` (test_init_role_permissions below)
+    # seeds rows *and* grants and is the only entry point. The property that
+    # matters -- no admin action leaves a codename seeded-but-ungranted -- is
+    # asserted in tests/test_perm_init_does_not_revoke.py, against effective
+    # permissions rather than row counts.
 
     def test_init_roles(self):
         self.client.force_authenticate(user=self.admin)
