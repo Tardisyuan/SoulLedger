@@ -255,6 +255,11 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
 
         success = workflow.complete_node(node.id, verdict, notes, user=request.user)
         if success:
+            # The decision is on the soul's timeline, and whoever the workflow
+            # moved on to hears about it. See `WorkflowService.announce` for why
+            # this is here and not inside `complete_node`.
+            node.refresh_from_db()
+            WorkflowService.announce(workflow, node=node)
             return Response(ApprovalWorkflowSerializer(workflow).data)
         # `complete_node` now re-checks the node's status under a row lock, so
         # the common reason to land here is that another decision was recorded

@@ -27,6 +27,7 @@ from apps.death_sync.serializers import (
     ExternalApiKeySerializer,
     WebhookConfigSerializer,
 )
+from apps.death_sync.throttling import ApiKeyRateThrottle
 
 
 class ExternalApiKeyViewSet(viewsets.ModelViewSet):
@@ -68,6 +69,13 @@ class DeathRegistrationViewSet(viewsets.ModelViewSet):
     """
     Death registration endpoints (API key authenticated).
     """
+    # `ApiKeyRateThrottle` existed since the app landed and was wired to nothing:
+    # `DEFAULT_THROTTLE_CLASSES` held only `AnonRateThrottle`, and `grep
+    # throttle_classes` matched no view. Measured: a key with
+    # `rate_limit_per_minute=1`, five consecutive requests -> `[200,200,200,200,200]`.
+    # The model column, the serializer field and the admin form all said the
+    # limit was being enforced.
+    throttle_classes = [ApiKeyRateThrottle]
     authentication_classes = [APIKeyAuthentication]
     # Default IsAuthenticated always rejects: APIKeyAuthentication returns
     # AnonymousUser on success (see its docstring), so request.user is never
@@ -244,6 +252,13 @@ class WebhookViewSet(viewsets.ModelViewSet):
     """
     CRUD for webhook configurations (API key authenticated).
     """
+    # `ApiKeyRateThrottle` existed since the app landed and was wired to nothing:
+    # `DEFAULT_THROTTLE_CLASSES` held only `AnonRateThrottle`, and `grep
+    # throttle_classes` matched no view. Measured: a key with
+    # `rate_limit_per_minute=1`, five consecutive requests -> `[200,200,200,200,200]`.
+    # The model column, the serializer field and the admin form all said the
+    # limit was being enforced.
+    throttle_classes = [ApiKeyRateThrottle]
     authentication_classes = [APIKeyAuthentication]
     # See DeathRegistrationViewSet above / apps/core/permissions.py for why
     # the default IsAuthenticated cannot be used here.
@@ -274,6 +289,11 @@ class DeathSyncHealthView(APIView):
     Health check for death sync API with monitoring metrics.
     """
     authentication_classes = [APIKeyAuthentication]
+    # Deliberately NOT throttled, while the two data endpoints above are. This
+    # is the endpoint an operator reads to find out *why* they are being
+    # refused -- throttling it makes the answer unavailable exactly when it is
+    # needed. It writes nothing and reads four counts.
+    throttle_classes = []
     # See DeathRegistrationViewSet above / apps/core/permissions.py for why
     # the default IsAuthenticated cannot be used here.
     # `can_query_status` was the other declared-and-never-read flag.
@@ -323,9 +343,19 @@ class DeathSyncHealthView(APIView):
                 "name": api_key.name if api_key else None,
                 "system_type": api_key.system_type if api_key else None,
                 "is_active": api_key.is_active if api_key else False,
-                "rate_limit_remaining": {
+                # Renamed from `rate_limit_remaining`, which is what these two
+                # numbers were reported as while being the configured ceiling --
+                # never the remaining count, and doubly wrong while nothing was
+                # counting at all.
+                "rate_limit": {
                     "per_minute": api_key.rate_limit_per_minute if api_key else 0,
                     "per_hour": api_key.rate_limit_per_hour if api_key else 0,
+                },
+                # The real thing. `null` when the counter cannot be read, rather
+                # than a number that would look like an answer.
+                "rate_limit_remaining": {
+                    "per_minute": ApiKeyRateThrottle.remaining_for(api_key, "minute"),
+                    "per_hour": ApiKeyRateThrottle.remaining_for(api_key, "hour"),
                 },
             },
             "system": {
