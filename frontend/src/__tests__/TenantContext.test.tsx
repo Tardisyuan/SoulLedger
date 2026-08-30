@@ -71,6 +71,64 @@ describe("TenantContext rehydration", () => {
     expect(mockMyRolePermissions).toHaveBeenCalledTimes(1);
   });
 
+  it("takes the server's role over the cached one — a demotion lands immediately", async () => {
+    /* 缓存的 envelope 里写着 ADMIN,而服务器说这个人现在是 VIEWER。
+
+       此前 `.then(({ data }) => ...)` **只读 `data.permissions`,把 `role` 丢掉了**。
+       role 于是一直是 localStorage 里那个值,而那个 envelope 的 TTL 是 **24 小时**,
+       此后没有任何东西修正它。
+
+       为什么这比一个过期的标签严重得多:`usePermissions.hasPermission` 的第一行是
+       `if (user?.role === "ADMIN") return true`。一个被降为 VIEWER 的 ADMIN,
+       在最长 24 小时内(跨刷新)对**每一个** `<RequirePermission>` 都照样放行。
+       后端会 403,所以不泄露数据 —— 用户看到的是一屏 403,而不是「没有这个功能」。 */
+    localStorage.setItem(
+      USER_KEY,
+      JSON.stringify({
+        user: {
+          id: 1,
+          username: "was_admin",
+          display_name: "Was Admin",
+          email: "a@test.com",
+          role: "ADMIN",
+          tenant: { id: 1, code: "CN_DIYU", display_name: "CN_DIYU" },
+        },
+        storedAt: Date.now(),
+      })
+    );
+    mockMyRolePermissions.mockResolvedValue({
+      data: { role: "VIEWER", permissions: ["soul.read"], details: [] },
+    });
+
+    const { result } = renderHook(() => useTenant(), { wrapper });
+
+    // 挂载那一刻仍是缓存里的值 —— 这一步是对的,UI 不该被网络阻塞。
+    expect(result.current.user?.role).toBe("ADMIN");
+
+    await waitFor(() => {
+      expect(result.current.user?.role).toBe("VIEWER");
+    });
+    // 权限列表也要一起更新,否则「role 对了但权限还是旧的」是另一种半吊子状态。
+    expect(result.current.user?.permissions).toEqual(["soul.read"]);
+  });
+
+  it("keeps the cached role when the server does not send one", async () => {
+    /* 反对照。没有它,一个「无条件把 role 设成 data.role」的实现同样满足上面那条,
+       而一个省略了该字段的响应会把角色抹成 undefined —— 那会让每一道门都关上,
+       看起来像权限系统坏了。 */
+    seedStoredUser();
+    mockMyRolePermissions.mockResolvedValue({
+      data: { permissions: ["soul.read"], details: [] },
+    });
+
+    const { result } = renderHook(() => useTenant(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.user?.permissions).toEqual(["soul.read"]);
+    });
+    expect(result.current.user?.role).toBe("JUDGE");
+  });
+
   it("leaves the gate closed (empty permissions) if the refetch fails", async () => {
     seedStoredUser();
     mockMyRolePermissions.mockRejectedValue(new Error("network error"));

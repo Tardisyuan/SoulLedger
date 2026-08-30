@@ -64,13 +64,80 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * The single in-flight refresh.
+ *
+ * WHY A MODULE-LEVEL PROMISE AND NOT A PER-REQUEST FLAG. `error.config._retry`
+ * lives on **each request's own config**, so two requests that 401 at the same
+ * moment both saw `_retry === false`, both read the same refresh token, and
+ * both POSTed `/auth/refresh/`. The backend runs
+ * `ROTATE_REFRESH_TOKENS: True` with `BLACKLIST_AFTER_ROTATION: True`
+ * (config/settings.py), so the first one succeeds **and blacklists the token
+ * the second one is still holding** — the second necessarily 401s, falls into
+ * the catch, clears the cookies and sends the user to `/login`.
+ *
+ * The access token lasts 30 minutes. Any page that fires several queries at
+ * once — which is most of them — meets this condition on its first load after
+ * expiry. Nothing about it is rare.
+ *
+ * Concurrent 401s now await the same promise, so exactly one rotation happens
+ * and every waiter retries with the token it produced.
+ */
+let refreshInFlight: Promise<string> | null = null;
+
+/** `true` for the three endpoints that must never be retried after a 401.
+ *
+ * The regex used to be anchored as `/^\/api\/v1\/auth\/...` and matched
+ * **nothing**: `baseURL` already carries `/api/v1`, so axios hands the
+ * interceptor `config.url === "/auth/login/"`. Measured in node:
+ *
+ *     "/auth/login/"         -> false
+ *     "/auth/register/"      -> false
+ *     "/auth/refresh/"       -> false
+ *     "/api/v1/auth/login/"  -> true
+ *
+ * and `src/__tests__/api.test.ts` fed it the last of those in three tests
+ * while asserting fifty lines further down that the real call is
+ * `mockInstance.post('/auth/login/')` — **the file carried its own
+ * refutation.**
+ *
+ * With the guard dead, a failed login (401) while a still-valid refresh cookie
+ * sat in the browser sent the interceptor off to rotate the refresh token and
+ * **replay the login request**. Every mistyped password burned a rotation.
+ *
+ * Matching on the suffix rather than the whole path keeps it correct whether or
+ * not `/api/v1` is part of `config.url`, which is the thing that broke.
+ */
+function isAuthEndpoint(url: string | undefined): boolean {
+  return /\/auth\/(login|register|refresh)\/?$/.test(url || "");
+}
+
+async function rotateRefreshToken(refresh: string): Promise<string> {
+  // SIMPLE_JWT has ROTATE_REFRESH_TOKENS=True and BLACKLIST_AFTER_ROTATION=True,
+  // so the server blacklists the refresh token we just sent and issues a new
+  // one in `data.refresh`. It MUST be persisted (same cookie the login flow
+  // writes to) or the next refresh will present an already-blacklisted token
+  // and the user gets silently booted to /login.
+  const { data } = await axios.post<TokenRefreshResponse>(
+    `${API_BASE_URL}/auth/refresh/`,
+    { refresh }
+  );
+  if (typeof document !== "undefined") {
+    document.cookie = `soulledger_access=${data.access}; path=/; max-age=86400; SameSite=Lax`;
+    document.cookie = `soulledger_refresh=${data.refresh}; path=/; max-age=604800; SameSite=Lax`;
+  }
+  if (typeof sessionStorage !== "undefined") {
+    sessionStorage.setItem("soulledger_access", data.access);
+  }
+  return data.access;
+}
+
 // Handle 401 → redirect to login (skip for auth endpoints which handle their own errors)
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     if (error.response?.status === 401 && !error.config._retry) {
-      const isAuthEndpoint = /^\/api\/v1\/auth\/(login|register|refresh)\/?$/.test(error.config.url || '');
-      if (isAuthEndpoint) {
+      if (isAuthEndpoint(error.config.url)) {
         return Promise.reject(error);
       }
 
@@ -78,20 +145,15 @@ api.interceptors.response.use(
       const refresh = getCookie("soulledger_refresh");
       if (refresh) {
         try {
-          // SIMPLE_JWT has ROTATE_REFRESH_TOKENS=True and BLACKLIST_AFTER_ROTATION=True,
-          // so the server blacklists the refresh token we just sent and issues a new
-          // one in `data.refresh`. It MUST be persisted (same cookie the login flow
-          // writes to) or the next refresh will present an already-blacklisted token
-          // and the user gets silently booted to /login.
-          const { data } = await axios.post<TokenRefreshResponse>(`${API_BASE_URL}/auth/refresh/`, { refresh });
-          if (typeof document !== "undefined") {
-            document.cookie = `soulledger_access=${data.access}; path=/; max-age=86400; SameSite=Lax`;
-            document.cookie = `soulledger_refresh=${data.refresh}; path=/; max-age=604800; SameSite=Lax`;
+          // Whoever gets here first starts the rotation; everyone else waits on
+          // the same promise rather than starting a second one.
+          if (!refreshInFlight) {
+            refreshInFlight = rotateRefreshToken(refresh).finally(() => {
+              refreshInFlight = null;
+            });
           }
-          if (typeof sessionStorage !== "undefined") {
-            sessionStorage.setItem("soulledger_access", data.access);
-          }
-          error.config.headers.Authorization = `Bearer ${data.access}`;
+          const access = await refreshInFlight;
+          error.config.headers.Authorization = `Bearer ${access}`;
           return api(error.config);
         } catch {
           // Refresh failed — clear tokens and redirect
