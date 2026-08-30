@@ -669,14 +669,32 @@ class DispositionService:
         """
         Mark disposition as executed and move the soul to whatever comes after
         its realm — a next life, or nothing at all.
+
+        Returns False, and writes nothing, when the soul cannot make that move.
+
+        WHAT THIS USED TO DO. `is_executed`/`executed_at` were written and
+        saved **first**, the two `transition_to` calls below had their return
+        values dropped on the floor, and the method ended in a bare
+        `return True`. There was no `atomic()`, so the disposition row was
+        already committed by the time the transition was refused. Measured:
+
+            an ALIVE soul + a Disposition
+            execute(d) -> True
+            d.is_executed = True, d.executed_at set
+            soul.current_state = ALIVE      <- the edge does not exist
+
+        **The disposition record said "executed" and the soul was never
+        disposed of.** The caller got 200. Nothing downstream could tell the
+        difference, because the only thing that recorded the outcome was the
+        flag that had been written before the outcome was known.
+
+        The order is now: decide, then record. The whole method is atomic so a
+        refusal cannot leave the flag behind.
         """
+        from django.db import transaction
         from django.utils import timezone
 
         from apps.souls.models import SoulState
-
-        disposition.is_executed = True
-        disposition.executed_at = timezone.now()
-        disposition.save()
 
         # Not every soul has a next life to be waiting for. This used to send
         # every executed disposition to REINCARNATING, which put an Egyptian
@@ -697,11 +715,22 @@ class DispositionService:
         # disposition REINCARNATING and this method needed no Greek branch to
         # make that happen.
         soul = disposition.soul
-        if soul.civilization in REBIRTH_CAPABLE_CIVILIZATIONS:
-            soul.transition_to(SoulState.REINCARNATING, "Disposition executed")
-        else:
-            soul.transition_to(
-                SoulState.SETTLED,
-                "Disposition executed; this cosmology has no next life",
-            )
+        with transaction.atomic():
+            if soul.civilization in REBIRTH_CAPABLE_CIVILIZATIONS:
+                moved = soul.transition_to(
+                    SoulState.REINCARNATING, "Disposition executed"
+                )
+            else:
+                moved = soul.transition_to(
+                    SoulState.SETTLED,
+                    "Disposition executed; this cosmology has no next life",
+                )
+            if not moved:
+                # The soul is not in a state this disposition can act on. Say so
+                # instead of recording an execution that did not happen.
+                return False
+
+            disposition.is_executed = True
+            disposition.executed_at = timezone.now()
+            disposition.save()
         return True

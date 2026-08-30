@@ -16,11 +16,51 @@ class ReincarnationService:
         """
         Trigger reincarnation from a disposition.
         Disposition must be executed first via DispositionService.execute().
+
+        Returns False, and logs nothing, when the soul's cosmology has no next
+        life for it to be waiting on.
+
+        WHAT THIS USED TO DO. The transition's return value was dropped and the
+        event was written **unconditionally**, before anything had been
+        established about whether the move happened. Measured on an EG_DUAT
+        soul, DISPOSED:
+
+            DispositionService.execute   -> state SETTLED   (correct)
+            ReincarnationService.execute -> True, state still SETTLED (refused)
+            soul.events = ['REINCARNATION_TRIGGERED', 'STATE_CHANGED', ...]
+
+        So every executed Egyptian or European disposition left
+        `REINCARNATION_TRIGGERED` on the soul's timeline -- **exactly the lie
+        `SoulState.SETTLED` exists to stop telling.** A soul admitted to the
+        Field of Reeds had a record saying it had been sent to be reborn.
+
+        Why nobody noticed: `apps/disposition/tests.py::_execute_for` calls
+        `DispositionService.execute` and **never the
+        `ReincarnationService.execute` that the view calls immediately after
+        it** -- the fixture was one step shorter than the production path. And
+        no test anywhere asserted that `REINCARNATION_TRIGGERED` must be
+        *absent* for a terminal cosmology.
+
+        THE TEST IS THE STATE, NOT THE TRANSITION. The first attempt at this
+        fix gated the event on `transition_to`'s return value, and it was
+        wrong in the other direction: for a rebirth-capable soul,
+        `DispositionService.execute` has **already** moved it to REINCARNATING,
+        so the call here is a same-state transition, which is refused, and the
+        event that should be written was not. The question this event answers
+        is "is this soul queued for rebirth", and the honest way to ask it is
+        to look at where the soul is now.
         """
-        disposition.soul.transition_to(
-            SoulState.REINCARNATING,
-            f"Reincarnation triggered from disposition {disposition.id}"
-        )
+        soul = disposition.soul
+        if soul.current_state != SoulState.REINCARNATING:
+            soul.transition_to(
+                SoulState.REINCARNATING,
+                f"Reincarnation triggered from disposition {disposition.id}"
+            )
+            soul.refresh_from_db()
+        if soul.current_state != SoulState.REINCARNATING:
+            # A terminal cosmology, or a state this move is not available from.
+            return False
+
         # Log domain event
         from apps.events.services import EventService
         # The reincarnation record is created in complete_rebirth, log with disposition info

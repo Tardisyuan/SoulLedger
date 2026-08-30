@@ -65,9 +65,30 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         serializer = DispositionExecuteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        DispositionService.execute(disposition)
+        if not DispositionService.execute(disposition):
+            # `execute` now returns False, and writes nothing, when the soul is
+            # not in a state the disposition can act on. It used to return True
+            # unconditionally after having already saved `is_executed` -- the
+            # record said "executed" while the soul had not moved, and this
+            # view answered 200.
+            return Response(
+                {
+                    "error": "Soul is not in a state this disposition can act on",
+                    "detail": (
+                        f"当前状态 {disposition.soul.current_state} 不允许执行该处置；"
+                        f"处置未被标记为已执行"
+                    ),
+                    "soul_state": disposition.soul.current_state,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
 
-        # Also trigger ReincarnationService.execute
+        # Souls whose cosmology has a next life go on to be reborn. The call is
+        # unconditional here on purpose: `ReincarnationService.execute` answers
+        # False for the terminal cosmologies rather than this view holding a
+        # second copy of that list. It used to write
+        # REINCARNATION_TRIGGERED for every soul including those -- see its
+        # docstring.
         from apps.reincarnation.services import ReincarnationService
         ReincarnationService.execute(disposition)
 
