@@ -9,7 +9,7 @@ registered, so audit logging starts working before any model is saved.
 """
 import logging
 
-from django.db.models.signals import post_delete, post_migrate, post_save, pre_migrate
+from django.db.models.signals import post_delete, post_migrate, post_save, pre_migrate, pre_save
 from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
@@ -44,31 +44,40 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
         role_name = instance.name
         resource_id = str(instance.pk) if instance.pk else ''
 
-        # Get old permissions (before change)
-        if not created:
-            try:
-                old_role = sender.objects.get(pk=instance.pk)
-                old_permissions = sorted([
-                    rp.permission.codename
-                    for rp in old_role.permissions.all()
-                ])
-            except Exception:
-                pass
-
-        # Get new permissions (after change)
+        # This branch cannot report a permissions diff, and pretending
+        # otherwise was the previous shape:
+        #
+        #     old_role = sender.objects.get(pk=instance.pk)
+        #     old_permissions = [... for rp in old_role.permissions.all()]
+        #
+        # ran **after** the save and so read the same rows as
+        # `instance.permissions.all()` two lines below -- the same query on the
+        # same pk, `old == new` unconditionally, no audit row ever.
+        #
+        # A pre_save snapshot does not fix it either, and that was tried and
+        # measured: by the time anything calls `role.save()`, the RolePermission
+        # rows have **already** been changed by whatever changed them, so the
+        # "before" is not inside this save's scope at all. Measured snapshot:
+        # `['dbg.1']` -- the new value, taken before the save.
+        #
+        # The place that knows both sets is the code doing the replacing, and
+        # that is where the row is now written: see
+        # `apps/perm/views.py::assign_role_permissions`.
+        #
+        # `changes` therefore stays None here. Leaving the old computation in
+        # place with a broken "before" was worse than saying nothing: with
+        # `old_permissions` stuck at `[]`, a `role.save()` that touched no
+        # grant at all reported **every current grant as newly added** -- a
+        # second, wrong entry sitting next to the correct one. Measured while
+        # writing this: two `PERMISSION_CHANGE resource=role` rows for one
+        # assignment.
+        #
+        # The cache invalidation below still runs; that is the other half of
+        # this receiver's job and it does not need a diff.
         new_permissions = sorted([
             rp.permission.codename
             for rp in instance.permissions.all()
         ]) if hasattr(instance, 'permissions') else []
-
-        # Build changes dict if permissions changed
-        if old_permissions != new_permissions:
-            changes = {
-                "permissions": {
-                    "old": old_permissions,
-                    "new": new_permissions
-                }
-            }
 
     elif model_name == 'RolePermission':
         # RolePermission was modified - get the role name
@@ -186,20 +195,49 @@ def _invalidate_permission_cache(sender, instance, created=False, **kwargs):
             )
             logger.debug(f"Created PERMISSION_CHANGE audit log for {model_name} {resource_id}")
         except Exception as e:
-            # Silently ignore errors during migrations
-            err_str = str(e).lower()
-            migration_related = any(x in err_str for x in [
-                'no such table', 'undefinedtable', 'does not exist',
-                'relation', 'column', 'constraint', 'programmingerror'
-            ])
-            if not migration_related:
-                logger.error(f"Failed to create permission change audit log: {e}")
+            _swallow_or_log(e, "Failed to create permission change audit log")
 
 
 def _is_migration_context():
     """Check if we're currently in a migration or test database setup."""
     global _in_migration
     return _in_migration
+
+
+def _swallow_or_log(exc, what):
+    """Decide whether an audit-write failure is expected, and log it if not.
+
+    WHAT THIS REPLACES. Three copies of:
+
+        err_str = str(e).lower()
+        migration_related = any(x in err_str for x in [
+            'no such table', 'undefinedtable', 'does not exist',
+            'relation', 'column', 'constraint', 'programmingerror'
+        ])
+        if migration_related:
+            return          # not even a log line
+
+    PostgreSQL's ordinary runtime errors contain those substrings:
+
+        insert or update on table ... violates foreign key **constraint** ...
+        null value in **column** ... violates not-null **constraint**
+        **relation** ... does not exist
+
+    So any real audit-write failure of those shapes was dropped in total
+    silence. (C17's `inet` DataError happened to match none of them, which is
+    the only reason it ever produced a log line.)
+
+    The honest test is **the context, not the message**: `_is_migration_context()`
+    already tracks whether a migration is running, and it is the thing the
+    substring list was standing in for. Outside that context every failure is
+    logged, always -- an audit row that could not be written is exactly the
+    event nobody can afford to have swallowed.
+    """
+    if _is_migration_context():
+        logger.debug(f"{what} skipped during migration: {exc}")
+        return
+    logger.error(f"{what}: {exc}", exc_info=True)
+
 
 
 @receiver(pre_migrate)
@@ -327,15 +365,7 @@ def _create_audit_log(action, instance, changes=None):
             trace_id=trace_id,
         ))
     except Exception as e:
-        # Silently ignore errors during migrations when database schema is incomplete
-        err_str = str(e).lower()
-        migration_related = any(x in err_str for x in [
-            'no such table', 'undefinedtable', 'does not exist',
-            'relation', 'column', 'constraint', 'programmingerror'
-        ])
-        if migration_related:
-            return
-        logger.error(f"Failed to create audit log: {e}")
+        _swallow_or_log(e, "Failed to create audit log")
 
 
 def _get_client_ip(request):
@@ -349,6 +379,44 @@ def _get_client_ip(request):
     from apps.core.client_ip import get_client_ip
 
     return get_client_ip(request)
+
+
+#: 快照挂在实例上的属性名。用一个不像业务字段的名字,免得跟模型自己的列撞上。
+_AUDIT_SNAPSHOT = "_audit_row_before_save"
+
+
+
+def _on_pre_save(sender, instance, **kwargs):
+    """Take the row as it stands **before** this save, for post_save to diff against.
+
+    WHY THIS EXISTS. `_on_post_save` used to do:
+
+        old_instance = sender.objects.get(pk=instance.pk)
+        changes = _build_changes(instance, old_instance)
+
+    post_save fires **after** the row is written, so that query returns the
+    **new** row. `_build_changes` compared the instance with itself, every
+    field was equal, and `changes` came out None. Measured end to end on
+    PostgreSQL: `UPDATE approvalworkflow changes=None`.
+
+    `AuditLog.changes` is documented as `{"field": ["old", "new"]}` and is what
+    `/audit-logs/timeline/` renders. **It had never once carried the diff of an
+    UPDATE.** `apps/audit/tests.py` has no signal tests at all, so nothing said
+    otherwise.
+
+    `_base_manager`, not `objects`: several models here have a tenant-scoped
+    default manager, and the snapshot must not depend on whichever tenant
+    contextvar happens to be set on the thread doing the save.
+    """
+    if instance.pk is None:
+        setattr(instance, _AUDIT_SNAPSHOT, None)
+        return
+    try:
+        setattr(instance, _AUDIT_SNAPSHOT, sender._base_manager.get(pk=instance.pk))
+    except Exception:
+        # First save of a row with a client-assigned pk, or the table is not
+        # there yet during a migration. Either way there is no "before".
+        setattr(instance, _AUDIT_SNAPSHOT, None)
 
 
 def _on_post_save(sender, instance, created, **kwargs):
@@ -374,11 +442,9 @@ def _on_post_save(sender, instance, created, **kwargs):
 
     changes = None
     if not created and not is_soft_delete:
-        try:
-            old_instance = sender.objects.get(pk=instance.pk)
+        old_instance = getattr(instance, _AUDIT_SNAPSHOT, None)
+        if old_instance is not None:
             changes = _build_changes(instance, old_instance)
-        except Exception:
-            pass
     _create_audit_log(action, instance, changes)
 
 
@@ -478,14 +544,7 @@ def create_batch_audit_log(action, instances, changes=None):
         )
         logger.debug(f"Created batch {action} audit log for {instance_count} {resource_desc}")
     except Exception as e:
-        err_str = str(e).lower()
-        migration_related = any(x in err_str for x in [
-            'no such table', 'undefinedtable', 'does not exist',
-            'relation', 'column', 'constraint', 'programmingerror'
-        ])
-        if migration_related:
-            return
-        logger.error(f"Failed to create batch audit log: {e}")
+        _swallow_or_log(e, "Failed to create batch audit log")
 
 
 def _connect_model_signals(model):
@@ -505,6 +564,7 @@ def _connect_model_signals(model):
     if model._meta.label.split('.')[-1] in ('Role', 'RolePermission'):
         return
 
+    pre_save.connect(_on_pre_save, sender=model, dispatch_uid=f"audit_{model.__name__}_pre_save")
     post_save.connect(_on_post_save, sender=model, dispatch_uid=f"audit_{model.__name__}_post_save")
     post_delete.connect(_on_post_delete, sender=model, dispatch_uid=f"audit_{model.__name__}_post_delete")
     _connected_models.add(model)
