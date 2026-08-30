@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.core.client_ip import get_client_ip
 from apps.core.permissions import IsAdminPermission
 from apps.perm.cache import invalidate_all_permissions, invalidate_role_permissions
 from apps.perm.services import get_role_permission_codenames
@@ -198,6 +199,39 @@ def assign_role_permissions(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Both sets, before anything is touched. They are written to a single
+        # PERMISSION_CHANGE audit row below.
+        #
+        # WHY HERE AND NOT IN A SIGNAL. The `.delete()` on the next line fires
+        # post_delete per row, and each of those does produce a
+        # PERMISSION_CHANGE entry saying that grant was revoked. `bulk_create`
+        # two lines further down sends **no post_save at all**, so nothing
+        # records the grants. Measured end to end: a role holding
+        # {asg.0, asg.1, asg.2}, assigned {asg.0} -- keeping one, dropping two:
+        #
+        #     PC rolepermission 20 {'permissions': {'old': ['asg.0'], 'new': []}}
+        #     PC rolepermission 21 {'permissions': {'old': ['asg.1'], 'new': []}}
+        #     PC rolepermission 22 {'permissions': {'old': ['asg.2'], 'new': []}}
+        #
+        # **Three revocations and no grant.** Anyone reading
+        # `/audit-logs/timeline/` sees a role stripped bare, when in fact it
+        # kept one of the three. The per-row entries are not wrong, they are
+        # half of a replacement, and the half that survives is the alarming one.
+        #
+        # `_invalidate_permission_cache`'s Role branch cannot supply the other
+        # half either -- see its comment. This function is the only place that
+        # holds both sets at once.
+        codenames_before = sorted(
+            RolePermission.objects.filter(role=role).values_list(
+                "permission__codename", flat=True
+            )
+        )
+        codenames_after = sorted(
+            Permission.objects.filter(id__in=permission_ids).values_list(
+                "codename", flat=True
+            )
+        )
+
         # Replace all permissions for this role
         RolePermission.objects.filter(role=role).delete()
         to_create = [RolePermission(role=role, permission_id=pid) for pid in permission_ids]
@@ -213,6 +247,23 @@ def assign_role_permissions(request):
         # database directly; now that it reads through check_permission, the
         # admin's own role editor would show the stale answer straight back.
         invalidate_role_permissions(role_name)
+
+        if codenames_before != codenames_after:
+            from apps.audit.models import AuditAction, AuditLog
+
+            AuditLog.objects.create(
+                tenant=getattr(request, "tenant", None),
+                user=request.user if request.user.is_authenticated else None,
+                action=AuditAction.PERMISSION_CHANGE,
+                resource="role",
+                resource_id=str(role.pk),
+                changes={
+                    "permissions": {"old": codenames_before, "new": codenames_after}
+                },
+                description=f"Role {role_name} permissions replaced"[:500],
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+            )
 
         # save() (apps/core/models.py::AuditUserFields) increments `version`
         # on every update — this call is what advances it, so the response
