@@ -88,12 +88,29 @@ function ActorCard({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
       className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:border-[hsl(var(--color-accent))]/30 transition-colors"
     >
       <div className="flex items-start gap-3">
-        <span className="text-06" aria-hidden="true">{actor.icon || "👤"}</span>
+        {/* `icon` is not a field on ANY actor serializer -- the model column is
+            `icon_url`, and this expression was always undefined. (All 130 rows
+            on the test box have `icon_url` empty too, so nothing visible
+            changes; the dead read is removed so the next person does not
+            "fix" it by adding an `icon` field.) */}
+        <span className="text-06" aria-hidden="true">{"👤"}</span>
         <div className="flex-1 min-w-0">
+          {/* `display_name` and `display_title` are localized by the backend
+              and are in this very response. `name_zh`, `title` and
+              `description` are NOT on `ActorListSerializer` -- they live on the
+              detail and localized serializers. So every one of the 130 cards
+              rendered its title as MissingValue「未记载」while the localized
+              title sat unread in the same payload, and the second line fell
+              back to repeating the English canonical name.
+
+              This is the "a placeholder claims the data is missing while the
+              data is present" shape, at 130 cards. */}
           <h3 className="text-04 font-semibold text-[hsl(var(--color-ink))] truncate">{actor.name}</h3>
-          <p className="text-03 text-[hsl(var(--color-ink-subtle))]">{actor.name_zh || actor.name}</p>
+          <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
+            {actor.display_name || actor.name}
+          </p>
           <p className="text-02 text-[hsl(var(--color-ink-muted))] mt-1">
-            <DomainText value={actor.title} />
+            <DomainText value={actor.display_title} />
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
@@ -111,9 +128,10 @@ function ActorCard({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
           )}
         </div>
       </div>
-      {actor.description && (
-        <p className="mt-2 text-03 text-[hsl(var(--color-ink-muted))] line-clamp-2">{actor.description}</p>
-      )}
+      {/* `description` is not on the list serializer either. Removed rather
+          than left as a permanently-false condition: a read that can never be
+          true reads as "descriptions are optional", which is not what is
+          happening -- the list endpoint does not send them at all. */}
     </div>
   );
 }

@@ -109,6 +109,7 @@
     },
     "events": {
       "SOUL_CREATED": "灵魂登记",
+      "SETTLEMENT_CORRECTED": "结案更正",
       "SOUL_DIED": "记录身故",
       "STATE_CHANGED": "状态变更",
       "RECORD_ADDED": "记录添加",
@@ -196,6 +197,7 @@
       "verdict_passed": "善行通过",
       "verdict_failed": "恶行失败",
       "verdict_purgatory": "待定",
+      "verdict_retry": "重审",
       "reincarnate": "轮回 →",
       "being_reborn": "灵魂正在轮回中...",
       "previous_reincarnations": "次前世的轮回记录",
