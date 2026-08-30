@@ -74,7 +74,15 @@ test.describe("Workflow page", () => {
     await page.getByRole("button", { name: "审批实例", exact: true }).click();
 
     await expect(seen(page, WORKFLOW_INSTANCE.workflow_name)).toBeVisible();
-    await expect(seen(page, WORKFLOW_INSTANCE.soul)).toBeVisible();
+    // The row shows the soul's *name*, and must not show its primary key.
+    //
+    // This line used to read `WORKFLOW_INSTANCE.soul` and passed -- because
+    // the fixture set that field to a Chinese personal name while the list
+    // serializer sends a UUID there. The test certified behaviour the fixture
+    // had supplied. Both halves are asserted now: the absence is the one that
+    // cannot be satisfied by accident.
+    await expect(seen(page, WORKFLOW_INSTANCE.soul_name)).toBeVisible();
+    await expect(page.getByText(WORKFLOW_INSTANCE.soul, { exact: false })).toHaveCount(0);
 
     // The row's meta line is `<DomainEnum case_type> · <soul>`. Asserting the
     // enum through `title` rather than either the raw member or one locale's

@@ -7,7 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { buttonVariants } from "@/src/components/ui/Button";
@@ -106,7 +106,10 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
       <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:border-[hsl(var(--color-accent))] transition-colors cursor-pointer">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{t("dispatch.soul_prefix")}{dispatch.soul}</p>
+            <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{t("dispatch.soul_prefix")}
+              {/* `soul_name` is in the same response and was going unread;
+                  the card printed the primary key instead. */}
+              {dispatch.soul_name || <MissingValue kind="unrecorded" />}</p>
             <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
               {dispatch.source_tenant_code} → {dispatch.target_tenant_code}
             </p>

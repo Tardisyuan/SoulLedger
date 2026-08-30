@@ -85,7 +85,23 @@ DECAY_RATE = 0.01  # per year — the rate for any cosmology not listed below.
 # the dict in for symmetry has to be a decision.
 CIVILIZATION_DECAY_RATE = {
     Civilization.CHINESE: DECAY_RATE,
-    Civilization.EGYPTIAN: DECAY_RATE,
+    # EGYPTIAN gets 0.0 for the same reason EUROPEAN does, and the argument
+    # was made once and not carried across.
+    #
+    # `MAAT_FEATHER_WEIGHT` (readings.py) is justified in prose: "1 is the
+    # smallest weight a SoulRecord can carry ... a heart with any recorded
+    # wrongdoing beyond a single minimal deed is heavier than the feather.
+    # That is a harsh instrument, and it is meant to be." But `heart_weight` is
+    # the *decayed and rounded* demerit total, and EGYPTIAN was sharing the
+    # generic rate. Measured 2026-08-29: three recorded wrongs of weight 1
+    # decayed to a heart_weight of 1 and passed the weighing; so did a single
+    # wrong of weight 3 committed 150 years before death.
+    #
+    # This file already made this exact argument for EUROPEAN -- "a label that
+    # contradicts the arithmetic under it is worse than either alone" -- and
+    # gave it 0.0. Nobody carried it over. The Duat does not forget with time;
+    # the 42 negative confessions are not a decaying score.
+    Civilization.EGYPTIAN: 0.0,
     Civilization.EUROPEAN: 0.0,
 }
 

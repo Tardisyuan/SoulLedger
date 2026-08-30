@@ -10,6 +10,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { QueryError } from "@/src/components/ui/PageError";
 
 // organizationsApi.list() (lib/api/organizations.ts) doesn't forward a `page` param and
 // this page renders a parent/child tree (buildTree/renderTree below), so a paged view would
@@ -85,7 +86,7 @@ export default function OrganizationsPage() {
   const { user } = useTenant();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
-  const { data: organizations = [], isLoading, error } = useQuery({
+  const { data: organizations = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["organizations"],
     queryFn: fetchAllOrganizations,
     enabled: !!user,
@@ -168,6 +169,11 @@ export default function OrganizationsPage() {
         </div>
       }
     >
+      {/* Worse than its siblings: no empty state either, so a failed request
+          rendered a heading and literally nothing else -- `Object.entries({})`
+          over zero groups. And `fetchAllOrganizations` pages with `while
+          (true)`, so one failed page fails the whole query. */}
+      {isError && <QueryError onRetry={() => refetch()} />}
       <div className="space-y-10">
         {Object.entries(grouped).map(([category, orgs]) => {
           const info = { name: t(`organization.civilizations.${category}`) || category, icon: CIVILIZATION_ICONS[category] || "🌍" };

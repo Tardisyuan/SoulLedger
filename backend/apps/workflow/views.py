@@ -107,6 +107,10 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
     def advance(self, request, pk=None):
         """
         Manually advance workflow to next pending node.
+
+        Moves the pointer only; the node being left is not decided and stays
+        PENDING, so it can be returned to. Getting *past* an undecided node is
+        `escalate`, which records the skip.
         """
         workflow = self.get_object()
         if workflow.advance_to_next():
@@ -142,9 +146,13 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             )
 
         node = workflow.current_node
-        if not workflow.advance_to_next():
+        # Marks the node ESCALATED before moving on. Calling `advance_to_next`
+        # here left it PENDING, so `get_next_node()` handed it straight back
+        # and the audit row below recorded a skip that had not happened -- its
+        # `skipped_node` and `advanced_to` were measured to be the same id.
+        if not workflow.escalate_current_node(user=request.user, reason=reason):
             return Response(
-                {"error": "No next node available or workflow already completed"},
+                {"error": "No pending node to escalate past"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -248,6 +256,24 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         success = workflow.complete_node(node.id, verdict, notes, user=request.user)
         if success:
             return Response(ApprovalWorkflowSerializer(workflow).data)
+        # `complete_node` now re-checks the node's status under a row lock, so
+        # the common reason to land here is that another decision was recorded
+        # between this request's guard and that lock. "Failed to complete node"
+        # would leave the caller unable to tell a lost race from a bad request
+        # -- and the whole point of the lock is that the loser must find out.
+        node.refresh_from_db()
+        if node.status != NodeStatus.PENDING:
+            return Response(
+                {
+                    "error": "This node was already decided.",
+                    "detail": (
+                        f"Its verdict is {node.verdict or node.status}. Your "
+                        f"decision was not recorded."
+                    ),
+                    "node_status": node.status,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
         return Response({"error": "Failed to complete node"}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=["get"])

@@ -240,20 +240,31 @@ class TestApprovalWorkflowModel:
         assert workflow.completed_at is not None
 
     def test_advance_to_next(self, workflow):
-        """advance_to_next manually advances to next pending node."""
-        # Complete the first node first so advance goes to node 2
+        """advance_to_next moves off the node it is on.
+
+        This assertion used to read `in [2, 3]`, with a comment above it that
+        argued both ways and then accepted both. **2 is the answer when
+        advance does nothing** (complete_node has already left current_node on
+        node 2) and **3 is the answer when it works**. The correct answer is 3
+        and the actual answer was 2, so the test passed while the method it
+        was named for was a no-op that reported success.
+
+        A check that admits the broken answer is not a check.
+        """
         first_node = workflow.nodes.order_by("node_order").first()
         workflow.complete_node(first_node.id, "PASSED", "")
-
-        result = workflow.advance_to_next()
-
-        assert result is True
         workflow.refresh_from_db()
-        # After completing node 1, current_node is node 2
-        # advance_to_next finds the next PENDING node (node 3 if node 2 is now current)
-        # But since node 2 is PENDING and becomes current after complete_node,
-        # advance_to_next will find node 3 (the next PENDING after current)
-        assert workflow.current_node.node_order in [2, 3]
+        assert workflow.current_node.node_order == 2, (
+            "premise: complete_node leaves the flow on node 2"
+        )
+
+        assert workflow.advance_to_next() is True
+        workflow.refresh_from_db()
+        assert workflow.current_node.node_order == 3, (
+            f"advance_to_next left the flow on node "
+            f"{workflow.current_node.node_order}. Advancing to the node we "
+            f"are already standing on is what this method used to do."
+        )
 
     def test_advance_to_next_when_no_more_nodes(self, workflow):
         """advance_to_next returns False when no more nodes."""
@@ -418,13 +429,55 @@ class TestApprovalWorkflowAPI:
         assert wf.current_node == node2
         assert wf.current_node.node_order == 2
 
-        # Now advance should move to next (node 3, but doesn't exist, so no-op)
+        # Node 2 is the last pending node and it is the one we are standing
+        # on, so there is nowhere to advance to.
+        #
+        # This assertion used to read `== 200` with the comment "advance is a
+        # no-op". It was accurate about the behaviour and it was pinning a
+        # defect: `advance_to_next` computed the next node as
+        # `get_next_node()`, which returns the first PENDING node -- i.e. the
+        # one `current_node` already pointed at -- assigned it to itself, and
+        # returned True. Every call reported success and moved nothing, on the
+        # only route out of a stalled workflow.
         response = authenticated_client.post(
             f"/api/v1/workflows/{wf.id}/advance/",
             format="json"
         )
-        # Node 2 is the last node; advance is a no-op
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+        assert response.status_code == 400, (
+            f"Expected 400 (no next node), got {response.status_code}. A 200 "
+            f"here is the interface reporting a move it did not make."
+        )
+        wf.refresh_from_db()
+        assert wf.current_node == node2, "advance moved the pointer anyway"
+
+    def test_advance_actually_moves_when_there_is_somewhere_to_go(
+        self, authenticated_client, cn_tenant, soul
+    ):
+        """The other half. Without this, returning 400 unconditionally passes."""
+        wf = ApprovalWorkflow.objects.create(
+            soul=soul, workflow_name="可推进流程", case_type=CaseType.ROUTINE,
+            status=ApprovalWorkflowStatus.IN_PROGRESS, tenant=cn_tenant,
+        )
+        node1 = ApprovalNode.objects.create(
+            workflow=wf, node_name="节点1", node_order=1,
+            node_type="TRIAL", status=NodeStatus.PENDING,
+        )
+        node2 = ApprovalNode.objects.create(
+            workflow=wf, node_name="节点2", node_order=2,
+            node_type="TRIAL", status=NodeStatus.PENDING,
+        )
+        wf.current_node = node1
+        wf.save()
+
+        response = authenticated_client.post(
+            f"/api/v1/workflows/{wf.id}/advance/", format="json"
+        )
+        assert response.status_code == 200, response.data
+        wf.refresh_from_db()
+        assert wf.current_node == node2, (
+            f"advance answered 200 and left the flow on "
+            f"{wf.current_node.node_name if wf.current_node else None}"
+        )
 
     def test_workflow_stats_endpoint(self, authenticated_client, workflow):
         """GET /api/v1/workflows/{id}/stats/ returns progress stats."""

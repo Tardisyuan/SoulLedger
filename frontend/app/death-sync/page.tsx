@@ -10,6 +10,7 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
 import { badgeVariants } from "@/src/components/ui/Badge";
 
 interface DeathRegistration {
@@ -57,9 +58,9 @@ export default function DeathSyncPage() {
   const { t, formatDateTime } = useI18n();
   const { user } = useTenant();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["death-sync", "registrations"],
-    queryFn: () => api.get("/death-sync/register/").then(r => r.data),
+    queryFn: () => api.get("/death-sync/registrations/").then(r => r.data),
     enabled: !!user,
   });
   const registrations = data?.results ?? [];
@@ -76,7 +77,11 @@ export default function DeathSyncPage() {
       subtitle={t("death_sync.subtitle") || "External death registration sync"}
     >
       <PageSection title={t("death_sync.registrations") || "Registrations"} isLoading={isLoading}>
-        {isLoading ? (
+        {/* A failed request used to fall through to the empty state, so
+            "the server is down" and "there is nothing here" read the same. */}
+        {isError ? (
+          <QueryError onRetry={() => refetch()} />
+        ) : isLoading ? (
           <ListSkeleton count={5} />
         ) : registrations.length === 0 ? (
           <EmptyState title={t("death_sync.no_registrations") || "No death registrations found."} />

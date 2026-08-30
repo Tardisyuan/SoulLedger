@@ -13,7 +13,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
 import { getDisplayNameForTenant } from "@/src/config/civilizations";
-import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { useChartColors } from "@/src/hooks/useChartColors";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -96,12 +96,16 @@ function DashboardContent() {
     </>
   );
 
+  // The backend's /ledger/stats/export/ is a hardcoded `role == "ADMIN"` check,
+  // not a codename. `karma.export` never existed, and the whole `karma.*`
+  // family was renamed to `ledger.*` by perm/0016 -- so the string was doubly
+  // dead and the gate worked only because hasPermission short-circuits ADMIN.
   const pageActions = (
-    <RequirePermission permissions="karma.export">
+    <RequireAdmin>
       <Button type="button" variant="primary" onClick={handleExport}>
         {t("dashboard.export_stats")}
       </Button>
-    </RequirePermission>
+    </RequireAdmin>
   );
 
   const tabs: { key: DashboardTab; label: string }[] = [
@@ -129,9 +133,9 @@ function DashboardContent() {
     );
     // The ledger tab surfaces admin-only stats — hide the tab itself from non-admins.
     return tabItem.key === "ledger" ? (
-      <RequirePermission key={tabItem.key} permissions="ADMIN">
+      <RequireAdmin key={tabItem.key}>
         {button}
-      </RequirePermission>
+      </RequireAdmin>
     ) : (
       button
     );
@@ -253,8 +257,27 @@ function DashboardContent() {
             {/* Per-tenant breakdown */}
             <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
               <h2 className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mb-4">{t("dashboard.per_civilization_breakdown")}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[0, 1, 2].map((i) => (
+              {/* `md:grid-cols-3` alongside a hardcoded three cards was
+                  self-consistent and wrong together; with four civilizations
+                  the fourth card needs somewhere to go. */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                {/* Driven by the data, not by a fixed count. This read
+                    `[0, 1, 2]`, so the fourth civilization never appeared:
+                    measured 2026-08-29 with four tenants seeded, the page
+                    showed 中国地府 / 欧洲炼狱 / 埃及杜阿特 and no 希腊冥府 --
+                    while the bar chart directly above drew four bars and four
+                    swatches. Two views on one screen answering "how many
+                    civilizations are there" differently.
+
+                    The loading branch keeps a fixed length on purpose: with no
+                    data yet there is nothing to take a count from, and three
+                    skeletons are a guess at the layout rather than a claim
+                    about the world. (The other `[0, 1, 2]` in this file, in
+                    the recent-activity skeleton, is that same kind and stays.) */}
+                {(loading
+                  ? [0, 1, 2]
+                  : (stats?.tenants ?? []).map((_, i) => i)
+                ).map((i) => (
                   <div key={i} className="bg-[hsl(var(--color-surface-2))] p-4 border border-[hsl(var(--color-hairline))]">
                     {loading ? (
                       <div className="space-y-3">
@@ -310,7 +333,7 @@ function DashboardContent() {
                     <Skeleton className="h-full w-full" />
                   </div>
                 ) : (
-                  <LazyBarChart data={stats?.karma_distribution ?? []} dataKey="count" fill={CHART_SERIES.balance} height={180} name={t("dashboard.chart_souls")} />
+                  <LazyBarChart data={stats?.karma_distribution ?? []} dataKey="count" nameKey="label" fill={CHART_SERIES.balance} height={180} name={t("dashboard.chart_souls")} />
                 )}
               </div>
 
@@ -396,7 +419,7 @@ function DashboardContent() {
             </div>
           </>
         ) : (
-          <RequirePermission permissions="ADMIN" fallback={<PermissionDenied />}>
+          <RequireAdmin fallback={<PermissionDenied />}>
             {/* Ledger-only cards that don't already appear on the Overview tab */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
@@ -452,7 +475,7 @@ function DashboardContent() {
                 emptyMessage={t("admin.no_realm_data")}
               />
             </div>
-          </RequirePermission>
+          </RequireAdmin>
         )}
       </div>
     </PageShell>

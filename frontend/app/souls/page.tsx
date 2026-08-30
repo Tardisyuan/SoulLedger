@@ -320,9 +320,21 @@ export default function SoulsPage() {
                 whose cosmology does not net merit against demerit gets the
                 "not applicable" dot, visibly different from both. */}
             <td className="px-4 py-3 text-right">
-              {showsBalance
-                ? <DomainNumber value={soul.karmic_balance ?? 0} signed toned />
-                : <MissingValue kind="inapplicable" reason={t("souls.balance_not_applicable")} />}
+              {/* `?? 0` rendered a confident zero -- signed and toned -- for a
+                  value the backend deliberately withholds. `SoulSerializer
+                  .to_representation` deletes merit/demerit/karmic_balance for
+                  VIEWER, so the key is absent, not zero. Measured 2026-08-29:
+                  a VIEWER's row read `... 审判中 0 ...`, indistinguishable
+                  from a soul whose balance really is zero. Every other missing
+                  value on this page goes through MissingValue; this column was
+                  the one exception. */}
+              {!showsBalance ? (
+                <MissingValue kind="inapplicable" reason={t("souls.balance_not_applicable")} />
+              ) : soul.karmic_balance === undefined || soul.karmic_balance === null ? (
+                <MissingValue kind="unrecorded" reason={t("souls.balance_withheld")} />
+              ) : (
+                <DomainNumber value={soul.karmic_balance} signed toned />
+              )}
             </td>
             {showsDeathColumn && (
               /* 02 档：日期是元数据，不是正文。 */

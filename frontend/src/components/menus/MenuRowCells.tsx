@@ -83,12 +83,12 @@ export function MenuRowCells({
         <div className="flex justify-end gap-2">
           {!isDeleted && (
             <>
-              <RequirePermission permissions="menu.update">
+              <RequirePermission permissions="menu.manage">
                 <Button type="button" size="sm" onClick={() => onEdit(menu)}>
                   {t("menus.edit")}
                 </Button>
               </RequirePermission>
-              <RequirePermission permissions="menu.delete">
+              <RequirePermission permissions="menu.manage">
                 <Button type="button" size="sm" variant="danger" onClick={() => onDelete(menu)}>
                   {t("menus.delete")}
                 </Button>

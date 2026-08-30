@@ -67,6 +67,12 @@ const EVENT_REGISTRY: Record<string, Record<string, EventHandler>> = {
     DISPOSITION_CREATED: handleSoulEvent,
     REINCARNATION_TRIGGERED: handleSoulEvent,
     KARMA_RECALCULATED: handleSoulEvent,
+    // `Soul.correct_settlement` writes this. Without a handler it fell to
+    // `handleUnknownEvent`, which shows a bare English toast and **invalidates
+    // nothing** -- so a corrected settlement left the timeline showing the
+    // superseded state, which is precisely what the event was added to
+    // prevent (see the docstring on that method).
+    SETTLEMENT_CORRECTED: handleSoulStateChanged,
   },
 
   // Workflow domain
@@ -181,7 +187,12 @@ export function getEventLabel(eventType: string): string {
  */
 export const BACKEND_EVENT_TYPES = [
   // Soul
-  "SOUL_CREATED", "STATE_CHANGED", "RECORD_ADDED",
+  "SOUL_CREATED",
+  // Emitted by Soul.correct_settlement (apps/souls/models.py). It was
+  // missing from this list, from EVENT_REGISTRY.soul and from all three
+  // bundles -- and `detectEventDrift()` uses THIS list as its picture of the
+  // backend, so the detector was structurally unable to see its own gap.
+  "SETTLEMENT_CORRECTED", "STATE_CHANGED", "RECORD_ADDED",
   "JUDGMENT_INITIATED", "JUDGMENT_CONCLUDED",
   "DISPOSITION_CREATED", "REINCARNATION_TRIGGERED", "KARMA_RECALCULATED",
   // Workflow

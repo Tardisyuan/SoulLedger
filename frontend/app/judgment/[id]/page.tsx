@@ -465,7 +465,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
             </label>
           </div>
 
-          <RequirePermission permissions="judgment.conclude">
+          <RequirePermission permissions="judgment.execute">
             <Button
               type="button"
               variant="primary"

@@ -321,8 +321,15 @@ export default function SoulDetailPage() {
 
   // 副标题:文明、这个灵魂出生时用的那个名字(只在它与标题不同时出现 ——
   // 同名就只是噪音)、属于那同一个出生身份的生卒区间,以及一个可复制的 ID。
+  // `Skeleton` renders a <div>, and PageShell's subtitle slot renders a <p>.
+  // React reported it by name: "In HTML, <div> cannot be a descendant of <p>",
+  // followed by "Hydration failed because the server rendered HTML didn't
+  // match the client" -- the subtree was thrown away and re-rendered on every
+  // load of this page. (Not the known dev-server Skeleton noise in MEMORY.md:
+  // that one is a concurrent on-demand-compile artefact. This reproduced on a
+  // single worker, every time, with React naming the tag nesting.)
   const headerSubtitle = loading ? (
-    <Skeleton className="h-4 w-64" />
+    <Skeleton as="span" className="inline-block h-4 w-64" />
   ) : (
     <span className="flex items-center gap-2 flex-wrap">
       <DomainEnum namespace="souls.civilizations" value={soul?.civilization} />

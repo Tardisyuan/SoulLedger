@@ -109,6 +109,7 @@
     },
     "events": {
       "SOUL_CREATED": "灵魂登记",
+      "SETTLEMENT_CORRECTED": "结案更正",
       "SOUL_DIED": "记录身故",
       "STATE_CHANGED": "状态变更",
       "RECORD_ADDED": "记录添加",
@@ -196,6 +197,7 @@
       "verdict_passed": "善行通过",
       "verdict_failed": "恶行失败",
       "verdict_purgatory": "待定",
+      "verdict_retry": "重审",
       "reincarnate": "轮回 →",
       "being_reborn": "灵魂正在轮回中...",
       "previous_reincarnations": "次前世的轮回记录",
@@ -570,6 +572,8 @@
       "advance": "推进",
       "completed": "流程已完成",
       "completed_message": "此审批流程已完成。",
+      "completed_with_rejection": "流程已终止",
+      "completed_with_rejection_message": "此审批流程因存在拒绝裁决而终止。",
       "nodes": "节点",
       "history": "历史",
       "current": "当前",
@@ -840,13 +844,14 @@
     },
     "corpus": {
       "title": "语料条文",
-      "subtitle": "判决可以据以成立的条文。四套体系共转录 175 条。",
+      "subtitle": "判决可以据以成立的条文。四套体系共转录 {{n}} 条。",
       "col_sigil": "节号",
       "col_offence": "罪目",
       "col_text": "条文",
       "col_citations": "引",
       "filter_corpus": "语料",
       "article_count": "{{n}} 条",
+      "listed_count": "本页 {{n}} 条",
       "empty_reason": "这套语料尚无转录条文。",
       "citations_absent": "本次响应不带引用计数。",
       "sigil_absent": "此条无转录节号。"
@@ -1406,6 +1411,8 @@
     "visibility_label": "帖子可见范围"
   },
   "tenants": {
+    "active": "启用",
+    "inactive": "停用",
     "title": "租户管理",
     "subtitle": "各文明体系的租户配置",
     "list": "租户列表",
