@@ -20,6 +20,20 @@ class ApprovalWorkflowStatus(models.TextChoices):
     COMPLETED = "COMPLETED", "流程完成"
 
 
+#: 走到这里流程就结束了,不再接受任何节点决策。
+#:
+#: `APPROVED` / `APPEAL` / `EXCEPTION` **不在这里,因为它们在整个代码库里从未被
+#: 赋值过** —— 声明了、迁移了、`WorkflowFilter.status` 还把它们当筛选值提供
+#: (于是那三个选项永远匹配不到任何行),而没有一条路径写入它们。
+#: 把它们塞进这个元组会让这段注释开始撒谎:它们不是"终态",它们是**不可达状态**。
+#: 要么让它们可达,要么删掉;在那之前,`test_workflow_reachable_states.py` 把
+#: "哪些可达"这件事本身钉住,所以增删任何一个都得有人明确决定。
+TERMINAL_WORKFLOW_STATUSES = frozenset({
+    "COMPLETED",
+    "REJECTED",
+})
+
+
 class CaseType(models.TextChoices):
     # Chinese
     ROUTINE = "ROUTINE", "常规审判"
@@ -193,13 +207,20 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
             )
             if not node:
                 return False
+            if self.status in TERMINAL_WORKFLOW_STATUSES:
+                # The flow is over. Without this, the PENDING nodes left behind
+                # by a refusal are still decidable, and deciding the last one
+                # would flip a REJECTED workflow to COMPLETED -- erasing the
+                # refusal by walking past it.
+                return False
             if node.status != NodeStatus.PENDING:
                 # Somebody decided it between the view's check and this lock.
                 # Returning False rather than overwriting is the whole point:
                 # the second caller has to learn its decision was not recorded.
                 return False
 
-            node.status = NodeStatus.APPROVED if verdict in ["PASSED", "CONFIRMED"] else NodeStatus.REJECTED
+            passed = verdict in ["PASSED", "CONFIRMED"]
+            node.status = NodeStatus.APPROVED if passed else NodeStatus.REJECTED
             node.verdict = verdict
             node.notes = notes
             node.decided_at = timezone.now()
@@ -207,15 +228,42 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 node.approver = user
             node.save()
 
-            # Advance to next node
-            next_node = self.get_next_node()
-            if next_node:
-                self.current_node = next_node
-                self.status = ApprovalWorkflowStatus.IN_PROGRESS
-            else:
+            if not passed:
+                # A refusal ends the workflow. It used to mark the node
+                # REJECTED and then advance **unconditionally**, which is why
+                # `ApprovalWorkflowStatus.REJECTED` was declared and assigned
+                # nowhere in the codebase. Measured before this change:
+                #
+                #     complete_node(FAILED) -> True
+                #     n1.status = REJECTED
+                #     workflow.status = IN_PROGRESS, current_node = N2
+                #     ...after refusing all three nodes:
+                #     workflow.status = COMPLETED, completed_at set
+                #
+                # A soul refused in every one of the ten courts finished in the
+                # same state as one that passed every one of them. The two were
+                # not distinguishable from the workflow row, and `REJECTED`
+                # -- the state that exists to say which happened -- was
+                # unreachable.
+                #
+                # The nodes after this one keep `PENDING`: they were never
+                # reached, and rewriting them to some "skipped" value would
+                # claim a decision nobody made. `current_node = None` plus a
+                # terminal status is what stops the flow; the guard below
+                # refuses any further decision on it.
                 self.current_node = None
-                self.status = ApprovalWorkflowStatus.COMPLETED
+                self.status = ApprovalWorkflowStatus.REJECTED
                 self.completed_at = timezone.now()
+            else:
+                # Advance to next node
+                next_node = self.get_next_node()
+                if next_node:
+                    self.current_node = next_node
+                    self.status = ApprovalWorkflowStatus.IN_PROGRESS
+                else:
+                    self.current_node = None
+                    self.status = ApprovalWorkflowStatus.COMPLETED
+                    self.completed_at = timezone.now()
         self.save()
 
         return True
