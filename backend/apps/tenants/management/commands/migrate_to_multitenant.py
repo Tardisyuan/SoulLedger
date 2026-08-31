@@ -21,15 +21,14 @@ from apps.events.models import SoulEvent
 from apps.judgment.models import Judgment
 from apps.realms.models import Realm
 from apps.reincarnation.models import Reincarnation
-from apps.souls.models import Civilization, Soul
+from apps.souls.models import CIVILIZATION_TENANT, Soul
 from apps.tenants.models import Tenant
 
-# Mapping from civilization code → tenant code
-CIV_TO_TENANT = {
-    Civilization.CHINESE: "CN_DIYU",
-    Civilization.EUROPEAN: "EU_HEAVEN_HELL",
-    Civilization.EGYPTIAN: "EG_DUAT",
-}
+# Imported, not written out again. This was one of the copies
+# `apps.souls.models.CIVILIZATION_TENANT`'s comment names — and it had already
+# drifted: three entries, no GREEK, so a Greek soul reaching this backfill got
+# no tenant at all rather than a wrong one.
+CIV_TO_TENANT = CIVILIZATION_TENANT
 
 
 class Command(BaseCommand):

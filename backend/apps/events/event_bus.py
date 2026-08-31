@@ -326,12 +326,23 @@ def configure_default_handlers() -> None:
     for domain in ("soul", "workflow", "notification", "dispatch", "deathsync", "social"):
         handler_registry.register_domain(domain, AuditHandler())
 
+    # Notification domain — the UserNotification row itself.
+    #
+    # **Registered before WebSocketHandler, and the order matters**: dispatch
+    # order is registration order, so with the two the other way round
+    # `rt_user_{id}` received NOTIFICATION_CREATED *before*
+    # `UserNotification.objects.create()` had run. A client that reacts to the
+    # push by re-fetching `/notifications/` would not find the row it had just
+    # been told about — a race with no error anywhere, whose only symptom is a
+    # notification that appears one refresh late.
+    #
+    # The row is the fact; the push is the announcement of it. Announcing
+    # first is what was wrong.
+    handler_registry.register_domain("notification", NotificationHandler())
+
     # All domains — WebSocket real-time push
     for domain in ("workflow", "notification", "dispatch", "deathsync", "social"):
         handler_registry.register_domain(domain, WebSocketHandler())
-
-    # Notification domain — UserNotification + WS push
-    handler_registry.register_domain("notification", NotificationHandler())
 
     # All domains — webhook delivery (filters by tenant internally)
     for domain in ("workflow", "notification", "dispatch", "deathsync", "social"):

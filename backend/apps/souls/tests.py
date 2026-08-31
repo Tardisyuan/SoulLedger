@@ -429,10 +429,17 @@ class TestCivilizationGateDoesNotFailOpen:
     modelled here, so *unknown* silently meant *reborn*.
     """
 
+    # Written out by hand on purpose: expectations that come from
+    # `TENANT_CIVILIZATION` itself would follow it wherever it went, which is
+    # the failure this class exists to catch. **But a hand-written list can be
+    # short** — this one was, GR_HADES was missing after the Greek tenant went
+    # live, and nothing said so. `test_the_hand_written_list_covers_every_
+    # configured_tenant` below is the half that catches that.
     KNOWN = {
         "CN_DIYU": Civilization.CHINESE,
         "EU_HEAVEN_HELL": Civilization.EUROPEAN,
         "EG_DUAT": Civilization.EGYPTIAN,
+        "GR_HADES": Civilization.GREEK,
     }
 
     def _soul_in(self, code):
@@ -445,8 +452,24 @@ class TestCivilizationGateDoesNotFailOpen:
     def test_configured_tenant_codes_still_map(self, db, code, expected):
         assert self._soul_in(code).civilization == expected
 
+    def test_the_hand_written_list_covers_every_configured_tenant(self):
+        """两半各干一件事:上面那条不从被测的映射取期望,这条保证它不漏。
+
+        缺 GREEK 的时候,上面那条**全绿** —— 它只说「列出来的三个还对」,
+        从不说「列出来的就是全部」。
+        """
+        from apps.souls.models import TENANT_CIVILIZATION
+
+        assert set(self.KNOWN) == set(TENANT_CIVILIZATION), (
+            f"手写名单 {sorted(self.KNOWN)} 与配置里的 "
+            f"{sorted(TENANT_CIVILIZATION)} 不一致"
+        )
+        assert dict(TENANT_CIVILIZATION) == self.KNOWN, (
+            "名单里的对应关系与配置不符"
+        )
+
     def test_unrecognised_tenant_code_is_unknown_not_chinese(self, db):
-        soul = self._soul_in("GR_HADES_NOT_WIRED_UP_YET")
+        soul = self._soul_in("NO_SUCH_TENANT_CODE")
         assert soul.civilization == UNKNOWN_CIVILIZATION
         assert soul.civilization != Civilization.CHINESE
 
