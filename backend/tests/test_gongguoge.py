@@ -157,10 +157,32 @@ def seeded(db):
 
 @pytest.fixture
 def articles(seeded):
+    """The GONGGUOGE articles — the subject of every count in this file."""
     return {
         statute.code: statute
         for statute in Statute.objects.filter(corpus=StatuteCorpus.GONGGUOGE)
     }
+
+
+@pytest.fixture
+def every_article(seeded):
+    """**Every** statute, whatever its corpus.
+
+    The two clause guards below use this instead of `articles`.
+
+    Their subject list was `corpus=GONGGUOGE`, and today that happens to cover
+    every article that could fail: a census of all 172 rows found 為X功/過 in
+    74 of them and all 74 are GONGGUOGE. **But that is a property of the data,
+    not of the check.** `HELL_LAW` is a deliberately empty Chinese corpus
+    member; an article added there with a price and no clause would be
+    invisible to a guard that filters by corpus name.
+
+    Costs nothing to widen: the regex selects its own subjects and the other
+    98 rows contribute zero matches. The counting tests keep the narrow
+    fixture, because a count of 74 is a fact about GONGGUOGE and not about the
+    table.
+    """
+    return {statute.code: statute for statute in Statute.objects.all()}
 
 
 def _expected_codes():
@@ -481,7 +503,7 @@ def _cn_number(text):
 
 
 @pytest.mark.django_db
-def test_every_priced_act_in_the_text_is_a_clause(articles):
+def test_every_priced_act_in_the_text_is_a_clause(every_article):
     """A 「為X功／過」 in the prose with no clause behind it is a value the
     ledger cannot award, and nothing else here would notice.
 
@@ -508,7 +530,7 @@ def test_every_priced_act_in_the_text_is_a_clause(articles):
     `nullifiers` rather than `clauses`.
     """
     faults = []
-    for code, statute in sorted(articles.items()):
+    for code, statute in sorted(every_article.items()):
         body = re.sub(r"〔[^〕]*〕", "", statute.text_zh or "")
         priced = len(_PRICE.findall(body))
         carried = len((statute.payload_json or {}).get("clauses", []))
@@ -525,7 +547,7 @@ def test_every_priced_act_in_the_text_is_a_clause(articles):
 
 
 @pytest.mark.django_db
-def test_every_priced_act_carries_the_value_the_text_gives_it(articles):
+def test_every_priced_act_carries_the_value_the_text_gives_it(every_article):
     """条数对上了,**值**也要对上。
 
     上面那条只比条数。`ANCHOR_POINTS` 只钉了 8 篇约 17 个条款,而全语料约 200 个 ——
@@ -539,7 +561,7 @@ def test_every_priced_act_carries_the_value_the_text_gives_it(articles):
     过期的总数。
     """
     faults = []
-    for code, statute in sorted(articles.items()):
+    for code, statute in sorted(every_article.items()):
         body = re.sub(r"〔[^〕]*〕", "", statute.text_zh or "")
         priced = [
             (_cn_number(num), 1 if kind == "功" else -1)

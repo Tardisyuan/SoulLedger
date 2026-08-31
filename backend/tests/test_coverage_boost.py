@@ -502,7 +502,10 @@ class TestPermissionCache:
         assert result is False
 
     def test_cache_miss_after_ttl_expiry(self, cache):
-        cache._ttl = 0
+        # `_fallback_ttl`,不是 `_ttl`。进程内的兜底有自己的、短得多的 TTL ——
+        # 一次撤销到不了别的 worker 的字典,所以那个数字就是「已撤销的授权还被
+        # 认可」的窗口宽度。`_ttl` 现在只管 Redis 里那条共享的。
+        cache._fallback_ttl = 0
         cache.set("GUARDIAN", "karma.read", True)
         time.sleep(0.01)
         result = cache.get("GUARDIAN", "karma.read")
