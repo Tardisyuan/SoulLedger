@@ -385,6 +385,20 @@ function paginated(results: unknown[]) {
 }
 
 /**
+ * Endpoints a page may call that no spec models, and that are genuinely fine
+ * as an empty list.
+ *
+ * Deliberately short and deliberately explicit. Anything not here that falls
+ * through fails the test — see `ApiMock.assertEverythingWasHandled`.
+ */
+const BACKGROUND_PATHS: RegExp[] = [
+  /^\/notifications\//,
+  /^\/menus\//,
+  /^\/social\//,
+  /^\/audit-logs\//,
+];
+
+/**
  * A tiny in-browser API server. Handlers registered later win, so a test can
  * override any default with `api.on(...)` — that is how the destructive
  * checks (500s, 409 conflicts) are driven.
@@ -392,6 +406,21 @@ function paginated(results: unknown[]) {
 export class ApiMock {
   /** Every intercepted request, in order. Assert against this. */
   readonly calls: RecordedCall[] = [];
+
+  /** Every WebSocket URL the page opened, minus the dev server's own HMR
+   *  socket. See `interceptWebSockets`. */
+  readonly socketUrls: string[] = [];
+
+  /** The origin the app actually sent its API requests to.
+   *
+   *  Read from the first intercepted request rather than from
+   *  `process.env.NEXT_PUBLIC_API_URL`: the browser resolves that at build
+   *  time from `.env.local`, and the Playwright process does not load that
+   *  file — so a test that recomputed it from the environment compared the
+   *  app's real target against a different string and failed on a correct
+   *  app. Measured 2026-08-31: browser `192.168.2.200:8000`, test process
+   *  `localhost:8000`. */
+  apiOrigin: string | null = null;
 
   private routes: { method: string; matcher: RegExp; handler: MockHandler }[] = [];
 
@@ -436,10 +465,44 @@ export class ApiMock {
       }
     }
     // Unmatched: an empty page, which is what the untested background
-    // requests (notifications, menus, stats) should look like. Recorded with
-    // handled=false so a test can notice if something it cares about fell
-    // through.
+    // requests (notifications, menus, stats) should look like.
+    //
+    // **Recording `handled=false` was not enough.** Nothing ever read the
+    // flag — a repo-wide grep for it matched only this class's own writes —
+    // so the day the app starts calling a new endpoint, that endpoint gets a
+    // confident `200 {results: []}` and every spec stays green. The comment
+    // in workflow.spec.ts:140 wrote the trap down and stepped around it.
+    //
+    // `assertEverythingWasHandled()` below turns the flag into a check, and
+    // `BACKGROUND_PATHS` names the fall-throughs that are meant to be
+    // fall-throughs. A path not in that list is a spec's problem, not the
+    // fixture's.
     return { body: paginated([]) };
+  }
+
+  /** Requests that fell through to the empty-page default, minus the expected ones. */
+  unexpectedUnhandled(): RecordedCall[] {
+    return this.calls.filter(
+      (call) => !call.handled && !BACKGROUND_PATHS.some((re) => re.test(call.path))
+    );
+  }
+
+  /**
+   * Fail if the app called an endpoint this mock does not model.
+   *
+   * Called from `setupAuthenticatedPage`'s teardown. The message names the
+   * paths, because the useful answer is "add a handler for these", not
+   * "something was unhandled".
+   */
+  assertEverythingWasHandled(): void {
+    const stray = this.unexpectedUnhandled();
+    if (stray.length === 0) return;
+    const lines = stray.map((c) => `  ${c.method} ${c.path}`).join("\n");
+    throw new Error(
+      `ApiMock 没有模型化这些请求,它们拿到了一个默认的 200 空列表:\n${lines}\n` +
+        `请给它们注册 handler,或者(确实是背景噪音的话)加进 BACKGROUND_PATHS。\n` +
+        `一个静默的 200 空页会让「应用开始调一个新端点」这件事对整套 e2e 不可见。`
+    );
   }
 
   /** The defaults every spec starts from. */
@@ -562,6 +625,66 @@ export class ApiMock {
     this.on("GET", "/workflow/templates/", []);
     this.on("GET", "/workflows/", paginated([WORKFLOW_INSTANCE]));
 
+    // ── Reference lists the sidebar's admin pages read ──
+    //
+    // These six were **not modelled** until 2026-08-31: /users, /tenants,
+    // /realms, /actors, /auth/profile/ and /death-sync/registrations/ all fell
+    // through to the empty-page default, so the specs that "cover" those pages
+    // were asserting against a fabricated empty list and would have stayed
+    // green through any regression in what the page renders.
+    // `e2e/the-api-mock-models-what-the-app-calls.spec.ts` is what found them,
+    // and is what stops the seventh from being added silently.
+    this.on("GET", "/users/", paginated([
+      { ...TEST_USER, is_active: true, last_login: "2026-08-30T10:00:00Z" },
+      {
+        id: 2,
+        username: "test_judge",
+        display_name: "测试判官",
+        email: "judge@soulledger.test",
+        role: "JUDGE",
+        tenant: TEST_USER.tenant,
+        is_active: true,
+        last_login: null,
+      },
+    ]));
+    this.on("GET", "/auth/profile/", { ...TEST_USER, is_active: true });
+    this.on("GET", "/tenants/", paginated([
+      { id: 1, code: "CN_DIYU", display_name: "中国地府", is_active: true },
+      { id: 2, code: "EU_HEAVEN_HELL", display_name: "欧洲天堂地狱", is_active: true },
+    ]));
+    this.on("GET", "/realms/", paginated([
+      {
+        id: 1,
+        realm_code: "DY_01",
+        name_zh: "第一殿",
+        name_en: "First Court",
+        civilization: "CHINESE",
+        realm_type: "PURGATORY",
+        tier: 1,
+        is_eternal: false,
+      },
+    ]));
+    this.on("GET", "/actors/", paginated([
+      {
+        id: 1,
+        name: "阎罗王",
+        name_zh: "阎罗王",
+        name_en: "Yama King",
+        role: "JUDGE",
+        civilization: "CHINESE",
+        is_active: true,
+      },
+    ]));
+    this.on("GET", "/death-sync/registrations/", paginated([
+      {
+        id: "11111111-1111-1111-1111-111111111111",
+        source_system: "civil-registry",
+        idempotency_key: "reg-001",
+        status: "PROCESSED",
+        request_timestamp: "2026-08-30T09:00:00Z",
+      },
+    ]));
+
     // ── Recycle bin ──
     this.on("GET", "/recycle-bin/", { results: [RECYCLE_BIN_ENTRY], count: 1 });
     this.on("POST", "/recycle-bin/restore/", { restored: 1 + RECYCLE_BIN_ENTRY.dependent_count });
@@ -583,6 +706,27 @@ function corsHeaders(request: Request): Record<string, string> {
     "Access-Control-Allow-Headers": "authorization,content-type,x-tenant-id",
     "Access-Control-Max-Age": "86400",
   };
+}
+
+/**
+ * Records every WebSocket this page opens, and answers none of them.
+ *
+ * `page.route` only covers HTTP, so `lib/ws/client.ts` escaped the mock
+ * entirely: a regression that pointed the socket at the wrong host was
+ * invisible to the whole suite. This does not simulate a server — it records
+ * the URL, which is the part a spec can assert on, and lets the client's own
+ * retry/backoff run against a socket that never opens (what it already does
+ * today whenever the dev server has no channel layer).
+ */
+export async function interceptWebSockets(page: Page, mock: ApiMock): Promise<void> {
+  page.on("websocket", (ws) => {
+    // Next's own hot-reload socket rides on the page origin and is not the
+    // app talking to its API. Excluded by path, not by host — on a machine
+    // where the API and the dev server share a host, a host filter would drop
+    // the socket this exists to watch.
+    if (ws.url().includes("/_next/")) return;
+    mock.socketUrls.push(ws.url());
+  });
 }
 
 /** Installs the interceptor for every `/api/v1/**` request on this page. */
@@ -610,6 +754,7 @@ export async function mockApi(page: Page, mock: ApiMock = new ApiMock().register
       })(),
       handled: false,
     };
+    mock.apiOrigin ??= url.origin;
     mock.calls.push(call);
 
     const reply = await mock.resolve(call);
@@ -663,6 +808,7 @@ export async function seedAuthState(page: Page): Promise<void> {
  */
 export async function setupAuthenticatedPage(page: Page): Promise<ApiMock> {
   const api = await mockApi(page);
+  await interceptWebSockets(page, api);
   await seedAuthState(page);
   return api;
 }

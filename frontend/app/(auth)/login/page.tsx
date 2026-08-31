@@ -26,7 +26,11 @@ export default function LoginPage() {
       const tokens = res.data;
       // Store access token in sessionStorage (not cookie) to limit XSS exposure
       sessionStorage.setItem("soulledger_access", tokens.access);
-      document.cookie = `soulledger_refresh=${tokens.refresh}; path=/; max-age=604800; SameSite=Lax`;
+      // `Secure` only over https — it is dropped on plain http, which is what
+      // `npm run dev` and the e2e suite serve. Same rule as the refresh
+      // interceptor's; see lib/api/client.ts::refreshCookie.
+      const secure = location.protocol === "https:" ? "; Secure" : "";
+      document.cookie = `soulledger_refresh=${tokens.refresh}; path=/; max-age=604800; SameSite=Lax${secure}`;
 
       // Populate TenantContext so downstream components have tenant/user info
       if (tokens.user) {

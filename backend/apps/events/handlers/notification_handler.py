@@ -69,6 +69,25 @@ class NotificationHandler(DomainEventHandler):
             related_id=related_id,
         )
 
+        # The row's id goes into the payload the WebSocketHandler will send.
+        #
+        # Measured 2026-08-29, counting inside the handlers:
+        #     rows before=0  at_WS_push=0  after=1
+        #     push_payload_has_id=False    row_id=1
+        # — the push carried no id, so a client could not deduplicate against
+        # what it already had and had to re-fetch the list instead. Combined
+        # with the push arriving first, "notification received → refresh →
+        # the list does not have it" was a reproducible window.
+        #
+        # This handler is registered *before* WebSocketHandler (see
+        # `configure_default_handlers`), and both read the same envelope
+        # object, so mutating the payload here is what the socket sends.
+        payload_target = payload.get("notification")
+        if isinstance(payload_target, dict):
+            payload_target["id"] = notification.id
+        else:
+            payload["id"] = notification.id
+
         # WebSocket delivery is NOT done here — the EventBus registry also has
         # WebSocketHandler registered for the "notification" domain, so the WS
         # push happens automatically via the registry dispatch.  Calling

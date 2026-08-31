@@ -66,9 +66,11 @@ class FakeWebSocket {
 const lastSocket = () => FakeWebSocket.instances[FakeWebSocket.instances.length - 1];
 
 function setToken(token: string | null) {
+  // sessionStorage, not a cookie — the WS clients read only sessionStorage
+  // now. See src/__tests__/support/wsHarness.ts::setToken for why.
   document.cookie = "soulledger_access=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
   sessionStorage.clear();
-  if (token !== null) document.cookie = `soulledger_access=${token}; path=/`;
+  if (token !== null) sessionStorage.setItem("soulledger_access", token);
 }
 
 let errorSpy: jest.SpyInstance;

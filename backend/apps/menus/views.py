@@ -19,6 +19,24 @@ from .serializers import (
     MenuTreeSerializer,
 )
 
+#: What `MenuSerializer` reaches for on every row it renders.
+#:
+#: `GET /menus/` measured **37 queries** for ~16 menu rows on 2026-08-29 —
+#: `get_children` and `get_buttons` each issued one per node, recursively — and
+#: the sidebar calls this endpoint on every page load. `GET /menus/tree/` was
+#: 15, because `tree` had already built a `children_map` by hand.
+#:
+#: Two levels of `children` because the seeded tree is two deep. A third level
+#: would fall back to per-node queries — slower, never wrong — rather than
+#: silently returning less.
+_MENU_PREFETCH = (
+    "buttons",
+    "children",
+    "children__buttons",
+    "children__children",
+    "children__children__buttons",
+)
+
 
 class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelViewSet):
     """
@@ -66,13 +84,17 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # toggle to reveal there and Menu.all_objects is not exposed to it.
         show_deleted = self.request.query_params.get('show_deleted', '').lower() in ('1', 'true', 'yes')
         if getattr(user, 'role', None) == 'ADMIN':
-            return Menu.all_objects.all() if show_deleted else Menu.objects.all()
+            base = Menu.all_objects if show_deleted else Menu.objects
+            return base.all().prefetch_related(*_MENU_PREFETCH)
         # `roles` was consulted by `tree` and ignored here — and here is what the
         # sidebar calls (`useSidebarMenus` -> `menusApi.list()`), so a VIEWER was
         # served /tenants and /organizations, both roles=["ADMIN"]. Measured, not
         # inferred: 200 with 15 rows. Only ADMIN holds `menu.manage`, so no
         # non-ADMIN write path narrows with it.
-        return visible_menus(Menu.objects.filter(is_active=True), user)
+        return visible_menus(
+            Menu.objects.filter(is_active=True).prefetch_related(*_MENU_PREFETCH),
+            user,
+        )
 
     def destroy(self, request, *args, **kwargs):
         """Soft-delete, recording who and why. The default ModelViewSet
