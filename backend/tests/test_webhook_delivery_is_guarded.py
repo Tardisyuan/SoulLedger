@@ -93,9 +93,29 @@ def _run_on_commit_callbacks():
             fn()
 
 
-def _deliver(envelope):
-    """Run the handler with the network stubbed, returning the request it made."""
+def _record(envelope):
+    """跑 handler,返回它**记下**的投递行。不发 HTTP。
+
+    2026-09-01 之后 handler 只写 `EventWebhookDelivery` 行,真正的 HTTP 在
+    `events.deliver_webhook` 任务里(M26 的后半:把投递从请求线程上挪走,
+    并让失败有人重试)。所以订阅过滤在这里断,签名在任务上断。
+
+    `_run_on_commit_callbacks` 仍然需要:`django_db` 把测试裹在一个**永不提交**
+    的 atomic 里,而入队挂在 `on_commit` 上。入队本身会失败(测试环境没有
+    broker),`_enqueue` 吞掉它 —— 那正是「入队失败不算数据丢失」的设计:行还在。
+    """
     from apps.events.handlers.webhook_handler import WebhookHandler
+    from apps.events.models import EventWebhookDelivery
+
+    before = set(EventWebhookDelivery.objects.values_list("id", flat=True))
+    with _run_on_commit_callbacks():
+        WebhookHandler().handle(envelope)
+    return list(EventWebhookDelivery.objects.exclude(id__in=before))
+
+
+def _run_delivery_task(delivery):
+    """把一条已记录的投递交给真正的任务跑,返回它发出的请求。"""
+    from apps.events.tasks import deliver_event_webhook
 
     sent = []
 
@@ -113,26 +133,22 @@ def _deliver(envelope):
 
         return _R()
 
-    # `_run_on_commit_callbacks` because `handle` defers the delivery to
-    # `transaction.on_commit` (see M26 — a 10-second blocking HTTP call was
-    # holding the publisher's transaction and its row locks open).
-    # `pytest.mark.django_db` wraps each test in an atomic block that **never
-    # commits**, so without this the callback never runs and every assertion
-    # below reads `sent == []` — a failure whose cause is the fixture, not the
-    # code under test.
     with patch("urllib.request.urlopen", side_effect=fake_urlopen), patch(
         "apps.events.handlers.webhook_handler._reject_if_not_publicly_routable",
         lambda url: None,
-    ), _run_on_commit_callbacks():
-        WebhookHandler().handle(envelope)
+    ):
+        deliver_event_webhook.apply(args=[str(delivery.id)])
     return sent
 
 
 @pytest.mark.django_db
 def test_a_delivery_is_signed_with_the_configured_secret(wired):
     _, hook = wired
-    sent = _deliver(_Envelope("DEATH_SYNC_RECEIVED", domain="death_sync"))
-    assert len(sent) == 1, "the handler sent nothing; the probe proves nothing"
+    recorded = _record(_Envelope("DEATH_SYNC_RECEIVED", domain="death_sync"))
+    assert len(recorded) == 1, "handler 没有记下投递;下面的探针什么都证明不了"
+
+    sent = _run_delivery_task(recorded[0])
+    assert len(sent) == 1, "任务没有发出请求"
 
     body = sent[0].data
     header = sent[0].headers["X-soulledger-signature"]
@@ -142,13 +158,10 @@ def test_a_delivery_is_signed_with_the_configured_secret(wired):
     with_empty = "sha256=" + hmac.new(b"", body, hashlib.sha256).hexdigest()
 
     assert header == with_real, (
-        f"signature does not verify against `signing_secret`. Got {header}, "
-        f"expected {with_real}."
+        f"签名与 `signing_secret` 对不上。得到 {header},应为 {with_real}。"
     )
     assert header != with_empty, (
-        "the signature verifies against an EMPTY key -- anyone who can see the "
-        "body can forge it. `getattr(webhook, 'secret', '')` reads a field that "
-        "does not exist and silently degrades to no key at all."
+        "签名用空密钥就能复现 —— 任何看得见 body 的人都能伪造它。"
     )
 
 
@@ -157,26 +170,34 @@ def test_a_webhook_only_receives_the_events_it_subscribed_to(wired):
     _, hook = wired
     assert hook.events == ["DEATH_SYNC_RECEIVED"]
 
-    sent = _deliver(_Envelope("WORKFLOW_APPROVED"))
-    assert sent == [], (
-        "a webhook registered for death notifications was sent a workflow "
-        "event. The payload carries soul ids and verdicts, to a URL the "
-        "tenant supplied."
+    assert _record(_Envelope("WORKFLOW_APPROVED")) == [], (
+        "一个只订阅了死亡通知的 webhook 被记下了一条 workflow 投递。"
+        "载荷里带着 soul id 与裁决,而目标 URL 是租户自己给的。"
     )
-
-    sent = _deliver(_Envelope("DEATH_SYNC_RECEIVED", domain="death_sync"))
-    assert len(sent) == 1, (
-        "the subscribed event did not arrive -- the filter refuses everything"
+    assert len(_record(_Envelope("DEATH_SYNC_RECEIVED", domain="death_sync"))) == 1, (
+        "订阅了的事件没被记下 —— 过滤器把什么都拒了"
     )
 
 
 @pytest.mark.django_db
 def test_an_empty_subscription_list_still_means_everything(wired):
-    """`events=[]` is the plain reading of 'no filter', and must stay so."""
     _, hook = wired
     hook.events = []
     hook.save(update_fields=["events"])
-    assert len(_deliver(_Envelope("WORKFLOW_APPROVED"))) == 1
+    assert len(_record(_Envelope("WORKFLOW_APPROVED"))) == 1
+
+
+@pytest.mark.django_db
+def test_a_webhook_without_a_secret_records_nothing(wired):
+    """没有签名密钥就不记 —— 否则会攒下一堆永远发不出去的行。
+
+    任务侧也有同一道检查(它把行标成 ABANDONED),两处都要:handler 这道防止
+    行堆积,任务那道防止有人直接入队一条没密钥的投递。
+    """
+    _, hook = wired
+    hook.signing_secret = ""
+    hook.save(update_fields=["signing_secret"])
+    assert _record(_Envelope("DEATH_SYNC_RECEIVED", domain="death_sync")) == []
 
 
 @pytest.mark.parametrize(

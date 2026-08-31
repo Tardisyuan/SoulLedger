@@ -4,11 +4,7 @@ WebhookHandler — delivers events to external webhook endpoints.
 Reads webhook URLs from Tenant.webhook_configs.
 Only handles events for tenants that have webhooks configured.
 """
-import hashlib
-import hmac
-import json
 import logging
-import urllib.request
 
 from django.db import transaction
 
@@ -44,42 +40,43 @@ class WebhookHandler(DomainEventHandler):
         return bool(envelope.tenant_code)
 
     def handle(self, envelope: EventEnvelope) -> None:
-        """Deliver after the publisher's transaction commits.
+        """记下要投递什么(事务内),提交后交给 worker。
 
-        WHAT THIS FIXES. These handlers are dispatched synchronously from
-        inside the publisher's transaction — `Soul.save()` publishes
-        SOUL_CREATED immediately after `super().save()`, and this handler then
-        ran `urllib.request.urlopen(..., timeout=10)` **once per active
-        webhook, inside that transaction**. Two consequences, and the second
-        is the serious one:
+        WHAT THIS USED TO DO. 这些 handler 是从**发布者的事务里**同步派发的 ——
+        `Soul.save()` 在 `super().save()` 之后立刻发 SOUL_CREATED,而这个 handler
+        当时就对每个活跃 webhook 跑一次 `urllib.request.urlopen(..., timeout=10)`,
+        串行。三个后果:
 
-        * a receiver that calls back into this API sees a database that does
-          not have the row the event announces — the transaction has not
-          committed, and the callback is served by a different connection;
-        * an open transaction holds its connection and its row locks for as
-          long as the remote host takes to answer. A slow or hanging endpoint
-          the *tenant* configured therefore holds this system's locks. Ten
-          seconds each, serially.
+        * 回调进本 API 的接收方,看到的库里没有这个事件宣布的那一行(事务未提交,
+          回调走的是另一条连接);
+        * **一个开着的事务会一直占着它的连接和行锁,直到远端答复为止** ——
+          而远端是租户自己配的,超时 10 秒;
+        * 请求要等它,而**失败之后没有任何东西记得这件事**。
 
-        `on_commit` moves the whole thing past the commit. Outside a
-        transaction it runs immediately, so callers that publish without one
-        are unaffected.
+        前两条 2026-08-31 用 `transaction.on_commit` 修掉了。第三条(以及「仍在
+        请求线程上」)是这一次:
 
-        WHAT THIS DOES NOT FIX. Delivery is still synchronous **on the request
-        thread** — after the commit, but before the response. Moving it to a
-        worker needs a task and a delivery log (death_sync has both:
-        `death_sync.deliver_webhook`), and doing that here without them would
-        drop failures on the floor instead of retrying them. Stated rather
-        than left as an omission that looks the same as a decision.
+        **记与发分开。** `_record_deliveries` 在事务里写 `EventWebhookDelivery`
+        行 —— 所以事务回滚时投递也不存在,一次没有发生的事件不留下投递记录。
+        提交之后 `_enqueue` 尽力把它们交给 worker;**入队失败不算数据丢失**,
+        行停在 PENDING,`events.retry_pending_webhooks` 会捡起来。
+
+        这段代码现在不发任何 HTTP。签名、重试、退避、放弃都在
+        `apps/events/tasks.py`。
         """
+        delivery_ids: list[str] = []
+        try:
+            delivery_ids = self._record_deliveries(envelope)
+        except Exception:
+            logger.exception(
+                "WebhookHandler: 记录投递失败 %s", envelope.event_type
+            )
+            return
+        if not delivery_ids:
+            return
 
-        def _deliver():
-            try:
-                self._deliver_to_tenant_webhooks(envelope)
-            except Exception:
-                logger.exception(
-                    "WebhookHandler: delivery failed for %s", envelope.event_type
-                )
+        def _dispatch():
+            self._enqueue(delivery_ids)
 
         # `on_commit` only when there *is* a transaction to commit.
         #
@@ -92,24 +89,29 @@ class WebhookHandler(DomainEventHandler):
         # is a plain attribute — no query, so it works under
         # pytest-django's DB blocker.
         if transaction.get_connection().in_atomic_block:
-            transaction.on_commit(_deliver)
+            transaction.on_commit(_dispatch)
         else:
-            _deliver()
+            _dispatch()
 
-    def _deliver_to_tenant_webhooks(self, envelope: EventEnvelope) -> None:
-        """Find and deliver to all active webhooks for the tenant."""
+    def _record_deliveries(self, envelope: EventEnvelope) -> list[str]:
+        """把该发的投递**记下来**,返回它们的 id。不发。
+
+        在发布者的事务里跑,所以事务回滚时这些行也不存在 —— 一次没有发生的事件
+        不该留下投递记录。真正的 HTTP 在 `events.deliver_webhook` 里。
+        """
+        from apps.events.models import EventWebhookDelivery
         from apps.tenants.models import Tenant
 
         tenant = Tenant.objects.filter(code=envelope.tenant_code).first()
         if tenant is None:
-            return
+            return []
 
         webhooks = getattr(tenant, "webhook_configs", None)
         if webhooks is None:
-            return
+            return []
 
-        payload_bytes = json.dumps(envelope.to_dict(), default=str).encode()
-
+        payload = envelope.to_dict()
+        ids = []
         for webhook in webhooks.filter(is_active=True):
             # `WebhookConfig.events` is documented as "event types to subscribe
             # to" and was never read: an integration registered for
@@ -121,46 +123,46 @@ class WebhookHandler(DomainEventHandler):
             subscribed = getattr(webhook, "events", None)
             if subscribed and envelope.event_type not in subscribed:
                 continue
-            try:
-                # `webhook.secret` does not exist -- the field is
-                # `signing_secret`. `getattr(..., "")` turned that typo into an
-                # empty HMAC key, silently. Measured: the signature this sent
-                # was reproducible by anyone who could see the body, and a
-                # receiver verifying against the real secret rejected 100% of
-                # EventBus deliveries while accepting death-sync's (which signs
-                # the same header name correctly) -- so the failure looked like
-                # a transport problem. No default here: a renamed field must
-                # raise, not degrade into no signature at all.
-                secret = webhook.signing_secret
-                if not secret:
-                    logger.error(
-                        "WebhookHandler: webhook %s has no signing secret; "
-                        "refusing to send an unsigned delivery",
-                        getattr(webhook, "id", "?"),
-                    )
-                    continue
-                sig = hmac.new(
-                    secret.encode(), payload_bytes, hashlib.sha256
-                ).hexdigest()
-
-                req = urllib.request.Request(
-                    webhook.url,
-                    data=payload_bytes,
-                    headers={
-                        "Content-Type": "application/json",
-                        "X-SoulLedger-Domain": envelope.domain,
-                        "X-SoulLedger-Event": envelope.event_type,
-                        "X-SoulLedger-Signature": f"sha256={sig}",
-                    },
-                    method="POST",
+            # `webhook.secret` does not exist -- the field is
+            # `signing_secret`. `getattr(..., "")` turned that typo into an
+            # empty HMAC key, silently: the signature was reproducible by
+            # anyone who could see the body. The signing now happens in the
+            # task, and it refuses a webhook with no secret rather than
+            # degrading into no signature at all -- but check here too, so a
+            # misconfigured endpoint does not accumulate rows nobody can send.
+            if not webhook.signing_secret:
+                logger.error(
+                    "WebhookHandler: webhook %s has no signing secret; "
+                    "refusing to record a delivery it could never sign",
+                    getattr(webhook, "id", "?"),
                 )
-                # Same SSRF surface as apps/death_sync/webhook_service.py:
-                # `url` is an unrestricted URLField and urlopen will happily
-                # reach 127.0.0.1 or 169.254.169.254. Validate before
-                # connecting, and honour the per-webhook timeout the model
-                # carries instead of a hardcoded one.
-                _reject_if_not_publicly_routable(webhook.url)
-                timeout = getattr(webhook, "timeout_seconds", None) or 10
-                urllib.request.urlopen(req, timeout=timeout)
+                continue
+            delivery = EventWebhookDelivery.objects.create(
+                webhook=webhook,
+                tenant=tenant,
+                domain=envelope.domain,
+                event_type=envelope.event_type,
+                payload_json=payload,
+            )
+            ids.append(str(delivery.id))
+        return ids
+
+    @staticmethod
+    def _enqueue(delivery_ids) -> None:
+        """交给 worker。**尽力而为,失败不算数据丢失。**
+
+        这里已经在事务提交之后,broker 可能是不可达的。行已经写下了,所以入队失败
+        只是让那条投递停在 PENDING —— `events.retry_pending_webhooks` 会把它捡起来。
+        异常一律吞掉:这段由**提交方**触发,抛出去会变成某个无关写请求的 500。
+        """
+        from apps.events.tasks import deliver_event_webhook
+
+        for delivery_id in delivery_ids:
+            try:
+                deliver_event_webhook.delay(delivery_id)
             except Exception:
-                logger.debug("WebhookHandler: delivery to %s failed", getattr(webhook, "url", "?"))
+                logger.warning(
+                    "WebhookHandler: 投递 %s 入队失败,留在 PENDING 等兜底任务",
+                    delivery_id,
+                )
+

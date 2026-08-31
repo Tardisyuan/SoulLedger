@@ -25,12 +25,33 @@ from apps.events.handlers.webhook_handler import WebhookHandler
 
 
 @pytest.fixture
-def spy(monkeypatch):
+def spy(monkeypatch, db):
+    """盯的是**入队**,不是投递。
+
+    2026-09-01 之后 handler 在事务里写 `EventWebhookDelivery` 行,提交之后才把
+    它们交给 worker(M26 后半)。所以「提交前不发生」这件事,现在指的是
+    `_enqueue` 不被调用 —— 记录本身**必须**在事务里发生,否则回滚时会留下一条
+    宣布了一件没发生的事的投递。
+    """
     calls = []
     monkeypatch.setattr(
-        WebhookHandler,
-        "_deliver_to_tenant_webhooks",
-        lambda self, envelope: calls.append(envelope),
+        WebhookHandler, "_enqueue", staticmethod(lambda ids: calls.append(list(ids)))
+    )
+    # handler 只有在真的记下了行时才会入队,所以要有一个订阅一切的 webhook。
+    from apps.death_sync.models import ExternalApiKey, WebhookConfig
+    from apps.tenants.models import Tenant
+
+    tenant = Tenant.objects.get_or_create(
+        code="CN_DIYU", defaults={"display_name": "CN_DIYU"}
+    )[0]
+    _, key_hash, key_prefix = ExternalApiKey.generate_key()
+    key = ExternalApiKey.objects.create(
+        tenant=tenant, name="oc", system_type="HOSPITAL",
+        key_hash=key_hash, key_prefix=key_prefix,
+    )
+    WebhookConfig.objects.create(
+        tenant=tenant, api_key=key, url="https://example.invalid/hook",
+        signing_secret="s", events=[],
     )
     return calls
 
@@ -49,10 +70,9 @@ def test_nothing_is_sent_before_the_commit(spy):
     with transaction.atomic():
         WebhookHandler().handle(_envelope())
         assert spy == [], (
-            "webhook 在事务提交前就发了 —— 接收方回调时看不到这一行,"
-            "而这条 HTTP 调用正占着一个开着的事务"
+            "投递在事务提交前就入队了 —— worker 可能在行可见之前就把它发出去"
         )
-    assert len(spy) == 1, "提交之后 webhook 没有发出"
+    assert len(spy) == 1, "提交之后没有入队"
 
 
 @pytest.mark.django_db(transaction=True)
@@ -63,7 +83,7 @@ def test_a_rolled_back_transaction_sends_nothing(spy):
     with pytest.raises(_RollbackError), transaction.atomic():
         WebhookHandler().handle(_envelope())
         raise _RollbackError
-    assert spy == [], "事务回滚了,webhook 还是发了出去"
+    assert spy == [], "事务回滚了,投递还是入了队"
 
 
 @pytest.mark.django_db(transaction=True)
