@@ -254,6 +254,29 @@ WORKFLOW_TEMPLATES = {
 # deliberate deletion from this list. `tests.py::TestTemplateApproverBasis`
 # asserts the two stay in step: every node in WORKFLOW_TEMPLATES either carries
 # an `actor` or appears here, never both and never neither.
+# 埃及的「常规」审判**就是**称心,所以两个 case type 指向同一份模板。
+#
+# 实测(2026-09-01,`_resolve_template`):
+#
+#     (EGYPTIAN, HEART_WEIGHING) → '欧西里斯称重流程'   3 节点
+#     (EGYPTIAN, ROUTINE)        → 'EGYPTIAN 审批流程'  1 节点  ← 泛用兜底
+#
+# 而 `frontend/src/config/workflow-templates.ts` 的 `EGYPTIAN_ROUTINE` 预设**叫**
+# 「心脏称重流程」、节点是两真之殿(Anubis/Osiris/Ammit),`caseType` 写的却是
+# `ROUTINE`。两边各自都合法(ROUTINE 在 `VALID_CASE_TYPES_BY_CIVILIZATION[EGYPTIAN]`
+# 里),所以既有的那几条跨栈守卫一条都不会红 —— 而一个埃及 ROUTINE 判决拿到的是
+# 一个泛用单节点流程,不是两真之殿。
+#
+# **这不是命名口味,是考据。** 埃及没有第二种「普通」审判:每个死者的心都要对着
+# 玛阿特的羽毛称一次(BD 125),称心就是那个程序本身。所以 ROUTINE 对埃及只能
+# 指向称重流程 —— 别的答案都要先说出「不称心的埃及审判」是什么。
+#
+# 指同一个 dict 对象而不是抄一份:抄一份就会漂,而这两个 key 说的是同一件事。
+# `tests/test_workflow_egyptian_routine_is_the_weighing.py` 钉住这个同一性。
+WORKFLOW_TEMPLATES[(Civilization.EGYPTIAN, CaseType.ROUTINE)] = WORKFLOW_TEMPLATES[
+    (Civilization.EGYPTIAN, CaseType.HEART_WEIGHING)
+]
+
 TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
     # 申诉审判流程
     "原殿阎王 · 复核": "「原殿」 is whichever court first tried the case. The node "

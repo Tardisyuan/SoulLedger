@@ -8,6 +8,24 @@ Cross-references in the comments below ("above", "below", "this file") were
 written when every table in this package was one module; see the package
 docstring in ``apps/actors/mythology/__init__.py``. Every table they name is
 importable from that package.
+
+NOT SPLIT PER CIVILIZATION, AND THAT IS THE POINT OF THE PARAGRAPH ABOVE.
+This is the largest file in the package (826 lines) and the only one holding
+all four cosmologies — ``actors_*`` and ``statutes_*`` are one civilization or
+one corpus each, so splitting this would follow the convention. It was
+considered on 2026-09-01, under CLAUDE.md's 500-line rule, and refused:
+
+**there are twenty positional cross-references in the comments below**
+("the tenth court's row below", "the paragraph above", "the seven terraces
+below", "superbia the root above them"). A mechanical split turns twenty true
+sentences into twenty possibly-false ones, silently — which is the exact
+defect class the 2026-08-29 audit spent 181 findings closing. ``REALM_PARENTS``
+sits between the Greek and Egyptian tables and links rows across them, so it
+has no obvious home either.
+
+Splitting this file is a rewrite of its commentary, not a move of its data. If
+it is done, do it as its own change with the cross-references rewritten one by
+one — not as a line-count exercise.
 """
 from apps.realms.models import RealmType
 
