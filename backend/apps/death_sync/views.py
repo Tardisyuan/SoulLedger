@@ -5,13 +5,14 @@ import hashlib
 import json
 
 from django.db import IntegrityError
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.permissions import HasValidApiKey, IsAdminPermission, TenantPermission
 from apps.core.tenant import scope_to_api_key, scope_to_tenant
+from apps.core.viewsets import AuditUserViewSetMixin
 from apps.death_sync.authentication import APIKeyAuthentication
 from apps.death_sync.models import (
     DeathRegistrationRequest,
@@ -30,7 +31,7 @@ from apps.death_sync.serializers import (
 from apps.death_sync.throttling import ApiKeyRateThrottle
 
 
-class ExternalApiKeyViewSet(viewsets.ModelViewSet):
+class ExternalApiKeyViewSet(AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for external API keys (admin only).
     """
@@ -65,9 +66,21 @@ class ExternalApiKeyViewSet(viewsets.ModelViewSet):
         serializer.validated_data['_raw_key'] = raw_key
 
 
-class DeathRegistrationViewSet(viewsets.ModelViewSet):
-    """
-    Death registration endpoints (API key authenticated).
+class DeathRegistrationViewSet(
+    AuditUserViewSetMixin, mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet
+):
+    """Death registration endpoints (API key authenticated). Create and read only.
+
+    `DeathRegistrationRequest`'s docstring says "Immutable after creation.
+    Used for idempotency, audit, and retry" — and this was a `ModelViewSet`,
+    so an external system could `DELETE .../register/{id}/` and get 204.
+    Measured 2026-08-29: the row then disappeared from `objects` and stayed in
+    `_base_manager` (soft delete), i.e. **a registration could be removed from
+    the audit trail by the same key that created it.**
+
+    Create + read, so PUT/PATCH/DELETE answer 405 instead. The retry path that
+    docstring mentions goes through the service, not through the client
+    editing its own record.
     """
     # `ApiKeyRateThrottle` existed since the app landed and was wired to nothing:
     # `DEFAULT_THROTTLE_CLASSES` held only `AnonRateThrottle`, and `grep
@@ -248,7 +261,7 @@ class DeathRegistrationReadViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
 
-class WebhookViewSet(viewsets.ModelViewSet):
+class WebhookViewSet(AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for webhook configurations (API key authenticated).
     """

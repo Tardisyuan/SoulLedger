@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 from apps.authentication.models import UserRole
 from apps.core.permissions import IsAdminPermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
-from apps.core.viewsets import CodenameViewSetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
 from .serializers import (
     ChangePasswordSerializer,
@@ -39,7 +39,7 @@ from .serializers import (
 # ---------------------------------------------------------------------------
 
 
-class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
+class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelViewSet):
     """
     用户管理 API
 

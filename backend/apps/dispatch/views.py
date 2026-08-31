@@ -279,7 +279,8 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CrossTenantJudgmentViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ModelViewSet):
+class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
+                                 DataScopeViewSetMixin, viewsets.ModelViewSet):
     """
     CrossTenantJudgment CRUD + actions.
     """

@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.viewsets import CodenameViewSetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
 from .access import menu_is_visible_to, visible_menus
 from .button_access import visible_buttons
@@ -20,7 +20,7 @@ from .serializers import (
 )
 
 
-class MenuViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
+class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelViewSet):
     """
     Menu CRUD ViewSet — supports tree structure with button resources.
     """
@@ -173,7 +173,7 @@ class MenuViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         return Response(accessible_menus)
 
 
-class MenuButtonViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
+class MenuButtonViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelViewSet):
     """
     MenuButton CRUD — 按钮资源管理。
 

@@ -16,6 +16,28 @@ from apps.ledger.services import LedgerService, RebirthNotApplicable
 from apps.souls.models import Soul, SoulState
 
 
+def _csv_safe(value):
+    """Neutralise a spreadsheet formula hiding in a data cell.
+
+    `csv.writer` quotes a cell that contains commas or quotes; it does not
+    care what the cell *starts* with. Excel and LibreOffice do: a cell whose
+    first character is one of ``= + - @`` (or a leading tab/CR, which some
+    versions strip before deciding) is parsed as a formula on open. Measured
+    2026-08-29: a soul named ``=HYPERLINK("http://evil","click")`` produced a
+    row that evaluates on open.
+
+    The name in that cell comes from an external death-registration feed, and
+    this export is a file a person opens on their own machine -- so the writer
+    of the value and the reader of the file need not be the same tenant.
+
+    A leading apostrophe is the fix spreadsheets themselves use: it makes the
+    cell literal text and is not shown. Applied to the rendered string, so the
+    ints and ISO timestamps in this row pass through untouched.
+    """
+    text = "" if value is None else str(value)
+    return "'" + text if text[:1] in ("=", "+", "-", "@", "\t", "\r") else text
+
+
 def _format_death_date(soul: Soul) -> str:
     """CSV-friendly death date, preserving BCE years the legacy
     soul.death_date property can't represent. year-month-day / year-month
@@ -233,23 +255,37 @@ class LedgerOverviewStatsView(APIView):
         tenant_stats = [v for v in tenant_map.values() if v['total_souls'] > 0]
 
         # Karma distribution buckets - scoped to tenant (S-H3)
+        #
+        # The two end buckets are UNBOUNDED (`min`/`max` of None). They used to
+        # be [-99999, -50) and [50, 99999), which left every soul outside
+        # ±99999 in no bucket at all: a chart called "distribution" whose bars
+        # summed to less than the total printed beside it. Measured
+        # 2026-08-29 on four souls -- `sum(karma_distribution) == 2`,
+        # `total_souls == 4`, the two with balances of ±200000 counted nowhere.
+        # Record weights have no upper bound, so those balances are reachable.
+        #
+        # The `> 50` label was also wrong at its own edge: the filter is
+        # `[50, 99999)` and the bucket below it is `[20, 50)`, so a balance of
+        # exactly 50 lands in the bucket labelled *greater than* 50. Labels now
+        # say `>= 50` and `< -50`, which is what the half-open intervals do.
         karma_buckets = [
-            {"label": "< -50", "min": -99999, "max": -50},
+            {"label": "< -50", "min": None, "max": -50},
             {"label": "-50 to -20", "min": -50, "max": -20},
             {"label": "-20 to -5", "min": -20, "max": -5},
             {"label": "-5 to 5", "min": -5, "max": 5},
             {"label": "5 to 20", "min": 5, "max": 20},
             {"label": "20 to 50", "min": 20, "max": 50},
-            {"label": "> 50", "min": 50, "max": 99999},
+            {"label": ">= 50", "min": 50, "max": None},
         ]
         bucket_counts = {}
         for i, b in enumerate(karma_buckets):
             # karmic_balance = merit_score - demerit_score, expressed via F()
-            bucket_counts[f'bucket_{i}'] = Count(
-                'id',
-                filter=Q(merit_score__gte=F('demerit_score') + b['min']) &
-                       Q(merit_score__lt=F('demerit_score') + b['max'])
-            )
+            condition = Q()
+            if b["min"] is not None:
+                condition &= Q(merit_score__gte=F('demerit_score') + b['min'])
+            if b["max"] is not None:
+                condition &= Q(merit_score__lt=F('demerit_score') + b['max'])
+            bucket_counts[f'bucket_{i}'] = Count('id', filter=condition)
         bucket_result = soul_qs.aggregate(**bucket_counts)
         for i, b in enumerate(karma_buckets):
             b["count"] = bucket_result.get(f'bucket_{i}', 0)
@@ -294,6 +330,12 @@ class LedgerOverviewStatsView(APIView):
             "karma_distribution": [
                 {"label": b["label"], "count": b["count"]} for b in karma_buckets
             ],
+            # The buckets partition the whole line, so this always equals
+            # `total_souls`. It is emitted rather than assumed so a reader of
+            # the chart can check it, and so `tests/test_karma_distribution_
+            # accounts_for_every_soul.py` has something to assert that does not
+            # depend on the bucket boundaries it is checking.
+            "karma_distribution_total": sum(b["count"] for b in karma_buckets),
             "recent_activity": recent_activity,
             "souls_by_realm": souls_by_realm,
         })
@@ -371,9 +413,14 @@ class LedgerExportStatsView(APIView):
         for soul in qs.iterator(chunk_size=1000):
             writer.writerow([
                 str(soul.id),
-                soul.name,
-                soul.civilization,
-                soul.current_state,
+                # `_csv_safe` on every free-text cell. `name` is the one an
+                # external system supplies, but `civilization` and
+                # `current_state` are strings too and a whitelist that has to
+                # be re-checked whenever a column is added is the kind of
+                # guard that silently stops covering things.
+                _csv_safe(soul.name),
+                _csv_safe(soul.civilization),
+                _csv_safe(soul.current_state),
                 soul.merit_score,
                 soul.demerit_score,
                 soul.karmic_balance,
@@ -381,7 +428,7 @@ class LedgerExportStatsView(APIView):
                 # for BCE deaths, so build the CSV cell from the raw
                 # year/month/day instead — e.g. "-612-03" for a
                 # year+month-only BCE record.
-                _format_death_date(soul),
+                _csv_safe(_format_death_date(soul)),
                 soul.create_time.isoformat(),
             ])
 
