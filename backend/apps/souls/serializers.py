@@ -128,6 +128,14 @@ class SoulRecordSerializer(serializers.ModelSerializer):
     # which is only ever True when the stored fingerprint still matches —
     # see apps.souls.dates.check_record_date / date_warning_fingerprint.
     date_problems = serializers.SerializerMethodField()
+    # Read-only since `SoulRecord.save()` derives it from the soul's tenant.
+    # It was writable before that, and it was the **only** thing that ever set
+    # it — a client could stamp a Greek soul's record CHINESE and the column
+    # would keep that answer, indexed. Silently ignoring the input would be
+    # worse than refusing it; DRF drops a read-only field instead of 400-ing,
+    # which is the behaviour the API's other derived field
+    # (`SoulSerializer.civilization`) already has.
+    civilization = serializers.CharField(read_only=True)
 
     class Meta:
         model = SoulRecord
