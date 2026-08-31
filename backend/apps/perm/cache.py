@@ -33,11 +33,21 @@ class PermissionCache:
     # these from, instead of raising AttributeError on the first miss.
     _retry_cooldown = 5
     _last_connect_failure: float | None = None
+    _fallback_ttl = 15
+    _key_prefix = ""
+    _ttl = 300
 
     def __init__(self):
         self._redis_client = None
         self._fallback_cache: dict[tuple[str, str], tuple[bool, float]] = {}
         self._ttl = getattr(settings, 'CACHE_PERMISSION_TTL', 300)
+        # The process-local fallback gets its OWN, much shorter TTL — see
+        # `CACHE_PERMISSION_FALLBACK_TTL` in config/settings.py. A revocation
+        # in one worker cannot reach another worker's dict, so this number is
+        # the width of the window in which a revoked grant is still honoured
+        # while Redis is down.
+        self._fallback_ttl = getattr(settings, 'CACHE_PERMISSION_FALLBACK_TTL', 15)
+        self._key_prefix = getattr(settings, 'CACHE_PERMISSION_KEY_PREFIX', '')
         self._retry_cooldown = getattr(settings, 'CACHE_REDIS_RETRY_COOLDOWN', 5)
         self._last_connect_failure: float | None = None
         self._connect_redis()
@@ -66,8 +76,13 @@ class PermissionCache:
         return (time.monotonic() - self._last_connect_failure) >= self._retry_cooldown
 
     def _make_key(self, role: str, codename: str) -> str:
-        """Generate Redis key for role+codename pair."""
-        return f"perm:{role}:{codename}"
+        """Generate Redis key for role+codename pair.
+
+        Prefixed. Unprefixed `perm:*` is shared by every process pointed at the
+        same Redis — which includes other deployments and, as CLAUDE.md
+        records, test runs.
+        """
+        return f"{self._key_prefix}perm:{role}:{codename}"
 
     def get(self, role: str, codename: str) -> bool | None:
         """
@@ -95,7 +110,7 @@ class PermissionCache:
         entry = self._fallback_cache.get(cache_key)
         if entry is not None:
             value, timestamp = entry
-            if time.time() - timestamp < self._ttl:
+            if time.time() - timestamp < self._fallback_ttl:
                 return value
             # Expired - remove from cache
             del self._fallback_cache[cache_key]
@@ -159,7 +174,7 @@ class PermissionCache:
         # Invalidate Redis using SCAN (non-blocking) instead of KEYS
         if self._redis_client is not None:
             try:
-                pattern = f"perm:{role}:*"
+                pattern = f"{self._key_prefix}perm:{role}:*"
                 keys = []
                 cursor = 0
                 while True:

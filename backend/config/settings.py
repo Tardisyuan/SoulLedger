@@ -253,6 +253,31 @@ SIMPLE_JWT = {
 # Permission Cache TTL (seconds)
 CACHE_PERMISSION_TTL = int(os.getenv("CACHE_PERMISSION_TTL", "300"))  # 5 minutes
 
+# How long the PROCESS-LOCAL fallback may hold a grant when Redis is down.
+#
+# Much shorter than CACHE_PERMISSION_TTL on purpose. The Redis entry is shared,
+# so a revocation clears it for everyone at once (`invalidate_role` SCANs and
+# deletes, and every write endpoint in apps/perm/views.py calls it). The
+# fallback dict is per process: worker A's revocation cannot reach worker B's
+# memory, so B keeps answering from a copy nobody can invalidate until the
+# entry expires on its own.
+#
+# 300s was that window. 15s bounds it. The cost is more DB lookups during a
+# Redis outage — which is a degraded mode already, and the thing being cached
+# is one indexed query.
+CACHE_PERMISSION_FALLBACK_TTL = int(
+    os.getenv("CACHE_PERMISSION_FALLBACK_TTL", "15")
+)
+
+# Namespace for the shared permission keys.
+#
+# `perm:{role}:{codename}` carried no deployment prefix, so two deployments
+# pointed at one Redis share each other's grants — and CLAUDE.md already
+# records test runs writing `perm:*` into the shared box. Defaults to the empty
+# string so an existing deployment's keys are not orphaned by an upgrade; set
+# it per environment.
+CACHE_PERMISSION_KEY_PREFIX = os.getenv("CACHE_PERMISSION_KEY_PREFIX", "")
+
 # How long PermissionCache waits after a failed Redis connect attempt before
 # retrying, instead of reconnecting on every cache miss. See apps/perm/cache.py.
 CACHE_REDIS_RETRY_COOLDOWN = int(os.getenv("CACHE_REDIS_RETRY_COOLDOWN", "5"))  # seconds
