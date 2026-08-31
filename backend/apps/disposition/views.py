@@ -59,11 +59,39 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
         POST /disposition/{id}/execute/
         """
         disposition = self.get_object()
-        if disposition.is_executed:
-            return Response({"error": "Already executed"}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = DispositionExecuteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        # THE `is_executed` CHECK HAS TO HAPPEN UNDER THE LOCK.
+        #
+        # It used to be an unlocked read at the top of this method. Two threads
+        # both read `is_executed=False` and both went on to execute. Measured on
+        # a PostgreSQL 16 clone:
+        #
+        #     P3 results = {'b': 'executed', 'a': 'executed'}   state = SETTLED
+        #     P3 events  = ['REINCARNATION_TRIGGERED', 'REINCARNATION_TRIGGERED',
+        #                   'STATE_CHANGED', 'SOUL_CREATED']
+        #
+        # The state machine held (one STATE_CHANGED), **but this guard stopped
+        # nothing**: two executions, two events, `executed_at` written twice.
+        # A guard that reads before the row is locked answers a question about
+        # the past.
+        from django.db import transaction
+
+        with transaction.atomic():
+            locked = (
+                Disposition.objects.select_for_update()
+                .filter(pk=disposition.pk)
+                .first()
+            )
+            if locked is None:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            if locked.is_executed:
+                return Response(
+                    {"error": "Already executed"}, status=status.HTTP_400_BAD_REQUEST
+                )
+            disposition = locked
 
         if not DispositionService.execute(disposition):
             # `execute` now returns False, and writes nothing, when the soul is
