@@ -43,6 +43,29 @@ from django.urls import get_resolver
 # exempt from *codename* enforcement, an unrelated axis; most of them are
 # tenant-scoped through the helper and so do not belong here at all.
 # ---------------------------------------------------------------------------
+#: 这份契约**解析不出模型**的视图。它们不是豁免 —— 豁免是 EXEMPT,那里的条目
+#: 有模型、有租户字段、只是走别的路。这里的条目是「这个检查根本看不见你」,
+#: 而看不见比不合格更危险:输出是 SKIP,读起来和通过一模一样。
+#:
+#: M5 就是这么发现的:`UserViewSet` 没有类级 `queryset` 也没有 `serializer_class`,
+#: 于是 `_model_for` 返回 None、这条断言 skip。**把它 `get_queryset` 里的
+#: `scope_to_tenant` 删掉,这份契约照样全绿。**
+MODEL_UNRESOLVABLE: dict[str, str] = {
+    "LoginView": (
+        "认证端点,不服务任何模型 —— 它的工作就是把凭据换成 token。"
+        "没有租户可隔离:调用者此刻还没有身份。"
+    ),
+    "RefreshView": (
+        "同 LoginView。刷新一个已签发的 token,不读任何租户数据。"
+    ),
+}
+#: `UserViewSet` 曾经在上面这份名单里。**移除它不是因为记录写好了,是因为它现在
+#: 真的受这份契约约束了** —— 给它加了类级 `queryset = User.objects.all()`,
+#: `_model_for` 于是解析得出 User,断言开始求值。变异实证:把它 `get_queryset()`
+#: 里的 `scope_to_tenant` 换成恒等函数,加 queryset **之前** 34 条全绿,
+#: 之后 1 条红。**一条记录得很好的豁免,和一个真的会红的检查,不是一回事。**
+
+
 EXEMPT: dict[str, str] = {
     "DispatchRecordViewSet": (
         "Inherently cross-tenant by design: a dispatch record is a transfer "
@@ -201,9 +224,21 @@ def _params():
 @pytest.mark.parametrize("view_cls,pattern", _params())
 def test_tenant_bearing_viewset_scopes_through_the_helper(view_cls, pattern):
     model = _model_for(view_cls)
+    assert model is not None or view_cls.__name__ in MODEL_UNRESOLVABLE, (
+        f"{view_cls.__name__}:这份契约解析不出它服务的模型(没有类级 `queryset`,"
+        f"序列化器的 Meta 也拿不到),于是 **这条断言从未被求值过**。\n"
+        f"实测:删掉 `UserViewSet.get_queryset` 里的 `scope_to_tenant`,这份契约"
+        f"照样通过 —— 它的 SKIP 输出就是断言从未运行的直接证据,而模块 docstring "
+        f"写着「每个 router 注册的 viewset 都过这个模块」。\n"
+        f"要么给它一个类级 `queryset`,要么写进 MODEL_UNRESOLVABLE 并说明"
+        f"它的租户隔离由什么保证。"
+    )
+    if model is None:
+        # 已在名单里,理由记在那儿。
+        return
     path = _tenant_path(model)
     if path is None:
-        pytest.skip(f"{model and model.__name__} cannot reach Tenant")
+        pytest.skip(f"{model.__name__} cannot reach Tenant")
 
     name = view_cls.__name__
     if name in EXEMPT:
@@ -269,4 +304,28 @@ def test_the_contract_covers_something():
     assert len(covered) >= 20, (
         f"Only {len(covered)} tenant-bearing viewsets found; the discovery in "
         f"{__file__} is probably broken rather than the codebase having shrunk."
+    )
+
+
+def test_the_unresolvable_list_names_only_routed_viewsets():
+    """名单里的名字必须还在路由上。
+
+    一条指着已删视图的记录,读起来和一条生效的记录完全一样,而它记录的那个理由
+    早已无人可依。与 EXEMPT 的同名守卫同一个道理。
+    """
+    routed = {cls.__name__ for cls in _registered_viewsets()}
+    stale = sorted(set(MODEL_UNRESOLVABLE) - routed)
+    assert stale == [], f"MODEL_UNRESOLVABLE 里这些视图已不在路由上:{stale}"
+
+
+def test_the_unresolvable_list_does_not_cover_a_resolvable_viewset():
+    """反方向:模型现在解析得出来了,就该受契约约束,而不是继续躺在名单里。"""
+    redundant = sorted(
+        name
+        for cls in _registered_viewsets()
+        if (name := cls.__name__) in MODEL_UNRESOLVABLE and _model_for(cls) is not None
+    )
+    assert redundant == [], (
+        f"这些视图的模型现在解析得出来了,把它们从 MODEL_UNRESOLVABLE 里删掉,"
+        f"契约才会真的对它们生效:{redundant}"
     )

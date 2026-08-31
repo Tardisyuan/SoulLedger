@@ -103,6 +103,16 @@ class UserViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
             return UserUpdateSerializer
         return UserManagementSerializer
 
+    #: 类级 queryset,给 `tests/test_tenant_scoping_contract.py` 用。
+    #:
+    #: 这个视图按 action 选 queryset 与 serializer,所以两者都没有类级默认值 ——
+    #: 而那份契约靠它们解析「这个视图服务哪个模型」。解析不出来时它 **skip**,
+    #: 于是这个视图的租户隔离**从未被那份契约检查过**:实测把下面
+    #: `get_queryset()` 里的 `scope_to_tenant` 换成恒等函数,契约 34 条全绿。
+    #:
+    #: 运行时行为不变:DRF 定义了 `get_queryset()` 就不会读这个属性。
+    queryset = User.objects.all()
+
     def get_queryset(self):
         qs = User.objects.select_related('tenant').all()
 

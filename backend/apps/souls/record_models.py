@@ -69,7 +69,12 @@ class SoulRecord(AuditUserFields, models.Model):
         max_length=20,
         choices=Civilization.choices,
         default=Civilization.CHINESE,
-        help_text="Derived from soul's tenant (kept for query convenience)",
+        help_text=(
+            "Derived from the soul's tenant on save (kept for query "
+            "convenience). Not authoritative: routing and the ledger read "
+            "`soul.civilization`, the property. This column exists so a "
+            "report can filter records without joining Soul."
+        ),
     )
     tenant = models.ForeignKey(
         "tenants.Tenant",
@@ -338,6 +343,18 @@ class SoulRecord(AuditUserFields, models.Model):
         # Auto-populate tenant from soul if not set
         if self.tenant is None and self.soul_id is not None:
             self.tenant = self.soul.tenant
+        # …and the civilization, which the help_text has claimed since the
+        # column was added and **no code performed**. `default=CHINESE` meant a
+        # record on a Greek soul was stamped CHINESE, forever, and the only
+        # writer was a client PATCHing the serializer's writable field. There
+        # is an index on this column; it indexed a wrong answer.
+        #
+        # Derived from `soul.civilization` (the property, which reads the
+        # tenant code) rather than from `self.tenant`: they agree by
+        # construction, and going through the property keeps one definition of
+        # the mapping instead of two.
+        if self.soul_id is not None:
+            self.civilization = self.soul.civilization
         super().save(*args, **kwargs)
         if is_new:
             if SoulRecord._batch_mode:

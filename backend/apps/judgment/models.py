@@ -469,6 +469,26 @@ class Statute(AuditUserFields, models.Model):
     def __str__(self):
         return f"{self.code} {self.title_en or self.title_zh}"
 
+    def save(self, *args, **kwargs):
+        """`clean()` is not called by anything Django runs on a write.
+
+        `Model.save()` does not call `full_clean()`, DRF serializers do not
+        call it either (`is_valid()` runs *serializer* validators), and
+        `update_or_create` goes straight to `save()`. So the corpus/civilization
+        cross-check below was reachable only from a ModelForm — and the only
+        form in this project is the admin's. **Every path that actually writes
+        statutes — `seed_mythology`, migrations' data steps, the shell — went
+        around it.** A check nothing calls is [[verification-mechanisms-fail-
+        silently-here]]: it reads as enforcement and enforces nothing.
+
+        `self.clean()`, not `self.full_clean()`: `full_clean` would also run
+        field-level validation (blank/choices/max_length) on rows that
+        migrations write with deliberately partial values, which would turn a
+        narrow invariant into a broad and untested one.
+        """
+        self.clean()
+        return super().save(*args, **kwargs)
+
     def clean(self):
         expected = CORPUS_CIVILIZATION.get(self.corpus)
         if expected is not None and self.civilization != expected:
