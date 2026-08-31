@@ -46,6 +46,43 @@ interface TokenRefreshResponse {
   refresh: string;
 }
 
+/** The access token, from sessionStorage — **not** from a cookie.
+ *
+ * Cookie-first was the old order, and it is what made the 24-hour
+ * `soulledger_access` cookie written by `rotateRefreshToken` win over the
+ * short-lived value the same function had just put in sessionStorage. See the
+ * comment there. Any cookie left over from that era is cleared on the next
+ * refresh, and never read.
+ */
+export function getAccessToken(): string | null {
+  if (typeof sessionStorage === "undefined") return null;
+  return sessionStorage.getItem("soulledger_access");
+}
+
+function clearAccessCookie(): void {
+  if (typeof document === "undefined") return;
+  document.cookie = "soulledger_access=; path=/; max-age=0";
+}
+
+/** The refresh cookie, with `Secure` wherever `Secure` can work.
+ *
+ * Not unconditional: `Secure` cookies are dropped on plain http, which is
+ * what `npm run dev` and the Playwright suite serve — so hardcoding it would
+ * log everyone out locally while looking like a security fix. Keyed on the
+ * page's own protocol instead.
+ *
+ * `HttpOnly` is deliberately absent and has to be: the API is cross-origin
+ * and takes its credential in an `Authorization` header, so JS must be able
+ * to read this value. That is a property of the auth design, not an oversight.
+ */
+function refreshCookie(value: string): string {
+  const secure =
+    typeof location !== "undefined" && location.protocol === "https:"
+      ? "; Secure"
+      : "";
+  return `soulledger_refresh=${value}; path=/; max-age=604800; SameSite=Lax${secure}`;
+}
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
@@ -53,7 +90,7 @@ export const api = axios.create({
 
 // Add JWT token and tenant ID to every request
 api.interceptors.request.use((config) => {
-  const token = getCookie("soulledger_access") || (typeof sessionStorage !== "undefined" ? sessionStorage.getItem("soulledger_access") : null);
+  const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -112,7 +149,7 @@ function isAuthEndpoint(url: string | undefined): boolean {
   return /\/auth\/(login|register|refresh)\/?$/.test(url || "");
 }
 
-async function rotateRefreshToken(refresh: string): Promise<string> {
+export async function rotateRefreshToken(refresh: string): Promise<string> {
   // SIMPLE_JWT has ROTATE_REFRESH_TOKENS=True and BLACKLIST_AFTER_ROTATION=True,
   // so the server blacklists the refresh token we just sent and issues a new
   // one in `data.refresh`. It MUST be persisted (same cookie the login flow
@@ -122,12 +159,26 @@ async function rotateRefreshToken(refresh: string): Promise<string> {
     `${API_BASE_URL}/auth/refresh/`,
     { refresh }
   );
-  if (typeof document !== "undefined") {
-    document.cookie = `soulledger_access=${data.access}; path=/; max-age=86400; SameSite=Lax`;
-    document.cookie = `soulledger_refresh=${data.refresh}; path=/; max-age=604800; SameSite=Lax`;
-  }
+  // THE ACCESS TOKEN DOES NOT GO IN A COOKIE.
+  //
+  // This used to write `soulledger_access` as a cookie with
+  // `max-age=86400` — **24 hours, for a token that lives 30 minutes** — and
+  // the readers preferred the cookie over sessionStorage. The login path never
+  // did that; it wrote sessionStorage only. So the design's own rule ("the
+  // access token lives in sessionStorage and dies with the tab") held until
+  // the first silent refresh and then quietly stopped holding: from that
+  // moment the token survived tab closes and browser restarts for a day, and
+  // was readable by any script on the page.
+  //
+  // `clearAccessCookie()` is not tidiness — a browser that has been through
+  // the old code still has that cookie, and the reader would keep preferring
+  // it over the fresh token in sessionStorage.
   if (typeof sessionStorage !== "undefined") {
     sessionStorage.setItem("soulledger_access", data.access);
+  }
+  clearAccessCookie();
+  if (typeof document !== "undefined") {
+    document.cookie = refreshCookie(data.refresh);
   }
   return data.access;
 }

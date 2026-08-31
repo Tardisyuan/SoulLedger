@@ -6,7 +6,7 @@ Targets: WorkflowService, DeathSyncService, PermissionCache, EventService,
 """
 import time
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -719,61 +719,108 @@ class TestRealtimeEventPublisher:
     """Test RealtimeEventPublisher publish methods."""
 
     @patch("channels.layers.get_channel_layer")
-    def test_publish_workflow(self, mock_get_cl):
+    def test_publish_workflow(self, mock_get_cl, django_capture_on_commit_callbacks):
         mock_cl = MagicMock()
-        mock_cl.group_send = MagicMock()
+        mock_cl.group_send = AsyncMock()
         mock_get_cl.return_value = mock_cl
-        RealtimeEventPublisher.publish_workflow(
-            "WORKFLOW_APPROVED", {"workflow_id": "123"},
-            tenant_code="CN_DIYU",
-        )
+        # `WebSocketHandler` defers its `group_send` to
+        # `transaction.on_commit` (M40: the push was going out inside the
+        # publisher's uncommitted transaction, announcing a row no other
+        # connection could read). `django_db` never commits, so without
+        # this the callback never runs and the assertion below reads
+        # `group_send` as uncalled — a fixture artefact, not a defect.
+        with django_capture_on_commit_callbacks(execute=True):
+            RealtimeEventPublisher.publish_workflow(
+                "WORKFLOW_APPROVED", {"workflow_id": "123"},
+                tenant_code="CN_DIYU",
+            )
         mock_cl.group_send.assert_called_once()
 
     @patch("channels.layers.get_channel_layer")
-    def test_publish_dispatch(self, mock_get_cl):
+    def test_publish_dispatch(self, mock_get_cl, django_capture_on_commit_callbacks):
         mock_cl = MagicMock()
-        mock_cl.group_send = MagicMock()
+        mock_cl.group_send = AsyncMock()
         mock_get_cl.return_value = mock_cl
-        RealtimeEventPublisher.publish_dispatch(
-            "DISPATCH_CREATED", {"dispatch_id": "456"},
-            tenant_code="EU_HEAVEN_HELL",
-        )
+        # `WebSocketHandler` defers its `group_send` to
+        # `transaction.on_commit` (M40: the push was going out inside the
+        # publisher's uncommitted transaction, announcing a row no other
+        # connection could read). `django_db` never commits, so without
+        # this the callback never runs and the assertion below reads
+        # `group_send` as uncalled — a fixture artefact, not a defect.
+        with django_capture_on_commit_callbacks(execute=True):
+            RealtimeEventPublisher.publish_dispatch(
+                "DISPATCH_CREATED", {"dispatch_id": "456"},
+                tenant_code="EU_HEAVEN_HELL",
+            )
         mock_cl.group_send.assert_called_once()
 
     @patch("channels.layers.get_channel_layer")
-    def test_publish_deathsync(self, mock_get_cl):
+    def test_publish_deathsync(self, mock_get_cl, django_capture_on_commit_callbacks):
         mock_cl = MagicMock()
-        mock_cl.group_send = MagicMock()
+        mock_cl.group_send = AsyncMock()
         mock_get_cl.return_value = mock_cl
-        RealtimeEventPublisher.publish_deathsync(
-            "DEATH_SYNC_RECEIVED", {"reg_id": "789"},
-            tenant_code="CN_DIYU",
-        )
+        # `WebSocketHandler` defers its `group_send` to
+        # `transaction.on_commit` (M40: the push was going out inside the
+        # publisher's uncommitted transaction, announcing a row no other
+        # connection could read). `django_db` never commits, so without
+        # this the callback never runs and the assertion below reads
+        # `group_send` as uncalled — a fixture artefact, not a defect.
+        with django_capture_on_commit_callbacks(execute=True):
+            RealtimeEventPublisher.publish_deathsync(
+                "DEATH_SYNC_RECEIVED", {"reg_id": "789"},
+                tenant_code="CN_DIYU",
+            )
         mock_cl.group_send.assert_called_once()
 
     @patch("channels.layers.get_channel_layer")
-    def test_publish_notification(self, mock_get_cl):
+    def test_publish_notification(self, mock_get_cl, django_capture_on_commit_callbacks):
         mock_cl = MagicMock()
-        mock_cl.group_send = MagicMock()
+        mock_cl.group_send = AsyncMock()
         mock_get_cl.return_value = mock_cl
-        RealtimeEventPublisher.publish_notification(
-            user_id=42, notification_data={"msg": "Hello"},
-            tenant_code="CN_DIYU",
-        )
-        mock_cl.group_send.assert_called_once()
+        # `WebSocketHandler` defers its `group_send` to
+        # `transaction.on_commit` (M40: the push was going out inside the
+        # publisher's uncommitted transaction, announcing a row no other
+        # connection could read). `django_db` never commits, so without
+        # this the callback never runs and the assertion below reads
+        # `group_send` as uncalled — a fixture artefact, not a defect.
+        with django_capture_on_commit_callbacks(execute=True):
+            RealtimeEventPublisher.publish_notification(
+                user_id=42, notification_data={"msg": "Hello"},
+                tenant_code="CN_DIYU",
+            )
+        # TWO, not one: the tenant group and the user's own group.
+        #
+        # This said `assert_called_once()` and passed — because `group_send`
+        # was a plain `MagicMock`, so `async_to_sync` recorded the first call
+        # and then raised `object MagicMock can't be used in 'await'
+        # expression` on the await. The handler swallowed that, the loop never
+        # reached the second group, and "called once" was true *of a publish
+        # that had crashed*. With a real `AsyncMock` the send completes and
+        # the count is what the code actually does.
+        assert mock_cl.group_send.call_count == 2, mock_cl.group_send.call_args_list
+        groups = [call.args[0] for call in mock_cl.group_send.call_args_list]
+        assert any("CN_DIYU" in g for g in groups), groups
+        assert any("42" in g for g in groups), groups
 
     @patch("channels.layers.get_channel_layer")
-    def test_publish_with_user_ids(self, mock_get_cl):
+    def test_publish_with_user_ids(self, mock_get_cl, django_capture_on_commit_callbacks):
         """publish with user_ids sends to tenant group + user groups."""
         mock_cl = MagicMock()
         # Make group_send a regular function (not async) to avoid async_to_sync warning
-        mock_cl.group_send = MagicMock(return_value=None)
+        mock_cl.group_send = AsyncMock(return_value=None)
         mock_get_cl.return_value = mock_cl
-        RealtimeEventPublisher.publish(
-            domain="workflow", event_type="TEST",
-            payload={}, tenant_code="CN_DIYU",
-            user_ids=[1, 2, 3],
-        )
+        # `WebSocketHandler` defers its `group_send` to
+        # `transaction.on_commit` (M40: the push was going out inside the
+        # publisher's uncommitted transaction, announcing a row no other
+        # connection could read). `django_db` never commits, so without
+        # this the callback never runs and the assertion below reads
+        # `group_send` as uncalled — a fixture artefact, not a defect.
+        with django_capture_on_commit_callbacks(execute=True):
+            RealtimeEventPublisher.publish(
+                domain="workflow", event_type="TEST",
+                payload={}, tenant_code="CN_DIYU",
+                user_ids=[1, 2, 3],
+            )
         # At minimum, the tenant group should be called
         assert mock_cl.group_send.call_count >= 1
 
@@ -786,15 +833,22 @@ class TestRealtimeEventPublisher:
         )
 
     @patch("channels.layers.get_channel_layer")
-    def test_publish_with_permission_gate(self, mock_get_cl):
+    def test_publish_with_permission_gate(self, mock_get_cl, django_capture_on_commit_callbacks):
         mock_cl = MagicMock()
-        mock_cl.group_send = MagicMock()
+        mock_cl.group_send = AsyncMock()
         mock_get_cl.return_value = mock_cl
-        RealtimeEventPublisher.publish(
-            domain="workflow", event_type="TEST",
-            payload={}, tenant_code="CN_DIYU",
-            permission="workflow.read",
-        )
+        # `WebSocketHandler` defers its `group_send` to
+        # `transaction.on_commit` (M40: the push was going out inside the
+        # publisher's uncommitted transaction, announcing a row no other
+        # connection could read). `django_db` never commits, so without
+        # this the callback never runs and the assertion below reads
+        # `group_send` as uncalled — a fixture artefact, not a defect.
+        with django_capture_on_commit_callbacks(execute=True):
+            RealtimeEventPublisher.publish(
+                domain="workflow", event_type="TEST",
+                payload={}, tenant_code="CN_DIYU",
+                permission="workflow.read",
+            )
         call_args = mock_cl.group_send.call_args
         message = call_args[0][1]
         assert message["data"]["_permission"] == "workflow.read"

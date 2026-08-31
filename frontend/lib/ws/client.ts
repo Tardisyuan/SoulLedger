@@ -33,16 +33,11 @@ function getWebSocketUrl(): string {
 }
 
 function getAccessToken(): string | null {
-  if (typeof document === "undefined") return null;
-  const cookieVal = document.cookie
-    .split("; ")
-    .find((c) => c.startsWith("soulledger_access="))
-    ?.split("=")[1];
-  if (cookieVal) return cookieVal;
-  if (typeof sessionStorage !== "undefined") {
-    return sessionStorage.getItem("soulledger_access");
-  }
-  return null;
+  // sessionStorage only. This used to read the `soulledger_access` **cookie**
+  // first, which is how a 24-hour cookie written by the refresh interceptor
+  // outranked the 30-minute token beside it. See lib/api/client.ts.
+  if (typeof sessionStorage === "undefined") return null;
+  return sessionStorage.getItem("soulledger_access");
 }
 
 export class WSClient {

@@ -32,9 +32,11 @@ carrying the tenant's signature.
 """
 import hashlib
 import hmac
+from contextlib import contextmanager
 from unittest.mock import patch
 
 import pytest
+from django.db import transaction
 
 from apps.death_sync.webhook_service import _BLOCKED_NETWORKS, _validate_webhook_url
 
@@ -71,6 +73,26 @@ def wired(db):
     return tenant, hook
 
 
+
+@contextmanager
+def _run_on_commit_callbacks():
+    """Run whatever `transaction.on_commit` collects inside this block.
+
+    `django_capture_on_commit_callbacks` is the pytest-django fixture for
+    this; a context manager keeps `_deliver` usable from a plain helper
+    function rather than threading a fixture through every caller.
+    """
+    connection = transaction.get_connection()
+    start = len(connection.run_on_commit)
+    try:
+        yield
+    finally:
+        callbacks = [fn for _sids, fn, *_ in connection.run_on_commit[start:]]
+        del connection.run_on_commit[start:]
+        for fn in callbacks:
+            fn()
+
+
 def _deliver(envelope):
     """Run the handler with the network stubbed, returning the request it made."""
     from apps.events.handlers.webhook_handler import WebhookHandler
@@ -91,10 +113,17 @@ def _deliver(envelope):
 
         return _R()
 
+    # `_run_on_commit_callbacks` because `handle` defers the delivery to
+    # `transaction.on_commit` (see M26 — a 10-second blocking HTTP call was
+    # holding the publisher's transaction and its row locks open).
+    # `pytest.mark.django_db` wraps each test in an atomic block that **never
+    # commits**, so without this the callback never runs and every assertion
+    # below reads `sent == []` — a failure whose cause is the fixture, not the
+    # code under test.
     with patch("urllib.request.urlopen", side_effect=fake_urlopen), patch(
         "apps.events.handlers.webhook_handler._reject_if_not_publicly_routable",
         lambda url: None,
-    ):
+    ), _run_on_commit_callbacks():
         WebhookHandler().handle(envelope)
     return sent
 

@@ -83,9 +83,19 @@ export class FakeWebSocket {
 export const lastSocket = () => FakeWebSocket.instances[FakeWebSocket.instances.length - 1];
 
 export function setToken(token: string | null) {
+  // sessionStorage, not a cookie. The WS clients used to read the
+  // `soulledger_access` **cookie** first, which is what let a 24-hour cookie
+  // written by the refresh interceptor outrank the 30-minute token beside it
+  // (see lib/api/client.ts). They now read sessionStorage only, so a harness
+  // that seeds a cookie seeds nothing.
   document.cookie = "soulledger_access=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
   sessionStorage.clear();
-  if (token !== null) document.cookie = `soulledger_access=${token}; path=/`;
+  if (token !== null) sessionStorage.setItem("soulledger_access", token);
+}
+
+/** Plant a stale `soulledger_access` cookie without touching sessionStorage. */
+export function setLegacyCookieToken(token: string) {
+  document.cookie = `soulledger_access=${token}; path=/`;
 }
 
 /** Handle onto the per-test console spy, filled in by the registered hook. */

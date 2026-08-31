@@ -110,13 +110,23 @@ describe('API Client — lib/api.ts', () => {
 
   // ── getCookie (tested via request interceptor) ───────────────────────────
   describe('getCookie (via request interceptor)', () => {
-    it('should read token from document.cookie', () => {
-      document.cookie = 'soulledger_access=my-jwt-token; path=/';
+    it('reads the token from sessionStorage', () => {
+      sessionStorage.setItem('soulledger_access', 'my-jwt-token');
       const config = applyRequestInterceptor({ headers: {} }) as Record<string, unknown>;
       expect((config.headers as Record<string, string>).Authorization).toBe('Bearer my-jwt-token');
     });
 
-    it('should return null for missing cookie', () => {
+    it('ignores a soulledger_access cookie entirely', () => {
+      // 这条曾经断的是相反的事。access token 被写进一个 `max-age=86400` 的
+      // cookie(而它只活 30 分钟),读取端又是 cookie 优先 —— 于是「关标签页即
+      // 失效」这条设计,在第一次静默刷新之后就不再成立。现在 access 只住在
+      // sessionStorage,而刷新时会清掉残留的那个 cookie。
+      document.cookie = 'soulledger_access=stale-24h; path=/';
+      const config = applyRequestInterceptor({ headers: {} }) as Record<string, unknown>;
+      expect((config.headers as Record<string, string | undefined>).Authorization).toBeUndefined();
+    });
+
+    it('should return null when nothing is stored', () => {
       const config = applyRequestInterceptor({ headers: {} }) as Record<string, unknown>;
       expect((config.headers as Record<string, string | undefined>).Authorization).toBeUndefined();
     });
@@ -144,23 +154,17 @@ describe('API Client — lib/api.ts', () => {
 
   // ── Request interceptor: Authorization ───────────────────────────────────
   describe('request interceptor — Authorization', () => {
-    it('should add Bearer token from cookie', () => {
-      document.cookie = 'soulledger_access=cookie-token; path=/';
-      const config = applyRequestInterceptor({ headers: {} }) as Record<string, unknown>;
-      expect((config.headers as Record<string, string>).Authorization).toBe('Bearer cookie-token');
-    });
-
-    it('should add Bearer token from sessionStorage when cookie is absent', () => {
+    it('should add Bearer token from sessionStorage', () => {
       sessionStorage.setItem('soulledger_access', 'session-token');
       const config = applyRequestInterceptor({ headers: {} }) as Record<string, unknown>;
       expect((config.headers as Record<string, string>).Authorization).toBe('Bearer session-token');
     });
 
-    it('should prefer cookie over sessionStorage', () => {
-      document.cookie = 'soulledger_access=cookie-wins; path=/';
-      sessionStorage.setItem('soulledger_access', 'session-loses');
+    it('a stale cookie does not win over sessionStorage', () => {
+      document.cookie = 'soulledger_access=cookie-stale; path=/';
+      sessionStorage.setItem('soulledger_access', 'session-current');
       const config = applyRequestInterceptor({ headers: {} }) as Record<string, unknown>;
-      expect((config.headers as Record<string, string>).Authorization).toBe('Bearer cookie-wins');
+      expect((config.headers as Record<string, string>).Authorization).toBe('Bearer session-current');
     });
 
     it('should not set Authorization when no token exists', () => {
