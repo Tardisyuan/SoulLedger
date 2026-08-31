@@ -1,6 +1,6 @@
 """CHINESE — GONGGUOGE. TRANSCRIBED here, from 《太微仙君功過格》 (1171).
 
-The other transcribed corpus. The 73 articles themselves are in
+The other transcribed corpus. The 74 articles themselves are in
 ``gongguoge_entries.py``; this module holds the provenance, the notes every
 row carries, the gate table and the builder that expands the entries into
 seed rows.
@@ -80,7 +80,7 @@ GONGGUOGE_SOURCE = (
     "docs/lore-verification/gongguoge.md §1-§4。"
 )
 
-#: Carried by all 73. The one note that must never fall off a row.
+#: Carried by all 74. The one note that must never fall off a row.
 APPROPRIATION_NOTE = (
     "挪用聲明：《太微仙君功過格》是在世修道者每日自記的道德賬簿，不是冥府判案的法典。"
     "其原生賞罰為在世奪紀奪算（紀＝三百日、算＝三日，據《抱朴子·微旨》）、"
@@ -91,7 +91,7 @@ APPROPRIATION_NOTE = (
     "清《十戒功過格》序進一步把功過格掛靠於「陰律」，但同樣未提供任何編號條文。"
 )
 
-#: Carried by all 73 as well: the fungibility class is only half sourced.
+#: Carried by all 74 as well: the fungibility class is only half sourced.
 FUNGIBILITY_CLASS_NOTE = (
     "payload.fungibility_class 的兩個值 MONEY／LIFE 有明文依據——"
     "《文昌帝君功過格·凡例》：「功過有不可折者。如用財之百功，不可折致死人之百過。"
@@ -115,13 +115,13 @@ GONGGUOGE_GATES = {
 def _gongguoge_rows():
     """Expand GONGGUOGE_ENTRIES into the row shape `_seed_statutes` consumes.
 
-    Built rather than written out, because the parts that repeat 73 times —
+    Built rather than written out, because the parts that repeat 74 times —
     the appropriation note, the gate metadata, the corpus-wide payload keys —
     are exactly the parts that must not be allowed to differ between rows. The
     parts that are per-article (the text, every point value, every caveat) are
     literal above and are never derived from anything.
 
-    `ordinal` is continuous 1..73 in document order — 功格 then 過律 — and NOT
+    `ordinal` is continuous 1..74 in document order — 功格 then 過律 — and NOT
     the number within the 門, which is carried separately as
     `payload["gate_ordinal"]`. `Statute.Meta.ordering` sorts on `ordinal`, so a
     per-gate numbering would interleave 救濟門一 with 不仁門一 and read the

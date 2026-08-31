@@ -14,7 +14,15 @@ class AuditUserFields(SoftDeleteMixin, models.Model):
     These coexist with any existing created_at/updated_at fields.
 
     Auto-populates create_user/update_user from the current request context
-    (thread-local storage set by PermissionMiddleware).
+    — a `contextvar` (`apps/core/request_local.py`), not thread-local, and set
+    by `AuditUserViewSetMixin` (`apps/core/viewsets.py`), not by middleware.
+    The HTTP `PermissionMiddleware` this docstring used to name was deleted on
+    2026-08-28; it had never set anything here.
+
+    **So a viewset that does not carry that mixin writes rows with
+    `create_user = None`** — measured on eight of them 2026-08-29. That is
+    what `tests/test_every_writable_audit_viewset_sets_the_user.py` now walks
+    the real URLconf to prevent.
     """
     create_user = models.ForeignKey(
         "authentication.User",

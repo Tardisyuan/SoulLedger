@@ -98,11 +98,30 @@ class MenuSerializer(serializers.ModelSerializer):
         because that module's docstring says converging on one implementation
         is the point of the module -- and this was the fourth copy.
         """
-        from apps.menus.access import visible_menus
+        from apps.menus.access import menu_is_visible_to
 
-        children = visible_menus(
-            obj.children.filter(is_active=True), self._caller()
-        ).order_by("order")
+        # Filtered in Python off the prefetched related manager, not with a
+        # fresh `obj.children.filter(...)`. The queryset version issued one
+        # query per node and recursed: `GET /menus/` was 37 queries for ~16
+        # rows, on the endpoint the sidebar hits every page load. See
+        # `_MENU_PREFETCH` in views.py.
+        #
+        # `menu_is_visible_to` is the same predicate `visible_menus` applies
+        # row by row, so the answer is identical — `visible_menus` already
+        # evaluates `roles` in Python (JSONField `contains` is unsupported on
+        # SQLite; see apps/menus/access.py's header).
+        caller = self._caller()
+        if not getattr(caller, "is_authenticated", False):
+            # Fails closed, matching `visible_menus`.
+            return []
+        children = sorted(
+            (
+                child
+                for child in obj.children.all()
+                if child.is_active and menu_is_visible_to(child, caller)
+            ),
+            key=lambda m: (m.order, m.pk),
+        )
         return MenuSerializer(children, many=True, context=self.context).data
 
     def get_buttons(self, obj):
@@ -112,11 +131,20 @@ class MenuSerializer(serializers.ModelSerializer):
         `JUDGE GET /menus/buttons/ -> 200, n=1, ['tenant.delete']`, a button
         hanging off a `roles=["ADMIN"]` menu.
         """
-        from apps.menus.button_access import visible_buttons
+        from apps.menus.button_access import button_is_visible_to
 
-        buttons = visible_buttons(
-            obj.buttons.filter(is_active=True), self._caller()
-        ).order_by("order")
+        # Python-side for the same reason as `get_children` above.
+        caller = self._caller()
+        if not getattr(caller, "is_authenticated", False):
+            return []
+        buttons = sorted(
+            (
+                button
+                for button in obj.buttons.all()
+                if button.is_active and button_is_visible_to(button, caller)
+            ),
+            key=lambda b: (b.order, b.pk),
+        )
         return MenuButtonSerializer(buttons, many=True).data
 
     def _caller(self):

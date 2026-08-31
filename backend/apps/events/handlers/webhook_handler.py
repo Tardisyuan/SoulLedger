@@ -10,6 +10,8 @@ import json
 import logging
 import urllib.request
 
+from django.db import transaction
+
 from apps.events.event_bus import DomainEventHandler, EventEnvelope
 
 logger = logging.getLogger(__name__)
@@ -42,10 +44,57 @@ class WebhookHandler(DomainEventHandler):
         return bool(envelope.tenant_code)
 
     def handle(self, envelope: EventEnvelope) -> None:
-        try:
-            self._deliver_to_tenant_webhooks(envelope)
-        except Exception:
-            logger.exception("WebhookHandler: delivery failed for %s", envelope.event_type)
+        """Deliver after the publisher's transaction commits.
+
+        WHAT THIS FIXES. These handlers are dispatched synchronously from
+        inside the publisher's transaction — `Soul.save()` publishes
+        SOUL_CREATED immediately after `super().save()`, and this handler then
+        ran `urllib.request.urlopen(..., timeout=10)` **once per active
+        webhook, inside that transaction**. Two consequences, and the second
+        is the serious one:
+
+        * a receiver that calls back into this API sees a database that does
+          not have the row the event announces — the transaction has not
+          committed, and the callback is served by a different connection;
+        * an open transaction holds its connection and its row locks for as
+          long as the remote host takes to answer. A slow or hanging endpoint
+          the *tenant* configured therefore holds this system's locks. Ten
+          seconds each, serially.
+
+        `on_commit` moves the whole thing past the commit. Outside a
+        transaction it runs immediately, so callers that publish without one
+        are unaffected.
+
+        WHAT THIS DOES NOT FIX. Delivery is still synchronous **on the request
+        thread** — after the commit, but before the response. Moving it to a
+        worker needs a task and a delivery log (death_sync has both:
+        `death_sync.deliver_webhook`), and doing that here without them would
+        drop failures on the floor instead of retrying them. Stated rather
+        than left as an omission that looks the same as a decision.
+        """
+
+        def _deliver():
+            try:
+                self._deliver_to_tenant_webhooks(envelope)
+            except Exception:
+                logger.exception(
+                    "WebhookHandler: delivery failed for %s", envelope.event_type
+                )
+
+        # `on_commit` only when there *is* a transaction to commit.
+        #
+        # `transaction.on_commit` needs a live connection, and a bare
+        # `on_commit` broke ten existing tests that publish with no
+        # database at all — silently, because this method swallows its
+        # exceptions. Outside a transaction `on_commit` runs the
+        # callback immediately anyway, so this is the same semantics
+        # without requiring a connection to say so. `in_atomic_block`
+        # is a plain attribute — no query, so it works under
+        # pytest-django's DB blocker.
+        if transaction.get_connection().in_atomic_block:
+            transaction.on_commit(_deliver)
+        else:
+            _deliver()
 
     def _deliver_to_tenant_webhooks(self, envelope: EventEnvelope) -> None:
         """Find and deliver to all active webhooks for the tenant."""

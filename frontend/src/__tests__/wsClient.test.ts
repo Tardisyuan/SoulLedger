@@ -14,7 +14,7 @@
  */
 import { WSClient, type WSStatus } from "@/lib/ws/client";
 
-import { FakeWebSocket, installWsHarness, lastSocket, setToken } from "./support/wsHarness";
+import { FakeWebSocket, installWsHarness, lastSocket, setLegacyCookieToken, setToken } from "./support/wsHarness";
 
 const harness = installWsHarness();
 
@@ -40,7 +40,7 @@ describe("WSClient authentication gate", () => {
     expect(onStatusChange).not.toHaveBeenCalledWith("connecting");
   });
 
-  it("falls back to sessionStorage when the cookie is absent", () => {
+  it("takes the token from sessionStorage", () => {
     setToken(null);
     sessionStorage.setItem("soulledger_access", "session-tok");
 
@@ -49,14 +49,24 @@ describe("WSClient authentication gate", () => {
     expect(lastSocket().url).toContain("token=session-tok");
   });
 
-  it("prefers the cookie token over the sessionStorage one", () => {
-    setToken("cookie-tok");
-    sessionStorage.setItem("soulledger_access", "session-tok");
+  it("ignores a stale soulledger_access cookie", () => {
+    // 这条曾经是反过来的:「cookie 优先于 sessionStorage」。那正是缺陷 ——
+    // 刷新拦截器把 access 写成一个 `max-age=86400` 的 cookie(而 access 只活
+    // 30 分钟),读取端又是 cookie 优先,于是那个 24 小时的值一直赢。
+    // 现在两个 WS 客户端都只认 sessionStorage,而拦截器会清掉残留的 cookie。
+    setToken("session-tok");
+    setLegacyCookieToken("cookie-tok");
 
     new WSClient().connect();
 
-    expect(lastSocket().url).toContain("token=cookie-tok");
-    expect(lastSocket().url).not.toContain("session-tok");
+    expect(lastSocket().url).toContain("token=session-tok");
+    expect(lastSocket().url).not.toContain("cookie-tok");
+  });
+
+  it("没有 token 时不开 socket —— **断存在的反面**", () => {
+    setToken(null);
+    new WSClient().connect();
+    expect(FakeWebSocket.instances).toHaveLength(0);
   });
 
   it("percent-encodes the token into the query string", () => {

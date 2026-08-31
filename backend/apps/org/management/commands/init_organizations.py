@@ -147,11 +147,31 @@ class Command(BaseCommand):
                 parent = org_map[parent_code]
                 if org.parent != parent:
                     org.parent = parent
-                    org.save(update_fields=["parent"])
+                    # `level` as well as `parent`. `Organization.save()`
+                    # recomputes `level` from the parent — and then
+                    # `update_fields=["parent"]` left it out of the UPDATE
+                    # statement, so the computed value was discarded every
+                    # time. Measured on the shared box 2026-08-29:
+                    # `select level, count(*) from organizations group by 1`
+                    # returned `0 | 35` — the *whole table*, DIYU_01..10
+                    # included, at depth zero. `help_text` says the column is
+                    # "层级深度（用于权限计算）".
+                    #
+                    # org/tests.py:47 asserts `level == 1` through
+                    # `objects.create(parent=...)` — the one path that did
+                    # work — so the defect had a passing test sitting next to
+                    # it. `_fix_levels` below covers the rest: a child seen
+                    # before its parent computes from a stale parent level,
+                    # and this loop's order is the order of a literal list.
+                    org.save(update_fields=["parent", "level"])
                     self.stdout.write(f"    更新父组织: {code} -> {parent_code}")
 
             # 更新 org_map
             org_map[code] = org
+
+        fixed = self._fix_levels()
+        if fixed:
+            self.stdout.write(f"  修正层级深度: {fixed} 行")
 
         self.stdout.write(
             self.style.SUCCESS(
@@ -161,6 +181,33 @@ class Command(BaseCommand):
 
         # 打印树形结构
         self.print_tree()
+
+    def _fix_levels(self):
+        """Recompute every row's depth top-down, and report how many moved.
+
+        Not `for org in ...: org.save()` — that computes each row from
+        whatever its parent's *stored* level happens to be, which is the bug
+        one level up. Walking roots outward means a parent's depth is always
+        settled before its children are asked.
+
+        Covers rows this command did not touch as well: `HADES_NORSE` was
+        reparented by a migration, and nothing recomputes depth on that path
+        either.
+        """
+        rows = list(Organization.objects.all())
+        children: dict = {}
+        for org in rows:
+            children.setdefault(org.parent_id, []).append(org)
+
+        fixed = 0
+        frontier = [(org, 0) for org in children.get(None, [])]
+        while frontier:
+            org, depth = frontier.pop()
+            if org.level != depth:
+                Organization.objects.filter(pk=org.pk).update(level=depth)
+                fixed += 1
+            frontier.extend((child, depth + 1) for child in children.get(org.pk, []))
+        return fixed
 
     def print_tree(self):
         self.stdout.write("\n=== 组织架构树 ===")

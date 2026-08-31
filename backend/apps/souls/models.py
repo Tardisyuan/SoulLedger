@@ -242,8 +242,14 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         ),
     )
 
-    merit_score = models.IntegerField(default=0)
-    demerit_score = models.IntegerField(default=0)
+    merit_score = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+    )
+    demerit_score = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+    )
 
     tenant = models.ForeignKey(
         'tenants.Tenant',
@@ -259,6 +265,27 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         indexes = [
             models.Index(fields=["tenant", "current_state"]),
             models.Index(fields=["current_state"]),
+        ]
+        constraints = [
+            # 参与算术或路由决策的字段,过去一个约束都没有。`full_clean()` 实跑:
+            # `merit_score` 接受 −999999。对照:同一批模型里 birth/death/event 的
+            # month/day 都带 Min/Max —— **带约束的都是日期,参与算术的一个都没有。**
+            #
+            # validator 与 CheckConstraint 两道都加,守的不是同一条路:validator
+            # 被 DRF 的 ModelSerializer 抄进序列化器字段(API),CheckConstraint 由
+            # 数据库执行(ORM 直写、shell、迁移的数据步骤)。只加前者会得到一条
+            # `Model.save()` 不执行的规则 —— 见 `Statute.clean()` 那条。
+            #
+            # 下限 0:`_route_european` 的注释断言「culpa 是过失总额所以永不为负」,
+            # 而那句话此前是替一个没有任何约束的列做的保证。
+            models.CheckConstraint(
+                condition=models.Q(merit_score__gte=0),
+                name="soul_merit_score_not_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(demerit_score__gte=0),
+                name="soul_demerit_score_not_negative",
+            ),
         ]
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager

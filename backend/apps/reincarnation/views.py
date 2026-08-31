@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
-from apps.core.viewsets import CodenameViewSetMixin, DataScopeViewSetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.reincarnation.models import Reincarnation
 from apps.reincarnation.serializers import (
     RebirthRequestSerializer,
@@ -42,7 +42,8 @@ def _state_conflict(soul, target_state):
     )
 
 
-class ReincarnationViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ModelViewSet):
+class ReincarnationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
+                           DataScopeViewSetMixin, viewsets.ModelViewSet):
     queryset = Reincarnation.objects.select_related("soul", "disposition", "tenant").all()
     serializer_class = ReincarnationSerializer
     # CodenamePermission is what finally enforces the codenames below; before

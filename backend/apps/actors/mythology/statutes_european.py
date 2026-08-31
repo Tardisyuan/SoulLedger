@@ -1,6 +1,6 @@
 """EUROPEAN — DEADLY_SIN. TRANSCRIBED here, from Dante's Purgatorio X-XXVII.
 
-One of the two corpora whose text is written out in this package. Read the
+One of the five corpora whose text is written out in this package. Read the
 provenance contract in ``apps.actors.mythology`` before touching it: which
 corpus is transcribed and which is a pointer is the distinction that the
 withdrawn EU-DS-01..07 table was lost for want of.

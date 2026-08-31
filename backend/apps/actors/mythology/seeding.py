@@ -69,6 +69,55 @@ STATUTE_FIELDS = (
     "source_actor", "source_actor_field",
 )
 
+#: Columns this seeder deliberately does not own, and why.
+#:
+#: `--update` compares only the `*_FIELDS` tuples above, so anything outside
+#: them **drifts invisibly**: the seeder reports `unchanged` for a row whose
+#: uncompared column somebody edited, and the ordinary (non-`--update`) run
+#: prints nothing at all about it. Measured 2026-08-29: set an actor's
+#: `icon_url` by hand, run `--update`, and every compared field is restored
+#: while `icon_url` stays — reported as `unchanged`.
+#:
+#: The fix for `is_active` was to bring it *into* the comparison set (it has
+#: real consumers — see the comment in `ACTOR_FIELDS`). These three are the
+#: opposite call, written down rather than left as an omission that looks the
+#: same either way:
+#:
+#: * `Actor.icon_url` — operational. Nothing in `ACTORS`/`ASSESSORS` supplies
+#:   an icon; a deployment that sets one is not drifting from the corpus.
+#: * `Actor.is_deleted` / soft-delete columns — retirement is
+#:   `actors/0010`'s job and `seed_mythology` must not undo it.
+#: * `Realm.is_judgment_required` — **migration-managed**. `realms/0013` sets
+#:   it to False for specific realms and `realms/0014`'s docstring says it is
+#:   "deliberately not set here"; folding it into the seed table would make
+#:   the next `--update` revert those migrations.
+#:
+#: `tests/test_seed_field_coverage_is_declared.py` requires every concrete
+#: field on these models to be in one list or the other, so a column added
+#: later cannot land in neither.
+NOT_SEEDED = {
+    "Actor": {"icon_url"},
+    "Realm": {"is_judgment_required"},
+}
+
+#: Columns every model here carries for reasons that have nothing to do with
+#: the corpus: identity, the audit stamps `AuditUserFields` adds, the
+#: soft-delete columns, the tenant/civilization the seeder derives itself, and
+#: `sort_code`. Listed once rather than repeated per model.
+INFRASTRUCTURE_FIELDS = frozenset({
+    "id",
+    "create_time", "create_user", "update_time", "update_user", "version",
+    "created_at",
+    "is_deleted", "deleted_at", "deleted_by", "delete_reason",
+    "delete_cascade_id",
+    "tenant", "civilization",
+    "sort_code",
+    # The identity a row is matched on — see `_seed_actors`/`_seed_realms`.
+    # It cannot be "updated" because it is how the row is found.
+    "name", "realm_code", "code",
+    "parent_realm",
+})
+
 
 class Stats:
     """Per-model tally, printed as the run summary."""
@@ -319,6 +368,18 @@ class MythologySeeder:
                 "title_egy": "",
                 "description": self._assessor_description(row),
                 "powers_json": powers,
+                # 与 `_seed_actors` 同一个理由(见那里的注释)。这一行是补上的:
+                # `is_active` 被加进 `ACTOR_FIELDS` 时,`ASSESSOR_FIELDS` 是它的
+                # 别名,于是比对集合立刻包含了这个字段,而这里的 values 没有 ——
+                # `--update` 因此把 **44 个判官行**全部判成「有改动」,拿 None 去
+                # 比 True。dry-run 里看得见:`~ Assessor 34 Nefer-Tem: is_active`,
+                # 一路到 42。
+                #
+                # 后果不是数据被写坏(值本来就是 True),是**汇总说谎**:
+                # `updated=44 unchanged=43` 会让人以为这一轮真的改了 44 行,
+                # 而实际只有一行有内容差异。**一个把「无差异」报成「已更新」的
+                # 命令,会让下一次真正的差异淹没在噪音里。**
+                "is_active": True,
             }
             self._upsert(
                 model=Actor,
@@ -337,7 +398,7 @@ class MythologySeeder:
     def _seed_statutes(self, civilization, tenant, corpus, source, rows, do_update, stats):
         """Seed one corpus transcribed from a document into CIVILIZATION_STATUTES.
 
-        Three corpora are transcribed today: the seven capital sins on the
+        Six corpora are transcribed today: the seven capital sins on the
         terraces of Purgatorio (EUROPEAN_STATUTES), 《太微仙君功過格》
         (CHINESE_STATUTES) and the circles of the Inferno (INFERNO_STATUTES).
         Called once per corpus, so a civilization with two of them — Europe has

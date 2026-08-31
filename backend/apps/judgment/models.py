@@ -220,8 +220,9 @@ class StatuteCorpus(models.TextChoices):
         The Platonic myths inherit none, so the article here is a RULE OF THE
         COURT (see StatutePolarity.PROCEDURE): the reform, the bench, the
         venue, the rule of evidence, the purpose of punishment, the rate and
-        the unit. Twenty-two articles under GR-GRG-* and GR-ER-*, of which
-        exactly one carries OFFENCE polarity — Republic X 615b, which names
+        the unit. Twenty-three articles under GR-GRG-* and GR-ER-* (GORGIAS 12,
+        REPUBLIC_ER 11), of which twenty-one are PROCEDURE, one carries MERIT,
+        and exactly one carries OFFENCE polarity — Republic X 615b, which names
         three wrongs after "for example" and closes with "any other evil
         behaviour". That catch-all is NOT a gap to be filled; expanding it is
         precisely how the withdrawn HELL_LAW corpus was written.
@@ -467,6 +468,26 @@ class Statute(AuditUserFields, models.Model):
 
     def __str__(self):
         return f"{self.code} {self.title_en or self.title_zh}"
+
+    def save(self, *args, **kwargs):
+        """`clean()` is not called by anything Django runs on a write.
+
+        `Model.save()` does not call `full_clean()`, DRF serializers do not
+        call it either (`is_valid()` runs *serializer* validators), and
+        `update_or_create` goes straight to `save()`. So the corpus/civilization
+        cross-check below was reachable only from a ModelForm — and the only
+        form in this project is the admin's. **Every path that actually writes
+        statutes — `seed_mythology`, migrations' data steps, the shell — went
+        around it.** A check nothing calls is [[verification-mechanisms-fail-
+        silently-here]]: it reads as enforcement and enforces nothing.
+
+        `self.clean()`, not `self.full_clean()`: `full_clean` would also run
+        field-level validation (blank/choices/max_length) on rows that
+        migrations write with deliberately partial values, which would turn a
+        narrow invariant into a broad and untested one.
+        """
+        self.clean()
+        return super().save(*args, **kwargs)
 
     def clean(self):
         expected = CORPUS_CIVILIZATION.get(self.corpus)

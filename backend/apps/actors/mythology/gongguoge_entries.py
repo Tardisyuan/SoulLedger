@@ -2,7 +2,7 @@
 
 Split out of ``statutes_chinese.py`` only for length; that module holds the
 corpus header, the gate table and the row builder, and is where to start
-reading. The three constants below sit here rather than there because every
+reading. The five constants below sit here rather than there because every
 one of their uses is in this table, and importing them the other way round
 would make the two modules import each other.
 
