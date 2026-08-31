@@ -188,36 +188,75 @@ class TestMenuButtonCRUD:
         assert resp.status_code == status.HTTP_200_OK
 
     def test_list_buttons_non_admin(self):
-        """Non-ADMIN roles must reach the button list, not a 500.
+        """Non-ADMIN roles must reach the button list, not a 500 — and must not
+        be handed the buttons of a menu they cannot see.
 
-        Every other button test here authenticates as ADMIN, so the
-        non-ADMIN branch of MenuButtonViewSet.get_queryset() was never
-        executed by the suite — it filtered on `menu__tenant`, a field
-        Menu does not have, and raised FieldError (500) for all four
-        non-ADMIN roles. Menus and their buttons are global navigation
-        metadata shared across tenants, so a non-ADMIN sees the same
-        buttons ADMIN does.
+        THE FIRST HALF is what this test was written for: every other button
+        test here authenticates as ADMIN, so the non-ADMIN branch of
+        `MenuButtonViewSet.get_queryset()` was never executed by the suite — it
+        filtered on `menu__tenant`, a field `Menu` does not have, and raised
+        FieldError (500) for all four non-ADMIN roles.
+
+        THE SECOND HALF used to be asserted the other way round. This test
+        ended with `assert self.button.pk in [...]` and a docstring saying
+        "a non-ADMIN sees the same buttons ADMIN does" — while `self.menu` is
+        created with `roles=["ADMIN"]`. **The assertion encoded the leak.**
+        Measured as JUDGE before the change: `GET /menus/buttons/ -> 200, n=1`,
+        showing `tenant.delete`. `MenuTreeSerializer.get_buttons` filtered the
+        same data by `user_has_permission`; this exit filtered by nothing.
+
+        "Global navigation metadata shared across tenants" was true and is
+        still true — buttons carry no tenant. It does not follow that role
+        visibility is shared too, and that is the step the old docstring took
+        without saying so.
         """
         resp = self.viewer_client.get(f"{BASE}/buttons/")
         assert resp.status_code == status.HTTP_200_OK
         results = resp.data["results"] if isinstance(resp.data, dict) else resp.data
-        assert self.button.pk in [b["id"] for b in results]
+        assert self.button.pk not in [b["id"] for b in results], (
+            "VIEWER 拿到了挂在 roles=['ADMIN'] 菜单下的按钮"
+        )
+
+    def test_list_buttons_non_admin_sees_buttons_on_menus_it_can_see(self):
+        """The other half. Without it, a queryset that returns nothing at all
+        satisfies the test above, and the button list breaks for every role
+        that is supposed to have one."""
+        open_menu = Menu.objects.create(name="Open Menu", path="/open", order=3)
+        visible = MenuButton.objects.create(
+            menu=open_menu, name="Read", code="read", permission="soul.read", order=1
+        )
+        resp = self.viewer_client.get(f"{BASE}/buttons/")
+        assert resp.status_code == status.HTTP_200_OK
+        results = resp.data["results"] if isinstance(resp.data, dict) else resp.data
+        assert visible.pk in [b["id"] for b in results]
 
     def test_list_buttons_non_admin_filtered_by_menu_id(self):
         """?menu_id= still narrows the list for a non-ADMIN caller."""
         other_menu = Menu.objects.create(name="Other Menu", path="/other", order=2)
-        MenuButton.objects.create(
+        exported = MenuButton.objects.create(
             menu=other_menu, name="Export", code="export", permission="soul.read", order=1
         )
-        resp = self.viewer_client.get(f"{BASE}/buttons/?menu_id={self.menu.pk}")
+        resp = self.viewer_client.get(f"{BASE}/buttons/?menu_id={other_menu.pk}")
         assert resp.status_code == status.HTTP_200_OK
         results = resp.data["results"] if isinstance(resp.data, dict) else resp.data
-        assert [b["id"] for b in results] == [self.button.pk]
+        assert [b["id"] for b in results] == [exported.pk]
 
-    def test_retrieve_button_non_admin(self):
+    def test_retrieve_button_non_admin_is_refused_for_an_admin_only_menu(self):
+        """Detail follows the list. A 404 rather than a 403 on purpose: the
+        list does not admit the row exists, and the detail view should not
+        contradict it."""
         resp = self.viewer_client.get(f"{BASE}/buttons/{self.button.pk}/")
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_retrieve_button_non_admin_on_a_visible_menu(self):
+        """Positive control for the line above."""
+        open_menu = Menu.objects.create(name="Open Menu 2", path="/open2", order=4)
+        visible = MenuButton.objects.create(
+            menu=open_menu, name="Read", code="read", permission="soul.read", order=1
+        )
+        resp = self.viewer_client.get(f"{BASE}/buttons/{visible.pk}/")
         assert resp.status_code == status.HTTP_200_OK
-        assert resp.data["name"] == "Add"
+        assert resp.data["name"] == "Read"
 
     def test_retrieve_button(self):
         resp = self.admin_client.get(f"{BASE}/buttons/{self.button.pk}/")
