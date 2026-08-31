@@ -56,9 +56,24 @@ cd backend && python -m pytest -q --no-cov --create-db
 
 **`tests/test_concurrency.py` 里有 4 条 `skipif(SQLITE)` 的测试,是这个仓库里唯一
 真正检验 `select_for_update` 的东西** —— 上面那条 SQLite 命令一条都不跑它们。
-2026-08-31 用上面的 PostgreSQL 命令实跑:**5 passed / 0 skipped**。
 `test_the_postgres_only_set_is_the_set_we_think_it_is` 钉住这个集合,
 让它不能再无声地增长。
+
+**两条路径实跑对照(2026-08-31,同一份代码):**
+
+    SQLite 内存库     3435 passed /  7 skipped / exit 0
+    真 PostgreSQL     3440 passed /  2 skipped / exit 0
+
+多的 5 条正是那 4 条并发测试加 `test_two_judges_cannot_both_decide_one_node.py`;
+剩下的 2 个 skip 是 `Menu` / `MenuButton`,它们**确实没有 tenant 字段**。
+**「7 skipped」不是噪音,是 5 条从没在这条路径上跑过的测试。**
+
+跑完记得看 115 上有没有留下 `test_soulledger*`:pytest-django 正常会删掉它,
+中断或 xdist 会留下。2026-08-31 清理时那里躺着 **8 个**(最老的是 2026-06-06 的),
+每一个都是空库,而**陈旧的 test_soulledger 正是那上千条「环境错误」的成因**。
+
+    psql -U soulledger -d postgres -Atc \
+      "select datname from pg_database where datname like 'test_soulledger%'"
 
 **SQLITE HIDES A WHOLE CLASS OF DEFECT, AND THE SUITE ONLY RUNS ON SQLITE.**
 Two shipped bugs surfaced the first time this code met a real PostgreSQL
