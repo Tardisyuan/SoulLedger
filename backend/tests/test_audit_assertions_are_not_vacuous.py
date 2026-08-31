@@ -49,6 +49,16 @@ def run_nested(tmp_path, body, name="test_probe.py"):
             **os.environ,
             "PYTHONPATH": str(REPO_ROOT / "backend"),
             "DJANGO_SETTINGS_MODULE": "config.settings",
+            # 子进程固定用 SQLite 内存库。
+            #
+            # 它要证明的是**那个插件会不会响**,与数据库无关。而继承父进程的
+            # 配置时,如果父进程正跑在 PostgreSQL 上,子进程会去建同一个
+            # `test_soulledger`,拿到
+            #     database "test_soulledger" already exists
+            #     database "test_soulledger" is being accessed by other users
+            # —— 2026-08-31 在真 PostgreSQL 上全量跑时,这四条就是这么红的。
+            # 一条**因为测试装置而红**的失败,读起来和产品缺陷一模一样。
+            "DATABASE_URL": "sqlite:///:memory:",
         },
         capture_output=True,
         text=True,

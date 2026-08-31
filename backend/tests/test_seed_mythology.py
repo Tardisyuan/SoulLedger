@@ -1574,23 +1574,25 @@ def test_consolidate_eu_pantheon_audit_is_clean_after_seeding(seeded):
 
 
 @pytest.mark.django_db
-def test_consolidate_eu_pantheon_finds_nothing_to_merge_after_seeding(seeded):
-    """Seeding does not hand the merge step work to do.
+def test_consolidate_eu_pantheon_leaves_a_freshly_seeded_database_alone(seeded):
+    """Seed and cleanup agree about the target state.
 
-    If both Pluto and Hades were seeded, this command would soft-delete one of
-    them every time a fresh database was set up, with the survivor decided by
-    insertion order. Nothing to merge is the correct post-seed state.
+    This used to assert the string "nothing to merge", from the Pluto/Hades
+    step that was retired on 2026-08-31 — Dante's Pluto is a distinct figure
+    and is now seeded. The half worth keeping is the one that was never about
+    that step: a freshly seeded database must give this command **nothing at
+    all** to do. If it did, seed and cleanup would be pulling in opposite
+    directions, and every fresh setup would drift on the first run.
     """
     out = io.StringIO()
     call_command("consolidate_eu_pantheon", stdout=out, stderr=out)
     output = out.getvalue()
-    assert "nothing to merge" in output, (
-        f"consolidate_eu_pantheon found a Pluto/Hades merge to perform on a "
-        f"freshly seeded database — seeding created both names.\n{output}"
-    )
     assert "Nothing to do" in output, (
         f"consolidate_eu_pantheon has changes queued against a freshly seeded "
         f"database; seed and consolidation disagree about the target state.\n{output}"
+    )
+    assert "Pluto" not in output or "merge" not in output.lower(), (
+        f"the retired merge step is printing again:\n{output}"
     )
 
 

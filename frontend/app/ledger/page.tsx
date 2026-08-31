@@ -8,6 +8,8 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { LazyBarChart } from "@/src/components/charts/LazyDashboardCharts";
 import { DomainEnum, IdentifierChip } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
  * 功德统计 —— 租户级统计,**不是**功过台账。
@@ -50,7 +52,7 @@ import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
  * the eight-step scale, theme tokens, and figures that are labelled as the
  * counts they are rather than sized like the weight sums they are not.
  */
-export default function LedgerPage() {
+function LedgerPageContent() {
   const { t, formatDateTime } = useI18n();
   const { user } = useTenant();
 
@@ -266,4 +268,17 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function SectionError({ label }: { label: string }) {
   return <p className="text-03 text-[hsl(var(--color-status-error))]">{label}</p>;
+}
+
+
+/* 页级门。后端才是正解(这几个 viewset 都挂了 `CodenamePermission`),这里是纵深:
+   侧边栏的菜单过滤**只藏链接、不挡路由**,所以在补上这道门之前,直接输 URL 就能
+   打开一个功能完整的页面。码名与后端 `permission_codename` 对齐,不是猜的角色名 ——
+   `tests/test_page_gates_match_the_backend.py` 会因为路由没有门而红。 */
+export default function LedgerPage() {
+  return (
+    <RequirePermission permissions="ledger.read" fallback={<PermissionDenied />}>
+      <LedgerPageContent />
+    </RequirePermission>
+  );
 }

@@ -60,12 +60,34 @@ class JWTAuthMiddleware(BaseMiddleware):
                         return {"type": "websocket.close", "code": 4001}
                     scope["user"] = user
                     authenticated = True
-                    # Send auth success confirmation
-                    await send({
-                        "type": "websocket.send",
-                        "text": json.dumps({"type": "auth.success", "user_id": user.id}),
-                    })
-                    return await wrapped_receive()  # Get next real message
+                    # FORWARD the auth message; do not swallow it.
+                    #
+                    # This used to `return await wrapped_receive()` -- eat the
+                    # frame and wait for the next real one -- after sending its
+                    # own `auth.success`. The consumer's auth handler
+                    # (`apps/notifications/consumers.py`) therefore **never
+                    # ran**, and that handler is what calls `_join_groups()`.
+                    # Measured over the real ASGI stack:
+                    #
+                    #     [D1] connect with no token: True
+                    #     [D2] frame1 = {'type':'auth.success','user_id':2}
+                    #          frame2 = NOTHING (TimeoutError)
+                    #
+                    # Only the middleware's frame arrived. No `connected` frame,
+                    # so no groups were joined: the socket belonged to nothing
+                    # and received no events for the rest of its life, while
+                    # `self.user` on the consumer stayed AnonymousUser and every
+                    # later message was answered "not authenticated".
+                    #
+                    # Two blocks of a 219-line consumer that looked like they
+                    # were working. The front end only uses the `?token=` query
+                    # string, which is why nothing surfaced.
+                    #
+                    # The middleware's `auth.success` is gone with it: the
+                    # consumer answers `connected` once it has actually joined
+                    # the groups, and two confirmations for one event is how a
+                    # client ends up trusting the earlier, weaker one.
+                    return message
 
                 # No auth token in first message
                 await self._reject(send, code=4001, reason="Token required as first message")

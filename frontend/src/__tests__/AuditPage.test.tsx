@@ -27,9 +27,18 @@ jest.mock("@/lib/api", () => ({
 }));
 
 let mockIsAdmin = true;
+let mockRole: string | null = null;
+let mockPermissions: string[] = ["audit.read"];
 
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ isAdmin: mockIsAdmin, user: { role: mockIsAdmin ? "ADMIN" : "JUDGE" } }),
+  // `permissions` 现在有意义:页面外面包了
+  // `<RequirePermission permissions="audit.read">`。ADMIN 走短路,JUDGE 这一半
+  // 拿不到 `audit.read` —— 这正是这两条 access control 测试要的形状,只是判据从
+  // 页面内部的 isAdmin 变成了那道门。
+  useTenant: () => ({
+    isAdmin: mockIsAdmin,
+    user: { role: mockRole ?? (mockIsAdmin ? "ADMIN" : "JUDGE"), permissions: mockPermissions },
+  }),
 }));
 
 jest.mock("@/src/contexts/I18nContext", () => ({
@@ -82,30 +91,59 @@ function pickChip(currentTriggerLabel: string, optionLabel: string) {
 beforeEach(() => {
   jest.clearAllMocks();
   mockIsAdmin = true;
+  mockRole = null;
+  mockPermissions = ["audit.read"];
   mockedList.mockResolvedValue({ data: { count: 1, results: [entry()] } });
 });
 
 // ── Admin gate ───────────────────────────────────────────────────────
 
 describe("AuditPage access control", () => {
-  it("refuses a non-admin and issues no request for the log", async () => {
+  /* 这一组的判据从「是不是 ADMIN」改成了「有没有 audit.read」。
+     后端把 `audit.read` 授予 ADMIN **与 MODERATOR**,而这页问的是
+     `role === "ADMIN"` —— 实拍:MODERATOR 看到「访问被拒绝 / 仅管理员可查看审计
+     日志」,并且一个请求都没发。**一个持有该权限的人被界面挡在外面。**
+     (最先描述这一页的那条审计发现说它「完全没有权限门」;它有,只是问错了问题。
+     两条都在同一份账本里 —— M47 与 M65。) */
+
+  it("refuses a caller without audit.read and issues no request for the log", async () => {
+    // role 也要一起改。`hasPermission` 第一行对 ADMIN 短路返回 true,只清空
+    // permissions 的话这条测试测的是短路,不是权限。
     mockIsAdmin = false;
+    mockRole = "VIEWER";
+    mockPermissions = [];
 
     renderPage();
 
     expect(await screen.findByText("audit.access_denied")).toBeInTheDocument();
-    expect(screen.getByText("audit.admin_only")).toBeInTheDocument();
+    expect(screen.getByText("audit.needs_audit_read")).toBeInTheDocument();
     expect(mockedList).not.toHaveBeenCalled();
   });
 
-  it("renders no filter bar or table for a non-admin", async () => {
+  it("renders no filter bar or table without audit.read", async () => {
     mockIsAdmin = false;
+    mockRole = "VIEWER";
+    mockPermissions = [];
 
     renderPage();
 
     await screen.findByText("audit.access_denied");
     expect(screen.queryByPlaceholderText("audit.search_placeholder")).not.toBeInTheDocument();
     expect(screen.queryByText("created a soul")).not.toBeInTheDocument();
+  });
+
+  it("lets a MODERATOR in — it holds audit.read", async () => {
+    /* 正对照,也是这条缺陷的另一半。没有它,把判据从 isAdmin 换成
+       hasPermission 之后,一个「谁都拒绝」的实现同样满足上面两条。 */
+    mockIsAdmin = false;
+    mockRole = "MODERATOR";
+    mockPermissions = ["audit.read"];
+
+    renderPage();
+
+    await screen.findByPlaceholderText("audit.search_placeholder");
+    expect(screen.queryByText("audit.access_denied")).not.toBeInTheDocument();
+    expect(mockedList).toHaveBeenCalled();
   });
 
   it("fetches the log for an admin", async () => {

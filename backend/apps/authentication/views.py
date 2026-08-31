@@ -511,9 +511,18 @@ def profile_view(request):
     PATCH /api/v1/auth/profile/ — update current user
     """
     if request.method == "GET":
-        return Response(UserSerializer(request.user).data)
+        return Response(UserSerializer(request.user, context={"request": request}).data)
     elif request.method == "PATCH":
-        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        # `context={"request": request}` is not decoration: `validate_organization`
+        # scopes the FK against the caller's tenant and has no other way to
+        # learn who is calling. Without it the serializer refuses **every**
+        # organization change with "cannot determine the current tenant" --
+        # which reads like the guard working and is the guard failing closed on
+        # the legitimate case too. `change_password` sixteen lines below already
+        # passed context; this one did not.
+        serializer = UserSerializer(
+            request.user, data=request.data, partial=True, context={"request": request}
+        )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

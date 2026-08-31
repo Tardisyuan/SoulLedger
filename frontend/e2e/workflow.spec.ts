@@ -108,13 +108,36 @@ test.describe("Workflow page", () => {
 
     await page.getByRole("button", { name: "审批实例", exact: true }).click();
 
-    // Known gap, pinned deliberately: this tab has no error state, so a
-    // failed load is indistinguishable from "no instances". What must hold
-    // either way is that no fabricated row appears and the page still works.
+    // 这个 tab 此前对「加载失败」和「一条都没有」渲染**同一段文案**
+    // (「暂无审批实例」),于是这条测试与它上面那条空状态测试共用一个可观察量 ——
+    // 一个让实例列表永久为空的变异会让两条都通过。那时这里写着
+    // 「Known gap, pinned deliberately」。缺口补上了(`QueryError`),断言跟着换。
     await expect(seen(page, WORKFLOW_INSTANCE.workflow_name)).toHaveCount(0);
-    await expect(seen(page, "暂无审批实例")).toBeVisible();
+    await expect(page.locator("[data-query-error]")).toBeVisible();
+    // **这一句才是这条测试的意义**:失败态不能长得像空态。
+    await expect(seen(page, "暂无审批实例")).toHaveCount(0);
     await page.getByRole("button", { name: "现有流程", exact: true }).click();
     await expect(heading(page, "十殿审判流程")).toBeVisible();
+  });
+
+  test("空列表与 500 渲染的不是同一段文案", async ({ page }) => {
+    /* 把 M12 那句话本身写成断言。上面两条各自成立时,「两者可区分」仍然可能
+       不成立 —— 比如两条路径都渲染 role="alert"。这一条直接比较两次渲染。 */
+    api.on("GET", "/workflows/", { count: 0, next: null, previous: null, results: [] });
+    await page.goto("/workflow");
+    await page.getByRole("button", { name: "审批实例", exact: true }).click();
+    await expect(seen(page, "暂无审批实例")).toBeVisible();
+    // `role="alert"` 区分不开 —— 空状态组件自己也带这个角色,第一版就是这么
+    // 写的,而它红了。用 `data-query-error` 这个只有失败态才有的标记。
+    const emptyShowedError = await page.locator("[data-query-error]").count();
+
+    api.on("GET", "/workflows/", () => ({ status: 500, body: { detail: "boom" } }));
+    await page.reload();
+    await page.getByRole("button", { name: "审批实例", exact: true }).click();
+    await expect(page.locator("[data-query-error]")).toBeVisible();
+    await expect(seen(page, "暂无审批实例")).toHaveCount(0);
+
+    expect(emptyShowedError).toBe(0);
   });
 });
 

@@ -11,6 +11,8 @@ import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
+import { RequireAdmin } from "@/src/components/rbac/RequirePermission";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import {
   CIVILIZATION_SHORT_CODES,
   TENANT_CODE_TO_CIVILIZATION,
@@ -41,7 +43,7 @@ function civMark(tenantCode: string): string | undefined {
   return prefix ? `hsl(var(--color-civ-mark-${prefix}))` : undefined;
 }
 
-export default function TenantsPage() {
+function TenantsPageContent() {
   const { t } = useI18n();
   const { user } = useTenant();
   const [page, setPage] = useState(1);
@@ -162,5 +164,17 @@ export default function TenantsPage() {
         })}
       </div>
     </PageShell>
+  );
+}
+
+
+/* `RequireAdmin`,不是 `RequirePermission permissions="ADMIN"` —— 后者把角色名当
+   码名用,只因为 `hasPermission` 对 ADMIN 短路才碰巧成立(见 RequirePermission.tsx
+   里 RequireAdmin 的注释)。这两页对应的后端确实是硬编码的 ADMIN,不是某个码名。 */
+export default function TenantsPage() {
+  return (
+    <RequireAdmin fallback={<PermissionDenied />}>
+      <TenantsPageContent />
+    </RequireAdmin>
   );
 }

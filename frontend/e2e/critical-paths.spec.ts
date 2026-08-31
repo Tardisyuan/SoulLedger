@@ -164,7 +164,7 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
   test("opens a pending proposal and approves it", async ({ page }) => {
     await page.goto("/dispatch");
 
-    await expect(page.locator("h1")).toContainText("调度管理");
+    await expect(page.locator("h1")).toHaveText("调度管理");
     await expect(page.getByRole("heading", { name: "待处理提案" })).toBeVisible();
 
     // Scoped to the pending section: dispatchApi.history() hits the same
@@ -210,7 +210,7 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
 
     // ── Detail ──
     await expect(page).toHaveURL(`/dispatch/${PROPOSED_DISPATCH.id}`);
-    await expect(page.locator("h1")).toContainText("调度详情");
+    await expect(page.locator("h1")).toHaveText("调度详情");
     await expect(page.getByText(PROPOSED_DISPATCH.source_tenant_code)).toBeVisible();
     await expect(page.getByText(PROPOSED_DISPATCH.target_tenant_code)).toBeVisible();
     // Detail goes through `DispatchRecordSerializer`, which does send these --
@@ -240,7 +240,7 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
     });
     await page.goto(`/dispatch/${PROPOSED_DISPATCH.id}`);
 
-    await expect(page.locator("h1")).toContainText("调度详情");
+    await expect(page.locator("h1")).toHaveText("调度详情");
     await expect(page.getByRole("button", { name: "批准" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "驳回" })).toHaveCount(0);
   });

@@ -56,8 +56,17 @@ GREEK_ACTORS = [
     # place here that is his. That is a compromise, exactly like the one
     # recorded for 地藏王菩萨, and not a claim from a text.
     #
-    # Hades, not Pluto: same god, and `consolidate_eu_pantheon` merges the pair
-    # into Hades. Pluto is therefore deliberately NOT seeded — it only exists in
+    # Hades, not Pluto -- BUT NOT BECAUSE PLUTO IS A DUPLICATE OF THIS ROW.
+    # That was the reading from 2026-08-04 to 2026-08-31, and
+    # `consolidate_eu_pantheon` soft-deleted the European Pluto on it. Dante's
+    # Pluto guards the fourth circle (Inf. VII.2) and is seeded in
+    # `actors_european.py`; this row is the Greek god who presides over the
+    # whole underworld. Different offices in different underworlds, the same
+    # distinction the Minos rows already carry. The paragraph below is kept
+    # because the etymology in it is correct and worth having; what changed is
+    # the conclusion drawn from it.
+    # (Historical note; the merge described here no longer runs.) Pluto used
+    # not to be seeded — it only existed in
     # databases predating that command, which is exactly the case the merge step
     # is there to clean up. Seeding both would manufacture on every fresh
     # database the duplicate the merge exists to remove.
@@ -199,27 +208,22 @@ GREEK_ACTORS = [
 # Same table and same rules as EGYPTIAN_ACTOR_ALIASES — read its header for what
 # qualifies and why this is not a fifth name column.
 GREEK_ACTOR_ALIASES = {
-    # Moved here with the Hades row it names. `Πλούτων`/`Pluto` and `Hades` are
-    # one god, and this repository had already concluded so before this table
-    # existed: `consolidate_eu_pantheon` merges a `Pluto` row into `Hades`, and
-    # the Hades row above records the reasoning (Plouton is a Greek cult title
-    # from πλοῦτος, wealth — Plato, Cratylus 403a — of which Latin Pluto is a
-    # transcription; Rome's own underworld gods are Dis Pater and Orcus). What
-    # that conclusion did not have was anywhere to live except a management
-    # command's `MERGE_NAMES` tuple and a comment. It lives here now, so a
-    # lookup handed "Pluto" finds Hades on the strength of recorded data rather
-    # than because somebody remembered to run a merge.
+    # EMPTY, AND THE ENTRY THAT USED TO BE HERE IS WHY.
     #
-    # It had to move with the row rather than stay behind: `_seed_actors` warns
-    # and drops any alias naming an actor the cast it is seeding does not
-    # contain, so a `Hades` entry left in EUROPEAN_ACTOR_ALIASES would have
-    # stopped being written the moment Hades became GREEK — silently, in the
-    # sense that the alias simply would not exist and the lookup it serves would
-    # fall through to the behaviour it was meant to replace.
+    # It was `"Hades": ["Pluto"]`, recorded so a lookup handed "Pluto" would
+    # find Hades. That was correct while no Pluto row existed. It stopped being
+    # correct on 2026-08-31, when Dante's Pluto was seeded under EUROPEAN as
+    # the warden of the fourth circle (Inf. VII.2) -- with both a real `Pluto`
+    # row and an alias pointing "Pluto" at Hades, `_resolve_approver` has two
+    # answers for one name, and which one it gives depends on whether the
+    # column pass or the alias pass runs first.
     #
-    # Recording the alias does NOT resurrect Pluto and does not change what
-    # `consolidate_eu_pantheon` does: that command matches on `name` exactly, no
-    # Pluto row is seeded, and on a legacy database that still has one the
-    # resolver's column pass finds it before this alias is ever consulted.
-    "Hades": ["Pluto"],
+    # `tests/test_actor_name_aliases.py::test_the_lookup_resolves_every_
+    # recorded_name_to_one_row` is the test that says so, and it went red on
+    # the commit that seeded the row -- which is the whole reason that test
+    # exists. Deleting the alias rather than special-casing the resolver is the
+    # smaller change and the honest one: the two are different figures, so
+    # there is no name to alias.
+    #
+    # The etymology the entry carried is not lost; it is in the Hades row above.
 }

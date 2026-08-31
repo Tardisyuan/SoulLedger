@@ -106,10 +106,32 @@ class ReincarnationService:
             target_realm = disposition.destination_realm.realm_code
             previous_realm = disposition.destination_realm.realm_code
 
-        # Count previous cycles
-        cycle_count = soul.reincarnations.count() + 1
-
         with transaction.atomic():
+            # THE LOCK COMES BEFORE THE COUNT. It used to be
+            #
+            #     cycle_count = soul.reincarnations.count() + 1
+            #     with transaction.atomic():
+            #         Reincarnation.objects.create(..., cycle_count=cycle_count, ...)
+            #
+            # -- counted outside the transaction, with no lock on the soul.
+            # Measured on a PostgreSQL 16 clone of the shared box, barrier placed
+            # between "both have counted" and "both have written":
+            #
+            #     P2 cycle_counts = {'a': 1, 'b': 1}   distinct = 1
+            #
+            # **Two concurrent rebirths got the same cycle number.** The
+            # reincarnation history is then one cycle short and nothing in the
+            # data says so. Same shape as the ledger recalculation (H11); at the
+            # time `grep select_for_update apps/reincarnation apps/disposition`
+            # matched nothing.
+            #
+            # `soul.save()` further down is a whole-row UPDATE, so it also
+            # clobbers a concurrent writer's merit/demerit -- the lock covers
+            # that too, which is why it wraps the whole block and not just the
+            # count.
+            soul = Soul.all_objects.select_for_update().get(pk=soul.pk)
+            cycle_count = soul.reincarnations.count() + 1
+
             # Create reincarnation record
             reincarnation = Reincarnation.objects.create(
                 soul=soul,

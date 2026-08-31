@@ -150,7 +150,28 @@ export class WSClient {
     };
   }
 
-  /** Manually disconnect. Client can reconnect later. */
+  /** Manually disconnect. Client can reconnect later.
+   *
+   * DETACHING `onclose` IS THE POINT, NOT TIDINESS. This used to be
+   * `this.ws.close(); this.ws = null;` with no `shutdown` flag set — and the
+   * browser then fires `close` on that socket **after** we have dropped our
+   * reference to it. `onclose` sees `this.shutdown === false` and a code of
+   * 1005 (not 4001), falls through to `scheduleReconnect()`, and one second
+   * later **this discarded instance opens a brand-new WebSocket** that nothing
+   * on the React side holds a reference to. Its `onStatusChange` still points
+   * at the setState of an unmounted component.
+   *
+   * `WebSocketContext.tsx` calls `disconnect()` in its cleanup, and the `user`
+   * object changes identity at least once while TenantContext hydrates — so
+   * every session left at least one zombie behind.
+   *
+   * Why no test caught it: `src/__tests__/support/wsHarness.ts`'s
+   * `FakeWebSocket.close()` only incremented a counter and set `readyState`.
+   * **It never fired `onclose`** — unlike a real WebSocket. The two tests for
+   * `close()` in `wsClient.reconnect.test.ts` reach for `serverClose(1006)`
+   * explicitly to simulate that, so the difference was known; `disconnect()`
+   * just never had the same treatment. The harness is fixed alongside this.
+   */
   disconnect(): void {
     this.stopHeartbeat();
     if (this.reconnectTimer) {
@@ -158,6 +179,12 @@ export class WSClient {
       this.reconnectTimer = null;
     }
     if (this.ws) {
+      // Detach first. A close we asked for must not be reported to the handler
+      // whose job is to react to closes we did not ask for.
+      this.ws.onclose = null;
+      this.ws.onmessage = null;
+      this.ws.onerror = null;
+      this.ws.onopen = null;
       this.ws.close();
       this.ws = null;
     }
