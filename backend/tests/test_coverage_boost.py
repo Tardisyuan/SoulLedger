@@ -477,6 +477,21 @@ class TestPermissionCache:
         c._redis_client = None
         c._fallback_cache = {}
         c._ttl = 300
+        # `_fallback_ttl` set explicitly, and NOT to the shipped default.
+        #
+        # That default is **0** — while Redis is down the fallback does not
+        # answer at all, because a per-process cache cannot be invalidated by
+        # another worker's revocation (measured: two processes, Redis at a
+        # closed port; see config/settings.py's note and
+        # tests/test_the_permission_fallback_window_is_bounded.py).
+        #
+        # The tests in this class are about the fallback's *mechanics* —
+        # set/get/expiry/invalidate — so they need it switched on. Naming the
+        # number here rather than inheriting it keeps them measuring what they
+        # say they measure: five of them started failing the moment the default
+        # changed, which is the right signal, and this is the right fix for it.
+        c._fallback_ttl = 300
+        c._key_prefix = ""
         # Prevent reconnection attempts in get()/set()
         c._connect_redis = lambda: None
         return c
@@ -538,10 +553,34 @@ class TestPermissionCache:
         assert c1 is c2
 
     @patch("redis.from_url")
-    def test_redis_fallback_on_connect_failure(self, mock_from_url):
+    def test_redis_connect_failure_is_handled(self, mock_from_url):
+        """连不上 Redis 不抛,`_redis_client` 置 None。"""
         mock_from_url.side_effect = Exception("Redis down")
         c = PermissionCache()
         assert c._redis_client is None
+
+    @patch("redis.from_url")
+    def test_with_the_shipped_default_the_fallback_does_not_answer(self, mock_from_url):
+        """Redis 挂掉时,出厂配置下兜底**不作答**。
+
+        这条曾经断的是反面(`set` 之后 `get` 回 True),而那正是 M10:
+        进程内的兜底没有任何跨进程的失效通道,所以 worker A 的撤销到不了
+        worker B 的字典。两进程实测(Redis 指向关着的端口):兜底 300 秒时,
+        B 在 A 撤销之后仍答 True 直到 +301.5 秒;兜底 0 时,B 立刻答 False。
+        """
+        mock_from_url.side_effect = Exception("Redis down")
+        c = PermissionCache()
+        c.set("ADMIN", "test.perm", True)
+        assert c.get("ADMIN", "test.perm") is None, (
+            "出厂默认下兜底答了话 —— 那么降级期间一次撤销又有窗口了"
+        )
+
+    @patch("redis.from_url")
+    def test_the_fallback_still_works_when_switched_on(self, mock_from_url):
+        """**断存在。** 上面那条在兜底彻底坏掉时也会绿。"""
+        mock_from_url.side_effect = Exception("Redis down")
+        c = PermissionCache()
+        c._fallback_ttl = 300
         c.set("ADMIN", "test.perm", True)
         assert c.get("ADMIN", "test.perm") is True
 
