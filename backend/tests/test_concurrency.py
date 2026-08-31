@@ -317,3 +317,64 @@ class TestSoulStateTransitionConcurrency:
 
         soul.refresh_from_db()
         assert soul.current_state == SoulState.ALIVE
+
+
+# ---------------------------------------------------------------------------
+# The guard for the skips themselves.
+# ---------------------------------------------------------------------------
+
+
+def test_the_postgres_only_set_is_the_set_we_think_it_is():
+    """哪些测试只在 PostgreSQL 上跑,写成一条会红的断言。
+
+    这四条是这个仓库里**唯一**真正检验 `select_for_update` 的东西,而 CLAUDE.md 的
+    一行命令强制 `DATABASE_URL="sqlite:///:memory:"` —— 本地全量跑时它们一条都不
+    执行。`ci.yml` 确实起 postgres:16(所以不是「永远不会触发」),但同一文件里
+    workflow 只剩 `workflow_dispatch`。**唯一验证行锁的东西,实践上没被跑过。**
+
+    这条守卫不能让它们跑起来 —— 那是运行环境的事,记在下面的运行方法里。它能做的
+    是让这个集合**停止无声地增长**:再有一条测试被标成 PostgreSQL-only,这里就红,
+    加它的人得在这份名单上写下名字。一个可以随手扩大的豁免集合,和没有豁免是两回事。
+
+    HOW TO RUN THEM(2026-08-31 实跑,5 passed / 0 skipped):
+
+        cd backend && python -m pytest tests/test_concurrency.py -q --no-cov --create-db
+
+    不设 `DATABASE_URL`,让 Django 读 `.env` 指向真 PostgreSQL;pytest-django 会
+    自建 `test_soulledger` 再删掉,不碰真库。`--create-db` 是必需的:一个陈旧的
+    `test_soulledger` 会造成上千条「环境错误」,而那正是当初把这条路径判成不可用的
+    原因(见记忆里那条 0/3 的命中率)。
+    """
+    import ast
+    from pathlib import Path
+
+    # AST,不是字符串搜索。第一版用「在这个 def 之前 400 个字符里找 skipif」
+    # 这类启发式,返回**空集** —— 而空集会让 `assert pg_only == expected` 报出
+    # 一个看起来像「集合变了」的失败,掩盖掉真正的原因是扫描器坏了。
+    # 这个仓库栽在「扫描器看的不是它以为在看的东西」上,这是第六次。
+    tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    pg_only = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef) or not node.name.startswith("test_"):
+            continue
+        for dec in node.decorator_list:
+            src = ast.dump(dec)
+            if "skipif" in src and "SQLITE" in src:
+                pg_only.append(node.name)
+                break
+    pg_only = sorted(pg_only)
+
+    #: 实测得来,不是按审计文字抄的 —— 第一版这份名单是我按账本描述猜的,
+    #: 里面两个名字在这个文件里根本不存在。
+    expected = [
+        "test_concurrent_approve_and_reject",
+        "test_concurrent_approve_only_one_succeeds",
+        "test_concurrent_die_only_one_succeeds",
+        "test_concurrent_state_transition_to_disposed",
+    ]
+    assert pg_only == expected, (
+        f"PostgreSQL-only 的集合变了:{pg_only}\n"
+        f"期望:{expected}\n"
+        f"加一条 skipif(SQLITE) 意味着又一条断言在本地永不执行 —— "
+        f"把它写进这份名单,并说明为什么它非 PostgreSQL 不可。"
+    )

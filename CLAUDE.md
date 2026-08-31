@@ -46,7 +46,19 @@ cd frontend && npm test
 
 # E2E
 cd frontend && npx playwright test --project=chromium
+
+# 真 PostgreSQL 上跑一遍 —— 上面那条 SQLite 命令跑不到的东西在这里
+# 不设 DATABASE_URL,让 Django 读 .env 指向 115;pytest-django 自建 test_soulledger
+# 再删掉,不碰真库。`--create-db` 是必需的:陈旧的 test_soulledger 会造成上千条
+# 「环境错误」,那正是这条路径当初被判成不可用的原因。
+cd backend && python -m pytest -q --no-cov --create-db
 ```
+
+**`tests/test_concurrency.py` 里有 4 条 `skipif(SQLITE)` 的测试,是这个仓库里唯一
+真正检验 `select_for_update` 的东西** —— 上面那条 SQLite 命令一条都不跑它们。
+2026-08-31 用上面的 PostgreSQL 命令实跑:**5 passed / 0 skipped**。
+`test_the_postgres_only_set_is_the_set_we_think_it_is` 钉住这个集合,
+让它不能再无声地增长。
 
 **SQLITE HIDES A WHOLE CLASS OF DEFECT, AND THE SUITE ONLY RUNS ON SQLITE.**
 Two shipped bugs surfaced the first time this code met a real PostgreSQL

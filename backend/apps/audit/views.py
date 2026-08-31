@@ -12,6 +12,10 @@ from apps.core.viewsets import CodenameViewSetMixin
 from .models import AuditAction, AuditLog
 from .serializers import AuditLogDetailSerializer, AuditLogSerializer
 
+#: `/audit-logs/timeline/?limit=` 的上界。没有它,`?limit=999999999` 是一次全表
+#: 扫描,而它返回 **200** —— 一个「成功」的响应,是最不容易被发现的拒绝服务面。
+TIMELINE_MAX_LIMIT = 500
+
 
 class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
     """
