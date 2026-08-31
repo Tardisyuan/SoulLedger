@@ -8,11 +8,25 @@ from django.db.models import ExpressionWrapper, F, IntegerField, QuerySet
 
 from apps.tenants.managers import TenantManager
 
-CIVILIZATION_TENANT_MAP = {
-    'CHINESE': 'CN_DIYU',
-    'EUROPEAN': 'EU_HEAVEN_HELL',
-    'EGYPTIAN': 'EG_DUAT',
-}
+# `CIVILIZATION_TENANT_MAP` and `filter_by_civilization` were deleted 2026-08-31.
+#
+# The map was the **fourth** hand-written copy of civilization→tenant, and it
+# was missing GREEK — while the comment on `apps.souls.models.CIVILIZATION_TENANT`
+# says in so many words that this mapping "existed in three more places, each
+# free to drift", which is why that one is exported and callers are told to
+# import it.
+#
+# The method was also fail-OPEN: an unrecognised civilization hit
+# `return self` — the whole queryset. Measured 2026-08-29:
+# `filter_by_civilization("GREEK")` returned every soul, Chinese ones included.
+# `apps/souls/filters.py::filter_civilization`, the one the API actually uses,
+# returns `.none()` on the same input. **Two methods with the same name, one
+# fail-closed and one fail-open**, and the fail-open one had no callers — so
+# the next caller would have got the silent full set.
+#
+# Anything needing this direction imports `CIVILIZATION_TENANT` from
+# `apps.souls.models`. `tests/test_no_second_copy_of_the_civilization_map.py`
+# keeps a fifth copy from appearing.
 
 
 class SoulQuerySet(QuerySet):
@@ -21,13 +35,6 @@ class SoulQuerySet(QuerySet):
     def exclude_orphaned(self):
         """Exclude records with null tenant."""
         return self.filter(tenant__isnull=False)
-
-    def filter_by_civilization(self, civilization: str):
-        """Filter by civilization code (maps to tenant code)."""
-        tenant_code = CIVILIZATION_TENANT_MAP.get(civilization)
-        if tenant_code:
-            return self.filter(tenant__code=tenant_code)
-        return self
 
     def filter_by_state(self, state: str):
         """Filter by current_state."""

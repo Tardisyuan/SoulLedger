@@ -75,6 +75,7 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
     sentence_years = models.IntegerField(
         null=True,
         blank=True,
+        validators=[MinValueValidator(0)],
         help_text="Sentence duration in years; null = no term recorded (see is_eternal)",
     )
     # WHEN THE TERM BEGAN BEING COUNTED — and deliberately NOT `executed_at`.
@@ -138,6 +139,16 @@ class Disposition(ArchivableMixin, AuditUserFields, models.Model):
             models.Index(fields=["tenant", "created_at"]),
             models.Index(fields=["soul"]),
             models.Index(fields=["is_executed"]),
+        ]
+        constraints = [
+            # 实测接受 −5000,且能从 API 写进去。一个负的刑期不是一个短刑期,
+            # 它是一个没有意义的数,而 `is_eternal` 已经承担了「无期」这个含义。
+            # `null` 仍然合法:那表示「没有记录刑期」,与「刑期是 0」不同。
+            models.CheckConstraint(
+                condition=models.Q(sentence_years__isnull=True)
+                | models.Q(sentence_years__gte=0),
+                name="disposition_sentence_years_not_negative",
+            ),
         ]
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager

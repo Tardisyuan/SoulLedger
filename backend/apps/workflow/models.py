@@ -219,6 +219,25 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 # the second caller has to learn its decision was not recorded.
                 return False
 
+            # A node that declares which verdicts it accepts has that
+            # declaration honoured. `required_verdicts` was written at node
+            # creation (`services.py`), exposed in the serializer, and read by
+            # **nothing** — the only consumer of a verdict is
+            # `WorkflowNodeActionSerializer.verdict`, a *fixed* ChoiceField.
+            # Measured 2026-08-29: a node with
+            # `required_verdicts=["CONFIRMED"]` accepted `"PASSED"` and
+            # answered 200, so a template's per-node constraint had no effect
+            # at all while its help_text said 「可接受的裁决列表」.
+            #
+            # An empty list still means "no constraint" — that is the default
+            # and most nodes carry it. This only enforces a list somebody
+            # actually wrote.
+            if node.required_verdicts and verdict not in node.required_verdicts:
+                raise ValueError(
+                    f"Node {node.node_name} accepts {node.required_verdicts}; "
+                    f"got {verdict}"
+                )
+
             passed = verdict in ["PASSED", "CONFIRMED"]
             node.status = NodeStatus.APPROVED if passed else NodeStatus.REJECTED
             node.verdict = verdict

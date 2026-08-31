@@ -253,7 +253,21 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
         verdict = serializer.validated_data["verdict"]
         notes = serializer.validated_data.get("notes", "")
 
-        success = workflow.complete_node(node.id, verdict, notes, user=request.user)
+        try:
+            success = workflow.complete_node(node.id, verdict, notes, user=request.user)
+        except ValueError as exc:
+            # `complete_node` raises when the node declares
+            # `required_verdicts` and this verdict is not in it. A 400 rather
+            # than a 500: the client sent a verdict this node does not accept,
+            # and it can see which ones it does.
+            return Response(
+                {
+                    "error": "This node does not accept that verdict.",
+                    "detail": str(exc),
+                    "required_verdicts": node.required_verdicts,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if success:
             # The decision is on the soul's timeline, and whoever the workflow
             # moved on to hears about it. See `WorkflowService.announce` for why

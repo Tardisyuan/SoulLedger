@@ -52,6 +52,30 @@ class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeVie
     filterset_fields = ["soul", "is_executed", "is_eternal", "memory_reset"]
     ordering_fields = ["created_at", "executed_at"]
 
+    def get_queryset(self):
+        """Archived dispositions are off the list unless asked for.
+
+        `ArchivableMixin`'s docstring says "an archived record is removed from
+        normal lists". That was true of Soul (`apps/souls/views.py` filters it)
+        and **false here**: `TenantManager` filters `is_deleted` only, and this
+        queryset filtered nothing, so `archive()` on a Disposition changed a
+        flag and nothing else. Measured 2026-08-29 —
+        `d.archive(reason="test")`, then `Disposition.objects.filter(pk=d.pk)`
+        still returned it.
+
+        `?show_archived=1` to see them, matching the `show_deleted` switch the
+        Soul viewset already has: archiving is reversible and the rows are
+        meant to stay readable, which is the whole difference between it and a
+        delete.
+        """
+        qs = super().get_queryset()
+        show_archived = self.request.query_params.get(
+            "show_archived", ""
+        ).lower() in ("1", "true", "yes")
+        if not show_archived:
+            qs = qs.filter(is_archived=False)
+        return qs
+
     @action(detail=True, methods=["post"])
     def execute(self, request, pk=None):
         """

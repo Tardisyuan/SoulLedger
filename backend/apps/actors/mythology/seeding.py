@@ -69,6 +69,55 @@ STATUTE_FIELDS = (
     "source_actor", "source_actor_field",
 )
 
+#: Columns this seeder deliberately does not own, and why.
+#:
+#: `--update` compares only the `*_FIELDS` tuples above, so anything outside
+#: them **drifts invisibly**: the seeder reports `unchanged` for a row whose
+#: uncompared column somebody edited, and the ordinary (non-`--update`) run
+#: prints nothing at all about it. Measured 2026-08-29: set an actor's
+#: `icon_url` by hand, run `--update`, and every compared field is restored
+#: while `icon_url` stays — reported as `unchanged`.
+#:
+#: The fix for `is_active` was to bring it *into* the comparison set (it has
+#: real consumers — see the comment in `ACTOR_FIELDS`). These three are the
+#: opposite call, written down rather than left as an omission that looks the
+#: same either way:
+#:
+#: * `Actor.icon_url` — operational. Nothing in `ACTORS`/`ASSESSORS` supplies
+#:   an icon; a deployment that sets one is not drifting from the corpus.
+#: * `Actor.is_deleted` / soft-delete columns — retirement is
+#:   `actors/0010`'s job and `seed_mythology` must not undo it.
+#: * `Realm.is_judgment_required` — **migration-managed**. `realms/0013` sets
+#:   it to False for specific realms and `realms/0014`'s docstring says it is
+#:   "deliberately not set here"; folding it into the seed table would make
+#:   the next `--update` revert those migrations.
+#:
+#: `tests/test_seed_field_coverage_is_declared.py` requires every concrete
+#: field on these models to be in one list or the other, so a column added
+#: later cannot land in neither.
+NOT_SEEDED = {
+    "Actor": {"icon_url"},
+    "Realm": {"is_judgment_required"},
+}
+
+#: Columns every model here carries for reasons that have nothing to do with
+#: the corpus: identity, the audit stamps `AuditUserFields` adds, the
+#: soft-delete columns, the tenant/civilization the seeder derives itself, and
+#: `sort_code`. Listed once rather than repeated per model.
+INFRASTRUCTURE_FIELDS = frozenset({
+    "id",
+    "create_time", "create_user", "update_time", "update_user", "version",
+    "created_at",
+    "is_deleted", "deleted_at", "deleted_by", "delete_reason",
+    "delete_cascade_id",
+    "tenant", "civilization",
+    "sort_code",
+    # The identity a row is matched on — see `_seed_actors`/`_seed_realms`.
+    # It cannot be "updated" because it is how the row is found.
+    "name", "realm_code", "code",
+    "parent_realm",
+})
+
 
 class Stats:
     """Per-model tally, printed as the run summary."""

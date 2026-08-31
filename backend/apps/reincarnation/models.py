@@ -3,6 +3,7 @@ Reincarnation model — tracks rebirth cycles.
 """
 import uuid
 
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from apps.core.models import AuditUserFields
@@ -72,7 +73,11 @@ class Reincarnation(AuditUserFields, models.Model):
         choices=RebirthForm.choices,
         default=RebirthForm.HUMAN,
     )
-    cycle_count = models.IntegerField(default=1)
+    cycle_count = models.IntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        help_text="Which turn of the wheel this is; the first rebirth is 1.",
+    )
     previous_realm = models.CharField(max_length=100, blank=True)
     new_identity = models.CharField(max_length=255, blank=True, help_text="Name in new life")
     notes = models.TextField(blank=True)
@@ -89,6 +94,14 @@ class Reincarnation(AuditUserFields, models.Model):
         ordering = ["-reincarnated_at"]
         verbose_name = "Reincarnation"
         verbose_name_plural = "Reincarnations"
+        constraints = [
+            # 实测接受 −7,而 `ReincarnationSerializer` 同样没有 `read_only_fields`。
+            # 下限 1 而不是 0:默认值就是 1,「第零次轮回」不是这个系统里的一个状态。
+            models.CheckConstraint(
+                condition=models.Q(cycle_count__gte=1),
+                name="reincarnation_cycle_count_at_least_one",
+            ),
+        ]
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()
