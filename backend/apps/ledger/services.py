@@ -431,6 +431,7 @@ class LedgerService:
             # locked.
             soul = Soul.all_objects.select_for_update().get(pk=soul.pk)
             old_merit = soul.merit_score
+            old_demerit = soul.demerit_score
 
             records = soul.records.all()
             anchor = cls._get_decay_anchor(soul)
@@ -459,7 +460,13 @@ class LedgerService:
 
         # Log domain event
         from apps.events.services import EventService
-        EventService.log_karma_recalculated(soul, old_merit, soul.merit_score)
+        EventService.log_karma_recalculated(
+            soul,
+            old_merit,
+            soul.merit_score,
+            old_demerit=old_demerit,
+            new_demerit=soul.demerit_score,
+        )
 
         return {
             "soul_id": str(soul.id),

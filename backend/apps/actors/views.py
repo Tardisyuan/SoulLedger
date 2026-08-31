@@ -30,7 +30,20 @@ class ActorViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnl
     permission_codename = "actors"
     queryset = Actor.objects.filter(is_active=True)
     filterset_class = ActorFilter
-    search_fields = ActorFilter.search_fields
+    # NO `search_fields` HERE, DELIBERATELY.
+    #
+    # Setting it activates DRF's `SearchFilter`, which consumes `?search=` —
+    # and `ActorFilter.search` is a `CharFilter` that consumes the *same*
+    # parameter. Both ran, and the two are ANDed: the FilterSet wants the whole
+    # string as a substring of one field, `SearchFilter` wants every
+    # whitespace-separated term matched. The intersection is narrower than
+    # either alone, so `?search=Osiris Lord` could come back empty while both
+    # mechanisms would have matched something on their own.
+    #
+    # One consumer. `ActorFilter.filter_search` is the one this app documents
+    # (substring across name/name_zh/name_en/name_egy/title/description), and
+    # `SearchFilter` is inert without `search_fields`.
+    # `tests/test_actor_search_has_one_owner.py` pins it.
     ordering_fields = ActorFilter.ordering_fields
 
     def get_queryset(self):

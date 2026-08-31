@@ -8,7 +8,14 @@ import { useJudgments, useCreateJudgment, useConcludeJudgment } from "@/src/hook
 import { judgmentApi } from "@/lib/api";
 
 const mockShowToast = jest.fn();
-const mockInvalidateQueries = jest.fn();
+
+// `mockInvalidateQueries` 与 `mockShowToast` 曾经在这里各占一行,而**两个都
+// 没有被任何 `jest.mock` 工厂引用**,也没有任何断言读它们 —— 下面的
+// `jest.mock("@/src/components/ui/Toast")` 用的是一个就地新建的 `jest.fn()`。
+// 它们制造出「这条测试在观察 toast 与缓存失效」的观感,而实际什么都没观察。
+//
+// 藏了很久:`src/__tests__/**` 整个在 eslint 的 `ignores` 里,主块又把
+// `no-unused-vars` 关成了 off。
 
 jest.mock("@/lib/api", () => ({
   judgmentApi: {

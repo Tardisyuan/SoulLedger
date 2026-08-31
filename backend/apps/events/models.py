@@ -54,6 +54,15 @@ class EventType(models.TextChoices):
     USER_FOLLOWED = "USER_FOLLOWED"
     USER_UNFOLLOWED = "USER_UNFOLLOWED"
 
+    # Notification events
+    #
+    # The backend **emits** this — `apps/events/event_bus.py` and
+    # `apps/events/services.py` both publish `event_type="NOTIFICATION_CREATED"`
+    # — and it was not a member of this enum. The frontend's
+    # `lib/events/event_registry.ts` **is** complete and handles it; the
+    # incomplete list was this one, which is the direction nobody checks.
+    NOTIFICATION_CREATED = "NOTIFICATION_CREATED"
+
 
 class SoulEvent(AuditUserFields, models.Model):
     """

@@ -63,10 +63,16 @@ const mockedExport = ledgerApi.exportStats as jest.Mock;
 
 const baseStats = {
   total_souls: 4,
+  // `label` 是**枚举成员原样**,不是英文标签。
+  //
+  // 这份夹具原来写的是 `"Alive"` / `"Judging"` / `"Disposed"`,而后端
+  // (`apps/ledger/views.py`)写的是 `{"label": s}` —— SCREAMING_SNAKE 原样。
+  // 夹具和它旁边那条注释一起,把一个不存在的接线说成了事实,于是下面两条测试
+  // **钉住的是那个不存在的接线**。
   state_distribution: [
-    { state: "ALIVE", label: "Alive", count: 2 },
-    { state: "JUDGING", label: "Judging", count: 1 },
-    { state: "DISPOSED", label: "Disposed", count: 1 },
+    { state: "ALIVE", label: "ALIVE", count: 2 },
+    { state: "JUDGING", label: "JUDGING", count: 1 },
+    { state: "DISPOSED", label: "DISPOSED", count: 1 },
   ],
   tenants: [
     { tenant_code: "CN_DIYU", tenant_name: "地府", total_souls: 3, state_breakdown: { ALIVE: 2, JUDGING: 1 } },
@@ -131,18 +137,27 @@ describe("DashboardPage overview", () => {
     await waitFor(() => expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(3));
   });
 
-  it("shows the API label in the pie legend when no translation exists", async () => {
+  it("翻译缺失时,图例里不会出现裸枚举成员", async () => {
+    // 这条曾经叫「shows the API label in the pie legend」,断的是
+    // `toHaveTextContent("Alive|Judging|Disposed")` —— 而 API 送的是
+    // `ALIVE|JUDGING|DISPOSED`。**夹具、注释、测试三者互相印证了一件假的事。**
+    // 现在断的是:无论 `label` 里是什么,裸成员都不会进图例。
+    mockT.mockImplementation((key: string) => key);
+
     renderPage();
 
-    expect(await screen.findByTestId("pie")).toHaveTextContent("Alive|Judging|Disposed");
+    const legend = await screen.findByTestId("pie");
+    expect(legend).not.toHaveTextContent("ALIVE");
+    expect(legend).not.toHaveTextContent("JUDGING");
+    expect(legend).not.toHaveTextContent("DISPOSED");
   });
 
-  it("shows the translated state name when one exists", async () => {
+  it("**断存在。** 有翻译时用翻译", async () => {
     mockT.mockImplementation((key: string) => (key === "souls.states.ALIVE" ? "存活" : key));
 
     renderPage();
 
-    expect(await screen.findByTestId("pie")).toHaveTextContent("存活|Judging|Disposed");
+    expect(await screen.findByTestId("pie")).toHaveTextContent("存活");
   });
 
   it("renders the error text instead of the pie chart when the query fails", async () => {

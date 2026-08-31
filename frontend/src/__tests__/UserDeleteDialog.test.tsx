@@ -1,7 +1,7 @@
 /**
  * Tests for UserDeleteDialog component
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
 import type { User } from "@/lib/api";
 

@@ -219,9 +219,14 @@ function LedgerPageContent() {
 const STATE_DOT: Record<string, string> = {
   ALIVE: "bg-[hsl(var(--color-status-alive))]",
   JUDGING: "bg-[hsl(var(--color-status-judging))]",
-  DISPOSED: "bg-[hsl(var(--color-status-lost))]",
+  // `--color-status-disposed`, not `--color-status-lost`. DISPOSED was
+  // wearing LOST's token — and LOST had no entry at all, so 「迷失」 fell to the
+  // error-red fallback below. Two of the six states were the wrong colour, and
+  // one of them was wearing the other's.
+  DISPOSED: "bg-[hsl(var(--color-status-disposed))]",
   REINCARNATING: "bg-[hsl(var(--color-status-reincarnating))]",
   SETTLED: "bg-[hsl(var(--color-status-settled))]",
+  LOST: "bg-[hsl(var(--color-status-lost))]",
 };
 
 /**

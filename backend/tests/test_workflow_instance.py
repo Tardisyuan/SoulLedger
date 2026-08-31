@@ -507,11 +507,16 @@ class TestJudgmentWorkflowIntegration:
     @pytest.fixture
     def soul(self, cn_tenant):
         # civilization is derived from tenant
+        #
+        # JUDGING,不是 ALIVE:这个类里的每条测试都要 `conclude`,而 JUDGING 是
+        # 它的真实前置条件(生产路径是 `soul.die()` 把灵魂送进去)。此前这里是
+        # ALIVE,而 `conclude` **丢掉了 `transition_to` 的返回值** —— judgment
+        # 标记 final、处置已创建,而灵魂还是 ALIVE,没有测试断言过灵魂状态。
         return Soul.objects.create(
             name="测试灵魂",
             birth_date="1990-01-01",
             origin_location="北京",
-            current_state=SoulState.ALIVE,
+            current_state=SoulState.JUDGING,
             tenant=cn_tenant,
         )
 

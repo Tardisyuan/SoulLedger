@@ -25,6 +25,8 @@ export interface WSClientOptions {
   onNotification?: (notification: Record<string, unknown>) => void;
   onWorkflowEvent?: (event: Record<string, unknown>) => void;
   onGenericEvent?: (event: Record<string, unknown>) => void;
+  /** 服务端对 `{"type":"permission.refresh"}` 的应答。见 onmessage 里的 case。 */
+  onPermissionsRefreshed?: (permissions: string[]) => void;
 }
 
 function getWebSocketUrl(): string {
@@ -64,6 +66,7 @@ export class WSClient {
       onNotification: () => {},
       onWorkflowEvent: () => {},
       onGenericEvent: () => {},
+      onPermissionsRefreshed: () => {},
       ...options,
     };
   }
@@ -113,6 +116,18 @@ export class WSClient {
             break;
           case "workflow":
             this.options.onWorkflowEvent(data);
+            break;
+          case "permission.refreshed":
+            // 后端一直在应答这条,而前端**从来没有 case 处理它** ——
+            // 落到 default,`domain`/`event` 都没有,于是被静默丢弃。
+            // 全仓 grep `permission.refresh` 零命中:这条通道两端都在,
+            // 中间没有接线。
+            //
+            // 现在收下它。发送端仍然由调用方决定(`send({type:
+            // "permission.refresh"})`),这里只保证送回来的新权限集不会掉在地上。
+            this.options.onPermissionsRefreshed(
+              (data.permissions as string[] | undefined) ?? []
+            );
             break;
           case "error":
             console.warn("[WS] Server error:", data.message);

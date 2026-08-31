@@ -405,7 +405,19 @@ def offset_within_classes(class_totals: dict) -> dict:
             offset, _m_left, _d_left, applied = _offset_with_grain(mg, dg)
             granularity_applied = granularity_applied or applied
         else:
-            offset = min(merit, demerit)
+            # `max(0.0, ...)`: an offset can be zero but never negative.
+            #
+            # Bare `min(merit, demerit)` with a negative pool inverts the
+            # arithmetic below — `merit=-50, demerit=20` gives `offset=-50`
+            # and therefore `unoffset_demerit = 20 - (-50) = 70`: **20 points
+            # of wrongdoing producing 70 points of unoffset wrongdoing**, and
+            # that number is what `DispositionService._route_chinese` sentences
+            # on. Unreachable today (the live path always carries grain buckets
+            # and `_offset_with_grain`'s `if take > 0` already refuses), and
+            # `Soul.merit_score` now has a `MinValueValidator(0)` and a check
+            # constraint besides — but this function takes plain floats from
+            # whoever calls it and does not read those columns.
+            offset = max(0.0, min(merit, demerit))
 
         by_class[name] = {
             "merit": _tidy(merit),

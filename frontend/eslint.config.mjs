@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import tsPlugin from "@typescript-eslint/eslint-plugin";
 import eslintParser from "@typescript-eslint/parser";
 import reactHooks from "eslint-plugin-react-hooks";
 import jsxA11y from "eslint-plugin-jsx-a11y";
@@ -145,6 +146,14 @@ const HEX_ALLOW = [
   "src/components/workflow/",
   "src/components/charts/",
   "src/components/settings/SettingsDrawer.tsx",
+  // `app/global-error.tsx` 替换的是**根布局本身** —— 它渲染在
+  // `app/layout.tsx` 失败之后,而 `globals.css`(以及里面每一个
+  // `--color-*` token)正是根布局 import 的。那里没有 token 可用:
+  // `hsl(var(--color-canvas))` 会解析成空,页面变成默认白底黑字,
+  // 而这个文件存在的全部理由就是「其它一切都不可用时还能说人话」。
+  //
+  // 这是唯一一个「真值颜色合法」不是设计取舍、而是**运行时事实**的地方。
+  "app/global-error.tsx",
 ];
 
 // 同一份清单要给**两条**规则用(no-hex-colour 与 no-raw-palette 的任意值分支),
@@ -359,10 +368,25 @@ const SHARED_GLOBALS = {
 
 const eslintConfig = [
   {
-    ignores: [".next/**", "node_modules/**", "coverage/**", "scripts/**", "src/__tests__/**"],
+    // `src/__tests__/**` 不再被忽略。
+    //
+    // 忽略它 + 全局 `no-unused-vars: "off"` 两层叠在一起,把「测试文件 import 了
+    // 一个东西却从不调用」藏得严严实实。实例:`inkOnSurfaceContract.test.ts`
+    // import 了 `readFileSync` 与 `GLOBALS_CSS` 两个都不用;
+    // `usePermissions.test.ts` import 了 `createElement` 与 `TenantProvider`
+    // —— 而**真的 provider 从来没被执行过**(`useTenant` 被 mock 了),
+    // 那两个 import 正是「这条测试渲染了真实上下文」的观感来源。
+    //
+    // 一个从不被调用的 import,在测试里比在产品代码里更值得报红:它通常意味着
+    // 那条测试**打算**做的事和它实际做的事不是一回事。
+    ignores: [".next/**", "node_modules/**", "coverage/**", "scripts/**"],
   },
   {
     files: ["**/*.ts", "**/*.tsx"],
+    // 测试文件由下面**单独一块**处理:那里只开 `no-unused-vars`。
+    // 设计系统那几条(字号档、间距节奏、死圆角)是给产品代码的 —— 让它们去管
+    // 一个断言里的 `text-sm` 字符串,只会让人把整块重新关掉。
+    ignores: ["src/__tests__/**"],
     languageOptions: {
       parser: eslintParser,
       parserOptions: {
@@ -376,11 +400,64 @@ const eslintConfig = [
     plugins: { "react-hooks": reactHooks },
     rules: {
       "react-hooks/rules-of-hooks": "error",
+      // `warn`,不是 `off`。
+      //
+      // `off` 是两层遮蔽里的第二层(第一层是上面的 `ignores`)。开成 `error`
+      // 会让这一轮变成一次大规模改写;`warn` 让它们出现在输出里,而
+      // `npm run lint` 仍然按退出码判定通过 —— 下一次有人碰这些文件时它就在
+      // 眼前。`argsIgnorePattern` 放行按约定写的 `_` 前缀。
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "react/react-in-jsx-scope": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-non-null-assertion": "off",
+    },
+  },
+
+  // ── 测试文件:只查「import 了却从不用」 ────────────────────────────────
+  //
+  // `src/__tests__/**` 曾经在全局 `ignores` 里,再加上主块的
+  // `no-unused-vars: "off"` —— 两层遮蔽叠在一起。实例:
+  // `inkOnSurfaceContract.test.ts` import 了 `readFileSync` 与 `GLOBALS_CSS`
+  // 两个都不用;`usePermissions.test.ts` import 了 `createElement` 与
+  // `TenantProvider`,而**真的 provider 从来没被执行过**(`useTenant` 被 mock
+  // 了)—— 那两个 import 正是「这条测试渲染了真实上下文」这个错觉的来源。
+  //
+  // 一个从不被调用的 import,在测试里比在产品代码里更值得看见:它通常意味着
+  // 那条测试**打算**做的事和它实际做的事不是一回事。
+  //
+  // `warn` 而不是 `error`:开成 error 会让这一轮变成一次跨 98 个文件的改写。
+  // warn 让它们出现在输出里,而 `npm run lint` 仍按退出码判定通过。
+  {
+    files: ["src/__tests__/**/*.ts", "src/__tests__/**/*.tsx"],
+    languageOptions: {
+      parser: eslintParser,
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+        ecmaVersion: "latest",
+        sourceType: "module",
+      },
+      globals: { ...SHARED_GLOBALS, jest: "readonly", describe: "readonly", it: "readonly", expect: "readonly", beforeEach: "readonly", afterEach: "readonly", beforeAll: "readonly", afterAll: "readonly" },
+    },
+    // 注册 `@typescript-eslint` 插件。
+    //
+    // 测试文件里有既存的 `eslint-disable-next-line
+    // @typescript-eslint/no-require-imports` 注释,而这份手写 flat config 从来
+    // 没注册过那个插件 —— 于是 ESLint 报「Definition for rule not found」。
+    // 那些注释此前一条也没生效过,只是没人看见,因为整个目录被忽略着。
+    plugins: { "@typescript-eslint": tsPlugin },
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-var-requires": "off",
+      "no-unused-vars": [
+        "warn",
+        {
+          args: "after-used",
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
 
@@ -395,6 +472,9 @@ const eslintConfig = [
   // 6 个文件,所以全部按 `error` 接上,而不是挑两条。
   {
     files: ["**/*.tsx"],
+    // 同上:a11y 规则读的是 JSX 结构,而测试里的 JSX 常常是**故意畸形的**
+    // (缺 label 的输入框、没有 alt 的图片)—— 那正是被测的对象。
+    ignores: ["src/__tests__/**"],
     plugins: { "jsx-a11y": jsxA11y },
     rules: {
       ...jsxA11y.configs.recommended.rules,
@@ -461,6 +541,11 @@ const eslintConfig = [
       "lib/**/*.{ts,tsx}",
       "hooks/**/*.{ts,tsx}",
     ],
+    // 测试文件除外。这几条规则读的是**类名字符串**,而测试里的 `text-xs` /
+    // `py-0.5` / `rounded` 通常正是**被断言为不该出现的东西** —— 让规则去管
+    // 断言的内容,只会让人把整块重新关掉,而那正是 `src/__tests__/**` 当初被
+    // 塞进全局 `ignores` 的原因。
+    ignores: ["src/__tests__/**"],
     plugins: { "design-system": designSystem },
     rules: {
       "design-system/type-scale": "error",

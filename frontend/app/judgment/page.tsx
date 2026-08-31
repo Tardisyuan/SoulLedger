@@ -7,7 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { judgmentApi, PAGE_SIZE, type Judgment } from "@/lib/api";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
 import { buttonVariants } from "@/src/components/ui/Button";
@@ -117,7 +117,15 @@ function JudgmentQueuePageContent() {
         renderRow={(judgment) => (
           <>
             <td className="px-4 py-3 font-medium text-ink">
-              {judgment.soul_name || judgment.soul}
+              {/* `MissingValue`,不是 UUID。`judgment.soul` 是主键;
+                  `soul_name || soul` 在名字缺失时把一串 UUID 印成灵魂名 ——
+                  兜底方向违反 IDENTIFIER_POLICY(标识符不做名字的兜底)。
+                  「没有记录名字」是一个可以显示的事实,一串 UUID 不是。 */}
+              {judgment.soul_name ? (
+                judgment.soul_name
+              ) : (
+                <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />
+              )}
             </td>
             <td className="px-4 py-3 text-ink-muted">
               <DomainEnum namespace="souls.civilizations" value={judgment.civilization} />

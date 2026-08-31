@@ -84,10 +84,11 @@ export const crossTenantJudgmentsApi = {
   create: (data: { title: string; description: string }) => api.post<CrossTenantJudgment>("/dispatch/cross-tenant-judgments/", data),
   participate: (id: string, data: { participant_tenant: number; participant_actor?: number; role?: string }) =>
     api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/participate/`, data),
-  // No response type: CrossTenantJudgmentViewSet declares only `participate`
-  // and `conclude` (backend/apps/dispatch/views.py:333 and :380). There is no
-  // `activate` route, so this call 404s. It has no callers.
-  activate: (id: string) => api.post(`/dispatch/cross-tenant-judgments/${id}/activate/`),
+  // `activate` was deleted 2026-08-31. `CrossTenantJudgmentViewSet` declares
+  // only `participate` and `conclude`, so the call 404'd — and the comment
+  // above it **said so**, in the file, next to the code, for as long as it
+  // existed. A method that documents its own uselessness is still a method the
+  // next person will call.
   conclude: (id: string, data: { conclusion_type: string }) =>
     api.post<CrossTenantJudgment>(`/dispatch/cross-tenant-judgments/${id}/conclude/`, data),
 };

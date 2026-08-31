@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { Badge, BADGE_TONES, BADGE_TONE_CLASSES, type BadgeTone } from "@/src/components/ui/Badge";
+import { Badge, BADGE_TONES, BADGE_TONE_CLASSES } from "@/src/components/ui/Badge";
 import {
   ENUM_TONE_CLASSES,
   EnumBadge,
