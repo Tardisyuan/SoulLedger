@@ -24,7 +24,7 @@ jest.mock('../../messages/egy.json', () => ({
   default: { nav: { title: '𓂀 Soul Book 𓂀' } },
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const { I18nProvider, useI18n } = require('@/src/contexts/I18nContext');
 
 function renderI18n() {

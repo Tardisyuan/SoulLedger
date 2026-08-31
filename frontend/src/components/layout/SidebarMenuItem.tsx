@@ -9,6 +9,9 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { isMenuPathActive } from "@/src/lib/menuPath";
 
+/** 稳定引用 —— 默认值写成字面量会让 `React.memo` 每次都失效。 */
+const EMPTY_PATHS: readonly string[] = [];
+
 /**
  * 侧边栏的一行菜单项（有子项时是可展开的分组）。原先长在 AppLayout.tsx 里，
  * 随文件一起越过 500 行的上限之后搬到这里；代码逐字未改。
@@ -20,9 +23,11 @@ function SidebarMenuItemInner({
   menu,
   collapsed,
   depth = 0,
+  allMenuPaths = EMPTY_PATHS,
 }: {
   menu: SidebarMenu;
   collapsed: boolean;
+  allMenuPaths?: readonly string[];
   depth?: number;
 }) {
   const pathname = usePathname();
@@ -30,7 +35,7 @@ function SidebarMenuItemInner({
   const hasChildren = menu.children && menu.children.length > 0;
   const { t } = useI18n();
 
-  const active = isMenuPathActive(pathname, menu.path);
+  const active = isMenuPathActive(pathname, menu.path, allMenuPaths);
 
   const indent = collapsed ? "" : depth > 0 ? "ml-4" : "";
 
@@ -70,6 +75,7 @@ function SidebarMenuItemInner({
                 menu={child}
                 collapsed={collapsed}
                 depth={depth + 1}
+                allMenuPaths={allMenuPaths}
               />
             ))}
           </div>

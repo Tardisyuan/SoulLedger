@@ -49,7 +49,7 @@ jest.mock('../../messages/egy.json', () => ({
 }));
 
 // Import AFTER mock setup
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const { I18nProvider, useI18n } = require('@/src/contexts/I18nContext');
 
 // ── Helper: render useI18n hook inside the provider ─────────────────────────

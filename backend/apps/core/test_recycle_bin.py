@@ -130,7 +130,12 @@ class TestArchiveGuard:
         self.admin = User.objects.create_user(
             username="rb_archive_admin", password="test123", role="ADMIN", tenant=self.tenant
         )
-        self.soul = Soul.objects.create(name="Concluded Soul", tenant=self.tenant, current_state=SoulState.ALIVE)
+        # JUDGING,不是 ALIVE:`conclude` 要把灵魂送到 DISPOSED,而那条边只从
+        # JUDGING 出发。这里此前是 ALIVE,而 `conclude` **丢掉了 transition_to
+        # 的返回值** —— judgment 标记 final、处置已创建,而灵魂纹丝不动。
+        self.soul = Soul.objects.create(
+            name="Concluded Soul", tenant=self.tenant, current_state=SoulState.JUDGING
+        )
         self.judgment = Judgment.objects.create(soul=self.soul, civilization=Civilization.CHINESE)
         self.judgment.conclude("PASSED", "Lived well")
         self.disposition = Disposition.objects.get(judgment=self.judgment)

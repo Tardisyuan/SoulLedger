@@ -135,6 +135,14 @@ class StatuteCitationService:
         return bool(deleted)
 
 
+class JudgmentNotConcludableError(Exception):
+    """The soul cannot take the state change concluding a judgment requires.
+
+    Raised inside `conclude`'s transaction so the judgment, the disposition and
+    the workflow it has already created roll back with it.
+    """
+
+
 class JudgmentConclusionService:
     """
     Orchestrates the judgment conclusion saga across multiple bounded contexts:
@@ -190,7 +198,17 @@ class JudgmentConclusionService:
                 WorkflowService.create_from_judgment(judgment)
 
             # Step 4: Transition soul state (cross-context: judgment → souls)
-            judgment.soul.transition_to(SoulState.DISPOSED, f"Judgment concluded: {verdict}")
+            # Checked, not dropped. A soul that cannot move to DISPOSED
+            # leaves this block with a concluded judgment, a disposition and
+            # possibly a workflow all committed around it — and `conclude`
+            # returned True either way, so no caller could tell.
+            if not judgment.soul.transition_to(
+                SoulState.DISPOSED, f"Judgment concluded: {verdict}"
+            ):
+                raise JudgmentNotConcludableError(
+                    f"Soul {judgment.soul.pk} is {judgment.soul.current_state}; "
+                    f"a judgment cannot conclude from there. Nothing was written."
+                )
 
         # Step 5: Log domain event (outside transaction for performance)
         from apps.events.services import EventService

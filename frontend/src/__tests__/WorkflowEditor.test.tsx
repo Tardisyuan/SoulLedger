@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 jest.mock("@xyflow/react", () => {
   const React = require("react");
   return {
-    ReactFlow: ({ children, ...props }: any) => <div data-testid="react-flow">{children}</div>,
+    ReactFlow: ({ children, ..._props }: any) => <div data-testid="react-flow">{children}</div>,
     Controls: () => <div>Controls</div>,
     Background: () => <div>Background</div>,
     Panel: ({ children }: any) => <div>{children}</div>,

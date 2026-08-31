@@ -104,7 +104,10 @@ export default function DeathSyncPage() {
                 </div>
                 <div className="mt-2 flex gap-4 text-02 text-[hsl(var(--color-ink-muted))]">
                   <span>{t("death_sync.requested") || "Requested"}: {formatDateTime(reg.request_timestamp)}</span>
-                  {reg.processing_duration_ms && (
+                  {/* `!= null`,不是真值判断。`processing_duration_ms` 是
+                      `number | null`,值为 0 时 `0 && …` 求值为 `0`,而 React
+                      **会把裸 0 渲染出来** —— 元信息行里凭空多一个 0。 */}
+                  {reg.processing_duration_ms != null && (
                     <span>{t("death_sync.duration") || "Duration"}: {reg.processing_duration_ms}ms</span>
                   )}
                 </div>

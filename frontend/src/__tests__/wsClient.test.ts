@@ -245,3 +245,54 @@ describe("WSClient message routing", () => {
     expect(onStatusChange.mock.calls.filter(([s]: [WSStatus]) => s === "connected")).toHaveLength(1);
   });
 });
+
+describe("permission.refreshed", () => {
+  /**
+   * 后端一直在应答 `{"type":"permission.refresh"}`,回一条
+   * `{"type":"permission.refreshed", "permissions":[...]}`
+   * (`apps/core/ws_permissions.py:59-68`)。前端的 message-type switch 里
+   * **没有这个 case** —— 落到 default,而 default 只在有 `domain`+`event` 时
+   * 才分发,所以那条应答被静默丢弃。
+   *
+   * 全仓 grep `permission.refresh` 零命中:通道两端都在,中间没有接线。
+   */
+  it("把服务端送回的新权限集交给回调", () => {
+    setToken("tok");
+    const onPermissionsRefreshed = jest.fn();
+    new WSClient({ onPermissionsRefreshed }).connect();
+
+    lastSocket().onmessage?.({
+      data: JSON.stringify({
+        type: "permission.refreshed",
+        permissions: ["soul.read", "ledger.read"],
+      }),
+    } as MessageEvent);
+
+    expect(onPermissionsRefreshed).toHaveBeenCalledWith(["soul.read", "ledger.read"]);
+  });
+
+  it("没有 permissions 字段时给一个空数组,而不是 undefined", () => {
+    // 调用方会 `.map` 它。`undefined` 会在调用方那里炸,而炸的地方离原因很远。
+    setToken("tok");
+    const onPermissionsRefreshed = jest.fn();
+    new WSClient({ onPermissionsRefreshed }).connect();
+
+    lastSocket().onmessage?.({
+      data: JSON.stringify({ type: "permission.refreshed" }),
+    } as MessageEvent);
+
+    expect(onPermissionsRefreshed).toHaveBeenCalledWith([]);
+  });
+
+  it("**断存在的反面。** 它不再落到通用事件分发上", () => {
+    setToken("tok");
+    const onGenericEvent = jest.fn();
+    new WSClient({ onGenericEvent }).connect();
+
+    lastSocket().onmessage?.({
+      data: JSON.stringify({ type: "permission.refreshed", permissions: [] }),
+    } as MessageEvent);
+
+    expect(onGenericEvent).not.toHaveBeenCalled();
+  });
+});
