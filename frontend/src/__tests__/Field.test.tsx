@@ -27,7 +27,7 @@ const OPTIONS = [
 ];
 
 /** All three controls, so "unified" below means all of them and not the input. */
-const CONTROLS: Array<[string, (props: Record<string, unknown>) => React.ReactElement]> = [
+const CONTROLS: Array<[string, (_props: Record<string, unknown>) => React.ReactElement]> = [
   ["input", (p) => <TextField label="Name" {...p} />],
   ["select", (p) => <SelectField label="Civ" options={OPTIONS} {...p} />],
   ["textarea", (p) => <TextAreaField label="Reason" {...p} />],

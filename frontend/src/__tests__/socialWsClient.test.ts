@@ -12,7 +12,7 @@ import { SocialWSClient, type SocialEvent } from "@/lib/ws/social-client";
 
 // ── Fake WebSocket ───────────────────────────────────────────────────
 
-type Handler = ((ev: unknown) => void) | null;
+type Handler = ((_ev: unknown) => void) | null;
 
 class FakeWebSocket {
   static CONNECTING = 0;

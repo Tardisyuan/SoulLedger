@@ -307,21 +307,41 @@ class LedgerOverviewStatsView(APIView):
         ]
 
         # Souls by realm/disposition breakdown - scoped to tenant (S-H3)
-        executed_realms = {}
-        disp_qs = Disposition.objects.all() if tenant is None else Disposition.objects.filter(tenant=tenant)
-        for d in disp_qs.filter(is_executed=True).select_related("destination_realm").only("destination_realm__realm_code", "destination_realm__name_en", "destination_realm__civilization"):
-            if d.destination_realm:
-                realm_code = d.destination_realm.realm_code
-                if realm_code not in executed_realms:
-                    executed_realms[realm_code] = {
-                        "realm_code": realm_code,
-                        "realm_name": d.destination_realm.name_en,
-                        "civilization": d.destination_realm.civilization,
-                        "count": 0,
-                    }
-                executed_realms[realm_code]["count"] += 1
-
-        souls_by_realm = list(executed_realms.values())
+        #
+        # Counted in SQL, not by iterating. This loop pulled **every executed
+        # disposition in the tenant** into Python — no limit, no cache — to
+        # produce a handful of counts, on a dashboard endpoint. The comment
+        # nine lines above saying "single query, no N+1" is about the
+        # per-tenant soul counts, not about this.
+        #
+        # `is_archived=False` as well: an archived disposition is one somebody
+        # took off the list (`apps/core/archive.py`), and it was still being
+        # counted here while `LedgerService._term_start_for` excludes it — two
+        # numbers on the same screen disagreeing about what counts.
+        disp_qs = (
+            Disposition.objects.all()
+            if tenant is None
+            else Disposition.objects.filter(tenant=tenant)
+        )
+        souls_by_realm = [
+            {
+                "realm_code": row["destination_realm__realm_code"],
+                "realm_name": row["destination_realm__name_en"],
+                "civilization": row["destination_realm__civilization"],
+                "count": row["count"],
+            }
+            for row in (
+                disp_qs.filter(is_executed=True, is_archived=False)
+                .exclude(destination_realm__isnull=True)
+                .values(
+                    "destination_realm__realm_code",
+                    "destination_realm__name_en",
+                    "destination_realm__civilization",
+                )
+                .annotate(count=Count("id"))
+                .order_by("destination_realm__realm_code")
+            )
+        ]
 
         return Response({
             "total_souls": total_souls,

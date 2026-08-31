@@ -141,16 +141,27 @@ function DashboardContent() {
     );
   });
 
-  // The API hands back an English `label` per state ("Alive", "Judging", ...).
-  // Prefer the translated enum so the chart legend and the compact list follow
-  // the language picker; fall back to the API label if a key is ever missing
-  // (t() returns the key itself when it can't resolve one).
+  // WHAT THE API ACTUALLY SENDS. `{"label": s}` — **the SCREAMING_SNAKE enum
+  // member verbatim** (backend/apps/ledger/views.py). This comment used to say
+  // it was an English label ("Alive", "Judging", …), and that reading made
+  // `apiLabel` look like a safe fallback. It is not: on the day a
+  // `souls.states.*` key goes missing, that fallback puts the raw enum member
+  // into the chart legend — the exact defect §4.6 exists to remove.
+  //
+  // The branch is dead today (all six keys exist, pinned by
+  // src/__tests__/domainNamespaceContract.test.ts). It is kept only for the
+  // shape of the fallback chain; the value it prefers now is the convention's
+  // own copy, never the server's string.
   const stateLabel = (state: string, apiLabel?: string) => {
     const resolved = resolveEnumDisplay(t, "souls.states", state);
     // The server's English label beats the convention's generic
     // "unrecognized" copy, but the raw enum member is never the fallback.
     // `label` is null only for an absent state; a chart axis needs a string.
-    return resolved.state === "known" ? resolved.label : apiLabel || resolved.label || t("common.value.unrecorded");
+    if (resolved.state === "known") return resolved.label;
+    // `apiLabel` is deliberately NOT consulted — see above. It is the raw enum
+    // member, and printing it is what the convention forbids.
+    void apiLabel;
+    return resolved.label || t("common.value.unrecorded");
   };
 
   const stateData = stats?.state_distribution?.map((s) => ({

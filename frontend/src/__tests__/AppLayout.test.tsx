@@ -30,6 +30,26 @@ describe("isMenuPathActive", () => {
     expect(isMenuPathActive("/souls/42", "/souls")).toBe(true);
   });
 
+  it("一条路由只点亮一项:更具体的菜单存在时,祖先不亮", () => {
+    // `/social` 与 `/social/follows` 都是菜单项,而 `startsWith` 让两者
+    // **同时高亮**。侧边栏同时点亮两项,读起来像是不知道自己在哪一页。
+    const paths = ["/social", "/social/follows", "/souls"];
+    expect(isMenuPathActive("/social/follows", "/social", paths)).toBe(false);
+    expect(isMenuPathActive("/social/follows", "/social/follows", paths)).toBe(true);
+  });
+
+  it("**断存在。** 没有更具体菜单时,详情页仍然点亮它的列表页", () => {
+    // 只断「祖先不亮」的修法(比如「只有分组才做祖先高亮」)会让这一条红:
+    // `/souls` 是叶子,而 `/souls/42` 应该点亮它。
+    const paths = ["/social", "/social/follows", "/souls"];
+    expect(isMenuPathActive("/souls/42", "/souls", paths)).toBe(true);
+  });
+
+  it("祖先仍然只在真的是祖先时才亮", () => {
+    const paths = ["/social", "/social/follows"];
+    expect(isMenuPathActive("/socialise", "/social", paths)).toBe(false);
+  });
+
   it("does not match a sibling path that merely shares a prefix", () => {
     // /social must not light up for /social-other or vice versa.
     expect(isMenuPathActive("/social-other", "/social")).toBe(false);
@@ -124,7 +144,7 @@ describe("Breadcrumb", () => {
   }));
 
   // Requiring after the mocks are registered so AppLayout picks them up.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const { Breadcrumb } = require("@/src/components/layout/AppLayout");
 
   const menus: SidebarMenu[] = [

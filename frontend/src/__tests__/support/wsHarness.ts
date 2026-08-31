@@ -14,7 +14,7 @@
  * carry.
  */
 
-type Handler = ((ev: unknown) => void) | null;
+type Handler = ((_ev: unknown) => void) | null;
 
 export class FakeWebSocket {
   static CONNECTING = 0;

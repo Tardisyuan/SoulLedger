@@ -1136,6 +1136,11 @@
       "ACTIVE": "进行中",
       "CONCLUDED": "已结案",
       "CANCELLED": "已取消"
+    },
+    "participant_roles": {
+      "ADVISOR": "顾问",
+      "CO_JUDGE": "联合审判官",
+      "CHAIRMAN": "主持"
     }
   },
   "users": {

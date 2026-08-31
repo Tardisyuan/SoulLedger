@@ -60,7 +60,7 @@ afterEach(() => {
 
 describe("WelcomePage quick stats", () => {
   it("shows a placeholder for every stat until the request resolves", () => {
-    let resolve: (v: unknown) => void = () => {};
+    let resolve: (_v: unknown) => void = () => {};
     mockedStats.mockReturnValue(new Promise((r) => (resolve = r)));
 
     render(<WelcomePage />);

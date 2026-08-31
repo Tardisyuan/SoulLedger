@@ -27,9 +27,18 @@ FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
 REGISTRY = FRONTEND / "lib" / "events" / "event_registry.ts"
 HANDLERS = FRONTEND / "lib" / "events" / "eventHandlers.ts"
 
-# Emitted by `event_bus.publish` rather than declared on EventType. Listed here
-# so the extra-member check stays meaningful instead of being switched off.
-KNOWN_EXTRA = {"NOTIFICATION_CREATED"}
+#: 前端列了、而后端枚举没有的成员。**现在是空的。**
+#:
+#: 曾经是 `{"NOTIFICATION_CREATED"}`,理由写着「由 `event_bus.publish` 发出,
+#: 没有声明在 EventType 上」。那句话是真的,而它描述的正是缺陷:后端**在发**
+#: 这个事件,却没把它列进自己的枚举 —— 前端反而是完整的那一边。
+#:
+#: 那条豁免让这个契约测试对它免疫,于是「后端枚举不完备」一直没人报。
+#: 2026-08-31 把成员补进 `EventType`(events/0013),豁免随之清空。
+#:
+#: **一条比它的理由活得久的豁免,就是一个盲区。** 留空而不是删掉这个常量:
+#: 下面 `test_the_exemption_list_is_still_earned` 会盯着它。
+KNOWN_EXTRA: set[str] = set()
 
 
 def _backend_members():
@@ -149,3 +158,16 @@ def test_the_soul_timeline_can_handle_every_soul_event():
     handled = set(re.findall(r"^\s*([A-Z_]+)\s*:", block.group(1), re.M))
     missing = _soul_domain_members() - handled
     assert not missing, f"EVENT_REGISTRY.soul has no handler for {sorted(missing)}"
+
+
+def test_the_exemption_list_is_still_earned():
+    """`KNOWN_EXTRA` 里的每一项都必须**确实**不在后端枚举里。
+
+    一条指向已经存在的成员的豁免,是一条永远不会红的规则 —— 而这个文件的
+    `KNOWN_EXTRA` 正是这样存在过:`NOTIFICATION_CREATED` 被豁免着,
+    而豁免的理由(「后端没声明它」)本身就是那个缺陷。
+    """
+    stale = sorted(KNOWN_EXTRA & _backend_members())
+    assert stale == [], (
+        f"KNOWN_EXTRA 里这些成员后端已经有了,豁免可以删:{stale}"
+    )

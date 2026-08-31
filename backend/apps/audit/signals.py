@@ -553,8 +553,16 @@ def _connect_model_signals(model):
         return
     if model._meta.abstract:
         return
-    # Skip self (AuditLog model)
-    if model._meta.label.split('.')[-1].startswith('Audit'):
+    # Skip the audit log itself — auditing the audit trail recurses.
+    #
+    # Was `label.startswith('Audit')`. Only `AuditLog` matches that today, so
+    # the over-wide prefix is latent rather than live; but an `AuditPolicy` or
+    # `AuditRetention` added later would silently get no audit rows at all,
+    # and "no rows" is not a shape anyone goes looking for. Identity, not
+    # spelling.
+    from apps.audit.models import AuditLog
+
+    if model is AuditLog:
         return
     # Skip SoulEvent (internal event log, creates SoulEvent entries which should not generate AuditLogs)
     if model._meta.label.split('.')[-1] == 'SoulEvent':

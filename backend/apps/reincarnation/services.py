@@ -6,6 +6,16 @@ from apps.ledger.services import LedgerService
 from apps.souls.models import Soul, SoulState
 
 
+class RebirthRefusedError(Exception):
+    """The soul could not make the move the rebirth depends on.
+
+    Raised rather than returned, and raised **inside** `complete_rebirth`'s
+    transaction, because by that point the row and the score rewrites are
+    already staged: returning would commit them around a rebirth that did not
+    happen.
+    """
+
+
 class ReincarnationService:
     """
     Handles reincarnation execution and rebirth completion.
@@ -180,7 +190,23 @@ class ReincarnationService:
             soul.origin_location = ""
             soul.save()
 
-            soul.transition_to(SoulState.ALIVE, f"Rebirth complete (cycle {cycle_count})")
+            # The return value is checked, and the check is inside the
+            # `atomic()` on purpose.
+            #
+            # Dropped, this was the worst of the three: by the time it runs the
+            # `Reincarnation` row exists, `merit_score`/`demerit_score` have
+            # been overwritten with the inherited values, and `name` /
+            # `death_date` / `origin_location` have been rewritten — **all in
+            # this same transaction**. A refused transition raised nothing, so
+            # nothing rolled back, and every one of those side effects
+            # committed around a soul that never became ALIVE.
+            if not soul.transition_to(
+                SoulState.ALIVE, f"Rebirth complete (cycle {cycle_count})"
+            ):
+                raise RebirthRefusedError(
+                    f"Soul {soul.pk} is {soul.current_state}; it cannot be "
+                    f"reborn from there. Nothing was written."
+                )
 
         EventService.log(
             soul,

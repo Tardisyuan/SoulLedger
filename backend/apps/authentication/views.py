@@ -230,8 +230,20 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         # Prevent privilege escalation: assigning user's role must be >= target role.
         # Shares apps/authentication/serializers.py's ROLE_HIERARCHY so this
         # stays in sync with the same check applied on create/update.
+        # No `caller_role != 'ADMIN'` short-circuit.
+        #
+        # `IsAdminPermission` gates this action, so that clause guaranteed the
+        # whole check was **dead**: by the time control reaches here the caller
+        # is ADMIN, and the condition's first half is always False. Harmless
+        # today — and silently unprotective the day the ADMIN gate becomes a
+        # codename check, which the comments around here describe as planned.
+        #
+        # Removing it costs nothing: ADMIN ranks 0, the most privileged, so
+        # `role_rank('ADMIN') > role_rank(anything)` is never true. The check
+        # now says what it means — you cannot assign above your own rank —
+        # instead of naming one role for which it does not apply.
         caller_role = getattr(request.user, 'role', None)
-        if caller_role != 'ADMIN' and role_rank(caller_role) > role_rank(new_role):
+        if role_rank(caller_role) > role_rank(new_role):
             return Response(
                 {'error': 'Cannot assign a role more privileged than your own'},
                 status=status.HTTP_403_FORBIDDEN,

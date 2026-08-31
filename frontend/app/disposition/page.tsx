@@ -36,11 +36,11 @@ export default function DispositionPage() {
   const executeMutation = useMutation({
     mutationFn: (id: string) => dispositionApi.execute(id),
     onSuccess: () => {
-      showToast(t("disposition.executed_success") || "Disposition executed", "success");
+      showToast(t("disposition.executed_success"), "success");
       queryClient.invalidateQueries({ queryKey: ["dispositions"] });
       setShowExecuteModal(null);
     },
-    onError: () => showToast(t("disposition.execute_error") || "Failed to execute", "error"),
+    onError: () => showToast(t("disposition.execute_error"), "error"),
   });
 
   return (
@@ -48,18 +48,18 @@ export default function DispositionPage() {
       variant="page"
       title={
         <>
-          {t("disposition.title") || "Dispositions"}
+          {t("disposition.title")}
           <MenuGloss path="/disposition" />
         </>
       }
-      subtitle={t("disposition.subtitle") || "Soul disposition management"}
+      subtitle={t("disposition.subtitle")}
       isLoading={isLoading}
       skeleton={<ListSkeleton count={5} />}
       isEmpty={dispositions.length === 0}
       empty={
         <EmptyState
-          title={t("disposition.list") || "All Dispositions"}
-          reason={t("disposition.no_dispositions") || "No dispositions found."}
+          title={t("disposition.list")}
+          reason={t("disposition.no_dispositions")}
         />
       }
     >
@@ -69,20 +69,20 @@ export default function DispositionPage() {
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-03 font-medium text-ink">
-                  {t("disposition.soul") || "Soul"}:{" "}
+                  {t("disposition.soul")}:{" "}
                   <Link href={`/souls/${d.soul}`} className="text-[hsl(var(--color-accent-ink))] hover:underline">
                     {d.soul_name || d.soul}
                   </Link>
                 </p>
                 <p className="text-03 text-ink-subtle mt-1">
-                  {t("disposition.realm") || "Realm"}: <DomainText value={d.realm_name || d.destination_realm} />
+                  {t("disposition.realm")}: <DomainText value={d.realm_name || d.destination_realm} />
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {d.is_executed ? (
-                  <Badge tone="success">{t("disposition.executed") || "Executed"}</Badge>
+                  <Badge tone="success">{t("disposition.executed")}</Badge>
                 ) : d.is_eternal ? (
-                  <Badge tone="info">{t("disposition.eternal") || "Eternal"}</Badge>
+                  <Badge tone="info">{t("disposition.eternal")}</Badge>
                 ) : (
                   <RequirePermission permissions="disposition.execute">
                     <Button
@@ -91,7 +91,7 @@ export default function DispositionPage() {
                       size="sm"
                       onClick={() => setShowExecuteModal(d.id)}
                     >
-                      {t("disposition.execute") || "Execute"}
+                      {t("disposition.execute")}
                     </Button>
                   </RequirePermission>
                 )}
@@ -108,7 +108,7 @@ export default function DispositionPage() {
       {showExecuteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-surface-1 p-6 w-full max-w-md border border-hairline">
-            <h2 className="text-06 text-ink mb-2">{t("disposition.confirm_execute") || "Confirm Execution"}</h2>
+            <h2 className="text-06 text-ink mb-2">{t("disposition.confirm_execute")}</h2>
             <p className="text-04 text-ink-muted mb-4">
               {t("disposition.execute_warning")}
             </p>
@@ -126,7 +126,7 @@ export default function DispositionPage() {
                 loading={executeMutation.isPending}
                 onClick={() => executeMutation.mutate(showExecuteModal)}
               >
-                {executeMutation.isPending ? t("common.loading") : t("disposition.confirm_execute") || "Confirm"}
+                {executeMutation.isPending ? t("common.loading") : t("disposition.confirm_execute")}
               </Button>
             </div>
           </div>

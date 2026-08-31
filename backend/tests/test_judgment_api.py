@@ -128,6 +128,15 @@ class TestJudgmentAPI:
 
     def test_conclude_judgment_passed(self, authenticated_client, soul, cn_tenant):
         """POST /api/v1/judgment/{id}/conclude/ with PASSED verdict."""
+        # 灵魂必须先在 JUDGING —— 这是 `conclude` 的真实前置条件
+        # (生产路径是 `soul.die()` 把它送进 JUDGING)。
+        #
+        # 在 2026-08-31 之前,这几条测试用一个 ALIVE 的灵魂调 conclude,而
+        # `conclude` **丢掉了 `transition_to` 的返回值** —— 接口回 200、
+        # judgment 标记 final、处置已创建,而灵魂还是 ALIVE。测试没有断言灵魂
+        # 的状态,所以谁都没看见。
+        soul.current_state = SoulState.JUDGING
+        soul.save(update_fields=["current_state"])
         judgment = Judgment.objects.create(
             soul=soul,
             civilization=soul.civilization,
@@ -151,6 +160,15 @@ class TestJudgmentAPI:
 
     def test_conclude_judgment_failed(self, authenticated_client, soul, cn_tenant):
         """POST /api/v1/judgment/{id}/conclude/ with FAILED verdict routes to hell."""
+        # 灵魂必须先在 JUDGING —— 这是 `conclude` 的真实前置条件
+        # (生产路径是 `soul.die()` 把它送进 JUDGING)。
+        #
+        # 在 2026-08-31 之前,这几条测试用一个 ALIVE 的灵魂调 conclude,而
+        # `conclude` **丢掉了 `transition_to` 的返回值** —— 接口回 200、
+        # judgment 标记 final、处置已创建,而灵魂还是 ALIVE。测试没有断言灵魂
+        # 的状态,所以谁都没看见。
+        soul.current_state = SoulState.JUDGING
+        soul.save(update_fields=["current_state"])
         judgment = Judgment.objects.create(
             soul=soul,
             civilization=soul.civilization,
@@ -175,6 +193,15 @@ class TestJudgmentAPI:
 
     def test_conclude_judgment_purgatory(self, authenticated_client, soul, cn_tenant):
         """POST /api/v1/judgment/{id}/conclude/ with PURGATORY verdict."""
+        # 灵魂必须先在 JUDGING —— 这是 `conclude` 的真实前置条件
+        # (生产路径是 `soul.die()` 把它送进 JUDGING)。
+        #
+        # 在 2026-08-31 之前,这几条测试用一个 ALIVE 的灵魂调 conclude,而
+        # `conclude` **丢掉了 `transition_to` 的返回值** —— 接口回 200、
+        # judgment 标记 final、处置已创建,而灵魂还是 ALIVE。测试没有断言灵魂
+        # 的状态,所以谁都没看见。
+        soul.current_state = SoulState.JUDGING
+        soul.save(update_fields=["current_state"])
         judgment = Judgment.objects.create(
             soul=soul,
             civilization=soul.civilization,
@@ -195,6 +222,15 @@ class TestJudgmentAPI:
 
     def test_conclude_judgment_retry(self, authenticated_client, soul, cn_tenant):
         """POST /api/v1/judgment/{id}/conclude/ with RETRY verdict."""
+        # 灵魂必须先在 JUDGING —— 这是 `conclude` 的真实前置条件
+        # (生产路径是 `soul.die()` 把它送进 JUDGING)。
+        #
+        # 在 2026-08-31 之前,这几条测试用一个 ALIVE 的灵魂调 conclude,而
+        # `conclude` **丢掉了 `transition_to` 的返回值** —— 接口回 200、
+        # judgment 标记 final、处置已创建,而灵魂还是 ALIVE。测试没有断言灵魂
+        # 的状态,所以谁都没看见。
+        soul.current_state = SoulState.JUDGING
+        soul.save(update_fields=["current_state"])
         judgment = Judgment.objects.create(
             soul=soul,
             civilization=soul.civilization,
@@ -237,6 +273,15 @@ class TestJudgmentAPI:
 
     def test_conclude_judgment_creates_workflow(self, authenticated_client, soul, cn_tenant):
         """POST /api/v1/judgment/{id}/conclude/ with create_workflow=true creates workflow."""
+        # 灵魂必须先在 JUDGING —— 这是 `conclude` 的真实前置条件
+        # (生产路径是 `soul.die()` 把它送进 JUDGING)。
+        #
+        # 在 2026-08-31 之前,这几条测试用一个 ALIVE 的灵魂调 conclude,而
+        # `conclude` **丢掉了 `transition_to` 的返回值** —— 接口回 200、
+        # judgment 标记 final、处置已创建,而灵魂还是 ALIVE。测试没有断言灵魂
+        # 的状态,所以谁都没看见。
+        soul.current_state = SoulState.JUDGING
+        soul.save(update_fields=["current_state"])
         judgment = Judgment.objects.create(
             soul=soul,
             civilization=soul.civilization,

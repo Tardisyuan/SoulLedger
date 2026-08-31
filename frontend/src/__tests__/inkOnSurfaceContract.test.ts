@@ -46,11 +46,8 @@
  * No DOM, no browser: the stylesheet is parsed by `./support/globalsCssTokens`
  * — the one parser — and the WCAG formulas live there too.
  */
-import { readFileSync } from "node:fs";
-
 import {
   CIV_PREFIXES,
-  GLOBALS_CSS,
   LIGHT_TOKENS,
   ROOT_TOKENS,
   SURFACE_TOKENS,

@@ -1,9 +1,15 @@
 /**
  * Tests for usePermissions hook
+ *
+ * NOTE: `useTenant` 在下面被 mock 了,所以**真的 `TenantProvider` 从来没有跑过**。
+ * 这个文件曾经 import 了 `TenantProvider` 与 `createElement` 而两个都不调用 ——
+ * 两个 import 制造出「这条测试是在真实上下文里跑的」这个错觉。它不是:这里的
+ * 一切都由那个 mock 的返回值驱动。删掉那两个 import 是诚实的版本。
+ *
+ * 它们藏了很久,因为 `src/__tests__/**` 整个在 eslint 的 `ignores` 里,
+ * 而主块又把 `no-unused-vars` 关成了 off —— 两层遮蔽叠在一起。
  */
 import { renderHook } from "@testing-library/react";
-import { createElement } from "react";
-import { TenantProvider } from "@/src/contexts/TenantContext";
 import { usePermissions } from "@/src/hooks/usePermissions";
 
 // Mock useTenant to return different user roles

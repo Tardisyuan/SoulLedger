@@ -7,8 +7,8 @@
  */
 
 // Capture interceptor callbacks before the module executes
-let requestInterceptor: ((config: Record<string, unknown>) => Record<string, unknown>) | null = null;
-let responseRejected: ((error: unknown) => Promise<unknown>) | null = null;
+let requestInterceptor: ((_config: Record<string, unknown>) => Record<string, unknown>) | null = null;
+let responseRejected: ((_error: unknown) => Promise<unknown>) | null = null;
 
 const mockInstance = Object.assign(
   // Callable like AxiosInstance: api(config) => Promise
@@ -46,9 +46,9 @@ jest.mock('axios', () => {
 });
 
 // Import AFTER mock setup — module-level code runs (axios.create, interceptors)
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const axios = require('axios');
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 require('../../lib/api');
 
 // Suppress jsdom navigation warnings from window.location.href = "/login"
@@ -333,7 +333,7 @@ describe('API Client — lib/api.ts', () => {
 
   // ── authApi ──────────────────────────────────────────────────────────────
   describe('authApi', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     const { authApi } = require('../../lib/api');
 
     it('login() should POST to /auth/login/ with credentials', () => {
@@ -372,7 +372,7 @@ describe('API Client — lib/api.ts', () => {
 
   // ── soulsApi ─────────────────────────────────────────────────────────────
   describe('soulsApi', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     const { soulsApi } = require('../../lib/api');
 
     it('list() should GET /souls/ with query params', () => {
@@ -417,7 +417,7 @@ describe('API Client — lib/api.ts', () => {
 
   // ── judgmentApi ──────────────────────────────────────────────────────────
   describe('judgmentApi', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     const { judgmentApi } = require('../../lib/api');
 
     it('list() should GET /judgment/', () => {
@@ -443,7 +443,7 @@ describe('API Client — lib/api.ts', () => {
 
   // ── ledgerApi ────────────────────────────────────────────────────────────
   describe('ledgerApi', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     const { ledgerApi } = require('../../lib/api');
 
     it('balance() should GET /ledger/balance/:id/', () => {
@@ -461,7 +461,7 @@ describe('API Client — lib/api.ts', () => {
 
   // ── workflowApi ──────────────────────────────────────────────────────────
   describe('workflowApi', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     const { workflowApi } = require('../../lib/api');
 
     it('list() should GET /workflows/', () => {

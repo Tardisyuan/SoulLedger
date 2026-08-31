@@ -335,7 +335,7 @@ describe("RHYTHM_EXEMPT 豁免没有过期", () => {
  * 这里立刻红,不需要任何人记得同时改两个地方。
  */
 describe("tailwind-merge 认识八档字号", () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const twConfig = require("../../tailwind.config.js");
   const scale: string[] = Object.keys(twConfig.theme.extend.fontSize);
 
