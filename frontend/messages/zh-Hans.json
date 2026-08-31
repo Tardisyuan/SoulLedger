@@ -583,7 +583,14 @@
       "approve_success": "节点审批成功",
       "approve_error": "节点审批失败",
       "advance_success": "流程已推进",
-      "advance_error": "推进流程失败"
+      "advance_error": "推进流程失败",
+      "advance_no_movement": "流程没有推进 —— 当前节点仍是原来那个",
+      "escalate": "越级推进",
+      "escalate_reason_label": "越级理由（必填，会写入审计）",
+      "escalate_reason_placeholder": "为什么要跳过当前节点",
+      "escalate_success": "已越级推进，理由已记入审计",
+      "escalate_error": "越级推进失败",
+      "escalate_needs_reason": "越级推进必须写明理由"
     },
     "verdicts": {
       "passed": "通过",

@@ -211,7 +211,25 @@ class TestJWTAuthentication:
 
     @pytest.mark.asyncio
     async def test_auth_via_first_message(self, admin_user, cn_tenant):
-        """Token sent as first message → authenticated."""
+        """Token sent as first message → authenticated **and joined to groups**.
+
+        断言从 `auth.success` 改成 `connected`,而这不是换一个字符串那么简单。
+
+        `auth.success` 是**中间件**发的,它发完就把那条 auth 消息吞掉
+        (`return await wrapped_receive()`),于是 consumer 的 auth 分支从不执行 ——
+        而那个分支才是调 `_join_groups()` 的地方。实拍:
+
+            [D2] frame1 = {'type':'auth.success','user_id':2}
+                 frame2 = NOTHING (TimeoutError)
+
+        只有中间件那一帧。**socket 不属于任何组,此后收不到任何事件**,
+        而 consumer 上的 `self.user` 仍是 AnonymousUser,之后每条消息都被判
+        「未认证」。这条测试断言 `auth.success`,于是它对上面这一切一无所知 ——
+        它测的是那条被吞掉的路径留下的回声。
+
+        `connected` 只有在 `_join_groups()` 跑完之后才发,所以它是一个**关于
+        入组**的断言,不只是关于认证。下面那条推事件的断言是它的另一半。
+        """
         app = _get_ws_app()
         communicator = WebsocketCommunicator(app, "/ws/notifications/")
 
@@ -223,8 +241,37 @@ class TestJWTAuthentication:
         await communicator.send_json_to({"type": "auth", "token": token})
 
         response = await communicator.receive_json_from()
-        assert response["type"] == "auth.success"
-        assert response["user_id"] == admin_user.id
+        assert response["type"] == "connected", response
+        assert response.get("user_id") == admin_user.id, response
+
+        await communicator.disconnect()
+
+    @pytest.mark.asyncio
+    async def test_first_message_auth_actually_joins_the_groups(self, admin_user, cn_tenant):
+        """上一条的另一半:入了组,就收得到推给这个组的事件。
+
+        没有这一条,`connected` 也只是一个字符串 —— 一个「发完 connected 就不管了」
+        的实现同样满足上一条,而 socket 依旧收不到任何东西。
+        """
+        from channels.layers import get_channel_layer
+
+        from apps.events.realtime import ChannelNaming
+
+        app = _get_ws_app()
+        communicator = WebsocketCommunicator(app, "/ws/notifications/")
+        connected, _ = await communicator.connect()
+        assert connected
+
+        token = await _make_token(admin_user, cn_tenant.code)
+        await communicator.send_json_to({"type": "auth", "token": token})
+        assert (await communicator.receive_json_from())["type"] == "connected"
+
+        await get_channel_layer().group_send(
+            ChannelNaming.tenant_group(cn_tenant.code),
+            {"type": "realtime_event", "data": {"hello": "first-frame auth"}},
+        )
+        received = await communicator.receive_json_from(timeout=3)
+        assert received["hello"] == "first-frame auth"
 
         await communicator.disconnect()
 
