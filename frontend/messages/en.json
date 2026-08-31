@@ -583,7 +583,14 @@
       "approve_success": "Node approved successfully",
       "approve_error": "Failed to approve node",
       "advance_success": "Workflow advanced",
-      "advance_error": "Failed to advance workflow"
+      "advance_error": "Failed to advance workflow",
+      "advance_no_movement": "The workflow did not move — it is still on the same node",
+      "escalate": "Escalate past this node",
+      "escalate_reason_label": "Reason (required, recorded in the audit log)",
+      "escalate_reason_placeholder": "Why this node is being skipped",
+      "escalate_success": "Escalated; the reason has been recorded",
+      "escalate_error": "Escalation failed",
+      "escalate_needs_reason": "Escalation requires a written reason"
     },
     "verdicts": {
       "passed": "Passed",
@@ -900,7 +907,8 @@
       "BATCH_CREATE": "Batch created",
       "BATCH_UPDATE": "Batch updated",
       "BATCH_DELETE": "Batch deleted"
-    }
+    },
+    "needs_audit_read": "Requires the audit.read permission"
   },
   "profile": {
     "title": "Personal Center",

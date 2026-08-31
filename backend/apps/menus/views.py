@@ -9,6 +9,7 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import CodenameViewSetMixin
 
 from .access import menu_is_visible_to, visible_menus
+from .button_access import visible_buttons
 from .models import Menu, MenuButton
 from .serializers import (
     MenuButtonCreateUpdateSerializer,
@@ -151,18 +152,24 @@ class MenuViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="list-public")
     def list_public(self, request):
-        """GET /api/v1/menus/list-public/ - Get accessible menus by role"""
-        is_authenticated = getattr(request.user, 'is_authenticated', False)
-        user_role = getattr(request.user, 'role', None)
+        """GET /api/v1/menus/list-public/ - Get accessible menus by role
+
+        The role test used to be spelled out inline here -- `is_public = not
+        menu.roles`, then `user_role in menu.roles or user_role == "ADMIN"` --
+        which was the **third** hand-written copy of a rule
+        `apps/menus/access.py` exists to hold one copy of. It agreed with the
+        others on top-level menus and, because it serialised through
+        `MenuSerializer`, leaked ADMIN-only *children* exactly as `/menus/` did.
+
+        Now it asks `menu_is_visible_to` and hands the request down in the
+        serializer context so `get_children` can filter too.
+        """
         top_menus = Menu.objects.filter(parent__isnull=True, is_active=True).order_by("order")
-        accessible_menus = []
-        for menu in top_menus:
-            is_public = not menu.roles
-            if is_public:
-                accessible_menus.append(MenuSerializer(menu).data)
-            elif is_authenticated and user_role:
-                if user_role in menu.roles or user_role == "ADMIN":
-                    accessible_menus.append(MenuSerializer(menu).data)
+        accessible_menus = [
+            MenuSerializer(menu, context={"request": request}).data
+            for menu in top_menus
+            if menu_is_visible_to(menu, request.user)
+        ]
         return Response(accessible_menus)
 
 
@@ -209,6 +216,13 @@ class MenuButtonViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
         # before reaching it, so the suite stayed green while all four
         # non-ADMIN roles got a 500 from GET /menus/buttons/. Access is
         # already gated by menu.read / menu.manage via CodenameViewSetMixin.
+        # Role/codename visibility, converged with the tree serializer.
+        # `MenuTreeSerializer.get_buttons` filtered by `user_has_permission`
+        # while this listed everything: two exits for one dataset, one filtered
+        # and one not. Measured as JUDGE: `GET /menus/buttons/ -> 200, n=1`
+        # showing `tenant.delete`, a button under a `roles=["ADMIN"]` menu.
+        qs = visible_buttons(qs, user)
+
         # Filter by menu_id if provided
         menu_id = self.request.query_params.get('menu_id')
         if menu_id:

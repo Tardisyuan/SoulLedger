@@ -583,7 +583,14 @@
       "approve_success": "Mekher Sesen Seth",
       "approve_error": "Ma Sesen Mekher Seth",
       "advance_success": "Em Kheme Seth Khemen",
-      "advance_error": "Ma Khemen Em Kheme Seth"
+      "advance_error": "Ma Khemen Em Kheme Seth",
+      "advance_no_movement": "The workflow did not move — it is still on the same node",
+      "escalate": "Escalate past this node",
+      "escalate_reason_label": "Reason (required, recorded in the audit log)",
+      "escalate_reason_placeholder": "Why this node is being skipped",
+      "escalate_success": "Escalated; the reason has been recorded",
+      "escalate_error": "Escalation failed",
+      "escalate_needs_reason": "Escalation requires a written reason"
     },
     "verdicts": {
       "passed": "Sethet",
@@ -900,7 +907,8 @@
       "BATCH_CREATE": "Kheme Seth Wu",
       "BATCH_UPDATE": "Khemen Seth Wu",
       "BATCH_DELETE": "Wehem Seth Wu"
-    }
+    },
+    "needs_audit_read": "Requires the audit.read permission"
   },
   "profile": {
     "title": "Aha Pepi",

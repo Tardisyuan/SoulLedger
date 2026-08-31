@@ -53,19 +53,13 @@ EXPECTED_ALIASES = {
         # spelling they were given should still find the god.
         "Horus": ["Heru"],
     },
-    "GREEK": {
-        # `consolidate_eu_pantheon` merges a Pluto row into Hades and records
-        # why (Plouton is a Greek cult title of Hades; Latin Pluto transcribes
-        # it). That conclusion is now data rather than a tuple in a command.
-        #
-        # GREEK, not EUROPEAN. Hades moved when GREEK became its own
-        # civilization, and the alias had to move with him: `_seed_actors` warns
-        # and drops any alias naming an actor the cast it is seeding does not
-        # contain, so an entry left behind in a European table would have
-        # stopped reaching the database — silently, in the sense that the
-        # resolver would simply go back to not knowing the name.
-        "Hades": ["Pluto"],
-    },
+    # GREEK records no aliases. It held exactly one — `"Hades": ["Pluto"]` —
+    # until 2026-08-31, when Dante's Pluto was seeded under EUROPEAN as the
+    # warden of the fourth circle (Inf. VII.2). With a real `Pluto` row and an
+    # alias pointing "Pluto" at Hades, one name has two answers and which one
+    # the resolver gives depends on pass order. The two are different figures,
+    # so there is no name left to alias.
+    "GREEK": {},
 }
 
 
@@ -126,22 +120,27 @@ def test_the_lookup_resolves_every_recorded_name_to_one_row(seeded):
             f"expected {expected!r}"
         )
 
-    greek = Actor.all_objects.filter(civilization="GREEK")
-    found = resolve_actor_by_any_name(greek, "Pluto")
-    assert found is not None and found.name == "Hades", (
-        f"'Pluto' resolved to {found.name if found else None!r}. No Pluto row "
-        f"is seeded — consolidate_eu_pantheon merges it away — so the alias on "
-        f"Hades is the only thing that can answer this."
-    )
-    # And absence on the other side of the split: every caller scopes the
-    # resolver to one civilization, so an alias filed under the wrong one
-    # answers nobody. Asserting only the positive above would stay green with
-    # the entry duplicated into a European table nothing seeds from.
+    # "Pluto" now names a row, not an alias, and it is a European one.
+    #
+    # Until 2026-08-31 this block asserted the opposite: `"Pluto"` resolved to
+    # `Hades` inside GREEK, and to nobody inside EUROPEAN. Both halves flipped
+    # when Dante's Pluto was seeded as the fourth circle's warden — and that is
+    # the point of the pair, not an accident of it. **Every caller scopes the
+    # resolver to one civilization**, so the same string resolving to different
+    # rows in different casts is the correct behaviour for two figures who
+    # share a name, and the wrong behaviour for one figure with two names.
     european = Actor.all_objects.filter(civilization="EUROPEAN")
-    assert resolve_actor_by_any_name(european, "Pluto") is None, (
-        "'Pluto' resolved inside the EUROPEAN cast. Hades is GREEK; a European "
-        "row answering to his cult title means the split left a duplicate "
-        "behind."
+    found = resolve_actor_by_any_name(european, "Pluto")
+    assert found is not None and found.name == "Pluto", (
+        f"'Pluto' resolved to {found.name if found else None!r} inside the "
+        f"EUROPEAN cast. Dante's Pluto guards the fourth circle and is seeded "
+        f"in actors_european.py."
+    )
+    greek = Actor.all_objects.filter(civilization="GREEK")
+    assert resolve_actor_by_any_name(greek, "Pluto") is None, (
+        "'Pluto' resolved inside the GREEK cast. The alias that used to make "
+        "that happen was removed when the European row came back; leaving both "
+        "gives one name two answers."
     )
 
 

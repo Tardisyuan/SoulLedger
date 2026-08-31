@@ -235,6 +235,19 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    # Without this, SimpleJWT never writes `last_login` -- it defaults to False
+    # and nothing else in `apps/authentication/` touches the column. Measured on
+    # the shared box 2026-08-31: **0 of 100 users** had a non-null `last_login`,
+    # including the account that owns 22 audit rows.
+    #
+    # That is worse than a missing feature, because the column reads like an
+    # answer. Two separate investigations on this repo cited "从未登录" as
+    # evidence about an account -- once about the orphaned `Pluto` account, once
+    # about four Norse-bound admins -- and in both cases the field was empty for
+    # everybody, so it distinguished nothing. A column that is null for every
+    # row cannot be used to tell rows apart, and it takes reading the settings
+    # to find that out.
+    "UPDATE_LAST_LOGIN": True,
 }
 
 # Permission Cache TTL (seconds)

@@ -281,20 +281,36 @@ def test_seed_mythology_still_seeds_everything_the_retired_script_seeded():
 
 
 @pytest.mark.django_db
-def test_pluto_stays_unseeded():
-    """Guards the one deliberate omission, so it is not "restored" by mistake."""
+def test_dantes_pluto_is_seeded_under_european_only():
+    """The inverse of what this test asserted until 2026-08-31.
+
+    It used to be `test_pluto_stays_unseeded`, guarding "the one deliberate
+    omission" on the reading that Pluto is Hades under a Roman name. The
+    etymology behind that reading is right — Πλούτων is a Greek cult title from
+    πλοῦτος, wealth (Plato, Cratylus 403a) — but **this cast is not the Greek
+    cast**: Dante's Pluto bars the fourth circle (Inf. VII.2, "cominciò Pluto
+    con la voce chioccia"), the European corpus already recorded him as circle
+    4's guardian, and Charon / Minos / Cerberus are seeded here as exactly that
+    kind of warden.
+
+    The assertion is two-sided on purpose. One `Pluto` row is the fix; two —
+    one per civilization — would be the duplicate the old merge existed to
+    remove, arriving by the other door.
+    """
     call_command(SEED_COMMAND, stdout=io.StringIO())
 
-    resurrected = sorted(
-        Actor.all_objects.filter(name__in=DELIBERATELY_NOT_CARRIED_OVER)
-        .values_list("name", flat=True)
+    plutos = sorted(
+        Actor.all_objects.filter(name="Pluto").values_list("civilization", flat=True)
     )
-
-    assert not resurrected, (
-        f"{resurrected} is seeded again. Pluto is Hades under his Roman name; "
-        f"`seed_mythology` seeds Hades and `consolidate_eu_pantheon` merges any "
-        f"Pluto row into him. Seeding both manufactures on every fresh database "
-        f"the duplicate that merge exists to remove."
+    assert plutos == ["EUROPEAN"], (
+        f"Pluto rows seeded under {plutos}. Exactly one is wanted, under "
+        f"EUROPEAN: Dante's warden of the fourth circle. A GREEK one would be "
+        f"the duplicate of Hades that the retired merge step existed to remove."
+    )
+    hades = Actor.all_objects.filter(name="Hades")
+    assert [h.civilization for h in hades] == ["GREEK"], (
+        "Hades must stay exactly one GREEK row — the two figures are distinct, "
+        "not renamed."
     )
 
 

@@ -40,12 +40,24 @@ def tenant(db):
     )[0]
 
 
+#: `transaction=True`,不是普通的 `django_db`。
+#:
+#: `middleware._authenticate_token` 经 `database_sync_to_async` 跑在**另一个线程、
+#: 另一条数据库连接**上。普通 `django_db` 把测试包在一个不提交的事务里 ——
+#: 在 PostgreSQL 上那条连接**看不见**本测试刚建的用户,于是认证返回 None,
+#: 正对照红。SQLite 内存库共用同一条连接,所以它在本地一直是绿的。
+#:
+#: 2026-08-31 全量在真 PostgreSQL 上跑时抓到:`assert None is not None`,
+#: 报错信息是「an active user was refused」—— 一条**因为环境而红、看起来像产品
+#: 缺陷**的失败。它在 SQLite 上通过的理由,在真数据库上不存在。
+
+
 def _ws_authenticate(raw_token):
     middleware = JWTAuthMiddleware(lambda scope, receive, send: None)
     return async_to_sync(middleware._authenticate_token)(raw_token)
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_an_active_user_passes_both(tenant):
     """Positive control, and the one that fails if this becomes deny-all."""
     user = User.objects.create_user(
@@ -60,7 +72,7 @@ def test_an_active_user_passes_both(tenant):
     assert _ws_authenticate(raw) is not None, "an active user was refused"
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_a_deactivated_user_is_refused_by_both(tenant):
     user = User.objects.create_user(
         username="da_inactive", password="x", role="VIEWER", tenant=tenant

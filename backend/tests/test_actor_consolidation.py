@@ -144,59 +144,24 @@ def test_purge_norse_refuses_to_delete_a_referenced_row(
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.django_db
-def test_merge_keeps_hades_even_when_pluto_was_created_first(eu_tenant_row, tmp_path):
-    """The Greek name survives regardless of insertion order.
-
-    The tiebreak used to fall through to created_at, so with both rows
-    unreferenced the survivor was whichever seed path had run first — and the
-    soft-delete reason written to the database says "merged into Hades"
-    unconditionally, which would have been a lie half the time.
-    """
-    pluto = _actor(eu_tenant_row, "Pluto", "EUROPEAN", ActorRole.OVERSEER)
-    hades = _actor(eu_tenant_row, "Hades", "EUROPEAN", ActorRole.OVERSEER)
-
-    _run("consolidate_eu_pantheon", execute=True, backup_dir=str(tmp_path))
-
-    pluto.refresh_from_db()
-    hades.refresh_from_db()
-    assert not hades.is_deleted, (
-        "The merge soft-deleted Hades and kept Pluto. Pluto is the Roman name; "
-        "Hades is the canonical survivor no matter which row is older."
-    )
-    assert pluto.is_deleted, "Pluto was not merged away — the pair is still duplicated."
+# THE TWO PLUTO/HADES MERGE TESTS THAT USED TO BE HERE ARE GONE.
+#
+# They pinned `consolidate_eu_pantheon`'s Step 1 -- that Hades survives a tie
+# regardless of insertion order, and that the command refuses when both rows
+# are referenced. The step itself was retired on 2026-08-31: Dante's Pluto is
+# a distinct figure from the Greek Πλούτων and is now seeded as the fourth
+# circle's warden, so there is no pair to merge. See the note in
+# `apps/actors/mythology/actors_european.py` and the retired-step paragraph in
+# the command.
+#
+# Deleting them rather than rewriting them is the point. A test that pins a
+# removed behaviour has to be either deleted or inverted, and inverting these
+# would produce "the command does not merge Pluto into Hades" -- a sentence
+# true of every command in the repository, and therefore worth nothing. What
+# replaces them is `tests/test_dantes_pluto_is_his_own_row.py`, which asserts
+# the two rows coexist and that neither resolver nor cleanup collapses them.
 
 
-@pytest.mark.django_db
-def test_merge_refuses_when_both_rows_are_referenced(
-    eu_tenant_row, django_user_model, tmp_path
-):
-    pluto = _actor(eu_tenant_row, "Pluto", "EUROPEAN", ActorRole.OVERSEER)
-    hades = _actor(eu_tenant_row, "Hades", "EUROPEAN", ActorRole.OVERSEER)
-    django_user_model.objects.create(
-        username="pluto-clerk", role="ADMIN", tenant=eu_tenant_row, actor=pluto
-    )
-    django_user_model.objects.create(
-        username="hades-clerk", role="ADMIN", tenant=eu_tenant_row, actor=hades
-    )
-
-    output = _run("consolidate_eu_pantheon", execute=True, backup_dir=str(tmp_path))
-
-    pluto.refresh_from_db()
-    hades.refresh_from_db()
-    assert not pluto.is_deleted and not hades.is_deleted, (
-        "The merge deleted one of two referenced rows. When both are referenced "
-        "it must report and stop.\n" + output
-    )
-    assert "CONFLICT" in output, f"Both rows survived but no conflict was reported.\n{output}"
-
-
-# --------------------------------------------------------------------------
-# fix_actor_civilization — Ma'at / Maat spelling merge
-# --------------------------------------------------------------------------
-
-
-@pytest.mark.django_db
 def test_maat_is_renamed_to_the_canonical_spelling_when_alone(eg_tenant_row, tmp_path):
     """A lone "Maat" row becomes "Ma'at" — a rename, so references travel with it.
 

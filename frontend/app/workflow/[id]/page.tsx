@@ -56,6 +56,8 @@ export default function WorkflowDetailPage() {
   const [selectedVerdict, setSelectedVerdict] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [activeTab, setActiveTab] = useState<"nodes" | "history">("nodes");
+  const [escalateOpen, setEscalateOpen] = useState(false);
+  const [escalateReason, setEscalateReason] = useState("");
 
   // Fetch workflow detail
   const { data: workflow, isLoading, error, refetch } = useQuery({
@@ -87,12 +89,42 @@ export default function WorkflowDetailPage() {
   // Advance mutation
   const advanceMutation = useMutation({
     mutationFn: () => workflowApi.advance(id),
-    onSuccess: () => {
-      showToast(t("workflow.detail.advance_success"), "success");
+    onSuccess: (response) => {
+      // 比对返回体里的 current_node,而不是无条件报成功。
+      //
+      // 实拍(修改前):mock `POST advance/` 返回 200、body 与 GET 完全相同 ——
+      // 界面弹出绿色的「流程已推进」,而节点那一行前后都停在「第1殿」。
+      // **操作员得到一次成功回执和一个没动的流程,没有任何提示说它没动。**
+      // 后端那条 advance 当时本身就是空操作(C11),所以这不是假设的场景。
+      const before = workflow?.current_node ?? null;
+      const after = response?.data?.current_node ?? null;
+      if (before !== null && after === before) {
+        showToast(t("workflow.detail.advance_no_movement"), "error");
+      } else {
+        showToast(t("workflow.detail.advance_success"), "success");
+      }
       refetch();
     },
     onError: (err: { response?: { data?: { error?: string } }; message?: string }) => {
       showToast(err?.response?.data?.error || t("workflow.detail.advance_error"), "error");
+    },
+  });
+
+  // Escalate mutation —— `workflow.escalate` 的界面入口,此前完全不存在。
+  //
+  // `ROLE_PERMISSIONS` 把这个码名写成「realm lead 越过停滞流程的唯一正途」,
+  // 并为此刻意**不**给 MODERATOR approve/advance。实拍:MODERATOR 打开这一页,
+  // 可见控件只有导航、返回、节点计数与历史 —— 那条正途在界面上一个入口都没有。
+  const escalateMutation = useMutation({
+    mutationFn: (reason: string) => workflowApi.escalate(id, { reason }),
+    onSuccess: () => {
+      showToast(t("workflow.detail.escalate_success"), "success");
+      setEscalateReason("");
+      setEscalateOpen(false);
+      refetch();
+    },
+    onError: (err: { response?: { data?: { error?: string } }; message?: string }) => {
+      showToast(err?.response?.data?.error || t("workflow.detail.escalate_error"), "error");
     },
   });
 
@@ -284,7 +316,59 @@ export default function WorkflowDetailPage() {
                     : t("workflow.detail.advance")}
                 </Button>
               </RequirePermission>
+
+              {/* 越级推进。MODERATOR 持有 `workflow.escalate` 而**不**持有
+                  approve/advance —— 这是 ROLE_PERMISSIONS 刻意的安排:越级要留痕,
+                  所以理由是必填的,而这道门与上面两道互不重叠。 */}
+              <RequirePermission permissions="workflow.escalate">
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="secondary"
+                  onClick={() => setEscalateOpen((v) => !v)}
+                  aria-expanded={escalateOpen}
+                >
+                  {t("workflow.detail.escalate")}
+                </Button>
+              </RequirePermission>
             </div>
+
+            {escalateOpen && (
+              <RequirePermission permissions="workflow.escalate">
+                <div className="mt-4 space-y-2">
+                  <label
+                    htmlFor="escalate-reason"
+                    className="block text-02 text-[hsl(var(--color-ink-muted))]"
+                  >
+                    {t("workflow.detail.escalate_reason_label")}
+                  </label>
+                  <textarea
+                    id="escalate-reason"
+                    value={escalateReason}
+                    onChange={(e) => setEscalateReason(e.target.value)}
+                    placeholder={t("workflow.detail.escalate_reason_placeholder")}
+                    rows={3}
+                    className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03"
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      // 空理由在这里就拦住,不发请求。后端也会拒,但让操作员
+                      // 从一次往返之后才知道「你得写理由」,是把一次可以立刻
+                      // 说清楚的事变成一次失败。
+                      if (!escalateReason.trim()) {
+                        showToast(t("workflow.detail.escalate_needs_reason"), "error");
+                        return;
+                      }
+                      escalateMutation.mutate(escalateReason.trim());
+                    }}
+                    loading={escalateMutation.isPending}
+                  >
+                    {t("workflow.detail.escalate")}
+                  </Button>
+                </div>
+              </RequirePermission>
+            )}
           </div>
         )}
 

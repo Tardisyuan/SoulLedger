@@ -18,7 +18,12 @@ jest.mock("@/lib/api", () => ({
   ledgerApi: { statsOverview: jest.fn() },
 }));
 
-let mockUser: { id: number } | null = { id: 1 };
+// `permissions` 现在是必需的:页面外面包了
+// `<RequirePermission permissions="ledger.read">`。这个套件测的是账本数字怎么
+// 渲染,不是权限 —— 给足权限,让它继续测它自己的东西。门本身由
+// `backend/tests/test_page_gates_match_the_backend.py` 守。
+type MockUser = { id: number; role?: string; permissions?: string[] };
+let mockUser: MockUser | null = { id: 1, role: "VIEWER", permissions: ["ledger.read"] };
 const mockT = jest.fn((key: string) => key);
 
 jest.mock("@/src/contexts/TenantContext", () => ({
@@ -94,7 +99,7 @@ const fullStats = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUser = { id: 1 };
+  mockUser = { id: 1, role: "VIEWER", permissions: ["ledger.read"] };
   mockT.mockImplementation((key: string) => key);
   mockedStats.mockResolvedValue({ data: fullStats });
 });
@@ -272,11 +277,16 @@ describe("LedgerPage failure handling", () => {
   });
 
   it("does not call the stats endpoint at all when there is no user", async () => {
+    /* 「没有用户就不发请求」这件事仍然成立,只是现在由页级的
+       `<RequirePermission permissions="ledger.read">` 完成 —— `usePermissions`
+       在没有 user 时对任何码名返回 false,门直接渲染 PermissionDenied。
+       所以断言从「页头还在」改成「页头不在、且没发请求」:页头还在才是旧行为,
+       那时页面渲染了自己、只是查询被 `enabled` 关掉了。 */
     mockUser = null;
 
     renderPage();
 
-    expect(await screen.findByText("ledger.title")).toBeInTheDocument();
-    expect(mockedStats).not.toHaveBeenCalled();
+    await waitFor(() => expect(mockedStats).not.toHaveBeenCalled());
+    expect(screen.queryByText("ledger.title")).not.toBeInTheDocument();
   });
 });

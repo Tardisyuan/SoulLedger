@@ -12,6 +12,8 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { buttonVariants } from "@/src/components/ui/Button";
 import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
  * Dispatch state → badge tone, for the two lists on this page.
@@ -31,7 +33,7 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   CANCELLED: "neutral",
 };
 
-export default function DispatchPage() {
+function DispatchPageContent() {
   const { t } = useI18n();
   const { user } = useTenant();
 
@@ -128,5 +130,18 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
         )}
       </div>
     </Link>
+  );
+}
+
+
+/* 页级门。后端才是正解(这几个 viewset 都挂了 `CodenamePermission`),这里是纵深:
+   侧边栏的菜单过滤**只藏链接、不挡路由**,所以在补上这道门之前,直接输 URL 就能
+   打开一个功能完整的页面。码名与后端 `permission_codename` 对齐,不是猜的角色名 ——
+   `tests/test_page_gates_match_the_backend.py` 会因为路由没有门而红。 */
+export default function DispatchPage() {
+  return (
+    <RequirePermission permissions="dispatch.read" fallback={<PermissionDenied />}>
+      <DispatchPageContent />
+    </RequirePermission>
   );
 }
