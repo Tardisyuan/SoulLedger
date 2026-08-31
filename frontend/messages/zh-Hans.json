@@ -900,7 +900,8 @@
       "BATCH_CREATE": "批量创建",
       "BATCH_UPDATE": "批量更新",
       "BATCH_DELETE": "批量删除"
-    }
+    },
+    "needs_audit_read": "需要「查看审计日志」权限（audit.read）"
   },
   "profile": {
     "title": "个人中心",

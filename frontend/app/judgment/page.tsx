@@ -11,6 +11,8 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
 import { buttonVariants } from "@/src/components/ui/Button";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 /**
  * Verdicts keep the `--color-verdict-*` palette rather than moving onto
@@ -28,7 +30,7 @@ const VERDICT_COLORS: Record<string, string> = {
   RETRY: "bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]",
 };
 
-export default function JudgmentQueuePage() {
+function JudgmentQueuePageContent() {
   const { t, formatDate } = useI18n();
   const [tab, setTab] = useState<"pending" | "concluded">("pending");
   const [page, setPage] = useState(1);
@@ -162,5 +164,18 @@ export default function JudgmentQueuePage() {
         onPageChange={setPage}
       />
     </PageShell>
+  );
+}
+
+
+/* 页级门。后端才是正解(这几个 viewset 都挂了 `CodenamePermission`),这里是纵深:
+   侧边栏的菜单过滤**只藏链接、不挡路由**,所以在补上这道门之前,直接输 URL 就能
+   打开一个功能完整的页面。码名与后端 `permission_codename` 对齐,不是猜的角色名 ——
+   `tests/test_page_gates_match_the_backend.py` 会因为路由没有门而红。 */
+export default function JudgmentQueuePage() {
+  return (
+    <RequirePermission permissions="judgment.read" fallback={<PermissionDenied />}>
+      <JudgmentQueuePageContent />
+    </RequirePermission>
   );
 }

@@ -13,6 +13,8 @@ import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { badgeVariants } from "@/src/components/ui/Badge";
 import { QueryError } from "@/src/components/ui/PageError";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 const CIVILIZATION_ICONS: Record<string, string> = {
   CHINESE: "🏯",
@@ -136,7 +138,7 @@ function ActorCard({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
   );
 }
 
-export default function ActorsPage() {
+function ActorsPageContent() {
   const { t } = useI18n();
   const { user } = useTenant();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -295,5 +297,23 @@ export default function ActorsPage() {
         )}
       </PageSection>
     </PageShell>
+  );
+}
+
+
+/* 页级门。**后端才是正解,这里是纵深** —— `apps/actors/views.py` 已经挂了
+   `CodenamePermission`,这道门挡不住任何直接打接口的人。它挡的是另一件事:
+   在补上后端之前,VIEWER 直接输 URL 就能打开一个功能完整的页面并拿到数据,
+   而侧边栏的菜单过滤**只藏链接、不挡路由**。三个页面 grep
+   `RequirePermission|hasPermission` 都是零命中 —— 前端没有掩盖后端的洞,
+   洞是直接可点的。
+
+   `fallback={<PermissionDenied />}` 而不是渲染空白:一个没有权限的人应当看到
+   「你没有这个权限」,而不是一个看起来加载失败的页面。 */
+export default function ActorsPage() {
+  return (
+    <RequirePermission permissions="actors.read" fallback={<PermissionDenied />}>
+      <ActorsPageContent />
+    </RequirePermission>
   );
 }

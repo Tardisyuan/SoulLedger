@@ -10,6 +10,7 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { groupAuditLogsByTrace, type AuditGroup } from "@/lib/auditGrouping";
+import { usePermissions } from "@/src/hooks/usePermissions";
 
 const ACTION_OPTIONS = [
   "CREATE", "UPDATE", "DELETE", "LOGIN", "LOGOUT", "VIEW",
@@ -53,7 +54,18 @@ function actionEnumValue(action: string, t: (key: string) => string): EnumValue 
 
 export default function AuditPage() {
   const { t, formatDateTime } = useI18n();
-  const { isAdmin } = useTenant();
+  // `hasPermission("audit.read")`, not `isAdmin`.
+  //
+  // The backend grants `audit.read` to ADMIN **and MODERATOR**
+  // (`apps/perm/models.py::ROLE_PERMISSIONS`), while this page asked
+  // `role === "ADMIN"`. Measured: MODERATOR got "访问被拒绝 / 仅管理员可查看审计
+  // 日志" and issued zero requests — refused by the UI for a permission it
+  // holds. The audit finding that first described this page said it had **no**
+  // gate at all; it had one, pointed at the wrong question. Both are in the
+  // same ledger (M47 and M65), which is why this comment names the codename
+  // rather than the role.
+  const { hasPermission } = usePermissions();
+  const canReadAudit = hasPermission("audit.read");
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -89,7 +101,7 @@ export default function AuditPage() {
       const res = await auditApi.list(params);
       return res.data;
     },
-    enabled: isAdmin,
+    enabled: canReadAudit,
   });
 
   const logs = data?.results ?? [];
@@ -180,14 +192,14 @@ export default function AuditPage() {
     </>
   );
 
-  // Access denied for non-admin. A refusal is a note in the file, not a poster,
+  // Access denied. A refusal is a note in the file, not a poster,
   // so it goes through EmptyState (left-aligned, civ-marked) instead of the
   // centred `h-64` box — and the page keeps its header, so the operator can
   // still see *which* page refused them.
-  if (!isAdmin) {
+  if (!canReadAudit) {
     return (
       <PageShell variant="full" title={title}>
-        <EmptyState title={t("audit.access_denied")} reason={t("audit.admin_only")} />
+        <EmptyState title={t("audit.access_denied")} reason={t("audit.needs_audit_read")} />
       </PageShell>
     );
   }

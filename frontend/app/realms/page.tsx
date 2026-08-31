@@ -12,6 +12,8 @@ import { Button } from "@/src/components/ui/Button";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { QueryError } from "@/src/components/ui/PageError";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 const CIVILIZATION_CONFIG: Record<string, { nameKey: string; icon: React.ReactNode }> = {
   CHINESE: { nameKey: "realms.civilizations.CHINESE", icon: <Castle className="w-6 h-6" /> },
@@ -71,7 +73,7 @@ const REALM_TYPE_CONFIG: Record<string, { icon: React.ReactNode; className: stri
   NEUTRAL: { icon: <Castle className="w-4 h-4" />, className: 'bg-[hsl(var(--color-ink-tertiary)/0.1)] border-[hsl(var(--color-ink-tertiary)/0.3)] text-[hsl(var(--color-ink-muted))]' },
 };
 
-export default function RealmsPage() {
+function RealmsPageContent() {
   const { t } = useI18n();
   const { user } = useTenant();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -182,5 +184,23 @@ export default function RealmsPage() {
         })}
       </div>
     </PageShell>
+  );
+}
+
+
+/* 页级门。**后端才是正解,这里是纵深** —— `apps/realms/views.py` 已经挂了
+   `CodenamePermission`,这道门挡不住任何直接打接口的人。它挡的是另一件事:
+   在补上后端之前,VIEWER 直接输 URL 就能打开一个功能完整的页面并拿到数据,
+   而侧边栏的菜单过滤**只藏链接、不挡路由**。三个页面 grep
+   `RequirePermission|hasPermission` 都是零命中 —— 前端没有掩盖后端的洞,
+   洞是直接可点的。
+
+   `fallback={<PermissionDenied />}` 而不是渲染空白:一个没有权限的人应当看到
+   「你没有这个权限」,而不是一个看起来加载失败的页面。 */
+export default function RealmsPage() {
+  return (
+    <RequirePermission permissions="realms.read" fallback={<PermissionDenied />}>
+      <RealmsPageContent />
+    </RequirePermission>
   );
 }

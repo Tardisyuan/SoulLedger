@@ -11,6 +11,8 @@ import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { QueryError } from "@/src/components/ui/PageError";
+import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
 // organizationsApi.list() (lib/api/organizations.ts) doesn't forward a `page` param and
 // this page renders a parent/child tree (buildTree/renderTree below), so a paged view would
@@ -81,7 +83,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   GREEK: "bg-[hsl(var(--color-civ-mark-gr)/0.2)] text-[hsl(var(--color-civ-mark-gr))] border-[hsl(var(--color-civ-mark-gr)/0.4)]",
 };
 
-export default function OrganizationsPage() {
+function OrganizationsPageContent() {
   const { t } = useI18n();
   const { user } = useTenant();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -208,5 +210,18 @@ export default function OrganizationsPage() {
         })}
       </div>
     </PageShell>
+  );
+}
+
+
+/* 页级门。后端才是正解(这几个 viewset 都挂了 `CodenamePermission`),这里是纵深:
+   侧边栏的菜单过滤**只藏链接、不挡路由**,所以在补上这道门之前,直接输 URL 就能
+   打开一个功能完整的页面。码名与后端 `permission_codename` 对齐,不是猜的角色名 ——
+   `tests/test_page_gates_match_the_backend.py` 会因为路由没有门而红。 */
+export default function OrganizationsPage() {
+  return (
+    <RequirePermission permissions="org.read" fallback={<PermissionDenied />}>
+      <OrganizationsPageContent />
+    </RequirePermission>
   );
 }
