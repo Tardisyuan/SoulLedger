@@ -33,7 +33,7 @@ class PermissionCache:
     # these from, instead of raising AttributeError on the first miss.
     _retry_cooldown = 5
     _last_connect_failure: float | None = None
-    _fallback_ttl = 15
+    _fallback_ttl = 0
     _key_prefix = ""
     _ttl = 300
 
@@ -41,12 +41,13 @@ class PermissionCache:
         self._redis_client = None
         self._fallback_cache: dict[tuple[str, str], tuple[bool, float]] = {}
         self._ttl = getattr(settings, 'CACHE_PERMISSION_TTL', 300)
-        # The process-local fallback gets its OWN, much shorter TTL — see
-        # `CACHE_PERMISSION_FALLBACK_TTL` in config/settings.py. A revocation
-        # in one worker cannot reach another worker's dict, so this number is
-        # the width of the window in which a revoked grant is still honoured
-        # while Redis is down.
-        self._fallback_ttl = getattr(settings, 'CACHE_PERMISSION_FALLBACK_TTL', 15)
+        # The process-local fallback gets its OWN TTL, defaulting to **0** —
+        # see `CACHE_PERMISSION_FALLBACK_TTL` in config/settings.py for the
+        # two-process measurement behind that number. A revocation in one
+        # worker cannot reach another worker's dict, so this is the width of
+        # the window in which a revoked grant is still honoured while Redis is
+        # down, and only 0 makes that window empty.
+        self._fallback_ttl = getattr(settings, 'CACHE_PERMISSION_FALLBACK_TTL', 0)
         self._key_prefix = getattr(settings, 'CACHE_PERMISSION_KEY_PREFIX', '')
         self._retry_cooldown = getattr(settings, 'CACHE_REDIS_RETRY_COOLDOWN', 5)
         self._last_connect_failure: float | None = None
