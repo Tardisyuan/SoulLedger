@@ -39,23 +39,60 @@ def offline_cache():
     return cache
 
 
-def test_the_fallback_has_its_own_ttl_and_it_is_shorter():
-    """两个数字必须是两个 —— 共用一个就是把跨进程的窗口宽度交给了共享条目的寿命。"""
+def test_the_fallback_is_disabled_by_default():
+    """默认 0 —— 降级期间不缓存权限答案。
+
+    两进程实测(Redis 指向关着的端口,共享一个 SQLite 文件库):A 读、B 读、
+    A 删掉授权行并调 `invalidate_all_permissions()`,然后 B 再问:
+
+        兜底 TTL   A 撤销后 B 立刻答   +20s   B 转为 False
+        300        True(库已 False)  True   +301.5s
+         15        True(库已 False)  —      +16.5s
+          0        False              False  立刻
+
+    **有界的 TTL 只是把窗口收窄,只有 0 让它为空。** 这是一个授权判断,
+    在降级期间从一份谁也清不掉的副本上作答是错的一边。
+    """
     from django.conf import settings
 
-    shared = getattr(settings, "CACHE_PERMISSION_TTL", 300)
     fallback = getattr(settings, "CACHE_PERMISSION_FALLBACK_TTL", None)
     assert fallback is not None, "兜底没有自己的 TTL 设置项"
-    assert fallback < shared, (
-        f"兜底 TTL {fallback} 不比共享 TTL {shared} 短 —— 那么一次撤销在降级期间"
-        f"最多被无视 {fallback} 秒,而这个数字本该是被刻意压小的那个"
+    assert fallback == 0, (
+        f"兜底 TTL 是 {fallback},不是 0 —— 那么 Redis 挂掉时,一次撤销最多还能"
+        f"被无视 {fallback} 秒。调大它是一个取舍(每次检查省两条索引查询,"
+        f"实测 217 µs),但那要是一个写下来的决定。"
     )
 
 
-def test_a_grant_written_to_the_fallback_expires_on_the_fallback_clock(offline_cache):
+def test_it_is_still_a_separate_number_from_the_shared_one():
+    """两个数字必须是两个。
+
+    共用一个就是把跨进程的窗口宽度交给了共享条目的寿命 —— 而那正是修复前的
+    状态:兜底跟着 `CACHE_PERMISSION_TTL` 一起是 300 秒。
+    """
+    from django.conf import settings
+
+    shared = getattr(settings, "CACHE_PERMISSION_TTL", 300)
+    fallback = getattr(settings, "CACHE_PERMISSION_FALLBACK_TTL", 0)
+    assert fallback != shared, (
+        f"兜底与共享 TTL 又是同一个数({shared})—— 跨进程窗口的宽度重新由"
+        f"共享条目的寿命决定了"
+    )
+
+
+def test_with_the_default_ttl_the_fallback_never_answers(offline_cache):
+    """默认 0:写得进去,读不出来 —— 也就是「降级期间不缓存」。"""
     offline_cache._fallback_ttl = 0
     offline_cache.set("JUDGE", "soul.read", True)
-    time.sleep(0.01)
+    assert offline_cache.get("JUDGE", "soul.read") is None
+
+
+def test_a_grant_written_to_the_fallback_expires_on_the_fallback_clock(offline_cache):
+    """非零配置下,过期走的是兜底那口钟。"""
+    offline_cache._fallback_ttl = 0.05
+    offline_cache.set("JUDGE", "soul.read", True)
+    assert offline_cache.get("JUDGE", "soul.read") is True
+    time.sleep(0.1)
     assert offline_cache.get("JUDGE", "soul.read") is None
 
 
@@ -97,3 +134,29 @@ def test_an_empty_prefix_keeps_the_old_key_shape():
     cache = PermissionCache.__new__(PermissionCache)
     cache._key_prefix = ""
     assert cache._make_key("JUDGE", "soul.read") == "perm:JUDGE:soul.read"
+
+
+@override_settings(CACHE_PERMISSION_TTL=300, CACHE_PERMISSION_FALLBACK_TTL=7)
+def test_a_real_instance_wires_the_fallback_ttl_from_its_own_setting():
+    """**走 `__init__`,不是手工构造的实例。**
+
+    这个文件上面每一条都不会红于把 `self._fallback_ttl = self._ttl` 写回去 ——
+    读 settings 的那几条读的是**设置**,行为那几条用的是 `__new__` 造出来、
+    再由测试自己赋值的实例。**接线本身一条都没被走过**,而接线正是这次改的东西。
+
+    实测:把 `__init__` 里那一行改成 `self._fallback_ttl = self._ttl`,
+    加这一条之前 **8 passed 全绿**。
+    """
+    cache = PermissionCache()
+    assert cache._fallback_ttl == 7, (
+        f"实例拿到的兜底 TTL 是 {cache._fallback_ttl},而设置里写的是 7 —— "
+        f"`__init__` 没有从 CACHE_PERMISSION_FALLBACK_TTL 取值"
+    )
+    assert cache._ttl == 300
+    assert cache._fallback_ttl != cache._ttl
+
+
+def test_an_instance_built_without_init_still_defaults_to_zero():
+    """`tests/test_coverage_boost.py` 用 `__new__` 绕过 `__init__` 造纯兜底缓存,
+    所以类级默认值也要是 0 —— 否则那条路径上的默认是另一个数。"""
+    assert PermissionCache._fallback_ttl == 0
