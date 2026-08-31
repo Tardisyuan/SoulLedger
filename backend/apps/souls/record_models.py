@@ -2,6 +2,7 @@
 Soul record model — merit/demerit/judgment evidence attached to a soul.
 """
 import uuid
+from contextvars import ContextVar
 
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -10,6 +11,15 @@ from apps.core.models import AuditUserFields
 from apps.souls.dates import parse_historical_date, to_legacy_date
 from apps.souls.models import Civilization, Soul
 from apps.tenants.managers import TenantManager
+
+#: Batch state: `(depth, deferred_soul_ids)`.
+#:
+#: A `ContextVar`, so two overlapping requests do not share it — the class
+#: attributes this replaced were process-global, and the later batch's
+#: `__enter__` wiped the earlier one's accumulated set. Default is a shared
+#: empty frozenset-shaped `set()` that is never mutated: `__enter__` installs
+#: a fresh one at depth 0, and `save()` only adds when depth > 0.
+_BATCH: ContextVar = ContextVar("soulrecord_batch", default=(0, set()))
 
 
 class RecordType(models.TextChoices):
@@ -69,7 +79,12 @@ class SoulRecord(AuditUserFields, models.Model):
         max_length=20,
         choices=Civilization.choices,
         default=Civilization.CHINESE,
-        help_text="Derived from soul's tenant (kept for query convenience)",
+        help_text=(
+            "Derived from the soul's tenant on save (kept for query "
+            "convenience). Not authoritative: routing and the ledger read "
+            "`soul.civilization`, the property. This column exists so a "
+            "report can filter records without joining Soul."
+        ),
     )
     tenant = models.ForeignKey(
         "tenants.Tenant",
@@ -266,9 +281,25 @@ class SoulRecord(AuditUserFields, models.Model):
         ),
     )
 
-    # Batch mode flags (class-level, not instance)
-    _batch_mode = False
-    _deferred_souls = set()
+    # Batch state lives in a contextvar, not on the class.
+    #
+    # It was two class attributes. Three things were wrong with that:
+    #
+    # 1. `__exit__` cleared `cls._deferred_soul_ids` — **a name that does not
+    #    exist**. The real attribute is `_deferred_souls`. That line created a
+    #    new attribute on the class and left the real set full; measured
+    #    2026-08-29, one enter/exit conjures the attribute out of nothing.
+    # 2. Class attributes are shared by every request in the process. Two
+    #    overlapping batches and the later `__enter__` **wipes the earlier
+    #    one's accumulated set** — those souls' karma is never recalculated,
+    #    the denormalised scores stay stale, and nothing raises.
+    # 3. `__exit__` set `_batch_mode = False` unconditionally, so a nested
+    #    `with SoulRecord.batch():` turned batching off for the outer block on
+    #    the inner block's exit.
+    #
+    # A `ContextVar` is per-task under ASGI and per-thread under WSGI; the
+    # depth counter makes nesting behave. `_BATCH` holds `(depth, souls)` —
+    # one variable so the two can never be updated out of step.
 
     class Meta:
         ordering = ["-recorded_at"]
@@ -305,28 +336,40 @@ class SoulRecord(AuditUserFields, models.Model):
             with SoulRecord.batch():
                 for item in items:
                     SoulRecord.objects.create(soul=soul, ...)
+
+        Reentrant: only the outermost block flushes. Concurrent callers do not
+        see each other's deferred souls — see the note on `_BATCH` above.
         """
 
         class BatchContext:
             def __enter__(self_batch):
-                cls._batch_mode = True
-                cls._deferred_souls = set()
+                depth, souls = _BATCH.get()
+                self_batch._token = _BATCH.set(
+                    (depth + 1, souls if depth else set())
+                )
                 return self_batch
 
             def __exit__(self_batch, exc_type, exc_val, exc_tb):
-                cls._batch_mode = False
-                # Flush deferred karma recalculations
-                cls._flush_karma_recalculations()
-                cls._deferred_soul_ids = set()
+                depth, souls = _BATCH.get()
+                outermost = depth <= 1
+                _BATCH.reset(self_batch._token)
+                if outermost:
+                    # Flush even when the block is unwinding on an exception:
+                    # rows already committed inside it have stale denormalised
+                    # scores either way, and leaving them stale is the quieter
+                    # of the two failures.
+                    cls._flush_karma_recalculations(souls)
                 return False
 
         return BatchContext()
 
     @classmethod
-    def _flush_karma_recalculations(cls):
+    def _flush_karma_recalculations(cls, soul_ids=None):
         """Run karma recalculation once per unique soul."""
         from apps.ledger.services import LedgerService
-        for soul_id in cls._deferred_souls:
+        if soul_ids is None:
+            soul_ids = _BATCH.get()[1]
+        for soul_id in soul_ids:
             try:
                 soul = Soul.objects.get(pk=soul_id)
                 LedgerService.recalculate_soul_ledger(soul)
@@ -338,11 +381,24 @@ class SoulRecord(AuditUserFields, models.Model):
         # Auto-populate tenant from soul if not set
         if self.tenant is None and self.soul_id is not None:
             self.tenant = self.soul.tenant
+        # …and the civilization, which the help_text has claimed since the
+        # column was added and **no code performed**. `default=CHINESE` meant a
+        # record on a Greek soul was stamped CHINESE, forever, and the only
+        # writer was a client PATCHing the serializer's writable field. There
+        # is an index on this column; it indexed a wrong answer.
+        #
+        # Derived from `soul.civilization` (the property, which reads the
+        # tenant code) rather than from `self.tenant`: they agree by
+        # construction, and going through the property keeps one definition of
+        # the mapping instead of two.
+        if self.soul_id is not None:
+            self.civilization = self.soul.civilization
         super().save(*args, **kwargs)
         if is_new:
-            if SoulRecord._batch_mode:
+            depth, souls = _BATCH.get()
+            if depth:
                 # Defer karma recalculation until batch completes
-                SoulRecord._deferred_souls.add(self.soul_id)
+                souls.add(self.soul_id)
             else:
                 self._update_soul_karma()
 

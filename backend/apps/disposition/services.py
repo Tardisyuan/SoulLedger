@@ -715,6 +715,17 @@ class DispositionService:
         # disposition REINCARNATING and this method needed no Greek branch to
         # make that happen.
         soul = disposition.soul
+        if disposition.is_archived:
+            # An archived disposition is one somebody took off the list. It was
+            # still executable: `archive()` set a flag that nothing read, so
+            # `execute()` on an archived row moved the soul to REINCARNATING and
+            # reported success. Measured 2026-08-29.
+            #
+            # False, not an exception, matching every other refusal in this
+            # method — the caller's contract is "returns False, and writes
+            # nothing, when the soul cannot make that move".
+            return False
+
         with transaction.atomic():
             if soul.civilization in REBIRTH_CAPABLE_CIVILIZATIONS:
                 moved = soul.transition_to(

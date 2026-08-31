@@ -260,12 +260,17 @@ DEFAULT_PERMISSIONS = [
     ("workflow.advance", "推进工作流", "workflow"),
     ("workflow.escalate", "越级推进工作流", "workflow"),
     # cross-tenant judgment 权限
-    # 注意：这一族目前**没有任何视图声明它**。看名字它显然是为
-    # apps/dispatch/views.py 的 CrossTenantJudgmentViewSet 写的，但那个视图
-    # 声明的是 dispatch.*。两族的持有者不同——cross_judgment.* 是
-    # ADMIN/JUDGE/MODERATOR，dispatch.read 是 ADMIN/GUARDIAN/MODERATOR——
-    # 所以改挂过去会让 GUARDIAN 丢掉跨域审判的读权限、JUDGE 凭空获得，
-    # 属于策略变更而非改名，留给负责人定夺。
+    #
+    # 这段注释曾经写着「这一族目前**没有任何视图声明它**」，并在此基础上论证了
+    # 一整段「改挂过去属于策略变更」。**那句话被它描述的代码反驳** ——
+    # `apps/dispatch/views.py::CrossTenantJudgmentViewSet` 就写着
+    # `permission_codename = "cross_judgment"`，而且整张 `extra_permissions`
+    # 表都挂在这一族上。持有者是 ADMIN/JUDGE/MODERATOR，与 `dispatch.*` 的
+    # ADMIN/GUARDIAN/MODERATOR 确实不同，那部分事实仍然成立；不成立的是
+    # 「没人声明它」这个前提，而整段论证是架在那个前提上的。
+    #
+    # `tests/test_every_codename_family_is_claimed.py` 现在把「哪些族被哪个视图
+    # 声明」写成一条会红的断言，所以这类注释不能再只是一句话。
     ("cross_judgment.read", "查看跨域审判", "cross_judgment"),
     ("cross_judgment.create", "创建跨域审判", "cross_judgment"),
     # realms 权限

@@ -1,6 +1,7 @@
 """EUROPEAN — INFERNO. TRANSCRIBED here, from Dante's Inferno IV-XXXIV.
 
-The SECOND European corpus, and the third transcribed one. The 26 places
+The SECOND European corpus. (The transcription ordinal that used to stand
+here is gone for the reason given in statutes_gorgias.py.) The 26 places
 themselves are in ``statutes_inferno_entries.py``; this module holds the
 provenance, the notes every row carries, the wall of Dis, and the builder that
 expands the entries into seed rows — the same division of labour as

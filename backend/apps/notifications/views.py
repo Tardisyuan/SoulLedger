@@ -7,12 +7,12 @@ from rest_framework.response import Response
 
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
-from apps.core.viewsets import CodenameViewSetMixin
+from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.notifications.models import UserNotification
 from apps.notifications.serializers import UserNotificationListSerializer, UserNotificationSerializer
 
 
-class NotificationViewSet(CodenameViewSetMixin, viewsets.ModelViewSet):
+class NotificationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelViewSet):
     """
     ViewSet for user notifications.
 

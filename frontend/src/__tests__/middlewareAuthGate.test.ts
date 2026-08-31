@@ -19,12 +19,13 @@
  * jsdom 里跑不了这个文件:`next/server` 在模块顶层就要 `Request`,而 jsdom 没有。
  * 所以有上面那行 `@jest-environment node`。
  */
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 import { NextRequest } from "next/server";
 
 import { middleware } from "@/middleware";
+import { DEFAULT_LOCALE, LOCALE_COOKIE } from "@/src/config/locale";
 
 const APP_DIR = path.join(__dirname, "..", "..", "app");
 
@@ -98,18 +99,71 @@ describe("未登录时,除公开路由外每一条都被送去登录页", () => 
   });
 });
 
-describe("管理员路由的标记", () => {
-  it.each(["/admin/stats", "/permissions", "/menus", "/menus/buttons"])(
-    "%s 带凭证时打上 X-Requires-Admin",
+describe("中间件不假装自己在做角色鉴权", () => {
+  /** `X-Requires-Admin` 已删(2026-08-31)。
+   *
+   * 它自称「add header for client-side verification」,而**没有任何客户端代码
+   * 读它,也读不到** —— 它是 document 响应头。全仓 grep `Requires-Admin`
+   * 只有它自己那一行。
+   *
+   * 更糟的是它的路径清单:`["/admin","/permissions","/menus"]`,而
+   * `/tenants`、`/users`、`/organizations`、`/audit` 都是管理面且都不在里面。
+   * **一个什么都不做的守卫,配着一份错的清单** —— 而清单读起来像是权威的。
+   *
+   * 这两条钉住「它没有回来」。真正的闸在页面的 `<RequireAdmin>` /
+   * `<RequirePermission>`(见本文件上半部与
+   * backend/tests/test_page_gates_match_the_backend.py),以及每个 API 上的
+   * `CodenamePermission`。 */
+  it.each(["/admin/stats", "/permissions", "/menus", "/tenants", "/audit"])(
+    "%s 不再带一个没人读的 X-Requires-Admin",
     (route) => {
       const res = middleware(request(route, { soulledger_refresh: "tok" }));
-      expect(res.headers.get("X-Requires-Admin")).toBe("true");
+      expect(res.headers.get("X-Requires-Admin")).toBeNull();
     }
   );
 
-  it.each(["/souls", "/ledger", "/dashboard"])("%s 不打这个标记", (route) => {
-    const res = middleware(request(route, { soulledger_refresh: "tok" }));
-    expect(res.headers.get("X-Requires-Admin")).toBeNull();
+  it("middleware.ts 里不再出现这个头名", () => {
+    // 断源码,而不只断行为:一个只在别的路径上打这个头的实现,上面那条会绿。
+    const source = readFileSync(
+      path.join(__dirname, "..", "..", "middleware.ts"),
+      "utf8"
+    );
+    const mentions = source
+      .split("\n")
+      .filter((line) => line.includes("X-Requires-Admin"))
+      .filter((line) => !line.trimStart().startsWith("//"));
+    expect(mentions).toEqual([]);
+  });
+});
+
+describe("locale 常量只有一份", () => {
+  /** `src/config/locale.ts` 的文件头从写下那天起就说「`middleware.ts` 同样从
+   * 这里取值」,而 `git log -p --all -- frontend/middleware.ts | grep
+   * config/locale` **一次都没命中过**。三份同源常量说好收成一份,实际还是两份,
+   * 而注释宣告了收拢已完成。 */
+  it("middleware.ts 真的从 src/config/locale 取值", () => {
+    const source = readFileSync(
+      path.join(__dirname, "..", "..", "middleware.ts"),
+      "utf8"
+    );
+    expect(source).toMatch(/from\s+["']@\/src\/config\/locale["']/);
+  });
+
+  it("并且没有自己再抄一份字面量", () => {
+    const source = readFileSync(
+      path.join(__dirname, "..", "..", "middleware.ts"),
+      "utf8"
+    );
+    const declarations = source
+      .split("\n")
+      .filter((line) => /^\s*const\s+(LOCALE_COOKIE|SUPPORTED_LOCALES|DEFAULT_LOCALE)\s*=/.test(line));
+    expect(declarations).toEqual([]);
+  });
+
+  it("中间件写出的 cookie 名就是那个模块导出的那个", () => {
+    // 行为侧的对照:上面两条断的是源码,这条断的是结果。
+    const res = middleware(request("/", {}));
+    expect(res.cookies.get(LOCALE_COOKIE)?.value).toBe(DEFAULT_LOCALE);
   });
 });
 

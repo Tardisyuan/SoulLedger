@@ -122,7 +122,7 @@ def test_every_permission_string_is_held_by_someone():
         if name in CATALOGUE and name not in GRANTED
     }
     assert orphaned == {}, (
-        f"gated on codename(s) no role holds: "
+        "gated on codename(s) no role holds: "
         + "; ".join(f"{k} ({', '.join(v)})" for k, v in sorted(orphaned.items()))
     )
 

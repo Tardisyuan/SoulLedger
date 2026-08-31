@@ -92,6 +92,7 @@ const COLLECTED_FILES = [
   "WorkflowEditor.test.tsx",
   "WorkflowPage.instances.test.tsx",
   "WorkflowPage.test.tsx",
+  "accessTokenNeverBecomesACookie.test.ts",
   "api.test.ts",
   "auditGrouping.test.ts",
   "chartColourContract.test.ts",
