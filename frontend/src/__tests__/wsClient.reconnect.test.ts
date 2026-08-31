@@ -278,3 +278,44 @@ describe("WSClient heartbeat", () => {
     expect(socket.sent).toHaveLength(sentBefore);
   });
 });
+
+
+describe("disconnect() 不留僵尸连接", () => {
+  /* `disconnect()` 曾经只是 `ws.close(); ws = null`。浏览器随后在那个已被丢弃的
+     socket 上派发 close(code 1005 ≠ 4001),`onclose` 看到 `shutdown === false`,
+     于是 `scheduleReconnect()` —— **一秒之后这个实例自己新建一个 WebSocket**,
+     而 React 侧已经不持有它的引用了。它的 `onStatusChange` 还指着一个已卸载组件
+     的 setState。
+
+     `WebSocketContext` 的 cleanup 用的正是 `disconnect()`,而 `user` 对象在
+     TenantContext 水合时至少变一次身份 —— **每次会话至少留下一个僵尸**。
+
+     这两条测试在测试替身修好之前是**写不出来的**:`FakeWebSocket.close()` 从不
+     派发 onclose,那条路径在测试里根本不存在。 */
+
+  it("主动断开之后不再自己重连", async () => {
+    const client = new WSClient({ initialReconnectDelay: 1000 });
+    client.connect();
+    lastSocket().open();
+    expect(FakeWebSocket.instances).toHaveLength(1);
+
+    client.disconnect();
+    await Promise.resolve();          // 让替身的 queueMicrotask 跑掉
+    jest.advanceTimersByTime(10_000); // 远超第一次重连的退避
+
+    expect(FakeWebSocket.instances).toHaveLength(1);
+  });
+
+  it("服务器主动断开时仍然会重连(反对照)", async () => {
+    /* 没有这一条,一个「永不重连」的实现同样满足上面那条 —— 而那会让每一次
+       网络抖动都变成一条再也不回来的连接。 */
+    const client = new WSClient({ initialReconnectDelay: 1000 });
+    client.connect();
+    lastSocket().open();
+
+    lastSocket().serverClose(1006);
+    jest.advanceTimersByTime(10_000);
+
+    expect(FakeWebSocket.instances.length).toBeGreaterThan(1);
+  });
+});

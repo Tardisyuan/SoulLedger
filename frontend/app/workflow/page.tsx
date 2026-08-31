@@ -19,6 +19,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { WorkflowInstanceList } from "@/src/components/workflow/page/WorkflowInstanceList";
 import { TemplateDetailModal } from "@/src/components/workflow/page/TemplateDetailModal";
 import { DeleteTemplateModal } from "@/src/components/workflow/page/DeleteTemplateModal";
+import { QueryError } from "@/src/components/ui/PageError";
 import type {
   BackendTemplate,
   FlowNode,
@@ -39,7 +40,15 @@ export default function WorkflowPage() {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmingTemplate, setConfirmingTemplate] = useState<BackendTemplate | null>(null);
 
-  const { data: workflowsData, isLoading: isWorkflowsLoading } = useQuery({
+  // `isError` / `refetch` 拿出来:这个 tab 此前对「加载失败」和「一条都没有」
+  // 渲染**同一段文案**(「暂无审批实例」)。两条 e2e 测试因此共用一个可观察量 ——
+  // 一个让实例列表永久为空的变异会让两条都通过。
+  const {
+    data: workflowsData,
+    isLoading: isWorkflowsLoading,
+    isError: isWorkflowsError,
+    refetch: refetchWorkflows,
+  } = useQuery({
     queryKey: ["workflows"],
     queryFn: async () => {
       const res = await workflowApi.list();
@@ -460,7 +469,11 @@ export default function WorkflowPage() {
           </div>
         ) : (
           /* Instances tab */
-          <WorkflowInstanceList workflows={workflows} isLoading={isWorkflowsLoading} />
+          isWorkflowsError ? (
+            <QueryError onRetry={() => refetchWorkflows()} />
+          ) : (
+            <WorkflowInstanceList workflows={workflows} isLoading={isWorkflowsLoading} />
+          )
         )}
 
         {/* 查看模板详情弹窗 */}

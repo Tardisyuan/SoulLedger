@@ -49,6 +49,18 @@ export class FakeWebSocket {
   close() {
     this.closeCalls++;
     this.readyState = FakeWebSocket.CLOSED;
+    // 真实的 WebSocket 在 `close()` 之后**会**派发 close 事件(code 1005,
+    // 表示没有收到关闭帧)。这个替身此前不派发,于是
+    // `WSClient.disconnect()` 里那条「关掉之后浏览器再回调一次 onclose,
+    // 于是重连出一个僵尸连接」的路径,在测试里根本不存在。
+    //
+    // **一个行为与被替代对象不同的测试替身,会让正确的代码看起来是坏的、
+    // 让坏掉的代码看起来是好的。** 这里属于后者:`wsClient.reconnect.test.ts`
+    // 里给 `close()` 写的两条测试反而用 `serverClose(1006)` 显式补上了这一步 ——
+    // 也就是说这个差别是知道的,只是没对 `disconnect()` 做同样的事。
+    queueMicrotask(() => {
+      this.onclose?.({ code: 1005, reason: "", wasClean: false } as CloseEvent);
+    });
   }
 
   // ── Test drivers ───────────────────────────────────────────────────
