@@ -23,7 +23,6 @@ the test exercises something the fixture invented.
 Only *extra* keys are an error. A fixture may omit fields the page does not
 read -- that is what makes it a fixture rather than a copy of the API.
 """
-import json
 import re
 from pathlib import Path
 

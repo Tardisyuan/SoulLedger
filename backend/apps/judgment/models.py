@@ -220,8 +220,9 @@ class StatuteCorpus(models.TextChoices):
         The Platonic myths inherit none, so the article here is a RULE OF THE
         COURT (see StatutePolarity.PROCEDURE): the reform, the bench, the
         venue, the rule of evidence, the purpose of punishment, the rate and
-        the unit. Twenty-two articles under GR-GRG-* and GR-ER-*, of which
-        exactly one carries OFFENCE polarity — Republic X 615b, which names
+        the unit. Twenty-three articles under GR-GRG-* and GR-ER-* (GORGIAS 12,
+        REPUBLIC_ER 11), of which twenty-one are PROCEDURE, one carries MERIT,
+        and exactly one carries OFFENCE polarity — Republic X 615b, which names
         three wrongs after "for example" and closes with "any other evil
         behaviour". That catch-all is NOT a gap to be filled; expanding it is
         precisely how the withdrawn HELL_LAW corpus was written.

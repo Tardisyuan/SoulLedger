@@ -49,7 +49,7 @@ the ones the note below points at resolve like this:
 
 Statutes — the articles a verdict can cite (apps.judgment.models.Statute)
 
-FOUR CORPORA ARE SEEDED, AND THE LARGEST ONE IS NOT WRITTEN IN THIS FILE.
+SIX CORPORA ARE SEEDED, AND THE LARGEST ONE IS NOT WRITTEN IN THIS FILE.
 
   CHINESE   — here, below, as CHINESE_STATUTES: 《太微仙君功過格》 (1171),
               74 transcribed articles under corpus GONGGUOGE. This is the
@@ -410,7 +410,17 @@ CORPUS_PROVENANCE = {
             "text (Paul Shorey)"
         ),
         "known_gap": (
-            "Three, and two of them are the SOURCE's. (1) 615b names three "
+            "Four, and two of them are the SOURCE's. (0) 614b — Er's death on "
+            "the battlefield, the twelfth-day return on the pyre, and the "
+            "frame that makes him the reporter — is inside the cited range and "
+            "is NOT transcribed. It is narrative apparatus and states no rule "
+            "of the court, which is why it was passed over; it is declared "
+            "here because the last time a section inside a declared range went "
+            "unremarked, that was GR-GRG-12 (Gorgias 526c-d, Minos with the "
+            "golden sceptre), and the actor file was meanwhile asserting he "
+            "presided over nothing. An undeclared omission inside a declared "
+            "range is the shape, regardless of how load-bearing the passage "
+            "is. (1) 615b names three "
             "wrongs after 'for example' and closes with 'any other evil "
             "behaviour' — a refusal to enumerate, not a lost list, recorded on "
             "GR-ER-04. (2) 615c says impiety toward gods and parents, murder, "
