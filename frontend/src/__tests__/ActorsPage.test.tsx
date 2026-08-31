@@ -34,7 +34,12 @@ jest.mock("@/lib/api", () => ({
 }));
 
 jest.mock("@/src/contexts/TenantContext", () => ({
-  useTenant: () => ({ user: { id: "u1", username: "yama" } }),
+  // `permissions: ["actors.read"]` 是页面外那道 `<RequirePermission>` 需要的。
+  // 这个套件测的是阵容怎么排版,不是权限 —— 给足权限,让它继续测它自己的东西。
+  // 门本身由 `tests/test_page_gates_match_the_backend.py` 守。
+  useTenant: () => ({
+    user: { id: "u1", username: "yama", role: "JUDGE", permissions: ["actors.read"] },
+  }),
 }));
 
 // The gloss reads the sidebar menu tree over the network; it has its own tests.

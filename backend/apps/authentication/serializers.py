@@ -140,10 +140,52 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    """The serializer behind `PATCH /auth/profile/` — what a user may change
+    about themselves.
+
+    `role` and `tenant` were already locked. `organization` was not, and it is
+    a foreign key with no tenant check: measured, a VIEWER could
+    `PATCH /auth/profile/ {"organization": <an org belonging to tenant B>}`
+    and get 200. Nothing downstream widened that into data access
+    (`apps/perm/filters.py` never mentions `organization`, so `DataScopeFilter`
+    does not read it), which is why this is a write-integrity hole rather than
+    a privilege escalation — but "the field nobody reads today" is not a
+    permission model.
+
+    Kept writable rather than made read-only: moving between the organizations
+    of one's own tenant is what this field is for. The scoping happens in
+    `validate_organization`.
+    """
+
     class Meta:
         model = User
         fields = ["id", "username", "email", "role", "first_name", "last_name", "is_active", "display_name", "organization", "position"]
         read_only_fields = ["id", "is_active", "username", "role"]
+
+    def validate_organization(self, value):
+        """Refuse an organization belonging to somebody else's tenant.
+
+        `PrimaryKeyRelatedField` resolves the FK against the whole table — the
+        queryset it builds from the model field has no tenant contextvar and no
+        request. So the check has to be here, against the caller's own tenant,
+        and it has to read the tenant off the request rather than off
+        `self.instance` (a user with no tenant must not be able to claim one by
+        way of an organization).
+        """
+        if value is None:
+            return value
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        tenant = getattr(request, "tenant", None) or getattr(user, "tenant", None)
+        if tenant is None:
+            raise serializers.ValidationError(
+                "无法确定当前租户,不能设置组织。"
+            )
+        if value.tenant_id != tenant.id:
+            raise serializers.ValidationError(
+                f"组织 {value.code} 属于另一个租户,不能挂到当前账号下。"
+            )
+        return value
 
 
 # ---------------------------------------------------------------------------

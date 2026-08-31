@@ -900,7 +900,8 @@
       "BATCH_CREATE": "Kheme Seth Wu",
       "BATCH_UPDATE": "Khemen Seth Wu",
       "BATCH_DELETE": "Wehem Seth Wu"
-    }
+    },
+    "needs_audit_read": "Requires the audit.read permission"
   },
   "profile": {
     "title": "Aha Pepi",
