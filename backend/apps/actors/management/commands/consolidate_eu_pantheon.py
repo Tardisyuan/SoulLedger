@@ -31,22 +31,17 @@ What that means in practice:
     北欧分流流程 template in frontend/src/config/workflow-templates.ts were
     both removed once a reference check showed nothing pointed at them.
 
-This command does TWO things by default, plus one on request:
+This command does ONE thing by default, plus one on request:
 
-  1. Pluto/Hades merge: same deity, two rows, two OVERSEERs. (Not quite "the
-     Roman name", as this file used to say: Πλούτων is a Greek cult title from
-     πλοῦτος, wealth — Plato, Cratylus 403a — and Latin Pluto transcribes it.
-     Rome's own underworld gods are Dis Pater and Orcus. The merge is right;
-     what it folds is two cult aspects of one Greek god.) Before merging, live
-     references (User.actor,
-     Judgment.judge, WorkflowNode.approver_actor,
-     CrossTenantJudgmentParticipant.participant_actor) are checked. If only
-     one row is referenced (or neither), the unreferenced/lesser-referenced
-     row is soft-deleted, and on a tie Hades is the survivor by name — the
-     Greek name is the canonical one, so the outcome does not depend on
-     which row happened to be inserted first. If BOTH are referenced, this
-     command does NOT merge — it reports the conflict and leaves both rows
-     untouched, so a human can decide how to migrate the reference.
+  (RETIRED) Pluto/Hades merge. It ran from 2026-08-04 to 2026-08-31 and is
+     gone. The scholarship it rested on is right as far as it goes — Πλούτων
+     is a Greek cult title from πλοῦτος, wealth (Plato, Cratylus 403a), and
+     Latin Pluto transcribes it; Rome's own underworld gods are Dis Pater and
+     Orcus — but the two rows were never two spellings of one row in *this*
+     schema. Dante has a Pluto of his own, guarding the fourth circle
+     (Inf. VII.2, "cominciò Pluto con la voce chioccia"), and this cast seeds
+     Charon, Minos and Cerberus as exactly that kind of warden. See the note
+     on the restored row in `apps/actors/mythology/actors_european.py`.
 
   2. Greco-Roman completeness audit (read-only): confirms each of the seven is
      present, holds its role, AND STANDS IN ITS REALM. Deviations are printed,
@@ -115,13 +110,6 @@ GREEK_TENANT_CODE = "GR_HADES"
 # ever existed in this system, so these rows are typically mistagged onto the
 # Christian EU_HEAVEN realm or onto one of Dante's circles.
 NORSE_NAMES = ["Odin", "Freya", "Hel", "Valkyries"]
-
-MERGE_NAMES = ("Pluto", "Hades")
-# On a reference-count tie the Greek name wins. Without this the survivor was
-# decided by created_at, i.e. by seed insertion order, while the soft-delete
-# reason written to the database claimed unconditionally that the row was
-# "merged into Hades".
-MERGE_SURVIVOR = "Hades"
 
 # name -> (role, realm_code). BOTH halves are checked. Adding the realm column
 # is the whole point of these tables: see the note in the module docstring for
@@ -207,7 +195,7 @@ def _snapshot(actor):
 class Command(BaseCommand):
     help = (
         "Consolidate EU_HEAVEN_HELL down to two judgment systems (Christian, "
-        "Greco-Roman): merge Pluto/Hades if safe and audit Greco-Roman role "
+        "Greco-Roman): audit Greco-Roman role "
         "completeness. Pass --purge-norse to also soft-delete leftover Norse "
         "actors. Defaults to a dry-run."
     )
@@ -305,90 +293,33 @@ class Command(BaseCommand):
 
         affected = []  # snapshots collected for the backup file
         plan = []  # human-readable summary lines
-
         # ------------------------------------------------------------------
-        # Step 1: Pluto / Hades merge
-        # ------------------------------------------------------------------
-        self.stdout.write(self.style.MIGRATE_HEADING("Step 1: Pluto/Hades merge"))
+        # Step 1 used to be a Pluto/Hades merge. IT IS GONE, AND THAT IS THE
+        # POINT OF THIS PARAGRAPH.
+        #
+        # The merge rested on Πλούτων being a cult title of Ἅιδης -- true, from
+        # πλοῦτος, wealth, Plato Cratylus 403a, and Latin Pluto transcribes it.
+        # What it missed is that **this cast is not the Greek cast**. Dante has
+        # a Pluto of his own: `statutes_inferno_entries.py` records circle 4's
+        # guardian, and Inf. VII.2 names him -- "cominciò Pluto con la voce
+        # chioccia". `actors_european.py` seeds Charon, Minos and Cerberus as
+        # the wardens of the circles they keep, and the fourth circle's was the
+        # one missing.
+        #
+        # The precedent was already in the file this merge was deleting rows
+        # out of: the Minos row carries "THIS ROW IS DANTE'S MINOS ... Plato's
+        # Minos now has a row of his own under GREEK ... Different offices in
+        # different underworlds". Pluto was the same situation handled the
+        # opposite way.
+        #
+        # Restored by decision on 2026-08-31, twice put to and confirmed by the
+        # repository owner. Removing the step rather than inverting it is
+        # deliberate: there is nothing left to merge, so a command that still
+        # asked the question would have to answer "no" forever, and a step that
+        # can only answer one way is a step nobody reads.
         merge_delete = None
-        rows = {name: tenant_actors.filter(name=name).first() for name in MERGE_NAMES}
-        active_rows = {n: a for n, a in rows.items() if a is not None and not a.is_deleted}
 
-        if len(active_rows) <= 1:
-            self.stdout.write(
-                f"  [skip] only {len(active_rows)} active row(s) among {MERGE_NAMES} — nothing to merge"
-            )
-        else:
-            refs = {n: _reference_count(a) for n, a in active_rows.items()}
-            referenced = {n: c for n, c in refs.items() if c > 0}
-            for n, a in active_rows.items():
-                self.stdout.write(
-                    f"    {n}: id={a.id} role={a.role} realm={a.realm.realm_code if a.realm else None} "
-                    f"refs={refs[n]}"
-                )
 
-            if len(referenced) >= 2:
-                self.stdout.write(self.style.ERROR(
-                    "  [CONFLICT] both Pluto and Hades are referenced by other records — "
-                    "refusing to merge automatically:"
-                ))
-                for n in referenced:
-                    users = _referencing_users(active_rows[n])
-                    self.stdout.write(f"    {n} (id={active_rows[n].id}) referenced by users: {users}")
-                self.stdout.write(self.style.ERROR(
-                    "  ACTION REQUIRED: decide which row survives and how the referencing "
-                    "User.actor row should be re-pointed, then re-run. No changes made to either row."
-                ))
-            else:
-                # The survivor is always MERGE_SURVIVOR. It used to be
-                # "most-referenced row wins, Greek name breaks the tie", and
-                # that ordering is unstable in a way that only shows up once
-                # somebody restores the retired row:
-                #
-                #   Pluto restored and referenced by one account, Hades
-                #   referenced by none -> `-refs` puts Pluto first -> **Hades
-                #   is soft-deleted**, reversing a documented merge, and the
-                #   row left standing carries the Roman name.
-                #
-                # The Greek name winning outright is the decision this command
-                # was written to carry out; letting a reference count override
-                # it means an account can decide lore. So the order is fixed,
-                # and a reference on the row being retired is handled by
-                # refusing rather than by changing who survives -- repointing
-                # an account onto a row in another tenant is exactly the kind
-                # of cross-tenant link this codebase spends its effort closing.
-                scored = sorted(
-                    active_rows.values(),
-                    key=lambda a: (a.name != MERGE_SURVIVOR, a.created_at),
-                )
-                keeper, loser = scored[0], scored[1]
-
-                if refs[loser.name] > 0:
-                    users = _referencing_users(loser)
-                    self.stdout.write(self.style.ERROR(
-                        f"  [CONFLICT] {loser.name} (id={loser.id}) is referenced by "
-                        f"users {users} and is the row this merge would retire."
-                    ))
-                    self.stdout.write(self.style.ERROR(
-                        "  ACTION REQUIRED: decide where those accounts should point "
-                        f"(note that {keeper.name} lives in a different tenant), then "
-                        "clear the reference and re-run. No changes made to either row."
-                    ))
-                    merge_delete = None
-                    keeper = loser = None
-                elif keeper is not None:
-                    self.stdout.write(
-                        f"  KEEP   id={keeper.id} name={keeper.name} refs={refs[keeper.name]}"
-                    )
-                    before = _snapshot(loser)
-                    affected.append({"action": "soft_delete_merge", "before": before, "kept_id": str(keeper.id)})
-                    plan.append(f"SOFT-DELETE Actor(id={loser.id}, name={loser.name!r}) — merged into {keeper.id}")
-                    self.stdout.write(
-                        f"  DELETE id={loser.id} name={loser.name} refs={refs[loser.name]} (merged into {keeper.name})"
-                    )
-                    merge_delete = loser
-
-        # ------------------------------------------------------------------
         # Step 2: Greco-Roman completeness audit (read-only)
         # ------------------------------------------------------------------
         self.stdout.write("")

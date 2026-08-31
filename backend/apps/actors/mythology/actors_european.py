@@ -171,6 +171,43 @@ EUROPEAN_ACTORS = [
      "row of his own under GREEK; Homer's, Odyssey 11.568-571, gives judgment "
      "sceptre in hand and is not seeded. Different offices in different "
      "underworlds"),
+    # DANTE'S PLUTO, AND WHY HE IS BACK.
+    #
+    # This row was seeded, then soft-deleted on 2026-08-04 by
+    # `consolidate_eu_pantheon` on the reading that Pluto is a second name for
+    # Hades. The scholarship behind that reading is sound as far as it goes:
+    # Πλούτων is a Greek cult title of Ἅιδης, from πλοῦτος, wealth (Plato,
+    # Cratylus 403a), and Latin Pluto is its transcription. What it missed is
+    # that **this cast is not the Greek cast**, and the European corpus has a
+    # Pluto of its own: `statutes_inferno_entries.py`, circle 4, records
+    # `"guardian": "Plutus"` for Inf. VII — the figure who opens the canto with
+    # "Pape Satàn, pape Satàn aleppe!" and over whom Virgil says "Taci,
+    # maladetto lupo". Dante's own word in VII.2 is `Pluto`.
+    #
+    # The precedent is nine lines above this one. Minos carries a note saying
+    # THIS ROW IS DANTE'S MINOS, that Plato's Minos "now has a row of his own
+    # under GREEK", and that these are "different offices in different
+    # underworlds". Pluto is exactly that situation and was handled the
+    # opposite way — Charon, Minos and Cerberus are all seeded here as the
+    # guardians of the circles they keep, and the fourth circle's was the one
+    # missing.
+    #
+    # He is a GUARDIAN here, not an OVERSEER. He bars and berates the avaricious
+    # and the prodigal at one gate; he does not preside. The GREEK Hades row
+    # keeps OVERSEER, and `test_greek_seats_exactly_one_overseer` still holds.
+    ("Pluto", "普路托", "Pluto", "Pluto", ActorRole.GUARDIAN, "EU_HELL_4TH",
+     "第四圈守卫普路托", "第四圈守卫普路托", "Pluto - Warden of the Fourth Circle", "Pluto",
+     "Dante's Pluto - bars the fourth circle, where the miserly and the "
+     "prodigal roll their weights against each other; opens Inferno VII with "
+     "'Pape Satàn, pape Satàn aleppe!' and is silenced by Virgil as 'maladetto "
+     "lupo' (Inf. VII.1-15). THIS ROW IS DANTE'S PLUTO. The Greek Πλούτων, a "
+     "cult title of Ἅιδης from πλοῦτος, wealth (Plato, Cratylus 403a), presides "
+     "over the whole Greek underworld and has a row of his own under GREEK as "
+     "Hades. Commentators have argued since the Trecento whether Dante meant "
+     "the god of the dead or Plutus the god of wealth; the corpus entry for "
+     "circle 4 records the guardian as Plutus while Dante's own text says "
+     "Pluto, and this row keeps Dante's word. Different offices in different "
+     "underworlds"),
     ("Cerberus", "刻耳柏洛斯", "Cerberus", "Kerberos", ActorRole.GUARDIAN, "EU_HELL_3RD",
      "冥界三头犬刻耳柏洛斯", "冥界三头犬刻耳柏洛斯", "Cerberus - Three-headed Hound", "Kerberos",
      "Three-headed hound - Dante sets him over the gluttons in the third "
