@@ -455,6 +455,29 @@ def test_a_faults_points_are_negative_and_a_merits_are_positive(articles):
 RESTATED_RATE = {"CN-GGG-F-JJ-07": 1}
 
 _PRICE = re.compile("為(?:半|[一二三四五六七八九十百千]+)[功過]")
+_PRICE_VALUE = re.compile("為(半|[一二三四五六七八九十百千]+)([功過])")
+
+#: 中文数字 → 值。只覆盖这份语料实际出现的那些写法,遇到不认识的**抛异常**而不是
+#: 跳过 —— 一个悄悄跳过看不懂的数字的解析器,会把「解析不了」变成「没有问题」。
+_CN_DIGITS = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
+              "六": 6, "七": 7, "八": 8, "九": 9}
+
+
+def _cn_number(text):
+    """把「五十」「百」「一百」「三千」这类读成整数。"""
+    if text == "半":
+        return 0.5
+    units = {"十": 10, "百": 100, "千": 1000}
+    total, current = 0, 0
+    for ch in text:
+        if ch in _CN_DIGITS:
+            current = _CN_DIGITS[ch]
+        elif ch in units:
+            total += (current or 1) * units[ch]
+            current = 0
+        else:
+            raise ValueError(f"看不懂的中文数字:{text!r}(卡在 {ch!r})")
+    return total + current
 
 
 @pytest.mark.django_db
@@ -498,6 +521,44 @@ def test_every_priced_act_in_the_text_is_a_clause(articles):
             )
     assert not faults, "\n  ".join(
         ["A priced act in the prose has no clause behind it:", *faults]
+    )
+
+
+@pytest.mark.django_db
+def test_every_priced_act_carries_the_value_the_text_gives_it(articles):
+    """条数对上了,**值**也要对上。
+
+    上面那条只比条数。`ANCHOR_POINTS` 只钉了 8 篇约 17 个条款,而全语料约 200 个 ——
+    **锚点之外任何一个值改错(只要符号不翻)都是静默的**,而这些值直接进功过相抵的账。
+
+    实证:把 BG-6 的 `("受觸極親", -50)` 改成 `-49` —— 与它自己正文「為五十過」
+    直接矛盾 —— **68 passed,0 红**。
+
+    这条把「為X功/過」里的中文数字解析出来,与条款的 points 逐个比对,顺序对顺序。
+    与上面那条同一个原则:比的是**每一条与它自己的正文**,不是一个会随语料增长而
+    过期的总数。
+    """
+    faults = []
+    for code, statute in sorted(articles.items()):
+        body = re.sub(r"〔[^〕]*〕", "", statute.text_zh or "")
+        priced = [
+            (_cn_number(num), 1 if kind == "功" else -1)
+            for num, kind in _PRICE_VALUE.findall(body)
+        ]
+        clauses = (statute.payload_json or {}).get("clauses", [])
+        if len(priced) != len(clauses) + RESTATED_RATE.get(code, 0):
+            continue  # 条数不符由上面那条报告,这里不重复
+        for (value, sign), clause in zip(priced, clauses, strict=False):
+            expected = value * sign
+            actual = clause.get("points")
+            if actual != expected:
+                faults.append(
+                    f"{code} 「{clause.get('condition_zh')}」: 正文写 "
+                    f"{'為' + str(value) + ('功' if sign > 0 else '過')},"
+                    f"条款记 {actual}(应为 {expected})"
+                )
+    assert not faults, "\n  ".join(
+        ["条款的分值与它自己的正文不符:", *faults]
     )
 
 

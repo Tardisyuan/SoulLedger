@@ -319,6 +319,18 @@ class MythologySeeder:
                 "title_egy": "",
                 "description": self._assessor_description(row),
                 "powers_json": powers,
+                # 与 `_seed_actors` 同一个理由(见那里的注释)。这一行是补上的:
+                # `is_active` 被加进 `ACTOR_FIELDS` 时,`ASSESSOR_FIELDS` 是它的
+                # 别名,于是比对集合立刻包含了这个字段,而这里的 values 没有 ——
+                # `--update` 因此把 **44 个判官行**全部判成「有改动」,拿 None 去
+                # 比 True。dry-run 里看得见:`~ Assessor 34 Nefer-Tem: is_active`,
+                # 一路到 42。
+                #
+                # 后果不是数据被写坏(值本来就是 True),是**汇总说谎**:
+                # `updated=44 unchanged=43` 会让人以为这一轮真的改了 44 行,
+                # 而实际只有一行有内容差异。**一个把「无差异」报成「已更新」的
+                # 命令,会让下一次真正的差异淹没在噪音里。**
+                "is_active": True,
             }
             self._upsert(
                 model=Actor,
@@ -337,7 +349,7 @@ class MythologySeeder:
     def _seed_statutes(self, civilization, tenant, corpus, source, rows, do_update, stats):
         """Seed one corpus transcribed from a document into CIVILIZATION_STATUTES.
 
-        Three corpora are transcribed today: the seven capital sins on the
+        Six corpora are transcribed today: the seven capital sins on the
         terraces of Purgatorio (EUROPEAN_STATUTES), 《太微仙君功過格》
         (CHINESE_STATUTES) and the circles of the Inferno (INFERNO_STATUTES).
         Called once per corpus, so a civilization with two of them — Europe has

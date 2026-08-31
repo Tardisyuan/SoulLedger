@@ -1,6 +1,8 @@
 """GREEK — GORGIAS. TRANSCRIBED here, from Plato's Gorgias 523a-526d.
 
-The FIRST Greek corpus, and the fifth transcribed one. Its companion is
+The FIRST Greek corpus. (An ordinal for "which transcribed corpus is this"
+used to stand here and had drifted; the count lives in one place now —
+`tests/test_prose_numbers_match_the_data.py`.) Its companion is
 ``statutes_republic.py``; the two are separate for the same reason
 ``statutes_european.py`` and ``statutes_inferno.py`` are, and the reason is
 stated in full there.

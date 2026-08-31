@@ -1,5 +1,5 @@
 """
-Idempotent seeder for the three civilizations' mythology reference data.
+Idempotent seeder for the four civilizations' mythology reference data.
 
 Why this exists
 ---------------
@@ -46,7 +46,8 @@ This module is the entry point Django discovers and the argument parsing; the
 write path is ``apps.actors.mythology.seeding.MythologySeeder``, mixed into
 ``Command`` below, and every row either of them writes is a literal in
 ``apps.actors.mythology``. That package's ``__init__`` carries the provenance
-contract for the three statute corpora — which one is transcribed, which is a
+contract for the seven declared statute corpora — six are seeded, one
+(HELL_LAW) is declared and deliberately empty. Which is transcribed, which is a
 pointer at rows seeded here, and why a fourth is empty. Read it before adding
 to any of them.
 
@@ -83,7 +84,7 @@ __all__ = [
 
 class Command(MythologySeeder, BaseCommand):
     help = (
-        "Seed the three civilizations' mythology reference data (tenants, realms, "
+        "Seed the four civilizations' mythology reference data (tenants, realms, "
         "actors). Idempotent: re-running creates nothing new."
     )
 
