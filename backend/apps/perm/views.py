@@ -104,7 +104,20 @@ def get_role_permissions(request):
     GET /api/v1/perm/role-permissions/
     获取当前用户的角色权限（仅返回用户自己的角色）
     """
-    # 仅允许用户查询自己的角色权限，防止枚举
+    # 只返回请求者自己那一份 —— 但**这句话过去写的是「防止枚举」,而同一个前缀下
+    # 有两个端点把那个说法拆掉了一半**:`list_permissions` 与 `list_roles` 都是
+    # `[IsAuthenticated]`,任何登录用户(含 VIEWER)拿得到全部 codename 目录和全部
+    # 角色名。
+    #
+    # 重新核过之后,真正的边界在这里,而它是成立的:**授权**(哪个角色有哪些
+    # codename)只有两条读取路径 —— 这一条(只给自己)和
+    # `get_permissions_for_role`(只给 ADMIN)。`RoleSerializer` 没有
+    # `permissions` 字段,`list_permissions` 返回的是 codename 目录本身。
+    #
+    # 所以对非 ADMIN 泄漏的是**目录**,不是**授权**:codename 有哪些、角色叫什么、
+    # 每个角色有多少人(`user_count`)。那是个刻意的产品决定还是没人想过,
+    # 现在由 `tests/test_perm_prefix_discloses_only_the_catalogue.py` 钉住 ——
+    # 一句注释是一次没被执行的断言,而上一句就是这样错了很久的。
     role = request.user.role
     permission_codenames = _get_role_permissions_from_db(role)
     permissions = Permission.objects.filter(codename__in=permission_codenames)

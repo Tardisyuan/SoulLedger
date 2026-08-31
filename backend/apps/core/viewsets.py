@@ -17,7 +17,7 @@ ACTION_PERM_MAP = {
 
 class CodenameViewSetMixin:
     """
-    Mixin that auto-generates _required_permissions for PermissionMiddleware.
+    Mixin that auto-generates the codenames a request must carry.
 
     Subclasses set `permission_codename` (e.g. "soul") and the mixin builds
     codenames like "soul.read", "soul.create" from the current DRF action.
@@ -28,8 +28,13 @@ class CodenameViewSetMixin:
             'karma': ['soul.read'],
         }
 
-    PermissionMiddleware calls get_required_permissions() when _required_permissions
-    is not set, so no DRF dispatch() timing issues.
+    `apps/core/permissions.py::CodenamePermission` calls
+    get_required_permissions() from `APIView.initial()`. It has to be there
+    and not in middleware: the answer depends on `self.action`, which DRF sets
+    in `initialize_request()` — inside `dispatch()`. The `PermissionMiddleware`
+    this docstring used to name ran in the request phase, read a
+    `request.view` attribute nothing sets, and took its `view is None` early
+    return on every request ever made. It was deleted 2026-08-28.
     """
     permission_codename = None
     extra_permissions = {}
@@ -85,11 +90,18 @@ class DataScopeViewSetMixin:
 
 
 class AuditUserViewSetMixin:
-    """
-    Mixin that sets thread-local user context before create/update operations.
+    """Set the current-user contextvar around every write.
 
-    This ensures AuditUserFields.save() can access the current authenticated user
-    even when using DRF's force_authenticate() in tests.
+    A `contextvar` (`apps/core/request_local.py`), not thread-local — the
+    distinction matters under ASGI, where one thread serves many requests.
+
+    **This is the only place that sets it.** `AuditUserFields.save()` reads it
+    to fill `create_user` / `update_user`, so a writable viewset that does not
+    inherit this mixin records rows with no author — measured on eight of them
+    2026-08-29, including `ExternalApiKeyViewSet` and `WebhookViewSet`, where
+    "who added this" is the whole of the audit question.
+    `tests/test_every_writable_audit_viewset_sets_the_user.py` walks the real
+    URLconf so the next one to be added is caught rather than counted.
     """
 
     def perform_create(self, serializer):
