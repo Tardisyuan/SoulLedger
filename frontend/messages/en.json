@@ -1136,6 +1136,11 @@
       "ACTIVE": "Active",
       "CONCLUDED": "Concluded",
       "CANCELLED": "Cancelled"
+    },
+    "participant_roles": {
+      "ADVISOR": "Advisor",
+      "CO_JUDGE": "Co-Judge",
+      "CHAIRMAN": "Chairman"
     }
   },
   "users": {

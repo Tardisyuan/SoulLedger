@@ -265,6 +265,11 @@ class ExecuteTerminalStateTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # GREEK included. It was missing — and it is the **newest** of the
+        # four and the second rebirth-capable one, which is exactly what
+        # `execute`'s own comment spends a paragraph on. A subject list that
+        # does not grow when the domain does is the failure mode this file's
+        # sibling guards keep finding.
         cls.tenants = {
             Civilization.CHINESE: Tenant.objects.create(
                 code="CN_DIYU", display_name="Chinese Diyu"
@@ -275,7 +280,23 @@ class ExecuteTerminalStateTest(TestCase):
             Civilization.EGYPTIAN: Tenant.objects.create(
                 code="EG_DUAT", display_name="Egyptian Duat"
             ),
+            Civilization.GREEK: Tenant.objects.create(
+                code="GR_HADES", display_name="Greek Hades"
+            ),
         }
+
+    def test_the_tenant_map_covers_every_civilization(self):
+        """守卫的守卫:这个类的每条参数化测试都从 `cls.tenants` 取主体。
+
+        少一个文明,那些测试**不会红,只会少跑一轮** —— 而「少跑一轮」和
+        「全都通过」在输出里长得一样。
+        """
+        from apps.souls.models import TENANT_CIVILIZATION
+
+        assert set(self.tenants) == set(TENANT_CIVILIZATION.values()), (
+            f"tenant 表覆盖 {sorted(self.tenants)},配置里有 "
+            f"{sorted(set(TENANT_CIVILIZATION.values()))}"
+        )
 
     def _disposed_soul(self, civilization):
         return Soul.objects.create(

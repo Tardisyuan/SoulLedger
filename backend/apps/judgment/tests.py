@@ -44,6 +44,12 @@ class JudgmentModelTest(TestCase):
 
     def test_judgment_conclude(self):
         from apps.judgment.models import Judgment
+        # JUDGING 是 `conclude` 的真实前置条件(生产路径是 `soul.die()`)。
+        # 在此之前这条测试用一个 ALIVE 的灵魂调 conclude,而 `conclude` **丢掉了
+        # `transition_to` 的返回值** —— judgment 标记 final、处置已创建,而灵魂
+        # 还是 ALIVE,测试没有断言灵魂状态,所以谁都没看见。
+        self.soul.current_state = SoulState.JUDGING
+        self.soul.save(update_fields=["current_state"])
         j = Judgment.objects.create(
             soul=self.soul,
             civilization=Civilization.CHINESE,
@@ -158,6 +164,12 @@ class JudgmentAPITest(TestCase):
 
     def test_conclude_judgment_admin(self):
         """Admin can conclude a pending judgment"""
+        # JUDGING 是 `conclude` 的真实前置条件(生产路径是 `soul.die()`)。
+        # 在此之前这条测试用一个 ALIVE 的灵魂调 conclude,而 `conclude` **丢掉了
+        # `transition_to` 的返回值** —— judgment 标记 final、处置已创建,而灵魂
+        # 还是 ALIVE,测试没有断言灵魂状态,所以谁都没看见。
+        self.pending_judgment.soul.current_state = SoulState.JUDGING
+        self.pending_judgment.soul.save(update_fields=["current_state"])
         self.client.force_authenticate(user=self.admin_user)
         response = self.client.post(
             f"/api/v1/judgment/{self.pending_judgment.id}/conclude/",

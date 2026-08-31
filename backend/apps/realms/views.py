@@ -24,6 +24,14 @@ class RealmViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnl
     # in the DB under the plural name, so the view moves, not the data.
     # Read-only viewset: `realms.read` is the whole family, no write codename.
     permission_codename = "realms"
+    # `select_related("parent_realm")` is inert with the current serializer and
+    # is kept only against the day it is not.
+    #
+    # Measured 2026-08-31 (10 children under one parent): **4 queries with it,
+    # 4 without**. `RealmSerializer` renders `parent_realm` as a bare primary
+    # key, so nothing dereferences the parent row and there is no join to save.
+    # `tests/test_realm_actor_api.py` used to carry a test *named* after this
+    # line whose only assertion was `status_code == 200`.
     queryset = Realm.objects.select_related("parent_realm").all()
     filterset_class = RealmFilter
     search_fields = RealmFilter.search_fields

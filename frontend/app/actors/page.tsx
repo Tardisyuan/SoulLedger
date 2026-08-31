@@ -42,6 +42,10 @@ const ROLE_BADGE_CLASSES: Record<string, string> = {
   GUARDIAN: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))] border-[hsl(var(--color-status-info)/0.3)]",
   EXECUTOR: "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.3)]",
   CONDUIT: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.3)]",
+  // OVERSEER was missing — `ActorRole` has five members and all three message
+  // bundles carry `actors.roles.OVERSEER`, so the label was right and only the
+  // colour fell to the fallback. Hades is an OVERSEER.
+  OVERSEER: "bg-[hsl(var(--color-status-judging)/0.1)] text-[hsl(var(--color-status-judging))] border-[hsl(var(--color-status-judging)/0.3)]",
 };
 const ROLE_BADGE_FALLBACK =
   "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] border-[hsl(var(--color-hairline-tertiary))]";

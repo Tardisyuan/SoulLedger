@@ -152,34 +152,17 @@ class DispatchRecordListSerializer(serializers.ModelSerializer):
         ]
 
 
-class DispatchProposeSerializer(serializers.Serializer):
-    """Serializer for proposing a new dispatch.
-    Accepts either tenant_id (int) or tenant_code (str) for source/target.
-    """
-    source_tenant = serializers.IntegerField(required=False)
-    target_tenant = serializers.IntegerField(required=False)
-    source_tenant_code = serializers.CharField(required=False, max_length=50)
-    target_tenant_code = serializers.CharField(required=False, max_length=50)
-    soul = serializers.IntegerField()
-    reason = serializers.CharField(max_length=2000)
-
-    def validate(self, attrs):
-        from apps.tenants.models import Tenant
-        # Resolve tenant_code to tenant_id if codes provided
-        if not attrs.get('source_tenant') and attrs.get('source_tenant_code'):
-            try:
-                attrs['source_tenant'] = Tenant.objects.get(code=attrs['source_tenant_code']).id
-            except Tenant.DoesNotExist:
-                raise serializers.ValidationError({"source_tenant_code": "Invalid tenant code"}) from None
-        if not attrs.get('target_tenant') and attrs.get('target_tenant_code'):
-            try:
-                attrs['target_tenant'] = Tenant.objects.get(code=attrs['target_tenant_code']).id
-            except Tenant.DoesNotExist:
-                raise serializers.ValidationError({"target_tenant_code": "Invalid tenant code"}) from None
-        if not attrs.get('source_tenant') or not attrs.get('target_tenant'):
-            raise serializers.ValidationError("source_tenant and target_tenant are required (as id or code)")
-        return attrs
-
+# `DispatchProposeSerializer` was deleted 2026-08-31.
+#
+# It declared `soul = serializers.IntegerField()` while `Soul`'s primary key is
+# a UUID, and it was used by **nothing** — `DispatchRecordViewSet.get_serializer_class`
+# returns only the list/detail pair, and a repo-wide grep found no other
+# reference. Harmless as code; not harmless as documentation, because it read
+# like the propose endpoint's contract and the next person to touch that
+# endpoint would have made the endpoint match it.
+#
+# The real propose path is `DispatchService.propose`, called from
+# `DispatchRecordViewSet.create`.
 
 class DispatchApproveSerializer(serializers.Serializer):
     """Serializer for approving a dispatch."""

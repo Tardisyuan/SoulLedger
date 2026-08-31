@@ -5,7 +5,13 @@ from django.apps import AppConfig
 
 
 class SoulsConfig(AppConfig):
-    default_auto_field = "django.db.models.BigAutoAutoField"
+    # `BigAutoField`, not `BigAutoAutoField`. The typo was real: `import_string`
+    # on that name raises ImportError. It has never fired because both models in
+    # this app declare explicit UUID primary keys, and Django only resolves
+    # `default_auto_field` when it has to *generate* an implicit one — so the
+    # first model added here without a `primary_key` would have crashed at
+    # migration time. A mine, not a fault.
+    default_auto_field = "django.db.models.BigAutoField"
     name = "apps.souls"
     verbose_name = "Souls"
 

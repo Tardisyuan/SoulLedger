@@ -23,13 +23,24 @@ class TenantMiddleware(BaseMiddleware):
         user = scope.get("user")
         tenant = None
 
-        if user and hasattr(user, "tenant") and user.tenant is not None:
+        # `user.tenant`, and only that.
+        #
+        # There used to be a fallback reading `scope["jwt_claims"]["tenant_code"]`
+        # — and **nothing anywhere writes `scope["jwt_claims"]`**. A repo-wide
+        # grep found exactly one occurrence of that key: the read below it.
+        # So the branch could not execute, and its presence claimed a second
+        # source of truth this transport does not have.
+        #
+        # WORTH KNOWING, NOT A LEAK. HTTP resolves the tenant from the token's
+        # `tenant_code` claim (`TenantMiddleware`); WebSocket resolves it from
+        # the user's own FK. The two can disagree — measured 2026-08-29, one
+        # token gave `request.tenant = ZZB` over HTTP while the socket joined
+        # `rt:tenant:ZZA`. The FK is the stricter of the two (it cannot be
+        # asserted by a token), so removing the fallback narrows nothing; it
+        # just stops advertising a path that never ran. The disagreement itself
+        # is L25 and is a separate decision.
+        if user and getattr(user, "tenant", None) is not None:
             tenant = user.tenant
-        elif user and hasattr(user, "rbac_role") and user.rbac_role is not None:
-            # Try tenant from JWT claim as fallback
-            tenant_code = scope.get("jwt_claims", {}).get("tenant_code")
-            if tenant_code:
-                tenant = await self._resolve_tenant(tenant_code)
 
         scope["tenant"] = tenant
 

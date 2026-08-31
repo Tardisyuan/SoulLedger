@@ -3,6 +3,7 @@ Actor models — deities, judges, guardians, executors across civilizations.
 """
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
@@ -84,6 +85,55 @@ class Actor(AuditUserFields, models.Model):
 
     all_objects = models.Manager()  # unfiltered; declared first so it's _base_manager
     objects = TenantManager()
+
+    def save(self, *args, **kwargs):
+        """`clean()` is not called by anything Django runs on a write.
+
+        Same shape as `Statute.save()`: `Model.save()` does not call
+        `full_clean()`, DRF serializers do not either, and `update_or_create`
+        goes straight here. `Actor` had no `clean()` at all, so the one field
+        in `powers_json` that SQL later casts was unvalidated on every path.
+
+        `self.clean()`, not `full_clean()`: a narrow invariant, kept narrow.
+        """
+        self.clean()
+        return super().save(*args, **kwargs)
+
+    def clean(self):
+        """`powers_json["assessor_index"]` must be a whole number.
+
+        `ActorViewSet.get_queryset` annotates
+        `Cast(KeyTextTransform("assessor_index", "powers_json"), IntegerField())`
+        to seat the bench of 42 in the order the text gives them. That cast is
+        **one of the things SQLite hides**: a non-numeric string there is
+        coerced to 0 on SQLite and raises on PostgreSQL, where it takes the
+        whole `/api/v1/actors/` list down with a 500 — for every caller, not
+        just the one row.
+
+        No API can write it (`ActorViewSet` is read-only), so the surface is
+        `seed_mythology`, the management commands, migrations and the Django
+        admin. All of them go through `save()`.
+
+        Live data is clean: 115's 42 assessor rows are all ints (measured
+        2026-08-31). This is the guard that keeps it that way.
+        """
+        payload = self.powers_json or {}
+        if "assessor_index" not in payload:
+            return
+        value = payload["assessor_index"]
+        if isinstance(value, bool) or not isinstance(value, int):
+            # `bool` is an `int` subclass and `True` would cast to 1 —
+            # a seat number nobody chose.
+            raise ValidationError(
+                {
+                    "powers_json": (
+                        f"assessor_index must be a whole number, got "
+                        f"{value!r} ({type(value).__name__}). SQLite casts a "
+                        f"non-numeric value to 0; PostgreSQL 500s the whole "
+                        f"actor list."
+                    )
+                }
+            )
 
     def __str__(self):
         return f"{self.name} ({self.role})"

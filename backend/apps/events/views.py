@@ -25,4 +25,9 @@ class SoulEventViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.Rea
     queryset = SoulEvent.objects.select_related("soul", "tenant").all()
     serializer_class = SoulEventSerializer
     filterset_fields = ["soul", "event_type", "actor"]
-    ordering_fields = ["created_at"]
+    # `create_time`, not `created_at` — `SoulEvent` has no `created_at`.
+    # DRF's OrderingFilter silently drops an unknown field, so
+    # `?ordering=created_at` answered 200 and sorted by nothing: **a knob that
+    # returns success and does nothing**. `occurred_at` is the domain time and
+    # is worth offering beside the row's own.
+    ordering_fields = ["create_time", "occurred_at", "event_type"]

@@ -366,7 +366,14 @@ class CrossTenantJudgmentViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
             return qs
         tenant = getattr(self.request, "tenant", None)
         if tenant:
-            return qs.filter(Q(initiating_tenant=tenant) | Q(participants__participant_tenant=tenant))
+            # `.distinct()`: the right-hand `Q` joins `participants`, and a row
+            # comes back **once per matching participant**. `add_participant`
+            # enforces no uniqueness, so a tenant added twice to the same
+            # judgment sees that judgment twice — in the page body and in the
+            # paginated `count`, which is the number the UI prints.
+            return qs.filter(
+                Q(initiating_tenant=tenant) | Q(participants__participant_tenant=tenant)
+            ).distinct()
         return qs.none()
 
     def perform_create(self, serializer):

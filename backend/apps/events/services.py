@@ -69,12 +69,36 @@ class EventService:
         }, actor)
 
     @staticmethod
-    def log_karma_recalculated(soul, old_score: int, new_score: int, actor: str = "system") -> None:
-        EventService.log(soul, "KARMA_RECALCULATED", {
+    def log_karma_recalculated(
+        soul,
+        old_score: int,
+        new_score: int,
+        actor: str = "system",
+        old_demerit: int | None = None,
+        new_demerit: int | None = None,
+    ) -> None:
+        """Report what the recalculation changed — **both columns**.
+
+        `old_score`/`new_score` are merit. A recalculation that moved
+        `demerit_score` by 100 and left merit alone emitted `delta: 0`, i.e.
+        an event announcing that nothing happened, on the run where the soul's
+        standing changed most. Demerit is optional so existing callers keep
+        working; when it is given, `balance_delta` is the number a reader of
+        this event actually wants.
+        """
+        payload = {
             "old_score": old_score,
             "new_score": new_score,
             "delta": new_score - old_score,
-        }, actor)
+        }
+        if old_demerit is not None and new_demerit is not None:
+            payload["old_demerit"] = old_demerit
+            payload["new_demerit"] = new_demerit
+            payload["demerit_delta"] = new_demerit - old_demerit
+            payload["balance_delta"] = (new_score - new_demerit) - (
+                old_score - old_demerit
+            )
+        EventService.log(soul, "KARMA_RECALCULATED", payload, actor)
 
     @staticmethod
     def log_reincarnation_triggered(reincarnation, actor: str = "system") -> None:

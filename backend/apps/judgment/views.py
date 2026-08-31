@@ -22,7 +22,11 @@ from apps.judgment.serializers import (
     JudgmentSerializer,
     StatuteSerializer,
 )
-from apps.judgment.services import CitationRefusedError, StatuteCitationService
+from apps.judgment.services import (
+    CitationRefusedError,
+    JudgmentNotConcludableError,
+    StatuteCitationService,
+)
 from apps.ledger.services import LedgerService
 from apps.realms.models import Realm
 from apps.realms.serializers import RealmLocalizedSerializer
@@ -404,6 +408,14 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             )
         except CitationRefusedError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except JudgmentNotConcludableError as exc:
+            # The soul cannot make the move a conclusion requires — it is not
+            # under judgment. This used to be **silent**: `transition_to`'s
+            # answer was dropped, so the endpoint answered 200 with a judgment
+            # marked final, a disposition created, and a soul still ALIVE.
+            # 400, not 500: the caller asked for something the case's state
+            # does not allow, and the message says which state it is in.
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         judgment.refresh_from_db()
         return Response(
             JudgmentSerializer(judgment, context=self.get_serializer_context()).data
@@ -462,7 +474,7 @@ class StatuteViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSet
         Un-ordered pagination is not a cosmetic warning: page 2 of the corpus
         is computed from a fresh LIMIT/OFFSET over a set the database may order
         differently each time, so articles repeat on one page and vanish from
-        another. With 175 rows and a browser that pages through them, that is
+        another. With 172 rows and a browser that pages through them, that is
         the whole feature. Keep this list identical to `Meta.ordering`;
         `tests/test_judgment_statutes.py::TestCitationCount` pins the pair.
         """

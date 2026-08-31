@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Fragment } from "react";
+import React, { useState, useEffect, useMemo, Fragment } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,7 +13,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { authApi } from "@/lib/api";
 import { SettingsDrawer, useAccentColor } from "@/src/components/settings/SettingsDrawer";
 import { ConnectionStatus } from "@/src/components/connection-status";
-import { useSidebarMenus } from "@/src/hooks/useSidebarMenus";
+import { useSidebarMenus, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
 import { TenantSignal } from "@/src/components/layout/TenantSignal";
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { Breadcrumb } from "@/src/components/layout/Breadcrumb";
@@ -83,6 +83,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const { data: menus = [] } = useSidebarMenus();
+
+  // 菜单树里每一条非空 path,摊平。
+  //
+  // `isMenuPathActive` 用它判断「有没有更具体的菜单项也命中这条路由」——
+  // `/social/follows` 存在,所以 `/social` 在那一页不高亮;`/souls/42` 不存在,
+  // 所以 `/souls` 在详情页照常高亮。从真实菜单树取,不写死名单。
+  const allMenuPaths = useMemo(() => {
+    const out: string[] = [];
+    const walk = (items: readonly SidebarMenu[]) => {
+      for (const item of items) {
+        if (item.path) out.push(item.path);
+        if (item.children?.length) walk(item.children);
+      }
+    };
+    walk(menus);
+    return out;
+  }, [menus]);
 
   const { data: notifications = [] } = useQuery({
     queryKey: ["notifications-unread-count"],
@@ -200,6 +217,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               key={menu.id}
               menu={menu}
               collapsed={collapsed}
+              allMenuPaths={allMenuPaths}
             />
           ))}
         </nav>

@@ -1,6 +1,7 @@
 """
 DRF permission classes for SoulLedger multi-tenant isolation.
 """
+from django.core.exceptions import FieldDoesNotExist
 from rest_framework import permissions
 
 
@@ -132,10 +133,36 @@ class TenantPermission(permissions.BasePermission):
         if tenant is None:
             return False
 
-        # Check if object has a tenant field
-        obj_tenant = getattr(obj, 'tenant', None)
+        # Ask the MODEL whether it has a tenant column, not the INSTANCE
+        # whether that column happens to be set.
+        #
+        # `getattr(obj, 'tenant', None) is None` collapsed two different facts
+        # into one answer: "this model is not tenant-scoped" (allow — there is
+        # nothing to compare) and "this row's nullable tenant FK is NULL"
+        # (which is not the same thing at all). **18 of the 25 tenant FKs in
+        # this project are `null=True`**, so the second case is not exotic.
+        #
+        # No exploitable path today: `scope_to_tenant` filters tenantless rows
+        # out before object permissions run, so nothing reaches here with a
+        # NULL tenant. But this class reads like the object-level backstop
+        # behind that filter, and it was not one.
+        has_tenant_column = False
+        try:
+            obj._meta.get_field("tenant")
+            has_tenant_column = True
+        except (FieldDoesNotExist, AttributeError):
+            # Not a Django model, or a model without the column. Fall through
+            # to the attribute — a plain object carrying a `tenant` still
+            # carries an ownership claim, and refusing to look at it because it
+            # has no `_meta` would be the same mistake in the other direction.
+            pass
+
+        obj_tenant = getattr(obj, "tenant", None)
         if obj_tenant is None:
-            return True  # No tenant field — allow
+            # Two different facts, and only one of them means "allow":
+            #   * the model has no tenant column  -> nothing to compare, allow;
+            #   * the column exists and is NULL   -> an unowned row, refuse.
+            return not has_tenant_column
 
         return str(obj_tenant.pk) == str(tenant.pk)
 

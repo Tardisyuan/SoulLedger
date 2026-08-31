@@ -1,5 +1,12 @@
 "use client";
 
+// `t(key) || "…"` 的兜底在这个应用里**永远不会触发**。
+// `useI18n` 的 `t()` 在找不到键时返回**键本身**(一个真值字符串),所以
+// `||` 右边是死代码。而且这些键三份 bundle 里都有 —— 双重意义上的死分支。
+//
+// `app/souls/[id]/page.tsx:61` 与 `app/recycle-bin` 各留过一条注释说明这个
+// 形态并改掉了它。**同一个仓库里已经诊断过的问题,另外三个文件没跟上。**
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -103,10 +110,10 @@ export default function WelcomePage() {
   // 时段本身没有信息量 —— 问候语已经说了「上午好」。
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 6) return t("nav.greeting_night") || "夜深了";
-    if (hour < 12) return t("nav.greeting_morning") || "上午好";
-    if (hour < 18) return t("nav.greeting_afternoon") || "下午好";
-    return t("nav.greeting_evening") || "晚上好";
+    if (hour < 6) return t("nav.greeting_night");
+    if (hour < 12) return t("nav.greeting_morning");
+    if (hour < 18) return t("nav.greeting_afternoon");
+    return t("nav.greeting_evening");
   };
 
   const greeting = getGreeting();

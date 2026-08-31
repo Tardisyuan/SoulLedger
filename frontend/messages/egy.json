@@ -1136,6 +1136,11 @@
       "ACTIVE": "Em Iri",
       "CONCLUDED": "Em Hotep",
       "CANCELLED": "Em Kher"
+    },
+    "participant_roles": {
+      "ADVISOR": "Sedjem-ash",
+      "CO_JUDGE": "Wepwy-em-senu",
+      "CHAIRMAN": "Heri-tep"
     }
   },
   "users": {

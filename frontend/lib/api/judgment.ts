@@ -48,7 +48,7 @@ export interface Judgment {
  *   - `HELL_LAW` (Chinese) is EMPTY and stays empty. There is no codified 冥律
  *     to transcribe; the corpus written against that shape was withdrawn. The
  *     value is kept because rows may still carry it.
- *   - `GONGGUOGE` (Chinese) is 《太微仙君功過格》, 73 point-valued articles, and
+ *   - `GONGGUOGE` (Chinese) is 《太微仙君功過格》, 74 point-valued articles, and
  *     the only corpus here whose articles can be MERIT.
  *   - `NEGATIVE_CONFESSION` (Egyptian) is the Forty-Two's declarations of
  *     innocence — denials, not prohibitions.

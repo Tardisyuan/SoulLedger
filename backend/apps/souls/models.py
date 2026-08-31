@@ -446,8 +446,23 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
         from apps.events.services import log_soul_state_change
 
         with transaction.atomic():
-            # Lock the row to prevent concurrent state mutations
-            locked_soul = Soul.objects.select_for_update().get(pk=self.pk)
+            # Lock the row to prevent concurrent state mutations.
+            #
+            # `all_objects`, then check `is_deleted` explicitly. `Soul.objects`
+            # filters soft-deleted rows out, so this used to raise
+            # `Soul.DoesNotExist` for a soft-deleted soul instead of returning
+            # False — a 500 where the contract says "returns False when the
+            # move is not available". Both view entry points already exclude
+            # deleted rows, so nothing reaches it today; the service layer is
+            # callable from elsewhere and should refuse cleanly.
+            locked_soul = Soul.all_objects.select_for_update().get(pk=self.pk)
+            if locked_soul.is_deleted:
+                logger.warning(
+                    "Refused %s for %s: the soul is soft-deleted.",
+                    new_state,
+                    self.pk,
+                )
+                return False
             if not locked_soul.can_transition_to(new_state):
                 return False
 
@@ -512,9 +527,19 @@ class Soul(ArchivableMixin, AuditUserFields, models.Model):
                 locked_soul.death_date = tz.now().date()
 
             # Apply any extra field updates (e.g. death_date, origin_location from die())
+            #
+            # A kwarg this model does not have is a **typo**, not an option.
+            # `if hasattr(...)` dropped it silently and `transition_to` still
+            # returned True: `deathdate=` and `orgin_location=` were both
+            # accepted and both discarded. No caller misspells one today —
+            # which is exactly why nothing would have caught the first that did.
             for field, value in kwargs.items():
-                if hasattr(locked_soul, field):
-                    setattr(locked_soul, field, value)
+                if not hasattr(locked_soul, field):
+                    raise TypeError(
+                        f"Soul has no field {field!r} — transition_to() will "
+                        f"not silently drop it"
+                    )
+                setattr(locked_soul, field, value)
 
             locked_soul.save()
 

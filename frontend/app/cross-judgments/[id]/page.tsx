@@ -121,8 +121,21 @@ export default function CrossJudgmentDetailPage() {
                 <span className="text-05" aria-hidden="true">👤</span>
                 <div>
                   <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{p.participant_actor_name || p.participant_actor}</p>
-                  <p className="text-02 text-[hsl(var(--color-ink-subtle))]">
-                    {p.participant_tenant} — {p.role}
+                  {/* `DomainEnum`,不是裸成员。`p.role` 是
+                      `ParticipantRole`(ADVISOR / CO_JUDGE / CHAIRMAN),而三份
+                      bundle 里**一个 participant-role 键都没有** —— 页面上印的
+                      一直是 SCREAMING_SNAKE 原样,正是 §4.6 要消除的那种。
+                      键已补进 `crossJudgments.participant_roles`。 */}
+                  <p className="text-02 text-[hsl(var(--color-ink-subtle))] flex items-center gap-1">
+                    <span>{p.participant_tenant}</span>
+                    {/* 中点,不是 em dash。em dash 是 §4.6 里「缺失值」的
+                        专用字形,`domainDisplayContract` 会把它当成手写的缺失
+                        标记报红 —— 而这里它只是两个存在的值之间的分隔符。 */}
+                    <span aria-hidden="true">·</span>
+                    <DomainEnum
+                      namespace="crossJudgments.participant_roles"
+                      value={p.role}
+                    />
                   </p>
                 </div>
               </div>

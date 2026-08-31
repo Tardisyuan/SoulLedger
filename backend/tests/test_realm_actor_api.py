@@ -2,6 +2,8 @@
 Tests for Realm and Actor API endpoints.
 """
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
 from apps.actors.models import Actor, ActorRole
 from apps.realms.models import Realm, RealmType
@@ -37,8 +39,23 @@ class TestRealmAPI:
         response = api_client.get("/api/v1/realms/")
         assert response.status_code == 401
 
-    def test_realms_select_related_parent(self, api_client, admin_user, cn_tenant):
-        """Realms endpoint uses select_related for parent_realm."""
+    def test_realms_listing_does_not_cost_a_query_per_row(
+        self, api_client, admin_user, cn_tenant
+    ):
+        """列表的查询条数不随行数增长。
+
+        **改过名。** 它原来叫 `test_realms_select_related_parent`,声称验证
+        `select_related` —— 而全部断言是 `== 200`。删掉那句 `select_related`
+        不可能改变状态码,所以它对自己声称的属性**逻辑上不可能变红**。
+
+        实测(2026-08-31,10 个子 realm 挂一个父):带 `select_related` 与去掉
+        它,**都是 4 条 SQL**。`RealmSerializer` 把 `parent_realm` 渲染成主键
+        id,不取那一行,所以那里根本没有可省的 join —— 那个 `select_related`
+        是个空操作,而这条测试原来的名字替它做了担保。
+
+        所以这里断的是真正成立的性质:条数不随行数增长。上界而不是精确值 ——
+        精确值会因无关改动报红,于是被人调大,于是不再是守卫。
+        """
         from rest_framework_simplejwt.tokens import RefreshToken
         token = RefreshToken.for_user(admin_user)
         if admin_user.tenant:
@@ -57,8 +74,24 @@ class TestRealmAPI:
             tenant=cn_tenant,
         )
 
-        response = api_client.get("/api/v1/realms/")
+        # 断查询条数,不是断状态码。
+        #
+        # 这条测试的名字声称验证 `select_related` —— 而它的全部断言曾经是
+        # `== 200`。**删掉那句 `select_related` 不可能改变状态码**,所以它对自己
+        # 声称的属性逻辑上不可能变红。
+        #
+        # 上界而不是精确值:精确值会因任何无关改动报红,于是被人调大,于是不再是
+        # 守卫。上界给的是「不随行数线性增长」这个性质。
+        with CaptureQueriesContext(connection) as captured:
+            response = api_client.get("/api/v1/realms/")
         assert response.status_code == 200
+        body = response.json()
+        rows = body["results"] if isinstance(body, dict) else body
+        assert len(rows) >= 2, f"只返回了 {len(rows)} 行 —— 下面那条上界形同虚设"
+        assert len(captured) <= 8, (
+            f"{len(captured)} 条 SQL —— parent_realm 又变回每行一查了。"
+            f"queries: {[q['sql'][:80] for q in captured]}"
+        )
 
 
 @pytest.mark.django_db

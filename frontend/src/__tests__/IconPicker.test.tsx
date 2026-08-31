@@ -1,7 +1,7 @@
 /**
  * Tests for src/components/ui/IconPicker.tsx
  */
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { IconPicker } from "@/src/components/ui/IconPicker";
 
 // ── Mock I18nContext ──────────────────────────────────
