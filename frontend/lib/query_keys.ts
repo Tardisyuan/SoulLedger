@@ -60,6 +60,14 @@ export const dispositionKeys = {
 export const notificationKeys = {
   all: ["notifications"] as const,
   list: (params?: Record<string, string>) => [...notificationKeys.all, "list", params] as const,
+  /**
+   * The masthead badge. NOT under `all`: it is a separate endpoint with its own
+   * cache entry, and putting it under `["notifications", …]` would make every
+   * list invalidation refetch the badge too. It lives here rather than as a
+   * literal in two files so the WS handler and the badge cannot drift apart —
+   * which is exactly what happened to four other pairs (see eventHandlers.ts).
+   */
+  unreadCount: ["notifications-unread-count"] as const,
 };
 
 export const socialKeys = {

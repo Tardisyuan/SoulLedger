@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@/lib/api";
+import { workflowKeys } from "@/lib/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import Link from "next/link";
@@ -59,9 +60,16 @@ export default function WorkflowDetailPage() {
   const [escalateOpen, setEscalateOpen] = useState(false);
   const [escalateReason, setEscalateReason] = useState("");
 
-  // Fetch workflow detail
+  // Fetch workflow detail.
+  //
+  // `workflowKeys.detail(id)`, not `["workflow", id]`. It was the latter, and
+  // the WS handler for WORKFLOW_APPROVED / _REJECTED invalidates
+  // `["workflows","detail",id]` — singular vs plural, diverging at the FIRST
+  // segment, so it matched nothing. An approver sitting on this page, which is
+  // the single most likely page to be open when the event fires, saw nothing
+  // change.
   const { data: workflow, isLoading, error, refetch } = useQuery({
-    queryKey: ["workflow", id],
+    queryKey: workflowKeys.detail(id),
     queryFn: () => workflowApi.get(id).then((res) => res.data),
   });
 

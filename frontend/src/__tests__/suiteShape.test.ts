@@ -107,6 +107,7 @@ const COLLECTED_FILES = [
   "domainDisplayRendering.test.tsx",
   "domainNamespaceContract.test.ts",
   "drawerFocusTrap.test.tsx",
+  "eventInvalidationReachesCache.test.ts",
   "eventRegistry.test.ts",
   "focusRingContract.test.ts",
   "inkOnSurfaceContract.test.ts",

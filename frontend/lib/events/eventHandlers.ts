@@ -10,7 +10,43 @@
  *
  * Nothing here is exported to the app at large: `event_registry` is still the
  * only public door, and `dispatchEvent` is still the only way in.
+ *
+ * KEYS THAT HAVE A FACTORY COME FROM `lib/query_keys.ts`. They used to be
+ * retyped as literals here, and four of them did not match the key the cache
+ * actually used:
+ *
+ *   handler asked for                        cache was actually at
+ *   ["social","comments","post",id]          ["social","comments","list",{post:id}]
+ *   ["social","reactions","post",id]         ["social","reactions",{post:id}]
+ *   ["social","follows","followers",id]      ["social","follows","followers"]
+ *   ["social","profile",id]                  ["social","profiles","detail",id]
+ *
+ * `invalidateQueries` matches by PREFIX, so a key that diverges at any segment
+ * — or that is merely LONGER than the cached one, as the follows pair was —
+ * matches nothing and fails silently. Comment threads, reaction counts, follow
+ * lists and profile pages did not update on a push. The registry's contract
+ * says no event may go unhandled; these were handled into a void, which is
+ * worse, because the unhandled path at least warns.
+ *
+ * The social keys now mirror what the local mutations in `useSocial.ts` do —
+ * `comments.all`, `reactions.all`, `follows.all`, `profiles.all`. That is not
+ * a coincidence to preserve but the point: the optimistic path and the realtime
+ * path should invalidate the same thing, and the local one is known to work.
+ *
+ * TWO KEYS ARE STILL LITERALS: `["dispatch"]` and `["death-sync"]`, because
+ * neither family has a factory yet. Both are correct today — every dispatch
+ * and death-sync page keys under the same first segment, so the one-segment
+ * key prefix-matches all of them — but correct by coincidence of spelling,
+ * which is precisely how the four above went wrong. They are the next two to
+ * convert, not an exception to the rule.
  */
+import {
+  notificationKeys,
+  socialKeys,
+  soulKeys,
+  workflowKeys,
+} from "../query_keys";
+
 import type {
   DeathSyncEventPayload,
   DispatchEventPayload,
@@ -72,34 +108,34 @@ export const EVENT_LABELS: Record<string, string> = {
 // ── Pure Handler Functions ─────────────────────────────────────────────
 
 export function handleSoulCreated(payload: SoulEventPayload, ctx: EventContext): HandlerResult {
-  ctx.queryClient.invalidateQueries({ queryKey: ["souls"] });
+  ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
   const msg = `Soul created: ${payload.soul_name || ""}`;
   ctx.showToast(msg, "info", 5000);
   return { success: true, invalidatedKeys: ["souls"], toastMessage: msg };
 }
 
 export function handleSoulStateChanged(payload: SoulEventPayload, ctx: EventContext): HandlerResult {
-  ctx.queryClient.invalidateQueries({ queryKey: ["souls"] });
+  ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
   if (payload.soul_id) {
-    ctx.queryClient.invalidateQueries({ queryKey: ["souls", "detail", payload.soul_id] });
+    ctx.queryClient.invalidateQueries({ queryKey: soulKeys.detail(payload.soul_id) });
   }
   return { success: true, invalidatedKeys: ["souls"] };
 }
 
 export function handleSoulEvent(_payload: SoulEventPayload, ctx: EventContext): HandlerResult {
-  ctx.queryClient.invalidateQueries({ queryKey: ["souls"] });
+  ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
   return { success: true, invalidatedKeys: ["souls"] };
 }
 
 export function handleWorkflowEvent(payload: WorkflowEventPayload, ctx: EventContext): HandlerResult {
-  ctx.queryClient.invalidateQueries({ queryKey: ["workflows"] });
+  ctx.queryClient.invalidateQueries({ queryKey: workflowKeys.all });
   if (payload.workflow_id) {
     ctx.queryClient.invalidateQueries({
-      queryKey: ["workflows", "detail", payload.workflow_id],
+      queryKey: workflowKeys.detail(payload.workflow_id),
     });
   }
   if (payload.soul_id) {
-    ctx.queryClient.invalidateQueries({ queryKey: ["souls"] });
+    ctx.queryClient.invalidateQueries({ queryKey: soulKeys.all });
   }
 
   const label = EVENT_LABELS[payload.event] || "Workflow update";
@@ -116,8 +152,8 @@ export function handleWorkflowEvent(payload: WorkflowEventPayload, ctx: EventCon
 }
 
 export function handleNotificationEvent(payload: NotificationEventPayload, ctx: EventContext): HandlerResult {
-  ctx.queryClient.invalidateQueries({ queryKey: ["notifications"] });
-  ctx.queryClient.invalidateQueries({ queryKey: ["notifications-unread-count"] });
+  ctx.queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+  ctx.queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount });
 
   if (payload.notification) {
     const title = payload.notification.title || "New notification";
@@ -167,29 +203,31 @@ export function handleSocialEvent(payload: SocialEventPayload, ctx: EventContext
 
   // Invalidate post queries
   if (["POST_CREATED", "POST_UPDATED", "POST_DELETED"].includes(payload.event)) {
-    ctx.queryClient.invalidateQueries({ queryKey: ["social", "posts"] });
+    ctx.queryClient.invalidateQueries({ queryKey: socialKeys.posts.all });
     invalidated.push("social.posts");
   }
 
   // Invalidate comment queries
   if (["COMMENT_CREATED", "COMMENT_DELETED"].includes(payload.event)) {
-    if (payload.post_id) {
-      ctx.queryClient.invalidateQueries({
-        queryKey: ["social", "comments", "post", payload.post_id],
-      });
-    }
-    ctx.queryClient.invalidateQueries({ queryKey: ["social", "posts"] });
+    // `comments.all`, not a per-post key. Threads cache under
+    // `comments.list({ post })`, so the id lives inside an object in the
+    // fourth segment, not as a segment of its own — the per-post key this
+    // used to build could never match one. Invalidating the family is what
+    // `useCreateComment` does locally, and at most a couple of threads are
+    // ever cached.
+    ctx.queryClient.invalidateQueries({ queryKey: socialKeys.comments.all });
+    ctx.queryClient.invalidateQueries({ queryKey: socialKeys.posts.all });
     invalidated.push("social.comments", "social.posts");
   }
 
   // Invalidate reaction queries
   if (["REACTION_ADDED", "REACTION_REMOVED"].includes(payload.event)) {
+    // Same shape as comments: reaction lists cache under
+    // `[...reactions.all, params]` with the post id inside `params`.
+    ctx.queryClient.invalidateQueries({ queryKey: socialKeys.reactions.all });
     if (payload.post_id) {
       ctx.queryClient.invalidateQueries({
-        queryKey: ["social", "reactions", "post", payload.post_id],
-      });
-      ctx.queryClient.invalidateQueries({
-        queryKey: ["social", "posts", "detail", payload.post_id],
+        queryKey: socialKeys.posts.detail(payload.post_id),
       });
     }
     invalidated.push("social.reactions");
@@ -197,23 +235,18 @@ export function handleSocialEvent(payload: SocialEventPayload, ctx: EventContext
 
   // Invalidate follow queries
   if (["USER_FOLLOWED", "USER_UNFOLLOWED"].includes(payload.event)) {
-    if (payload.following_id) {
-      ctx.queryClient.invalidateQueries({
-        queryKey: ["social", "follows", "followers", payload.following_id],
-      });
-      ctx.queryClient.invalidateQueries({
-        queryKey: ["social", "profile", payload.following_id],
-      });
+    // The follows caches are the CURRENT USER's two lists and carry no id
+    // (`follows.following` / `follows.followers`), so there is no per-side key
+    // to build: the old code appended the id and produced keys LONGER than the
+    // cached ones, which prefix-matching can never reach. Both sides of the
+    // relationship land on the same family.
+    ctx.queryClient.invalidateQueries({ queryKey: socialKeys.follows.all });
+    for (const userId of [payload.following_id, payload.follower_id]) {
+      if (userId) {
+        ctx.queryClient.invalidateQueries({ queryKey: socialKeys.profiles.detail(userId) });
+      }
     }
-    if (payload.follower_id) {
-      ctx.queryClient.invalidateQueries({
-        queryKey: ["social", "follows", "following", payload.follower_id],
-      });
-      ctx.queryClient.invalidateQueries({
-        queryKey: ["social", "profile", payload.follower_id],
-      });
-    }
-    invalidated.push("social.follows", "social.profile");
+    invalidated.push("social.follows", "social.profiles");
   }
 
   // Toast for social events
