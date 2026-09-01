@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { CIVILIZATION_OPTIONS } from '@/src/config/civilizations'
+
 // ── Auth ─────────────────────────────────────────────
 
 export const loginSchema = z.object({
@@ -26,10 +28,18 @@ export const changePasswordSchema = z.object({
 
 export const soulCreateSchema = z.object({
   name: z.string().min(1, '请输入灵魂名称').max(100, '名称最多100位'),
+  // Derived from CIVILIZATION_OPTIONS, not retyped. This enum spelled three
+  // members while the pick-list it validates spelled four, so 希腊 was
+  // selectable and unsubmittable: choosing it failed with '请选择文明' against
+  // a select that plainly had one chosen. That is the gap
+  // src/config/civilizations.ts names in its own header — "the gap GREEK
+  // slipped through" — and this was the place it slipped through.
+  //
   // No UNKNOWN here — this is a pick-list for a human creating a soul, and
   // UNKNOWN is a symptom of a misconfigured tenant, not a cosmology anyone
-  // would deliberately choose.
-  civilization: z.enum(['CHINESE', 'EUROPEAN', 'EGYPTIAN'], {
+  // would deliberately choose. UNKNOWN is absent from CIVILIZATION_OPTIONS for
+  // the same reason, so deriving keeps that property instead of restating it.
+  civilization: z.enum(CIVILIZATION_OPTIONS, {
     error: '请选择文明',
   }),
   birth_date: z.string().optional().nullable(),
@@ -62,8 +72,10 @@ export const soulTransitionSchema = z.object({
 export const judgmentCreateSchema = z.object({
   soul_id: z.string().uuid('无效的灵魂ID'),
   court: z.string().min(1, '请选择审判庭'),
-  // Same reasoning as soulCreateSchema.civilization — no UNKNOWN.
-  civilization: z.enum(['CHINESE', 'EUROPEAN', 'EGYPTIAN'], {
+  // Same reasoning as soulCreateSchema.civilization — derived, no UNKNOWN.
+  // This one had drifted too, and had no consumer to notice: it would have
+  // shipped the identical GREEK defect the day anything started using it.
+  civilization: z.enum(CIVILIZATION_OPTIONS, {
     error: '请选择文明',
   }),
 })

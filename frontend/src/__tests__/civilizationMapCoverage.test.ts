@@ -7,6 +7,10 @@ import {
   CIVILIZATION_LABELS,
   CIVILIZATION_OPTIONS,
 } from "@/src/config/civilizations";
+import {
+  judgmentCreateSchema,
+  soulCreateSchema,
+} from "@/lib/validations/schemas";
 
 /**
  * Every hand-written map keyed by civilization, held against the one list.
@@ -158,5 +162,59 @@ describe("every civilization-keyed map covers every civilization", () => {
       "src/config/civilizations.ts::CIVILIZATION_DISPLAY_NAMES",
     ];
     expect(addresses).toHaveLength(6);
+  });
+});
+
+/**
+ * The same list, held against the VALIDATORS rather than the maps.
+ *
+ * WHAT WENT UNCAUGHT, AGAIN. Everything above checks maps — objects keyed by
+ * civilization. `lib/validations/schemas.ts` spelled the members as a zod
+ * enum, which is a *list*, so none of the map assertions could ever see it,
+ * and it sat three members long (CHINESE / EUROPEAN / EGYPTIAN) while
+ * CIVILIZATION_OPTIONS had four. The pick-list in the soul-create modal
+ * renders from CIVILIZATION_OPTIONS, so 希腊 was offered and then rejected on
+ * submit with "请选择文明" — pointed at a select that plainly had a
+ * civilization chosen. Creating a Greek soul through the UI was impossible
+ * from the day GREEK landed.
+ *
+ * This is not the maps' failure mode. A missing map key renders something
+ * wrong but harmless; a missing enum member is a wall. The check above was
+ * running and would have gone red for a map — its subject list just did not
+ * contain the thing that was broken.
+ *
+ * BEHAVIOURAL, NOT TEXTUAL. The maps are read as text because importing their
+ * page modules would drag React in. These schemas are pure zod, so there is no
+ * reason to read them as text and every reason not to: parsing an actual value
+ * through the actual schema is immune to however the members get spelled. Both
+ * schemas now derive from CIVILIZATION_OPTIONS, which is why neither appears
+ * in the address list above — deriving REMOVES an address instead of adding
+ * one. This test is what keeps them derived: retype a literal enum here and
+ * omit a member, and it goes red on the omitted member by name.
+ */
+describe("every civilization-accepting validator accepts every civilization", () => {
+  it.each([...CIVILIZATION_OPTIONS])("soulCreateSchema accepts %s", (civ) => {
+    const result = soulCreateSchema.safeParse({
+      name: "验证用",
+      civilization: civ,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it.each([...CIVILIZATION_OPTIONS])("judgmentCreateSchema accepts %s", (civ) => {
+    const result = judgmentCreateSchema.safeParse({
+      soul_id: "00000000-0000-4000-8000-000000000000",
+      court: "一殿",
+      civilization: civ,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  // Assert the absence too. Without this, a schema that had quietly become
+  // `z.string()` — accepting anything, including the misconfigured-tenant
+  // sentinel these enums exist to keep out — would pass every case above.
+  it("still rejects a non-civilization, so the cases above mean something", () => {
+    expect(soulCreateSchema.safeParse({ name: "x", civilization: "UNKNOWN" }).success).toBe(false);
+    expect(soulCreateSchema.safeParse({ name: "x", civilization: "ATLANTEAN" }).success).toBe(false);
   });
 });
