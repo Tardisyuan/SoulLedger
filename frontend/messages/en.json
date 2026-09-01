@@ -712,7 +712,9 @@
       "col_balance": "Net",
       "total": "Total",
       "empty": "No entries recorded."
-    }
+    },
+    "series_effective": "Effective",
+    "series_decayed": "Decayed away"
   },
   "judgment": {
     "title": "Judgment",

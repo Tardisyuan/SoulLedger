@@ -3,6 +3,7 @@
 import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { groupDigits } from "@/src/components/dashboard/numberFormat";
+import { MissingValue } from "@/src/components/ui/DomainValue";
 
 /**
  * 概览页顶部那四张 KPI 卡。原先长在 app/dashboard/page.tsx 里，那个文件越过
@@ -32,7 +33,17 @@ function StatCardInner({
         // 钉在了一个这轮改版**就是要改**的字号上。属性说的是「这是一个 KPI」,
         // 字号说的是「它现在多大」——只有前者是测试真正关心的。
         <div data-kpi="" className={`text-08 tabular-nums ${color}`}>
-          {groupDigits(value ?? 0)}
+          {/* `value ?? 0` printed a confident, grouped **0** for a value the
+              API did not send — the exact defect class this repo already
+              eradicated from the souls balance column. A KPI reading 0 is a
+              claim about the ledger; an em dash is a claim about this cell.
+              `unrecorded`, not `inapplicable`: the stat applies, we just do
+              not have it. */}
+          {value === undefined || value === null ? (
+            <MissingValue kind="unrecorded" />
+          ) : (
+            groupDigits(value)
+          )}
         </div>
       )}
     </div>

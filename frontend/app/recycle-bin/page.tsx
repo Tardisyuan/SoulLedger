@@ -92,7 +92,11 @@ export default function RecycleBinPage() {
         variant="page"
         subtitle={t("recycle_bin.intro")}
       >
-        <DataTable<RecycleBinEntry>
+        {/* `compact` (~36px rows) because this page is scan-and-find: the operator
+          is looking for a row, not deciding on each one. Decision surfaces
+          (the judgment list) stay `comfortable`. */}
+      <DataTable<RecycleBinEntry>
+        density="compact"
           caption={t("recycle_bin.title")}
           columns={[
             { key: "type", header: t("recycle_bin.col_type") },

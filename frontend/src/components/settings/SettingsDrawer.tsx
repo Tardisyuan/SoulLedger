@@ -289,7 +289,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                   key={color.value}
                   onClick={() => applyAccentColor(color.value)}
                   style={{ backgroundColor: color.value }}
-                  className={`h-10 transition-all ${
+                  className={`h-10 transition-colors ${
                     accentColor === color.value
                       ? "ring-2 ring-offset-2 ring-offset-surface-1 ring-[hsl(var(--color-accent))] scale-105"
                       : "hover:scale-105"

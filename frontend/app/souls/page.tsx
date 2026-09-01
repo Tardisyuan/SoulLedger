@@ -259,7 +259,11 @@ export default function SoulsPage() {
     >
       {/* No `pagination` slot — DataTable renders its own <Pagination>
           (components/ui/data-table.tsx:288) from the four props at the end. */}
+      {/* `compact` (~36px rows) because this page is scan-and-find: the operator
+          is looking for a row, not deciding on each one. Decision surfaces
+          (the judgment list) stay `comfortable`. */}
       <DataTable<SoulListItem>
+        density="compact"
         caption={t("souls.title")}
         columns={[
           { key: "name", header: t("souls.name"), sortable: true },

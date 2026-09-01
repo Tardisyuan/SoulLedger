@@ -215,22 +215,28 @@ function DashboardContent() {
           <>
             {/* Summary cards - each loads independently */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* `?? 0` on the three state cards below, and NOT here.
+                  A state missing from `state_distribution` means zero souls are
+                  in it — a real count. `total_souls` missing means the API did
+                  not send it, which is not a number at all; StatCard renders
+                  that as an em dash rather than a confident 0. The two used to
+                  be the same expression. */}
               <StatCard label={t("dashboard.total_souls")} value={stats?.total_souls} isLoading={loading} />
               <StatCard
                 label={t("dashboard.alive")}
-                value={stats?.state_distribution?.find(s => s.state === "ALIVE")?.count}
+                value={stats?.state_distribution?.find(s => s.state === "ALIVE")?.count ?? 0}
                 isLoading={loading}
                 color="text-[hsl(var(--color-status-success))]"
               />
               <StatCard
                 label={t("dashboard.under_judgment")}
-                value={stats?.state_distribution?.find(s => s.state === "JUDGING")?.count}
+                value={stats?.state_distribution?.find(s => s.state === "JUDGING")?.count ?? 0}
                 isLoading={loading}
                 color="text-[hsl(var(--color-accent-ink))]"
               />
               <StatCard
                 label={t("dashboard.disposed")}
-                value={stats?.state_distribution?.find(s => s.state === "DISPOSED")?.count}
+                value={stats?.state_distribution?.find(s => s.state === "DISPOSED")?.count ?? 0}
                 isLoading={loading}
                 color="text-[hsl(var(--color-status-lost))]"
               />

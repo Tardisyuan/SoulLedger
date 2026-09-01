@@ -712,7 +712,9 @@
       "col_balance": "Wedja",
       "total": "Dema",
       "empty": "Nen medu."
-    }
+    },
+    "series_effective": "Effective",
+    "series_decayed": "Decayed away"
   },
   "judgment": {
     "title": "Sheemtet Seth",

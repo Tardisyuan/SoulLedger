@@ -7,7 +7,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Scale, User } from "lucide-react";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
@@ -99,7 +99,7 @@ function ActorCard({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
             on the test box have `icon_url` empty too, so nothing visible
             changes; the dead read is removed so the next person does not
             "fix" it by adding an `icon` field.) */}
-        <span className="text-06" aria-hidden="true">{"👤"}</span>
+        <User aria-hidden="true" className="w-6 h-6 text-[hsl(var(--color-ink-subtle))] shrink-0" />
         <div className="flex-1 min-w-0">
           {/* `display_name` and `display_title` are localized by the backend
               and are in this very response. `name_zh`, `title` and
@@ -267,7 +267,7 @@ function ActorsPageContent() {
                             aria-label={t("actors.assessors.toggle")}
                             className="w-full flex items-center gap-3 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-dashed border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] transition-colors text-left"
                           >
-                            <span className="text-05" aria-hidden="true">⚖️</span>
+                            <Scale aria-hidden="true" className="w-5 h-5 text-[hsl(var(--color-ink-subtle))] shrink-0" />
                             <div className="flex-1 min-w-0">
                               <h3 className="text-04 font-semibold text-[hsl(var(--color-ink))] truncate">
                                 {t("actors.assessors.title")}

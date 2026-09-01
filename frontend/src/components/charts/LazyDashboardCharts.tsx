@@ -3,6 +3,38 @@
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 
+/**
+ * The chart chrome, written once.
+ *
+ * The five design-guard ESLint rules only read class strings, so everything
+ * recharts takes as an inline style object is invisible to them — and it
+ * drifted accordingly. Measured 2026-09-01: four tooltips carried
+ * `borderRadius: "6px"` and two bar series carried rounded corners in a system
+ * where every radius is 0 except `full`/`focus`; four ticks were `fontSize: 9`,
+ * under the type scale's 11px floor and effectively illegible for CJK tick
+ * labels; and only ONE of the four charts set `axisLine`/`tickLine`, so three
+ * of them drew recharts' default grey axes in both themes, on themed surfaces.
+ *
+ * A shared object rather than four copies, so a fifth chart cannot forget the
+ * way the first three did.
+ */
+const CHART_AXIS = {
+  tick: { fill: "hsl(var(--color-ink-muted))", fontSize: 11 },
+  axisLine: { stroke: "hsl(var(--color-hairline))" },
+  tickLine: { stroke: "hsl(var(--color-hairline))" },
+} as const;
+
+const CHART_TOOLTIP = {
+  contentStyle: {
+    background: "hsl(var(--color-surface-2))",
+    border: "1px solid hsl(var(--color-hairline))",
+    borderRadius: 0,
+    color: "hsl(var(--color-ink))",
+  },
+  labelStyle: { color: "hsl(var(--color-ink-muted))" },
+} as const;
+
+
 // ── Recharts base types ──────────────────────────────────────────
 interface ChartDataPoint {
   name?: string;
@@ -89,25 +121,29 @@ const LazyBarChart = dynamic(
                   fill: "hsl(var(--color-ink-muted))",
                   fontSize: 11,
                 }}
-              />
+              axisLine={CHART_AXIS.axisLine}
+                tickLine={CHART_AXIS.tickLine}
+                />
               <YAxis
                 tick={{
                   fill: "hsl(var(--color-ink-muted))",
                   fontSize: 11,
                 }}
-              />
+              axisLine={CHART_AXIS.axisLine}
+                tickLine={CHART_AXIS.tickLine}
+                />
               <Tooltip
                 contentStyle={{
                   background: "hsl(var(--color-surface-1))",
                   border: "1px solid hsl(var(--color-hairline))",
-                  borderRadius: "6px",
+                  borderRadius: 0,
                   fontSize: 12,
                 }}
               />
               <Bar
                 dataKey={dataKey}
                 fill={fill}
-                radius={[4, 4, 0, 0]}
+                radius={0}
                 name={name}
               >
                 {data.map((entry, i) => (
@@ -179,7 +215,7 @@ const LazyDashboardPieChart = dynamic(
                 contentStyle={{
                   background: "hsl(var(--color-surface-2))",
                   border: "1px solid hsl(var(--color-hairline))",
-                  borderRadius: "6px",
+                  borderRadius: 0,
                   fontSize: 12,
                 }}
               />
@@ -244,22 +280,26 @@ const LazySoulLineChart = dynamic(
                 dataKey="date"
                 tick={{
                   fill: "hsl(var(--color-ink-muted))",
-                  fontSize: 9,
+                  fontSize: 11,
                 }}
+                axisLine={CHART_AXIS.axisLine}
+                tickLine={CHART_AXIS.tickLine}
                 tickFormatter={formatTick}
               />
               <YAxis
                 tick={{
                   fill: "hsl(var(--color-ink-muted))",
-                  fontSize: 9,
+                  fontSize: 11,
                 }}
+                axisLine={CHART_AXIS.axisLine}
+                tickLine={CHART_AXIS.tickLine}
                 width={30}
               />
               <Tooltip
                 contentStyle={{
                   background: "hsl(var(--color-surface-2))",
                   border: "1px solid hsl(var(--color-hairline))",
-                  borderRadius: "6px",
+                  borderRadius: 0,
                   fontSize: 11,
                 }}
                 labelStyle={{ color: "hsl(var(--color-ink-muted))" }}
@@ -310,9 +350,20 @@ const LazyLifespanBarChart = dynamic(
         ResponsiveContainer,
         ReferenceLine,
       } = mod;
+      /**
+       * `seriesNames` is required, not optional, and that is the point.
+       *
+       * The two `<Bar>`s had no `name`, so recharts fell back to the dataKey
+       * and a zh-Hans tooltip printed the raw identifiers `effective` and
+       * `decayedAway`. The solid-vs-85%-opacity encoding that distinguishes
+       * them was explained only in a code comment — nothing on screen said
+       * which was which. Making the prop required means a caller cannot render
+       * this chart without deciding what the two series are called.
+       */
       return function WrappedLifespanBarChart({
         data,
         height = 140,
+        seriesNames,
       }: {
         data: {
           key: string;
@@ -322,6 +373,7 @@ const LazyLifespanBarChart = dynamic(
           color: string;
         }[];
         height?: number;
+        seriesNames: { effective: string; decayedAway: string };
       }) {
         return (
           <ResponsiveContainer width="100%" height={height}>
@@ -332,30 +384,32 @@ const LazyLifespanBarChart = dynamic(
               />
               <XAxis
                 dataKey="label"
-                tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 9 }}
-                axisLine={{ stroke: "hsl(var(--color-hairline))" }}
-                tickLine={{ stroke: "hsl(var(--color-hairline))" }}
+                tick={CHART_AXIS.tick}
+                axisLine={CHART_AXIS.axisLine}
+                tickLine={CHART_AXIS.tickLine}
               />
               <YAxis
-                tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 9 }}
+                tick={{ fill: "hsl(var(--color-ink-muted))", fontSize: 11 }}
+                axisLine={CHART_AXIS.axisLine}
+                tickLine={CHART_AXIS.tickLine}
                 width={30}
               />
               <Tooltip
                 contentStyle={{
                   background: "hsl(var(--color-surface-2))",
                   border: "1px solid hsl(var(--color-hairline))",
-                  borderRadius: "6px",
+                  borderRadius: 0,
                   fontSize: 11,
                 }}
                 labelStyle={{ color: "hsl(var(--color-ink-muted))" }}
               />
               <ReferenceLine y={0} stroke="hsl(var(--color-hairline))" />
-              <Bar dataKey="effective" stackId="w" radius={[2, 2, 0, 0]}>
+              <Bar dataKey="effective" name={seriesNames.effective} stackId="w" radius={0}>
                 {data.map((d) => (
                   <mod.Cell key={`eff-${d.key}`} fill={d.color} fillOpacity={0.85} />
                 ))}
               </Bar>
-              <Bar dataKey="decayedAway" stackId="w">
+              <Bar dataKey="decayedAway" name={seriesNames.decayedAway} stackId="w">
                 {data.map((d) => (
                   <mod.Cell key={`decay-${d.key}`} fill={d.color} fillOpacity={0.25} />
                 ))}
