@@ -193,16 +193,17 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
   return (
     <li className="grid grid-cols-1 gap-2 py-4 md:grid-cols-[96px_1fr_160px] md:gap-6">
       {/* 节号 —— the article's number in its own civilization's system.
-          `--civ-mark` is the tenant's identity colour (app/globals.css stamps
-          it per [data-civ] on <html>), which is the token the design calls for
-          here; it is NOT per-statute, so a cross-civilization citation list
-          marks every sigil in the viewing tenant's colour. That is what the
-          token means and the alternative — reading --color-civ-mark-{cn,eu,eg,gr}
+          `--civ-ink`, not `--civ-mark`: the sigil is glyphs, and the two
+          aliases exist to keep that distinction (see globals.css). Both are
+          the tenant's identity colour, stamped per [data-civ] on <html>, and
+          both are NOT per-statute — a cross-civilization citation list marks
+          every sigil in the viewing tenant's colour. That is what the token
+          means, and the alternative — reading --color-civ-ink-{cn,eu,eg,gr}
           off the statute — is the four-way branch civilizationSigil.ts exists
           to prevent. */}
       <div className="min-w-0">
         <p
-          className="font-mono tabular-nums text-03 text-[hsl(var(--civ-mark))]"
+          className="font-mono tabular-nums text-03 text-[hsl(var(--civ-ink))]"
           title={system}
         >
           {sigil ?? <MissingValue kind="unrecorded" reason={system} />}

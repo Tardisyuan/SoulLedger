@@ -38,6 +38,15 @@ import {
 // affordance into one channel. The mark is its own element, which is also what
 // makes it enumerable.
 //
+// GLYPHS TAKE `--civ-ink`, THE DOT AND THE CHIP'S FILL TAKE `--civ-mark`.
+// Both aliases are stamped per tenant by the same `[data-civ]` rules. The two
+// letters are 11px mono, so they are text at 4.5:1, and the unmapped-tenant
+// fallback made that plain: `--civ-mark` is declared only in `:root` — the
+// dark block — so a logged-out light-mode masthead drew them with a colour
+// measured against a near-black canvas, at 3.23:1 in the rail and 2.84:1 in
+// the chip. `--civ-ink` is declared in both themes. The 7px dot keeps the
+// mark: it is a graphical object at 3:1, and it passes.
+//
 // The colour comes from `hsl(var(--civ-mark))`, aliased per tenant by the
 // `[data-civ]` rules in globals.css exactly as `--civ-hue` is. No variant
 // looks up `--color-civ-mark-cn` by name, so none of them enumerates the four
@@ -162,7 +171,7 @@ export function TenantSignal({
         title={civilization}
         aria-label={name}
         className="font-mono text-01 leading-none uppercase"
-        style={{ color: "hsl(var(--civ-mark))" }}
+        style={{ color: "hsl(var(--civ-ink))" }}
       >
         {shortCode}
       </span>
@@ -197,7 +206,7 @@ export function TenantSignal({
       {dot}
       <span
         className="font-mono text-01 leading-none uppercase"
-        style={{ color: "hsl(var(--civ-mark))" }}
+        style={{ color: "hsl(var(--civ-ink))" }}
       >
         {shortCode}
       </span>
