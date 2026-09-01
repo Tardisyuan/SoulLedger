@@ -6,6 +6,8 @@ import Link from "next/link";
 import { TextField } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
 import { authApi } from "@/lib/api";
+import { loginSchema } from "@/lib/validations/schemas";
+import { useFormValidation } from "@/lib/validations/useFormValidation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -17,9 +19,22 @@ export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
+  // `loginSchema` had ZERO consumers. It sat in lib/validations/schemas.ts
+  // beside `judgmentCreateSchema`, which drifted to three civilizations while
+  // nobody used it and would have shipped that defect the day anything did.
+  // A schema with no caller is not a spare part; it is a claim nothing checks.
+  //
+  // It also closes the gap that made this the worst of the three validation
+  // regimes in the app: the login form had no client-side validation at all,
+  // so an empty submit was a round trip to be told what the form already knew.
+  const { validate, getError, clearFieldError } = useFormValidation(loginSchema);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const result = validate(form);
+    if (!result.success) return;
+
     setLoading(true);
 
     try {
@@ -96,7 +111,11 @@ export default function LoginPage() {
               type="text"
               label={t("auth.username")}
               value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              onChange={(e) => {
+                clearFieldError("username");
+                setForm({ ...form, username: e.target.value });
+              }}
+              error={getError("username")}
               placeholder="admin"
               required
             />
@@ -107,7 +126,11 @@ export default function LoginPage() {
               type="password"
               label={t("auth.password")}
               value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              onChange={(e) => {
+                clearFieldError("password");
+                setForm({ ...form, password: e.target.value });
+              }}
+              error={getError("password")}
               placeholder="••••••••"
               required
             />

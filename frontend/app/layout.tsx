@@ -15,6 +15,8 @@ import { TenantProvider } from "@/src/contexts/TenantContext";
 import { WebSocketProvider } from "@/src/contexts/WebSocketContext";
 import { SocialEventBusProvider } from "@/hooks/useSocialEventBus";
 import { QueryProvider } from "@/src/components/providers/QueryProvider";
+import { Suspense } from "react";
+import { RouteProgress } from "@/src/components/layout/RouteProgress";
 import { AppLayoutWrapper } from "@/src/components/layout/AppLayoutWrapper";
 
 /** 没有这个,真机上整个应用按约 980px 的默认布局视口渲染,再整体缩小塞进屏幕
@@ -89,6 +91,11 @@ export default async function RootLayout({
                 <WebSocketProvider>
                   <SocialEventBusProvider>
                     <ToastProvider>
+                      {/* useSearchParams needs a Suspense boundary or the whole
+                          tree opts out of static rendering. */}
+                      <Suspense fallback={null}>
+                        <RouteProgress />
+                      </Suspense>
                     <AppLayoutWrapper>
                       {children}
                     </AppLayoutWrapper>

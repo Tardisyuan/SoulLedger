@@ -20,7 +20,7 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { I18nProvider, useI18n } from "@/src/contexts/I18nContext";
 import {
   describeSystemEvent,
@@ -87,10 +87,20 @@ function event(overrides: Partial<SoulEvent> = {}): SoulEvent {
   };
 }
 
-/** The production `t`, bound to a real bundle. No mock, no stand-in. */
-function translatorFor(locale: (typeof LOCALES)[number]) {
+/**
+ * The production `t`, bound to a real bundle. No mock, no stand-in.
+ *
+ * `async` because only the default bundle is statically imported now — `en`
+ * and `egy` arrive by dynamic import (see LAZY_BUNDLES in I18nContext). Before
+ * the chunk lands, `t` answers from zh-Hans through the same fallback a
+ * missing key takes, which here would fail as "the en bundle says 状态变更".
+ * The wait is on a key whose value differs per locale, so it cannot pass early.
+ */
+async function translatorFor(locale: (typeof LOCALES)[number]) {
   const { result } = renderHook(() => useI18n(), { wrapper: I18nProvider });
   act(() => result.current.setLocale(locale));
+  const marker = { "zh-Hans": "状态变更", en: "State changed", egy: "Set Medu Khemen Seth" }[locale];
+  await waitFor(() => expect(result.current.t("souls.events.STATE_CHANGED")).toBe(marker));
   return result.current.t;
 }
 
@@ -101,8 +111,8 @@ describe("system-event copy resolves through the shipped bundles", () => {
     egy: { event: "Set Medu Khemen Seth", from: "Em Sheemtet", to: "Em Wetep" },
   };
 
-  it.each(LOCALES)("renders a STATE_CHANGED row in %s and leaks no raw member", (locale) => {
-    const text = describeSystemEvent(event(), makeSystemEventLabels(translatorFor(locale)));
+  it.each(LOCALES)("renders a STATE_CHANGED row in %s and leaks no raw member", async (locale) => {
+    const text = describeSystemEvent(event(), makeSystemEventLabels(await translatorFor(locale)));
 
     expect(text).toContain(expected[locale].event);
     expect(text).toContain(expected[locale].from);
@@ -121,9 +131,10 @@ describe("system-event copy resolves through the shipped bundles", () => {
     expect(text).not.toContain("souls.events.");
   });
 
-  it.each(LOCALES)("renders every migrated event type in %s without falling through to the member", (locale) => {
-    const labels = makeSystemEventLabels(translatorFor(locale));
-    const unrecognized = translatorFor(locale)("common.value.unrecognized");
+  it.each(LOCALES)("renders every migrated event type in %s without falling through to the member", async (locale) => {
+    const t = await translatorFor(locale);
+    const labels = makeSystemEventLabels(t);
+    const unrecognized = t("common.value.unrecognized");
 
     for (const type of MIGRATED_EVENT_TYPES) {
       const text = describeSystemEvent(event({ event_type: type, payload: {} }), labels);
@@ -133,8 +144,8 @@ describe("system-event copy resolves through the shipped bundles", () => {
     }
   });
 
-  it("shows translated 'unrecognized' copy, not the member, for an event type no bundle covers", () => {
-    const t = translatorFor("en");
+  it("shows translated 'unrecognized' copy, not the member, for an event type no bundle covers", async () => {
+    const t = await translatorFor("en");
     const text = describeSystemEvent(
       event({ event_type: "SOME_FUTURE_EVENT_TYPE", payload: {} }),
       makeSystemEventLabels(t)
@@ -145,7 +156,7 @@ describe("system-event copy resolves through the shipped bundles", () => {
 });
 
 describe("bundle parity", () => {
-  it("keeps the three catalogues on exactly the same key set", () => {
+  it("keeps the three catalogues on exactly the same key set", async () => {
     const [reference, ...rest] = LOCALES.map((l) => flatten(bundle(l)).sort());
     for (const other of rest) {
       expect(other).toEqual(reference);
@@ -153,7 +164,7 @@ describe("bundle parity", () => {
     expect(reference.length).toBeGreaterThan(0);
   });
 
-  it("carries every migrated event type in all three catalogues", () => {
+  it("carries every migrated event type in all three catalogues", async () => {
     for (const locale of LOCALES) {
       const keys = new Set(flatten(bundle(locale)));
       for (const type of MIGRATED_EVENT_TYPES) {
@@ -162,7 +173,7 @@ describe("bundle parity", () => {
     }
   });
 
-  it("carries the inheritance caption the card now formats from the API's rates", () => {
+  it("carries the inheritance caption the card now formats from the API's rates", async () => {
     for (const locale of LOCALES) {
       const keys = new Set(flatten(bundle(locale)));
       expect(keys.has("ledger.carry_forward_rate")).toBe(true);
