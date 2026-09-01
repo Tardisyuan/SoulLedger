@@ -475,6 +475,13 @@ function DashboardContent() {
                   { key: "count", header: t("admin.soul_count"), align: "right" },
                 ]}
                 data={stats?.souls_by_realm?.slice(0, 10) ?? []}
+                // The page has an error branch, but it only wraps the pie
+                // chart (line ~248). This table sits outside it and reads the
+                // same query, so a failure gave it `?? []` and it rendered
+                // "no data" beside a chart that said "failed to load".
+                // DataTable suppresses its own empty state when isError is
+                // set (data-table.tsx:144).
+                isError={!!queryError}
                 keyExtractor={(realm, idx) => `${realm.realm_code}-${idx}`}
                 renderRow={(realm) => (
                   <>

@@ -109,6 +109,7 @@ const COLLECTED_FILES = [
   "drawerFocusTrap.test.tsx",
   "eventInvalidationReachesCache.test.ts",
   "eventRegistry.test.ts",
+  "errorIsNotAnEmptyState.test.ts",
   "focusRingContract.test.ts",
   "inkOnSurfaceContract.test.ts",
   "ledgerQuantityContract.render.test.tsx",

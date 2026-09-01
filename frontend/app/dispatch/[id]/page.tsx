@@ -15,6 +15,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
 import { badgeVariants } from "@/src/components/ui/Badge";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -66,7 +67,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showExecuteModal, setShowExecuteModal] = useState(false);
 
-  const { data: dispatch, isLoading } = useQuery({
+  const { data: dispatch, isLoading, isError, refetch } = useQuery({
     queryKey: ["dispatch", "detail", id],
     queryFn: () => dispatchApi.get(id).then(r => r.data),
     enabled: !!user && !!id,
@@ -123,10 +124,24 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     );
   }
 
+  // Split, and in this order. There was one branch: `!dispatch` rendered
+  // "Dispatch not found." — hardcoded English — for a 500, a dropped
+  // connection and a cross-tenant 403 alike, so the page told an operator who
+  // had pasted someone else's URL exactly what it told an operator who had
+  // typo'd an id. The error branch comes first because `dispatch` is also
+  // undefined when the request failed.
+  if (isError) {
+    return (
+      <PageShell variant="prose" backLink={backLink} title={t("dispatch.detail_title")}>
+        <QueryError onRetry={() => refetch()} />
+      </PageShell>
+    );
+  }
+
   if (!dispatch) {
     return (
       <PageShell variant="prose" backLink={backLink} title={t("dispatch.detail_title")}>
-        <EmptyState title="Dispatch not found." />
+        <EmptyState title={t("dispatch.not_found")} />
       </PageShell>
     );
   }
