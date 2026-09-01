@@ -16,6 +16,7 @@ import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
+import { BaseModal } from "@/src/components/ui/Modal";
 import { badgeVariants } from "@/src/components/ui/Badge";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -64,6 +65,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
   const router = useRouter();
   const queryClient = useQueryClient();
   const [rejectReason, setRejectReason] = useState("");
+  const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showExecuteModal, setShowExecuteModal] = useState(false);
 
@@ -233,10 +235,15 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
           <h2 className="text-06 font-semibold text-[hsl(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
           <div className="flex gap-3">
             <RequirePermission permissions="dispatch.approve">
+              {/* Was `approveMutation.mutate()` fired straight from the click,
+                  while reject and execute — on this same page, in this same
+                  card — each opened a confirmation. Approving is the
+                  cross-tenant handover: it is the one of the three whose
+                  consequence reaches another tenant's ledger. */}
               <Button
                 type="button"
                 variant="primary"
-                onClick={() => approveMutation.mutate()}
+                onClick={() => setShowApproveModal(true)}
                 loading={approveMutation.isPending}
               >
                 {t("dispatch.approve")}
@@ -263,64 +270,95 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
         </div>
       )}
 
-      {/* Reject Modal */}
-      {showRejectModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[hsl(var(--color-surface-1))] p-6 w-full max-w-md border border-[hsl(var(--color-hairline))]">
-            <h3 className="text-05 font-semibold text-[hsl(var(--color-ink))] mb-4">{t("dispatch.reject_reason")}</h3>
-            <TextAreaField
-              label={t("dispatch.reason")}
-              value={rejectReason}
-              onChange={e => setRejectReason(e.target.value)}
-              rows={3}
-              placeholder={t("dispatch.reject_placeholder")}
-              className="mb-4"
-            />
-            <div className="flex gap-3 justify-end">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => { setShowRejectModal(false); setRejectReason(""); }}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="danger"
-                onClick={() => { rejectMutation.mutate(); setShowRejectModal(false); }}
-                loading={rejectMutation.isPending}
-              >
-                {t("dispatch.confirm_reject")}
-              </Button>
-            </div>
+      {/* All three confirmations go through BaseModal (@headlessui Dialog).
+          The reject and execute dialogs were hand-rolled `fixed inset-0
+          bg-black/50 … z-50` overlays — a third scrim dialect alongside
+          Modal.tsx's own `bg-black/60 backdrop-blur-sm` and recycle-bin's
+          `z-[9999]` — and being plain divs they had no focus trap, no Escape,
+          and no `aria-modal`. Adding a third hand-rolled one for approve would
+          have made the divergence permanent. */}
+      <BaseModal
+        isOpen={showApproveModal}
+        onClose={() => setShowApproveModal(false)}
+        title={t("dispatch.confirm_approve")}
+        footer={
+          <div className="flex gap-3 justify-end">
+            <Button type="button" variant="secondary" onClick={() => setShowApproveModal(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => { approveMutation.mutate(); setShowApproveModal(false); }}
+              loading={approveMutation.isPending}
+            >
+              {t("dispatch.approve")}
+            </Button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <p className="text-04 text-[hsl(var(--color-ink-muted))]">
+          {t("dispatch.approve_warning")}
+        </p>
+      </BaseModal>
 
-      {/* Execute Modal */}
-      {showExecuteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[hsl(var(--color-surface-1))] p-6 w-full max-w-md border border-[hsl(var(--color-hairline))]">
-            <h3 className="text-05 font-semibold text-[hsl(var(--color-ink))] mb-2">{t("dispatch.confirm_execute")}</h3>
-            <p className="text-04 text-[hsl(var(--color-ink-muted))] mb-4">
-              {t("dispatch.execute_warning")}
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button type="button" variant="secondary" onClick={() => setShowExecuteModal(false)}>
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                onClick={() => { executeMutation.mutate(); setShowExecuteModal(false); }}
-                loading={executeMutation.isPending}
-              >
-                {t("dispatch.confirm_execute")}
-              </Button>
-            </div>
+      <BaseModal
+        isOpen={showRejectModal}
+        onClose={() => { setShowRejectModal(false); setRejectReason(""); }}
+        title={t("dispatch.reject_reason")}
+        footer={
+          <div className="flex gap-3 justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => { setShowRejectModal(false); setRejectReason(""); }}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => { rejectMutation.mutate(); setShowRejectModal(false); }}
+              loading={rejectMutation.isPending}
+            >
+              {t("dispatch.confirm_reject")}
+            </Button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <TextAreaField
+          label={t("dispatch.reason")}
+          value={rejectReason}
+          onChange={e => setRejectReason(e.target.value)}
+          rows={3}
+          placeholder={t("dispatch.reject_placeholder")}
+        />
+      </BaseModal>
+
+      <BaseModal
+        isOpen={showExecuteModal}
+        onClose={() => setShowExecuteModal(false)}
+        title={t("dispatch.confirm_execute")}
+        footer={
+          <div className="flex gap-3 justify-end">
+            <Button type="button" variant="secondary" onClick={() => setShowExecuteModal(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => { executeMutation.mutate(); setShowExecuteModal(false); }}
+              loading={executeMutation.isPending}
+            >
+              {t("dispatch.confirm_execute")}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-04 text-[hsl(var(--color-ink-muted))]">
+          {t("dispatch.execute_warning")}
+        </p>
+      </BaseModal>
     </PageShell>
   );
 }

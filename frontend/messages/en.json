@@ -388,7 +388,8 @@
     "deleted_badge": "Deleted",
     "delete_confirm_title": "Move to recycle bin?",
     "delete_confirm_message": "\"{{name}}\" will move to the recycle bin. It can be restored for {{days}} days; after that, an administrator can permanently delete it.",
-    "delete_confirm_action": "Move to recycle bin"
+    "delete_confirm_action": "Move to recycle bin",
+    "update_error": "Failed to update menu"
   },
   "recycle_bin": {
     "title": "Recycle Bin",
@@ -1121,7 +1122,9 @@
       "REJECTED": "Rejected",
       "EXECUTED": "Executed",
       "CANCELLED": "Cancelled"
-    }
+    },
+    "confirm_approve": "Approve this cross-tenant dispatch?",
+    "approve_warning": "The target tenant gains disposition rights over this soul. The action is written to the audit log."
   },
   "crossJudgments": {
     "title": "Cross-Tenant Judgments",
@@ -1423,7 +1426,8 @@
       "FOLLOWERS": "Followers Only",
       "PRIVATE": "Private"
     },
-    "visibility_label": "Post visibility"
+    "visibility_label": "Post visibility",
+    "follow_error": "Follow action failed"
   },
   "tenants": {
     "active": "Active",
@@ -1486,5 +1490,13 @@
       "EGYPTIAN": "Egyptian Duat",
       "GREEK": "Greek Underworld"
     }
+  },
+  "connection": {
+    "connected": "Connected",
+    "connecting": "Connecting…",
+    "reconnecting": "Reconnecting…",
+    "disconnected": "Disconnected",
+    "failed": "Connection failed",
+    "retry": "Reconnect"
   }
 }

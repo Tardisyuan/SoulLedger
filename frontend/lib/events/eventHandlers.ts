@@ -249,7 +249,24 @@ export function handleSocialEvent(payload: SocialEventPayload, ctx: EventContext
     invalidated.push("social.follows", "social.profiles");
   }
 
-  // Toast for social events
+  // Toast only what is about the person looking at the screen.
+  //
+  // This used to fire on every social frame, so a busy tenant meant a banner
+  // per post, comment and reaction, for every signed-in user. The only social
+  // event whose payload identifies its target is a follow — `following_id` is
+  // the person BEING followed — so that is the only one that can be aimed.
+  // See EventContext.currentUserId for why the rest cannot be, and note that
+  // the cache invalidation above is unconditional either way: the feed still
+  // updates in real time, it just stops interrupting.
+  const aimedAtViewer =
+    ["USER_FOLLOWED", "USER_UNFOLLOWED"].includes(payload.event) &&
+    ctx.currentUserId !== undefined &&
+    payload.following_id === ctx.currentUserId;
+
+  if (!aimedAtViewer) {
+    return { success: true, invalidatedKeys: invalidated };
+  }
+
   const label = EVENT_LABELS[payload.event] || "Social update";
   const name = payload.author_name || payload.soul_name || "";
   const toastMsg = name ? `${label} — ${name}` : label;
@@ -262,9 +279,13 @@ export function handleSocialEvent(payload: SocialEventPayload, ctx: EventContext
   };
 }
 
-export function handleUnknownEvent(payload: EventPayload, ctx: EventContext): HandlerResult {
+export function handleUnknownEvent(payload: EventPayload, _ctx: EventContext): HandlerResult {
+  // Logged, not toasted. "Unhandled event: social.SOMETHING_NEW" is a message
+  // to whoever forgot the registry row; to an operator it is untranslated
+  // debug text appearing over their work, about a fault they cannot act on.
+  // The `error` in the return value is how the caller — and the drift
+  // detector — still learn about it.
   const msg = `Unhandled event: ${payload.domain}.${payload.event}`;
   console.warn(`[EventRegistry] ${msg}`, payload);
-  ctx.showToast(msg, "info", 3000);
   return { success: false, invalidatedKeys: [], error: msg };
 }

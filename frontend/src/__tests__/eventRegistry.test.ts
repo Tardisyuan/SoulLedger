@@ -342,7 +342,10 @@ describe("social events", () => {
 
     expect(invalidatedKeys(invalidateQueries)).toEqual(['["social","reactions"]']);
     expect(result.invalidatedKeys).toEqual(["social.reactions"]);
-    expect(showToast).toHaveBeenCalled();
+    // No banner: a reaction is not addressed to the viewer, and the payload
+    // carries no field that could say whether it was. See the "aimed at the
+    // viewer" block below.
+    expect(showToast).not.toHaveBeenCalled();
   });
 
   it("invalidates the follow family and both users' profiles", () => {
@@ -365,6 +368,57 @@ describe("social events", () => {
       '["social","profiles","detail","u2"]',
       '["social","profiles","detail","u1"]',
     ]);
+  });
+
+  // ── Which social frames may interrupt the viewer ───────────────────
+  //
+  // Every social event used to toast every signed-in user, so one busy tenant
+  // meant a banner per post, comment and reaction on everyone's screen. Only a
+  // follow frame identifies its target (`following_id` is the person being
+  // followed); nothing in the payload says whose post a comment or reaction
+  // landed on, so those can only be silent — the cache invalidation above is
+  // what keeps the screen current.
+  it("toasts a follow aimed at the viewer", () => {
+    const { ctx, showToast } = makeContext();
+
+    dispatchEvent(
+      {
+        domain: "social",
+        event: "USER_FOLLOWED",
+        follower_id: "u1",
+        following_id: "me",
+        author_name: "Ann",
+      } as EventPayload,
+      { ...ctx, currentUserId: "me" },
+    );
+
+    expect(showToast).toHaveBeenCalledWith("New follower — Ann", "info", 4000);
+  });
+
+  it("stays silent for a follow between two other people", () => {
+    const { ctx, invalidateQueries, showToast } = makeContext();
+
+    dispatchEvent(
+      { domain: "social", event: "USER_FOLLOWED", follower_id: "u1", following_id: "u2" } as EventPayload,
+      { ...ctx, currentUserId: "me" },
+    );
+
+    // Silent, but not inert: the follow lists still refresh.
+    expect(showToast).not.toHaveBeenCalled();
+    expect(invalidatedKeys(invalidateQueries)).toContain('["social","follows"]');
+  });
+
+  it("stays silent when the viewer is unknown, rather than toasting everyone", () => {
+    // `currentUserId` is undefined before the user resolves. The old default
+    // was to toast; the safe default is not to.
+    const { ctx, showToast } = makeContext();
+
+    dispatchEvent(
+      { domain: "social", event: "USER_FOLLOWED", follower_id: "u1", following_id: "u2" } as EventPayload,
+      ctx,
+    );
+
+    expect(showToast).not.toHaveBeenCalled();
   });
 
   it("invalidates one profile when only the follower is known", () => {
@@ -393,7 +447,11 @@ describe("unhandled events", () => {
     expect(result.success).toBe(false);
     expect(result.error).toBe("Unhandled event: aliens.PROBE");
     expect(invalidateQueries).not.toHaveBeenCalled();
-    expect(showToast).toHaveBeenCalledWith("Unhandled event: aliens.PROBE", "info", 3000);
+    // Logged, NOT toasted. This used to assert the opposite: the operator got
+    // "Unhandled event: aliens.PROBE" as a banner over their work —
+    // untranslated debug text about a missing registry row they cannot act on.
+    // The failure still travels, in `result.error` and the console warning.
+    expect(showToast).not.toHaveBeenCalled();
     expect(warnSpy).toHaveBeenCalled();
   });
 

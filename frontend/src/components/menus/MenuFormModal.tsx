@@ -35,6 +35,7 @@ export function MenuFormModal({
   iconError,
   setIconError,
   onSubmit,
+  isSubmitting = false,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -47,6 +48,8 @@ export function MenuFormModal({
   iconError: boolean;
   setIconError: (value: boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
+  /** Locks the submit button while a create/update is in flight. */
+  isSubmitting?: boolean;
 }) {
   const { t } = useI18n();
   const { isAdmin } = useTenant();
@@ -298,7 +301,7 @@ export function MenuFormModal({
           >
             {t("common.cancel")}
           </Button>
-          <Button type="submit" variant="primary">
+          <Button type="submit" variant="primary" disabled={isSubmitting}>
             {editingMenu ? t("menus.save") : t("menus.create")}
           </Button>
         </div>

@@ -388,7 +388,8 @@
     "deleted_badge": "已删除",
     "delete_confirm_title": "移至回收站？",
     "delete_confirm_message": "「{{name}}」将移至回收站，{{days}} 天内可从回收站恢复；超过此期限后，管理员可将其永久删除。",
-    "delete_confirm_action": "移至回收站"
+    "delete_confirm_action": "移至回收站",
+    "update_error": "更新菜单失败"
   },
   "recycle_bin": {
     "title": "回收站",
@@ -1121,7 +1122,9 @@
       "REJECTED": "已拒绝",
       "EXECUTED": "已执行",
       "CANCELLED": "已取消"
-    }
+    },
+    "confirm_approve": "确认批准这次跨租户调度?",
+    "approve_warning": "批准后目标租户将获得该灵魂的处置权。此操作会写入审计日志。"
   },
   "crossJudgments": {
     "title": "跨文明审判",
@@ -1423,7 +1426,8 @@
       "FOLLOWERS": "仅关注者",
       "PRIVATE": "私密"
     },
-    "visibility_label": "帖子可见范围"
+    "visibility_label": "帖子可见范围",
+    "follow_error": "关注操作失败"
   },
   "tenants": {
     "active": "启用",
@@ -1486,5 +1490,13 @@
       "EGYPTIAN": "埃及冥界",
       "GREEK": "希腊冥界"
     }
+  },
+  "connection": {
+    "connected": "已连接",
+    "connecting": "连接中…",
+    "reconnecting": "重连中…",
+    "disconnected": "已断开",
+    "failed": "连接失败",
+    "retry": "重连"
   }
 }

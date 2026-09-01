@@ -175,11 +175,20 @@ export function useToggleReaction() {
 
 export function useToggleFollow() {
   const qc = useQueryClient();
+  const { t } = useI18n();
+  const { showToast } = useToast();
   return useMutation({
     mutationFn: (followingId: string) => socialApi.toggleFollow(followingId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.follows.all });
       qc.invalidateQueries({ queryKey: socialKeys.profiles.all });
+    },
+    // This was the only social mutation with no onError. A failed follow left
+    // the button reading "Follow" with nothing said, which is indistinguishable
+    // from a click that never registered — so the natural response was to click
+    // again, and fail again, silently.
+    onError: (error) => {
+      showToast(extractErrorMessage(error, t("social.follow_error")), "error");
     },
   });
 }

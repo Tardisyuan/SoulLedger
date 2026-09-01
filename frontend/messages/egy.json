@@ -388,7 +388,8 @@
     "deleted_badge": "Wehem Seth",
     "delete_confirm_title": "Nehem Ma Per Wehem?",
     "delete_confirm_message": "\"{{name}}\" Nehem Ma Per Wehem. Sesen Kheme Wehem {{days}} Hru; Em Metu Set, Hem Ahet Wehem Djet.",
-    "delete_confirm_action": "Nehem Ma Per Wehem"
+    "delete_confirm_action": "Nehem Ma Per Wehem",
+    "update_error": "Failed to update menu"
   },
   "recycle_bin": {
     "title": "Per Wehem Seth",
@@ -1121,7 +1122,9 @@
       "REJECTED": "Wehem Seth",
       "EXECUTED": "Iri Sethet",
       "CANCELLED": "Ma Iri Seth"
-    }
+    },
+    "confirm_approve": "Approve this cross-tenant dispatch?",
+    "approve_warning": "The target tenant gains disposition rights over this soul. The action is written to the audit log."
   },
   "crossJudgments": {
     "title": "Sheemtet Seth Em Kehat",
@@ -1423,7 +1426,8 @@
       "FOLLOWERS": "Shemsu Neb",
       "PRIVATE": "Imen"
     },
-    "visibility_label": "Set Medu Maa"
+    "visibility_label": "Set Medu Maa",
+    "follow_error": "Follow action failed"
   },
   "tenants": {
     "active": "Active",
@@ -1486,5 +1490,13 @@
       "EGYPTIAN": "Duat Mesjet",
       "GREEK": "Duat Haunebut"
     }
+  },
+  "connection": {
+    "connected": "Connected",
+    "connecting": "Connecting…",
+    "reconnecting": "Reconnecting…",
+    "disconnected": "Disconnected",
+    "failed": "Connection failed",
+    "retry": "Reconnect"
   }
 }
