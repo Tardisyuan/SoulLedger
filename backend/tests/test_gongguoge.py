@@ -819,12 +819,31 @@ def test_no_periodic_settlement_or_decay_was_wired_to_this_corpus(seeded):
     said it was, a product choice, and 一月一小比 is deliberately NOT implemented
     as extra arithmetic on top of it: that would score the same deeds twice.
     """
-    from apps.ledger import services
+    import pathlib as _pathlib
+
+    from apps.ledger import constants, services
 
     assert services.CIVILIZATION_DECAY_RATE["CHINESE"] == services.DECAY_RATE
     assert not hasattr(services.LedgerService, "monthly_settlement")
-    with open(services.__file__, encoding="utf-8") as handle:
-        body = handle.read()
+
+    # 读 `constants.py`,不是 `services.py`。
+    #
+    # 2026-09-01 把常量从 `services.py` 拆走时(那个文件 785 行,220 行是常量),
+    # 这条测试报红了 —— **它报红是对的**,一条读源码的守卫本来就该在源码搬家时
+    # 说话。但它当时说的是「注释没了」,而事实是「注释搬了」:两件事不一样,
+    # 而错误信息只给出了前者。
+    #
+    # 下面第一条断言就是为此加的:先确认这个常量确实由 `constants` 定义,
+    # 再去读它的源码。**这样「搬走了」与「删掉了」会给出两条不同的失败**。
+    assert "CIVILIZATION_DECAY_RATE" in vars(constants), (
+        "CIVILIZATION_DECAY_RATE 不再由 apps.ledger.constants 定义 —— "
+        "它可能又搬家了。下面那条读的是这个模块的源码,先把这件事说清楚。"
+    )
+    assert services.CIVILIZATION_DECAY_RATE is constants.CIVILIZATION_DECAY_RATE, (
+        "services 重导出的不是 constants 里那一份 —— 两处会各自漂移"
+    )
+
+    body = _pathlib.Path(constants.__file__).read_text(encoding="utf-8")
     assert "功過格 is cumulative and its entries do not\n# expire" in body, (
         "The note stating that 功過格 does not decay is gone from "
         "CIVILIZATION_DECAY_RATE. It was right before this corpus landed and "

@@ -270,7 +270,20 @@ def test_a_node_label_resolves_to_the_actor_that_node_designates(seeded, resolve
     from apps.tenants.models import Tenant
 
     checked = 0
+    # 按**模板对象**去重,不按 key。
+    #
+    # `(EGYPTIAN, ROUTINE)` 与 `(EGYPTIAN, HEART_WEIGHING)` 指向**同一个 dict**
+    # (埃及的常规审判就是称心,见 templates.py 那段注释)。按 key 遍历会把同两个
+    # 节点数两遍,而下面那句 `checked == 18` 是一条**条数守卫** —— 它当场报了
+    # `20 == 18`,做对了它该做的事。
+    #
+    # 但 20 是「key 数」,18 是「节点数」,而这条测试查的是节点。去重之后这个数字
+    # 只在真的加了节点时才动,加一个别名不会。
+    seen_templates: set[int] = set()
     for (civilization, _case_type), template in WORKFLOW_TEMPLATES.items():
+        if id(template) in seen_templates:
+            continue
+        seen_templates.add(id(template))
         tenant = Tenant.objects.get(code=CIVILIZATION_TENANT[civilization])
         for node in template["nodes"]:
             actor_key = node.get("actor")
