@@ -221,7 +221,7 @@ export function SoulLifecycleTimeline({
   const visibleRows = filterRows(rows, tab, includeSystemEvents);
 
   return (
-    <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+    <div className="bg-[hsl(var(--color-surface-1))] p-5 border border-[hsl(var(--color-hairline))]">
       {/* Header + filter tabs */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
         <h2 className="text-01 text-[hsl(var(--color-ink-muted))] uppercase">
@@ -233,7 +233,7 @@ export function SoulLifecycleTimeline({
               key={tabKey}
               type="button"
               onClick={() => setTab(tabKey)}
-              className={`px-2.5 py-1 rounded text-03 transition-colors ${
+              className={`px-2.5 py-1 text-03 transition-colors ${
                 tab === tabKey
                   ? "bg-[hsl(var(--color-accent))] text-black font-medium"
                   : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
@@ -269,7 +269,7 @@ export function SoulLifecycleTimeline({
           return (
             <div key={step} className="flex items-center flex-1 min-w-[72px]">
               <div
-                className={`px-2 py-1 rounded text-02 font-medium whitespace-nowrap text-center flex-1 ${
+                className={`px-2 py-1 text-02 font-medium whitespace-nowrap text-center flex-1 ${
                   state === "now"
                     ? "bg-[hsl(var(--color-accent))] text-black"
                     : state === "done"
@@ -359,7 +359,7 @@ export function SoulLifecycleTimeline({
                     </div>
                   )}
                   {row.idChip && (
-                    <span className="inline-block mt-0.5 font-mono text-02 px-1 py-0.5 rounded bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-subtle))]">
+                    <span className="inline-block mt-0.5 font-mono text-02 px-1 py-0.5 bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-subtle))]">
                       {row.idChip.slice(0, 8)}
                     </span>
                   )}
@@ -412,7 +412,7 @@ export function SoulLifecycleTimeline({
                     <button
                       type="button"
                       onClick={() => openJudgment && onOpenJudgmentQueue(openJudgment.id)}
-                      className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black rounded-md text-03 font-medium transition-colors"
+                      className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-03 font-medium transition-colors"
                     >
                       {tf("souls.detail.timeline.open_in_queue", "在审判队列中打开")}
                     </button>
@@ -433,7 +433,7 @@ export function SoulLifecycleTimeline({
             // cycle-band divider
             return (
               <div key={row.id} className="my-2 pl-16">
-                <div className="flex items-center gap-2 py-1 px-2 rounded bg-[hsl(var(--color-surface-2))] text-02 text-[hsl(var(--color-ink-muted))]">
+                <div className="flex items-center gap-2 py-1 px-2 bg-[hsl(var(--color-surface-2))] text-02 text-[hsl(var(--color-ink-muted))]">
                   <span className="font-semibold text-[hsl(var(--color-ink))]">
                     {tf("souls.detail.timeline.cycle_band", "第 {{n}} 世", { n: String(row.cycleNumber) })}
                   </span>

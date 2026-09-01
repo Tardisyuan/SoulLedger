@@ -6,13 +6,27 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { X, Sun, Moon } from "lucide-react";
 
+/**
+ * The swatch and the colour it applies, as ONE fact.
+ *
+ * Each entry used to carry a `class` beside its `value` — `bg-amber-500` next
+ * to `#f59e0b` — and the square was painted from the class while the accent
+ * was set from the value. `tailwind.config.js` records what that cost: while
+ * an `amber` override was in the theme, `bg-amber-500` was one step brighter
+ * than `#f59e0b`, so **the square you clicked and the colour you got were
+ * different**. Removing the override made them agree again, by luck rather
+ * than by construction — two spellings of one colour, either of which could
+ * drift.
+ *
+ * They are painted from `value` now. There is nothing left to disagree.
+ */
 const ACCENT_COLORS = [
-  { name: "Amber", value: "#f59e0b", class: "bg-amber-500" },
-  { name: "Blue", value: "#3b82f6", class: "bg-blue-500" },
-  { name: "Green", value: "#22c55e", class: "bg-green-500" },
-  { name: "Purple", value: "#a855f7", class: "bg-purple-500" },
-  { name: "Red", value: "#ef4444", class: "bg-red-500" },
-  { name: "Rose", value: "#f43f5e", class: "bg-rose-500" },
+  { name: "Amber", value: "#f59e0b" },
+  { name: "Blue", value: "#3b82f6" },
+  { name: "Green", value: "#22c55e" },
+  { name: "Purple", value: "#a855f7" },
+  { name: "Red", value: "#ef4444" },
+  { name: "Rose", value: "#f43f5e" },
 ];
 
 const NAV_MODE_KEY = "soulledger_nav_mode";
@@ -132,7 +146,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
             <div className="flex gap-2">
               <button
                 onClick={toggleTheme}
-                className={`flex-1 py-2 px-3 rounded-md text-03 transition-colors ${
+                className={`flex-1 py-2 px-3 text-03 transition-colors ${
                   theme === "light"
                     ? "bg-[hsl(var(--color-accent))] text-black"
                     : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
@@ -145,7 +159,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
               </button>
               <button
                 onClick={toggleTheme}
-                className={`flex-1 py-2 px-3 rounded-md text-03 transition-colors ${
+                className={`flex-1 py-2 px-3 text-03 transition-colors ${
                   theme === "dark"
                     ? "bg-[hsl(var(--color-accent))] text-black"
                     : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
@@ -167,7 +181,8 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 <button
                   key={color.value}
                   onClick={() => applyAccentColor(color.value)}
-                  className={`h-10 rounded-md ${color.class} transition-all ${
+                  style={{ backgroundColor: color.value }}
+                  className={`h-10 transition-all ${
                     accentColor === color.value
                       ? "ring-2 ring-offset-2 ring-offset-surface-1 ring-[hsl(var(--color-accent))] scale-105"
                       : "hover:scale-105"
@@ -182,11 +197,11 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 value={customHex}
                 onChange={(e) => setCustomHex(e.target.value)}
                 placeholder="#ff5500"
-                className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+                className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
               />
               <button
                 onClick={handleCustomHex}
-                className="px-4 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md text-03 text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] hover:text-[hsl(var(--color-ink))] transition-colors"
+                className="px-4 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] hover:text-[hsl(var(--color-ink))] transition-colors"
               >
                 {t("settings.apply") || "Apply"}
               </button>
@@ -199,7 +214,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
             <div className="flex gap-2">
               <button
                 onClick={() => onNavModeChange("classic")}
-                className={`flex-1 py-2 px-3 rounded-md text-03 transition-colors ${
+                className={`flex-1 py-2 px-3 text-03 transition-colors ${
                   navMode === "classic"
                     ? "bg-[hsl(var(--color-accent))] text-black"
                     : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
@@ -209,7 +224,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
               </button>
               <button
                 onClick={() => onNavModeChange("compact")}
-                className={`flex-1 py-2 px-3 rounded-md text-03 transition-colors ${
+                className={`flex-1 py-2 px-3 text-03 transition-colors ${
                   navMode === "compact"
                     ? "bg-[hsl(var(--color-accent))] text-black"
                     : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"

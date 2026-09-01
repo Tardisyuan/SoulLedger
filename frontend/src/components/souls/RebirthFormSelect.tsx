@@ -99,7 +99,7 @@ export function RebirthFormSelect({ value, onChange, disabled, tf }: RebirthForm
                   aria-checked={selected}
                   disabled={disabled}
                   onClick={() => onChange(form)}
-                  className={`px-2 py-1.5 rounded-md border text-03 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`px-2 py-1.5 border text-03 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     selected ? GROUP_TONE[group.key].selected : UNSELECTED
                   }`}
                 >

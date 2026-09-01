@@ -17,7 +17,7 @@ export function Skeleton({ className, as: Tag = 'div' }: SkeletonProps) {
   return (
     <Tag
       className={cn(
-        'animate-pulse rounded-md bg-[hsl(var(--color-surface-2))]',
+        'animate-pulse bg-[hsl(var(--color-surface-2))]',
         className
       )}
     />
@@ -53,7 +53,7 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
 // 卡片骨架屏
 export function CardSkeleton() {
   return (
-    <div className="border rounded-lg p-4 space-y-3">
+    <div className="border p-4 space-y-3">
       <Skeleton className="h-4 w-1/3" />
       <Skeleton className="h-4 w-full" />
       <Skeleton className="h-4 w-2/3" />
@@ -75,7 +75,7 @@ export function ListSkeleton({ count = 3 }: { count?: number }) {
 // 面板骨架屏 - 比 CardSkeleton 更重的样式,用于详情页面板
 export function SkeletonCard({ className }: SkeletonProps) {
   return (
-    <div className={cn('bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]', className)}>
+    <div className={cn('bg-[hsl(var(--color-surface-1))] p-5 border border-[hsl(var(--color-hairline))]', className)}>
       <Skeleton className="h-4 w-24 mb-4" />
       <div className="space-y-2">
         <Skeleton className="h-3 w-full" />

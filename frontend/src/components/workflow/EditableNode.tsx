@@ -22,7 +22,7 @@ function EditableNodeComponent({
 
   return (
     <div
-      className={`px-4 py-3 rounded-lg border-2 min-w-[180px] cursor-pointer transition-all ${
+      className={`px-4 py-3 border-2 min-w-[180px] cursor-pointer transition-all ${
         selected ? "ring-2 ring-[hsl(var(--color-accent))] ring-offset-2 ring-offset-[hsl(var(--color-surface-2))]" : ""
       } ${colorClass}`}
     >

@@ -44,7 +44,7 @@ export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDelet
         type="button"
         onClick={onClose}
         disabled={deleteMutation.isPending}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded text-03 transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 text-03 transition-colors"
       >
         {t("common.cancel") || "取消"}
       </button>
@@ -52,7 +52,7 @@ export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDelet
         type="button"
         onClick={handleConfirm}
         disabled={deleteMutation.isPending}
-        className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-400 disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] rounded text-03 font-medium text-white transition-colors"
+        className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-400 disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] text-03 font-medium text-white transition-colors"
       >
         {deleteMutation.isPending ? (
           <span className="flex items-center justify-center gap-2">
@@ -79,7 +79,7 @@ export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDelet
           {t("users.delete_confirm") || "确定要删除以下用户吗？此操作无法撤销。"}
         </p>
         {user && (
-          <div className="bg-[hsl(var(--color-surface-1))] rounded border border-[hsl(var(--color-hairline))] p-3 space-y-1">
+          <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-3 space-y-1">
             <p className="text-03 font-medium text-[hsl(var(--color-ink))]">
               <span className="text-[hsl(var(--color-ink-subtle))]">{t("users.username") || "用户名"}: </span>
               {user.username}

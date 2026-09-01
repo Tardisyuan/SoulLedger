@@ -230,7 +230,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="w-full flex justify-center">
               <button
                 onClick={() => setCollapsed(!collapsed)}
-                className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
+                className="w-8 h-8 flex items-center justify-center text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
                 title={t("nav.expand_menu")}
                 aria-label={t("nav.expand_menu")}
                 aria-expanded={false}
@@ -244,7 +244,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="w-1/4 flex justify-center">
                 <button
                   onClick={() => setCollapsed(!collapsed)}
-                  className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
+                  className="w-8 h-8 flex items-center justify-center text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
                   title={t("nav.collapse_menu")}
                   aria-label={t("nav.collapse_menu")}
                   aria-expanded={true}
@@ -274,7 +274,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-md text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))]"
+            className="md:hidden p-2 text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))]"
             aria-label={mobileMenuOpen ? t("nav.collapse_menu") : t("nav.expand_menu")}
             aria-expanded={mobileMenuOpen}
           >
@@ -321,7 +321,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {user && (
               <Popover className="relative">
                 <Popover.Button
-                  className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
+                  className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1"
                   aria-label={
                     notifications.length > 0
                       ? `${t("notifications.title")} (${notifications.length})`
@@ -347,7 +347,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   leaveFrom="transform opacity-100 scale-100"
                   leaveTo="transform opacity-0 scale-95"
                 >
-                  <Popover.Panel className="absolute right-0 mt-2 w-80 origin-top-right rounded-lg bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-xl focus:outline-none z-[99998]">
+                  <Popover.Panel className="absolute right-0 mt-2 w-80 origin-top-right bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-xl focus:outline-none z-[99998]">
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-[hsl(var(--color-ink))]">{t("notifications.title")}</h3>
@@ -362,7 +362,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       ) : (
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                           {notifications.slice(0, 5).map((n: Notification) => (
-                            <div key={n.id} className="p-2 rounded hover:bg-[hsl(var(--color-surface-2))] cursor-pointer">
+                            <div key={n.id} className="p-2 hover:bg-[hsl(var(--color-surface-2))] cursor-pointer">
                               <p className="text-03 text-[hsl(var(--color-ink))]">{n.message || n.title}</p>
                               <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
                                 {formatDateTime(n.created_at)}
@@ -394,7 +394,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={toggleTheme}
               title={theme === "dark" ? t("nav.theme_light") : t("nav.theme_dark")}
               aria-label={theme === "dark" ? t("nav.theme_light") : t("nav.theme_dark")}
-              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
+              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1"
             >
               {theme === "dark" ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -415,7 +415,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setSettingsOpen(true)}
               title={t("nav.settings")}
               aria-label={t("nav.settings")}
-              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
+              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3" />
@@ -448,7 +448,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ) : (
               <Link
                 href="/login"
-                className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-03 font-medium hover:bg-[hsl(var(--color-accent))] hover:!text-black transition-colors"
+                className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 text-03 font-medium hover:bg-[hsl(var(--color-accent))] hover:!text-black transition-colors"
               >
                 {t("auth.login")}
               </Link>

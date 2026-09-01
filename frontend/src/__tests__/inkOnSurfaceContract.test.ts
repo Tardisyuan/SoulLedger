@@ -358,6 +358,70 @@ describe("the WCAG helpers this file imports", () => {
     expect(contrastRatio([118, 118, 118], [255, 255, 255])).toBeCloseTo(4.54, 2);
   });
 
+/**
+ * `--color-accent-ink`, measured everywhere it is painted.
+ *
+ * It was outside the matrix. The exclusion above is correct — it is a
+ * link/text accent, not a member of the ink ramp, and sweeping it in by name
+ * would have been the wrong fix — but "not in the ink family" became "not
+ * measured anywhere", and 33 files use it.
+ *
+ * What that hid: the token was `32 92% 34%`, and its own comment claimed
+ * 5.05:1, which is true — **against white**. Light surfaces are not white.
+ * `--color-surface-1..4` are `var(--civ-hue) 14%..11% 98%..92%`, tinted per
+ * tenant, and on European surface-4 the same token measured **4.16:1**. The
+ * comment and the failure were about different backgrounds, so neither
+ * contradicted the other and nothing went red. Retuned to `32 92% 31%`:
+ * 4.81:1 on that worst pairing, 5.84:1 on white.
+ *
+ * Measured over the same four civilization hues and both themes as the ink
+ * matrix, because a per-tenant hue is exactly what the white-only reading
+ * could not see.
+ */
+describe("--color-accent-ink clears AA on every surface it can land on", () => {
+  const ACCENT_INK = "--color-accent-ink";
+
+  /**
+   * `SURFACE_TOKENS` is `--color-surface-1..4` only — `--color-canvas` is not
+   * in it, so the ink matrix above has never measured anything on the page
+   * background either. That is a real gap and it is left alone here rather
+   * than widened silently: it belongs to the ink family's own block, where
+   * adding a fifth background changes 32 pinned combinations. accent-ink
+   * takes canvas because canvas is where most of its 33 call sites paint —
+   * the home page's links sit directly on it.
+   */
+  const BACKGROUNDS = [...SURFACE_TOKENS, "--color-canvas"];
+
+  const combos = THEMES.flatMap((theme) =>
+    CIV_PREFIXES.flatMap((civ) =>
+      BACKGROUNDS.map((surface) => ({
+        key: `${theme} ${civ} ${surface}`,
+        ratio: contrastRatio(
+          hslTripleToRgb(resolveRampForCiv(theme, civ, ACCENT_INK)),
+          hslTripleToRgb(resolveRampForCiv(theme, civ, surface))
+        ),
+      }))
+    )
+  );
+
+  it("has combinations to measure, so this block cannot pass on an empty list", () => {
+    expect(combos.length).toBe(THEMES.length * CIV_PREFIXES.length * BACKGROUNDS.length);
+    // 2 themes x 4 civilizations x (4 surfaces + canvas).
+    expect(combos.length).toBe(40);
+  });
+
+  it.each(combos.map((c) => [c.key, c] as const))("%s", (_key, combo) => {
+    expect(combo.ratio).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+  });
+
+  it("keeps headroom rather than sitting flush on the line", () => {
+    // 32% would also clear AA — by 0.08. A token one rounding away from
+    // failing is one surface tweak away from failing silently, and the surface
+    // ramp is tuned more often than the accent is.
+    const worst = Math.min(...combos.map((c) => c.ratio));
+    expect(worst).toBeGreaterThanOrEqual(4.7);
+  });
+});
   // The two ratios globals.css states about itself against light-mode white,
   // checked in BOTH directions.
   //
@@ -385,7 +449,7 @@ describe("the WCAG helpers this file imports", () => {
   // Only a retune that moves both, and updates this list, is green.
   const WHITE_CLAIMS: [token: string, claimed: number][] = [
     ["--color-accent", 2.14],
-    ["--color-accent-ink", 5.05],
+    ["--color-accent-ink", 5.84],
   ];
 
   it.each(WHITE_CLAIMS)(

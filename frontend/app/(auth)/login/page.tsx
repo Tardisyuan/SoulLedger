@@ -68,7 +68,7 @@ export default function LoginPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded-lg p-8"
+          className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-8"
         >
           <h2 className="text-xl font-semibold text-[hsl(var(--color-ink))] mb-6 text-center">
             {t("auth.login")}
@@ -86,7 +86,7 @@ export default function LoginPage() {
                 type="text"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
-                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-4 py-2.5 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] transition-colors"
+                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] px-4 py-2.5 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] transition-colors"
                 placeholder="admin"
                 required
               />
@@ -103,7 +103,7 @@ export default function LoginPage() {
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-md px-4 py-2.5 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] transition-colors"
+                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] px-4 py-2.5 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] transition-colors"
                 placeholder="••••••••"
                 required
               />
@@ -113,7 +113,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-6 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink))] font-medium py-2.5 rounded-md transition-colors"
+            className="w-full mt-6 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink))] font-medium py-2.5 transition-colors"
           >
             {loading ? (t("auth.logging_in")) : (t("auth.login"))}
           </button>
