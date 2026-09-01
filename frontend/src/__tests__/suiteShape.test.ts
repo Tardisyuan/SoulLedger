@@ -111,6 +111,7 @@ const COLLECTED_FILES = [
   "eventRegistry.test.ts",
   "errorIsNotAnEmptyState.test.ts",
   "focusRingContract.test.ts",
+  "gridPopupKeyboardContract.test.tsx",
   "inkOnSurfaceContract.test.ts",
   "ledgerQuantityContract.render.test.tsx",
   "messageValuesAreNotTheirOwnKeys.test.ts",

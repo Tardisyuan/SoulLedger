@@ -1,6 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
+
+import { usePopupOpenState, useRovingPopupKeys } from './useRovingPopupKeys'
 import { cn } from '@/lib/utils'
 
 export interface FilterChipOption {
@@ -36,25 +38,34 @@ export interface FilterBarProps {
  * localised or kept visually consistent across zh-Hans/en/egy. Every control
  * is 36px, matching compact row height.
  */
+/**
+ * A chip's dropdown declares `role="listbox"` with `role="option"` children.
+ * That is a promise of arrow-key navigation, and it was not being kept: the
+ * only key handled was Escape, which closed the popup and left focus on the
+ * body. Unlike ActionsMenu this one is not portaled, so Tab did reach the
+ * options — the reachability failure was narrower here, the broken promise
+ * identical. Both now share `useRovingPopupKeys`.
+ */
 function FilterChip({ config }: { config: FilterChipConfig }) {
-  const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const { open, setOpen, close } = usePopupOpenState(triggerRef)
+  const { containerRef: listRef, itemRefs } = useRovingPopupKeys({
+    open,
+    // No option is ever disabled here; the array still has to be the right
+    // length, because the hook indexes the refs by it.
+    enabled: config.options.map(() => true),
+    onRequestClose: close,
+  })
 
   useEffect(() => {
     if (!open) return
     function onDocPointerDown(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
-    }
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) close(false)
     }
     document.addEventListener('mousedown', onDocPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', onDocPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
+    return () => document.removeEventListener('mousedown', onDocPointerDown)
+  }, [open, close])
 
   const active = config.value !== ''
   const activeOption = config.options.find((o) => o.value === config.value)
@@ -62,10 +73,16 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
   return (
     <div ref={rootRef} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (open ? close(true) : setOpen(true))}
+        onKeyDown={(e) => {
+          if (open || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return
+          e.preventDefault()
+          setOpen(true)
+        }}
         className={cn(
           'flex items-center gap-2 h-9 px-3 rounded border text-03 transition-colors',
           active
@@ -78,19 +95,27 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
       </button>
       {open && (
         <div
+          ref={listRef}
           role="listbox"
           aria-label={config.label}
           className="absolute left-0 top-full mt-1 z-30 min-w-[180px] max-h-64 overflow-y-auto rounded-md border border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-surface-4))] shadow-[0_16px_40px_-10px_hsl(0_0%_0%/0.6)] py-1"
         >
-          {config.options.map((option) => (
+          {config.options.map((option, index) => (
             <button
               key={option.value}
+              ref={(el) => {
+                itemRefs.current[index] = el
+              }}
               type="button"
               role="option"
+              // Roving focus: inside a listbox the arrows are the navigation
+              // and Tab is the way out, so the options must not also be tab
+              // stops.
+              tabIndex={-1}
               aria-selected={option.value === config.value}
               onClick={() => {
                 config.onChange(option.value)
-                setOpen(false)
+                close(true)
               }}
               className={cn(
                 'w-full text-left px-3 py-1.5 text-03 transition-colors',
