@@ -27,9 +27,9 @@ class JWTAuthMiddleware(BaseMiddleware):
         token = self._extract_token_from_query(scope)
 
         if token:
-            user = await self._authenticate_token(token)
+            user, reason = await self._authenticate_and_check_tenant(token)
             if user is None:
-                await self._reject(send, code=4001, reason="Invalid token")
+                await self._reject(send, code=4001, reason=reason)
                 return
             scope["user"] = user
             return await super().__call__(scope, receive, send)
@@ -54,9 +54,11 @@ class JWTAuthMiddleware(BaseMiddleware):
                     data = {}
 
                 if data.get("type") == "auth" and data.get("token"):
-                    user = await self._authenticate_token(data["token"])
+                    user, reason = await self._authenticate_and_check_tenant(
+                        data["token"]
+                    )
                     if user is None:
-                        await self._reject(send, code=4001, reason="Invalid token")
+                        await self._reject(send, code=4001, reason=reason)
                         return {"type": "websocket.close", "code": 4001}
                     scope["user"] = user
                     authenticated = True
@@ -109,7 +111,50 @@ class JWTAuthMiddleware(BaseMiddleware):
         return None
 
     @database_sync_to_async
-    def _authenticate_token(self, token_str):
+    def _authenticate_and_check_tenant(self, token_str):
+        """认证,并把 token 断言的租户与用户自己的外键对一遍。
+
+        返回 `(user, reject_reason)`;`user` 为 None 时 `reject_reason` 说明原因。
+
+        WHY。HTTP 从 token 的 `tenant_code` claim 解析租户(`TenantMiddleware`),
+        WebSocket 从 `user.tenant` 外键解析。**两者可以不一致** —— 2026-08-29 实测:
+        同一个 token 让 `request.tenant = ZZB`,而 socket 加入了 `rt:tenant:ZZA`。
+
+        不是泄漏:外键是更严的一边,token 断言不了它,所以 WS 加入的组永远是用户
+        真正属于的那个。**但「两条路径对同一个问题给出不同答案」本身是一个事实,
+        而在此之前它不会让任何东西报错** —— 它只会让两个传输层各自安静地正确,
+        而没有人知道它们不一致。
+
+        用户 2026-09-01 的决定:**不统一两条路径,但不一致时拒绝连接**。
+        拒绝而不是纠正:一个断言了错租户的 token 是一个需要有人去看的事实,
+        而静默地用外键覆盖它会把这个事实变回不可见。
+
+        claim 缺失不算冲突 —— 不是每个 token 都带它(见 `TenantMiddleware` 自己的
+        回落),而缺失与不一致是两件事。
+        """
+        user = self._authenticate_token_sync(token_str)
+        if user is None:
+            return None, "Invalid token"
+
+        try:
+            claimed = AccessToken(token_str).get("tenant_code")
+        except (TokenError, InvalidToken):
+            return None, "Invalid token"
+
+        if not claimed:
+            return user, None
+
+        actual = user.tenant.code if user.tenant_id else None
+        if actual != claimed:
+            logger.warning(
+                "JWTAuthMiddleware: token claims tenant %r, user %s belongs to %r "
+                "— refusing the socket",
+                claimed, user.pk, actual,
+            )
+            return None, "Token tenant does not match the user's tenant"
+        return user, None
+
+    def _authenticate_token_sync(self, token_str):
         """Validate JWT and return User, or None."""
         try:
             token = AccessToken(token_str)
@@ -139,6 +184,15 @@ class JWTAuthMiddleware(BaseMiddleware):
         except Exception:
             logger.exception("JWTAuthMiddleware: unexpected error")
             return None
+
+    @database_sync_to_async
+    def _authenticate_token(self, token_str):
+        """认证,不看租户 —— 保留给既有调用方与测试。
+
+        新代码用 `_authenticate_and_check_tenant`:它多做一件事,而那件事
+        (claim 与外键对不上就拒绝)是一个策略,不该藏在一个名字里没说的地方。
+        """
+        return self._authenticate_token_sync(token_str)
 
     @staticmethod
     async def _reject(send, code, reason):

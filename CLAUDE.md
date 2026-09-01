@@ -102,6 +102,12 @@ transactions, constraints, or column widths, run it against PostgreSQL.
 
 - NEVER claim `fixed`, `verified`, or `production ready` without execution evidence
 - Claiming a suite passed requires the command, its exit code, and the passed count
+- **读退出码,不读输出。** `ruff check . | tail -1` 在失败时给的是
+  「[*] 1 fixable…」而不是「Found 1 error.」;`cmd | tail` 的退出码是 `tail` 的,
+  永远是 0;`| grep` 只给你要找的,不会告诉你还有别的。三次事故全出在这里 ——
+  2026-08-30 的两条 ruff 错误躺在 main 上、2026-08-31 把 playwright 的
+  「3 failed」读成绿的、2026-09-01 又让一条 ruff 错误跟着提交合进 main。
+  写成 `cmd >/dev/null 2>&1; echo "exit: $?"`,或对管道用 `${PIPESTATUS[0]}`
 - A green run from before the change is not evidence — re-run after editing
 - Before fixing a bug, write it out first: symptom → root cause → proposed fix
 - If the root cause is unknown, say so — do not ship a patch that only hides the symptom
