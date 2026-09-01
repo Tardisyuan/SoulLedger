@@ -1,8 +1,4 @@
 {
-  "app/(auth)/login/page.tsx": {
-    "space": 5,
-    "type": 5
-  },
   "app/admin/stats/error.tsx": {
     "palette": 1,
     "type": 2
@@ -54,10 +50,6 @@
   "src/components/social/FollowButton.tsx": {
     "space": 1
   },
-  "src/components/social/PostCard.tsx": {
-    "palette": 17,
-    "space": 1
-  },
   "src/components/social/ProfileCard.tsx": {
     "space": 1
   },
@@ -100,9 +92,6 @@
   },
   "src/components/users/UserModal.tsx": {
     "palette": 2
-  },
-  "src/components/workflow/EditableNode.tsx": {
-    "palette": 4
   },
   "src/components/workflow/WorkflowEditor.tsx": {
     "palette": 6,
