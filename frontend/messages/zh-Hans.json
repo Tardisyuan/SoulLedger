@@ -1223,7 +1223,9 @@
       "purple": "紫色",
       "red": "红色",
       "rose": "玫瑰"
-    }
+    },
+    "accent_hex_invalid": "请输入 6 位十六进制颜色，例如 #ff5500",
+    "accent_hex_too_dark": "这个颜色太深，主按钮上的黑色文字会看不清"
   },
   "admin": {
     "ledger_stats": "功德统计",

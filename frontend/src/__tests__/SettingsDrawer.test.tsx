@@ -157,3 +157,76 @@ describe("SettingsDrawer", () => {
     expect(screen.getByText("Apply")).toBeInTheDocument();
   });
 });
+
+/**
+ * The accent is three tokens, and this is what keeps it that way.
+ *
+ * `applyAccentColor` used to set `--color-accent` alone. The other two are not
+ * decorative: measured 2026-09-01, `--color-accent-ink` is read at **92 sites**
+ * (every accent heading, link and eyebrow) and `--color-accent-hover` at 10.
+ * Picking Blue turned the fills blue and left all of that amber — the feature
+ * looked like it worked because the square you clicked did change.
+ *
+ * The theme is part of it: `--color-accent-ink` is declared equal to the accent
+ * in dark and darkened in light (the accent measures 2.13:1 on white), and the
+ * drawer writes INLINE properties on documentElement, which apply to both.
+ */
+describe("the accent picker writes the whole accent, not a third of it", () => {
+  const readToken = (name: string) =>
+    document.documentElement.style.getPropertyValue(name);
+
+  beforeEach(() => {
+    document.documentElement.removeAttribute("style");
+    // The drawer persists the accent and re-applies it on mount, so without
+    // this the next test reads the previous test's colour back out of storage.
+    try {
+      localStorage.clear();
+    } catch {
+      // jsdom without storage
+    }
+  });
+
+  it("sets accent, hover and ink together", () => {
+    renderDrawer();
+
+    const blue = document.querySelectorAll<HTMLButtonElement>(".grid.grid-cols-3 button")[1];
+    fireEvent.click(blue);
+
+    expect(readToken("--color-accent")).not.toBe("");
+    // These two were left at their amber values by the old code.
+    expect(readToken("--color-accent-hover")).not.toBe("");
+    expect(readToken("--color-accent-ink")).not.toBe("");
+    // All three must share the chosen hue — the failure being pinned is
+    // exactly "the fill moved and the text did not".
+    const hueOf = (v: string) => v.trim().split(" ")[0];
+    expect(hueOf(readToken("--color-accent-hover"))).toBe(hueOf(readToken("--color-accent")));
+    expect(hueOf(readToken("--color-accent-ink"))).toBe(hueOf(readToken("--color-accent")));
+  });
+
+  it("refuses a custom hex too dark for the black label on primary buttons", () => {
+    renderDrawer();
+
+    const before = readToken("--color-accent");
+    fireEvent.change(screen.getByPlaceholderText("#ff5500"), {
+      target: { value: "#101010" },
+    });
+    fireEvent.click(screen.getByText("Apply"));
+
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    // And it must not have applied it. Primary buttons label the accent fill
+    // with text-black; #101010 behind black text is unreadable.
+    expect(readToken("--color-accent")).toBe(before);
+  });
+
+  it("still accepts a legible custom hex", () => {
+    renderDrawer();
+
+    fireEvent.change(screen.getByPlaceholderText("#ff5500"), {
+      target: { value: "#ffaa00" },
+    });
+    fireEvent.click(screen.getByText("Apply"));
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(readToken("--color-accent")).not.toBe("");
+  });
+});
