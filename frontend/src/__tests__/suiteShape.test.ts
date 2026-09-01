@@ -121,6 +121,7 @@ const COLLECTED_FILES = [
   "ledgerQuantityContract.test.tsx",
   "presetNodeTypes.test.tsx",
   "readingQuantityContract.test.tsx",
+  "reducedMotionContract.test.ts",
   "setup.test.ts",
   "socialWsClient.test.ts",
   "soulLifecycleEventCopy.test.tsx",
