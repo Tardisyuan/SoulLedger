@@ -490,3 +490,46 @@ textarea:focus-visible,
 select:focus-visible {
   outline-offset: 0;
 }
+
+/* ── nprogress ────────────────────────────────────────────────────────────
+   Written here rather than importing `nprogress/nprogress.css`, which hard-codes
+   `#29d` — a fixed blue that would be the one chrome in the app ignoring both
+   the theme and the accent the operator picked. Three of the package's rules
+   (the spinner, the peg's shadow) are dropped: `showSpinner: false` is set in
+   RouteProgress, and the peg glow reads as a smear at 2px.
+   See src/components/layout/RouteProgress.tsx for why the bar exists at all. */
+#nprogress {
+  pointer-events: none;
+}
+
+#nprogress .bar {
+  position: fixed;
+  z-index: 1600; /* above the sticky masthead, below dialogs (z-[9999]) */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: hsl(var(--color-accent));
+}
+
+#nprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0;
+  width: 100px;
+  height: 100%;
+  opacity: 1;
+  transform: rotate(3deg) translate(0, -4px);
+  box-shadow: 0 0 10px hsl(var(--color-accent)), 0 0 5px hsl(var(--color-accent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The bar still appears and still says "something is happening"; it just
+     stops sliding. */
+  #nprogress .bar {
+    transition: none !important;
+  }
+  #nprogress .peg {
+    display: none;
+  }
+}

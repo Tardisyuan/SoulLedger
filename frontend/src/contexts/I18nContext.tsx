@@ -3,25 +3,59 @@
 import {
   DEFAULT_LOCALE,
   HTML_LANG as HTML_LANG_MAP,
+  isLocale as isLocaleGuard,
   type Locale,
   LOCALE_COOKIE as LOCALE_COOKIE_NAME,
 } from "@/src/config/locale";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import zhMessages from "../../messages/zh-Hans.json";
-import enMessages from "../../messages/en.json";
-import egyMessages from "../../messages/egy.json";
+import defaultMessages from "../../messages/zh-Hans.json";
 
 // Locale 的类型与常量在 src/config/locale.ts —— 那个模块不带 "use client",
 // 所以服务端的 app/layout.tsx 也能 import。这里 re-export 是为了不打断既有引用。
 export type { Locale } from "@/src/config/locale";
 export { HTML_LANG, isLocale, LOCALE_COOKIE } from "@/src/config/locale";
 
-const messages: Record<Locale, Record<string, unknown>> = {
-  "zh-Hans": zhMessages,
-  en: enMessages,
-  egy: egyMessages,
+type Bundle = Record<string, unknown>;
+
+/**
+ * Only the default bundle is static. The others arrive when they are asked for.
+ *
+ * All three were `import`ed eagerly, and `I18nProvider` wraps the root layout,
+ * so every route shipped and parsed all of them: 47.7KB gzipped (zh-Hans 17.4,
+ * en 16.3, egy 14.0) of which two thirds is dead weight for any given reader.
+ *
+ * WHY THE DEFAULT CANNOT BE LAZY. `t()` falls back to `DEFAULT_LOCALE` for any
+ * key the active bundle is missing, which is what keeps a partially translated
+ * locale showing real copy instead of raw keys. That fallback has to be
+ * resident. So this is three-to-one for a zh-Hans reader and three-to-two for
+ * the others, not three-to-one for everybody.
+ *
+ * THE COST, STATED PLAINLY. Between first paint and the chunk arriving, an
+ * `en` or `egy` reader sees the default bundle's copy — Chinese — through the
+ * same fallback path a missing key already takes. It is a flash, not a
+ * failure, and it is the price of not blocking first paint on a fetch. The
+ * alternative (hold `children` until the bundle lands) trades a flash for a
+ * delay; this one was chosen deliberately.
+ */
+const LAZY_BUNDLES: Record<string, () => Promise<unknown>> = {
+  en: () => import("../../messages/en.json"),
+  egy: () => import("../../messages/egy.json"),
 };
+
+/**
+ * `mod.default ?? mod`, and it is not defensive padding.
+ *
+ * A dynamic `import()` of JSON resolves to `{ default: … }` under the app's
+ * ESM build and, under ts-jest's CommonJS transform, to the object itself.
+ * Reading only `.default` made every switching test return the fallback copy
+ * — the bundle arrived and was stored as `undefined`. Both shapes are real
+ * here, so both are handled.
+ */
+function unwrapBundle(mod: unknown): Bundle {
+  const m = mod as { default?: Bundle };
+  return (m && typeof m === "object" && m.default ? m.default : (mod as Bundle));
+}
 
 export const LOCALE_LABELS: Record<Locale, string> = {
   "zh-Hans": "简体中文",
@@ -195,6 +229,29 @@ export function I18nProvider({
 }) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale ?? DEFAULT_LOCALE);
   const [hydrated, setHydrated] = useState(initialLocale !== undefined);
+  const [loadedBundles, setLoadedBundles] = useState<Partial<Record<Locale, Bundle>>>({});
+
+  // Fetch the active bundle if it is not the default and not already here.
+  // Cancelled on unmount/locale change so a slow chunk cannot overwrite a
+  // newer choice.
+  useEffect(() => {
+    const loader = LAZY_BUNDLES[locale];
+    if (!loader || loadedBundles[locale]) return;
+    let cancelled = false;
+    loader()
+      .then((mod) => {
+        if (!cancelled) setLoadedBundles((prev) => ({ ...prev, [locale]: unwrapBundle(mod) }));
+      })
+      .catch((err) => {
+        // Not fatal: `t()` keeps answering from the default bundle. Logged
+        // rather than toasted — the reader can see the language is wrong and
+        // has no action to take about a failed chunk fetch.
+        console.error(`[i18n] failed to load the "${locale}" bundle`, err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, loadedBundles]);
 
   useEffect(() => {
     // 服务端已经给了值就不必再读 cookie —— 两者同源,重读只会多一次渲染。
@@ -202,8 +259,10 @@ export function I18nProvider({
     const match = document.cookie
       .split("; ")
       .find((row) => row.startsWith(`${LOCALE_COOKIE_NAME}=`));
-    const saved = match?.split("=")[1] as Locale;
-    if (saved && messages[saved]) {
+    const saved = match?.split("=")[1];
+    // `isLocale`, not "is there a bundle for it" — the bundles are no longer
+    // all resident, so their presence stopped being a membership test.
+    if (isLocaleGuard(saved)) {
       setLocaleState(saved);
     }
     setHydrated(true);
@@ -233,7 +292,11 @@ export function I18nProvider({
       };
       // Fall back to the default locale before giving up, so a bundle that is
       // only partially translated shows real copy instead of a raw key.
-      const value = lookup(messages[locale]) ?? lookup(messages[DEFAULT_LOCALE]);
+      const active = locale === DEFAULT_LOCALE ? defaultMessages : loadedBundles[locale];
+      // `?? lookup(defaultMessages)` is doing two jobs now: the original one
+      // (a key missing from a partial translation) and covering the window
+      // before a lazy bundle has arrived.
+      const value = (active ? lookup(active as Bundle) : null) ?? lookup(defaultMessages);
       if (value === null) return key;
       if (!params) return value;
       return value.replace(/\{\{(\w+)\}\}|\{(\w+)\}/g, (_, p1, p2) => {
@@ -241,7 +304,11 @@ export function I18nProvider({
         return k in params ? params[k] : _;
       });
     },
-    [locale]
+    // `loadedBundles` belongs here. Without it the memoised `t` closes over the
+    // bundle map as it was when the locale changed — which is empty, since the
+    // chunk has not arrived yet — so it kept answering from the default bundle
+    // forever. Visible as: switching language does nothing until you navigate.
+    [locale, loadedBundles]
   );
 
   const formatDate = useCallback(

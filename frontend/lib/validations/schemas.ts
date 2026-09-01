@@ -3,25 +3,20 @@ import { z } from 'zod'
 import { CIVILIZATION_OPTIONS } from '@/src/config/civilizations'
 
 // ── Auth ─────────────────────────────────────────────
+//
+// `registerSchema` and `changePasswordSchema` were here with ZERO consumers,
+// alongside `loginSchema` (now wired into app/(auth)/login/page.tsx) and
+// `judgmentCreateSchema` (which drifted to three civilizations while unused —
+// see the note on its `civilization` field, and the defect that shipped
+// because its twin had a caller). A validator nothing calls does not fail; it
+// quietly stops describing the form it was written for. Deleting them is
+// cheaper than keeping unchecked claims: there is no registration form in this
+// app at all, and `app/profile/page.tsx` validates its password change by hand
+// against different rules than these stated.
 
 export const loginSchema = z.object({
   username: z.string().min(1, '请输入用户名'),
   password: z.string().min(1, '请输入密码'),
-})
-
-export const registerSchema = z.object({
-  username: z.string().min(3, '用户名至少3位').max(50, '用户名最多50位'),
-  email: z.string().email('邮箱格式不正确'),
-  password1: z.string().min(8, '密码至少8位'),
-  password2: z.string().min(8, '确认密码至少8位'),
-}).refine((data) => data.password1 === data.password2, {
-  message: '两次密码不一致',
-  path: ['password2'],
-})
-
-export const changePasswordSchema = z.object({
-  old_password: z.string().min(1, '请输入旧密码'),
-  new_password: z.string().min(8, '新密码至少8位'),
 })
 
 // ── Soul ─────────────────────────────────────────────
@@ -150,8 +145,6 @@ export const ledgerRecordSchema = z.object({
 // ── Type inference ───────────────────────────────────
 
 export type LoginInput = z.infer<typeof loginSchema>
-export type RegisterInput = z.infer<typeof registerSchema>
-export type ChangePasswordInput = z.infer<typeof changePasswordSchema>
 export type SoulCreateInput = z.infer<typeof soulCreateSchema>
 export type SoulUpdateInput = z.infer<typeof soulUpdateSchema>
 export type SoulTransitionInput = z.infer<typeof soulTransitionSchema>
