@@ -417,6 +417,39 @@
   }
 }
 
+/* ── Reduced motion ───────────────────────────────────────────────────────
+   Until now the ONLY `prefers-reduced-motion` block in this stylesheet was the
+   nprogress one below, added in the same pass as this. Everything else ignored
+   the preference: measured on 2026-09-01, the app ships 159 transition
+   utilities, **24 `animate-pulse` skeletons and 8 `animate-spin` spinners**,
+   and 4 `motion-reduce:` utilities total. So an operator who had asked their OS
+   to reduce motion still got every skeleton pulsing and every spinner turning,
+   on a console they sit in front of all day.
+
+   WHAT THIS DOES AND DOES NOT DO. Transitions and animations are collapsed to
+   a single frame rather than removed: `animation: … 1ms` still fires
+   `animationend`, and `transition-duration: 1ms` still fires `transitionend`,
+   so any code waiting on those events keeps working. Removing them outright is
+   the version of this rule that breaks @headlessui's `data-closed` transitions
+   — its panels wait for the event before unmounting.
+
+   `scroll-behavior: auto` because a smooth-scrolled jump is the same
+   vestibular trigger as a slide, and the pagination and anchor links do jump.
+
+   NOT scoped away from spinners deliberately: a spinner that has stopped
+   turning is still a spinner, and `aria-busy` / `role="status"` is what
+   actually announces the wait — the rotation was never the accessible part. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* React Flow Controls Dark Mode Override */
 .react-flow__controls {
   background: hsl(var(--color-surface-1)) !important;
