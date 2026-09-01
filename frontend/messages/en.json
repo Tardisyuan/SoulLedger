@@ -932,7 +932,8 @@
     "save": "Save",
     "cancel": "Cancel",
     "avatar": "Avatar",
-    "upload_avatar": "Upload Avatar"
+    "upload_avatar": "Upload Avatar",
+    "load_failed": "Could not load the latest profile — the values below may be out of date"
   },
   "notifications": {
     "title": "Notifications",
@@ -1090,6 +1091,7 @@
     "submit_proposal": "Submit Proposal",
     "soul_prefix": "Soul #",
     "detail_title": "Dispatch detail",
+    "not_found": "Dispatch not found",
     "soul": "Soul",
     "status": "Status",
     "actions": "Actions",

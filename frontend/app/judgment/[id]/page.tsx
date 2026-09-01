@@ -18,6 +18,7 @@ import { JudgmentEvidenceColumn } from "@/src/components/judgment/JudgmentEviden
 import { PageShell } from "@/src/components/ui/PageShell";
 import { PageSpinner } from "@/src/components/ui/Spinner";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { toHanNumeral } from "@/src/config/civilizationSigil";
@@ -143,7 +144,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   // WS soul handler invalidates `soulKeys.all`, which prefix-matches
   // `["souls","detail",id]` and matched nothing at `["soul", id]`, so a state
   // change pushed while a judge had this page open left the soul panel stale.
-  const { data: judgment, isLoading, error } = useQuery({
+  const { data: judgment, isLoading, error, refetch } = useQuery({
     queryKey: judgmentKeys.detail(id),
     queryFn: () => judgmentApi.get(id).then((res) => res.data),
   });
@@ -199,7 +200,20 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     return <PageSpinner label={t("judgment.detail.loading")} />;
   }
 
-  if (error || !judgment) {
+  // `error` used to be OR'd into the not-found branch, so a 500 or a
+  // cross-tenant 403 rendered "审判未找到" — a sentence that says the record
+  // does not exist, about a record that may well exist and simply could not be
+  // fetched. Retry is the useful offer for the first case and misleading for
+  // the second, which is why they are two branches.
+  if (error) {
+    return (
+      <PageShell variant="page" title={t("judgment.title")} backLink={backLink}>
+        <QueryError onRetry={() => refetch()} />
+      </PageShell>
+    );
+  }
+
+  if (!judgment) {
     return (
       <PageShell variant="page" title={t("judgment.title")} backLink={backLink}>
         <EmptyState

@@ -932,7 +932,8 @@
     "save": "保存",
     "cancel": "取消",
     "avatar": "头像",
-    "upload_avatar": "上传头像"
+    "upload_avatar": "上传头像",
+    "load_failed": "无法获取最新资料，下面显示的可能是旧值"
   },
   "notifications": {
     "title": "通知中心",
@@ -1090,6 +1091,7 @@
     "submit_proposal": "提交提案",
     "soul_prefix": "灵魂 #",
     "detail_title": "调度详情",
+    "not_found": "调度未找到",
     "soul": "灵魂",
     "status": "状态",
     "actions": "操作",

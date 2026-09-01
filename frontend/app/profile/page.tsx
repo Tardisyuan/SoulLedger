@@ -41,7 +41,7 @@ export default function ProfilePage() {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
 
   // Fetch latest profile
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, isError, refetch } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
       const res = await authApi.profile();
@@ -112,6 +112,28 @@ export default function ProfilePage() {
 
   return (
     <PageShell title={t("profile.title")} variant="prose">
+      {/* A banner, not a full-page error state. Every field here falls back to
+          the auth context's `user`, so a failed fetch does not blank the page
+          — it shows values that may be stale without saying so, which is the
+          worse failure. Replacing the whole page with QueryError would hide
+          content that is still usable. The error was not read at all before
+          this. */}
+      {isError && (
+        <div
+          role="alert"
+          className="mb-6 border border-[hsl(var(--color-status-error)/0.5)] bg-[hsl(var(--color-status-error)/0.08)] px-4 py-3 flex items-center justify-between gap-4"
+        >
+          <p className="text-03 text-ink">{t("profile.load_failed")}</p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="text-03 text-ink-muted hover:text-ink transition-colors shrink-0"
+          >
+            {t("error.retry")}
+          </button>
+        </div>
+      )}
+
       {/* Basic Info Section */}
       <PageSection
         title={t("profile.basic_info")}

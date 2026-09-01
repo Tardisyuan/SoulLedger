@@ -10,6 +10,7 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
 import { TextAreaField, fieldControl } from "@/src/components/ui/Field";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,16 +26,19 @@ export default function SocialFeedPage() {
   const createPost = useCreatePost();
 
   const params = { page };
-  const { data: feedData, isLoading: feedLoading } = useFeed(
-    tab === "feed" ? params : undefined,
-  );
-  const { data: allData, isLoading: allLoading } = usePosts(
-    tab === "all" ? params : undefined,
-  );
+  const { data: feedData, isLoading: feedLoading, isError: feedError, refetch: refetchFeed } =
+    useFeed(tab === "feed" ? params : undefined);
+  const { data: allData, isLoading: allLoading, isError: allError, refetch: refetchAll } =
+    usePosts(tab === "all" ? params : undefined);
 
   const data = tab === "feed" ? feedData : allData;
   const posts = Array.isArray(data) ? data : (data?.results ?? []);
   const isLoading = tab === "feed" ? feedLoading : allLoading;
+  // Neither error was read. A failed feed produced `data === undefined`, which
+  // falls through to `?? []`, which renders "no posts yet" — the same words a
+  // genuinely empty feed shows. The active tab's error is the one on screen.
+  const isError = tab === "feed" ? feedError : allError;
+  const refetch = tab === "feed" ? refetchFeed : refetchAll;
   const paged = data && !Array.isArray(data) ? data : null;
   const totalPages = paged ? Math.ceil(paged.count / PAGE_SIZE) : 0;
 
@@ -175,6 +179,8 @@ export default function SocialFeedPage() {
               <Skeleton key={i} className="h-32" />
             ))}
           </div>
+        ) : isError ? (
+          <QueryError onRetry={() => refetch()} />
         ) : posts.length === 0 ? (
           <EmptyState
             title={t("social.posts")}

@@ -12,6 +12,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { QueryError } from "@/src/components/ui/PageError";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { TextAreaField } from "@/src/components/ui/Field";
@@ -167,7 +168,22 @@ export default function WorkflowDetailPage() {
     );
   }
 
-  if (error || !workflow) {
+  // Split from the not-found branch below. `error || !workflow` told an
+  // approver whose request 500'd, or who lacked permission on this tenant,
+  // that the workflow "was not found" — a claim about the record's existence
+  // made on evidence that says nothing about it.
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-10">
+        <QueryError onRetry={() => refetch()} />
+        <Link href="/workflow" className="text-03 text-[hsl(var(--color-accent-ink))] hover:underline">
+          {t("workflow.detail.back_to_list")}
+        </Link>
+      </div>
+    );
+  }
+
+  if (!workflow) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-10">
         <div className="text-03 text-[hsl(var(--color-status-error))]">{t("workflow.detail.not_found")}</div>

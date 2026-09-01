@@ -10,6 +10,7 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
 import { buttonVariants } from "@/src/components/ui/Button";
 import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -37,13 +38,22 @@ function DispatchPageContent() {
   const { t } = useI18n();
   const { user } = useTenant();
 
-  const { data: proposed = [], isLoading: loadingProposed } = useQuery({
+  // `isError` on both. The `= []` defaults mean a failed request lands on the
+  // same empty array an empty tenant produces, so both sections rendered
+  // "no pending dispatches" / "no history" when the server was down.
+  const {
+    data: proposed = [], isLoading: loadingProposed,
+    isError: proposedError, refetch: refetchProposed,
+  } = useQuery({
     queryKey: ["dispatch", "proposed"],
     queryFn: () => dispatchApi.proposed().then(r => r.data.results),
     enabled: !!user,
   });
 
-  const { data: history = [], isLoading: loadingHistory } = useQuery({
+  const {
+    data: history = [], isLoading: loadingHistory,
+    isError: historyError, refetch: refetchHistory,
+  } = useQuery({
     queryKey: ["dispatch", "history"],
     queryFn: () => dispatchApi.history().then(r => r.data.results),
     enabled: !!user,
@@ -71,6 +81,8 @@ function DispatchPageContent() {
       <PageSection title={t("dispatch.pending")} isLoading={loadingProposed} className="mb-6">
         {loadingProposed ? (
           <ListSkeleton count={3} />
+        ) : proposedError ? (
+          <QueryError onRetry={() => refetchProposed()} />
         ) : proposed.length === 0 ? (
           <EmptyState title={t("dispatch.no_pending")} />
         ) : (
@@ -86,6 +98,8 @@ function DispatchPageContent() {
       <PageSection title={t("dispatch.history")} isLoading={loadingHistory}>
         {loadingHistory ? (
           <ListSkeleton count={5} />
+        ) : historyError ? (
+          <QueryError onRetry={() => refetchHistory()} />
         ) : history.length === 0 ? (
           <EmptyState title={t("dispatch.no_history")} />
         ) : (

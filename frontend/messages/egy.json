@@ -932,7 +932,8 @@
     "save": "Pedet",
     "cancel": "Khatem",
     "avatar": "Wer Aha",
-    "upload_avatar": "Terqeq Aha"
+    "upload_avatar": "Terqeq Aha",
+    "load_failed": "Could not load the latest profile — the values below may be out of date"
   },
   "notifications": {
     "title": "Mes Neteru",
@@ -1090,6 +1091,7 @@
     "reason": "Medu",
     "soul_prefix": "Aba #",
     "detail_title": "Medu Pert Abuf",
+    "not_found": "Ma Rekhyu Pert Abuf",
     "soul": "Aba",
     "status": "Set Medu",
     "actions": "Aha Seth",
