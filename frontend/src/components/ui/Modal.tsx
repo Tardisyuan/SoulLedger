@@ -4,7 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from "@headlessui/react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { soulsApi } from "@/lib/api";
+import { useCreateSoul } from "@/src/hooks/useSouls";
 import {
   CIVILIZATION_OPTIONS,
   type CivilizationOption,
@@ -95,6 +95,13 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
   const { t } = useI18n();
   const { showToast } = useToast();
   const { validate, getError, clearFieldError } = useFormValidation(soulCreateSchema);
+  // `useCreateSoul`, not `soulsApi.create`. This called the API client
+  // directly, so **nothing invalidated the souls cache on create**: the list
+  // only appeared to update because `onCreated` calls `refetch()` on the
+  // calling page's exact query, leaving every other cached souls list — every
+  // other filter, sort and page — stale for its full 30s staleTime. The page
+  // even declared `useCreateSoul()` and never used it.
+  const createSoul = useCreateSoul();
 
   // Unique prefix so field/error ids never collide across multiple Modal
   // instances mounted at once (e.g. list + create modal on the same page).
@@ -144,12 +151,16 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         setLoading(false);
         return
       }
-      await soulsApi.create(result.data);
-      showToast(t("souls.form.create_success"), "success");
+      // No toast here: `useCreateSoul` owns both the success and failure
+      // message. Toasting again would show two identical banners for one
+      // create, which is what the edit path did until this commit.
+      await createSoul.mutateAsync(result.data);
       onCreated();
       onClose();
     } catch {
-      showToast(t("souls.form.create_error"), "error");
+      // Swallowed deliberately — the hook's onError has already told the user.
+      // Rethrowing or toasting here is the double-report; leaving the modal
+      // open is the recovery.
     } finally {
       setLoading(false);
     }

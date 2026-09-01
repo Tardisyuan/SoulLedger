@@ -85,13 +85,14 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
         data: result.data,
       },
       {
+        // No toasts here. `useUpdateSoul` already toasts on both outcomes, so
+        // every soul edit raised TWO banners — `souls.form.update_success`
+        // from this callback and the hook's own, which are the same sentence.
+        // The callbacks stay: closing the modal is this component's job, not
+        // the hook's.
         onSuccess: () => {
-          showToast(t("souls.form.update_success"), "success");
           onUpdated();
           onClose();
-        },
-        onError: () => {
-          showToast(t("souls.form.update_error"), "error");
         },
       }
     );

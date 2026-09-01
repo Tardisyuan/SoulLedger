@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { useSouls, useCreateSoul } from "@/src/hooks/useSouls";
+import { useSouls } from "@/src/hooks/useSouls";
 import { CIVILIZATION_OPTIONS } from "@/src/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
@@ -104,7 +104,6 @@ export default function SoulsPage() {
   });
 
   // Create mutation with auto-invalidation
-  const createMutation = useCreateSoul();
 
   /**
    * BRIEF §4.6: "03-souls-list shows a 死亡时间 column that is `—` for every
