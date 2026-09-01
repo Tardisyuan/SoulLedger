@@ -7,6 +7,7 @@ import { EnumBadge } from "@/components/ui/data-grid";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { useJudgmentQueue, UNDO_WINDOW_MS, type VerdictCode } from "@/src/hooks/useJudgmentQueue";
+import { Button } from "@/src/components/ui/Button";
 import {
   LedgerPanel,
   PriorCyclesPanel,
@@ -243,13 +244,9 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
             <span className="font-mono tabular-nums text-02 text-[hsl(var(--color-ink-muted))]">
               {t("judgment.queue.undo_countdown", { seconds: String(secondsLeft) })}
             </span>
-            <button
-              type="button"
-              onClick={undo}
-              className="px-3 py-1 border border-[hsl(var(--color-hairline-strong))] text-03 font-medium text-[hsl(var(--color-ink))] hover:bg-[hsl(var(--color-surface-2))]"
-            >
+            <Button type="button" variant="secondary" onClick={undo}>
               {t("judgment.queue.undo")}
-            </button>
+            </Button>
           </div>
         )}
 
@@ -258,13 +255,9 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
             title={t("judgment.queue.error_title")}
             body={t("judgment.queue.error_body")}
             action={
-              <button
-                type="button"
-                onClick={() => queue.refetch()}
-                className="px-3 py-1.5 bg-[hsl(var(--color-accent))] text-black text-03 font-medium"
-              >
+              <Button type="button" variant="primary" onClick={() => queue.refetch()}>
                 {t("common.retry")}
-              </button>
+              </Button>
             }
           />
         ) : queue.isLoading ? (
@@ -279,21 +272,13 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
             body={t("judgment.queue.exhausted_body", { n: String(progress.decided) })}
             action={
               progress.deferred > 0 ? (
-                <button
-                  type="button"
-                  onClick={restoreDeferred}
-                  className="px-3 py-1.5 bg-[hsl(var(--color-accent))] text-black text-03 font-medium"
-                >
+                <Button type="button" variant="primary" onClick={restoreDeferred}>
                   {t("judgment.queue.restore_deferred")}
-                </button>
+                </Button>
               ) : (
-                <button
-                  type="button"
-                  onClick={leave}
-                  className="px-3 py-1.5 bg-[hsl(var(--color-accent))] text-black text-03 font-medium"
-                >
+                <Button type="button" variant="primary" onClick={leave}>
                   {t("judgment.queue.leave")}
-                </button>
+                </Button>
               )
             }
           />
@@ -339,6 +324,13 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 {t("judgment.queue.create_workflow")}
                 <kbd className="font-mono text-02 px-1 bg-[hsl(var(--color-surface-3))]">W</kbd>
               </label>
+              {/* The verdict row stays hand-rolled, deliberately, while the
+                  four plain buttons on this screen moved to `Button`.
+                  Each verdict carries its own status token as an inline
+                  `color` and an embedded `<kbd>` hint; expressing that through
+                  the variant system would mean either a variant per verdict or
+                  a pile of className overrides fighting it. A shared primitive
+                  is for the shapes that repeat — these do not. */}
               <div className="flex flex-wrap gap-2">
                 {VERDICTS.map((verdict) => (
                   <button
