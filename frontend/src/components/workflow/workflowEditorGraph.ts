@@ -8,6 +8,67 @@ export interface TemplateNode {
   approver_role: string;
   approver_type: "ACTOR" | "ROLE" | "SYSTEM";
   node_order: number;
+  /**
+   * Where the flow goes after this node, by TEMPLATE-LOCAL `id`.
+   *
+   * Null on both — the default, and what every template written before this
+   * existed carries — means the engine's original behaviour: pass advances by
+   * `node_order`, refusal ends the workflow REJECTED. The backend enforces
+   * that same default (`ApprovalNode.on_pass` / `on_fail`), so a template that
+   * says nothing runs exactly as it did.
+   *
+   * Until these existed, the editor let an operator connect any two nodes and
+   * then **discarded the result on save** — `getTemplateNodes` sent only
+   * `node_order`, and the reload rebuilt every graph as a straight chain. The
+   * canvas offered a capability the model did not have.
+   */
+  on_pass?: string | null;
+  on_fail?: string | null;
+  /**
+   * Canvas coordinates. Presentational only — the engine never reads them —
+   * but without them a dragged arrangement was lost on every reload, because
+   * positions were recomputed as `idx * 160`: one tall column, whatever shape
+   * the operator had arranged.
+   */
+  position?: { x: number; y: number } | null;
+}
+
+/**
+ * Edges for a template, from its declared routing when it has any.
+ *
+ * Falls back to `chain()` — consecutive `node_order` — when no node declares a
+ * route, which is every template written before routing existed. That
+ * fallback mirrors the backend's own default rather than restating it: a
+ * template with no edges means "advance in order" on both sides, and the two
+ * would be a silent contradiction if they disagreed.
+ */
+function edgesFor(rows: TemplateNode[]): Edge[] {
+  const declared = rows.some((n) => n.on_pass || n.on_fail);
+  if (!declared) return chain(rows);
+
+  const known = new Set(rows.map((n, idx) => String(n.id ?? `node-${idx}`)));
+  const out: Edge[] = [];
+  rows.forEach((n, idx) => {
+    const source = String(n.id ?? `node-${idx}`);
+    for (const [field, target] of [
+      ["pass", n.on_pass],
+      ["fail", n.on_fail],
+    ] as const) {
+      // An edge naming an id this template no longer defines is dropped, the
+      // same way the backend drops it at instantiation. Deleting a node leaves
+      // edges into it dangling, and rendering a line to nothing would be a
+      // drawing of a route that cannot run.
+      if (!target || !known.has(String(target))) continue;
+      out.push({
+        id: `e${source}-${field}-${target}`,
+        source,
+        target: String(target),
+        label: field === "pass" ? "通过" : "否决",
+        ...edgeArrow(),
+      } as Edge);
+    }
+  });
+  return out;
 }
 
 /**
@@ -64,7 +125,7 @@ export function savedTemplateToFlow(rows: TemplateNode[]): { nodes: Node[]; edge
     nodes: rows.map((n: TemplateNode, idx: number) => ({
       id: n.id || `node-${idx}`,
       type: "editableNode",
-      position: { x: 250, y: idx * 160 },
+      position: n.position ?? { x: 250, y: idx * 160 },
       data: {
         id: n.id || `node-${idx}`,
         label: n.node_name,
@@ -74,7 +135,7 @@ export function savedTemplateToFlow(rows: TemplateNode[]): { nodes: Node[]; edge
         approverType: n.approver_type,
       },
     })),
-    edges: chain(rows),
+    edges: edgesFor(rows),
   };
 }
 

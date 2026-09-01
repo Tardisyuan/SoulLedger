@@ -138,7 +138,25 @@ NODE_TYPE_VALUES = ("TRIAL", "EVALUATION", "APPEAL", "FINAL", "EXECUTION")
 #: Keys carried through as-is when present. ``actor`` is what ``_resolve_approver``
 #: prefers over the label; ``approver_type``/``approver_role`` are what the
 #: editor lets a user set per node; ``id`` is the editor's own node handle.
-CARRIED_NODE_KEYS = ("id", "actor", "approver_type", "approver_role")
+#:
+#: ``on_pass``/``on_fail``/``position`` are here rather than in
+#: ``LEGACY_NODE_KEYS`` because they have no legacy spelling — they never
+#: existed in the ``name/court/type/order`` shape. They must be in ONE of the
+#: two tables or `normalize_template_node` drops them: it builds its result
+#: from these tables alone, by design ("the result contains only canonical
+#: keys"), so a routing edge stored in ``nodes_json`` would survive the
+#: serializer and then vanish at the next normalization — visible in the
+#: editor, gone after a reload, which is the exact defect this feature exists
+#: to remove.
+CARRIED_NODE_KEYS = (
+    "id",
+    "actor",
+    "approver_type",
+    "approver_role",
+    "on_pass",
+    "on_fail",
+    "position",
+)
 
 
 def normalize_template_node(node_def: dict, position: int = 1) -> dict:

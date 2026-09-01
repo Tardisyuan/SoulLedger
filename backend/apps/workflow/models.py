@@ -247,7 +247,37 @@ class ApprovalWorkflow(AuditUserFields, models.Model):
                 node.approver = user
             node.save()
 
-            if not passed:
+            # ── Conditional routing, before either default ─────────────
+            #
+            # A node may name where the flow goes next, separately for the two
+            # outcomes. Both defaults below are unchanged and still run when a
+            # node names nothing, which is every node written before these
+            # fields existed.
+            #
+            # THREE CONDITIONS, EACH LOAD-BEARING:
+            #
+            # * `is not None` — the field is optional and null is the default.
+            # * `status == PENDING` — the only reason no cycle validator is
+            #   needed. A decided node never returns to PENDING, so an edge
+            #   pointing backwards is followed at most once per node and then
+            #   falls through to the order-based path below. A flow can no more
+            #   loop forever than it can decide a node twice.
+            # * `workflow_id == self.id` — the FK is `"self"`, so nothing in
+            #   the schema stops it pointing into another workflow. Following
+            #   such an edge would set `current_node` to a row this workflow
+            #   does not own, and `complete_node`'s own `filter(workflow=self)`
+            #   would then refuse every decision on it: a flow stuck on a node
+            #   it cannot act on. Refusing the edge leaves it on the default
+            #   path instead, which is recoverable.
+            routed = node.on_pass if passed else node.on_fail
+            if (
+                routed is not None
+                and routed.status == NodeStatus.PENDING
+                and routed.workflow_id == self.id
+            ):
+                self.current_node = routed
+                self.status = ApprovalWorkflowStatus.IN_PROGRESS
+            elif not passed:
                 # A refusal ends the workflow. It used to mark the node
                 # REJECTED and then advance **unconditionally**, which is why
                 # `ApprovalWorkflowStatus.REJECTED` was declared and assigned
@@ -534,6 +564,46 @@ class ApprovalNode(AuditUserFields, models.Model):
         related_name="approved_nodes",
     )
     decided_at = models.DateTimeField(null=True, blank=True)
+
+    # ── Conditional routing ────────────────────────────────────────────
+    #
+    # Where the flow goes after THIS node is decided. Both null — the default,
+    # and what every row written before this field existed carries — means the
+    # behaviour that was here before:
+    #
+    #     passed  -> the next PENDING node by `node_order`
+    #     refused -> the workflow ends REJECTED
+    #
+    # so a template that says nothing about routing runs exactly as it did.
+    # That is deliberate: every stored `nodes_json` predates this, and a
+    # migration that changed how existing flows advance would be a data change
+    # wearing a schema change's clothes.
+    #
+    # WHY `SET_NULL`. Deleting the node a branch points AT must not delete the
+    # node that points. Losing a route is repairable by re-pointing it; losing
+    # the deciding node is not.
+    #
+    # WHY THERE IS NO CYCLE VALIDATOR. `complete_node` only follows an edge to
+    # a node that is still `PENDING`, and a decided node never returns to
+    # PENDING. So a cycle walks each node at most once and then falls through
+    # to the order-based path. The invariant does the work a validator would,
+    # and it holds for cycles nobody drew on purpose too.
+    on_pass = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="通过后跳转到的节点；为空则按 node_order 取下一个 PENDING",
+    )
+    on_fail = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="否决后跳转到的节点；为空则整个流程判为 REJECTED",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 

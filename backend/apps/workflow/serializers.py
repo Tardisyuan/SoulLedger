@@ -38,6 +38,32 @@ class WorkflowTemplateNodeSerializer(serializers.Serializer):
     )
     node_order = serializers.IntegerField(default=1)
 
+    # ── Routing and layout ─────────────────────────────────────────────
+    #
+    # This is a `serializers.Serializer` with a declared field list, so DRF
+    # DROPS any key it does not name. Adding the model fields and the editor UI
+    # without adding them here would have produced the defect in its purest
+    # form: the editor draws a branch, the request carries it, and the
+    # serializer silently discards it on the way in. `nodes_json` is a
+    # JSONField, so nothing else would have complained.
+    #
+    # `on_pass`/`on_fail` hold the TEMPLATE-LOCAL node id (the `id` field
+    # above), not an ApprovalNode pk — a template is not an instance, and the
+    # instance rows do not exist until a workflow is created from it.
+    # `WorkflowService` maps these to real FKs at instantiation.
+    on_pass = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, default=None
+    )
+    on_fail = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, default=None
+    )
+    # Canvas coordinates. Purely presentational — the engine never reads them —
+    # but without them a dragged arrangement is lost on every reload, which is
+    # what made the editor re-stack every graph into one tall column.
+    position = serializers.DictField(
+        child=serializers.FloatField(), required=False, allow_null=True, default=None
+    )
+
     def to_representation(self, instance):
         """Render a stored node, in whichever shape it was stored.
 
