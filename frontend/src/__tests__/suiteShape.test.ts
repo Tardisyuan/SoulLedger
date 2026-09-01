@@ -122,6 +122,7 @@ const COLLECTED_FILES = [
   "socialWsClient.test.ts",
   "soulLifecycleEventCopy.test.tsx",
   "soulLifecycleRows.test.ts",
+  "soulMutationFeedback.test.tsx",
   "soulReadingCopyCoverage.test.tsx",
   "statusTokenLayering.test.ts",
   "suiteShape.test.ts",
