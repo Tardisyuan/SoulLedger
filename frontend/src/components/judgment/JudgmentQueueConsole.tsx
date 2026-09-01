@@ -238,31 +238,6 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 
         {showKeys && <KeyboardMap />}
 
-        {pending && (
-          <div
-            role="status"
-            className="flex flex-wrap items-center gap-3 border border-[hsl(var(--color-accent)/0.3)] bg-[hsl(var(--color-accent)/0.1)] px-4 py-3"
-          >
-            <span className="text-03 text-[hsl(var(--color-ink))]">
-              {/* The verdict name is interpolated INTO another translation, so
-                  it has to be a string and cannot be <DomainEnum>. It still
-                  must not be a bare `t()` template: t() echoes its key back on
-                  a miss, so a verdict the bundle does not cover would read
-                  "judgment.verdicts.appealed recorded for 王氏". */}
-              {t("judgment.queue.pending_verdict", {
-                soul: pending.soulName,
-                verdict: resolveEnumDisplay(t, "judgment.verdicts", pending.verdict).label ?? "",
-              })}
-            </span>
-            <span className="font-mono tabular-nums text-02 text-[hsl(var(--color-ink-muted))]">
-              {t("judgment.queue.undo_countdown", { seconds: String(secondsLeft) })}
-            </span>
-            <Button type="button" variant="secondary" onClick={undo}>
-              {t("judgment.queue.undo")}
-            </Button>
-          </div>
-        )}
-
         {queue.isError ? (
           <ConsoleNotice
             title={t("judgment.queue.error_title")}
@@ -337,53 +312,106 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 {t("judgment.queue.create_workflow")}
                 <kbd className="font-mono text-02 px-1 bg-[hsl(var(--color-surface-3))]">W</kbd>
               </label>
-              {/* The verdict row stays hand-rolled, deliberately, while the
-                  four plain buttons on this screen moved to `Button`.
-                  Each verdict carries its own status token as an inline
-                  `color` and an embedded `<kbd>` hint; expressing that through
-                  the variant system would mean either a variant per verdict or
-                  a pile of className overrides fighting it. A shared primitive
-                  is for the shapes that repeat — these do not. */}
-              <div className="flex flex-wrap gap-2">
-                {VERDICTS.map((verdict) => (
-                  <button
-                    key={verdict.code}
-                    type="button"
-                    onClick={() => rule(verdict.code)}
-                    className="flex items-center gap-2 px-4 py-2 border text-03 font-semibold transition-colors border-[hsl(var(--color-hairline-strong))] hover:bg-[hsl(var(--color-surface-2))]"
-                    style={{ color: `hsl(var(${verdict.token}))` }}
-                  >
-                    <kbd className="font-mono text-02 px-1.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]">
-                      {verdict.key}
-                    </kbd>
-                    {/* A JSX position, so the component rather than the string
-                        helper: <DomainEnum> renders one span, carries the raw
-                        member in `title` itself, and shows translated
-                        "unrecognized" copy instead of a dotted key when a
-                        verdict is missing from the bundle. */}
-                    <DomainEnum namespace="judgment.verdicts" value={verdict.code} />
-                  </button>
-                ))}
-                <span aria-hidden="true" className="w-px self-stretch bg-[hsl(var(--color-hairline))]" />
-                <button
-                  type="button"
-                  onClick={defer}
-                  className="flex items-center gap-2 px-4 py-2 border border-[hsl(var(--color-hairline-strong))] text-03 font-medium text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))]"
-                >
-                  <kbd className="font-mono text-02 px-1.5 bg-[hsl(var(--color-surface-3))]">S</kbd>
-                  {t("judgment.queue.defer")}
-                </button>
-              </div>
               {/* The one place the two correction paths are named side by
                   side, so an operator learns the rule at the moment it
                   applies rather than after they need it. */}
-              <p className="mt-3 text-02 text-[hsl(var(--color-ink-subtle))]">
+              <p className="text-02 text-[hsl(var(--color-ink-subtle))]">
                 {t("judgment.queue.undo_scope_note", { seconds: String(Math.round(UNDO_WINDOW_MS / 1000)) })}
               </p>
             </section>
           </>
         )}
       </div>
+
+      {/**
+       * The decision bar. Sticky, and it holds the undo strip.
+       *
+       * TWO PROBLEMS, ONE MECHANISM. The verdict controls used to be the last
+       * block under a two-column grid of panels, so a long confession or a
+       * long ledger pushed them below the fold — on the screen whose entire
+       * job is deciding. And the pending-undo strip rendered ABOVE those
+       * panels, so **every verdict shifted the whole case down**: the operator
+       * reading the next case could not see the undo countdown for the
+       * previous one, which is the only moment that countdown exists for.
+       *
+       * The slot is rendered whether or not a verdict is pending, at a fixed
+       * height, so landing one does not move anything. Empty, it draws
+       * nothing.
+       *
+       * WHAT STAYED IN THE SCROLL. Notes and "create workflow" are optional
+       * per verdict and `N` reaches the notes field from anywhere, so keeping
+       * them here would have doubled the bar's height for something the
+       * operator asks for rather than always needs. The bar carries only what
+       * is irreversible.
+       */}
+      {judgment && cursor.soul && cursor.ledger && (
+        <div className="sticky bottom-0 border-t border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-canvas))]">
+          <div className="max-w-6xl mx-auto px-6 py-3">
+            <div className="h-10 flex items-center" aria-live="polite">
+              {pending ? (
+                <div role="status" className="flex flex-wrap items-center gap-3">
+                  <span className="text-03 text-[hsl(var(--color-ink))]">
+                    {/* The verdict name is interpolated INTO another
+                        translation, so it has to be a string and cannot be
+                        <DomainEnum>. It still must not be a bare `t()`
+                        template: t() echoes its key back on a miss, so a
+                        verdict the bundle does not cover would read
+                        "judgment.verdicts.appealed recorded for 王氏". */}
+                    {t("judgment.queue.pending_verdict", {
+                      soul: pending.soulName,
+                      verdict: resolveEnumDisplay(t, "judgment.verdicts", pending.verdict).label ?? "",
+                    })}
+                  </span>
+                  <span className="font-mono tabular-nums text-02 text-[hsl(var(--color-ink-muted))]">
+                    {t("judgment.queue.undo_countdown", { seconds: String(secondsLeft) })}
+                  </span>
+                  <Button type="button" variant="secondary" onClick={undo}>
+                    {t("judgment.queue.undo")}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+
+            {/* The verdict row stays hand-rolled, deliberately, while the four
+                plain buttons on this screen moved to `Button`. Each verdict
+                carries its own status token as an inline `color` and an
+                embedded `<kbd>` hint; expressing that through the variant
+                system would mean either a variant per verdict or a pile of
+                className overrides fighting it. A shared primitive is for the
+                shapes that repeat — these do not. */}
+            <div className="flex flex-wrap gap-2">
+              {VERDICTS.map((verdict) => (
+                <button
+                  key={verdict.code}
+                  type="button"
+                  onClick={() => rule(verdict.code)}
+                  className="flex items-center gap-2 px-4 py-2 border text-03 font-semibold transition-colors border-[hsl(var(--color-hairline-strong))] hover:bg-[hsl(var(--color-surface-2))]"
+                  style={{ color: `hsl(var(${verdict.token}))` }}
+                >
+                  <kbd className="font-mono text-02 px-1.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]">
+                    {verdict.key}
+                  </kbd>
+                  {/* A JSX position, so the component rather than the string
+                      helper: <DomainEnum> renders one span, carries the raw
+                      member in `title` itself, and shows translated
+                      "unrecognized" copy instead of a dotted key when a
+                      verdict is missing from the bundle. */}
+                  <DomainEnum namespace="judgment.verdicts" value={verdict.code} />
+                </button>
+              ))}
+              <span aria-hidden="true" className="w-px self-stretch bg-[hsl(var(--color-hairline))]" />
+              <button
+                type="button"
+                onClick={defer}
+                className="flex items-center gap-2 px-4 py-2 border border-[hsl(var(--color-hairline-strong))] text-03 font-medium text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))]"
+              >
+                <kbd className="font-mono text-02 px-1.5 bg-[hsl(var(--color-surface-3))]">S</kbd>
+                {t("judgment.queue.defer")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
