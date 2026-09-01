@@ -44,7 +44,7 @@ function EditableNodeComponent({
         selected ? "ring-2 ring-[hsl(var(--color-accent))] ring-offset-2 ring-offset-[hsl(var(--color-surface-2))]" : ""
       } ${colorClass}`}
     >
-      <Handle type="target" position={Position.Top} className="!bg-[hsl(var(--color-accent))]" />
+      <Handle type="target" position={Position.Top} className="bg-[hsl(var(--color-accent))]!" />
       <div className="text-03 font-semibold text-[hsl(var(--color-ink))]">{data.label}</div>
       <div className="text-02 text-[hsl(var(--color-ink-muted))] mt-1">{data.nodeType}</div>
       {data.courtCode && (
@@ -59,7 +59,7 @@ function EditableNodeComponent({
           {data.approverRole}
         </div>
       )}
-      <Handle type="source" position={Position.Bottom} className="!bg-[hsl(var(--color-accent))]" />
+      <Handle type="source" position={Position.Bottom} className="bg-[hsl(var(--color-accent))]!" />
     </div>
   );
 }

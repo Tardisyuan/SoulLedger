@@ -324,14 +324,14 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         <section className="min-w-0">
           <JudgmentSectionHead id={clausesId} title={t("judgment.detail.verdict")} />
 
-          {/* `-ml-[3px]` hangs the seal rule outside the text column instead of
+          {/* `ml-[-3px]` hangs the seal rule outside the text column instead of
               indenting the clause carrying it; every row reserves the same 3px
               transparent border, so marking one moves nothing. `role="group"`
               only while the clauses are choosable — four radios sharing a
               `name` are a group to the browser but nothing names that group;
               on a decided case there is nothing to choose. */}
           <ol
-            className="-ml-[3px] mt-4 divide-y divide-hairline"
+            className="ml-[-3px] mt-4 divide-y divide-hairline"
             {...(isFinal ? {} : { role: "group", "aria-labelledby": clausesId })}
           >
             {VERDICTS.map((member, index) => {
@@ -365,7 +365,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                        token globals.css:459 uses. Selection is never
                        colour-only either: the 3px rule is there or it is not. */
                     <label
-                      className={`${row} cursor-pointer hover:bg-surface-2 focus-within:outline focus-within:outline-2 focus-within:outline-[hsl(var(--color-focus))]`}
+                      className={`${row} cursor-pointer hover:bg-surface-2 focus-within:outline-solid focus-within:outline-2 focus-within:outline-[hsl(var(--color-focus))]`}
                     >
                       <input
                         ref={index === 0 ? firstClauseRef : undefined}
@@ -514,7 +514,7 @@ function MetaRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[76px_1fr] items-baseline gap-3 py-2">
       <dt className="text-01 uppercase text-ink-subtle">{label}</dt>
-      <dd className="text-03 text-ink min-w-0 break-words">{children}</dd>
+      <dd className="text-03 text-ink min-w-0 wrap-break-word">{children}</dd>
     </div>
   );
 }

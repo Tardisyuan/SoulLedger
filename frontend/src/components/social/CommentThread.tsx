@@ -121,7 +121,7 @@ export function CommentThread({ postId }: { postId: string }) {
           <input
             type="text" value={newComment} onChange={(e) => setNewComment(e.target.value)}
             placeholder={t("social.add_comment") || "Write a comment..."}
-            className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
           <button
             type="submit" disabled={!newComment.trim() || createComment.isPending}

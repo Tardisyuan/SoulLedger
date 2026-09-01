@@ -33,7 +33,7 @@ export function MatrixToolbar({
         onChange={(e) => onFilterTextChange(e.target.value)}
         placeholder={t("permissions.matrix.filter_placeholder")}
         aria-label={t("permissions.matrix.filter_placeholder")}
-        className="flex-1 min-w-[200px] px-3 py-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+        className="flex-1 min-w-[200px] px-3 py-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
       />
       <label className="flex items-center gap-2 text-03 text-[hsl(var(--color-ink-muted))] cursor-pointer">
         <input

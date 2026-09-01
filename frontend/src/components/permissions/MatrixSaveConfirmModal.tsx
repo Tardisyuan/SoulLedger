@@ -101,7 +101,7 @@ export function MatrixSaveConfirmModal({
                   value={typedRoleNames[diff.role] ?? ""}
                   onChange={(e) => onTypedRoleNameChange(diff.role, e.target.value)}
                   placeholder={diff.role}
-                  className="w-full px-2 py-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 font-mono text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+                  className="w-full px-2 py-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 font-mono text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
                 />
               </div>
             )}

@@ -90,7 +90,7 @@ export function RoleFormModal({
             placeholder={t("permissions.role_name_placeholder")}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : undefined}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline text-[hsl(var(--color-ink))] text-03 focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="w-full px-3 py-2 bg-surface-2 border border-hairline text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
         </div>
         <div>
@@ -103,7 +103,7 @@ export function RoleFormModal({
             placeholder={t("permissions.display_name_placeholder")}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : undefined}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline text-[hsl(var(--color-ink))] text-03 focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="w-full px-3 py-2 bg-surface-2 border border-hairline text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
         </div>
       </form>

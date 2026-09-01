@@ -370,13 +370,13 @@ export default function WorkflowEditor({
             onChange={(e) => setTemplateName(e.target.value)}
             placeholder={t("workflow.editor.template_name_placeholder")}
             aria-label={t("workflow.editor.template_name_placeholder")}
-            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
           <select
             value={templateCiv}
             onChange={(e) => setTemplateCiv(e.target.value as typeof templateCiv)}
             aria-label={t("workflow.editor.civilization_select_label") === "workflow.editor.civilization_select_label" ? "Civilization" : t("workflow.editor.civilization_select_label")}
-            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           >
             {/* Rendered from CIVILIZATION_OPTIONS so the dropdown cannot fall
                 behind the union the state is typed with — three hand-written
@@ -392,7 +392,7 @@ export default function WorkflowEditor({
             value={templateCaseType}
             onChange={(e) => setTemplateCaseType(e.target.value)}
             aria-label={t("workflow.editor.case_type_select_label") === "workflow.editor.case_type_select_label" ? "Case Type" : t("workflow.editor.case_type_select_label")}
-            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           >
             <option value="ROUTINE">{t("workflow.case_types.ROUTINE")}</option>
             <option value="APPEAL">{t("workflow.case_types.APPEAL")}</option>
@@ -409,7 +409,7 @@ export default function WorkflowEditor({
             value={templatePriority}
             onChange={(e) => setTemplatePriority(Number(e.target.value))}
             aria-label={t("workflow.detail.priority")}
-            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           >
             {priorityOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -461,8 +461,8 @@ export default function WorkflowEditor({
           }}
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-          <Controls className="!bg-[hsl(var(--color-surface-1))] !border-[hsl(var(--color-hairline))] !" />
-          <Panel position="top-left" className="bg-[hsl(var(--color-surface-1))]/90 backdrop-blur px-3 py-2 border border-[hsl(var(--color-hairline))] text-02 text-[hsl(var(--color-ink-muted))]">
+          <Controls className="bg-[hsl(var(--color-surface-1))]! border-[hsl(var(--color-hairline))]! !" />
+          <Panel position="top-left" className="bg-[hsl(var(--color-surface-1))]/90 backdrop-blur-sm px-3 py-2 border border-[hsl(var(--color-hairline))] text-02 text-[hsl(var(--color-ink-muted))]">
             {t("workflow.editor.hint")}
           </Panel>
         </ReactFlow>

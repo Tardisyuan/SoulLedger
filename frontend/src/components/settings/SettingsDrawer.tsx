@@ -304,7 +304,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 value={customHex}
                 onChange={(e) => setCustomHex(e.target.value)}
                 placeholder="#ff5500"
-                className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+                className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
               />
               <button
                 onClick={handleCustomHex}

@@ -269,7 +269,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <main className={`transition-[margin-left] duration-200 ${collapsed ? "ml-0 md:ml-16" : "ml-0 md:ml-56"}`}>
 
         {/* Top header */}
-        <header className="sticky top-0 z-40 h-16 bg-[hsl(var(--color-canvas))]/80 backdrop-blur-sm border-b border-[hsl(var(--color-hairline))] flex items-center px-4 md:px-6 gap-3 md:gap-4">
+        <header className="sticky top-0 z-40 h-16 bg-[hsl(var(--color-canvas))]/80 backdrop-blur-xs border-b border-[hsl(var(--color-hairline))] flex items-center px-4 md:px-6 gap-3 md:gap-4">
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -346,7 +346,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   leaveFrom="transform opacity-100 scale-100"
                   leaveTo="transform opacity-0 scale-95"
                 >
-                  <Popover.Panel className="absolute right-0 mt-2 w-80 origin-top-right bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-xl focus:outline-none z-drawer">
+                  <Popover.Panel className="absolute right-0 mt-2 w-80 origin-top-right bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-xl focus:outline-hidden z-drawer">
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-[hsl(var(--color-ink))]">{t("notifications.title")}</h3>
@@ -432,7 +432,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     fixed for. */}
                 <Link
                   href="/profile"
-                  className="hidden sm:block max-w-[10rem] truncate text-[hsl(var(--color-ink-muted))] text-03 hover:text-[hsl(var(--color-accent-ink))] transition-colors"
+                  className="hidden sm:block max-w-40 truncate text-[hsl(var(--color-ink-muted))] text-03 hover:text-[hsl(var(--color-accent-ink))] transition-colors"
                 >
                   {t("nav.greeting", { username: user.display_name || user.username })}
                 </Link>
@@ -447,7 +447,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ) : (
               <Link
                 href="/login"
-                className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 text-03 font-medium hover:bg-[hsl(var(--color-accent))] hover:!text-black transition-colors"
+                className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 text-03 font-medium hover:bg-[hsl(var(--color-accent))] hover:text-black! transition-colors"
               >
                 {t("auth.login")}
               </Link>

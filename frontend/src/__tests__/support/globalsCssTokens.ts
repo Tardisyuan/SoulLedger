@@ -214,13 +214,27 @@ export interface CivAttrRule {
  */
 export function readCivAttrRules(): Record<string, CivAttrRule> {
   const rules: Record<string, CivAttrRule> = {};
-  const blockPattern = /\[data-civ="([\w-]+)"\]\s*\{([^}]*)\}/g;
+  // Quote style and line breaks are NOT part of the contract. This pattern
+  // required `[data-civ="cn"] { … }` on one line with double quotes, and the
+  // Tailwind v4 upgrade — which reformats the stylesheet it rewrites — turned
+  // them into multi-line blocks with single quotes. The parser then found
+  // nothing and the assertion compared two empty lists' worth of civilizations,
+  // which is the shape this whole file exists to prevent.
+  const blockPattern = /\[data-civ=['"]([\w-]+)['"]\]\s*\{([^}]*)\}/g;
   for (const block of css.matchAll(blockPattern)) {
     const entry: CivAttrRule = {};
     for (const decl of block[2].matchAll(/--civ-(hue|mark):\s*var\((--[\w-]+)\)\s*;/g)) {
       entry[decl[1] as "hue" | "mark"] = decl[2];
     }
     rules[block[1]] = entry;
+  }
+  if (Object.keys(rules).length === 0) {
+    // Loud, not empty. An empty map makes every caller's `toEqual([])` pass.
+    throw new Error(
+      `Parsed no [data-civ] rules out of ${GLOBALS_CSS}. Fix this parser — ` +
+        `an empty result turns every civilization assertion into a comparison ` +
+        `of two empty lists.`
+    );
   }
   return rules;
 }

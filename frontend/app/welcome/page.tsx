@@ -273,7 +273,7 @@ export default function WelcomePage() {
                 key={activity.id}
                 className="flex items-start gap-4 p-3 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] transition-colors"
               >
-                <div className="w-10 h-10 bg-[hsl(var(--color-accent)/0.1)] flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-[hsl(var(--color-accent)/0.1)] flex items-center justify-center shrink-0">
                   <Activity className="w-5 h-5 text-[hsl(var(--color-accent-ink))]" />
                 </div>
                 <div className="flex-1 min-w-0">

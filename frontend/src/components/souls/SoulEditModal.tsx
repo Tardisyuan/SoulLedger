@@ -150,7 +150,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
             disabled={updateMutation.isPending}
             aria-invalid={!!getError('name')}
             aria-describedby={getError('name') ? nameErrorId : undefined}
-            className={`bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none disabled:opacity-50 transition-colors ${
+            className={`bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden disabled:opacity-50 transition-colors ${
               getError('name') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
             placeholder={t("souls.form.name_placeholder")}
@@ -169,7 +169,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
             disabled={updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-04 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-04 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
           />
         </div>
 
@@ -182,7 +182,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
             value={originLocation}
             onChange={(e) => setOriginLocation(e.target.value)}
             disabled={updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder={t("souls.form.location_placeholder")}
           />
         </div>
@@ -195,7 +195,7 @@ export function SoulEditModal({ isOpen, onClose, soul, onUpdated }: SoulEditModa
             value={currentState}
             onChange={(e) => setCurrentState(e.target.value as Soul["current_state"])}
             disabled={updateMutation.isPending || isSettled}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-04 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-04 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
           >
             {isSettled ? (
               <option value="SETTLED">{t("souls.states.SETTLED")}</option>

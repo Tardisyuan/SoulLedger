@@ -285,7 +285,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("icon_picker.search")}
             aria-label={t("icon_picker.search")}
-            className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
 
           {!search && (
