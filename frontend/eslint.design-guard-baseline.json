@@ -48,11 +48,6 @@
   "src/components/charts/LazyWorkflowEditor.tsx": {
     "radius": 1
   },
-  "src/components/connection-status.tsx": {
-    "palette": 5,
-    "space": 1,
-    "type": 1
-  },
   "src/components/judgment/JudgmentQueueConsole.tsx": {
     "radius": 16,
     "space": 6

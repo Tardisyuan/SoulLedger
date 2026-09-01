@@ -68,6 +68,20 @@ export default function MenusPage() {
     onError: () => showToast(t("menus.create_error") || "Failed to create menu", "error"),
   });
 
+  // The edit path had no mutation at all: `await menusApi.update(...)` inline,
+  // so a failure was an unhandled promise rejection — no toast, no cache
+  // invalidation, and the modal sitting open with nothing said. Create had a
+  // mutation and edit did not, on the same form, behind the same button.
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<MenuItemFull> }) =>
+      menusApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["menus"] });
+      setEditingMenu(null);
+    },
+    onError: () => showToast(t("menus.update_error"), "error"),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: number) => menusApi.delete(id),
     onSuccess: () => {
@@ -134,13 +148,16 @@ export default function MenusPage() {
       setIconError(true);
       return;
     }
+    // `mutate`, not `await mutateAsync`. Both mutations report failure through
+    // their own `onError`; awaiting the async form here re-raised the same
+    // rejection into this handler, where nothing caught it — so a failed
+    // create toasted AND logged an unhandled rejection.
     if (editingMenu) {
-      await menusApi.update(editingMenu.id, form);
-      queryClient.invalidateQueries({ queryKey: ["menus"] });
-      setEditingMenu(null);
+      updateMutation.mutate({ id: editingMenu.id, data: form });
     } else {
-      await createMutation.mutateAsync(form);
-      setIsCreateModalOpen(false);
+      createMutation.mutate(form, {
+        onSuccess: () => setIsCreateModalOpen(false),
+      });
     }
   };
 
@@ -226,6 +243,9 @@ export default function MenusPage() {
         iconError={iconError}
         setIconError={setIconError}
         onSubmit={handleSubmit}
+        // Only create had a pending state; the edit branch could be submitted
+        // as many times as the operator clicked.
+        isSubmitting={createMutation.isPending || updateMutation.isPending}
       />
 
       {/* Delete confirmation (Stage 4 §4.7): the verb is "移至回收站"

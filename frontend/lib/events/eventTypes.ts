@@ -94,6 +94,22 @@ export type EventHandler = (
 export interface EventContext {
   queryClient: QueryClient;
   showToast: (msg: string, type?: "success" | "error" | "info", duration?: number) => void;
+  /**
+   * The signed-in user, as a string, or undefined when it is not known.
+   *
+   * Only the social handler reads it, and only to answer "is this frame about
+   * the person looking at the screen?". Every social event used to toast every
+   * viewer unconditionally, so on a busy tenant each post, comment and
+   * reaction by anyone popped a banner on everyone's screen.
+   *
+   * WHAT IT CAN AND CANNOT DECIDE. `SocialEventPayload` carries `follower_id`,
+   * `following_id` and `user_id` — the ACTOR — and nothing that identifies the
+   * owner of the thing acted upon. So "someone followed me" is answerable and
+   * "someone commented on my post" is not: the field does not exist in the
+   * frame. Those events now invalidate silently rather than toast everyone,
+   * which is the honest handling of a fact the payload does not contain.
+   */
+  currentUserId?: string;
 }
 
 // ── Handler Result (for replay safety) ─────────────────────────────────
