@@ -29,7 +29,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
       {/* Backdrop */}
       <DialogBackdrop
         transition
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm duration-200 ease-out data-closed:opacity-0 dark:bg-black/80"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs duration-200 ease-out data-closed:opacity-0 dark:bg-black/80"
       />
 
       {/* Centered panel.
@@ -218,7 +218,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             disabled={loading}
             aria-invalid={!!getError('name')}
             aria-describedby={getError('name') ? nameErrorId : undefined}
-            className={`bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none disabled:opacity-50 transition-colors ${
+            className={`bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden disabled:opacity-50 transition-colors ${
               getError('name') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
             placeholder={t("souls.form.name_placeholder")}
@@ -239,7 +239,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             disabled={loading}
             aria-invalid={!!getError('civilization')}
             aria-describedby={getError('civilization') ? civilizationErrorId : undefined}
-            className={`bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none disabled:opacity-50 transition-colors ${
+            className={`bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-hidden disabled:opacity-50 transition-colors ${
               getError('civilization') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
           >
@@ -261,7 +261,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
             disabled={loading}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -272,7 +272,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             value={originLocation}
             onChange={(e) => setOriginLocation(e.target.value)}
             disabled={loading}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder={t("souls.form.location_placeholder")}
           />
         </div>
@@ -327,7 +327,7 @@ export function ConfirmDialog({
     <Dialog open={isOpen} onClose={onCancel} className="relative z-dialog">
       <DialogBackdrop
         transition
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm duration-200 ease-out data-closed:opacity-0 dark:bg-black/80"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs duration-200 ease-out data-closed:opacity-0 dark:bg-black/80"
       />
       {/* 与上面的 Modal 同一套约束,理由见那里。这个对话框的内容通常很短,
        * 但 `message` 是调用方传进来的任意文本 —— 「通常很短」不是约束。 */}

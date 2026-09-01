@@ -169,7 +169,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
             value={formData.username}
             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
             disabled={isEditing || createMutation.isPending || updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder={t("users.username_placeholder") || "输入用户名"}
           />
         </div>
@@ -183,7 +183,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             disabled={createMutation.isPending || updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder={t("users.email_placeholder") || "输入邮箱"}
           />
         </div>
@@ -200,7 +200,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             disabled={createMutation.isPending || updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder={isEditing ? (t("users.password_edit_placeholder") || "留空则不修改") : (t("users.password_placeholder") || "输入密码")}
           />
         </div>
@@ -212,7 +212,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
             value={formData.role}
             onChange={(e) => setFormData({ ...formData, role: e.target.value as CreateUserInput["role"] })}
             disabled={createMutation.isPending || updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
           >
             <option value="ADMIN">{t("users.role_admin") || "管理员"}</option>
             <option value="JUDGE">{t("users.role_judge") || "审判者"}</option>
@@ -230,7 +230,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
               value={formData.first_name}
               onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+              className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
               placeholder={t("users.first_name_placeholder") || "名"}
             />
           </div>
@@ -242,7 +242,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
               value={formData.last_name}
               onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+              className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
               placeholder={t("users.last_name_placeholder") || "姓"}
             />
           </div>

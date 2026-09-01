@@ -21,7 +21,7 @@ const SOURCE = readFileSync(
  * Every "this file must not contain X" assertion below has to read this and not
  * `SOURCE`, and the first run proved why: four of them went red immediately,
  * because Button.tsx *documents* the things it refuses to do — it names
- * `outline-none`, it names `cursor-not-allowed`, and it quotes
+ * `outline-hidden`, it names `cursor-not-allowed`, and it quotes
  * app/permissions/page.tsx's `focus-visible:ring-[hsl(var(--color-accent))]` as
  * the anti-example. A scanner that cannot tell a prohibition from its own
  * explanation punishes the file for explaining itself, and the way that gets
@@ -200,18 +200,18 @@ describe("focus is left to the global rule", () => {
   /**
    * `app/globals.css:459` is `:focus-visible { outline: 2px solid
    * hsl(var(--color-focus)) !important }`, and the `!important` is what beats
-   * the 69 `outline-none` utilities in the app. A component participates by
-   * doing nothing. Writing `outline-none` here would opt out; writing a ring
+   * the 69 `outline-hidden` utilities in the app. A component participates by
+   * doing nothing. Writing `outline-hidden` here would opt out; writing a ring
    * would double it.
    */
-  it("writes no outline-none", () => {
+  it("writes no outline-hidden", () => {
     expect(CODE).not.toMatch(/\boutline-none\b/);
     for (const [variant, size] of MATRIX) {
-      expect(classesOf(variant, size)).not.toContain("outline-none");
+      expect(classesOf(variant, size)).not.toContain("outline-hidden");
     }
   });
 
-  it("writes no focus ring of its own", () => {
+  it("writes no focus ring-3 of its own", () => {
     expect(CODE).not.toMatch(/\bfocus(-visible)?:ring/);
   });
 

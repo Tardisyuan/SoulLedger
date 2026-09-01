@@ -82,7 +82,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
             onChange={(e) => setBio(e.target.value)}
             disabled={updateMutation.isPending}
             rows={3}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors resize-none"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-04 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors resize-none"
             placeholder={t("social.bio_placeholder") || "Tell others about yourself…"}
           />
         </div>
@@ -98,7 +98,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
             value={avatarUrl}
             onChange={(e) => setAvatarUrl(e.target.value)}
             disabled={updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-02 font-mono text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-02 font-mono text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder="https://…"
           />
         </div>

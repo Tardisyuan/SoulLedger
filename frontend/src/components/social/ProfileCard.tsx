@@ -18,7 +18,7 @@ export function ProfileCard({ profile }: { profile: UserProfile }) {
     <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6">
       <div className="flex items-start gap-4">
         {/* Avatar */}
-        <div className="w-16 h-16 rounded-full bg-[hsl(var(--color-surface-2))] flex items-center justify-center text-06 text-[hsl(var(--color-accent-ink))] overflow-hidden flex-shrink-0">
+        <div className="w-16 h-16 rounded-full bg-[hsl(var(--color-surface-2))] flex items-center justify-center text-06 text-[hsl(var(--color-accent-ink))] overflow-hidden shrink-0">
           {profile.avatar_url ? (
             <img
               src={profile.avatar_url}

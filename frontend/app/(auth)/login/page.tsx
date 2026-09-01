@@ -85,7 +85,7 @@ export default function LoginPage() {
             first screen anyone sees.
 
             The defect underneath the styling: the submit button was
-            `bg-[--color-accent]` with `text-[--color-ink]`. Dark-mode ink is
+            `bg-accent` with `text-ink`. Dark-mode ink is
             `210 11% 96%`, near-white, so the label measured **1.95:1** on the
             amber fill; `Button`'s primary is `text-black`, which is 9.82:1.
             Same accent-foreground mistake as FollowButton, on the one control

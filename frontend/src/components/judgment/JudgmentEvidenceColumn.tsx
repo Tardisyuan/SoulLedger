@@ -66,11 +66,11 @@ export function JudgmentEvidenceColumn({ evidence }: { evidence: Record<string, 
                   {toHanNumeral(index + 1) ?? String(index + 1)}
                 </span>
                 <span className="min-w-0">
-                  <span className="text-04 text-ink block break-words">
+                  <span className="text-04 text-ink block wrap-break-word">
                     <EvidenceValue value={value} />
                   </span>
                   {/* The source pointer: which key of the record this line is. */}
-                  <span className="font-mono text-02 text-ink-subtle block mt-1 break-words">
+                  <span className="font-mono text-02 text-ink-subtle block mt-1 wrap-break-word">
                     {key}
                   </span>
                 </span>

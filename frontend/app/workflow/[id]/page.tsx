@@ -503,7 +503,7 @@ export default function WorkflowDetailPage() {
                     {/* Node indicator. `rounded-full` survives the corner purge
                         on purpose: it is one of the two shapes that still mean
                         something — a round mark is an identity token. */}
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-02 font-medium ${nodeColor}`}>
+                    <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-02 font-medium ${nodeColor}`}>
                       {isPast ? (
                         <span>{node.verdict?.[0] || "D"}</span>
                       ) : (

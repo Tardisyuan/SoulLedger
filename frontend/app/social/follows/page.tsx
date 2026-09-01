@@ -102,7 +102,7 @@ export default function FollowsPage() {
               >
                 {/* rounded-full stays: an avatar is an identity mark, one of
                     the two shapes the radius scale still has a value for. */}
-                <div className="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-03 font-bold text-[hsl(var(--color-accent-ink))] flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-03 font-bold text-[hsl(var(--color-accent-ink))] shrink-0">
                   {userName?.charAt(0)?.toUpperCase() || "?"}
                 </div>
                 <Link

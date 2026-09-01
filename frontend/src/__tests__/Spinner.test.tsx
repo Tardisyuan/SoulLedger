@@ -27,7 +27,7 @@ function classesIn(container: HTMLElement): string[] {
   );
 }
 
-describe("the ring colour is a token, and there is only one of it", () => {
+describe("the ring-3 colour is a token, and there is only one of it", () => {
   /**
    * 21 `app/**&#47;loading.tsx` files, 20 of them the same six lines. Fifteen
    * hardcode `border-amber-500/20` + `border-t-amber-500`; five write the
@@ -109,7 +109,7 @@ describe("size", () => {
     ["sm", "w-4", "h-4", "border-2"],
     ["md", "w-6", "h-6", "border-2"],
     ["lg", "w-16", "h-16", "border-4"],
-  ] as const)("%s is %s/%s with a %s ring", (size, w, h, border) => {
+  ] as const)("%s is %s/%s with a %s ring-3", (size, w, h, border) => {
     const { container } = render(<Spinner size={size} />);
     const classes = classesIn(container);
     expect(classes).toEqual(expect.arrayContaining([w, h, border]));
@@ -120,7 +120,7 @@ describe("size", () => {
     expect(classesIn(container)).toEqual(expect.arrayContaining(["w-6", "h-6"]));
   });
 
-  it("does not put a 4px ring on a 16px box", () => {
+  it("does not put a 4px ring-3 on a 16px box", () => {
     // Ring width tracks diameter; the wrong pairing renders a donut, and it is
     // the pairing you get by copying the lg spinner into an inline slot.
     const { container } = render(<Spinner size="sm" />);

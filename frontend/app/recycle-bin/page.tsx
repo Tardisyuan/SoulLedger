@@ -199,7 +199,7 @@ export default function RecycleBinPage() {
         />
 
         {confirmHardDelete && (
-          <div className="fixed inset-0 z-dialog flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-dialog flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
             <div className="w-full max-w-sm bg-surface-2 border border-hairline">
               <div className="px-6 py-4">
                 <h3 className="text-05 text-ink mb-2">

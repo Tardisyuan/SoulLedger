@@ -86,7 +86,7 @@ export function NodeEditModal({
             onChange={(e) =>
               setEditData({ ...editData, node_name: e.target.value })
             }
-            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
         </div>
         <div>
@@ -100,7 +100,7 @@ export function NodeEditModal({
                 node_type: e.target.value as NodeEditData["node_type"],
               })
             }
-            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           >
             {nodeTypeOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -119,7 +119,7 @@ export function NodeEditModal({
               setEditData({ ...editData, court_code: e.target.value })
             }
             placeholder={t("workflow.editor.court_placeholder")}
-            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
         </div>
         <div>
@@ -133,7 +133,7 @@ export function NodeEditModal({
                 approver_type: e.target.value as NodeEditData["approver_type"],
               })
             }
-            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           >
             {approverTypeOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -152,7 +152,7 @@ export function NodeEditModal({
               setEditData({ ...editData, approver_role: e.target.value })
             }
             placeholder={t("workflow.editor.approver_placeholder")}
-            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
         </div>
         <div className="flex justify-end gap-3 pt-2">

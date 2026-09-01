@@ -83,13 +83,13 @@ import { Spinner } from "./Spinner";
  *
  * ── FOCUS: deliberately not here ───────────────────────────────────────────
  *
- * There is no `focus:ring` in this file and there must not be one.
+ * There is no `focus:ring-3` in this file and there must not be one.
  * `app/globals.css:459` declares a single `:focus-visible { outline: 2px solid
  * hsl(var(--color-focus)) !important }`, and the `!important` is load-bearing —
- * it is what beats the 69 `outline-none` utilities scattered across the app.
+ * it is what beats the 69 `outline-hidden` utilities scattered across the app.
  * `src/__tests__/statusTokenLayering.test.ts` pins that rule's existence, its
  * `!important`, and its token. The only thing a component has to do to
- * participate is **not write `outline-none`**, which this one does not.
+ * participate is **not write `outline-hidden`**, which this one does not.
  *
  * Note also what the ring must NOT be: `--color-focus` is not `--color-accent`,
  * because the accent is user-configurable and a focus ring the user can tune to

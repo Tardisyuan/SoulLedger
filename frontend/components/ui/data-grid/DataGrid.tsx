@@ -90,7 +90,7 @@ function SelectAllCheckbox({
       /* 14px glyph, 24px target. WCAG 2.5.8's minimum is 24x24 and a bare
              `w-3.5` checkbox is 14 — a miss selects nothing, or worse, the row
              beneath. The padding grows the hit area without growing the mark. */
-            className="accent-[hsl(var(--color-accent))] w-3.5 h-3.5 cursor-pointer p-[5px] box-content -m-[5px]"
+            className="accent-[hsl(var(--color-accent))] w-3.5 h-3.5 cursor-pointer p-[5px] box-content m-[-5px]"
     />
   )
 }
@@ -180,7 +180,7 @@ export function DataGrid<T>({
             /* 14px glyph, 24px target. WCAG 2.5.8's minimum is 24x24 and a bare
              `w-3.5` checkbox is 14 — a miss selects nothing, or worse, the row
              beneath. The padding grows the hit area without growing the mark. */
-            className="accent-[hsl(var(--color-accent))] w-3.5 h-3.5 cursor-pointer p-[5px] box-content -m-[5px]"
+            className="accent-[hsl(var(--color-accent))] w-3.5 h-3.5 cursor-pointer p-[5px] box-content m-[-5px]"
           />
         </td>
         {cells}

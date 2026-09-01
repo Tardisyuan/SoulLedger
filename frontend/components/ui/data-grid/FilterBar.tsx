@@ -161,7 +161,7 @@ export function FilterBar({
             value={searchValue ?? ''}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
-            className="flex-1 bg-transparent text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-tertiary))] focus:outline-none"
+            className="flex-1 bg-transparent text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-tertiary))] focus:outline-hidden"
           />
         </div>
       )}
