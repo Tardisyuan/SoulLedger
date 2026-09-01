@@ -15,6 +15,11 @@ export function useSouls(params?: Record<string, string | number | undefined>) {
       const res = await soulsApi.list(params);
       return res.data;
     },
+    // Keep the previous page rendered while the next one loads, so a page
+    // turn or a filter change does not flash a skeleton over data that is
+    // about to be replaced by more of the same. `useJudgmentQueue` was the
+    // only list in the app doing this; every other one blanked.
+    placeholderData: (previous) => previous,
     staleTime: 30_000, // 30s — reduce redundant API calls
   });
 }
@@ -137,6 +142,11 @@ export function useDeleteSoul() {
     mutationFn: (id: string) => soulsApi.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: soulKeys.all });
+      // The delete is soft — the record is in /recycle-bin — and this said
+      // nothing at all, so the safety net existed and was undiscoverable.
+      // The wording names what the backend did, the way the menus delete
+      // confirmation already does ("移至回收站", never "删除").
+      showToast(t("souls.detail.delete_to_recycle_bin"), "success");
     },
     onError: () => {
       showToast(t("souls.detail.error_delete"), "error");

@@ -280,7 +280,8 @@
           "event_before_birth": "事件早于出生",
           "event_after_death": "事件晚于死亡"
         }
-      }
+      },
+      "delete_to_recycle_bin": "已移至回收站"
     },
     "date_problem_filter": "仅看有问题的",
     "balance_not_applicable": "不适用 — 详见灵魂详情",

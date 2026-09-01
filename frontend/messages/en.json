@@ -280,7 +280,8 @@
           "event_before_birth": "Event before birth",
           "event_after_death": "Event after death"
         }
-      }
+      },
+      "delete_to_recycle_bin": "Moved to the recycle bin"
     },
     "date_problem_filter": "Problems only",
     "balance_not_applicable": "Not applicable — see soul detail",

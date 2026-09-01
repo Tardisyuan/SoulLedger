@@ -272,7 +272,8 @@
           "event_before_birth": "Medew Her Tepy Wepet Her Tepy",
           "event_after_death": "Medew Kher Wepet Ru"
         }
-      }
+      },
+      "delete_to_recycle_bin": "Moved to the recycle bin"
     },
     "order_name_desc": "Ren Z-A",
     "balance_range": "Redu Unemu",
