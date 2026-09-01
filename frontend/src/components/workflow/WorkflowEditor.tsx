@@ -177,6 +177,28 @@ export default function WorkflowEditor({
 
   // Convert React Flow nodes to template nodes
   const getTemplateNodes = useCallback((): TemplateNode[] => {
+    /**
+     * The canvas edges, read back as routing.
+     *
+     * `sourceHandle` is what makes this possible: each node has a `pass` and a
+     * `fail` source handle, so an edge already carries which outcome it
+     * belongs to. Before routing existed, `onConnect` produced edges with no
+     * such distinction and this function sent only `node_order` — every drawn
+     * branch was discarded on save and the reload rebuilt a straight chain.
+     *
+     * Last edge wins per (source, handle). The canvas allows more than one
+     * edge from a handle and the model holds exactly one target, so something
+     * has to choose; taking the most recent matches what the operator just
+     * did rather than what they did first.
+     */
+    const routing = new Map<string, { on_pass?: string; on_fail?: string }>();
+    for (const edge of edges) {
+      if (!edge.source || !edge.target) continue;
+      const field = edge.sourceHandle === "fail" ? "on_fail" : "on_pass";
+      const current = routing.get(edge.source) ?? {};
+      routing.set(edge.source, { ...current, [field]: edge.target });
+    }
+
     return nodes.map((n, idx) => ({
       id: n.id,
       node_name: n.data.label as string,
@@ -185,6 +207,15 @@ export default function WorkflowEditor({
       approver_role: (n.data.approverRole as string) || "",
       approver_type: (n.data.approverType as TemplateNode["approver_type"]) || "ROLE",
       node_order: idx + 1,
+      // `?? null`, not `|| undefined`: the serializer declares these with
+      // `allow_null`, and sending null is how a node says "no route here" —
+      // omitting the key would leave whatever was stored before.
+      on_pass: routing.get(n.id)?.on_pass ?? null,
+      on_fail: routing.get(n.id)?.on_fail ?? null,
+      // Rounded because these are pixels on a canvas, not measurements: the
+      // drag handler produces long floats and storing them makes every save a
+      // diff even when nothing moved.
+      position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
     }));
   }, [nodes]);
 

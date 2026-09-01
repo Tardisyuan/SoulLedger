@@ -402,6 +402,13 @@ class WorkflowService:
                 transaction so nothing half-built is left behind.
         """
         first_node = None
+        # Template-local node id -> the row it produced, so the routing edges
+        # below can be resolved after every node exists. A template names its
+        # targets by its OWN ids; the ApprovalNode pks do not exist until this
+        # loop runs, which is why routing cannot be wired inside it.
+        by_template_id: dict[str, ApprovalNode] = {}
+        routing_defs: list[tuple[ApprovalNode, dict]] = []
+
         for position, raw_node_def in enumerate(template["nodes"], start=1):
             node_def = normalize_template_node(raw_node_def, position)
             node = ApprovalNode.objects.create(
@@ -423,6 +430,34 @@ class WorkflowService:
             )
             if first_node is None:
                 first_node = node
+            template_id = node_def.get("id")
+            if template_id:
+                by_template_id[str(template_id)] = node
+            if node_def.get("on_pass") or node_def.get("on_fail"):
+                routing_defs.append((node, node_def))
+
+        # ── Wire the routing edges ─────────────────────────────────────
+        #
+        # Second pass, because an edge can point forwards or backwards and the
+        # target may not have been created yet on the first.
+        #
+        # An edge naming an id this template does not define is DROPPED, not
+        # raised on. A template is user-authored data that can outlive the node
+        # it referenced — deleting a node in the editor leaves any edge into it
+        # dangling — and refusing to instantiate the whole workflow would turn
+        # a stale reference into an un-judgeable soul. A dropped edge falls back
+        # to the order-based default, which is the behaviour the flow had before
+        # anyone drew the edge.
+        for node, node_def in routing_defs:
+            updates = []
+            for field in ("on_pass", "on_fail"):
+                target_id = node_def.get(field)
+                target = by_template_id.get(str(target_id)) if target_id else None
+                if target is not None and target.pk != node.pk:
+                    setattr(node, field, target)
+                    updates.append(field)
+            if updates:
+                node.save(update_fields=updates)
 
         if first_node is None:
             raise ValueError(

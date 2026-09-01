@@ -59,7 +59,34 @@ function EditableNodeComponent({
           {data.approverRole}
         </div>
       )}
-      <Handle type="source" position={Position.Bottom} className="bg-[hsl(var(--color-accent))]!" />
+      {/* TWO source handles, not one, and the ids are the routing.
+          A single handle could only ever say "next"; the engine now
+          distinguishes where a flow goes when this node PASSES from where it
+          goes when it is REFUSED (`ApprovalNode.on_pass` / `on_fail`), and an
+          edge has to be able to say which it is. `sourceHandle` is what
+          `getTemplateNodes` reads back — without the ids a drawn branch could
+          be persisted but not told apart, which is the "stored but meaningless"
+          shape this whole feature exists to remove.
+
+          Side by side on the same edge of the node, so neither reads as "the
+          default one", and coloured from the status tokens so the pair is
+          legible before anyone hovers. */}
+      <Handle
+        id="pass"
+        type="source"
+        position={Position.Bottom}
+        style={{ left: "30%" }}
+        className="bg-[hsl(var(--color-status-success))]!"
+        title="通过"
+      />
+      <Handle
+        id="fail"
+        type="source"
+        position={Position.Bottom}
+        style={{ left: "70%" }}
+        className="bg-[hsl(var(--color-status-error))]!"
+        title="否决"
+      />
     </div>
   );
 }
