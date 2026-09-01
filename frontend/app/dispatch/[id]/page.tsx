@@ -270,7 +270,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
         </div>
       )}
 
-      {/* All three confirmations go through BaseModal (@headlessui Dialog).
+      {/* All three confirmations go through BaseModal (Base UI Dialog).
           The reject and execute dialogs were hand-rolled `fixed inset-0
           bg-black/50 … z-50` overlays — a third scrim dialect alongside
           Modal.tsx's own `bg-black/60 backdrop-blur-xs` and recycle-bin's

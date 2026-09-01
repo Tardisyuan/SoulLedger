@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, Fragment } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Popover, Transition } from "@headlessui/react";
+import { Popover } from "@base-ui/react/popover";
 import { notificationsApi, type Notification, type PaginatedResponse } from "@/lib/api";
 import { notificationKeys } from "@/lib/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -318,8 +318,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
             {/* Notification Bell with Popover */}
             {user && (
-              <Popover className="relative">
-                <Popover.Button
+              /* Base UI's Popover, not @headlessui's. The anatomy gains a
+                 `Positioner`, and that is the substantive difference: the panel
+                 used to be `absolute right-0 mt-2` inside a `relative` wrapper,
+                 which pins it to the trigger and lets it run off-screen on a
+                 narrow viewport. `Positioner` uses Floating UI underneath, so
+                 it flips and shifts to stay on screen — the bell sits at the
+                 right edge of the masthead, which is exactly where that
+                 matters. */
+              <Popover.Root>
+                <Popover.Trigger
                   className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1"
                   aria-label={
                     notifications.length > 0
@@ -336,17 +344,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       {notifications.length > 9 ? "9+" : notifications.length}
                     </span>
                   )}
-                </Popover.Button>
-                <Transition
-                  as={Fragment}
-                  enter="transition ease-out duration-100"
-                  enterFrom="transform opacity-0 scale-95"
-                  enterTo="transform opacity-100 scale-100"
-                  leave="transition ease-in duration-75"
-                  leaveFrom="transform opacity-100 scale-100"
-                  leaveTo="transform opacity-0 scale-95"
-                >
-                  <Popover.Panel className="absolute right-0 mt-2 w-80 origin-top-right bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-xl focus:outline-hidden z-drawer">
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Positioner sideOffset={8} align="end" className="z-drawer">
+                    <Popover.Popup className="w-80 origin-top-right bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-xl focus:outline-hidden transition duration-100 ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-[hsl(var(--color-ink))]">{t("notifications.title")}</h3>
@@ -371,9 +372,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         </div>
                       )}
                     </div>
-                  </Popover.Panel>
-                </Transition>
-              </Popover>
+                  </Popover.Popup>
+                  </Popover.Positioner>
+                </Popover.Portal>
+              </Popover.Root>
             )}
 
             <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
