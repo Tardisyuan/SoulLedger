@@ -318,7 +318,8 @@
       "id_copied": "ID copied to clipboard",
       "id_copy_failed": "Copy failed",
       "copied": "Copied ✓"
-    }
+    },
+    "field_required": "This field is required"
   },
   "pagination": {
     "info": "Page {{page}} / {{total}} ({{count}} records)"

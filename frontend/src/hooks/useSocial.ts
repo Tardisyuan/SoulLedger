@@ -1,6 +1,7 @@
 "use client";
 
 import axios from "axios";
+import { drfNonFieldError } from "@/lib/validations/drfErrors";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { socialApi, type UserProfile } from "@/lib/api";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -8,26 +9,11 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { socialKeys } from "@/lib/query_keys";
 
 /**
- * DRF renders a plain `serializers.ValidationError("...")` raised from
- * `validate()` (no field name) as `{ non_field_errors: ["..."] }` — see
- * `ReactionCreateSerializer.validate` / `CommentCreateSerializer.validate`
- * in backend/apps/social/serializers.py, both of which reject cross-tenant
- * targets this way. Pull the first message out of that shape when present;
- * fall back to a translated generic message for anything else (network
- * error, 500, unexpected payload) so we never show raw JSON or "undefined".
+ * Was a private reader for DRF's `non_field_errors` shape. It now delegates to
+ * `lib/validations/drfErrors`, which also reads the per-field shape nothing in
+ * the app used to read — see that file for why the two are separate functions.
  */
-function extractErrorMessage(error: unknown, fallback: string): string {
-  if (axios.isAxiosError(error)) {
-    const data: unknown = error.response?.data;
-    if (data && typeof data === "object" && "non_field_errors" in data) {
-      const nonFieldErrors = (data as { non_field_errors?: unknown }).non_field_errors;
-      if (Array.isArray(nonFieldErrors) && typeof nonFieldErrors[0] === "string") {
-        return nonFieldErrors[0];
-      }
-    }
-  }
-  return fallback;
-}
+const extractErrorMessage = drfNonFieldError;
 
 // ── Posts ────────────────────────────────────────────────────────────
 

@@ -318,7 +318,8 @@
       "id_copied": "Ren Aa Em Sesh",
       "id_copy_failed": "Ma Sesh",
       "copied": "Em Sesh ✓"
-    }
+    },
+    "field_required": "This field is required"
   },
   "pagination": {
     "info": "Per {{page}} / {{total}} ({{count}} medu)"

@@ -103,6 +103,7 @@ const COLLECTED_FILES = [
   "connectionRecovery.test.tsx",
   "cssTokenReferenceContract.test.ts",
   "dispatchApproveConfirms.test.tsx",
+  "dispatchProposeValidation.test.tsx",
   "dataGridToneContract.test.ts",
   "designGuardContract.test.ts",
   "domainDisplayContract.test.tsx",
