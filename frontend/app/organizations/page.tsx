@@ -5,7 +5,7 @@ import { api, type Organization, type PaginatedResponse } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { CardSkeleton } from "@/components/ui/skeleton";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ClipboardList, Landmark, Scale } from "lucide-react";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
@@ -127,7 +127,20 @@ function OrganizationsPageContent() {
       className="flex items-center gap-3 py-2 px-3 hover:bg-surface-2 transition-colors"
       style={{ paddingLeft: `${depth * 20 + 12}px` }}
     >
-      <span aria-hidden="true" className="text-05">{depth === 0 ? "🏛️" : depth === 1 ? "⚖️" : "📋"}</span>
+      {/* lucide, not emoji. The CIVILIZATION_ICONS map above stays emoji on
+          purpose — those are identity marks carrying measured font-coverage
+          reasoning. These three are chrome: OS-rendered glyphs beside a
+          controlled three-family type system, drawn differently on every
+          platform. */}
+      <span aria-hidden="true" className="text-[hsl(var(--color-ink-subtle))] shrink-0">
+        {depth === 0 ? (
+          <Landmark className="w-5 h-5" />
+        ) : depth === 1 ? (
+          <Scale className="w-5 h-5" />
+        ) : (
+          <ClipboardList className="w-5 h-5" />
+        )}
+      </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <h3 className="text-03 font-medium text-ink truncate">{org.name}</h3>

@@ -202,7 +202,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           className="h-1 bg-[hsl(var(--color-surface-3))] overflow-hidden"
         >
           <div
-            className="h-full bg-[hsl(var(--color-accent))] transition-all"
+            className="h-full bg-[hsl(var(--color-accent))] transition-[width]"
             style={{ width: `${Math.min(100, (progress.position / Math.max(progress.total, 1)) * 100)}%` }}
           />
         </div>

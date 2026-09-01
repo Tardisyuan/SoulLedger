@@ -263,7 +263,35 @@ export function SoulKarmaLedgerCard({
         {records.length > 0 && (
           <div className="mt-4">
             <p className="text-02 text-[hsl(var(--color-ink-muted))] mb-2">{t("ledger.timeline")}</p>
-            <LazyLifespanBarChart data={getLifespanChartData(records)} />
+            <LazyLifespanBarChart
+              data={getLifespanChartData(records)}
+              seriesNames={{
+                effective: t("ledger.series_effective"),
+                decayedAway: t("ledger.series_decayed"),
+              }}
+            />
+            {/* A legend, because the solid-vs-faded encoding was documented in
+                a code comment and nowhere on screen. Two swatches at the same
+                opacities the bars use, so the mapping is read off the chart
+                rather than remembered. */}
+            <div className="mt-2 flex items-center gap-4 text-02 text-[hsl(var(--color-ink-muted))]">
+              <span className="inline-flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="w-2.5 h-2.5 bg-[hsl(var(--color-ink-muted))]"
+                  style={{ opacity: 0.85 }}
+                />
+                {t("ledger.series_effective")}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="w-2.5 h-2.5 bg-[hsl(var(--color-ink-muted))]"
+                  style={{ opacity: 0.35 }}
+                />
+                {t("ledger.series_decayed")}
+              </span>
+            </div>
           </div>
         )}
       </div>

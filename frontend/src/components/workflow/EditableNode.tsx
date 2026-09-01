@@ -2,6 +2,7 @@
 
 import { memo } from "react";
 import { Handle, Position, type NodeTypes } from "@xyflow/react";
+import { Landmark, User } from "lucide-react";
 
 /**
  * A workflow node on the canvas.
@@ -39,7 +40,7 @@ function EditableNodeComponent({
 
   return (
     <div
-      className={`px-4 py-3 border-2 min-w-[180px] cursor-pointer transition-all ${
+      className={`px-4 py-3 border-2 min-w-[180px] cursor-pointer transition-colors ${
         selected ? "ring-2 ring-[hsl(var(--color-accent))] ring-offset-2 ring-offset-[hsl(var(--color-surface-2))]" : ""
       } ${colorClass}`}
     >
@@ -47,10 +48,16 @@ function EditableNodeComponent({
       <div className="text-03 font-semibold text-[hsl(var(--color-ink))]">{data.label}</div>
       <div className="text-02 text-[hsl(var(--color-ink-muted))] mt-1">{data.nodeType}</div>
       {data.courtCode && (
-        <div className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">🏛 {data.courtCode}</div>
+        <div className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1 flex items-center gap-1">
+          <Landmark aria-hidden="true" className="w-3 h-3" />
+          {data.courtCode}
+        </div>
       )}
       {data.approverRole && (
-        <div className="text-02 text-[hsl(var(--color-ink-subtle))]">👤 {data.approverRole}</div>
+        <div className="text-02 text-[hsl(var(--color-ink-subtle))] flex items-center gap-1">
+          <User aria-hidden="true" className="w-3 h-3" />
+          {data.approverRole}
+        </div>
       )}
       <Handle type="source" position={Position.Bottom} className="!bg-[hsl(var(--color-accent))]" />
     </div>

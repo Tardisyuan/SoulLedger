@@ -4,6 +4,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { type FlowNode, type TemplatePreviewData } from "@/src/components/workflow/page/types";
+import { Landmark } from "lucide-react";
 
 /**
  * /workflow 的「查看模板详情」弹窗。原先长在 app/workflow/page.tsx 的 return 里，
@@ -58,7 +59,12 @@ export function TemplateDetailModal({
                 <div key={idx} className="bg-surface-3 p-2 text-03">
                   <div className="font-medium text-ink">{node.node_name}</div>
                   <div className="text-02 text-ink-muted mt-1">
-                    {node.court_code && <span>🏛 {node.court_code}</span>}
+                    {node.court_code && (
+                  <span className="inline-flex items-center gap-1">
+                    <Landmark aria-hidden="true" className="w-3.5 h-3.5" />
+                    {node.court_code}
+                  </span>
+                )}
                     <span className="ml-2"><DomainEnum namespace="workflow.node_type" value={node.node_type} /></span>
                   </div>
                   {node.approver_role && (

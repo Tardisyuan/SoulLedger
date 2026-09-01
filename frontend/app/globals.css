@@ -417,6 +417,27 @@
   }
 }
 
+/* ── CJK headings do not take Latin display tracking ──────────────────────
+   `text-05/06/07/08` carry −0.01em … −0.03em. Those are Archivo's display
+   values — correct for Latin at 18–56px, and wrong for hanzi, whose strokes
+   crowd under negative tracking. CJK convention is 0 or positive. (`text-01`'s
+   +0.10em is fine and stays: positive 加字距 on small uppercase labels is
+   traditional in both scripts.)
+
+   Every `<h1>` on the 34 PageShell routes is `text-07`, and in zh-Hans its
+   content is Chinese — so the crowding is on the most-read line of most pages.
+
+   Scoped by `:lang`, not by a new token, because the tracking is baked into
+   the scale and the scale is right for the Latin it was measured on. `text-08`
+   is deliberately left alone: its content is KPI digits, which are Latin
+   glyphs whatever the interface language.
+
+   `:is()` rather than four selectors so specificity stays flat — these have to
+   lose to a deliberate `tracking-*` utility on a specific element. */
+html:lang(zh-Hans) :is(.text-05, .text-06, .text-07) {
+  letter-spacing: 0;
+}
+
 /* ── Reduced motion ───────────────────────────────────────────────────────
    Until now the ONLY `prefers-reduced-motion` block in this stylesheet was the
    nprogress one below, added in the same pass as this. Everything else ignored
@@ -454,7 +475,10 @@
 .react-flow__controls {
   background: hsl(var(--color-surface-1)) !important;
   border: 1px solid hsl(var(--color-hairline)) !important;
-  border-radius: 8px !important;
+/* 0, not 8px. These two rules exist to drag vendor chrome INTO the token
+     system, and then handed it the one radius the system forbids
+     (tailwind.config.js zeroes every step except `full` and `focus`). */
+  border-radius: 0 !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
 }
 
@@ -482,7 +506,10 @@
 .react-flow__minimap {
   background: hsl(var(--color-surface-1)) !important;
   border: 1px solid hsl(var(--color-hairline)) !important;
-  border-radius: 8px !important;
+/* 0, not 8px. These two rules exist to drag vendor chrome INTO the token
+     system, and then handed it the one radius the system forbids
+     (tailwind.config.js zeroes every step except `full` and `focus`). */
+  border-radius: 0 !important;
 }
 
 .react-flow__minimap-mask {

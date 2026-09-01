@@ -712,7 +712,9 @@
       "col_balance": "销算余",
       "total": "合计",
       "empty": "尚无账目。"
-    }
+    },
+    "series_effective": "现值",
+    "series_decayed": "已衰减"
   },
   "judgment": {
     "title": "审判",

@@ -9,6 +9,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
+import { User } from "lucide-react";
 
 /**
  * Case state → badge tone, the same table the list page carries.
@@ -118,7 +119,7 @@ export default function CrossJudgmentDetailPage() {
           <div className="space-y-2">
             {judgment.participants.map((p: import("@/lib/api").CrossTenantJudgmentParticipant, i: number) => (
               <div key={i} className="flex items-center gap-3 bg-[hsl(var(--color-surface-2))] px-4 py-2">
-                <span className="text-05" aria-hidden="true">👤</span>
+                <User aria-hidden="true" className="w-5 h-5 text-[hsl(var(--color-ink-subtle))] shrink-0" />
                 <div>
                   <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{p.participant_actor_name || p.participant_actor}</p>
                   {/* `DomainEnum`,不是裸成员。`p.role` 是
