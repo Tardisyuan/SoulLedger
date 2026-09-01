@@ -66,7 +66,8 @@
       "EUROPEAN": "Wedja Meseh, Duat Sekhem, Duat en Dante, Itru Lethe",
       "EGYPTIAN": "Wedja Wesir, Fai Ib, Sekhet Iaru",
       "GREEK": "Khemet Wedja, Sesh Er, Mu Lethe"
-    }
+    },
+    "your_realm": "Your realm"
   },
   "footer": {
     "built_with": "Aha Seth Web Em Django + DRF + Next.js",
@@ -322,7 +323,10 @@
     "field_required": "This field is required"
   },
   "pagination": {
-    "info": "Per {{page}} / {{total}} ({{count}} medu)"
+    "info": "Per {{page}} / {{total}} ({{count}} medu)",
+    "first": "First page",
+    "last": "Last page",
+    "jump": "Jump to page"
   },
   "menus": {
     "title": "Iri Menu",
@@ -798,7 +802,8 @@
       "key_workflow": "Shabu “iri wat en wetep-heka”",
       "key_restore": "Ini sep-u sedjer neb",
       "key_help": "Sesh / imen sesh en djed-tep",
-      "key_leave": "Per em set (shu sesh-per tepy)"
+      "key_leave": "Per em set (shu sesh-per tepy)",
+      "key_notes": "Focus the notes field"
     },
     "detail": {
       "loading": "Khemut Sheemtet Seth...",

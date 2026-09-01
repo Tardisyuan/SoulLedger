@@ -66,7 +66,8 @@
       "EUROPEAN": "基督教审判、炼狱、但丁地狱、忘川河",
       "EGYPTIAN": "奥西里斯审判、心脏称重、芦苇之地",
       "GREEK": "三判官分道、厄尔的千年循环、勒忒之水"
-    }
+    },
+    "your_realm": "你所属的冥府"
   },
   "footer": {
     "built_with": "使用 Django + DRF + Next.js 构建",
@@ -322,7 +323,10 @@
     "field_required": "此项为必填"
   },
   "pagination": {
-    "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)"
+    "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)",
+    "first": "首页",
+    "last": "末页",
+    "jump": "跳到第几页"
   },
   "menus": {
     "title": "菜单管理",
@@ -798,7 +802,8 @@
       "key_workflow": "切换「同时发起审批流程」",
       "key_restore": "恢复所有已延后的条目",
       "key_help": "显示 / 隐藏键盘映射",
-      "key_leave": "退出队列（在输入框内则先失焦）"
+      "key_leave": "退出队列（在输入框内则先失焦）",
+      "key_notes": "聚焦备注"
     },
     "detail": {
       "loading": "加载审判中...",

@@ -66,7 +66,8 @@
       "EUROPEAN": "Christian judgement, purgatory, Dante's Inferno, Lethe",
       "EGYPTIAN": "The judgement of Osiris, the weighing of the heart, the Field of Reeds",
       "GREEK": "Three judges parting the ways, Er's thousand-year cycle, the water of Lethe"
-    }
+    },
+    "your_realm": "Your realm"
   },
   "footer": {
     "built_with": "Built with Django + DRF + Next.js",
@@ -322,7 +323,10 @@
     "field_required": "This field is required"
   },
   "pagination": {
-    "info": "Page {{page}} / {{total}} ({{count}} records)"
+    "info": "Page {{page}} / {{total}} ({{count}} records)",
+    "first": "First page",
+    "last": "Last page",
+    "jump": "Jump to page"
   },
   "menus": {
     "title": "Menu Management",
@@ -798,7 +802,8 @@
       "key_workflow": "Toggle “also open an approval workflow”",
       "key_restore": "Bring every deferred case back",
       "key_help": "Show / hide this map",
-      "key_leave": "Leave the queue (blurs a text field first)"
+      "key_leave": "Leave the queue (blurs a text field first)",
+      "key_notes": "Focus the notes field"
     },
     "detail": {
       "loading": "Loading judgment...",
