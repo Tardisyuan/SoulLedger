@@ -14,7 +14,7 @@ export function LanguageSwitcher() {
         disabled
         aria-hidden="true"
         tabIndex={-1}
-        className="bg-surface-2 text-ink-muted text-sm rounded-md px-3 py-1.5 border border-hairline cursor-pointer"
+        className="bg-surface-2 text-ink-muted text-sm px-3 py-1.5 border border-hairline cursor-pointer"
       >
         <option>—</option>
       </select>
@@ -26,7 +26,7 @@ export function LanguageSwitcher() {
       value={locale}
       onChange={(e) => setLocale(e.target.value as Locale)}
       aria-label={t("nav.language")}
-      className="bg-surface-2 text-ink-muted text-sm rounded-md px-3 py-1.5 border border-hairline cursor-pointer hover:border-hairline transition-colors"
+      className="bg-surface-2 text-ink-muted text-sm px-3 py-1.5 border border-hairline cursor-pointer hover:border-hairline transition-colors"
     >
       {(Object.keys(LOCALE_LABELS) as Locale[]).map((loc) => (
         <option key={loc} value={loc}>

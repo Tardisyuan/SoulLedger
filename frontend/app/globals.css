@@ -202,8 +202,29 @@
      measures 2.1328:1 against white, which the old note gave as 2.14. So the
      original measurement was sound and only this line drifted — which is why
      src/__tests__/inkOnSurfaceContract.test.ts reproduces BOTH figures from
-     the stylesheet rather than trusting either. */
-  --color-accent-ink: 32 92% 34%;
+     the stylesheet rather than trusting either.
+
+     34% → 31%, AND EVERY FIGURE ABOVE IS AGAINST WHITE, WHICH IS THE WRONG
+     BACKGROUND. That whole argument — 34% vs 35%, 5.05 vs 4.83 — was
+     conducted on `0 0% 100%`. But light surfaces are not white: surface-1..4
+     are `var(--civ-hue) 14%..11% 98%..92%`, tinted per tenant, and surface-4
+     is the darkest of them. Measured across all four civilization hues, 34%
+     lands at **4.16:1 on European surface-4** — under AA — while measuring
+     5.04:1 on canvas exactly as the note claimed. The note was true and the
+     token still failed, because the two sentences were about different
+     backgrounds.
+
+     31% is the value: 4.81:1 on the worst pairing (eu/surface-4) and 5.84:1 on
+     white. 32% would also clear AA, by 0.08.
+
+     WHY THIS SURVIVED A 128-PAIR CONTRAST MATRIX. It was excluded from it.
+     `inkOnSurfaceContract.test.ts` derives the ink family by prefix and then
+     asserts `--color-accent-ink` is NOT in it — correctly, since it is a
+     link/text accent and not a member of the ink ramp — and nothing measured
+     it anywhere else. 33 files use it. The matrix now carries it as its own
+     case; being outside the ink family is a reason to give it a row, not a
+     reason to have none. */
+  --color-accent-ink: 32 92% 31%;
   --color-accent-hover: 43 96% 58%;
   /* Same 258deg hue, dropped from 76% to 48% lightness for light surfaces.
      Declared HERE and not only in :root on purpose: a token :root declares

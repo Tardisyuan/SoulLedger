@@ -114,7 +114,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
           type="button"
           onClick={primary.onSelect}
           disabled={primary.disabled}
-          className="px-2.5 py-1 rounded text-03 text-[hsl(var(--color-ink-muted))] border border-[hsl(var(--color-hairline-strong))] hover:text-[hsl(var(--color-ink))] hover:border-[hsl(var(--color-hairline-tertiary))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="px-2.5 py-1 text-03 text-[hsl(var(--color-ink-muted))] border border-[hsl(var(--color-hairline-strong))] hover:text-[hsl(var(--color-ink))] hover:border-[hsl(var(--color-hairline-tertiary))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {primary.label}
         </button>
@@ -130,7 +130,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
             aria-expanded={open}
             onClick={toggle}
             onKeyDown={onTriggerKeyDown}
-            className="px-2 py-1 rounded font-mono text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))] hover:bg-[hsl(var(--color-surface-3))] transition-colors"
+            className="px-2 py-1 font-mono text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))] hover:bg-[hsl(var(--color-surface-3))] transition-colors"
           >
             ⋯
           </button>
@@ -142,7 +142,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
                 role="menu"
                 aria-label={menuLabel}
                 style={{ position: 'fixed', top: pos.top, right: pos.right }}
-                className="z-50 min-w-[168px] rounded-md border border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-surface-4))] shadow-[0_16px_40px_-10px_hsl(0_0%_0%/0.6)] py-1"
+                className="z-50 min-w-[168px] border border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-surface-4))] shadow-[0_16px_40px_-10px_hsl(0_0%_0%/0.6)] py-1"
               >
                 {items.map((item, index) => (
                   <button

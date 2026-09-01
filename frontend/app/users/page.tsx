@@ -98,8 +98,8 @@ export default function UsersPage() {
            the sticky bar to twice its height. The accessible name therefore
            rides on `aria-label` — the same call `app/souls/page.tsx` already
            documents for its own filter row, now spelled the same way in both
-           places instead of two (`bg-surface-1 rounded` here, `bg-surface-2
-           rounded-md` there). */
+           places instead of two (`bg-surface-1` here, `bg-surface-2
+           ` there). */
         <>
           <input
             type="text"

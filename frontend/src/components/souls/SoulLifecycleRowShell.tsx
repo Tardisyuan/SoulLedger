@@ -37,8 +37,8 @@ interface RowShellProps {
 export function RowShell({ date, dotClassName, dashed, hideConnector, highlight, tint, terminalVariant, children, right }: RowShellProps) {
   return (
     <div
-      className={`flex items-stretch gap-3 ${tint ? "bg-[hsl(var(--color-accent)/0.06)] rounded-md" : ""} ${
-        highlight ? "bg-[hsl(var(--color-accent)/0.1)] rounded-md border border-[hsl(var(--color-accent)/0.4)]" : ""
+      className={`flex items-stretch gap-3 ${tint ? "bg-[hsl(var(--color-accent)/0.06)]" : ""} ${
+        highlight ? "bg-[hsl(var(--color-accent)/0.1)] border border-[hsl(var(--color-accent)/0.4)]" : ""
       }`}
     >
       <div className="w-16 shrink-0 text-02 text-[hsl(var(--color-ink-subtle))] text-right pt-2">{date ?? <MissingValue kind="unrecorded" />}</div>

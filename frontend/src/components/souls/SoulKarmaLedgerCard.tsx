@@ -121,7 +121,7 @@ export function SoulKarmaLedgerCard({
   return (
     <div className="space-y-6">
       {/* 业力总账 */}
-      <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+      <div className="bg-[hsl(var(--color-surface-1))] p-5 border border-[hsl(var(--color-hairline))]">
         <h2 className="text-01 text-[hsl(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
 
         <SoulReadingPanel
@@ -241,7 +241,7 @@ export function SoulKarmaLedgerCard({
             </>
           )}
 
-          <div className="rounded border border-dashed border-[hsl(var(--color-hairline))] p-2 mt-2">
+          <div className="border border-dashed border-[hsl(var(--color-hairline))] p-2 mt-2">
             <p className="text-02 text-[hsl(var(--color-ink-subtle))]">
               {tf(
                 "ledger.advisory_disclaimer",
@@ -272,7 +272,7 @@ export function SoulKarmaLedgerCard({
           409/REBIRTH_NOT_APPLICABLE for a terminal cosmology resolves this to
           null; see ledgerApi.inheritance's caller in page.tsx). */}
       {inheritance && (
-        <div className="bg-[hsl(var(--color-surface-1))] rounded-lg p-5 border border-[hsl(var(--color-hairline))]">
+        <div className="bg-[hsl(var(--color-surface-1))] p-5 border border-[hsl(var(--color-hairline))]">
           <p className="text-01 text-[hsl(var(--color-ink-muted))] uppercase mb-3">
             {t("ledger.next_life_inheritance")}
           </p>

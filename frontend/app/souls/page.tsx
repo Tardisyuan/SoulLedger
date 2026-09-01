@@ -173,7 +173,7 @@ export default function SoulsPage() {
            new is that the skin is `fieldControl`, the same one `Field` puts on
            every form control, so this row and `app/users/page.tsx` no longer
            disagree about the surface (`surface-2` vs `surface-1`), the corner
-           (`rounded-md` vs `rounded`) or the gap (3 vs 4). */
+           (`` vs ``) or the gap (3 vs 4). */
         <>
           <input
             type="text"

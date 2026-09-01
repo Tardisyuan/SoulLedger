@@ -5,6 +5,7 @@ import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from "@headlessui/re
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useCreateSoul } from "@/src/hooks/useSouls";
+import { Button } from "@/src/components/ui/Button";
 import {
   CIVILIZATION_OPTIONS,
   type CivilizationOption,
@@ -50,7 +51,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
       <div className="fixed inset-0 flex w-screen items-center justify-center overflow-y-auto p-4">
         <DialogPanel
           transition
-          className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg duration-200 ease-out data-closed:scale-95 data-closed:opacity-0"
+          className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] duration-200 ease-out data-closed:scale-95 data-closed:opacity-0"
         >
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-[hsl(var(--color-hairline))]">
@@ -172,7 +173,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         type="button"
         onClick={onClose}
         disabled={loading}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded text-03 transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 text-03 transition-colors"
       >
         {t("common.cancel")}
       </button>
@@ -180,7 +181,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         type="submit"
         form="soul-create-form"
         disabled={loading || !name.trim()}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] rounded text-03 font-medium text-black transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] text-03 font-medium text-black transition-colors"
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
@@ -217,7 +218,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             disabled={loading}
             aria-invalid={!!getError('name')}
             aria-describedby={getError('name') ? nameErrorId : undefined}
-            className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none disabled:opacity-50 transition-colors ${
+            className={`bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none disabled:opacity-50 transition-colors ${
               getError('name') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
             placeholder={t("souls.form.name_placeholder")}
@@ -238,7 +239,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             disabled={loading}
             aria-invalid={!!getError('civilization')}
             aria-describedby={getError('civilization') ? civilizationErrorId : undefined}
-            className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none disabled:opacity-50 transition-colors ${
+            className={`bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none disabled:opacity-50 transition-colors ${
               getError('civilization') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
           >
@@ -260,7 +261,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
             disabled={loading}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -271,7 +272,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             value={originLocation}
             onChange={(e) => setOriginLocation(e.target.value)}
             disabled={loading}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder={t("souls.form.location_placeholder")}
           />
         </div>
@@ -305,11 +306,22 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const { t } = useI18n();
 
-  const variantColors = {
-    danger: "bg-red-500 hover:bg-red-600",
-    warning: "bg-yellow-500 hover:bg-yellow-600",
-    info: "bg-blue-500 hover:bg-blue-600",
-  };
+  // Was three hand-rolled fills — `bg-red-500` / `bg-yellow-500` /
+  // `bg-blue-500`, each with `text-white`. `bg-yellow-500` under white text is
+  // about 1.9:1, which made the confirm step of a soul state transition the
+  // least readable control in the app; none of the three followed the status
+  // tokens, so all three stayed one colour while the theme changed around
+  // them. `Button`'s own docstring already argued this exact case for the 15
+  // danger buttons it replaced — this dialog was simply not among them.
+  //
+  // `info` is mapped rather than dropped: the prop still accepts it, and no
+  // call site has ever passed it (only `danger`, the default, and one
+  // `warning` in app/souls/[id]/page.tsx).
+  const variantButton = {
+    danger: "danger",
+    warning: "warning",
+    info: "primary",
+  } as const;
 
   return (
     <Dialog open={isOpen} onClose={onCancel} className="relative z-[9999]">
@@ -322,25 +334,24 @@ export function ConfirmDialog({
       <div className="fixed inset-0 flex w-screen items-center justify-center overflow-y-auto p-4">
         <DialogPanel
           transition
-          className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg duration-200 ease-out data-closed:scale-95 data-closed:opacity-0"
+          className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] duration-200 ease-out data-closed:scale-95 data-closed:opacity-0"
         >
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
             <h3 className="text-06 text-[hsl(var(--color-ink))] mb-2">{title}</h3>
             <p className="text-04 text-[hsl(var(--color-ink-muted))]">{message}</p>
           </div>
           <div className="shrink-0 px-6 pb-5 flex gap-3">
-            <button
-              onClick={onCancel}
-              className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] rounded text-03 transition-colors"
-            >
+            <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
               {cancelText || t("common.cancel")}
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant={variantButton[variant]}
               onClick={onConfirm}
-              className={`flex-1 px-4 py-2 text-white rounded text-03 font-medium transition-colors ${variantColors[variant]}`}
+              className="flex-1"
             >
               {confirmText || t("common.confirm")}
-            </button>
+            </Button>
           </div>
         </DialogPanel>
       </div>

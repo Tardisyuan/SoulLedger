@@ -162,7 +162,7 @@ export function DataTable<T>({
 
   return (
     <div className={cn('w-full', className)}>
-      {/* `rounded-lg` used to sit here. borderRadius.lg is 0 now, so it emitted
+      {/* `` used to sit here. borderRadius.lg is 0 now, so it emitted
           nothing and only told the next reader this box had a corner radius. */}
       {/* `relative` 不是装饰,它决定绝对定位的后代被谁裁剪。
           没有它,这个滚动容器的 `position` 是 `static`,于是里面每一个

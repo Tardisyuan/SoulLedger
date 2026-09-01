@@ -182,6 +182,27 @@ const button = cva(
           "hover:bg-[hsl(var(--color-status-error)/0.2)] hover:border-[hsl(var(--color-status-error)/0.5)]",
           "active:bg-[hsl(var(--color-status-error)/0.3)]",
         ],
+        /**
+         * Caution without destruction — a state transition that is hard to
+         * take back but does not delete anything. Same 10%-tint recipe as
+         * danger, on `--color-status-warning`, measured the same way and
+         * across all four civilization hues (the ramp is tenant-tinted, so the
+         * worst pairing is not the one a single spot check finds):
+         *
+         *   dark   warning text on 10% warning over surface-1 → 8.25:1  ✓
+         *   light  warning text on 10% warning over surface-1 → 4.71:1  ✓
+         *
+         * It exists because `ConfirmDialog` had three hand-rolled variants —
+         * `bg-red-500` / `bg-yellow-500` / `bg-blue-500`, all with
+         * `text-white`. `bg-yellow-500` with white text is roughly 1.9:1: the
+         * least readable control in the app sat on the confirm step of a soul
+         * state transition. Only `danger` and `warning` were ever used.
+         */
+        warning: [
+          "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.3)]",
+          "hover:bg-[hsl(var(--color-status-warning)/0.2)] hover:border-[hsl(var(--color-status-warning)/0.5)]",
+          "active:bg-[hsl(var(--color-status-warning)/0.3)]",
+        ],
       },
       size: {
         sm: "px-2 py-1 text-02",
@@ -234,6 +255,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 });
 
 /** Exported so the contract test can enumerate variants without restating them. */
-export const BUTTON_VARIANTS: ButtonVariant[] = ["primary", "secondary", "ghost", "danger"];
+export const BUTTON_VARIANTS: ButtonVariant[] = ["primary", "secondary", "ghost", "danger", "warning"];
 export const BUTTON_SIZES: ButtonSize[] = ["sm", "md", "lg"];
 export { button as buttonVariants };

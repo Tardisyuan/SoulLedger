@@ -19,13 +19,13 @@ export default function Error({
         <p className="text-[hsl(var(--color-ink-muted))] mb-6">{t("error.description")}</p>
         <button
           onClick={reset}
-          className="px-4 py-2 bg-[hsl(var(--color-accent))] text-black rounded-lg font-medium hover:opacity-90 transition-opacity mr-3"
+          className="px-4 py-2 bg-[hsl(var(--color-accent))] text-black font-medium hover:opacity-90 transition-opacity mr-3"
         >
           {t("error.retry")}
         </button>
         <a
           href="/"
-          className="px-4 py-2 bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] rounded-lg font-medium hover:opacity-90 transition-opacity"
+          className="px-4 py-2 bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] font-medium hover:opacity-90 transition-opacity"
         >
           {t("error.home")}
         </a>

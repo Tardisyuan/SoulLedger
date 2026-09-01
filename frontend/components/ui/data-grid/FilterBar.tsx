@@ -84,7 +84,7 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
           setOpen(true)
         }}
         className={cn(
-          'flex items-center gap-2 h-9 px-3 rounded border text-03 transition-colors',
+          'flex items-center gap-2 h-9 px-3 border text-03 transition-colors',
           active
             ? 'bg-[hsl(var(--color-accent)/0.12)] border-[hsl(var(--color-accent)/0.4)] text-[hsl(var(--color-ink))]'
             : 'bg-[hsl(var(--color-surface-2))] border-[hsl(var(--color-hairline-strong))] text-[hsl(var(--color-ink))] hover:border-[hsl(var(--color-hairline-tertiary))]'
@@ -98,7 +98,7 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
           ref={listRef}
           role="listbox"
           aria-label={config.label}
-          className="absolute left-0 top-full mt-1 z-30 min-w-[180px] max-h-64 overflow-y-auto rounded-md border border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-surface-4))] shadow-[0_16px_40px_-10px_hsl(0_0%_0%/0.6)] py-1"
+          className="absolute left-0 top-full mt-1 z-30 min-w-[180px] max-h-64 overflow-y-auto border border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-surface-4))] shadow-[0_16px_40px_-10px_hsl(0_0%_0%/0.6)] py-1"
         >
           {config.options.map((option, index) => (
             <button
@@ -147,12 +147,12 @@ export function FilterBar({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-2.5 p-4 rounded-lg bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline-strong))]',
+        'flex flex-wrap items-center gap-2.5 p-4 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline-strong))]',
         className
       )}
     >
       {onSearchChange && (
-        <div className="flex items-center gap-2 h-9 px-3 rounded border border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-surface-2))] min-w-[220px]">
+        <div className="flex items-center gap-2 h-9 px-3 border border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-surface-2))] min-w-[220px]">
           <span aria-hidden="true" className="font-mono text-03 text-[hsl(var(--color-ink-tertiary))]">
             ⌕
           </span>
@@ -180,7 +180,7 @@ export function FilterBar({
           onClick={density.onToggle}
           aria-pressed={density.compact}
           className={cn(
-            'h-9 px-3 rounded border text-03 transition-colors',
+            'h-9 px-3 border text-03 transition-colors',
             density.compact
               ? 'bg-[hsl(var(--color-accent)/0.12)] border-[hsl(var(--color-accent)/0.4)] text-[hsl(var(--color-ink))]'
               : 'bg-[hsl(var(--color-surface-2))] border-[hsl(var(--color-hairline-strong))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]'

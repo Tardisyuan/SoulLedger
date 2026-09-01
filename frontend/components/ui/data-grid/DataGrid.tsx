@@ -187,7 +187,7 @@ export function DataGrid<T>({
       {/* Select-all means the page, not the query (§6) — onSelectAllMatching is
           an explicit second step, never implied by the header checkbox. */}
       {selection && selectedCount > 0 && (
-        <div className="flex items-center gap-4 px-4 h-12 mb-2 rounded-lg bg-[hsl(var(--color-accent)/0.1)] border border-[hsl(var(--color-accent)/0.3)]">
+        <div className="flex items-center gap-4 px-4 h-12 mb-2 bg-[hsl(var(--color-accent)/0.1)] border border-[hsl(var(--color-accent)/0.3)]">
           <span className="text-03 font-medium text-[hsl(var(--color-ink))]">{selection.labels.selectedCount(selectedCount)}</span>
           {selection.bulkActions && (
             <>
