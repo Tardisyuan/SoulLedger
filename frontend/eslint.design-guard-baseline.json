@@ -87,9 +87,6 @@
   "src/components/ui/Pagination.tsx": {
     "space": 2
   },
-  "src/components/users/UserDeleteDialog.tsx": {
-    "palette": 2
-  },
   "src/components/users/UserModal.tsx": {
     "palette": 2
   },

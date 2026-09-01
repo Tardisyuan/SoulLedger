@@ -52,7 +52,10 @@ export function UserDeleteDialog({ user, isOpen, onClose, onConfirm }: UserDelet
         type="button"
         onClick={handleConfirm}
         disabled={deleteMutation.isPending}
-        className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-400 disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] text-03 font-medium text-white transition-colors"
+        /* Was `bg-red-500 … text-white` — the filled-danger recipe Button.tsx's
+                 own docstring measures at ~3.59:1 in dark mode and replaced with the
+                 10%-tint `danger` variant for 15 other buttons. This one was missed. */
+              className="flex-1 px-4 py-2 bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] border border-[hsl(var(--color-status-error)/0.3)] hover:bg-[hsl(var(--color-status-error)/0.2)] disabled:opacity-50 text-03 font-medium transition-colors"
       >
         {deleteMutation.isPending ? (
           <span className="flex items-center justify-center gap-2">

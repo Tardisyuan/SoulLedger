@@ -29,6 +29,92 @@ const ACCENT_COLORS = [
   { name: "Rose", value: "#f43f5e" },
 ];
 
+/**
+ * The accent is THREE tokens, and the picker used to write one.
+ *
+ * `applyAccentColor` set `--color-accent` only. `--color-accent-hover` and
+ * `--color-accent-ink` kept their amber values, and those are not decorative:
+ * measured 2026-09-01, `--color-accent-ink` is read at **92 sites** (it is the
+ * text/link accent) and `--color-accent-hover` at 10. So picking Blue turned
+ * the button fills blue and left every accent heading, link and hover amber —
+ * a feature that looked like it worked because the part you clicked did.
+ *
+ * WHY ONE WRITE WAS THE EASY MISTAKE. The drawer writes inline custom
+ * properties on `documentElement`, which apply to BOTH themes at once, and
+ * `--color-accent` is the one accent token declared identically in `:root` and
+ * `.light` — so writing it needs no theme awareness. `--color-accent-ink` does:
+ * dark declares it equal to the accent, light declares a darkened value
+ * (`32 92% 31%`) because the accent itself measures 2.13:1 on white. That is
+ * why the theme is a parameter here, and why the values are re-applied when
+ * the theme flips.
+ */
+function accentTokens(hex: string, theme: string): Record<string, string> {
+  const [h, sPct, lPct] = hexToHsl(hex).split(" ");
+  const hue = parseInt(h, 10);
+  const sat = parseInt(sPct, 10);
+  const light = parseInt(lPct, 10);
+
+  // Hover: the shipped amber pair is 50% → 58% lightness. Same step, clamped
+  // so a very light accent does not hover to white.
+  const hover = `${hue} ${Math.min(100, sat + 4)}% ${Math.min(72, light + 8)}%`;
+
+  // Ink: in dark mode the accent sits on a dark surface and is already legible
+  // (the stylesheet declares ink = accent there). In light mode it has to be
+  // darkened until black-on-white-grade contrast is reached — solved rather
+  // than guessed, against white, targeting 5.5:1 so the tenant-tinted surfaces
+  // (which are darker than white) still clear the 4.5 floor. That margin is
+  // the same one the shipped amber carries: 5.84 on white, 4.81 on the worst
+  // tinted surface.
+  const ink =
+    theme === "light"
+      ? `${hue} ${sat}% ${solveInkLightness(hue, sat)}%`
+      : `${hue} ${sat}% ${light}%`;
+
+  return {
+    "--color-accent": `${hue} ${sat}% ${light}%`,
+    "--color-accent-hover": hover,
+    "--color-accent-ink": ink,
+  };
+}
+
+/** Relative luminance of an `H S% L%` triple, per WCAG. */
+function luminance(h: number, s: number, l: number): number {
+  const S = s / 100;
+  const L = l / 100;
+  const c = (1 - Math.abs(2 * L - 1)) * S;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = L - c / 2;
+  const [r, g, b] = (
+    [
+      [c, x, 0],
+      [x, c, 0],
+      [0, c, x],
+      [0, x, c],
+      [x, 0, c],
+      [c, 0, x],
+    ] as const
+  )[Math.floor(h / 60) % 6].map((v) => v + m);
+  const lin = (v: number) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+/** The highest lightness at this hue that still clears 5.5:1 on white. */
+function solveInkLightness(hue: number, sat: number): number {
+  for (let l = 60; l >= 5; l -= 1) {
+    const ratio = 1.05 / (luminance(hue, sat, l) + 0.05);
+    if (ratio >= 5.5) return l;
+  }
+  return 5;
+}
+
+/** Whether black label text on this fill clears AA — primary buttons use
+ *  `text-black`, so an accent that fails this makes them unreadable. */
+export function accentTakesBlackText(hex: string): boolean {
+  const [h, sPct, lPct] = hexToHsl(hex).split(" ");
+  const lum = luminance(parseInt(h, 10), parseInt(sPct, 10), parseInt(lPct, 10));
+  return (lum + 0.05) / 0.05 >= 4.5;
+}
+
 const NAV_MODE_KEY = "soulledger_nav_mode";
 const ACCENT_COLOR_KEY = "soulledger_accent_color";
 
@@ -77,17 +163,22 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
     labelledBy: titleId,
   });
 
+  // Re-applied on theme change, not only on pick: `--color-accent-ink` is
+  // theme-dependent (see `accentTokens`), and an inline custom property set
+  // for one theme would be wrong in the other the moment the user flips it.
   useEffect(() => {
+    let saved: string | null = null;
     try {
-      const saved = localStorage.getItem(ACCENT_COLOR_KEY);
-      if (saved && /^#[0-9a-fA-F]{6}$/.test(saved)) {
-        setAccentColor(saved);
-        document.documentElement.style.setProperty("--color-accent", hexToHsl(saved));
-      }
+      saved = localStorage.getItem(ACCENT_COLOR_KEY);
     } catch {
       // localStorage unavailable (SSR or private browsing)
     }
-  }, []);
+    if (!saved || !/^#[0-9a-fA-F]{6}$/.test(saved)) return;
+    setAccentColor(saved);
+    for (const [name, value] of Object.entries(accentTokens(saved, theme))) {
+      document.documentElement.style.setProperty(name, value);
+    }
+  }, [theme]);
 
   const applyAccentColor = (color: string) => {
     if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
@@ -97,13 +188,29 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
     } catch {
       // localStorage unavailable
     }
-    document.documentElement.style.setProperty("--color-accent", hexToHsl(color));
+    for (const [name, value] of Object.entries(accentTokens(color, theme))) {
+      document.documentElement.style.setProperty(name, value);
+    }
   };
 
+  const [customHexError, setCustomHexError] = useState<string | null>(null);
+
   const handleCustomHex = () => {
-    if (/^#[0-9A-Fa-f]{6}$/.test(customHex)) {
-      applyAccentColor(customHex);
+    if (!/^#[0-9A-Fa-f]{6}$/.test(customHex)) {
+      setCustomHexError(t("settings.accent_hex_invalid"));
+      return;
     }
+    // The six presets all pass; the free-text field is the hole. Primary
+    // buttons label the accent fill with `text-black` (Button.tsx settled that
+    // for 47 call sites), so an accent too dark for black text makes every
+    // primary button in the app unreadable — and nothing else would have
+    // stopped it.
+    if (!accentTakesBlackText(customHex)) {
+      setCustomHexError(t("settings.accent_hex_too_dark"));
+      return;
+    }
+    setCustomHexError(null);
+    applyAccentColor(customHex);
   };
 
   if (!open) return null;
@@ -201,11 +308,21 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
               />
               <button
                 onClick={handleCustomHex}
+                aria-describedby={customHexError ? "accent-hex-error" : undefined}
                 className="px-4 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] hover:text-[hsl(var(--color-ink))] transition-colors"
               >
                 {t("settings.apply") || "Apply"}
               </button>
             </div>
+            {customHexError && (
+              <p
+                id="accent-hex-error"
+                role="alert"
+                className="mt-2 text-02 text-[hsl(var(--color-status-error))]"
+              >
+                {customHexError}
+              </p>
+            )}
           </div>
 
           {/* Navigation Mode Section */}

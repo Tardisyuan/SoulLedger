@@ -1223,7 +1223,9 @@
       "purple": "Djam",
       "red": "Desher",
       "rose": "Desher Nedjes"
-    }
+    },
+    "accent_hex_invalid": "Enter a 6-digit hex colour, e.g. #ff5500",
+    "accent_hex_too_dark": "Too dark — the black label on primary buttons would be unreadable"
   },
   "menu_buttons": {
     "title": "Sekhem Menu",
