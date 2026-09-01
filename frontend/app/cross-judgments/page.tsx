@@ -1,5 +1,8 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Pagination } from "@/src/components/ui/Pagination";
+import { PAGE_SIZE } from "@/lib/api/client";
 import Link from "next/link";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { crossTenantJudgmentsApi, type CrossTenantJudgmentListItem } from "@/lib/api";
@@ -38,15 +41,44 @@ export default function CrossJudgmentsPage() {
   const { t } = useI18n();
   const { user } = useTenant();
 
-  const { data: judgments = [], isLoading, isError, refetch } = useQuery({
-    queryKey: ["cross-judgments"],
-    queryFn: () => crossTenantJudgmentsApi.list().then(r => r.data.results),
+  /**
+   * Was `list()` with no `page` param and no pagination control, while the
+   * server paginates at 20 (`lib/api/client.ts:28`) — so a tenant with more
+   * than twenty cross-tenant cases had the rest invisible and unreachable,
+   * with nothing on screen saying so.
+   */
+  const [page, setPage] = useState(1);
+  const { data: pageData, isLoading, isError, refetch } = useQuery({
+    queryKey: ["cross-judgments", page],
+    queryFn: () => crossTenantJudgmentsApi.list({ page: String(page) }).then(r => r.data),
+    placeholderData: (previous) => previous,
     enabled: !!user,
   });
+  const judgments = pageData?.results ?? [];
 
   return (
     <PageShell
       variant="full"
+      pagination={{
+        count: (
+          <p className="text-03 text-ink-muted">
+            {t("pagination.info", {
+              page: String(page),
+              total: String(Math.max(1, Math.ceil((pageData?.count ?? 0) / PAGE_SIZE))),
+              count: String(pageData?.count ?? 0),
+            })}
+          </p>
+        ),
+        controls: (
+          <Pagination
+            page={page}
+            totalPages={Math.max(1, Math.ceil((pageData?.count ?? 0) / PAGE_SIZE))}
+            count={pageData?.count ?? 0}
+            onPageChange={setPage}
+            showInfo={false}
+          />
+        ),
+      }}
       title={
         <>
           {t("crossJudgments.title")}

@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { dispatchApi, type DispatchRecord } from "@/lib/api";
@@ -11,6 +12,8 @@ import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
+import { Pagination } from "@/src/components/ui/Pagination";
+import { PAGE_SIZE } from "@/lib/api/client";
 import { buttonVariants } from "@/src/components/ui/Button";
 import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -41,23 +44,38 @@ function DispatchPageContent() {
   // `isError` on both. The `= []` defaults mean a failed request lands on the
   // same empty array an empty tenant produces, so both sections rendered
   // "no pending dispatches" / "no history" when the server was down.
-  const {
-    data: proposed = [], isLoading: loadingProposed,
-    isError: proposedError, refetch: refetchProposed,
-  } = useQuery({
-    queryKey: ["dispatch", "proposed"],
-    queryFn: () => dispatchApi.proposed().then(r => r.data.results),
-    enabled: !!user,
-  });
+  /**
+   * Both lists were `.then(r => r.data.results)` with no `page` param and no
+   * pagination control. The server paginates at 20 (`lib/api/client.ts:28`),
+   * so **everything past the twentieth record was invisible and unreachable**,
+   * with nothing on screen saying so — on the page where cross-tenant
+   * approvals are triaged. The count is rendered now as well: "20 of 137" is
+   * the part that was missing even more than the controls.
+   */
+  const [proposedPage, setProposedPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
 
   const {
-    data: history = [], isLoading: loadingHistory,
+    data: proposedData, isLoading: loadingProposed,
+    isError: proposedError, refetch: refetchProposed,
+  } = useQuery({
+    queryKey: ["dispatch", "proposed", proposedPage],
+    queryFn: () => dispatchApi.proposed({ page: String(proposedPage) }).then(r => r.data),
+    enabled: !!user,
+    placeholderData: (previous) => previous,
+  });
+  const proposed = proposedData?.results ?? [];
+
+  const {
+    data: historyData, isLoading: loadingHistory,
     isError: historyError, refetch: refetchHistory,
   } = useQuery({
-    queryKey: ["dispatch", "history"],
-    queryFn: () => dispatchApi.history().then(r => r.data.results),
+    queryKey: ["dispatch", "history", historyPage],
+    queryFn: () => dispatchApi.history({ page: String(historyPage) }).then(r => r.data),
     enabled: !!user,
+    placeholderData: (previous) => previous,
   });
+  const history = historyData?.results ?? [];
 
   return (
     <PageShell
@@ -92,6 +110,12 @@ function DispatchPageContent() {
             ))}
           </div>
         )}
+        <Pagination
+          page={proposedPage}
+          totalPages={Math.max(1, Math.ceil((proposedData?.count ?? 0) / PAGE_SIZE))}
+          count={proposedData?.count ?? 0}
+          onPageChange={setProposedPage}
+        />
       </PageSection>
 
       {/* History - skeleton while loading */}
@@ -109,6 +133,12 @@ function DispatchPageContent() {
             ))}
           </div>
         )}
+        <Pagination
+          page={historyPage}
+          totalPages={Math.max(1, Math.ceil((historyData?.count ?? 0) / PAGE_SIZE))}
+          count={historyData?.count ?? 0}
+          onPageChange={setHistoryPage}
+        />
       </PageSection>
     </PageShell>
   );
