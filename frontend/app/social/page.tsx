@@ -26,10 +26,14 @@ export default function SocialFeedPage() {
   const createPost = useCreatePost();
 
   const params = { page };
+  // Both queries used to RUN, always. Passing `undefined` params to the
+  // inactive one changes its key; it does not stop it fetching — so every
+  // visit to this page hit both `/social/feed/` and `/social/posts/`, and
+  // every page turn hit both again. `enabled` is what actually gates a query.
   const { data: feedData, isLoading: feedLoading, isError: feedError, refetch: refetchFeed } =
-    useFeed(tab === "feed" ? params : undefined);
+    useFeed(params, { enabled: tab === "feed" });
   const { data: allData, isLoading: allLoading, isError: allError, refetch: refetchAll } =
-    usePosts(tab === "all" ? params : undefined);
+    usePosts(params, { enabled: tab === "all" });
 
   const data = tab === "feed" ? feedData : allData;
   const posts = Array.isArray(data) ? data : (data?.results ?? []);

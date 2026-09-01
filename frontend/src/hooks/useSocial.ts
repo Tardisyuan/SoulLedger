@@ -31,13 +31,29 @@ function extractErrorMessage(error: unknown, fallback: string): string {
 
 // ── Posts ────────────────────────────────────────────────────────────
 
-export function usePosts(params?: Record<string, string | number | undefined>) {
+/**
+ * `options.enabled` exists because `app/social/page.tsx` shows one of two tabs
+ * and was running BOTH queries. It passed `undefined` params to the inactive
+ * one, which changes the query key and does not stop the fetch — the page hit
+ * `/social/posts/` and `/social/feed/` on every visit and every page turn,
+ * always discarding one of the two answers.
+ */
+export function usePosts(
+  params?: Record<string, string | number | undefined>,
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: socialKeys.posts.list(params),
     queryFn: async () => {
       const res = await socialApi.listPosts(params);
       return res.data;
     },
+    enabled: options?.enabled ?? true,
+    // Keep the previous page rendered while the next one loads, so a page
+    // turn or a filter change does not flash a skeleton over data that is
+    // about to be replaced by more of the same. `useJudgmentQueue` was the
+    // only list in the app doing this; every other one blanked.
+    placeholderData: (previous) => previous,
     staleTime: 30_000,
   });
 }
@@ -54,13 +70,23 @@ export function usePost(id: string) {
   });
 }
 
-export function useFeed(params?: Record<string, string | number | undefined>) {
+/** See `usePosts` for why this takes `enabled`. */
+export function useFeed(
+  params?: Record<string, string | number | undefined>,
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: socialKeys.posts.feed(params),
     queryFn: async () => {
       const res = await socialApi.feed(params);
       return res.data;
     },
+    enabled: options?.enabled ?? true,
+    // Keep the previous page rendered while the next one loads, so a page
+    // turn or a filter change does not flash a skeleton over data that is
+    // about to be replaced by more of the same. `useJudgmentQueue` was the
+    // only list in the app doing this; every other one blanked.
+    placeholderData: (previous) => previous,
     staleTime: 30_000,
   });
 }
@@ -161,8 +187,17 @@ export function useToggleReaction() {
   return useMutation({
     mutationFn: (data: { post?: string; comment?: string; reaction_type: string }) =>
       socialApi.addReaction(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: socialKeys.reactions.all });
+    onSuccess: (_data, vars) => {
+      // The target's reaction list, not every reaction list in the cache.
+      // Each PostCard mounts its own ReactionBar with its own
+      // `useReactions({ post })` query, so `reactions.all` meant one click
+      // refetched the reaction list of every post on screen.
+      //
+      // `posts.all` STAYS, and is not the same mistake: `Post.reaction_count`
+      // is rendered in the card (PostCard.tsx:91), so the feed's own rows go
+      // stale on a reaction. Checked before narrowing it.
+      const target = vars.post ? { post: vars.post } : { comment: vars.comment };
+      qc.invalidateQueries({ queryKey: [...socialKeys.reactions.all, target] });
       qc.invalidateQueries({ queryKey: socialKeys.posts.all });
     },
     onError: (error) => {

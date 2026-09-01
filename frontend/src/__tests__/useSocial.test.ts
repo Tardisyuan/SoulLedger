@@ -10,6 +10,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useToggleReaction, useCreateComment, useUpdateProfile } from "@/src/hooks/useSocial";
+import { socialKeys } from "@/lib/query_keys";
 import { socialApi } from "@/lib/api";
 
 const mockShowToast = jest.fn();
@@ -64,19 +65,39 @@ beforeEach(() => {
 });
 
 describe("useToggleReaction behavior", () => {
-  it("invalidates reaction and post queries on success", async () => {
+  /**
+   * Behavioural, and it asserts an ABSENCE that the previous version could not.
+   *
+   * This used to spy on `invalidateQueries` and check it was called with
+   * `["social","reactions"]`. That is the whole reaction family — every
+   * PostCard mounts its own ReactionBar with its own `useReactions({ post })`
+   * query, so one click refetched the reaction list of every post on screen,
+   * and a spy on the call could not tell that from the narrow, correct thing.
+   *
+   * Seeding two posts and asking the cache afterwards can. `posts.all` is
+   * still expected broad: `Post.reaction_count` is rendered in the card
+   * (PostCard.tsx:91), so the feed rows really do go stale on a reaction —
+   * checked before narrowing anything.
+   */
+  it("invalidates the reacted post's reactions, and leaves other posts' alone", async () => {
     const { queryClient, wrapper } = createWrapper();
+    const mine = [...socialKeys.reactions.all, { post: "post-1" }];
+    const theirs = [...socialKeys.reactions.all, { post: "post-2" }];
+    const feed = socialKeys.posts.feed({ page: 1 });
+    queryClient.setQueryData(mine, { results: [] });
+    queryClient.setQueryData(theirs, { results: [] });
+    queryClient.setQueryData(feed, { results: [], count: 0 });
+
     const { result } = renderHook(() => useToggleReaction(), { wrapper });
     await act(async () => {
       result.current.mutate({ post: "post-1", reaction_type: "LIKE" });
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith(
-      expect.objectContaining({ queryKey: ["social", "reactions"] })
-    );
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith(
-      expect.objectContaining({ queryKey: ["social", "posts"] })
-    );
+
+    expect(queryClient.getQueryState(mine)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(theirs)?.isInvalidated).toBe(false);
+    // The feed carries reaction_count, so it does have to refresh.
+    expect(queryClient.getQueryState(feed)?.isInvalidated).toBe(true);
   });
 
   it("surfaces the backend's actual message on a cross-tenant 400", async () => {
