@@ -318,7 +318,8 @@
       "id_copied": "ID 已复制到剪贴板",
       "id_copy_failed": "复制失败",
       "copied": "已复制 ✓"
-    }
+    },
+    "field_required": "此项为必填"
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)"

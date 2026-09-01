@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { dispatchApi, soulsApi, ledgerApi } from "@/lib/api";
@@ -7,6 +7,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
+import { drfFieldErrors, drfNonFieldError } from "@/lib/validations/drfErrors";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
@@ -18,6 +19,17 @@ export default function ProposeDispatchPage() {
   const { showToast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  /**
+   * Per-field errors. This form had three `required` controls and passed no
+   * `error` to any of them, so every rejection — a blank reason, a
+   * cross-tenant refusal, a DRF field error — arrived as the same generic
+   * toast ("发起调度失败") with nothing saying which control the server
+   * refused. `Field` has carried the whole apparatus (aria-invalid,
+   * role="alert", describedby chaining) the entire time; nobody passed it
+   * anything.
+   */
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const formRef = useRef<HTMLFormElement>(null);
   const [form, setForm] = useState({
     soul_id: "",
     target_tenant_code: "",
@@ -74,9 +86,46 @@ export default function ProposeDispatchPage() {
       })),
   ];
 
+  /**
+   * Server field name → the control that holds it. The form keys and the API
+   * keys differ (`soul_id` vs `soul`, `target_tenant_code` vs `target_tenant`),
+   * so a DRF error keyed by the API name has to be translated back or it lands
+   * on nothing.
+   */
+  const FIELD_OF: Record<string, string> = {
+    soul: "soul_id",
+    target_tenant: "target_tenant_code",
+    source_tenant: "target_tenant_code",
+    reason: "reason",
+  };
+
+  /** Focus the first control the operator has to fix, so the fix is one key
+   *  away rather than a scroll-and-hunt. */
+  const focusFirstInvalid = (keys: string[]) => {
+    const order = ["soul_id", "target_tenant_code", "reason"];
+    const first = order.find((k) => keys.includes(k));
+    if (!first) return;
+    const el = formRef.current?.querySelector<HTMLElement>(`[name="${first}"], #${first}`);
+    el?.focus();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.tenant?.code) return;
+
+    // Submit-time required check. `Field` turns `required` into
+    // `aria-required` only — there is no native or client-side gate — so an
+    // untouched select used to round-trip to the server just to be told.
+    const missing: Record<string, string> = {};
+    if (!form.soul_id) missing.soul_id = t("common.field_required");
+    if (!form.target_tenant_code) missing.target_tenant_code = t("common.field_required");
+    if (!form.reason.trim()) missing.reason = t("common.field_required");
+    if (Object.keys(missing).length > 0) {
+      setFieldErrors(missing);
+      focusFirstInvalid(Object.keys(missing));
+      return;
+    }
+    setFieldErrors({});
 
     // Backend requires numeric source_tenant/target_tenant FK ids (tenant codes
     // are read-only output fields on this endpoint), so resolve them from the
@@ -99,7 +148,20 @@ export default function ProposeDispatchPage() {
       });
       router.push("/dispatch");
     } catch (err) {
-      showToast(t("dispatch.propose_error"), "error");
+      // Field-keyed rejections go under the controls; object-level ones stay a
+      // toast, because the server did not name a control for them.
+      const byField = drfFieldErrors(err);
+      const mapped = Object.fromEntries(
+        Object.entries(byField)
+          .filter(([apiField]) => FIELD_OF[apiField])
+          .map(([apiField, message]) => [FIELD_OF[apiField], message])
+      );
+      setFieldErrors(mapped);
+      if (Object.keys(mapped).length > 0) {
+        focusFirstInvalid(Object.keys(mapped));
+      } else {
+        showToast(drfNonFieldError(err, t("dispatch.propose_error")), "error");
+      }
     } finally {
       setLoading(false);
     }
@@ -107,35 +169,53 @@ export default function ProposeDispatchPage() {
 
   return (
     <PageShell variant="prose" title={t("dispatch.propose")}>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
         {/* While the list is in flight the control stays in place, disabled,
             holding a single "Loading…" option. The skeleton it replaces sat
             *beside* the label rather than under it, so the field's own label
             vanished for as long as the query took and the row changed height
             when it came back. */}
         <SelectField
+          id="soul_id"
+          name="soul_id"
           label={t("dispatch.target_soul")}
           required
           disabled={soulsLoading}
+          error={fieldErrors.soul_id}
           value={form.soul_id}
-          onChange={e => setForm({ ...form, soul_id: e.target.value })}
+          onChange={e => {
+            setFieldErrors(({ soul_id: _drop, ...rest }) => rest);
+            setForm({ ...form, soul_id: e.target.value });
+          }}
           options={soulsLoading ? [{ value: "", label: t("common.loading") }] : soulOptions}
         />
 
         <SelectField
+          id="target_tenant_code"
+          name="target_tenant_code"
           label={t("dispatch.target_tenant")}
           required
           disabled={tenantsLoading}
+          error={fieldErrors.target_tenant_code}
           value={form.target_tenant_code}
-          onChange={e => setForm({ ...form, target_tenant_code: e.target.value })}
+          onChange={e => {
+            setFieldErrors(({ target_tenant_code: _drop, ...rest }) => rest);
+            setForm({ ...form, target_tenant_code: e.target.value });
+          }}
           options={tenantsLoading ? [{ value: "", label: t("common.loading") }] : tenantOptions}
         />
 
         <TextAreaField
+          id="reason"
+          name="reason"
           label={t("dispatch.reason")}
           required
+          error={fieldErrors.reason}
           value={form.reason}
-          onChange={e => setForm({ ...form, reason: e.target.value })}
+          onChange={e => {
+            setFieldErrors(({ reason: _drop, ...rest }) => rest);
+            setForm({ ...form, reason: e.target.value });
+          }}
           rows={4}
           placeholder={t("dispatch.reason_placeholder")}
         />
