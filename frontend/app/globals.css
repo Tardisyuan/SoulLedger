@@ -564,7 +564,11 @@ select:focus-visible {
 
 #nprogress .bar {
   position: fixed;
-  z-index: 1600; /* above the sticky masthead, below dialogs (z-[9999]) */
+  /* Matches the `progress` step of the named z scale in tailwind.config.js —
+     above the sticky masthead, below dialogs and drawers. The literal is
+     unavoidable here (this is raw CSS, not a utility class); the comment is
+     what keeps the two from drifting. */
+  z-index: 60;
   top: 0;
   left: 0;
   width: 100%;

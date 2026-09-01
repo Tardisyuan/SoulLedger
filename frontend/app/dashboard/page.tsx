@@ -188,11 +188,25 @@ function DashboardContent() {
     ...tenant.state_breakdown,
   })) ?? [];
 
-  const realmChartData = stats?.souls_by_realm?.map((r) => ({
-    name: r.realm_name,
-    count: r.count,
-    civilization: r.civilization,
-  })) ?? [];
+  /**
+   * Sorted descending, unlike `tenantData` above, and the difference is the
+   * point.
+   *
+   * Realms have no canonical order, so the server's order is arbitrary and a
+   * reader comparing magnitudes has to hunt. Tenants do: there are exactly
+   * four, each carries its civilization's hue (contract-tested), and a stable
+   * order lets a reader learn "the third bar is Egypt" and keep that across
+   * page loads — sorting those by magnitude would make the bars swap places
+   * between visits. Applying "always sort descending" to both would have
+   * traded a real identity for a generic rule.
+   */
+  const realmChartData = [...(stats?.souls_by_realm ?? [])]
+    .sort((a, b) => b.count - a.count)
+    .map((r) => ({
+      name: r.realm_name,
+      count: r.count,
+      civilization: r.civilization,
+    }));
 
   const formatTimestamp = (ts: string) => formatDateTime(ts);
 

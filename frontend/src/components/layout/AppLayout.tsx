@@ -34,19 +34,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = usePathname();
-  const [isNavigating, setIsNavigating] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
 
-  // Track navigation state by pathname changes
+  /**
+   * Close the mobile menu on navigation. It used to also drive a progress bar,
+   * and that bar was removed rather than kept beside `RouteProgress`:
+   *
+   * it lit up when `pathname !== prevPathname` — that is, once the route had
+   * ALREADY changed — and then showed for a fixed 300ms. A progress indicator
+   * that starts when the wait ends and runs on a timer unrelated to the work.
+   * `RouteProgress` starts on `history.pushState` and finishes when the new
+   * route is on screen, which is the thing this was standing in for.
+   */
   useEffect(() => {
     if (pathname !== prevPathname) {
-      setIsNavigating(true);
       setPrevPathname(pathname);
-      // Auto-close mobile menu on navigation
       setMobileMenuOpen(false);
-      // Small delay to ensure content loads before hiding indicator
-      const timer = setTimeout(() => setIsNavigating(false), 300);
-      return () => clearTimeout(timer);
     }
   }, [pathname, prevPathname]);
 
@@ -264,10 +267,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <main className={`transition-[margin-left] duration-200 ${collapsed ? "ml-0 md:ml-16" : "ml-0 md:ml-56"}`}>
-        {/* Navigation loading bar */}
-        {isNavigating && (
-          <div className="fixed top-0 left-0 right-0 z-[99999] h-1 bg-[hsl(var(--color-accent))] animate-pulse" />
-        )}
 
         {/* Top header */}
         <header className="sticky top-0 z-40 h-16 bg-[hsl(var(--color-canvas))]/80 backdrop-blur-sm border-b border-[hsl(var(--color-hairline))] flex items-center px-4 md:px-6 gap-3 md:gap-4">
@@ -347,7 +346,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   leaveFrom="transform opacity-100 scale-100"
                   leaveTo="transform opacity-0 scale-95"
                 >
-                  <Popover.Panel className="absolute right-0 mt-2 w-80 origin-top-right bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-xl focus:outline-none z-[99998]">
+                  <Popover.Panel className="absolute right-0 mt-2 w-80 origin-top-right bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-xl focus:outline-none z-drawer">
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-[hsl(var(--color-ink))]">{t("notifications.title")}</h3>

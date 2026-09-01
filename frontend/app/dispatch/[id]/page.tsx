@@ -274,7 +274,8 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
           The reject and execute dialogs were hand-rolled `fixed inset-0
           bg-black/50 … z-50` overlays — a third scrim dialect alongside
           Modal.tsx's own `bg-black/60 backdrop-blur-sm` and recycle-bin's
-          `z-[9999]` — and being plain divs they had no focus trap, no Escape,
+          `z-[9999]`, since renamed `z-dialog` — and being plain divs they had
+          no focus trap, no Escape,
           and no `aria-modal`. Adding a third hand-rolled one for approve would
           have made the divergence permanent. */}
       <BaseModal
