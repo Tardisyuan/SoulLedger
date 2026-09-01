@@ -1,8 +1,25 @@
 "use client";
 
+import { memo } from "react";
 import { Handle, Position, type NodeTypes } from "@xyflow/react";
 
-// Custom editable node component
+/**
+ * A workflow node on the canvas.
+ *
+ * MEMOISED, and it is the first thing xyflow's own performance guidance asks
+ * for. Nodes are real DOM elements and React Flow re-renders every custom node
+ * on any viewport change unless the component is wrapped — so without this,
+ * dragging one node re-rendered all of them, once per frame. `nodeTypes` is
+ * already module-scope (a fresh object each render would defeat this
+ * entirely), so the memo was the only piece missing. Today's templates are
+ * small enough that nobody would notice; this is the cliff, not the fire.
+ *
+ * The five type colours were `border-blue-500` / `-purple-500` / `-green-500`
+ * / `-red-500` — raw palette, one fixed value for both themes, on a canvas
+ * whose surfaces do change. They are status tokens now, chosen for meaning
+ * rather than for looking different: evaluation is informational, appeal is a
+ * caution, final is a success, execution is the irreversible one.
+ */
 function EditableNodeComponent({
   data,
   selected,
@@ -12,10 +29,10 @@ function EditableNodeComponent({
 }) {
   const nodeTypeColors: Record<string, string> = {
     TRIAL: "border-[hsl(var(--color-accent))] bg-[hsl(var(--color-surface-3))]",
-    EVALUATION: "border-blue-500 bg-[hsl(var(--color-surface-3))]",
-    APPEAL: "border-purple-500 bg-[hsl(var(--color-surface-3))]",
-    FINAL: "border-green-500 bg-[hsl(var(--color-surface-3))]",
-    EXECUTION: "border-red-500 bg-[hsl(var(--color-surface-3))]",
+    EVALUATION: "border-[hsl(var(--color-status-info))] bg-[hsl(var(--color-surface-3))]",
+    APPEAL: "border-[hsl(var(--color-status-warning))] bg-[hsl(var(--color-surface-3))]",
+    FINAL: "border-[hsl(var(--color-status-success))] bg-[hsl(var(--color-surface-3))]",
+    EXECUTION: "border-[hsl(var(--color-status-error))] bg-[hsl(var(--color-surface-3))]",
   };
 
   const colorClass = nodeTypeColors[data.nodeType] || nodeTypeColors.TRIAL;
@@ -40,7 +57,10 @@ function EditableNodeComponent({
   );
 }
 
+const EditableNode = memo(EditableNodeComponent);
+EditableNode.displayName = "EditableNode";
+
 export const nodeTypes: NodeTypes = {
-  editableNode: EditableNodeComponent,
+  editableNode: EditableNode,
 };
 

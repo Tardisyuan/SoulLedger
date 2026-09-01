@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { TextField } from "@/src/components/ui/Field";
+import { Button } from "@/src/components/ui/Button";
 import { authApi } from "@/lib/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -61,66 +63,69 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-canvas">
       <div className="w-full max-w-md px-6">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[hsl(var(--color-ink))] mb-2">{t("nav.title")}</h1>
-          <p className="text-[hsl(var(--color-ink-muted))]">{t("home.hero_subtitle")}</p>
+        {/* On the type scale and the spacing rhythm, and on the shared form
+            primitives. This was the last page still speaking pre-migration
+            Tailwind — `text-3xl` / `text-xl` / `text-sm`, `p-8`, `py-2.5` —
+            which mattered more here than anywhere else, because it is the
+            first screen anyone sees.
+
+            The defect underneath the styling: the submit button was
+            `bg-[--color-accent]` with `text-[--color-ink]`. Dark-mode ink is
+            `210 11% 96%`, near-white, so the label measured **1.95:1** on the
+            amber fill; `Button`'s primary is `text-black`, which is 9.82:1.
+            Same accent-foreground mistake as FollowButton, on the one control
+            every user presses. */}
+        <div className="text-center mb-6">
+          <h1 className="text-07 text-[hsl(var(--color-ink))] mb-2">{t("nav.title")}</h1>
+          <p className="text-04 text-[hsl(var(--color-ink-muted))]">{t("home.hero_subtitle")}</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-8"
+          className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6"
         >
-          <h2 className="text-xl font-semibold text-[hsl(var(--color-ink))] mb-6 text-center">
+          <h2 className="text-06 text-[hsl(var(--color-ink))] mb-6 text-center">
             {t("auth.login")}
           </h2>
 
           <div className="space-y-4">
-            <div>
-              <label htmlFor="login-username" className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">
-                {t("auth.username")}
-              </label>
-              <input
-                id="login-username"
-                name="username"
-                autoComplete="username"
-                type="text"
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] px-4 py-2.5 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] transition-colors"
-                placeholder="admin"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="login-password" className="block text-sm text-[hsl(var(--color-ink-muted))] mb-1">
-                {t("auth.password")}
-              </label>
-              <input
-                id="login-password"
-                name="password"
-                autoComplete="current-password"
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] px-4 py-2.5 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] transition-colors"
-                placeholder="••••••••"
-                required
-              />
-            </div>
+            <TextField
+              id="login-username"
+              name="username"
+              autoComplete="username"
+              type="text"
+              label={t("auth.username")}
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              placeholder="admin"
+              required
+            />
+            <TextField
+              id="login-password"
+              name="password"
+              autoComplete="current-password"
+              type="password"
+              label={t("auth.password")}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              placeholder="••••••••"
+              required
+            />
           </div>
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
             disabled={loading}
-            className="w-full mt-6 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink))] font-medium py-2.5 transition-colors"
+            loading={loading}
+            className="w-full mt-6"
           >
-            {loading ? (t("auth.logging_in")) : (t("auth.login"))}
-          </button>
+            {loading ? t("auth.logging_in") : t("auth.login")}
+          </Button>
         </form>
 
-        <p className="text-center text-[hsl(var(--color-ink-subtle))] text-sm mt-6">
-          <Link href="/" className="text-[hsl(var(--color-accent-ink))] hover:text-[hsl(var(--color-accent-ink))]">
+        <p className="text-center text-03 text-[hsl(var(--color-ink-subtle))] mt-6">
+          <Link href="/" className="text-[hsl(var(--color-accent-ink))] hover:underline">
             {t("nav.home")}
           </Link>
         </p>
