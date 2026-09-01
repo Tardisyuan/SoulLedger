@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { judgmentApi, soulsApi } from "@/lib/api";
+import { judgmentKeys, soulKeys } from "@/lib/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -135,13 +136,21 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const clausesId = useId();
   const firstClauseRef = useRef<HTMLInputElement>(null);
 
+  // Both keys come from the factories. They were `["judgment", id]` and
+  // `["soul", judgment?.soul]` — singular, so they diverged from
+  // `judgmentKeys.detail` / `soulKeys.detail` at the FIRST segment and no
+  // invalidation could ever reach them. The soul one is the visible loss: the
+  // WS soul handler invalidates `soulKeys.all`, which prefix-matches
+  // `["souls","detail",id]` and matched nothing at `["soul", id]`, so a state
+  // change pushed while a judge had this page open left the soul panel stale.
   const { data: judgment, isLoading, error } = useQuery({
-    queryKey: ["judgment", id],
+    queryKey: judgmentKeys.detail(id),
     queryFn: () => judgmentApi.get(id).then((res) => res.data),
   });
 
   const { data: soulData } = useQuery({
-    queryKey: ["soul", judgment?.soul],
+    // `?? ""` never runs a request: `enabled` gates it on the same value.
+    queryKey: soulKeys.detail(judgment?.soul ?? ""),
     queryFn: () => soulsApi.get(judgment!.soul).then((res) => res.data),
     enabled: !!judgment?.soul,
   });
