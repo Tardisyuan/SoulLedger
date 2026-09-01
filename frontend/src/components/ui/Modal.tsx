@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from "@headlessui/react";
+import { Dialog } from "@base-ui/react/dialog";
+import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useCreateSoul } from "@/src/hooks/useSouls";
@@ -23,14 +24,35 @@ interface BaseModalProps {
   footer?: React.ReactNode;
 }
 
+/**
+ * MIGRATED FROM @headlessui TO Base UI, and the anatomy is the visible part of
+ * the change.
+ *
+ * `@headlessui` is in maintenance mode — Tailwind Labs still fixes bugs, but
+ * the changelog carries no feature releases and there is an open "Next
+ * release?" discussion. It has no command palette and no data-grid-adjacent
+ * primitives, which is what a console like this reaches for next. Base UI 1.7
+ * is the layer shadcn/ui itself switched its default to in July 2026, built by
+ * the people who wrote Radix and Floating UI.
+ *
+ * WHAT DID NOT CHANGE, deliberately: the layout. `max-h` + `flex flex-col` +
+ * a scrollable body is one mechanism with a measured reason (see the note
+ * below), and swapping the primitive underneath is not an excuse to redesign
+ * it. Same classes, same structure, different owner.
+ *
+ * WHAT DID: `<Dialog>` becomes the five-part anatomy
+ * `Root / Portal / Backdrop / Viewport / Popup`, `onClose` becomes
+ * `onOpenChange`, and the animation hooks move from headlessui's `transition`
+ * prop to Base UI's `data-starting-style` / `data-ending-style` attributes.
+ */
 export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModalProps) {
   return (
-    <Dialog open={isOpen} onClose={onClose} className="relative z-dialog">
-      {/* Backdrop */}
-      <DialogBackdrop
-        transition
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs duration-200 ease-out data-closed:opacity-0 dark:bg-black/80"
-      />
+    <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Dialog.Portal>
+        {/* Backdrop */}
+        <Dialog.Backdrop
+          className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-xs transition-opacity duration-200 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-black/80"
+        />
 
       {/* Centered panel.
        *
@@ -48,36 +70,35 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
        *
        * 外层加 `overflow-y-auto` 是兜底:若某天 body 内部出现不可压缩的元素,
        * 至少整个面板还能滚,而不是把内容藏到视口外。 */}
-      <div className="fixed inset-0 flex w-screen items-center justify-center overflow-y-auto p-4">
-        <DialogPanel
-          transition
-          className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] duration-200 ease-out data-closed:scale-95 data-closed:opacity-0"
-        >
-          {/* Header */}
-          <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-[hsl(var(--color-hairline))]">
-            <DialogTitle className="text-[hsl(var(--color-ink))] text-06">{title}</DialogTitle>
-            <button
-              onClick={onClose}
-              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))] transition-colors text-06 leading-none"
-              aria-label="Close"
-            >
-              ×
-            </button>
-          </div>
-
-          {/* Body —— 唯一允许收缩与滚动的一段。header 与 footer 都是 `shrink-0`,
-           * 因为「关闭」和「提交」在任何视口高度下都必须留在屏幕上。 */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
-
-          {/* Footer */}
-          {footer && (
-            <div className="shrink-0 px-6 pb-5 border-t border-[hsl(var(--color-hairline))] pt-4">
-              {footer}
+        <Dialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-center justify-center overflow-y-auto p-4">
+          <Dialog.Popup
+            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] transition duration-200 ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0"
+          >
+            {/* Header */}
+            <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-[hsl(var(--color-hairline))]">
+              <Dialog.Title className="text-[hsl(var(--color-ink))] text-06">{title}</Dialog.Title>
+              <Dialog.Close
+                className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))] transition-colors text-06 leading-none"
+                aria-label="Close"
+              >
+                ×
+              </Dialog.Close>
             </div>
-          )}
-        </DialogPanel>
-      </div>
-    </Dialog>
+
+            {/* Body —— 唯一允许收缩与滚动的一段。header 与 footer 都是 `shrink-0`,
+             * 因为「关闭」和「提交」在任何视口高度下都必须留在屏幕上。 */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+
+            {/* Footer */}
+            {footer && (
+              <div className="shrink-0 px-6 pb-5 border-t border-[hsl(var(--color-hairline))] pt-4">
+                {footer}
+              </div>
+            )}
+          </Dialog.Popup>
+        </Dialog.Viewport>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
@@ -323,38 +344,53 @@ export function ConfirmDialog({
     info: "primary",
   } as const;
 
+  /**
+   * `AlertDialog`, not `Dialog`, and that is a behaviour change worth naming.
+   *
+   * An alert dialog does not dismiss on an outside click — the operator has to
+   * answer it. Every call site here is a confirmation before something
+   * consequential (delete a user, delete a soul, move a menu to the recycle
+   * bin, transition a soul's state), and a stray click on the backdrop
+   * silently choosing "cancel" is the friendlier half of the wrong pair: it
+   * teaches that the dialog is dismissible, which is exactly the habit you do
+   * not want at the moment the answer matters. Escape and the Cancel button
+   * both still close it.
+   *
+   * `@headlessui` had no alert-dialog primitive, so this was a plain Dialog
+   * with the outside-click behaviour it comes with. Base UI has one.
+   */
   return (
-    <Dialog open={isOpen} onClose={onCancel} className="relative z-dialog">
-      <DialogBackdrop
-        transition
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs duration-200 ease-out data-closed:opacity-0 dark:bg-black/80"
-      />
-      {/* 与上面的 Modal 同一套约束,理由见那里。这个对话框的内容通常很短,
-       * 但 `message` 是调用方传进来的任意文本 —— 「通常很短」不是约束。 */}
-      <div className="fixed inset-0 flex w-screen items-center justify-center overflow-y-auto p-4">
-        <DialogPanel
-          transition
-          className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] duration-200 ease-out data-closed:scale-95 data-closed:opacity-0"
-        >
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-            <h3 className="text-06 text-[hsl(var(--color-ink))] mb-2">{title}</h3>
-            <p className="text-04 text-[hsl(var(--color-ink-muted))]">{message}</p>
-          </div>
-          <div className="shrink-0 px-6 pb-5 flex gap-3">
-            <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
-              {cancelText || t("common.cancel")}
-            </Button>
-            <Button
-              type="button"
-              variant={variantButton[variant]}
-              onClick={onConfirm}
-              className="flex-1"
-            >
-              {confirmText || t("common.confirm")}
-            </Button>
-          </div>
-        </DialogPanel>
-      </div>
-    </Dialog>
+    <AlertDialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onCancel(); }}>
+      <AlertDialog.Portal>
+        <AlertDialog.Backdrop className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-xs transition-opacity duration-200 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-black/80" />
+        {/* 与上面的 Modal 同一套约束,理由见那里。这个对话框的内容通常很短,
+         * 但 `message` 是调用方传进来的任意文本 —— 「通常很短」不是约束。 */}
+        <AlertDialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-center justify-center overflow-y-auto p-4">
+          <AlertDialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] transition duration-200 ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+              <AlertDialog.Title className="text-06 text-[hsl(var(--color-ink))] mb-2">
+                {title}
+              </AlertDialog.Title>
+              <AlertDialog.Description className="text-04 text-[hsl(var(--color-ink-muted))]">
+                {message}
+              </AlertDialog.Description>
+            </div>
+            <div className="shrink-0 px-6 pb-5 flex gap-3">
+              <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
+                {cancelText || t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                variant={variantButton[variant]}
+                onClick={onConfirm}
+                className="flex-1"
+              >
+                {confirmText || t("common.confirm")}
+              </Button>
+            </div>
+          </AlertDialog.Popup>
+        </AlertDialog.Viewport>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
   );
 }

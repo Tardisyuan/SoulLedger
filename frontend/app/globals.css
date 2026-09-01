@@ -81,9 +81,16 @@
 
   --border-width-3: 3px;
 
+  /* 顺序在 2026-09-01 换过一次,而且是被一个具体需要逼出来的,不是顺手调的。
+     命名这三档时照抄了当时的现状 —— drawer(99998)压在 dialog(9999)之上 ——
+     并在注释里记着「这多半是反的,留给真正要动层级的那一次」。那一次到了:
+     `LogoutConfirmDialog` 要换成共用的 `ConfirmDialog`,而它此前特意用了
+     drawer 那一档,因为它可能在移动端抽屉打开时被唤起。
+     dialog 现在压在 drawer 之上。理由是单向的:**从抽屉里开出来的确认框必须盖住
+     抽屉**,而抽屉不会在对话框打开时被打开 —— 对话框是模态的。 */
   --z-index-progress: 60;
-  --z-index-dialog: 70;
-  --z-index-drawer: 80;
+  --z-index-drawer: 70;
+  --z-index-dialog: 80;
 
   --container-prose: 720px;
   --container-page: 1200px;
@@ -577,8 +584,9 @@ html:lang(zh-Hans) :is(.text-05, .text-06, .text-07) {
    a single frame rather than removed: `animation: … 1ms` still fires
    `animationend`, and `transition-duration: 1ms` still fires `transitionend`,
    so any code waiting on those events keeps working. Removing them outright is
-   the version of this rule that breaks @headlessui's `data-closed` transitions
-   — its panels wait for the event before unmounting.
+   the version of this rule that breaks the dialog primitive's exit transitions
+   — Base UI (like @headlessui before it) waits for that event before
+   unmounting a popup, so a dialog that never fires one never goes away.
 
    `scroll-behavior: auto` because a smooth-scrolled jump is the same
    vestibular trigger as a slide, and the pagination and anchor links do jump.
