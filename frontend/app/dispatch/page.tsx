@@ -145,7 +145,7 @@ function DispatchPageContent() {
 }
 
 function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
 
   return (
     <Link href={`/dispatch/${dispatch.id}`} className="block">
@@ -158,6 +158,18 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
               {dispatch.soul_name || <MissingValue kind="unrecorded" />}</p>
             <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
               {dispatch.source_tenant_code} → {dispatch.target_tenant_code}
+            </p>
+            {/* `proposed_at` was in the response and unread, so this card
+                carried no time at all — a queue that cannot be triaged by age.
+                Mono + tabular-nums so the timestamps line up digit for digit
+                down a column of cards, which is what makes "oldest first"
+                readable at a glance. */}
+            <p className="text-02 font-mono tabular-nums text-[hsl(var(--color-ink-subtle))] mt-1">
+              {dispatch.proposed_at ? (
+                formatDateTime(dispatch.proposed_at)
+              ) : (
+                <MissingValue kind="unrecorded" />
+              )}
             </p>
           </div>
           {/* <DomainEnum> renders exactly one span, so passing the badge

@@ -136,7 +136,20 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           event.preventDefault();
           restoreDeferred();
           break;
+        case "n":
+          // The notes textarea is the only text input on a keyboard-first
+          // surface, and it had no key — the operator had to reach for the
+          // mouse to add a note to a verdict they were about to file with a
+          // single keystroke. `isTextEntry` above means `n` stops being a
+          // shortcut the moment focus lands there, so typing "notes" works.
+          event.preventDefault();
+          document.getElementById("queue-notes")?.focus();
+          break;
         case "?":
+        case "h":
+          // `h` as well as `?`. On most non-US layouts `?` needs Shift, so a
+          // help key that is itself awkward to press is a help key nobody
+          // finds. `h` is free here — no verdict claims it.
           event.preventDefault();
           setShowKeys((prev) => !prev);
           break;
@@ -418,7 +431,10 @@ function KeyboardMap() {
     ["U", t("judgment.queue.key_undo")],
     ["W", t("judgment.queue.key_workflow")],
     ["R", t("judgment.queue.key_restore")],
-    ["?", t("judgment.queue.key_help")],
+    ["N", t("judgment.queue.key_notes")],
+    // Both spellings listed, because a help key nobody can find is not help:
+    // `?` needs Shift on most non-US layouts.
+    ["? · H", t("judgment.queue.key_help")],
     ["Esc", t("judgment.queue.key_leave")],
   ];
   return (
