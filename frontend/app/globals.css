@@ -160,6 +160,14 @@
      and the components that draw the mark render no identity text at all in
      that case — so the disc never appears alone. */
     --civ-mark: 215 8% 57%;
+    /* The neutral ink. `--civ-mark`'s 215 8% 57% is declared once, here, and
+     :root is the DARK block -- there is no `.light` override, so an unmapped
+     tenant drew the masthead's tenant code with a value measured against a
+     near-black canvas on a white one: 3.23:1 in the rail, 2.84:1 in the chip,
+     both at 11px. As a 7px dot the same value is a graphical object at
+     3.23:1 and passes 1.4.11, which is why the mark itself is left alone and
+     only the text moves. `.light` overrides this one below. */
+    --civ-ink: 215 8% 57%;
     --color-canvas: 240 15% 4%;
     --color-surface-1: var(--civ-hue) 13% 7%;
     --color-surface-2: var(--civ-hue) 12% 9%;
@@ -437,6 +445,40 @@
      surface-1, hsl(88 13% 7%) -- AAA. */
     --color-civ-hue-gr: 88;
     --color-civ-mark-gr: 88 40% 52%;
+    /* IDENTITY TEXT, as distinct from the identity mark. Same split, same
+     reason, as --color-accent / --color-accent-ink: a fill and the text drawn
+     on that fill cannot be one value. Badge's `accent` tone already carries
+     the rule in its own comment -- "the foreground is --color-accent-ink, NOT
+     --color-accent ... a badge is text" -- and CATEGORY_COLORS in
+     app/organizations/page.tsx copied that tone's 10/20/40 fill-text-border
+     ladder while spelling the foreground `--color-civ-mark-*`. It took the
+     ladder and left behind the one thing the ladder's comment says is the
+     point.
+
+     Measured, not eyeballed. A civilization badge is `text-02` (12px/500) on
+     `mark/0.2` over the *logged-in* tenant's surface -- which on
+     /organizations is a different civilization from the badge's own, so the
+     figure has to hold for every host-tenant x surface-1..4 pair, not just
+     the badge's own ramp. At the mark's own lightness the worst of those 32
+     pairs was: cn 3.70:1, eu 3.68:1 (dark) and cn 4.16:1, eg 3.29:1,
+     gr 3.35:1 (light). AA for 12px text is 4.5:1. On the surfaces that page
+     actually uses (surface-1, hover surface-2) four of the eight still failed
+     -- cn 3.93 / eu 3.92 dark, eg 3.58 / gr 3.64 light.
+
+     Each ink keeps its civilization's hue and saturation and moves only
+     lightness, away from the canvas: nothing here changes which colour a
+     cosmology *is*, only whether its name can be read. eg/gr dark and eu
+     light already cleared the bar, so their ink equals their mark -- the same
+     way --color-accent-ink equals --color-accent in dark mode. Every value
+     below is >= 4.6:1 across all 32 pairs; civilizationColourContract pins
+     that floor and goes red if a value drifts.
+
+     MARK IS THE GRAPHIC, INK IS THE TEXT. Dots, rules, borders, chart series
+     keep the mark (non-text, 3:1). Anything with glyphs in it takes the ink. */
+    --color-civ-ink-cn: 12 55% 65%;
+    --color-civ-ink-eu: 232 42% 70%;
+    --color-civ-ink-eg: 44 45% 55%;
+    --color-civ-ink-gr: 88 40% 52%;
   }
 
   /* TenantProvider stamps this on <html> once the logged-in user's tenant
@@ -464,18 +506,22 @@
   [data-civ='cn'] {
     --civ-hue: var(--color-civ-hue-cn);
     --civ-mark: var(--color-civ-mark-cn);
+    --civ-ink: var(--color-civ-ink-cn);
   }
   [data-civ='eu'] {
     --civ-hue: var(--color-civ-hue-eu);
     --civ-mark: var(--color-civ-mark-eu);
+    --civ-ink: var(--color-civ-ink-eu);
   }
   [data-civ='eg'] {
     --civ-hue: var(--color-civ-hue-eg);
     --civ-mark: var(--color-civ-mark-eg);
+    --civ-ink: var(--color-civ-ink-eg);
   }
   [data-civ='gr'] {
     --civ-hue: var(--color-civ-hue-gr);
     --civ-mark: var(--color-civ-mark-gr);
+    --civ-ink: var(--color-civ-ink-gr);
   }
 
   .light {
@@ -512,6 +558,13 @@
      hsl(88 14% 98%) -- AA. */
     --color-civ-hue-gr: 88;
     --color-civ-mark-gr: 88 46% 32%;
+    /* 亮色一半:同 hue/sat,朝白底反方向压暗。见 :root 的度量。 */
+    --color-civ-ink-cn: 12 58% 35%;
+    --color-civ-ink-eu: 232 45% 44%;
+    --color-civ-ink-eg: 44 52% 27%;
+    --color-civ-ink-gr: 88 46% 25%;
+    /* 亮色的中性 ink。白底上 4.66:1;暗色那条是 5.37:1。 */
+    --civ-ink: 215 8% 43%;
   }
 }
 

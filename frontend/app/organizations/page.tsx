@@ -71,16 +71,23 @@ const CIVILIZATION_ICONS: Record<string, string> = {
  * 38° amber was the worse offender of the four: that is `--color-accent`, the
  * colour of every button and link in the app, standing in for "Chinese".
  *
- * The 10%/20%/40% fill-text-border ladder is Badge's `accent` tone recipe, not
- * a new invention. Feedback tokens (`--color-status-*`) are deliberately absent
+ * The 10%/20%/40% fill-text-border ladder is Badge's `accent` tone recipe, and
+ * the foreground is now `--color-civ-ink-*`, not `--color-civ-mark-*`. That was
+ * the half of the recipe this map had missed: `accent`'s own comment says "the
+ * foreground is --color-accent-ink, NOT --color-accent ... a badge is text", and
+ * a badge here is `text-02`, 12px, needing 4.5:1. Drawn at the mark's own
+ * lightness on `mark/0.2`, four of the eight civilization x theme combinations
+ * failed on the surfaces this page actually uses — cn 3.93 / eu 3.92 dark,
+ * eg 3.58 / gr 3.64 light. The fill and the border keep the mark; only the
+ * glyphs moved. Feedback tokens (`--color-status-*`) are deliberately absent
  * — `statusTokenLayering.test.ts` polices exactly that for enum-keyed maps like
  * this one, and a civilization is a domain identity, not a system state.
  */
 const CATEGORY_COLORS: Record<string, string> = {
-  CHINESE: "bg-[hsl(var(--color-civ-mark-cn)/0.2)] text-[hsl(var(--color-civ-mark-cn))] border-[hsl(var(--color-civ-mark-cn)/0.4)]",
-  EUROPEAN: "bg-[hsl(var(--color-civ-mark-eu)/0.2)] text-[hsl(var(--color-civ-mark-eu))] border-[hsl(var(--color-civ-mark-eu)/0.4)]",
-  EGYPTIAN: "bg-[hsl(var(--color-civ-mark-eg)/0.2)] text-[hsl(var(--color-civ-mark-eg))] border-[hsl(var(--color-civ-mark-eg)/0.4)]",
-  GREEK: "bg-[hsl(var(--color-civ-mark-gr)/0.2)] text-[hsl(var(--color-civ-mark-gr))] border-[hsl(var(--color-civ-mark-gr)/0.4)]",
+  CHINESE: "bg-[hsl(var(--color-civ-mark-cn)/0.2)] text-[hsl(var(--color-civ-ink-cn))] border-[hsl(var(--color-civ-mark-cn)/0.4)]",
+  EUROPEAN: "bg-[hsl(var(--color-civ-mark-eu)/0.2)] text-[hsl(var(--color-civ-ink-eu))] border-[hsl(var(--color-civ-mark-eu)/0.4)]",
+  EGYPTIAN: "bg-[hsl(var(--color-civ-mark-eg)/0.2)] text-[hsl(var(--color-civ-ink-eg))] border-[hsl(var(--color-civ-mark-eg)/0.4)]",
+  GREEK: "bg-[hsl(var(--color-civ-mark-gr)/0.2)] text-[hsl(var(--color-civ-ink-gr))] border-[hsl(var(--color-civ-mark-gr)/0.4)]",
 };
 
 function OrganizationsPageContent() {

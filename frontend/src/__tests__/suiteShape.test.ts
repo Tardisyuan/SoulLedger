@@ -97,6 +97,7 @@ const COLLECTED_FILES = [
   "api.test.ts",
   "auditGrouping.test.ts",
   "chartColourContract.test.ts",
+  "civIdentityInkContract.test.ts",
   "civilizationColourContract.test.ts",
   "civilizationCopyCoverage.test.ts",
   "civilizationMapCoverage.test.ts",
