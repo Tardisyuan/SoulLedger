@@ -37,6 +37,13 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   CANCELLED: "neutral",
 };
 
+/*
+ * The `t("…") || "English fallback"` spellings that used to be here are gone.
+ * `useI18n`'s `t()` returns the KEY when it cannot resolve one, and a key is a
+ * non-empty string — so the right-hand side was unreachable, and it read as
+ * i18n coverage that did not exist. Both keys resolve; nothing changed on
+ * screen. Three other files carry a comment diagnosing this exact shape.
+ */
 export default function CrossJudgmentsPage() {
   const { t } = useI18n();
   const { user } = useTenant();
@@ -88,7 +95,7 @@ export default function CrossJudgmentsPage() {
       subtitle={t("crossJudgments.subtitle")}
     >
       <PageSection
-        title={t("crossJudgments.list_title") || "Cross-Judgment Cases"}
+        title={t("crossJudgments.list_title")}
         isLoading={isLoading}
       >
         {/* A failed request used to fall through to the empty state, so
@@ -98,7 +105,7 @@ export default function CrossJudgmentsPage() {
         ) : isLoading ? (
           <ListSkeleton count={3} />
         ) : judgments.length === 0 ? (
-          <EmptyState title={t("crossJudgments.no_judgments") || "No cross-tenant judgments yet"} />
+          <EmptyState title={t("crossJudgments.no_judgments")} />
         ) : (
           <div className="space-y-4">
             {judgments.map((j: CrossTenantJudgmentListItem) => (
@@ -111,7 +118,7 @@ export default function CrossJudgmentsPage() {
                   <div className="min-w-0">
                     <h3 className="text-04 font-semibold text-[hsl(var(--color-ink))]">{j.title}</h3>
                     <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
-                      {t("crossJudgments.initiated_by") || "Initiated by"}: {j.initiating_tenant_code}
+                      {t("crossJudgments.initiated_by")}: {j.initiating_tenant_code}
                     </p>
                   </div>
                   {/* <DomainEnum> renders exactly one span, so it becomes the

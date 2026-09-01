@@ -25,7 +25,7 @@ interface BaseModalProps {
 
 export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModalProps) {
   return (
-    <Dialog open={isOpen} onClose={onClose} className="relative z-[9999]">
+    <Dialog open={isOpen} onClose={onClose} className="relative z-dialog">
       {/* Backdrop */}
       <DialogBackdrop
         transition
@@ -324,7 +324,7 @@ export function ConfirmDialog({
   } as const;
 
   return (
-    <Dialog open={isOpen} onClose={onCancel} className="relative z-[9999]">
+    <Dialog open={isOpen} onClose={onCancel} className="relative z-dialog">
       <DialogBackdrop
         transition
         className="fixed inset-0 bg-black/60 backdrop-blur-sm duration-200 ease-out data-closed:opacity-0 dark:bg-black/80"

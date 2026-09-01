@@ -224,7 +224,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
       <button
         type="button"
         aria-label={t("common.close")}
-        className="fixed inset-0 bg-black/50 z-[99998]"
+        className="fixed inset-0 bg-black/50 z-drawer"
         onClick={onClose}
       />
 
@@ -232,7 +232,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
       <div
         ref={drawerRef}
         {...drawerProps}
-        className="fixed right-0 top-0 h-full w-80 bg-[hsl(var(--color-surface-1))] border-l border-[hsl(var(--color-hairline))] z-[99998] shadow-xl overflow-y-auto"
+        className="fixed right-0 top-0 h-full w-80 bg-[hsl(var(--color-surface-1))] border-l border-[hsl(var(--color-hairline))] z-drawer shadow-xl overflow-y-auto"
       >
         <div className="p-6">
           {/* Header */}
