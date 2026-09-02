@@ -182,6 +182,39 @@ export function Field({
         ) : null}
       </label>
 
+      {/* `required` becomes `aria-required` and is NOT forwarded to the
+          control as the native HTML attribute. That is a decision, not an
+          oversight, and it is written down here because an e2e test spent its
+          life asserting the opposite (`validity.valueMissing === true` on the
+          login form, which can never be true while this holds).
+
+          Native `required` inside a `<form>` makes the browser refuse the
+          submit and show its own bubble BEFORE the submit handler runs. Three
+          consequences, all of them regressions for this app:
+
+            - The bubble is in the BROWSER's language. This app ships three
+              bundles and picks its locale from a cookie; a zh-Hans user on an
+              en browser would get the one message on the page they did not
+              choose.
+            - The bubble replaces the field's own `role="alert"` error, which
+              is translated, styled, and wired to `aria-describedby` right
+              here. The app would lose its error presentation for exactly the
+              simplest failure.
+            - All 13 forms would change at once. None of them passes
+              `noValidate`, so none of them is expecting the browser to take
+              over.
+
+          Every form in this app validates in JS instead — zod schemas in
+          `@soulledger/core/validations`, checked in the submit handler after
+          `preventDefault()`. The asterisk beside the label is for eyes,
+          `aria-required` is for assistive tech, and the error span is for
+          both.
+
+          IF THIS IS EVER REVISITED, the way to have both is `noValidate` on
+          the `<form>` plus the native attribute here: the input then carries
+          truthful HTML semantics (useful for autofill) while presentation
+          stays with the app. That is a change to all 13 forms, so it is a
+          decision to make deliberately rather than a line to add here. */}
       {children({
         id: controlId,
         "aria-invalid": invalid || undefined,
