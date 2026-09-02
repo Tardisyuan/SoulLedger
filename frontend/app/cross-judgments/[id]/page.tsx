@@ -69,7 +69,8 @@ export default function CrossJudgmentDetailPage() {
 
   if (error && !judgment) {
     return (
-      <PageShell variant="prose" title={t("crossJudgments.title")} backLink={backLink}>
+      <PageShell
+      density="document" variant="prose" title={t("crossJudgments.title")} backLink={backLink}>
         <p className="text-04 text-[hsl(var(--color-status-error))]">{error}</p>
       </PageShell>
     );
@@ -77,6 +78,7 @@ export default function CrossJudgmentDetailPage() {
 
   return (
     <PageShell
+      density="document"
       variant="prose"
       backLink={backLink}
       title={loading ? <Skeleton className="h-8 w-64" /> : judgment?.title}

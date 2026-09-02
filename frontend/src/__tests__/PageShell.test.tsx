@@ -12,6 +12,8 @@
  * 每条都写成「断言缺席」而不只是「断言在场」—— 前三条的失败模式都是多出来一个
  * 类名，而「该有的类名还在」在多出来的时候照样是绿的。
  */
+import { readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
 import { render } from "@testing-library/react";
 import { PageShell, type PageShellVariant } from "@/src/components/ui/PageShell";
 
@@ -281,5 +283,97 @@ describe("PageShell · 分页位", () => {
     const { container } = render(<PageShell title="T">body</PageShell>);
     expect(container.querySelector("[data-page-shell-pagination]")).toBeNull();
     expect(allClasses(container).filter((c) => /\bborder-t-2\b/.test(c))).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+/**
+ * `density` —— 统一是默认,不是唯一。
+ *
+ * 迁移时 33 条路由都拿到同一套正文节奏 `px-6 py-6`,对一张可排序的表格那是对的:
+ * 操作员在扫描,多余的留白就是他一秒钟里少看到的一行。缺陷不是统一,是**没有
+ * 出口** —— 真正被读的那几条路由只能从壳内部顶开它。实测 2026-09-02:
+ * `app/judgment/[id]` 在四处写 `gap-10 mt-10`,`app/ledger` 写 `space-y-10`。
+ *
+ * 全仓 935 处纵向节奏里 96% 挤在 ≤24px,≥48px 的只有 6 处(0.6%)。宏观节奏
+ * 一直存在,只是没人走得到。
+ */
+describe("PageShell density", () => {
+  it("defaults to table, so the other thirty routes do not move", () => {
+    const { container } = render(<PageShell title="T">x</PageShell>);
+    const body = container.querySelector("[data-page-shell-body]");
+    expect(body).toHaveAttribute("data-density", "table");
+    expect(body?.className).toContain("py-6");
+    // 断言缺席:默认档不许悄悄带上文档档的节奏。
+    expect(body?.className).not.toContain("pt-10");
+    expect(body?.className).not.toContain("pb-16");
+  });
+
+  it("document actually changes the body rhythm", () => {
+    const { container } = render(
+      <PageShell title="T" density="document">x</PageShell>
+    );
+    const body = container.querySelector("[data-page-shell-body]");
+    expect(body).toHaveAttribute("data-density", "document");
+    expect(body?.className).toContain("pt-10");
+    expect(body?.className).toContain("pb-16");
+    expect(body?.className).not.toContain("py-6");
+  });
+
+  it("changes only the vertical rhythm — column width stays the variant's job", () => {
+    const widthOf = (density?: "table" | "document") => {
+      const { container } = render(
+        <PageShell title="T" variant="prose" density={density}>x</PageShell>
+      );
+      const cls = container.querySelector("[data-page-shell-body]")?.className ?? "";
+      return cls.split(/\s+/).filter((c) => c.startsWith("max-w") || c === "mx-auto").sort();
+    };
+    expect(widthOf("document")).toEqual(widthOf("table"));
+    expect(widthOf("table").length).toBeGreaterThan(0);
+  });
+
+  /**
+   * 一条路由里的每个 `<PageShell>` 必须同意自己是什么。
+   *
+   * 这些页面为加载态、错误态和正文各渲染一个壳。只给正文那个加 density,
+   * 加载完成的瞬间正文就会跳一次 —— **我第一次改就是这么错的**:
+   * 正则只匹配了每个文件的第一个 `<PageShell`,而那恰好是加载态。
+   */
+  it("keeps every PageShell in one route agreeing on its density", () => {
+    const APP = path.join(__dirname, "..", "..", "app");
+    const walk = (dir: string, out: string[] = []): string[] => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        if (e.name === "node_modules" || e.name === ".next") continue;
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) walk(full, out);
+        else if (e.name === "page.tsx") out.push(full);
+      }
+      return out;
+    };
+    const routes = walk(APP);
+    expect(routes.length).toBeGreaterThan(20);
+
+    const disagreeing: string[] = [];
+    for (const file of routes) {
+      const src = readFileSync(file, "utf8");
+      const shells = src.match(/<PageShell\b/g)?.length ?? 0;
+      if (shells < 2) continue;
+      const declared = (src.match(/density="document"/g) ?? []).length;
+      if (declared !== 0 && declared !== shells) {
+        disagreeing.push(
+          `${path.relative(APP, file)}  ${shells} shells, ${declared} declared document`
+        );
+      }
+    }
+    if (disagreeing.length > 0) {
+      throw new Error(
+        `A route renders several PageShells (loading / error / content) and only ` +
+          `some of them declare density="document". The body rhythm changes the ` +
+          `moment the page finishes loading, which reads as a jump.\n\n` +
+          disagreeing.join("\n")
+      );
+    }
+    expect(disagreeing).toEqual([]);
   });
 });

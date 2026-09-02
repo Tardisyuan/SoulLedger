@@ -50,6 +50,18 @@ const WIDTH_CLASS: Record<PageShellVariant, string> = {
  * 页面只给内容。传了这个对象就有占位，**即使两半都空** —— 空结果时分页条
  * 塌陷会让下面的内容往上跳一格。
  */
+export type PageShellDensity = "table" | "document";
+
+/**
+ * 正文槽的纵向节奏,按密度。
+ *
+ * 只有纵向:左右一律 `px-6`,因为列宽归 `variant` 管,两个 prop 各管一件事。
+ */
+const BODY_CLASS: Record<PageShellDensity, string> = {
+  table: "px-6 py-6",
+  document: "px-6 pt-10 pb-16",
+};
+
 export interface PageShellPagination {
   /** 左侧：「第 2 页 / 共 7 页，共 133 条」这类计数。 */
   count?: React.ReactNode;
@@ -102,6 +114,22 @@ export interface PageShellProps {
   isLoading?: boolean;
   isEmpty?: boolean;
   children?: React.ReactNode;
+  /**
+   * 这条路由是被**读**的还是被**扫**的。
+   *
+   * 默认 `"table"`,也就是迁移时 33 条路由拿到的那一套:`py-6`,区段边界与
+   * 卡片内边距同重。对一张可排序的表格这是对的 —— 操作员在扫描,任何多余的
+   * 留白都是他一秒钟里少看到的一行。
+   *
+   * `"document"` 是给真正被读的两三条路由的。它们此前**没有一条被认可的途径**
+   * 说自己是文档:`app/judgment/[id]` 在四处写 `gap-10 mt-10`,
+   * `app/ledger` 写 `space-y-10`,都是从壳内部顶开固定的 `py-6`。壳把统一
+   * 当默认是对的,把统一当唯一才是那个缺陷 —— 这个 prop 是那道出口。
+   *
+   * 实测背景(2026-09-02):全仓 935 处纵向节奏里,96% 挤在 ≤24px,
+   * ≥48px 的只有 6 处、占 0.6%。宏观节奏是存在的,只是没人走得到。
+   */
+  density?: PageShellDensity;
   /** 追加到最外层。**不要用它改列宽** —— 那是 variant 的事。 */
   className?: string;
 }
@@ -109,6 +137,7 @@ export interface PageShellProps {
 export function PageShell({
   title,
   variant = "page",
+  density = "table",
   eyebrow,
   backLink,
   tabs,
@@ -235,7 +264,7 @@ export function PageShell({
         </div>
       ) : null}
 
-      <div data-page-shell-body="" className={cn(width, "px-6 py-6")}>
+      <div data-page-shell-body="" data-density={density} className={cn(width, BODY_CLASS[density])}>
         {body}
       </div>
 
