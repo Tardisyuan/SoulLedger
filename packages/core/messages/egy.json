@@ -597,7 +597,8 @@
       "escalate_reason_placeholder": "Why this node is being skipped",
       "escalate_success": "Escalated; the reason has been recorded",
       "escalate_error": "Escalation failed",
-      "escalate_needs_reason": "Escalation requires a written reason"
+      "escalate_needs_reason": "Escalation requires a written reason",
+      "approver_name_absent": "the node carries the approver's primary key; the backend sends no name"
     },
     "verdicts": {
       "passed": "Sethet",
@@ -1136,7 +1137,8 @@
       "CANCELLED": "Ma Iri Seth"
     },
     "confirm_approve": "Approve this cross-tenant dispatch?",
-    "approve_warning": "The target tenant gains disposition rights over this soul. The action is written to the audit log."
+    "approve_warning": "The target tenant gains disposition rights over this soul. The action is written to the audit log.",
+    "proposer_account_removed": "the proposing account has been deleted, so no name is available"
   },
   "crossJudgments": {
     "title": "Sheemtet Seth Em Kehat",

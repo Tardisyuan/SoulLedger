@@ -597,7 +597,8 @@
       "escalate_reason_placeholder": "为什么要跳过当前节点",
       "escalate_success": "已越级推进，理由已记入审计",
       "escalate_error": "越级推进失败",
-      "escalate_needs_reason": "越级推进必须写明理由"
+      "escalate_needs_reason": "越级推进必须写明理由",
+      "approver_name_absent": "节点只带审批人主键,后端未返回姓名"
     },
     "verdicts": {
       "passed": "通过",
@@ -1136,7 +1137,8 @@
       "CANCELLED": "已取消"
     },
     "confirm_approve": "确认批准这次跨租户调度?",
-    "approve_warning": "批准后目标租户将获得该灵魂的处置权。此操作会写入审计日志。"
+    "approve_warning": "批准后目标租户将获得该灵魂的处置权。此操作会写入审计日志。",
+    "proposer_account_removed": "提议人账号已删除,姓名无从取得"
   },
   "crossJudgments": {
     "title": "跨文明审判",

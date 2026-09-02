@@ -2,7 +2,7 @@
 
 import { type ApprovalNode } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
+import { DomainEnum, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
 import { Badge } from "@/src/components/ui/Badge";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 
@@ -56,9 +56,32 @@ export function WorkflowNodeHistory({
             {node.notes && (
               <p className="text-03 text-[hsl(var(--color-ink-muted))] mt-2 italic">&ldquo;{node.notes}&rdquo;</p>
             )}
-            {node.approver && (
+            {node.approver != null && (
               <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
-                {t("workflow.detail.approver")}: {node.approver}
+                {t("workflow.detail.approver")}:{" "}
+                {/* `MissingValue`, not the raw `node.approver` value. That field is
+                    the deciding user's integer primary key: `ApprovalNodeSerializer`
+                    sends `approver` and **no** `approver_name` — unlike
+                    `DispatchRecordSerializer`, which carries `dispatched_by_name`
+                    beside the pk. So there is no name to show here, and printing
+                    the pk is IDENTIFIER_POLICY clause 4.
+                
+                    The line is kept rather than hidden because "decided by someone
+                    we cannot name" and "not decided" are different facts; the
+                    tooltip says which one this is.
+                
+                    NOTE THE SPELLING: this comment says `node.approver` without
+                    braces on purpose. Rule 3 of domainDisplayContract scans line by
+                    line and `stripComment` only removes `//` — a JSX block comment
+                    survives it, so writing the braced form here would be reported
+                    as the very render this comment says was removed. Prose read as
+                    code, the trap this repository keeps re-finding.
+                
+                    THE REAL FIX IS ON THE BACKEND — an `approver_name` field
+                    mirroring `dispatched_by_name`. Out of scope for this
+                    frontend-only change; recorded here and in the tooltip so it is
+                    not lost. */}
+                <MissingValue kind="unrecorded" reason={t("workflow.detail.approver_name_absent")} />
               </p>
             )}
           </div>

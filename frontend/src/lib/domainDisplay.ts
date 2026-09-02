@@ -222,6 +222,30 @@ export const IDENTIFIER_POLICY_EXCEPTIONS: readonly IdentifierPolicyException[] 
       "exists somewhere unshown.",
     registered: "2026-08-14",
   },
+  {
+    file: "app/death-sync/page.tsx",
+    site: 'registration rows: "Ref: <source_reference_id ?? idempotency_key>"',
+    reason:
+      "The reference is the external system's own key for this death " +
+      "registration, and correlating a row back to that system is the entire " +
+      "purpose of the screen — an operator reconciling a failed sync pastes " +
+      "this value into the source system. There is no human name to show " +
+      "instead: a DeathRegistration carries a source_system, a reference and a " +
+      "status, and the subject's name is precisely what the sync has not " +
+      "resolved yet. So clause 1 (detail pages only) and clause 2 (once per " +
+      "page) are waived, as they are for the audit list above. Clause 3 is " +
+      "NOT, and this line was breaking it until now: it rendered as plain " +
+      "text, so the one thing the reference is for — being pasted somewhere " +
+      "else — was the one thing it could not do. It is an <IdentifierChip> " +
+      "now. Clause 4 is not in play: both sides of the fallback are " +
+      "identifiers, so no name is being displaced.\n\n" +
+      "FOUND BY EXTENDING THE SCANNER, not by reading the page. The old " +
+      "RAW_IDENTIFIER_RE only matched a brace containing nothing but the " +
+      "member path, so `{a || b}` was invisible to it — see " +
+      "FALLBACK_EXPRESSION_RE in domainDisplayContract.test.tsx. This site had " +
+      "been unpoliced since it was written.",
+    registered: "2026-09-03",
+  },
 ];
 
 /** Characters of a UUID shown before the copy affordance. */
