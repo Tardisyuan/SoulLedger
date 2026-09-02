@@ -24,7 +24,11 @@ export function FollowButton({ userId }: { userId: string }) {
       className={`px-4 py-1.5 text-03 font-medium transition-colors ${
         isFollowing
           ? "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] hover:bg-[hsl(var(--color-surface-3))] border border-[hsl(var(--color-hairline))]"
-          : "bg-[hsl(var(--color-accent))] text-white hover:bg-[hsl(var(--color-accent))]"
+          // `text-black`, not `text-white`. Accent is `hsl(38 92% 50%)` in both
+          // themes; white on it is about 2.1:1. Button.tsx's docstring settled
+          // this for 47-vs-16 call sites — "primary is text-black" — and this
+          // one was among the 16.
+          : "bg-[hsl(var(--color-accent))] text-black hover:bg-[hsl(var(--color-accent-hover))]"
       } disabled:opacity-50`}
     >
       {toggleFollow.isPending

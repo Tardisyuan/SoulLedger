@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/src/contexts/I18nContext";
 import { RequireAdmin } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 
@@ -14,14 +15,26 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
  */
 function AdminStatsRedirectContent() {
   const router = useRouter();
+  const { t } = useI18n();
 
   useEffect(() => {
     router.replace("/dashboard?tab=ledger");
   }, [router]);
 
+  // `role="status"` with a name. An audit read this page as "missing an
+  // <h1>"; it is a redirect shim with no content, so a heading would be the
+  // wrong fix — but the spinner had no accessible name at all, so a screen
+  // reader announced nothing at all while the route moved out from under it.
+  // (`app/judgment/queue/page.tsx` was flagged the same way and is simply
+  // fine: its <h1> lives in JudgmentQueueConsole.tsx:167, outside the file
+  // that was grepped.)
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-canvas flex items-center justify-center">
-      <div className="relative w-16 h-16">
+    <div
+      role="status"
+      aria-label={t("common.loading")}
+      className="min-h-[calc(100vh-4rem)] bg-canvas flex items-center justify-center"
+    >
+      <div aria-hidden="true" className="relative w-16 h-16">
         <div className="absolute inset-0 border-4 border-[hsl(var(--color-accent))]/20 rounded-full" />
         <div className="absolute inset-0 border-4 border-transparent border-t-[hsl(var(--color-accent))] rounded-full animate-spin" />
       </div>

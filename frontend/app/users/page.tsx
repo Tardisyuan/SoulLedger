@@ -98,8 +98,8 @@ export default function UsersPage() {
            the sticky bar to twice its height. The accessible name therefore
            rides on `aria-label` — the same call `app/souls/page.tsx` already
            documents for its own filter row, now spelled the same way in both
-           places instead of two (`bg-surface-1 rounded` here, `bg-surface-2
-           rounded-md` there). */
+           places instead of two (`bg-surface-1` here, `bg-surface-2
+           ` there). */
         <>
           <input
             type="text"
@@ -138,7 +138,11 @@ export default function UsersPage() {
     >
       {/* No `pagination` slot — DataTable renders its own <Pagination>
           (components/ui/data-table.tsx:288) from the four props at the end. */}
+      {/* `compact` (~36px rows) because this page is scan-and-find: the operator
+          is looking for a row, not deciding on each one. Decision surfaces
+          (the judgment list) stay `comfortable`. */}
       <DataTable<User>
+        density="compact"
         caption={t("users.title")}
         columns={[
           { key: "username", header: t("users.username"), sortable: true },

@@ -45,7 +45,7 @@ import { cn } from "@/lib/utils";
  *    `:focus-visible` rule at `app/globals.css:459` (with its companion
  *    `input,textarea,select:focus-visible { outline-offset: 0 }` immediately
  *    below, which exists so the ring and the accent border do not read as a
- *    double outline). Nothing here writes `outline-none`, so nothing here has
+ *    double outline). Nothing here writes `outline-hidden`, so nothing here has
  *    to fight it.
  *
  * ── THE PLACEHOLDER SPELLING, WRITTEN DOWN ONCE ────────────────────────────
@@ -57,7 +57,7 @@ import { cn } from "@/lib/utils";
  * That class produces **no CSS**. `placeholder:` is a variant, and what follows
  * a variant has to be a utility. `[hsl(...)]` is not one: Tailwind's
  * arbitrary-*property* form requires `[property:value]`, e.g.
- * `[color:hsl(...)]`, and a bare bracketed value has no property to set. So
+ * `text-[hsl(...)]`, and a bare bracketed value has no property to set. So
  * Tailwind matches nothing, emits nothing, and that input's placeholder renders
  * at the inherited text colour — full-strength ink, indistinguishable from a
  * real value. It fails silently: no build error, no type error, no visual diff

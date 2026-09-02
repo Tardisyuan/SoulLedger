@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { TenantSignal } from "@/src/components/layout/TenantSignal";
@@ -193,7 +193,12 @@ describe("no tenant, no claim", () => {
 });
 
 describe("the name follows the locale", () => {
-  it("reads the catalogue rather than the config's own Chinese label", () => {
+  // These two await the bundle. Only zh-Hans is statically imported now; `en`
+  // arrives by dynamic import, and until it does `t()` answers from the
+  // default bundle — which is Chinese, which is exactly the wrong answer these
+  // tests exist to catch. Asserting on the frame before the chunk lands would
+  // make them fail for a reason that has nothing to do with the masthead.
+  it("reads the catalogue rather than the config's own Chinese label", async () => {
     // CIVILIZATION_LABELS is a Chinese-only map in config/civilizations. If the
     // masthead read it, an English or Egyptian operator would get 中国地府 in
     // the one line whose job is telling them where they are. Asserted as the
@@ -202,26 +207,36 @@ describe("the name follows the locale", () => {
     // on passing if the component stopped localizing at all.
     document.cookie = "soulledger-locale=en;path=/";
     const { container } = renderSignal(CIVILIZATION_CODES.CHINESE, "line");
-    expect(textWithoutColour(container)).toBe("Chinese Diyu");
+    await waitFor(() => expect(textWithoutColour(container)).toBe("Chinese Diyu"));
     document.cookie = "soulledger-locale=zh-Hans;path=/";
   });
 
-  it("says something different in each locale, so the switch is not a no-op", () => {
+  it("says something different in each locale, so the switch is not a no-op", async () => {
     // The cookie is `soulledger-locale`, hyphenated. Spelling it with an
     // underscore sets a cookie nothing reads, and both halves of a
     // locale-comparison assertion then render in the same language and agree —
     // a check that passes because it never switched anything.
-    const read = () => {
+    // `differentFrom` rather than a predicate: the only thing worth waiting for
+    // here is "no longer the default bundle's answer", and naming that directly
+    // reads better than a callback.
+    const read = async (differentFrom?: string) => {
       const { container, unmount } = renderSignal(CIVILIZATION_CODES.EGYPTIAN, "line");
+      if (differentFrom !== undefined) {
+        await waitFor(() =>
+          expect(textWithoutColour(container)).not.toBe(differentFrom)
+        );
+      }
       const text = textWithoutColour(container);
       unmount();
       return text;
     };
 
     document.cookie = "soulledger-locale=zh-Hans;path=/";
-    const zh = read();
+    const zh = await read();
     document.cookie = "soulledger-locale=en;path=/";
-    const en = read();
+    // Wait until it is no longer the default bundle's answer — otherwise `en`
+    // could be read mid-flight, equal `zh`, and fail for the wrong reason.
+    const en = await read(zh);
     document.cookie = "soulledger-locale=zh-Hans;path=/";
 
     expect(zh).not.toBe(en);

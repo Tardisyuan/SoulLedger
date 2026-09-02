@@ -36,7 +36,10 @@ export function SoulDeleteModal({
             type="button"
             onClick={onConfirm}
             disabled={isPending}
-            className="flex-1 px-4 py-2 bg-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.8)] disabled:opacity-50 text-white text-03 font-medium transition-colors"
+            /* Same measured failure as UserDeleteDialog, just spelled with the
+                 token instead of `bg-red-500`: a filled status-error with white text
+                 is ~3.59:1 in dark mode. The tint recipe clears AA in both themes. */
+              className="flex-1 px-4 py-2 bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] border border-[hsl(var(--color-status-error)/0.3)] hover:bg-[hsl(var(--color-status-error)/0.2)] disabled:opacity-50 text-03 font-medium transition-colors"
           >
             {isPending ? t("souls.detail.deleting") : t("souls.detail.confirm_delete_action")}
           </button>

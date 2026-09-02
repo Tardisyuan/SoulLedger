@@ -43,6 +43,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { user } = useTenant();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  // As a string: `AuthUser.id` is a number and the social payload's
+  // `following_id` arrives as a string off the wire, so comparing them raw
+  // would be false for the one case the gate exists to catch.
+  const currentUserId = user ? String(user.id) : undefined;
   const [status, setStatus] = useState<WSStatus>("disconnected");
   const clientRef = useRef<WSClient | null>(null);
 
@@ -55,7 +59,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           event: "NOTIFICATION_CREATED",
           notification: notification as EventPayload["notification"],
         } as EventPayload,
-        { queryClient, showToast },
+        { queryClient, showToast, currentUserId },
       );
     },
     [queryClient, showToast],
@@ -74,7 +78,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           status: event.status as string,
           verdict: event.verdict as string,
         } as EventPayload,
-        { queryClient, showToast },
+        { queryClient, showToast, currentUserId },
       );
     },
     [queryClient, showToast],
@@ -82,7 +86,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
   const handleGenericEvent = useCallback(
     (event: Record<string, unknown>) => {
-      dispatchEvent(event as EventPayload, { queryClient, showToast });
+      dispatchEvent(event as EventPayload, { queryClient, showToast, currentUserId });
     },
     [queryClient, showToast],
   );

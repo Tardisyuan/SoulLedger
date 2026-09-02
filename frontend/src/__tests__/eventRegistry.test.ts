@@ -279,7 +279,15 @@ describe("social events", () => {
     expect(result.invalidatedKeys).toEqual(["social.posts"]);
   });
 
-  it("invalidates the thread for the specific post on COMMENT_CREATED", () => {
+  // The four cases below assert the CORRECTED keys. What they asserted before
+  // was the literal spelling the handler happened to use, which matched no
+  // cached query on any of these four families — and the case names said so in
+  // words ("invalidates the thread for the specific post", "invalidates only
+  // the follower side") while the app updated neither. Pinning a key against a
+  // jest.fn() cannot tell those apart; `invalidationReachesTheCache` below is
+  // the assertion that can, and this block is now the cheap, readable mirror
+  // of it.
+  it("invalidates the comment family on COMMENT_CREATED", () => {
     const { ctx, invalidateQueries } = makeContext();
 
     dispatchEvent(
@@ -288,20 +296,25 @@ describe("social events", () => {
     );
 
     expect(invalidatedKeys(invalidateQueries)).toEqual([
-      '["social","comments","post","p1"]',
+      '["social","comments"]',
       '["social","posts"]',
     ]);
   });
 
-  it("skips the per-post comment key when the frame has no post_id", () => {
+  it("invalidates the comment family even when the frame has no post_id", () => {
+    // Threads do not cache under a per-post key, so there is no per-post key to
+    // skip: a comment frame without an id still has to refresh the family.
     const { ctx, invalidateQueries } = makeContext();
 
     dispatchEvent({ domain: "social", event: "COMMENT_DELETED" } as EventPayload, ctx);
 
-    expect(invalidatedKeys(invalidateQueries)).toEqual(['["social","posts"]']);
+    expect(invalidatedKeys(invalidateQueries)).toEqual([
+      '["social","comments"]',
+      '["social","posts"]',
+    ]);
   });
 
-  it("invalidates reaction and post-detail keys for REACTION_ADDED", () => {
+  it("invalidates the reaction family and the post detail for REACTION_ADDED", () => {
     const { ctx, invalidateQueries } = makeContext();
 
     dispatchEvent(
@@ -310,12 +323,16 @@ describe("social events", () => {
     );
 
     expect(invalidatedKeys(invalidateQueries)).toEqual([
-      '["social","reactions","post","p2"]',
+      '["social","reactions"]',
       '["social","posts","detail","p2"]',
     ]);
   });
 
-  it("invalidates nothing for a reaction on a comment (no post_id)", () => {
+  it("still refreshes reactions for a reaction on a comment (no post_id)", () => {
+    // Previously this invalidated NOTHING and the case was named for that as
+    // if it were a decision. Reactions on comments are cached in the same
+    // family as reactions on posts; leaving them stale was the per-post key's
+    // side effect, not a choice.
     const { ctx, invalidateQueries, showToast } = makeContext();
 
     const result = dispatchEvent(
@@ -323,12 +340,15 @@ describe("social events", () => {
       ctx,
     );
 
-    expect(invalidateQueries).not.toHaveBeenCalled();
+    expect(invalidatedKeys(invalidateQueries)).toEqual(['["social","reactions"]']);
     expect(result.invalidatedKeys).toEqual(["social.reactions"]);
-    expect(showToast).toHaveBeenCalled();
+    // No banner: a reaction is not addressed to the viewer, and the payload
+    // carries no field that could say whether it was. See the "aimed at the
+    // viewer" block below.
+    expect(showToast).not.toHaveBeenCalled();
   });
 
-  it("invalidates both sides of a follow relationship", () => {
+  it("invalidates the follow family and both users' profiles", () => {
     const { ctx, invalidateQueries } = makeContext();
 
     dispatchEvent(
@@ -341,15 +361,67 @@ describe("social events", () => {
       ctx,
     );
 
+    // One follows key, not one per side: `follows.following` and
+    // `follows.followers` are the current user's own lists and carry no id.
     expect(invalidatedKeys(invalidateQueries)).toEqual([
-      '["social","follows","followers","u2"]',
-      '["social","profile","u2"]',
-      '["social","follows","following","u1"]',
-      '["social","profile","u1"]',
+      '["social","follows"]',
+      '["social","profiles","detail","u2"]',
+      '["social","profiles","detail","u1"]',
     ]);
   });
 
-  it("invalidates only the follower side when following_id is missing", () => {
+  // ── Which social frames may interrupt the viewer ───────────────────
+  //
+  // Every social event used to toast every signed-in user, so one busy tenant
+  // meant a banner per post, comment and reaction on everyone's screen. Only a
+  // follow frame identifies its target (`following_id` is the person being
+  // followed); nothing in the payload says whose post a comment or reaction
+  // landed on, so those can only be silent — the cache invalidation above is
+  // what keeps the screen current.
+  it("toasts a follow aimed at the viewer", () => {
+    const { ctx, showToast } = makeContext();
+
+    dispatchEvent(
+      {
+        domain: "social",
+        event: "USER_FOLLOWED",
+        follower_id: "u1",
+        following_id: "me",
+        author_name: "Ann",
+      } as EventPayload,
+      { ...ctx, currentUserId: "me" },
+    );
+
+    expect(showToast).toHaveBeenCalledWith("New follower — Ann", "info", 4000);
+  });
+
+  it("stays silent for a follow between two other people", () => {
+    const { ctx, invalidateQueries, showToast } = makeContext();
+
+    dispatchEvent(
+      { domain: "social", event: "USER_FOLLOWED", follower_id: "u1", following_id: "u2" } as EventPayload,
+      { ...ctx, currentUserId: "me" },
+    );
+
+    // Silent, but not inert: the follow lists still refresh.
+    expect(showToast).not.toHaveBeenCalled();
+    expect(invalidatedKeys(invalidateQueries)).toContain('["social","follows"]');
+  });
+
+  it("stays silent when the viewer is unknown, rather than toasting everyone", () => {
+    // `currentUserId` is undefined before the user resolves. The old default
+    // was to toast; the safe default is not to.
+    const { ctx, showToast } = makeContext();
+
+    dispatchEvent(
+      { domain: "social", event: "USER_FOLLOWED", follower_id: "u1", following_id: "u2" } as EventPayload,
+      ctx,
+    );
+
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it("invalidates one profile when only the follower is known", () => {
     const { ctx, invalidateQueries } = makeContext();
 
     dispatchEvent(
@@ -358,25 +430,9 @@ describe("social events", () => {
     );
 
     expect(invalidatedKeys(invalidateQueries)).toEqual([
-      '["social","follows","following","u1"]',
-      '["social","profile","u1"]',
+      '["social","follows"]',
+      '["social","profiles","detail","u1"]',
     ]);
-  });
-
-  it("prefers author_name over soul_name in the toast", () => {
-    const { ctx, showToast } = makeContext();
-
-    dispatchEvent(
-      {
-        domain: "social",
-        event: "POST_CREATED",
-        author_name: "Ann",
-        soul_name: "Ignored",
-      } as EventPayload,
-      ctx,
-    );
-
-    expect(showToast).toHaveBeenCalledWith("New post — Ann", "info", 4000);
   });
 });
 
@@ -391,7 +447,11 @@ describe("unhandled events", () => {
     expect(result.success).toBe(false);
     expect(result.error).toBe("Unhandled event: aliens.PROBE");
     expect(invalidateQueries).not.toHaveBeenCalled();
-    expect(showToast).toHaveBeenCalledWith("Unhandled event: aliens.PROBE", "info", 3000);
+    // Logged, NOT toasted. This used to assert the opposite: the operator got
+    // "Unhandled event: aliens.PROBE" as a banner over their work —
+    // untranslated debug text about a missing registry row they cannot act on.
+    // The failure still travels, in `result.error` and the console warning.
+    expect(showToast).not.toHaveBeenCalled();
     expect(warnSpy).toHaveBeenCalled();
   });
 

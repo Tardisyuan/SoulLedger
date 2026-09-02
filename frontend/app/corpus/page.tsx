@@ -473,7 +473,7 @@ function StatuteRow({
 
   return (
     <tr className="border-b border-hairline last:border-b-0">
-      <td className="text-02 font-mono text-right align-top py-3 pr-2 text-[hsl(var(--civ-mark))]">
+      <td className="text-02 font-mono text-right align-top py-3 pr-2 text-[hsl(var(--civ-ink))]">
         <DomainText
           value={sigil}
           missingKind="unrecorded"

@@ -181,7 +181,7 @@ export interface IdentifierChipProps {
 
 const IDENTIFIER_VARIANT_CLASSES: Record<"chip" | "inline", string> = {
   chip:
-    "font-mono text-02 px-1.5 py-0.5 rounded bg-[hsl(var(--color-surface-2))] " +
+    "font-mono text-02 px-1.5 py-0.5 bg-[hsl(var(--color-surface-2))] " +
     "border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-3))] " +
     "text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors",
   // No fill at all, so nothing here can approach the 0.1 badge-tint cap

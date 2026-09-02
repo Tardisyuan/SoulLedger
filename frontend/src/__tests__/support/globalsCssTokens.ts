@@ -199,6 +199,8 @@ export interface CivAttrRule {
   hue?: string;
   /** The token `--civ-mark` is pointed at, or undefined if the rule omits it. */
   mark?: string;
+  /** The token `--civ-ink` is pointed at, or undefined if the rule omits it. */
+  ink?: string;
 }
 
 /**
@@ -214,13 +216,27 @@ export interface CivAttrRule {
  */
 export function readCivAttrRules(): Record<string, CivAttrRule> {
   const rules: Record<string, CivAttrRule> = {};
-  const blockPattern = /\[data-civ="([\w-]+)"\]\s*\{([^}]*)\}/g;
+  // Quote style and line breaks are NOT part of the contract. This pattern
+  // required `[data-civ="cn"] { … }` on one line with double quotes, and the
+  // Tailwind v4 upgrade — which reformats the stylesheet it rewrites — turned
+  // them into multi-line blocks with single quotes. The parser then found
+  // nothing and the assertion compared two empty lists' worth of civilizations,
+  // which is the shape this whole file exists to prevent.
+  const blockPattern = /\[data-civ=['"]([\w-]+)['"]\]\s*\{([^}]*)\}/g;
   for (const block of css.matchAll(blockPattern)) {
     const entry: CivAttrRule = {};
-    for (const decl of block[2].matchAll(/--civ-(hue|mark):\s*var\((--[\w-]+)\)\s*;/g)) {
-      entry[decl[1] as "hue" | "mark"] = decl[2];
+    for (const decl of block[2].matchAll(/--civ-(hue|mark|ink):\s*var\((--[\w-]+)\)\s*;/g)) {
+      entry[decl[1] as "hue" | "mark" | "ink"] = decl[2];
     }
     rules[block[1]] = entry;
+  }
+  if (Object.keys(rules).length === 0) {
+    // Loud, not empty. An empty map makes every caller's `toEqual([])` pass.
+    throw new Error(
+      `Parsed no [data-civ] rules out of ${GLOBALS_CSS}. Fix this parser — ` +
+        `an empty result turns every civilization assertion into a comparison ` +
+        `of two empty lists.`
+    );
   }
   return rules;
 }
@@ -428,6 +444,19 @@ export function relativeLuminance([r, g, b]: Rgb): number {
     return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
   };
   return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+}
+
+/**
+ * `fg` at `alpha` over `bg`, as the browser composites it — the only way to get
+ * the real background of text sitting on a `bg-[hsl(var(--x)/0.2)]` fill.
+ *
+ * Naive source-over on already-gamma-encoded sRGB, which is what CSS actually
+ * does for `hsl(... / a)` over an opaque backdrop. Linearising first would be
+ * more correct physically and would NOT match what the user sees, and matching
+ * the browser is the entire point of a contrast pin.
+ */
+export function compositeOver(fg: Rgb, bg: Rgb, alpha: number): Rgb {
+  return [0, 1, 2].map((i) => alpha * fg[i] + (1 - alpha) * bg[i]) as unknown as Rgb;
 }
 
 /** WCAG contrast ratio, 1:1 to 21:1. Order-independent. */

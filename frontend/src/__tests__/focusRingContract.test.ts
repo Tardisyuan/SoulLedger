@@ -108,7 +108,7 @@ function readFocusVisibleRule(): string {
   if (m === null) {
     throw new Error(
       `No bare \`:focus-visible\` rule at column 0 in ${GLOBALS_CSS}. The app ` +
-        `clears the native focus outline in 22 files, so without this rule ` +
+        `clears the native focus outline-solid in 22 files, so without this rule ` +
         `there is no keyboard focus indicator at all. If the rule moved, fix ` +
         `this reader — do not delete the comparison.`
     );
@@ -118,12 +118,12 @@ function readFocusVisibleRule(): string {
 
 const FOCUS_RULE = readFocusVisibleRule();
 
-/** The `outline` declaration's value, `!important` included. */
+/** The `outline-solid` declaration's value, `!important` included. */
 function focusOutlineValue(): string {
   const m = /(?:^|;)\s*outline\s*:\s*([^;]+);/.exec(FOCUS_RULE);
   if (m === null) {
     throw new Error(
-      `The \`:focus-visible\` rule in ${GLOBALS_CSS} declares no \`outline\`. ` +
+      `The \`:focus-visible\` rule in ${GLOBALS_CSS} declares no \`outline-solid\`. ` +
         `That rule is the app's only focus indicator.`
     );
   }
@@ -195,8 +195,8 @@ describe("the focus-ring checks are looking at something", () => {
   });
 });
 
-describe("the keyboard focus ring is a rule that can be proven to exist", () => {
-  it("the rule declares an outline and marks it important", () => {
+describe("the keyboard focus ring-3 is a rule that can be proven to exist", () => {
+  it("the rule declares an outline-solid and marks it important", () => {
     // `!important` is not decoration. 69 uses of the outline-clearing utility
     // sit on the elements this rule targets; without the flag they all win.
     const value = focusOutlineValue();
@@ -205,13 +205,13 @@ describe("the keyboard focus ring is a rule that can be proven to exist", () => 
     expect(value).toMatch(/\b2px\b/);
   });
 
-  it("the outline names the focus token and nothing else", () => {
+  it("the outline-solid names the focus token and nothing else", () => {
     // An exact set, not a `toContain`. "It mentions --color-focus" would stay
     // green while the accent sat beside it in the same shorthand.
     expect(varsIn(focusOutlineValue())).toEqual([FOCUS_TOKEN]);
   });
 
-  it("the outline does not name the user-configurable accent", () => {
+  it("the outline-solid does not name the user-configurable accent", () => {
     // Said separately from the set comparison because this is the regression
     // with a name: `useAccentColor` writes --color-accent as an inline style on
     // <html> from a localStorage preference, so an accent-coloured ring is one
@@ -260,7 +260,7 @@ describe("--color-focus is a token of its own, in both themes", () => {
   });
 });
 
-describe("the focus ring clears WCAG 1.4.11 on every surface it can land on", () => {
+describe("the focus ring-3 clears WCAG 1.4.11 on every surface it can land on", () => {
   it.each(THEMES)("%s mode: 3:1 against the canvas and every ramp step", (theme) => {
     const ring = hslTripleToRgb(TOKENS_BY_THEME[theme][FOCUS_TOKEN]);
     const measured: string[] = [];
@@ -276,7 +276,7 @@ describe("the focus ring clears WCAG 1.4.11 on every surface it can land on", ()
     expect(measured.length).toBeGreaterThan(10);
   });
 
-  it("the accent this ring used to borrow would fail that floor in light mode", () => {
+  it("the accent this ring-3 used to borrow would fail that floor in light mode", () => {
     // The reason the token exists, re-derived rather than quoted. If a future
     // accent value ever cleared 3:1 everywhere, this goes red and someone gets
     // to re-read the argument — which is still the runtime-clobber one, and

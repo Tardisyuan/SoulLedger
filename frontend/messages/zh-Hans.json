@@ -66,7 +66,8 @@
       "EUROPEAN": "基督教审判、炼狱、但丁地狱、忘川河",
       "EGYPTIAN": "奥西里斯审判、心脏称重、芦苇之地",
       "GREEK": "三判官分道、厄尔的千年循环、勒忒之水"
-    }
+    },
+    "your_realm": "你所属的冥府"
   },
   "footer": {
     "built_with": "使用 Django + DRF + Next.js 构建",
@@ -280,7 +281,8 @@
           "event_before_birth": "事件早于出生",
           "event_after_death": "事件晚于死亡"
         }
-      }
+      },
+      "delete_to_recycle_bin": "已移至回收站"
     },
     "date_problem_filter": "仅看有问题的",
     "balance_not_applicable": "不适用 — 详见灵魂详情",
@@ -317,10 +319,14 @@
       "id_copied": "ID 已复制到剪贴板",
       "id_copy_failed": "复制失败",
       "copied": "已复制 ✓"
-    }
+    },
+    "field_required": "此项为必填"
   },
   "pagination": {
-    "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)"
+    "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)",
+    "first": "首页",
+    "last": "末页",
+    "jump": "跳到第几页"
   },
   "menus": {
     "title": "菜单管理",
@@ -388,7 +394,8 @@
     "deleted_badge": "已删除",
     "delete_confirm_title": "移至回收站？",
     "delete_confirm_message": "「{{name}}」将移至回收站，{{days}} 天内可从回收站恢复；超过此期限后，管理员可将其永久删除。",
-    "delete_confirm_action": "移至回收站"
+    "delete_confirm_action": "移至回收站",
+    "update_error": "更新菜单失败"
   },
   "recycle_bin": {
     "title": "回收站",
@@ -710,7 +717,9 @@
       "col_balance": "销算余",
       "total": "合计",
       "empty": "尚无账目。"
-    }
+    },
+    "series_effective": "现值",
+    "series_decayed": "已衰减"
   },
   "judgment": {
     "title": "审判",
@@ -793,7 +802,8 @@
       "key_workflow": "切换「同时发起审批流程」",
       "key_restore": "恢复所有已延后的条目",
       "key_help": "显示 / 隐藏键盘映射",
-      "key_leave": "退出队列（在输入框内则先失焦）"
+      "key_leave": "退出队列（在输入框内则先失焦）",
+      "key_notes": "聚焦备注"
     },
     "detail": {
       "loading": "加载审判中...",
@@ -932,7 +942,8 @@
     "save": "保存",
     "cancel": "取消",
     "avatar": "头像",
-    "upload_avatar": "上传头像"
+    "upload_avatar": "上传头像",
+    "load_failed": "无法获取最新资料，下面显示的可能是旧值"
   },
   "notifications": {
     "title": "通知中心",
@@ -1082,6 +1093,9 @@
     "no_history": "暂无调度历史",
     "target_soul": "目标灵魂",
     "select_soul": "选择灵魂...",
+    "soul_search_placeholder": "按姓名搜索灵魂...",
+    "soul_search_empty": "没有匹配的灵魂",
+    "soul_search_more": "显示 {{shown}} / {{count}} 条 —— 继续输入以缩小范围",
     "target_tenant": "目标租户",
     "select_tenant": "选择租户...",
     "reason": "理由",
@@ -1090,6 +1104,7 @@
     "submit_proposal": "提交提案",
     "soul_prefix": "灵魂 #",
     "detail_title": "调度详情",
+    "not_found": "调度未找到",
     "soul": "灵魂",
     "status": "状态",
     "actions": "操作",
@@ -1119,7 +1134,9 @@
       "REJECTED": "已拒绝",
       "EXECUTED": "已执行",
       "CANCELLED": "已取消"
-    }
+    },
+    "confirm_approve": "确认批准这次跨租户调度?",
+    "approve_warning": "批准后目标租户将获得该灵魂的处置权。此操作会写入审计日志。"
   },
   "crossJudgments": {
     "title": "跨文明审判",
@@ -1217,7 +1234,9 @@
       "purple": "紫色",
       "red": "红色",
       "rose": "玫瑰"
-    }
+    },
+    "accent_hex_invalid": "请输入 6 位十六进制颜色，例如 #ff5500",
+    "accent_hex_too_dark": "这个颜色太深，主按钮上的黑色文字会看不清"
   },
   "admin": {
     "ledger_stats": "功德统计",
@@ -1421,7 +1440,8 @@
       "FOLLOWERS": "仅关注者",
       "PRIVATE": "私密"
     },
-    "visibility_label": "帖子可见范围"
+    "visibility_label": "帖子可见范围",
+    "follow_error": "关注操作失败"
   },
   "tenants": {
     "active": "启用",
@@ -1484,5 +1504,13 @@
       "EGYPTIAN": "埃及冥界",
       "GREEK": "希腊冥界"
     }
+  },
+  "connection": {
+    "connected": "已连接",
+    "connecting": "连接中…",
+    "reconnecting": "重连中…",
+    "disconnected": "已断开",
+    "failed": "连接失败",
+    "retry": "重连"
   }
 }

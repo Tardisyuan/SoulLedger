@@ -55,7 +55,7 @@ export function SoulIdentityPanel({ soul }: { soul: QueueSoul }) {
   ];
 
   return (
-    <section aria-labelledby="queue-identity-heading" className="rounded-lg border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
+    <section aria-labelledby="queue-identity-heading" className="border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
       <h3 id="queue-identity-heading" className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.identity")}
       </h3>
@@ -145,7 +145,7 @@ export function LedgerPanel({ ledger }: { ledger: QueueLedger }) {
   ];
 
   return (
-    <section aria-labelledby="queue-ledger-heading" className="rounded-lg border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
+    <section aria-labelledby="queue-ledger-heading" className="border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
       <h3 id="queue-ledger-heading" className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.ledger")}
       </h3>
@@ -285,7 +285,7 @@ export function PriorCyclesPanel({ cycles }: { cycles: QueuePriorCycle[] }) {
   ];
 
   return (
-    <section aria-labelledby="queue-cycles-heading" className="rounded-lg border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
+    <section aria-labelledby="queue-cycles-heading" className="border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
       <h3 id="queue-cycles-heading" className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.prior_cycles")}
       </h3>
@@ -307,7 +307,7 @@ export function RealmOptionsPanel({ realms }: { realms: QueueRealm[] }) {
   const { t } = useI18n();
 
   return (
-    <section aria-labelledby="queue-realms-heading" className="rounded-lg border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
+    <section aria-labelledby="queue-realms-heading" className="border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
       <h3 id="queue-realms-heading" className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-1">
         {t("judgment.queue.realm_options")}
       </h3>

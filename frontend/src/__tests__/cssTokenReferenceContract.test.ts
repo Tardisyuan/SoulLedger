@@ -187,3 +187,70 @@ describe("every referenced custom property is declared in globals.css", () => {
     expect(dangling).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+
+/**
+ * MARK IS THE GRAPHIC, INK IS THE TEXT.
+ *
+ * `--color-civ-ink-*` / `--civ-ink` exist because the identity mark, drawn at
+ * its own lightness as 11-12px glyphs, failed WCAG AA in four of eight
+ * civilization x theme combinations — see civIdentityInkContract.test.ts for
+ * the measurements and the two places that shipped. That split survives only
+ * as long as nobody spells a mark into a text property again, and a single
+ * mark bound to a `text-…` utility, added back later, looks exactly like the
+ * three legitimate `bg-`/`border-` uses beside it.
+ *
+ * NOTE THE CLASS NAME IS NOT WRITTEN OUT ANYWHERE IN THIS FILE. Tailwind v4
+ * scans every source file it is pointed at, `__tests__` included, and it does
+ * not know prose from markup — the first draft of this comment quoted the
+ * offending class verbatim and the production stylesheet duly grew a real
+ * `color:hsl(var(--civ-mark))` rule that no element in the app carries. A
+ * comment that emits CSS is a claim about the build that is true only because
+ * the comment is there.
+ *
+ * So this reads the *property*, not the token. Fills, borders, rules and the
+ * 7px identity dot keep the mark and are untouched here; a colour/text binding
+ * is the only thing rejected.
+ *
+ * It lives in this file rather than in the ink contract because the walker is
+ * here. A second copy of `walk` is the defect `support/globalsCssTokens.ts`
+ * was extracted to stop, and adding one to police a rule about not
+ * duplicating decisions would be its own joke.
+ */
+describe("the civilization mark is never used as text", () => {
+  /** The mark bound to a text utility class, or to `color:` in a style object. */
+  const MARK_AS_TEXT = /text-\[[^\]]*var\(--(?:color-)?civ-mark|(?:^|[^-\w])color:\s*["'`]?hsl\(\s*var\(--(?:color-)?civ-mark/;
+
+  const sources = SOURCE_ROOTS.flatMap((root) => walk(path.join(FRONTEND_ROOT, root), []));
+
+  it("has files to scan, so the rule cannot pass on an empty list", () => {
+    expect(sources.length).toBeGreaterThan(100);
+  });
+
+  it("still finds the mark used as a graphic, so the pattern is not just missing everything", () => {
+    // The control. Without this, deleting every `--civ-mark` in the app would
+    // make the rule below green and read as compliance.
+    const asGraphic = sources.filter((f) =>
+      /(?:bg-|border-|background:|borderColor:)[^\n]*var\(--(?:color-)?civ-mark/.test(
+        readFileSync(f, "utf8")
+      )
+    );
+    expect(asGraphic.length).toBeGreaterThan(0);
+  });
+
+  it("has no civilization mark bound to a text colour", () => {
+    const offenders = sources
+      .filter((f) => MARK_AS_TEXT.test(readFileSync(f, "utf8")))
+      .map((f) => path.relative(FRONTEND_ROOT, f).split(path.sep).join("/"));
+    if (offenders.length > 0) {
+      throw new Error(
+        `A civilization mark is being drawn as text. Use \`--civ-ink\` (or ` +
+          `\`--color-civ-ink-<prefix>\` where the tenant is not the logged-in one) ` +
+          `— the mark's lightness is measured for fills and rules, not glyphs.\n\n` +
+          offenders.join("\n")
+      );
+    }
+    expect(offenders).toEqual([]);
+  });
+});

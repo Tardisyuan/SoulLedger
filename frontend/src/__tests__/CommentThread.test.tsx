@@ -84,7 +84,12 @@ describe("CommentThread delete UI", () => {
     render(<CommentThread postId="post-1" />);
     fireEvent.click(screen.getByText("common.delete"));
 
-    const dialog = screen.getByRole("dialog");
+    // `alertdialog`, not `dialog`. ConfirmDialog moved from @headlessui's
+    // generic Dialog to Base UI's AlertDialog, which is the accurate role for
+    // a question the operator has to answer — and which, unlike a plain
+    // dialog, does not let a stray click on the backdrop quietly answer
+    // "cancel" for them.
+    const dialog = screen.getByRole("alertdialog");
     const confirmButtons = within(dialog).getAllByText("common.delete");
     fireEvent.click(confirmButtons[confirmButtons.length - 1]);
 

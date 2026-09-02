@@ -309,8 +309,11 @@ describe("WebSocketProvider event fan-out", () => {
       lastSocket().receive({ type: "broadcast", domain: "social", event: "POST_CREATED", author_name: "Ann" }),
     );
 
+    // Routed and cached — but silent. This asserted a banner for every post by
+    // anyone, which is what it did: on a busy tenant, one per frame per
+    // viewer. The feed still updates; it no longer interrupts.
     expect(invalidatedKeys()).toContain('["social","posts"]');
-    expect(mockShowToast).toHaveBeenCalledWith("New post — Ann", "info", 4000);
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it("ignores a malformed frame — no cache churn, no toast, still connected", () => {

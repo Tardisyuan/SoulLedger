@@ -177,6 +177,28 @@ export default function WorkflowEditor({
 
   // Convert React Flow nodes to template nodes
   const getTemplateNodes = useCallback((): TemplateNode[] => {
+    /**
+     * The canvas edges, read back as routing.
+     *
+     * `sourceHandle` is what makes this possible: each node has a `pass` and a
+     * `fail` source handle, so an edge already carries which outcome it
+     * belongs to. Before routing existed, `onConnect` produced edges with no
+     * such distinction and this function sent only `node_order` — every drawn
+     * branch was discarded on save and the reload rebuilt a straight chain.
+     *
+     * Last edge wins per (source, handle). The canvas allows more than one
+     * edge from a handle and the model holds exactly one target, so something
+     * has to choose; taking the most recent matches what the operator just
+     * did rather than what they did first.
+     */
+    const routing = new Map<string, { on_pass?: string; on_fail?: string }>();
+    for (const edge of edges) {
+      if (!edge.source || !edge.target) continue;
+      const field = edge.sourceHandle === "fail" ? "on_fail" : "on_pass";
+      const current = routing.get(edge.source) ?? {};
+      routing.set(edge.source, { ...current, [field]: edge.target });
+    }
+
     return nodes.map((n, idx) => ({
       id: n.id,
       node_name: n.data.label as string,
@@ -185,6 +207,15 @@ export default function WorkflowEditor({
       approver_role: (n.data.approverRole as string) || "",
       approver_type: (n.data.approverType as TemplateNode["approver_type"]) || "ROLE",
       node_order: idx + 1,
+      // `?? null`, not `|| undefined`: the serializer declares these with
+      // `allow_null`, and sending null is how a node says "no route here" —
+      // omitting the key would leave whatever was stored before.
+      on_pass: routing.get(n.id)?.on_pass ?? null,
+      on_fail: routing.get(n.id)?.on_fail ?? null,
+      // Rounded because these are pixels on a canvas, not measurements: the
+      // drag handler produces long floats and storing them makes every save a
+      // diff even when nothing moved.
+      position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
     }));
   }, [nodes]);
 
@@ -350,7 +381,7 @@ export default function WorkflowEditor({
   ];
 
   return (
-    <div className="flex flex-col h-full bg-[hsl(var(--color-surface-2))] rounded-lg">
+    <div className="flex flex-col h-full bg-[hsl(var(--color-surface-2))]">
       {/* Toolbar
        *
        * `overflow-x-auto` + `min-w-0`,与 `ui/PageShell.tsx` 的筛选栏同一个理由:
@@ -370,13 +401,13 @@ export default function WorkflowEditor({
             onChange={(e) => setTemplateName(e.target.value)}
             placeholder={t("workflow.editor.template_name_placeholder")}
             aria-label={t("workflow.editor.template_name_placeholder")}
-            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
           <select
             value={templateCiv}
             onChange={(e) => setTemplateCiv(e.target.value as typeof templateCiv)}
             aria-label={t("workflow.editor.civilization_select_label") === "workflow.editor.civilization_select_label" ? "Civilization" : t("workflow.editor.civilization_select_label")}
-            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           >
             {/* Rendered from CIVILIZATION_OPTIONS so the dropdown cannot fall
                 behind the union the state is typed with — three hand-written
@@ -392,7 +423,7 @@ export default function WorkflowEditor({
             value={templateCaseType}
             onChange={(e) => setTemplateCaseType(e.target.value)}
             aria-label={t("workflow.editor.case_type_select_label") === "workflow.editor.case_type_select_label" ? "Case Type" : t("workflow.editor.case_type_select_label")}
-            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           >
             <option value="ROUTINE">{t("workflow.case_types.ROUTINE")}</option>
             <option value="APPEAL">{t("workflow.case_types.APPEAL")}</option>
@@ -409,7 +440,7 @@ export default function WorkflowEditor({
             value={templatePriority}
             onChange={(e) => setTemplatePriority(Number(e.target.value))}
             aria-label={t("workflow.detail.priority")}
-            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           >
             {priorityOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -423,21 +454,21 @@ export default function WorkflowEditor({
         <div className="flex items-center gap-2">
           <button
             onClick={addNode}
-            className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-03 font-medium rounded transition-colors"
+            className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-03 font-medium transition-colors"
           >
             + {t("workflow.editor.add_node")}
           </button>
           <button
             onClick={deleteSelectedNode}
             disabled={!selectedNodeId}
-            className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-03 font-medium rounded border border-red-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-03 font-medium border border-red-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {t("workflow.editor.delete_selected")}
           </button>
           <button
             onClick={handleSave}
             disabled={saveMutation.isPending}
-            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-03 font-medium rounded transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-03 font-medium transition-colors disabled:opacity-50"
           >
             {saveMutation.isPending ? t("workflow.editor.saving") : t("workflow.editor.save_template")}
           </button>
@@ -461,8 +492,8 @@ export default function WorkflowEditor({
           }}
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-          <Controls className="!bg-[hsl(var(--color-surface-1))] !border-[hsl(var(--color-hairline))] !rounded" />
-          <Panel position="top-left" className="bg-[hsl(var(--color-surface-1))]/90 backdrop-blur px-3 py-2 rounded border border-[hsl(var(--color-hairline))] text-02 text-[hsl(var(--color-ink-muted))]">
+          <Controls className="bg-[hsl(var(--color-surface-1))]! border-[hsl(var(--color-hairline))]! !" />
+          <Panel position="top-left" className="bg-[hsl(var(--color-surface-1))]/90 backdrop-blur-sm px-3 py-2 border border-[hsl(var(--color-hairline))] text-02 text-[hsl(var(--color-ink-muted))]">
             {t("workflow.editor.hint")}
           </Panel>
         </ReactFlow>

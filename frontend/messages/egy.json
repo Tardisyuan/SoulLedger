@@ -66,7 +66,8 @@
       "EUROPEAN": "Wedja Meseh, Duat Sekhem, Duat en Dante, Itru Lethe",
       "EGYPTIAN": "Wedja Wesir, Fai Ib, Sekhet Iaru",
       "GREEK": "Khemet Wedja, Sesh Er, Mu Lethe"
-    }
+    },
+    "your_realm": "Your realm"
   },
   "footer": {
     "built_with": "Aha Seth Web Em Django + DRF + Next.js",
@@ -272,7 +273,8 @@
           "event_before_birth": "Medew Her Tepy Wepet Her Tepy",
           "event_after_death": "Medew Kher Wepet Ru"
         }
-      }
+      },
+      "delete_to_recycle_bin": "Moved to the recycle bin"
     },
     "order_name_desc": "Ren Z-A",
     "balance_range": "Redu Unemu",
@@ -317,10 +319,14 @@
       "id_copied": "Ren Aa Em Sesh",
       "id_copy_failed": "Ma Sesh",
       "copied": "Em Sesh ✓"
-    }
+    },
+    "field_required": "This field is required"
   },
   "pagination": {
-    "info": "Per {{page}} / {{total}} ({{count}} medu)"
+    "info": "Per {{page}} / {{total}} ({{count}} medu)",
+    "first": "First page",
+    "last": "Last page",
+    "jump": "Jump to page"
   },
   "menus": {
     "title": "Iri Menu",
@@ -388,7 +394,8 @@
     "deleted_badge": "Wehem Seth",
     "delete_confirm_title": "Nehem Ma Per Wehem?",
     "delete_confirm_message": "\"{{name}}\" Nehem Ma Per Wehem. Sesen Kheme Wehem {{days}} Hru; Em Metu Set, Hem Ahet Wehem Djet.",
-    "delete_confirm_action": "Nehem Ma Per Wehem"
+    "delete_confirm_action": "Nehem Ma Per Wehem",
+    "update_error": "Failed to update menu"
   },
   "recycle_bin": {
     "title": "Per Wehem Seth",
@@ -710,7 +717,9 @@
       "col_balance": "Wedja",
       "total": "Dema",
       "empty": "Nen medu."
-    }
+    },
+    "series_effective": "Effective",
+    "series_decayed": "Decayed away"
   },
   "judgment": {
     "title": "Sheemtet Seth",
@@ -793,7 +802,8 @@
       "key_workflow": "Shabu “iri wat en wetep-heka”",
       "key_restore": "Ini sep-u sedjer neb",
       "key_help": "Sesh / imen sesh en djed-tep",
-      "key_leave": "Per em set (shu sesh-per tepy)"
+      "key_leave": "Per em set (shu sesh-per tepy)",
+      "key_notes": "Focus the notes field"
     },
     "detail": {
       "loading": "Khemut Sheemtet Seth...",
@@ -932,7 +942,8 @@
     "save": "Pedet",
     "cancel": "Khatem",
     "avatar": "Wer Aha",
-    "upload_avatar": "Terqeq Aha"
+    "upload_avatar": "Terqeq Aha",
+    "load_failed": "Could not load the latest profile — the values below may be out of date"
   },
   "notifications": {
     "title": "Mes Neteru",
@@ -1081,6 +1092,9 @@
     "no_pending": "Ma Rekhyu Pert Abuf Em Set Medu",
     "no_history": "Ma Rekhyu Medew Pert Abuf",
     "select_soul": "Setep Aba...",
+    "soul_search_placeholder": "Shesep Aba Her Ren...",
+    "soul_search_empty": "Ma Rekhyu Aba",
+    "soul_search_more": "{{shown}} / {{count}} medu — Shesep Her Ren",
     "reason_placeholder": "Medu Pert Abuf...",
     "target_soul": "Aba Setep Seth",
     "select_tenant": "Setep Per Hemes...",
@@ -1090,6 +1104,7 @@
     "reason": "Medu",
     "soul_prefix": "Aba #",
     "detail_title": "Medu Pert Abuf",
+    "not_found": "Ma Rekhyu Pert Abuf",
     "soul": "Aba",
     "status": "Set Medu",
     "actions": "Aha Seth",
@@ -1119,7 +1134,9 @@
       "REJECTED": "Wehem Seth",
       "EXECUTED": "Iri Sethet",
       "CANCELLED": "Ma Iri Seth"
-    }
+    },
+    "confirm_approve": "Approve this cross-tenant dispatch?",
+    "approve_warning": "The target tenant gains disposition rights over this soul. The action is written to the audit log."
   },
   "crossJudgments": {
     "title": "Sheemtet Seth Em Kehat",
@@ -1217,7 +1234,9 @@
       "purple": "Djam",
       "red": "Desher",
       "rose": "Desher Nedjes"
-    }
+    },
+    "accent_hex_invalid": "Enter a 6-digit hex colour, e.g. #ff5500",
+    "accent_hex_too_dark": "Too dark — the black label on primary buttons would be unreadable"
   },
   "menu_buttons": {
     "title": "Sekhem Menu",
@@ -1421,7 +1440,8 @@
       "FOLLOWERS": "Shemsu Neb",
       "PRIVATE": "Imen"
     },
-    "visibility_label": "Set Medu Maa"
+    "visibility_label": "Set Medu Maa",
+    "follow_error": "Follow action failed"
   },
   "tenants": {
     "active": "Active",
@@ -1484,5 +1504,13 @@
       "EGYPTIAN": "Duat Mesjet",
       "GREEK": "Duat Haunebut"
     }
+  },
+  "connection": {
+    "connected": "Connected",
+    "connecting": "Connecting…",
+    "reconnecting": "Reconnecting…",
+    "disconnected": "Disconnected",
+    "failed": "Connection failed",
+    "retry": "Reconnect"
   }
 }

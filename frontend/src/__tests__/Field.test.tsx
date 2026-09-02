@@ -131,8 +131,8 @@ describe("focus-visible, not focus", () => {
     expect(classes.filter((c) => /^focus:/.test(c))).toEqual([]);
   });
 
-  it("writes no outline-none, leaving the global ring alone", () => {
-    // app/globals.css:459 is `:focus-visible { outline: ... !important }`, and
+  it("writes no outline-none, leaving the global ring-3 alone", () => {
+    // app/globals.css:459 is `:focus-visible { outline-solid: ... !important }`, and
     // the rule immediately below it sets outline-offset: 0 for input/select/
     // textarea so the ring and the accent border are not read as a double
     // outline. A component participates by doing nothing.

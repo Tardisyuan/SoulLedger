@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { dispatchApi, type DispatchRecord } from "@/lib/api";
@@ -10,6 +11,9 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
+import { Pagination } from "@/src/components/ui/Pagination";
+import { PAGE_SIZE } from "@/lib/api/client";
 import { buttonVariants } from "@/src/components/ui/Button";
 import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -37,17 +41,41 @@ function DispatchPageContent() {
   const { t } = useI18n();
   const { user } = useTenant();
 
-  const { data: proposed = [], isLoading: loadingProposed } = useQuery({
-    queryKey: ["dispatch", "proposed"],
-    queryFn: () => dispatchApi.proposed().then(r => r.data.results),
-    enabled: !!user,
-  });
+  // `isError` on both. The `= []` defaults mean a failed request lands on the
+  // same empty array an empty tenant produces, so both sections rendered
+  // "no pending dispatches" / "no history" when the server was down.
+  /**
+   * Both lists were `.then(r => r.data.results)` with no `page` param and no
+   * pagination control. The server paginates at 20 (`lib/api/client.ts:28`),
+   * so **everything past the twentieth record was invisible and unreachable**,
+   * with nothing on screen saying so — on the page where cross-tenant
+   * approvals are triaged. The count is rendered now as well: "20 of 137" is
+   * the part that was missing even more than the controls.
+   */
+  const [proposedPage, setProposedPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
 
-  const { data: history = [], isLoading: loadingHistory } = useQuery({
-    queryKey: ["dispatch", "history"],
-    queryFn: () => dispatchApi.history().then(r => r.data.results),
+  const {
+    data: proposedData, isLoading: loadingProposed,
+    isError: proposedError, refetch: refetchProposed,
+  } = useQuery({
+    queryKey: ["dispatch", "proposed", proposedPage],
+    queryFn: () => dispatchApi.proposed({ page: String(proposedPage) }).then(r => r.data),
     enabled: !!user,
+    placeholderData: (previous) => previous,
   });
+  const proposed = proposedData?.results ?? [];
+
+  const {
+    data: historyData, isLoading: loadingHistory,
+    isError: historyError, refetch: refetchHistory,
+  } = useQuery({
+    queryKey: ["dispatch", "history", historyPage],
+    queryFn: () => dispatchApi.history({ page: String(historyPage) }).then(r => r.data),
+    enabled: !!user,
+    placeholderData: (previous) => previous,
+  });
+  const history = historyData?.results ?? [];
 
   return (
     <PageShell
@@ -71,6 +99,8 @@ function DispatchPageContent() {
       <PageSection title={t("dispatch.pending")} isLoading={loadingProposed} className="mb-6">
         {loadingProposed ? (
           <ListSkeleton count={3} />
+        ) : proposedError ? (
+          <QueryError onRetry={() => refetchProposed()} />
         ) : proposed.length === 0 ? (
           <EmptyState title={t("dispatch.no_pending")} />
         ) : (
@@ -80,12 +110,20 @@ function DispatchPageContent() {
             ))}
           </div>
         )}
+        <Pagination
+          page={proposedPage}
+          totalPages={Math.max(1, Math.ceil((proposedData?.count ?? 0) / PAGE_SIZE))}
+          count={proposedData?.count ?? 0}
+          onPageChange={setProposedPage}
+        />
       </PageSection>
 
       {/* History - skeleton while loading */}
       <PageSection title={t("dispatch.history")} isLoading={loadingHistory}>
         {loadingHistory ? (
           <ListSkeleton count={5} />
+        ) : historyError ? (
+          <QueryError onRetry={() => refetchHistory()} />
         ) : history.length === 0 ? (
           <EmptyState title={t("dispatch.no_history")} />
         ) : (
@@ -95,13 +133,19 @@ function DispatchPageContent() {
             ))}
           </div>
         )}
+        <Pagination
+          page={historyPage}
+          totalPages={Math.max(1, Math.ceil((historyData?.count ?? 0) / PAGE_SIZE))}
+          count={historyData?.count ?? 0}
+          onPageChange={setHistoryPage}
+        />
       </PageSection>
     </PageShell>
   );
 }
 
 function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
-  const { t } = useI18n();
+  const { t, formatDateTime } = useI18n();
 
   return (
     <Link href={`/dispatch/${dispatch.id}`} className="block">
@@ -114,6 +158,18 @@ function DispatchCard({ dispatch }: { dispatch: DispatchRecord }) {
               {dispatch.soul_name || <MissingValue kind="unrecorded" />}</p>
             <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
               {dispatch.source_tenant_code} → {dispatch.target_tenant_code}
+            </p>
+            {/* `proposed_at` was in the response and unread, so this card
+                carried no time at all — a queue that cannot be triaged by age.
+                Mono + tabular-nums so the timestamps line up digit for digit
+                down a column of cards, which is what makes "oldest first"
+                readable at a glance. */}
+            <p className="text-02 font-mono tabular-nums text-[hsl(var(--color-ink-subtle))] mt-1">
+              {dispatch.proposed_at ? (
+                formatDateTime(dispatch.proposed_at)
+              ) : (
+                <MissingValue kind="unrecorded" />
+              )}
             </p>
           </div>
           {/* <DomainEnum> renders exactly one span, so passing the badge
