@@ -36,6 +36,26 @@ export interface KeyValueStore {
  *  authenticated. Web assigns `/login`; a native client resets its navigator. */
 export type UnauthorizedHandler = () => void;
 
+/**
+ * Run `handler` when the session is about to go away; returns an unsubscribe.
+ *
+ * WHAT THIS IS ACTUALLY FOR, because "suspend" is vague on its own. The
+ * judgment queue holds a verdict for the length of its undo window before
+ * sending it. A verdict the operator gave and then walked away from is a
+ * decision they made, so it has to be flushed rather than dropped — and the
+ * moment to flush is the last moment the client still exists.
+ *
+ * That moment has a different name on every platform, which is exactly why it
+ * is a port rather than a call: `beforeunload` on web, `AppState` going to
+ * `background` on React Native. Neither name means anything to the other, and
+ * the rule ("commit on the way out") means the same thing to both.
+ *
+ * The default does nothing and returns a no-op unsubscribe. A host that
+ * registers none loses held verdicts on exit — which is the honest behaviour
+ * of a platform that has no such event, not a silent failure.
+ */
+export type SessionSuspendSubscriber = (handler: () => void) => () => void;
+
 export interface PlatformAdapter {
   /** Cleared when the session ends. Holds the access token, and nothing else. */
   session: KeyValueStore;
@@ -43,4 +63,6 @@ export interface PlatformAdapter {
   persistent: KeyValueStore;
   /** Called once a 401 could not be recovered from. */
   onUnauthorized: UnauthorizedHandler;
+  /** Subscribe to "the client is going away". See `SessionSuspendSubscriber`. */
+  onSessionSuspend: SessionSuspendSubscriber;
 }

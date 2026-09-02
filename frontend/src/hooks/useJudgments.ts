@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { judgmentApi } from "@soulledger/core/api";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { judgmentKeys } from "@/lib/query_keys";
+import { judgmentKeys } from "@soulledger/core/query_keys";
 
 // ── Queries ──────────────────────────────────────────────────────────
 

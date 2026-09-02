@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { socialApi, type UserProfile } from "@soulledger/core/api";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { socialKeys } from "@/lib/query_keys";
+import { socialKeys } from "@soulledger/core/query_keys";
 
 /**
  * Was a private reader for DRF's `non_field_errors` shape. It now delegates to

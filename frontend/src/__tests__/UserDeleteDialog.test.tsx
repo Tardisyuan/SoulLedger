@@ -48,7 +48,7 @@ jest.mock("@soulledger/core/api", () => ({
   },
 }));
 
-jest.mock("@/lib/query_keys", () => ({
+jest.mock("@soulledger/core/query_keys", () => ({
   userKeys: { all: ["users"] },
 }));
 

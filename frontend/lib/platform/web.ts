@@ -107,6 +107,15 @@ const persistent: KeyValueStore = {
 export const webPlatform: PlatformAdapter = {
   session,
   persistent,
+  onSessionSuspend(handler) {
+    // `beforeunload` is this platform's name for "the client is going away".
+    // It is the only such event a browser has that fires early enough to send
+    // a request, and it is the reason `useJudgmentQueue` no longer names it:
+    // the hook states the rule, this states the browser.
+    if (typeof window === "undefined") return () => {};
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  },
   onUnauthorized() {
     // The one line in the old `lib/api/client.ts` that assumed a browser with a
     // URL bar. A native client resets its navigator here instead.

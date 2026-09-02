@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@soulledger/core/api";
-import { workflowKeys } from "@/lib/query_keys";
+import { workflowKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import Link from "next/link";

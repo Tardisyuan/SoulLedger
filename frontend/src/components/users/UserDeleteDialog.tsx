@@ -2,7 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { usersApi, type User } from "@soulledger/core/api";
-import { userKeys } from "@/lib/query_keys";
+import { userKeys } from "@soulledger/core/query_keys";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useQueryClient } from "@tanstack/react-query";

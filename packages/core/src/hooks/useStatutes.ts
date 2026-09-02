@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { judgmentApi, type Statute, type StatuteCorpus } from "@soulledger/core/api";
-import { judgmentKeys } from "@/lib/query_keys";
+import { judgmentApi, type Statute, type StatuteCorpus } from "../api/index";
+import { judgmentKeys } from "../query_keys";
 
 /**
  * A page of the corpus — the 175 transcribed articles four cosmologies judge by.
@@ -14,7 +14,7 @@ import { judgmentKeys } from "@/lib/query_keys";
  * transcribed from. Nothing a logged-in operator can do changes an article's
  * text. The one field that *does* move under them is `citation_count`, which is
  * annotated from `JudgmentCitation` — hence the key sitting under
- * `judgmentKeys.all` (see lib/query_keys.ts), so filing grounds on a verdict
+ * `judgmentKeys.all` (see ../query_keys.ts), so filing grounds on a verdict
  * invalidates these pages along with the judgment they were filed on.
  */
 export function useStatutes(params?: Record<string, string>) {

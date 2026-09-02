@@ -10,7 +10,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useToggleReaction, useCreateComment, useUpdateProfile } from "@/src/hooks/useSocial";
-import { socialKeys } from "@/lib/query_keys";
+import { socialKeys } from "@soulledger/core/query_keys";
 import { socialApi } from "@soulledger/core/api";
 
 const mockShowToast = jest.fn();

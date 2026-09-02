@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PAGE_SIZE, type Statute, type StatuteCorpus } from "@soulledger/core/api";
-import { useStatutes, groupStatutesByCorpus, type CorpusGroup } from "@/src/hooks/useStatutes";
+import { useStatutes, groupStatutesByCorpus, type CorpusGroup } from "@soulledger/core/hooks/useStatutes";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
