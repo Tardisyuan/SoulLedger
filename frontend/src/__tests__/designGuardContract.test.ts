@@ -365,3 +365,94 @@ describe("tailwind-merge 认识八档字号", () => {
     expect(cn(`text-${scale[0]}`, `text-${scale[scale.length - 1]}`)).toBe(`text-${scale[scale.length - 1]}`);
   });
 });
+
+// ---------------------------------------------------------------------------
+
+/**
+ * `DESIGN.md` MAY NOT PRESCRIBE WHAT THE CODE DOES NOT DO.
+ *
+ * It used to. On 2026-09-02 the file at the repo root was a 259-line
+ * hand-maintained mirror of the token system that disagreed with the code in
+ * six of its nine sections: it named **Inter** and **JetBrains Mono** while
+ * `app/fonts.ts` ships Archivo / Source Serif 4 / IBM Plex Mono, prescribed
+ * `border-radius: 8px` and `12px` while every radius token in `globals.css` is
+ * `0`, specified a 14px body the scale does not contain, and said "no shadows,
+ * never" while nine `shadow-*` classes ship.
+ *
+ * Nothing caught it, and nothing could: a document cannot fail a test. That is
+ * the actual defect — not the staleness, but that staleness was undetectable.
+ * An agent told "read DESIGN.md first" would have reintroduced all three.
+ *
+ * So this is the smallest test that makes the document falsifiable. It does not
+ * check prose, and it does not require the file to restate anything. It checks
+ * two things the file has no business asserting on its own: which typefaces the
+ * app uses, and whether corners are round. Both are recovered from the code.
+ */
+describe("DESIGN.md cannot prescribe against the code", () => {
+  const doc = fs.readFileSync(path.join(ROOT, "..", "DESIGN.md"), "utf8");
+
+  /** The three families `app/fonts.ts` actually imports, read from the file. */
+  const shippedFonts = (() => {
+    const src = fs.readFileSync(path.join(ROOT, "app", "fonts.ts"), "utf8");
+    const m = /import\s*\{([^}]*)\}\s*from\s*["']next\/font\/google["']/.exec(src);
+    if (m === null) throw new Error("Could not read the font imports from app/fonts.ts — fix this parser.");
+    const names = m[1].split(",").map((x) => x.trim()).filter(Boolean);
+    if (names.length === 0) throw new Error("Parsed zero fonts from app/fonts.ts.");
+    return names;
+  })();
+
+  /** Faces a design doc reaches for by reflex, and that this app deliberately does not use. */
+  const NOT_OURS = ["Inter", "JetBrains Mono", "Roboto", "Open Sans", "Lato", "Poppins", "Montserrat", "Nunito"];
+
+  it("reads the fonts the app actually ships", () => {
+    // Guards the parser: an empty list would make the assertion below vacuous.
+    expect(shippedFonts).toEqual(expect.arrayContaining(["Archivo"]));
+    expect(shippedFonts.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("names no typeface the app does not use", () => {
+    const named = NOT_OURS.filter(
+      (f) => new RegExp(`\\b${f.replace(/\s+/g, "\\s+")}\\b`, "i").test(doc) && !shippedFonts.includes(f.replace(/\s+/g, "_"))
+    );
+    // The rewritten file may NAME them while explaining that they are wrong —
+    // so the rule is about prescription, not mention: a banned face may appear
+    // only on a line that also says it is not what ships.
+    const prescribing = named.filter((f) =>
+      doc.split("\n").some((line) => {
+        const re = new RegExp(`\\b${f.replace(/\s+/g, "\\s+")}\\b`, "i");
+        if (!re.test(line)) return false;
+        return !/(not|never|instead of|rather than|previous|used to|disagree|wrong|ships)/i.test(line);
+      })
+    );
+    expect(prescribing).toEqual([]);
+  });
+
+  it("prescribes no rounded corner, because every shape radius is 0", () => {
+    // Recovered from globals.css rather than asserted: if the app ever adopts a
+    // real radius, this test stops applying and says so by going red.
+    // SHAPE radii only. `--radius-focus` (2px) and `--radius-full` (9999px) are
+    // deliberate exceptions — a focus ring and a pill — and sweeping them in is
+    // what made the first version of this test inert: `allZero` was false, the
+    // rule returned early, and a mutation that put `border-radius: 12px` back
+    // into DESIGN.md passed. The premise "every radius token is 0" was simply
+    // wrong; 8 of 10 are.
+    const css = fs.readFileSync(path.join(ROOT, "app", "globals.css"), "utf8");
+    const shape = [...css.matchAll(/--radius(-(?:none|sm|md|lg|xl|2xl|3xl))?:\s*([^;]+);/g)]
+      .map((m) => m[2].trim());
+    expect(shape.length).toBeGreaterThanOrEqual(8);
+    const allZero = shape.every((v) => v === "0" || v === "0px");
+    expect(allZero).toBe(true); // asserted, not assumed — see above
+
+    const offenders = doc
+      .split("\n")
+      .map((line, i) => [i + 1, line] as const)
+      // A PRESCRIPTION, not a mention. A declaration a reader would copy starts
+      // the line; prose that explains why corners are square says
+      // "…would render `border-radius: 0` and read as a choice…" mid-sentence,
+      // and the first version of this rule flagged exactly that line in the
+      // rewritten file it was meant to protect.
+      .filter(([, line]) => /^\s*`?border-radius:\s*(?!0\b)/.test(line))
+      .map(([n, line]) => `DESIGN.md:${n}  ${line.trim().slice(0, 70)}`);
+    expect(offenders).toEqual([]);
+  });
+});
