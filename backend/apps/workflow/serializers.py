@@ -142,7 +142,7 @@ class WorkflowTemplateListSerializer(serializers.ModelSerializer):
             "node_count",
         ]
 
-    def get_node_count(self, obj):
+    def get_node_count(self, obj) -> int:
         return len(obj.nodes_json or [])
 
 

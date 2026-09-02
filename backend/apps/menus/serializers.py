@@ -1,6 +1,7 @@
 """
 Menu serializers — tree structure with button resources.
 """
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import Menu, MenuButton
@@ -32,6 +33,7 @@ class MenuTreeSerializer(serializers.ModelSerializer):
         children = sorted(children, key=lambda m: m.order)
         return MenuTreeSerializer(children, many=True, context=self.context).data
 
+    @extend_schema_field(MenuButtonSerializer(many=True))
     def get_buttons(self, obj):
         """Filter buttons by user's role permissions."""
         from apps.core.permissions import user_has_permission
@@ -124,6 +126,7 @@ class MenuSerializer(serializers.ModelSerializer):
         )
         return MenuSerializer(children, many=True, context=self.context).data
 
+    @extend_schema_field(MenuButtonSerializer(many=True))
     def get_buttons(self, obj):
         """Buttons the caller may see. Same shape as `MenuTreeSerializer`'s.
 
@@ -186,3 +189,27 @@ class MenuButtonCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = MenuButton
         fields = ["id", "menu", "name", "code", "permission", "order", "is_active"]
+
+
+# ── Recursive `children`, declared after the classes exist ────────────────────
+#
+# `children` is the one field here that cannot be annotated in the class body:
+# both serializers return `Serializer(children, many=True).data` **of their own
+# class**, and the name does not exist yet while the body is being executed.
+# Decorating afterwards is the same decoration, applied once the class object is
+# there to refer to.
+#
+# Why it matters more than the other eighteen. An un-hinted method field becomes
+# `string` in the schema, so a generated client would type the entire menu tree
+# — the structure the sidebar is built out of — as a bare string. Every other
+# degraded field loses one scalar; this one loses the recursion.
+#
+# drf-spectacular resolves the self-reference into an OpenAPI `$ref` back to the
+# same component, which is exactly the shape the hand-written
+# `MenuItem.children?: MenuItem[]` already describes.
+MenuTreeSerializer.get_children = extend_schema_field(MenuTreeSerializer(many=True))(
+    MenuTreeSerializer.get_children
+)
+MenuSerializer.get_children = extend_schema_field(MenuSerializer(many=True))(
+    MenuSerializer.get_children
+)

@@ -27,7 +27,7 @@ def _locale_from_context(context):
     return "en"
 
 
-def _assessor_index(obj):
+def _assessor_index(obj) -> int | None:
     """The actor's seat on the bench of 42, or None if he does not sit on it.
 
     The list endpoint deliberately exposes this ONE key out of `powers_json`
@@ -62,13 +62,13 @@ class ActorListSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "civilization", "role", "realm_code",
                   "display_name", "display_title", "is_active", "assessor_index"]
 
-    def get_display_name(self, obj):
+    def get_display_name(self, obj) -> str:
         return obj.get_localized_name(_locale_from_context(self.context))
 
-    def get_display_title(self, obj):
+    def get_display_title(self, obj) -> str:
         return obj.get_localized_title(_locale_from_context(self.context))
 
-    def get_assessor_index(self, obj):
+    def get_assessor_index(self, obj) -> int | None:
         return _assessor_index(obj)
 
 
@@ -88,13 +88,13 @@ class ActorLocalizedSerializer(serializers.ModelSerializer):
             "description", "icon_url", "is_active", "assessor_index",
         ]
 
-    def get_display_name(self, obj):
+    def get_display_name(self, obj) -> str:
         return obj.get_localized_name(_locale_from_context(self.context))
 
-    def get_display_title(self, obj):
+    def get_display_title(self, obj) -> str:
         return obj.get_localized_title(_locale_from_context(self.context))
 
-    def get_assessor_index(self, obj):
+    def get_assessor_index(self, obj) -> int | None:
         # `?localized=true` drops powers_json too, so without this the seat is
         # unreachable from that shape as well.
         return _assessor_index(obj)

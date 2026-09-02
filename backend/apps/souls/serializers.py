@@ -1,6 +1,7 @@
 """
 REST serializers for Soul app.
 """
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.core.field_permissions import FieldPermissionMixin
@@ -8,6 +9,39 @@ from apps.souls.dates import ERROR, WARNING, check_record_date, check_soul_dates
 from apps.souls.fields import HistoricalDateField
 from apps.souls.models import Soul, SoulState
 from apps.souls.record_models import SoulRecord
+
+
+class SoulDateProblemSerializer(serializers.Serializer):
+    """The shape `_soul_level_date_problems` returns, for the schema only.
+
+    NEVER INSTANTIATED. `SerializerMethodField` builds these dicts by hand from
+    `DateProblem` namedtuples; this class exists so `@extend_schema_field` can
+    name the shape, and so the generated TypeScript is
+    `{severity, code, message}[]` rather than the `string` drf-spectacular
+    defaults an un-hinted method field to.
+
+    Because it is never instantiated, nothing keeps it honest at runtime — the
+    guard is `tests/test_schema_has_no_warnings.py` plus the fact that the
+    dict literal it mirrors is eleven lines below it.
+    """
+
+    severity = serializers.ChoiceField(choices=[ERROR, WARNING])
+    code = serializers.CharField()
+    message = serializers.CharField()
+
+
+class RecordDateProblemSerializer(SoulDateProblemSerializer):
+    """The record-level shape: the soul-level three plus the acknowledged trio.
+
+    The trio is absent from `SoulDateProblemSerializer` on purpose and the
+    reason is recorded at `_soul_level_date_problems`: both soul-level codes are
+    ERROR severity, and an ERROR is refused at write time, so there is never a
+    persisted soul-level problem to acknowledge.
+    """
+
+    acknowledged = serializers.BooleanField()
+    acknowledged_by = serializers.CharField(allow_null=True)
+    acknowledged_at = serializers.DateTimeField(allow_null=True)
 
 
 def _is_viewer(context) -> bool:
@@ -210,6 +244,7 @@ class SoulRecordSerializer(serializers.ModelSerializer):
             )
         return value
 
+    @extend_schema_field(RecordDateProblemSerializer(many=True))
     def get_date_problems(self, obj):
         soul = obj.soul
         event = (obj.event_year, obj.event_month, obj.event_day)
@@ -442,16 +477,17 @@ class SoulSerializer(FieldPermissionMixin, serializers.ModelSerializer):
         ))
         return attrs
 
-    def get_merit_score(self, obj):
+    def get_merit_score(self, obj) -> int | None:
         if _is_viewer(self.context):
             return None  # VIEWER cannot see merit score
         return obj.merit_score
 
-    def get_demerit_score(self, obj):
+    def get_demerit_score(self, obj) -> int | None:
         if _is_viewer(self.context):
             return None  # VIEWER cannot see demerit score
         return obj.demerit_score
 
+    @extend_schema_field(SoulDateProblemSerializer(many=True))
     def get_date_problems(self, obj):
         return _soul_level_date_problems(obj)
 
@@ -501,15 +537,16 @@ class SoulListSerializer(serializers.ModelSerializer):
             "has_record_error",
         ]
 
-    def get_karmic_balance(self, obj):
+    def get_karmic_balance(self, obj) -> int | None:
         if _is_viewer(self.context):
             return None
         return obj.karmic_balance
 
+    @extend_schema_field(SoulDateProblemSerializer(many=True))
     def get_date_problems(self, obj):
         return _soul_level_date_problems(obj)
 
-    def get_has_date_warning(self, obj):
+    def get_has_date_warning(self, obj) -> bool:
         birth = (obj.birth_year, obj.birth_month, obj.birth_day)
         death = (obj.death_year, obj.death_month, obj.death_day)
         for record in obj.records.all():
@@ -522,7 +559,7 @@ class SoulListSerializer(serializers.ModelSerializer):
                 return True
         return False
 
-    def get_has_record_error(self, obj):
+    def get_has_record_error(self, obj) -> bool:
         birth = (obj.birth_year, obj.birth_month, obj.birth_day)
         death = (obj.death_year, obj.death_month, obj.death_day)
         for record in obj.records.all():

@@ -45,7 +45,7 @@ class StatuteSerializer(serializers.ModelSerializer):
             "source", "source_notes", "payload_json",
         ]
 
-    def get_citation_count(self, obj):
+    def get_citation_count(self, obj) -> int | None:
         """How many times this tenant has cited the article — or ``None``.
 
         A method field rather than ``IntegerField`` because the annotation is
@@ -63,10 +63,10 @@ class StatuteSerializer(serializers.ModelSerializer):
         """
         return getattr(obj, "citation_count", None)
 
-    def get_display_title(self, obj):
+    def get_display_title(self, obj) -> str:
         return obj.get_localized_title(_locale_from(self.context))
 
-    def get_display_text(self, obj):
+    def get_display_text(self, obj) -> str:
         return obj.get_localized_text(_locale_from(self.context))
 
     def get_is_derived(self, obj) -> bool:

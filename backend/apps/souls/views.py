@@ -2,6 +2,8 @@
 REST views for Soul app.
 """
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -313,6 +315,23 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         serializer = SoulRecordSerializer(records, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "record_id",
+                OpenApiTypes.UUID,
+                OpenApiParameter.PATH,
+                description=(
+                    "The SoulRecord's primary key. drf-spectacular cannot infer "
+                    "this one: it looks the name up on the viewset's model, and "
+                    "`Soul` has no `record_id` field — the id belongs to the "
+                    "related SoulRecord. Left un-annotated it defaults to "
+                    "`string`, which is the same silent widening an un-hinted "
+                    "SerializerMethodField suffers."
+                ),
+            )
+        ]
+    )
     @action(
         detail=True,
         methods=["post"],
@@ -362,6 +381,23 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         record.save()
         return Response(SoulRecordSerializer(record).data)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "record_id",
+                OpenApiTypes.UUID,
+                OpenApiParameter.PATH,
+                description=(
+                    "The SoulRecord's primary key. drf-spectacular cannot infer "
+                    "this one: it looks the name up on the viewset's model, and "
+                    "`Soul` has no `record_id` field — the id belongs to the "
+                    "related SoulRecord. Left un-annotated it defaults to "
+                    "`string`, which is the same silent widening an un-hinted "
+                    "SerializerMethodField suffers."
+                ),
+            )
+        ]
+    )
     @action(
         detail=True,
         methods=["post"],
