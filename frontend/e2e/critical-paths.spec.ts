@@ -170,9 +170,20 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
     // Scoped to the pending section: dispatchApi.history() hits the same
     // unfiltered endpoint, so a PROPOSED record legitimately appears in both
     // lists and an unscoped locator is ambiguous.
-    const pendingSection = page
-      .locator("div.rounded-lg")
-      .filter({ has: page.getByRole("heading", { name: "待处理提案" }) });
+    // Located by STRUCTURE, not by a decorative class. This was
+    // `div.rounded-lg`, and it stopped matching anything when the design
+    // system moved these panels to `<PageSection>` and squared the corners —
+    // `rounded-lg` does not appear anywhere in app/dispatch/page.tsx any more.
+    // The failure read as "the pending card is missing", which is a much more
+    // alarming thing than what had happened.
+    //
+    // `div:has(> div > h3)` is PageSection's own shape: a root div whose first
+    // child is the header div holding the title as an h3. That is the
+    // component's contract rather than its styling, so a second Tailwind pass
+    // does not break it.
+    const pendingSection = page.locator(
+      'div:has(> div > h3:text-is("待处理提案"))'
+    );
 
     // The pending card must name both civilizations — the whole point of a
     // cross-tenant dispatch is that it leaves one cosmology for another.
@@ -224,7 +235,15 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
     ).toBeVisible();
 
     // ── Approve ──
+    // Through the confirmation, same as the rejection test below. The button
+    // on the card opens a dialog; the one inside it is what fires the
+    // mutation. Both carry the same label, so the second click is scoped to
+    // the dialog — an unscoped `getByRole("button", { name: "批准" })` matches
+    // two elements once the dialog is open and fails Playwright's strict mode.
     await page.getByRole("button", { name: "批准" }).click();
+    const approveConfirm = page.getByRole("dialog");
+    await expect(approveConfirm).toBeVisible();
+    await approveConfirm.getByRole("button", { name: "批准" }).click();
 
     await expect.poll(() => api.countOf("POST", `/dispatch/records/${PROPOSED_DISPATCH.id}/approve/`)).toBe(1);
     await expect(page.getByText("已批准")).toBeVisible();
@@ -249,7 +268,18 @@ test.describe("Critical path: cross-civilization dispatch approval", () => {
     api.on("POST", "/dispatch/records/:id/approve/", () => ({ status: 403, body: { detail: "not your tenant" } }));
     await page.goto(`/dispatch/${PROPOSED_DISPATCH.id}`);
 
+    // Two clicks, not one. Approving opens a confirmation now — see the
+    // comment on the button in app/dispatch/[id]/page.tsx: approve is the one
+    // of the three actions whose consequence reaches another tenant's ledger,
+    // so it was given the same confirm step reject and execute already had.
+    // This test predated that change and clicked once, so the mutation never
+    // fired and the toast it waited for could not appear. The old failure
+    // therefore read as "the error toast is broken" when the error had simply
+    // never been requested.
     await page.getByRole("button", { name: "批准" }).click();
+    const confirm = page.getByRole("dialog");
+    await expect(confirm).toBeVisible();
+    await confirm.getByRole("button", { name: "批准" }).click();
 
     await expect(page.getByText("批准失败")).toBeVisible();
     // No navigation — the operator stays where the failure happened.

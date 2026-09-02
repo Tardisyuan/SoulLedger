@@ -88,12 +88,33 @@ test.describe("Login page", () => {
 
     await page.getByRole("button", { name: "登录" }).click();
 
-    // Both fields are `required`, so the browser refuses the submit — the
-    // real assertion is that no login attempt was made, not just that the
-    // URL happens to be unchanged.
+    // WHAT ACTUALLY BLOCKS THIS — and why the comment that used to sit here
+    // was describing a mechanism that does not exist.
+    //
+    // It said "both fields are `required`, so the browser refuses the submit",
+    // and asserted `validity.valueMissing === true`. Neither holds.
+    // `app/(auth)/login/page.tsx` does pass `required` to <TextField>, but
+    // `Field` (src/components/ui/Field.tsx) turns it into `aria-required` and
+    // never forwards it to the <input> — so there is no native constraint to
+    // violate and `valueMissing` is permanently false. That assertion could
+    // never pass; the two below it passed all along, for a different reason
+    // than the comment gave.
+    //
+    // The real mechanism is the form's own validation: `handleSubmit` calls
+    // `preventDefault()`, then `validate(form)` against `loginSchema` from
+    // `@soulledger/core/validations`, and returns before touching the API when
+    // it fails. Native constraint validation is deliberately not used here —
+    // the reasoning is recorded on `Field` itself.
     await expect(page).toHaveURL(/\/login/);
     expect(api.countOf("POST", "/auth/login/")).toBe(0);
-    await expect(page.getByLabel("用户名")).toHaveJSProperty("validity.valueMissing", true);
+
+    // Assert the mechanism, not just its side effect. "No request was sent"
+    // is also true of a page whose submit button is broken; what separates
+    // "validation refused this" from "nothing happened" is that the form said
+    // why, in the app's own locale and its own markup.
+    await expect(page.getByRole("alert").filter({ hasText: "请输入用户名" })).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: "请输入密码" })).toBeVisible();
+    await expect(page.getByLabel("用户名")).toHaveAttribute("aria-invalid", "true");
   });
 
   test("bad credentials surface an error and leave the user on /login", async ({ page }) => {
