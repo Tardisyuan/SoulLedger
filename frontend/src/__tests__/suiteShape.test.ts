@@ -69,6 +69,7 @@ const COLLECTED_FILES = [
   "PostCard.test.tsx",
   "paginatedPagesCanBePaged.test.ts",
   "permissionGatesActuallyWithhold.test.tsx",
+  "platformAdapterIsInstalled.test.tsx",
   "ProfileCard.test.tsx",
   "RebirthFormSelect.test.tsx",
   "RequireButton.test.tsx",
