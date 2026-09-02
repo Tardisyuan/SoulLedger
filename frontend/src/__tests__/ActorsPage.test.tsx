@@ -27,9 +27,9 @@ import type { ReactNode } from "react";
 import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ActorsPage from "@/app/actors/page";
-import { actorsApi } from "@/lib/api";
+import { actorsApi } from "@soulledger/core/api";
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   actorsApi: { list: jest.fn() },
 }));
 

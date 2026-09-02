@@ -5,7 +5,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useSouls, useCreateSoul, useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
-import { soulsApi } from "@/lib/api";
+import { soulsApi } from "@soulledger/core/api";
 
 const mockShowToast = jest.fn();
 
@@ -17,7 +17,7 @@ const mockShowToast = jest.fn();
 // 藏了很久:`src/__tests__/**` 整个在 eslint 的 `ignores` 里,主块又把
 // `no-unused-vars` 关成了 off。
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   soulsApi: {
     list: jest.fn().mockResolvedValue({ data: { results: [], count: 0 } }),
     create: jest.fn().mockResolvedValue({ data: {} }),

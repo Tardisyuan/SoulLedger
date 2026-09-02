@@ -3,7 +3,7 @@
 import { useState, useEffect, useId } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
-import type { Permission } from "@/lib/api";
+import type { Permission } from "@soulledger/core/api";
 
 export function PermissionFormModal({
   isOpen,

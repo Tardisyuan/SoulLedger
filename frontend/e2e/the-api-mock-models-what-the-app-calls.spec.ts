@@ -10,7 +10,7 @@
  * `/api/v1/**` 请求都有 handler —— 背景噪音(通知轮询、菜单、社交、审计日志)
  * 在 `BACKGROUND_PATHS` 里逐条列名,不在名单上的算失败。
  *
- * 同时钉住 WebSocket:`page.route` 只管 HTTP,所以 `lib/ws/client.ts` 整个逃过了
+ * 同时钉住 WebSocket:`page.route` 只管 HTTP,所以 `packages/core/src/ws/client.ts` 整个逃过了
  * mock —— 一个把 socket 指到错误主机的回归对整套 e2e 不可见。
  * `interceptWebSockets` 把打开过的 URL 记下来,这里断言它们指向本机。
  */

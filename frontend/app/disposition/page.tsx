@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { dispositionApi, type Disposition } from "@/lib/api";
+import { dispositionApi, type Disposition } from "@soulledger/core/api";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { DomainText } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";

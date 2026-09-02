@@ -26,11 +26,11 @@ import {
   useProfile,
   useMyProfile,
 } from "@/src/hooks/useSocial";
-import { socialApi } from "@/lib/api";
+import { socialApi } from "@soulledger/core/api";
 
 const mockShowToast = jest.fn();
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   socialApi: {
     listPosts: jest.fn().mockResolvedValue({ data: { results: [] } }),
     getPost: jest.fn().mockResolvedValue({ data: { id: "p1" } }),

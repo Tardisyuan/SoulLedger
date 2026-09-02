@@ -6,8 +6,8 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Figure } from "@/src/components/ledger/QuantityFigure";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { formatHistoricalDate } from "@/lib/utils";
-import { SUMMARY_QUANTITIES } from "@/lib/api/ledgerQuantities";
-import type { QueueLedger, QueueLedgerRecord, QueuePriorCycle, QueueRealm, QueueSoul } from "@/lib/api";
+import { SUMMARY_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
+import type { QueueLedger, QueueLedgerRecord, QueuePriorCycle, QueueRealm, QueueSoul } from "@soulledger/core/api";
 
 /**
  * The read-only half of the triage card: everything §4.2 says must be on

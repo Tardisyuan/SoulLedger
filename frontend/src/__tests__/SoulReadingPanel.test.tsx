@@ -31,7 +31,7 @@
  * and measured itself.
  *
  * The direction this file cannot see — a member, or a whole `kind`, added on
- * the backend and not to the constants in `lib/api/ledger.ts` — is held by
+ * the backend and not to the constants in `packages/core/src/api/ledger.ts` — is held by
  * `apps/ledger/test_readings.py::TestFrontendMemberListsAgree`, which reads
  * this module's declarations as text and compares them to the Python tuples.
  * That blind spot is how the GREEK panel came to not exist for a release.
@@ -49,7 +49,7 @@ import {
   type LedgerReading,
   type LedgerReadingKind,
   type PoenaMissingInput,
-} from "@/lib/api/ledger";
+} from "@soulledger/core/api/ledger";
 
 import {
   ZH,
@@ -110,7 +110,7 @@ describe("SoulReadingPanel — poena bullets follow the payload", () => {
 
     // The loop below is `not.toContain` per member: over an empty member list
     // it asserts nothing and passes. Measured at 3 (ABSOLUTION, SATISFACTION,
-    // PENANCE) against `lib/api/ledger.ts`.
+    // PENANCE) against `packages/core/src/api/ledger.ts`.
     assertScanned("poena members swept for raw leakage", POENA_MISSING_INPUTS.length, 3);
     for (const member of POENA_MISSING_INPUTS) {
       expect(text).not.toContain(member);
@@ -140,7 +140,7 @@ describe("SoulReadingPanel — poena bullets follow the payload", () => {
 // Exhaustiveness — the property, not the four instances of it
 // ---------------------------------------------------------------------------
 //
-// `f92ed35` gave the Greek reading `kind: "SENTENCE"`. `lib/api/ledger.ts`
+// `f92ed35` gave the Greek reading `kind: "SENTENCE"`. `packages/core/src/api/ledger.ts`
 // declared four kinds, the component switched over those four with no
 // `default`, and so a SENTENCE payload fell out of the switch, the function
 // returned `undefined`, and React 18 rendered that as nothing. A Greek soul's

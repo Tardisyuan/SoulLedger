@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { WSClient, type WSStatus, type WSMessage } from "@/lib/ws/client";
+import { WSClient, type WSStatus, type WSMessage } from "@soulledger/core/ws/client";
 import { useTenant } from "./TenantContext";
 import { useToast } from "./ToastContext";
 import { dispatchEvent, type EventPayload } from "@/lib/events/event_registry";

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { CIVILIZATION_ICONS, CIVILIZATION_ICON_FALLBACK } from "@soulledger/core/config/civilizations";
 import { useQuery } from "@tanstack/react-query";
-import { api, type Organization, type PaginatedResponse } from "@/lib/api";
+import { api, type Organization, type PaginatedResponse } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { CardSkeleton } from "@/components/ui/skeleton";

@@ -21,12 +21,12 @@ import {
   sortRows,
   type SpineRow,
 } from "@/src/components/souls/soulLifecycleRows";
-import type { LedgerRecord } from "@/lib/api/ledger";
-import type { Soul } from "@/lib/api/souls";
-import type { SoulEvent } from "@/lib/api/events";
-import type { Judgment } from "@/lib/api/judgment";
-import type { Disposition } from "@/lib/api/disposition";
-import type { Reincarnation } from "@/lib/api/reincarnation";
+import type { LedgerRecord } from "@soulledger/core/api/ledger";
+import type { Soul } from "@soulledger/core/api/souls";
+import type { SoulEvent } from "@soulledger/core/api/events";
+import type { Judgment } from "@soulledger/core/api/judgment";
+import type { Disposition } from "@soulledger/core/api/disposition";
+import type { Reincarnation } from "@soulledger/core/api/reincarnation";
 
 function record(overrides: Partial<LedgerRecord> = {}): LedgerRecord {
   return {

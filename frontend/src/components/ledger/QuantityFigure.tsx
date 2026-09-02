@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import type { QuantityKind } from "@/lib/api/ledgerQuantities";
+import type { QuantityKind } from "@soulledger/core/api/ledgerQuantities";
 
 type TFunc = (key: string, params?: Record<string, string>) => string;
 

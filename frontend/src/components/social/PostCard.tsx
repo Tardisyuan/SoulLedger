@@ -7,7 +7,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useDeletePost } from "@/src/hooks/useSocial";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { ReactionBar } from "./ReactionBar";
-import type { Post } from "@/lib/api";
+import type { Post } from "@soulledger/core/api";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
 

@@ -5,7 +5,7 @@
  */
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { PostCard } from "@/src/components/social/PostCard";
-import type { Post } from "@/lib/api";
+import type { Post } from "@soulledger/core/api";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({

@@ -12,9 +12,9 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import NotificationsPage from "@/app/notifications/page";
-import { notificationsApi } from "@/lib/api";
+import { notificationsApi } from "@soulledger/core/api";
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   notificationsApi: { list: jest.fn(), markRead: jest.fn(), markAllRead: jest.fn() },
 }));
 

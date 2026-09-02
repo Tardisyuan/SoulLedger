@@ -1,7 +1,7 @@
 /**
  * GREEK — the panel that did not exist, and the clock it could not read.
  *
- * `f92ed35` gave the Greek reading `kind: "SENTENCE"`. `lib/api/ledger.ts`
+ * `f92ed35` gave the Greek reading `kind: "SENTENCE"`. `packages/core/src/api/ledger.ts`
  * declared four kinds, this component switched over those four with no
  * `default`, and so a SENTENCE payload fell out of the switch, the function
  * returned `undefined`, and React 18 rendered that as nothing. A Greek soul's
@@ -26,7 +26,7 @@
  */
 import { screen } from "@testing-library/react";
 
-import { SENTENCE_MISSING_INPUTS, type SentenceMissingInput } from "@/lib/api/ledger";
+import { SENTENCE_MISSING_INPUTS, type SentenceMissingInput } from "@soulledger/core/api/ledger";
 
 import {
   ZH,
@@ -171,7 +171,7 @@ describe("SoulReadingPanel — the Greek sentence renders at all", () => {
     const text = container.textContent ?? "";
 
     // `not.toContain` per member asserts nothing over an empty list. Measured
-    // at 2 (TERM_START, TIME_SERVED) against `lib/api/ledger.ts`.
+    // at 2 (TERM_START, TIME_SERVED) against `packages/core/src/api/ledger.ts`.
     assertScanned("sentence members swept for raw leakage", SENTENCE_MISSING_INPUTS.length, 2);
     for (const member of SENTENCE_MISSING_INPUTS) {
       expect(text).not.toContain(member);

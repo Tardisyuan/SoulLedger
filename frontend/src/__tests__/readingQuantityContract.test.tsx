@@ -51,8 +51,8 @@ import {
   SENTENCE_MISSING_INPUTS,
   type LedgerReading,
   type LedgerReadingKind,
-} from "@/lib/api/ledger";
-import { QUANTITY_KINDS, READING_QUANTITIES } from "@/lib/api/ledgerQuantities";
+} from "@soulledger/core/api/ledger";
+import { QUANTITY_KINDS, READING_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 

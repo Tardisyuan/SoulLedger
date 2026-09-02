@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { api, PAGE_SIZE, type Tenant, type PaginatedResponse } from "@/lib/api";
+import { api, PAGE_SIZE, type Tenant, type PaginatedResponse } from "@soulledger/core/api";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";

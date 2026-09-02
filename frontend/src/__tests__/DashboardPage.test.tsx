@@ -13,7 +13,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DashboardPage from "@/app/dashboard/page";
-import { ledgerApi } from "@/lib/api";
+import { ledgerApi } from "@soulledger/core/api";
 
 const mockReplace = jest.fn();
 let mockSearch = new URLSearchParams();
@@ -23,7 +23,7 @@ jest.mock("next/navigation", () => ({
   useSearchParams: () => mockSearch,
 }));
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   ledgerApi: { statsOverview: jest.fn(), exportStats: jest.fn() },
   menusApi: { all: jest.fn().mockResolvedValue({ data: [] }), list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
 }));

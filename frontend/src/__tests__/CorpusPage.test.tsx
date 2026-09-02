@@ -35,9 +35,9 @@ import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CorpusPage from "@/app/corpus/page";
 import { I18nProvider } from "@/src/contexts/I18nContext";
-import { judgmentApi } from "@/lib/api";
+import { judgmentApi } from "@soulledger/core/api";
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   PAGE_SIZE: 20,
   judgmentApi: { statutes: jest.fn() },
 }));

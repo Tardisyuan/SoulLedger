@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { judgmentApi, type Judgment, type JudgmentQueueCursor } from "@/lib/api";
+import { judgmentApi, type Judgment, type JudgmentQueueCursor } from "@soulledger/core/api";
 import { judgmentKeys } from "@/lib/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";

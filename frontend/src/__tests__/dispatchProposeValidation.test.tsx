@@ -18,9 +18,9 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import ProposeDispatchPage from "@/app/dispatch/propose/page";
-import { dispatchApi, soulsApi, ledgerApi } from "@/lib/api";
+import { dispatchApi, soulsApi, ledgerApi } from "@soulledger/core/api";
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   dispatchApi: { propose: jest.fn() },
   soulsApi: { list: jest.fn() },
   ledgerApi: { statsOverview: jest.fn() },

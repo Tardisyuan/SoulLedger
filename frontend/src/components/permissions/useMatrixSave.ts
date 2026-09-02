@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { permApi, Permission, Role, RolePermissions, RolePermissionConflict } from "@/lib/api";
+import { permApi, Permission, Role, RolePermissions, RolePermissionConflict } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { cloneGrantMap, computeRoleDiff, type GrantMap, type RoleDiff } from "./matrixDiff";

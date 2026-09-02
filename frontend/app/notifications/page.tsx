@@ -6,7 +6,7 @@ import {
   Bell, FileText, Scale, AlertCircle, RefreshCw, TrendingUp, User,
   type LucideIcon
 } from "lucide-react";
-import { notificationsApi, type Notification, type PaginatedResponse } from "@/lib/api";
+import { notificationsApi, type Notification, type PaginatedResponse } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Skeleton } from "@/components/ui/skeleton";

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useId } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi, type User, type CreateUserInput, type UpdateUserInput } from "@/lib/api";
+import { usersApi, type User, type CreateUserInput, type UpdateUserInput } from "@soulledger/core/api";
 import { userKeys } from "@/lib/query_keys";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";

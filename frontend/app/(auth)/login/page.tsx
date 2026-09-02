@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { TextField } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
-import { authApi } from "@/lib/api";
+import { authApi } from "@soulledger/core/api";
 import { loginSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -45,7 +45,7 @@ export default function LoginPage() {
       sessionStorage.setItem("soulledger_access", tokens.access);
       // `Secure` only over https — it is dropped on plain http, which is what
       // `npm run dev` and the e2e suite serve. Same rule as the refresh
-      // interceptor's; see lib/api/client.ts::refreshCookie.
+      // interceptor's; see packages/core/src/api/client.ts::refreshCookie.
       const secure = location.protocol === "https:" ? "; Secure" : "";
       document.cookie = `soulledger_refresh=${tokens.refresh}; path=/; max-age=604800; SameSite=Lax${secure}`;
 

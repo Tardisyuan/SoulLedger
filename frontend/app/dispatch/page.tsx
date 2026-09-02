@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { dispatchApi, type DispatchRecord } from "@/lib/api";
+import { dispatchApi, type DispatchRecord } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ListSkeleton } from "@/components/ui/skeleton";
@@ -13,7 +13,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Pagination } from "@/src/components/ui/Pagination";
-import { PAGE_SIZE } from "@/lib/api/client";
+import { PAGE_SIZE } from "@soulledger/core/api/client";
 import { buttonVariants } from "@/src/components/ui/Button";
 import { badgeVariants, type BadgeTone } from "@/src/components/ui/Badge";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -46,7 +46,7 @@ function DispatchPageContent() {
   // "no pending dispatches" / "no history" when the server was down.
   /**
    * Both lists were `.then(r => r.data.results)` with no `page` param and no
-   * pagination control. The server paginates at 20 (`lib/api/client.ts:28`),
+   * pagination control. The server paginates at 20 (`packages/core/src/api/client.ts:28`),
    * so **everything past the twentieth record was invisible and unreachable**,
    * with nothing on screen saying so — on the page where cross-tenant
    * approvals are triaged. The count is rendered now as well: "20 of 137" is

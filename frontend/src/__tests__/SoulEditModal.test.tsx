@@ -11,7 +11,7 @@
  */
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
-import type { Soul } from "@/lib/api";
+import type { Soul } from "@soulledger/core/api";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: (key: string) => key }),

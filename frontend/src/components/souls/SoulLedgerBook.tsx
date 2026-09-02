@@ -1,7 +1,7 @@
 "use client";
 
-import type { LedgerRecord } from "@/lib/api/ledger";
-import { RECORD_QUANTITIES } from "@/lib/api/ledgerQuantities";
+import type { LedgerRecord } from "@soulledger/core/api/ledger";
+import { RECORD_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { formatHistoricalDate } from "@/lib/utils";
 

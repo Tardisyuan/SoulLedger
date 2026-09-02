@@ -16,7 +16,7 @@
  * echoes keys makes every copy assertion pass against a bundle with no copy in
  * it.
  */
-import type { QueueLedger } from "@/lib/api/judgment";
+import type { QueueLedger } from "@soulledger/core/api/judgment";
 
 import {
   BALANCE_READING,

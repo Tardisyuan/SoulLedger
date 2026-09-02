@@ -28,7 +28,7 @@ import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WorkflowPage from "@/app/workflow/page";
-import { workflowApi } from "@/lib/api";
+import { workflowApi } from "@soulledger/core/api";
 
 export const mockPush = jest.fn();
 
@@ -36,7 +36,7 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   workflowApi: {
     list: jest.fn(),
     templates: { list: jest.fn(), get: jest.fn(), delete: jest.fn() },

@@ -46,7 +46,7 @@ import {
   RECORD_QUANTITIES,
   SUMMARY_QUANTITIES,
   readingQuantityOf,
-} from "@/lib/api/ledgerQuantities";
+} from "@soulledger/core/api/ledgerQuantities";
 
 import {
   INHERITANCE,

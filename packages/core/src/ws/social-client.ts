@@ -10,6 +10,11 @@
  *   - Heartbeat keepalive
  *   - Event subscription registry
  */
+/* The access token is read through the shared port. This file used to carry
+ * its own copy of the reader and its own paraphrase of the warning that goes
+ * with it; `../platform/index.ts` now holds one of each. */
+import { getAccessToken } from "../platform/index";
+
 
 export type SocialWSStatus = "connecting" | "connected" | "disconnected" | "reconnecting";
 
@@ -45,13 +50,6 @@ function getWebSocketUrl(): string {
   return apiBase.replace(/^http/, "ws").replace("/api/v1", "") + "/ws/notifications/";
 }
 
-function getAccessToken(): string | null {
-  // sessionStorage only. This used to read the `soulledger_access` **cookie**
-  // first, which is how a 24-hour cookie written by the refresh interceptor
-  // outranked the 30-minute token beside it. See lib/api/client.ts.
-  if (typeof sessionStorage === "undefined") return null;
-  return sessionStorage.getItem("soulledger_access");
-}
 
 // ── Event Deduplicator ────────────────────────────────────────────────
 

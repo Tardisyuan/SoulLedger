@@ -5,7 +5,7 @@
  * _get_trace_id() — not a client-side actor+verb+timestamp heuristic.
  */
 import { groupAuditLogsByTrace } from "@/lib/auditGrouping";
-import type { AuditLogEntry } from "@/lib/api/audit";
+import type { AuditLogEntry } from "@soulledger/core/api/audit";
 
 function entry(overrides: Partial<AuditLogEntry>): AuditLogEntry {
   return {

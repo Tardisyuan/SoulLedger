@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi, PAGE_SIZE, type User, type PaginatedResponse } from "@/lib/api";
+import { usersApi, PAGE_SIZE, type User, type PaginatedResponse } from "@soulledger/core/api";
 import { userKeys } from "@/lib/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { UserModal } from "@/src/components/users/UserModal";

@@ -5,7 +5,7 @@ import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { useUpdateSoul } from "@/src/hooks/useSouls";
-import type { Soul } from "@/lib/api";
+import type { Soul } from "@soulledger/core/api";
 import { soulUpdateSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
 import { type HistoricalDate } from "@/lib/utils";

@@ -1,5 +1,5 @@
 /**
- * Shared fixture for the `lib/ws/client.ts` suites.
+ * Shared fixture for the `packages/core/src/ws/client.ts` suites.
  *
  * `wsClient.test.ts` and `wsClient.reconnect.test.ts` are two halves of one
  * set of tests and need byte-identical surroundings: the same fake socket, the
@@ -86,7 +86,7 @@ export function setToken(token: string | null) {
   // sessionStorage, not a cookie. The WS clients used to read the
   // `soulledger_access` **cookie** first, which is what let a 24-hour cookie
   // written by the refresh interceptor outrank the 30-minute token beside it
-  // (see lib/api/client.ts). They now read sessionStorage only, so a harness
+  // (see packages/core/src/api/client.ts). They now read sessionStorage only, so a harness
   // that seeds a cookie seeds nothing.
   document.cookie = "soulledger_access=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
   sessionStorage.clear();

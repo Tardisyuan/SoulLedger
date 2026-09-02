@@ -1,4 +1,4 @@
-import { Permission } from "@/lib/api";
+import { Permission } from "@soulledger/core/api";
 import type { DataGridColumn } from "@/components/ui/data-grid";
 
 /**

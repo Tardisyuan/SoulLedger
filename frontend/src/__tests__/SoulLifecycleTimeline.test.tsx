@@ -5,10 +5,10 @@
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { SoulLifecycleTimeline } from "@/src/components/souls/SoulLifecycleTimeline";
-import type { Soul } from "@/lib/api/souls";
-import type { Judgment } from "@/lib/api/judgment";
-import type { LedgerRecord } from "@/lib/api/ledger";
-import type { SoulEvent } from "@/lib/api/events";
+import type { Soul } from "@soulledger/core/api/souls";
+import type { Judgment } from "@soulledger/core/api/judgment";
+import type { LedgerRecord } from "@soulledger/core/api/ledger";
+import type { SoulEvent } from "@soulledger/core/api/events";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({

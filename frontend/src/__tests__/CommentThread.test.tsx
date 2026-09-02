@@ -5,7 +5,7 @@
  */
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { CommentThread } from "@/src/components/social/CommentThread";
-import type { Comment } from "@/lib/api";
+import type { Comment } from "@soulledger/core/api";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({

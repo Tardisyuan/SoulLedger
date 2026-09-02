@@ -3,7 +3,7 @@
 import { useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { menuButtonsApi, menusApi, permApi, PAGE_SIZE, type MenuButton, type MenuItem, type PaginatedResponse, type Permission } from "@/lib/api";
+import { menuButtonsApi, menusApi, permApi, PAGE_SIZE, type MenuButton, type MenuItem, type PaginatedResponse, type Permission } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { Modal } from "@/src/components/ui/Modal";

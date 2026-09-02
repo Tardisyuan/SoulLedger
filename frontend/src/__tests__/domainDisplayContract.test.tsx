@@ -320,9 +320,12 @@ function format(violations: Violation[]): string {
  * whole thing being hand-maintained without anyone saying so.
  */
 describe("the enum-field registry is not quietly behind the API types", () => {
-  /** `field: "A" | "B"` in any `lib/api/*.ts` — a field the types themselves call an enum. */
+  /** `field: "A" | "B"` in any `packages/core/src/api/*.ts` — a field the types
+   *  themselves call an enum. The directory left `frontend` with the rest of the
+   *  API contract; this reads it where it is now, and `readdirSync` throws on a
+   *  wrong path rather than quietly scanning nothing. */
   function unionFieldsInApiTypes(): string[] {
-    const dir = path.join(FRONTEND_ROOT, "lib", "api");
+    const dir = path.join(FRONTEND_ROOT, "..", "packages", "core", "src", "api");
     const names = new Set<string>();
     for (const f of readdirSync(dir)) {
       if (!f.endsWith(".ts")) continue;
@@ -342,7 +345,7 @@ describe("the enum-field registry is not quietly behind the API types", () => {
     const missing = unionFieldsInApiTypes().filter((n) => !ENUM_FIELDS.includes(n));
     if (missing.length > 0) {
       throw new Error(
-        `These fields are declared as string unions in lib/api/ but are not in ` +
+        `These fields are declared as string unions in packages/core/src/api/ but are not in ` +
           `ENUM_FIELDS, so every rule in this file is blind to them — including ` +
           `the one that stops a raw member reaching the screen. Add them.\n\n` +
           missing.join("\n")

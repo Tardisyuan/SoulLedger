@@ -32,7 +32,7 @@ import { DateProblemsPanel } from "@/src/components/souls/DateProblemsPanel";
 import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
 import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActions";
 import { SoulLifecycleTimeline } from "@/src/components/souls/SoulLifecycleTimeline";
-import type { Soul } from "@/lib/api/souls";
+import type { Soul } from "@soulledger/core/api/souls";
 
 let grantedPermissions: string[] = [];
 

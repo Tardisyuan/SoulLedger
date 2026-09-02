@@ -2,10 +2,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pagination } from "@/src/components/ui/Pagination";
-import { PAGE_SIZE } from "@/lib/api/client";
+import { PAGE_SIZE } from "@soulledger/core/api/client";
 import Link from "next/link";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
-import { crossTenantJudgmentsApi, type CrossTenantJudgmentListItem } from "@/lib/api";
+import { crossTenantJudgmentsApi, type CrossTenantJudgmentListItem } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageSection } from "@/components/ui/page-section";
@@ -50,7 +50,7 @@ export default function CrossJudgmentsPage() {
 
   /**
    * Was `list()` with no `page` param and no pagination control, while the
-   * server paginates at 20 (`lib/api/client.ts:28`) — so a tenant with more
+   * server paginates at 20 (`packages/core/src/api/client.ts:28`) — so a tenant with more
    * than twenty cross-tenant cases had the rest invisible and unreachable,
    * with nothing on screen saying so.
    */

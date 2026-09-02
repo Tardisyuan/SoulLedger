@@ -1,6 +1,6 @@
 "use client";
 
-import { Permission, Role } from "@/lib/api";
+import { Permission, Role } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { codenameOf, findCountParadox, findNonSubsetPair } from "./matrixDiff";
 

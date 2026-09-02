@@ -3,7 +3,7 @@
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { UserDeleteDialog } from "@/src/components/users/UserDeleteDialog";
-import type { User } from "@/lib/api";
+import type { User } from "@soulledger/core/api";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({
@@ -42,7 +42,7 @@ jest.mock("@tanstack/react-query", () => ({
   }),
 }));
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   usersApi: {
     delete: jest.fn(),
   },

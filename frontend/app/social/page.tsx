@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PAGE_SIZE } from "@/lib/api";
+import { PAGE_SIZE } from "@soulledger/core/api";
 import { useFeed, usePosts, useCreatePost } from "@/src/hooks/useSocial";
 import { PostCard } from "@/src/components/social/PostCard";
 import { Pagination } from "@/src/components/ui/Pagination";

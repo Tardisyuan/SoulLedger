@@ -1,6 +1,6 @@
 "use client";
 
-import { type ApprovalNode } from "@/lib/api";
+import { type ApprovalNode } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { Badge } from "@/src/components/ui/Badge";

@@ -18,11 +18,11 @@ import {
   useTransitionSoul,
   useAddSoulRecord,
 } from "@/src/hooks/useSouls";
-import { soulsApi } from "@/lib/api";
+import { soulsApi } from "@soulledger/core/api";
 
 const mockShowToast = jest.fn();
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   soulsApi: {
     get: jest.fn().mockResolvedValue({ data: { id: "s1" } }),
     karma: jest.fn().mockResolvedValue({ data: { balance: 10 } }),

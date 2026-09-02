@@ -1,6 +1,6 @@
 "use client";
 
-import { Role } from "@/lib/api";
+import { Role } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { Button } from "@/src/components/ui/Button";

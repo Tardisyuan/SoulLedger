@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { crossTenantJudgmentsApi } from "@/lib/api";
+import { crossTenantJudgmentsApi } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,7 +35,7 @@ export default function CrossJudgmentDetailPage() {
   const router = useRouter();
   const id = params.id;
 
-  const [judgment, setJudgment] = useState<import("@/lib/api").CrossTenantJudgment | null>(null);
+  const [judgment, setJudgment] = useState<import("@soulledger/core/api").CrossTenantJudgment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -128,7 +128,7 @@ export default function CrossJudgmentDetailPage() {
           </div>
         ) : judgment?.participants && judgment.participants.length > 0 ? (
           <div className="space-y-2">
-            {judgment.participants.map((p: import("@/lib/api").CrossTenantJudgmentParticipant, i: number) => (
+            {judgment.participants.map((p: import("@soulledger/core/api").CrossTenantJudgmentParticipant, i: number) => (
               <div key={i} className="flex items-center gap-3 bg-[hsl(var(--color-surface-2))] px-4 py-2">
                 <User aria-hidden="true" className="w-5 h-5 text-[hsl(var(--color-ink-subtle))] shrink-0" />
                 <div>

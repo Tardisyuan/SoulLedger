@@ -29,7 +29,7 @@ import { CIVILIZATION_CODES, CIVILIZATION_SHORT_CODES } from "@soulledger/core/c
 
 export const FRONTEND_ROOT = path.join(__dirname, "..", "..", "..");
 export const GLOBALS_CSS = path.join(FRONTEND_ROOT, "app", "globals.css");
-export const SOULS_TS = path.join(FRONTEND_ROOT, "lib", "api", "souls.ts");
+export const SOULS_TS = path.join(FRONTEND_ROOT, "..", "packages", "core", "src", "api", "souls.ts");
 export const EN_MESSAGES = path.join(FRONTEND_ROOT, "messages", "en.json");
 
 const css = readFileSync(GLOBALS_CSS, "utf8");
@@ -242,7 +242,7 @@ export function readCivAttrRules(): Record<string, CivAttrRule> {
 }
 
 /**
- * `Soul.current_state` from lib/api/souls.ts — the states the payload can
+ * `Soul.current_state` from packages/core/src/api/souls.ts — the states the payload can
  * actually carry, read as text because Jest sees the type only at compile time
  * and a type cannot be iterated at runtime. This is the reverse direction for
  * STATE_COLORS: without it, a state the API can send but no chart can colour

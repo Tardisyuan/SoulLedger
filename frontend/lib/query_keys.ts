@@ -1,4 +1,4 @@
-import type { UserFilters } from "./api";
+import type { UserFilters } from "@soulledger/core/api";
 
 export const userKeys = {
   all: ["users"] as const,

@@ -6,7 +6,7 @@ import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useDispositions, useExecuteDisposition } from "@/src/hooks/useDispositions";
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   dispositionApi: {
     list: jest.fn().mockResolvedValue({ data: [] }),
     execute: jest.fn().mockResolvedValue({ data: {} }),
@@ -56,7 +56,7 @@ describe("useExecuteDisposition", () => {
   });
 
   it("calls dispositionApi.execute on mutate", async () => {
-    const { dispositionApi } = require("@/lib/api");
+    const { dispositionApi } = require("@soulledger/core/api");
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useExecuteDisposition(), { wrapper });
     await act(async () => {

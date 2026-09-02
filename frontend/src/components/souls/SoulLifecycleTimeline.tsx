@@ -6,12 +6,12 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { RowShell, TONE_DOT } from "@/src/components/souls/SoulLifecycleRowShell";
 import { ANNIHILATION_REALM_CODE } from "@/src/lib/realmCodes";
-import type { Soul } from "@/lib/api/souls";
-import type { SoulEvent } from "@/lib/api/events";
-import type { Judgment } from "@/lib/api/judgment";
-import type { Disposition } from "@/lib/api/disposition";
-import type { Reincarnation } from "@/lib/api/reincarnation";
-import type { LedgerRecord } from "@/lib/api/ledger";
+import type { Soul } from "@soulledger/core/api/souls";
+import type { SoulEvent } from "@soulledger/core/api/events";
+import type { Judgment } from "@soulledger/core/api/judgment";
+import type { Disposition } from "@soulledger/core/api/disposition";
+import type { Reincarnation } from "@soulledger/core/api/reincarnation";
+import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import {
   buildKarmaRows,
   buildBirthMarker,

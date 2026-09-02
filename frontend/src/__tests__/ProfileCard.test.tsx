@@ -6,7 +6,7 @@
  */
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { ProfileCard } from "@/src/components/social/ProfileCard";
-import type { UserProfile } from "@/lib/api";
+import type { UserProfile } from "@soulledger/core/api";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({

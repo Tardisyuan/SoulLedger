@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { HistoricalDate } from "@/lib/utils";
+import type { HistoricalDate } from "../domain/dates";
 
 export interface LedgerStatsOverview {
   total_souls: number;

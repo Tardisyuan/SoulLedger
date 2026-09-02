@@ -10,7 +10,7 @@ import {
   sigilSystemName,
   type StatuteRef,
 } from "@soulledger/core/config/civilizationSigil";
-import type { JudgmentCitation, Statute, StatutePolarity } from "@/lib/api";
+import type { JudgmentCitation, Statute, StatutePolarity } from "@soulledger/core/api";
 
 /**
  * 附引条文 —— the articles a verdict rests on.

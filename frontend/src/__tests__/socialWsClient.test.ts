@@ -1,5 +1,5 @@
 /**
- * Tests for lib/ws/social-client.ts — the social realtime channel.
+ * Tests for packages/core/src/ws/social-client.ts — the social realtime channel.
  *
  * Beyond connect/reconnect this client owns two pieces of state that fail
  * silently when wrong: the dedup window (drops events it should have
@@ -8,7 +8,7 @@
  * socket without a token, no reconnect after 4001, no emit for pongs,
  * malformed frames, or frames missing domain/event.
  */
-import { SocialWSClient, type SocialEvent } from "@/lib/ws/social-client";
+import { SocialWSClient, type SocialEvent } from "@soulledger/core/ws/social-client";
 
 // ── Fake WebSocket ───────────────────────────────────────────────────
 

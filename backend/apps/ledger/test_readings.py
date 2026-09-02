@@ -502,7 +502,7 @@ class TestNoProseInReadings:
 # --------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-LEDGER_TS = REPO_ROOT / "frontend" / "lib" / "api" / "ledger.ts"
+LEDGER_TS = REPO_ROOT / "packages" / "core" / "src" / "api" / "ledger.ts"
 
 
 def _ts_const_members(source: str, name: str) -> list[str]:

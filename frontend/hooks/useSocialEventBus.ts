@@ -20,7 +20,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { SocialWSClient, type SocialEvent, type SocialEventHandler, type SocialWSStatus } from "@/lib/ws/social-client";
+import { SocialWSClient, type SocialEvent, type SocialEventHandler, type SocialWSStatus } from "@soulledger/core/ws/social-client";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { dispatchEvent, type EventPayload } from "@/lib/events/event_registry";

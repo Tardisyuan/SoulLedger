@@ -1,7 +1,7 @@
 "use client";
 
-import type { LedgerReading } from "@/lib/api/ledger";
-import { READING_QUANTITIES, type QuantityKind } from "@/lib/api/ledgerQuantities";
+import type { LedgerReading } from "@soulledger/core/api/ledger";
+import { READING_QUANTITIES, type QuantityKind } from "@soulledger/core/api/ledgerQuantities";
 import { Figure } from "@/src/components/ledger/QuantityFigure";
 
 type TFunc = (key: string, params?: Record<string, string>) => string;
