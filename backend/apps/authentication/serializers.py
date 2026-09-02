@@ -357,3 +357,15 @@ class LoginLogSerializer(serializers.ModelSerializer):
         fields = ["id", "user", "username", "status", "ip_address",
                   "user_agent", "failure_reason", "timestamp"]
         read_only_fields = fields
+
+
+class LogoutRequestSerializer(serializers.Serializer):
+    """Body of POST /auth/logout/.
+
+    `required=False` is not a courtesy: `logout_view` reads
+    `request.data.get("refresh")` and returns 200 "Logged out successfully"
+    when it is absent, blacklisting nothing. Declaring it required would
+    document a rejection the view does not perform.
+    """
+
+    refresh = serializers.CharField(required=False)

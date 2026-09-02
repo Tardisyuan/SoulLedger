@@ -94,3 +94,59 @@ class HealthSerializer(serializers.Serializer):
     """Serializer for health check response."""
     api_key = serializers.DictField()
     system = serializers.DictField()
+
+
+# ── Doc-only response shapes ─────────────────────────────────────────────
+
+
+class ApiKeyRateLimitSerializer(serializers.Serializer):
+    """The two configured ceilings on the key. Zero when there is no key on
+    the request, which is what the health view substitutes rather than
+    omitting the block."""
+
+    per_minute = serializers.IntegerField()
+    per_hour = serializers.IntegerField()
+
+
+class ApiKeyRateLimitRemainingSerializer(serializers.Serializer):
+    """Requests actually left in each window.
+
+    Nullable, and that is the point of the field existing: `remaining_for`
+    returns None when the counter cannot be read, and the view reports that
+    as null rather than inventing a number. A null here is "unknown", never
+    "zero" — these two were once reported under this name while carrying the
+    configured ceiling, which is never the remaining count.
+    """
+
+    per_minute = serializers.IntegerField(allow_null=True)
+    per_hour = serializers.IntegerField(allow_null=True)
+
+
+class DeathSyncApiKeyHealthSerializer(serializers.Serializer):
+    """`name` and `system_type` are null when the request carries no api key."""
+
+    name = serializers.CharField(allow_null=True)
+    system_type = serializers.CharField(allow_null=True)
+    is_active = serializers.BooleanField()
+    rate_limit = ApiKeyRateLimitSerializer()
+    rate_limit_remaining = ApiKeyRateLimitRemainingSerializer()
+
+
+class DeathSyncSystemHealthSerializer(serializers.Serializer):
+    """The three counts are scoped to the calling key's tenant and to the
+    last 24 hours. `status` is the literal "healthy" — the view has no branch
+    that emits anything else, so it reports that the endpoint answered, not
+    that the counts are within any threshold.
+    """
+
+    status = serializers.CharField()
+    pending_registrations_24h = serializers.IntegerField()
+    failed_registrations_24h = serializers.IntegerField()
+    failed_webhooks_24h = serializers.IntegerField()
+
+
+class DeathSyncHealthSerializer(serializers.Serializer):
+    """200 body of `DeathSyncHealthView`. Doc-only; see apps/core/schema.py."""
+
+    api_key = DeathSyncApiKeyHealthSerializer()
+    system = DeathSyncSystemHealthSerializer()

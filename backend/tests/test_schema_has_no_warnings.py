@@ -19,46 +19,29 @@ wrong type in the client, and the hand-written type it replaces was more
 accurate than the generated one. This check is the thing that has to hold for
 generation to be safe at all.
 
-WHY IT ALSO PINS THE ERRORS. Warnings and errors are different channels in
+WHY IT ALSO CHECKS THE ERRORS. Warnings and errors are different channels in
 drf-spectacular, and `grep -i warning` on the command output does not see the
-errors at all. There are 27 views it cannot introspect, each reported as
+errors at all. A view the generator cannot introspect is reported as
 `Error [...]: unable to guess serializer ... Ignoring view for now.` "Ignoring
 view for now" means **the endpoint is in the document with no request or
 response body**. A generated client gets nothing for it.
 
-Those 27 are pre-existing — measured identical before and after the pass that
-took warnings to zero — and fixing them means giving ~27 function-based views
-explicit `@extend_schema` request/response serializers, which is a separate
-piece of work. Pinned by name rather than counted, for the reason
-`suiteShape.test.ts` gives about its own list: a change that fixes one and adds
-another nets to zero and passes. Fix one, delete its line. Add a view that
-cannot be introspected, and this goes red with the name in the message.
+There were 27 such views, and this file used to carry their names so that a
+28th could not be added unnoticed. All 27 were given explicit request/response
+serializers, so the list is gone and the assertion is now the stronger one:
+**not one**. A name list would have to stay in sync with a set that is
+supposed to be empty, and an empty list compared by equality is the same
+assertion written in a way that invites the next person to add a line to it
+instead of a serializer.
+
+Note what "zero" does and does not buy. It says every endpoint has a declared
+body — not that the declaration is right. The shapes are doc-only serializers
+describing dicts built by hand elsewhere, and nothing here re-derives them from
+the views; see apps/core/schema.py's module docstring.
 """
 import pytest
 from drf_spectacular.drainage import GENERATOR_STATS, reset_generator_stats
 from drf_spectacular.generators import SchemaGenerator
-
-# Views drf-spectacular cannot introspect, and therefore documents with no
-# body. Every one is either an `@api_view` function or an `APIView` without a
-# `serializer_class`. Deleting a line here is how a fix gets recorded.
-KNOWN_UNINTROSPECTABLE = {
-    # apps/authentication/views.py
-    "change_password", "logout_view", "profile_view", "register_view",
-    "reset_password_request", "set_new_password",
-    # apps/death_sync/views.py
-    "DeathSyncHealthView",
-    # apps/ledger/views.py
-    "LedgerBalanceView", "LedgerRecalculateView", "LedgerEffectiveView",
-    "LedgerInheritanceView", "LedgerExportStatsView", "LedgerOverviewStatsView",
-    # apps/perm/views.py
-    "export_permissions", "import_permissions", "list_permissions",
-    "update_delete_permission", "create_permission", "get_role_permissions",
-    "assign_role_permissions", "init_role_permissions", "list_roles",
-    "get_permissions_for_role", "update_delete_role", "create_role",
-    "init_roles",
-    # apps/core/recycle_bin_views.py
-    "RecycleBinViewSet",
-}
 
 
 @pytest.fixture(scope="module")
@@ -104,17 +87,23 @@ def test_schema_generates_without_warnings(generated):
     )
 
 
-def test_the_set_of_undocumented_views_has_not_grown(generated):
-    """The 27 views that carry no request/response body, pinned by name."""
+def test_no_view_is_published_without_a_body(generated):
+    """Not one. Every view must be introspectable.
+
+    The remedy for a name appearing here is one of:
+      * a function view -> `@extend_schema(request=..., responses=...)`;
+      * an `APIView` -> `serializer_class`, or `@extend_schema` when the
+        request and response differ, when there is no request body, or when
+        the response is not JSON.
+    Read the shape off the view, not off a client that consumes it.
+    """
     import re
 
     _, _, errors = generated
-    seen = {m.group(1) for e in errors if (m := re.search(r"Error \[([^\]]+)\]", e))}
-    assert seen == KNOWN_UNINTROSPECTABLE, (
-        "the set of views drf-spectacular cannot introspect changed.\n"
-        f"  newly unintrospectable: {sorted(seen - KNOWN_UNINTROSPECTABLE)}\n"
-        f"  fixed (delete from KNOWN_UNINTROSPECTABLE): "
-        f"{sorted(KNOWN_UNINTROSPECTABLE - seen)}\n"
-        "A view in this set is published with no request or response body, so "
-        "a generated client gets nothing for it."
+    seen = sorted({m.group(1) for e in errors if (m := re.search(r"Error \[([^\]]+)\]", e))})
+    assert seen == [], (
+        f"{len(seen)} view(s) drf-spectacular cannot introspect: {seen}\n"
+        "Each is published with no request or response body — the path is in "
+        "the document and a generated client gets nothing for it. This is the "
+        "error channel, which a warnings check does not see."
     )
