@@ -32,7 +32,12 @@ import reactHooks from "eslint-plugin-react-hooks";
  */
 export default [
   {
-    ignores: ["node_modules/**"],
+    // `src/api/generated/**` is openapi-typescript's output. Linting it would
+    // report on a file nobody edits and whose only correct fix is upstream —
+    // and every finding would come back on the next `schema:generate`. It is
+    // still type-checked, which is the part that matters: `npx tsc` compiles it
+    // along with everything that imports it.
+    ignores: ["node_modules/**", "src/api/generated/**"],
   },
   {
     files: ["src/**/*.ts"],
