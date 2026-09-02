@@ -6,7 +6,7 @@ import { type Locator, type Page, type Request } from "@playwright/test";
  *
  * ── Why the API is mocked ─────────────────────────────────────────────────
  * playwright.config.ts starts ONE server: `npm run dev` (Next.js on :3333).
- * Nothing starts Django, and lib/api/client.ts points at
+ * Nothing starts Django, and packages/core/src/api/client.ts points at
  * NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1" — so in CI every XHR
  * this app makes is a connection refused. These specs therefore intercept
  * `**​/api/v1/**` and answer from the fixtures below. That keeps CI free of a
@@ -19,7 +19,7 @@ import { type Locator, type Page, type Request } from "@playwright/test";
  *   - middleware.ts:41 gates every non-public route on the COOKIE
  *     `soulledger_refresh`; localStorage is invisible to middleware, which
  *     runs on the server before any script executes.
- *   - lib/api/client.ts:42 reads the access token from the cookie
+ *   - packages/core/src/api/client.ts:42 reads the access token from the cookie
  *     `soulledger_access` or `sessionStorage.soulledger_access`.
  *   - TenantContext.tsx:62 hydrates the user from localStorage key
  *     `soulledger_user`, and expects a `{ user, storedAt }` envelope rather
@@ -711,7 +711,7 @@ function corsHeaders(request: Request): Record<string, string> {
 /**
  * Records every WebSocket this page opens, and answers none of them.
  *
- * `page.route` only covers HTTP, so `lib/ws/client.ts` escaped the mock
+ * `page.route` only covers HTTP, so `packages/core/src/ws/client.ts` escaped the mock
  * entirely: a regression that pointed the socket at the wrong host was
  * invisible to the whole suite. This does not simulate a server — it records
  * the URL, which is the part a spec can assert on, and lets the client's own
@@ -773,7 +773,7 @@ export async function mockApi(page: Page, mock: ApiMock = new ApiMock().register
  *   - `soulledger_refresh` cookie — the only thing middleware.ts inspects,
  *     and it must be a real cookie (not localStorage) or the very first
  *     server-side navigation redirects to /login.
- *   - `soulledger_access` in sessionStorage — where lib/api/client.ts's
+ *   - `soulledger_access` in sessionStorage — where packages/core/src/api/client.ts's
  *     request interceptor looks for the bearer token.
  *   - `soulledger_user` envelope in localStorage — what TenantContext
  *     rehydrates from on mount, giving the tree a role of ADMIN.

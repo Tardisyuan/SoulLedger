@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueries } from "@tanstack/react-query";
-import { permApi, Permission, Role, RolePermissions } from "@/lib/api";
+import { permApi, Permission, Role, RolePermissions } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";

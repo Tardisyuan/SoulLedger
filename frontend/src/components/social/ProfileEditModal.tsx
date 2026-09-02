@@ -4,7 +4,7 @@ import { useState, useEffect, useId } from "react";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useUpdateProfile } from "@/src/hooks/useSocial";
-import type { UserProfile } from "@/lib/api";
+import type { UserProfile } from "@soulledger/core/api";
 
 interface ProfileEditModalProps {
   isOpen: boolean;

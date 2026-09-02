@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { menusApi, type MenuItem } from "@/lib/api";
+import { menusApi, type MenuItem } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 
 /**

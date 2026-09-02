@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { CIVILIZATION_ICONS, CIVILIZATION_ICON_FALLBACK } from "@soulledger/core/config/civilizations";
 import { useQuery } from "@tanstack/react-query";
-import { actorsApi, Actor } from "@/lib/api";
+import { actorsApi, Actor } from "@soulledger/core/api";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";

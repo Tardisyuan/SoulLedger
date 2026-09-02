@@ -3,7 +3,7 @@
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { PermissionFormModal } from "@/src/components/permissions/PermissionFormModal";
-import type { Permission } from "@/lib/api";
+import type { Permission } from "@soulledger/core/api";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({

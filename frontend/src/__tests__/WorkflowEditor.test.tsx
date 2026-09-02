@@ -36,7 +36,7 @@ jest.mock("@xyflow/react", () => {
 
 jest.mock("@xyflow/react/dist/style.css", () => {});
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   workflowApi: {
     templates: {
       get: jest.fn().mockResolvedValue({ data: null }),
@@ -215,7 +215,7 @@ describe("WorkflowEditor", () => {
   });
 
   it("sends the chosen priority in the saved template", async () => {
-    const { workflowApi } = require("@/lib/api");
+    const { workflowApi } = require("@soulledger/core/api");
     renderWithProviders(<WorkflowEditor />);
 
     fireEvent.change(screen.getByLabelText("Priority"), { target: { value: "2" } });
@@ -231,7 +231,7 @@ describe("WorkflowEditor", () => {
     // Absence: an editor that only forwarded a *changed* priority would keep
     // the case above green while every unchanged template arrived without the
     // key — which the backend reads as "not specified", not as "normal".
-    const { workflowApi } = require("@/lib/api");
+    const { workflowApi } = require("@soulledger/core/api");
     const before = workflowApi.templates.create.mock.calls.length;
     renderWithProviders(<WorkflowEditor />);
 

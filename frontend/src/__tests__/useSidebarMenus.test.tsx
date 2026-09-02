@@ -12,9 +12,9 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useSidebarMenus, isDirectory, type SidebarMenu } from "@/src/hooks/useSidebarMenus";
-import { menusApi } from "@/lib/api";
+import { menusApi } from "@soulledger/core/api";
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   menusApi: {
     all: jest.fn(),
     list: jest.fn(),

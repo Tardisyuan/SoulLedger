@@ -11,7 +11,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
 import { DomainEnum, DomainNumber, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
 import { isColumnUninformative, resolveEnumDisplay } from "@/src/lib/domainDisplay";
-import { PAGE_SIZE, soulsApi, type SoulListItem } from "@/lib/api";
+import { PAGE_SIZE, soulsApi, type SoulListItem } from "@soulledger/core/api";
 import { cn, formatHistoricalDate } from "@/lib/utils";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";

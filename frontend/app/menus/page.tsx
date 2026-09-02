@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { menusApi, permApi, PAGE_SIZE, type Permission } from "@/lib/api";
+import { menusApi, permApi, PAGE_SIZE, type Permission } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { ConfirmDialog } from "@/src/components/ui/Modal";

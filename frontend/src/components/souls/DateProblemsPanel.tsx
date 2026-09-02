@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-import { soulsApi } from "@/lib/api";
-import type { SoulDateProblem, SoulRecordEntry } from "@/lib/api/souls";
+import { soulsApi } from "@soulledger/core/api";
+import type { SoulDateProblem, SoulRecordEntry } from "@soulledger/core/api/souls";
 
 interface DateProblemsPanelProps {
   soulId: string;

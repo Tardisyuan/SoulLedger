@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { auditApi, PAGE_SIZE, type AuditLogEntry } from "@/lib/api";
+import { auditApi, PAGE_SIZE, type AuditLogEntry } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { DataGrid, FilterBar, parseOrdering, type DataGridColumn, type EnumValue } from "@/components/ui/data-grid";

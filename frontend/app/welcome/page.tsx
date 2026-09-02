@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { auditApi, ledgerApi, type LedgerStatsOverview } from "@/lib/api";
+import { auditApi, ledgerApi, type LedgerStatsOverview } from "@soulledger/core/api";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import {

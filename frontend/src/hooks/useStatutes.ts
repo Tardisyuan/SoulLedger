@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { judgmentApi, type Statute, type StatuteCorpus } from "@/lib/api";
+import { judgmentApi, type Statute, type StatuteCorpus } from "@soulledger/core/api";
 import { judgmentKeys } from "@/lib/query_keys";
 
 /**

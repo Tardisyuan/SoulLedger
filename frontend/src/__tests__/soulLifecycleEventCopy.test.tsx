@@ -26,7 +26,7 @@ import {
   describeSystemEvent,
   makeSystemEventLabels,
 } from "@/src/components/souls/soulLifecycleRows";
-import type { SoulEvent } from "@/lib/api/events";
+import type { SoulEvent } from "@soulledger/core/api/events";
 
 const MESSAGES_DIR = path.join(__dirname, "..", "..", "messages");
 const LOCALES = ["zh-Hans", "en", "egy"] as const;

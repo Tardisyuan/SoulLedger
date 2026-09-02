@@ -4,7 +4,7 @@ import { use, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { judgmentApi, soulsApi } from "@/lib/api";
+import { judgmentApi, soulsApi } from "@soulledger/core/api";
 import { judgmentKeys, soulKeys } from "@/lib/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";

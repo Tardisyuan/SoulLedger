@@ -1,6 +1,6 @@
 "use client";
 
-import { type ApprovalWorkflow } from "@/lib/api";
+import { type ApprovalWorkflow } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 

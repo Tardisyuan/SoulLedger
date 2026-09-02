@@ -14,7 +14,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useJudgmentQueue, UNDO_WINDOW_MS } from "@/src/hooks/useJudgmentQueue";
-import { judgmentApi } from "@/lib/api";
+import { judgmentApi } from "@soulledger/core/api";
 
 const mockShowToast = jest.fn();
 
@@ -53,7 +53,7 @@ function cursorFor(judgment: typeof JUDGMENT_A | null, total = 2, remaining = 2)
   };
 }
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   judgmentApi: {
     next: jest.fn(),
     conclude: jest.fn().mockResolvedValue({ data: {} }),

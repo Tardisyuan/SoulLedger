@@ -1,4 +1,4 @@
-import type { MenuItem } from "@/lib/api";
+import type { MenuItem } from "@soulledger/core/api";
 
 export const ROLE_OPTIONS = ["ADMIN", "JUDGE", "GUARDIAN", "VIEWER"];
 

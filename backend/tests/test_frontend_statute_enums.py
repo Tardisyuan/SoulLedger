@@ -1,6 +1,6 @@
 """The statute enums, as both ends declare them.
 
-WHY THIS FILE EXISTS. `frontend/lib/api/judgment.ts` declared
+WHY THIS FILE EXISTS. `packages/core/src/api/judgment.ts` declared
 
     export type StatuteCorpus = "HELL_LAW" | "NEGATIVE_CONFESSION" | "DEADLY_SIN";
 
@@ -40,7 +40,7 @@ import pytest
 from apps.judgment.models import StatuteCorpus, StatutePolarity
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-JUDGMENT_TS = REPO_ROOT / "frontend" / "lib" / "api" / "judgment.ts"
+JUDGMENT_TS = REPO_ROOT / "packages" / "core" / "src" / "api" / "judgment.ts"
 MESSAGES = REPO_ROOT / "frontend" / "messages"
 LOCALES = ("en", "zh-Hans", "egy")
 
@@ -122,7 +122,7 @@ def test_the_typescript_union_lists_every_member_django_defines(
     known = {member.value for member in enum}
 
     assert declared == known, (
-        f"frontend/lib/api/judgment.ts's `{type_name}` disagrees with "
+        f"packages/core/src/api/judgment.ts's `{type_name}` disagrees with "
         f"apps.judgment.models.{type_name}. Missing from the frontend: "
         f"{sorted(known - declared)}; declared but not a member: "
         f"{sorted(declared - known)}. Django owns this enum — add the member "

@@ -28,7 +28,7 @@ import {
   SENTENCE_MISSING_INPUTS,
   type LedgerReading,
   type PoenaMissingInput,
-} from "@/lib/api/ledger";
+} from "@soulledger/core/api/ledger";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 

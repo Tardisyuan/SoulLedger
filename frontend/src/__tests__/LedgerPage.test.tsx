@@ -12,9 +12,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LedgerPage from "@/app/ledger/page";
-import { ledgerApi } from "@/lib/api";
+import { ledgerApi } from "@soulledger/core/api";
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   ledgerApi: { statsOverview: jest.fn() },
 }));
 

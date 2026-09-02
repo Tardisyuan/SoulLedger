@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { realmsApi, type Realm } from "@/lib/api";
+import { realmsApi, type Realm } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { CardSkeleton } from "@/components/ui/skeleton";

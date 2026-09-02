@@ -29,11 +29,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { soulKeys } from "@/lib/query_keys";
-import { soulsApi } from "@/lib/api";
+import { soulsApi } from "@soulledger/core/api";
 
 const mockShowToast = jest.fn();
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   soulsApi: {
     create: jest.fn().mockResolvedValue({ data: { id: "s-new" } }),
     update: jest.fn().mockResolvedValue({ data: { id: "s-1" } }),

@@ -9,7 +9,7 @@
 import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { JudgmentQueueConsole } from "@/src/components/judgment/JudgmentQueueConsole";
-import { judgmentApi } from "@/lib/api";
+import { judgmentApi } from "@soulledger/core/api";
 
 const mockPush = jest.fn();
 const mockShowToast = jest.fn();
@@ -79,7 +79,7 @@ function cursor(judgment: typeof JUDGMENT | null, remaining = 2) {
   };
 }
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   judgmentApi: { next: jest.fn(), conclude: jest.fn().mockResolvedValue({ data: {} }) },
 }));
 

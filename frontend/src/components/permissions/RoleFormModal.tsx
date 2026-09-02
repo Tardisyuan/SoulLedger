@@ -3,7 +3,7 @@
 import { useState, useEffect, useId } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
-import type { Role } from "@/lib/api";
+import type { Role } from "@soulledger/core/api";
 
 export function RoleFormModal({
   isOpen,

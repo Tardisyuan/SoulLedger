@@ -12,9 +12,9 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { TenantProvider, useTenant } from "@/src/contexts/TenantContext";
 import { CIVILIZATION_CODES } from "@soulledger/core/config/civilizations";
-import { permApi } from "@/lib/api";
+import { permApi } from "@soulledger/core/api";
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   permApi: {
     myRolePermissions: jest.fn(),
   },

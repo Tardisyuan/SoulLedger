@@ -1,7 +1,7 @@
 "use client";
 
-import type { LedgerReading, UnavailableReasonCode } from "@/lib/api/ledger";
-import { READING_QUANTITIES, SUMMARY_QUANTITIES } from "@/lib/api/ledgerQuantities";
+import type { LedgerReading, UnavailableReasonCode } from "@soulledger/core/api/ledger";
+import { READING_QUANTITIES, SUMMARY_QUANTITIES } from "@soulledger/core/api/ledgerQuantities";
 import { Figure } from "@/src/components/ledger/QuantityFigure";
 // The Greek fork — its geometry, and the long argument for why the two roads
 // have no cell to be combined in — lives in its own module. It is the one
@@ -35,7 +35,7 @@ interface SoulReadingPanelProps {
  * `SENTENCE` fell through, the function returned `undefined`, React rendered
  * it as nothing, and every Greek soul's ledger card was blank with no error
  * anywhere. `tsc` was green the whole time, because a switch is exhaustive
- * over the union declared in `lib/api/ledger.ts` and that union was the half
+ * over the union declared in `packages/core/src/api/ledger.ts` and that union was the half
  * that had not been updated. See the branch itself.
  *
  * `karmic_balance` is deliberately never displayed here for anything but

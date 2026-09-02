@@ -62,7 +62,7 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), prefetch: jest.fn() }),
 }));
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   notificationsApi: { list: jest.fn().mockResolvedValue({ data: { results: [] } }) },
   authApi: { logout: jest.fn().mockResolvedValue({}) },
 }));

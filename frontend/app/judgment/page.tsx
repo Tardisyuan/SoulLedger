@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { judgmentApi, PAGE_SIZE, type Judgment } from "@/lib/api";
+import { judgmentApi, PAGE_SIZE, type Judgment } from "@soulledger/core/api";
 import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-table";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";

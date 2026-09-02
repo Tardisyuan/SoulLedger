@@ -2,7 +2,7 @@
 
 Why this file exists
 --------------------
-`frontend/lib/api/client.ts` declares ``PAGE_SIZE = 20`` under a docstring
+`packages/core/src/api/client.ts` declares ``PAGE_SIZE = 20`` under a docstring
 reading "Must match DRF's ``REST_FRAMEWORK["PAGE_SIZE"]`` in
 backend/config/settings.py". Nothing made that true. Two integers in two
 languages, joined by a sentence — the KEEP-IN-SYNC shape this repository has now
@@ -47,7 +47,7 @@ import pytest
 from django.conf import settings
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CLIENT_TS = REPO_ROOT / "frontend" / "lib" / "api" / "client.ts"
+CLIENT_TS = REPO_ROOT / "packages" / "core" / "src" / "api" / "client.ts"
 
 
 def _ts_page_size() -> int:

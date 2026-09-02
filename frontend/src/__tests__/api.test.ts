@@ -49,7 +49,7 @@ jest.mock('axios', () => {
  
 const axios = require('axios');
  
-require('../../lib/api');
+require('@soulledger/core/api');
 
 // Suppress jsdom navigation warnings from window.location.href = "/login"
 const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -67,7 +67,7 @@ function applyResponseErrorInterceptor(error: Record<string, unknown>) {
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
-describe('API Client — lib/api.ts', () => {
+describe('API Client — @soulledger/core/api', () => {
   beforeEach(() => {
     // Clear cookies
     document.cookie.split(';').forEach((c) => {
@@ -334,7 +334,7 @@ describe('API Client — lib/api.ts', () => {
   // ── authApi ──────────────────────────────────────────────────────────────
   describe('authApi', () => {
      
-    const { authApi } = require('../../lib/api');
+    const { authApi } = require('@soulledger/core/api');
 
     it('login() should POST to /auth/login/ with credentials', () => {
       mockInstance.post.mockResolvedValueOnce({ data: { access: 'tok' } });
@@ -373,7 +373,7 @@ describe('API Client — lib/api.ts', () => {
   // ── soulsApi ─────────────────────────────────────────────────────────────
   describe('soulsApi', () => {
      
-    const { soulsApi } = require('../../lib/api');
+    const { soulsApi } = require('@soulledger/core/api');
 
     it('list() should GET /souls/ with query params', () => {
       mockInstance.get.mockResolvedValueOnce({ data: { results: [] } });
@@ -418,7 +418,7 @@ describe('API Client — lib/api.ts', () => {
   // ── judgmentApi ──────────────────────────────────────────────────────────
   describe('judgmentApi', () => {
      
-    const { judgmentApi } = require('../../lib/api');
+    const { judgmentApi } = require('@soulledger/core/api');
 
     it('list() should GET /judgment/', () => {
       mockInstance.get.mockResolvedValueOnce({ data: [] });
@@ -444,7 +444,7 @@ describe('API Client — lib/api.ts', () => {
   // ── ledgerApi ────────────────────────────────────────────────────────────
   describe('ledgerApi', () => {
      
-    const { ledgerApi } = require('../../lib/api');
+    const { ledgerApi } = require('@soulledger/core/api');
 
     it('balance() should GET /ledger/balance/:id/', () => {
       mockInstance.get.mockResolvedValueOnce({ data: {} });
@@ -462,7 +462,7 @@ describe('API Client — lib/api.ts', () => {
   // ── workflowApi ──────────────────────────────────────────────────────────
   describe('workflowApi', () => {
      
-    const { workflowApi } = require('../../lib/api');
+    const { workflowApi } = require('@soulledger/core/api');
 
     it('list() should GET /workflows/', () => {
       mockInstance.get.mockResolvedValueOnce({ data: [] });

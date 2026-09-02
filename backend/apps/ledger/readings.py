@@ -68,7 +68,7 @@ completely. `SoulReadingPanel.tsx` drew the poena panel from
 `souls.detail.reading.*` keys — a heading plus *three separate bullets* where
 the sentence had one clause listing three things — and drew the unmapped-tenant
 panel from `unavailable_explanation` and `unavailable_cta`. Both fields were
-declared in `frontend/lib/api/ledger.ts` and read by nothing in the repository.
+declared in `packages/core/src/api/ledger.ts` and read by nothing in the repository.
 
 So the split `66a5a3f` drew holds and these two fall on the catalogue side of
 it. What distinguishes them from TERMINAL_COSMOLOGY_REASON, which stays in

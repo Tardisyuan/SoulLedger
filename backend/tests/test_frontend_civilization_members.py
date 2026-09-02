@@ -8,7 +8,7 @@ and the union was missing the member the backend had started sending. ``tsc``
 cannot see that class of defect — a hand-written union is a claim about the
 wire, and the compiler only ever checks the code against the claim.
 
-``frontend/lib/api/souls.ts`` carried the same shape in two more places. Both
+``packages/core/src/api/souls.ts`` carried the same shape in two more places. Both
 were hand-written three-member unions, ``"CHINESE" | "EUROPEAN" | "EGYPTIAN"``,
 written when ``Civilization`` had three members; ``GREEK`` (tenant ``GR_HADES``)
 has been the fourth since. A comparison against ``"GREEK"`` on a value typed by
@@ -49,7 +49,7 @@ from apps.souls.models import UNKNOWN_CIVILIZATION, Civilization
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CIVILIZATIONS_TS = REPO_ROOT / "packages" / "core" / "src" / "config" / "civilizations.ts"
-SOULS_TS = REPO_ROOT / "frontend" / "lib" / "api" / "souls.ts"
+SOULS_TS = REPO_ROOT / "packages" / "core" / "src" / "api" / "souls.ts"
 
 
 def _ts_const_members(path: Path, name: str) -> list[str]:

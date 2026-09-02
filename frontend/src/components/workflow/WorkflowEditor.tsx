@@ -19,7 +19,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { workflowApi } from "@/lib/api";
+import { workflowApi } from "@soulledger/core/api";
 import {
   CIVILIZATION_OPTIONS,
   isCivilizationOption,

@@ -19,8 +19,8 @@ import {
   SoulEvent,
   LedgerSummary,
   SoulRecordEntry,
-} from "@/lib/api";
-import { ledgerApi, type LedgerInheritance } from "@/lib/api/ledger";
+} from "@soulledger/core/api";
+import { ledgerApi, type LedgerInheritance } from "@soulledger/core/api/ledger";
 import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { SoulKarmaLedgerCard } from "@/src/components/souls/SoulKarmaLedgerCard";

@@ -13,8 +13,8 @@
  * Not named `*.test.ts` on purpose: `suiteShape.test.ts` walks this directory
  * for `/\.test\.tsx?$/` and requires every match to be registered by name.
  */
-import type { LedgerInheritance, LedgerReading, LedgerRecord } from "@/lib/api/ledger";
-import type { QueueLedger } from "@/lib/api/judgment";
+import type { LedgerInheritance, LedgerReading, LedgerRecord } from "@soulledger/core/api/ledger";
+import type { QueueLedger } from "@soulledger/core/api/judgment";
 
 import en from "../../../messages/en.json";
 import egy from "../../../messages/egy.json";

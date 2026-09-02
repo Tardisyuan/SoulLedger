@@ -15,6 +15,7 @@ import { TenantProvider } from "@/src/contexts/TenantContext";
 import { WebSocketProvider } from "@/src/contexts/WebSocketContext";
 import { SocialEventBusProvider } from "@/hooks/useSocialEventBus";
 import { QueryProvider } from "@/src/components/providers/QueryProvider";
+import { PlatformProvider } from "@/src/components/providers/PlatformProvider";
 import { Suspense } from "react";
 import { RouteProgress } from "@/src/components/layout/RouteProgress";
 import { AppLayoutWrapper } from "@/src/components/layout/AppLayoutWrapper";
@@ -84,6 +85,7 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
       </head>
       <body className="antialiased min-h-screen">
+        <PlatformProvider />
         <QueryProvider>
           <I18nProvider initialLocale={locale}>
             <ThemeProvider>

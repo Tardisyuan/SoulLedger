@@ -3,7 +3,7 @@
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { RoleFormModal } from "@/src/components/permissions/RoleFormModal";
-import type { Role } from "@/lib/api";
+import type { Role } from "@soulledger/core/api";
 
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({

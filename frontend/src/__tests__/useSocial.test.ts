@@ -11,11 +11,11 @@ import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useToggleReaction, useCreateComment, useUpdateProfile } from "@/src/hooks/useSocial";
 import { socialKeys } from "@/lib/query_keys";
-import { socialApi } from "@/lib/api";
+import { socialApi } from "@soulledger/core/api";
 
 const mockShowToast = jest.fn();
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   socialApi: {
     addReaction: jest.fn().mockResolvedValue({ data: {} }),
     createComment: jest.fn().mockResolvedValue({ data: {} }),

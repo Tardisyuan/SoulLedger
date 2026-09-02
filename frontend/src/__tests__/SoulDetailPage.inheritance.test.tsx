@@ -76,8 +76,8 @@ const mockInheritance = jest.fn();
 // stubbing does not fail where it is wrong; it fails in whatever component
 // reaches for the missing export next, which is how a mock ends up measuring
 // itself. Only the HTTP call needs to be a stub here.
-jest.mock("@/lib/api/ledger", () => ({
-  ...jest.requireActual("@/lib/api/ledger"),
+jest.mock("@soulledger/core/api/ledger", () => ({
+  ...jest.requireActual("@soulledger/core/api/ledger"),
   ledgerApi: {
     inheritance: (...args: unknown[]) => mockInheritance(...args),
   },
@@ -85,12 +85,12 @@ jest.mock("@/lib/api/ledger", () => ({
 
 const mockSoulsGet = jest.fn();
 const mockSoulsLedger = jest.fn();
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   soulsApi: {
     get: (...args: unknown[]) => mockSoulsGet(...args),
     karma: (...args: unknown[]) => mockSoulsLedger(...args),
     // Bare array, not a pagination envelope — see soulsApi.records's own
-    // comment (lib/api/souls.ts). DateProblemsPanel now actually reads this
+    // comment (packages/core/src/api/souls.ts). DateProblemsPanel now actually reads this
     // (it didn't before), so a mock shaped like a paginated response would
     // make it call `.flatMap` on a plain object and throw.
     records: jest.fn().mockResolvedValue({ data: [] }),

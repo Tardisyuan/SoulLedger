@@ -1,5 +1,5 @@
 /**
- * Tests for lib/ws/client.ts — the notification WebSocket state machine, part
+ * Tests for packages/core/src/ws/client.ts — the notification WebSocket state machine, part
  * two: what happens to a socket over time.
  *
  * Reconnection is the half that fails silently. A client that stops retrying
@@ -11,7 +11,7 @@
  * The auth gate and message routing live in `wsClient.test.ts`. Both files
  * drive the same fake socket from `support/wsHarness.ts`.
  */
-import { WSClient } from "@/lib/ws/client";
+import { WSClient } from "@soulledger/core/ws/client";
 
 import { FakeWebSocket, installWsHarness, lastSocket } from "./support/wsHarness";
 

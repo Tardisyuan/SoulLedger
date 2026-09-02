@@ -19,7 +19,7 @@ import { render, screen } from "@testing-library/react";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { JudgmentGroundsPanel } from "@/src/components/judgment/JudgmentGroundsPanel";
 import { MISSING_GLYPH } from "@/src/lib/domainDisplay";
-import type { JudgmentCitation, Statute } from "@/lib/api";
+import type { JudgmentCitation, Statute } from "@soulledger/core/api";
 
 function statute(overrides: Partial<Statute> = {}): Statute {
   return {

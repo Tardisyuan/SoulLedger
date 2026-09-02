@@ -6,7 +6,7 @@ import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useReborn } from "@/src/hooks/useReincarnation";
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   reincarnationApi: {
     reborn: jest.fn().mockResolvedValue({ data: {} }),
   },
@@ -40,7 +40,7 @@ describe("useReborn", () => {
   });
 
   it("calls reincarnationApi.reborn on mutate", async () => {
-    const { reincarnationApi } = require("@/lib/api");
+    const { reincarnationApi } = require("@soulledger/core/api");
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useReborn(), { wrapper });
     await act(async () => {

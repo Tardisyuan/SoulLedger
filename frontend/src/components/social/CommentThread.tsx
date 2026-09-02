@@ -7,7 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { ReactionBar } from "./ReactionBar";
-import type { Comment } from "@/lib/api";
+import type { Comment } from "@soulledger/core/api";
 
 function CommentItem({ comment, postId, depth, onReply }: {
   comment: Comment; postId: string; depth: number; onReply: (id: string) => void;

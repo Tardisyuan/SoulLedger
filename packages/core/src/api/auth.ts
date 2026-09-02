@@ -1,4 +1,5 @@
-import { api, getCookie } from "./client";
+import { api } from "./client";
+import { getRefreshToken } from "../platform/index";
 
 /** User.role choices (backend/apps/authentication/models.py:17). */
 export type UserRole = "ADMIN" | "JUDGE" | "GUARDIAN" | "VIEWER";
@@ -55,7 +56,7 @@ export const authApi = {
   // logout_view (backend/apps/authentication/views.py) blacklists whatever
   // refresh token is in the body; without one it silently no-ops and the
   // token stays valid. Read it from the same cookie the login flow writes to.
-  logout: () => api.post<{ detail: string }>("/auth/logout/", { refresh: getCookie("soulledger_refresh") }),
+  logout: () => api.post<{ detail: string }>("/auth/logout/", { refresh: getRefreshToken() }),
   profile: () => api.get<AuthProfile>("/auth/profile/"),
   updateProfile: (data: object) => api.patch<AuthProfile>("/auth/profile/", data),
   changePassword: (oldPasswordOrData: string | { old_password: string; new_password: string }, newPassword?: string) => {

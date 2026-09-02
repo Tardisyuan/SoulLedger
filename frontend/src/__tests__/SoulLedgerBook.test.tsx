@@ -34,7 +34,7 @@
  */
 import { render } from "@testing-library/react";
 
-import type { LedgerRecord } from "@/lib/api/ledger";
+import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { SoulLedgerBook } from "@/src/components/souls/SoulLedgerBook";
 

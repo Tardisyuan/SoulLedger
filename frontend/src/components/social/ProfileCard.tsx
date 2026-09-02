@@ -6,7 +6,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { FollowButton } from "./FollowButton";
 import { ProfileEditModal } from "./ProfileEditModal";
-import type { UserProfile } from "@/lib/api";
+import type { UserProfile } from "@soulledger/core/api";
 
 export function ProfileCard({ profile }: { profile: UserProfile }) {
   const { t } = useI18n();

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { ledgerApi, LedgerStatsOverview } from "@/lib/api";
+import { ledgerApi, LedgerStatsOverview } from "@soulledger/core/api";
 import {
   LazyDashboardPieChart,
   LazyBarChart,

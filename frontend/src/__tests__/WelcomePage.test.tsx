@@ -9,9 +9,9 @@
  */
 import { render, screen, waitFor } from "@testing-library/react";
 import WelcomePage from "@/app/welcome/page";
-import { auditApi, ledgerApi } from "@/lib/api";
+import { auditApi, ledgerApi } from "@soulledger/core/api";
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   ledgerApi: { statsOverview: jest.fn() },
   auditApi: { list: jest.fn() },
 }));

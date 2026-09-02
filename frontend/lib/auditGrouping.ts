@@ -1,4 +1,4 @@
-import type { AuditLogEntry } from './api/audit'
+import type { AuditLogEntry } from '@soulledger/core/api/audit'
 
 /**
  * Groups audit rows into events (design doc §9, "events, not writes").

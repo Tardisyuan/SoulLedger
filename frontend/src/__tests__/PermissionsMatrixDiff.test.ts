@@ -18,7 +18,7 @@ import {
   findCountParadox,
   type GrantMap,
 } from "@/app/permissions/page";
-import type { Permission } from "@/lib/api";
+import type { Permission } from "@soulledger/core/api";
 
 function perm(id: number, codename: string, category = "soul"): Permission {
   return { id, codename, name: codename, category };

@@ -22,7 +22,7 @@ import type { ReactNode } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WorkflowPage from "@/app/workflow/page";
-import { workflowApi } from "@/lib/api";
+import { workflowApi } from "@soulledger/core/api";
 import { WORKFLOW_TEMPLATES } from "@soulledger/core/config/workflow-templates";
 import {
   PRESET_NODE_TYPE,
@@ -34,7 +34,7 @@ import {
 
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   workflowApi: {
     list: jest.fn().mockResolvedValue({ data: { results: [] } }),
     templates: {

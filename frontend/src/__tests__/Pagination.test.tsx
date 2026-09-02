@@ -61,7 +61,7 @@ describe("Pagination", () => {
  * First / last / jump — the part that changes the shape of the task.
  *
  * The control was prev/next only. At the app's 20 rows a page
- * (`lib/api/client.ts:28`), a tenant with a few thousand souls needed 150+
+ * (`packages/core/src/api/client.ts:28`), a tenant with a few thousand souls needed 150+
  * clicks to reach the tail, one page at a time, with no way to say where it
  * wanted to be.
  */

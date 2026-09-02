@@ -1,4 +1,4 @@
-import { Permission } from "@/lib/api";
+import { Permission } from "@soulledger/core/api";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Pure helpers — no React/DOM dependency, re-exported from

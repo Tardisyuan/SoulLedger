@@ -1,5 +1,5 @@
 /**
- * Tests for lib/ws/client.ts — the notification WebSocket state machine, part
+ * Tests for packages/core/src/ws/client.ts — the notification WebSocket state machine, part
  * one: who is allowed to open a socket, and what arriving frames turn into.
  *
  * This client is the whole realtime channel: if it silently stops
@@ -12,7 +12,7 @@
  * `wsClient.reconnect.test.ts`. Both files drive the same fake socket, which
  * is defined once in `support/wsHarness.ts` so the two cannot drift apart.
  */
-import { WSClient, type WSStatus } from "@/lib/ws/client";
+import { WSClient, type WSStatus } from "@soulledger/core/ws/client";
 
 import { FakeWebSocket, installWsHarness, lastSocket, setLegacyCookieToken, setToken } from "./support/wsHarness";
 

@@ -4,12 +4,12 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { LazyLifespanBarChart } from "@/src/components/charts/LazyDashboardCharts";
 import { Figure } from "@/src/components/ledger/QuantityFigure";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
-import type { LedgerReading, LedgerRecord, LedgerInheritance } from "@/lib/api/ledger";
+import type { LedgerReading, LedgerRecord, LedgerInheritance } from "@soulledger/core/api/ledger";
 import {
   INHERITANCE_QUANTITIES,
   RECORD_QUANTITIES,
   SUMMARY_QUANTITIES,
-} from "@/lib/api/ledgerQuantities";
+} from "@soulledger/core/api/ledgerQuantities";
 import type { HistoricalDate } from "@/lib/utils";
 
 /** A rate from the inheritance payload, as the whole-number percentage the

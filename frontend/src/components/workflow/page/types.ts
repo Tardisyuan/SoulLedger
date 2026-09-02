@@ -6,7 +6,7 @@
  * `WorkflowEditor.tsx`（画布编辑器，另一条改动线在动）分开：这一层的东西只服务
  * /workflow 这一个页面。
  */
-import { type WorkflowTemplateNode } from "@/lib/api";
+import { type WorkflowTemplateNode } from "@soulledger/core/api";
 
 // ── Types for template data ──────────────────────────────────────
 

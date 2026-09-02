@@ -15,8 +15,8 @@
  */
 import { render } from "@testing-library/react";
 
-import type { LedgerInheritance, LedgerReading } from "@/lib/api/ledger";
-import type { QueueLedger } from "@/lib/api/judgment";
+import type { LedgerInheritance, LedgerReading } from "@soulledger/core/api/ledger";
+import type { QueueLedger } from "@soulledger/core/api/judgment";
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { LedgerPanel } from "@/src/components/judgment/JudgmentQueueContext";
 import { SoulKarmaLedgerCard } from "@/src/components/souls/SoulKarmaLedgerCard";

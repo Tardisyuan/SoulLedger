@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type ApprovalWorkflowListItem } from "@/lib/api";
+import { type ApprovalWorkflowListItem } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";

@@ -15,9 +15,9 @@ import { render, screen, waitFor, fireEvent, within } from "@testing-library/rea
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AuditPage from "@/app/audit/page";
-import { auditApi } from "@/lib/api";
+import { auditApi } from "@soulledger/core/api";
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   auditApi: { list: jest.fn() },
   PAGE_SIZE: 20,
   menusApi: {

@@ -53,9 +53,9 @@ jest.mock("react", () => {
 });
 
 import DispatchDetailPage from "@/app/dispatch/[id]/page";
-import { dispatchApi } from "@/lib/api";
+import { dispatchApi } from "@soulledger/core/api";
 
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   dispatchApi: {
     get: jest.fn(),
     approve: jest.fn().mockResolvedValue({ data: {} }),

@@ -66,14 +66,14 @@ jest.mock("@/src/components/souls/SoulEditModal", () => ({
 // happens not to reach that panel; the mock was still lying about the module,
 // and a mock that is wrong only where nobody looks yet is the shape this
 // repository keeps getting caught by.
-jest.mock("@/lib/api/ledger", () => ({
-  ...jest.requireActual("@/lib/api/ledger"),
+jest.mock("@soulledger/core/api/ledger", () => ({
+  ...jest.requireActual("@soulledger/core/api/ledger"),
   ledgerApi: { inheritance: jest.fn().mockRejectedValue({ response: { status: 409 } }) },
 }));
 
 const mockReborn = jest.fn();
 const mockDispositionList = jest.fn();
-jest.mock("@/lib/api", () => ({
+jest.mock("@soulledger/core/api", () => ({
   soulsApi: {
     get: (...args: unknown[]) => mockSoulsGet(...args),
     karma: jest.fn().mockResolvedValue({ data: null }),

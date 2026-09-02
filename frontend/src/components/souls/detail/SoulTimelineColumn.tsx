@@ -1,6 +1,6 @@
 "use client";
 
-import type { Disposition, Judgment, LedgerSummary, Reincarnation, Soul, SoulEvent, SoulRecordEntry } from "@/lib/api";
+import type { Disposition, Judgment, LedgerSummary, Reincarnation, Soul, SoulEvent, SoulRecordEntry } from "@soulledger/core/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DateProblemsPanel } from "@/src/components/souls/DateProblemsPanel";
 import { SoulLedgerBook } from "@/src/components/souls/SoulLedgerBook";

@@ -8,7 +8,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import { permApi } from "@/lib/api";
+import { permApi } from "@soulledger/core/api";
 import { CIVILIZATION_SHORT_CODE_SET } from "@soulledger/core/config/civilizations";
 
 // ── Types ────────────────────────────────────────────────────────────

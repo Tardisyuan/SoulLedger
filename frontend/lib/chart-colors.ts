@@ -69,7 +69,7 @@ export type ChartChromeKey =
 export interface ChartColors {
   /**
    * Soul lifecycle states — mirrors `--color-status-<state>`, one entry per
-   * member of the `Soul.current_state` union in lib/api/souls.ts — the states
+   * member of the `Soul.current_state` union in packages/core/src/api/souls.ts — the states
    * the payload can actually carry.
    */
   STATE_COLORS: Record<string, string>;

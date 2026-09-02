@@ -12,13 +12,13 @@
  * Each sweep below ends in `expect(missing).toEqual([])` — an absence, which
  * is also what a sweep over an empty list reports. So each one collects the
  * keys it actually visited and states that count as well, and every count is a
- * number read off `lib/api/ledger.ts` rather than one that seemed safe.
+ * number read off `packages/core/src/api/ledger.ts` rather than one that seemed safe.
  */
 import {
   POENA_MISSING_INPUTS,
   SENTENCE_MISSING_INPUTS,
   UNAVAILABLE_REASON_CODES,
-} from "@/lib/api/ledger";
+} from "@soulledger/core/api/ledger";
 
 import { assertScanned } from "./support/soulReadingFixtures";
 
