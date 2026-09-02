@@ -7,7 +7,7 @@ import { api } from "@soulledger/core/api";
 import { ListSkeleton } from "@/components/ui/skeleton";
 import { PageSection } from "@/components/ui/page-section";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
-import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { DomainEnum, IdentifierChip } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
@@ -93,7 +93,18 @@ export default function DeathSyncPage() {
                   <div className="min-w-0">
                     <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{reg.source_system}</p>
                     <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
-                      {t("death_sync.reference") || "Ref"}: {reg.source_reference_id || reg.idempotency_key}
+                      {/* IdentifierChip, not dead text. This one is a genuine
+                          exception to clauses 1-2 and is registered as such in
+                          IDENTIFIER_POLICY_EXCEPTIONS — an external system's
+                          reference IS the content of a sync row. Clause 3 is
+                          not waivable though, and this line was violating it:
+                          a reference you cannot paste back into the source
+                          system is a decoration, not a trace. */}
+                      {t("death_sync.reference") || "Ref"}:{" "}
+                      <IdentifierChip
+                        id={reg.source_reference_id || reg.idempotency_key}
+                        variant="inline"
+                      />
                     </p>
                   </div>
                   <DomainEnum

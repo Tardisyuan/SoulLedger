@@ -11,6 +11,7 @@ import { useToast } from "@/src/contexts/ToastContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
+import { MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { TextAreaField } from "@/src/components/ui/Field";
@@ -199,7 +200,26 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
           </div>
           <div>
             <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("dispatch.proposed_by")}</p>
-            <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{dispatch.dispatched_by_name || dispatch.dispatched_by}</p>
+            {/* `MissingValue`, NOT `|| dispatch.dispatched_by`.
+                `dispatched_by` is the proposing user's integer primary key —
+                `ForeignKey(User, on_delete=SET_NULL)` with no `source=`
+                override, so DRF sends the pk. `dispatched_by_name` is
+                `CharField(source="dispatched_by.username", allow_null=True)`,
+                so it is null exactly when that account has been deleted, and
+                the old `||` fallback fired precisely then: a bare user id
+                printed where a person's name belongs.
+
+                That is IDENTIFIER_POLICY clause 4 — an id standing where a
+                name should be — which no exception suspends. "Nobody recorded
+                this name" is a fact worth showing; a primary key is not. Same
+                shape as `app/judgment/page.tsx`'s `soul_name`. */}
+            <p className="text-04 font-medium text-[hsl(var(--color-ink))]">
+              {dispatch.dispatched_by_name ? (
+                dispatch.dispatched_by_name
+              ) : (
+                <MissingValue kind="unrecorded" reason={t("dispatch.proposer_account_removed")} />
+              )}
+            </p>
           </div>
           <div>
             <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("dispatch.proposed_at")}</p>

@@ -250,11 +250,37 @@ function scanHardcodedDashes(): Violation[] {
 // ---------------------------------------------------------------------------
 
 /**
- * Property names holding an opaque pointer to a record: `id`, `uuid`, `pk`,
- * and anything `*_id`. `.name`, `.code`, `.label` are deliberately absent —
- * they mean something to a reader, which is the whole distinction.
+ * Foreign keys DRF serialises as a bare primary key while **not** being named
+ * like one.
+ *
+ * WHY THIS LIST HAS TO EXIST. The pattern below recognises identifiers by
+ * spelling — `id`, `uuid`, `pk`, `*_id` — and that is a complete rule only
+ * while every id-bearing field is spelled that way. It is not. A DRF
+ * `ForeignKey` with no `source=` override serialises to the related row's pk
+ * under **the model field's own name**, and those names are chosen to read as
+ * relationships, not as identifiers: `dispatched_by`, `approver`.
+ *
+ * Both of those were being rendered straight into a JSX text position while
+ * every rule in this file was green, because the rule ran, could go red, and
+ * its subject list did not contain them. That is the same shape as
+ * `conclusion_type` two entries below in ENUM_FIELDS, and as commit `4051e51`.
+ * Found by diffing the hand-written API types against the generated OpenAPI
+ * schema: both were typed `string` in the frontend and `number | null` in the
+ * document.
+ *
+ * Adding one here is a claim that the field carries a pk. Verify it against
+ * the serializer — a `CharField(source="…​.username")` beside it (like
+ * `dispatched_by_name`) is the tell that the bare field is the key.
  */
-const IDENTIFIER_FIELD_RE = String.raw`id|uuid|pk|[a-z]\w*_id`;
+const FK_PRIMARY_KEY_FIELDS = ["dispatched_by", "approver"];
+
+/**
+ * Property names holding an opaque pointer to a record: `id`, `uuid`, `pk`,
+ * anything `*_id`, and the foreign keys above that are not spelled like one.
+ * `.name`, `.code`, `.label` are deliberately absent — they mean something to
+ * a reader, which is the whole distinction.
+ */
+const IDENTIFIER_FIELD_RE = String.raw`id|uuid|pk|[a-z]\w*_id|${FK_PRIMARY_KEY_FIELDS.join("|")}`;
 
 /**
  * `{row.resource_id}` standing in a JSX text position. Same two-character
@@ -265,6 +291,35 @@ const IDENTIFIER_FIELD_RE = String.raw`id|uuid|pk|[a-z]\w*_id`;
  */
 const RAW_IDENTIFIER_RE = new RegExp(
   String.raw`(^|[^=$])\{\s*([A-Za-z_$][\w$]*(?:\??\.[\w$]+)*\??\.(?:${IDENTIFIER_FIELD_RE}))\s*\}`,
+  "g"
+);
+
+/**
+ * The same identifier, reached through a fallback: `{row.name || row.owner}`.
+ *
+ * WHY A SECOND PATTERN. `RAW_IDENTIFIER_RE` requires the braced expression to
+ * be **only** the member path, so anything with an operator in it slips past —
+ * and `name || id` is not an exotic spelling, it is the exact shape this defect
+ * takes every time. Two live instances were found this way and neither was
+ * visible to the rule above:
+ *
+ *     {dispatch.dispatched_by_name || dispatch.dispatched_by}
+ *     {judgment.soul_name || judgment.soul}          (fixed earlier, same shape)
+ *
+ * The fallback is what makes it dangerous rather than merely wrong: the id is
+ * shown *only* when the name is missing, so it never appears in the happy path
+ * a developer or a screenshot exercises. It surfaces for exactly the rows whose
+ * subject has been deleted.
+ *
+ * `||` and `??` both, and the identifier may sit on either side — a name can be
+ * the fallback for an id just as easily.
+ */
+const FALLBACK_EXPRESSION_RE = new RegExp(
+  String.raw`(?:^|[^=$])\{[^{}]*(?:\|\||\?\?)[^{}]*\}`,
+  "g"
+);
+const IDENTIFIER_MEMBER_RE = new RegExp(
+  String.raw`[A-Za-z_$][\w$]*(?:\??\.[\w$]+)*\??\.(?:${IDENTIFIER_FIELD_RE})\b`,
   "g"
 );
 
@@ -285,6 +340,17 @@ function scanIdentifierSites(): IdentifierSite[] {
       let m: RegExpExecArray | null;
       while ((m = RAW_IDENTIFIER_RE.exec(code)) !== null) {
         found.push({ file: rel, line: i + 1, text: m[2], kind: "raw" });
+      }
+      // `{name || id}` — see FALLBACK_EXPRESSION_RE. Reported with the whole
+      // expression rather than just the member, because "which side of the
+      // `||`" is the first thing a reader needs.
+      FALLBACK_EXPRESSION_RE.lastIndex = 0;
+      let f: RegExpExecArray | null;
+      while ((f = FALLBACK_EXPRESSION_RE.exec(code)) !== null) {
+        IDENTIFIER_MEMBER_RE.lastIndex = 0;
+        if (IDENTIFIER_MEMBER_RE.test(f[0])) {
+          found.push({ file: rel, line: i + 1, text: f[0].trim(), kind: "raw" });
+        }
       }
       if (code.includes("<IdentifierChip")) {
         found.push({ file: rel, line: i + 1, text: line.trim().slice(0, 110), kind: "chip" });
