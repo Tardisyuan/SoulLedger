@@ -58,6 +58,16 @@ const ENUM_FIELDS = [
   "severity",
   "disposition_type",
   "action",
+  // Added 2026-09-02, after `conclusion_type` shipped as a raw member.
+  // `app/cross-judgments/[id]` printed `PASS` / `FAIL` verbatim at text-06 bold
+  // — the conclusion of a cross-civilization tribunal, the largest text on the
+  // panel — with all 2049 tests green, because this list had never been told
+  // the field existed. The rule ran, could go red, and was looking at the wrong
+  // subjects. The meta-test below now stops that from happening silently again.
+  "conclusion_type",
+  "approver_type",
+  "reaction_type",
+  "visibility",
 ];
 
 /** The two modules that are allowed to spell a missing value out. */
@@ -292,6 +302,55 @@ function isDetailPage(rel: string): boolean {
 function format(violations: Violation[]): string {
   return violations.map((v) => `  ${v.file}:${v.line}  ${v.text}`).join("\n");
 }
+
+/**
+ * THE LIST OF ENUM FIELDS IS ITSELF A SUBJECT LIST, AND IT WAS WRONG.
+ *
+ * Every rule in this file works by recognising a field name. `ENUM_FIELDS` is
+ * hand-written, so a field it has never heard of is invisible to all of them —
+ * the check runs, the check can go red, and it is watching the wrong set. That
+ * is exactly how `conclusion_type` reached production: `PASS` / `FAIL` printed
+ * verbatim as a tribunal's verdict, with every gate green.
+ *
+ * This cannot be fully derived — most enum fields in `lib/api/*.ts` are typed
+ * as plain `string`, so nothing in the types says they are enums. But the ones
+ * that ARE declared as string unions can be derived exactly, and requiring the
+ * list to contain all of them closes the mechanical half. What remains
+ * hand-maintained is now explicitly the `string`-typed half, rather than the
+ * whole thing being hand-maintained without anyone saying so.
+ */
+describe("the enum-field registry is not quietly behind the API types", () => {
+  /** `field: "A" | "B"` in any `lib/api/*.ts` — a field the types themselves call an enum. */
+  function unionFieldsInApiTypes(): string[] {
+    const dir = path.join(FRONTEND_ROOT, "lib", "api");
+    const names = new Set<string>();
+    for (const f of readdirSync(dir)) {
+      if (!f.endsWith(".ts")) continue;
+      const src = readFileSync(path.join(dir, f), "utf8");
+      for (const m of src.matchAll(/^\s*(\w+)\??:\s*"[A-Z_]+"(?:\s*\|\s*"[A-Z_]+")+/gm)) {
+        names.add(m[1]);
+      }
+    }
+    return [...names].sort();
+  }
+
+  it("finds union-typed fields to check, so this cannot pass on an empty set", () => {
+    expect(unionFieldsInApiTypes().length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("registers every field the API types declare as a string union", () => {
+    const missing = unionFieldsInApiTypes().filter((n) => !ENUM_FIELDS.includes(n));
+    if (missing.length > 0) {
+      throw new Error(
+        `These fields are declared as string unions in lib/api/ but are not in ` +
+          `ENUM_FIELDS, so every rule in this file is blind to them — including ` +
+          `the one that stops a raw member reaching the screen. Add them.\n\n` +
+          missing.join("\n")
+      );
+    }
+    expect(missing).toEqual([]);
+  });
+});
 
 describe("§4.6 source contract", () => {
   it("scans a non-trivial number of files (guards the walker itself)", () => {

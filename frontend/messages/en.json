@@ -1158,6 +1158,10 @@
       "ADVISOR": "Advisor",
       "CO_JUDGE": "Co-Judge",
       "CHAIRMAN": "Chairman"
+    },
+    "conclusion_types": {
+      "PASS": "Passed",
+      "FAIL": "Rejected"
     }
   },
   "users": {

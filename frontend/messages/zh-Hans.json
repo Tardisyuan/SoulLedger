@@ -1158,6 +1158,10 @@
       "ADVISOR": "顾问",
       "CO_JUDGE": "联合审判官",
       "CHAIRMAN": "主持"
+    },
+    "conclusion_types": {
+      "PASS": "通过",
+      "FAIL": "否决"
     }
   },
   "users": {

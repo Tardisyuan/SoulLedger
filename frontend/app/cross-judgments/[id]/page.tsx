@@ -101,10 +101,19 @@ export default function CrossJudgmentDetailPage() {
         )
       }
     >
+        {/* THE FOURTH SERIF SITE. `app/fonts.ts` states the rule — Source Serif 4
+           appears only on things a person said, and names four: the classical
+           corpus, the confession, the grounds of a judgment, **and the joint
+           opinion of a cross-civilization tribunal**. Measured 2026-09-02, the
+           app had three. This page — whose entire subject is four cosmologies
+           reasoning in prose — carried none, and set the opinion at
+           `text-ink-muted`, the weight of a subtitle.
+
+           `text-05` and full ink, matching the other three sites exactly. */}
       {loading ? (
         <Skeleton className="h-4 w-full mb-6" />
       ) : judgment?.description && (
-        <p className="text-04 text-[hsl(var(--color-ink-muted))] mb-6">{judgment.description}</p>
+        <p className="font-serif text-05 text-[hsl(var(--color-ink))] mb-6">{judgment.description}</p>
       )}
 
       {/* Participants */}
@@ -151,11 +160,29 @@ export default function CrossJudgmentDetailPage() {
       {!loading && judgment?.status === "CONCLUDED" && (
         <div className="bg-[hsl(var(--color-surface-2))] p-4">
           <h2 className="text-06 font-semibold text-[hsl(var(--color-ink))] mb-2">{t("crossJudgments.verdict")}</h2>
+          {/* `DomainEnum`, not the bare member. Twenty lines above, this same
+              file spends five lines arguing that `p.role` must not reach the
+              screen as SCREAMING_SNAKE — and then printed `PASS` / `FAIL`
+              verbatim at text-06 bold, as the conclusion of a
+              cross-civilization tribunal. It was the largest text on the panel
+              and the only untranslated string on the page.
+              `crossJudgments.conclusion_types` now carries both members in all
+              three bundles; the raw value stays reachable in `title`.
+
+              The model's own field is a bare `CharField(null=True)` whose
+              help_text reads "PASS or FAIL" — the choices live only in the
+              serializer — so an unrecognised member is genuinely possible.
+              `DomainEnum` renders that italic with the raw value in `title`,
+              and renders nothing-recorded as `MissingValue`; the old ternary
+              silently painted both cases as ordinary ink. */}
           <p className={`text-06 font-bold ${
             judgment.conclusion_type === "PASS" ? "text-[hsl(var(--color-status-success))]" :
             judgment.conclusion_type === "FAIL" ? "text-[hsl(var(--color-status-error))]" : "text-[hsl(var(--color-ink))]"
           }`}>
-            {judgment.conclusion_type}
+            <DomainEnum
+              namespace="crossJudgments.conclusion_types"
+              value={judgment.conclusion_type}
+            />
           </p>
         </div>
       )}
