@@ -207,7 +207,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   // the second, which is why they are two branches.
   if (error) {
     return (
-      <PageShell variant="page" title={t("judgment.title")} backLink={backLink}>
+      <PageShell
+      density="document" variant="page" title={t("judgment.title")} backLink={backLink}>
         <QueryError onRetry={() => refetch()} />
       </PageShell>
     );
@@ -215,7 +216,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   if (!judgment) {
     return (
-      <PageShell variant="page" title={t("judgment.title")} backLink={backLink}>
+      <PageShell
+      density="document" variant="page" title={t("judgment.title")} backLink={backLink}>
         <EmptyState
           title={t("judgment.detail.not_found")}
           action={
@@ -266,6 +268,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
   return (
     <PageShell
+      density="document"
       variant="page"
       backLink={backLink}
       eyebrow={eyebrow}

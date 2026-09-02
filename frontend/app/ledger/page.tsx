@@ -71,6 +71,7 @@ function LedgerPageContent() {
 
   return (
     <PageShell
+      density="document"
       variant="page"
       title={t("ledger.title")}
       subtitle={t("ledger.subtitle")}
