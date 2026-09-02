@@ -41,6 +41,64 @@
    * The scale tokens below are a different story and stay: `--text-01` etc.
    * generate `.text-01`, and nothing re-declares those names. */
 
+  /* MOTION. Three durations and two easings, named by the JOB they do — not by
+   * their number, because `duration-200` records what was typed and not why.
+   *
+   * Before this block the app had no motion layer at all: 126 `transition-colors`
+   * running on Tailwind's default 150ms, plus twelve hand-written `duration-100
+   * | -150 | -200` with no stated difference between them. Colour, type and
+   * space were tokenised; motion was the one axis where every decision was a
+   * bare number.
+   *
+   * WHY THESE THREE. They are the three things that actually happen in a
+   * console, and they want different speeds:
+   *   press  — the element under the pointer answering. Must read as a response,
+   *            not an animation; past ~120ms a press starts to feel laggy.
+   *   state  — something changing while it stays where it is (colour, border,
+   *            opacity). The default 150ms is close enough that adopting 160ms
+   *            costs nothing and gives the tier a name.
+   *   settle — something arriving on or leaving the screen. Needs long enough to
+   *            be seen starting; this is the only tier the eye should notice.
+   *
+   * WHY ONLY TWO EASINGS. Arriving and leaving are not symmetric: a thing that
+   * appears should decelerate into place, a thing that leaves should get out of
+   * the way. Anything changing IN PLACE keeps Tailwind's own `ease-in-out` —
+   * a third custom curve there would be a preference, not a decision.
+   *
+   * NO OVERSHOOT ANYWHERE. Not defined, so it cannot be reached by name. A
+   * bounce on a verdict button would be the app being pleased with itself while
+   * someone sentences a soul.
+   *
+   * THESE SHORTHAND UTILITIES ARE SAFE, unlike the colour ones deleted above.
+   * The colour tokens broke because `:root` re-declared the same names with raw
+   * triples and `@layer base` outranked `@theme`. Nothing re-declares these, and
+   * their values are complete CSS values rather than fragments — verified in the
+   * production stylesheet, not assumed. */
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
+
+  --transition-duration-press: 100ms;
+  --transition-duration-state: 160ms;
+  --transition-duration-settle: 240ms;
+
+  /* The one motion in this app that is not a state change.
+   *
+   * The undo strip in the judgment queue appears after a verdict is landed and
+   * gives the operator a few seconds to take it back. It is the only moment in
+   * the product where something irreversible has just happened and the way out
+   * is on screen — and it was appearing with no transition at all, in a slot
+   * that is deliberately reserved at a fixed height so nothing else moves.
+   *
+   * That reserved slot is why this can be an animation rather than a layout
+   * shift: the space is already there, so the strip only has to become visible
+   * IN it. 4px of rise, which is under the threshold where a reader tracks the
+   * movement itself, plus the fade that actually does the work.
+   *
+   * Registered as a token rather than written inline so it has a name and one
+   * definition. The reduced-motion block below collapses it to 1ms like
+   * everything else. */
+  --animate-undo-strip: undo-strip var(--transition-duration-settle) var(--ease-enter) both;
+
   --font-sans:
     var(--font-sans-latin), 'Noto Sans SC Variable', ui-sans-serif, system-ui,
     sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
@@ -587,6 +645,17 @@
   }
 }
 
+@keyframes undo-strip {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @layer base {
   body {
     @apply bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))];
@@ -612,10 +681,10 @@
     border-color: hsl(var(--color-hairline));
   }
   a {
-    @apply text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] transition-colors duration-150;
+    @apply text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] transition-colors duration-state;
   }
   button {
-    @apply transition-colors duration-150;
+    @apply transition-colors duration-state;
   }
   input, select, textarea {
     @apply bg-[hsl(var(--color-surface-1))] border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))];

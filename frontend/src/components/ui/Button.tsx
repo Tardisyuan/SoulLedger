@@ -122,7 +122,7 @@ const button = cva(
     // than written as decoration.
     "border",
     // `transition-colors` alone would leave the press-shift un-eased.
-    "transition-[color,background-color,border-color,transform] duration-150",
+    "transition-[color,background-color,border-color,transform] duration-state",
     // The pressed nudge, shared by all four variants so "pressed" is one
     // gesture in this UI rather than four. Suppressed under reduced-motion:
     // a 1px translate is small but it is still unrequested movement.

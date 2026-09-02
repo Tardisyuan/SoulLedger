@@ -24,22 +24,22 @@ export default function Loading() {
       <header className="border-b border-[hsl(var(--color-hairline))]">
         <div className="px-6 pt-10 pb-6">
           {/* h-10 对着 text-07 的 32px × 1.2;h-6 对着 text-04 副标题。 */}
-          <div className="h-10 w-64 bg-[hsl(var(--color-surface-1))] animate-pulse" />
-          <div className="h-6 w-96 bg-[hsl(var(--color-surface-1))] animate-pulse mt-3" />
+          <div className="h-10 w-64 bg-[hsl(var(--color-hairline))] animate-pulse" />
+          <div className="h-6 w-96 bg-[hsl(var(--color-hairline))] animate-pulse mt-3" />
         </div>
       </header>
 
       {/* variant="full":矩阵的列数随角色数增长,这里也不设 max-width。 */}
       <div className="px-6 py-6 space-y-10">
         <div className="space-y-2">
-          <div className="h-11 w-full bg-[hsl(var(--color-surface-1))] animate-pulse" />
+          <div className="h-11 w-full bg-[hsl(var(--color-hairline))] animate-pulse" />
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div key={i} className="h-8 w-full bg-[hsl(var(--color-surface-1))] animate-pulse" />
+            <div key={i} className="h-8 w-full bg-[hsl(var(--color-hairline))] animate-pulse" />
           ))}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-20 bg-[hsl(var(--color-surface-1))] animate-pulse" />
+            <div key={i} className="h-20 bg-[hsl(var(--color-hairline))] animate-pulse" />
           ))}
         </div>
       </div>

@@ -17,7 +17,21 @@ export function Skeleton({ className, as: Tag = 'div' }: SkeletonProps) {
   return (
     <Tag
       className={cn(
-        'animate-pulse bg-[hsl(var(--color-surface-2))]',
+        /* `--color-hairline`, NOT a surface token.
+         *
+         * A skeleton block is one of the ~29% of surface fills in this app that
+         * ships with no border, so the fill is the ONLY thing separating it from
+         * what it sits on — and the surface ramp cannot do that job. Measured
+         * 2026-09-02: `--color-surface-2` against the canvas is 1.05:1, and
+         * `animate-pulse` drops opacity to 0.5, so the trough is **1.02:1**. A
+         * loading state that is, in the literal sense, invisible.
+         *
+         * The hairline is the token that already means "the quietest visible
+         * boundary": 1.44:1 full and 1.15:1 at the pulse trough in dark mode —
+         * about 14x the perceptual separation, and it touches none of the 128
+         * pinned ink-on-surface combinations because the hairline family is in
+         * neither ramp. */
+        'animate-pulse bg-[hsl(var(--color-hairline))]',
         className
       )}
     />

@@ -62,7 +62,7 @@ function SidebarMenuItemInner({
                 {menu.path === "/" ? t("nav.welcome") : menu.name}
               </span>
               {hasChildren && (
-                <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`} />
+                <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform duration-settle ${expanded ? "rotate-90" : ""}`} />
               )}
             </>
           )}

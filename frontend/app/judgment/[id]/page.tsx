@@ -453,7 +453,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 onChange={(event) => setNotes(event.target.value)}
                 rows={5}
                 placeholder={t("judgment.detail.notes_placeholder")}
-                className="block w-full mt-4 border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] px-3 py-2 font-sans text-04 text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] transition-[border-color] duration-150 focus-visible:border-[hsl(var(--color-accent))] resize-y"
+                className="block w-full mt-4 border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] px-3 py-2 font-sans text-04 text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] transition-[border-color] duration-state focus-visible:border-[hsl(var(--color-accent))] resize-y"
               />
             </>
           )}

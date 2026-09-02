@@ -135,7 +135,7 @@ export function CommentThread({ postId }: { postId: string }) {
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="animate-pulse h-12 bg-[hsl(var(--color-surface-2))]" />
+            <div key={i} className="animate-pulse h-12 bg-[hsl(var(--color-hairline))]" />
           ))}
         </div>
       ) : comments.length === 0 ? (
