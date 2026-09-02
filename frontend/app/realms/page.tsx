@@ -134,12 +134,12 @@ function RealmsPageContent() {
                 onClick={() => toggleCollapse(civ)}
                 className="w-full justify-start mb-4 text-left"
               >
-                <span aria-hidden="true" className="text-ink-muted">{config.icon}</span>
+                <span aria-hidden="true" className="text-[hsl(var(--color-ink-muted))]">{config.icon}</span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-06 text-ink truncate">{t(config.nameKey)}</span>
-                  <span className="block text-04 text-ink-subtle">{civRealms.length} {t("realms.count")}</span>
+                  <span className="block text-06 text-[hsl(var(--color-ink))] truncate">{t(config.nameKey)}</span>
+                  <span className="block text-04 text-[hsl(var(--color-ink-subtle))]">{civRealms.length} {t("realms.count")}</span>
                 </span>
-                <ChevronDown aria-hidden="true" className={`w-5 h-5 text-ink-muted transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                <ChevronDown aria-hidden="true" className={`w-5 h-5 text-[hsl(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
               </Button>
 
               {!isCollapsed && (
@@ -147,12 +147,12 @@ function RealmsPageContent() {
                   {civRealms.map((realm) => {
                     const typeConfig = REALM_TYPE_CONFIG[realm.realm_type] || REALM_TYPE_CONFIG.NEUTRAL;
                     return (
-                      <div key={realm.id} className="bg-surface-1 border border-hairline p-4 hover:border-[hsl(var(--color-accent)/0.5)] hover:bg-surface-2 transition-colors">
+                      <div key={realm.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:border-[hsl(var(--color-accent)/0.5)] hover:bg-[hsl(var(--color-surface-2))] transition-colors">
                         <div className="flex items-start gap-3">
-                          <div aria-hidden="true" className="text-ink-muted">{typeConfig.icon}</div>
+                          <div aria-hidden="true" className="text-[hsl(var(--color-ink-muted))]">{typeConfig.icon}</div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-04 font-semibold text-ink truncate">{t(`realms.names.${realm.realm_code}`) || realm.name_en}</h3>
-                            <p className="text-03 text-ink-tertiary truncate">{t(`realms.codes.${realm.realm_code}`) || realm.name_local}</p>
+                            <h3 className="text-04 font-semibold text-[hsl(var(--color-ink))] truncate">{t(`realms.names.${realm.realm_code}`) || realm.name_en}</h3>
+                            <p className="text-03 text-[hsl(var(--color-ink-tertiary))] truncate">{t(`realms.codes.${realm.realm_code}`) || realm.name_local}</p>
                           </div>
                         </div>
                         <div className="mt-2 flex items-center justify-between">

@@ -85,7 +85,7 @@ export function PermissionFormModal({
             type="button"
             onClick={handleClose}
             disabled={isPending}
-            className="flex-1 px-4 py-2 bg-surface-1 border border-hairline text-[hsl(var(--color-ink-muted))] hover:bg-surface-2 disabled:opacity-50 text-03 transition-colors"
+            className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 text-03 transition-colors"
           >
             {t("common.cancel")}
           </button>
@@ -112,7 +112,7 @@ export function PermissionFormModal({
             placeholder={t("permissions.codename_placeholder")}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : undefined}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
+            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
         </div>
         <div>
@@ -125,7 +125,7 @@ export function PermissionFormModal({
             placeholder={t("permissions.name_placeholder")}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : undefined}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
+            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
         </div>
         <div>
@@ -137,7 +137,7 @@ export function PermissionFormModal({
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             placeholder={t("permissions.category_placeholder")}
-            className="w-full px-3 py-2 bg-surface-2 border border-hairline text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
+            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
           <datalist id={categoryListId}>
             {existingCategories.map((c) => (

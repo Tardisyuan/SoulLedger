@@ -129,8 +129,8 @@ export default function WorkflowPage() {
           onClick={() => setTab(tabItem.key)}
           className={`px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px ${
             tab === tabItem.key
-              ? "text-[hsl(var(--color-accent-ink))] border-accent"
-              : "text-ink-muted border-transparent hover:text-ink"
+              ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
+              : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
           }`}
         >
           {tabItem.label}
@@ -143,8 +143,8 @@ export default function WorkflowPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <div>
                 {/* 06 是区块标题那一档。 */}
-                <h2 className="text-06 text-ink">{t("workflow.templates")}</h2>
-                <p className="text-03 text-ink-muted">{t("workflow.select_template")}</p>
+                <h2 className="text-06 text-[hsl(var(--color-ink))]">{t("workflow.templates")}</h2>
+                <p className="text-03 text-[hsl(var(--color-ink-muted))]">{t("workflow.select_template")}</p>
               </div>
               <RequirePermission permissions="workflow.create">
                 <Button
@@ -175,7 +175,7 @@ export default function WorkflowPage() {
                   <div className="space-y-2">
                     {/* 01 是 uppercase 小标签那一档，这两行原本是 `text-xs
                         font-semibold` 拼出来的同一个东西。 */}
-                    <div className="text-01 uppercase text-ink-muted px-2">{t("workflow.custom_templates")}</div>
+                    <div className="text-01 uppercase text-[hsl(var(--color-ink-muted))] px-2">{t("workflow.custom_templates")}</div>
                     {templates.map((tmpl: BackendTemplate) => (
                       /* Stays a plain <button>, not `Button`. These are
                          selectable list rows: full-width, left-aligned, two
@@ -191,12 +191,12 @@ export default function WorkflowPage() {
                         }}
                         className={`w-full text-left px-3 py-2 border transition-colors ${
                           editingTemplateId === String(tmpl.id)
-                            ? "bg-[hsl(var(--color-accent))]/10 border-accent text-ink"
-                            : "bg-surface-1 border-hairline text-ink-muted hover:border-[hsl(var(--color-accent))]/50"
+                            ? "bg-[hsl(var(--color-accent))]/10 border-[hsl(var(--color-accent))] text-[hsl(var(--color-ink))]"
+                            : "bg-[hsl(var(--color-surface-1))] border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:border-[hsl(var(--color-accent))]/50"
                         }`}
                       >
                         <div className="text-03 font-medium truncate">{tmpl.name}</div>
-                        <div className="text-02 text-ink-subtle mt-1">
+                        <div className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
                           <DomainEnum namespace="workflow.civilizations" value={tmpl.civilization} /> · <DomainEnum namespace="workflow.case_types" value={tmpl.case_type} />
                         </div>
                       </button>
@@ -206,7 +206,7 @@ export default function WorkflowPage() {
 
                 {/* 预定义模板列表 */}
                 <div className="space-y-2">
-                  <div className="text-01 uppercase text-ink-muted px-2">{t("workflow.predefined_templates")}</div>
+                  <div className="text-01 uppercase text-[hsl(var(--color-ink-muted))] px-2">{t("workflow.predefined_templates")}</div>
                   {Object.entries(templatesByCiv).map(([civ, civTemplates]) => (
                     <div key={civ} className="space-y-1">
                       <div className="text-02 text-[hsl(var(--color-accent-ink))] px-2 py-1 font-medium">
@@ -222,8 +222,8 @@ export default function WorkflowPage() {
                           }}
                           className={`w-full text-left px-3 py-2 border transition-colors text-03 ${
                             selectedTemplate === tmpl.key && !editingTemplateId
-                              ? "bg-[hsl(var(--color-accent))]/10 border-accent text-ink"
-                              : "bg-surface-1 border-hairline text-ink-muted hover:border-[hsl(var(--color-accent))]/50"
+                              ? "bg-[hsl(var(--color-accent))]/10 border-[hsl(var(--color-accent))] text-[hsl(var(--color-ink))]"
+                              : "bg-[hsl(var(--color-surface-1))] border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:border-[hsl(var(--color-accent))]/50"
                           }`}
                         >
                           {tmpl.name}
@@ -238,7 +238,7 @@ export default function WorkflowPage() {
               <div className="flex-1 min-w-0">
                 {/* 预览内容 */}
                 {(editingTemplateId || selectedTemplate) && (
-                  <div className="bg-surface-1 border border-hairline p-4">
+                  <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
                     {/* 后端模板预览 */}
                     {editingTemplateId && templates.find((tpl: BackendTemplate) => String(tpl.id) === editingTemplateId) && (() => {
                       const tmpl = templates.find((tpl: BackendTemplate) => String(tpl.id) === editingTemplateId)!;
@@ -246,7 +246,7 @@ export default function WorkflowPage() {
                         <>
                           <div className="flex items-start justify-between mb-4">
                             <div>
-                              <h3 className="text-06 text-ink">{tmpl.name}</h3>
+                              <h3 className="text-06 text-[hsl(var(--color-ink))]">{tmpl.name}</h3>
                               <div className="flex gap-2 mt-1">
                                 {/* A civilization is an identity, which is the
                                     documented meaning of `pill` here; the case
@@ -301,25 +301,25 @@ export default function WorkflowPage() {
                               </RequirePermission>
                             </div>
                           </div>
-                          <p className="text-03 text-ink-muted mb-4">{tmpl.description || t("workflow.no_description")}</p>
-                          <div className="text-02 text-ink-subtle mb-3">
+                          <p className="text-03 text-[hsl(var(--color-ink-muted))] mb-4">{tmpl.description || t("workflow.no_description")}</p>
+                          <div className="text-02 text-[hsl(var(--color-ink-subtle))] mb-3">
                             {t("workflow.nodes_count", { count: String(tmpl.node_count ?? (tmpl.nodes_json || []).length) })}
                           </div>
                           {tmpl.nodes_json ? (
                             <div className="space-y-2 max-h-80 overflow-y-auto">
                               {tmpl.nodes_json.map((node: FlowNode, idx: number) => (
-                                <div key={idx} className="flex items-center gap-3 p-2 bg-surface-2">
+                                <div key={idx} className="flex items-center gap-3 p-2 bg-[hsl(var(--color-surface-2))]">
                                   {/* `rounded-full` survives the corner purge:
                                       a round mark is an identity token, which
                                       an ordinal step number is. */}
                                   <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] flex items-center justify-center text-02 font-medium shrink-0">
                                     {idx + 1}
                                   </span>
-                                  <span className="text-03 text-ink">{node.node_name}</span>
-                                  <span className="text-ink-subtle">·</span>
-                                  <span className="text-02 text-ink-muted">{node.court_code}</span>
-                                  <span className="text-ink-subtle">·</span>
-                                  <span className="text-02 text-ink-muted"><DomainEnum namespace="workflow.node_type" value={node.node_type} /></span>
+                                  <span className="text-03 text-[hsl(var(--color-ink))]">{node.node_name}</span>
+                                  <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
+                                  <span className="text-02 text-[hsl(var(--color-ink-muted))]">{node.court_code}</span>
+                                  <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
+                                  <span className="text-02 text-[hsl(var(--color-ink-muted))]"><DomainEnum namespace="workflow.node_type" value={node.node_type} /></span>
                                 </div>
                               ))}
                             </div>
@@ -329,7 +329,7 @@ export default function WorkflowPage() {
                             // node breakdown would mean shipping every template's full graph on one
                             // list request. Predefined (not-yet-saved) templates still come with
                             // nodes_json inline and keep the detail list above.
-                            <p className="text-02 text-ink-subtle">
+                            <p className="text-02 text-[hsl(var(--color-ink-subtle))]">
                               {t("workflow.view_to_see_nodes")}
                             </p>
                           )}
@@ -342,7 +342,7 @@ export default function WorkflowPage() {
                       <>
                         <div className="flex items-start justify-between mb-4">
                           <div>
-                            <h3 className="text-06 text-ink">{currentTemplate.name}</h3>
+                            <h3 className="text-06 text-[hsl(var(--color-ink))]">{currentTemplate.name}</h3>
                             <div className="flex gap-2 mt-1">
                               <Badge tone="accent" shape="pill">
                                 <DomainEnum namespace="workflow.civilizations" value={currentTemplate.civilization} />
@@ -411,27 +411,27 @@ export default function WorkflowPage() {
                             </RequirePermission>
                           </div>
                         </div>
-                        <p className="text-03 text-ink-muted mb-4">{currentTemplate.description}</p>
-                        <div className="text-02 text-ink-subtle mb-3">
+                        <p className="text-03 text-[hsl(var(--color-ink-muted))] mb-4">{currentTemplate.description}</p>
+                        <div className="text-02 text-[hsl(var(--color-ink-subtle))] mb-3">
                           {t("workflow.nodes_count", { count: String(currentTemplate.nodes.length) })}
                         </div>
                         <div className="space-y-2 max-h-80 overflow-y-auto">
                           {currentTemplate.nodes.map((node: FrontendNode, idx: number) => (
-                            <div key={idx} className="flex items-center gap-3 p-2 bg-surface-2">
+                            <div key={idx} className="flex items-center gap-3 p-2 bg-[hsl(var(--color-surface-2))]">
                               <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] flex items-center justify-center text-02 font-medium shrink-0">
                                 {idx + 1}
                               </span>
-                              <span className="text-03 text-ink">{node.name}</span>
-                              <span className="text-ink-subtle">·</span>
-                              <span className="text-02 text-ink-muted">{node.court}</span>
-                              <span className="text-ink-subtle">·</span>
+                              <span className="text-03 text-[hsl(var(--color-ink))]">{node.name}</span>
+                              <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
+                              <span className="text-02 text-[hsl(var(--color-ink-muted))]">{node.court}</span>
+                              <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
                               {/* `workflow.node_type` 这个 bundle 只有 trial/
                                   evaluation/appeal/final/execution 五个键，所以
                                   直接传 `node.type`（「分流」…）时 <DomainEnum> 一律
                                   判为 unrecognized，这一格 56 个预设节点全部显示
                                  「未识别取值」。映射之后它显示的是真正的类型，也和
                                   保存下去的值是同一个。 */}
-                              <span className="text-02 text-ink-muted"><DomainEnum namespace="workflow.node_type" value={nodeTypeFor(node.type)} /></span>
+                              <span className="text-02 text-[hsl(var(--color-ink-muted))]"><DomainEnum namespace="workflow.node_type" value={nodeTypeFor(node.type)} /></span>
                             </div>
                           ))}
                         </div>
@@ -442,7 +442,7 @@ export default function WorkflowPage() {
 
                 {/* 未选中状态 */}
                 {!editingTemplateId && !selectedTemplate && (
-                  <div className="bg-surface-1 border border-hairline px-4">
+                  <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-4">
                     <EmptyState title={t("workflow.select_from_left")} />
                   </div>
                 )}

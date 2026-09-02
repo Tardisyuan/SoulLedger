@@ -30,7 +30,7 @@ type FilterType = "all" | "unread";
  */
 const TAB_BASE = "px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px";
 const TAB_ON = "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent-ink))]";
-const TAB_OFF = "border-transparent text-ink-muted hover:text-ink";
+const TAB_OFF = "border-transparent text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]";
 
 export default function NotificationsPage() {
   const { t, formatDateTime } = useI18n();
@@ -154,7 +154,7 @@ export default function NotificationsPage() {
       skeleton={
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="p-4 border border-hairline space-y-3">
+            <div key={i} className="p-4 border border-[hsl(var(--color-hairline))] space-y-3">
               <div className="flex items-start gap-3">
                 <Skeleton className="h-8 w-8" />
                 <div className="flex-1 space-y-2">
@@ -206,8 +206,8 @@ export default function NotificationsPage() {
             key={notification.id}
             className={`p-4 border transition-colors ${
               notification.is_read
-                ? "bg-surface-1 border-hairline"
-                : "bg-surface-1 border-[hsl(var(--color-accent)/0.3)]"
+                ? "bg-[hsl(var(--color-surface-1))] border-[hsl(var(--color-hairline))]"
+                : "bg-[hsl(var(--color-surface-1))] border-[hsl(var(--color-accent)/0.3)]"
             }`}
           >
             <div className="flex items-start gap-3">
@@ -226,18 +226,18 @@ export default function NotificationsPage() {
                 <div className="flex items-start justify-between gap-2">
                   <h2
                     className={`text-03 font-medium ${
-                      notification.is_read ? "text-ink-muted" : "text-ink"
+                      notification.is_read ? "text-[hsl(var(--color-ink-muted))]" : "text-[hsl(var(--color-ink))]"
                     }`}
                   >
                     {notification.title}
                   </h2>
-                  <span className="text-02 font-mono text-ink-subtle shrink-0">
+                  <span className="text-02 font-mono text-[hsl(var(--color-ink-subtle))] shrink-0">
                     {formatDate(notification.created_at)}
                   </span>
                 </div>
                 <p
                   className={`mt-1 text-03 ${
-                    notification.is_read ? "text-ink-subtle" : "text-ink-muted"
+                    notification.is_read ? "text-[hsl(var(--color-ink-subtle))]" : "text-[hsl(var(--color-ink-muted))]"
                   }`}
                 >
                   {notification.message}
@@ -260,7 +260,7 @@ export default function NotificationsPage() {
 
               {/* Unread Indicator */}
               {!notification.is_read && (
-                <span aria-hidden="true" className="w-2 h-2 bg-accent rounded-full shrink-0 mt-2" />
+                <span aria-hidden="true" className="w-2 h-2 bg-[hsl(var(--color-accent))] rounded-full shrink-0 mt-2" />
               )}
             </div>
           </div>

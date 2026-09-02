@@ -167,12 +167,12 @@ export default function AuditPage() {
       header: t("audit.affected"),
       value: (g) => (
         <div>
-          <div className="text-ink">
+          <div className="text-[hsl(var(--color-ink))]">
             {g.descriptions.length > 0 ? g.descriptions.join(" · ") : g.resources.join(" + ")}
           </div>
           {/* 02 档正是 ID / 时间戳 / 资源标识那一档。`mt-0.5`(2px) 不在节奏
               阶梯上，收到最小的一格 `mt-1`(4px)。 */}
-          <div className="font-mono text-02 text-ink-tertiary mt-1">{g.resourceDetail}</div>
+          <div className="font-mono text-02 text-[hsl(var(--color-ink-tertiary))] mt-1">{g.resourceDetail}</div>
         </div>
       ),
     },

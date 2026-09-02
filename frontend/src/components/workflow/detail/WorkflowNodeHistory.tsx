@@ -38,9 +38,9 @@ export function WorkflowNodeHistory({
           return aTime - bTime;
         })
         .map((node) => (
-          <div key={node.id} className="bg-surface-1 p-4 border border-hairline">
+          <div key={node.id} className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-03 font-medium text-ink">{node.node_name}</span>
+              <span className="text-03 font-medium text-[hsl(var(--color-ink))]">{node.node_name}</span>
               {/* <DomainEnum> sets its own `title` from the raw member —
                   that is the whole point of the component — so this one
                   needs no hand-rolled attribute, unlike the string-form
@@ -50,14 +50,14 @@ export function WorkflowNodeHistory({
                 <DomainEnum namespace="workflow.verdicts" value={node.verdict} />
               </Badge>
             </div>
-            <div className="text-02 text-ink-muted">
+            <div className="text-02 text-[hsl(var(--color-ink-muted))]">
               {t("workflow.detail.decided_at")}: <DomainText value={node.decided_at ? formatDateTime(node.decided_at) : null} />
             </div>
             {node.notes && (
-              <p className="text-03 text-ink-muted mt-2 italic">&ldquo;{node.notes}&rdquo;</p>
+              <p className="text-03 text-[hsl(var(--color-ink-muted))] mt-2 italic">&ldquo;{node.notes}&rdquo;</p>
             )}
             {node.approver && (
-              <p className="text-02 text-ink-subtle mt-1">
+              <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
                 {t("workflow.detail.approver")}: {node.approver}
               </p>
             )}

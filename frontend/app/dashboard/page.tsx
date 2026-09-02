@@ -524,7 +524,7 @@ export default function DashboardPage() {
   // 不是 `min-h-screen`:AppLayout 给的槽位已经是 min-h-[calc(100vh-4rem)],
   // 再写一次就永远多出 64px 死滚动(PageShell 文件头第 3 条)。
   return (
-    <Suspense fallback={<div className="min-h-[60vh] bg-canvas" />}>
+    <Suspense fallback={<div className="min-h-[60vh] bg-[hsl(var(--color-canvas))]" />}>
       <DashboardContent />
     </Suspense>
   );

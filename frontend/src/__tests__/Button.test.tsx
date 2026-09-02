@@ -59,7 +59,7 @@ describe("the class merge does not eat the eight-step type scale", () => {
    * `lib/utils.ts` now registers 01–08 as font sizes.
    */
   it("keeps a font size and a text colour that are written together", () => {
-    expect(cn("bg-accent text-black border-accent", "px-2 py-1 text-02").split(/\s+/)).toEqual(
+    expect(cn("bg-[hsl(var(--color-accent))] text-black border-[hsl(var(--color-accent))]", "px-2 py-1 text-02").split(/\s+/)).toEqual(
       expect.arrayContaining(["text-black", "text-02"])
     );
     // Same string, not just separate arguments — the collision was never about
@@ -167,7 +167,7 @@ describe("the primary button's foreground is the one that passes AA", () => {
   it.each(BUTTON_SIZES)("primary/%s is black on accent", (size) => {
     const classes = classesOf("primary", size);
     expect(classes).toContain("text-black");
-    expect(classes).toContain("bg-accent");
+    expect(classes).toContain("bg-[hsl(var(--color-accent))]");
   });
 
   it.each(BUTTON_SIZES)("primary/%s is never white on accent", (size) => {
@@ -263,7 +263,7 @@ describe("behaviour", () => {
   it("defaults to secondary/md", () => {
     render(<Button>label</Button>);
     const classes = screen.getByRole("button").className.split(/\s+/);
-    expect(classes).toEqual(expect.arrayContaining(["bg-surface-2", "px-3", "py-2", "text-03"]));
+    expect(classes).toEqual(expect.arrayContaining(["bg-[hsl(var(--color-surface-2))]", "px-3", "py-2", "text-03"]));
   });
 
   it("disables and marks itself busy while loading", () => {
@@ -295,9 +295,9 @@ describe("behaviour", () => {
   });
 
   it("lets a caller's className win a conflict", () => {
-    render(<Button variant="primary" className="bg-surface-4" />);
+    render(<Button variant="primary" className="bg-[hsl(var(--color-surface-4))]" />);
     const classes = screen.getByRole("button").className.split(/\s+/);
-    expect(classes).toContain("bg-surface-4");
-    expect(classes).not.toContain("bg-accent");
+    expect(classes).toContain("bg-[hsl(var(--color-surface-4))]");
+    expect(classes).not.toContain("bg-[hsl(var(--color-accent))]");
   });
 });

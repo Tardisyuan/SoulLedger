@@ -102,7 +102,7 @@ function TenantsPageContent() {
               // with. Pagination.tsx is off-limits this wave, so the page gives
               // the slot what the slot asks for.
               count: (
-                <p className="text-03 text-ink-muted">
+                <p className="text-03 text-[hsl(var(--color-ink-muted))]">
                   {t("pagination.info", {
                     page: String(page),
                     total: String(totalPages),
@@ -142,12 +142,12 @@ function TenantsPageContent() {
           return (
             <div
               key={tenant.id}
-              className={`bg-surface-1 border border-hairline p-4 flex items-center justify-between gap-4${mark ? " border-l-3" : ""}`}
+              className={`bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 flex items-center justify-between gap-4${mark ? " border-l-3" : ""}`}
               style={mark ? { borderLeftColor: mark } : undefined}
             >
               <div className="min-w-0">
-                <p className="text-03 font-medium text-ink truncate">{tenant.display_name}</p>
-                <p className="text-02 font-mono text-ink-subtle mt-1 truncate">
+                <p className="text-03 font-medium text-[hsl(var(--color-ink))] truncate">{tenant.display_name}</p>
+                <p className="text-02 font-mono text-[hsl(var(--color-ink-subtle))] mt-1 truncate">
                   {t("tenants.code") || "Code"}: {tenant.code}
                 </p>
               </div>

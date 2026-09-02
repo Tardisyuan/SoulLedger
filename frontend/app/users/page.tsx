@@ -80,7 +80,7 @@ export default function UsersPage() {
         </>
       }
       backLink={
-        <Link href="/" className="text-03 text-ink-muted hover:text-ink">
+        <Link href="/" className="text-03 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]">
           ← {t("nav.home")}
         </Link>
       }
@@ -159,10 +159,10 @@ export default function UsersPage() {
         keyExtractor={(user) => String(user.id)}
         renderRow={(user) => (
           <>
-            <td className="px-4 py-3 text-ink font-medium">
+            <td className="px-4 py-3 text-[hsl(var(--color-ink))] font-medium">
               {user.username}
             </td>
-            <td className="px-4 py-3 text-ink-muted">
+            <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
               {user.email}
             </td>
             <td className="px-4 py-3">
@@ -190,7 +190,7 @@ export default function UsersPage() {
                 <DomainEnum namespace="users.roles" value={user.role} />
               </Badge>
             </td>
-            <td className="px-4 py-3 text-ink-muted">
+            <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
               {user.tenant?.display_name || user.tenant?.code || "-"}
             </td>
             <td className="px-4 py-3">

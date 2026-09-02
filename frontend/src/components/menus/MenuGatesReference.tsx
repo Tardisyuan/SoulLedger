@@ -45,25 +45,25 @@ export function MenuGatesReference() {
        text-ink-muted`, `px-4 py-3 font-medium`, hairline rule under the row
        — so the two tables on this page read as one table style even though
        only one of them is the component. */
-    <details className="mb-4 bg-surface-2 border border-hairline">
-      <summary className="cursor-pointer px-4 py-3 text-03 font-medium text-ink">
+    <details className="mb-4 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))]">
+      <summary className="cursor-pointer px-4 py-3 text-03 font-medium text-[hsl(var(--color-ink))]">
         {t("menus.gates_title")}
       </summary>
       <div className="px-4 pb-4">
-        <p className="text-03 text-ink-muted mb-3">{t("menus.gates_intro")}</p>
+        <p className="text-03 text-[hsl(var(--color-ink-muted))] mb-3">{t("menus.gates_intro")}</p>
         <div className="overflow-x-auto">
           <table className="w-full text-03 border-collapse">
-            <thead className="bg-surface-2 text-ink-muted">
-              <tr className="text-left border-b border-hairline">
+            <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
+              <tr className="text-left border-b border-[hsl(var(--color-hairline))]">
                 <th className="px-4 py-3 font-medium">{t("menus.gate_col_name")}</th>
                 <th className="px-4 py-3 font-medium">{t("menus.gate_col_effect")}</th>
                 <th className="px-4 py-3 font-medium">{t("menus.gate_col_nonadmin")}</th>
               </tr>
             </thead>
-            <tbody className="text-ink-muted">
+            <tbody className="text-[hsl(var(--color-ink-muted))]">
               {GATE_ROWS.map((row) => (
-                <tr key={row.name} className="border-b border-hairline last:border-0">
-                  <td className="px-4 py-3 font-medium text-ink whitespace-nowrap">{t(row.name)}</td>
+                <tr key={row.name} className="border-b border-[hsl(var(--color-hairline))] last:border-0">
+                  <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))] whitespace-nowrap">{t(row.name)}</td>
                   <td className="px-4 py-3">{t(row.effect)}</td>
                   <td className="px-4 py-3">{t(row.nonadmin)}</td>
                 </tr>
@@ -71,7 +71,7 @@ export function MenuGatesReference() {
             </tbody>
           </table>
         </div>
-        <p className="text-02 text-ink-subtle mt-2">{t("menus.gates_footnote")}</p>
+        <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-2">{t("menus.gates_footnote")}</p>
       </div>
     </details>
   );

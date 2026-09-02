@@ -126,12 +126,12 @@ export function JudgmentSectionHead({
   id?: string;
 }) {
   return (
-    <div className="flex items-baseline gap-3 border-b-2 border-ink-subtle pb-2">
-      <h2 id={id} className="text-01 uppercase text-ink flex-1">
+    <div className="flex items-baseline gap-3 border-b-2 border-[hsl(var(--color-ink-subtle))] pb-2">
+      <h2 id={id} className="text-01 uppercase text-[hsl(var(--color-ink))] flex-1">
         {title}
       </h2>
       {meta ? (
-        <span className="font-mono tabular-nums text-02 text-ink-subtle">{meta}</span>
+        <span className="font-mono tabular-nums text-02 text-[hsl(var(--color-ink-subtle))]">{meta}</span>
       ) : null}
     </div>
   );
@@ -152,13 +152,13 @@ export function JudgmentGroundsPanel({ citations }: { citations: JudgmentCitatio
       />
 
       {citations.length === 0 ? (
-        <p className="text-04 text-ink-subtle py-6">
+        <p className="text-04 text-[hsl(var(--color-ink-subtle))] py-6">
           {/* Not "no data": a verdict given without citing anything is a fact
               about that verdict, and saying so is the point of the panel. */}
           {t("judgment.grounds.empty")}
         </p>
       ) : (
-        <ul className="divide-y divide-hairline">
+        <ul className="divide-y divide-[hsl(var(--color-hairline))]">
           {citations.map((citation) => (
             <GroundRow key={citation.id} citation={citation} />
           ))}
@@ -211,13 +211,13 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
         {/* The article code is a citation key, not an opaque identifier —
             "CN-HL-O01" is how a reader looks the article up, so it is content
             and IDENTIFIER_POLICY does not reach it. */}
-        <p className="font-mono text-01 text-ink-tertiary mt-1">{statute.code}</p>
+        <p className="font-mono text-01 text-[hsl(var(--color-ink-tertiary))] mt-1">{statute.code}</p>
       </div>
 
       {/* 条文正文 */}
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-04 font-medium text-ink">{statute.display_title}</h3>
+          <h3 className="text-04 font-medium text-[hsl(var(--color-ink))]">{statute.display_title}</h3>
           <Badge tone={POLARITY_TONE[statute.polarity] ?? "neutral"}>
             <DomainEnum namespace="judgment.statute_polarity" value={statute.polarity} />
           </Badge>
@@ -232,15 +232,15 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
             confession is, and not in the sans the court writes its own notes
             in. The rule is stated once, on the page, and this is its second
             landing site. */}
-        <p className="font-serif text-05 text-ink mt-2">
+        <p className="font-serif text-05 text-[hsl(var(--color-ink))] mt-2">
           <DomainText value={statute.display_text} />
         </p>
 
         {citation.note && (
-          <p className="text-03 text-ink-muted mt-2">
+          <p className="text-03 text-[hsl(var(--color-ink-muted))] mt-2">
             {/* 适用理由 is the COURT's sentence about the article, not the
                 article's own, so it stays sans. */}
-            <span className="text-01 uppercase text-ink-subtle mr-2">
+            <span className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mr-2">
               {t("judgment.grounds.note")}
             </span>
             {citation.note}
@@ -249,9 +249,9 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
       </div>
 
       {/* 出处 */}
-      <div className="min-w-0 text-02 text-ink-subtle">
+      <div className="min-w-0 text-02 text-[hsl(var(--color-ink-subtle))]">
         <p>
-          <span className="text-01 uppercase text-ink-tertiary block">
+          <span className="text-01 uppercase text-[hsl(var(--color-ink-tertiary))] block">
             {statute.is_derived ? t("judgment.grounds.derived") : t("judgment.grounds.source")}
           </span>
           {statute.source}
@@ -260,7 +260,7 @@ function GroundRow({ citation }: { citation: JudgmentCitation }) {
             source by ink and not by `italic` — this page reserves italic for
             what italic is for. */}
         {statute.source_notes?.map((note, index) => (
-          <p key={index} className="text-ink-tertiary mt-2">
+          <p key={index} className="text-[hsl(var(--color-ink-tertiary))] mt-2">
             {t("judgment.grounds.caveat")} {note}
           </p>
         ))}

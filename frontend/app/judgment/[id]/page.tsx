@@ -190,7 +190,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const backLink = (
     <Link
       href="/judgment"
-      className="text-02 text-ink-muted hover:text-ink transition-colors"
+      className="text-02 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
     >
       {t("judgment.detail.back_to_list")}
     </Link>
@@ -219,7 +219,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         <EmptyState
           title={t("judgment.detail.not_found")}
           action={
-            <Link href="/judgment" className="text-03 text-ink-muted hover:text-ink transition-colors">
+            <Link href="/judgment" className="text-03 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors">
               {t("common.back_to_list")}
             </Link>
           }
@@ -259,7 +259,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const subtitle = (
     <span className="inline-flex flex-wrap items-center gap-2">
       {civilisation}
-      <span aria-hidden="true" className="text-ink-tertiary">·</span>
+      <span aria-hidden="true" className="text-[hsl(var(--color-ink-tertiary))]">·</span>
       <span className="font-mono tabular-nums">{formatDate(judgment.created_at)}</span>
     </span>
   );
@@ -289,9 +289,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 <DomainEnum namespace="judgment.verdicts" value={judgment.verdict} />
               </p>
               {/* 主审 · 结案时间. 印记 / 会审比数 have no fields — file header. */}
-              <p className="text-02 font-mono text-ink-subtle mt-2 truncate">
+              <p className="text-02 font-mono text-[hsl(var(--color-ink-subtle))] mt-2 truncate">
                 <DomainText value={judgment.judge_name} />
-                <span aria-hidden="true" className="mx-2 text-ink-tertiary">·</span>
+                <span aria-hidden="true" className="mx-2 text-[hsl(var(--color-ink-tertiary))]">·</span>
                 {judgment.concluded_at ? (
                   <span className="tabular-nums">{formatDateTime(judgment.concluded_at)}</span>
                 ) : (
@@ -305,7 +305,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           </>
         ) : (
           <>
-            <p className="text-01 uppercase text-ink-subtle flex-1">{t("judgment.pending")}</p>
+            <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] flex-1">{t("judgment.pending")}</p>
             <Button
               type="button"
               variant="ghost"
@@ -331,7 +331,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               `name` are a group to the browser but nothing names that group;
               on a decided case there is nothing to choose. */}
           <ol
-            className="ml-[-3px] mt-4 divide-y divide-hairline"
+            className="ml-[-3px] mt-4 divide-y divide-[hsl(var(--color-hairline))]"
             {...(isFinal ? {} : { role: "group", "aria-labelledby": clausesId })}
           >
             {VERDICTS.map((member, index) => {
@@ -340,10 +340,10 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               const marked = isFinal ? isOrdered : isChosen;
               const clause = (
                 <>
-                  <span className="font-mono tabular-nums text-02 text-ink-tertiary">
+                  <span className="font-mono tabular-nums text-02 text-[hsl(var(--color-ink-tertiary))]">
                     {toHanNumeral(index + 1)}
                   </span>
-                  <span className={`text-05 ${marked ? VERDICT_INK[member] : "text-ink"}`}>
+                  <span className={`text-05 ${marked ? VERDICT_INK[member] : "text-[hsl(var(--color-ink))]"}`}>
                     <DomainEnum namespace="judgment.verdicts" value={member} />
                   </span>
                 </>
@@ -365,7 +365,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                        token globals.css:459 uses. Selection is never
                        colour-only either: the 3px rule is there or it is not. */
                     <label
-                      className={`${row} cursor-pointer hover:bg-surface-2 focus-within:outline-solid focus-within:outline-2 focus-within:outline-[hsl(var(--color-focus))]`}
+                      className={`${row} cursor-pointer hover:bg-[hsl(var(--color-surface-2))] focus-within:outline-solid focus-within:outline-2 focus-within:outline-[hsl(var(--color-focus))]`}
                     >
                       <input
                         ref={index === 0 ? firstClauseRef : undefined}
@@ -388,7 +388,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         {/* ── 元信息表 ───────────────────────────────────────────────────── */}
         <aside className="min-w-0">
           <JudgmentSectionHead title={t("judgment.detail.soul_info")} />
-          <dl className="mt-4 divide-y divide-hairline">
+          <dl className="mt-4 divide-y divide-[hsl(var(--color-hairline))]">
             <MetaRow label={t("judgment.detail.soul_name")}>
               <DomainText value={soulName} />
             </MetaRow>
@@ -422,9 +422,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               to carry: a confession in italic reads as an aside, and italic is
               then unavailable for what italic is for. */}
           {judgment.confession ? (
-            <p className="font-serif text-05 text-ink mt-4">{judgment.confession}</p>
+            <p className="font-serif text-05 text-[hsl(var(--color-ink))] mt-4">{judgment.confession}</p>
           ) : (
-            <p className="text-04 text-ink-subtle mt-4">
+            <p className="text-04 text-[hsl(var(--color-ink-subtle))] mt-4">
               <MissingValue kind="unrecorded" />
             </p>
           )}
@@ -436,9 +436,9 @@ export default function JudgmentDetailPage({ params }: PageProps) {
           {isFinal ? (
             /* The bench's own sentence, so sans — the other half of the rule. */
             judgment.notes ? (
-              <p className="font-sans text-04 text-ink mt-4">{judgment.notes}</p>
+              <p className="font-sans text-04 text-[hsl(var(--color-ink))] mt-4">{judgment.notes}</p>
             ) : (
-              <p className="text-04 text-ink-subtle mt-4">
+              <p className="text-04 text-[hsl(var(--color-ink-subtle))] mt-4">
                 <MissingValue kind="unrecorded" />
               </p>
             )
@@ -453,7 +453,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                 onChange={(event) => setNotes(event.target.value)}
                 rows={5}
                 placeholder={t("judgment.detail.notes_placeholder")}
-                className="block w-full mt-4 border border-hairline bg-surface-1 px-3 py-2 font-sans text-04 text-ink placeholder:text-[hsl(var(--color-ink-subtle))] transition-[border-color] duration-150 focus-visible:border-[hsl(var(--color-accent))] resize-y"
+                className="block w-full mt-4 border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] px-3 py-2 font-sans text-04 text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] transition-[border-color] duration-150 focus-visible:border-[hsl(var(--color-accent))] resize-y"
               />
             </>
           )}
@@ -471,7 +471,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 
       {/* ── 结案 ─────────────────────────────────────────────────────────── */}
       {!isFinal && (
-        <div className="mt-10 border-t-2 border-ink-subtle pt-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="mt-10 border-t-2 border-[hsl(var(--color-ink-subtle))] pt-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex items-start gap-2 min-w-0">
             <input
               id={createWorkflowId}
@@ -481,8 +481,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
               className="mt-1 h-4 w-4 shrink-0 accent-[hsl(var(--color-accent))]"
             />
             <label htmlFor={createWorkflowId} className="cursor-pointer min-w-0">
-              <span className="text-03 text-ink block">{t("judgment.detail.create_workflow")}</span>
-              <span className="text-02 text-ink-subtle block mt-1 max-w-prose">
+              <span className="text-03 text-[hsl(var(--color-ink))] block">{t("judgment.detail.create_workflow")}</span>
+              <span className="text-02 text-[hsl(var(--color-ink-subtle))] block mt-1 max-w-prose">
                 {t("judgment.detail.create_workflow_hint")}
               </span>
             </label>
@@ -513,8 +513,8 @@ export default function JudgmentDetailPage({ params }: PageProps) {
 function MetaRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[76px_1fr] items-baseline gap-3 py-2">
-      <dt className="text-01 uppercase text-ink-subtle">{label}</dt>
-      <dd className="text-03 text-ink min-w-0 wrap-break-word">{children}</dd>
+      <dt className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{label}</dt>
+      <dd className="text-03 text-[hsl(var(--color-ink))] min-w-0 wrap-break-word">{children}</dd>
     </div>
   );
 }

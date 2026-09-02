@@ -68,7 +68,7 @@ export default function CrossJudgmentsPage() {
       variant="full"
       pagination={{
         count: (
-          <p className="text-03 text-ink-muted">
+          <p className="text-03 text-[hsl(var(--color-ink-muted))]">
             {t("pagination.info", {
               page: String(page),
               total: String(Math.max(1, Math.ceil((pageData?.count ?? 0) / PAGE_SIZE))),

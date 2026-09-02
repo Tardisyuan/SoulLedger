@@ -182,11 +182,11 @@ export default function MenuButtonsPage() {
         keyExtractor={(btn) => String(btn.id)}
         renderRow={(btn) => (
           <>
-            <td className="px-4 py-3 font-medium text-ink">{btn.name}</td>
+            <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">{btn.name}</td>
             {/* Codenames are identifiers, which is what the 02 step is for. */}
-            <td className="px-4 py-3 text-02 font-mono text-ink-muted">{btn.code}</td>
-            <td className="px-4 py-3 text-02 font-mono text-ink-muted">{btn.permission}</td>
-            <td className="px-4 py-3 text-ink-muted">{btn.order}</td>
+            <td className="px-4 py-3 text-02 font-mono text-[hsl(var(--color-ink-muted))]">{btn.code}</td>
+            <td className="px-4 py-3 text-02 font-mono text-[hsl(var(--color-ink-muted))]">{btn.permission}</td>
+            <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{btn.order}</td>
             <td className="px-4 py-3">
               {/* is_active IS a system state — the gate is either in force or
                   it is not — so this one legitimately takes a Badge tone
@@ -290,7 +290,7 @@ export default function MenuButtonsPage() {
               checked={form.is_active}
               onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
             />
-            <label htmlFor={isActiveId} className="text-03 text-ink">{t("menus.active")}</label>
+            <label htmlFor={isActiveId} className="text-03 text-[hsl(var(--color-ink))]">{t("menus.active")}</label>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button

@@ -3,24 +3,43 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --color-canvas: hsl(var(--color-canvas));
-
-  --color-surface-1: hsl(var(--color-surface-1));
-  --color-surface-2: hsl(var(--color-surface-2));
-  --color-surface-3: hsl(var(--color-surface-3));
-  --color-surface-4: hsl(var(--color-surface-4));
-
-  --color-hairline: hsl(var(--color-hairline));
-  --color-hairline-strong: hsl(var(--color-hairline-strong));
-  --color-hairline-tertiary: hsl(var(--color-hairline-tertiary));
-
-  --color-ink: hsl(var(--color-ink));
-  --color-ink-muted: hsl(var(--color-ink-muted));
-  --color-ink-subtle: hsl(var(--color-ink-subtle));
-  --color-ink-tertiary: hsl(var(--color-ink-tertiary));
-
-  --color-accent: hsl(var(--color-accent));
-  --color-accent-hover: hsl(var(--color-accent-hover));
+  /* NO COLOUR TOKENS HERE, DELIBERATELY.
+   *
+   * They used to be — `--color-ink: hsl(var(--color-ink))` and thirteen more —
+   * and every one of them was a no-op that looked like a system. Tailwind emits
+   * `@theme` variables into the `theme` layer and generates `.text-ink {
+   * color: var(--color-ink) }` from them. But `:root` below, in `@layer base`,
+   * re-declares the SAME name as the raw triple `210 11% 96%` — and `base`
+   * outranks `theme`. So the utility resolved to `color: 210 11% 96%`, which is
+   * not a colour, so the browser dropped the declaration.
+   *
+   * Measured on the production build, with a control group on one page: 10 of
+   * 10 elements written `text-[hsl(var(--color-ink-subtle))]` rendered dimmed;
+   * 2 of 2 written `text-ink-subtle` rendered at FULL ink. Same page, same
+   * intent, two spellings, two outcomes. `tsc`, `eslint`, 2039 tests and
+   * `next build` were all green throughout — `text-ink` itself happens to look
+   * right because it inherits body's ink, so the failure was invisible.
+   *
+   * Tailwind 3 had no collision: `tailwind.config.js` defined the utility's
+   * value as `'hsl(var(--color-ink))'` in its OWN namespace, so the wrapper
+   * lived in the class and the variable held the triple. Moving to `@theme`
+   * put the wrapper into a variable of the same name. That is the bug, and it
+   * arrived with the v4 migration in 8fb0da4.
+   *
+   * The two spellings cannot coexist under one name, so the repo now has one:
+   * `text-[hsl(var(--color-ink))]`. It also has to be that one — the raw triple
+   * is what makes an alpha modifier possible at all — a triple can be written
+   * into `hsl(… / 0.2)`, a finished colour cannot — and hundreds of call sites
+   * need that alpha.
+   *
+   * (Written without spelling a token name, because
+   * cssTokenReferenceContract scans this file too and does not strip
+   * comments — the first draft of this note put a made-up token in prose and
+   * the guard duly reported it as an undeclared reference.) `cssTokenReferenceContract.test.ts` fails the build
+   * if a bare `text-ink` / `bg-surface-1` / `border-hairline` comes back.
+   *
+   * The scale tokens below are a different story and stay: `--text-01` etc.
+   * generate `.text-01`, and nothing re-declares those names. */
 
   --font-sans:
     var(--font-sans-latin), 'Noto Sans SC Variable', ui-sans-serif, system-ui,
@@ -570,7 +589,7 @@
 
 @layer base {
   body {
-    @apply bg-canvas text-ink;
+    @apply bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))];
     color: hsl(var(--color-ink));
     background: hsl(var(--color-canvas));
   }
@@ -593,13 +612,13 @@
     border-color: hsl(var(--color-hairline));
   }
   a {
-    @apply text-ink-muted hover:text-[hsl(var(--color-accent))] transition-colors duration-150;
+    @apply text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] transition-colors duration-150;
   }
   button {
     @apply transition-colors duration-150;
   }
   input, select, textarea {
-    @apply bg-surface-1 border-hairline text-ink placeholder-ink-subtle;
+    @apply bg-[hsl(var(--color-surface-1))] border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))];
   }
 }
 

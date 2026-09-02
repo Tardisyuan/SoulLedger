@@ -254,3 +254,118 @@ describe("the civilization mark is never used as text", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+
+/**
+ * ONE SPELLING FOR A COLOUR TOKEN, AND IT IS THE BRACKETED ONE.
+ *
+ * `text-ink`, `bg-surface-1`, `border-hairline` and 25 more spellings used to
+ * work: Tailwind 3's config defined each utility's value as
+ * `'hsl(var(--color-ink))'` in its own namespace, so the `hsl()` lived in the
+ * class and the variable held the raw triple. The v4 migration moved that into
+ * `@theme`, which puts the wrapper into a variable of the SAME name — and
+ * `:root` in `@layer base` re-declares that name as the triple, outranking the
+ * `theme` layer. Every one of those utilities became `color: 210 11% 96%`,
+ * which is not a colour, so the browser dropped it.
+ *
+ * 433 call sites across 63 files, and nothing went red: `tsc`, `eslint`, 2039
+ * tests and `next build` were all green. `text-ink` even LOOKED right, because
+ * it inherits body's ink. What actually shipped was the rest: every
+ * `text-ink-subtle` rendered at full ink (hierarchy gone) and every
+ * `border-hairline` fell back to `currentColor` (a hairline drawn at full ink).
+ * Measured on the production build with a control group on one page — 10 of 10
+ * bracketed spellings dimmed correctly, 2 of 2 bare spellings did not.
+ *
+ * The two spellings cannot coexist under one variable name, so this rule keeps
+ * the repo on one. It has to be the bracketed one: the raw triple is what makes
+ * an alpha modifier possible, and hundreds of sites need it.
+ */
+// NOTE FOR ANY FUTURE CODEMOD: the strings inside this describe are FIXTURES.
+// `'className="text-ink"'` here is the thing being detected, not a class being
+// shipped, and rewriting it to the bracketed form turns the detector's own
+// self-test into a tautology. A scripted rewrite did exactly that once — it
+// converted five fixtures and the block went red, which is the only reason it
+// was noticed. Skip this file, or restore the fixtures afterwards.
+describe("colour tokens are referenced one way only", () => {
+  /** Every colour family `app/globals.css` owns, longest first so `ink` cannot eat `ink-subtle`. */
+  const COLOUR_TOKENS = [
+    "surface-1", "surface-2", "surface-3", "surface-4", "canvas",
+    "hairline-strong", "hairline-tertiary", "hairline",
+    "ink-muted", "ink-subtle", "ink-tertiary", "ink",
+    "accent-hover", "accent",
+  ];
+
+  /** The properties Tailwind can colour. `divide-` and `placeholder-` are in because both shipped. */
+  const COLOURABLE = "bg|text|border|divide|ring|fill|stroke|outline|placeholder";
+
+  /**
+   * A bare token after a colourable prefix, with any variant chain in front.
+   * The negative lookbehind on `-` keeps it off `--color-ink` inside a bracket.
+   */
+  const BARE = new RegExp(
+    `(?<![\\w-])((?:[a-z][a-z0-9-]*:)*)(${COLOURABLE})-(${COLOUR_TOKENS.join("|")})(?![\\w-])`
+  );
+
+  const sources = SOURCE_ROOTS.flatMap((root) => walk(path.join(FRONTEND_ROOT, root), []));
+
+  /** Comments blanked, offsets preserved — prose that names a class is not a class. */
+  const codeOnly = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+       .replace(/(?<![:\w])\/\/[^\n]*/g, (m) => m.replace(/[^\n]/g, " "));
+
+  it("has files to scan, so the rule cannot pass on an empty list", () => {
+    expect(sources.length).toBeGreaterThan(100);
+  });
+
+  it("catches the spellings it exists to catch, and spares the ones it must", () => {
+    // The detector, tested on both sides. Without this the rule could be
+    // silently inert and read as compliance.
+    expect(BARE.test('className="text-ink"')).toBe(true);
+    expect(BARE.test('className="hover:bg-surface-2"')).toBe(true);
+    expect(BARE.test('className="divide-y divide-hairline"')).toBe(true);
+    expect(BARE.test('"active:border-accent"')).toBe(true);
+
+    // The bracketed form is the whole point — it must never trip.
+    expect(BARE.test('className="text-[hsl(var(--color-ink))]"')).toBe(false);
+    expect(BARE.test('className="bg-[hsl(var(--color-surface-1)/0.2)]"')).toBe(false);
+    expect(BARE.test('className="hover:text-[hsl(var(--color-accent-hover))]"')).toBe(false);
+    // Nor may it fire on words that merely end in a token name.
+    expect(BARE.test('className="text-blackish"')).toBe(false);
+    expect(BARE.test("const inkStyle = 1;")).toBe(false);
+  });
+
+  it("ignores a bare spelling that only appears in prose", () => {
+    // Comments in this repo do quote these class names on purpose — including
+    // the note in globals.css explaining why they were removed.
+    expect(BARE.test(codeOnly("// use text-ink here"))).toBe(false);
+    expect(BARE.test(codeOnly("/* was bg-surface-1 before */"))).toBe(false);
+    expect(BARE.test(codeOnly('x = "text-ink";'))).toBe(true);
+  });
+
+  it("has no bare colour-token class anywhere in the source tree", () => {
+    const offenders: string[] = [];
+    for (const file of sources) {
+      const code = codeOnly(readFileSync(file, "utf8"));
+      code.split("\n").forEach((line, i) => {
+        const m = BARE.exec(line);
+        if (m) {
+          offenders.push(
+            `${path.relative(FRONTEND_ROOT, file).split(path.sep).join("/")}:${i + 1}  ${m[0]}`
+          );
+        }
+      });
+    }
+    if (offenders.length > 0) {
+      throw new Error(
+        `Bare colour-token classes. These generate no CSS: the utility resolves ` +
+          `to \`var(--color-x)\`, which holds a raw HSL triple, which is not a ` +
+          `colour — so the browser drops the declaration and the element renders ` +
+          `with the inherited value. Nothing else in the build will tell you. ` +
+          `Write \`text-[hsl(var(--color-ink))]\` instead.\n\n` +
+          offenders.join("\n")
+      );
+    }
+    expect(offenders).toEqual([]);
+  });
+});

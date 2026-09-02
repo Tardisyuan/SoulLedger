@@ -82,7 +82,7 @@ import { cn } from "@/lib/utils";
  */
 export const fieldControl = cva(
   [
-    "block w-full border bg-surface-1 text-ink",
+    "block w-full border bg-[hsl(var(--color-surface-1))] text-[hsl(var(--color-ink))]",
     "placeholder:text-[hsl(var(--color-ink-subtle))]",
     "transition-[border-color] duration-150",
     // Disabled on every control, not 29% of them.
@@ -97,7 +97,7 @@ export const fieldControl = cva(
       },
       invalid: {
         // `focus-visible:`, not `focus:` — see the note above.
-        false: "border-hairline focus-visible:border-[hsl(var(--color-accent))]",
+        false: "border-[hsl(var(--color-hairline))] focus-visible:border-[hsl(var(--color-accent))]",
         // An invalid field keeps its error border through focus. Letting focus
         // repaint it accent would mean the field stops looking wrong at exactly
         // the moment the user goes to fix it.

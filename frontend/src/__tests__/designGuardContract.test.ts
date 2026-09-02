@@ -156,7 +156,7 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
   // 到那时最省事的做法就是把整条规则删掉。带斜杠的不透明度写法要一并钉住:
   // classTokens 会在 `/` 处截断,截断后的残段不能被误判成字面颜色。
   const CLEAN =
-    'export const P = () => (<div className="p-4 gap-6 mx-auto text-04 text-01 rounded-full rounded-focus bg-surface-1 text-ink border-hairline ' +
+    'export const P = () => (<div className="p-4 gap-6 mx-auto text-04 text-01 rounded-full rounded-focus bg-[hsl(var(--color-surface-1))] text-[hsl(var(--color-ink))] border-[hsl(var(--color-hairline))] ' +
     'bg-[hsl(var(--color-accent))] border-[hsl(var(--color-civ-mark-cn)/0.4)] shadow-[0_0_0_1px_hsl(var(--color-hairline))]" />);\n';
   let fired: Array<Array<string | null>>;
   let clean: Msg[];

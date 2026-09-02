@@ -39,7 +39,7 @@ export default function UserProfilePage() {
   const pagination = postsData
     ? {
         count: (
-          <p className="text-03 text-ink-muted">
+          <p className="text-03 text-[hsl(var(--color-ink-muted))]">
             {t("pagination.info", {
               page: String(page),
               total: String(totalPages),
@@ -89,7 +89,7 @@ export default function UserProfilePage() {
           <ProfileCard profile={profile} />
         ) : null}
 
-        <h2 className="text-06 text-ink">{t("social.user_posts")}</h2>
+        <h2 className="text-06 text-[hsl(var(--color-ink))]">{t("social.user_posts")}</h2>
 
         {postsLoading ? (
           <div className="space-y-3">

@@ -219,7 +219,7 @@ export default function SoulsPage() {
               onBlur={() => setPage(1)}
               className={cn(fieldControl({ size: "md" }), "w-20")}
             />
-            <span className="text-03 text-ink-muted">-</span>
+            <span className="text-03 text-[hsl(var(--color-ink-muted))]">-</span>
             <input
               type="number"
               placeholder={t("souls.balance_max")}
@@ -249,7 +249,7 @@ export default function SoulsPage() {
           >
             {t("souls.date_problem_filter")}
             {typeof problemCountQuery.data === "number" && (
-              <Badge className="bg-[hsl(var(--color-surface-3))] text-ink">
+              <Badge className="bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink))]">
                 {problemCountQuery.data}
               </Badge>
             )}
@@ -292,7 +292,7 @@ export default function SoulsPage() {
           const showsBalance = soul.civilization === "CHINESE";
           return (
           <>
-            <td className="px-4 py-3 font-medium text-ink">
+            <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">
               <span className="flex items-center gap-1">
                 {marker && (
                   <span className={marker.className} aria-hidden="true" title={t(marker.labelKey)}>
@@ -302,7 +302,7 @@ export default function SoulsPage() {
                 {soul.name}
               </span>
             </td>
-            <td className="px-4 py-3 text-ink-muted">
+            <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
               <DomainEnum namespace="souls.civilizations" value={soul.civilization} />
             </td>
             <td className="px-4 py-3">
@@ -312,7 +312,7 @@ export default function SoulsPage() {
                   the feedback layer. Only the geometry moves. */}
               <Badge
                 title={soul.current_state}
-                className={STATE_COLORS[soul.current_state] ?? "bg-[hsl(var(--color-surface-3))] text-ink-muted"}
+                className={STATE_COLORS[soul.current_state] ?? "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}
               >
                 {resolveEnumDisplay(t, "souls.states", soul.current_state).label ?? t("common.value.unrecorded")}
               </Badge>
@@ -341,7 +341,7 @@ export default function SoulsPage() {
             </td>
             {showsDeathColumn && (
               /* 02 档：日期是元数据，不是正文。 */
-              <td className="px-4 py-3 text-02 text-ink-muted">
+              <td className="px-4 py-3 text-02 text-[hsl(var(--color-ink-muted))]">
                 <DomainText value={formatHistoricalDate(soul.death_date)} />
               </td>
             )}

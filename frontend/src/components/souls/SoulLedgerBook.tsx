@@ -117,7 +117,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
     return (
       <section>
         <BookHeading title={t("ledger.book.title")} />
-        <p className="text-03 text-ink-subtle">{t("ledger.book.empty")}</p>
+        <p className="text-03 text-[hsl(var(--color-ink-subtle))]">{t("ledger.book.empty")}</p>
       </section>
     );
   }
@@ -136,7 +136,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
           </colgroup>
 
           <thead>
-            <tr className="border-b border-hairline">
+            <tr className="border-b border-[hsl(var(--color-hairline))]">
               <HeadCell first>{t("ledger.book.col_n")}</HeadCell>
               <HeadCell>{t("ledger.book.col_date")}</HeadCell>
               <HeadCell>{t("ledger.book.col_item")}</HeadCell>
@@ -162,22 +162,22 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
               const eventDate = formatHistoricalDate(record.event_date);
 
               return (
-                <tr key={record.id} className="border-b border-hairline">
-                  <BodyCell first className="text-ink-tertiary tabular-nums font-mono">
+                <tr key={record.id} className="border-b border-[hsl(var(--color-hairline))]">
+                  <BodyCell first className="text-[hsl(var(--color-ink-tertiary))] tabular-nums font-mono">
                     {n}
                   </BodyCell>
 
                   {/* 116px and `whitespace-nowrap`: an ancient date reads
                       "44 BCE · March 15" and wrapping it puts the month on its
                       own line, which makes the column look like two rows. */}
-                  <BodyCell className="font-mono text-02 text-ink-subtle whitespace-nowrap">
+                  <BodyCell className="font-mono text-02 text-[hsl(var(--color-ink-subtle))] whitespace-nowrap">
                     {eventDate ?? formatDate(record.recorded_at)}
                   </BodyCell>
 
                   {/* 事目 stays ink. Colouring the prose as well as the figure
                       would turn the page into a signal lamp and cost the two
                       numerals the only job the colour has. */}
-                  <BodyCell className="font-sans text-03 text-ink-muted">
+                  <BodyCell className="font-sans text-03 text-[hsl(var(--color-ink-muted))]">
                     {record.description}
                   </BodyCell>
 
@@ -230,10 +230,10 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
               判决落印带: both mark a settlement. Per-row subtotals would compete
               with 销算余, which already IS the running subtotal. */}
           <tfoot>
-            <tr className="border-t-3 border-ink">
+            <tr className="border-t-3 border-[hsl(var(--color-ink))]">
               <FootCell first />
               <FootCell />
-              <FootCell className="font-sans text-01 uppercase text-ink-subtle">
+              <FootCell className="font-sans text-01 uppercase text-[hsl(var(--color-ink-subtle))]">
                 {t("ledger.book.total")}
               </FootCell>
               <FootCell numeric>
@@ -274,7 +274,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
 
 function BookHeading({ title }: { title: string }) {
   return (
-    <h2 className="text-01 uppercase text-ink-subtle border-b-2 border-ink-subtle pb-2 mb-3">
+    <h2 className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] border-b-2 border-[hsl(var(--color-ink-subtle))] pb-2 mb-3">
       {title}
     </h2>
   );
@@ -286,7 +286,7 @@ function BookHeading({ title }: { title: string }) {
  * six ruled columns into a bordered card.
  */
 function rule(first?: boolean): string {
-  return first ? "" : "border-l border-hairline";
+  return first ? "" : "border-l border-[hsl(var(--color-hairline))]";
 }
 
 function HeadCell({
@@ -309,11 +309,11 @@ function HeadCell({
       scope="col"
       className={`text-01 uppercase font-normal px-2 py-2 align-bottom ${
         numeric ? "text-right" : "text-left"
-      } ${rule(first)} ${className || "text-ink-subtle"}`}
+      } ${rule(first)} ${className || "text-[hsl(var(--color-ink-subtle))]"}`}
     >
       {children}
       {scale ? (
-        <span data-quantity-scale="" className="block text-01 font-normal text-ink-tertiary">
+        <span data-quantity-scale="" className="block text-01 font-normal text-[hsl(var(--color-ink-tertiary))]">
           {t("ledger.figure_scale_weight")}
         </span>
       ) : null}
@@ -336,7 +336,7 @@ function BodyCell({
     <td
       className={`px-2 py-2 align-top ${numeric ? "text-right" : "text-left"} ${rule(
         first
-      )} ${numeric && !children ? "text-ink-tertiary" : ""} ${className}`}
+      )} ${numeric && !children ? "text-[hsl(var(--color-ink-tertiary))]" : ""} ${className}`}
     >
       {children}
     </td>

@@ -164,11 +164,11 @@ describe("PageShell · 页头两行", () => {
     expect(eyebrow.className).toMatch(/\buppercase\b/);
   });
 
-  it("副标题是 text-04 + text-ink-subtle", () => {
+  it("副标题是 text-04 + text-[hsl(var(--color-ink-subtle))]", () => {
     const { container } = render(<PageShell title="T" subtitle="一句副标题">body</PageShell>);
     const sub = container.querySelector<HTMLElement>("[data-page-shell-subtitle]")!;
     expect(sub.className).toMatch(/\btext-04\b/);
-    expect(sub.className).toMatch(/\btext-ink-subtle\b/);
+    expect(sub.className).toContain("text-[hsl(var(--color-ink-subtle))]");
   });
 
   it("不画面包屑 —— AppLayout.tsx:260 已经有一条，两边都画就是重复", () => {

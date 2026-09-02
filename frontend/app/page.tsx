@@ -44,7 +44,7 @@ export default function HomePage() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="min-h-screen bg-[hsl(var(--color-canvas))]">
       {/* Header with logo */}
       <header className="h-16 border-b border-[hsl(var(--color-hairline))] flex items-center px-6">
         <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ export default function HomePage() {
               <Button>:它导航,不触发动作。 */}
           <a
             href={user ? "/dashboard" : "/login"}
-            className="inline-flex items-center gap-2 px-3 py-2 text-03 font-medium bg-accent text-black border border-accent hover:bg-accent-hover hover:border-accent-hover transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-2 text-03 font-medium bg-[hsl(var(--color-accent))] text-black border border-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] hover:border-[hsl(var(--color-accent-hover))] transition-colors"
           >
             {t("home.console")}
             <ExternalLink className="w-4 h-4" />

@@ -132,12 +132,12 @@ export function PageShell({
     <div
       data-page-shell=""
       data-variant={variant}
-      className={cn("bg-canvas text-ink", className)}
+      className={cn("bg-[hsl(var(--color-canvas))] text-[hsl(var(--color-ink))]", className)}
     >
       {/* 页头：不 sticky。 */}
       <header
         data-page-shell-header=""
-        className="border-b border-hairline"
+        className="border-b border-[hsl(var(--color-hairline))]"
       >
         <div className={cn(width, "px-6 pt-10 pb-6")}>
           {/* 返回链接与 eyebrow 共用标题上方那一行，但它们不是一回事，所以是
@@ -157,7 +157,7 @@ export function PageShell({
               {eyebrow ? (
                 <p
                   data-page-shell-eyebrow=""
-                  className="text-01 font-mono uppercase text-ink-subtle min-w-0"
+                  className="text-01 font-mono uppercase text-[hsl(var(--color-ink-subtle))] min-w-0"
                 >
                   {eyebrow}
                 </p>
@@ -166,7 +166,7 @@ export function PageShell({
           ) : null}
 
           <div className="flex items-start gap-4">
-            <h1 className="text-07 text-ink flex-1 min-w-0">{title}</h1>
+            <h1 className="text-07 text-[hsl(var(--color-ink))] flex-1 min-w-0">{title}</h1>
             {actions ? (
               <div data-page-shell-actions="" className="shrink-0">
                 {actions}
@@ -180,7 +180,7 @@ export function PageShell({
                PageShell.test.tsx 的 variant 断言也只看四个容器位。 */
             <p
               data-page-shell-subtitle=""
-              className="text-04 text-ink-subtle max-w-prose mt-3"
+              className="text-04 text-[hsl(var(--color-ink-subtle))] max-w-prose mt-3"
             >
               {subtitle}
             </p>
@@ -198,7 +198,7 @@ export function PageShell({
           为什么不塞进 children：它必须在筛选栏之上，否则筛选看起来像作用于
           所有标签页而不是当前这个。 */}
       {tabs ? (
-        <div data-page-shell-tabs="" className="border-b border-hairline">
+        <div data-page-shell-tabs="" className="border-b border-[hsl(var(--color-hairline))]">
           <div className={cn(width, "px-6 flex items-center gap-1")}>{tabs}</div>
         </div>
       ) : null}
@@ -209,7 +209,7 @@ export function PageShell({
       {filters ? (
         <div
           data-page-shell-filters=""
-          className="sticky top-16 z-30 bg-canvas border-b border-hairline"
+          className="sticky top-16 z-30 bg-[hsl(var(--color-canvas))] border-b border-[hsl(var(--color-hairline))]"
         >
           {/* `overflow-x-auto` 不是装饰。这一行是固定高度、不换行的 flex —— 而
               筛选控件的数量由每个页面自己决定。灵魂页放了搜索框、两个数字输入、
@@ -241,7 +241,7 @@ export function PageShell({
 
       {pagination ? (
         <div data-page-shell-pagination="" className={cn(width, "px-6 pb-6")}>
-          <div className="border-t-2 border-ink-subtle pt-3 min-h-14 flex items-center justify-between gap-4">
+          <div className="border-t-2 border-[hsl(var(--color-ink-subtle))] pt-3 min-h-14 flex items-center justify-between gap-4">
             <div data-page-shell-pagination-count="" className="min-w-0">
               {pagination.count}
             </div>

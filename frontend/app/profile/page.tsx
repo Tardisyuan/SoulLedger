@@ -123,11 +123,11 @@ export default function ProfilePage() {
           role="alert"
           className="mb-6 border border-[hsl(var(--color-status-error)/0.5)] bg-[hsl(var(--color-status-error)/0.08)] px-4 py-3 flex items-center justify-between gap-4"
         >
-          <p className="text-03 text-ink">{t("profile.load_failed")}</p>
+          <p className="text-03 text-[hsl(var(--color-ink))]">{t("profile.load_failed")}</p>
           <button
             type="button"
             onClick={() => refetch()}
-            className="text-03 text-ink-muted hover:text-ink transition-colors shrink-0"
+            className="text-03 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors shrink-0"
           >
             {t("error.retry")}
           </button>
@@ -141,22 +141,22 @@ export default function ProfilePage() {
         className="mb-6"
       >
         {/* Username (read-only) */}
-        <div className="flex items-center px-4 py-3 border-b border-hairline">
-          <label className="w-32 text-01 uppercase text-ink-subtle shrink-0">
+        <div className="flex items-center px-4 py-3 border-b border-[hsl(var(--color-hairline))]">
+          <label className="w-32 text-01 uppercase text-[hsl(var(--color-ink-subtle))] shrink-0">
             {t("profile.username")}
           </label>
           {isLoading ? (
             <Skeleton className="h-4 w-32" />
           ) : (
-            <span className="text-04 text-ink font-medium truncate">
+            <span className="text-04 text-[hsl(var(--color-ink))] font-medium truncate">
               {profile?.username || user?.username}
             </span>
           )}
         </div>
 
         {/* Email */}
-        <div className="flex items-center px-4 py-3 border-b border-hairline">
-          <label className="w-32 text-01 uppercase text-ink-subtle shrink-0">
+        <div className="flex items-center px-4 py-3 border-b border-[hsl(var(--color-hairline))]">
+          <label className="w-32 text-01 uppercase text-[hsl(var(--color-ink-subtle))] shrink-0">
             {t("profile.email")}
           </label>
           {editingField === "email" ? (
@@ -180,7 +180,7 @@ export default function ProfilePage() {
               {isLoading ? (
                 <Skeleton className="h-4 w-48" />
               ) : (
-                <span className="text-04 text-ink truncate">
+                <span className="text-04 text-[hsl(var(--color-ink))] truncate">
                   {profile?.email || user?.email || "-"}
                 </span>
               )}
@@ -203,8 +203,8 @@ export default function ProfilePage() {
         </div>
 
         {/* First Name */}
-        <div className="flex items-center px-4 py-3 border-b border-hairline">
-          <label className="w-32 text-01 uppercase text-ink-subtle shrink-0">
+        <div className="flex items-center px-4 py-3 border-b border-[hsl(var(--color-hairline))]">
+          <label className="w-32 text-01 uppercase text-[hsl(var(--color-ink-subtle))] shrink-0">
             {t("profile.first_name")}
           </label>
           {editingField === "first_name" ? (
@@ -228,7 +228,7 @@ export default function ProfilePage() {
               {isLoading ? (
                 <Skeleton className="h-4 w-24" />
               ) : (
-                <span className="text-04 text-ink truncate">
+                <span className="text-04 text-[hsl(var(--color-ink))] truncate">
                   {profile?.first_name || "-"}
                 </span>
               )}
@@ -251,8 +251,8 @@ export default function ProfilePage() {
         </div>
 
         {/* Last Name */}
-        <div className="flex items-center px-4 py-3 border-b border-hairline">
-          <label className="w-32 text-01 uppercase text-ink-subtle shrink-0">
+        <div className="flex items-center px-4 py-3 border-b border-[hsl(var(--color-hairline))]">
+          <label className="w-32 text-01 uppercase text-[hsl(var(--color-ink-subtle))] shrink-0">
             {t("profile.last_name")}
           </label>
           {editingField === "last_name" ? (
@@ -276,7 +276,7 @@ export default function ProfilePage() {
               {isLoading ? (
                 <Skeleton className="h-4 w-24" />
               ) : (
-                <span className="text-04 text-ink truncate">
+                <span className="text-04 text-[hsl(var(--color-ink))] truncate">
                   {profile?.last_name || "-"}
                 </span>
               )}
@@ -299,8 +299,8 @@ export default function ProfilePage() {
         </div>
 
         {/* Role (read-only) */}
-        <div className="flex items-center px-4 py-3 border-b border-hairline">
-          <label className="w-32 text-01 uppercase text-ink-subtle shrink-0">
+        <div className="flex items-center px-4 py-3 border-b border-[hsl(var(--color-hairline))]">
+          <label className="w-32 text-01 uppercase text-[hsl(var(--color-ink-subtle))] shrink-0">
             {t("profile.role")}
           </label>
           {isLoading ? (
@@ -314,13 +314,13 @@ export default function ProfilePage() {
 
         {/* Tenant (read-only) */}
         <div className="flex items-center px-4 py-3">
-          <label className="w-32 text-01 uppercase text-ink-subtle shrink-0">
+          <label className="w-32 text-01 uppercase text-[hsl(var(--color-ink-subtle))] shrink-0">
             {t("profile.tenant")}
           </label>
           {isLoading ? (
             <Skeleton className="h-4 w-32" />
           ) : (
-            <span className="text-04 text-ink truncate">
+            <span className="text-04 text-[hsl(var(--color-ink))] truncate">
               {/* /auth/profile/ is UserSerializer, which has no `tenant`
                   field at all — the two leading branches this expression
                   used to start with were dead. */}

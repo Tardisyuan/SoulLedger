@@ -150,18 +150,18 @@ const button = cva(
          * direction, without inventing a token that does not exist.
          */
         primary: [
-          "bg-accent text-black border-accent",
-          "hover:bg-accent-hover hover:border-accent-hover",
-          "active:bg-accent active:border-accent",
+          "bg-[hsl(var(--color-accent))] text-black border-[hsl(var(--color-accent))]",
+          "hover:bg-[hsl(var(--color-accent-hover))] hover:border-[hsl(var(--color-accent-hover))]",
+          "active:bg-[hsl(var(--color-accent))] active:border-[hsl(var(--color-accent))]",
         ],
         /**
          * The default button. Surface ramp 2 → 3 → 4 across rest → hover →
          * press; ink text on a hairline border.
          */
         secondary: [
-          "bg-surface-2 text-ink border-hairline",
-          "hover:bg-surface-3 hover:border-hairline-strong",
-          "active:bg-surface-4",
+          "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] border-[hsl(var(--color-hairline))]",
+          "hover:bg-[hsl(var(--color-surface-3))] hover:border-[hsl(var(--color-hairline-strong))]",
+          "active:bg-[hsl(var(--color-surface-4))]",
         ],
         /**
          * No chrome at rest — toolbars, table row actions, anywhere a border
@@ -170,9 +170,9 @@ const button = cva(
          * rather than absent so it does not resize when it lights up.
          */
         ghost: [
-          "bg-transparent text-ink-muted border-transparent",
-          "hover:bg-surface-2 hover:text-ink",
-          "active:bg-surface-3",
+          "bg-transparent text-[hsl(var(--color-ink-muted))] border-transparent",
+          "hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]",
+          "active:bg-[hsl(var(--color-surface-3))]",
         ],
         /**
          * Destructive. Tinted, not filled — see the contrast note above.

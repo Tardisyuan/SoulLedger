@@ -90,8 +90,8 @@ function JudgmentQueuePageContent() {
           onClick={() => { setTab(tabItem.key); setPage(1); }}
           className={`px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px ${
             tab === tabItem.key
-              ? "text-[hsl(var(--color-accent-ink))] border-accent"
-              : "text-ink-muted border-transparent hover:text-ink"
+              ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
+              : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
           }`}
         >
           {tabItem.label}
@@ -116,7 +116,7 @@ function JudgmentQueuePageContent() {
         keyExtractor={(judgment) => String(judgment.id)}
         renderRow={(judgment) => (
           <>
-            <td className="px-4 py-3 font-medium text-ink">
+            <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">
               {/* `MissingValue`,不是 UUID。`judgment.soul` 是主键;
                   `soul_name || soul` 在名字缺失时把一串 UUID 印成灵魂名 ——
                   兜底方向违反 IDENTIFIER_POLICY(标识符不做名字的兜底)。
@@ -127,10 +127,10 @@ function JudgmentQueuePageContent() {
                 <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />
               )}
             </td>
-            <td className="px-4 py-3 text-ink-muted">
+            <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
               <DomainEnum namespace="souls.civilizations" value={judgment.civilization} />
             </td>
-            <td className="px-4 py-3 text-ink-muted">
+            <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
               {judgment.court}
             </td>
             <td className="px-4 py-3">
@@ -147,7 +147,7 @@ function JudgmentQueuePageContent() {
               )}
             </td>
             {/* 02 档：日期是元数据，不是正文。 */}
-            <td className="px-4 py-3 text-02 text-ink-muted">
+            <td className="px-4 py-3 text-02 text-[hsl(var(--color-ink-muted))]">
               {formatDate(judgment.created_at)}
             </td>
             <td className="px-4 py-3">

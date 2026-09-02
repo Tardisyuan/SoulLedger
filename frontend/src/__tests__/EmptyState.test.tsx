@@ -59,10 +59,10 @@ describe("EmptyState · 居左", () => {
 
   it("外层 className 是追加的，不改上面那条居左的约定", () => {
     const { container } = render(
-      <EmptyState title="尚无判决" className="border border-hairline" />
+      <EmptyState title="尚无判决" className="border border-[hsl(var(--color-hairline))]" />
     );
     const root = container.querySelector<HTMLElement>("[data-empty-state]")!;
-    expect(root.className).toMatch(/\bborder-hairline\b/);
+    expect(root.className).toContain("border-[hsl(var(--color-hairline))]");
     expect(root.className).toMatch(/\bpy-10\b/);
   });
 });
@@ -99,7 +99,7 @@ describe("EmptyState · 那条短线", () => {
 });
 
 describe("EmptyState · 排版", () => {
-  it("标题 text-01，原因 text-04 + text-ink-subtle", () => {
+  it("标题 text-01，原因 text-04 + text-[hsl(var(--color-ink-subtle))]", () => {
     const { container } = render(
       <EmptyState title="尚无判决" reason="这一卷还没有任何灵魂被登记。" />
     );
@@ -107,7 +107,7 @@ describe("EmptyState · 排版", () => {
     const reason = container.querySelector<HTMLElement>("[data-empty-state-reason]")!;
     expect(title.className).toMatch(/\btext-01\b/);
     expect(reason.className).toMatch(/\btext-04\b/);
-    expect(reason.className).toMatch(/\btext-ink-subtle\b/);
+    expect(reason.className).toContain("text-[hsl(var(--color-ink-subtle))]");
   });
 
   it("空态不产生标题层级 —— 它是卷宗里的一条注记，不是一个区块", () => {
