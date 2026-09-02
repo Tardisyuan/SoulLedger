@@ -1158,6 +1158,10 @@
       "ADVISOR": "Sedjem-ash",
       "CO_JUDGE": "Wepwy-em-senu",
       "CHAIRMAN": "Heri-tep"
+    },
+    "conclusion_types": {
+      "PASS": "Sethet",
+      "FAIL": "Ma Sethet"
     }
   },
   "users": {
