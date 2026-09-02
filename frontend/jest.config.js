@@ -36,12 +36,31 @@ module.exports = {
   // History of measured coverage, each entry the reading taken when these
   // numbers were last moved:
   //   gate switched on  statements 30.03 / branches 20.59 / functions 19.66 / lines 30.01
-  //   this pass         statements 51.44 / branches 40.39 / functions 41.00 / lines 51.96
+  //   two passes ago    statements 51.44 / branches 40.39 / functions 41.00 / lines 51.96
+  //   this pass         statements 56.90 / branches 46.80 / functions 48.92 / lines 57.55
   //
-  // The jump came from covering the two WebSocket clients, the event
+  // The 30 -> 51 jump came from covering the two WebSocket clients, the event
   // registry, the sidebar-menu gates, the remaining souls/social hooks, and
   // five page components (ledger, welcome, dashboard, workflow,
   // notifications, audit).
+  //
+  // THE 51 -> 57 JUMP IS NOT COVERAGE IMPROVING. Nothing was tested that was
+  // not tested the day before; `lib/api`, `lib/ws`, `lib/validations`,
+  // `src/config` and `lib/query_keys` moved to `packages/core`, and
+  // `collectCoverageFrom` below is resolved against `rootDir`, so those ~5,200
+  // lines simply left the denominator. The measurement is of a smaller and
+  // better-covered set. Ratcheted anyway, because the alternative is a gate
+  // sitting seven points below the real number — which is the same slack this
+  // file argues against two paragraphs down.
+  //
+  // AND THE MOVED CODE IS NOW OUTSIDE COVERAGE ACCOUNTING ALTOGETHER. It is
+  // still exercised — the suites that tested it still do, through the
+  // `@soulledger/core` mappings above — but jest instruments only under
+  // `rootDir`. Adding `../packages/core/src/**/*.ts` here was tried and is
+  // worse than the gap: jest lists the files and reports them at **0%**,
+  // which reads as "this package is untested" when it is not. Recorded rather
+  // than papered over; the fix is a coverage run owned by the package itself,
+  // and that does not exist yet.
   //
   // Each number is ~1 point below the measured figure, deliberately not flush
   // against it (51.44 -> 51 would leave 0.44 points of room). One new
@@ -51,10 +70,10 @@ module.exports = {
   // still catches any real regression: it is ~52 statements or ~50 branches.
   coverageThreshold: {
     global: {
-      branches: 39,
-      functions: 40,
-      lines: 51,
-      statements: 50,
+      branches: 46,
+      functions: 48,
+      lines: 57,
+      statements: 56,
     },
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
