@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { useSouls, useCreateSoul } from "@/src/hooks/useSouls";
+import { useSouls } from "@/src/hooks/useSouls";
 import { CIVILIZATION_OPTIONS } from "@/src/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
@@ -104,7 +104,6 @@ export default function SoulsPage() {
   });
 
   // Create mutation with auto-invalidation
-  const createMutation = useCreateSoul();
 
   /**
    * BRIEF §4.6: "03-souls-list shows a 死亡时间 column that is `—` for every
@@ -174,7 +173,7 @@ export default function SoulsPage() {
            new is that the skin is `fieldControl`, the same one `Field` puts on
            every form control, so this row and `app/users/page.tsx` no longer
            disagree about the surface (`surface-2` vs `surface-1`), the corner
-           (`rounded-md` vs `rounded`) or the gap (3 vs 4). */
+           (`` vs ``) or the gap (3 vs 4). */
         <>
           <input
             type="text"
@@ -260,7 +259,11 @@ export default function SoulsPage() {
     >
       {/* No `pagination` slot — DataTable renders its own <Pagination>
           (components/ui/data-table.tsx:288) from the four props at the end. */}
+      {/* `compact` (~36px rows) because this page is scan-and-find: the operator
+          is looking for a row, not deciding on each one. Decision surfaces
+          (the judgment list) stay `comfortable`. */}
       <DataTable<SoulListItem>
+        density="compact"
         caption={t("souls.title")}
         columns={[
           { key: "name", header: t("souls.name"), sortable: true },

@@ -259,3 +259,77 @@ describe("JudgmentQueueConsole", () => {
     expect(screen.getByText("common.retry")).toBeInTheDocument();
   });
 });
+
+/**
+ * The decision bar, and the two layout facts it exists to fix.
+ *
+ * The verdict controls used to be the last block under a two-column grid of
+ * panels, so a long confession or a long ledger pushed them below the fold —
+ * on the screen whose entire job is deciding. And the pending-undo strip
+ * rendered ABOVE those panels, so **every verdict shifted the whole case
+ * down**: an operator reading the next case could not see the undo countdown
+ * for the previous one, which is the only moment that countdown exists for.
+ *
+ * Both are layout, which jsdom does not compute — it has no viewport and no
+ * scrolling. So these assert the STRUCTURE that produces the behaviour: the
+ * controls live inside a sticky container, and the undo slot is present at a
+ * fixed height whether or not a verdict is pending. A screenshot test would
+ * assert the outcome; this asserts the mechanism, and says so rather than
+ * pretending otherwise.
+ */
+describe("the decision bar", () => {
+  const stickyBar = (container: HTMLElement) =>
+    container.querySelector<HTMLElement>(".sticky.bottom-0");
+
+  it("keeps every verdict control inside the sticky bar", async () => {
+    const { container } = renderConsole();
+    await screen.findByText("第一位待判者");
+
+    const bar = stickyBar(container);
+    expect(bar).not.toBeNull();
+    // All four verdicts and Defer — the irreversible controls — are the bar's
+    // whole contents. If one were left in the scroll it could be off-screen at
+    // the moment it is needed.
+    for (const key of ["1", "2", "3", "4", "S"]) {
+      expect(bar!.textContent).toContain(key);
+    }
+  });
+
+  it("leaves the notes field OUT of the bar, where it does not double its height", async () => {
+    const { container } = renderConsole();
+    await screen.findByText("第一位待判者");
+
+    const bar = stickyBar(container);
+    expect(bar!.querySelector("#queue-notes")).toBeNull();
+    // But still on the page, and still reachable — `N` focuses it.
+    expect(container.querySelector("#queue-notes")).not.toBeNull();
+  });
+
+  it("reserves the undo slot before anything is pending", async () => {
+    const { container } = renderConsole();
+    await screen.findByText("第一位待判者");
+
+    const bar = stickyBar(container);
+    const slot = bar!.querySelector("[aria-live='polite']");
+    // Present and empty. Mounting it on the first verdict is what used to push
+    // the case down; a reserved slot cannot.
+    expect(slot).not.toBeNull();
+    expect(slot!.textContent).toBe("");
+    expect(slot!.className).toContain("h-10");
+  });
+
+  it("fills that same slot when a verdict is pending, without adding one", async () => {
+    const { container } = renderConsole();
+    await screen.findByText("第一位待判者");
+
+    fireEvent.keyDown(window, { key: "1" });
+
+    await waitFor(() =>
+      expect(stickyBar(container)!.querySelector("[aria-live='polite']")!.textContent).not.toBe("")
+    );
+    // Still exactly one slot — the strip moved into the reserved space rather
+    // than inserting a new row.
+    expect(stickyBar(container)!.querySelectorAll("[aria-live='polite']")).toHaveLength(1);
+    expect(screen.getByRole("status").textContent).toContain("第一位待判者");
+  });
+});

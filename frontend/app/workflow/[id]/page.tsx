@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { workflowApi, type ApprovalWorkflow, type ApprovalNode } from "@/lib/api";
+import { workflowKeys } from "@/lib/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import Link from "next/link";
@@ -11,6 +12,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { QueryError } from "@/src/components/ui/PageError";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { TextAreaField } from "@/src/components/ui/Field";
@@ -59,9 +61,16 @@ export default function WorkflowDetailPage() {
   const [escalateOpen, setEscalateOpen] = useState(false);
   const [escalateReason, setEscalateReason] = useState("");
 
-  // Fetch workflow detail
+  // Fetch workflow detail.
+  //
+  // `workflowKeys.detail(id)`, not `["workflow", id]`. It was the latter, and
+  // the WS handler for WORKFLOW_APPROVED / _REJECTED invalidates
+  // `["workflows","detail",id]` — singular vs plural, diverging at the FIRST
+  // segment, so it matched nothing. An approver sitting on this page, which is
+  // the single most likely page to be open when the event fires, saw nothing
+  // change.
   const { data: workflow, isLoading, error, refetch } = useQuery({
-    queryKey: ["workflow", id],
+    queryKey: workflowKeys.detail(id),
     queryFn: () => workflowApi.get(id).then((res) => res.data),
   });
 
@@ -159,7 +168,22 @@ export default function WorkflowDetailPage() {
     );
   }
 
-  if (error || !workflow) {
+  // Split from the not-found branch below. `error || !workflow` told an
+  // approver whose request 500'd, or who lacked permission on this tenant,
+  // that the workflow "was not found" — a claim about the record's existence
+  // made on evidence that says nothing about it.
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-10">
+        <QueryError onRetry={() => refetch()} />
+        <Link href="/workflow" className="text-03 text-[hsl(var(--color-accent-ink))] hover:underline">
+          {t("workflow.detail.back_to_list")}
+        </Link>
+      </div>
+    );
+  }
+
+  if (!workflow) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-10">
         <div className="text-03 text-[hsl(var(--color-status-error))]">{t("workflow.detail.not_found")}</div>
@@ -479,7 +503,7 @@ export default function WorkflowDetailPage() {
                     {/* Node indicator. `rounded-full` survives the corner purge
                         on purpose: it is one of the two shapes that still mean
                         something — a round mark is an identity token. */}
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-02 font-medium ${nodeColor}`}>
+                    <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-02 font-medium ${nodeColor}`}>
                       {isPast ? (
                         <span>{node.verdict?.[0] || "D"}</span>
                       ) : (

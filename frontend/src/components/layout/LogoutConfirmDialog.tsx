@@ -1,16 +1,26 @@
 "use client";
 
-import { Fragment } from "react";
-import { Dialog, Transition } from "@headlessui/react";
 import { useI18n } from "@/src/contexts/I18nContext";
+import { ConfirmDialog } from "@/src/components/ui/Modal";
 
 /**
- * 「确认退出登录」对话框。原先长在 AppLayout.tsx 的 return 里，随文件一起越过
- * 500 行的上限之后搬到这里。
+ * 「确认退出登录」对话框。
  *
- * 纯展示：状态仍然归 AppLayout（它同时要控制那个触发按钮），这里只收三个 prop。
- * 除了缩进和把 `logoutConfirmOpen` / `setLogoutConfirmOpen(false)` / `handleLogout`
- * 换成 `open` / `onClose` / `onConfirm` 之外，标记逐字未改。
+ * 曾经是一份**手写的第四个确认框** —— 自己的 @headlessui `Dialog` + `Transition`、
+ * 自己的两个手搓按钮、自己的一套进出场类名 —— 和 `ConfirmDialog` 讲同一件事,
+ * 只是又讲了一遍。`hallmark` 的审查把这一类点名为「每个文件各自重新拼写一遍确认
+ * 对话框」,这是其中之一。
+ *
+ * 现在它只是 `ConfirmDialog` 的一层薄壳:状态仍然归 AppLayout(它同时要控制那个
+ * 触发按钮),这里只把三个 prop 转过去,外加这一处的文案。
+ *
+ * 换掉它连带解决了两件事:两个手搓按钮回到 `Button`(所以有了 `active:` 按压态),
+ * 以及**对话框语义**变成 alert-dialog —— 退出登录这类问题不该被背景上的一次误点
+ * 悄悄答成「取消」。
+ *
+ * 它此前特意用 `z-drawer` 而不是 `z-dialog`,因为它可能在移动端抽屉打开时被唤起。
+ * 那个需要没有消失,消失的是特例:globals.css 里 dialog 与 drawer 的先后已经对调,
+ * 理由写在那里。
  */
 export function LogoutConfirmDialog({
   open,
@@ -24,58 +34,14 @@ export function LogoutConfirmDialog({
   const { t } = useI18n();
 
   return (
-    <Transition appear show={open} as={Fragment}>
-      <Dialog as="div" className="relative z-[99998]" onClose={() => onClose()}>
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
-        </Transition.Child>
-
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <Dialog.Panel className="w-full max-w-md rounded-xl bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6 shadow-2xl">
-                <Dialog.Title className="text-05 font-semibold text-[hsl(var(--color-ink))]">
-                  {t("auth.confirm_logout")}
-                </Dialog.Title>
-                <Dialog.Description className="mt-2 text-04 text-[hsl(var(--color-ink-muted))]">
-                  {t("auth.confirm_logout_desc")}
-                </Dialog.Description>
-
-                <div className="mt-6 flex justify-end gap-3">
-                  <button
-                    onClick={() => onClose()}
-                    className="px-4 py-2 rounded-md bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] text-03 hover:bg-[hsl(var(--color-surface-3))] transition-colors"
-                  >
-                    {t("common.cancel")}
-                  </button>
-                  <button
-                    onClick={onConfirm}
-                    className="px-4 py-2 rounded-md bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] text-03 hover:bg-[hsl(var(--color-status-error)/0.3)] transition-colors"
-                  >
-                    {t("auth.confirm_logout_btn")}
-                  </button>
-                </div>
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
-        </div>
-      </Dialog>
-    </Transition>
+    <ConfirmDialog
+      isOpen={open}
+      title={t("auth.confirm_logout")}
+      message={t("auth.confirm_logout_desc")}
+      onConfirm={onConfirm}
+      onCancel={onClose}
+      confirmText={t("auth.confirm_logout_btn")}
+      variant="danger"
+    />
   );
 }

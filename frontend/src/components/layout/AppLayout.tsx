@@ -4,8 +4,9 @@ import React, { useState, useEffect, useMemo, Fragment } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Popover, Transition } from "@headlessui/react";
+import { Popover } from "@base-ui/react/popover";
 import { notificationsApi, type Notification, type PaginatedResponse } from "@/lib/api";
+import { notificationKeys } from "@/lib/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useTheme } from "@/src/contexts/ThemeContext";
@@ -33,19 +34,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = usePathname();
-  const [isNavigating, setIsNavigating] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
 
-  // Track navigation state by pathname changes
+  /**
+   * Close the mobile menu on navigation. It used to also drive a progress bar,
+   * and that bar was removed rather than kept beside `RouteProgress`:
+   *
+   * it lit up when `pathname !== prevPathname` — that is, once the route had
+   * ALREADY changed — and then showed for a fixed 300ms. A progress indicator
+   * that starts when the wait ends and runs on a timer unrelated to the work.
+   * `RouteProgress` starts on `history.pushState` and finishes when the new
+   * route is on screen, which is the thing this was standing in for.
+   */
   useEffect(() => {
     if (pathname !== prevPathname) {
-      setIsNavigating(true);
       setPrevPathname(pathname);
-      // Auto-close mobile menu on navigation
       setMobileMenuOpen(false);
-      // Small delay to ensure content loads before hiding indicator
-      const timer = setTimeout(() => setIsNavigating(false), 300);
-      return () => clearTimeout(timer);
     }
   }, [pathname, prevPathname]);
 
@@ -102,7 +106,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [menus]);
 
   const { data: notifications = [] } = useQuery({
-    queryKey: ["notifications-unread-count"],
+    queryKey: notificationKeys.unreadCount,
     queryFn: async () => {
       const res = await notificationsApi.list({ is_read: "false" });
       return res.data.results;
@@ -154,7 +158,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <aside
         ref={drawerRef}
         {...drawerProps}
-        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-[hsl(var(--color-surface-1))] border-r border-[hsl(var(--color-hairline))] z-50 transition-all duration-200 flex flex-col
+        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-[hsl(var(--color-surface-1))] border-r border-[hsl(var(--color-hairline))] z-50 transition-[width] duration-200 flex flex-col
           ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
         {/* Logo */}
@@ -229,7 +233,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="w-full flex justify-center">
               <button
                 onClick={() => setCollapsed(!collapsed)}
-                className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
+                className="w-8 h-8 flex items-center justify-center text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
                 title={t("nav.expand_menu")}
                 aria-label={t("nav.expand_menu")}
                 aria-expanded={false}
@@ -243,7 +247,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="w-1/4 flex justify-center">
                 <button
                   onClick={() => setCollapsed(!collapsed)}
-                  className="w-8 h-8 flex items-center justify-center rounded-md text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
+                  className="w-8 h-8 flex items-center justify-center text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
                   title={t("nav.collapse_menu")}
                   aria-label={t("nav.collapse_menu")}
                   aria-expanded={true}
@@ -262,18 +266,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className={`transition-all duration-200 ${collapsed ? "ml-0 md:ml-16" : "ml-0 md:ml-56"}`}>
-        {/* Navigation loading bar */}
-        {isNavigating && (
-          <div className="fixed top-0 left-0 right-0 z-[99999] h-1 bg-[hsl(var(--color-accent))] animate-pulse" />
-        )}
+      <main className={`transition-[margin-left] duration-200 ${collapsed ? "ml-0 md:ml-16" : "ml-0 md:ml-56"}`}>
 
         {/* Top header */}
-        <header className="sticky top-0 z-40 h-16 bg-[hsl(var(--color-canvas))]/80 backdrop-blur-sm border-b border-[hsl(var(--color-hairline))] flex items-center px-4 md:px-6 gap-3 md:gap-4">
+        <header className="sticky top-0 z-40 h-16 bg-[hsl(var(--color-canvas))]/80 backdrop-blur-xs border-b border-[hsl(var(--color-hairline))] flex items-center px-4 md:px-6 gap-3 md:gap-4">
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-md text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))]"
+            className="md:hidden p-2 text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))]"
             aria-label={mobileMenuOpen ? t("nav.collapse_menu") : t("nav.expand_menu")}
             aria-expanded={mobileMenuOpen}
           >
@@ -318,9 +318,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
             {/* Notification Bell with Popover */}
             {user && (
-              <Popover className="relative">
-                <Popover.Button
-                  className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
+              /* Base UI's Popover, not @headlessui's. The anatomy gains a
+                 `Positioner`, and that is the substantive difference: the panel
+                 used to be `absolute right-0 mt-2` inside a `relative` wrapper,
+                 which pins it to the trigger and lets it run off-screen on a
+                 narrow viewport. `Positioner` uses Floating UI underneath, so
+                 it flips and shifts to stay on screen — the bell sits at the
+                 right edge of the masthead, which is exactly where that
+                 matters. */
+              <Popover.Root>
+                <Popover.Trigger
+                  className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1"
                   aria-label={
                     notifications.length > 0
                       ? `${t("notifications.title")} (${notifications.length})`
@@ -336,17 +344,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       {notifications.length > 9 ? "9+" : notifications.length}
                     </span>
                   )}
-                </Popover.Button>
-                <Transition
-                  as={Fragment}
-                  enter="transition ease-out duration-100"
-                  enterFrom="transform opacity-0 scale-95"
-                  enterTo="transform opacity-100 scale-100"
-                  leave="transition ease-in duration-75"
-                  leaveFrom="transform opacity-100 scale-100"
-                  leaveTo="transform opacity-0 scale-95"
-                >
-                  <Popover.Panel className="absolute right-0 mt-2 w-80 origin-top-right rounded-lg bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-xl focus:outline-none z-[99998]">
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Positioner sideOffset={8} align="end" className="z-drawer">
+                    <Popover.Popup className="w-80 origin-top-right bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-xl focus:outline-hidden transition duration-100 ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-[hsl(var(--color-ink))]">{t("notifications.title")}</h3>
@@ -361,7 +362,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       ) : (
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                           {notifications.slice(0, 5).map((n: Notification) => (
-                            <div key={n.id} className="p-2 rounded hover:bg-[hsl(var(--color-surface-2))] cursor-pointer">
+                            <div key={n.id} className="p-2 hover:bg-[hsl(var(--color-surface-2))] cursor-pointer">
                               <p className="text-03 text-[hsl(var(--color-ink))]">{n.message || n.title}</p>
                               <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
                                 {formatDateTime(n.created_at)}
@@ -371,9 +372,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         </div>
                       )}
                     </div>
-                  </Popover.Panel>
-                </Transition>
-              </Popover>
+                  </Popover.Popup>
+                  </Popover.Positioner>
+                </Popover.Portal>
+              </Popover.Root>
             )}
 
             <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
@@ -393,7 +395,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={toggleTheme}
               title={theme === "dark" ? t("nav.theme_light") : t("nav.theme_dark")}
               aria-label={theme === "dark" ? t("nav.theme_light") : t("nav.theme_dark")}
-              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
+              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1"
             >
               {theme === "dark" ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -414,7 +416,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setSettingsOpen(true)}
               title={t("nav.settings")}
               aria-label={t("nav.settings")}
-              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1 rounded"
+              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3" />
@@ -432,7 +434,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     fixed for. */}
                 <Link
                   href="/profile"
-                  className="hidden sm:block max-w-[10rem] truncate text-[hsl(var(--color-ink-muted))] text-03 hover:text-[hsl(var(--color-accent-ink))] transition-colors"
+                  className="hidden sm:block max-w-40 truncate text-[hsl(var(--color-ink-muted))] text-03 hover:text-[hsl(var(--color-accent-ink))] transition-colors"
                 >
                   {t("nav.greeting", { username: user.display_name || user.username })}
                 </Link>
@@ -447,7 +449,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ) : (
               <Link
                 href="/login"
-                className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 rounded-lg text-03 font-medium hover:bg-[hsl(var(--color-accent))] hover:!text-black transition-colors"
+                className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 text-03 font-medium hover:bg-[hsl(var(--color-accent))] hover:text-black! transition-colors"
               >
                 {t("auth.login")}
               </Link>

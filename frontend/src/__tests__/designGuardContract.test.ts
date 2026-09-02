@@ -326,21 +326,33 @@ describe("RHYTHM_EXEMPT 豁免没有过期", () => {
 });
 
 /**
- * tailwind-merge 不读 tailwind.config.js —— 它有自己硬编码的分组表。所以
+ * tailwind-merge 不读 Tailwind 的配置 —— 它有自己硬编码的分组表。所以
  * `text-01`…`text-08` 这批**新增**字号,除非在 lib/utils.ts 里显式登记进
  * font-size 组,否则会掉进 text-COLOR 组,和文字色互相吞掉。
  *
- * 这两处现在是手工同步的。下面这个测试遍历的是 tailwind.config.js 的键,
- * 断言的是 `cn()` 的**行为** —— 所以往 config 里加第九档而忘了改 utils.ts,
- * 这里立刻红,不需要任何人记得同时改两个地方。
+ * 这两处现在是手工同步的。下面这个测试遍历的是**字阶的真实来源**,断言的是
+ * `cn()` 的**行为** —— 所以加第九档而忘了改 utils.ts,这里立刻红,不需要任何人
+ * 记得同时改两个地方。
+ *
+ * 来源换过一次:v3 时是 `require("../../tailwind.config.js").theme.extend.fontSize`。
+ * Tailwind v4 的升级把配置整个搬进了 `app/globals.css` 的 `@theme` 并**删掉了
+ * 那个文件**,于是这个套件在 import 阶段就炸了 —— 报的是「Test suite failed to
+ * run」,**它的 64 条测试连同它一起消失**。套件数没变,只有总条数掉了,而那正是
+ * 只看「N passed」时最容易漏掉的形状。现在读 `@theme` 里的 `--text-NN`。
  */
 describe("tailwind-merge 认识八档字号", () => {
-   
-  const twConfig = require("../../tailwind.config.js");
-  const scale: string[] = Object.keys(twConfig.theme.extend.fontSize);
+  const themeCss = fs.readFileSync(path.join(ROOT, "app", "globals.css"), "utf8");
+  // `--text-01: 11px;` 而不是 `--text-01--line-height:` —— 只取档位本身。
+  const scale: string[] = [
+    ...new Set(
+      [...themeCss.matchAll(/^\s*--text-(\d{2}):\s*[^;]+;/gm)].map((m) => m[1])
+    ),
+  ].sort();
 
-  it("配置里确实有一套自定义字号", () => {
-    expect(scale.length).toBeGreaterThan(0);
+  it("字阶的来源确实读到了东西", () => {
+    // 不是 `> 0`:空遍历会让下面每一条 it.each 悄悄不存在,而套件仍然是绿的。
+    // 八档是这套体系当下的形状,加第九档要在这里改一次数字,那是刻意的。
+    expect(scale).toEqual(["01", "02", "03", "04", "05", "06", "07", "08"]);
   });
 
   it.each(scale)("text-%s 不与文字色互相吞掉", (step) => {

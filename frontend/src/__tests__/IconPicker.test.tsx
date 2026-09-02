@@ -130,12 +130,24 @@ describe("IconPicker", () => {
     expect(screen.getByText("Security")).toBeInTheDocument();
   });
 
+  /**
+   * `ACTIVE_TAB` is the accent token, not `bg-amber-500`.
+   *
+   * These two assertions used to name the raw palette class, which made them
+   * a second place the picker's colour was written down — and they would have
+   * kept passing while the control ignored the accent the user actually chose
+   * in SettingsDrawer. (Choose Blue and the icon picker stayed amber; it was
+   * `bg-amber-500` in the source, in both themes, forever.) Naming the token
+   * means these fail if the tab stops following the accent.
+   */
+  const ACTIVE_TAB = "bg-[hsl(var(--color-accent))]";
+
   it("should start with 'navigation' as the active category", () => {
     render(<IconPicker {...defaultProps} />);
     fireEvent.click(screen.getByText("Select Icon"));
 
     const navBtn = screen.getByText("Navigation");
-    expect(navBtn.className).toContain("bg-amber-500");
+    expect(navBtn.className).toContain(ACTIVE_TAB);
   });
 
   it("should switch categories when a tab is clicked", () => {
@@ -144,10 +156,10 @@ describe("IconPicker", () => {
 
     fireEvent.click(screen.getByText("Users"));
     const usersBtn = screen.getByText("Users");
-    expect(usersBtn.className).toContain("bg-amber-500");
+    expect(usersBtn.className).toContain(ACTIVE_TAB);
 
     const navBtn = screen.getByText("Navigation");
-    expect(navBtn.className).not.toContain("bg-amber-500");
+    expect(navBtn.className).not.toContain(ACTIVE_TAB);
   });
 
   // --- Icon grid ---

@@ -188,11 +188,25 @@ function DashboardContent() {
     ...tenant.state_breakdown,
   })) ?? [];
 
-  const realmChartData = stats?.souls_by_realm?.map((r) => ({
-    name: r.realm_name,
-    count: r.count,
-    civilization: r.civilization,
-  })) ?? [];
+  /**
+   * Sorted descending, unlike `tenantData` above, and the difference is the
+   * point.
+   *
+   * Realms have no canonical order, so the server's order is arbitrary and a
+   * reader comparing magnitudes has to hunt. Tenants do: there are exactly
+   * four, each carries its civilization's hue (contract-tested), and a stable
+   * order lets a reader learn "the third bar is Egypt" and keep that across
+   * page loads — sorting those by magnitude would make the bars swap places
+   * between visits. Applying "always sort descending" to both would have
+   * traded a real identity for a generic rule.
+   */
+  const realmChartData = [...(stats?.souls_by_realm ?? [])]
+    .sort((a, b) => b.count - a.count)
+    .map((r) => ({
+      name: r.realm_name,
+      count: r.count,
+      civilization: r.civilization,
+    }));
 
   const formatTimestamp = (ts: string) => formatDateTime(ts);
 
@@ -215,22 +229,28 @@ function DashboardContent() {
           <>
             {/* Summary cards - each loads independently */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* `?? 0` on the three state cards below, and NOT here.
+                  A state missing from `state_distribution` means zero souls are
+                  in it — a real count. `total_souls` missing means the API did
+                  not send it, which is not a number at all; StatCard renders
+                  that as an em dash rather than a confident 0. The two used to
+                  be the same expression. */}
               <StatCard label={t("dashboard.total_souls")} value={stats?.total_souls} isLoading={loading} />
               <StatCard
                 label={t("dashboard.alive")}
-                value={stats?.state_distribution?.find(s => s.state === "ALIVE")?.count}
+                value={stats?.state_distribution?.find(s => s.state === "ALIVE")?.count ?? 0}
                 isLoading={loading}
                 color="text-[hsl(var(--color-status-success))]"
               />
               <StatCard
                 label={t("dashboard.under_judgment")}
-                value={stats?.state_distribution?.find(s => s.state === "JUDGING")?.count}
+                value={stats?.state_distribution?.find(s => s.state === "JUDGING")?.count ?? 0}
                 isLoading={loading}
                 color="text-[hsl(var(--color-accent-ink))]"
               />
               <StatCard
                 label={t("dashboard.disposed")}
-                value={stats?.state_distribution?.find(s => s.state === "DISPOSED")?.count}
+                value={stats?.state_distribution?.find(s => s.state === "DISPOSED")?.count ?? 0}
                 isLoading={loading}
                 color="text-[hsl(var(--color-status-lost))]"
               />
@@ -475,6 +495,13 @@ function DashboardContent() {
                   { key: "count", header: t("admin.soul_count"), align: "right" },
                 ]}
                 data={stats?.souls_by_realm?.slice(0, 10) ?? []}
+                // The page has an error branch, but it only wraps the pie
+                // chart (line ~248). This table sits outside it and reads the
+                // same query, so a failure gave it `?? []` and it rendered
+                // "no data" beside a chart that said "failed to load".
+                // DataTable suppresses its own empty state when isError is
+                // set (data-table.tsx:144).
+                isError={!!queryError}
                 keyExtractor={(realm, idx) => `${realm.realm_code}-${idx}`}
                 renderRow={(realm) => (
                   <>

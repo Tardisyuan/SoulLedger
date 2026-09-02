@@ -1,5 +1,8 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Pagination } from "@/src/components/ui/Pagination";
+import { PAGE_SIZE } from "@/lib/api/client";
 import Link from "next/link";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { crossTenantJudgmentsApi, type CrossTenantJudgmentListItem } from "@/lib/api";
@@ -34,19 +37,55 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   CANCELLED: "neutral",
 };
 
+/*
+ * The `t("…") || "English fallback"` spellings that used to be here are gone.
+ * `useI18n`'s `t()` returns the KEY when it cannot resolve one, and a key is a
+ * non-empty string — so the right-hand side was unreachable, and it read as
+ * i18n coverage that did not exist. Both keys resolve; nothing changed on
+ * screen. Three other files carry a comment diagnosing this exact shape.
+ */
 export default function CrossJudgmentsPage() {
   const { t } = useI18n();
   const { user } = useTenant();
 
-  const { data: judgments = [], isLoading, isError, refetch } = useQuery({
-    queryKey: ["cross-judgments"],
-    queryFn: () => crossTenantJudgmentsApi.list().then(r => r.data.results),
+  /**
+   * Was `list()` with no `page` param and no pagination control, while the
+   * server paginates at 20 (`lib/api/client.ts:28`) — so a tenant with more
+   * than twenty cross-tenant cases had the rest invisible and unreachable,
+   * with nothing on screen saying so.
+   */
+  const [page, setPage] = useState(1);
+  const { data: pageData, isLoading, isError, refetch } = useQuery({
+    queryKey: ["cross-judgments", page],
+    queryFn: () => crossTenantJudgmentsApi.list({ page: String(page) }).then(r => r.data),
+    placeholderData: (previous) => previous,
     enabled: !!user,
   });
+  const judgments = pageData?.results ?? [];
 
   return (
     <PageShell
       variant="full"
+      pagination={{
+        count: (
+          <p className="text-03 text-ink-muted">
+            {t("pagination.info", {
+              page: String(page),
+              total: String(Math.max(1, Math.ceil((pageData?.count ?? 0) / PAGE_SIZE))),
+              count: String(pageData?.count ?? 0),
+            })}
+          </p>
+        ),
+        controls: (
+          <Pagination
+            page={page}
+            totalPages={Math.max(1, Math.ceil((pageData?.count ?? 0) / PAGE_SIZE))}
+            count={pageData?.count ?? 0}
+            onPageChange={setPage}
+            showInfo={false}
+          />
+        ),
+      }}
       title={
         <>
           {t("crossJudgments.title")}
@@ -56,7 +95,7 @@ export default function CrossJudgmentsPage() {
       subtitle={t("crossJudgments.subtitle")}
     >
       <PageSection
-        title={t("crossJudgments.list_title") || "Cross-Judgment Cases"}
+        title={t("crossJudgments.list_title")}
         isLoading={isLoading}
       >
         {/* A failed request used to fall through to the empty state, so
@@ -66,7 +105,7 @@ export default function CrossJudgmentsPage() {
         ) : isLoading ? (
           <ListSkeleton count={3} />
         ) : judgments.length === 0 ? (
-          <EmptyState title={t("crossJudgments.no_judgments") || "No cross-tenant judgments yet"} />
+          <EmptyState title={t("crossJudgments.no_judgments")} />
         ) : (
           <div className="space-y-4">
             {judgments.map((j: CrossTenantJudgmentListItem) => (
@@ -79,7 +118,7 @@ export default function CrossJudgmentsPage() {
                   <div className="min-w-0">
                     <h3 className="text-04 font-semibold text-[hsl(var(--color-ink))]">{j.title}</h3>
                     <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
-                      {t("crossJudgments.initiated_by") || "Initiated by"}: {j.initiating_tenant_code}
+                      {t("crossJudgments.initiated_by")}: {j.initiating_tenant_code}
                     </p>
                   </div>
                   {/* <DomainEnum> renders exactly one span, so it becomes the

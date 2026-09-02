@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from "@headlessui/react";
+import { Dialog } from "@base-ui/react/dialog";
+import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { soulsApi } from "@/lib/api";
+import { useCreateSoul } from "@/src/hooks/useSouls";
+import { Button } from "@/src/components/ui/Button";
 import {
   CIVILIZATION_OPTIONS,
   type CivilizationOption,
@@ -22,14 +24,35 @@ interface BaseModalProps {
   footer?: React.ReactNode;
 }
 
+/**
+ * MIGRATED FROM @headlessui TO Base UI, and the anatomy is the visible part of
+ * the change.
+ *
+ * `@headlessui` is in maintenance mode — Tailwind Labs still fixes bugs, but
+ * the changelog carries no feature releases and there is an open "Next
+ * release?" discussion. It has no command palette and no data-grid-adjacent
+ * primitives, which is what a console like this reaches for next. Base UI 1.7
+ * is the layer shadcn/ui itself switched its default to in July 2026, built by
+ * the people who wrote Radix and Floating UI.
+ *
+ * WHAT DID NOT CHANGE, deliberately: the layout. `max-h` + `flex flex-col` +
+ * a scrollable body is one mechanism with a measured reason (see the note
+ * below), and swapping the primitive underneath is not an excuse to redesign
+ * it. Same classes, same structure, different owner.
+ *
+ * WHAT DID: `<Dialog>` becomes the five-part anatomy
+ * `Root / Portal / Backdrop / Viewport / Popup`, `onClose` becomes
+ * `onOpenChange`, and the animation hooks move from headlessui's `transition`
+ * prop to Base UI's `data-starting-style` / `data-ending-style` attributes.
+ */
 export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModalProps) {
   return (
-    <Dialog open={isOpen} onClose={onClose} className="relative z-[9999]">
-      {/* Backdrop */}
-      <DialogBackdrop
-        transition
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm duration-200 ease-out data-closed:opacity-0 dark:bg-black/80"
-      />
+    <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Dialog.Portal>
+        {/* Backdrop */}
+        <Dialog.Backdrop
+          className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-xs transition-opacity duration-200 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-black/80"
+        />
 
       {/* Centered panel.
        *
@@ -47,36 +70,35 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
        *
        * 外层加 `overflow-y-auto` 是兜底:若某天 body 内部出现不可压缩的元素,
        * 至少整个面板还能滚,而不是把内容藏到视口外。 */}
-      <div className="fixed inset-0 flex w-screen items-center justify-center overflow-y-auto p-4">
-        <DialogPanel
-          transition
-          className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg duration-200 ease-out data-closed:scale-95 data-closed:opacity-0"
-        >
-          {/* Header */}
-          <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-[hsl(var(--color-hairline))]">
-            <DialogTitle className="text-[hsl(var(--color-ink))] text-06">{title}</DialogTitle>
-            <button
-              onClick={onClose}
-              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))] transition-colors text-06 leading-none"
-              aria-label="Close"
-            >
-              ×
-            </button>
-          </div>
-
-          {/* Body —— 唯一允许收缩与滚动的一段。header 与 footer 都是 `shrink-0`,
-           * 因为「关闭」和「提交」在任何视口高度下都必须留在屏幕上。 */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
-
-          {/* Footer */}
-          {footer && (
-            <div className="shrink-0 px-6 pb-5 border-t border-[hsl(var(--color-hairline))] pt-4">
-              {footer}
+        <Dialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-center justify-center overflow-y-auto p-4">
+          <Dialog.Popup
+            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] transition duration-200 ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0"
+          >
+            {/* Header */}
+            <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-[hsl(var(--color-hairline))]">
+              <Dialog.Title className="text-[hsl(var(--color-ink))] text-06">{title}</Dialog.Title>
+              <Dialog.Close
+                className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))] transition-colors text-06 leading-none"
+                aria-label="Close"
+              >
+                ×
+              </Dialog.Close>
             </div>
-          )}
-        </DialogPanel>
-      </div>
-    </Dialog>
+
+            {/* Body —— 唯一允许收缩与滚动的一段。header 与 footer 都是 `shrink-0`,
+             * 因为「关闭」和「提交」在任何视口高度下都必须留在屏幕上。 */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+
+            {/* Footer */}
+            {footer && (
+              <div className="shrink-0 px-6 pb-5 border-t border-[hsl(var(--color-hairline))] pt-4">
+                {footer}
+              </div>
+            )}
+          </Dialog.Popup>
+        </Dialog.Viewport>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
@@ -95,6 +117,13 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
   const { t } = useI18n();
   const { showToast } = useToast();
   const { validate, getError, clearFieldError } = useFormValidation(soulCreateSchema);
+  // `useCreateSoul`, not `soulsApi.create`. This called the API client
+  // directly, so **nothing invalidated the souls cache on create**: the list
+  // only appeared to update because `onCreated` calls `refetch()` on the
+  // calling page's exact query, leaving every other cached souls list — every
+  // other filter, sort and page — stale for its full 30s staleTime. The page
+  // even declared `useCreateSoul()` and never used it.
+  const createSoul = useCreateSoul();
 
   // Unique prefix so field/error ids never collide across multiple Modal
   // instances mounted at once (e.g. list + create modal on the same page).
@@ -144,12 +173,16 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         setLoading(false);
         return
       }
-      await soulsApi.create(result.data);
-      showToast(t("souls.form.create_success"), "success");
+      // No toast here: `useCreateSoul` owns both the success and failure
+      // message. Toasting again would show two identical banners for one
+      // create, which is what the edit path did until this commit.
+      await createSoul.mutateAsync(result.data);
       onCreated();
       onClose();
     } catch {
-      showToast(t("souls.form.create_error"), "error");
+      // Swallowed deliberately — the hook's onError has already told the user.
+      // Rethrowing or toasting here is the double-report; leaving the modal
+      // open is the recovery.
     } finally {
       setLoading(false);
     }
@@ -161,7 +194,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         type="button"
         onClick={onClose}
         disabled={loading}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 rounded text-03 transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] disabled:opacity-50 text-03 transition-colors"
       >
         {t("common.cancel")}
       </button>
@@ -169,7 +202,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
         type="submit"
         form="soul-create-form"
         disabled={loading || !name.trim()}
-        className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))] disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] rounded text-03 font-medium text-black transition-colors"
+        className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:bg-[hsl(var(--color-surface-3))] disabled:text-[hsl(var(--color-ink-subtle))] text-03 font-medium text-black transition-colors"
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
@@ -206,7 +239,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             disabled={loading}
             aria-invalid={!!getError('name')}
             aria-describedby={getError('name') ? nameErrorId : undefined}
-            className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none disabled:opacity-50 transition-colors ${
+            className={`bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden disabled:opacity-50 transition-colors ${
               getError('name') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
             placeholder={t("souls.form.name_placeholder")}
@@ -227,7 +260,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             disabled={loading}
             aria-invalid={!!getError('civilization')}
             aria-describedby={getError('civilization') ? civilizationErrorId : undefined}
-            className={`bg-[hsl(var(--color-surface-1))] border rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none disabled:opacity-50 transition-colors ${
+            className={`bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-hidden disabled:opacity-50 transition-colors ${
               getError('civilization') ? 'border-red-500 focus:border-red-500' : 'border-[hsl(var(--color-hairline))] focus:border-[hsl(var(--color-accent))]'
             }`}
           >
@@ -249,7 +282,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
             disabled={loading}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -260,7 +293,7 @@ export function SoulCreateModal({ isOpen, onClose, onCreated }: SoulCreateModalP
             value={originLocation}
             onChange={(e) => setOriginLocation(e.target.value)}
             disabled={loading}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] rounded px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-none focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
+            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
             placeholder={t("souls.form.location_placeholder")}
           />
         </div>
@@ -294,45 +327,70 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const { t } = useI18n();
 
-  const variantColors = {
-    danger: "bg-red-500 hover:bg-red-600",
-    warning: "bg-yellow-500 hover:bg-yellow-600",
-    info: "bg-blue-500 hover:bg-blue-600",
-  };
+  // Was three hand-rolled fills — `bg-red-500` / `bg-yellow-500` /
+  // `bg-blue-500`, each with `text-white`. `bg-yellow-500` under white text is
+  // about 1.9:1, which made the confirm step of a soul state transition the
+  // least readable control in the app; none of the three followed the status
+  // tokens, so all three stayed one colour while the theme changed around
+  // them. `Button`'s own docstring already argued this exact case for the 15
+  // danger buttons it replaced — this dialog was simply not among them.
+  //
+  // `info` is mapped rather than dropped: the prop still accepts it, and no
+  // call site has ever passed it (only `danger`, the default, and one
+  // `warning` in app/souls/[id]/page.tsx).
+  const variantButton = {
+    danger: "danger",
+    warning: "warning",
+    info: "primary",
+  } as const;
 
+  /**
+   * `AlertDialog`, not `Dialog`, and that is a behaviour change worth naming.
+   *
+   * An alert dialog does not dismiss on an outside click — the operator has to
+   * answer it. Every call site here is a confirmation before something
+   * consequential (delete a user, delete a soul, move a menu to the recycle
+   * bin, transition a soul's state), and a stray click on the backdrop
+   * silently choosing "cancel" is the friendlier half of the wrong pair: it
+   * teaches that the dialog is dismissible, which is exactly the habit you do
+   * not want at the moment the answer matters. Escape and the Cancel button
+   * both still close it.
+   *
+   * `@headlessui` had no alert-dialog primitive, so this was a plain Dialog
+   * with the outside-click behaviour it comes with. Base UI has one.
+   */
   return (
-    <Dialog open={isOpen} onClose={onCancel} className="relative z-[9999]">
-      <DialogBackdrop
-        transition
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm duration-200 ease-out data-closed:opacity-0 dark:bg-black/80"
-      />
-      {/* 与上面的 Modal 同一套约束,理由见那里。这个对话框的内容通常很短,
-       * 但 `message` 是调用方传进来的任意文本 —— 「通常很短」不是约束。 */}
-      <div className="fixed inset-0 flex w-screen items-center justify-center overflow-y-auto p-4">
-        <DialogPanel
-          transition
-          className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] rounded-lg duration-200 ease-out data-closed:scale-95 data-closed:opacity-0"
-        >
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-            <h3 className="text-06 text-[hsl(var(--color-ink))] mb-2">{title}</h3>
-            <p className="text-04 text-[hsl(var(--color-ink-muted))]">{message}</p>
-          </div>
-          <div className="shrink-0 px-6 pb-5 flex gap-3">
-            <button
-              onClick={onCancel}
-              className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] rounded text-03 transition-colors"
-            >
-              {cancelText || t("common.cancel")}
-            </button>
-            <button
-              onClick={onConfirm}
-              className={`flex-1 px-4 py-2 text-white rounded text-03 font-medium transition-colors ${variantColors[variant]}`}
-            >
-              {confirmText || t("common.confirm")}
-            </button>
-          </div>
-        </DialogPanel>
-      </div>
-    </Dialog>
+    <AlertDialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onCancel(); }}>
+      <AlertDialog.Portal>
+        <AlertDialog.Backdrop className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-xs transition-opacity duration-200 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-black/80" />
+        {/* 与上面的 Modal 同一套约束,理由见那里。这个对话框的内容通常很短,
+         * 但 `message` 是调用方传进来的任意文本 —— 「通常很短」不是约束。 */}
+        <AlertDialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-center justify-center overflow-y-auto p-4">
+          <AlertDialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] transition duration-200 ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+              <AlertDialog.Title className="text-06 text-[hsl(var(--color-ink))] mb-2">
+                {title}
+              </AlertDialog.Title>
+              <AlertDialog.Description className="text-04 text-[hsl(var(--color-ink-muted))]">
+                {message}
+              </AlertDialog.Description>
+            </div>
+            <div className="shrink-0 px-6 pb-5 flex gap-3">
+              <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
+                {cancelText || t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                variant={variantButton[variant]}
+                onClick={onConfirm}
+                className="flex-1"
+              >
+                {confirmText || t("common.confirm")}
+              </Button>
+            </div>
+          </AlertDialog.Popup>
+        </AlertDialog.Viewport>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
   );
 }

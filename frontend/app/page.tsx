@@ -1,7 +1,7 @@
 "use client";
 
 import { useTenant } from "@/src/contexts/TenantContext";
-import { CIVILIZATION_OPTIONS } from "@/src/config/civilizations";
+import { CIVILIZATION_OPTIONS, getCivilizationFromTenantCode } from "@/src/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ExternalLink } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -29,6 +29,18 @@ import { useTheme } from "@/src/contexts/ThemeContext";
 export default function HomePage() {
   const { t, locale } = useI18n();
   const { user } = useTenant();
+  /**
+   * The second asymmetry: the civilization the viewer belongs to is marked.
+   *
+   * `/` is public (`AppLayoutWrapper`'s PUBLIC_PATHS), so an anonymous visitor
+   * has no tenant and the grid stays even for them — the hero's left anchor is
+   * what breaks the template shape in that case. For a signed-in operator this
+   * turns four interchangeable cards into "yours, and the other three", which
+   * is the actual relationship.
+   */
+  const viewerCivilization = user?.tenant?.code
+    ? getCivilizationFromTenantCode(user.tenant.code)
+    : null;
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -85,20 +97,32 @@ export default function HomePage() {
 
       {/* Main content */}
       <main className="container mx-auto px-4 py-10 md:py-16">
-        <header className="text-center mb-10 md:mb-16">
+        {/* LEFT-ANCHORED, not centred, and that is the whole change.
+            "Centred everything" — centred h1, centred subtitle, centred
+            section heading, symmetric 2x2 grid, centred footer — is the one
+            template shape on this app's only marketing-ish screen. It is not a
+            defect; it is the arrangement every generated landing page reaches
+            for, which is exactly why it reads as one. A single asymmetry is
+            enough to break it, and the hero is the cheapest place to put one:
+            no component changes, no copy changes, and the reading order
+            (title, then subtitle, then description) is unchanged.
+
+            The second asymmetry is in the grid below — the civilization the
+            viewer actually belongs to is marked. */}
+        <header className="mb-10 md:mb-16">
           {/* 八档字级表最上面那两档。迁移前是 `text-4xl md:text-5xl lg:text-6xl`
               —— 三个断点、三个表外字号。 */}
           <h1 className="text-07 md:text-08 mb-4 text-[hsl(var(--color-accent-ink))]">
             {t("home.hero_title")}
           </h1>
           <p className="text-[hsl(var(--color-accent-ink))]/80 text-05 mb-2">{t("home.hero_subtitle")}</p>
-          <p className="text-[hsl(var(--color-ink-subtle))] text-04 max-w-prose mx-auto">
+          <p className="text-[hsl(var(--color-ink-subtle))] text-04 max-w-prose">
             {t("home.hero_description")}
           </p>
         </header>
 
         <section>
-          <h2 className="text-06 text-center mb-6 md:mb-10 text-[hsl(var(--color-ink-muted))]">
+          <h2 className="text-06 mb-6 md:mb-10 text-[hsl(var(--color-ink-muted))]">
             {t("home.civilizations_title")}
           </h2>
           {/* Rendered from CIVILIZATION_OPTIONS, not from three hand-written
@@ -124,7 +148,7 @@ export default function HomePage() {
               by member, and those three namespaces are added to that guard. A
               fifth civilization now fails the test rather than quietly getting
               no card. */}
-          <div className="grid md:grid-cols-2 gap-4 md:gap-6 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-4 md:gap-6 max-w-4xl">
             {CIVILIZATION_OPTIONS.map((civ) => (
               <CivilizationCard
                 key={civ}
@@ -132,6 +156,8 @@ export default function HomePage() {
                 subtitle={t(`home.civ_subtitle.${civ}`)}
                 description={t(`home.civ_desc.${civ}`)}
                 isEgyptian={civ === "EGYPTIAN"}
+                isViewersOwn={civ === viewerCivilization}
+                ownLabel={t("home.your_realm")}
               />
             ))}
           </div>
@@ -183,14 +209,34 @@ function CivilizationCard({
   subtitle,
   description,
   isEgyptian,
+  isViewersOwn,
+  ownLabel,
 }: {
   title: string;
   subtitle: string;
   description: string;
   isEgyptian?: boolean;
+  /** The viewer's own realm. Marked, not reordered — the order is
+   *  CIVILIZATION_OPTIONS' and a test pins it. */
+  isViewersOwn?: boolean;
+  ownLabel?: string;
 }) {
   return (
-    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 md:p-6 h-full flex flex-col">
+    <div
+      className={
+        isViewersOwn
+          ? "bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] border-l-3 border-l-[hsl(var(--color-accent))] p-4 md:p-6 h-full flex flex-col"
+          : "bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 md:p-6 h-full flex flex-col"
+      }
+    >
+      {isViewersOwn && ownLabel && (
+        // The 3px left rule is the civilization-identity width the scale
+        // already reserves for exactly this (tailwind.config.js's borderWidth
+        // note: "文明身份线与判决落印带,全站只有这两处"). The eyebrow says in
+        // words what the rule says in colour, because a colour alone is not
+        // available to everyone.
+        <p className="text-01 uppercase text-[hsl(var(--color-accent-ink))] mb-2">{ownLabel}</p>
+      )}
       <p
         className="text-06 mb-1"
         style={

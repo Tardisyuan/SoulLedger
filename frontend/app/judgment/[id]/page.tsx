@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { judgmentApi, soulsApi } from "@/lib/api";
+import { judgmentKeys, soulKeys } from "@/lib/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -17,6 +18,7 @@ import { JudgmentEvidenceColumn } from "@/src/components/judgment/JudgmentEviden
 import { PageShell } from "@/src/components/ui/PageShell";
 import { PageSpinner } from "@/src/components/ui/Spinner";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { toHanNumeral } from "@/src/config/civilizationSigil";
@@ -135,13 +137,21 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const clausesId = useId();
   const firstClauseRef = useRef<HTMLInputElement>(null);
 
-  const { data: judgment, isLoading, error } = useQuery({
-    queryKey: ["judgment", id],
+  // Both keys come from the factories. They were `["judgment", id]` and
+  // `["soul", judgment?.soul]` — singular, so they diverged from
+  // `judgmentKeys.detail` / `soulKeys.detail` at the FIRST segment and no
+  // invalidation could ever reach them. The soul one is the visible loss: the
+  // WS soul handler invalidates `soulKeys.all`, which prefix-matches
+  // `["souls","detail",id]` and matched nothing at `["soul", id]`, so a state
+  // change pushed while a judge had this page open left the soul panel stale.
+  const { data: judgment, isLoading, error, refetch } = useQuery({
+    queryKey: judgmentKeys.detail(id),
     queryFn: () => judgmentApi.get(id).then((res) => res.data),
   });
 
   const { data: soulData } = useQuery({
-    queryKey: ["soul", judgment?.soul],
+    // `?? ""` never runs a request: `enabled` gates it on the same value.
+    queryKey: soulKeys.detail(judgment?.soul ?? ""),
     queryFn: () => soulsApi.get(judgment!.soul).then((res) => res.data),
     enabled: !!judgment?.soul,
   });
@@ -190,7 +200,20 @@ export default function JudgmentDetailPage({ params }: PageProps) {
     return <PageSpinner label={t("judgment.detail.loading")} />;
   }
 
-  if (error || !judgment) {
+  // `error` used to be OR'd into the not-found branch, so a 500 or a
+  // cross-tenant 403 rendered "审判未找到" — a sentence that says the record
+  // does not exist, about a record that may well exist and simply could not be
+  // fetched. Retry is the useful offer for the first case and misleading for
+  // the second, which is why they are two branches.
+  if (error) {
+    return (
+      <PageShell variant="page" title={t("judgment.title")} backLink={backLink}>
+        <QueryError onRetry={() => refetch()} />
+      </PageShell>
+    );
+  }
+
+  if (!judgment) {
     return (
       <PageShell variant="page" title={t("judgment.title")} backLink={backLink}>
         <EmptyState
@@ -301,14 +324,14 @@ export default function JudgmentDetailPage({ params }: PageProps) {
         <section className="min-w-0">
           <JudgmentSectionHead id={clausesId} title={t("judgment.detail.verdict")} />
 
-          {/* `-ml-[3px]` hangs the seal rule outside the text column instead of
+          {/* `ml-[-3px]` hangs the seal rule outside the text column instead of
               indenting the clause carrying it; every row reserves the same 3px
               transparent border, so marking one moves nothing. `role="group"`
               only while the clauses are choosable — four radios sharing a
               `name` are a group to the browser but nothing names that group;
               on a decided case there is nothing to choose. */}
           <ol
-            className="-ml-[3px] mt-4 divide-y divide-hairline"
+            className="ml-[-3px] mt-4 divide-y divide-hairline"
             {...(isFinal ? {} : { role: "group", "aria-labelledby": clausesId })}
           >
             {VERDICTS.map((member, index) => {
@@ -342,7 +365,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
                        token globals.css:459 uses. Selection is never
                        colour-only either: the 3px rule is there or it is not. */
                     <label
-                      className={`${row} cursor-pointer hover:bg-surface-2 focus-within:outline focus-within:outline-2 focus-within:outline-[hsl(var(--color-focus))]`}
+                      className={`${row} cursor-pointer hover:bg-surface-2 focus-within:outline-solid focus-within:outline-2 focus-within:outline-[hsl(var(--color-focus))]`}
                     >
                       <input
                         ref={index === 0 ? firstClauseRef : undefined}
@@ -491,7 +514,7 @@ function MetaRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[76px_1fr] items-baseline gap-3 py-2">
       <dt className="text-01 uppercase text-ink-subtle">{label}</dt>
-      <dd className="text-03 text-ink min-w-0 break-words">{children}</dd>
+      <dd className="text-03 text-ink min-w-0 wrap-break-word">{children}</dd>
     </div>
   );
 }

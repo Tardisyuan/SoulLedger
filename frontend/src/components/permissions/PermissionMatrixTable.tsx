@@ -30,7 +30,7 @@ function MatrixCell({
       aria-label={label}
       disabled={disabled}
       onClick={onToggle}
-      // 这里原先是 `focus:outline-none focus-visible:ring-2
+      // 这里原先是 `focus:outline-hidden focus-visible:ring-2
       // focus-visible:ring-[hsl(var(--color-accent))]` —— 全仓唯一一处把焦点环
       // 指向 --color-accent 的地方,而那正是 globals.css 用 40 行(:96-134)
       // 论证**不能**做的事:--color-accent 被 SettingsDrawer 的 useAccentColor
@@ -40,9 +40,9 @@ function MatrixCell({
       // 它本身就不合格:hsl(38 92% 50%) 在浅色模式白底上是 2.14:1,连非文字
       // UI 的 3:1 底线都够不到。
       //
-      // 两条 `outline-none` 也一起删了 —— 它们是全局规则要越过的那 69 处之一。
+      // 两条 `outline-hidden` 也一起删了 —— 它们是全局规则要越过的那 69 处之一。
       // 删掉之后接管的是 globals.css:459 那条
-      // `:focus-visible { outline: 2px solid hsl(var(--color-focus)) !important }`,
+      // `:focus-visible { outline-solid: 2px solid hsl(var(--color-focus)) !important }`,
       // --color-focus 是字面量三元组(深 258 95% 76% / 浅 258 85% 48%),抽屉
       // 够不着它。本组件不写 outline-none,就是它参与全局焦点环的全部要求
       // (Button.tsx 的「FOCUS: deliberately not here」一节说的是同一件事)。

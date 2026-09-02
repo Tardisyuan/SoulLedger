@@ -203,7 +203,7 @@ function ThresholdReading({
       </div>
       <div className="flex justify-center">
         <span
-          className={`px-2 py-0.5 rounded text-02 font-bold ${
+          className={`px-2 py-0.5 text-02 font-bold ${
             failed
               ? "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]"
               : "bg-[hsl(var(--color-karma-merit)/0.1)] text-[hsl(var(--color-karma-merit))]"
@@ -313,7 +313,7 @@ function UnrenderableReading({ kind, t }: { kind: string; t: TFunc }) {
   return (
     <div
       role="status"
-      className="rounded border border-dashed border-[hsl(var(--color-status-warning))] p-3"
+      className="border border-dashed border-[hsl(var(--color-status-warning))] p-3"
     >
       <p className="text-02 text-[hsl(var(--color-status-warning))]">
         {t("souls.detail.reading.unrenderable_kind", { kind })}
@@ -362,7 +362,7 @@ function UnavailableReading({
           from "these are not weights". A reader who scrolls from a Greek soul's
           road count to this box is making exactly the comparison the review
           caught, and the box is the place it is least defended against. */}
-      <div className="rounded border border-dashed border-[hsl(var(--color-hairline))] p-3 space-y-1.5">
+      <div className="border border-dashed border-[hsl(var(--color-hairline))] p-3 space-y-1.5">
         <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">
           {t("souls.detail.reading.unavailable_raw_data")}
         </p>

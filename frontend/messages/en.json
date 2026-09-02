@@ -66,7 +66,8 @@
       "EUROPEAN": "Christian judgement, purgatory, Dante's Inferno, Lethe",
       "EGYPTIAN": "The judgement of Osiris, the weighing of the heart, the Field of Reeds",
       "GREEK": "Three judges parting the ways, Er's thousand-year cycle, the water of Lethe"
-    }
+    },
+    "your_realm": "Your realm"
   },
   "footer": {
     "built_with": "Built with Django + DRF + Next.js",
@@ -280,7 +281,8 @@
           "event_before_birth": "Event before birth",
           "event_after_death": "Event after death"
         }
-      }
+      },
+      "delete_to_recycle_bin": "Moved to the recycle bin"
     },
     "date_problem_filter": "Problems only",
     "balance_not_applicable": "Not applicable — see soul detail",
@@ -317,10 +319,14 @@
       "id_copied": "ID copied to clipboard",
       "id_copy_failed": "Copy failed",
       "copied": "Copied ✓"
-    }
+    },
+    "field_required": "This field is required"
   },
   "pagination": {
-    "info": "Page {{page}} / {{total}} ({{count}} records)"
+    "info": "Page {{page}} / {{total}} ({{count}} records)",
+    "first": "First page",
+    "last": "Last page",
+    "jump": "Jump to page"
   },
   "menus": {
     "title": "Menu Management",
@@ -388,7 +394,8 @@
     "deleted_badge": "Deleted",
     "delete_confirm_title": "Move to recycle bin?",
     "delete_confirm_message": "\"{{name}}\" will move to the recycle bin. It can be restored for {{days}} days; after that, an administrator can permanently delete it.",
-    "delete_confirm_action": "Move to recycle bin"
+    "delete_confirm_action": "Move to recycle bin",
+    "update_error": "Failed to update menu"
   },
   "recycle_bin": {
     "title": "Recycle Bin",
@@ -710,7 +717,9 @@
       "col_balance": "Net",
       "total": "Total",
       "empty": "No entries recorded."
-    }
+    },
+    "series_effective": "Effective",
+    "series_decayed": "Decayed away"
   },
   "judgment": {
     "title": "Judgment",
@@ -793,7 +802,8 @@
       "key_workflow": "Toggle “also open an approval workflow”",
       "key_restore": "Bring every deferred case back",
       "key_help": "Show / hide this map",
-      "key_leave": "Leave the queue (blurs a text field first)"
+      "key_leave": "Leave the queue (blurs a text field first)",
+      "key_notes": "Focus the notes field"
     },
     "detail": {
       "loading": "Loading judgment...",
@@ -932,7 +942,8 @@
     "save": "Save",
     "cancel": "Cancel",
     "avatar": "Avatar",
-    "upload_avatar": "Upload Avatar"
+    "upload_avatar": "Upload Avatar",
+    "load_failed": "Could not load the latest profile — the values below may be out of date"
   },
   "notifications": {
     "title": "Notifications",
@@ -1082,6 +1093,9 @@
     "no_history": "No dispatch history",
     "target_soul": "Target Soul",
     "select_soul": "Select soul...",
+    "soul_search_placeholder": "Search souls by name...",
+    "soul_search_empty": "No souls match",
+    "soul_search_more": "Showing {{shown}} of {{count}} — keep typing to narrow",
     "target_tenant": "Target Tenant",
     "select_tenant": "Select tenant...",
     "reason": "Reason",
@@ -1090,6 +1104,7 @@
     "submit_proposal": "Submit Proposal",
     "soul_prefix": "Soul #",
     "detail_title": "Dispatch detail",
+    "not_found": "Dispatch not found",
     "soul": "Soul",
     "status": "Status",
     "actions": "Actions",
@@ -1119,7 +1134,9 @@
       "REJECTED": "Rejected",
       "EXECUTED": "Executed",
       "CANCELLED": "Cancelled"
-    }
+    },
+    "confirm_approve": "Approve this cross-tenant dispatch?",
+    "approve_warning": "The target tenant gains disposition rights over this soul. The action is written to the audit log."
   },
   "crossJudgments": {
     "title": "Cross-Tenant Judgments",
@@ -1217,7 +1234,9 @@
       "purple": "Purple",
       "red": "Red",
       "rose": "Rose"
-    }
+    },
+    "accent_hex_invalid": "Enter a 6-digit hex colour, e.g. #ff5500",
+    "accent_hex_too_dark": "Too dark — the black label on primary buttons would be unreadable"
   },
   "admin": {
     "ledger_stats": "Deed Statistics",
@@ -1421,7 +1440,8 @@
       "FOLLOWERS": "Followers Only",
       "PRIVATE": "Private"
     },
-    "visibility_label": "Post visibility"
+    "visibility_label": "Post visibility",
+    "follow_error": "Follow action failed"
   },
   "tenants": {
     "active": "Active",
@@ -1484,5 +1504,13 @@
       "EGYPTIAN": "Egyptian Duat",
       "GREEK": "Greek Underworld"
     }
+  },
+  "connection": {
+    "connected": "Connected",
+    "connecting": "Connecting…",
+    "reconnecting": "Reconnecting…",
+    "disconnected": "Disconnected",
+    "failed": "Connection failed",
+    "retry": "Reconnect"
   }
 }

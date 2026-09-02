@@ -52,6 +52,18 @@ export interface DataTableColumn {
 }
 
 export interface DataTableProps<T> {
+  /**
+   * Row height. `compact` is `py-2` (~36px at text-03) against
+   * `comfortable`'s `py-3` (~44px) — an 18% reduction, which at 20 rows a
+   * page is the difference between the table fitting one 1080p viewport and
+   * not.
+   *
+   * It lived on DataGrid, so only the two pages on DataGrid could reach it
+   * and exactly one used it; the other ten list pages call DataTable
+   * directly. The default stays `comfortable`: the wider row is right where
+   * each line is a decision, and wrong where the page is a scan-and-find.
+   */
+  density?: 'comfortable' | 'compact'
   columns: DataTableColumn[]
   data?: T[]
   keyExtractor: (item: T, index: number) => string
@@ -126,6 +138,7 @@ export function DataTable<T>({
   onRetry,
   errorMessage,
   skeletonRows = 5,
+  density = 'comfortable',
   sort,
   onSortChange,
   isFiltered,
@@ -139,6 +152,20 @@ export function DataTable<T>({
   onPageChange,
   className,
 }: DataTableProps<T>) {
+
+  const cellPadding = density === 'compact' ? 'px-4 py-2' : 'px-4 py-3'
+  /**
+   * The body rows come from `renderRow`, which every caller hand-writes — 40
+   * `px-4 py-3` `<td>`s across app/. So a `density` prop alone would only have
+   * moved the header, and the table would have looked broken at `compact`.
+   *
+   * A descendant selector on the table beats the single class on each `<td>`
+   * without touching any of those call sites. It is scoped to `tbody` so the
+   * header keeps `cellPadding` directly, and it only exists in the compact
+   * branch — `comfortable` emits no override at all, so nothing changes for
+   * the ten pages that do not opt in.
+   */
+  const bodyDensity = density === 'compact' ? '[&_tbody_td]:py-2' : ''
   const { t } = useI18n()
 
   const isEmpty = !isLoading && !isError && !data?.length
@@ -162,7 +189,7 @@ export function DataTable<T>({
 
   return (
     <div className={cn('w-full', className)}>
-      {/* `rounded-lg` used to sit here. borderRadius.lg is 0 now, so it emitted
+      {/* `` used to sit here. borderRadius.lg is 0 now, so it emitted
           nothing and only told the next reader this box had a corner radius. */}
       {/* `relative` 不是装饰,它决定绝对定位的后代被谁裁剪。
           没有它,这个滚动容器的 `position` 是 `static`,于是里面每一个
@@ -189,7 +216,7 @@ export function DataTable<T>({
             of text still outside the eight-step scale. 13px is tighter than what
             it replaces: the scale buys hierarchy from the span between steps,
             not by growing rows, and the table is where density is defended. */}
-        <table className="w-full text-03" aria-busy={isLoading || undefined}>
+        <table className={cn("w-full text-03", bodyDensity)} aria-busy={isLoading || undefined}>
           <caption className="sr-only">{caption}</caption>
           {columns.some((c) => c.width) && (
             <colgroup>
@@ -211,7 +238,7 @@ export function DataTable<T>({
                     className={cn(
                       'font-medium',
                       align,
-                      isSortable ? 'p-0' : 'px-4 py-3',
+                      isSortable ? 'p-0' : cellPadding,
                       column.headerClassName
                     )}
                   >
@@ -220,7 +247,8 @@ export function DataTable<T>({
                         type="button"
                         onClick={() => handleSort(column)}
                         className={cn(
-                          'group flex w-full items-center gap-1.5 px-4 py-3 font-medium',
+                          'group flex w-full items-center gap-1.5 font-medium',
+                          cellPadding,
                           'hover:text-[hsl(var(--color-ink))] transition-colors',
                           // Focus ring comes from the global :focus-visible rule
                           // in globals.css; a local one would double up on it.

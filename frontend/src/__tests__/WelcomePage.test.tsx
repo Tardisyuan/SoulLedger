@@ -9,10 +9,11 @@
  */
 import { render, screen, waitFor } from "@testing-library/react";
 import WelcomePage from "@/app/welcome/page";
-import { ledgerApi } from "@/lib/api";
+import { auditApi, ledgerApi } from "@/lib/api";
 
 jest.mock("@/lib/api", () => ({
   ledgerApi: { statsOverview: jest.fn() },
+  auditApi: { list: jest.fn() },
 }));
 
 let mockUser: Record<string, unknown> | null = null;
@@ -49,6 +50,9 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUser = null;
   mockedStats.mockResolvedValue({ data: stats });
+  // A default so tests that are not about the feed do not have to configure
+  // it. The feed tests override this with what they actually assert on.
+  (auditApi.list as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
   hoursSpy = jest.spyOn(Date.prototype, "getHours").mockReturnValue(10);
 });
 
@@ -171,31 +175,110 @@ describe("WelcomePage identity", () => {
 
 // ── Activity feed ────────────────────────────────────────────────────
 
+/**
+ * The activity feed, and the two tests that used to certify inventions.
+ *
+ * This block previously asserted three hard-coded rows ("新灵魂 张三 入库",
+ * by "admin") and an agent panel listing "soul-indexer" / "ledger-decay" /
+ * "judgment-assistant" with a pulsing "running" dot — **none of which existed**.
+ * The page fabricated them, and these tests held them in place. `/welcome` is
+ * on `PUBLIC_PATHS`, so that fiction was shown to unauthenticated visitors.
+ * A third test pinned `/settings` among the quick-action hrefs, a route that
+ * has never existed (`ls app/settings` → nothing).
+ *
+ * A test that asserts invented content is worse than no test: it makes the
+ * invention look load-bearing, and it goes red when someone removes it.
+ */
 describe("WelcomePage activity feed", () => {
-  it("labels a just-created entry as 'just now' and older ones in hours", async () => {
+  const entry = (over: Partial<Record<string, unknown>> = {}) => ({
+    id: 1,
+    action: "SOUL_CREATE",
+    description: "记录一条",
+    username: "yama",
+    user_display: "阎罗",
+    timestamp: new Date().toISOString(),
+    resource: "soul",
+    resource_id: "s1",
+    ip_address: null,
+    tenant_code: "CN_DIYU",
+    ...over,
+  });
+
+  it("renders entries returned by the audit API, not invented ones", async () => {
+    mockUser = { username: "yama", role: "JUDGE" };
+    (auditApi.list as jest.Mock).mockResolvedValue({
+      data: {
+        results: [
+          entry({ id: 1, description: "真实条目 A" }),
+          entry({ id: 2, description: "真实条目 B", timestamp: new Date(Date.now() - 3600000).toISOString() }),
+        ],
+        count: 2,
+      },
+    });
+
     render(<WelcomePage />);
 
-    expect(await screen.findByText("welcome.just_now")).toBeInTheDocument();
+    expect(await screen.findByText("真实条目 A")).toBeInTheDocument();
+    expect(screen.getByText("welcome.just_now")).toBeInTheDocument();
     expect(screen.getByText("welcome.hours_ago(1)")).toBeInTheDocument();
-    expect(screen.getByText("welcome.hours_ago(2)")).toBeInTheDocument();
+    // Assert the absence too — the old fixtures must not be reachable.
+    expect(screen.queryByText(/张三/)).not.toBeInTheDocument();
   });
 
-  it("renders the agent panel including the task line only for agents that have one", async () => {
+  it("shows at most three, because the first page is twenty", async () => {
+    mockUser = { username: "yama", role: "JUDGE" };
+    (auditApi.list as jest.Mock).mockResolvedValue({
+      data: {
+        results: Array.from({ length: 20 }, (_, i) => entry({ id: i + 1, description: `条目 ${i + 1}` })),
+        count: 20,
+      },
+    });
+
     render(<WelcomePage />);
 
-    expect(await screen.findByText("soul-indexer")).toBeInTheDocument();
-    expect(screen.getByText("索引新灵魂")).toBeInTheDocument();
-    // ledger-decay is idle with no task, so it contributes no task line.
-    expect(screen.getByText("ledger-decay")).toBeInTheDocument();
-    expect(screen.getAllByText("welcome.running")).toHaveLength(2);
-    expect(screen.getAllByText("welcome.idle")).toHaveLength(1);
-    expect(screen.queryByText("welcome.working")).not.toBeInTheDocument();
+    await screen.findByText("条目 1");
+    expect(screen.getByText("条目 3")).toBeInTheDocument();
+    expect(screen.queryByText("条目 4")).not.toBeInTheDocument();
+    // And it must not ask for a page size the backend ignores: DRF runs a
+    // plain PageNumberPagination with no page_size_query_param.
+    expect((auditApi.list as jest.Mock).mock.calls[0]?.[0]).toBeUndefined();
   });
 
-  it("links the quick actions to their routes", async () => {
+  it("asks for nothing, and invents nothing, for an anonymous visitor", async () => {
+    mockUser = null;
+    (auditApi.list as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
+
+    render(<WelcomePage />);
+
+    await waitFor(() => expect(ledgerApi.statsOverview).toHaveBeenCalled());
+    // The audit log needs a session. Showing nothing is the honest answer to
+    // "what has been happening?" when we are not allowed to know.
+    expect(auditApi.list).not.toHaveBeenCalled();
+    expect(screen.queryByText(/张三/)).not.toBeInTheDocument();
+  });
+
+  it("no longer claims a fleet of agents is running", async () => {
+    mockUser = { username: "yama", role: "JUDGE" };
+    (auditApi.list as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
+
+    render(<WelcomePage />);
+
+    await waitFor(() => expect(ledgerApi.statsOverview).toHaveBeenCalled());
+    for (const invented of ["soul-indexer", "ledger-decay", "judgment-assistant"]) {
+      expect(screen.queryByText(invented)).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText("welcome.agent_status")).not.toBeInTheDocument();
+  });
+
+  it("links the quick actions to routes that exist", async () => {
+    mockUser = { username: "yama", role: "JUDGE" };
+    (auditApi.list as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
+
     render(<WelcomePage />);
 
     const hrefs = (await screen.findAllByRole("link")).map((a) => a.getAttribute("href"));
-    expect(hrefs).toEqual(expect.arrayContaining(["/souls", "/workflow", "/judgment", "/ledger", "/audit", "/settings"]));
+    expect(hrefs).toEqual(expect.arrayContaining(["/souls", "/workflow", "/judgment", "/ledger", "/audit"]));
+    // `/settings` was in this list and has never been a route.
+    expect(hrefs).not.toContain("/settings");
   });
 });

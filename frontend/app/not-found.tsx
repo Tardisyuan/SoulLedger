@@ -13,7 +13,7 @@ export default function NotFound() {
         <p className="text-[hsl(var(--color-ink-muted))] mb-6">{t("not_found.description")}</p>
         <a
           href="/"
-          className="px-4 py-2 bg-[hsl(var(--color-accent))] text-black rounded-lg font-medium hover:opacity-90 hover:!text-black transition-opacity"
+          className="px-4 py-2 bg-[hsl(var(--color-accent))] text-black font-medium hover:opacity-90 hover:text-black! transition-opacity"
         >
           {t("not_found.home")}
         </a>

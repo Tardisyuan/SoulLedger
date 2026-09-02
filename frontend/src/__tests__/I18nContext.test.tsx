@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 
 // Mock message files with minimal fixtures
 jest.mock('../../messages/zh-Hans.json', () => ({
@@ -152,8 +152,19 @@ describe('I18nContext', () => {
   });
 
   // ── Locale switching ─────────────────────────────────────────────────────
+  //
+  // SWITCHING IS ASYNCHRONOUS NOW. Only the default bundle is statically
+  // imported; `en` and `egy` arrive by dynamic import (see the LAZY_BUNDLES
+  // note in I18nContext). Between `setLocale('en')` and the chunk landing,
+  // `t()` answers from the default bundle through the same fallback path a
+  // missing key takes — so these tests await the arrival rather than asserting
+  // on the frame in between.
+  //
+  // The window itself is asserted below, deliberately: it is a real,
+  // user-visible consequence of lazy-loading and it should be a stated
+  // property rather than something a future reader discovers.
   describe('locale switching', () => {
-    it('should switch to English and reflect in t() output', () => {
+    it('should switch to English and reflect in t() output', async () => {
       const { result } = renderI18n();
       expect(result.current.t('nav.title')).toBe('灵魂账本');
 
@@ -162,10 +173,23 @@ describe('I18nContext', () => {
       });
 
       expect(result.current.locale).toBe('en');
-      expect(result.current.t('nav.title')).toBe('Soul Ledger');
+      await waitFor(() => expect(result.current.t('nav.title')).toBe('Soul Ledger'));
     });
 
-    it('should switch to Egyptian and reflect in t() output', () => {
+    it('shows the default copy until the bundle arrives, not a raw key', async () => {
+      const { result } = renderI18n();
+
+      act(() => {
+        result.current.setLocale('en');
+      });
+
+      // The frame in between: Chinese copy, not "nav.title". A raw key here
+      // would mean the fallback had been lost along with the eager import.
+      expect(result.current.t('nav.title')).toBe('灵魂账本');
+      await waitFor(() => expect(result.current.t('nav.title')).toBe('Soul Ledger'));
+    });
+
+    it('should switch to Egyptian and reflect in t() output', async () => {
       const { result } = renderI18n();
 
       act(() => {
@@ -173,15 +197,20 @@ describe('I18nContext', () => {
       });
 
       expect(result.current.locale).toBe('egy');
-      expect(result.current.t('nav.title')).toBe('𓂀 Soul Book 𓂀');
+      await waitFor(() => expect(result.current.t('nav.title')).toBe('𓂀 Soul Book 𓂀'));
     });
 
-    it('should fall back to the default locale when a key is missing', () => {
+    it('should fall back to the default locale when a key is missing', async () => {
       const { result } = renderI18n();
 
       act(() => {
         result.current.setLocale('egy');
       });
+
+      // Wait for the bundle first, or this passes for the wrong reason: before
+      // it lands EVERY key falls back, so the assertion would hold even if egy
+      // did contain `auth.login`.
+      await waitFor(() => expect(result.current.t('nav.title')).toBe('𓂀 Soul Book 𓂀'));
 
       // "auth.login" exists in zh-Hans but NOT in egy — a partially translated
       // bundle should show real copy from the default locale, not a raw key.
@@ -198,17 +227,21 @@ describe('I18nContext', () => {
       expect(result.current.t('auth.totally_absent')).toBe('auth.totally_absent');
     });
 
-    it('should support switching back to zh-Hans', () => {
+    it('should support switching back to zh-Hans', async () => {
       const { result } = renderI18n();
 
       act(() => {
         result.current.setLocale('en');
       });
-      expect(result.current.t('nav.title')).toBe('Soul Ledger');
+      // Await the arrival, or the second half proves nothing: before the
+      // bundle lands the fallback already renders Chinese, so "switched back"
+      // and "never switched" look identical.
+      await waitFor(() => expect(result.current.t('nav.title')).toBe('Soul Ledger'));
 
       act(() => {
         result.current.setLocale('zh-Hans');
       });
+      // Synchronous on the way back — the default bundle is always resident.
       expect(result.current.t('nav.title')).toBe('灵魂账本');
     });
 

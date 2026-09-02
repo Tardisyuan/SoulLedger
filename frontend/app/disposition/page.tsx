@@ -12,6 +12,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 
@@ -22,7 +23,7 @@ export default function DispositionPage() {
   const queryClient = useQueryClient();
   const [showExecuteModal, setShowExecuteModal] = useState<string | null>(null);
 
-  const { data: dispositionsResponse, isLoading } = useQuery({
+  const { data: dispositionsResponse, isLoading, isError, refetch } = useQuery({
     queryKey: ["dispositions"],
     queryFn: () => dispositionApi.list().then(r => r.data),
     enabled: !!user,
@@ -55,12 +56,19 @@ export default function DispositionPage() {
       subtitle={t("disposition.subtitle")}
       isLoading={isLoading}
       skeleton={<ListSkeleton count={5} />}
-      isEmpty={dispositions.length === 0}
+      // `isError ||`, not `dispositions.length === 0` alone. A failed request
+      // yields `results ?? []`, which is empty, so "the server is down" and
+      // "no dispositions have been filed" rendered the same words.
+      isEmpty={isError || dispositions.length === 0}
       empty={
-        <EmptyState
-          title={t("disposition.list")}
-          reason={t("disposition.no_dispositions")}
-        />
+        isError ? (
+          <QueryError onRetry={() => refetch()} />
+        ) : (
+          <EmptyState
+            title={t("disposition.list")}
+            reason={t("disposition.no_dispositions")}
+          />
+        )
       }
     >
       <div className="space-y-3">

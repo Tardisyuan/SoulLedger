@@ -9,14 +9,33 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { ReactionBar } from "./ReactionBar";
 import type { Post } from "@/lib/api";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
+import { Badge, type BadgeTone } from "@/src/components/ui/Badge";
 
-const VISIBILITY_COLORS: Record<string, string> = {
-  PUBLIC: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  TENANT: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-  FOLLOWERS:
-    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
-  PRIVATE:
-    "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+/**
+ * Visibility, in the app's badge tones.
+ *
+ * These four used to be hand-written light/dark pairs — `bg-green-100
+ * text-green-800 dark:bg-green-900/30 dark:text-green-400` and three more —
+ * which made this the **only component in the codebase running its own theme
+ * system**. Of the ten `dark:` utilities in the whole frontend, six were here.
+ * It worked, which is what made it durable: a private parallel implementation
+ * of the thing `.light`/`:root` already do, immune to every contrast
+ * measurement the token layer carries and to the user's accent choice.
+ *
+ * `Badge` is the one tone table (its own docstring: "THIS IS NOW THE ONLY TONE
+ * TABLE"), and its fills are measured — 10%, because columns.tsx recorded that
+ * 16% drops light-mode badge text to 4.37:1.
+ *
+ * `pill`, deliberately: Badge's docstring reserves the rounded shape for
+ * identity rather than state, and visibility is a property of the post's
+ * audience — closer to a tag than to a status. It was already `rounded-full`
+ * here.
+ */
+const VISIBILITY_TONES: Record<string, BadgeTone> = {
+  PUBLIC: "success",
+  TENANT: "info",
+  FOLLOWERS: "accent",
+  PRIVATE: "neutral",
 };
 
 export function PostCard({ post }: { post: Post }) {
@@ -32,7 +51,7 @@ export function PostCard({ post }: { post: Post }) {
   };
 
   return (
-    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:shadow-sm transition-shadow">
+    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:shadow-xs transition-shadow">
       <div className="flex items-center gap-3 mb-3">
         <Link
           href={`/social/profile/${post.author}`}
@@ -40,11 +59,9 @@ export function PostCard({ post }: { post: Post }) {
         >
           {post.author_name || post.author_username}
         </Link>
-        <span
-          className={`text-02 px-2 py-0.5 rounded-full ${VISIBILITY_COLORS[post.visibility] ?? ""}`}
-        >
+        <Badge tone={VISIBILITY_TONES[post.visibility] ?? "neutral"} shape="pill">
           <DomainEnum namespace="social.visibility" value={post.visibility} />
-        </span>
+        </Badge>
         <span className="text-02 font-mono tabular-nums text-[hsl(var(--color-ink-muted))] ml-auto">
           {formatDate(post.create_time)}
         </span>
@@ -53,7 +70,7 @@ export function PostCard({ post }: { post: Post }) {
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
             aria-label={t("common.delete") || "Delete"}
-            className="text-02 text-[hsl(var(--color-ink-subtle))] hover:text-red-500 transition-colors"
+            className="text-02 text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-status-error))] transition-colors"
           >
             {t("common.delete") || "Delete"}
           </button>

@@ -5,7 +5,7 @@ import { api, type Organization, type PaginatedResponse } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { CardSkeleton } from "@/components/ui/skeleton";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ClipboardList, Landmark, Scale } from "lucide-react";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
@@ -71,16 +71,23 @@ const CIVILIZATION_ICONS: Record<string, string> = {
  * 38° amber was the worse offender of the four: that is `--color-accent`, the
  * colour of every button and link in the app, standing in for "Chinese".
  *
- * The 10%/20%/40% fill-text-border ladder is Badge's `accent` tone recipe, not
- * a new invention. Feedback tokens (`--color-status-*`) are deliberately absent
+ * The 10%/20%/40% fill-text-border ladder is Badge's `accent` tone recipe, and
+ * the foreground is now `--color-civ-ink-*`, not `--color-civ-mark-*`. That was
+ * the half of the recipe this map had missed: `accent`'s own comment says "the
+ * foreground is --color-accent-ink, NOT --color-accent ... a badge is text", and
+ * a badge here is `text-02`, 12px, needing 4.5:1. Drawn at the mark's own
+ * lightness on `mark/0.2`, four of the eight civilization x theme combinations
+ * failed on the surfaces this page actually uses — cn 3.93 / eu 3.92 dark,
+ * eg 3.58 / gr 3.64 light. The fill and the border keep the mark; only the
+ * glyphs moved. Feedback tokens (`--color-status-*`) are deliberately absent
  * — `statusTokenLayering.test.ts` polices exactly that for enum-keyed maps like
  * this one, and a civilization is a domain identity, not a system state.
  */
 const CATEGORY_COLORS: Record<string, string> = {
-  CHINESE: "bg-[hsl(var(--color-civ-mark-cn)/0.2)] text-[hsl(var(--color-civ-mark-cn))] border-[hsl(var(--color-civ-mark-cn)/0.4)]",
-  EUROPEAN: "bg-[hsl(var(--color-civ-mark-eu)/0.2)] text-[hsl(var(--color-civ-mark-eu))] border-[hsl(var(--color-civ-mark-eu)/0.4)]",
-  EGYPTIAN: "bg-[hsl(var(--color-civ-mark-eg)/0.2)] text-[hsl(var(--color-civ-mark-eg))] border-[hsl(var(--color-civ-mark-eg)/0.4)]",
-  GREEK: "bg-[hsl(var(--color-civ-mark-gr)/0.2)] text-[hsl(var(--color-civ-mark-gr))] border-[hsl(var(--color-civ-mark-gr)/0.4)]",
+  CHINESE: "bg-[hsl(var(--color-civ-mark-cn)/0.2)] text-[hsl(var(--color-civ-ink-cn))] border-[hsl(var(--color-civ-mark-cn)/0.4)]",
+  EUROPEAN: "bg-[hsl(var(--color-civ-mark-eu)/0.2)] text-[hsl(var(--color-civ-ink-eu))] border-[hsl(var(--color-civ-mark-eu)/0.4)]",
+  EGYPTIAN: "bg-[hsl(var(--color-civ-mark-eg)/0.2)] text-[hsl(var(--color-civ-ink-eg))] border-[hsl(var(--color-civ-mark-eg)/0.4)]",
+  GREEK: "bg-[hsl(var(--color-civ-mark-gr)/0.2)] text-[hsl(var(--color-civ-ink-gr))] border-[hsl(var(--color-civ-mark-gr)/0.4)]",
 };
 
 function OrganizationsPageContent() {
@@ -127,7 +134,20 @@ function OrganizationsPageContent() {
       className="flex items-center gap-3 py-2 px-3 hover:bg-surface-2 transition-colors"
       style={{ paddingLeft: `${depth * 20 + 12}px` }}
     >
-      <span aria-hidden="true" className="text-05">{depth === 0 ? "🏛️" : depth === 1 ? "⚖️" : "📋"}</span>
+      {/* lucide, not emoji. The CIVILIZATION_ICONS map above stays emoji on
+          purpose — those are identity marks carrying measured font-coverage
+          reasoning. These three are chrome: OS-rendered glyphs beside a
+          controlled three-family type system, drawn differently on every
+          platform. */}
+      <span aria-hidden="true" className="text-[hsl(var(--color-ink-subtle))] shrink-0">
+        {depth === 0 ? (
+          <Landmark className="w-5 h-5" />
+        ) : depth === 1 ? (
+          <Scale className="w-5 h-5" />
+        ) : (
+          <ClipboardList className="w-5 h-5" />
+        )}
+      </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <h3 className="text-03 font-medium text-ink truncate">{org.name}</h3>
