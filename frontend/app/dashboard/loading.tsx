@@ -18,17 +18,17 @@ export default function Loading() {
       <header className="border-b border-[hsl(var(--color-hairline))]">
         <div className="max-w-page mx-auto px-6 pt-10 pb-6">
           <div className="flex items-start gap-4">
-            <div className="h-10 w-64 bg-[hsl(var(--color-surface-1))] animate-pulse" />
-            <div className="ml-auto h-9 w-32 bg-[hsl(var(--color-surface-1))] animate-pulse" />
+            <div className="h-10 w-64 bg-[hsl(var(--color-hairline))] animate-pulse" />
+            <div className="ml-auto h-9 w-32 bg-[hsl(var(--color-hairline))] animate-pulse" />
           </div>
-          <div className="h-6 w-96 bg-[hsl(var(--color-surface-1))] animate-pulse mt-3" />
+          <div className="h-6 w-96 bg-[hsl(var(--color-hairline))] animate-pulse mt-3" />
         </div>
       </header>
 
       <div className="border-b border-[hsl(var(--color-hairline))]">
         <div className="max-w-page mx-auto px-6 flex items-center gap-1">
-          <div className="h-10 w-24 bg-[hsl(var(--color-surface-1))] animate-pulse" />
-          <div className="h-10 w-24 bg-[hsl(var(--color-surface-1))] animate-pulse" />
+          <div className="h-10 w-24 bg-[hsl(var(--color-hairline))] animate-pulse" />
+          <div className="h-10 w-24 bg-[hsl(var(--color-hairline))] animate-pulse" />
         </div>
       </div>
 
@@ -36,12 +36,12 @@ export default function Loading() {
         {/* 四张 KPI 卡。h-28 = 11px 标签 + 8px 间隔 + 56px 数字 + 16px 上下内距。 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 bg-[hsl(var(--color-surface-1))] animate-pulse" />
+            <div key={i} className="h-28 bg-[hsl(var(--color-hairline))] animate-pulse" />
           ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="h-72 bg-[hsl(var(--color-surface-1))] animate-pulse" />
-          <div className="h-72 bg-[hsl(var(--color-surface-1))] animate-pulse" />
+          <div className="h-72 bg-[hsl(var(--color-hairline))] animate-pulse" />
+          <div className="h-72 bg-[hsl(var(--color-hairline))] animate-pulse" />
         </div>
       </div>
     </div>

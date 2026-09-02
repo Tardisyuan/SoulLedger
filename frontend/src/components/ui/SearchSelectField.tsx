@@ -190,7 +190,7 @@ export function SearchSelectField({
 
           <Combobox.Portal>
             <Combobox.Positioner sideOffset={4} className="z-dialog w-[var(--anchor-width)]">
-              <Combobox.Popup className="max-h-64 overflow-y-auto bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] py-1 transition duration-150 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0">
+              <Combobox.Popup className="max-h-64 overflow-y-auto bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] py-1 transition duration-state ease-enter data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0">
                 {loading ? (
                   <p className="px-3 py-2 text-02 text-[hsl(var(--color-ink-subtle))]" role="status">
                     {loadingText}

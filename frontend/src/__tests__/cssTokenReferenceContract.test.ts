@@ -369,3 +369,68 @@ describe("colour tokens are referenced one way only", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+
+/**
+ * A SKELETON MAY NOT BE FILLED FROM THE SURFACE RAMP.
+ *
+ * Skeleton blocks are among the ~29% of surface fills in this app that ship
+ * with no border, so the fill is the only thing separating them from what they
+ * sit on — and the surface ramp cannot do that job. Measured 2026-09-02:
+ * `--color-surface-1` against the canvas is 1.046:1 dark / 1.050:1 light, and
+ * `animate-pulse` halves the opacity, putting the trough at **1.021:1**. Twenty
+ * blocks across three `loading.tsx` files and the shared `skeleton.tsx`
+ * primitive were drawn that way — a loading state nobody could see.
+ *
+ * `--color-hairline` is the token that already means "the quietest visible
+ * boundary": 1.438:1 full, 1.153:1 at the trough. It also belongs to neither
+ * ramp, so using it here moves none of the 128 pinned ink-on-surface
+ * combinations.
+ */
+describe("skeletons are visible against what they sit on", () => {
+  const sources = SOURCE_ROOTS.flatMap((root) => walk(path.join(FRONTEND_ROOT, root), []));
+
+  /**
+   * ANY quoted class string that pulses AND fills from the surface ramp.
+   *
+   * Deliberately NOT anchored on `className=`. The first version was, and it
+   * missed the one site that matters most: `components/ui/skeleton.tsx` — the
+   * shared primitive every other skeleton is built from — writes its classes as
+   * a bare string inside a `cn([...])` array, with no attribute in front of it.
+   * The mutation test caught this: reverting that file's fill to
+   * `--color-surface-2` left the rule green. Same shape as the `cva()` array
+   * strings that defeated an earlier scan in this repo.
+   */
+  const PULSING_SURFACE =
+    /(?:animate-pulse[^"'`\n]*bg-\[hsl\(var\(--color-surface-|bg-\[hsl\(var\(--color-surface-[^"'`\n]*animate-pulse)/;
+
+  it("catches the pattern it exists to catch, and spares the ones it must", () => {
+    expect(PULSING_SURFACE.test('className="h-8 animate-pulse bg-[hsl(var(--color-surface-1))]"')).toBe(true);
+    expect(PULSING_SURFACE.test('className="bg-[hsl(var(--color-surface-2))] animate-pulse"')).toBe(true);
+    // The shape the first version missed: a bare string in a `cn([...])` array.
+    expect(PULSING_SURFACE.test("  'animate-pulse bg-[hsl(var(--color-surface-2))]',")).toBe(true);
+    // The fix, and unrelated surface use, must both pass.
+    expect(PULSING_SURFACE.test('className="h-8 animate-pulse bg-[hsl(var(--color-hairline))]"')).toBe(false);
+    expect(PULSING_SURFACE.test('className="bg-[hsl(var(--color-surface-1))] border"')).toBe(false);
+  });
+
+  it("has files to scan", () => {
+    expect(sources.length).toBeGreaterThan(100);
+  });
+
+  it("has no pulsing block filled from the surface ramp", () => {
+    const offenders = sources
+      .filter((f) => PULSING_SURFACE.test(readFileSync(f, "utf8")))
+      .map((f) => path.relative(FRONTEND_ROOT, f).split(path.sep).join("/"));
+    if (offenders.length > 0) {
+      throw new Error(
+        `A skeleton is filled from the surface ramp. At 1.05:1 — 1.02:1 once ` +
+          `animate-pulse halves the opacity — the block is invisible against ` +
+          `what it sits on. Fill it from \`--color-hairline\` instead.\n\n` +
+          offenders.join("\n")
+      );
+    }
+    expect(offenders).toEqual([]);
+  });
+});

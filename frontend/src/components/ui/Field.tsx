@@ -84,7 +84,7 @@ export const fieldControl = cva(
   [
     "block w-full border bg-[hsl(var(--color-surface-1))] text-[hsl(var(--color-ink))]",
     "placeholder:text-[hsl(var(--color-ink-subtle))]",
-    "transition-[border-color] duration-150",
+    "transition-[border-color] duration-state",
     // Disabled on every control, not 29% of them.
     "disabled:opacity-50 disabled:cursor-not-allowed",
   ],

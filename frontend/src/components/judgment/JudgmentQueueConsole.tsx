@@ -349,7 +349,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           <div className="max-w-6xl mx-auto px-6 py-3">
             <div className="h-10 flex items-center" aria-live="polite">
               {pending ? (
-                <div role="status" className="flex flex-wrap items-center gap-3">
+                <div role="status" className="flex flex-wrap items-center gap-3 animate-undo-strip">
                   <span className="text-03 text-[hsl(var(--color-ink))]">
                     {/* The verdict name is interpolated INTO another
                         translation, so it has to be a string and cannot be

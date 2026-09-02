@@ -51,7 +51,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
       <Dialog.Portal>
         {/* Backdrop */}
         <Dialog.Backdrop
-          className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-xs transition-opacity duration-200 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-black/80"
+          className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-xs transition-opacity duration-settle ease-enter data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-black/80"
         />
 
       {/* Centered panel.
@@ -72,7 +72,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
        * 至少整个面板还能滚,而不是把内容藏到视口外。 */}
         <Dialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-center justify-center overflow-y-auto p-4">
           <Dialog.Popup
-            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] transition duration-200 ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0"
+            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] transition duration-settle ease-enter data-ending-style:ease-exit data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0"
           >
             {/* Header */}
             <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-[hsl(var(--color-hairline))]">
@@ -362,11 +362,11 @@ export function ConfirmDialog({
   return (
     <AlertDialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onCancel(); }}>
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-xs transition-opacity duration-200 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-black/80" />
+        <AlertDialog.Backdrop className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-xs transition-opacity duration-settle ease-enter data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-black/80" />
         {/* 与上面的 Modal 同一套约束,理由见那里。这个对话框的内容通常很短,
          * 但 `message` 是调用方传进来的任意文本 —— 「通常很短」不是约束。 */}
         <AlertDialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-center justify-center overflow-y-auto p-4">
-          <AlertDialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] transition duration-200 ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+          <AlertDialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] transition duration-settle ease-enter data-ending-style:ease-exit data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
               <AlertDialog.Title className="text-06 text-[hsl(var(--color-ink))] mb-2">
                 {title}
