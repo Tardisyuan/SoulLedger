@@ -91,8 +91,14 @@ jobs:
       # one.
       - name: Install dependencies
         run: npm ci
+      # `@soulledger/core` has its own tsconfig and its own eslint config; the
+      # frontend's `eslint .` cannot reach outside its base path, so a job that
+      # only ran the frontend's gates would be checking 5,196 fewer lines than
+      # the day before the package existed.
       - name: Typecheck @soulledger/core
         run: npm run typecheck --workspace @soulledger/core
+      - name: Lint @soulledger/core
+        run: npm run lint --workspace @soulledger/core
       - name: TypeScript check
         run: |
           cd frontend
