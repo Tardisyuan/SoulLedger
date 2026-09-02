@@ -83,18 +83,27 @@ function renderPage() {
 /**
  * Fill every control so a test can then break exactly one thing.
  *
- * The two selects wait for their OPTIONS, not just for the control: both are
- * fed by queries, and setting a `<select>` to a value it has no option for
- * leaves it at "" — which the submit-time required check then blocks, so the
- * test would never reach the server at all. (It did, the first time.)
+ * THE TENANT SELECT WAITS FOR ITS OPTIONS, not just for the control: it is fed
+ * by a query, and setting a `<select>` to a value it has no option for leaves
+ * it at "" — which the submit-time required check then blocks, so the test
+ * would never reach the server at all. (It did, the first time.)
+ *
+ * THE SOUL FIELD IS NO LONGER A SELECT. It is a search-driven combobox, because
+ * the old `<select>` was built from page 1 of a 20-per-page endpoint and could
+ * not reach a tenant's twenty-first soul. So the soul is chosen the way a user
+ * chooses one: type, wait for the server's answer, click the row. `findByRole`
+ * is what waits out the 300ms debounce — no fake timers, because the thing
+ * being tested is that the value survives the round trip, and a mocked clock
+ * would let a broken debounce pass.
  */
 async function fillValid() {
-  await screen.findByRole("option", { name: /孟婆/ });
   await screen.findByRole("option", { name: /GR_HADES/ });
 
-  fireEvent.change(screen.getByLabelText(/dispatch\.target_soul/), {
-    target: { value: "s1" },
-  });
+  const soulInput = screen.getByLabelText(/dispatch\.target_soul/);
+  fireEvent.click(soulInput);
+  fireEvent.change(soulInput, { target: { value: "孟" } });
+  fireEvent.click(await screen.findByRole("option", { name: /孟婆/ }));
+
   fireEvent.change(screen.getByLabelText(/dispatch\.target_tenant/), {
     target: { value: "GR_HADES" },
   });

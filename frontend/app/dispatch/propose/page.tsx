@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { dispatchApi, soulsApi, ledgerApi } from "@/lib/api";
@@ -12,6 +12,7 @@ import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextAreaField, type SelectOption } from "@/src/components/ui/Field";
+import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
 
 export default function ProposeDispatchPage() {
   const { t } = useI18n();
@@ -36,15 +37,43 @@ export default function ProposeDispatchPage() {
     reason: "",
   });
 
+  /**
+   * SERVER-SIDE SEARCH, NOT ONE PAGE.
+   *
+   * This was `soulsApi.list({ page: 1 })` feeding a plain `<select>`, and DRF's
+   * PAGE_SIZE is 20 — so a tenant's twenty-first soul could not be nominated
+   * for a dispatch at all. There was no pagination, no search and no count, so
+   * a truncated list looked exactly like a complete one. Same root cause as
+   * `cfe9f99`, in the shape that scan missed because it only looked at tables.
+   *
+   * `search` goes to the server because the client is the one thing that does
+   * NOT hold the whole collection; filtering here would narrow the twenty rows
+   * it happens to have and present that as the answer.
+   */
+  const [soulSearchInput, setSoulSearchInput] = useState("");
+  const [soulSearch, setSoulSearch] = useState("");
+
+  // 300ms, the same debounce app/souls/page.tsx uses for its own search box.
+  useEffect(() => {
+    const timer = setTimeout(() => setSoulSearch(soulSearchInput), 300);
+    return () => clearTimeout(timer);
+  }, [soulSearchInput]);
+
   const { data: soulsResponse, isLoading: soulsLoading } = useQuery({
-    queryKey: ["dispatch", "souls"],
-    queryFn: () => soulsApi.list({ page: 1 }),
+    // `soulSearch` is IN the key. Without it every query would read the first
+    // search's cached page and the box would look broken rather than slow.
+    queryKey: ["dispatch", "souls", soulSearch],
+    queryFn: () => soulsApi.list({ page: 1, search: soulSearch || undefined }),
     enabled: !!user,
+    // Keeps the previous page on screen while the next search resolves, so the
+    // list does not blank between keystrokes.
+    placeholderData: (previous) => previous,
   });
 
   // Paginated list — `results` is always present, so the old
   // `|| soulsResponse?.data` fallback was unreachable.
   const souls = soulsResponse?.data?.results ?? [];
+  const soulCount = soulsResponse?.data?.count ?? souls.length;
 
   const { data: statsData, isLoading: tenantsLoading } = useQuery({
     queryKey: ["dispatch", "tenants"],
@@ -62,13 +91,10 @@ export default function ProposeDispatchPage() {
    * change that: the label is still a string, it is just assembled here rather
    * than between the option tags.
    */
-  const soulOptions: SelectOption[] = [
-    { value: "", label: t("dispatch.select_soul") },
-    ...souls.map((s) => ({
-      value: String(s.id),
-      label: `${s.name} (${resolveEnumDisplay(t, "souls.states", s.current_state).label ?? t("common.value.unrecorded")})`,
-    })),
-  ];
+  const soulOptions: SelectOption[] = souls.map((s) => ({
+    value: String(s.id),
+    label: `${s.name} (${resolveEnumDisplay(t, "souls.states", s.current_state).label ?? t("common.value.unrecorded")})`,
+  }));
 
   /**
    * `tn`, not `t`. The old spelling shadowed the i18n `t` inside both the
@@ -175,19 +201,35 @@ export default function ProposeDispatchPage() {
             *beside* the label rather than under it, so the field's own label
             vanished for as long as the query took and the row changed height
             when it came back. */}
-        <SelectField
+        <SearchSelectField
           id="soul_id"
           name="soul_id"
           label={t("dispatch.target_soul")}
           required
-          disabled={soulsLoading}
           error={fieldErrors.soul_id}
           value={form.soul_id}
-          onChange={e => {
+          onValueChange={(next) => {
             setFieldErrors(({ soul_id: _drop, ...rest }) => rest);
-            setForm({ ...form, soul_id: e.target.value });
+            setForm({ ...form, soul_id: next });
           }}
-          options={soulsLoading ? [{ value: "", label: t("common.loading") }] : soulOptions}
+          options={soulOptions}
+          searchText={soulSearchInput}
+          onSearchTextChange={setSoulSearchInput}
+          loading={soulsLoading}
+          placeholder={t("dispatch.soul_search_placeholder")}
+          loadingText={t("common.loading")}
+          emptyText={t("dispatch.soul_search_empty")}
+          // Only when the server says it is holding more than it sent. Shown
+          // unconditionally it would read as "there is more" on a list that is
+          // already complete.
+          moreText={
+            soulCount > souls.length
+              ? t("dispatch.soul_search_more", {
+                  shown: String(souls.length),
+                  count: String(soulCount),
+                })
+              : undefined
+          }
         />
 
         <SelectField
