@@ -32,7 +32,7 @@ Two causes, not one — and the distinction is why both were fixed:
 Both are closed: ``_resolve_template`` is now the single lookup both doors call,
 and ``WORKFLOW_TEMPLATES`` carries ``(EUROPEAN, APPEAL)`` and
 ``(EGYPTIAN, APPEAL)`` ported from the presets in
-``frontend/src/config/workflow-templates.ts``, which already carried the
+``packages/core/src/config/workflow-templates.ts``, which already carried the
 sourcing. No actor was invented for them: Michael, Christ, Isis, Nephthys and
 Osiris are all rows ``seed_mythology`` seeds, and this file asserts that rather
 than assuming it.

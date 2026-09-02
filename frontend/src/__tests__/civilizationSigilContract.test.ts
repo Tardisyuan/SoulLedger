@@ -1,7 +1,7 @@
 import {
   CIVILIZATION_SHORT_CODES,
   CIVILIZATION_OPTIONS,
-} from "@/src/config/civilizations";
+} from "@soulledger/core/config/civilizations";
 import {
   CIVILIZATIONS_WITH_NO_SIGIL,
   CIVILIZATION_SIGILS,
@@ -12,7 +12,7 @@ import {
   sigilSystemName,
   toHanNumeral,
   toRomanNumeral,
-} from "@/src/config/civilizationSigil";
+} from "@soulledger/core/config/civilizationSigil";
 
 /**
  * Each civilization numbers its own articles, and the four ways of numbering

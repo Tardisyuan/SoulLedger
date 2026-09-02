@@ -2,7 +2,7 @@
 
 Why this file exists
 --------------------
-Three of the seventeen presets in ``frontend/src/config/workflow-templates.ts``
+Three of the seventeen presets in ``packages/core/src/config/workflow-templates.ts``
 declared ``caseType: "EMERGENCY"`` — ``CHINESE_EMERGENCY``,
 ``EUROPEAN_EMERGENCY``, ``EGYPTIAN_EMERGENCY`` — and
 ``apps/workflow/models.py::CaseType`` has no ``EMERGENCY`` member. Measured
@@ -163,7 +163,7 @@ CASE_TYPES_NOT_VALID_FOR_THEIR_CIVILIZATION: dict[str, str] = {
     # flows that skip a ladder of instances those two civilizations do not have.
     # Each was re-filed by content into a member its own civilization's set
     # already carries; the reasoning is written on each preset in
-    # `frontend/src/config/workflow-templates.ts` and summarised here:
+    # `packages/core/src/config/workflow-templates.ts` and summarised here:
     #
     # * `GREEK_ROUTINE` (then named `EUROPEAN_GREEK`) -> `ROUTINE`. Gorgias 524a
     #   judges *every* Greek dead at the meadow's fork and sends them to the

@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { permApi } from "@/lib/api";
-import { CIVILIZATION_SHORT_CODE_SET } from "@/src/config/civilizations";
+import { CIVILIZATION_SHORT_CODE_SET } from "@soulledger/core/config/civilizations";
 
 // ── Types ────────────────────────────────────────────────────────────
 

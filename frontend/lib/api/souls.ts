@@ -2,7 +2,7 @@ import { api } from "./client";
 import type { PaginatedResponse } from "./users";
 import type { LedgerSummary } from "./ledger";
 import type { HistoricalDate } from "@/lib/utils";
-import type { CivilizationOption } from "@/src/config/civilizations";
+import type { CivilizationOption } from "@soulledger/core/config/civilizations";
 
 export interface SoulInput {
   name: string;

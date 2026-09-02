@@ -6,7 +6,7 @@ import {
   CIVILIZATION_LABELS,
   CIVILIZATION_SHORT_CODES,
   getCivilizationFromTenantCode,
-} from "@/src/config/civilizations";
+} from "@soulledger/core/config/civilizations";
 
 // ── Which cosmology am I in ─────────────────────────────────────────────
 //

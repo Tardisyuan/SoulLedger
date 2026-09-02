@@ -16,7 +16,7 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import {
   CIVILIZATION_SHORT_CODES,
   TENANT_CODE_TO_CIVILIZATION,
-} from "@/src/config/civilizations";
+} from "@soulledger/core/config/civilizations";
 
 /**
  * The 3px identity rule down the left edge of a tenant row.

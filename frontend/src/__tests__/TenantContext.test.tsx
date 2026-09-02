@@ -11,7 +11,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { TenantProvider, useTenant } from "@/src/contexts/TenantContext";
-import { CIVILIZATION_CODES } from "@/src/config/civilizations";
+import { CIVILIZATION_CODES } from "@soulledger/core/config/civilizations";
 import { permApi } from "@/lib/api";
 
 jest.mock("@/lib/api", () => ({

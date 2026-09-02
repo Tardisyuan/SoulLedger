@@ -445,7 +445,7 @@ class WorkflowTemplate(AuditUserFields, models.Model):
     # sayable only by picking a CaseType member for it, which is the mistake
     # `a77a41e` undid: case_type answers "which kind of case", priority answers
     # "how urgent", and EMERGENCY was the second answer written into the first
-    # column. See frontend/src/config/workflow-templates.ts::CHINESE_EMERGENCY.
+    # column. See packages/core/src/config/workflow-templates.ts::CHINESE_EMERGENCY.
     priority = models.IntegerField(
         default=0,
         help_text="Default priority for workflows built from this template: "

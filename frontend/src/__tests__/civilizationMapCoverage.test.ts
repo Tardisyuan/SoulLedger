@@ -6,11 +6,11 @@ import {
   CIVILIZATION_DISPLAY_NAMES,
   CIVILIZATION_LABELS,
   CIVILIZATION_OPTIONS,
-} from "@/src/config/civilizations";
+} from "@soulledger/core/config/civilizations";
 import {
   judgmentCreateSchema,
   soulCreateSchema,
-} from "@/lib/validations/schemas";
+} from "@soulledger/core/validations/schemas";
 
 /**
  * Every hand-written map keyed by civilization, held against the one list.
@@ -42,14 +42,18 @@ import {
  * throws rather than reporting zero maps.
  */
 
-const FRONTEND_ROOT = path.join(__dirname, "..", "..");
+/** Repo root, not frontend root. `CIVILIZATION_ICONS` now lives in
+ *  `packages/core`, and the pages that consume it still live in `frontend`, so
+ *  the addresses this file checks span both trees and have to be written from
+ *  the one place that contains both. */
+const REPO_ROOT = path.join(__dirname, "..", "..", "..");
 
 /** Every hand-written civilization-keyed map, and what it costs when a member
  *  is missing. The consequence is recorded so a reader deciding whether to add
  *  their new map here can tell whether it belongs. */
 const TEXT_MAPS: { file: string; name: string; keyedBy: "civilization" | "tenantCode"; costs: string }[] = [
   {
-    file: "app/organizations/page.tsx", name: "CATEGORY_COLORS",
+    file: "frontend/app/organizations/page.tsx", name: "CATEGORY_COLORS",
     keyedBy: "civilization",
     costs: "an organization subtree renders uncoloured, beside coloured siblings",
   },
@@ -63,7 +67,7 @@ const TEXT_MAPS: { file: string; name: string; keyedBy: "civilization" | "tenant
   // cannot find, which would have turned a real deletion into a parser error
   // that reads like a broken test.
   {
-    file: "app/realms/page.tsx", name: "CIVILIZATION_CONFIG",
+    file: "frontend/app/realms/page.tsx", name: "CIVILIZATION_CONFIG",
     keyedBy: "civilization",
     costs: "the realms page renders that civilization's group with no header",
   },
@@ -74,14 +78,14 @@ const TEXT_MAPS: { file: string; name: string; keyedBy: "civilization" | "tenant
     // still agreed. Only one recorded that Greek gained Hades, Aeacus,
     // Rhadamanthus and Minos in `realms/0018`. It now lives once, in config,
     // and both pages import it.
-    file: "src/config/civilizations.ts", name: "CIVILIZATION_ICONS",
+    file: "packages/core/src/config/civilizations.ts", name: "CIVILIZATION_ICONS",
     keyedBy: "civilization",
     costs: "the organizations and actors pages both show no icon for that civilization",
   },
 ];
 
 function keysOf(file: string, name: string): string[] {
-  const source = readFileSync(path.join(FRONTEND_ROOT, file), "utf8");
+  const source = readFileSync(path.join(REPO_ROOT, file), "utf8");
   // `export const` too — a map that moved into config is exported.
   const start = new RegExp(`^(?:export )?const ${name}\\b[^=]*=\\s*\\{`, "m").exec(source);
   if (start === null) {
@@ -169,8 +173,8 @@ describe("every civilization-keyed map covers every civilization", () => {
     // CIVILIZATION_ICONS being deleted with its avatar.)
     const addresses = [
       ...TEXT_MAPS.map((m) => `${m.file}::${m.name}`),
-      "src/config/civilizations.ts::CIVILIZATION_LABELS",
-      "src/config/civilizations.ts::CIVILIZATION_DISPLAY_NAMES",
+      "packages/core/src/config/civilizations.ts::CIVILIZATION_LABELS",
+      "packages/core/src/config/civilizations.ts::CIVILIZATION_DISPLAY_NAMES",
     ];
     expect(addresses).toHaveLength(5);
   });

@@ -78,7 +78,7 @@ from apps.workflow.services import (
 # backend/tests/… -> backend/tests -> backend -> repo root. Derived from this
 # file's location and never hardcoded — see tests/test_production.py's header.
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PRESETS_TS = REPO_ROOT / "frontend" / "src" / "config" / "workflow-templates.ts"
+PRESETS_TS = REPO_ROOT / "packages" / "core" / "src" / "config" / "workflow-templates.ts"
 
 #: `{ id: "n1", name: "秦广王 · 分流", court: "第一殿", type: "分流", order: 1 },`
 #: One object literal per preset node, all seventeen presets written this way.

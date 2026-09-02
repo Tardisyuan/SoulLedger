@@ -28,7 +28,7 @@ import {
   WORKFLOW_TEMPLATES,
   type WorkflowNodeTemplate,
   type WorkflowTemplate,
-} from "@/src/config/workflow-templates";
+} from "@soulledger/core/config/workflow-templates";
 
 const HALL = "两真之殿";
 const AARU = "芦苇原";

@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { CIVILIZATION_ICONS, CIVILIZATION_ICON_FALLBACK } from "@/src/config/civilizations";
+import { CIVILIZATION_ICONS, CIVILIZATION_ICON_FALLBACK } from "@soulledger/core/config/civilizations";
 import { useQuery } from "@tanstack/react-query";
 import { actorsApi, Actor } from "@/lib/api";
 import { cn } from "@/lib/utils";

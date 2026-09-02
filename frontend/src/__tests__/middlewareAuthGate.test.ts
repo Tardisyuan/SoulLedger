@@ -25,7 +25,7 @@ import path from "node:path";
 import { NextRequest } from "next/server";
 
 import { middleware } from "@/middleware";
-import { DEFAULT_LOCALE, LOCALE_COOKIE } from "@/src/config/locale";
+import { DEFAULT_LOCALE, LOCALE_COOKIE } from "@soulledger/core/config/locale";
 
 const APP_DIR = path.join(__dirname, "..", "..", "app");
 
@@ -137,16 +137,16 @@ describe("中间件不假装自己在做角色鉴权", () => {
 });
 
 describe("locale 常量只有一份", () => {
-  /** `src/config/locale.ts` 的文件头从写下那天起就说「`middleware.ts` 同样从
+  /** `packages/core/src/config/locale.ts` 的文件头从写下那天起就说「`middleware.ts` 同样从
    * 这里取值」,而 `git log -p --all -- frontend/middleware.ts | grep
    * config/locale` **一次都没命中过**。三份同源常量说好收成一份,实际还是两份,
    * 而注释宣告了收拢已完成。 */
-  it("middleware.ts 真的从 src/config/locale 取值", () => {
+  it("middleware.ts 真的从 @soulledger/core/config/locale 取值", () => {
     const source = readFileSync(
       path.join(__dirname, "..", "..", "middleware.ts"),
       "utf8"
     );
-    expect(source).toMatch(/from\s+["']@\/src\/config\/locale["']/);
+    expect(source).toMatch(/from\s+["']@soulledger\/core\/config\/locale["']/);
   });
 
   it("并且没有自己再抄一份字面量", () => {

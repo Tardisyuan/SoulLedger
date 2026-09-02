@@ -9,7 +9,7 @@ import {
   formatSigil,
   sigilSystemName,
   type StatuteRef,
-} from "@/src/config/civilizationSigil";
+} from "@soulledger/core/config/civilizationSigil";
 import type { JudgmentCitation, Statute, StatutePolarity } from "@/lib/api";
 
 /**

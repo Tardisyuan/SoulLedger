@@ -15,7 +15,7 @@ has been the fourth since. A comparison against ``"GREEK"`` on a value typed by
 either of them is a comparison ``tsc`` believes can never be true.
 
 The fix was to stop declaring the set there at all — both fields now read
-``CivilizationOption``, derived from ``frontend/src/config/civilizations.ts``'s
+``CivilizationOption``, derived from ``packages/core/src/config/civilizations.ts``'s
 ``CIVILIZATION_OPTIONS``, which ``f62fdaa`` established as the frontend's one
 list. That leaves exactly one seam this side has to hold: that list against the
 enum, plus the fact that ``souls.ts`` still derives rather than re-enumerating.
@@ -48,7 +48,7 @@ from pathlib import Path
 from apps.souls.models import UNKNOWN_CIVILIZATION, Civilization
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CIVILIZATIONS_TS = REPO_ROOT / "frontend" / "src" / "config" / "civilizations.ts"
+CIVILIZATIONS_TS = REPO_ROOT / "packages" / "core" / "src" / "config" / "civilizations.ts"
 SOULS_TS = REPO_ROOT / "frontend" / "lib" / "api" / "souls.ts"
 
 

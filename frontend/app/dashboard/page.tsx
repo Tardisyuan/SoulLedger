@@ -12,7 +12,7 @@ import {
 } from "@/src/components/charts/LazyDashboardCharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
-import { getDisplayNameForTenant } from "@/src/config/civilizations";
+import { getDisplayNameForTenant } from "@soulledger/core/config/civilizations";
 import { RequireAdmin, RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
 import { useChartColors } from "@/src/hooks/useChartColors";

@@ -24,7 +24,7 @@ import {
   CIVILIZATION_OPTIONS,
   isCivilizationOption,
   type CivilizationOption,
-} from "@/src/config/civilizations";
+} from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 // Both stay under src/components/workflow/ deliberately: xyflow renders
 // `markerEnd` into a standalone <marker> defs tree where `hsl(var(--…))` does

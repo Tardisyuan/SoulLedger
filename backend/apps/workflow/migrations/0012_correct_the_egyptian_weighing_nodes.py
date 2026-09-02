@@ -21,7 +21,7 @@ as judges.
   四十二判官不作裁断，也没有什么可「核实」。
 
 前端的同一套流程已按考据改过(`Anubis · 引导与称量`、`42审判者 · 否定告白`，
-两者在 `frontend/src/config/workflow-node-types.ts` 里都判读为 EVALUATION)，后端
+两者在 `packages/core/src/config/workflow-node-types.ts` 里都判读为 EVALUATION)，后端
 是留在旧读法上的那一侧。模板已改；这个迁移管**已经落库的行**。
 
 为什么需要迁移而不是只改模板
