@@ -1,6 +1,11 @@
-import type { KeyValueStore, PlatformAdapter, UnauthorizedHandler } from "./types";
+import type {
+  KeyValueStore,
+  PlatformAdapter,
+  SessionSuspendSubscriber,
+  UnauthorizedHandler,
+} from "./types";
 
-export type { KeyValueStore, PlatformAdapter, UnauthorizedHandler };
+export type { KeyValueStore, PlatformAdapter, SessionSuspendSubscriber, UnauthorizedHandler };
 
 /** The key the access token is stored under, in the **session** store. */
 export const ACCESS_TOKEN_KEY = "soulledger_access";
@@ -29,6 +34,7 @@ const nullAdapter: PlatformAdapter = {
   session: nullStore,
   persistent: nullStore,
   onUnauthorized: () => {},
+  onSessionSuspend: () => () => {},
 };
 
 let adapter: PlatformAdapter = nullAdapter;
@@ -89,4 +95,15 @@ export function setRefreshToken(value: string): void {
 
 export function getTenantId(): string {
   return adapter.persistent.get(TENANT_ID_KEY) || "";
+}
+
+/**
+ * Subscribe to the client going away. Returns the unsubscribe.
+ *
+ * Read through `platform()` on each call rather than captured once, so a host
+ * that installs its adapter after this module is first imported still gets its
+ * own implementation instead of the null one.
+ */
+export function onSessionSuspend(handler: () => void): () => void {
+  return platform().onSessionSuspend(handler);
 }

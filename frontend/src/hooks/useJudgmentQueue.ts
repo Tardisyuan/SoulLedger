@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { judgmentApi, type Judgment, type JudgmentQueueCursor } from "@soulledger/core/api";
-import { judgmentKeys } from "@/lib/query_keys";
+import { judgmentKeys } from "@soulledger/core/query_keys";
+import { onSessionSuspend } from "@soulledger/core/platform";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 
@@ -41,7 +42,8 @@ import { useToast } from "@/src/contexts/ToastContext";
  *
  * Consequences worth stating plainly:
  *  - The verdict is not durable for up to UNDO_WINDOW_MS. A closed tab loses
- *    it. `flush()` runs on unmount and on `beforeunload` to shrink that window
+ *    it. `flush()` runs on unmount and when the platform reports the session
+ *    suspending (web: `beforeunload`) to shrink that window
  *    to the smallest honest size, but it cannot be zero, and the UI says the
  *    verdict is "pending" rather than showing it as done.
  *  - Only one verdict is ever in flight. Giving a second one flushes the
@@ -249,10 +251,14 @@ export function useJudgmentQueue(options?: { at?: string }) {
   const flushRef = useRef(flush);
   flushRef.current = flush;
   useEffect(() => {
-    const onUnload = () => flushRef.current();
-    window.addEventListener("beforeunload", onUnload);
+    // Through the platform port, not `window.addEventListener("beforeunload")`.
+    // What this effect states is a rule about verdicts — commit on the way out
+    // — and `beforeunload` is one platform's spelling of "on the way out". The
+    // spelling now lives in `lib/platform/web.ts`; React Native's is `AppState`
+    // reaching `background`, and it will register there.
+    const unsubscribe = onSessionSuspend(() => flushRef.current());
     return () => {
-      window.removeEventListener("beforeunload", onUnload);
+      unsubscribe();
       flushRef.current();
     };
   }, []);

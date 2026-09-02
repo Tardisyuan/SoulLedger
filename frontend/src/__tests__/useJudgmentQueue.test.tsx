@@ -212,6 +212,30 @@ describe("useJudgmentQueue", () => {
     expect(mockConclude).toHaveBeenCalledWith(JUDGMENT_A.id, expect.objectContaining({ verdict: "PURGATORY" }));
   });
 
+  it("挂起会话也会送出扣在手里的裁决 —— 不靠卸载", async () => {
+    // 这条对应的是 unmount 那条**没有**覆盖的另一半路径。操作员给了裁决然后直接
+    // 关标签页,组件不会卸载,清理函数不会跑 —— 送出与否全看那个挂起监听。
+    //
+    // 走的是 `beforeunload` 这个真事件,不是 mock:jest.setup.js 装的是真的 web
+    // 适配器,所以这条同时验证了 useJudgmentQueue -> onSessionSuspend ->
+    // lib/platform/web.ts -> window 这一整条链。一个 mock 掉端口的替身在链路断掉时
+    // 依然会绿,而链路断掉正是这次改动可能引入的故障。
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+
+    act(() => result.current.submitVerdict({ verdict: "PURGATORY" }));
+    expect(mockConclude).not.toHaveBeenCalled();   // 还在撤销窗口里扣着
+
+    await act(async () => {
+      window.dispatchEvent(new Event("beforeunload"));
+    });
+
+    expect(mockConclude).toHaveBeenCalledWith(
+      JUDGMENT_A.id,
+      expect.objectContaining({ verdict: "PURGATORY" })
+    );
+  });
+
   it("defer hides the case for the sitting and writes nothing", async () => {
     const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
     await waitFor(() => expect(result.current.cursor.judgment?.id).toBe(JUDGMENT_A.id));

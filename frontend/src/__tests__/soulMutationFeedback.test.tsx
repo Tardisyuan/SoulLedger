@@ -28,7 +28,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { SoulCreateModal } from "@/src/components/ui/Modal";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
-import { soulKeys } from "@/lib/query_keys";
+import { soulKeys } from "@soulledger/core/query_keys";
 import { soulsApi } from "@soulledger/core/api";
 
 const mockShowToast = jest.fn();

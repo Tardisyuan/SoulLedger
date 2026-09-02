@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Popover } from "@base-ui/react/popover";
 import { notificationsApi, type Notification, type PaginatedResponse } from "@soulledger/core/api";
-import { notificationKeys } from "@/lib/query_keys";
+import { notificationKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useTheme } from "@/src/contexts/ThemeContext";

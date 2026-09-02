@@ -48,7 +48,7 @@ import {
   socialKeys,
   soulKeys,
   workflowKeys,
-} from "@/lib/query_keys";
+} from "@soulledger/core/query_keys";
 
 /**
  * Every cache entry a push is supposed to be able to reach, keyed the way the

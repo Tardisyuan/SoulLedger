@@ -45,7 +45,7 @@ import {
   socialKeys,
   soulKeys,
   workflowKeys,
-} from "../query_keys";
+} from "@soulledger/core/query_keys";
 
 import type {
   DeathSyncEventPayload,
