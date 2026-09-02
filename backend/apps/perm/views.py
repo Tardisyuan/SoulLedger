@@ -2,6 +2,8 @@
 Permission views — full CRUD for permissions and role-permission assignment
 """
 from django.db import transaction
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -9,16 +11,25 @@ from rest_framework.response import Response
 
 from apps.core.client_ip import get_client_ip
 from apps.core.permissions import IsAdminPermission
+from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.perm.cache import invalidate_all_permissions, invalidate_role_permissions
 from apps.perm.services import get_role_permission_codenames
 
 from .models import DEFAULT_PERMISSIONS, DEFAULT_ROLES, ROLE_PERMISSIONS, Permission, Role, RolePermission
 from .serializers import (
+    InitRolePermissionsResultSerializer,
+    InitRolesResultSerializer,
     PermissionCreateUpdateSerializer,
+    PermissionExportSerializer,
+    PermissionImportRequestSerializer,
+    PermissionImportResultSerializer,
     PermissionSerializer,
     RoleCreateUpdateSerializer,
+    RolePermissionAssignResultSerializer,
     RolePermissionAssignSerializer,
+    RolePermissionsSerializer,
     RoleSerializer,
+    RoleVersionConflictSerializer,
 )
 
 # The resolution itself lives in apps/perm/services.py, because the login
@@ -28,6 +39,7 @@ from .serializers import (
 _get_role_permissions_from_db = get_role_permission_codenames
 
 
+@extend_schema(request=None, responses={200: PermissionSerializer(many=True)})
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_permissions(request):
@@ -40,6 +52,20 @@ def list_permissions(request):
     return Response(serializer.data)
 
 
+@extend_schema(
+    request=PermissionCreateUpdateSerializer,
+    responses={
+        # PermissionSerializer, not the create serializer: the response adds
+        # `id`, which is the only thing the caller cannot already know.
+        201: PermissionSerializer,
+        # Two different 400s share this slot — a duplicate codename answers
+        # {"error": ...} and a validation failure answers DRF's field-keyed
+        # {"codename": [...]}. Documented as the former because it is the one
+        # this view writes itself; see OpenApiTypes.OBJECT on register_view
+        # for the other shape.
+        400: ErrorResponseSerializer,
+    },
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
 def create_permission(request):
@@ -65,6 +91,16 @@ def create_permission(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    methods=["PUT"],
+    request=PermissionCreateUpdateSerializer,
+    responses={200: PermissionSerializer, 400: OpenApiTypes.OBJECT, 404: ErrorResponseSerializer},
+)
+@extend_schema(
+    methods=["DELETE"],
+    request=None,
+    responses={204: None, 404: ErrorResponseSerializer},
+)
 @api_view(["PUT", "DELETE"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
 def update_delete_permission(request, pk):
@@ -97,6 +133,7 @@ def update_delete_permission(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(request=None, responses={200: RolePermissionsSerializer})
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_role_permissions(request):
@@ -129,6 +166,15 @@ def get_role_permissions(request):
     })
 
 
+@extend_schema(
+    request=None,
+    responses={
+        200: RolePermissionsSerializer,
+        # `detail`, not `error`. This endpoint is the odd one out in this
+        # module and the document has to say so rather than smoothing it over.
+        404: DetailResponseSerializer,
+    },
+)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
 def get_permissions_for_role(request, name):
@@ -159,6 +205,15 @@ def get_permissions_for_role(request, name):
     })
 
 
+@extend_schema(
+    request=RolePermissionAssignSerializer,
+    responses={
+        200: RolePermissionAssignResultSerializer,
+        400: OpenApiTypes.OBJECT,
+        404: ErrorResponseSerializer,
+        409: RoleVersionConflictSerializer,
+    },
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
 def assign_role_permissions(request):
@@ -295,6 +350,7 @@ def assign_role_permissions(request):
 # ── Role CRUD ────────────────────────────────────────────────────────────
 
 
+@extend_schema(request=None, responses={200: RoleSerializer(many=True)})
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_roles(request):
@@ -307,6 +363,10 @@ def list_roles(request):
     return Response(serializer.data)
 
 
+@extend_schema(
+    request=RoleCreateUpdateSerializer,
+    responses={201: RoleSerializer, 400: ErrorResponseSerializer},
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
 def create_role(request):
@@ -326,6 +386,16 @@ def create_role(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    methods=["PUT"],
+    request=RoleCreateUpdateSerializer,
+    responses={200: RoleSerializer, 400: OpenApiTypes.OBJECT, 404: ErrorResponseSerializer},
+)
+@extend_schema(
+    methods=["DELETE"],
+    request=None,
+    responses={204: None, 404: ErrorResponseSerializer},
+)
 @api_view(["PUT", "DELETE"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
 def update_delete_role(request, pk):
@@ -353,6 +423,7 @@ def update_delete_role(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(request=None, responses={200: InitRolesResultSerializer})
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
 def init_roles(request):
@@ -376,6 +447,7 @@ def init_roles(request):
     })
 
 
+@extend_schema(request=None, responses={200: InitRolePermissionsResultSerializer})
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
 def init_role_permissions(request):
@@ -431,6 +503,13 @@ def init_role_permissions(request):
 # ── Permission Export/Import ────────────────────────────────────────────
 
 
+@extend_schema(
+    request=None,
+    # Served with Content-Disposition: attachment, but the bytes are the JSON
+    # document below — a client that reads the body rather than saving the
+    # file gets exactly this.
+    responses={(200, "application/json"): PermissionExportSerializer},
+)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
 def export_permissions(request):
@@ -442,6 +521,10 @@ def export_permissions(request):
     return export_permissions_json_response()
 
 
+@extend_schema(
+    request=PermissionImportRequestSerializer,
+    responses={200: PermissionImportResultSerializer, 400: ErrorResponseSerializer},
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated, IsAdminPermission])
 def import_permissions(request):

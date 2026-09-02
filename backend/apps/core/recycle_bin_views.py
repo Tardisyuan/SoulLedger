@@ -10,13 +10,90 @@ codebase otherwise reserves for ADMIN (menu.manage, user.manage, ...), and
 there is no scoped-down "restore only my tenant's souls" need described in
 the design doc.
 """
-from rest_framework import status, viewsets
+from drf_spectacular.utils import extend_schema, extend_schema_field
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core import recycle_bin
 from apps.core.permissions import CodenamePermission, TenantPermission
+from apps.core.schema import ErrorResponseSerializer
 from apps.core.viewsets import CodenameViewSetMixin
+
+# ── Doc-only shapes ──────────────────────────────────────────────────────
+#
+# The three methods below build their responses by hand, so drf-spectacular
+# has nothing to introspect and publishes the endpoints with no body at all
+# unless it is told. See apps/core/schema.py. Nothing here runs.
+
+
+@extend_schema_field(
+    {"oneOf": [{"type": "integer"}, {"type": "string", "format": "uuid"}]}
+)
+class BinEntryIdField(serializers.Field):
+    """A primary key from *whichever* model the entry came from.
+
+    The bin spans models, and the registry today holds two with different key
+    types: `menu` is an auto integer, `soul` is a UUID. `row.pk` goes onto the
+    wire as it is, so this is an integer for one entity type and a UUID string
+    for the other — a single declared type would be wrong for half the list.
+    """
+
+
+class RecycleBinEntrySerializer(serializers.Serializer):
+    """One row of the bin — always a cascade PARENT, never a dependent.
+
+    Built by `recycle_bin.list_bin_entries`. `dependent_count` is how many
+    other rows share this row's cascade id, which is what "含 N 项关联" shows;
+    the dependents themselves are deliberately not listed as entries.
+
+    `retention_days` and `hard_delete_eligible` are meaningful only for
+    `kind == "reference"`. A domain record (a judicial-process row) gets
+    `retention_days: null` and `hard_delete_eligible: false` permanently —
+    it has no hard-delete path here at all, not one that has yet to open.
+    """
+
+    entity_type = serializers.CharField()
+    kind = serializers.ChoiceField(choices=["reference", "domain"])
+    id = BinEntryIdField()
+    label = serializers.CharField()
+    deleted_at = serializers.DateTimeField(allow_null=True)
+    #: The username, not the user id — null for a row deleted with no user.
+    deleted_by = serializers.CharField(allow_null=True)
+    delete_reason = serializers.CharField(allow_blank=True)
+    cascade_id = serializers.UUIDField(allow_null=True)
+    dependent_count = serializers.IntegerField()
+    retention_days = serializers.IntegerField(allow_null=True)
+    hard_delete_eligible = serializers.BooleanField()
+
+
+class RecycleBinListSerializer(serializers.Serializer):
+    """`count` is the length of `results`, not a paginated total — this
+    endpoint is unpaginated and returns the whole bin."""
+
+    results = RecycleBinEntrySerializer(many=True)
+    count = serializers.IntegerField()
+
+
+class RecycleBinRestoreRequestSerializer(serializers.Serializer):
+    """Restore is keyed by cascade id, not by row: the whole set deleted
+    together comes back together."""
+
+    cascade_id = serializers.UUIDField()
+
+
+class RecycleBinRestoreResultSerializer(serializers.Serializer):
+    """Rows actually restored, across every model sharing the cascade id."""
+
+    restored = serializers.IntegerField()
+
+
+class RecycleBinHardDeleteRequestSerializer(serializers.Serializer):
+    """`entity_type` must name a *reference* type; a domain record is
+    refused with 400 rather than silently ignored."""
+
+    entity_type = serializers.CharField()
+    id = BinEntryIdField()
 
 
 class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
@@ -32,6 +109,7 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         "hard_delete": ["recycle_bin.hard_delete"],
     }
 
+    @extend_schema(responses={200: RecycleBinListSerializer})
     def list(self, request):
         """GET /api/v1/recycle-bin/ — every soft-deleted parent row, across
         every registered entity type, with its dependent count. ADMIN sees
@@ -43,6 +121,14 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
         entries = recycle_bin.list_bin_entries(tenant=tenant, is_admin=is_admin)
         return Response({"results": entries, "count": len(entries)})
 
+    @extend_schema(
+        request=RecycleBinRestoreRequestSerializer,
+        responses={
+            200: RecycleBinRestoreResultSerializer,
+            400: ErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
+    )
     @action(detail=False, methods=["post"])
     def restore(self, request):
         """POST /api/v1/recycle-bin/restore/  body: {"cascade_id": "..."}
@@ -67,6 +153,14 @@ class RecycleBinViewSet(CodenameViewSetMixin, viewsets.ViewSet):
             )
         return Response({"restored": restored})
 
+    @extend_schema(
+        request=RecycleBinHardDeleteRequestSerializer,
+        # Every refusal here is a 400 carrying a sentence — missing fields, an
+        # unknown entity type, a domain record, a row still inside its
+        # retention window. The view distinguishes them in `error`, not in the
+        # status code.
+        responses={204: None, 400: ErrorResponseSerializer},
+    )
     @action(detail=False, methods=["post"], url_path="hard-delete")
     def hard_delete(self, request):
         """POST /api/v1/recycle-bin/hard-delete/  body: {"entity_type": "menu", "id": 3}

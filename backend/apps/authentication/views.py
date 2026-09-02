@@ -5,6 +5,8 @@ import logging
 import secrets
 
 from django.contrib.auth import get_user_model
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -17,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 from apps.authentication.models import UserRole
 from apps.core.permissions import IsAdminPermission, TenantPermission
+from apps.core.schema import DetailResponseSerializer, ErrorResponseSerializer
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 
@@ -24,6 +27,7 @@ from .serializers import (
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
     LoginLogSerializer,
+    LogoutRequestSerializer,
     RegisterSerializer,
     ResetPasswordSerializer,
     SetNewPasswordSerializer,
@@ -480,6 +484,15 @@ class RefreshView(TokenRefreshView):
     permission_classes = [AllowAny]
 
 
+@extend_schema(
+    request=LogoutRequestSerializer,
+    responses={
+        200: DetailResponseSerializer,
+        # Same key, not `error`: the except branch answers
+        # {"detail": "Invalid token"}.
+        400: DetailResponseSerializer,
+    },
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
@@ -497,6 +510,17 @@ def logout_view(request):
         return Response({"detail": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    request=RegisterSerializer,
+    responses={
+        # The created user is rendered by UserSerializer, not by the
+        # RegisterSerializer that validated the input — the two differ
+        # (no password out, tenant/organization refs in).
+        201: UserSerializer,
+        400: OpenApiTypes.OBJECT,
+        429: ErrorResponseSerializer,
+    },
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def register_view(request):
@@ -525,6 +549,16 @@ def register_view(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    methods=["GET"],
+    request=None,
+    responses={200: UserSerializer},
+)
+@extend_schema(
+    methods=["PATCH"],
+    request=UserSerializer,
+    responses={200: UserSerializer, 400: OpenApiTypes.OBJECT},
+)
 @api_view(["GET", "PATCH"])
 @permission_classes([IsAuthenticated])
 def profile_view(request):
@@ -551,6 +585,10 @@ def profile_view(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    request=ChangePasswordSerializer,
+    responses={200: DetailResponseSerializer},
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def change_password(request):
@@ -568,6 +606,16 @@ def change_password(request):
     return Response({"detail": "密码修改成功"})
 
 
+@extend_schema(
+    request=ResetPasswordSerializer,
+    responses={
+        # 200 for an address with no account too — the view returns the same
+        # body deliberately, so the document must not promise a 404 that
+        # would tell an enumerator the difference.
+        200: DetailResponseSerializer,
+        429: ErrorResponseSerializer,
+    },
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def reset_password_request(request):
@@ -608,6 +656,14 @@ def reset_password_request(request):
     return Response({"detail": "验证码已发送到邮箱"})
 
 
+@extend_schema(
+    request=SetNewPasswordSerializer,
+    responses={
+        200: DetailResponseSerializer,
+        400: ErrorResponseSerializer,
+        404: ErrorResponseSerializer,
+    },
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def set_new_password(request):

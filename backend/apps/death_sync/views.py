@@ -25,6 +25,7 @@ from apps.death_sync.permissions import CanManageWebhooks, CanQueryStatus
 from apps.death_sync.serializers import (
     DeathRegistrationCreateSerializer,
     DeathRegistrationRequestSerializer,
+    DeathSyncHealthSerializer,
     ExternalApiKeySerializer,
     WebhookConfigSerializer,
 )
@@ -302,6 +303,12 @@ class DeathSyncHealthView(APIView):
     Health check for death sync API with monitoring metrics.
     """
     authentication_classes = [APIKeyAuthentication]
+    #: Read by drf-spectacular, not by DRF — a plain APIView ignores it at
+    #: runtime. Without it this endpoint is published with no response body:
+    #: the generator reports `unable to guess serializer ... Ignoring view for
+    #: now`, which is a message on the error channel and invisible to a
+    #: warnings check.
+    serializer_class = DeathSyncHealthSerializer
     # Deliberately NOT throttled, while the two data endpoints above are. This
     # is the endpoint an operator reads to find out *why* they are being
     # refused -- throttling it makes the answer unavailable exactly when it is

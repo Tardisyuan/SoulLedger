@@ -2018,7 +2018,7 @@ export interface paths {
          * @description GET /api/v1/perm/permissions/
          *     获取所有权限列表
          */
-        get: operations["v1_perm_permissions_retrieve"];
+        get: operations["v1_perm_permissions_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2144,7 +2144,7 @@ export interface paths {
          * @description GET /api/v1/perm/roles/
          *     获取所有角色列表
          */
-        get: operations["v1_perm_roles_retrieve"];
+        get: operations["v1_perm_roles_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2299,7 +2299,7 @@ export interface paths {
          *     every tenant's rows (matching every other ADMIN-bypass list in this
          *     codebase); a non-ADMIN sees only their own tenant's.
          */
-        get: operations["v1_recycle_bin_retrieve"];
+        get: operations["v1_recycle_bin_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3783,6 +3783,28 @@ export interface components {
          */
         ActorRoleEnum: "JUDGE" | "EXECUTOR" | "GUARDIAN" | "CONDUIT" | "OVERSEER";
         /**
+         * @description The two configured ceilings on the key. Zero when there is no key on
+         *     the request, which is what the health view substitutes rather than
+         *     omitting the block.
+         */
+        ApiKeyRateLimit: {
+            per_minute: number;
+            per_hour: number;
+        };
+        /**
+         * @description Requests actually left in each window.
+         *
+         *     Nullable, and that is the point of the field existing: `remaining_for`
+         *     returns None when the counter cannot be read, and the view reports that
+         *     as null rather than inventing a number. A null here is "unknown", never
+         *     "zero" — these two were once reported under this name while carrying the
+         *     configured ceiling, which is never the remaining count.
+         */
+        ApiKeyRateLimitRemaining: {
+            per_minute: number | null;
+            per_hour: number | null;
+        };
+        /**
          * @description Serializer for ApprovalNode.
          *
          *     `status`, `verdict`, `approver` and `decided_at` are the fields
@@ -4046,6 +4068,19 @@ export interface components {
             role: string | null;
             tenant: string | null;
         };
+        /** @description kind=BALANCE — the Chinese 功過格 account. */
+        BalanceReading: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "BALANCE";
+            civilization: string;
+            balance: number;
+            merit: number;
+            demerit: number;
+            non_fungible?: components["schemas"]["NonFungible"];
+        };
         /** @enum {unknown} */
         BlankEnum: "";
         /**
@@ -4061,6 +4096,11 @@ export interface components {
          * @enum {string}
          */
         CaseTypeEnum: "ROUTINE" | "APPEAL" | "CROSS_REALM" | "SPECIAL" | "CANONIZATION" | "PURGATORY_REVIEW" | "HERESY_TRIAL" | "HEART_WEIGHING" | "DIVINE_TRIAL";
+        /** @description Serializer for changing password with old password verification. */
+        ChangePassword: {
+            old_password: string;
+            new_password: string;
+        };
         /**
          * @description * `CHINESE` - Chinese Diyu
          *     * `EUROPEAN` - European Heaven/Hell
@@ -4249,6 +4289,35 @@ export interface components {
          * @enum {string}
          */
         DeathRegistrationRequestStatusEnum: "PENDING" | "ACCEPTED" | "PROCESSED" | "FAILED" | "DUPLICATE" | "PARTIAL";
+        /** @description `name` and `system_type` are null when the request carries no api key. */
+        DeathSyncApiKeyHealth: {
+            name: string | null;
+            system_type: string | null;
+            is_active: boolean;
+            rate_limit: components["schemas"]["ApiKeyRateLimit"];
+            rate_limit_remaining: components["schemas"]["ApiKeyRateLimitRemaining"];
+        };
+        /** @description 200 body of `DeathSyncHealthView`. Doc-only; see apps/core/schema.py. */
+        DeathSyncHealth: {
+            api_key: components["schemas"]["DeathSyncApiKeyHealth"];
+            system: components["schemas"]["DeathSyncSystemHealth"];
+        };
+        /**
+         * @description The three counts are scoped to the calling key's tenant and to the
+         *     last 24 hours. `status` is the literal "healthy" — the view has no branch
+         *     that emits anything else, so it reports that the endpoint answered, not
+         *     that the counts are within any threshold.
+         */
+        DeathSyncSystemHealth: {
+            status: string;
+            pending_registrations_24h: number;
+            failed_registrations_24h: number;
+            failed_webhooks_24h: number;
+        };
+        /** @description `{"detail": "..."}` — the success/notice body DRF's own convention uses. */
+        DetailResponse: {
+            detail: string;
+        };
         /**
          * @description Serializer for DispatchRecord.
          *
@@ -4377,6 +4446,16 @@ export interface components {
             readonly created_at: string;
         };
         /**
+         * @description `{"error": "..."}` — this codebase's other, non-DRF, one-line body.
+         *
+         *     Kept distinct from `DetailResponseSerializer` rather than unified: the two
+         *     keys are what the views actually emit, and a client that reads `detail`
+         *     where the server writes `error` gets `undefined`, not a type error.
+         */
+        ErrorResponse: {
+            error: string;
+        };
+        /**
          * @description * `SOUL_CREATED` - Soul Created
          *     * `STATE_CHANGED` - State Changed
          *     * `SETTLEMENT_CORRECTED` - Settlement Corrected
@@ -4410,6 +4489,38 @@ export interface components {
          * @enum {string}
          */
         EventTypeEnum: "SOUL_CREATED" | "STATE_CHANGED" | "SETTLEMENT_CORRECTED" | "RECORD_ADDED" | "JUDGMENT_INITIATED" | "JUDGMENT_CONCLUDED" | "DISPOSITION_CREATED" | "REINCARNATION_TRIGGERED" | "KARMA_RECALCULATED" | "WORKFLOW_CREATED" | "WORKFLOW_ASSIGNED" | "WORKFLOW_APPROVED" | "WORKFLOW_REJECTED" | "DISPATCH_CREATED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "DISPATCH_EXECUTED" | "DISPATCH_STATUS_CHANGED" | "DEATH_SYNC_RECEIVED" | "DEATH_SYNC_PROCESSED" | "POST_CREATED" | "POST_UPDATED" | "POST_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "REACTION_ADDED" | "REACTION_REMOVED" | "USER_FOLLOWED" | "USER_UNFOLLOWED" | "NOTIFICATION_CREATED";
+        ExportedDataScope: {
+            role: string;
+            civilization: string | null;
+            model_name: string;
+            filter_conditions: unknown;
+            scope_type: string;
+            priority: number;
+            is_active: boolean;
+        };
+        ExportedFieldPermission: {
+            role: string;
+            model_name: string;
+            field_name: string;
+            visible: boolean;
+            read_only: boolean;
+            editable: boolean;
+        };
+        ExportedPermission: {
+            codename: string;
+            name: string;
+            category: string;
+        };
+        ExportedRole: {
+            name: string;
+            display_name: string;
+            scope: string;
+        };
+        ExportedRolePermission: {
+            role: string;
+            permission: string;
+            conditions: unknown;
+        };
         /** @description Serializer for ExternalApiKey (hides key_hash, shows raw_key on create). */
         ExternalApiKey: {
             /** Format: uuid */
@@ -4455,6 +4566,62 @@ export interface components {
             /** Format: uuid */
             readonly id: string;
             following: number;
+        };
+        /**
+         * @description One offsetting pool. `_tidy` keeps whole numbers whole and 半功 at 0.5,
+         *     so every member here is a number that may or may not be an integer.
+         */
+        FungibilityClassTotal: {
+            /** Format: double */
+            merit: number;
+            /** Format: double */
+            demerit: number;
+            /** Format: double */
+            offset: number;
+            /** Format: double */
+            unoffset_demerit: number;
+            /** Format: double */
+            unusable_merit: number;
+        };
+        /**
+         * @description kind=GUILT_AND_PENALTY — the European culpa/poena pair.
+         *
+         *     `poena` is null in every response this code can currently produce:
+         *     `_european_reading` assigns `None` unconditionally, because the three
+         *     facts it presupposes are not recorded anywhere. `poena_missing` names
+         *     them, and is non-empty for exactly as long as `poena` is null.
+         */
+        GuiltAndPenaltyReading: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "GUILT_AND_PENALTY";
+            civilization: string;
+            culpa: number;
+            culpa_record_count: number;
+            poena: number | null;
+            poena_missing: string[];
+        };
+        /**
+         * @description 200 body of `init_role_permissions`.
+         *
+         *     `roles` maps a role name to a human sentence — "Assigned 7 permissions" or
+         *     "Role not found". It is a per-role status string and not a count; the view
+         *     builds it that way and a client cannot parse a number out of it safely.
+         */
+        InitRolePermissionsResult: {
+            message: string;
+            permissions_added: number;
+            permissions_total: number;
+            roles: {
+                [key: string]: string;
+            };
+        };
+        /** @description 200 body of `init_roles`. `total` is every Role row, not the count created. */
+        InitRolesResult: {
+            message: string;
+            total: number;
         };
         /**
          * @description Serializer mixin that dynamically filters fields based on FieldPermission rules.
@@ -4503,6 +4670,142 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        /**
+         * @description Only label and count reach the wire — the `min`/`max` bounds the view
+         *     computes with are not emitted. The end buckets are unbounded, so the
+         *     counts always sum to `total_souls`.
+         */
+        KarmaBucket: {
+            label: string;
+            count: number;
+        };
+        /**
+         * @description * `reference` - reference
+         *     * `domain` - domain
+         * @enum {string}
+         */
+        KindEnum: "reference" | "domain";
+        /**
+         * @description 200 body of `LedgerEffectiveView`. Same three numbers as the summary's
+         *     merit/demerit/balance, under names that say they are decay-applied.
+         */
+        LedgerEffective: {
+            /** Format: uuid */
+            soul_id: string;
+            effective_merit: number;
+            effective_demerit: number;
+            effective_balance: number;
+        };
+        /**
+         * @description `{"error": "NOT_FOUND", "message": "Soul not found"}`.
+         *
+         *     Two members, not one: `error` here is a machine code (NOT_FOUND,
+         *     FORBIDDEN) and `message` is the prose. That is a different body from the
+         *     `{"error": "<sentence>"}` the perm and auth views emit, which is why
+         *     apps/core/schema.py's ErrorResponseSerializer is not reused — a client
+         *     that printed this one's `error` would show the operator the word
+         *     "NOT_FOUND".
+         */
+        LedgerError: {
+            error: string;
+            message: string;
+        };
+        /**
+         * @description 200 body of `LedgerInheritanceView`.
+         *
+         *     The two rates are the fractions the arithmetic above them used, not the
+         *     20/100 percentages a card draws with. Shipping the same float makes it
+         *     impossible for the displayed rate and the applied rate to disagree —
+         *     which is a failure this codebase has already had once.
+         */
+        LedgerInheritance: {
+            /** Format: uuid */
+            soul_id: string;
+            inherited_merit: number;
+            inherited_demerit: number;
+            /** Format: double */
+            inheritance_merit_rate: number;
+            /** Format: double */
+            inheritance_demerit_rate: number;
+        };
+        /**
+         * @description 200 body of `LedgerOverviewStatsView`.
+         *
+         *     `karma_distribution_total` is emitted rather than assumed: it always
+         *     equals `total_souls` because the buckets partition the whole line, and
+         *     it exists so a reader can check that without re-deriving the bounds.
+         */
+        LedgerOverviewStats: {
+            total_souls: number;
+            state_distribution: components["schemas"]["SoulStateDistribution"][];
+            tenants: components["schemas"]["TenantSoulStats"][];
+            karma_distribution: components["schemas"]["KarmaBucket"][];
+            karma_distribution_total: number;
+            recent_activity: components["schemas"]["RecentActivity"][];
+            souls_by_realm: components["schemas"]["SoulsByRealm"][];
+        };
+        LedgerReading: components["schemas"]["BalanceReading"] | components["schemas"]["ThresholdReading"] | components["schemas"]["GuiltAndPenaltyReading"] | components["schemas"]["SentenceReading"] | components["schemas"]["UnavailableReading"];
+        /**
+         * @description 200 body of `LedgerRecalculateView` — the denormalised columns as
+         *     they stand after the write, not the decayed sums that produced them.
+         */
+        LedgerRecalculateResult: {
+            /** Format: uuid */
+            soul_id: string;
+            merit_score: number;
+            demerit_score: number;
+            karmic_balance: number;
+        };
+        /**
+         * @description `{year, month, day}` — never an ISO string. `year` can be negative
+         *     (BCE) and month/day are routinely unknown for ancient records, which is
+         *     the whole reason this is structured. See apps.souls.dates.
+         */
+        LedgerRecordEventDate: {
+            year: number;
+            month: number | null;
+            day: number | null;
+        };
+        /** @description One row of `records` in the balance payload. */
+        LedgerRecordSummary: {
+            /** Format: uuid */
+            id: string;
+            type: string;
+            category: string;
+            fungibility_class: string;
+            description: string;
+            original_weight: number;
+            /** Format: double */
+            effective_weight: number;
+            /** Format: double */
+            years_elapsed: number;
+            /** Format: double */
+            decay_factor: number;
+            civilization: string;
+            /** Format: date-time */
+            recorded_at: string;
+            event_date: components["schemas"]["LedgerRecordEventDate"] | null;
+            is_milestone: boolean;
+        };
+        /**
+         * @description 200 body of `LedgerBalanceView`.
+         *
+         *     `karmic_balance` is merit minus demerit — the Chinese instrument, served
+         *     to every civilization because it is also a Soul column that querysets
+         *     sort on. `reading` is the instrument this soul's own cosmology uses, and
+         *     is what a client should show a person.
+         */
+        LedgerSummary: {
+            /** Format: uuid */
+            soul_id: string;
+            soul_name: string;
+            merit_score: number;
+            demerit_score: number;
+            karmic_balance: number;
+            record_count: number;
+            records: components["schemas"]["LedgerRecordSummary"][];
+            reading: components["schemas"]["LedgerReading"];
+        };
         /** @description Serializer for login log entries. */
         LoginLog: {
             readonly id: number;
@@ -4521,6 +4824,17 @@ export interface components {
          * @enum {string}
          */
         LoginLogStatusEnum: "SUCCESS" | "FAILED";
+        /**
+         * @description Body of POST /auth/logout/.
+         *
+         *     `required=False` is not a courtesy: `logout_view` reads
+         *     `request.data.get("refresh")` and returns 200 "Logged out successfully"
+         *     when it is absent, blacklisting nothing. Declaring it required would
+         *     document a rejection the view does not perform.
+         */
+        LogoutRequest: {
+            refresh?: string;
+        };
         /**
          * @description * `MENGPO` - 孟婆汤 (Mengpo Soup)
          *     * `LETHE` - 忘川 (Lethe)
@@ -4606,6 +4920,33 @@ export interface components {
          * @enum {string}
          */
         MenuTypeEnum: "DIRECTORY" | "MENU" | "BUTTON";
+        /**
+         * @description `offset_within_classes` — 功過有不可折者, netted per class.
+         *
+         *     `by_class` is keyed by fungibility class name, not a list: the classes are
+         *     derived from record categories and the caller looks one up rather than
+         *     scanning.
+         *
+         *     `granularity_applied` False does not mean the rule was tested and did not
+         *     bite — `granularity_unavailable` is the sentence saying why, and it is
+         *     always present for exactly that reason.
+         */
+        NonFungible: {
+            by_class: {
+                [key: string]: components["schemas"]["FungibilityClassTotal"];
+            };
+            /** Format: double */
+            unoffset_demerit: number;
+            /** Format: double */
+            unusable_merit: number;
+            rule_zh: string;
+            rule_source: string;
+            attested_classes: string[];
+            granularity_rule_zh: string;
+            granularity_applied: boolean;
+            granularity_unavailable: string;
+            granularity_missing_inputs: string[];
+        };
         /**
          * @description * `WORKFLOW_ASSIGNED` - Workflow Assigned
          *     * `JUDGMENT_COMPLETED` - Judgment Completed
@@ -5575,6 +5916,44 @@ export interface components {
             readonly records?: components["schemas"]["SoulRecord"][];
             readonly date_problems?: components["schemas"]["SoulDateProblem"][];
         };
+        /**
+         * @description The serializer behind `PATCH /auth/profile/` — what a user may change
+         *     about themselves.
+         *
+         *     `role` and `tenant` were already locked. `organization` was not, and it is
+         *     a foreign key with no tenant check: measured, a VIEWER could
+         *     `PATCH /auth/profile/ {"organization": <an org belonging to tenant B>}`
+         *     and get 200. Nothing downstream widened that into data access
+         *     (`apps/perm/filters.py` never mentions `organization`, so `DataScopeFilter`
+         *     does not read it), which is why this is a write-integrity hole rather than
+         *     a privilege escalation — but "the field nobody reads today" is not a
+         *     permission model.
+         *
+         *     Kept writable rather than made read-only: moving between the organizations
+         *     of one's own tenant is what this field is for. The scoping happens in
+         *     `validate_organization`.
+         */
+        PatchedUser: {
+            readonly id?: number;
+            /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+            readonly username?: string;
+            /** Email address */
+            email?: string;
+            readonly role?: components["schemas"]["UserRoleEnum"];
+            first_name?: string;
+            last_name?: string;
+            /**
+             * Active
+             * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
+             */
+            readonly is_active?: boolean;
+            /** @description Display name shown in the navbar (e.g. 系统管理员) */
+            display_name?: string;
+            /** @description 所属组织：如 第一殿、冥王厅 */
+            organization?: number | null;
+            /** @description 职位：如 第一殿殿主 */
+            position?: string;
+        };
         PatchedUserNotification: {
             readonly id?: number;
             readonly user?: number;
@@ -5680,6 +6059,60 @@ export interface components {
             /** Format: date-time */
             readonly updated_at?: string;
             readonly tenant?: number | null;
+        };
+        Permission: {
+            readonly id: number;
+            codename: string;
+            name: string;
+            category: string;
+        };
+        PermissionCreateUpdate: {
+            codename: string;
+            name: string;
+            category: string;
+        };
+        /**
+         * @description Body of GET /perm/export/ — served as a JSON file attachment.
+         *
+         *     `version` is the export format's version string ("1.0"), unrelated to
+         *     `Role.version`, which is the optimistic-lock counter.
+         */
+        PermissionExport: {
+            version: string;
+            permissions: components["schemas"]["ExportedPermission"][];
+            roles: components["schemas"]["ExportedRole"][];
+            role_permissions: components["schemas"]["ExportedRolePermission"][];
+            field_permissions: components["schemas"]["ExportedFieldPermission"][];
+            data_scopes: components["schemas"]["ExportedDataScope"][];
+        };
+        /**
+         * @description Body of POST /perm/import/ — an export document, plus `overwrite`.
+         *
+         *     Every member is optional because `import_permissions` reads each one with
+         *     `data.get(key, [])`: a document carrying only `roles` imports only roles.
+         *     The view's own check is `if not data` — an empty body, nothing narrower.
+         */
+        PermissionImportRequest: {
+            version?: string;
+            permissions?: components["schemas"]["ExportedPermission"][];
+            roles?: components["schemas"]["ExportedRole"][];
+            role_permissions?: components["schemas"]["ExportedRolePermission"][];
+            field_permissions?: components["schemas"]["ExportedFieldPermission"][];
+            data_scopes?: components["schemas"]["ExportedDataScope"][];
+            /** @default false */
+            overwrite: boolean;
+        };
+        PermissionImportResult: {
+            message: string;
+            stats: components["schemas"]["PermissionImportStats"];
+        };
+        /** @description Rows CREATED per table — `get_or_create` misses are not counted. */
+        PermissionImportStats: {
+            permissions: number;
+            roles: number;
+            role_permissions: number;
+            field_permissions: number;
+            data_scopes: number;
         };
         /**
          * @description * `OFFENCE` - Offence — counts against the soul
@@ -5834,6 +6267,32 @@ export interface components {
          */
         RebirthFormEnum: "DIVINE" | "HUMAN" | "ASURA" | "ANIMAL" | "HUNGRY_GHOST" | "HELL_BEING" | "OTHER";
         /**
+         * @description 409 body of `LedgerInheritanceView` — `RebirthNotApplicable.detail`.
+         *
+         *     409 and not 404: the soul reads back fine, it is the operation its
+         *     cosmology forbids. `detail` is prose from TERMINAL_COSMOLOGY_REASON;
+         *     `code` is the member to branch on.
+         */
+        RebirthNotApplicable: {
+            code: string;
+            civilization: string;
+            detail: string;
+        };
+        /**
+         * @description An AuditLog row flattened. `user` is the username or the literal
+         *     string "System" for a row with no user — not null.
+         */
+        RecentActivity: {
+            id: number;
+            action: string;
+            resource: string;
+            resource_id: string;
+            description: string;
+            user: string;
+            /** Format: date-time */
+            timestamp: string;
+        };
+        /**
          * @description The record-level shape: the soul-level three plus the acknowledged trio.
          *
          *     The trio is absent from `SoulDateProblemSerializer` on purpose and the
@@ -5858,6 +6317,70 @@ export interface components {
          * @enum {string}
          */
         RecordTypeEnum: "MERIT" | "DEMERIT" | "JUDGMENT" | "DISPOSITION";
+        /**
+         * @description One row of the bin — always a cascade PARENT, never a dependent.
+         *
+         *     Built by `recycle_bin.list_bin_entries`. `dependent_count` is how many
+         *     other rows share this row's cascade id, which is what "含 N 项关联" shows;
+         *     the dependents themselves are deliberately not listed as entries.
+         *
+         *     `retention_days` and `hard_delete_eligible` are meaningful only for
+         *     `kind == "reference"`. A domain record (a judicial-process row) gets
+         *     `retention_days: null` and `hard_delete_eligible: false` permanently —
+         *     it has no hard-delete path here at all, not one that has yet to open.
+         */
+        RecycleBinEntry: {
+            entity_type: string;
+            kind: components["schemas"]["KindEnum"];
+            id: number | string;
+            label: string;
+            /** Format: date-time */
+            deleted_at: string | null;
+            deleted_by: string | null;
+            delete_reason: string;
+            /** Format: uuid */
+            cascade_id: string | null;
+            dependent_count: number;
+            retention_days: number | null;
+            hard_delete_eligible: boolean;
+        };
+        /**
+         * @description `entity_type` must name a *reference* type; a domain record is
+         *     refused with 400 rather than silently ignored.
+         */
+        RecycleBinHardDeleteRequest: {
+            entity_type: string;
+            id: number | string;
+        };
+        /**
+         * @description `count` is the length of `results`, not a paginated total — this
+         *     endpoint is unpaginated and returns the whole bin.
+         */
+        RecycleBinList: {
+            results: components["schemas"]["RecycleBinEntry"][];
+            count: number;
+        };
+        /**
+         * @description Restore is keyed by cascade id, not by row: the whole set deleted
+         *     together comes back together.
+         */
+        RecycleBinRestoreRequest: {
+            /** Format: uuid */
+            cascade_id: string;
+        };
+        /** @description Rows actually restored, across every model sharing the cascade id. */
+        RecycleBinRestoreResult: {
+            restored: number;
+        };
+        Register: {
+            /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+            username: string;
+            /** Email address */
+            email?: string;
+            password: string;
+            first_name?: string;
+            last_name?: string;
+        };
         Reincarnation: {
             /** Format: uuid */
             readonly id: string;
@@ -5879,6 +6402,126 @@ export interface components {
             notes?: string;
             /** Format: date-time */
             readonly reincarnated_at: string;
+        };
+        /** @description Serializer for requesting password reset. */
+        ResetPassword: {
+            /** Format: email */
+            email: string;
+        };
+        Role: {
+            readonly id: number;
+            name: string;
+            display_name: string;
+            /**
+             * @description 作用域：GLOBAL=全局权限，ORG=组织级权限
+             *
+             *     * `GLOBAL` - 全局
+             *     * `ORG` - 组织级
+             */
+            scope?: components["schemas"]["ScopeEnum"];
+            /** @description ORG角色专属组织，GLOBAL角色此字段为空 */
+            organization?: number | null;
+            readonly organization_name: string;
+            readonly user_count: number;
+            readonly version: number;
+            /** Format: date-time */
+            readonly update_time: string;
+        };
+        RoleCreateUpdate: {
+            name: string;
+            display_name: string;
+            /**
+             * @description 作用域：GLOBAL=全局权限，ORG=组织级权限
+             *
+             *     * `GLOBAL` - 全局
+             *     * `ORG` - 组织级
+             */
+            scope?: components["schemas"]["ScopeEnum"];
+            /** @description ORG角色专属组织，GLOBAL角色此字段为空 */
+            organization?: number | null;
+        };
+        RolePermissionAssign: {
+            role: string;
+            permission_ids: number[];
+            expected_version?: number;
+        };
+        /**
+         * @description 200 body of `assign_role_permissions`.
+         *
+         *     `permission_ids` is the *validated* set — the ids that matched a
+         *     Permission row — and `version` is the value AFTER `role.save()` bumped it,
+         *     i.e. the one to send as `expected_version` next time, not the one just
+         *     checked against.
+         */
+        RolePermissionAssignResult: {
+            role: string;
+            assigned_count: number;
+            permission_ids: number[];
+            version: number;
+        };
+        /**
+         * @description `get_role_permissions` and `get_permissions_for_role`.
+         *
+         *     One shape for both, because the views say so in their own docstring
+         *     ("响应结构与 get_role_permissions 一致") and both build it from the same
+         *     three expressions. `permissions` is the codename list resolved through
+         *     `check_permission`; `details` is the subset of those codenames that has a
+         *     Permission row — a codename living only in the DEFAULT_PERMISSIONS dict
+         *     appears in `permissions` and NOT in `details`, so the two lists are not
+         *     guaranteed to be the same length.
+         */
+        RolePermissions: {
+            role: string;
+            permissions: string[];
+            details: components["schemas"]["Permission"][];
+        };
+        /**
+         * @description 409 body of `assign_role_permissions` — a stale-write rejection.
+         *
+         *     Distinct from `ErrorResponseSerializer` because the two extra members are
+         *     the entire point: a client that only reads `error` cannot show the
+         *     operator what moved underneath it.
+         */
+        RoleVersionConflict: {
+            error: string;
+            expected_version: number;
+            current_version: number;
+        };
+        /**
+         * @description * `GLOBAL` - 全局
+         *     * `ORG` - 组织级
+         * @enum {string}
+         */
+        ScopeEnum: "GLOBAL" | "ORG";
+        /**
+         * @description kind=SENTENCE — Republic X's two roads.
+         *
+         *     `wrongs` and `benefactions` are deed counts, and nothing in this payload
+         *     relates them to `repayment_multiple`: tenfold is owed per deed, not a
+         *     total. `elapsed_years` is whole years (`sentence_elapsed_years -> int |
+         *     None`), null when no term start is recorded, and `elapsed_missing` is
+         *     non-empty for exactly that long.
+         */
+        SentenceReading: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "SENTENCE";
+            civilization: string;
+            wrongs: number;
+            benefactions: number;
+            repayment_multiple: number;
+            circuit_years: number;
+            elapsed_years: number | null;
+            elapsed_missing: string[];
+        };
+        /** @description Serializer for setting new password via code. */
+        SetNewPassword: {
+            /** Format: email */
+            email: string;
+            code: string;
+            new_password: string;
         };
         /**
          * @description * `error` - error
@@ -6065,6 +6708,23 @@ export interface components {
          */
         SoulRecordCategoryEnum: "CHARITY" | "COMPASSION" | "HONESTY" | "COURAGE" | "WISDOM" | "PIETY" | "CRUELTY" | "DECEPTION" | "COWARDICE" | "GREED" | "BLASPHEMY" | "MURDER" | "OTHER";
         /**
+         * @description `label` is the raw state member today, same value as `state` — the
+         *     view assigns `"label": s` beside `"state": s`. Localising is the
+         *     client's job and this endpoint has no locale.
+         */
+        SoulStateDistribution: {
+            state: string;
+            label: string;
+            count: number;
+        };
+        /** @description Executed, non-archived dispositions with a destination realm. */
+        SoulsByRealm: {
+            realm_code: string;
+            realm_name: string;
+            civilization: string;
+            count: number;
+        };
+        /**
          * @description One citable article.
          *
          *     `display_text` is where a *derived* article becomes readable: for the
@@ -6133,9 +6793,85 @@ export interface components {
             /** Format: date-time */
             readonly created_at: string;
         };
+        TenantSoulStats: {
+            tenant_id: number;
+            tenant_code: string;
+            tenant_name: string;
+            total_souls: number;
+            state_breakdown: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * @description kind=THRESHOLD — the Egyptian weighing. No merit member: the scale
+         *     does not subtract, and `heart_weight` is the demerit total alone.
+         */
+        ThresholdReading: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "THRESHOLD";
+            civilization: string;
+            heart_weight: number;
+            counterweight: number;
+            heavier_than_feather: boolean;
+        };
         TokenRefresh: {
             readonly access: string;
             refresh: string;
+        };
+        /**
+         * @description kind=UNAVAILABLE — the tenant's civilization is not mapped, so this
+         *     ledger gets no reading rather than a guessed one. `reason_code` is a
+         *     state (TENANT_NOT_MAPPED); the remedy is the client's copy.
+         */
+        UnavailableReading: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "UNAVAILABLE";
+            civilization: string;
+            reason_code: string;
+        };
+        /**
+         * @description The serializer behind `PATCH /auth/profile/` — what a user may change
+         *     about themselves.
+         *
+         *     `role` and `tenant` were already locked. `organization` was not, and it is
+         *     a foreign key with no tenant check: measured, a VIEWER could
+         *     `PATCH /auth/profile/ {"organization": <an org belonging to tenant B>}`
+         *     and get 200. Nothing downstream widened that into data access
+         *     (`apps/perm/filters.py` never mentions `organization`, so `DataScopeFilter`
+         *     does not read it), which is why this is a write-integrity hole rather than
+         *     a privilege escalation — but "the field nobody reads today" is not a
+         *     permission model.
+         *
+         *     Kept writable rather than made read-only: moving between the organizations
+         *     of one's own tenant is what this field is for. The scoping happens in
+         *     `validate_organization`.
+         */
+        User: {
+            readonly id: number;
+            /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+            readonly username: string;
+            /** Email address */
+            email?: string;
+            readonly role: components["schemas"]["UserRoleEnum"];
+            first_name?: string;
+            last_name?: string;
+            /**
+             * Active
+             * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
+             */
+            readonly is_active: boolean;
+            /** @description Display name shown in the navbar (e.g. 系统管理员) */
+            display_name?: string;
+            /** @description 所属组织：如 第一殿、冥王厅 */
+            organization?: number | null;
+            /** @description 职位：如 第一殿殿主 */
+            position?: string;
         };
         /**
          * @description User serializer for creation with password handling.
@@ -6698,14 +7434,21 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePassword"];
+                "application/x-www-form-urlencoded": components["schemas"]["ChangePassword"];
+                "multipart/form-data": components["schemas"]["ChangePassword"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
             };
         };
     };
@@ -6789,14 +7532,29 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LogoutRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LogoutRequest"];
+                "multipart/form-data": components["schemas"]["LogoutRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
             };
         };
     };
@@ -6809,12 +7567,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
             };
         };
     };
@@ -6825,14 +7584,31 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedUser"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedUser"];
+                "multipart/form-data": components["schemas"]["PatchedUser"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
             };
         };
     };
@@ -6868,14 +7644,39 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Register"];
+                "application/x-www-form-urlencoded": components["schemas"]["Register"];
+                "multipart/form-data": components["schemas"]["Register"];
+            };
+        };
         responses: {
-            /** @description No response body */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -6886,14 +7687,29 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPassword"];
+                "application/x-www-form-urlencoded": components["schemas"]["ResetPassword"];
+                "multipart/form-data": components["schemas"]["ResetPassword"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -6904,14 +7720,37 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetNewPassword"];
+                "application/x-www-form-urlencoded": components["schemas"]["SetNewPassword"];
+                "multipart/form-data": components["schemas"]["SetNewPassword"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -7074,12 +7913,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeathSyncHealth"];
+                };
             };
         };
     };
@@ -8544,12 +9384,21 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LedgerSummary"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerError"];
+                };
             };
         };
     };
@@ -8564,12 +9413,21 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LedgerRecalculateResult"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerError"];
+                };
             };
         };
     };
@@ -8584,12 +9442,21 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LedgerEffective"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerError"];
+                };
             };
         };
     };
@@ -8604,12 +9471,29 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LedgerInheritance"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RebirthNotApplicable"];
+                };
             };
         };
     };
@@ -8622,12 +9506,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
+            /** @description CSV, one row per soul in the caller's tenant: Soul ID, Name, Civilization, State, Merit Score, Demerit Score, Karmic Balance, Death Date, Created At. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "text/csv": string;
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerError"];
+                };
             };
         };
     };
@@ -8640,12 +9534,21 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LedgerOverviewStats"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerError"];
+                };
             };
         };
     };
@@ -9537,12 +10440,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PermissionExport"];
+                };
             };
         };
     };
@@ -9553,18 +10457,33 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PermissionImportRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PermissionImportRequest"];
+                "multipart/form-data": components["schemas"]["PermissionImportRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PermissionImportResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
-    v1_perm_permissions_retrieve: {
+    v1_perm_permissions_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -9573,12 +10492,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Permission"][];
+                };
             };
         };
     };
@@ -9591,14 +10511,39 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PermissionCreateUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PermissionCreateUpdate"];
+                "multipart/form-data": components["schemas"]["PermissionCreateUpdate"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Permission"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -9620,6 +10565,14 @@ export interface operations {
                 };
                 content?: never;
             };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     v1_perm_permissions_create_create: {
@@ -9629,14 +10582,29 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PermissionCreateUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PermissionCreateUpdate"];
+                "multipart/form-data": components["schemas"]["PermissionCreateUpdate"];
+            };
+        };
         responses: {
-            /** @description No response body */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Permission"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -9649,12 +10617,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["RolePermissions"];
+                };
             };
         };
     };
@@ -9665,14 +10634,47 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RolePermissionAssign"];
+                "application/x-www-form-urlencoded": components["schemas"]["RolePermissionAssign"];
+                "multipart/form-data": components["schemas"]["RolePermissionAssign"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["RolePermissionAssignResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleVersionConflict"];
+                };
             };
         };
     };
@@ -9685,16 +10687,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["InitRolePermissionsResult"];
+                };
             };
         };
     };
-    v1_perm_roles_retrieve: {
+    v1_perm_roles_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -9703,12 +10706,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Role"][];
+                };
             };
         };
     };
@@ -9723,12 +10727,21 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["RolePermissions"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
             };
         };
     };
@@ -9741,14 +10754,39 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleCreateUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["RoleCreateUpdate"];
+                "multipart/form-data": components["schemas"]["RoleCreateUpdate"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -9770,6 +10808,14 @@ export interface operations {
                 };
                 content?: never;
             };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     v1_perm_roles_create_create: {
@@ -9779,14 +10825,29 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleCreateUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["RoleCreateUpdate"];
+                "multipart/form-data": components["schemas"]["RoleCreateUpdate"];
+            };
+        };
         responses: {
-            /** @description No response body */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -9799,12 +10860,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["InitRolesResult"];
+                };
             };
         };
     };
@@ -9873,7 +10935,7 @@ export interface operations {
             };
         };
     };
-    v1_recycle_bin_retrieve: {
+    v1_recycle_bin_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -9882,12 +10944,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["RecycleBinList"][];
+                };
             };
         };
     };
@@ -9898,14 +10961,28 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecycleBinHardDeleteRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RecycleBinHardDeleteRequest"];
+                "multipart/form-data": components["schemas"]["RecycleBinHardDeleteRequest"];
+            };
+        };
         responses: {
             /** @description No response body */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };
@@ -9916,14 +10993,37 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecycleBinRestoreRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RecycleBinRestoreRequest"];
+                "multipart/form-data": components["schemas"]["RecycleBinRestoreRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["RecycleBinRestoreResult"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };

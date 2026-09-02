@@ -5,6 +5,8 @@ import csv
 
 from django.db.models import Count, F, Q
 from django.http import HttpResponse
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,6 +14,15 @@ from rest_framework.views import APIView
 from apps.audit.models import AuditLog
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.disposition.models import Disposition
+from apps.ledger.serializers import (
+    LedgerEffectiveSerializer,
+    LedgerErrorSerializer,
+    LedgerInheritanceSerializer,
+    LedgerOverviewStatsSerializer,
+    LedgerRecalculateResultSerializer,
+    LedgerSummarySerializer,
+    RebirthNotApplicableSerializer,
+)
 from apps.ledger.services import LedgerService, RebirthNotApplicable
 from apps.souls.models import Soul, SoulState
 
@@ -69,10 +80,17 @@ class LedgerBalanceView(APIView):
     than by elapsed time. See CIVILIZATION_DECAY_RATE.
     """
     permission_classes = [TenantPermission, CodenamePermission]
+    #: Read by drf-spectacular, never by DRF: a plain APIView does not look at
+    #: this attribute at runtime. It is what puts a response body on this
+    #: endpoint in the OpenAPI document — without it the generator reports
+    #: `unable to guess serializer ... Ignoring view for now` and publishes the
+    #: path with no body at all.
+    serializer_class = LedgerSummarySerializer
 
     def get_required_permissions(self):
         return ['ledger.read']
 
+    @extend_schema(responses={200: LedgerSummarySerializer, 404: LedgerErrorSerializer})
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
@@ -103,6 +121,13 @@ class LedgerRecalculateView(APIView):
         # write codename this app defines is ledger.manage, so use that.
         return ['ledger.manage']
 
+    @extend_schema(
+        # No body. The soul is the path parameter and the recalculation takes
+        # nothing else, so `serializer_class` would be wrong here: on a POST
+        # the generator would publish it as a request body too.
+        request=None,
+        responses={200: LedgerRecalculateResultSerializer, 404: LedgerErrorSerializer},
+    )
     def post(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
@@ -125,10 +150,13 @@ class LedgerEffectiveView(APIView):
     Used for disposition decisions.
     """
     permission_classes = [TenantPermission, CodenamePermission]
+    #: See LedgerBalanceView.serializer_class.
+    serializer_class = LedgerEffectiveSerializer
 
     def get_required_permissions(self):
         return ['ledger.read']
 
+    @extend_schema(responses={200: LedgerEffectiveSerializer, 404: LedgerErrorSerializer})
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
@@ -159,10 +187,19 @@ class LedgerInheritanceView(APIView):
     (EGYPTIAN, EUROPEAN) — there is no next life to inherit into.
     """
     permission_classes = [TenantPermission, CodenamePermission]
+    #: See LedgerBalanceView.serializer_class.
+    serializer_class = LedgerInheritanceSerializer
 
     def get_required_permissions(self):
         return ['ledger.read']
 
+    @extend_schema(
+        responses={
+            200: LedgerInheritanceSerializer,
+            404: LedgerErrorSerializer,
+            409: RebirthNotApplicableSerializer,
+        }
+    )
     def get(self, request, soul_id):
         tenant = getattr(request, 'tenant', None)
         try:
@@ -194,10 +231,13 @@ class LedgerOverviewStatsView(APIView):
     recent activity, and souls by realm.
     """
     permission_classes = [TenantPermission, CodenamePermission]
+    #: See LedgerBalanceView.serializer_class.
+    serializer_class = LedgerOverviewStatsSerializer
 
     def get_required_permissions(self):
         return ['ledger.read']
 
+    @extend_schema(responses={200: LedgerOverviewStatsSerializer, 403: LedgerErrorSerializer})
     def get(self, request):
         user = request.user
         if getattr(user, 'role', None) != 'ADMIN':
@@ -379,6 +419,22 @@ class LedgerExportStatsView(APIView):
     def get_required_permissions(self):
         return ['ledger.read']
 
+    @extend_schema(
+        # No `serializer_class` here, unlike its four neighbours: the 200 is a
+        # CSV file, not JSON, and a serializer would document a body this
+        # endpoint never returns. The column order is the writerow below.
+        responses={
+            (200, "text/csv"): OpenApiResponse(
+                response=OpenApiTypes.BINARY,
+                description=(
+                    "CSV, one row per soul in the caller's tenant: Soul ID, "
+                    "Name, Civilization, State, Merit Score, Demerit Score, "
+                    "Karmic Balance, Death Date, Created At."
+                ),
+            ),
+            403: LedgerErrorSerializer,
+        },
+    )
     def get(self, request):
         user = request.user
         if getattr(user, 'role', None) != 'ADMIN':

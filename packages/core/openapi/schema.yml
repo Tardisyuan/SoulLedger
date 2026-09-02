@@ -337,11 +337,27 @@ paths:
         Change password — requires old password verification.
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+        required: true
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
   /api/v1/auth/login/:
     post:
       operationId: v1_auth_login_create
@@ -450,11 +466,32 @@ paths:
         Blacklist the refresh token.
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
   /api/v1/auth/profile/:
     get:
       operationId: v1_auth_profile_retrieve
@@ -467,7 +504,11 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
     patch:
       operationId: v1_auth_profile_partial_update
       description: |-
@@ -475,11 +516,33 @@ paths:
         PATCH /api/v1/auth/profile/ — update current user
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/auth/refresh/:
     post:
       operationId: v1_auth_refresh_create
@@ -518,12 +581,41 @@ paths:
         Rate limited via DRF throttle (RegisterThrottle: 5/hour per IP).
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Register'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Register'
+        required: true
       security:
       - jwtAuth: []
       - {}
       responses:
-        '200':
-          description: No response body
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/v1/auth/reset-password/:
     post:
       operationId: v1_auth_reset_password_create
@@ -533,12 +625,34 @@ paths:
         Stores code in Redis cache with 5-minute TTL.
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPassword'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResetPassword'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResetPassword'
+        required: true
       security:
       - jwtAuth: []
       - {}
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/v1/auth/set-new-password/:
     post:
       operationId: v1_auth_set_new_password_create
@@ -547,12 +661,40 @@ paths:
         Set new password via email + verification code from Redis.
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetNewPassword'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SetNewPassword'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SetNewPassword'
+        required: true
       security:
       - jwtAuth: []
       - {}
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/v1/death-sync/api-keys/:
     get:
       operationId: v1_death_sync_api_keys_list
@@ -731,7 +873,11 @@ paths:
       - ApiKeyAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeathSyncHealth'
+          description: ''
   /api/v1/death-sync/register/:
     get:
       operationId: v1_death_sync_register_list
@@ -2747,7 +2893,17 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerSummary'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerError'
+          description: ''
   /api/v1/ledger/calculate/{soul_id}/:
     post:
       operationId: v1_ledger_calculate_create
@@ -2768,7 +2924,17 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerRecalculateResult'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerError'
+          description: ''
   /api/v1/ledger/effective/{soul_id}/:
     get:
       operationId: v1_ledger_effective_retrieve
@@ -2790,7 +2956,17 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerEffective'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerError'
+          description: ''
   /api/v1/ledger/inheritance/{soul_id}/:
     get:
       operationId: v1_ledger_inheritance_retrieve
@@ -2820,7 +2996,23 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerInheritance'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerError'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RebirthNotApplicable'
+          description: ''
   /api/v1/ledger/stats/export/:
     get:
       operationId: v1_ledger_stats_export_retrieve
@@ -2841,7 +3033,20 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          description: 'CSV, one row per soul in the caller''s tenant: Soul ID, Name,
+            Civilization, State, Merit Score, Demerit Score, Karmic Balance, Death
+            Date, Created At.'
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerError'
+          description: ''
   /api/v1/ledger/stats/overview/:
     get:
       operationId: v1_ledger_stats_overview_retrieve
@@ -2857,7 +3062,17 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerOverviewStats'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerError'
+          description: ''
   /api/v1/menus/:
     get:
       operationId: v1_menus_list
@@ -4025,7 +4240,11 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionExport'
+          description: ''
   /api/v1/perm/import/:
     post:
       operationId: v1_perm_import_create
@@ -4035,14 +4254,35 @@ paths:
         Body: JSON from export endpoint
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionImportRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PermissionImportRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PermissionImportRequest'
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionImportResult'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/v1/perm/permissions/:
     get:
-      operationId: v1_perm_permissions_retrieve
+      operationId: v1_perm_permissions_list
       description: |-
         GET /api/v1/perm/permissions/
         获取所有权限列表
@@ -4052,7 +4292,13 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Permission'
+          description: ''
   /api/v1/perm/permissions/{id}/:
     put:
       operationId: v1_perm_permissions_update
@@ -4068,11 +4314,40 @@ paths:
         required: true
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionCreateUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PermissionCreateUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PermissionCreateUpdate'
+        required: true
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permission'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
     delete:
       operationId: v1_perm_permissions_destroy
       description: |-
@@ -4092,6 +4367,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/v1/perm/permissions/create/:
     post:
       operationId: v1_perm_permissions_create_create
@@ -4100,11 +4381,33 @@ paths:
         创建新权限（仅 ADMIN）
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionCreateUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PermissionCreateUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PermissionCreateUpdate'
+        required: true
       security:
       - jwtAuth: []
       responses:
-        '200':
-          description: No response body
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permission'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/v1/perm/role-permissions/:
     get:
       operationId: v1_perm_role_permissions_retrieve
@@ -4117,7 +4420,11 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolePermissions'
+          description: ''
   /api/v1/perm/role-permissions/assign/:
     post:
       operationId: v1_perm_role_permissions_assign_create
@@ -4126,11 +4433,46 @@ paths:
         为角色分配权限（替换该角色的所有权限，仅 ADMIN）
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RolePermissionAssign'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RolePermissionAssign'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RolePermissionAssign'
+        required: true
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolePermissionAssignResult'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleVersionConflict'
+          description: ''
   /api/v1/perm/role-permissions/init/:
     post:
       operationId: v1_perm_role_permissions_init_create
@@ -4143,10 +4485,14 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitRolePermissionsResult'
+          description: ''
   /api/v1/perm/roles/:
     get:
-      operationId: v1_perm_roles_retrieve
+      operationId: v1_perm_roles_list
       description: |-
         GET /api/v1/perm/roles/
         获取所有角色列表
@@ -4156,7 +4502,13 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Role'
+          description: ''
   /api/v1/perm/roles/{name}/permissions/:
     get:
       operationId: v1_perm_roles_permissions_retrieve
@@ -4182,7 +4534,17 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolePermissions'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailResponse'
+          description: ''
   /api/v1/perm/roles/{id}/:
     put:
       operationId: v1_perm_roles_update
@@ -4198,11 +4560,40 @@ paths:
         required: true
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleCreateUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RoleCreateUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RoleCreateUpdate'
+        required: true
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
     delete:
       operationId: v1_perm_roles_destroy
       description: |-
@@ -4222,6 +4613,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/v1/perm/roles/create/:
     post:
       operationId: v1_perm_roles_create_create
@@ -4230,11 +4627,33 @@ paths:
         创建新角色（仅 ADMIN）
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleCreateUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RoleCreateUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RoleCreateUpdate'
+        required: true
       security:
       - jwtAuth: []
       responses:
-        '200':
-          description: No response body
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/v1/perm/roles/init/:
     post:
       operationId: v1_perm_roles_init_create
@@ -4247,7 +4666,11 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitRolesResult'
+          description: ''
   /api/v1/realms/:
     get:
       operationId: v1_realms_list
@@ -4351,7 +4774,7 @@ paths:
           description: ''
   /api/v1/recycle-bin/:
     get:
-      operationId: v1_recycle_bin_retrieve
+      operationId: v1_recycle_bin_list
       description: |-
         GET /api/v1/recycle-bin/ — every soft-deleted parent row, across
         every registered entity type, with its dependent count. ADMIN sees
@@ -4363,7 +4786,13 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecycleBinList'
+          description: ''
   /api/v1/recycle-bin/hard-delete/:
     post:
       operationId: v1_recycle_bin_hard_delete_create
@@ -4378,11 +4807,29 @@ paths:
         destroy is enforced here, not just in the UI.
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecycleBinHardDeleteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecycleBinHardDeleteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecycleBinHardDeleteRequest'
+        required: true
       security:
       - jwtAuth: []
       responses:
-        '200':
+        '204':
           description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/v1/recycle-bin/restore/:
     post:
       operationId: v1_recycle_bin_restore_create
@@ -4396,11 +4843,39 @@ paths:
         independently of their parent.
       tags:
       - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecycleBinRestoreRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecycleBinRestoreRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecycleBinRestoreRequest'
+        required: true
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecycleBinRestoreResult'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/v1/reincarnation/:
     get:
       operationId: v1_reincarnation_list
@@ -7540,6 +8015,40 @@ components:
         * `GUARDIAN` - Guardian
         * `CONDUIT` - Soul Conduit / Guide
         * `OVERSEER` - Overseer / Admin
+    ApiKeyRateLimit:
+      type: object
+      description: |-
+        The two configured ceilings on the key. Zero when there is no key on
+        the request, which is what the health view substitutes rather than
+        omitting the block.
+      properties:
+        per_minute:
+          type: integer
+        per_hour:
+          type: integer
+      required:
+      - per_hour
+      - per_minute
+    ApiKeyRateLimitRemaining:
+      type: object
+      description: |-
+        Requests actually left in each window.
+
+        Nullable, and that is the point of the field existing: `remaining_for`
+        returns None when the counter cannot be read, and the view reports that
+        as null rather than inventing a number. A null here is "unknown", never
+        "zero" — these two were once reported under this name while carrying the
+        configured ceiling, which is never the remaining count.
+      properties:
+        per_minute:
+          type: integer
+          nullable: true
+        per_hour:
+          type: integer
+          nullable: true
+      required:
+      - per_hour
+      - per_minute
     ApprovalNode:
       type: object
       description: |-
@@ -8064,6 +8573,28 @@ components:
       - role
       - tenant
       - username
+    BalanceReading:
+      type: object
+      description: kind=BALANCE — the Chinese 功過格 account.
+      properties:
+        kind:
+          type: string
+        civilization:
+          type: string
+        balance:
+          type: integer
+        merit:
+          type: integer
+        demerit:
+          type: integer
+        non_fungible:
+          $ref: '#/components/schemas/NonFungible'
+      required:
+      - balance
+      - civilization
+      - demerit
+      - kind
+      - merit
     BlankEnum:
       enum:
       - ''
@@ -8089,6 +8620,20 @@ components:
         * `HERESY_TRIAL` - 异端审判
         * `HEART_WEIGHING` - 心脏称重
         * `DIVINE_TRIAL` - 神判
+    ChangePassword:
+      type: object
+      description: Serializer for changing password with old password verification.
+      properties:
+        old_password:
+          type: string
+          writeOnly: true
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 8
+      required:
+      - new_password
+      - old_password
     CivilizationEnum:
       enum:
       - CHINESE
@@ -8501,6 +9046,70 @@ components:
         * `FAILED` - Processing Failed
         * `DUPLICATE` - Duplicate - Already Processed
         * `PARTIAL` - Partially Processed (batch)
+    DeathSyncApiKeyHealth:
+      type: object
+      description: '`name` and `system_type` are null when the request carries no
+        api key.'
+      properties:
+        name:
+          type: string
+          nullable: true
+        system_type:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        rate_limit:
+          $ref: '#/components/schemas/ApiKeyRateLimit'
+        rate_limit_remaining:
+          $ref: '#/components/schemas/ApiKeyRateLimitRemaining'
+      required:
+      - is_active
+      - name
+      - rate_limit
+      - rate_limit_remaining
+      - system_type
+    DeathSyncHealth:
+      type: object
+      description: 200 body of `DeathSyncHealthView`. Doc-only; see apps/core/schema.py.
+      properties:
+        api_key:
+          $ref: '#/components/schemas/DeathSyncApiKeyHealth'
+        system:
+          $ref: '#/components/schemas/DeathSyncSystemHealth'
+      required:
+      - api_key
+      - system
+    DeathSyncSystemHealth:
+      type: object
+      description: |-
+        The three counts are scoped to the calling key's tenant and to the
+        last 24 hours. `status` is the literal "healthy" — the view has no branch
+        that emits anything else, so it reports that the endpoint answered, not
+        that the counts are within any threshold.
+      properties:
+        status:
+          type: string
+        pending_registrations_24h:
+          type: integer
+        failed_registrations_24h:
+          type: integer
+        failed_webhooks_24h:
+          type: integer
+      required:
+      - failed_registrations_24h
+      - failed_webhooks_24h
+      - pending_registrations_24h
+      - status
+    DetailResponse:
+      type: object
+      description: '`{"detail": "..."}` — the success/notice body DRF''s own convention
+        uses.'
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
     DispatchRecord:
       type: object
       description: |-
@@ -8757,6 +9366,19 @@ components:
       - realm_name
       - soul
       - soul_name
+    ErrorResponse:
+      type: object
+      description: |-
+        `{"error": "..."}` — this codebase's other, non-DRF, one-line body.
+
+        Kept distinct from `DetailResponseSerializer` rather than unified: the two
+        keys are what the views actually emit, and a client that reads `detail`
+        where the server writes `error` gets `undefined`, not a type error.
+      properties:
+        error:
+          type: string
+      required:
+      - error
     EventTypeEnum:
       enum:
       - SOUL_CREATED
@@ -8821,6 +9443,91 @@ components:
         * `USER_FOLLOWED` - User Followed
         * `USER_UNFOLLOWED` - User Unfollowed
         * `NOTIFICATION_CREATED` - Notification Created
+    ExportedDataScope:
+      type: object
+      properties:
+        role:
+          type: string
+        civilization:
+          type: string
+          nullable: true
+        model_name:
+          type: string
+        filter_conditions: {}
+        scope_type:
+          type: string
+        priority:
+          type: integer
+        is_active:
+          type: boolean
+      required:
+      - civilization
+      - filter_conditions
+      - is_active
+      - model_name
+      - priority
+      - role
+      - scope_type
+    ExportedFieldPermission:
+      type: object
+      properties:
+        role:
+          type: string
+        model_name:
+          type: string
+        field_name:
+          type: string
+        visible:
+          type: boolean
+        read_only:
+          type: boolean
+        editable:
+          type: boolean
+      required:
+      - editable
+      - field_name
+      - model_name
+      - read_only
+      - role
+      - visible
+    ExportedPermission:
+      type: object
+      properties:
+        codename:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+      required:
+      - category
+      - codename
+      - name
+    ExportedRole:
+      type: object
+      properties:
+        name:
+          type: string
+        display_name:
+          type: string
+        scope:
+          type: string
+      required:
+      - display_name
+      - name
+      - scope
+    ExportedRolePermission:
+      type: object
+      properties:
+        role:
+          type: string
+        permission:
+          type: string
+        conditions: {}
+      required:
+      - conditions
+      - permission
+      - role
     ExternalApiKey:
       type: object
       description: Serializer for ExternalApiKey (hides key_hash, shows raw_key on
@@ -8932,6 +9639,101 @@ components:
       required:
       - following
       - id
+    FungibilityClassTotal:
+      type: object
+      description: |-
+        One offsetting pool. `_tidy` keeps whole numbers whole and 半功 at 0.5,
+        so every member here is a number that may or may not be an integer.
+      properties:
+        merit:
+          type: number
+          format: double
+        demerit:
+          type: number
+          format: double
+        offset:
+          type: number
+          format: double
+        unoffset_demerit:
+          type: number
+          format: double
+        unusable_merit:
+          type: number
+          format: double
+      required:
+      - demerit
+      - merit
+      - offset
+      - unoffset_demerit
+      - unusable_merit
+    GuiltAndPenaltyReading:
+      type: object
+      description: |-
+        kind=GUILT_AND_PENALTY — the European culpa/poena pair.
+
+        `poena` is null in every response this code can currently produce:
+        `_european_reading` assigns `None` unconditionally, because the three
+        facts it presupposes are not recorded anywhere. `poena_missing` names
+        them, and is non-empty for exactly as long as `poena` is null.
+      properties:
+        kind:
+          type: string
+        civilization:
+          type: string
+        culpa:
+          type: integer
+        culpa_record_count:
+          type: integer
+        poena:
+          type: integer
+          nullable: true
+        poena_missing:
+          type: array
+          items:
+            type: string
+      required:
+      - civilization
+      - culpa
+      - culpa_record_count
+      - kind
+      - poena
+      - poena_missing
+    InitRolePermissionsResult:
+      type: object
+      description: |-
+        200 body of `init_role_permissions`.
+
+        `roles` maps a role name to a human sentence — "Assigned 7 permissions" or
+        "Role not found". It is a per-role status string and not a count; the view
+        builds it that way and a client cannot parse a number out of it safely.
+      properties:
+        message:
+          type: string
+        permissions_added:
+          type: integer
+        permissions_total:
+          type: integer
+        roles:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+      - message
+      - permissions_added
+      - permissions_total
+      - roles
+    InitRolesResult:
+      type: object
+      description: 200 body of `init_roles`. `total` is every Role row, not the count
+        created.
+      properties:
+        message:
+          type: string
+        total:
+          type: integer
+      required:
+      - message
+      - total
     Judgment:
       type: object
       description: |-
@@ -9027,6 +9829,280 @@ components:
       - created_at
       - id
       - statute
+    KarmaBucket:
+      type: object
+      description: |-
+        Only label and count reach the wire — the `min`/`max` bounds the view
+        computes with are not emitted. The end buckets are unbounded, so the
+        counts always sum to `total_souls`.
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+      required:
+      - count
+      - label
+    KindEnum:
+      enum:
+      - reference
+      - domain
+      type: string
+      description: |-
+        * `reference` - reference
+        * `domain` - domain
+    LedgerEffective:
+      type: object
+      description: |-
+        200 body of `LedgerEffectiveView`. Same three numbers as the summary's
+        merit/demerit/balance, under names that say they are decay-applied.
+      properties:
+        soul_id:
+          type: string
+          format: uuid
+        effective_merit:
+          type: integer
+        effective_demerit:
+          type: integer
+        effective_balance:
+          type: integer
+      required:
+      - effective_balance
+      - effective_demerit
+      - effective_merit
+      - soul_id
+    LedgerError:
+      type: object
+      description: |-
+        `{"error": "NOT_FOUND", "message": "Soul not found"}`.
+
+        Two members, not one: `error` here is a machine code (NOT_FOUND,
+        FORBIDDEN) and `message` is the prose. That is a different body from the
+        `{"error": "<sentence>"}` the perm and auth views emit, which is why
+        apps/core/schema.py's ErrorResponseSerializer is not reused — a client
+        that printed this one's `error` would show the operator the word
+        "NOT_FOUND".
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+      - error
+      - message
+    LedgerInheritance:
+      type: object
+      description: |-
+        200 body of `LedgerInheritanceView`.
+
+        The two rates are the fractions the arithmetic above them used, not the
+        20/100 percentages a card draws with. Shipping the same float makes it
+        impossible for the displayed rate and the applied rate to disagree —
+        which is a failure this codebase has already had once.
+      properties:
+        soul_id:
+          type: string
+          format: uuid
+        inherited_merit:
+          type: integer
+        inherited_demerit:
+          type: integer
+        inheritance_merit_rate:
+          type: number
+          format: double
+        inheritance_demerit_rate:
+          type: number
+          format: double
+      required:
+      - inheritance_demerit_rate
+      - inheritance_merit_rate
+      - inherited_demerit
+      - inherited_merit
+      - soul_id
+    LedgerOverviewStats:
+      type: object
+      description: |-
+        200 body of `LedgerOverviewStatsView`.
+
+        `karma_distribution_total` is emitted rather than assumed: it always
+        equals `total_souls` because the buckets partition the whole line, and
+        it exists so a reader can check that without re-deriving the bounds.
+      properties:
+        total_souls:
+          type: integer
+        state_distribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulStateDistribution'
+        tenants:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantSoulStats'
+        karma_distribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/KarmaBucket'
+        karma_distribution_total:
+          type: integer
+        recent_activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecentActivity'
+        souls_by_realm:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoulsByRealm'
+      required:
+      - karma_distribution
+      - karma_distribution_total
+      - recent_activity
+      - souls_by_realm
+      - state_distribution
+      - tenants
+      - total_souls
+    LedgerReading:
+      oneOf:
+      - $ref: '#/components/schemas/BalanceReading'
+      - $ref: '#/components/schemas/ThresholdReading'
+      - $ref: '#/components/schemas/GuiltAndPenaltyReading'
+      - $ref: '#/components/schemas/SentenceReading'
+      - $ref: '#/components/schemas/UnavailableReading'
+      discriminator:
+        propertyName: kind
+        mapping:
+          BALANCE: '#/components/schemas/BalanceReading'
+          THRESHOLD: '#/components/schemas/ThresholdReading'
+          GUILT_AND_PENALTY: '#/components/schemas/GuiltAndPenaltyReading'
+          SENTENCE: '#/components/schemas/SentenceReading'
+          UNAVAILABLE: '#/components/schemas/UnavailableReading'
+    LedgerRecalculateResult:
+      type: object
+      description: |-
+        200 body of `LedgerRecalculateView` — the denormalised columns as
+        they stand after the write, not the decayed sums that produced them.
+      properties:
+        soul_id:
+          type: string
+          format: uuid
+        merit_score:
+          type: integer
+        demerit_score:
+          type: integer
+        karmic_balance:
+          type: integer
+      required:
+      - demerit_score
+      - karmic_balance
+      - merit_score
+      - soul_id
+    LedgerRecordEventDate:
+      type: object
+      description: |-
+        `{year, month, day}` — never an ISO string. `year` can be negative
+        (BCE) and month/day are routinely unknown for ancient records, which is
+        the whole reason this is structured. See apps.souls.dates.
+      properties:
+        year:
+          type: integer
+        month:
+          type: integer
+          nullable: true
+        day:
+          type: integer
+          nullable: true
+      required:
+      - day
+      - month
+      - year
+    LedgerRecordSummary:
+      type: object
+      description: One row of `records` in the balance payload.
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        category:
+          type: string
+        fungibility_class:
+          type: string
+        description:
+          type: string
+        original_weight:
+          type: integer
+        effective_weight:
+          type: number
+          format: double
+        years_elapsed:
+          type: number
+          format: double
+        decay_factor:
+          type: number
+          format: double
+        civilization:
+          type: string
+        recorded_at:
+          type: string
+          format: date-time
+        event_date:
+          allOf:
+          - $ref: '#/components/schemas/LedgerRecordEventDate'
+          nullable: true
+        is_milestone:
+          type: boolean
+      required:
+      - category
+      - civilization
+      - decay_factor
+      - description
+      - effective_weight
+      - event_date
+      - fungibility_class
+      - id
+      - is_milestone
+      - original_weight
+      - recorded_at
+      - type
+      - years_elapsed
+    LedgerSummary:
+      type: object
+      description: |-
+        200 body of `LedgerBalanceView`.
+
+        `karmic_balance` is merit minus demerit — the Chinese instrument, served
+        to every civilization because it is also a Soul column that querysets
+        sort on. `reading` is the instrument this soul's own cosmology uses, and
+        is what a client should show a person.
+      properties:
+        soul_id:
+          type: string
+          format: uuid
+        soul_name:
+          type: string
+        merit_score:
+          type: integer
+        demerit_score:
+          type: integer
+        karmic_balance:
+          type: integer
+        record_count:
+          type: integer
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerRecordSummary'
+        reading:
+          $ref: '#/components/schemas/LedgerReading'
+      required:
+      - demerit_score
+      - karmic_balance
+      - merit_score
+      - reading
+      - record_count
+      - records
+      - soul_id
+      - soul_name
     LoginLog:
       type: object
       description: Serializer for login log entries.
@@ -9076,6 +10152,18 @@ components:
       description: |-
         * `SUCCESS` - 成功
         * `FAILED` - 失败
+    LogoutRequest:
+      type: object
+      description: |-
+        Body of POST /auth/logout/.
+
+        `required=False` is not a courtesy: `logout_view` reads
+        `request.data.get("refresh")` and returns 200 "Logged out successfully"
+        when it is absent, blacklisting nothing. Declaring it required would
+        document a rejection the view does not perform.
+      properties:
+        refresh:
+          type: string
     MemoryResetMechanismEnum:
       enum:
       - MENGPO
@@ -9271,6 +10359,58 @@ components:
         * `DIRECTORY` - 目录
         * `MENU` - 菜单
         * `BUTTON` - 按钮
+    NonFungible:
+      type: object
+      description: |-
+        `offset_within_classes` — 功過有不可折者, netted per class.
+
+        `by_class` is keyed by fungibility class name, not a list: the classes are
+        derived from record categories and the caller looks one up rather than
+        scanning.
+
+        `granularity_applied` False does not mean the rule was tested and did not
+        bite — `granularity_unavailable` is the sentence saying why, and it is
+        always present for exactly that reason.
+      properties:
+        by_class:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/FungibilityClassTotal'
+        unoffset_demerit:
+          type: number
+          format: double
+        unusable_merit:
+          type: number
+          format: double
+        rule_zh:
+          type: string
+        rule_source:
+          type: string
+        attested_classes:
+          type: array
+          items:
+            type: string
+        granularity_rule_zh:
+          type: string
+        granularity_applied:
+          type: boolean
+        granularity_unavailable:
+          type: string
+        granularity_missing_inputs:
+          type: array
+          items:
+            type: string
+      required:
+      - attested_classes
+      - by_class
+      - granularity_applied
+      - granularity_missing_inputs
+      - granularity_rule_zh
+      - granularity_unavailable
+      - rule_source
+      - rule_zh
+      - unoffset_demerit
+      - unusable_merit
     NotificationTypeEnum:
       enum:
       - WORKFLOW_ASSIGNED
@@ -10903,6 +12043,69 @@ components:
           items:
             $ref: '#/components/schemas/SoulDateProblem'
           readOnly: true
+    PatchedUser:
+      type: object
+      description: |-
+        The serializer behind `PATCH /auth/profile/` — what a user may change
+        about themselves.
+
+        `role` and `tenant` were already locked. `organization` was not, and it is
+        a foreign key with no tenant check: measured, a VIEWER could
+        `PATCH /auth/profile/ {"organization": <an org belonging to tenant B>}`
+        and get 200. Nothing downstream widened that into data access
+        (`apps/perm/filters.py` never mentions `organization`, so `DataScopeFilter`
+        does not read it), which is why this is a write-integrity hole rather than
+        a privilege escalation — but "the field nobody reads today" is not a
+        permission model.
+
+        Kept writable rather than made read-only: moving between the organizations
+        of one's own tenant is what this field is for. The scoping happens in
+        `validate_organization`.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        email:
+          title: Email address
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        role:
+          allOf:
+          - $ref: '#/components/schemas/UserRoleEnum'
+          readOnly: true
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        is_active:
+          type: boolean
+          readOnly: true
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+        display_name:
+          type: string
+          description: Display name shown in the navbar (e.g. 系统管理员)
+          maxLength: 100
+        organization:
+          type: integer
+          nullable: true
+          description: 所属组织：如 第一殿、冥王厅
+        position:
+          type: string
+          description: 职位：如 第一殿殿主
+          maxLength: 100
     PatchedUserNotification:
       type: object
       properties:
@@ -11086,6 +12289,143 @@ components:
           type: integer
           readOnly: true
           nullable: true
+    Permission:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        codename:
+          type: string
+          maxLength: 100
+        name:
+          type: string
+          maxLength: 200
+        category:
+          type: string
+          maxLength: 50
+      required:
+      - category
+      - codename
+      - id
+      - name
+    PermissionCreateUpdate:
+      type: object
+      properties:
+        codename:
+          type: string
+          maxLength: 100
+        name:
+          type: string
+          maxLength: 200
+        category:
+          type: string
+          maxLength: 50
+      required:
+      - category
+      - codename
+      - name
+    PermissionExport:
+      type: object
+      description: |-
+        Body of GET /perm/export/ — served as a JSON file attachment.
+
+        `version` is the export format's version string ("1.0"), unrelated to
+        `Role.version`, which is the optimistic-lock counter.
+      properties:
+        version:
+          type: string
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedPermission'
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedRole'
+        role_permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedRolePermission'
+        field_permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedFieldPermission'
+        data_scopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedDataScope'
+      required:
+      - data_scopes
+      - field_permissions
+      - permissions
+      - role_permissions
+      - roles
+      - version
+    PermissionImportRequest:
+      type: object
+      description: |-
+        Body of POST /perm/import/ — an export document, plus `overwrite`.
+
+        Every member is optional because `import_permissions` reads each one with
+        `data.get(key, [])`: a document carrying only `roles` imports only roles.
+        The view's own check is `if not data` — an empty body, nothing narrower.
+      properties:
+        version:
+          type: string
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedPermission'
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedRole'
+        role_permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedRolePermission'
+        field_permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedFieldPermission'
+        data_scopes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportedDataScope'
+        overwrite:
+          type: boolean
+          default: false
+    PermissionImportResult:
+      type: object
+      properties:
+        message:
+          type: string
+        stats:
+          $ref: '#/components/schemas/PermissionImportStats'
+      required:
+      - message
+      - stats
+    PermissionImportStats:
+      type: object
+      description: Rows CREATED per table — `get_or_create` misses are not counted.
+      properties:
+        permissions:
+          type: integer
+        roles:
+          type: integer
+        role_permissions:
+          type: integer
+        field_permissions:
+          type: integer
+        data_scopes:
+          type: integer
+      required:
+      - data_scopes
+      - field_permissions
+      - permissions
+      - role_permissions
+      - roles
     PolarityEnum:
       enum:
       - OFFENCE
@@ -11402,6 +12742,54 @@ components:
         * `HUNGRY_GHOST` - Hungry Ghost
         * `HELL_BEING` - Hell Being
         * `OTHER` - Other (Unclassified)
+    RebirthNotApplicable:
+      type: object
+      description: |-
+        409 body of `LedgerInheritanceView` — `RebirthNotApplicable.detail`.
+
+        409 and not 404: the soul reads back fine, it is the operation its
+        cosmology forbids. `detail` is prose from TERMINAL_COSMOLOGY_REASON;
+        `code` is the member to branch on.
+      properties:
+        code:
+          type: string
+        civilization:
+          type: string
+        detail:
+          type: string
+      required:
+      - civilization
+      - code
+      - detail
+    RecentActivity:
+      type: object
+      description: |-
+        An AuditLog row flattened. `user` is the username or the literal
+        string "System" for a row with no user — not null.
+      properties:
+        id:
+          type: integer
+        action:
+          type: string
+        resource:
+          type: string
+        resource_id:
+          type: string
+        description:
+          type: string
+        user:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+      - action
+      - description
+      - id
+      - resource
+      - resource_id
+      - timestamp
+      - user
     RecordDateProblem:
       type: object
       description: |-
@@ -11446,6 +12834,143 @@ components:
         * `DEMERIT` - Demerit
         * `JUDGMENT` - Judgment Evidence
         * `DISPOSITION` - Disposition Record
+    RecycleBinEntry:
+      type: object
+      description: |-
+        One row of the bin — always a cascade PARENT, never a dependent.
+
+        Built by `recycle_bin.list_bin_entries`. `dependent_count` is how many
+        other rows share this row's cascade id, which is what "含 N 项关联" shows;
+        the dependents themselves are deliberately not listed as entries.
+
+        `retention_days` and `hard_delete_eligible` are meaningful only for
+        `kind == "reference"`. A domain record (a judicial-process row) gets
+        `retention_days: null` and `hard_delete_eligible: false` permanently —
+        it has no hard-delete path here at all, not one that has yet to open.
+      properties:
+        entity_type:
+          type: string
+        kind:
+          $ref: '#/components/schemas/KindEnum'
+        id:
+          oneOf:
+          - type: integer
+          - type: string
+            format: uuid
+        label:
+          type: string
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_by:
+          type: string
+          nullable: true
+        delete_reason:
+          type: string
+        cascade_id:
+          type: string
+          format: uuid
+          nullable: true
+        dependent_count:
+          type: integer
+        retention_days:
+          type: integer
+          nullable: true
+        hard_delete_eligible:
+          type: boolean
+      required:
+      - cascade_id
+      - delete_reason
+      - deleted_at
+      - deleted_by
+      - dependent_count
+      - entity_type
+      - hard_delete_eligible
+      - id
+      - kind
+      - label
+      - retention_days
+    RecycleBinHardDeleteRequest:
+      type: object
+      description: |-
+        `entity_type` must name a *reference* type; a domain record is
+        refused with 400 rather than silently ignored.
+      properties:
+        entity_type:
+          type: string
+        id:
+          oneOf:
+          - type: integer
+          - type: string
+            format: uuid
+      required:
+      - entity_type
+      - id
+    RecycleBinList:
+      type: object
+      description: |-
+        `count` is the length of `results`, not a paginated total — this
+        endpoint is unpaginated and returns the whole bin.
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecycleBinEntry'
+        count:
+          type: integer
+      required:
+      - count
+      - results
+    RecycleBinRestoreRequest:
+      type: object
+      description: |-
+        Restore is keyed by cascade id, not by row: the whole set deleted
+        together comes back together.
+      properties:
+        cascade_id:
+          type: string
+          format: uuid
+      required:
+      - cascade_id
+    RecycleBinRestoreResult:
+      type: object
+      description: Rows actually restored, across every model sharing the cascade
+        id.
+      properties:
+        restored:
+          type: integer
+      required:
+      - restored
+    Register:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          title: Email address
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        password:
+          type: string
+          writeOnly: true
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+      required:
+      - password
+      - username
     Reincarnation:
       type: object
       properties:
@@ -11493,6 +13018,236 @@ components:
       - soul
       - soul_name
       - target_realm
+    ResetPassword:
+      type: object
+      description: Serializer for requesting password reset.
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    Role:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 20
+        display_name:
+          type: string
+          maxLength: 100
+        scope:
+          allOf:
+          - $ref: '#/components/schemas/ScopeEnum'
+          description: |-
+            作用域：GLOBAL=全局权限，ORG=组织级权限
+
+            * `GLOBAL` - 全局
+            * `ORG` - 组织级
+        organization:
+          type: integer
+          nullable: true
+          description: ORG角色专属组织，GLOBAL角色此字段为空
+        organization_name:
+          type: string
+          readOnly: true
+        user_count:
+          type: integer
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+        update_time:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - display_name
+      - id
+      - name
+      - organization_name
+      - update_time
+      - user_count
+      - version
+    RoleCreateUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 20
+        display_name:
+          type: string
+          maxLength: 100
+        scope:
+          allOf:
+          - $ref: '#/components/schemas/ScopeEnum'
+          description: |-
+            作用域：GLOBAL=全局权限，ORG=组织级权限
+
+            * `GLOBAL` - 全局
+            * `ORG` - 组织级
+        organization:
+          type: integer
+          nullable: true
+          description: ORG角色专属组织，GLOBAL角色此字段为空
+      required:
+      - display_name
+      - name
+    RolePermissionAssign:
+      type: object
+      properties:
+        role:
+          type: string
+          maxLength: 20
+        permission_ids:
+          type: array
+          items:
+            type: integer
+        expected_version:
+          type: integer
+      required:
+      - permission_ids
+      - role
+    RolePermissionAssignResult:
+      type: object
+      description: |-
+        200 body of `assign_role_permissions`.
+
+        `permission_ids` is the *validated* set — the ids that matched a
+        Permission row — and `version` is the value AFTER `role.save()` bumped it,
+        i.e. the one to send as `expected_version` next time, not the one just
+        checked against.
+      properties:
+        role:
+          type: string
+        assigned_count:
+          type: integer
+        permission_ids:
+          type: array
+          items:
+            type: integer
+        version:
+          type: integer
+      required:
+      - assigned_count
+      - permission_ids
+      - role
+      - version
+    RolePermissions:
+      type: object
+      description: |-
+        `get_role_permissions` and `get_permissions_for_role`.
+
+        One shape for both, because the views say so in their own docstring
+        ("响应结构与 get_role_permissions 一致") and both build it from the same
+        three expressions. `permissions` is the codename list resolved through
+        `check_permission`; `details` is the subset of those codenames that has a
+        Permission row — a codename living only in the DEFAULT_PERMISSIONS dict
+        appears in `permissions` and NOT in `details`, so the two lists are not
+        guaranteed to be the same length.
+      properties:
+        role:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+      required:
+      - details
+      - permissions
+      - role
+    RoleVersionConflict:
+      type: object
+      description: |-
+        409 body of `assign_role_permissions` — a stale-write rejection.
+
+        Distinct from `ErrorResponseSerializer` because the two extra members are
+        the entire point: a client that only reads `error` cannot show the
+        operator what moved underneath it.
+      properties:
+        error:
+          type: string
+        expected_version:
+          type: integer
+        current_version:
+          type: integer
+      required:
+      - current_version
+      - error
+      - expected_version
+    ScopeEnum:
+      enum:
+      - GLOBAL
+      - ORG
+      type: string
+      description: |-
+        * `GLOBAL` - 全局
+        * `ORG` - 组织级
+    SentenceReading:
+      type: object
+      description: |-
+        kind=SENTENCE — Republic X's two roads.
+
+        `wrongs` and `benefactions` are deed counts, and nothing in this payload
+        relates them to `repayment_multiple`: tenfold is owed per deed, not a
+        total. `elapsed_years` is whole years (`sentence_elapsed_years -> int |
+        None`), null when no term start is recorded, and `elapsed_missing` is
+        non-empty for exactly that long.
+      properties:
+        kind:
+          type: string
+        civilization:
+          type: string
+        wrongs:
+          type: integer
+        benefactions:
+          type: integer
+        repayment_multiple:
+          type: integer
+        circuit_years:
+          type: integer
+        elapsed_years:
+          type: integer
+          nullable: true
+        elapsed_missing:
+          type: array
+          items:
+            type: string
+      required:
+      - benefactions
+      - circuit_years
+      - civilization
+      - elapsed_missing
+      - elapsed_years
+      - kind
+      - repayment_multiple
+      - wrongs
+    SetNewPassword:
+      type: object
+      description: Serializer for setting new password via code.
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+          maxLength: 6
+          minLength: 6
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 8
+      required:
+      - code
+      - email
+      - new_password
     SeverityEnum:
       enum:
       - error
@@ -11917,6 +13672,40 @@ components:
         * `BLASPHEMY` - Blasphemy / Impiety
         * `MURDER` - Murder / Killing
         * `OTHER` - Other
+    SoulStateDistribution:
+      type: object
+      description: |-
+        `label` is the raw state member today, same value as `state` — the
+        view assigns `"label": s` beside `"state": s`. Localising is the
+        client's job and this endpoint has no locale.
+      properties:
+        state:
+          type: string
+        label:
+          type: string
+        count:
+          type: integer
+      required:
+      - count
+      - label
+      - state
+    SoulsByRealm:
+      type: object
+      description: Executed, non-archived dispositions with a destination realm.
+      properties:
+        realm_code:
+          type: string
+        realm_name:
+          type: string
+        civilization:
+          type: string
+        count:
+          type: integer
+      required:
+      - civilization
+      - count
+      - realm_code
+      - realm_name
     Statute:
       type: object
       description: |-
@@ -12053,6 +13842,49 @@ components:
       - created_at
       - display_name
       - id
+    TenantSoulStats:
+      type: object
+      properties:
+        tenant_id:
+          type: integer
+        tenant_code:
+          type: string
+        tenant_name:
+          type: string
+        total_souls:
+          type: integer
+        state_breakdown:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+      - state_breakdown
+      - tenant_code
+      - tenant_id
+      - tenant_name
+      - total_souls
+    ThresholdReading:
+      type: object
+      description: |-
+        kind=THRESHOLD — the Egyptian weighing. No merit member: the scale
+        does not subtract, and `heart_weight` is the demerit total alone.
+      properties:
+        kind:
+          type: string
+        civilization:
+          type: string
+        heart_weight:
+          type: integer
+        counterweight:
+          type: integer
+        heavier_than_feather:
+          type: boolean
+      required:
+      - civilization
+      - counterweight
+      - heart_weight
+      - heavier_than_feather
+      - kind
     TokenRefresh:
       type: object
       properties:
@@ -12064,6 +13896,91 @@ components:
       required:
       - access
       - refresh
+    UnavailableReading:
+      type: object
+      description: |-
+        kind=UNAVAILABLE — the tenant's civilization is not mapped, so this
+        ledger gets no reading rather than a guessed one. `reason_code` is a
+        state (TENANT_NOT_MAPPED); the remedy is the client's copy.
+      properties:
+        kind:
+          type: string
+        civilization:
+          type: string
+        reason_code:
+          type: string
+      required:
+      - civilization
+      - kind
+      - reason_code
+    User:
+      type: object
+      description: |-
+        The serializer behind `PATCH /auth/profile/` — what a user may change
+        about themselves.
+
+        `role` and `tenant` were already locked. `organization` was not, and it is
+        a foreign key with no tenant check: measured, a VIEWER could
+        `PATCH /auth/profile/ {"organization": <an org belonging to tenant B>}`
+        and get 200. Nothing downstream widened that into data access
+        (`apps/perm/filters.py` never mentions `organization`, so `DataScopeFilter`
+        does not read it), which is why this is a write-integrity hole rather than
+        a privilege escalation — but "the field nobody reads today" is not a
+        permission model.
+
+        Kept writable rather than made read-only: moving between the organizations
+        of one's own tenant is what this field is for. The scoping happens in
+        `validate_organization`.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        email:
+          title: Email address
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        role:
+          allOf:
+          - $ref: '#/components/schemas/UserRoleEnum'
+          readOnly: true
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        is_active:
+          type: boolean
+          readOnly: true
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+        display_name:
+          type: string
+          description: Display name shown in the navbar (e.g. 系统管理员)
+          maxLength: 100
+        organization:
+          type: integer
+          nullable: true
+          description: 所属组织：如 第一殿、冥王厅
+        position:
+          type: string
+          description: 职位：如 第一殿殿主
+          maxLength: 100
+      required:
+      - id
+      - is_active
+      - role
+      - username
     UserCreate:
       type: object
       description: |-
