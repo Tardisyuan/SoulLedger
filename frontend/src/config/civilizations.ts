@@ -115,3 +115,37 @@ export function getTenantCodeFromCivilization(civ: string): string {
 export function getDisplayNameForTenant(tenantCode: string): string {
   return CIVILIZATION_DISPLAY_NAMES[tenantCode] || tenantCode;
 }
+
+/**
+ * The four cosmologies as single glyphs, for the two places that group by
+ * civilization (`/organizations`, `/actors`).
+ *
+ * THESE ARE EMOJI ON PURPOSE, and the reasoning is measured — see the comments
+ * inside the map. It is the one place in the app where an emoji beats a Lucide
+ * icon: these are identity marks, not chrome, and the alternative that was
+ * tried (the Egyptian hieroglyph U+132F4) renders as tofu in every font
+ * available here.
+ *
+ * IT LIVES HERE BECAUSE IT USED TO LIVE TWICE. The same twelve lines were
+ * copied into `app/organizations/page.tsx` and `app/actors/page.tsx`, and by
+ * 2026-09-02 the two copies had already drifted: the values still agreed, the
+ * comments did not — only one of them recorded that Greek gained Hades,
+ * Aeacus, Rhadamanthus and Minos in `realms/0018`. Values that agree today and
+ * comments that disagree is the state right before the values disagree too.
+ */
+export const CIVILIZATION_ICONS: Record<string, string> = {
+  CHINESE: "🏯",
+  EUROPEAN: "⛪",
+  // U+132F4 (hieroglyph S029) sat here and rendered as tofu anywhere
+  // `Noto Sans Egyptian Hieroglyphs` is absent — measured: it is in none of
+  // Apple Color Emoji, Apple Symbols, Arial Unicode or DejaVu Sans. U+26B1 is
+  // RGI emoji, so it is in every colour-emoji font; the trailing U+FE0F is
+  // load-bearing because DejaVu Sans *does* cover bare U+26B1 and would draw
+  // it monochrome next to three colour neighbours.
+  EGYPTIAN: "⚱️",
+  // Hades, Aeacus, Rhadamanthus and Plato's Minos are GREEK since realms/0018.
+  GREEK: "🏛",
+};
+
+/** Drawn when a record's civilization is not one of the four. */
+export const CIVILIZATION_ICON_FALLBACK = "🌍";
