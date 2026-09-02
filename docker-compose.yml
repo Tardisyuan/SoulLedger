@@ -101,8 +101,10 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: ../Dockerfile.frontend
+      # Root context: `frontend` is an npm workspace and its `@soulledger/core`
+      # dependency lives in `packages/core`, outside `./frontend`.
+      context: .
+      dockerfile: Dockerfile.frontend
     command: npm run dev
     volumes:
       - ./frontend:/app

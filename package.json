@@ -1,0 +1,13 @@
+{
+  "name": "soulledger",
+  "private": true,
+  "version": "0.0.0",
+  "description": "SoulLedger monorepo root. Holds the workspace list only; every runnable target lives in a workspace.",
+  "workspaces": [
+    "frontend",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}

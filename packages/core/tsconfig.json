@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    /* No "dom" here, deliberately. This package is consumed by React Native as
+     * well as by the Next.js app, so anything that only type-checks because
+     * `document` / `window` / `sessionStorage` are ambient globals must not
+     * compile. `npx tsc --noEmit` inside this package is the check that keeps
+     * the "platform-independent" claim from being a comment.
+     *
+     * The one DOM type still needed is WebSocket, which src/ws declares
+     * structurally in src/platform/websocket.ts rather than importing. */
+    "lib": ["ES2020"],
+    "strict": true,
+    "noEmit": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

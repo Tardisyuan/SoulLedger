@@ -17,6 +17,7 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@soulledger/core": "*",
     "@base-ui/react": "^1.7.0",
     "@fontsource-variable/noto-sans-sc": "^5.3.0",
     "@fontsource-variable/noto-serif-sc": "^5.3.0",

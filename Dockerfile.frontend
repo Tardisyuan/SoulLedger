@@ -1,15 +1,27 @@
+# Build context is the REPOSITORY ROOT (docker-compose sets `context: .`).
+#
+# It used to be `./frontend`. That stopped being possible when `frontend`
+# became an npm workspace depending on `@soulledger/core` in `packages/core`:
+# a context rooted at `frontend` does not contain that directory, so `npm ci`
+# resolves the workspace link to nothing and the build fails at install.
+
 # ---- Dependencies ----
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
+COPY frontend/package.json ./frontend/
+COPY packages/core/package.json ./packages/core/
 RUN npm ci --ignore-scripts
 
 # ---- Build ----
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY package.json package-lock.json ./
+COPY packages/core ./packages/core
+COPY frontend ./frontend
 ENV NEXT_TELEMETRY_DISABLED=1
+WORKDIR /app/frontend
 RUN npm run build
 
 # ---- Production ----
@@ -22,9 +34,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/frontend/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/static ./.next/static
 
 USER nextjs
 
@@ -32,4 +44,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+CMD ["node", "frontend/server.js"]
