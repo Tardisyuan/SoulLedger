@@ -5,6 +5,8 @@ import uuid
 
 from django.db.models import Count
 from django_filters import rest_framework as filters
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -357,6 +359,21 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "statute_id",
+                OpenApiTypes.UUID,
+                OpenApiParameter.PATH,
+                description=(
+                    "The Statute to withdraw as a ground. Not inferable: the "
+                    "generator resolves path parameters against the viewset's "
+                    "model, and `Judgment` has no `statute_id` — the citation "
+                    "is a row in between. Defaults to `string` without this."
+                ),
+            )
+        ]
+    )
     @action(
         detail=True,
         methods=["delete"],

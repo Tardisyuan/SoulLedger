@@ -5,6 +5,7 @@ import hashlib
 
 from django.db import models
 from django.utils import timezone
+from drf_spectacular.extensions import OpenApiAuthenticationExtension
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -77,3 +78,33 @@ class APIKeyAuthentication(BaseAuthentication):
         from apps.core.client_ip import get_client_ip
 
         return get_client_ip(request)
+
+
+class APIKeyAuthenticationScheme(OpenApiAuthenticationExtension):
+    """Describe `APIKeyAuthentication` in the OpenAPI security schemes.
+
+    Without this, drf-spectacular says "could not resolve authenticator …
+    Ignoring for now" and the three death-sync endpoints are documented as
+    taking **no credential at all**. That is a worse kind of wrong than a
+    widened type: a reader of the schema would conclude the death-registration
+    intake is open, when in fact it wants `Authorization: ApiKey <raw_key>`.
+
+    `type: apiKey` in the `Authorization` header rather than `http`/`bearer`,
+    because the keyword is `ApiKey` and not `Bearer` — see `keyword` above.
+    OpenAPI has no vocabulary for "custom keyword in the Authorization header",
+    so the header is declared and the format is stated in the description.
+    """
+
+    target_class = "apps.death_sync.authentication.APIKeyAuthentication"
+    name = "ApiKeyAuth"
+
+    def get_security_definition(self, auto_schema):
+        return {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Authorization",
+            "description": (
+                "External-system API key, as `ApiKey <raw_key>`. The raw key is "
+                "never stored — `ExternalApiKey.key_hash` holds its SHA-256."
+            ),
+        }

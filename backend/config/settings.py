@@ -373,6 +373,31 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Cross-civilization soul management system API",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Named choice sets, because the generator's fallback names are hashes.
+    #
+    # Six choice sets collide on two field names — three `status` and two
+    # `role`, plus one set reached under two names. Left alone, the generator
+    # resolves each collision by appending a hash of the members:
+    # `StatusF3dEnum`, `StatusAa4Enum`, `StatusDd2Enum`, `Role511Enum`,
+    # `RoleF35Enum`. Those are the names a client generator turns into
+    # TypeScript, so the frontend would import `Role511Enum` and have to guess
+    # which of the two roles it is. Worse, the hash is derived from the members:
+    # adding one verdict to a choice set RENAMES the generated type, and the
+    # diff shows a deletion and an addition rather than an added member.
+    #
+    # The keys below are the names; the values are the choice sets they name.
+    "ENUM_NAME_OVERRIDES": {
+        "ApprovalWorkflowStatusEnum": "apps.workflow.models.ApprovalWorkflowStatus.choices",
+        "CrossTenantJudgmentStatusEnum": "apps.dispatch.models.JudgmentStatus.choices",
+        "DispatchStatusEnum": "apps.dispatch.models.DispatchStatus.choices",
+        "ActorRoleEnum": "apps.actors.models.ActorRole.choices",
+        "UserRoleEnum": "apps.authentication.models.UserRole.choices",
+        # Reached from both `apps.disposition` and `apps.realms`, which is the
+        # "multiple names for the same choice set" warning. `apps.realms.Realm`
+        # imports the class rather than restating the four values — the comment
+        # there says why — so there is exactly one set with two routes to it.
+        "MemoryResetMechanismEnum": "apps.disposition.models.MemoryResetMechanism.choices",
+    },
 }
 
 # Encryption key for Fernet (death sync webhook secrets)

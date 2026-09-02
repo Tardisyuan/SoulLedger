@@ -3,10 +3,38 @@ Auth serializers: register, login, user profile.
 """
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
+
+
+class UserTenantRefSerializer(serializers.Serializer):
+    """The three keys `UserManagementSerializer.get_tenant` returns.
+
+    Schema-only, never instantiated — the method builds the dict by hand. This
+    is a **reference**, not the full tenant: it carries id, code and
+    display_name and nothing else, which is what the user-management screens
+    need to label a row without a second request.
+    """
+
+    id = serializers.IntegerField()
+    code = serializers.CharField()
+    display_name = serializers.CharField()
+
+
+class UserOrganizationRefSerializer(serializers.Serializer):
+    """The three keys `UserManagementSerializer.get_organization` returns.
+
+    Note the third key is `name`, not `display_name` as on the tenant beside it.
+    That asymmetry is in the models and is reproduced here rather than tidied,
+    because this class's whole job is to say what the endpoint actually sends.
+    """
+
+    id = serializers.IntegerField()
+    code = serializers.CharField()
+    name = serializers.CharField()
 
 
 # ---------------------------------------------------------------------------
@@ -203,11 +231,13 @@ class UserManagementSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'tenant', 'organization', 'position', 'is_active', 'create_time', 'avatar']
         read_only_fields = ['id', 'create_time']
 
+    @extend_schema_field(UserTenantRefSerializer(allow_null=True))
     def get_tenant(self, obj):
         if obj.tenant:
             return {"id": obj.tenant.id, "code": obj.tenant.code, "display_name": obj.tenant.display_name}
         return None
 
+    @extend_schema_field(UserOrganizationRefSerializer(allow_null=True))
     def get_organization(self, obj):
         if obj.organization:
             return {"id": obj.organization.id, "code": obj.organization.code, "name": obj.organization.name}
