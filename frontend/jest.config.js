@@ -3,6 +3,17 @@ module.exports = {
   testEnvironment: 'jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    // Mapped rather than resolved through node_modules. The workspace symlink
+    // would work, but jest's default `transformIgnorePatterns` is
+    // `/node_modules/`, and a package whose "build" is its TypeScript source
+    // has to be transformed. Pointing at the real files keeps them outside that
+    // pattern, so ts-jest compiles them like any other source in the repo.
+    '^@soulledger/core$': '<rootDir>/../packages/core/src/index.ts',
+    '^@soulledger/core/api$': '<rootDir>/../packages/core/src/api/index.ts',
+    '^@soulledger/core/validations$': '<rootDir>/../packages/core/src/validations/index.ts',
+    '^@soulledger/core/platform$': '<rootDir>/../packages/core/src/platform/index.ts',
+    '^@soulledger/core/messages/(.*)$': '<rootDir>/../packages/core/messages/$1',
+    '^@soulledger/core/(.*)$': '<rootDir>/../packages/core/src/$1.ts',
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
   testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
