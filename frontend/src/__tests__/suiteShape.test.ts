@@ -116,6 +116,7 @@ const COLLECTED_FILES = [
   "drawerFocusTrap.test.tsx",
   "eventInvalidationReachesCache.test.ts",
   "eventRegistry.test.ts",
+  "enumsMatchTheSchema.test.ts",
   "errorIsNotAnEmptyState.test.ts",
   "focusRingContract.test.ts",
   "gridPopupKeyboardContract.test.tsx",

@@ -59,7 +59,19 @@ export interface ApprovalNode {
   realm?: string | null;
   required_verdicts?: number;
   evidence_json?: Record<string, unknown> | null;
-  approver?: string | null;
+  /**
+   * The deciding user's **integer primary key**, or null.
+   *
+   * WAS `string | null`. `ApprovalNode.approver` is a `ForeignKey` to
+   * `authentication.User` (`on_delete=SET_NULL, null=True`), serialised as the
+   * pk. Same finding as `DispatchRecord.dispatched_by`, same consequence:
+   * `app/workflow/[id]/page.tsx:553` and
+   * `src/components/workflow/detail/WorkflowNodeHistory.tsx:59` both render
+   * `{node.approver}` straight into the "approver" line, so a decided node
+   * shows a number where a person should be. Both render sites are out of
+   * scope here; the type is now correct and the defect is no longer disguised.
+   */
+  approver?: number | null;
   status: string;
   verdict?: string | null;
   decided_at: string | null;

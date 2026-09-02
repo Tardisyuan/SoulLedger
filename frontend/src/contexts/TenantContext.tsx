@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { permApi } from "@soulledger/core/api";
+import type { UserRole } from "@soulledger/core/api";
 import { CIVILIZATION_SHORT_CODE_SET } from "@soulledger/core/config/civilizations";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -32,7 +33,17 @@ export interface AuthUser {
   username: string;
   display_name: string;
   email: string;
-  role: "ADMIN" | "JUDGE" | "GUARDIAN" | "VIEWER";
+  /**
+   * The shared `UserRole`, not a fourth spelling of it.
+   *
+   * This line used to inline `"ADMIN" | "JUDGE" | "GUARDIAN" | "VIEWER"` — a
+   * third copy of the role list in the frontend, and like the other two it was
+   * missing MODERATOR. It was found by widening `UserRole` in
+   * `@soulledger/core/api` to the five members the backend actually has: `tsc`
+   * then refused `LoginUser` and the profile payload here, which is the copy
+   * announcing itself.
+   */
+  role: UserRole;
   tenant: TenantInfo | null;
   permissions: string[];
 }
