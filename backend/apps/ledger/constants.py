@@ -168,7 +168,7 @@ NON_FUNGIBLE_CIVILIZATIONS = frozenset({Civilization.CHINESE})
 # `inheritance_note` was a *sentence the soul-detail card rendered*. It is gone
 # from get_reincarnation_inheritance below, which now returns the two rates as
 # numbers (`inheritance_merit_rate` / `inheritance_demerit_rate`) and leaves the
-# wording to frontend/messages/{en,zh-Hans,egy}.json under
+# wording to packages/core/messages/{en,zh-Hans,egy}.json under
 # `ledger.carry_forward_rate`. The drift the TODO named had two ends rather than
 # one: the frontend was *also* hand-copying 20 and 100 into
 # SoulKarmaLedgerCard.tsx as literals, so the constants below could move and

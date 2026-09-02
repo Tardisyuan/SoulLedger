@@ -9,7 +9,7 @@ import {
 } from "@soulledger/core/config/locale";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import defaultMessages from "../../messages/zh-Hans.json";
+import defaultMessages from "@soulledger/core/messages/zh-Hans.json";
 
 // Locale 的类型与常量在 src/config/locale.ts —— 那个模块不带 "use client",
 // 所以服务端的 app/layout.tsx 也能 import。这里 re-export 是为了不打断既有引用。
@@ -39,8 +39,8 @@ type Bundle = Record<string, unknown>;
  * delay; this one was chosen deliberately.
  */
 const LAZY_BUNDLES: Record<string, () => Promise<unknown>> = {
-  en: () => import("../../messages/en.json"),
-  egy: () => import("../../messages/egy.json"),
+  en: () => import("@soulledger/core/messages/en.json"),
+  egy: () => import("@soulledger/core/messages/egy.json"),
 };
 
 /**

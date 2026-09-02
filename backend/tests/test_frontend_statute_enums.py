@@ -41,7 +41,7 @@ from apps.judgment.models import StatuteCorpus, StatutePolarity
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 JUDGMENT_TS = REPO_ROOT / "packages" / "core" / "src" / "api" / "judgment.ts"
-MESSAGES = REPO_ROOT / "frontend" / "messages"
+MESSAGES = REPO_ROOT / "packages" / "core" / "messages"
 LOCALES = ("en", "zh-Hans", "egy")
 
 ENUMS = (

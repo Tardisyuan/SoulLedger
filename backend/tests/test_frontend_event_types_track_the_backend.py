@@ -23,7 +23,8 @@ import pytest
 
 from apps.events.models import EventType
 
-FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+FRONTEND = REPO_ROOT / "frontend"
 REGISTRY = FRONTEND / "lib" / "events" / "event_registry.ts"
 HANDLERS = FRONTEND / "lib" / "events" / "eventHandlers.ts"
 
@@ -135,7 +136,7 @@ def test_every_soul_event_has_copy_in_every_bundle(bundle):
     import json
 
     data = json.loads(
-        (FRONTEND / "messages" / f"{bundle}.json").read_text(encoding="utf-8")
+        (REPO_ROOT / "packages" / "core" / "messages" / f"{bundle}.json").read_text(encoding="utf-8")
     )
     events = data.get("souls", {}).get("events", {})
     assert events, f"souls.events is empty in {bundle}.json"

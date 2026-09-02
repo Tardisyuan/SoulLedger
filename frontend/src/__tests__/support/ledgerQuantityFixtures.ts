@@ -16,9 +16,9 @@
 import type { LedgerInheritance, LedgerReading, LedgerRecord } from "@soulledger/core/api/ledger";
 import type { QueueLedger } from "@soulledger/core/api/judgment";
 
-import en from "../../../messages/en.json";
-import egy from "../../../messages/egy.json";
-import zhHans from "../../../messages/zh-Hans.json";
+import en from "@soulledger/core/messages/en.json";
+import egy from "@soulledger/core/messages/egy.json";
+import zhHans from "@soulledger/core/messages/zh-Hans.json";
 
 export const BUNDLES: Record<string, unknown> = { en, "zh-Hans": zhHans, egy };
 

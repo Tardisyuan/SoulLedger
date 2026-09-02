@@ -32,7 +32,7 @@ That question already has a column. ``ApprovalWorkflow.priority``
 it off the create request, ``WorkflowFilter`` exposes ``priority_min`` /
 ``priority_max`` and lists it in ``ordering_fields``, both workflow serializers
 carry it, and ``app/workflow/[id]/page.tsx`` renders it. Its value-1 label in
-``frontend/messages/zh-Hans.json`` is 「紧急」 — the exact word the three presets
+``packages/core/messages/zh-Hans.json`` is 「紧急」 — the exact word the three presets
 are named with. A ``CaseType.EMERGENCY`` labelled 「紧急审判」 would put urgency
 in two columns at once.
 
@@ -100,7 +100,7 @@ from tests.test_workflow_preset_node_types import (
     seeded,  # noqa: F401  (pytest fixture, used by name in the cases below)
 )
 
-MESSAGES_DIR = REPO_ROOT / "frontend" / "messages"
+MESSAGES_DIR = REPO_ROOT / "packages" / "core" / "messages"
 EDITOR_TSX = REPO_ROOT / "frontend" / "src" / "components" / "workflow" / "WorkflowEditor.tsx"
 
 #: The three bundles, which `docs`-less convention keeps exactly aligned.

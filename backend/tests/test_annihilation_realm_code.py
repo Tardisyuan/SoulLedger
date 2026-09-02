@@ -62,7 +62,7 @@ TIMELINE_TSX = (
     REPO_ROOT / "frontend" / "src" / "components" / "souls" / "SoulLifecycleTimeline.tsx"
 )
 MESSAGE_BUNDLES = [
-    REPO_ROOT / "frontend" / "messages" / name
+    REPO_ROOT / "packages" / "core" / "messages" / name
     for name in ("en.json", "zh-Hans.json", "egy.json")
 ]
 

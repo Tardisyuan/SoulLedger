@@ -48,7 +48,7 @@ jest.mock("@/src/components/layout/MenuGloss", () => ({
 }));
 
 const EN_BUNDLE = JSON.parse(
-  readFileSync(path.join(__dirname, "..", "..", "messages", "en.json"), "utf8")
+  readFileSync(path.join(__dirname, "..", "..", "..", "packages", "core", "messages", "en.json"), "utf8")
 ) as Record<string, unknown>;
 
 function lookup(key: string): unknown {

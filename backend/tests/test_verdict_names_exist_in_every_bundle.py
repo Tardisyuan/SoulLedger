@@ -25,7 +25,7 @@ import pytest
 from apps.judgment.models import Verdict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-MESSAGES = REPO_ROOT / "frontend" / "messages"
+MESSAGES = REPO_ROOT / "packages" / "core" / "messages"
 LOCALES = ("en", "zh-Hans", "egy")
 
 def _node_action_choices():
