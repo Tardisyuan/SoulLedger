@@ -23,9 +23,9 @@
  * 的键,这里照样绿。要守那一层得逐条钉写死的期望文案,而那份清单会随每次文案
  * 微调而红,最后被人整体删掉。这条守的是**退化**,不是正确性。
  */
-import en from "@/messages/en.json";
-import egy from "@/messages/egy.json";
-import zh from "@/messages/zh-Hans.json";
+import en from "@soulledger/core/messages/en.json";
+import egy from "@soulledger/core/messages/egy.json";
+import zh from "@soulledger/core/messages/zh-Hans.json";
 
 type Bundle = Record<string, unknown>;
 

@@ -51,7 +51,7 @@ function renderWithI18n(node: React.ReactNode) {
  * locale is zh-Hans, and pinning English strings would make this file fail on
  * a translation edit instead of on a convention breach.
  */
-const DEFAULT_BUNDLE = JSON.parse(readFileSync(path.join(FRONTEND_ROOT, "messages", "zh-Hans.json"), "utf8"));
+const DEFAULT_BUNDLE = JSON.parse(readFileSync(path.join(FRONTEND_ROOT, "..", "packages", "core", "messages", "zh-Hans.json"), "utf8"));
 function copy(key: string): string {
   return key.split(".").reduce<Record<string, unknown> | string>(
     (acc, part) => (acc as Record<string, unknown>)[part] as Record<string, unknown> | string,
@@ -317,7 +317,7 @@ describe("i18n", () => {
     // and that is the shape this catches.
     expect(BUNDLES).toHaveLength(3);
 
-    const bundle = JSON.parse(readFileSync(path.join(FRONTEND_ROOT, "messages", `${locale}.json`), "utf8"));
+    const bundle = JSON.parse(readFileSync(path.join(FRONTEND_ROOT, "..", "packages", "core", "messages", `${locale}.json`), "utf8"));
     const missing = DOMAIN_DISPLAY_I18N_KEYS.filter((key) => typeof lookup(bundle, key) !== "string");
     expect(missing).toEqual([]);
   });

@@ -30,7 +30,7 @@ import { CIVILIZATION_CODES, CIVILIZATION_SHORT_CODES } from "@soulledger/core/c
 export const FRONTEND_ROOT = path.join(__dirname, "..", "..", "..");
 export const GLOBALS_CSS = path.join(FRONTEND_ROOT, "app", "globals.css");
 export const SOULS_TS = path.join(FRONTEND_ROOT, "..", "packages", "core", "src", "api", "souls.ts");
-export const EN_MESSAGES = path.join(FRONTEND_ROOT, "messages", "en.json");
+export const EN_MESSAGES = path.join(FRONTEND_ROOT, "..", "packages", "core", "messages", "en.json");
 
 const css = readFileSync(GLOBALS_CSS, "utf8");
 

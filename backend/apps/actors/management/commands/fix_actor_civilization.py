@@ -55,7 +55,7 @@ DUPLICATE_NAMES = ["Isis", "Nephthys", "Ammit", "Charon", "Gabriel", "Ra"]
 # (duplicate_spelling, canonical_spelling, civilization)
 #
 # Ma'at: seed_mythology, scripts/seed_chinese_data.py, MISTAG_FIXES above,
-# tests/test_seed_mythology.py and frontend/messages/*.json all spell the
+# tests/test_seed_mythology.py and packages/core/messages/*.json all spell the
 # goddess "Ma'at" with the apostrophe; "Maat" appears only as a bare
 # transliteration — in the Actor.name_egy column, and as one entry in the
 # "42 Judges" roster that scripts/populate_egyptian_actors.py used to carry,

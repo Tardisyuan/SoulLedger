@@ -56,9 +56,9 @@ import { QUANTITY_KINDS, READING_QUANTITIES } from "@soulledger/core/api/ledgerQ
 import { I18nProvider } from "@/src/contexts/I18nContext";
 import { SoulReadingPanel } from "@/src/components/souls/SoulReadingPanel";
 
-import en from "../../messages/en.json";
-import egy from "../../messages/egy.json";
-import zhHans from "../../messages/zh-Hans.json";
+import en from "@soulledger/core/messages/en.json";
+import egy from "@soulledger/core/messages/egy.json";
+import zhHans from "@soulledger/core/messages/zh-Hans.json";
 
 const BUNDLES: Record<string, unknown> = { en, "zh-Hans": zhHans, egy };
 

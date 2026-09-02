@@ -74,7 +74,7 @@ function resolve(bundle: unknown, dotted: string): unknown {
 
 const NAMESPACES = collectNamespaces();
 const BUNDLES = Object.fromEntries(
-  LOCALES.map((l) => [l, JSON.parse(fs.readFileSync(path.join(ROOT, "messages", `${l}.json`), "utf8"))]),
+  LOCALES.map((l) => [l, JSON.parse(fs.readFileSync(path.join(ROOT, "..", "packages", "core", "messages", `${l}.json`), "utf8"))]),
 ) as Record<(typeof LOCALES)[number], unknown>;
 
 describe("每个 DomainEnum 命名空间在三份 bundle 里都存在", () => {

@@ -9,7 +9,7 @@ import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 
 // Mock message files with minimal fixtures
-jest.mock('../../messages/zh-Hans.json', () => ({
+jest.mock('@soulledger/core/messages/zh-Hans.json', () => ({
   __esModule: true,
   default: {
     nav: {
@@ -26,7 +26,7 @@ jest.mock('../../messages/zh-Hans.json', () => ({
   },
 }));
 
-jest.mock('../../messages/en.json', () => ({
+jest.mock('@soulledger/core/messages/en.json', () => ({
   __esModule: true,
   default: {
     nav: {
@@ -39,7 +39,7 @@ jest.mock('../../messages/en.json', () => ({
   },
 }));
 
-jest.mock('../../messages/egy.json', () => ({
+jest.mock('@soulledger/core/messages/egy.json', () => ({
   __esModule: true,
   default: {
     nav: {

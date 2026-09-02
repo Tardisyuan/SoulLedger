@@ -22,9 +22,9 @@ import {
 
 import { assertScanned } from "./support/soulReadingFixtures";
 
-import en from "../../messages/en.json";
-import egy from "../../messages/egy.json";
-import zhHans from "../../messages/zh-Hans.json";
+import en from "@soulledger/core/messages/en.json";
+import egy from "@soulledger/core/messages/egy.json";
+import zhHans from "@soulledger/core/messages/zh-Hans.json";
 
 const BUNDLES: Record<string, unknown> = { en, "zh-Hans": zhHans, egy };
 

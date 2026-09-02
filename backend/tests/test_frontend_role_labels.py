@@ -28,11 +28,12 @@ import pytest
 from apps.authentication.models import UserRole
 
 BUNDLES = ("zh-Hans", "en", "egy")
-FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+FRONTEND = REPO_ROOT / "frontend"
 
 
 def _roles_in(bundle):
-    path = FRONTEND / "messages" / f"{bundle}.json"
+    path = REPO_ROOT / "packages" / "core" / "messages" / f"{bundle}.json"
     assert path.exists(), f"{path} not found; this test is measuring nothing"
     data = json.loads(path.read_text(encoding="utf-8"))
     return data.get("users", {}).get("roles", {})

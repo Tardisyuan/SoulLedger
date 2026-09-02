@@ -9,17 +9,17 @@
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 
-jest.mock('../../messages/zh-Hans.json', () => ({
+jest.mock('@soulledger/core/messages/zh-Hans.json', () => ({
   __esModule: true,
   default: { nav: { title: '灵魂账本' } },
 }));
 
-jest.mock('../../messages/en.json', () => ({
+jest.mock('@soulledger/core/messages/en.json', () => ({
   __esModule: true,
   default: { nav: { title: 'Soul Ledger' } },
 }));
 
-jest.mock('../../messages/egy.json', () => ({
+jest.mock('@soulledger/core/messages/egy.json', () => ({
   __esModule: true,
   default: { nav: { title: '𓂀 Soul Book 𓂀' } },
 }));
