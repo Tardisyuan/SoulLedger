@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { CIVILIZATION_ICONS, CIVILIZATION_ICON_FALLBACK } from "@/src/config/civilizations";
 import { useQuery } from "@tanstack/react-query";
 import { actorsApi, Actor } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -15,20 +16,6 @@ import { badgeVariants } from "@/src/components/ui/Badge";
 import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
-
-const CIVILIZATION_ICONS: Record<string, string> = {
-  CHINESE: "🏯",
-  EUROPEAN: "⛪",
-  // U+132F4 (hieroglyph S029) sat here and rendered as tofu anywhere
-  // `Noto Sans Egyptian Hieroglyphs` is absent — measured: it is in none of
-  // Apple Color Emoji, Apple Symbols, Arial Unicode or DejaVu Sans. U+26B1 is
-  // RGI emoji, so it is in every colour-emoji font; the trailing U+FE0F is
-  // load-bearing because DejaVu Sans *does* cover bare U+26B1 and would draw
-  // it monochrome next to three colour neighbours.
-  EGYPTIAN: "⚱️",
-  // Hades, Aeacus, Rhadamanthus and Plato's Minos are GREEK since realms/0018.
-  GREEK: "🏛",
-};
 
 /**
  * Role badge fills. Every tint is 0.1 — the depth the light-mode
@@ -235,7 +222,7 @@ function ActorsPageContent() {
                     aria-expanded={!isCollapsed}
                     className="w-full flex items-center gap-3 mb-4 px-4 py-3 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-3))] transition-colors text-left"
                   >
-                    <span className="text-06" aria-hidden="true">{CIVILIZATION_ICONS[civ] || "🌍"}</span>
+                    <span className="text-06" aria-hidden="true">{CIVILIZATION_ICONS[civ] ?? CIVILIZATION_ICON_FALLBACK}</span>
                     <div className="flex-1">
                       <h2 className="text-06 font-semibold text-[hsl(var(--color-ink))]">
                         <DomainEnum namespace="actors.civilizations" value={civ} />

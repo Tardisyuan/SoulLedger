@@ -49,11 +49,6 @@ const FRONTEND_ROOT = path.join(__dirname, "..", "..");
  *  their new map here can tell whether it belongs. */
 const TEXT_MAPS: { file: string; name: string; keyedBy: "civilization" | "tenantCode"; costs: string }[] = [
   {
-    file: "app/organizations/page.tsx", name: "CIVILIZATION_ICONS",
-    keyedBy: "civilization",
-    costs: "an organization subtree renders with no icon",
-  },
-  {
     file: "app/organizations/page.tsx", name: "CATEGORY_COLORS",
     keyedBy: "civilization",
     costs: "an organization subtree renders uncoloured, beside coloured siblings",
@@ -73,15 +68,22 @@ const TEXT_MAPS: { file: string; name: string; keyedBy: "civilization" | "tenant
     costs: "the realms page renders that civilization's group with no header",
   },
   {
-    file: "app/actors/page.tsx", name: "CIVILIZATION_ICONS",
+    // MOVED, not removed: this map used to exist TWICE — the same twelve lines
+    // in `app/organizations/page.tsx` and `app/actors/page.tsx` — and by
+    // 2026-09-02 the copies had drifted in their comments while their values
+    // still agreed. Only one recorded that Greek gained Hades, Aeacus,
+    // Rhadamanthus and Minos in `realms/0018`. It now lives once, in config,
+    // and both pages import it.
+    file: "src/config/civilizations.ts", name: "CIVILIZATION_ICONS",
     keyedBy: "civilization",
-    costs: "the actors page shows no icon for that civilization's cast",
+    costs: "the organizations and actors pages both show no icon for that civilization",
   },
 ];
 
 function keysOf(file: string, name: string): string[] {
   const source = readFileSync(path.join(FRONTEND_ROOT, file), "utf8");
-  const start = new RegExp(`^const ${name}\\b[^=]*=\\s*\\{`, "m").exec(source);
+  // `export const` too — a map that moved into config is exported.
+  const start = new RegExp(`^(?:export )?const ${name}\\b[^=]*=\\s*\\{`, "m").exec(source);
   if (start === null) {
     throw new Error(
       `Could not find \`const ${name}\` in ${file}. Fix this parser or update ` +
@@ -107,12 +109,17 @@ describe("the parser is looking at something", () => {
   });
 
   it("names every map it believes exists, and finds each one", () => {
-    // Four, not five: the judgment detail page's CIVILIZATION_ICONS is gone
-    // (see the note in TEXT_MAPS). The floor exists so the assertions below
-    // cannot compare two empty lists, and four maps still gives them subjects
-    // — but it is now flush against the real count, so the NEXT map to
+    // Three, not four, and the argument this comment demands:
+    // CIVILIZATION_ICONS was TWO entries — one per page — because the map was
+    // duplicated. It is one map now, in config, imported by both pages, so it
+    // is one entry. Nothing stopped being checked; one thing stopped being
+    // checked twice. (The earlier drop, five to four, was the judgment detail
+    // page's own CIVILIZATION_ICONS being deleted with the avatar it painted.)
+    //
+    // The floor still exists so the assertions below cannot compare two empty
+    // lists, and it is still flush against the real count — the next map to
     // disappear has to be argued for here rather than absorbed by slack.
-    expect(TEXT_MAPS.length).toBeGreaterThanOrEqual(4);
+    expect(TEXT_MAPS.length).toBeGreaterThanOrEqual(3);
     for (const { file, name } of TEXT_MAPS) {
       expect(keysOf(file, name).length).toBeGreaterThan(0);
     }
@@ -151,17 +158,21 @@ describe("every civilization-keyed map covers every civilization", () => {
     // and needs to be told every place it has to be added, or it will be added
     // in one and forgotten in five.
     //
-    // Six, not seven: the judgment detail page's CIVILIZATION_ICONS was deleted
-    // along with the two-letter avatar it painted (see the note in TEXT_MAPS),
-    // so there is one fewer address to name. This number is the count of places
-    // a fifth civilization has to be added — leaving it at seven would have the
-    // failure message promise an address that no longer exists.
+    // Five, not six. This number is the count of places a fifth civilization
+    // has to be added, so it drops whenever two addresses become one — and
+    // CIVILIZATION_ICONS just did: it was written into two pages and is now
+    // written once in config. A fifth cosmology needs the icon added in ONE
+    // place now, not two. Leaving it at six would have the failure message
+    // promise an address that no longer exists.
+    //
+    // (The earlier drop, seven to six, was the judgment detail page's own
+    // CIVILIZATION_ICONS being deleted with its avatar.)
     const addresses = [
       ...TEXT_MAPS.map((m) => `${m.file}::${m.name}`),
       "src/config/civilizations.ts::CIVILIZATION_LABELS",
       "src/config/civilizations.ts::CIVILIZATION_DISPLAY_NAMES",
     ];
-    expect(addresses).toHaveLength(6);
+    expect(addresses).toHaveLength(5);
   });
 });
 

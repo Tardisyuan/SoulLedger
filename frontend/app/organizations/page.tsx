@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { CIVILIZATION_ICONS, CIVILIZATION_ICON_FALLBACK } from "@/src/config/civilizations";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Organization, type PaginatedResponse } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";
@@ -43,19 +44,6 @@ async function fetchAllOrganizations(): Promise<Organization[]> {
 // `CIVILIZATION_SHORT_CODES` would read better and would delete the guard —
 // the parser throws "Could not find `const CATEGORY_COLORS`" rather than
 // checking anything.
-const CIVILIZATION_ICONS: Record<string, string> = {
-  CHINESE: "🏯",
-  EUROPEAN: "⛪",
-  // U+132F4 (hieroglyph S029) sat here and rendered as tofu anywhere
-  // `Noto Sans Egyptian Hieroglyphs` is absent — measured: it is in none of
-  // Apple Color Emoji, Apple Symbols, Arial Unicode or DejaVu Sans. U+26B1 is
-  // RGI emoji, so it is in every colour-emoji font; the trailing U+FE0F is
-  // load-bearing because DejaVu Sans *does* cover bare U+26B1 and would draw
-  // it monochrome next to three colour neighbours.
-  EGYPTIAN: "⚱️",
-  GREEK: "🏛",
-};
-
 /**
  * MOVED OFF RAW HSL, onto the civilization identity tokens.
  *
@@ -198,7 +186,7 @@ function OrganizationsPageContent() {
       {isError && <QueryError onRetry={() => refetch()} />}
       <div className="space-y-10">
         {Object.entries(grouped).map(([category, orgs]) => {
-          const info = { name: t(`organization.civilizations.${category}`) || category, icon: CIVILIZATION_ICONS[category] || "🌍" };
+          const info = { name: t(`organization.civilizations.${category}`) || category, icon: CIVILIZATION_ICONS[category] ?? CIVILIZATION_ICON_FALLBACK };
           const isCollapsed = collapsed[category];
 
           return (
