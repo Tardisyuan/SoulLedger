@@ -2,7 +2,34 @@ import { api } from "./client";
 import { getRefreshToken } from "../platform/index";
 
 /** User.role choices (backend/apps/authentication/models.py:17). */
-export type UserRole = "ADMIN" | "JUDGE" | "GUARDIAN" | "VIEWER";
+/**
+ * `apps.authentication.models.UserRole`, all five members.
+ *
+ * MODERATOR WAS MISSING, AGAIN. This repository has been here before: the
+ * model's own docstring records that "MODERATOR was missing here while three
+ * other places already knew about it", `app/users/page.tsx` carries a note
+ * about a MODERATOR row rendering as "unrecognised value", and
+ * `app/audit/page.tsx` records a MODERATOR being shown "仅管理员可查看审计"
+ * for a permission the backend grants them. Each of those was fixed where it
+ * was found. **This declaration — the shared type both clients now compile
+ * against — was not**, and it was the last copy still short a member.
+ *
+ * Found by comparing this union against
+ * `components["schemas"]["UserRoleEnum"]` in the generated schema, which has
+ * had five members all along. `enumsMatchTheSchema.test.ts` now holds them
+ * equal, so the sixth role cannot land in the backend and stop here.
+ *
+ * Written as a literal union rather than an alias to the generated enum on
+ * purpose: `domainDisplayContract.test.tsx` derives its subject list by
+ * scanning these files for `field: "A" | "B"`, and an alias is invisible to
+ * that regex. See the header of `enumsMatchTheSchema.test.ts`.
+ */
+export type UserRole =
+  | "ADMIN"
+  | "MODERATOR"
+  | "JUDGE"
+  | "GUARDIAN"
+  | "VIEWER";
 
 /** The `user` object embedded in the login response (CustomTokenObtainPairSerializer). */
 export interface LoginUser {

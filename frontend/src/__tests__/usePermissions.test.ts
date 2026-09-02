@@ -19,13 +19,14 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 }));
 
 import { useTenant } from "@/src/contexts/TenantContext";
+import type { UserRole } from "@soulledger/core/api";
 const mockUseTenant = useTenant as jest.MockedFunction<typeof useTenant>;
 
-function mockUser(role: "ADMIN" | "JUDGE" | "GUARDIAN" | "VIEWER", permissions: string[] = []) {
+function mockUser(role: UserRole, permissions: string[] = []) {
   return { id: 1, username: "test", display_name: "Test", email: "test@test.com", role, permissions, tenant: null };
 }
 
-function mockContext(role: "ADMIN" | "JUDGE" | "GUARDIAN" | "VIEWER", permissions: string[] = []) {
+function mockContext(role: UserRole, permissions: string[] = []) {
   const isAdmin = role === "ADMIN";
   const isJudge = role === "JUDGE";
   const isGuardian = role === "GUARDIAN";

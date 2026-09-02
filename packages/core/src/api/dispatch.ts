@@ -9,8 +9,29 @@ export interface DispatchRecord {
   target_tenant_code: string;
   soul: string;
   soul_name: string;
-  dispatched_by: string;
-  dispatched_by_name: string;
+  /**
+   * The proposing user's **integer primary key**, or null.
+   *
+   * WAS `string`, AND THAT IS WHY `app/dispatch/[id]/page.tsx:202` RENDERS AN
+   * ID. `DispatchRecord.dispatched_by` is a plain `ForeignKey` to
+   * `authentication.User` with `on_delete=SET_NULL, null=True` and no `source=`
+   * override, so DRF serialises it as the pk — a number. Two independent
+   * derivations agree: the model declaration, and the generated
+   * `components["schemas"]["DispatchRecord"]["dispatched_by"]`, which is
+   * `number | null`.
+   *
+   * The page renders `{dispatch.dispatched_by_name || dispatch.dispatched_by}`.
+   * `dispatched_by_name` is `CharField(source="dispatched_by.username",
+   * allow_null=True)`, so when the proposing account is gone the fallback fires
+   * and the screen shows a bare user id where a username belongs. Typing this
+   * `string` is what made that read as a sensible fallback. The render site is
+   * in `frontend/app/`, out of scope for this change and left alone
+   * deliberately — the type now tells the truth, and the defect is visible.
+   */
+  dispatched_by: number | null;
+  /** Null when the proposing account has been deleted — `allow_null=True` on
+   *  `CharField(source="dispatched_by.username")`. */
+  dispatched_by_name: string | null;
   status: string;
   reason: string;
   proposed_at: string;

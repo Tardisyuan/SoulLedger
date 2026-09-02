@@ -68,6 +68,13 @@ const ENUM_FIELDS = [
   "approver_type",
   "reaction_type",
   "visibility",
+  // Added 2026-09-03 by the meta-test below, working exactly as intended.
+  // `MenuItem.menu_type` had been `string`; narrowing it to the three members
+  // `apps.menus.models.MenuType` actually has made it visible to
+  // `unionFieldsInApiTypes()`, which then reported it missing here. The subject
+  // list grew, and the registry was made to grow with it — which is the whole
+  // mechanism this file gained after `conclusion_type`.
+  "menu_type",
 ];
 
 /** The two modules that are allowed to spell a missing value out. */
