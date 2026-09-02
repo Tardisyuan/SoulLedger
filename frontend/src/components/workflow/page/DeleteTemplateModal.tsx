@@ -60,7 +60,7 @@ export function DeleteTemplateModal({
       }
     >
       <div className="space-y-3">
-        <p className="text-03 text-ink">{t("workflow.delete_confirm_msg", { name: template?.name || "" })}</p>
+        <p className="text-03 text-[hsl(var(--color-ink))]">{t("workflow.delete_confirm_msg", { name: template?.name || "" })}</p>
         <p className="text-03 text-[hsl(var(--color-status-error))]">{t("workflow.delete_irreversible")}</p>
       </div>
     </BaseModal>

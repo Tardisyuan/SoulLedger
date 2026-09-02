@@ -79,7 +79,7 @@ function LedgerPageContent() {
         {/* 三个总计。计数,不是权重 —— 所以标签在数字之上说出它数的是什么,
             而数字本身不带 `ledger.figure_scale_weight` 那个标尺词。那个词是
             `SoulRecord.weight` 的事实,这一页没有一个权重。 */}
-        <section className="border-t-2 border-ink-subtle pt-6 grid gap-6 md:grid-cols-3">
+        <section className="border-t-2 border-[hsl(var(--color-ink-subtle))] pt-6 grid gap-6 md:grid-cols-3">
           <OverviewFigure
             label={t("ledger.total_souls")}
             value={ledgerStats?.total_souls}
@@ -101,7 +101,7 @@ function LedgerPageContent() {
           {error ? (
             <SectionError label={t("common.error")} />
           ) : (
-            <ul className="divide-y divide-hairline">
+            <ul className="divide-y divide-[hsl(var(--color-hairline))]">
               {ledgerStats?.state_distribution?.map((item) => (
                 <li key={item.state} className="flex items-center justify-between gap-4 py-2">
                   <span className="flex items-center gap-2 min-w-0">
@@ -109,14 +109,14 @@ function LedgerPageContent() {
                       aria-hidden="true"
                       className={`w-3 h-3 rounded-full shrink-0 ${STATE_DOT[item.state] ?? "bg-[hsl(var(--color-status-error))]"}`}
                     />
-                    <span title={item.state} className="text-03 text-ink truncate">
+                    <span title={item.state} className="text-03 text-[hsl(var(--color-ink))] truncate">
                       {stateLabel(item.state, item.label)}
                     </span>
                   </span>
                   {isLoading ? (
                     <Skeleton className="h-4 w-12" />
                   ) : (
-                    <span className="text-03 font-mono tabular-nums text-ink-muted">{item.count}</span>
+                    <span className="text-03 font-mono tabular-nums text-[hsl(var(--color-ink-muted))]">{item.count}</span>
                   )}
                 </li>
               ))}
@@ -149,19 +149,19 @@ function LedgerPageContent() {
             {error ? (
               <SectionError label={t("common.error")} />
             ) : (
-              <ul className="divide-y divide-hairline">
+              <ul className="divide-y divide-[hsl(var(--color-hairline))]">
                 {ledgerStats.souls_by_realm.map((item) => (
                   <li key={item.realm_code} className="flex items-center justify-between gap-4 py-2">
                     <span className="min-w-0">
-                      <span className="text-03 text-ink">{item.realm_name}</span>
-                      <span className="text-02 text-ink-subtle ml-2">
+                      <span className="text-03 text-[hsl(var(--color-ink))]">{item.realm_name}</span>
+                      <span className="text-02 text-[hsl(var(--color-ink-subtle))] ml-2">
                         (<DomainEnum namespace="souls.civilizations" value={item.civilization} />)
                       </span>
                     </span>
                     {isLoading ? (
                       <Skeleton className="h-4 w-12" />
                     ) : (
-                      <span className="text-03 font-mono tabular-nums text-ink-muted">{item.count}</span>
+                      <span className="text-03 font-mono tabular-nums text-[hsl(var(--color-ink-muted))]">{item.count}</span>
                     )}
                   </li>
                 ))}
@@ -175,17 +175,17 @@ function LedgerPageContent() {
             {error ? (
               <SectionError label={t("common.error")} />
             ) : (
-              <ul className="divide-y divide-hairline">
+              <ul className="divide-y divide-[hsl(var(--color-hairline))]">
                 {ledgerStats.recent_activity.slice(0, 10).map((activity) => (
                   <li key={activity.id} className="flex items-start gap-3 py-3">
-                    <span className="text-01 uppercase text-ink-subtle shrink-0 pt-px">
+                    <span className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] shrink-0 pt-px">
                       <DomainEnum namespace="audit.actions" value={activity.action} />
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-03 text-ink">
+                      <span className="block text-03 text-[hsl(var(--color-ink))]">
                         {activity.description || <DomainEnum namespace="audit.actions" value={activity.action} />}
                       </span>
-                      <span className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-02 font-mono text-ink-subtle">
+                      <span className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-02 font-mono text-[hsl(var(--color-ink-subtle))]">
                         <span>{activity.user}</span>
                         <span aria-hidden="true">·</span>
                         <span>{activity.resource}</span>
@@ -247,11 +247,11 @@ function OverviewFigure({
 }) {
   return (
     <div>
-      <div className="text-01 uppercase text-ink-subtle">{label}</div>
+      <div className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{label}</div>
       {isLoading ? (
         <Skeleton className="h-10 w-20 mt-2" />
       ) : (
-        <div data-overview-figure="" className="text-07 font-mono tabular-nums text-ink mt-2">
+        <div data-overview-figure="" className="text-07 font-mono tabular-nums text-[hsl(var(--color-ink))] mt-2">
           {value ?? 0}
         </div>
       )}
@@ -263,7 +263,7 @@ function OverviewFigure({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-01 uppercase text-ink-subtle border-b-2 border-ink-subtle pb-2 mb-3">
+      <h2 className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] border-b-2 border-[hsl(var(--color-ink-subtle))] pb-2 mb-3">
         {title}
       </h2>
       {children}

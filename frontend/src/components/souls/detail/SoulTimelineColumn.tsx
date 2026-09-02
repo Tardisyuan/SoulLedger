@@ -52,7 +52,7 @@ export function SoulTimelineColumn({
           放在日期问题之下、生平脊线之上,因为一个坏日期会动摇它下面每一
           条账的日与序,而生平脊线讲的是比账簿更大的故事。 */}
       {!loading && ledger && (
-        <div className="bg-surface-1 p-4 border border-hairline">
+        <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
           <SoulLedgerBook records={ledger.records} />
         </div>
       )}

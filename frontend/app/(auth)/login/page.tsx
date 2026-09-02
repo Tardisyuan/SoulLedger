@@ -76,7 +76,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-canvas">
+    <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--color-canvas))]">
       <div className="w-full max-w-md px-6">
         {/* On the type scale and the spacing rhythm, and on the shared form
             primitives. This was the last page still speaking pre-migration

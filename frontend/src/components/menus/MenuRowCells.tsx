@@ -32,23 +32,23 @@ export function MenuRowCells({
 
   return (
     <>
-      <td className={`px-4 py-3 ${isDeleted ? "text-ink-subtle" : ""}`}>
+      <td className={`px-4 py-3 ${isDeleted ? "text-[hsl(var(--color-ink-subtle))]" : ""}`}>
         <div className="flex items-center gap-2">
           {MenuIcon ? (
             <MenuIcon className="w-4 h-4 text-[hsl(var(--color-accent-ink))]" />
           ) : null}
-          <span className={`font-medium ${isDeleted ? "line-through text-ink-subtle" : "text-ink"}`}>
+          <span className={`font-medium ${isDeleted ? "line-through text-[hsl(var(--color-ink-subtle))]" : "text-[hsl(var(--color-ink))]"}`}>
             {menu.name}
           </span>
           {isDeleted && (
-            <Badge className="shrink-0 text-ink-subtle">
+            <Badge className="shrink-0 text-[hsl(var(--color-ink-subtle))]">
               {t("menus.deleted_badge")}
             </Badge>
           )}
         </div>
       </td>
       {/* Paths are identifiers — the 02 step, and monospaced. */}
-      <td className="px-4 py-3 text-02 font-mono text-ink-muted">{menu.path}</td>
+      <td className="px-4 py-3 text-02 font-mono text-[hsl(var(--color-ink-muted))]">{menu.path}</td>
       <td className="px-4 py-3">
         <Badge>{t(`menus.menu_types.${menu.menu_type ?? "MENU"}`)}</Badge>
       </td>
@@ -64,7 +64,7 @@ export function MenuRowCells({
           ))}
         </div>
       </td>
-      <td className="px-4 py-3 text-ink-muted">{menu.order}</td>
+      <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{menu.order}</td>
       <td className="px-4 py-3">
         <div className="flex flex-col items-start gap-1">
           {/* is_active and visible are gates being in force or not —
@@ -72,7 +72,7 @@ export function MenuRowCells({
           <Badge tone={menu.is_active ? "success" : "neutral"}>
             {menu.is_active ? t("menus.active") : t("menus.inactive")}
           </Badge>
-          <Badge className={menu.visible !== false ? undefined : "text-ink-subtle"}>
+          <Badge className={menu.visible !== false ? undefined : "text-[hsl(var(--color-ink-subtle))]"}>
             {menu.visible !== false ? t("menus.shown_label") : t("menus.hidden_label")}
           </Badge>
         </div>
@@ -96,7 +96,7 @@ export function MenuRowCells({
             </>
           )}
           {isDeleted && (
-            <span className="text-02 text-ink-subtle">
+            <span className="text-02 text-[hsl(var(--color-ink-subtle))]">
               {t("recycle_bin.manage_from_bin")}
             </span>
           )}

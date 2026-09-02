@@ -20,7 +20,7 @@
  */
 export default function Loading() {
   return (
-    <div className="bg-canvas">
+    <div className="bg-[hsl(var(--color-canvas))]">
       <header className="border-b border-[hsl(var(--color-hairline))]">
         <div className="px-6 pt-10 pb-6">
           {/* h-10 对着 text-07 的 32px × 1.2;h-6 对着 text-04 副标题。 */}

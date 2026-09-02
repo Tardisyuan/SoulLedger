@@ -123,14 +123,14 @@ export default function RecycleBinPage() {
                 />
               </td>
               <td className="px-4 py-3">
-                <div className="font-medium text-ink">{entry.label}</div>
+                <div className="font-medium text-[hsl(var(--color-ink))]">{entry.label}</div>
                 {entry.delete_reason && (
-                  <div className="text-02 text-ink-subtle mt-1">
+                  <div className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
                     {entry.delete_reason}
                   </div>
                 )}
               </td>
-              <td className="px-4 py-3 text-ink-muted">
+              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
                 {entry.dependent_count > 0
                   ? t("recycle_bin.dependent_count", {
                       type: entityLabel(entry.entity_type),
@@ -139,7 +139,7 @@ export default function RecycleBinPage() {
                     })
                   : <DomainNumber value={entry.dependent_count} />}
               </td>
-              <td className="px-4 py-3 text-02 text-ink-subtle">
+              <td className="px-4 py-3 text-02 text-[hsl(var(--color-ink-subtle))]">
                 <DomainText value={entry.deleted_at ? new Date(entry.deleted_at).toLocaleString() : null} />
                 {entry.deleted_by && (
                   <div>{t("recycle_bin.deleted_by", { user: entry.deleted_by })}</div>
@@ -200,12 +200,12 @@ export default function RecycleBinPage() {
 
         {confirmHardDelete && (
           <div className="fixed inset-0 z-dialog flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-            <div className="w-full max-w-sm bg-surface-2 border border-hairline">
+            <div className="w-full max-w-sm bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))]">
               <div className="px-6 py-4">
-                <h3 className="text-05 text-ink mb-2">
+                <h3 className="text-05 text-[hsl(var(--color-ink))] mb-2">
                   {t("recycle_bin.hard_delete_confirm_title")}
                 </h3>
-                <p className="text-04 text-ink-muted">
+                <p className="text-04 text-[hsl(var(--color-ink-muted))]">
                   {t("recycle_bin.hard_delete_confirm_message", { name: confirmHardDelete.label })}
                 </p>
               </div>

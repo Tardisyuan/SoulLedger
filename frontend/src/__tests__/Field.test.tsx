@@ -290,7 +290,7 @@ describe("padding lands on the same ladder Button uses", () => {
     // string has `text-ink` and `text-0N` in it.
     const md = fieldControl({ size: "md" }).split(/\s+/);
     expect(md).toContain("text-03");
-    expect(md).toContain("text-ink");
+    expect(md).toContain("text-[hsl(var(--color-ink))]");
   });
 
   it("styles disabled on every size, not 29% of them", () => {

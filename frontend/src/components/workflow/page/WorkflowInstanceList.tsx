@@ -52,12 +52,12 @@ export function WorkflowInstanceList({
           <Link
             key={wf.id}
             href={`/workflow/${wf.id}`}
-            className="block bg-surface-1 p-4 border border-hairline hover:border-[hsl(var(--color-accent))]/50 transition-colors cursor-pointer"
+            className="block bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))] hover:border-[hsl(var(--color-accent))]/50 transition-colors cursor-pointer"
           >
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-03 font-medium text-ink">{wf.workflow_name}</div>
-                <div className="text-02 text-ink-muted mt-1">
+                <div className="text-03 font-medium text-[hsl(var(--color-ink))]">{wf.workflow_name}</div>
+                <div className="text-02 text-[hsl(var(--color-ink-muted))] mt-1">
                   <DomainEnum namespace="workflow.case_types" value={wf.case_type} />{" · "}
                   {/* `wf.soul` is the primary key. This row used to print the
                       UUID as though it were the soul's name. */}
@@ -77,7 +77,7 @@ export function WorkflowInstanceList({
                       ? "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))]"
                       : wf.status === "IN_PROGRESS"
                       ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
-                      : "bg-[hsl(var(--color-surface-3))] text-ink-muted"
+                      : "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"
                   }
                 >
                   <DomainEnum namespace="workflow.status" value={wf.status} />

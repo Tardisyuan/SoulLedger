@@ -169,7 +169,7 @@ export function MenuFormModal({
                 it stays a visual label only. Its typography is `Field`'s label
                 spelling (`text-01 uppercase text-ink-subtle`) so it does not
                 read as a different kind of label from the ones beside it. */}
-            <span id={iconLabelId} className="text-01 uppercase text-ink-subtle">
+            <span id={iconLabelId} className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">
               {t("menus.icon")} <span className="text-[hsl(var(--color-status-error))]">*</span>
             </span>
             <IconPicker
@@ -179,7 +179,7 @@ export function MenuFormModal({
             {iconError ? (
               <p className="text-02 text-[hsl(var(--color-status-error))]">{t("menus.icon_missing_error")}</p>
             ) : (
-              <p className="text-02 text-ink-tertiary">{t("menus.icon_required_hint")}</p>
+              <p className="text-02 text-[hsl(var(--color-ink-tertiary))]">{t("menus.icon_required_hint")}</p>
             )}
             {iconCollision && (
               <p className="text-02 text-[hsl(var(--color-status-warning))]">
@@ -234,7 +234,7 @@ export function MenuFormModal({
           </div>
         )}
         <div className="flex flex-col gap-1">
-          <span id={rolesLabelId} className="text-01 uppercase text-ink-subtle">{t("menus.roles")}</span>
+          <span id={rolesLabelId} className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("menus.roles")}</span>
           <div role="group" aria-labelledby={rolesLabelId} className="flex flex-wrap gap-2">
             {ROLE_OPTIONS.map((role) => (
               /* A pressed toggle is the accent fill, which is exactly
@@ -253,7 +253,7 @@ export function MenuFormModal({
               </Button>
             ))}
           </div>
-          <p className="text-02 text-ink-tertiary">{t("menus.roles_empty_hint")}</p>
+          <p className="text-02 text-[hsl(var(--color-ink-tertiary))]">{t("menus.roles_empty_hint")}</p>
         </div>
         <div className="flex flex-col gap-1">
           {isAdmin ? (
@@ -264,20 +264,20 @@ export function MenuFormModal({
                 checked={form.is_active}
                 onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
               />
-              <label htmlFor={isActiveId} className="text-03 text-ink">{t("menus.active")}</label>
+              <label htmlFor={isActiveId} className="text-03 text-[hsl(var(--color-ink))]">{t("menus.active")}</label>
             </div>
           ) : (
             // Per design review: no greyed-out checkbox for a control the
             // viewer can never use — a disabled control advertises a
             // capability that's permanently out of reach. Plain text instead.
             <div className="flex items-center gap-2 text-03">
-              <span className="text-ink-muted">{t("menus.active")}:</span>
-              <span className={form.is_active ? "text-[hsl(var(--color-status-success))]" : "text-ink-subtle"}>
+              <span className="text-[hsl(var(--color-ink-muted))]">{t("menus.active")}:</span>
+              <span className={form.is_active ? "text-[hsl(var(--color-status-success))]" : "text-[hsl(var(--color-ink-subtle))]"}>
                 {form.is_active ? t("menus.active") : t("menus.inactive")}
               </span>
             </div>
           )}
-          <p className="text-02 text-ink-tertiary">
+          <p className="text-02 text-[hsl(var(--color-ink-tertiary))]">
             {isAdmin ? t("menus.active_hint") : t("menus.active_readonly_note")}
           </p>
         </div>
@@ -289,9 +289,9 @@ export function MenuFormModal({
               checked={form.visible}
               onChange={(e) => setForm({ ...form, visible: e.target.checked })}
             />
-            <label htmlFor={visibleId} className="text-03 text-ink">{t("menus.visible_label")}</label>
+            <label htmlFor={visibleId} className="text-03 text-[hsl(var(--color-ink))]">{t("menus.visible_label")}</label>
           </div>
-          <p className="text-02 text-ink-tertiary">{t("menus.visible_hint")}</p>
+          <p className="text-02 text-[hsl(var(--color-ink-tertiary))]">{t("menus.visible_hint")}</p>
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <Button

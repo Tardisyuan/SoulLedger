@@ -18,7 +18,7 @@ export function PageSection({
   actions,
 }: PageSectionProps) {
   return (
-    <div className={cn('bg-surface-1 border border-hairline p-4', className)}>
+    <div className={cn('bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4', className)}>
       {title && (
         <div className="flex items-center justify-between mb-4 px-1">
           <h3 className="text-06 text-[hsl(var(--color-ink))]">{title}</h3>

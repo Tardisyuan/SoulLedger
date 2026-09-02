@@ -14,7 +14,7 @@
  */
 export default function Loading() {
   return (
-    <div className="bg-canvas">
+    <div className="bg-[hsl(var(--color-canvas))]">
       <header className="border-b border-[hsl(var(--color-hairline))]">
         <div className="max-w-page mx-auto px-6 pt-10 pb-6">
           <div className="flex items-start gap-4">

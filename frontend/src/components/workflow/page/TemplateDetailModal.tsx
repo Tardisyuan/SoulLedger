@@ -35,30 +35,30 @@ export function TemplateDetailModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               {/* 01 是 uppercase 小标签那一档 —— 这些是字段名，不是正文。 */}
-              <span className="text-01 uppercase text-ink-subtle">{t("souls.civilization")}</span>
-              <p className="text-03 text-ink font-medium"><DomainEnum namespace="workflow.civilizations" value={template.civilization} /></p>
+              <span className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("souls.civilization")}</span>
+              <p className="text-03 text-[hsl(var(--color-ink))] font-medium"><DomainEnum namespace="workflow.civilizations" value={template.civilization} /></p>
             </div>
             <div>
-              <span className="text-01 uppercase text-ink-subtle">{t("workflow.detail.case_type")}</span>
-              <p className="text-03 text-ink font-medium">
+              <span className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("workflow.detail.case_type")}</span>
+              <p className="text-03 text-[hsl(var(--color-ink))] font-medium">
                 <DomainEnum namespace="workflow.case_types" value={template.case_type || template.caseType} />
               </p>
             </div>
           </div>
           <div>
-            <span className="text-01 uppercase text-ink-subtle">{t("workflow.detail.notes")}</span>
-            <p className="text-03 text-ink"><DomainText value={template.description} /></p>
+            <span className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("workflow.detail.notes")}</span>
+            <p className="text-03 text-[hsl(var(--color-ink))]"><DomainText value={template.description} /></p>
           </div>
           <div>
-            <span className="text-01 uppercase text-ink-subtle">{t("workflow.detail.nodes")}</span>
+            <span className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("workflow.detail.nodes")}</span>
             <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
               {/* Backend templates arrive here via WorkflowTemplateSerializer's
                   `nodes` (source='nodes_json'); predefined templates are
                   built locally with a `nodes_json` key. Read both. */}
               {((template.nodes_json || template.nodes || []) as FlowNode[]).map((node: FlowNode, idx: number) => (
-                <div key={idx} className="bg-surface-3 p-2 text-03">
-                  <div className="font-medium text-ink">{node.node_name}</div>
-                  <div className="text-02 text-ink-muted mt-1">
+                <div key={idx} className="bg-[hsl(var(--color-surface-3))] p-2 text-03">
+                  <div className="font-medium text-[hsl(var(--color-ink))]">{node.node_name}</div>
+                  <div className="text-02 text-[hsl(var(--color-ink-muted))] mt-1">
                     {node.court_code && (
                   <span className="inline-flex items-center gap-1">
                     <Landmark aria-hidden="true" className="w-3.5 h-3.5" />
@@ -68,14 +68,14 @@ export function TemplateDetailModal({
                     <span className="ml-2"><DomainEnum namespace="workflow.node_type" value={node.node_type} /></span>
                   </div>
                   {node.approver_role && (
-                    <div className="text-02 text-ink-subtle mt-1">
+                    <div className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
                       {node.approver_role}
                     </div>
                   )}
                 </div>
               ))}
               {(template.nodes_json || template.nodes || []).length === 0 && (
-                <p className="text-03 text-ink-muted">{t("workflow.no_node_data")}</p>
+                <p className="text-03 text-[hsl(var(--color-ink-muted))]">{t("workflow.no_node_data")}</p>
               )}
             </div>
           </div>

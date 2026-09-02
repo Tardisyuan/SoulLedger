@@ -61,7 +61,7 @@ export default function FollowsPage() {
           className={`px-3 py-2 -mb-px text-03 font-medium border-b-2 transition-colors ${
             tab === key
               ? "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent-ink))]"
-              : "border-transparent text-ink-muted hover:text-ink"
+              : "border-transparent text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
           }`}
         >
           {key === "following" ? t("social.following") : t("social.followers")}
@@ -98,16 +98,16 @@ export default function FollowsPage() {
             return (
               <div
                 key={item.id}
-                className="flex items-center gap-3 p-3 bg-surface-1 border border-hairline hover:bg-surface-2 transition-colors"
+                className="flex items-center gap-3 p-3 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
               >
                 {/* rounded-full stays: an avatar is an identity mark, one of
                     the two shapes the radius scale still has a value for. */}
-                <div className="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-03 font-bold text-[hsl(var(--color-accent-ink))] shrink-0">
+                <div className="w-10 h-10 rounded-full bg-[hsl(var(--color-surface-2))] flex items-center justify-center text-03 font-bold text-[hsl(var(--color-accent-ink))] shrink-0">
                   {userName?.charAt(0)?.toUpperCase() || "?"}
                 </div>
                 <Link
                   href={`/social/profile/${userId}`}
-                  className="text-04 font-medium text-ink hover:underline flex-1"
+                  className="text-04 font-medium text-[hsl(var(--color-ink))] hover:underline flex-1"
                 >
                   {userName || userId}
                 </Link>

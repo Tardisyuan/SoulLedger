@@ -12,7 +12,7 @@ export default function Error({
   const { t } = useI18n();
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-canvas flex items-center justify-center">
+    <div className="min-h-[calc(100vh-4rem)] bg-[hsl(var(--color-canvas))] flex items-center justify-center">
       <div className="text-center">
         <div className="text-8xl font-bold text-red-500 mb-4">500</div>
         <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))] mb-2">{t("error.title")}</h1>

@@ -54,23 +54,23 @@ export function JudgmentEvidenceColumn({ evidence }: { evidence: Record<string, 
       />
 
       {entries.length === 0 ? (
-        <p className="text-04 text-ink-subtle py-6">{t("judgment.no_evidence")}</p>
+        <p className="text-04 text-[hsl(var(--color-ink-subtle))] py-6">{t("judgment.no_evidence")}</p>
       ) : (
         <>
-          <ol className="mt-4 divide-y divide-hairline">
+          <ol className="mt-4 divide-y divide-[hsl(var(--color-hairline))]">
             {entries.map(([key, value], index) => (
               <li key={key} className="grid grid-cols-[44px_1fr] gap-3 py-3">
                 {/* Han numerals, the same numbering the main clauses carry, so
                     the two numbered lists on this page read as one document. */}
-                <span className="font-mono tabular-nums text-02 text-ink-tertiary">
+                <span className="font-mono tabular-nums text-02 text-[hsl(var(--color-ink-tertiary))]">
                   {toHanNumeral(index + 1) ?? String(index + 1)}
                 </span>
                 <span className="min-w-0">
-                  <span className="text-04 text-ink block wrap-break-word">
+                  <span className="text-04 text-[hsl(var(--color-ink))] block wrap-break-word">
                     <EvidenceValue value={value} />
                   </span>
                   {/* The source pointer: which key of the record this line is. */}
-                  <span className="font-mono text-02 text-ink-subtle block mt-1 wrap-break-word">
+                  <span className="font-mono text-02 text-[hsl(var(--color-ink-subtle))] block mt-1 wrap-break-word">
                     {key}
                   </span>
                 </span>
@@ -79,10 +79,10 @@ export function JudgmentEvidenceColumn({ evidence }: { evidence: Record<string, 
           </ol>
 
           <details className="mt-4">
-            <summary className="text-02 text-ink-muted cursor-pointer hover:text-ink">
+            <summary className="text-02 text-[hsl(var(--color-ink-muted))] cursor-pointer hover:text-[hsl(var(--color-ink))]">
               {t("judgment.view")}
             </summary>
-            <pre className="mt-2 bg-surface-2 p-3 font-mono text-02 text-ink overflow-auto max-h-64">
+            <pre className="mt-2 bg-[hsl(var(--color-surface-2))] p-3 font-mono text-02 text-[hsl(var(--color-ink))] overflow-auto max-h-64">
               {JSON.stringify(evidence, null, 2)}
             </pre>
           </details>

@@ -27,40 +27,40 @@ export function WorkflowInfoCard({
     <>
     {/* Workflow Info Card. `p-5` (20px) was off the spacing ladder in all
         three cards on this page; `p-4` is the step below it. */}
-    <div className="bg-surface-1 p-4 border border-hairline">
+    <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
       {/* 01 是 uppercase 小标签那一档 —— 区块标题原本用 `text-sm` +
           `font-semibold` + `uppercase` 三个类拼出这个效果。 */}
-      <h2 className="text-01 uppercase text-ink-muted mb-3">
+      <h2 className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-3">
         {t("workflow.detail.info")}
       </h2>
       <dl className="grid grid-cols-2 gap-4 text-03">
         <div>
-          <dt className="text-ink-muted">{t("workflow.detail.soul")}</dt>
-          <dd className="text-ink font-medium">{workflow.soul_name || workflow.soul}</dd>
+          <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.soul")}</dt>
+          <dd className="text-[hsl(var(--color-ink))] font-medium">{workflow.soul_name || workflow.soul}</dd>
         </div>
         <div>
-          <dt className="text-ink-muted">{t("workflow.detail.case_type")}</dt>
-          <dd className="text-ink"><DomainEnum namespace="workflow.case_types" value={workflow.case_type} /></dd>
+          <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.case_type")}</dt>
+          <dd className="text-[hsl(var(--color-ink))]"><DomainEnum namespace="workflow.case_types" value={workflow.case_type} /></dd>
         </div>
         <div>
-          <dt className="text-ink-muted">{t("workflow.detail.judgment_verdict")}</dt>
-          <dd className="text-ink"><DomainEnum namespace="workflow.verdicts" value={workflow.judgment_verdict} /></dd>
+          <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.judgment_verdict")}</dt>
+          <dd className="text-[hsl(var(--color-ink))]"><DomainEnum namespace="workflow.verdicts" value={workflow.judgment_verdict} /></dd>
         </div>
         <div>
-          <dt className="text-ink-muted">{t("workflow.detail.priority")}</dt>
-          <dd className="text-ink">
+          <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.priority")}</dt>
+          <dd className="text-[hsl(var(--color-ink))]">
             {workflow.priority === 0 ? t("workflow.detail.normal") :
              workflow.priority === 1 ? t("workflow.detail.urgent") :
              t("workflow.detail.critical")}
           </dd>
         </div>
         <div>
-          <dt className="text-ink-muted">{t("workflow.detail.created_at")}</dt>
-          <dd className="text-ink">{formatDateTime(workflow.created_at)}</dd>
+          <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.created_at")}</dt>
+          <dd className="text-[hsl(var(--color-ink))]">{formatDateTime(workflow.created_at)}</dd>
         </div>
         <div>
-          <dt className="text-ink-muted">{t("workflow.detail.completed_at")}</dt>
-          <dd className="text-ink"><DomainText value={workflow.completed_at ? formatDateTime(workflow.completed_at) : null} missingKind={workflow.status === "COMPLETED" ? "unrecorded" : "inapplicable"} missingReason={statusLabel(workflow.status)} /></dd>
+          <dt className="text-[hsl(var(--color-ink-muted))]">{t("workflow.detail.completed_at")}</dt>
+          <dd className="text-[hsl(var(--color-ink))]"><DomainText value={workflow.completed_at ? formatDateTime(workflow.completed_at) : null} missingKind={workflow.status === "COMPLETED" ? "unrecorded" : "inapplicable"} missingReason={statusLabel(workflow.status)} /></dd>
         </div>
       </dl>
     </div>

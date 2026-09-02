@@ -185,7 +185,7 @@ export function SearchSelectField({
             onFocus={() => {
               if (searchText !== "" && !selected) setOpen(true);
             }}
-            className="w-full bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-03 text-[hsl(var(--color-ink))] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-accent))] disabled:opacity-50 border-hairline focus-visible:border-[hsl(var(--color-accent))] aria-[invalid=true]:border-[hsl(var(--color-status-error))]"
+            className="w-full bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-03 text-[hsl(var(--color-ink))] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-accent))] disabled:opacity-50 border-[hsl(var(--color-hairline))] focus-visible:border-[hsl(var(--color-accent))] aria-[invalid=true]:border-[hsl(var(--color-status-error))]"
           />
 
           <Combobox.Portal>

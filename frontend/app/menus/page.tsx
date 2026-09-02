@@ -195,7 +195,7 @@ export default function MenusPage() {
             checked={showDeleted}
             onChange={(e) => setShowDeleted(e.target.checked)}
           />
-          <label htmlFor="menus-show-deleted" className="text-03 text-ink-muted">
+          <label htmlFor="menus-show-deleted" className="text-03 text-[hsl(var(--color-ink-muted))]">
             {t("menus.show_deleted")}
           </label>
         </div>

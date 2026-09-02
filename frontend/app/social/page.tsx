@@ -77,7 +77,7 @@ export default function SocialFeedPage() {
   const pagination = paged
     ? {
         count: (
-          <p className="text-03 text-ink-muted">
+          <p className="text-03 text-[hsl(var(--color-ink-muted))]">
             {t("pagination.info", {
               page: String(page),
               total: String(totalPages),
@@ -116,7 +116,7 @@ export default function SocialFeedPage() {
           className={`px-3 py-2 -mb-px text-03 font-medium border-b-2 transition-colors ${
             tab === key
               ? "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent-ink))]"
-              : "border-transparent text-ink-muted hover:text-ink"
+              : "border-transparent text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
           }`}
         >
           {key === "feed" ? t("social.feed") : t("social.all")}
@@ -126,7 +126,7 @@ export default function SocialFeedPage() {
     >
       <div className="space-y-4">
         {/* Post creation */}
-        <div className="bg-surface-1 border border-hairline p-4">
+        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
           <TextAreaField
             label={t("social.post")}
             value={content}

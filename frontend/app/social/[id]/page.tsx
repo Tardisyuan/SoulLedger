@@ -50,7 +50,7 @@ export default function PostDetailPage() {
           <PostCard post={post} />
 
           <div className="mt-6">
-            <h2 className="text-06 text-ink mb-3">{t("social.comments")}</h2>
+            <h2 className="text-06 text-[hsl(var(--color-ink))] mb-3">{t("social.comments")}</h2>
             <CommentThread postId={id} />
           </div>
         </>

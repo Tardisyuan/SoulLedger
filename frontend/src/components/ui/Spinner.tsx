@@ -145,7 +145,7 @@ export function PageSpinner({ label }: { label?: string }) {
     // viewport. For a centred spinner that is invisible, and it is the right
     // trade: being 64px short on two routes costs nothing, while being 64px
     // long on nineteen costs a scrollbar on every one of them.
-    <div className="min-h-[calc(100vh-4rem)] bg-canvas flex items-center justify-center">
+    <div className="min-h-[calc(100vh-4rem)] bg-[hsl(var(--color-canvas))] flex items-center justify-center">
       <Spinner size="lg" label={label ?? t("common.loading")} />
     </div>
   );

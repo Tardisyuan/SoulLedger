@@ -73,16 +73,16 @@ export default function DispositionPage() {
     >
       <div className="space-y-3">
         {dispositions.map((d: Disposition) => (
-          <div key={d.id} className="bg-surface-1 border border-hairline p-4">
+          <div key={d.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-03 font-medium text-ink">
+                <p className="text-03 font-medium text-[hsl(var(--color-ink))]">
                   {t("disposition.soul")}:{" "}
                   <Link href={`/souls/${d.soul}`} className="text-[hsl(var(--color-accent-ink))] hover:underline">
                     {d.soul_name || d.soul}
                   </Link>
                 </p>
-                <p className="text-03 text-ink-subtle mt-1">
+                <p className="text-03 text-[hsl(var(--color-ink-subtle))] mt-1">
                   {t("disposition.realm")}: <DomainText value={d.realm_name || d.destination_realm} />
                 </p>
               </div>
@@ -106,7 +106,7 @@ export default function DispositionPage() {
               </div>
             </div>
             {d.notes && (
-              <p className="mt-2 text-03 text-ink-muted">{d.notes}</p>
+              <p className="mt-2 text-03 text-[hsl(var(--color-ink-muted))]">{d.notes}</p>
             )}
           </div>
         ))}
@@ -115,9 +115,9 @@ export default function DispositionPage() {
       {/* Execute Confirmation Modal */}
       {showExecuteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-surface-1 p-6 w-full max-w-md border border-hairline">
-            <h2 className="text-06 text-ink mb-2">{t("disposition.confirm_execute")}</h2>
-            <p className="text-04 text-ink-muted mb-4">
+          <div className="bg-[hsl(var(--color-surface-1))] p-6 w-full max-w-md border border-[hsl(var(--color-hairline))]">
+            <h2 className="text-06 text-[hsl(var(--color-ink))] mb-2">{t("disposition.confirm_execute")}</h2>
+            <p className="text-04 text-[hsl(var(--color-ink-muted))] mb-4">
               {t("disposition.execute_warning")}
             </p>
             <div className="flex gap-3 justify-end">

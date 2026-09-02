@@ -142,7 +142,7 @@ describe("PageSpinner is the whole-route shape those 20 files hand-roll", () => 
     // sits beside it.
     expect(root.className).toContain("min-h-[calc(100vh-4rem)]");
     expect(root.className).not.toContain("min-h-screen");
-    expect(root.className).toContain("bg-canvas");
+    expect(root.className).toContain("bg-[hsl(var(--color-canvas))]");
     expect(classesIn(container)).toEqual(expect.arrayContaining(["w-16", "h-16", "border-4"]));
     expect(screen.getByRole("status")).toBeInTheDocument();
   });

@@ -131,7 +131,7 @@ function OrganizationsPageContent() {
   const renderOrg = (org: Organization, depth: number = 0) => (
     <div
       key={org.id}
-      className="flex items-center gap-3 py-2 px-3 hover:bg-surface-2 transition-colors"
+      className="flex items-center gap-3 py-2 px-3 hover:bg-[hsl(var(--color-surface-2))] transition-colors"
       style={{ paddingLeft: `${depth * 20 + 12}px` }}
     >
       {/* lucide, not emoji. The CIVILIZATION_ICONS map above stays emoji on
@@ -150,12 +150,12 @@ function OrganizationsPageContent() {
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h3 className="text-03 font-medium text-ink truncate">{org.name}</h3>
+          <h3 className="text-03 font-medium text-[hsl(var(--color-ink))] truncate">{org.name}</h3>
           <Badge className={`shrink-0 ${CATEGORY_COLORS[org.category ?? ""] ?? ""}`}>
             {org.level === 0 ? t("organization.root") : `L${org.level}`}
           </Badge>
         </div>
-        <p className="text-02 font-mono text-ink-subtle truncate">{org.code}</p>
+        <p className="text-02 font-mono text-[hsl(var(--color-ink-subtle))] truncate">{org.code}</p>
       </div>
     </div>
   );
@@ -213,15 +213,15 @@ function OrganizationsPageContent() {
               >
                 <span aria-hidden="true" className="text-06">{info.icon}</span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-06 text-ink truncate">{info.name}</span>
-                  <span className="block text-04 text-ink-subtle">{t("organization.organizations_count", { count: String(orgs.length) })}</span>
+                  <span className="block text-06 text-[hsl(var(--color-ink))] truncate">{info.name}</span>
+                  <span className="block text-04 text-[hsl(var(--color-ink-subtle))]">{t("organization.organizations_count", { count: String(orgs.length) })}</span>
                 </span>
-                <ChevronDown aria-hidden="true" className={`w-5 h-5 text-ink-muted transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                <ChevronDown aria-hidden="true" className={`w-5 h-5 text-[hsl(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
               </Button>
 
               {/* Organization Tree */}
               {!isCollapsed && (
-                <div className="bg-surface-1 border border-hairline overflow-hidden">
+                <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] overflow-hidden">
                   {renderTree(orgs, null, 0)}
                 </div>
               )}

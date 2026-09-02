@@ -154,14 +154,14 @@ export default function WorkflowDetailPage() {
   }
 
   const backLink = (
-    <Link href="/workflow" className="text-03 text-ink-muted hover:text-ink">
+    <Link href="/workflow" className="text-03 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]">
       ← {t("workflow.detail.back_to_list")}
     </Link>
   );
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center gap-3 py-10 text-03 text-ink-muted">
+      <div className="flex items-center justify-center gap-3 py-10 text-03 text-[hsl(var(--color-ink-muted))]">
         <Spinner label={t("workflow.detail.loading")} />
         {t("workflow.detail.loading")}
       </div>
@@ -248,16 +248,16 @@ export default function WorkflowDetailPage() {
         <WorkflowInfoCard workflow={workflow} statusLabel={statusLabel} />
         {/* Current Node Action Card */}
         {currentNode && workflow.status !== "COMPLETED" && (
-          <div className="bg-surface-1 p-4 border border-hairline">
+          <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
             <h2 className="text-01 uppercase text-[hsl(var(--color-accent-ink))] mb-3">
               {t("workflow.detail.current_node")}
             </h2>
-            <div className="mb-4 p-3 bg-surface-2 border border-hairline">
-              <div className="text-03 font-medium text-ink">{currentNode.node_name}</div>
-              <div className="text-02 text-ink-muted mt-1">
+            <div className="mb-4 p-3 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))]">
+              <div className="text-03 font-medium text-[hsl(var(--color-ink))]">{currentNode.node_name}</div>
+              <div className="text-02 text-[hsl(var(--color-ink-muted))] mt-1">
                 <DomainEnum namespace="workflow.node_type" value={currentNode.node_type} /> · <DomainText value={currentNode.court_code} />
               </div>
-              <div className="text-02 text-ink-subtle mt-1">
+              <div className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
                 {t("workflow.detail.order")}: {currentNode.node_order}
               </div>
             </div>
@@ -269,7 +269,7 @@ export default function WorkflowDetailPage() {
                 <label> named no control at all: five radios share the group,
                 so there was no single `htmlFor` it could ever have carried. */}
             <fieldset className="space-y-2 mb-4">
-              <legend className="text-01 uppercase text-ink-subtle mb-2">
+              <legend className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mb-2">
                 {t("workflow.detail.select_verdict")}
               </legend>
               <div className="grid grid-cols-2 gap-2">
@@ -284,8 +284,8 @@ export default function WorkflowDetailPage() {
                     key={opt.key}
                     className={`flex items-center gap-2 p-2 border cursor-pointer transition-colors text-03 ${
                       selectedVerdict === opt.key
-                        ? "border-accent bg-[hsl(var(--color-accent))]/10"
-                        : "border-hairline hover:bg-surface-2"
+                        ? "border-[hsl(var(--color-accent))] bg-[hsl(var(--color-accent))]/10"
+                        : "border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))]"
                     }`}
                   >
                     <input
@@ -296,7 +296,7 @@ export default function WorkflowDetailPage() {
                       onChange={(e) => setSelectedVerdict(e.target.value)}
                       className="accent-[hsl(var(--color-accent))]"
                     />
-                    <span className="text-ink">{opt.label}</span>
+                    <span className="text-[hsl(var(--color-ink))]">{opt.label}</span>
                   </label>
                 ))}
               </div>
@@ -429,13 +429,13 @@ export default function WorkflowDetailPage() {
                 ? t("workflow.detail.completed_with_rejection")
                 : t("workflow.detail.completed")}
             </h2>
-            <p className="text-03 text-ink-muted">
+            <p className="text-03 text-[hsl(var(--color-ink-muted))]">
               {hasRejection
                 ? t("workflow.detail.completed_with_rejection_message")
                 : t("workflow.detail.completed_message")}
             </p>
             {workflow.completed_at && (
-              <p className="text-02 text-ink-subtle mt-2">
+              <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-2">
                 {t("workflow.detail.completed_at")}: {formatDateTime(workflow.completed_at)}
               </p>
             )}
@@ -457,14 +457,14 @@ export default function WorkflowDetailPage() {
             switching to History. What does move is the spelling: same gap, same
             hairline rule, same 03 label as the two strips that are in the slot,
             so they read as one control even though only two of them sit in it. */}
-        <div className="flex gap-1 border-b border-hairline">
+        <div className="flex gap-1 border-b border-[hsl(var(--color-hairline))]">
           <button
             type="button"
             onClick={() => setActiveTab("nodes")}
             className={`px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px ${
               activeTab === "nodes"
-                ? "text-[hsl(var(--color-accent-ink))] border-accent"
-                : "text-ink-muted border-transparent hover:text-ink"
+                ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
+                : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
             }`}
           >
             {t("workflow.detail.nodes")} ({sortedNodes.length})
@@ -474,8 +474,8 @@ export default function WorkflowDetailPage() {
             onClick={() => setActiveTab("history")}
             className={`px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px ${
               activeTab === "history"
-                ? "text-[hsl(var(--color-accent-ink))] border-accent"
-                : "text-ink-muted border-transparent hover:text-ink"
+                ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
+                : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
             }`}
           >
             {t("workflow.detail.history")}
@@ -495,8 +495,8 @@ export default function WorkflowDetailPage() {
               return (
                 <div
                   key={node.id}
-                  className={`bg-surface-1 p-4 border ${
-                    isCurrent ? "border-[hsl(var(--color-accent))]/50 shadow-lg shadow-[hsl(var(--color-accent))]/10" : "border-hairline"
+                  className={`bg-[hsl(var(--color-surface-1))] p-4 border ${
+                    isCurrent ? "border-[hsl(var(--color-accent))]/50 shadow-lg shadow-[hsl(var(--color-accent))]/10" : "border-[hsl(var(--color-hairline))]"
                   }`}
                 >
                   <div className="flex items-start gap-4">
@@ -514,18 +514,18 @@ export default function WorkflowDetailPage() {
                     {/* Node details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-03 font-medium text-ink">{node.node_name}</span>
+                        <span className="text-03 font-medium text-[hsl(var(--color-ink))]">{node.node_name}</span>
                         {isCurrent && (
                           <Badge tone="accent">{t("workflow.detail.current")}</Badge>
                         )}
                       </div>
-                      <div className="text-02 text-ink-muted mt-1">
+                      <div className="text-02 text-[hsl(var(--color-ink-muted))] mt-1">
                         <DomainEnum namespace="workflow.node_type" value={node.node_type} /> · <DomainText value={node.court_code} />
                       </div>
 
                       {/* Verdict and notes for completed nodes */}
                       {isPast && (
-                        <div className="mt-3 pt-3 border-t border-hairline">
+                        <div className="mt-3 pt-3 border-t border-[hsl(var(--color-hairline))]">
                           <div className="flex items-center gap-2 mb-2">
                             {/* `title` stays on the element that directly wraps
                                 the label string, and stays within three lines
@@ -540,16 +540,16 @@ export default function WorkflowDetailPage() {
                               {nodeVerdictLabel}
                             </Badge>
                             {node.decided_at && (
-                              <span className="text-02 text-ink-subtle">
+                              <span className="text-02 text-[hsl(var(--color-ink-subtle))]">
                                 {formatDateTime(node.decided_at)}
                               </span>
                             )}
                           </div>
                           {node.notes && (
-                            <p className="text-03 text-ink-muted italic">&ldquo;{node.notes}&rdquo;</p>
+                            <p className="text-03 text-[hsl(var(--color-ink-muted))] italic">&ldquo;{node.notes}&rdquo;</p>
                           )}
                           {node.approver && (
-                            <p className="text-02 text-ink-subtle mt-1">
+                            <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
                               {t("workflow.detail.approver")}: {node.approver}
                             </p>
                           )}
@@ -565,7 +565,7 @@ export default function WorkflowDetailPage() {
 
                   {/* Connector line */}
                   {idx < sortedNodes.length - 1 && (
-                    <div className="ml-4 mt-2 pl-4 border-l-2 border-hairline h-4" />
+                    <div className="ml-4 mt-2 pl-4 border-l-2 border-[hsl(var(--color-hairline))] h-4" />
                   )}
                 </div>
               );
