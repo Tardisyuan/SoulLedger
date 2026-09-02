@@ -201,7 +201,7 @@ def normalize_template_node(node_def: dict, position: int = 1) -> dict:
     # and stays there, where it renders as 「未识别取值」 and is missed by every
     # `node_type=` filter. The frontend presets held Chinese step names in this
     # key (「分流」, 「初审」 …); the fix for that is the mapping table in
-    # `frontend/src/config/workflow-node-types.ts`, applied before the value ever
+    # `packages/core/src/config/workflow-node-types.ts`, applied before the value ever
     # leaves the browser, and the serializer's ChoiceField still refuses such a
     # value on the way in. This clause is not that fix and does not replace it —
     # it is for rows that are *already stored*, which no boundary check can reach

@@ -28,7 +28,7 @@ What that means in practice:
     after the live-reference check below clears each one.
   * The two Norse leftovers this note used to point at are gone: the 北欧冥界
     (HADES_NORSE) Organization node in apps/org's init_organizations and the
-    北欧分流流程 template in frontend/src/config/workflow-templates.ts were
+    北欧分流流程 template in packages/core/src/config/workflow-templates.ts were
     both removed once a reference check showed nothing pointed at them.
 
 This command does ONE thing by default, plus one on request:

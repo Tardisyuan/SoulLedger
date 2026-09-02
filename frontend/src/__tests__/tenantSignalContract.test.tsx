@@ -6,7 +6,7 @@ import {
   CIVILIZATION_CODES,
   CIVILIZATION_OPTIONS,
   CIVILIZATION_SHORT_CODES,
-} from "@/src/config/civilizations";
+} from "@soulledger/core/config/civilizations";
 
 /**
  * The tenant signal: what the masthead says about which cosmology you are in.

@@ -23,9 +23,9 @@ Both the name and the type asserted the same rejected claim, twice each.
   for them to perform.
 
 The frontend had already corrected its copies —
-`frontend/src/config/workflow-templates.ts` renamed them to
+`packages/core/src/config/workflow-templates.ts` renamed them to
 `Anubis · 引导与称量` and `42审判者 · 否定告白`, and
-`src/config/workflow-node-types.ts` maps both to `EVALUATION` — while leaving a
+`packages/core/src/config/workflow-node-types.ts` maps both to `EVALUATION` — while leaving a
 comment saying the backend still carried the old reading. It did, so the same
 question had two answers depending on which end you asked.
 

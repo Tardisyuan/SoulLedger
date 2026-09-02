@@ -2,7 +2,7 @@
 
 Why this file exists
 --------------------
-``frontend/src/config/workflow-templates.ts`` writes each node's ``type`` as a
+``packages/core/src/config/workflow-templates.ts`` writes each node's ``type`` as a
 **Chinese step name** — 「分流」, 「初审」, 「申诉受理」 … —  while
 ``apps/workflow/models.py::NodeType`` has five members. ``app/workflow/page.tsx``
 mapped that value straight onto ``node_type``, ``WorkflowEditor`` kept it
@@ -29,7 +29,7 @@ differently on different nodes. The proof is in the backend table itself:
 carried the preset ``type`` 「分流」.
 
 The fix is a decision table on the frontend,
-``src/config/workflow-node-types.ts::PRESET_NODE_TYPE``, applied by ``page.tsx``
+``packages/core/src/config/workflow-node-types.ts::PRESET_NODE_TYPE``, applied by ``page.tsx``
 before the value leaves the browser. ``src/__tests__/presetNodeTypes.test.ts``
 holds it total over the presets. This file holds the three things Jest cannot
 reach: that the mapped values survive the serializer, that a mapped preset POSTed
@@ -71,8 +71,8 @@ from apps.workflow.serializers import WorkflowTemplateNodeSerializer
 from apps.workflow.services import WORKFLOW_TEMPLATES, WorkflowService
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PRESETS_TS = REPO_ROOT / "frontend" / "src" / "config" / "workflow-templates.ts"
-NODE_TYPES_TS = REPO_ROOT / "frontend" / "src" / "config" / "workflow-node-types.ts"
+PRESETS_TS = REPO_ROOT / "packages" / "core" / "src" / "config" / "workflow-templates.ts"
+NODE_TYPES_TS = REPO_ROOT / "packages" / "core" / "src" / "config" / "workflow-node-types.ts"
 
 #: `  CHINESE_ROUTINE: {` — one line per preset, at two-space indent.
 _PRESET_KEY = re.compile(r'^  ([A-Z][A-Z_]*): \{$', re.MULTILINE)

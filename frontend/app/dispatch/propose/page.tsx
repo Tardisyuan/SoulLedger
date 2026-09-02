@@ -7,7 +7,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
-import { drfFieldErrors, drfNonFieldError } from "@/lib/validations/drfErrors";
+import { drfFieldErrors, drfNonFieldError } from "@soulledger/core/validations/drfErrors";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";

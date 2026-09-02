@@ -3,7 +3,7 @@
 import { useI18n } from "@/src/contexts/I18nContext";
 import { MissingValue } from "@/src/components/ui/DomainValue";
 import { JudgmentSectionHead } from "@/src/components/judgment/JudgmentGroundsPanel";
-import { toHanNumeral } from "@/src/config/civilizationSigil";
+import { toHanNumeral } from "@soulledger/core/config/civilizationSigil";
 
 /**
  * 事实 —— the facts column of a judgment.

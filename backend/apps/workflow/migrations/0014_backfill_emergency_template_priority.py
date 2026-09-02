@@ -3,7 +3,7 @@ meant to carry.
 
 背景
 ----
-`frontend/src/config/workflow-templates.ts` 里有三套预设叫「紧急审判流程」——中国、
+`packages/core/src/config/workflow-templates.ts` 里有三套预设叫「紧急审判流程」——中国、
 欧洲、埃及各一套。`a77a41e` 之前它们写的是 `caseType: "EMERGENCY"`，而 `CaseType`
 没有这个成员，所以**存不下来**（400）。`a77a41e` 把它们按案件类别分别归入
 SPECIAL / ROUTINE / DIVINE_TRIAL，并在注释里写明：急缓不是案件类别，急缓留给

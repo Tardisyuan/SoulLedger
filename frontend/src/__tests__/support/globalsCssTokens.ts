@@ -25,7 +25,7 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { CIVILIZATION_CODES, CIVILIZATION_SHORT_CODES } from "@/src/config/civilizations";
+import { CIVILIZATION_CODES, CIVILIZATION_SHORT_CODES } from "@soulledger/core/config/civilizations";
 
 export const FRONTEND_ROOT = path.join(__dirname, "..", "..", "..");
 export const GLOBALS_CSS = path.join(FRONTEND_ROOT, "app", "globals.css");

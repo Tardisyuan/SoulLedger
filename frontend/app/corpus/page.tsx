@@ -14,13 +14,13 @@ import {
   CIVILIZATION_OPTIONS,
   CIVILIZATION_SHORT_CODES,
   isCivilizationOption,
-} from "@/src/config/civilizations";
+} from "@soulledger/core/config/civilizations";
 import {
   civilizationNamesOffences,
   formatSigil,
   sigilSystemName,
   type StatuteRef,
-} from "@/src/config/civilizationSigil";
+} from "@soulledger/core/config/civilizationSigil";
 import { cn } from "@/lib/utils";
 
 /**

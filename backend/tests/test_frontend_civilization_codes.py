@@ -49,7 +49,7 @@ import pytest
 from apps.souls.models import CIVILIZATION_TENANT, TENANT_CIVILIZATION
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CIVILIZATIONS_TS = REPO_ROOT / "frontend" / "src" / "config" / "civilizations.ts"
+CIVILIZATIONS_TS = REPO_ROOT / "packages" / "core" / "src" / "config" / "civilizations.ts"
 
 
 def _ts_object(source: str, name: str) -> dict[str, str]:

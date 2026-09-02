@@ -10,9 +10,9 @@ import { Button } from "@/src/components/ui/Button";
 import {
   CIVILIZATION_OPTIONS,
   type CivilizationOption,
-} from "@/src/config/civilizations";
-import { soulCreateSchema } from "@/lib/validations/schemas";
-import { useFormValidation } from "@/lib/validations/useFormValidation";
+} from "@soulledger/core/config/civilizations";
+import { soulCreateSchema } from "@soulledger/core/validations/schemas";
+import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
 
 // ── BaseModal ─────────────────────────────────────
 

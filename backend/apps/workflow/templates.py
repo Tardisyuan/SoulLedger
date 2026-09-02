@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 # should be able to run silently.
 #
 # THIS IS NOT THE SAME TABLE AS THE FRONTEND PRESETS, AND THAT IS DELIBERATE.
-# ``frontend/src/config/workflow-templates.ts`` holds seventeen presets keyed by
+# ``packages/core/src/config/workflow-templates.ts`` holds seventeen presets keyed by
 # name (``CHINESE_ROUTINE``, ``GREEK_ROUTINE``, …); this dict holds eight keyed
 # by ``(civilization, case_type)``. Neither is generated from the other and their
 # node sets differ — the frontend has Greek, Dante and 枉死城 flows this file has
@@ -131,7 +131,7 @@ WORKFLOW_TEMPLATES = {
     # version of.
     #
     # THE CONTENT IS THE FRONTEND PRESET, NOT A NEW READING. `EUROPEAN_APPEAL`
-    # in `frontend/src/config/workflow-templates.ts` carries the sourcing —
+    # in `packages/core/src/config/workflow-templates.ts` carries the sourcing —
     # 约 5:22 / 林后 5:10 for Christ as the only judge, the Requiem offertory's
     # `repraesentet` for Michael presenting rather than deciding, and the
     # deletion of the invented 天使议会 复核 layer. Nothing here is decided
@@ -227,7 +227,7 @@ WORKFLOW_TEMPLATES = {
             #
             # The frontend had already corrected its own copies of these two —
             # `Anubis · 引导与称量` and `42审判者 · 否定告白`, both mapped to
-            # EVALUATION in `frontend/src/config/workflow-node-types.ts`, whose
+            # EVALUATION in `packages/core/src/config/workflow-node-types.ts`, whose
             # comment on 灵魂引导 said outright that the backend node was still
             # carrying 「阿努比斯审判」的旧读法. It no longer is, and that comment
             # was updated with this change. The step words here are the frontend's;
@@ -261,7 +261,7 @@ WORKFLOW_TEMPLATES = {
 #     (EGYPTIAN, HEART_WEIGHING) → '欧西里斯称重流程'   3 节点
 #     (EGYPTIAN, ROUTINE)        → 'EGYPTIAN 审批流程'  1 节点  ← 泛用兜底
 #
-# 而 `frontend/src/config/workflow-templates.ts` 的 `EGYPTIAN_ROUTINE` 预设**叫**
+# 而 `packages/core/src/config/workflow-templates.ts` 的 `EGYPTIAN_ROUTINE` 预设**叫**
 # 「心脏称重流程」、节点是两真之殿(Anubis/Osiris/Ammit),`caseType` 写的却是
 # `ROUTINE`。两边各自都合法(ROUTINE 在 `VALID_CASE_TYPES_BY_CIVILIZATION[EGYPTIAN]`
 # 里),所以既有的那几条跨栈守卫一条都不会红 —— 而一个埃及 ROUTINE 判决拿到的是
@@ -305,7 +305,7 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
              "read 「Gabriel · 受理」 in the preset; Gabriel announces to the "
              "living (Dan 8:16, 9:21; Lk 1:11-38) and does not receive the "
              "dead's cases — see the European section of "
-             "frontend/src/config/workflow-templates.ts.",
+             "packages/core/src/config/workflow-templates.ts.",
     "主教座堂初审": "An institution (Diocese). EUROPEAN_ACTORS has no bishop.",
     "教省复审": "An institution (Archdiocese).",
     "罗马教廷终审": "An institution (the Curia). Naming a pope would be inventing "
@@ -324,7 +324,7 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
     # heaven with nothing further to decide. Naming a judge here would invent
     # a tribunal, which is the same move as the archangel council the frontend
     # preset used to run (see the European section of
-    # frontend/src/config/workflow-templates.ts).
+    # packages/core/src/config/workflow-templates.ts).
     "天堂准入终审": "Names the gate. Peter is not in EUROPEAN_ACTORS, and Christ — "
                "who is, since 79dee57 — does not judge here: the particular "
                "judgment referred the life to him already (CCC 1021-1022) and "
@@ -344,7 +344,7 @@ TEMPLATE_NODES_WITHOUT_AN_APPROVER = {
 
 
 # The same record, for the *presets* — the node labels
-# ``frontend/src/config/workflow-templates.ts`` writes down as naming nobody in
+# ``packages/core/src/config/workflow-templates.ts`` writes down as naming nobody in
 # its own ``NODES_THAT_NAME_NO_ACTOR`` table.
 #
 # This one IS consulted at runtime, and it has to be: since ``_resolve_approver``
@@ -429,7 +429,7 @@ def _designates_nobody(node_name: str) -> bool:
 # `case_type=CaseType.APPEAL` for a soul of any civilization and validated
 # nothing at all, so an appeal raised through *that* entry point has always been
 # legal for all three. Two presets say the same: `EUROPEAN_APPEAL` and
-# `EGYPTIAN_APPEAL` in `frontend/src/config/workflow-templates.ts` are complete
+# `EGYPTIAN_APPEAL` in `packages/core/src/config/workflow-templates.ts` are complete
 # flows (Christ · 私审判 …, Isis · 受理 → Nephthys · 复核 → Osiris · 终审) that a
 # user can save and that no judgment could ever be routed to. Two entry points
 # and two presets against one set: the set was widened rather than the other
@@ -461,7 +461,7 @@ VALID_CASE_TYPES_BY_CIVILIZATION = {
     # judged at the meadow's fork and sent to the Isles of the Blessed or to
     # Tartarus. That is the ordinary complete proceeding on this side, which is
     # what ROUTINE names. `GREEK_ROUTINE` in
-    # `frontend/src/config/workflow-templates.ts` is that flow.
+    # `packages/core/src/config/workflow-templates.ts` is that flow.
     #
     # APPEAL for the reason the whole table gained it: both entry points write
     # it unconditionally for any civilization, so a set without it makes the

@@ -2,7 +2,7 @@
 
 ## 分叉的后果不是命名,是一个泛用单节点流程
 
-`frontend/src/config/workflow-templates.ts` 的 `EGYPTIAN_ROUTINE` 预设**叫**
+`packages/core/src/config/workflow-templates.ts` 的 `EGYPTIAN_ROUTINE` 预设**叫**
 「心脏称重流程」、节点是两真之殿(Anubis / Osiris / Ammit),而它的 `caseType`
 写的是 `ROUTINE`。后端只有 `(EGYPTIAN, HEART_WEIGHING)`。实测(2026-09-01):
 
@@ -106,7 +106,7 @@ def test_the_frontend_preset_still_declares_routine():
 
     source = (
         pathlib.Path(__file__).resolve().parents[2]
-        / "frontend" / "src" / "config" / "workflow-templates.ts"
+        / "packages" / "core" / "src" / "config" / "workflow-templates.ts"
     ).read_text(encoding="utf-8")
     block = re.search(r"EGYPTIAN_ROUTINE:\s*\{(.*?)\n  \}", source, re.S)
     assert block, "找不到 EGYPTIAN_ROUTINE 预设"

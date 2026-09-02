@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { CIVILIZATION_OPTIONS } from '@/src/config/civilizations'
+import { CIVILIZATION_OPTIONS } from '../config/civilizations'
 
 // ── Auth ─────────────────────────────────────────────
 //

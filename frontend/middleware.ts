@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 // `git log -p --all -- frontend/middleware.ts | grep config/locale` matched
 // **nothing**, ever. The three literals below lived here in their own copy
 // while a comment elsewhere announced the consolidation as done.
-import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale } from "@/src/config/locale";
+import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale } from "@soulledger/core/config/locale";
 
 // Routes that don't require authentication
 const PUBLIC_PATHS = ["/", "/welcome", "/(auth)/login", "/(auth)/register"];

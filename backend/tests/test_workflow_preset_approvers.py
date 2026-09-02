@@ -7,7 +7,7 @@ fail-closed: a node with no `approver_actor` cannot be decided by anyone and has
 to go through the audited `escalate`. `e7e87e7` then found what that costs on
 the path nobody had measured — a workflow built from a *preset*:
 
-    frontend/src/config/workflow-templates.ts nodes carry `name/court/type/order`
+    packages/core/src/config/workflow-templates.ts nodes carry `name/court/type/order`
     and no `actor` key. /workflow saves a preset into `WorkflowTemplate.nodes_json`.
     `create_from_judgment` prefers `nodes_json` over `WORKFLOW_TEMPLATES`.
     `_resolve_approver` read only the `actor` key.
@@ -60,7 +60,7 @@ from apps.workflow.services import (
     WorkflowService,
 )
 
-#: `frontend/src/config/workflow-templates.ts :: EUROPEAN_ROUTINE`, verbatim —
+#: `packages/core/src/config/workflow-templates.ts :: EUROPEAN_ROUTINE`, verbatim —
 #: including the Chinese `type` strings, which are what the preset actually
 #: holds (they are not `NodeType` members; `create_from_judgment` copies them
 #: through unvalidated, and that is out of scope here).
@@ -283,7 +283,7 @@ def test_the_preset_excuse_mirror_matches_the_frontend_table():
     recorded = set(_preset_reasons())
     assert recorded == PRESET_NODES_THAT_NAME_NO_ACTOR, (
         "the mirror in apps/workflow/services.py and NODES_THAT_NAME_NO_ACTOR "
-        "in frontend/src/config/workflow-templates.ts disagree.\n"
+        "in packages/core/src/config/workflow-templates.ts disagree.\n"
         f"  only in the mirror: {sorted(PRESET_NODES_THAT_NAME_NO_ACTOR - recorded)}\n"
         f"  only in the preset file: {sorted(recorded - PRESET_NODES_THAT_NAME_NO_ACTOR)}"
     )

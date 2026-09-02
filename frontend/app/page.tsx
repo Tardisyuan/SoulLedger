@@ -1,7 +1,7 @@
 "use client";
 
 import { useTenant } from "@/src/contexts/TenantContext";
-import { CIVILIZATION_OPTIONS, getCivilizationFromTenantCode } from "@/src/config/civilizations";
+import { CIVILIZATION_OPTIONS, getCivilizationFromTenantCode } from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ExternalLink } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";

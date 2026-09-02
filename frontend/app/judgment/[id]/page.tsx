@@ -21,7 +21,7 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
-import { toHanNumeral } from "@/src/config/civilizationSigil";
+import { toHanNumeral } from "@soulledger/core/config/civilizationSigil";
 
 /**
  * 判决书 —— the judgment detail page.

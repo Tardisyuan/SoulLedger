@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { CIVILIZATION_ICONS, CIVILIZATION_ICON_FALLBACK } from "@/src/config/civilizations";
+import { CIVILIZATION_ICONS, CIVILIZATION_ICON_FALLBACK } from "@soulledger/core/config/civilizations";
 import { useQuery } from "@tanstack/react-query";
 import { api, type Organization, type PaginatedResponse } from "@/lib/api";
 import { useTenant } from "@/src/contexts/TenantContext";

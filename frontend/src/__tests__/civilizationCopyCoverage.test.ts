@@ -28,7 +28,7 @@
 import en from "../../messages/en.json";
 import egy from "../../messages/egy.json";
 import zhHans from "../../messages/zh-Hans.json";
-import { CIVILIZATION_OPTIONS } from "../config/civilizations";
+import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 
 const BUNDLES: Record<string, unknown> = { en, "zh-Hans": zhHans, egy };
 

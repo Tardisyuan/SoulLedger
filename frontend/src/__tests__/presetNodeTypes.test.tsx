@@ -23,12 +23,12 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WorkflowPage from "@/app/workflow/page";
 import { workflowApi } from "@/lib/api";
-import { WORKFLOW_TEMPLATES } from "@/src/config/workflow-templates";
+import { WORKFLOW_TEMPLATES } from "@soulledger/core/config/workflow-templates";
 import {
   PRESET_NODE_TYPE,
   nodeTypeFor,
   type NodeTypeMember,
-} from "@/src/config/workflow-node-types";
+} from "@soulledger/core/config/workflow-node-types";
 
 // ── the page that used to send the Chinese label ─────────────────────
 

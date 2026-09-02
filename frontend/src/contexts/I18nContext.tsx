@@ -6,15 +6,15 @@ import {
   isLocale as isLocaleGuard,
   type Locale,
   LOCALE_COOKIE as LOCALE_COOKIE_NAME,
-} from "@/src/config/locale";
+} from "@soulledger/core/config/locale";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import defaultMessages from "../../messages/zh-Hans.json";
 
 // Locale 的类型与常量在 src/config/locale.ts —— 那个模块不带 "use client",
 // 所以服务端的 app/layout.tsx 也能 import。这里 re-export 是为了不打断既有引用。
-export type { Locale } from "@/src/config/locale";
-export { HTML_LANG, isLocale, LOCALE_COOKIE } from "@/src/config/locale";
+export type { Locale } from "@soulledger/core/config/locale";
+export { HTML_LANG, isLocale, LOCALE_COOKIE } from "@soulledger/core/config/locale";
 
 type Bundle = Record<string, unknown>;
 

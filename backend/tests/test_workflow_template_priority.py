@@ -6,7 +6,7 @@ The gap
 and has always been *instance*-level: whoever creates a workflow passes it, and
 nothing else can. So 「this procedure is for urgent cases」 was not expressible
 at all — which is why the three 「紧急审判流程」 presets in
-`frontend/src/config/workflow-templates.ts` once wrote it into `caseType` as
+`packages/core/src/config/workflow-templates.ts` once wrote it into `caseType` as
 `"EMERGENCY"`, a `CaseType` member that does not exist, and answered 400 on
 every save. `a77a41e` filed them under real case types and left the urgency
 homeless. `WorkflowTemplate.priority` is the home.
@@ -315,7 +315,7 @@ def test_the_migration_backfills_exactly_the_presets_marked_urgent():
 
     presets_ts = (
         Path(__file__).resolve().parents[2]
-        / "frontend" / "src" / "config" / "workflow-templates.ts"
+        / "packages" / "core" / "src" / "config" / "workflow-templates.ts"
     )
     source = presets_ts.read_text(encoding="utf-8")
 

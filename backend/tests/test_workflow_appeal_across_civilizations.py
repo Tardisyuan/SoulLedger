@@ -31,7 +31,7 @@ Two entry points and two presets against one table, so the table was widened.
   for a soul of any civilization and, until this change, validated nothing at
   all. An appeal raised through that door has always been legal everywhere.
 * ``EUROPEAN_APPEAL`` and ``EGYPTIAN_APPEAL`` are complete presets in
-  ``frontend/src/config/workflow-templates.ts`` — flows a user can build, save
+  ``packages/core/src/config/workflow-templates.ts`` — flows a user can build, save
   and see, that no judgment could ever be routed to.
 
 Only the table said otherwise, so the table is what changed. The other half of

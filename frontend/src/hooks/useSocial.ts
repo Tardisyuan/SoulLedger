@@ -1,7 +1,7 @@
 "use client";
 
 import axios from "axios";
-import { drfNonFieldError } from "@/lib/validations/drfErrors";
+import { drfNonFieldError } from "@soulledger/core/validations/drfErrors";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { socialApi, type UserProfile } from "@/lib/api";
 import { useToast } from "@/src/contexts/ToastContext";

@@ -9,7 +9,7 @@ import "./globals.css";
 import { fontVariables } from "./fonts";
 import { ToastProvider } from "@/src/contexts/ToastContext";
 import { I18nProvider } from "@/src/contexts/I18nContext";
-import { HTML_LANG, isLocale, LOCALE_COOKIE } from "@/src/config/locale";
+import { HTML_LANG, isLocale, LOCALE_COOKIE } from "@soulledger/core/config/locale";
 import { ThemeProvider } from "@/src/contexts/ThemeContext";
 import { TenantProvider } from "@/src/contexts/TenantContext";
 import { WebSocketProvider } from "@/src/contexts/WebSocketContext";
