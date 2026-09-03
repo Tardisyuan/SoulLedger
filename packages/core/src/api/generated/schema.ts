@@ -3888,7 +3888,6 @@ export interface components {
             /** Format: uuid */
             workflow: string;
             node_name: string;
-            /** Format: int64 */
             node_order: number;
             node_type?: components["schemas"]["ApprovalNodeNodeTypeEnum"];
             approver_type?: components["schemas"]["ApprovalNodeApproverTypeEnum"];
@@ -3972,10 +3971,7 @@ export interface components {
             /** @description e.g., 十殿审判流程, 欧西里斯称重 */
             workflow_name: string;
             case_type?: components["schemas"]["CaseTypeEnum"];
-            /**
-             * Format: int64
-             * @description 0=normal, 1=urgent, 2=critical
-             */
+            /** @description 0=normal, 1=urgent, 2=critical */
             priority?: number;
             readonly status: components["schemas"]["ApprovalWorkflowStatusEnum"];
             /** Format: uuid */
@@ -4007,10 +4003,7 @@ export interface components {
             soul: string;
             readonly soul_name: string;
             case_type?: components["schemas"]["CaseTypeEnum"];
-            /**
-             * Format: int64
-             * @description 0=normal, 1=urgent, 2=critical
-             */
+            /** @description 0=normal, 1=urgent, 2=critical */
             priority?: number;
             status?: components["schemas"]["ApprovalWorkflowStatusEnum"];
             is_appeal?: boolean;
@@ -4497,10 +4490,7 @@ export interface components {
             readonly realm_name: string;
             memory_reset?: components["schemas"]["MemoryResetMechanismEnum"];
             is_eternal?: boolean;
-            /**
-             * Format: int64
-             * @description Sentence duration in years; null = no term recorded (see is_eternal)
-             */
+            /** @description Sentence duration in years; null = no term recorded (see is_eternal) */
             sentence_years?: number | null;
             /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
             term_start?: {
@@ -4603,9 +4593,7 @@ export interface components {
             is_active?: boolean;
             /** Format: date-time */
             expires_at?: string | null;
-            /** Format: int64 */
             rate_limit_per_minute?: number;
-            /** Format: int64 */
             rate_limit_per_hour?: number;
             /** @description List of allowed source IPs. Empty = allow all. */
             allowed_ips?: unknown;
@@ -4985,7 +4973,6 @@ export interface components {
             name: string;
             path?: string;
             icon?: string;
-            /** Format: int64 */
             order?: number;
             parent?: number | null;
             menu_type?: components["schemas"]["MenuTypeEnum"];
@@ -5013,7 +5000,6 @@ export interface components {
             code: string;
             /** @description 权限 codename，如 soul.create、judgment.delete */
             permission: string;
-            /** Format: int64 */
             order?: number;
             is_active?: boolean;
         };
@@ -5026,7 +5012,6 @@ export interface components {
             code: string;
             /** @description 权限 codename，如 soul.create、judgment.delete */
             permission: string;
-            /** Format: int64 */
             order?: number;
             is_active?: boolean;
         };
@@ -5035,7 +5020,6 @@ export interface components {
             name: string;
             path?: string;
             icon?: string;
-            /** Format: int64 */
             order?: number;
             parent?: number | null;
             menu_type?: components["schemas"]["MenuTypeEnum"];
@@ -5055,7 +5039,6 @@ export interface components {
             name: string;
             path?: string;
             icon?: string;
-            /** Format: int64 */
             order?: number;
             parent?: number | null;
             menu_type?: components["schemas"]["MenuTypeEnum"];
@@ -5140,15 +5123,9 @@ export interface components {
             category: components["schemas"]["OrganizationCategoryEnum"];
             /** @description 父组织（平行部门） */
             parent?: number | null;
-            /**
-             * Format: int64
-             * @description 层级深度：0=根组织
-             */
+            /** @description 层级深度：0=根组织 */
             level?: number;
-            /**
-             * Format: int64
-             * @description 同级别排序
-             */
+            /** @description 同级别排序 */
             sort?: number;
             readonly tenant: number;
         };
@@ -5641,7 +5618,6 @@ export interface components {
             /** Format: uuid */
             workflow?: string;
             node_name?: string;
-            /** Format: int64 */
             node_order?: number;
             node_type?: components["schemas"]["ApprovalNodeNodeTypeEnum"];
             approver_type?: components["schemas"]["ApprovalNodeApproverTypeEnum"];
@@ -5700,10 +5676,7 @@ export interface components {
             /** @description e.g., 十殿审判流程, 欧西里斯称重 */
             workflow_name?: string;
             case_type?: components["schemas"]["CaseTypeEnum"];
-            /**
-             * Format: int64
-             * @description 0=normal, 1=urgent, 2=critical
-             */
+            /** @description 0=normal, 1=urgent, 2=critical */
             priority?: number;
             readonly status?: components["schemas"]["ApprovalWorkflowStatusEnum"];
             /** Format: uuid */
@@ -5861,10 +5834,7 @@ export interface components {
             readonly realm_name?: string;
             memory_reset?: components["schemas"]["MemoryResetMechanismEnum"];
             is_eternal?: boolean;
-            /**
-             * Format: int64
-             * @description Sentence duration in years; null = no term recorded (see is_eternal)
-             */
+            /** @description Sentence duration in years; null = no term recorded (see is_eternal) */
             sentence_years?: number | null;
             /** @description A possibly-BCE date. `year` is signed (negative = BCE); `month` and `day` are null when the source does not record them, which is common for ancient records. On write, `YYYY-MM-DD` and `-YYYY-MM-DD` strings are also accepted for backward compatibility; see `HistoricalDateField.to_internal_value`. */
             term_start?: {
@@ -5891,9 +5861,7 @@ export interface components {
             is_active?: boolean;
             /** Format: date-time */
             expires_at?: string | null;
-            /** Format: int64 */
             rate_limit_per_minute?: number;
-            /** Format: int64 */
             rate_limit_per_hour?: number;
             /** @description List of allowed source IPs. Empty = allow all. */
             allowed_ips?: unknown;
@@ -5946,7 +5914,6 @@ export interface components {
             code?: string;
             /** @description 权限 codename，如 soul.create、judgment.delete */
             permission?: string;
-            /** Format: int64 */
             order?: number;
             is_active?: boolean;
         };
@@ -5955,7 +5922,6 @@ export interface components {
             name?: string;
             path?: string;
             icon?: string;
-            /** Format: int64 */
             order?: number;
             parent?: number | null;
             menu_type?: components["schemas"]["MenuTypeEnum"];
@@ -5986,15 +5952,9 @@ export interface components {
             category?: components["schemas"]["OrganizationCategoryEnum"];
             /** @description 父组织（平行部门） */
             parent?: number | null;
-            /**
-             * Format: int64
-             * @description 层级深度：0=根组织
-             */
+            /** @description 层级深度：0=根组织 */
             level?: number;
-            /**
-             * Format: int64
-             * @description 同级别排序
-             */
+            /** @description 同级别排序 */
             sort?: number;
             readonly tenant?: number;
         };
@@ -6025,10 +5985,7 @@ export interface components {
             disposition?: string | null;
             target_realm?: string;
             rebirth_form?: components["schemas"]["RebirthFormEnum"];
-            /**
-             * Format: int64
-             * @description Which turn of the wheel this is; the first rebirth is 1.
-             */
+            /** @description Which turn of the wheel this is; the first rebirth is 1. */
             cycle_count?: number;
             previous_realm?: string;
             /** @description Name in new life */
@@ -6191,9 +6148,7 @@ export interface components {
             is_active?: boolean;
             /** @description Event types to subscribe to. Empty = all events. */
             events?: unknown;
-            /** Format: int64 */
             max_retries?: number;
-            /** Format: int64 */
             timeout_seconds?: number;
             /** Format: date-time */
             readonly create_time?: string;
@@ -6219,10 +6174,7 @@ export interface components {
             description?: string;
             civilization?: components["schemas"]["CivilizationEnum"];
             case_type?: components["schemas"]["CaseTypeEnum"];
-            /**
-             * Format: int64
-             * @description Default priority for workflows built from this template: 0=normal, 1=urgent, 2=critical
-             */
+            /** @description Default priority for workflows built from this template: 0=normal, 1=urgent, 2=critical */
             priority?: number;
             is_active?: boolean;
             nodes?: components["schemas"]["WorkflowTemplateNode"][];
@@ -6328,9 +6280,7 @@ export interface components {
             readonly author_username: string;
             content: string;
             visibility?: components["schemas"]["VisibilityEnum"];
-            /** Format: int64 */
             comment_count?: number;
-            /** Format: int64 */
             reaction_count?: number;
             /** Format: date-time */
             readonly create_time: string;
@@ -6391,17 +6341,13 @@ export interface components {
             /** @description Egyptian name (transliteration or hieroglyphs) */
             name_egy?: string;
             realm_type: components["schemas"]["RealmTypeEnum"];
-            /**
-             * Format: int64
-             * @description Severity or bliss tier
-             */
+            /** @description Severity or bliss tier */
             tier?: number;
             /** Format: uuid */
             parent_realm?: string | null;
             description?: string;
             memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
             is_eternal?: boolean;
-            /** Format: int64 */
             cycle_limit?: number | null;
         };
         /** @description Lightweight serializer for list views. */
@@ -6413,10 +6359,7 @@ export interface components {
             /** @description English name */
             name_en?: string;
             realm_type: components["schemas"]["RealmTypeEnum"];
-            /**
-             * Format: int64
-             * @description Severity or bliss tier
-             */
+            /** @description Severity or bliss tier */
             tier?: number;
         };
         /**
@@ -6438,10 +6381,7 @@ export interface components {
             name_egy?: string;
             readonly display_name: string;
             realm_type: components["schemas"]["RealmTypeEnum"];
-            /**
-             * Format: int64
-             * @description Severity or bliss tier
-             */
+            /** @description Severity or bliss tier */
             tier?: number;
             is_eternal?: boolean;
             memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
@@ -6590,10 +6530,7 @@ export interface components {
             disposition?: string | null;
             target_realm: string;
             rebirth_form?: components["schemas"]["RebirthFormEnum"];
-            /**
-             * Format: int64
-             * @description Which turn of the wheel this is; the first rebirth is 1.
-             */
+            /** @description Which turn of the wheel this is; the first rebirth is 1. */
             cycle_count?: number;
             previous_realm?: string;
             /** @description Name in new life */
@@ -6830,9 +6767,7 @@ export interface components {
                 month: number | null;
                 day: number | null;
             } | null;
-            /** Format: int64 */
             merit_score?: number;
-            /** Format: int64 */
             demerit_score?: number;
             readonly karmic_balance: number | null;
             /** Format: date-time */
@@ -6881,10 +6816,7 @@ export interface components {
             readonly date_problems: components["schemas"]["RecordDateProblem"][];
             /** @description Which scoring clause this deed was scored under, as '<Statute.code>:<clause condition_zh>' — e.g. '救濟門#7:賑濟窮民百錢'. Blank means unknown, which makes this record granularity-blind. */
             statute_clause?: string;
-            /**
-             * Format: int64
-             * @description How many separate occasions this row's weight covers. NOT a row count: one row may document a year of alms or three rows one killing. 1 means 一次 — earned or incurred at a stroke. Null means unknown, which makes this record granularity-blind.
-             */
+            /** @description How many separate occasions this row's weight covers. NOT a row count: one row may document a year of alms or three rows one killing. 1 means 一次 — earned or incurred at a stroke. Null means unknown, which makes this record granularity-blind. */
             occurrence_count?: number | null;
             /** @description Which Inferno article this deed belongs under, as a Statute code in the EU-INF-* corpus — e.g. 'EU-INF-C7-G1' (seventh circle, first girone) or 'EU-INF-C9-Z1' (Caina). Blank means unclassified, which leaves the European router on its culpa ladder for this deed. */
             inferno_article?: string;
@@ -6938,7 +6870,6 @@ export interface components {
             code: string;
             civilization: components["schemas"]["CivilizationEnum"];
             corpus: components["schemas"]["CorpusEnum"];
-            /** Format: int64 */
             ordinal?: number;
             polarity?: components["schemas"]["PolarityEnum"];
             title_zh?: string;
@@ -7299,9 +7230,7 @@ export interface components {
             is_active?: boolean;
             /** @description Event types to subscribe to. Empty = all events. */
             events?: unknown;
-            /** Format: int64 */
             max_retries?: number;
-            /** Format: int64 */
             timeout_seconds?: number;
             /** Format: date-time */
             readonly create_time: string;
@@ -7343,10 +7272,7 @@ export interface components {
             description?: string;
             civilization?: components["schemas"]["CivilizationEnum"];
             case_type?: components["schemas"]["CaseTypeEnum"];
-            /**
-             * Format: int64
-             * @description Default priority for workflows built from this template: 0=normal, 1=urgent, 2=critical
-             */
+            /** @description Default priority for workflows built from this template: 0=normal, 1=urgent, 2=critical */
             priority?: number;
             is_active?: boolean;
             nodes?: components["schemas"]["WorkflowTemplateNode"][];
@@ -7372,10 +7298,7 @@ export interface components {
             description?: string;
             civilization?: components["schemas"]["CivilizationEnum"];
             case_type?: components["schemas"]["CaseTypeEnum"];
-            /**
-             * Format: int64
-             * @description Default priority for workflows built from this template: 0=normal, 1=urgent, 2=critical
-             */
+            /** @description Default priority for workflows built from this template: 0=normal, 1=urgent, 2=critical */
             priority?: number;
             is_active?: boolean;
             /** Format: date-time */

@@ -8716,9 +8716,6 @@ components:
           maxLength: 255
         node_order:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         node_type:
           $ref: '#/components/schemas/ApprovalNodeNodeTypeEnum'
         approver_type:
@@ -8863,9 +8860,6 @@ components:
           $ref: '#/components/schemas/CaseTypeEnum'
         priority:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           description: 0=normal, 1=urgent, 2=critical
         status:
           allOf:
@@ -8952,9 +8946,6 @@ components:
           $ref: '#/components/schemas/CaseTypeEnum'
         priority:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           description: 0=normal, 1=urgent, 2=critical
         status:
           $ref: '#/components/schemas/ApprovalWorkflowStatusEnum'
@@ -9990,9 +9981,7 @@ components:
           type: boolean
         sentence_years:
           type: integer
-          maximum: 9223372036854775807
           minimum: 0
-          format: int64
           nullable: true
           description: Sentence duration in years; null = no term recorded (see is_eternal)
         term_start:
@@ -10227,14 +10216,8 @@ components:
           nullable: true
         rate_limit_per_minute:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         rate_limit_per_hour:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         allowed_ips:
           description: List of allowed source IPs. Empty = allow all.
         can_register_death:
@@ -10972,9 +10955,6 @@ components:
           maxLength: 50
         order:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         parent:
           type: integer
           nullable: true
@@ -11040,9 +11020,6 @@ components:
           maxLength: 100
         order:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         is_active:
           type: boolean
       required:
@@ -11072,9 +11049,6 @@ components:
           maxLength: 100
         order:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         is_active:
           type: boolean
       required:
@@ -11100,9 +11074,6 @@ components:
           maxLength: 50
         order:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         parent:
           type: integer
           nullable: true
@@ -11146,9 +11117,6 @@ components:
           maxLength: 50
         order:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         parent:
           type: integer
           nullable: true
@@ -11308,15 +11276,9 @@ components:
           description: 父组织（平行部门）
         level:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           description: 层级深度：0=根组织
         sort:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           description: 同级别排序
         tenant:
           type: integer
@@ -12055,9 +12017,6 @@ components:
           maxLength: 255
         node_order:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         node_type:
           $ref: '#/components/schemas/ApprovalNodeNodeTypeEnum'
         approver_type:
@@ -12154,9 +12113,6 @@ components:
           $ref: '#/components/schemas/CaseTypeEnum'
         priority:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           description: 0=normal, 1=urgent, 2=critical
         status:
           allOf:
@@ -12441,9 +12397,7 @@ components:
           type: boolean
         sentence_years:
           type: integer
-          maximum: 9223372036854775807
           minimum: 0
-          format: int64
           nullable: true
           description: Sentence duration in years; null = no term recorded (see is_eternal)
         term_start:
@@ -12507,14 +12461,8 @@ components:
           nullable: true
         rate_limit_per_minute:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         rate_limit_per_hour:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         allowed_ips:
           description: List of allowed source IPs. Empty = allow all.
         can_register_death:
@@ -12616,9 +12564,6 @@ components:
           maxLength: 100
         order:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         is_active:
           type: boolean
     PatchedMenuCreateUpdate:
@@ -12638,9 +12583,6 @@ components:
           maxLength: 50
         order:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         parent:
           type: integer
           nullable: true
@@ -12692,15 +12634,9 @@ components:
           description: 父组织（平行部门）
         level:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           description: 层级深度：0=根组织
         sort:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           description: 同级别排序
         tenant:
           type: integer
@@ -12767,9 +12703,7 @@ components:
           $ref: '#/components/schemas/RebirthFormEnum'
         cycle_count:
           type: integer
-          maximum: 9223372036854775807
           minimum: 1
-          format: int64
           description: Which turn of the wheel this is; the first rebirth is 1.
         previous_realm:
           type: string
@@ -13081,14 +13015,8 @@ components:
           description: Event types to subscribe to. Empty = all events.
         max_retries:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         timeout_seconds:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         create_time:
           type: string
           format: date-time
@@ -13124,9 +13052,6 @@ components:
           $ref: '#/components/schemas/CaseTypeEnum'
         priority:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           description: 'Default priority for workflows built from this template: 0=normal,
             1=urgent, 2=critical'
         is_active:
@@ -13383,14 +13308,10 @@ components:
           $ref: '#/components/schemas/VisibilityEnum'
         comment_count:
           type: integer
-          maximum: 9223372036854775807
           minimum: 0
-          format: int64
         reaction_count:
           type: integer
-          maximum: 9223372036854775807
           minimum: 0
-          format: int64
         create_time:
           type: string
           format: date-time
@@ -13512,9 +13433,6 @@ components:
           $ref: '#/components/schemas/RealmTypeEnum'
         tier:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           description: Severity or bliss tier
         parent_realm:
           type: string
@@ -13530,9 +13448,6 @@ components:
           type: boolean
         cycle_limit:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           nullable: true
       required:
       - civilization
@@ -13561,9 +13476,6 @@ components:
           $ref: '#/components/schemas/RealmTypeEnum'
         tier:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           description: Severity or bliss tier
       required:
       - civilization
@@ -13608,9 +13520,6 @@ components:
           $ref: '#/components/schemas/RealmTypeEnum'
         tier:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           description: Severity or bliss tier
         is_eternal:
           type: boolean
@@ -13908,9 +13817,7 @@ components:
           $ref: '#/components/schemas/RebirthFormEnum'
         cycle_count:
           type: integer
-          maximum: 9223372036854775807
           minimum: 1
-          format: int64
           description: Which turn of the wheel this is; the first rebirth is 1.
         previous_realm:
           type: string
@@ -14416,14 +14323,10 @@ components:
           - day
         merit_score:
           type: integer
-          maximum: 9223372036854775807
           minimum: 0
-          format: int64
         demerit_score:
           type: integer
-          maximum: 9223372036854775807
           minimum: 0
-          format: int64
         karmic_balance:
           type: integer
           nullable: true
@@ -14533,9 +14436,7 @@ components:
           maxLength: 200
         occurrence_count:
           type: integer
-          maximum: 9223372036854775807
           minimum: 0
-          format: int64
           nullable: true
           description: 'How many separate occasions this row''s weight covers. NOT
             a row count: one row may document a year of alms or three rows one killing.
@@ -14645,9 +14546,6 @@ components:
           $ref: '#/components/schemas/CorpusEnum'
         ordinal:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         polarity:
           $ref: '#/components/schemas/PolarityEnum'
         title_zh:
@@ -15341,14 +15239,8 @@ components:
           description: Event types to subscribe to. Empty = all events.
         max_retries:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         timeout_seconds:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
         create_time:
           type: string
           format: date-time
@@ -15413,9 +15305,6 @@ components:
           $ref: '#/components/schemas/CaseTypeEnum'
         priority:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           description: 'Default priority for workflows built from this template: 0=normal,
             1=urgent, 2=critical'
         is_active:
@@ -15468,9 +15357,6 @@ components:
           $ref: '#/components/schemas/CaseTypeEnum'
         priority:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
           description: 'Default priority for workflows built from this template: 0=normal,
             1=urgent, 2=critical'
         is_active:
