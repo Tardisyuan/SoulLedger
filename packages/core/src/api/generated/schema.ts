@@ -4955,9 +4955,14 @@ export interface components {
          *     * `REINCARNATION_COMPLETE` - Reincarnation Complete
          *     * `KARMIC_UPDATE` - Karmic Update
          *     * `ROLE_ASSIGNED` - Role Assigned
+         *     * `DISPATCH_PROPOSED` - Dispatch Proposed
+         *     * `DISPATCH_APPROVED` - Dispatch Approved
+         *     * `DISPATCH_REJECTED` - Dispatch Rejected
+         *     * `CROSS_JUDGMENT_INVITED` - Cross-Tenant Judgment Invitation
+         *     * `JUDGMENT_CONCLUDED` - Judgment Concluded
          * @enum {string}
          */
-        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED";
+        NotificationTypeEnum: "WORKFLOW_ASSIGNED" | "JUDGMENT_COMPLETED" | "SYSTEM" | "APPEAL_REQUIRED" | "REINCARNATION_COMPLETE" | "KARMIC_UPDATE" | "ROLE_ASSIGNED" | "DISPATCH_PROPOSED" | "DISPATCH_APPROVED" | "DISPATCH_REJECTED" | "CROSS_JUDGMENT_INVITED" | "JUDGMENT_CONCLUDED";
         /** @enum {unknown} */
         NullEnum: null;
         Organization: {

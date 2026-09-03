@@ -12,7 +12,6 @@ from apps.dispatch.models import (
     JudgmentStatus,
 )
 from apps.events.models import EventType, SoulEvent
-from apps.tenants.models import Notification
 
 
 class DispatchService:
@@ -89,24 +88,36 @@ class DispatchService:
 
     @staticmethod
     def _notify_target_tenant(dispatch_record):
-        """Send notification to target tenant about incoming dispatch proposal."""
-        from apps.authentication.models import User
+        """Tell the target tenant a proposal is waiting on them.
 
-        # Find users in target tenant
+        Through `EventService.notify_user`, which is the path the notification
+        API and the WebSocket consumer both read. The previous spelling built
+        `apps.tenants.Notification` rows in bulk; nothing in this codebase ever
+        selected from that table, so this message — the one that says a
+        dispatch needs your approval — has never reached anybody.
+
+        One event per user rather than one `bulk_create`. That is the cost of
+        the change and it is deliberate: `bulk_create` emits no `post_save`, so
+        a row written that way cannot reach the bus, the socket, or a webhook
+        even if a reader were added later. Target tenants have operators, not
+        populations.
+        """
+        from apps.authentication.models import User
+        from apps.events.services import EventService
+
         target_users = User.objects.filter(tenant=dispatch_record.target_tenant, is_active=True)
-        notifications = [
-            Notification(
-                recipient=user,
-                notification_type="DISPATCH_PROPOSED",
+        for user in target_users:
+            EventService.notify_user(
+                user,
                 title=f"Incoming Dispatch: {dispatch_record.soul.name}",
-                message=f"A dispatch proposal for soul {dispatch_record.soul.name} from {dispatch_record.source_tenant.code} is pending your approval.",
-                related_object_id=str(dispatch_record.id),
-                related_object_type="DispatchRecord",
+                message=(
+                    f"A dispatch proposal for soul {dispatch_record.soul.name} "
+                    f"from {dispatch_record.source_tenant.code} is pending your approval."
+                ),
+                notification_type="DISPATCH_PROPOSED",
+                related_resource="DispatchRecord",
+                related_id=str(dispatch_record.id),
             )
-            for user in target_users
-        ]
-        if notifications:
-            Notification.objects.bulk_create(notifications)
 
     @staticmethod
     def approve(dispatch_record, approver):
@@ -181,19 +192,17 @@ class DispatchService:
         if reason:
             message += f" Reason: {reason}"
 
-        notifications = [
-            Notification(
-                recipient=user,
-                notification_type=notification_type,
+        from apps.events.services import EventService
+
+        for user in target_users:
+            EventService.notify_user(
+                user,
                 title=title,
                 message=message,
-                related_object_id=str(dispatch_record.id),
-                related_object_type="DispatchRecord",
+                notification_type=notification_type,
+                related_resource="DispatchRecord",
+                related_id=str(dispatch_record.id),
             )
-            for user in target_users
-        ]
-        if notifications:
-            Notification.objects.bulk_create(notifications)
 
     @staticmethod
     def execute(dispatch_record, executor):
@@ -313,23 +322,21 @@ class CrossTenantJudgmentService:
             tenant=participant_tenant,
         )
 
-        # Notify initiating tenant
+        # Notify initiating tenant, through the bus so the row lands in the
+        # model the notification API actually serves.
         from apps.authentication.models import User
-        from apps.tenants.models import Notification
+        from apps.events.services import EventService
 
         target_users = User.objects.filter(tenant=judgment.initiating_tenant, is_active=True)
-        notifications = [
-            Notification(
-                recipient=user,
-                notification_type="CROSS_JUDGMENT_INVITED",
+        for user in target_users:
+            EventService.notify_user(
+                user,
                 title=f"Participant Joined: {judgment.title}",
                 message=f"{participant_tenant.code} has joined as {role}.",
-                related_object_id=str(judgment.id),
-                related_object_type="CrossTenantJudgment",
+                notification_type="CROSS_JUDGMENT_INVITED",
+                related_resource="CrossTenantJudgment",
+                related_id=str(judgment.id),
             )
-            for user in target_users
-        ]
-        Notification.objects.bulk_create(notifications)
 
         # Activate judgment after participant joins
         CrossTenantJudgmentService.activate(judgment)
@@ -368,24 +375,25 @@ class CrossTenantJudgmentService:
         if not judgment.transition_to(JudgmentStatus.CONCLUDED, concluded_at=timezone.now(), conclusion_type=conclusion_type):
             raise ValueError(f"Cannot conclude judgment in status: {judgment.status}")
 
-        # Notify all participants
+        # Notify all participants, through the bus for the same reason.
         from apps.authentication.models import User
-        from apps.tenants.models import Notification
+        from apps.events.services import EventService
 
-        notifications = []
         for participant in judgment.participants.all():
-            target_users = User.objects.filter(tenant=participant.participant_tenant, is_active=True)
+            target_users = User.objects.filter(
+                tenant=participant.participant_tenant, is_active=True
+            )
             for user in target_users:
-                notifications.append(
-                    Notification(
-                        recipient=user,
-                        notification_type="JUDGMENT_CONCLUDED",
-                        title=f"Judgment Concluded: {judgment.title}",
-                        message=f"The cross-tenant judgment '{judgment.title}' has concluded with result: {conclusion_type}",
-                        related_object_id=str(judgment.id),
-                        related_object_type="CrossTenantJudgment",
-                    )
+                EventService.notify_user(
+                    user,
+                    title=f"Judgment Concluded: {judgment.title}",
+                    message=(
+                        f"The cross-tenant judgment '{judgment.title}' has concluded "
+                        f"with result: {conclusion_type}"
+                    ),
+                    notification_type="JUDGMENT_CONCLUDED",
+                    related_resource="CrossTenantJudgment",
+                    related_id=str(judgment.id),
                 )
-        Notification.objects.bulk_create(notifications)
 
         return judgment
