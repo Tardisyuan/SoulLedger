@@ -1,8 +1,14 @@
 """
 Data migration: backfill Organization.tenant from `category`.
 
-Same CIV_TO_TENANT mapping apps/tenants/management/commands/
-migrate_to_multitenant.py uses for Soul/Realm/Actor/Judgment:
+The civilization->tenant mapping, frozen at the three entries that existed
+when this migration was written. A data migration must not import
+apps/souls/models.py::CIVILIZATION_TENANT: that map has since gained
+GREEK -> GR_HADES, and a historical migration that changes meaning when the
+model changes stops being replayable.
+
+(This cited apps/tenants/management/commands/migrate_to_multitenant.py as the
+source until 2026-09-03, when that command was deleted as unrunnable.)
 
   CHINESE  -> CN_DIYU
   EUROPEAN -> EU_HEAVEN_HELL

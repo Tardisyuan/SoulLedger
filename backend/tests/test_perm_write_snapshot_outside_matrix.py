@@ -93,8 +93,10 @@ The first of these three is resolved by this tranche. The other two are
    are fixed: ``org.read``/``org.manage`` now exist in ``DEFAULT_PERMISSIONS``
    and are wired via ``CodenameViewSetMixin`` (see apps/org/views.py), and
    ``Organization.tenant`` is backfilled by
-   ``apps/org/migrations/0004_backfill_organization_tenant.py`` from the same
-   CIV_TO_TENANT mapping ``migrate_to_multitenant.py`` uses elsewhere. See THE
+   ``apps/org/migrations/0004_backfill_organization_tenant.py`` from the
+   civilization->tenant mapping (``migrate_to_multitenant.py`` was named here
+   as the mapping's other user until it was deleted on 2026-09-03; the live
+   definition is ``apps/souls/models.py::CIVILIZATION_TENANT``). See THE
    ORG TRANCHE below for the measured codes.
 2. ``ExternalApiKeyViewSet`` (POST ``/api/v1/death-sync/api-keys/``) declares
    no codename either. RESOLVED (C9): was closed by ``IsAdminUser`` so far
