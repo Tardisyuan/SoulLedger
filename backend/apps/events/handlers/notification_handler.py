@@ -90,8 +90,8 @@ class NotificationHandler(DomainEventHandler):
 
         # WebSocket delivery is NOT done here — the EventBus registry also has
         # WebSocketHandler registered for the "notification" domain, so the WS
-        # push happens automatically via the registry dispatch.  Calling
-        # RealtimeEventPublisher here would cause a duplicate WS message.
+        # push happens automatically via the registry dispatch.  Pushing
+        # from here as well would send the message twice.
 
         logger.debug(
             "NotificationHandler: created notification %s for user %s",

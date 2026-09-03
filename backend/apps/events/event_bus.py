@@ -6,7 +6,9 @@ Architecture:
                                                      -> [AuditHandler, WebSocketHandler, ...]
 
 Replaces:
-    EventService (audit logging) + RealtimeEventPublisher (WebSocket push)
+    EventService (audit logging) + RealtimeEventPublisher (WebSocket push).
+    Both are gone as separate publish paths: the facade was deleted once it
+    had zero production callers, and this bus is now the only door.
 
 Usage:
     from apps.events.event_bus import event_bus

@@ -2,11 +2,17 @@
 Tests for M12 Phase 3 — Unified Realtime Bus.
 
 Covers:
-  - RealtimeEventPublisher unified publishing
   - ChannelNaming convention
-  - EventService integration with RealtimeEventPublisher
+  - EventService integration with the EventBus
   - Dispatch event types
   - DeathSync event types
+
+The `TestRealtimeEventPublisher` class that stood here went with the facade it
+named. Its five tests called a method and checked it did not raise; four of
+them carried docstrings claiming "sends to correct domain" and asserted
+nothing at all. The coverage they appeared to provide lives in
+`test_coverage_boost.py::TestEventBusReachesTheChannelLayer`, which mocks the
+channel layer and asserts `group_send` was actually called.
 """
 import pytest
 from channels.db import database_sync_to_async
@@ -66,73 +72,7 @@ class TestChannelNaming:
         assert ChannelNaming.user_group(42) == "rt_user_42"
 
 
-# ------------------------------------------------------------------
-# RealtimeEventPublisher Tests
-# ------------------------------------------------------------------
-
-
 @pytest.mark.django_db(transaction=True)
-class TestRealtimeEventPublisher:
-    """Test unified RealtimeEventPublisher."""
-
-    @pytest.mark.asyncio
-    async def test_publish_does_not_raise(self, cn_tenant):
-        """publish() should not raise even if channel layer is unavailable."""
-        from apps.events.realtime import RealtimeEventPublisher
-
-        # Should not raise
-        await database_sync_to_async(RealtimeEventPublisher.publish)(
-            domain="workflow",
-            event_type="WORKFLOW_CREATED",
-            payload={"test": True},
-            tenant_code=cn_tenant.code,
-        )
-
-    @pytest.mark.asyncio
-    async def test_publish_workflow(self, cn_tenant):
-        """publish_workflow() sends to correct domain."""
-        from apps.events.realtime import RealtimeEventPublisher
-
-        await database_sync_to_async(RealtimeEventPublisher.publish_workflow)(
-            "WORKFLOW_APPROVED",
-            {"workflow_id": "test-123"},
-            tenant_code=cn_tenant.code,
-        )
-
-    @pytest.mark.asyncio
-    async def test_publish_dispatch(self, cn_tenant):
-        """publish_dispatch() sends to correct domain."""
-        from apps.events.realtime import RealtimeEventPublisher
-
-        await database_sync_to_async(RealtimeEventPublisher.publish_dispatch)(
-            "DISPATCH_CREATED",
-            {"dispatch_id": "test-456"},
-            tenant_code=cn_tenant.code,
-        )
-
-    @pytest.mark.asyncio
-    async def test_publish_deathsync(self, cn_tenant):
-        """publish_deathsync() sends to correct domain."""
-        from apps.events.realtime import RealtimeEventPublisher
-
-        await database_sync_to_async(RealtimeEventPublisher.publish_deathsync)(
-            "DEATH_SYNC_RECEIVED",
-            {"registration_id": "test-789"},
-            tenant_code=cn_tenant.code,
-        )
-
-    @pytest.mark.asyncio
-    async def test_publish_notification(self, cn_tenant):
-        """publish_notification() sends to specific user."""
-        from apps.events.realtime import RealtimeEventPublisher
-
-        await database_sync_to_async(RealtimeEventPublisher.publish_notification)(
-            user_id=1,
-            notification_data={"title": "Test", "message": "Hello"},
-            tenant_code=cn_tenant.code,
-        )
-
-
 # ------------------------------------------------------------------
 # EventType Enum Tests
 # ------------------------------------------------------------------
@@ -170,11 +110,11 @@ class TestEventTypes:
 
 @pytest.mark.django_db(transaction=True)
 class TestEventServiceIntegration:
-    """Test EventService uses RealtimeEventPublisher."""
+    """Test EventService publishes through the EventBus."""
 
     @pytest.mark.asyncio
     async def test_workflow_created_uses_publisher(self, soul, cn_tenant):
-        """log_workflow_created() creates audit + publishes via RealtimeEventPublisher."""
+        """log_workflow_created() creates the audit row and publishes on the bus."""
         from apps.events.models import EventType, SoulEvent
         from apps.events.services import EventService
         from apps.workflow.models import ApprovalWorkflow, ApprovalWorkflowStatus
@@ -198,7 +138,7 @@ class TestEventServiceIntegration:
 
     @pytest.mark.asyncio
     async def test_notify_user_uses_publisher(self, soul, cn_tenant):
-        """notify_user() creates notification + publishes via RealtimeEventPublisher."""
+        """notify_user() creates the notification and publishes on the bus."""
         from apps.authentication.models import User
         from apps.notifications.models import UserNotification, notify_user
 

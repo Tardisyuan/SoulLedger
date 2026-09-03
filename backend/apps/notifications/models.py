@@ -85,8 +85,11 @@ def notify_user(
     """
     Publish a notification event to EventBus.
 
-    The EventBus routes to NotificationHandler which creates the
-    UserNotification record and pushes to WebSocket via RealtimeEventPublisher.
+    The EventBus routes to NotificationHandler, which creates the
+    UserNotification record, and to WebSocketHandler, which does the push.
+    (This said "pushes to WebSocket via RealtimeEventPublisher" and was
+    already untrue before that facade was deleted: NotificationHandler has
+    never pushed anything — see its own note at handlers/notification_handler.py.)
 
     Business modules should use event_bus.publish_notification() or
     event_bus.publish("notification", {...}) directly for full decoupling.

@@ -10,7 +10,6 @@ Covers:
   - WebSocketHandler (channel layer delegation)
   - NotificationHandler (UserNotification creation)
   - Backward-compat: EventService → EventBus delegation
-  - Backward-compat: RealtimeEventPublisher → EventBus delegation
   - EventBus handler_count / reset
   - Error swallowing in handlers
 """
@@ -556,19 +555,6 @@ class TestBackwardCompat:
 
         assert log_soul_state_change is EventService.log_soul_state_change
         assert log_disposition_created is EventService.log_disposition_created
-
-    def test_realtime_publisher_delegates_to_bus(self, db):
-        """RealtimeEventPublisher static methods should delegate to EventBus."""
-        from apps.events.realtime import RealtimeEventPublisher
-
-        # Should not raise (channel layer may not be available)
-        RealtimeEventPublisher.publish(
-            domain="workflow",
-            event_type="TEST_EVENT",
-            payload={"test": True},
-            tenant_code="CN_DIYU",
-        )
-
 
 # ------------------------------------------------------------------
 # Default handler configuration

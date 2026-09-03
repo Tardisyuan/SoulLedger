@@ -1,11 +1,20 @@
-"""
-RealtimeEventPublisher — backward-compatible facade over the unified EventBus.
+"""Channel naming for the realtime layer.
 
-New code should use ``from apps.events.event_bus import event_bus`` directly.
-The static methods below delegate to the EventBus, which fans out to
-WebSocketHandler (channel layer), NotificationHandler, and WebhookHandler.
+WHAT WAS HERE. `RealtimeEventPublisher`, a "backward-compatible facade" whose
+five static methods each forwarded straight to `event_bus`, and which its own
+docstring marked Deprecated. Excluding comments and docstrings it had **zero**
+production callers and three test files; a naive `grep -rl` reported six
+production files, every one of which merely mentioned it in prose explaining
+the design.
 
-Channel Naming Convention:
+It was not inert. `apps/workflow/services.py:564` records the incident it
+belongs to: `RealtimeEventPublisher.publish_workflow` and
+`event_bus.publish_workflow` both had no callers, workflow events never reached
+`SoulEvent`, and six tests calling those functions directly stayed green the
+whole time. A second, callable, equivalent way to publish is how that happens
+twice — so the facade went and `event_bus` is now the only door.
+
+Channel naming convention (unchanged):
   rt:tenant:{code}    — tenant-wide broadcast (all users in tenant)
   rt:user:{user_id}   — per-user targeted delivery
 """
@@ -14,95 +23,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class RealtimeEventPublisher:
-    """
-    Backward-compatible facade.  All methods delegate to the EventBus.
-
-    Deprecated: prefer ``event_bus.publish()`` or domain-specific helpers.
-    """
-
-    @staticmethod
-    def publish(
-        domain: str,
-        event_type: str,
-        payload: dict,
-        tenant_code: str | None = None,
-        user_ids: list[int] | None = None,
-        permission: str | None = None,
-    ) -> None:
-        from apps.events.event_bus import event_bus
-        event_bus.publish(
-            event_type=event_type,
-            payload=payload,
-            domain=domain,
-            tenant_code=tenant_code,
-            user_ids=user_ids,
-            permission=permission,
-        )
-
-    @staticmethod
-    def publish_notification(
-        user_id: int,
-        notification_data: dict,
-        tenant_code: str | None = None,
-        permission: str | None = "notification.read",
-    ) -> None:
-        from apps.events.event_bus import event_bus
-        event_bus.publish_notification(
-            user_id=user_id,
-            notification_data=notification_data,
-            tenant_code=tenant_code,
-            permission=permission,
-        )
-
-    @staticmethod
-    def publish_workflow(
-        event_type: str,
-        payload: dict,
-        tenant_code: str | None = None,
-        user_ids: list[int] | None = None,
-        permission: str | None = "workflow.read",
-    ) -> None:
-        from apps.events.event_bus import event_bus
-        event_bus.publish_workflow(
-            event_type=event_type,
-            payload=payload,
-            tenant_code=tenant_code,
-            user_ids=user_ids,
-            permission=permission,
-        )
-
-    @staticmethod
-    def publish_dispatch(
-        event_type: str,
-        payload: dict,
-        tenant_code: str | None = None,
-        user_ids: list[int] | None = None,
-        permission: str | None = "dispatch.read",
-    ) -> None:
-        from apps.events.event_bus import event_bus
-        event_bus.publish_dispatch(
-            event_type=event_type,
-            payload=payload,
-            tenant_code=tenant_code,
-            user_ids=user_ids,
-            permission=permission,
-        )
-
-    @staticmethod
-    def publish_deathsync(
-        event_type: str,
-        payload: dict,
-        tenant_code: str | None = None,
-        permission: str | None = "audit.read",
-    ) -> None:
-        from apps.events.event_bus import event_bus
-        event_bus.publish_deathsync(
-            event_type=event_type,
-            payload=payload,
-            tenant_code=tenant_code,
-            permission=permission,
-        )
 
 
 class ChannelNaming:
