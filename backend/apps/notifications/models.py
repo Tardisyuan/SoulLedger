@@ -15,6 +15,18 @@ class NotificationType(models.TextChoices):
     REINCARNATION_COMPLETE = "REINCARNATION_COMPLETE", "Reincarnation Complete"
     KARMIC_UPDATE = "KARMIC_UPDATE", "Karmic Update"
     ROLE_ASSIGNED = "ROLE_ASSIGNED", "Role Assigned"
+    # The five below arrive from apps.dispatch. They were previously written to
+    # `apps.tenants.Notification`, a second notification model with four
+    # writers and no reader anywhere in the codebase — no serializer, no view,
+    # no consumer — so every dispatch notification this system has ever
+    # produced went into a table nothing selects from. DISPATCH_PROPOSED is the
+    # "a proposal is waiting on you" message, which is the entire point of the
+    # approve/reject flow.
+    DISPATCH_PROPOSED = "DISPATCH_PROPOSED", "Dispatch Proposed"
+    DISPATCH_APPROVED = "DISPATCH_APPROVED", "Dispatch Approved"
+    DISPATCH_REJECTED = "DISPATCH_REJECTED", "Dispatch Rejected"
+    CROSS_JUDGMENT_INVITED = "CROSS_JUDGMENT_INVITED", "Cross-Tenant Judgment Invitation"
+    JUDGMENT_CONCLUDED = "JUDGMENT_CONCLUDED", "Judgment Concluded"
 
 
 class UserNotification(AuditUserFields, models.Model):

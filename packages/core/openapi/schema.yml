@@ -10420,6 +10420,11 @@ components:
       - REINCARNATION_COMPLETE
       - KARMIC_UPDATE
       - ROLE_ASSIGNED
+      - DISPATCH_PROPOSED
+      - DISPATCH_APPROVED
+      - DISPATCH_REJECTED
+      - CROSS_JUDGMENT_INVITED
+      - JUDGMENT_CONCLUDED
       type: string
       description: |-
         * `WORKFLOW_ASSIGNED` - Workflow Assigned
@@ -10429,6 +10434,11 @@ components:
         * `REINCARNATION_COMPLETE` - Reincarnation Complete
         * `KARMIC_UPDATE` - Karmic Update
         * `ROLE_ASSIGNED` - Role Assigned
+        * `DISPATCH_PROPOSED` - Dispatch Proposed
+        * `DISPATCH_APPROVED` - Dispatch Approved
+        * `DISPATCH_REJECTED` - Dispatch Rejected
+        * `CROSS_JUDGMENT_INVITED` - Cross-Tenant Judgment Invitation
+        * `JUDGMENT_CONCLUDED` - Judgment Concluded
     NullEnum:
       enum:
       - null
