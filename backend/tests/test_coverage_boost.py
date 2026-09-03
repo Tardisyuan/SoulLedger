@@ -25,8 +25,9 @@ from apps.dispatch.models import (
     DispatchStatus,
     JudgmentStatus,
 )
+from apps.events.event_bus import event_bus
 from apps.events.models import SoulEvent
-from apps.events.realtime import ChannelNaming, RealtimeEventPublisher
+from apps.events.realtime import ChannelNaming
 from apps.events.services import EventService
 from apps.judgment.models import Judgment
 from apps.perm.cache import PermissionCache, get_permission_cache
@@ -754,11 +755,25 @@ class TestEventService:
 
 
 # =============================================================================
-# RealtimeEventPublisher Tests
+# EventBus -> channel layer
 # =============================================================================
 @pytest.mark.django_db
-class TestRealtimeEventPublisher:
-    """Test RealtimeEventPublisher publish methods."""
+class TestEventBusReachesTheChannelLayer:
+    """The bus's publish methods must actually reach the channel layer.
+
+    These tests used to call `RealtimeEventPublisher`, a facade that forwarded
+    every call straight to `event_bus` and has now been deleted. They are kept
+    and repointed rather than deleted with it, because they assert something
+    real: `group_send.assert_called_once()` says the event reached the
+    consumer. The facade's own tests asserted only "did not raise" and went
+    with it.
+
+    Which matters here specifically. `apps/workflow/services.py:564` records
+    what a green test on an uncalled function bought this repository: the
+    workflow events never reached `SoulEvent`, and six tests calling those
+    functions directly passed throughout. Testing the delegating facade rather
+    than the thing that delivers is one layer of exactly that mistake.
+    """
 
     @patch("channels.layers.get_channel_layer")
     def test_publish_workflow(self, mock_get_cl, django_capture_on_commit_callbacks):
@@ -772,7 +787,7 @@ class TestRealtimeEventPublisher:
         # this the callback never runs and the assertion below reads
         # `group_send` as uncalled — a fixture artefact, not a defect.
         with django_capture_on_commit_callbacks(execute=True):
-            RealtimeEventPublisher.publish_workflow(
+            event_bus.publish_workflow(
                 "WORKFLOW_APPROVED", {"workflow_id": "123"},
                 tenant_code="CN_DIYU",
             )
@@ -790,7 +805,7 @@ class TestRealtimeEventPublisher:
         # this the callback never runs and the assertion below reads
         # `group_send` as uncalled — a fixture artefact, not a defect.
         with django_capture_on_commit_callbacks(execute=True):
-            RealtimeEventPublisher.publish_dispatch(
+            event_bus.publish_dispatch(
                 "DISPATCH_CREATED", {"dispatch_id": "456"},
                 tenant_code="EU_HEAVEN_HELL",
             )
@@ -808,7 +823,7 @@ class TestRealtimeEventPublisher:
         # this the callback never runs and the assertion below reads
         # `group_send` as uncalled — a fixture artefact, not a defect.
         with django_capture_on_commit_callbacks(execute=True):
-            RealtimeEventPublisher.publish_deathsync(
+            event_bus.publish_deathsync(
                 "DEATH_SYNC_RECEIVED", {"reg_id": "789"},
                 tenant_code="CN_DIYU",
             )
@@ -826,7 +841,7 @@ class TestRealtimeEventPublisher:
         # this the callback never runs and the assertion below reads
         # `group_send` as uncalled — a fixture artefact, not a defect.
         with django_capture_on_commit_callbacks(execute=True):
-            RealtimeEventPublisher.publish_notification(
+            event_bus.publish_notification(
                 user_id=42, notification_data={"msg": "Hello"},
                 tenant_code="CN_DIYU",
             )
@@ -858,7 +873,7 @@ class TestRealtimeEventPublisher:
         # this the callback never runs and the assertion below reads
         # `group_send` as uncalled — a fixture artefact, not a defect.
         with django_capture_on_commit_callbacks(execute=True):
-            RealtimeEventPublisher.publish(
+            event_bus.publish(
                 domain="workflow", event_type="TEST",
                 payload={}, tenant_code="CN_DIYU",
                 user_ids=[1, 2, 3],
@@ -869,7 +884,7 @@ class TestRealtimeEventPublisher:
     @patch("channels.layers.get_channel_layer")
     def test_publish_no_channel_layer(self, mock_get_cl):
         mock_get_cl.return_value = None
-        RealtimeEventPublisher.publish(
+        event_bus.publish(
             domain="workflow", event_type="TEST",
             payload={}, tenant_code="CN_DIYU",
         )
@@ -886,7 +901,7 @@ class TestRealtimeEventPublisher:
         # this the callback never runs and the assertion below reads
         # `group_send` as uncalled — a fixture artefact, not a defect.
         with django_capture_on_commit_callbacks(execute=True):
-            RealtimeEventPublisher.publish(
+            event_bus.publish(
                 domain="workflow", event_type="TEST",
                 payload={}, tenant_code="CN_DIYU",
                 permission="workflow.read",
@@ -900,7 +915,7 @@ class TestRealtimeEventPublisher:
         mock_cl = MagicMock()
         mock_cl.group_send.side_effect = Exception("Channel layer down")
         mock_get_cl.return_value = mock_cl
-        RealtimeEventPublisher.publish(
+        event_bus.publish(
             domain="workflow", event_type="TEST",
             payload={}, tenant_code="CN_DIYU",
         )
