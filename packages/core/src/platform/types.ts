@@ -65,4 +65,37 @@ export interface PlatformAdapter {
   onUnauthorized: UnauthorizedHandler;
   /** Subscribe to "the client is going away". See `SessionSuspendSubscriber`. */
   onSessionSuspend: SessionSuspendSubscriber;
+  /**
+   * Where the API lives, e.g. `https://api.example.com/api/v1`. No trailing slash.
+   *
+   * WHY THIS IS A PORT AND NOT A CONSTANT. Three modules in this package —
+   * `api/client.ts`, `ws/client.ts`, `ws/social-client.ts` — each read
+   * `process.env.NEXT_PUBLIC_API_URL` directly and fell back to
+   * `http://localhost:8000/api/v1`. On a phone, `localhost` is the phone. Expo
+   * inlines `EXPO_PUBLIC_*` and defines no `NEXT_PUBLIC_*`; a Tauri webview
+   * reads `import.meta.env.VITE_*`. Both would have taken the fallback in
+   * silence and failed to reach anything.
+   *
+   * The package's own `package.json` calls it platform-independent and its
+   * tsconfig omits `"dom"` to enforce that — but `process.env` is not a DOM
+   * global, so the compiler could never have caught this. It is the same class
+   * of assumption as the cookie jar, and it needed the same treatment. The
+   * enforcement it was missing is `no-restricted-syntax` in this package's
+   * eslint config, which now refuses `process.env` here.
+   *
+   * SYNCHRONOUS for the same reason the stores are: it is read inside an Axios
+   * interceptor and from `WSClient.connect()`. A native adapter must have the
+   * value ready before the first request rather than fetching it.
+   */
+  baseUrl: string;
+  /**
+   * The WebSocket origin, derived from `baseUrl` unless the host overrides it.
+   *
+   * Kept separate because the derivation — swap the scheme, drop `/api/v1` —
+   * only holds when the socket is served from the API's origin. It is true for
+   * every deployment today, so the default computes it; a host that terminates
+   * websockets elsewhere sets this instead of being forced to lie about
+   * `baseUrl`.
+   */
+  wsUrl?: string;
 }

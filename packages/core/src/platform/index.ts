@@ -35,6 +35,11 @@ const nullAdapter: PlatformAdapter = {
   persistent: nullStore,
   onUnauthorized: () => {},
   onSessionSuspend: () => () => {},
+  // The development default, and it stays wrong on purpose for anything
+  // else: a host that has not called `configurePlatform` should fail against
+  // localhost during development rather than silently reach a real API. This
+  // is the value three modules used to inline; it is here once now.
+  baseUrl: "http://localhost:8000/api/v1",
 };
 
 let adapter: PlatformAdapter = nullAdapter;
@@ -106,4 +111,32 @@ export function getTenantId(): string {
  */
 export function onSessionSuspend(handler: () => void): () => void {
   return platform().onSessionSuspend(handler);
+}
+
+/**
+ * Where the API lives. See `PlatformAdapter.baseUrl`.
+ *
+ * A function, not a constant, because the adapter is installed after this
+ * module is evaluated. `api/client.ts` used to capture the value at module
+ * scope (`const API_BASE_URL = process.env…`), which is exactly why it could
+ * only ever come from the build environment.
+ */
+export function getApiBaseUrl(): string {
+  return adapter.baseUrl;
+}
+
+/**
+ * The notifications socket URL.
+ *
+ * Derived from `baseUrl` — swap the scheme, drop the `/api/v1` suffix — unless
+ * the host supplies `wsUrl`. Both WebSocket clients carried their own identical
+ * copy of this two-line derivation; the drift risk is the one `getAccessToken`
+ * above exists to close.
+ */
+export function getWebSocketUrl(): string {
+  if (adapter.wsUrl) return adapter.wsUrl;
+  return (
+    adapter.baseUrl.replace(/^http/, "ws").replace("/api/v1", "") +
+    "/ws/notifications/"
+  );
 }
