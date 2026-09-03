@@ -95,7 +95,17 @@ export const dispatchApi = {
   approve: (id: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/approve/`),
   reject: (id: string, reason?: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/reject/`, { reason }),
   execute: (id: string) => api.post<DispatchRecord>(`/dispatch/records/${id}/execute/`),
-  proposed: (params?: Record<string, string>) => api.get<PaginatedResponse<DispatchRecord>>("/dispatch/records/", { params: { ...params, status: "PROPOSED" } }),
+  // `/dispatch/records/proposed/`, not the list filtered by status. The list
+  // returns both sides of a transfer — `Q(source_tenant=…) | Q(target_tenant=…)`
+  // — while `approve` refuses anyone but the target. So filtering the list by
+  // status built an approval inbox containing this tenant's own outgoing
+  // proposals, each with an Approve button that could only ever 403 into a
+  // generic toast. The dedicated action filters `target_tenant=<caller>` and
+  // has existed, unused, the whole time.
+  //
+  // The predicate belongs on the server: expressing it here would mean the
+  // client has to know its own tenant code to ask "what is waiting on me".
+  proposed: (params?: Record<string, string>) => api.get<PaginatedResponse<DispatchRecord>>("/dispatch/records/proposed/", { params }),
   history: (params?: Record<string, string>) => api.get<PaginatedResponse<DispatchRecord>>("/dispatch/records/", { params }),
 };
 

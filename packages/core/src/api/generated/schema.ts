@@ -858,8 +858,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Get dispatch history for the current tenant. */
-        get: operations["v1_dispatch_records_history_retrieve"];
+        /**
+         * @description Get dispatch history for the current tenant.
+         *
+         *     Paginated for the same reason as its sibling above, and mainly so the
+         *     two are the same: a history list grows without bound, and two actions
+         *     on one viewset returning the same serializer through different
+         *     envelopes is the kind of asymmetry a client author discovers at
+         *     runtime.
+         */
+        get: operations["v1_dispatch_records_history_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -875,8 +883,26 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Get pending proposals for the current tenant (as target). */
-        get: operations["v1_dispatch_records_proposed_retrieve"];
+        /**
+         * @description Get pending proposals for the current tenant (as target).
+         *
+         *     This is the approval inbox. `list` deliberately returns both sides of a
+         *     transfer — you want to see your own outgoing proposals — but `approve`
+         *     refuses anyone who is not the target, so a client that builds its
+         *     approval queue from `list?status=PROPOSED` shows rows whose Approve
+         *     button can only ever 403. Which is what `frontend/app/dispatch` did
+         *     until it was pointed here. The predicate belongs on the server: a
+         *     client should not have to know its own tenant code to ask "what is
+         *     waiting on me".
+         *
+         *     FIFO on `proposed_at`, against the model's default `-proposed_at`. Two
+         *     reasons, the second of which is not optional: this is a work queue and
+         *     the oldest proposal has waited longest (the same argument
+         *     `JudgmentViewSet._pending_queue` records); and the queryset had no
+         *     ordering at all, which under pagination means rows can repeat or vanish
+         *     between pages.
+         */
+        get: operations["v1_dispatch_records_proposed_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -8652,9 +8678,29 @@ export interface operations {
             };
         };
     };
-    v1_dispatch_records_history_retrieve: {
+    v1_dispatch_records_history_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                proposed_after?: string;
+                proposed_before?: string;
+                /** @description A search term. */
+                search?: string;
+                soul_name?: string;
+                source_tenant?: number;
+                /**
+                 * @description * `PROPOSED` - 待审批
+                 *     * `APPROVED` - 已批准
+                 *     * `REJECTED` - 已拒绝
+                 *     * `EXECUTED` - 已执行
+                 *     * `CANCELLED` - 已取消
+                 */
+                status?: "APPROVED" | "CANCELLED" | "EXECUTED" | "PROPOSED" | "REJECTED";
+                target_tenant?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -8666,14 +8712,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DispatchRecord"];
+                    "application/json": components["schemas"]["PaginatedDispatchRecordListList"];
                 };
             };
         };
     };
-    v1_dispatch_records_proposed_retrieve: {
+    v1_dispatch_records_proposed_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                proposed_after?: string;
+                proposed_before?: string;
+                /** @description A search term. */
+                search?: string;
+                soul_name?: string;
+                source_tenant?: number;
+                /**
+                 * @description * `PROPOSED` - 待审批
+                 *     * `APPROVED` - 已批准
+                 *     * `REJECTED` - 已拒绝
+                 *     * `EXECUTED` - 已执行
+                 *     * `CANCELLED` - 已取消
+                 */
+                status?: "APPROVED" | "CANCELLED" | "EXECUTED" | "PROPOSED" | "REJECTED";
+                target_tenant?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -8685,7 +8751,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DispatchRecord"];
+                    "application/json": components["schemas"]["PaginatedDispatchRecordListList"];
                 };
             };
         };
