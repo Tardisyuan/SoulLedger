@@ -1,6 +1,7 @@
 """
 Menu views — tree structure with button resources.
 """
+from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -108,7 +109,8 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         menu.soft_delete(user=request.user, reason=reason)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=False, methods=["get"])
+    @extend_schema(responses=MenuSerializer(many=True))
+    @action(detail=False, methods=["get"], pagination_class=None)
     def all(self, request):
         """GET /api/v1/menus/all/ - Get all menus (ADMIN only)"""
         if request.user.role != "ADMIN":
@@ -128,7 +130,8 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         )
         return Response(serializer.data)
 
-    @action(detail=False, methods=["get"], url_path="tree")
+    @extend_schema(responses=MenuTreeSerializer(many=True))
+    @action(detail=False, methods=["get"], url_path="tree", pagination_class=None)
     def tree(self, request):
         """
         GET /api/v1/menus/tree/ — 完整资源树（含按钮），按角色过滤。
@@ -180,7 +183,13 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         )
         return Response(serializer.data)
 
-    @action(detail=False, methods=["get"], url_path="list-public")
+    @extend_schema(responses=MenuSerializer(many=True))
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="list-public",
+        pagination_class=None,
+    )
     def list_public(self, request):
         """GET /api/v1/menus/list-public/ - Get accessible menus by role
 

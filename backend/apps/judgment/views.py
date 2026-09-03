@@ -21,6 +21,7 @@ from apps.judgment.serializers import (
     JudgmentCitationSerializer,
     JudgmentCitationWriteSerializer,
     JudgmentConcludeSerializer,
+    JudgmentQueueCursorSerializer,
     JudgmentSerializer,
     StatuteSerializer,
 )
@@ -197,6 +198,7 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
                 break
         return seen
 
+    @extend_schema(responses=JudgmentQueueCursorSerializer)
     @action(detail=False, methods=["get"], url_path="next")
     def next_pending(self, request):
         """The next case to rule on, with everything needed to rule on it.
@@ -307,7 +309,17 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
     # Cited grounds
     # ------------------------------------------------------------------
 
-    @action(detail=True, methods=["get"], url_path="citations")
+    @extend_schema(responses=JudgmentCitationSerializer(many=True))
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="citations",
+        # The grounds of one judgment are a handful of rows and are returned
+        # whole. Said explicitly because drf-spectacular documents any
+        # `many=True` response on a paginated viewset as a page envelope,
+        # and this action returns a bare array.
+        pagination_class=None,
+    )
     def citations(self, request, pk=None):
         """The articles this verdict rests on, in their corpus's own order.
 
@@ -327,6 +339,10 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
             ).data
         )
 
+    @extend_schema(
+        request=JudgmentCitationWriteSerializer,
+        responses={201: JudgmentCitationSerializer},
+    )
     @citations.mapping.post
     def cite_statute(self, request, pk=None):
         """Record one article as a ground of this judgment.

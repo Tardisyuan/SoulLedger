@@ -12,6 +12,7 @@ from apps.core.archive import DeletionNotAllowedError
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import is_tenant_exempt, scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
+from apps.ledger.serializers import LedgerSummarySerializer
 from apps.ledger.services import LedgerService
 from apps.souls.dates import (
     ERROR,
@@ -291,6 +292,7 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
             )
         return Response(SoulSerializer(soul).data)
 
+    @extend_schema(responses=LedgerSummarySerializer)
     @action(detail=True, methods=["get"])
     def karma(self, request, pk=None):
         """Get full karma summary for a soul."""
@@ -307,7 +309,8 @@ class SoulViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUserViewSetM
         record = serializer.save(soul=soul)
         return Response(SoulRecordSerializer(record).data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=["get"])
+    @extend_schema(responses=SoulRecordSerializer(many=True))
+    @action(detail=True, methods=["get"], pagination_class=None)
     def records(self, request, pk=None):
         """List all records for a soul."""
         soul = self.get_object()

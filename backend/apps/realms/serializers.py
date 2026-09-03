@@ -41,7 +41,12 @@ class RealmLocalizedSerializer(serializers.ModelSerializer):
             "is_eternal", "memory_reset_mechanism",
         ]
 
-    def get_display_name(self, obj):
+    def get_display_name(self, obj) -> str:
+        # The return hint is what keeps this out of the generator's warning
+        # channel. It went unnoticed until `JudgmentQueueCursorSerializer`
+        # nested this serializer, because nothing reachable from the schema had
+        # descended into it before — the coverage of a check grows as the
+        # things it checks become reachable.
         request = self.context.get("request")
         if request:
             lang = request.META.get("HTTP_ACCEPT_LANGUAGE", "en")

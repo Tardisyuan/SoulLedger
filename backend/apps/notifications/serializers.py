@@ -58,3 +58,13 @@ class UserNotificationListSerializer(serializers.ModelSerializer):
             "related_id",
             "created_at",
         ]
+
+
+class MarkAllReadResultSerializer(serializers.Serializer):
+    """`{"marked_read": N}` — what `mark_all_read` returns.
+
+    Schema-only, never instantiated. `N` counts rows the update touched, which
+    is the number that were still unread, not the size of the caller's inbox.
+    """
+
+    marked_read = serializers.IntegerField()

@@ -115,7 +115,7 @@ export interface paths {
          * @description GET /api/v1/audit-logs/actions/
          *     Returns all available action types.
          */
-        get: operations["v1_audit_logs_actions_retrieve"];
+        get: operations["v1_audit_logs_actions_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -183,7 +183,7 @@ export interface paths {
          *         end_date: 结束日期 (YYYY-MM-DD)
          *         limit: 返回条数 (默认 50)
          */
-        get: operations["v1_audit_logs_timeline_retrieve"];
+        get: operations["v1_audit_logs_timeline_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -203,7 +203,7 @@ export interface paths {
          * @description GET /api/v1/audit-logs/trace/{trace_id}/
          *     按 trace_id 查询关联操作 — 查看同一请求内的所有变更。
          */
-        get: operations["v1_audit_logs_trace_retrieve"];
+        get: operations["v1_audit_logs_trace_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1136,7 +1136,7 @@ export interface paths {
          *     citations hang off it and inherit that scope rather than being queried
          *     (and separately scoped) on their own.
          */
-        get: operations["v1_judgment_citations_retrieve"];
+        get: operations["v1_judgment_citations_list"];
         put?: never;
         /**
          * @description Record one article as a ground of this judgment.
@@ -1518,7 +1518,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description GET /api/v1/menus/all/ - Get all menus (ADMIN only) */
-        get: operations["v1_menus_all_retrieve"];
+        get: operations["v1_menus_all_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1609,7 +1609,7 @@ export interface paths {
          *     Now it asks `menu_is_visible_to` and hands the request down in the
          *     serializer context so `get_children` can filter too.
          */
-        get: operations["v1_menus_list_public_retrieve"];
+        get: operations["v1_menus_list_public_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1632,7 +1632,7 @@ export interface paths {
          *     ADMIN 看到全部菜单和按钮。
          *     非 ADMIN 用户：菜单按 roles 过滤，按钮按 permission codename 过滤。
          */
-        get: operations["v1_menus_tree_retrieve"];
+        get: operations["v1_menus_tree_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1983,7 +1983,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description Return organization hierarchy as a tree. */
-        get: operations["v1_organizations_tree_retrieve"];
+        get: operations["v1_organizations_tree_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2703,7 +2703,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description List users following the current user. */
-        get: operations["v1_social_follows_followers_retrieve"];
+        get: operations["v1_social_follows_followers_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2720,7 +2720,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description List users the current user follows. */
-        get: operations["v1_social_follows_following_retrieve"];
+        get: operations["v1_social_follows_following_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2852,7 +2852,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description Return posts from users the current user follows. */
-        get: operations["v1_social_posts_feed_retrieve"];
+        get: operations["v1_social_posts_feed_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3167,7 +3167,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description List all records for a soul. */
-        get: operations["v1_souls_records_retrieve"];
+        get: operations["v1_souls_records_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4025,6 +4025,22 @@ export interface components {
          * @enum {string}
          */
         ApprovalWorkflowStatusEnum: "PENDING" | "IN_PROGRESS" | "APPROVED" | "REJECTED" | "APPEAL" | "EXCEPTION" | "COMPLETED";
+        /** @description One row of `stats.action_distribution` — a `values("action").annotate(count=…)`. */
+        AuditActionCount: {
+            action: string;
+            count: number;
+        };
+        /**
+         * @description One entry of `GET /audit-logs/actions/` — `AuditAction.choices` flattened.
+         *
+         *     Schema-only, never instantiated. The view returns a list comprehension over
+         *     `AuditAction.choices`, so `value` is the stored enum member and `label` its
+         *     human-readable half.
+         */
+        AuditActionOption: {
+            value: string;
+            label: string;
+        };
         /** @description Basic audit log serializer for list view. */
         AuditLog: {
             readonly id: number;
@@ -4077,6 +4093,28 @@ export interface components {
             readonly user_details: components["schemas"]["AuditUserDetails"] | null;
             /** @description Check if this log entry is from a batch operation. */
             readonly is_batch_operation: boolean;
+        };
+        /**
+         * @description One row of `stats.top_resources` — the same shape keyed by resource.
+         *
+         *     Kept separate from `AuditActionCountSerializer` rather than generalised to
+         *     `{name, count}`: the key really is `action` in one and `resource` in the
+         *     other, and a client reading `name` would get `undefined` from both.
+         */
+        AuditResourceCount: {
+            resource: string;
+            count: number;
+        };
+        /**
+         * @description The dict `AuditLogViewSet.stats` hand-builds.
+         *
+         *     Schema-only. `top_resources` is capped at 20 rows by the view;
+         *     `action_distribution` is not capped, because the action set is an enum.
+         */
+        AuditStats: {
+            action_distribution: components["schemas"]["AuditActionCount"][];
+            top_resources: components["schemas"]["AuditResourceCount"][];
+            total_logs: number;
         };
         /**
          * @description The dict `AuditLogDetailSerializer.get_user_details` hand-builds.
@@ -4594,6 +4632,17 @@ export interface components {
             following: number;
         };
         /**
+         * @description `{"following": true|false}` — the state `toggle` left the edge in.
+         *
+         *     Schema-only, never instantiated. Note the collision this documents away:
+         *     the request body's `following` is the **target user's id**, and the
+         *     response's `following` is a **boolean** saying whether the edge now exists.
+         *     Same key, two types, one round trip.
+         */
+        FollowToggleResult: {
+            following: boolean;
+        };
+        /**
          * @description One offsetting pool. `_tidy` keeps whole numbers whole and 半功 at 0.5,
          *     so every member here is a number that may or may not be an integer.
          */
@@ -4695,6 +4744,52 @@ export interface components {
             note?: string;
             /** Format: date-time */
             readonly created_at: string;
+        };
+        /**
+         * @description Input for `POST /judgment/{id}/citations/`.
+         *
+         *     Validates shape only. Whether the article exists, belongs to this tenant
+         *     and belongs to this cosmology is `StatuteCitationService.resolve`'s
+         *     business — it is the same question the `conclude` payload asks, and a
+         *     check written here would cover exactly one of the two callers.
+         */
+        JudgmentCitationWrite: {
+            /** Format: uuid */
+            statute: string;
+            /** @default  */
+            note: string;
+        };
+        /**
+         * @description The envelope `GET /api/v1/judgment/next/` returns.
+         *
+         *     Schema-only, never instantiated. This is the response a judgment client
+         *     hits most, and until this class existed it was documented as a bare
+         *     `Judgment` — drf-spectacular's fallback to the viewset serializer, which is
+         *     silent and was wrong. A generated client typed against that would have
+         *     reached for `verdict` on an object whose top level is a cursor.
+         *
+         *     Every field below is nullable or empty when the queue is exhausted: the
+         *     view builds the payload with `judgment`/`soul`/`ledger` at `None` and the
+         *     two lists empty, then fills them only once it has a case (see
+         *     `JudgmentViewSet.next_pending`). `position` is additionally null when
+         *     `remaining` is 0, because "the Nth of M" has no N when there is nothing
+         *     left to rule on.
+         *
+         *     The cross-app imports here are the same ones `views.py` already makes to
+         *     build this payload; they are not a new dependency, and keeping the shape
+         *     beside the other judgment serializers is what makes it possible to check
+         *     that it still matches.
+         */
+        JudgmentQueueCursor: {
+            total: number;
+            remaining: number;
+            skipped: number;
+            position: number | null;
+            judgment: components["schemas"]["Judgment"] | null;
+            soul: components["schemas"]["Soul"] | null;
+            ledger: components["schemas"]["LedgerSummary"] | null;
+            prior_cycles: components["schemas"]["Reincarnation"][];
+            realm_options: components["schemas"]["RealmLocalized"][];
         };
         /**
          * @description Only label and count reach the wire — the `min`/`max` bounds the view
@@ -4862,6 +4957,15 @@ export interface components {
             refresh?: string;
         };
         /**
+         * @description `{"marked_read": N}` — what `mark_all_read` returns.
+         *
+         *     Schema-only, never instantiated. `N` counts rows the update touched, which
+         *     is the number that were still unread, not the size of the caller's inbox.
+         */
+        MarkAllReadResult: {
+            marked_read: number;
+        };
+        /**
          * @description * `MENGPO` - 孟婆汤 (Mengpo Soup)
          *     * `LETHE` - 忘川 (Lethe)
          *     * `SPELL` - Spell Recitation
@@ -4938,6 +5042,28 @@ export interface components {
             /** @description 是否缓存该菜单 */
             cache?: boolean;
             component?: string;
+        };
+        /** @description Recursive tree serializer — includes children and buttons filtered by user permissions. */
+        MenuTree: {
+            readonly id: number;
+            name: string;
+            path?: string;
+            icon?: string;
+            /** Format: int64 */
+            order?: number;
+            parent?: number | null;
+            menu_type?: components["schemas"]["MenuTypeEnum"];
+            /** @description 权限 codename，如 soul.read、judgment.create */
+            permission?: string;
+            roles?: unknown;
+            is_active?: boolean;
+            /** @description 是否在侧边栏显示 */
+            visible?: boolean;
+            /** @description 是否缓存该菜单 */
+            cache?: boolean;
+            component?: string;
+            readonly children: components["schemas"]["MenuTree"][];
+            readonly buttons: components["schemas"]["MenuButton"][];
         };
         /**
          * @description * `DIRECTORY` - 目录
@@ -5447,6 +5573,15 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["WebhookConfig"][];
+        };
+        /**
+         * @description `{"password": "..."}` — the generated password `reset_password` returns.
+         *
+         *     Schema-only. The plaintext is in the response body because this is the only
+         *     time it exists; it is never stored and cannot be read back.
+         */
+        PasswordResetResult: {
+            password: string;
         };
         /**
          * @description Serializer for ApprovalNode.
@@ -6279,6 +6414,33 @@ export interface components {
             tier?: number;
         };
         /**
+         * @description Serializer that resolves the best-fit name based on Accept-Language header.
+         *     Adds 'display_name' field with the resolved localized name.
+         */
+        RealmLocalized: {
+            /** Format: uuid */
+            readonly id: string;
+            realm_code: string;
+            civilization: components["schemas"]["CivilizationEnum"];
+            /** @description Native/local name */
+            name_local: string;
+            /** @description Simplified Chinese name */
+            name_zh?: string;
+            /** @description English name */
+            name_en?: string;
+            /** @description Egyptian name (transliteration or hieroglyphs) */
+            name_egy?: string;
+            readonly display_name: string;
+            realm_type: components["schemas"]["RealmTypeEnum"];
+            /**
+             * Format: int64
+             * @description Severity or bliss tier
+             */
+            tier?: number;
+            is_eternal?: boolean;
+            memory_reset_mechanism?: components["schemas"]["MemoryResetMechanismEnum"] | components["schemas"]["BlankEnum"];
+        };
+        /**
          * @description * `HELL` - Hell / Punishment
          *     * `PURGATORY` - Purgatory / Intermediate
          *     * `BLISS` - Heaven / Bliss
@@ -6905,6 +7067,17 @@ export interface components {
             position?: string;
         };
         /**
+         * @description `{"updated": N}` — what `batch_activate` and `batch_deactivate` return.
+         *
+         *     Schema-only, never instantiated. `updated` is the row count from a single
+         *     `QuerySet.update()`, so it counts rows the tenant filter actually reached,
+         *     not the ids the caller sent — a caller passing ids from another tenant gets
+         *     a smaller number, not an error.
+         */
+        UserBatchUpdateResult: {
+            updated: number;
+        };
+        /**
          * @description User serializer for creation with password handling.
          *
          *     Non-ADMIN callers are constrained two ways (see ROLE_HIERARCHY above):
@@ -6935,6 +7108,17 @@ export interface components {
              * @description Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
              */
             is_active?: boolean;
+        };
+        /**
+         * @description `{"created": N, "errors": [...]}` — the CSV import summary.
+         *
+         *     Schema-only. `errors` is truncated to the first 50 rows by the view, so an
+         *     empty list means "no failures" but a 50-long list does **not** mean exactly
+         *     fifty; `created` is the only exact figure in this body.
+         */
+        UserImportResult: {
+            created: number;
+            errors: string[];
         };
         /** @description User serializer for list/retrieve operations in user management API. */
         UserManagement: {
@@ -7017,6 +7201,15 @@ export interface components {
             readonly id: string;
             bio?: string;
             avatar_url?: string;
+        };
+        /**
+         * @description `{"role": "..."}` — the single-role body `own_roles` returns.
+         *
+         *     Schema-only. Named for what it is: this endpoint is plural in its URL and
+         *     singular in its body, because a user carries one role in this system.
+         */
+        UserRole: {
+            role: string;
         };
         /**
          * @description * `ADMIN` - Administrator (阎罗王)
@@ -7106,6 +7299,22 @@ export interface components {
             timeout_seconds?: number;
             /** Format: date-time */
             readonly create_time: string;
+        };
+        /**
+         * @description The dict `WorkflowService.get_workflow_stats` builds.
+         *
+         *     Schema-only, never instantiated. `pending_nodes` is counted and
+         *     `completed_nodes` is derived as `total - pending`, so the two always sum to
+         *     `total_nodes` even for a status neither bucket names — see the note at
+         *     `apps/workflow/services.py:726`. `progress_percent` is 0-100, not 0-1, and
+         *     is a float because it is a ratio times 100, not a rounded percentage.
+         */
+        WorkflowStats: {
+            total_nodes: number;
+            completed_nodes: number;
+            pending_nodes: number;
+            /** Format: double */
+            progress_percent: number;
         };
         /**
          * @description Serializer for WorkflowTemplate.
@@ -7361,9 +7570,34 @@ export interface operations {
             };
         };
     };
-    v1_audit_logs_actions_retrieve: {
+    v1_audit_logs_actions_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description * `CREATE` - 创建
+                 *     * `UPDATE` - 更新
+                 *     * `DELETE` - 删除
+                 *     * `EXECUTE` - 执行
+                 *     * `READ` - 读取
+                 *     * `LOGIN` - 登录
+                 *     * `LOGOUT` - 登出
+                 *     * `VIEW` - 查看
+                 *     * `EXPORT` - 导出
+                 *     * `IMPORT` - 导入
+                 *     * `PERMISSION_CHANGE` - 权限变更
+                 *     * `BATCH_CREATE` - 批量创建
+                 *     * `BATCH_UPDATE` - 批量更新
+                 *     * `BATCH_DELETE` - 批量删除
+                 */
+                action?: "BATCH_CREATE" | "BATCH_DELETE" | "BATCH_UPDATE" | "CREATE" | "DELETE" | "EXECUTE" | "EXPORT" | "IMPORT" | "LOGIN" | "LOGOUT" | "PERMISSION_CHANGE" | "READ" | "UPDATE" | "VIEW";
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                resource?: string;
+                resource_id?: string;
+                /** @description A search term. */
+                search?: string;
+                user?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -7375,7 +7609,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuditLog"];
+                    "application/json": components["schemas"]["AuditActionOption"][];
                 };
             };
         };
@@ -7389,12 +7623,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Distinct `resource` values present in the caller's audit log. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuditLog"];
+                    "application/json": string[];
                 };
             };
         };
@@ -7413,14 +7648,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuditLog"];
+                    "application/json": components["schemas"]["AuditStats"];
                 };
             };
         };
     };
-    v1_audit_logs_timeline_retrieve: {
+    v1_audit_logs_timeline_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description * `CREATE` - 创建
+                 *     * `UPDATE` - 更新
+                 *     * `DELETE` - 删除
+                 *     * `EXECUTE` - 执行
+                 *     * `READ` - 读取
+                 *     * `LOGIN` - 登录
+                 *     * `LOGOUT` - 登出
+                 *     * `VIEW` - 查看
+                 *     * `EXPORT` - 导出
+                 *     * `IMPORT` - 导入
+                 *     * `PERMISSION_CHANGE` - 权限变更
+                 *     * `BATCH_CREATE` - 批量创建
+                 *     * `BATCH_UPDATE` - 批量更新
+                 *     * `BATCH_DELETE` - 批量删除
+                 */
+                action?: "BATCH_CREATE" | "BATCH_DELETE" | "BATCH_UPDATE" | "CREATE" | "DELETE" | "EXECUTE" | "EXPORT" | "IMPORT" | "LOGIN" | "LOGOUT" | "PERMISSION_CHANGE" | "READ" | "UPDATE" | "VIEW";
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                resource?: string;
+                resource_id?: string;
+                /** @description A search term. */
+                search?: string;
+                user?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -7432,14 +7692,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuditLog"];
+                    "application/json": components["schemas"]["AuditLog"][];
                 };
             };
         };
     };
-    v1_audit_logs_trace_retrieve: {
+    v1_audit_logs_trace_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description * `CREATE` - 创建
+                 *     * `UPDATE` - 更新
+                 *     * `DELETE` - 删除
+                 *     * `EXECUTE` - 执行
+                 *     * `READ` - 读取
+                 *     * `LOGIN` - 登录
+                 *     * `LOGOUT` - 登出
+                 *     * `VIEW` - 查看
+                 *     * `EXPORT` - 导出
+                 *     * `IMPORT` - 导入
+                 *     * `PERMISSION_CHANGE` - 权限变更
+                 *     * `BATCH_CREATE` - 批量创建
+                 *     * `BATCH_UPDATE` - 批量更新
+                 *     * `BATCH_DELETE` - 批量删除
+                 */
+                action?: "BATCH_CREATE" | "BATCH_DELETE" | "BATCH_UPDATE" | "CREATE" | "DELETE" | "EXECUTE" | "EXPORT" | "IMPORT" | "LOGIN" | "LOGOUT" | "PERMISSION_CHANGE" | "READ" | "UPDATE" | "VIEW";
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                resource?: string;
+                resource_id?: string;
+                /** @description A search term. */
+                search?: string;
+                user?: number;
+            };
             header?: never;
             path: {
                 trace_id: string;
@@ -7453,7 +7738,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuditLog"];
+                    "application/json": components["schemas"]["AuditLog"][];
                 };
             };
         };
@@ -9251,9 +9536,32 @@ export interface operations {
             };
         };
     };
-    v1_judgment_citations_retrieve: {
+    v1_judgment_citations_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description * `CHINESE` - Chinese Diyu
+                 *     * `EUROPEAN` - European Heaven/Hell
+                 *     * `EGYPTIAN` - Egyptian Duat
+                 *     * `GREEK` - Greek Underworld
+                 */
+                civilization?: "CHINESE" | "EGYPTIAN" | "EUROPEAN" | "GREEK";
+                has_verdict?: boolean;
+                is_final?: boolean;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+                soul?: string;
+                /**
+                 * @description * `PASSED` - Passed / Saved
+                 *     * `FAILED` - Failed / Condemned
+                 *     * `PURGATORY` - Purgatory / Intermediate
+                 *     * `RETRY` - Retry / Appeal
+                 */
+                verdict?: "FAILED" | "PASSED" | "PURGATORY" | "RETRY" | null;
+                verdict_null?: boolean;
+            };
             header?: never;
             path: {
                 /** @description A UUID string identifying this Judgment. */
@@ -9268,7 +9576,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Judgment"];
+                    "application/json": components["schemas"]["JudgmentCitation"][];
                 };
             };
         };
@@ -9285,18 +9593,18 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Judgment"];
-                "application/x-www-form-urlencoded": components["schemas"]["Judgment"];
-                "multipart/form-data": components["schemas"]["Judgment"];
+                "application/json": components["schemas"]["JudgmentCitationWrite"];
+                "application/x-www-form-urlencoded": components["schemas"]["JudgmentCitationWrite"];
+                "multipart/form-data": components["schemas"]["JudgmentCitationWrite"];
             };
         };
         responses: {
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Judgment"];
+                    "application/json": components["schemas"]["JudgmentCitation"];
                 };
             };
         };
@@ -9366,7 +9674,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Judgment"];
+                    "application/json": components["schemas"]["JudgmentQueueCursor"];
                 };
             };
         };
@@ -9773,9 +10081,14 @@ export interface operations {
             };
         };
     };
-    v1_menus_all_retrieve: {
+    v1_menus_all_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -9787,7 +10100,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Menu"];
+                    "application/json": components["schemas"]["Menu"][];
                 };
             };
         };
@@ -9942,9 +10255,14 @@ export interface operations {
             };
         };
     };
-    v1_menus_list_public_retrieve: {
+    v1_menus_list_public_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -9956,14 +10274,19 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Menu"];
+                    "application/json": components["schemas"]["Menu"][];
                 };
             };
         };
     };
-    v1_menus_tree_retrieve: {
+    v1_menus_tree_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -9975,7 +10298,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Menu"];
+                    "application/json": components["schemas"]["MenuTree"][];
                 };
             };
         };
@@ -10328,7 +10651,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserNotification"];
+                    "application/json": components["schemas"]["MarkAllReadResult"];
                 };
             };
         };
@@ -10483,9 +10806,14 @@ export interface operations {
             };
         };
     };
-    v1_organizations_tree_retrieve: {
+    v1_organizations_tree_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -10497,7 +10825,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Organization"];
+                    "application/json": components["schemas"]["Organization"][];
                 };
             };
         };
@@ -11557,9 +11885,14 @@ export interface operations {
             };
         };
     };
-    v1_social_follows_followers_retrieve: {
+    v1_social_follows_followers_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -11571,14 +11904,19 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Follow"];
+                    "application/json": components["schemas"]["Follow"][];
                 };
             };
         };
     };
-    v1_social_follows_following_retrieve: {
+    v1_social_follows_following_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -11590,7 +11928,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Follow"];
+                    "application/json": components["schemas"]["Follow"][];
                 };
             };
         };
@@ -11615,7 +11953,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Follow"];
+                    "application/json": components["schemas"]["FollowToggleResult"];
                 };
             };
         };
@@ -11770,9 +12108,16 @@ export interface operations {
             };
         };
     };
-    v1_social_posts_feed_retrieve: {
+    v1_social_posts_feed_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -11784,7 +12129,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Post"];
+                    "application/json": components["schemas"]["PaginatedPostListList"];
                 };
             };
         };
@@ -12320,14 +12665,54 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Soul"];
+                    "application/json": components["schemas"]["LedgerSummary"];
                 };
             };
         };
     };
-    v1_souls_records_retrieve: {
+    v1_souls_records_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description * `CHINESE` - Chinese Diyu
+                 *     * `EUROPEAN` - European Heaven/Hell
+                 *     * `EGYPTIAN` - Egyptian Duat
+                 *     * `GREEK` - Greek Underworld
+                 */
+                civilization?: "CHINESE" | "EGYPTIAN" | "EUROPEAN" | "GREEK";
+                created_after?: string;
+                created_before?: string;
+                /**
+                 * @description * `ALIVE` - Alive
+                 *     * `JUDGING` - Under Judgment
+                 *     * `DISPOSED` - Disposed
+                 *     * `REINCARNATING` - Reincarnating
+                 *     * `SETTLED` - Settled (Final)
+                 *     * `LOST` - Lost/Suspended
+                 */
+                current_state?: "ALIVE" | "DISPOSED" | "JUDGING" | "LOST" | "REINCARNATING" | "SETTLED";
+                death_date_after?: string;
+                death_date_before?: string;
+                has_date_problem?: boolean;
+                karma_max?: number;
+                karma_min?: number;
+                karmic_balance_max?: number;
+                karmic_balance_min?: number;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A search term. */
+                search?: string;
+                /**
+                 * @description * `ALIVE` - Alive
+                 *     * `JUDGING` - Under Judgment
+                 *     * `DISPOSED` - Disposed
+                 *     * `REINCARNATING` - Reincarnating
+                 *     * `SETTLED` - Settled (Final)
+                 *     * `LOST` - Lost/Suspended
+                 */
+                state?: "ALIVE" | "DISPOSED" | "JUDGING" | "LOST" | "REINCARNATING" | "SETTLED";
+                tenant__code?: string;
+            };
             header?: never;
             path: {
                 /** @description A UUID string identifying this Soul. */
@@ -12342,7 +12727,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Soul"];
+                    "application/json": components["schemas"]["SoulRecord"][];
                 };
             };
         };
@@ -12733,7 +13118,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserManagement"];
+                    "application/json": components["schemas"]["UserRole"];
                 };
             };
         };
@@ -12761,7 +13146,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserManagement"];
+                    "application/json": components["schemas"]["PasswordResetResult"];
                 };
             };
         };
@@ -12786,7 +13171,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserManagement"];
+                    "application/json": components["schemas"]["UserBatchUpdateResult"];
                 };
             };
         };
@@ -12811,7 +13196,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserManagement"];
+                    "application/json": components["schemas"]["UserBatchUpdateResult"];
                 };
             };
         };
@@ -12825,12 +13210,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description A CSV attachment, not JSON. Documented as such because a generated client that expects a user object here will try to parse a spreadsheet. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserManagement"];
+                    "text/csv": string;
                 };
             };
         };
@@ -12855,7 +13241,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserManagement"];
+                    "application/json": components["schemas"]["UserImportResult"];
                 };
             };
         };
@@ -13282,7 +13668,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApprovalWorkflow"];
+                    "application/json": components["schemas"]["WorkflowStats"];
                 };
             };
         };

@@ -6,7 +6,7 @@ import secrets
 
 from django.contrib.auth import get_user_model
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -28,11 +28,15 @@ from .serializers import (
     CustomTokenObtainPairSerializer,
     LoginLogSerializer,
     LogoutRequestSerializer,
+    PasswordResetResultSerializer,
     RegisterSerializer,
     ResetPasswordSerializer,
     SetNewPasswordSerializer,
+    UserBatchUpdateResultSerializer,
     UserCreateSerializer,
+    UserImportResultSerializer,
     UserManagementSerializer,
+    UserRoleSerializer,
     UserSerializer,
     UserUpdateSerializer,
     role_rank,
@@ -183,6 +187,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user.save(update_fields=['is_active'])
         return Response(UserManagementSerializer(user).data)
 
+    @extend_schema(responses=PasswordResetResultSerializer)
     @action(detail=True, methods=['post'])
     def reset_password(self, request, pk=None):
         """重置用户密码，返回随机生成的新密码"""
@@ -192,6 +197,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user.save(update_fields=['password'])
         return Response({'password': new_password})
 
+    @extend_schema(responses=UserBatchUpdateResultSerializer)
     @action(detail=False, methods=['post'])
     def batch_activate(self, request):
         """批量激活用户"""
@@ -201,6 +207,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         updated = User.objects.filter(id__in=user_ids, tenant=self.request.tenant).update(is_active=True)
         return Response({'updated': updated})
 
+    @extend_schema(responses=UserBatchUpdateResultSerializer)
     @action(detail=False, methods=['post'])
     def batch_deactivate(self, request):
         """批量停用用户"""
@@ -210,6 +217,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         updated = User.objects.filter(id__in=user_ids, tenant=self.request.tenant).update(is_active=False)
         return Response({'updated': updated})
 
+    @extend_schema(responses=UserRoleSerializer)
     @action(detail=True, methods=['get'])
     def own_roles(self, request, pk=None):
         """获取用户的角色"""
@@ -256,6 +264,16 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
         user.save(update_fields=['role'])
         return Response(UserManagementSerializer(user).data)
 
+    @extend_schema(
+        responses={
+            (200, "text/csv"): OpenApiResponse(
+                response=OpenApiTypes.BINARY,
+                description="A CSV attachment, not JSON. Documented as such "
+                "because a generated client that expects a user object here "
+                "will try to parse a spreadsheet.",
+            )
+        }
+    )
     @action(detail=False, methods=['get'])
     def export_csv(self, request):
         """导出用户列表为CSV文件"""
@@ -279,6 +297,7 @@ class UserViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
             ])
         return response
 
+    @extend_schema(responses=UserImportResultSerializer)
     @action(detail=False, methods=['post'])
     def import_csv(self, request):
         """从CSV文件批量导入用户"""

@@ -1,6 +1,7 @@
 """
 REST views for workflow app.
 """
+from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -16,6 +17,7 @@ from apps.workflow.serializers import (
     ApprovalWorkflowListSerializer,
     ApprovalWorkflowSerializer,
     WorkflowNodeActionSerializer,
+    WorkflowStatsSerializer,
     WorkflowTemplateListSerializer,
     WorkflowTemplateSerializer,
 )
@@ -295,6 +297,7 @@ class ApprovalWorkflowViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, Tenan
             )
         return Response({"error": "Failed to complete node"}, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(responses=WorkflowStatsSerializer)
     @action(detail=True, methods=["get"])
     def stats(self, request, pk=None):
         """

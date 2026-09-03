@@ -390,3 +390,15 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = ["id", "bio", "avatar_url"]
         read_only_fields = ["id"]
+
+
+class FollowToggleResultSerializer(serializers.Serializer):
+    """`{"following": true|false}` — the state `toggle` left the edge in.
+
+    Schema-only, never instantiated. Note the collision this documents away:
+    the request body's `following` is the **target user's id**, and the
+    response's `following` is a **boolean** saying whether the edge now exists.
+    Same key, two types, one round trip.
+    """
+
+    following = serializers.BooleanField()
