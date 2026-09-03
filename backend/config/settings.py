@@ -369,6 +369,14 @@ if not DEBUG:
 # drf-spectacular (API docs)
 SPECTACULAR_SETTINGS = {
     "TITLE": "SoulLedger API",
+    # The generated document must not record which database generated it.
+    # See apps/core/schema.py::drop_engine_dependent_integer_bounds — Django
+    # derives every integer field's min/max from the backend, so a schema
+    # generated on SQLite disagreed with CI's PostgreSQL in 32 components.
+    "POSTPROCESSING_HOOKS": [
+        "drf_spectacular.hooks.postprocess_schema_enums",
+        "apps.core.schema.drop_engine_dependent_integer_bounds",
+    ],
     "DESCRIPTION": "Cross-civilization soul management system API",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
