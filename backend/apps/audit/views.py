@@ -1,6 +1,7 @@
 """
 Audit views - AuditLog ViewSet with filtering support.
 """
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -10,7 +11,12 @@ from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import CodenameViewSetMixin
 
 from .models import AuditAction, AuditLog
-from .serializers import AuditLogDetailSerializer, AuditLogSerializer
+from .serializers import (
+    AuditActionOptionSerializer,
+    AuditLogDetailSerializer,
+    AuditLogSerializer,
+    AuditStatsSerializer,
+)
 
 #: `/audit-logs/timeline/?limit=` 的上界。没有它,`?limit=999999999` 是一次全表
 #: 扫描,而它返回 **200** —— 一个「成功」的响应,是最不容易被发现的拒绝服务面。
@@ -107,7 +113,12 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
             return AuditLogDetailSerializer
         return AuditLogSerializer
 
-    @action(detail=False, methods=["get"])
+    @extend_schema(responses=AuditActionOptionSerializer(many=True))
+    # `pagination_class=None` because this returns the whole enum as a bare
+    # array. Without it drf-spectacular documents any `many=True` response on
+    # a paginated viewset as a page envelope, and the document would promise
+    # `{count, results}` where the view sends a list.
+    @action(detail=False, methods=["get"], pagination_class=None)
     def actions(self, request):
         """
         GET /api/v1/audit-logs/actions/
@@ -118,6 +129,12 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
             for choice in AuditAction.choices
         ])
 
+    @extend_schema(
+        responses=OpenApiResponse(
+            response={"type": "array", "items": {"type": "string"}},
+            description="Distinct `resource` values present in the caller's audit log.",
+        )
+    )
     @action(detail=False, methods=["get"])
     def resources(self, request):
         """
@@ -135,6 +152,7 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         )
         return Response(list(resources))
 
+    @extend_schema(responses=AuditStatsSerializer)
     @action(detail=False, methods=["get"])
     def stats(self, request):
         """
@@ -173,7 +191,8 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
             "total_logs": qs.count(),
         })
 
-    @action(detail=False, methods=["get"], url_path="timeline")
+    @extend_schema(responses=AuditLogSerializer(many=True))
+    @action(detail=False, methods=["get"], url_path="timeline", pagination_class=None)
     def timeline(self, request):
         """
         GET /api/v1/audit-logs/timeline/
@@ -227,7 +246,13 @@ class AuditLogViewSet(CodenameViewSetMixin, viewsets.ReadOnlyModelViewSet):
         serializer = AuditLogSerializer(qs, many=True)
         return Response(serializer.data)
 
-    @action(detail=False, methods=["get"], url_path="trace/(?P<trace_id>[^/.]+)")
+    @extend_schema(responses=AuditLogSerializer(many=True))
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="trace/(?P<trace_id>[^/.]+)",
+        pagination_class=None,
+    )
     def by_trace(self, request, trace_id=None):
         """
         GET /api/v1/audit-logs/trace/{trace_id}/

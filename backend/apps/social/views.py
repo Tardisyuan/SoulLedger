@@ -25,6 +25,7 @@ TenantPermission plus an object-level owner check
 (IsAuthorOrReadOnly / IsReactionOwnerOrReadOnly / IsFollowOwnerOrReadOnly /
 IsProfileOwnerOrReadOnly), so authorship still governs writes.
 """
+from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -45,6 +46,7 @@ from apps.social.serializers import (
     CommentSerializer,
     FollowCreateSerializer,
     FollowSerializer,
+    FollowToggleResultSerializer,
     PostCreateSerializer,
     PostListSerializer,
     PostSerializer,
@@ -96,6 +98,7 @@ class PostViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelVie
         serializer.save(author=self.request.user)
         PostService.increment_post_count(self.request.user.pk)
 
+    @extend_schema(responses=PostListSerializer(many=True))
     @action(detail=False, methods=["get"])
     def feed(self, request):
         """Return posts from users the current user follows."""
@@ -306,7 +309,8 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
         tenant = getattr(self.request, "tenant", None)
         FollowService.follow(self.request.user, following, tenant)
 
-    @action(detail=False, methods=["get"])
+    @extend_schema(responses=FollowSerializer(many=True))
+    @action(detail=False, methods=["get"], pagination_class=None)
     def following(self, request):
         """List users the current user follows."""
         tenant = getattr(request, "tenant", None)
@@ -316,7 +320,8 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
         serializer = FollowSerializer(qs, many=True)
         return Response(serializer.data)
 
-    @action(detail=False, methods=["get"])
+    @extend_schema(responses=FollowSerializer(many=True))
+    @action(detail=False, methods=["get"], pagination_class=None)
     def followers(self, request):
         """List users following the current user."""
         tenant = getattr(request, "tenant", None)
@@ -326,6 +331,7 @@ class FollowViewSet(CodenameViewSetMixin, AuditUserViewSetMixin, viewsets.ModelV
         serializer = FollowSerializer(qs, many=True)
         return Response(serializer.data)
 
+    @extend_schema(responses=FollowToggleResultSerializer)
     @action(detail=False, methods=["post"])
     def toggle(self, request):
         """Toggle follow/unfollow for a target user."""

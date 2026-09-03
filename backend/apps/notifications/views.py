@@ -1,6 +1,7 @@
 """
 Views for notifications.
 """
+from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -9,7 +10,11 @@ from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.tenant import scope_to_tenant
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin
 from apps.notifications.models import UserNotification
-from apps.notifications.serializers import UserNotificationListSerializer, UserNotificationSerializer
+from apps.notifications.serializers import (
+    MarkAllReadResultSerializer,
+    UserNotificationListSerializer,
+    UserNotificationSerializer,
+)
 
 
 class NotificationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelViewSet):
@@ -114,6 +119,7 @@ class NotificationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.
         notification.save(update_fields=["is_read"])
         return Response(UserNotificationSerializer(notification).data)
 
+    @extend_schema(responses=MarkAllReadResultSerializer)
     @action(detail=False, methods=["post"])
     def mark_all_read(self, request):
         """Mark all of the user's notifications as read."""

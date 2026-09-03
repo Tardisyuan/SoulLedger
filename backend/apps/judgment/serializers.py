@@ -5,6 +5,10 @@ from rest_framework import serializers
 
 from apps.core.field_permissions import FieldPermissionMixin
 from apps.judgment.models import Judgment, JudgmentCitation, Statute
+from apps.ledger.serializers import LedgerSummarySerializer
+from apps.realms.serializers import RealmLocalizedSerializer
+from apps.reincarnation.serializers import ReincarnationSerializer
+from apps.souls.serializers import SoulSerializer
 
 
 def _locale_from(context) -> str:
@@ -133,3 +137,36 @@ class JudgmentConcludeSerializer(serializers.Serializer):
     statute_ids = serializers.ListField(
         child=serializers.UUIDField(), required=False, default=list
     )
+
+
+class JudgmentQueueCursorSerializer(serializers.Serializer):
+    """The envelope `GET /api/v1/judgment/next/` returns.
+
+    Schema-only, never instantiated. This is the response a judgment client
+    hits most, and until this class existed it was documented as a bare
+    `Judgment` — drf-spectacular's fallback to the viewset serializer, which is
+    silent and was wrong. A generated client typed against that would have
+    reached for `verdict` on an object whose top level is a cursor.
+
+    Every field below is nullable or empty when the queue is exhausted: the
+    view builds the payload with `judgment`/`soul`/`ledger` at `None` and the
+    two lists empty, then fills them only once it has a case (see
+    `JudgmentViewSet.next_pending`). `position` is additionally null when
+    `remaining` is 0, because "the Nth of M" has no N when there is nothing
+    left to rule on.
+
+    The cross-app imports here are the same ones `views.py` already makes to
+    build this payload; they are not a new dependency, and keeping the shape
+    beside the other judgment serializers is what makes it possible to check
+    that it still matches.
+    """
+
+    total = serializers.IntegerField()
+    remaining = serializers.IntegerField()
+    skipped = serializers.IntegerField()
+    position = serializers.IntegerField(allow_null=True)
+    judgment = JudgmentSerializer(allow_null=True)
+    soul = SoulSerializer(allow_null=True)
+    ledger = LedgerSummarySerializer(allow_null=True)
+    prior_cycles = ReincarnationSerializer(many=True)
+    realm_options = RealmLocalizedSerializer(many=True)

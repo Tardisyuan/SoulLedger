@@ -231,10 +231,69 @@ paths:
           description: ''
   /api/v1/audit-logs/actions/:
     get:
-      operationId: v1_audit_logs_actions_retrieve
+      operationId: v1_audit_logs_actions_list
       description: |-
         GET /api/v1/audit-logs/actions/
         Returns all available action types.
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+          enum:
+          - BATCH_CREATE
+          - BATCH_DELETE
+          - BATCH_UPDATE
+          - CREATE
+          - DELETE
+          - EXECUTE
+          - EXPORT
+          - IMPORT
+          - LOGIN
+          - LOGOUT
+          - PERMISSION_CHANGE
+          - READ
+          - UPDATE
+          - VIEW
+        description: |-
+          * `CREATE` - 创建
+          * `UPDATE` - 更新
+          * `DELETE` - 删除
+          * `EXECUTE` - 执行
+          * `READ` - 读取
+          * `LOGIN` - 登录
+          * `LOGOUT` - 登出
+          * `VIEW` - 查看
+          * `EXPORT` - 导出
+          * `IMPORT` - 导入
+          * `PERMISSION_CHANGE` - 权限变更
+          * `BATCH_CREATE` - 批量创建
+          * `BATCH_UPDATE` - 批量更新
+          * `BATCH_DELETE` - 批量删除
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: resource
+        schema:
+          type: string
+      - in: query
+        name: resource_id
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: user
+        schema:
+          type: integer
       tags:
       - v1
       security:
@@ -244,7 +303,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuditLog'
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditActionOption'
           description: ''
   /api/v1/audit-logs/resources/:
     get:
@@ -261,8 +322,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuditLog'
-          description: ''
+                type: array
+                items:
+                  type: string
+          description: Distinct `resource` values present in the caller's audit log.
   /api/v1/audit-logs/stats/:
     get:
       operationId: v1_audit_logs_stats_retrieve
@@ -279,11 +342,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuditLog'
+                $ref: '#/components/schemas/AuditStats'
           description: ''
   /api/v1/audit-logs/timeline/:
     get:
-      operationId: v1_audit_logs_timeline_retrieve
+      operationId: v1_audit_logs_timeline_list
       description: |-
         GET /api/v1/audit-logs/timeline/
         权限变更时间线 — 查询权限相关操作的审计日志。
@@ -294,6 +357,65 @@ paths:
             start_date: 开始日期 (YYYY-MM-DD)
             end_date: 结束日期 (YYYY-MM-DD)
             limit: 返回条数 (默认 50)
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+          enum:
+          - BATCH_CREATE
+          - BATCH_DELETE
+          - BATCH_UPDATE
+          - CREATE
+          - DELETE
+          - EXECUTE
+          - EXPORT
+          - IMPORT
+          - LOGIN
+          - LOGOUT
+          - PERMISSION_CHANGE
+          - READ
+          - UPDATE
+          - VIEW
+        description: |-
+          * `CREATE` - 创建
+          * `UPDATE` - 更新
+          * `DELETE` - 删除
+          * `EXECUTE` - 执行
+          * `READ` - 读取
+          * `LOGIN` - 登录
+          * `LOGOUT` - 登出
+          * `VIEW` - 查看
+          * `EXPORT` - 导出
+          * `IMPORT` - 导入
+          * `PERMISSION_CHANGE` - 权限变更
+          * `BATCH_CREATE` - 批量创建
+          * `BATCH_UPDATE` - 批量更新
+          * `BATCH_DELETE` - 批量删除
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: resource
+        schema:
+          type: string
+      - in: query
+        name: resource_id
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: user
+        schema:
+          type: integer
       tags:
       - v1
       security:
@@ -303,21 +425,81 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuditLog'
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditLog'
           description: ''
   /api/v1/audit-logs/trace/{trace_id}/:
     get:
-      operationId: v1_audit_logs_trace_retrieve
+      operationId: v1_audit_logs_trace_list
       description: |-
         GET /api/v1/audit-logs/trace/{trace_id}/
         按 trace_id 查询关联操作 — 查看同一请求内的所有变更。
       parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+          enum:
+          - BATCH_CREATE
+          - BATCH_DELETE
+          - BATCH_UPDATE
+          - CREATE
+          - DELETE
+          - EXECUTE
+          - EXPORT
+          - IMPORT
+          - LOGIN
+          - LOGOUT
+          - PERMISSION_CHANGE
+          - READ
+          - UPDATE
+          - VIEW
+        description: |-
+          * `CREATE` - 创建
+          * `UPDATE` - 更新
+          * `DELETE` - 删除
+          * `EXECUTE` - 执行
+          * `READ` - 读取
+          * `LOGIN` - 登录
+          * `LOGOUT` - 登出
+          * `VIEW` - 查看
+          * `EXPORT` - 导出
+          * `IMPORT` - 导入
+          * `PERMISSION_CHANGE` - 权限变更
+          * `BATCH_CREATE` - 批量创建
+          * `BATCH_UPDATE` - 批量更新
+          * `BATCH_DELETE` - 批量删除
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: resource
+        schema:
+          type: string
+      - in: query
+        name: resource_id
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
       - in: path
         name: trace_id
         schema:
           type: string
           description: 请求追踪ID，关联同一HTTP请求内的多个操作
         required: true
+      - in: query
+        name: user
+        schema:
+          type: integer
       tags:
       - v1
       security:
@@ -327,7 +509,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuditLog'
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditLog'
           description: ''
   /api/v1/auth/change-password/:
     post:
@@ -2676,7 +2860,7 @@ paths:
           description: ''
   /api/v1/judgment/{id}/citations/:
     get:
-      operationId: v1_judgment_citations_retrieve
+      operationId: v1_judgment_citations_list
       description: |-
         The articles this verdict rests on, in their corpus's own order.
 
@@ -2687,6 +2871,24 @@ paths:
         citations hang off it and inherit that scope rather than being queried
         (and separately scoped) on their own.
       parameters:
+      - in: query
+        name: civilization
+        schema:
+          type: string
+          enum:
+          - CHINESE
+          - EGYPTIAN
+          - EUROPEAN
+          - GREEK
+        description: |-
+          * `CHINESE` - Chinese Diyu
+          * `EUROPEAN` - European Heaven/Hell
+          * `EGYPTIAN` - Egyptian Duat
+          * `GREEK` - Greek Underworld
+      - in: query
+        name: has_verdict
+        schema:
+          type: boolean
       - in: path
         name: id
         schema:
@@ -2694,6 +2896,46 @@ paths:
           format: uuid
         description: A UUID string identifying this Judgment.
         required: true
+      - in: query
+        name: is_final
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: verdict
+        schema:
+          type: string
+          nullable: true
+          enum:
+          - FAILED
+          - PASSED
+          - PURGATORY
+          - RETRY
+        description: |-
+          * `PASSED` - Passed / Saved
+          * `FAILED` - Failed / Condemned
+          * `PURGATORY` - Purgatory / Intermediate
+          * `RETRY` - Retry / Appeal
+      - in: query
+        name: verdict_null
+        schema:
+          type: boolean
       tags:
       - v1
       security:
@@ -2703,7 +2945,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Judgment'
+                type: array
+                items:
+                  $ref: '#/components/schemas/JudgmentCitation'
           description: ''
     post:
       operationId: v1_judgment_citations_create
@@ -2731,22 +2975,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Judgment'
+              $ref: '#/components/schemas/JudgmentCitationWrite'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Judgment'
+              $ref: '#/components/schemas/JudgmentCitationWrite'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Judgment'
+              $ref: '#/components/schemas/JudgmentCitationWrite'
         required: true
       security:
       - jwtAuth: []
       responses:
-        '200':
+        '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Judgment'
+                $ref: '#/components/schemas/JudgmentCitation'
           description: ''
   /api/v1/judgment/{id}/citations/{statute_id}/:
     delete:
@@ -2866,7 +3110,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Judgment'
+                $ref: '#/components/schemas/JudgmentQueueCursor'
           description: ''
   /api/v1/judgment/statutes/:
     get:
@@ -3383,8 +3627,21 @@ paths:
           description: No response body
   /api/v1/menus/all/:
     get:
-      operationId: v1_menus_all_retrieve
+      operationId: v1_menus_all_list
       description: GET /api/v1/menus/all/ - Get all menus (ADMIN only)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
       tags:
       - v1
       security:
@@ -3394,7 +3651,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Menu'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Menu'
           description: ''
   /api/v1/menus/buttons/:
     get:
@@ -3580,7 +3839,7 @@ paths:
           description: No response body
   /api/v1/menus/list-public/:
     get:
-      operationId: v1_menus_list_public_retrieve
+      operationId: v1_menus_list_public_list
       description: |-
         GET /api/v1/menus/list-public/ - Get accessible menus by role
 
@@ -3593,6 +3852,19 @@ paths:
 
         Now it asks `menu_is_visible_to` and hands the request down in the
         serializer context so `get_children` can filter too.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
       tags:
       - v1
       security:
@@ -3602,17 +3874,32 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Menu'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Menu'
           description: ''
   /api/v1/menus/tree/:
     get:
-      operationId: v1_menus_tree_retrieve
+      operationId: v1_menus_tree_list
       description: |-
         GET /api/v1/menus/tree/ — 完整资源树（含按钮），按角色过滤。
 
         返回当前用户可访问的菜单树，包含每层菜单的按钮资源。
         ADMIN 看到全部菜单和按钮。
         非 ADMIN 用户：菜单按 roles 过滤，按钮按 permission codename 过滤。
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
       tags:
       - v1
       security:
@@ -3622,7 +3909,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Menu'
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuTree'
           description: ''
   /api/v1/nodes/:
     get:
@@ -4041,7 +4330,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserNotification'
+                $ref: '#/components/schemas/MarkAllReadResult'
           description: ''
   /api/v1/organizations/:
     get:
@@ -4353,8 +4642,21 @@ paths:
           description: No response body
   /api/v1/organizations/tree/:
     get:
-      operationId: v1_organizations_tree_retrieve
+      operationId: v1_organizations_tree_list
       description: Return organization hierarchy as a tree.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
       tags:
       - v1
       security:
@@ -4364,7 +4666,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Organization'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Organization'
           description: ''
   /api/v1/perm/export/:
     get:
@@ -5690,8 +5994,21 @@ paths:
           description: No response body
   /api/v1/social/follows/followers/:
     get:
-      operationId: v1_social_follows_followers_retrieve
+      operationId: v1_social_follows_followers_list
       description: List users following the current user.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
       tags:
       - v1
       security:
@@ -5701,12 +6018,27 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Follow'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Follow'
           description: ''
   /api/v1/social/follows/following/:
     get:
-      operationId: v1_social_follows_following_retrieve
+      operationId: v1_social_follows_following_list
       description: List users the current user follows.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
       tags:
       - v1
       security:
@@ -5716,7 +6048,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Follow'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Follow'
           description: ''
   /api/v1/social/follows/toggle/:
     post:
@@ -5743,7 +6077,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Follow'
+                $ref: '#/components/schemas/FollowToggleResult'
           description: ''
   /api/v1/social/posts/:
     get:
@@ -5969,8 +6303,27 @@ paths:
           description: No response body
   /api/v1/social/posts/feed/:
     get:
-      operationId: v1_social_posts_feed_retrieve
+      operationId: v1_social_posts_feed_list
       description: Return posts from users the current user follows.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
       tags:
       - v1
       security:
@@ -5980,7 +6333,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Post'
+                $ref: '#/components/schemas/PaginatedPostListList'
           description: ''
   /api/v1/social/profiles/:
     get:
@@ -6713,13 +7066,69 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Soul'
+                $ref: '#/components/schemas/LedgerSummary'
           description: ''
   /api/v1/souls/{id}/records/:
     get:
-      operationId: v1_souls_records_retrieve
+      operationId: v1_souls_records_list
       description: List all records for a soul.
       parameters:
+      - in: query
+        name: civilization
+        schema:
+          type: string
+          enum:
+          - CHINESE
+          - EGYPTIAN
+          - EUROPEAN
+          - GREEK
+        description: |-
+          * `CHINESE` - Chinese Diyu
+          * `EUROPEAN` - European Heaven/Hell
+          * `EGYPTIAN` - Egyptian Duat
+          * `GREEK` - Greek Underworld
+      - in: query
+        name: created_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: created_before
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: current_state
+        schema:
+          type: string
+          enum:
+          - ALIVE
+          - DISPOSED
+          - JUDGING
+          - LOST
+          - REINCARNATING
+          - SETTLED
+        description: |-
+          * `ALIVE` - Alive
+          * `JUDGING` - Under Judgment
+          * `DISPOSED` - Disposed
+          * `REINCARNATING` - Reincarnating
+          * `SETTLED` - Settled (Final)
+          * `LOST` - Lost/Suspended
+      - in: query
+        name: death_date_after
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: death_date_before
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: has_date_problem
+        schema:
+          type: boolean
       - in: path
         name: id
         schema:
@@ -6727,6 +7136,56 @@ paths:
           format: uuid
         description: A UUID string identifying this Soul.
         required: true
+      - in: query
+        name: karma_max
+        schema:
+          type: number
+      - in: query
+        name: karma_min
+        schema:
+          type: number
+      - in: query
+        name: karmic_balance_max
+        schema:
+          type: number
+      - in: query
+        name: karmic_balance_min
+        schema:
+          type: number
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: state
+        schema:
+          type: string
+          enum:
+          - ALIVE
+          - DISPOSED
+          - JUDGING
+          - LOST
+          - REINCARNATING
+          - SETTLED
+        description: |-
+          * `ALIVE` - Alive
+          * `JUDGING` - Under Judgment
+          * `DISPOSED` - Disposed
+          * `REINCARNATING` - Reincarnating
+          * `SETTLED` - Settled (Final)
+          * `LOST` - Lost/Suspended
+      - in: query
+        name: tenant__code
+        schema:
+          type: string
       tags:
       - v1
       security:
@@ -6736,7 +7195,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Soul'
+                type: array
+                items:
+                  $ref: '#/components/schemas/SoulRecord'
           description: ''
   /api/v1/souls/{id}/records/{record_id}/acknowledge-date-warning/:
     post:
@@ -7308,7 +7769,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserManagement'
+                $ref: '#/components/schemas/UserRole'
           description: ''
   /api/v1/users/{id}/reset_password/:
     post:
@@ -7342,7 +7803,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserManagement'
+                $ref: '#/components/schemas/PasswordResetResult'
           description: ''
   /api/v1/users/batch_activate/:
     post:
@@ -7369,7 +7830,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserManagement'
+                $ref: '#/components/schemas/UserBatchUpdateResult'
           description: ''
   /api/v1/users/batch_deactivate/:
     post:
@@ -7396,7 +7857,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserManagement'
+                $ref: '#/components/schemas/UserBatchUpdateResult'
           description: ''
   /api/v1/users/export_csv/:
     get:
@@ -7409,10 +7870,12 @@ paths:
       responses:
         '200':
           content:
-            application/json:
+            text/csv:
               schema:
-                $ref: '#/components/schemas/UserManagement'
-          description: ''
+                type: string
+                format: binary
+          description: A CSV attachment, not JSON. Documented as such because a generated
+            client that expects a user object here will try to parse a spreadsheet.
   /api/v1/users/import_csv/:
     post:
       operationId: v1_users_import_csv_create
@@ -7438,7 +7901,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserManagement'
+                $ref: '#/components/schemas/UserImportResult'
           description: ''
   /api/v1/workflow/templates/:
     get:
@@ -7975,7 +8438,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApprovalWorkflow'
+                $ref: '#/components/schemas/WorkflowStats'
           description: ''
   /api/v1/workflows/create_from_judgment/:
     post:
@@ -8525,6 +8988,33 @@ components:
         * `APPEAL` - 申诉中
         * `EXCEPTION` - 异常处理
         * `COMPLETED` - 流程完成
+    AuditActionCount:
+      type: object
+      description: One row of `stats.action_distribution` — a `values("action").annotate(count=…)`.
+      properties:
+        action:
+          type: string
+        count:
+          type: integer
+      required:
+      - action
+      - count
+    AuditActionOption:
+      type: object
+      description: |-
+        One entry of `GET /audit-logs/actions/` — `AuditAction.choices` flattened.
+
+        Schema-only, never instantiated. The view returns a list comprehension over
+        `AuditAction.choices`, so `value` is the stored enum member and `label` its
+        human-readable half.
+      properties:
+        value:
+          type: string
+        label:
+          type: string
+      required:
+      - label
+      - value
     AuditLog:
       type: object
       description: Basic audit log serializer for list view.
@@ -8684,6 +9174,44 @@ components:
       - user_details
       - user_display
       - username
+    AuditResourceCount:
+      type: object
+      description: |-
+        One row of `stats.top_resources` — the same shape keyed by resource.
+
+        Kept separate from `AuditActionCountSerializer` rather than generalised to
+        `{name, count}`: the key really is `action` in one and `resource` in the
+        other, and a client reading `name` would get `undefined` from both.
+      properties:
+        resource:
+          type: string
+        count:
+          type: integer
+      required:
+      - count
+      - resource
+    AuditStats:
+      type: object
+      description: |-
+        The dict `AuditLogViewSet.stats` hand-builds.
+
+        Schema-only. `top_resources` is capped at 20 rows by the view;
+        `action_distribution` is not capped, because the action set is an enum.
+      properties:
+        action_distribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditActionCount'
+        top_resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditResourceCount'
+        total_logs:
+          type: integer
+      required:
+      - action_distribution
+      - top_resources
+      - total_logs
     AuditUserDetails:
       type: object
       description: |-
@@ -9777,6 +10305,20 @@ components:
       required:
       - following
       - id
+    FollowToggleResult:
+      type: object
+      description: |-
+        `{"following": true|false}` — the state `toggle` left the edge in.
+
+        Schema-only, never instantiated. Note the collision this documents away:
+        the request body's `following` is the **target user's id**, and the
+        response's `following` is a **boolean** saying whether the edge now exists.
+        Same key, two types, one round trip.
+      properties:
+        following:
+          type: boolean
+      required:
+      - following
     FungibilityClassTotal:
       type: object
       description: |-
@@ -9967,6 +10509,86 @@ components:
       - created_at
       - id
       - statute
+    JudgmentCitationWrite:
+      type: object
+      description: |-
+        Input for `POST /judgment/{id}/citations/`.
+
+        Validates shape only. Whether the article exists, belongs to this tenant
+        and belongs to this cosmology is `StatuteCitationService.resolve`'s
+        business — it is the same question the `conclude` payload asks, and a
+        check written here would cover exactly one of the two callers.
+      properties:
+        statute:
+          type: string
+          format: uuid
+        note:
+          type: string
+          default: ''
+      required:
+      - statute
+    JudgmentQueueCursor:
+      type: object
+      description: |-
+        The envelope `GET /api/v1/judgment/next/` returns.
+
+        Schema-only, never instantiated. This is the response a judgment client
+        hits most, and until this class existed it was documented as a bare
+        `Judgment` — drf-spectacular's fallback to the viewset serializer, which is
+        silent and was wrong. A generated client typed against that would have
+        reached for `verdict` on an object whose top level is a cursor.
+
+        Every field below is nullable or empty when the queue is exhausted: the
+        view builds the payload with `judgment`/`soul`/`ledger` at `None` and the
+        two lists empty, then fills them only once it has a case (see
+        `JudgmentViewSet.next_pending`). `position` is additionally null when
+        `remaining` is 0, because "the Nth of M" has no N when there is nothing
+        left to rule on.
+
+        The cross-app imports here are the same ones `views.py` already makes to
+        build this payload; they are not a new dependency, and keeping the shape
+        beside the other judgment serializers is what makes it possible to check
+        that it still matches.
+      properties:
+        total:
+          type: integer
+        remaining:
+          type: integer
+        skipped:
+          type: integer
+        position:
+          type: integer
+          nullable: true
+        judgment:
+          allOf:
+          - $ref: '#/components/schemas/Judgment'
+          nullable: true
+        soul:
+          allOf:
+          - $ref: '#/components/schemas/Soul'
+          nullable: true
+        ledger:
+          allOf:
+          - $ref: '#/components/schemas/LedgerSummary'
+          nullable: true
+        prior_cycles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reincarnation'
+        realm_options:
+          type: array
+          items:
+            $ref: '#/components/schemas/RealmLocalized'
+      required:
+      - judgment
+      - ledger
+      - position
+      - prior_cycles
+      - realm_options
+      - remaining
+      - skipped
+      - soul
+      - total
     KarmaBucket:
       type: object
       description: |-
@@ -10302,6 +10924,18 @@ components:
       properties:
         refresh:
           type: string
+    MarkAllReadResult:
+      type: object
+      description: |-
+        `{"marked_read": N}` — what `mark_all_read` returns.
+
+        Schema-only, never instantiated. `N` counts rows the update touched, which
+        is the number that were still unread, not the size of the caller's inbox.
+      properties:
+        marked_read:
+          type: integer
+      required:
+      - marked_read
     MemoryResetMechanismEnum:
       enum:
       - MENGPO
@@ -10485,6 +11119,64 @@ components:
           type: string
           maxLength: 200
       required:
+      - id
+      - name
+    MenuTree:
+      type: object
+      description: Recursive tree serializer — includes children and buttons filtered
+        by user permissions.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        path:
+          type: string
+          maxLength: 200
+        icon:
+          type: string
+          maxLength: 50
+        order:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        parent:
+          type: integer
+          nullable: true
+        menu_type:
+          $ref: '#/components/schemas/MenuTypeEnum'
+        permission:
+          type: string
+          description: 权限 codename，如 soul.read、judgment.create
+          maxLength: 100
+        roles: {}
+        is_active:
+          type: boolean
+        visible:
+          type: boolean
+          description: 是否在侧边栏显示
+        cache:
+          type: boolean
+          description: 是否缓存该菜单
+        component:
+          type: string
+          maxLength: 200
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuTree'
+          readOnly: true
+        buttons:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuButton'
+          readOnly: true
+      required:
+      - buttons
+      - children
       - id
       - name
     MenuTypeEnum:
@@ -11285,6 +11977,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WebhookConfig'
+    PasswordResetResult:
+      type: object
+      description: |-
+        `{"password": "..."}` — the generated password `reset_password` returns.
+
+        Schema-only. The plaintext is in the response body because this is the only
+        time it exists; it is never stored and cannot be read back.
+      properties:
+        password:
+          type: string
+      required:
+      - password
     PatchedApprovalNode:
       type: object
       description: |-
@@ -12860,6 +13564,61 @@ components:
       - id
       - realm_code
       - realm_type
+    RealmLocalized:
+      type: object
+      description: |-
+        Serializer that resolves the best-fit name based on Accept-Language header.
+        Adds 'display_name' field with the resolved localized name.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        realm_code:
+          type: string
+          maxLength: 50
+        civilization:
+          $ref: '#/components/schemas/CivilizationEnum'
+        name_local:
+          type: string
+          description: Native/local name
+          maxLength: 255
+        name_zh:
+          type: string
+          description: Simplified Chinese name
+          maxLength: 255
+        name_en:
+          type: string
+          description: English name
+          maxLength: 255
+        name_egy:
+          type: string
+          description: Egyptian name (transliteration or hieroglyphs)
+          maxLength: 255
+        display_name:
+          type: string
+          readOnly: true
+        realm_type:
+          $ref: '#/components/schemas/RealmTypeEnum'
+        tier:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          description: Severity or bliss tier
+        is_eternal:
+          type: boolean
+        memory_reset_mechanism:
+          oneOf:
+          - $ref: '#/components/schemas/MemoryResetMechanismEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+      required:
+      - civilization
+      - display_name
+      - id
+      - name_local
+      - realm_code
+      - realm_type
     RealmTypeEnum:
       enum:
       - HELL
@@ -14129,6 +14888,20 @@ components:
       - is_active
       - role
       - username
+    UserBatchUpdateResult:
+      type: object
+      description: |-
+        `{"updated": N}` — what `batch_activate` and `batch_deactivate` return.
+
+        Schema-only, never instantiated. `updated` is the row count from a single
+        `QuerySet.update()`, so it counts rows the tenant filter actually reached,
+        not the ids the caller sent — a caller passing ids from another tenant gets
+        a smaller number, not an error.
+      properties:
+        updated:
+          type: integer
+      required:
+      - updated
     UserCreate:
       type: object
       description: |-
@@ -14191,6 +14964,24 @@ components:
       - id
       - password
       - username
+    UserImportResult:
+      type: object
+      description: |-
+        `{"created": N, "errors": [...]}` — the CSV import summary.
+
+        Schema-only. `errors` is truncated to the first 50 rows by the view, so an
+        empty list means "no failures" but a 50-long list does **not** mean exactly
+        fifty; `created` is the only exact figure in this body.
+      properties:
+        created:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+      required:
+      - created
+      - errors
     UserManagement:
       type: object
       description: User serializer for list/retrieve operations in user management
@@ -14409,6 +15200,18 @@ components:
             maxLength: 0
       required:
       - id
+    UserRole:
+      type: object
+      description: |-
+        `{"role": "..."}` — the single-role body `own_roles` returns.
+
+        Schema-only. Named for what it is: this endpoint is plural in its URL and
+        singular in its body, because a user carries one role in this system.
+      properties:
+        role:
+          type: string
+      required:
+      - role
     UserRoleEnum:
       enum:
       - ADMIN
@@ -14548,6 +15351,31 @@ components:
       - create_time
       - id
       - url
+    WorkflowStats:
+      type: object
+      description: |-
+        The dict `WorkflowService.get_workflow_stats` builds.
+
+        Schema-only, never instantiated. `pending_nodes` is counted and
+        `completed_nodes` is derived as `total - pending`, so the two always sum to
+        `total_nodes` even for a status neither bucket names — see the note at
+        `apps/workflow/services.py:726`. `progress_percent` is 0-100, not 0-1, and
+        is a float because it is a ratio times 100, not a rounded percentage.
+      properties:
+        total_nodes:
+          type: integer
+        completed_nodes:
+          type: integer
+        pending_nodes:
+          type: integer
+        progress_percent:
+          type: number
+          format: double
+      required:
+      - completed_nodes
+      - pending_nodes
+      - progress_percent
+      - total_nodes
     WorkflowTemplate:
       type: object
       description: |-

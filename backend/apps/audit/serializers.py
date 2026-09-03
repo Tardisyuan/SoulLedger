@@ -74,3 +74,46 @@ class AuditLogDetailSerializer(AuditLogSerializer):
         if obj.changes and isinstance(obj.changes, dict):
             return obj.changes.get("batch_operation", False)
         return False
+
+
+class AuditActionOptionSerializer(serializers.Serializer):
+    """One entry of `GET /audit-logs/actions/` — `AuditAction.choices` flattened.
+
+    Schema-only, never instantiated. The view returns a list comprehension over
+    `AuditAction.choices`, so `value` is the stored enum member and `label` its
+    human-readable half.
+    """
+
+    value = serializers.CharField()
+    label = serializers.CharField()
+
+
+class AuditActionCountSerializer(serializers.Serializer):
+    """One row of `stats.action_distribution` — a `values("action").annotate(count=…)`."""
+
+    action = serializers.CharField()
+    count = serializers.IntegerField()
+
+
+class AuditResourceCountSerializer(serializers.Serializer):
+    """One row of `stats.top_resources` — the same shape keyed by resource.
+
+    Kept separate from `AuditActionCountSerializer` rather than generalised to
+    `{name, count}`: the key really is `action` in one and `resource` in the
+    other, and a client reading `name` would get `undefined` from both.
+    """
+
+    resource = serializers.CharField()
+    count = serializers.IntegerField()
+
+
+class AuditStatsSerializer(serializers.Serializer):
+    """The dict `AuditLogViewSet.stats` hand-builds.
+
+    Schema-only. `top_resources` is capped at 20 rows by the view;
+    `action_distribution` is not capped, because the action set is an enum.
+    """
+
+    action_distribution = AuditActionCountSerializer(many=True)
+    top_resources = AuditResourceCountSerializer(many=True)
+    total_logs = serializers.IntegerField()

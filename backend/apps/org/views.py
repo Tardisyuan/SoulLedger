@@ -1,6 +1,7 @@
 """
 REST views for Organization app.
 """
+from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -58,7 +59,8 @@ class OrganizationViewSet(
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
 
-    @action(detail=False, methods=["get"])
+    @extend_schema(responses=OrganizationSerializer(many=True))
+    @action(detail=False, methods=["get"], pagination_class=None)
     def tree(self, request):
         """Return organization hierarchy as a tree."""
         orgs = self.get_queryset()

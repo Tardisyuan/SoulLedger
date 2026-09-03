@@ -369,3 +369,47 @@ class LogoutRequestSerializer(serializers.Serializer):
     """
 
     refresh = serializers.CharField(required=False)
+
+
+class UserBatchUpdateResultSerializer(serializers.Serializer):
+    """`{"updated": N}` — what `batch_activate` and `batch_deactivate` return.
+
+    Schema-only, never instantiated. `updated` is the row count from a single
+    `QuerySet.update()`, so it counts rows the tenant filter actually reached,
+    not the ids the caller sent — a caller passing ids from another tenant gets
+    a smaller number, not an error.
+    """
+
+    updated = serializers.IntegerField()
+
+
+class UserImportResultSerializer(serializers.Serializer):
+    """`{"created": N, "errors": [...]}` — the CSV import summary.
+
+    Schema-only. `errors` is truncated to the first 50 rows by the view, so an
+    empty list means "no failures" but a 50-long list does **not** mean exactly
+    fifty; `created` is the only exact figure in this body.
+    """
+
+    created = serializers.IntegerField()
+    errors = serializers.ListField(child=serializers.CharField())
+
+
+class UserRoleSerializer(serializers.Serializer):
+    """`{"role": "..."}` — the single-role body `own_roles` returns.
+
+    Schema-only. Named for what it is: this endpoint is plural in its URL and
+    singular in its body, because a user carries one role in this system.
+    """
+
+    role = serializers.CharField()
+
+
+class PasswordResetResultSerializer(serializers.Serializer):
+    """`{"password": "..."}` — the generated password `reset_password` returns.
+
+    Schema-only. The plaintext is in the response body because this is the only
+    time it exists; it is never stored and cannot be read back.
+    """
+
+    password = serializers.CharField()

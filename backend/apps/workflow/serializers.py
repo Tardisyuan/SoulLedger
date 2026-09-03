@@ -430,3 +430,19 @@ class WorkflowAdvanceSerializer(serializers.Serializer):
     """Serializer for manually advancing workflow."""
 
     pass
+
+
+class WorkflowStatsSerializer(serializers.Serializer):
+    """The dict `WorkflowService.get_workflow_stats` builds.
+
+    Schema-only, never instantiated. `pending_nodes` is counted and
+    `completed_nodes` is derived as `total - pending`, so the two always sum to
+    `total_nodes` even for a status neither bucket names — see the note at
+    `apps/workflow/services.py:726`. `progress_percent` is 0-100, not 0-1, and
+    is a float because it is a ratio times 100, not a rounded percentage.
+    """
+
+    total_nodes = serializers.IntegerField()
+    completed_nodes = serializers.IntegerField()
+    pending_nodes = serializers.IntegerField()
+    progress_percent = serializers.FloatField()
