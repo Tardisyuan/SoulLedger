@@ -565,11 +565,9 @@ export class ApiMock {
     this.on("GET", "/judgment/:id/", { ...OPENED_JUDGMENT });
 
     // ── Dispatch ──
-    this.on("GET", "/dispatch/records/", (call) =>
-      call.query.status === "PROPOSED"
-        ? { body: paginated([PROPOSED_DISPATCH]) }
-        : { body: paginated([PROPOSED_DISPATCH, EXECUTED_DISPATCH]) }
-    );
+    this.on("GET", "/dispatch/records/", () => ({
+      body: paginated([PROPOSED_DISPATCH, EXECUTED_DISPATCH]),
+    }));
     // Detail goes through `DispatchRecordSerializer`, which sends everything
     // the list serializer does *and* `reason`, `dispatched_by` and the
     // timestamps. The two fixtures are separate so that a list assertion
@@ -586,6 +584,16 @@ export class ApiMock {
       status: "APPROVED",
       decided_at: "2026-08-13T02:00:00Z",
     });
+    // The approval inbox is its own endpoint, not the list filtered by status:
+    // the list returns both sides of a transfer (`Q(source) | Q(target)`) while
+    // `approve` accepts only the target, so the filtered form put this tenant's
+    // own outgoing proposals in its inbox behind a button that always 403'd.
+    //
+    // Registered *after* `/dispatch/records/:id/` on purpose. `on()` unshifts,
+    // so the last registration wins, and `:id` compiles to `[^/]+`, which
+    // matches the literal segment `proposed` as readily as a uuid. Registered
+    // before, the inbox would be served a single detail object.
+    this.on("GET", "/dispatch/records/proposed/", paginated([PROPOSED_DISPATCH]));
 
     // ── Permissions matrix ──
     this.on("GET", "/perm/permissions/", PERMISSIONS);

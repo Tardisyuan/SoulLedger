@@ -1830,8 +1830,72 @@ paths:
           description: ''
   /api/v1/dispatch/records/history/:
     get:
-      operationId: v1_dispatch_records_history_retrieve
-      description: Get dispatch history for the current tenant.
+      operationId: v1_dispatch_records_history_list
+      description: |-
+        Get dispatch history for the current tenant.
+
+        Paginated for the same reason as its sibling above, and mainly so the
+        two are the same: a history list grows without bound, and two actions
+        on one viewset returning the same serializer through different
+        envelopes is the kind of asymmetry a client author discovers at
+        runtime.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: proposed_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: proposed_before
+        schema:
+          type: string
+          format: date-time
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul_name
+        schema:
+          type: string
+      - in: query
+        name: source_tenant
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - APPROVED
+          - CANCELLED
+          - EXECUTED
+          - PROPOSED
+          - REJECTED
+        description: |-
+          * `PROPOSED` - 待审批
+          * `APPROVED` - 已批准
+          * `REJECTED` - 已拒绝
+          * `EXECUTED` - 已执行
+          * `CANCELLED` - 已取消
+      - in: query
+        name: target_tenant
+        schema:
+          type: integer
       tags:
       - v1
       security:
@@ -1841,12 +1905,86 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DispatchRecord'
+                $ref: '#/components/schemas/PaginatedDispatchRecordListList'
           description: ''
   /api/v1/dispatch/records/proposed/:
     get:
-      operationId: v1_dispatch_records_proposed_retrieve
-      description: Get pending proposals for the current tenant (as target).
+      operationId: v1_dispatch_records_proposed_list
+      description: |-
+        Get pending proposals for the current tenant (as target).
+
+        This is the approval inbox. `list` deliberately returns both sides of a
+        transfer — you want to see your own outgoing proposals — but `approve`
+        refuses anyone who is not the target, so a client that builds its
+        approval queue from `list?status=PROPOSED` shows rows whose Approve
+        button can only ever 403. Which is what `frontend/app/dispatch` did
+        until it was pointed here. The predicate belongs on the server: a
+        client should not have to know its own tenant code to ask "what is
+        waiting on me".
+
+        FIFO on `proposed_at`, against the model's default `-proposed_at`. Two
+        reasons, the second of which is not optional: this is a work queue and
+        the oldest proposal has waited longest (the same argument
+        `JudgmentViewSet._pending_queue` records); and the queryset had no
+        ordering at all, which under pagination means rows can repeat or vanish
+        between pages.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: proposed_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: proposed_before
+        schema:
+          type: string
+          format: date-time
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: soul_name
+        schema:
+          type: string
+      - in: query
+        name: source_tenant
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - APPROVED
+          - CANCELLED
+          - EXECUTED
+          - PROPOSED
+          - REJECTED
+        description: |-
+          * `PROPOSED` - 待审批
+          * `APPROVED` - 已批准
+          * `REJECTED` - 已拒绝
+          * `EXECUTED` - 已执行
+          * `CANCELLED` - 已取消
+      - in: query
+        name: target_tenant
+        schema:
+          type: integer
       tags:
       - v1
       security:
@@ -1856,7 +1994,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DispatchRecord'
+                $ref: '#/components/schemas/PaginatedDispatchRecordListList'
           description: ''
   /api/v1/disposition/:
     get:

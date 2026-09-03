@@ -152,32 +152,55 @@ class TestDispatchProposedHistory:
             status=status_val, tenant=source,
         )
 
-    def test_proposed_shows_pending_for_target(self):
+    def test_proposed_returns_a_paginated_envelope(self):
+        """Both actions page now, so a client can read `count` off either.
+
+        Asserted on its own because the four tests below read `count`, and
+        `len(resp.data)` on an envelope returns the number of *keys* — four —
+        which is truthy, non-zero, and silently wrong. That is what these tests
+        did before the endpoint was paginated.
+        """
         self._create_dispatch(self.tenant_a, self.tenant_b)
         resp = self.client_b.get(f"{BASE}/records/proposed/")
         assert resp.status_code == status.HTTP_200_OK
-        assert len(resp.data) == 1
+        assert set(resp.data) >= {"count", "results"}, (
+            f"expected a pagination envelope, got keys {sorted(resp.data)}"
+        )
+
+    def test_proposed_shows_pending_for_target(self):
+        """This endpoint was always right; nothing was calling it.
+
+        The web client built its approval queue from `list?status=PROPOSED`,
+        which returns both sides of a transfer, while `approve` refuses anyone
+        but the target. So the inbox showed rows whose only possible outcome
+        was a 403. These assertions passed throughout.
+        """
+        self._create_dispatch(self.tenant_a, self.tenant_b)
+        resp = self.client_b.get(f"{BASE}/records/proposed/")
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["count"] == 1
 
     def test_proposed_excludes_approved(self):
         self._create_dispatch(self.tenant_a, self.tenant_b, "APPROVED")
         resp = self.client_b.get(f"{BASE}/records/proposed/")
-        assert len(resp.data) == 0
+        assert resp.data["count"] == 0
 
     def test_proposed_empty_for_source(self):
+        """The source tenant sees nothing here — the point of the endpoint."""
         self._create_dispatch(self.tenant_a, self.tenant_b)
         resp = self.client_a.get(f"{BASE}/records/proposed/")
-        assert len(resp.data) == 0
+        assert resp.data["count"] == 0
 
     def test_history_shows_source_records(self):
         self._create_dispatch(self.tenant_a, self.tenant_b)
         resp = self.client_a.get(f"{BASE}/records/history/")
         assert resp.status_code == status.HTTP_200_OK
-        assert len(resp.data) == 1
+        assert resp.data["count"] == 1
 
     def test_history_excludes_other_tenants(self):
         self._create_dispatch(self.tenant_a, self.tenant_b)
         resp = self.client_b.get(f"{BASE}/records/history/")
-        assert len(resp.data) == 0
+        assert resp.data["count"] == 0
 
 
 @pytest.mark.django_db

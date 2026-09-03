@@ -2,6 +2,7 @@
 REST views for dispatch app.
 """
 from django.db import IntegrityError
+from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -182,10 +183,27 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
         headers = self.get_success_headers(output_serializer.data)
         return Response(output_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+    @extend_schema(responses=DispatchRecordListSerializer(many=True))
     @action(detail=False, methods=["get"])
     def proposed(self, request):
         """
         Get pending proposals for the current tenant (as target).
+
+        This is the approval inbox. `list` deliberately returns both sides of a
+        transfer — you want to see your own outgoing proposals — but `approve`
+        refuses anyone who is not the target, so a client that builds its
+        approval queue from `list?status=PROPOSED` shows rows whose Approve
+        button can only ever 403. Which is what `frontend/app/dispatch` did
+        until it was pointed here. The predicate belongs on the server: a
+        client should not have to know its own tenant code to ask "what is
+        waiting on me".
+
+        FIFO on `proposed_at`, against the model's default `-proposed_at`. Two
+        reasons, the second of which is not optional: this is a work queue and
+        the oldest proposal has waited longest (the same argument
+        `JudgmentViewSet._pending_queue` records); and the queryset had no
+        ordering at all, which under pagination means rows can repeat or vanish
+        between pages.
         """
         tenant = getattr(request, "tenant", None)
         if not tenant:
@@ -197,15 +215,26 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             target_tenant=tenant,
             status=DispatchStatus.PROPOSED,
             is_deleted=False,
-        ).select_related("source_tenant", "soul", "dispatched_by")
+        ).select_related("source_tenant", "soul", "dispatched_by").order_by("proposed_at")
 
-        serializer = DispatchRecordListSerializer(proposals, many=True)
-        return Response(serializer.data)
+        page = self.paginate_queryset(proposals)
+        if page is not None:
+            return self.get_paginated_response(
+                DispatchRecordListSerializer(page, many=True).data
+            )
+        return Response(DispatchRecordListSerializer(proposals, many=True).data)
 
+    @extend_schema(responses=DispatchRecordListSerializer(many=True))
     @action(detail=False, methods=["get"])
     def history(self, request):
         """
         Get dispatch history for the current tenant.
+
+        Paginated for the same reason as its sibling above, and mainly so the
+        two are the same: a history list grows without bound, and two actions
+        on one viewset returning the same serializer through different
+        envelopes is the kind of asymmetry a client author discovers at
+        runtime.
         """
         tenant = getattr(request, "tenant", None)
         if not tenant:
@@ -218,8 +247,12 @@ class DispatchRecordViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, AuditUs
             is_deleted=False,
         ).select_related("target_tenant", "soul").order_by("-proposed_at")
 
-        serializer = DispatchRecordListSerializer(history, many=True)
-        return Response(serializer.data)
+        page = self.paginate_queryset(history)
+        if page is not None:
+            return self.get_paginated_response(
+                DispatchRecordListSerializer(page, many=True).data
+            )
+        return Response(DispatchRecordListSerializer(history, many=True).data)
 
     @action(detail=True, methods=["post"])
     def approve(self, request, pk=None):
