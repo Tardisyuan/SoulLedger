@@ -48,14 +48,25 @@ def set_current_tenant(tenant):
 ---
 
 ### 2. 跨租户权限模型 (CrossTenantPermission)
-**状态**: ✅ 完成
+**状态**: ❌ 已删除(2026-09-03)
+
+「✅ 完成」曾经写在这里,而这个模型从落地那天起就**零读取者、零写入者**:
+全仓没有一个文件 import 过它,唯一的外部提及是 `settings.py` 把它列进
+INSTALLED_APPS。115 上 `permissions_cross_tenant` 行数为 0。
+
+它真正的危害是误导 —— 名字和 `apps/perm`、`apps/core/permissions.py` 撞车,
+而且模型本身已经表达了 `(source_tenant, target_tenant, permission_type)`,
+一个来加固跨租户调令的人会找到它,并在一张没人执行的表上继续建。
+跨租户调度授权的实际承载者是 `apps/dispatch`(`DispatchRecord` 与
+`CrossTenantJudgment`)。
 
 **目的**: 支持三文明（中国/欧洲/埃及）之间的灵魂转移和审判授权
 
-**创建文件**:
-- `apps/permissions/models.py` - 新增 `CrossTenantPermission` 模型
-- `apps/permissions/migrations/0001_initial.py` - 迁移文件
-- `apps/permissions/apps.py` - App 配置
+**已删除的文件**(原为):
+- ~~`apps/permissions/models.py`~~ - `CrossTenantPermission` 模型
+- ~~`apps/permissions/migrations/0001_initial.py`~~
+- ~~`apps/permissions/apps.py`~~
+表由 `apps/tenants/migrations/0009_drop_dead_cross_tenant_permission_table.py` 落表。
 
 **模型设计**:
 ```python
@@ -115,7 +126,9 @@ class RolePermission(AuditUserFields):
         help_text='权限生效条件，如 {"current_state": ["PENDING", "APPEALING"]}'
     )
     data_scope = models.ForeignKey(
-        'permissions.DataScope',
+        # 计划里写的是 'permissions.DataScope';实际落地的是 apps/perm 里的
+        # DataScope 类(apps/perm/models.py:171 直接引用类对象)。
+        DataScope,
         on_delete=models.SET_NULL,
         null=True, blank=True
     )
@@ -128,8 +141,9 @@ class RolePermission(AuditUserFields):
 ### 5. API 权限装饰器
 **状态**: ✅ 完成
 
-**创建文件**:
-- `apps/permissions/decorators.py`
+**已删除的文件**(原为):
+- ~~`apps/permissions/decorators.py`~~ —— 一个 3 行的透传,
+  转给 `apps.perm.checker.check_permission`,包外零调用者。
 
 **实现**:
 ```python
@@ -218,12 +232,18 @@ const mutation = useMutation({
 
 ## 迁移应用
 
-```bash
-# 应用新迁移
-python manage.py migrate permissions
+~~应用新迁移~~ —— `apps.permissions` 已于 2026-09-03 删除。
 
-# 验证安装
-python -c "from apps.permissions.models import CrossTenantPermission, DataScope; print('OK')"
+上面这段验证命令**在被删之前就已经是坏的**:`DataScope` 从来不在
+`apps.permissions.models` 里,它住在 `apps/perm/models.py`。照着跑得到的是
+
+    ImportError: cannot import name 'DataScope' from 'apps.permissions.models'
+
+—— 一句从没有人执行过的「验证安装」。活着的权限 app 是 `apps/perm`:
+
+```bash
+python manage.py migrate perm
+python -c "from apps.perm.models import DataScope; print('OK')"
 ```
 
 ---

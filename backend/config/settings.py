@@ -75,7 +75,6 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.menus",
     "apps.perm",
-    "apps.permissions",
     "apps.notifications",
     "apps.dispatch",
     "apps.org",
