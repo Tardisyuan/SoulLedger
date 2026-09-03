@@ -19,11 +19,17 @@ class Organization(AuditUserFields):
     `tenant` FK, added alongside `org.read`/`org.manage` (see
     OrganizationViewSet in apps/org/views.py). Nullable, same pattern as
     Soul/Realm/Actor/Judgment, and backfilled by this app's own data migration
-    using the same CIV_TO_TENANT mapping (CHINESE -> CN_DIYU, EUROPEAN ->
-    EU_HEAVEN_HELL, EGYPTIAN -> EG_DUAT) that
-    apps/tenants/management/commands/migrate_to_multitenant.py uses for the
-    other models — that command itself never listed Organization, so the
-    backfill lives in the migration here instead of being folded into it.
+    using the civilization->tenant mapping that
+    apps/souls/models.py::CIVILIZATION_TENANT defines. The migration freezes
+    its own three-entry copy (CHINESE -> CN_DIYU, EUROPEAN -> EU_HEAVEN_HELL,
+    EGYPTIAN -> EG_DUAT) because a data migration must not drift with the
+    model; GREEK -> GR_HADES came later and no Organization predates it.
+
+    This used to cite apps/tenants/management/commands/migrate_to_multitenant.py
+    as the mapping's source. That command was deleted on 2026-09-03 — it read
+    Soul.civilization, a field souls/0004_remove_soul_civilization dropped, so
+    it could not run at all — and it never listed Organization either, which is
+    why the backfill lives in the migration here.
     With the field present, TenantQuerySetMixin's `hasattr(model, "tenant")`
     guard stops skipping this model and non-ADMIN roles are scoped to their
     own tenant's org tree.

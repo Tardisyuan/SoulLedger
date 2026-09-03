@@ -1809,9 +1809,10 @@ export interface paths {
          *        tenant") and both must hold, same pairing as every other enforced
          *        viewset.
          *     2. `Organization` now carries a `tenant` FK (nullable, backfilled from
-         *        `category` via the same CIV_TO_TENANT mapping
-         *        `apps/tenants/management/commands/migrate_to_multitenant.py` uses for
-         *        other models — see apps/org/models.py and the org migrations). With the
+         *        `category` through the civilization→tenant mapping that
+         *        `apps/souls/models.py::CIVILIZATION_TENANT` defines and
+         *        `apps/org/migrations/0004_backfill_organization_tenant.py` applies).
+         *        With the
          *        field present, `TenantQuerySetMixin.get_queryset()`'s `hasattr` guard no
          *        longer skips filtering, so non-ADMIN roles are scoped to their own
          *        tenant's org tree like everywhere else. `TenantCreateMixin` is added so
@@ -1837,9 +1838,10 @@ export interface paths {
          *        tenant") and both must hold, same pairing as every other enforced
          *        viewset.
          *     2. `Organization` now carries a `tenant` FK (nullable, backfilled from
-         *        `category` via the same CIV_TO_TENANT mapping
-         *        `apps/tenants/management/commands/migrate_to_multitenant.py` uses for
-         *        other models — see apps/org/models.py and the org migrations). With the
+         *        `category` through the civilization→tenant mapping that
+         *        `apps/souls/models.py::CIVILIZATION_TENANT` defines and
+         *        `apps/org/migrations/0004_backfill_organization_tenant.py` applies).
+         *        With the
          *        field present, `TenantQuerySetMixin.get_queryset()`'s `hasattr` guard no
          *        longer skips filtering, so non-ADMIN roles are scoped to their own
          *        tenant's org tree like everywhere else. `TenantCreateMixin` is added so
@@ -1877,9 +1879,10 @@ export interface paths {
          *        tenant") and both must hold, same pairing as every other enforced
          *        viewset.
          *     2. `Organization` now carries a `tenant` FK (nullable, backfilled from
-         *        `category` via the same CIV_TO_TENANT mapping
-         *        `apps/tenants/management/commands/migrate_to_multitenant.py` uses for
-         *        other models — see apps/org/models.py and the org migrations). With the
+         *        `category` through the civilization→tenant mapping that
+         *        `apps/souls/models.py::CIVILIZATION_TENANT` defines and
+         *        `apps/org/migrations/0004_backfill_organization_tenant.py` applies).
+         *        With the
          *        field present, `TenantQuerySetMixin.get_queryset()`'s `hasattr` guard no
          *        longer skips filtering, so non-ADMIN roles are scoped to their own
          *        tenant's org tree like everywhere else. `TenantCreateMixin` is added so
@@ -1904,9 +1907,10 @@ export interface paths {
          *        tenant") and both must hold, same pairing as every other enforced
          *        viewset.
          *     2. `Organization` now carries a `tenant` FK (nullable, backfilled from
-         *        `category` via the same CIV_TO_TENANT mapping
-         *        `apps/tenants/management/commands/migrate_to_multitenant.py` uses for
-         *        other models — see apps/org/models.py and the org migrations). With the
+         *        `category` through the civilization→tenant mapping that
+         *        `apps/souls/models.py::CIVILIZATION_TENANT` defines and
+         *        `apps/org/migrations/0004_backfill_organization_tenant.py` applies).
+         *        With the
          *        field present, `TenantQuerySetMixin.get_queryset()`'s `hasattr` guard no
          *        longer skips filtering, so non-ADMIN roles are scoped to their own
          *        tenant's org tree like everywhere else. `TenantCreateMixin` is added so
@@ -1932,9 +1936,10 @@ export interface paths {
          *        tenant") and both must hold, same pairing as every other enforced
          *        viewset.
          *     2. `Organization` now carries a `tenant` FK (nullable, backfilled from
-         *        `category` via the same CIV_TO_TENANT mapping
-         *        `apps/tenants/management/commands/migrate_to_multitenant.py` uses for
-         *        other models — see apps/org/models.py and the org migrations). With the
+         *        `category` through the civilization→tenant mapping that
+         *        `apps/souls/models.py::CIVILIZATION_TENANT` defines and
+         *        `apps/org/migrations/0004_backfill_organization_tenant.py` applies).
+         *        With the
          *        field present, `TenantQuerySetMixin.get_queryset()`'s `hasattr` guard no
          *        longer skips filtering, so non-ADMIN roles are scoped to their own
          *        tenant's org tree like everywhere else. `TenantCreateMixin` is added so
@@ -1961,9 +1966,10 @@ export interface paths {
          *        tenant") and both must hold, same pairing as every other enforced
          *        viewset.
          *     2. `Organization` now carries a `tenant` FK (nullable, backfilled from
-         *        `category` via the same CIV_TO_TENANT mapping
-         *        `apps/tenants/management/commands/migrate_to_multitenant.py` uses for
-         *        other models — see apps/org/models.py and the org migrations). With the
+         *        `category` through the civilization→tenant mapping that
+         *        `apps/souls/models.py::CIVILIZATION_TENANT` defines and
+         *        `apps/org/migrations/0004_backfill_organization_tenant.py` applies).
+         *        With the
          *        field present, `TenantQuerySetMixin.get_queryset()`'s `hasattr` guard no
          *        longer skips filtering, so non-ADMIN roles are scoped to their own
          *        tenant's org tree like everywhere else. `TenantCreateMixin` is added so

@@ -13,6 +13,19 @@ from apps.org.models import Organization
 from apps.org.serializers import OrganizationSerializer
 
 
+# The docstring below is published verbatim as the description of all six
+# `/api/v1/organizations/` operations, so it names only files that exist.
+#
+# It used to cite `apps/tenants/management/commands/migrate_to_multitenant.py`
+# as the authority on the civilization->tenant backfill. That command was
+# deleted on 2026-09-03: it read `Soul.civilization`, which
+# `souls/0004_remove_soul_civilization` dropped on 2026-05-08, so it could not
+# run against any database this repository produces. It also kept a
+# hand-written three-key tenant dict next to the imported four-key
+# `CIVILIZATION_TENANT`, so it would have raised `KeyError: 'GR_HADES'` on the
+# fourth iteration even with the field restored -- and it had no
+# `transaction.atomic`, so it would have committed three civilizations' worth
+# of updates before doing so.
 class OrganizationViewSet(
     CodenameViewSetMixin, TenantQuerySetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet
 ):
@@ -31,9 +44,10 @@ class OrganizationViewSet(
        tenant") and both must hold, same pairing as every other enforced
        viewset.
     2. `Organization` now carries a `tenant` FK (nullable, backfilled from
-       `category` via the same CIV_TO_TENANT mapping
-       `apps/tenants/management/commands/migrate_to_multitenant.py` uses for
-       other models — see apps/org/models.py and the org migrations). With the
+       `category` through the civilization→tenant mapping that
+       `apps/souls/models.py::CIVILIZATION_TENANT` defines and
+       `apps/org/migrations/0004_backfill_organization_tenant.py` applies).
+       With the
        field present, `TenantQuerySetMixin.get_queryset()`'s `hasattr` guard no
        longer skips filtering, so non-ADMIN roles are scoped to their own
        tenant's org tree like everywhere else. `TenantCreateMixin` is added so
