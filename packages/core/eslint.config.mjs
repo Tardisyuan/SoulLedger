@@ -71,6 +71,38 @@ export default [
       // `lib`. ESLint has no idea which globals are allowed here, so it would
       // report `WebSocket` and miss `document` — exactly backwards.
       "no-undef": "off",
+      // No build-time environment variables in a platform-independent package.
+      //
+      // WHY LINT AND NOT THE TYPE BOUNDARY. The `lib: ["ES2020"]` narrowing
+      // above is what keeps `document` and `localStorage` out, and the header
+      // of this file explains why that job belongs to tsc. It cannot do this
+      // one: `process.env` is not a DOM global, so the "no DOM" boundary had
+      // nothing to say about it, and three modules read
+      // `process.env.NEXT_PUBLIC_API_URL` — a *Next.js* variable — with a
+      // `http://localhost:8000` fallback. Expo defines no `NEXT_PUBLIC_*` and
+      // Tauri reads `import.meta.env.VITE_*`, so both would have taken that
+      // fallback in silence, and on a phone `localhost` is the phone.
+      //
+      // A host capability reaches this package through `PlatformAdapter`. The
+      // API base URL is one, so it is a port (`baseUrl`), and the web build
+      // supplies `NEXT_PUBLIC_API_URL` to it from `frontend/lib/platform/web.ts`.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "MemberExpression[object.name='process'][property.name='env']",
+          message:
+            "`process.env` is a host concern. @soulledger/core must not read " +
+            "build-time environment variables — Expo and Tauri do not define " +
+            "the same ones, and the fallback fails silently. Add a field to " +
+            "PlatformAdapter (src/platform/types.ts) and let each host supply it.",
+        },
+        {
+          selector: "MetaProperty[meta.name='import'][property.name='meta']",
+          message:
+            "`import.meta.env` is a bundler-specific host concern, for the " +
+            "same reason as `process.env`. Use a PlatformAdapter field.",
+        },
+      ],
     },
   },
 ];

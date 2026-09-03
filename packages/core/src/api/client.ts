@@ -2,6 +2,7 @@ import axios from "axios";
 import {
   ACCESS_TOKEN_KEY,
   getAccessToken,
+  getApiBaseUrl,
   getRefreshToken,
   REFRESH_TOKEN_KEY,
   getTenantId,
@@ -13,8 +14,27 @@ import {
 // import cycle with users.ts (which imports `api` from here as a value).
 import type { PaginatedResponse } from "./users";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-export const API_BASE = API_BASE_URL;
+/**
+ * Where the API lives, resolved per call rather than captured at import.
+ *
+ * This was `process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"`
+ * at module scope — a Next.js build-time variable, read from a package that
+ * declares itself platform-independent. Expo defines no `NEXT_PUBLIC_*` and a
+ * Tauri webview reads `import.meta.env.VITE_*`, so both would have taken the
+ * localhost fallback in silence, and on a phone `localhost` is the phone. It
+ * is a host capability, so it is a port: `PlatformAdapter.baseUrl`.
+ *
+ * Module scope was the mechanical half of the problem: the adapter is
+ * installed after this module is evaluated, so anything captured here
+ * predates it. Hence a call, and hence `baseURL` set in the interceptor
+ * below rather than on `axios.create`.
+ *
+ * `API_BASE` is gone rather than reassigned. It was a string, and a value
+ * resolved per call cannot be one; re-exporting `getApiBaseUrl` under the old
+ * name would have kept every call site compiling while changing what it
+ * returns.
+ */
+export { getApiBaseUrl };
 
 /**
  * Rows per page. Mirrors DRF's REST_FRAMEWORK["PAGE_SIZE"] in
@@ -72,12 +92,12 @@ interface TokenRefreshResponse {
 export { getAccessToken };
 
 export const api = axios.create({
-  baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
 });
 
 // Add JWT token and tenant ID to every request
 api.interceptors.request.use((config) => {
+  config.baseURL = getApiBaseUrl();
   const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -145,7 +165,7 @@ export async function rotateRefreshToken(refresh: string): Promise<string> {
   // refresh will present an already-blacklisted token and the user gets
   // silently booted to /login.
   const { data } = await axios.post<TokenRefreshResponse>(
-    `${API_BASE_URL}/auth/refresh/`,
+    `${getApiBaseUrl()}/auth/refresh/`,
     { refresh }
   );
   // THE ACCESS TOKEN DOES NOT GO IN THE PERSISTENT STORE.
@@ -218,15 +238,16 @@ api.interceptors.response.use(
  */
 export async function fetchAllPages<T>(url: string, params: Record<string, string> = {}): Promise<T[]> {
   const results: T[] = [];
-  let nextUrl: string | null = `${API_BASE}${url}?${new URLSearchParams(params)}`;
+  const base = getApiBaseUrl();
+  let nextUrl: string | null = `${base}${url}?${new URLSearchParams(params)}`;
   while (nextUrl) {
     const parsed: URL = new URL(nextUrl);
     const searchParams: Record<string, string> = {};
     parsed.searchParams.forEach((v: string, k: string) => { searchParams[k] = v; });
-    const relativePath: string = nextUrl.replace(API_BASE, "");
+    const relativePath: string = nextUrl.replace(base, "");
     const resp = await api.get<PaginatedResponse<T>>(relativePath, { params: searchParams });
     results.push(...resp.data.results);
-    nextUrl = resp.data.next ? (resp.data.next.startsWith("http") ? resp.data.next : `${API_BASE}${resp.data.next}`) : null;
+    nextUrl = resp.data.next ? (resp.data.next.startsWith("http") ? resp.data.next : `${base}${resp.data.next}`) : null;
   }
   return results;
 }

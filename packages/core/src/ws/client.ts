@@ -8,7 +8,7 @@
 /* The access token is read through the shared port. This file used to carry
  * its own copy of the reader and its own paraphrase of the warning that goes
  * with it; `../platform/index.ts` now holds one of each. */
-import { getAccessToken } from "../platform/index";
+import { getAccessToken, getWebSocketUrl } from "../platform/index";
 
 
 export type WSStatus = "connecting" | "connected" | "disconnected" | "reconnecting" | "failed";
@@ -34,10 +34,7 @@ export interface WSClientOptions {
   onPermissionsRefreshed?: (permissions: string[]) => void;
 }
 
-function getWebSocketUrl(): string {
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-  return apiBase.replace(/^http/, "ws").replace("/api/v1", "") + "/ws/notifications/";
-}
+
 
 
 export class WSClient {

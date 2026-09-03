@@ -107,6 +107,13 @@ const persistent: KeyValueStore = {
 export const webPlatform: PlatformAdapter = {
   session,
   persistent,
+  // The one place `NEXT_PUBLIC_API_URL` is read. It is a Next.js build-time
+  // variable, so it belongs to this host and not to `@soulledger/core`, which
+  // read it directly in three modules and fell back to localhost when it was
+  // absent — silently, in any host that is not Next. `packages/core`'s eslint
+  // config now refuses `process.env` outright, so the fallback cannot come
+  // back by accident.
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
   onSessionSuspend(handler) {
     // `beforeunload` is this platform's name for "the client is going away".
     // It is the only such event a browser has that fires early enough to send
