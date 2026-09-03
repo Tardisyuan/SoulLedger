@@ -117,7 +117,15 @@ class MenuViewSet(AuditUserViewSetMixin, CodenameViewSetMixin, viewsets.ModelVie
                 status=status.HTTP_403_FORBIDDEN
             )
         menus = Menu.objects.filter(parent__isnull=True).order_by("order")
-        serializer = MenuSerializer(menus, many=True)
+        # With no context, `MenuSerializer._caller()` finds no user and both
+        # `get_children` and `get_buttons` fail closed — so this endpoint
+        # returned every menu with empty children and empty buttons, which a
+        # client cannot tell apart from a menu that genuinely has neither.
+        # The two other call sites (`tree` below, and the recursive one in
+        # `get_children`) always passed it.
+        serializer = MenuSerializer(
+            menus, many=True, context=self.get_serializer_context()
+        )
         return Response(serializer.data)
 
     @action(detail=False, methods=["get"], url_path="tree")
