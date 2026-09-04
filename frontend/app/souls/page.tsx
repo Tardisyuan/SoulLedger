@@ -17,6 +17,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { fieldControl } from "@/src/components/ui/Field";
+import { soulStateBadgeClass } from "@/src/lib/soulStateBadge";
 
 /**
  * ⊘ (red) for any ERROR-severity date problem — either the soul's own
@@ -46,17 +47,8 @@ function dateProblemMarker(soul: SoulListItem): { glyph: string; className: stri
   return null;
 }
 
-const STATE_COLORS: Record<string, string> = {
-  ALIVE: "bg-[hsl(var(--color-status-alive)/0.1)] text-[hsl(var(--color-status-alive))]",
-  JUDGING: "bg-[hsl(var(--color-status-judging)/0.1)] text-[hsl(var(--color-status-judging))]",
-  DISPOSED: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
-  REINCARNATING: "bg-[hsl(var(--color-status-reincarnating)/0.1)] text-[hsl(var(--color-status-reincarnating))]",
-  LOST: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
-  SETTLED: "bg-[hsl(var(--color-status-settled)/0.1)] text-[hsl(var(--color-status-settled))]",
-};
-
 export default function SoulsPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [page, setPage] = useState(1);
   const [stateFilter, setStateFilter] = useState("");
   const [civilizationFilter, setCivilizationFilter] = useState("");
@@ -306,13 +298,15 @@ export default function SoulsPage() {
               <DomainEnum namespace="souls.civilizations" value={soul.civilization} />
             </td>
             <td className="px-4 py-3">
-              {/* STATE_COLORS keeps its own tints: these are soul-lifecycle
-                  tokens (`--color-status-alive` / `-judging` / `-settled`),
-                  not the system-feedback four, and `Badge`'s tone table is
-                  the feedback layer. Only the geometry moves. */}
+              {/* The lifecycle table keeps its own tints: these are
+                  soul-lifecycle tokens (`--color-status-alive` / `-judging` /
+                  `-settled` …), not the system-feedback four, and `Badge`'s
+                  tone table is the feedback layer. Only the geometry moves.
+                  The table itself is src/lib/soulStateBadge.ts — it was two
+                  byte-identical copies, one here and one on the detail page. */}
               <Badge
                 title={soul.current_state}
-                className={STATE_COLORS[soul.current_state] ?? "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]"}
+                className={soulStateBadgeClass(soul.current_state)}
               >
                 {resolveEnumDisplay(t, "souls.states", soul.current_state).label ?? t("common.value.unrecorded")}
               </Badge>
@@ -342,7 +336,7 @@ export default function SoulsPage() {
             {showsDeathColumn && (
               /* 02 档：日期是元数据，不是正文。 */
               <td className="px-4 py-3 text-02 text-[hsl(var(--color-ink-muted))]">
-                <DomainText value={formatHistoricalDate(soul.death_date)} />
+                <DomainText value={formatHistoricalDate(soul.death_date, locale)} />
               </td>
             )}
             <td className="px-4 py-3">

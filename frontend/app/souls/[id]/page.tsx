@@ -36,24 +36,16 @@ import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatHistoricalDate } from "@/lib/utils";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { soulStateBadgeClass } from "@/src/lib/soulStateBadge";
 
 /** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
 const BADGE_SHAPE = "px-2 py-1 text-01";
-
-const STATE_COLORS: Record<string, string> = {
-  ALIVE: "bg-[hsl(var(--color-status-alive)/0.1)] text-[hsl(var(--color-status-alive))]",
-  JUDGING: "bg-[hsl(var(--color-status-judging)/0.1)] text-[hsl(var(--color-status-judging))]",
-  DISPOSED: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
-  REINCARNATING: "bg-[hsl(var(--color-status-reincarnating)/0.1)] text-[hsl(var(--color-status-reincarnating))]",
-  LOST: "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]",
-  SETTLED: "bg-[hsl(var(--color-status-settled)/0.1)] text-[hsl(var(--color-status-settled))]",
-};
 
 export default function SoulDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, locale } = useI18n();
   const { showToast } = useToast();
   // messages/*.json is out of scope for this change (see task boundary) — new
   // copy ships as a code-level fallback until an i18n pass adds the real keys.
@@ -275,8 +267,8 @@ export default function SoulDetailPage() {
   // for its current identity. death_date is the most recent life's death
   // (null while alive), so a single trailing "—" reads as "ongoing" rather
   // than as a second empty placeholder.
-  const birthDisplay = formatHistoricalDate(soul?.birth_date);
-  const deathDisplay = formatHistoricalDate(soul?.death_date);
+  const birthDisplay = formatHistoricalDate(soul?.birth_date, locale);
+  const deathDisplay = formatHistoricalDate(soul?.death_date, locale);
   const dateRangeText = birthDisplay
     ? deathDisplay
       ? `${birthDisplay} — ${deathDisplay}`
@@ -307,7 +299,7 @@ export default function SoulDetailPage() {
           枚举现在只住在 `title` 里 —— 排查的人看得见,读页面的人看不见。 */}
       <span
         title={soul?.current_state}
-        className={`${BADGE_SHAPE} ${STATE_COLORS[soul?.current_state || "ALIVE"]}`}
+        className={`${BADGE_SHAPE} ${soulStateBadgeClass(soul?.current_state)}`}
       >
         {resolveEnumDisplay(t, "souls.states", soul?.current_state).label ?? t("common.value.unrecorded")}
       </span>
