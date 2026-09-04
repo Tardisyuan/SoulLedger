@@ -154,6 +154,53 @@ export type SessionSuspendSubscriber = (
 ) => () => void;
 
 /**
+ * One request, delivered on the way out — after the point where an ordinary
+ * one is abandoned.
+ *
+ * WHY THIS EXISTS. `useJudgmentQueue`'s terminal flush called `judgmentApi
+ * .conclude(...)`, which is axios, which is XHR. **A document that unloads
+ * aborts its in-flight XHRs.** So a tab closed inside the undo window issued a
+ * request that was cancelled by the very event that triggered it — and, because
+ * the flush cleared the persisted record first, there was nothing left on disk
+ * for the next session to recover either. The verdict was lost twice over, in
+ * silence, and no test could see it: jsdom has no unload, and the mock resolved.
+ *
+ * NOT `sendBeacon`, AND THIS IS THE WHOLE REASON THE PORT HAS THIS SHAPE.
+ * `navigator.sendBeacon` is the API this problem is usually named after, and it
+ * cannot be used here: it sends no author-defined headers, and this API takes
+ * its credential in `Authorization: Bearer` (`api/client.ts:103`). A beacon
+ * would arrive unauthenticated and be refused — a delivery mechanism that
+ * reliably fails is worse than none, because it looks like one that works.
+ * `fetch(..., { keepalive: true })` carries headers and outlives the document,
+ * so that is what the web adapter uses; the 64KB body limit it comes with is
+ * not a constraint for a verdict.
+ *
+ * THE HOST GETS A FINISHED REQUEST, not a path and a payload. The URL, the
+ * bearer token and the JSON body are assembled in this package, where the API
+ * contract already lives, so a host cannot get the credential wrong and there
+ * is no second place that knows how this app authenticates. The host supplies
+ * only the platform's answer to "send this even though we are dying".
+ *
+ * THE RETURN VALUE IS `accepted`, NOT `delivered`, and the difference is the
+ * point: nothing on this path can observe a response — the document is gone
+ * before one arrives. `true` means the host handed it to the platform, and the
+ * caller must treat that as *may have arrived*, never as *did*. That
+ * uncertainty is why the record stays on disk with a stamp and why the next
+ * session asks the server what actually happened, rather than assuming either
+ * way.
+ *
+ * The default returns `false`: a host that has installed no adapter, and one
+ * running under a server render, genuinely cannot deliver anything. Saying so
+ * lets the caller keep the record instead of dropping it against a promise
+ * nobody kept.
+ */
+export type TerminalDelivery = (request: {
+  url: string;
+  headers: Record<string, string>;
+  body: string;
+}) => boolean;
+
+/**
  * Run `handler` when a suspended session comes back; returns an unsubscribe.
  *
  * WHY THIS EXISTS AT ALL. `onSessionSuspend` had no counterpart, so nothing
@@ -346,6 +393,9 @@ export interface PlatformAdapter {
   onSessionResume: SessionResumeSubscriber;
   /** Show the operator a transient message. See `Notifier`. */
   notify: Notifier;
+  /** Deliver one request while the session is being torn down. See
+   *  `TerminalDelivery` — the default returns `false`, which is honest. */
+  deliverOnExit: TerminalDelivery;
   /**
    * Where the API lives, e.g. `https://api.example.com/api/v1`. No trailing slash.
    *

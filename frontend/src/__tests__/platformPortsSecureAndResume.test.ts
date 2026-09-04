@@ -58,6 +58,7 @@ function probeAdapter() {
     onSessionSuspend: () => () => {},
     onSessionResume: () => () => {},
     notify: () => {},
+    deliverOnExit: () => false,
     baseUrl: "http://example.test/api/v1",
   };
   return { adapter, session, persistent, secure };

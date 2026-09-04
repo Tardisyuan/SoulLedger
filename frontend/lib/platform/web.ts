@@ -237,6 +237,41 @@ export const webPlatform: PlatformAdapter = {
     // before they went through this port, and behaviour there must not change.
     showToast(renderNotifyMessage(message), kind, durationMs);
   },
+  deliverOnExit({ url, headers, body }) {
+    // `fetch` with `keepalive`, NOT `navigator.sendBeacon`, and the reason is
+    // the `Authorization` header — see `TerminalDelivery` in the package. A
+    // beacon cannot carry one, so it would arrive unauthenticated and be
+    // refused, every time, invisibly.
+    //
+    // `keepalive` is what makes this outlive the document: the request is
+    // handed to the network stack and detached from the page's lifetime, so
+    // unloading no longer aborts it the way it aborts the XHR axios uses.
+    //
+    // NOTHING IS AWAITED, and nothing can be. The returned promise resolves
+    // after this document is gone; there is no listener left to run a `.then`.
+    // `.catch(() => {})` is attached only so a rejection after teardown is not
+    // an unhandled rejection — it is not a place to report anything, because
+    // there is nobody to report to.
+    //
+    // `true` therefore means "the platform accepted it", which is the whole of
+    // what this host can honestly claim. The caller keeps its record on disk
+    // regardless and the next session asks the server what really happened.
+    if (typeof fetch === "undefined") return false;
+    try {
+      void fetch(url, {
+        method: "POST",
+        keepalive: true,
+        headers,
+        body,
+      }).catch(() => {});
+      return true;
+    } catch {
+      // A synchronous throw here is the keepalive quota (64KB across all
+      // in-flight keepalive requests) or a malformed URL. Either way the
+      // request was not accepted, and saying so keeps the record.
+      return false;
+    }
+  },
   onUnauthorized() {
     // The one line in the old `lib/api/client.ts` that assumed a browser with a
     // URL bar. A native client resets its navigator here instead.

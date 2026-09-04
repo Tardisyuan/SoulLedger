@@ -770,6 +770,8 @@
       "undo_scope_note": "Sheemtet khemu em {{seconds}} at — nen hab, nen wetep. Em-khet hab, shabu er wat en heka-sesh en neb-per.",
       "commit_error": "Sheemtet nen hab; sep aq er set khery",
       "stale_discarded": "Sheemtet tepy nen hab; sep aq er set khery",
+      "delivery_landed": "Sheemtet tepy hab",
+      "delivery_unverified": "Sheemtet tepy hab? Ma rekhyu. Maa sep",
       "skew_discarded": "The device clock moved, so a verdict left by an earlier session could not be placed in its undo window; it was not sent and the case is back in the queue",
       "restore_deferred": "Ini sep-u sedjer",
       "stat_decided": "{{n}} sheemtet",
