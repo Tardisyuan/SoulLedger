@@ -129,7 +129,6 @@ export default function PermissionsPage() {
   // so the query results are folded into one stable string key here rather
   // than spread into the deps array itself.
   const rolePermsUpdatedKey = rolePermQueries.map((q) => q.dataUpdatedAt).join(",");
-  const roleNamesKey = roleNames.join(",");
   const baseline = useMemo<GrantMap | null>(() => {
     if (!matrixReady) return null;
     const map: GrantMap = {};
@@ -138,7 +137,30 @@ export default function PermissionsPage() {
       map[name] = new Set(data.details.map((p) => p.id));
     });
     return map;
-  }, [matrixReady, roleNamesKey, rolePermsUpdatedKey]);
+    // `rolePermQueries` is deliberately not a dependency. `useQueries` returns
+    // a **new array on every render**, so including it would re-run this memo
+    // every render and mint a fresh `baseline` object each time — which the
+    // effect below takes as a dependency. That effect is guarded by
+    // `checked === null` so it would not loop forever, but the memo would stop
+    // memoising anything and every role's Set would be rebuilt on each
+    // keystroke in the filter box.
+    //
+    // `rolePermsUpdatedKey` is the stand-in: it folds each query's
+    // `dataUpdatedAt` into one string, so the memo re-runs exactly when a
+    // role's permission payload actually changes, which is the only thing that
+    // array's identity was ever standing for here.
+    //
+    // `roleNames` is the other name the rule asked for, and it *is* now a real
+    // dependency: it is `useMemo`'d on `rolesQuery.data`, so its identity moves
+    // only when the role list does. It replaced a `roleNamesKey =
+    // roleNames.join(",")` string that existed solely to stand in for it — with
+    // the array itself in the deps, that key had no remaining reader.
+    //
+    // What would remove the suppression: `useQueries` growing a stable-identity
+    // result, or this deriving `baseline` from a single fetch of all roles'
+    // permissions rather than N parallel ones.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matrixReady, roleNames, rolePermsUpdatedKey]);
 
   // Populate the editable `checked` state from the loaded baseline exactly
   // once. After a save, individual roles are patched in place (see

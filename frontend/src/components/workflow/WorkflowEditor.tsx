@@ -217,7 +217,18 @@ export default function WorkflowEditor({
       // diff even when nothing moved.
       position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
     }));
-  }, [nodes]);
+    // `edges` belongs here, and its absence was a shipped defect rather than
+    // untidiness. Memoised on `[nodes]` alone, this closure kept whatever
+    // `edges` were in scope the last time `nodes` changed identity — so an
+    // operator who drew a branch and hit save without also moving or editing
+    // a node saved `on_pass`/`on_fail: null` and got a 201 back. Every
+    // other edge-producing path (`addNode`) sets nodes in the same commit,
+    // which is why it never surfaced. Pinned by
+    // `src/__tests__/workflowEditorEdgeRouting.test.tsx`.
+    //
+    // No loop risk: this is called from `handleSave` and the mutation's
+    // `onSuccess`, never from an effect, so a new identity costs nothing.
+  }, [nodes, edges]);
 
   // Save template mutation
   const saveMutation = useMutation({
@@ -280,7 +291,11 @@ export default function WorkflowEditor({
 
     setNodes((nds) => [...nds, newNode]);
     setEdges((eds) => [...eds, ...newEdges]);
-  }, [nodes, setNodes, setEdges]);
+    // `t` names the new node ("新节点 3"). Its identity changes only when the
+    // locale changes or a lazy message bundle lands (see I18nContext's `t`,
+    // memoised on `[locale, loadedBundles]`), and this is a click handler, not
+    // an effect — a fresh identity re-renders one button and nothing else.
+  }, [nodes, setNodes, setEdges, t]);
 
   // Delete selected node
   const deleteSelectedNode = useCallback(() => {

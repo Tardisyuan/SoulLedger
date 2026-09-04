@@ -104,18 +104,25 @@ export default function AuditPage() {
     enabled: canReadAudit,
   });
 
-  const logs = data?.results ?? [];
   // Client-side search across resource/description on the page already
   // fetched — the audit endpoint has no dedicated `search` param (see
   // lib/api/audit.ts / backend/apps/audit/views.py's filterset_fields).
+  //
+  // `data?.results ?? []` lives *inside* the callback rather than above it.
+  // Hoisted, the `?? []` fallback minted a fresh array on every render where
+  // `data` was undefined, so the memo it fed re-ran every render and handed
+  // `groups` below a new identity each time — a useMemo that memoised
+  // nothing. The dependency is the query result itself, which TanStack keeps
+  // referentially stable between fetches.
   const filteredLogs = useMemo(() => {
+    const logs = data?.results ?? [];
     if (!search) return logs;
     const needle = search.toLowerCase();
     return logs.filter(
       (log: AuditLogEntry) =>
         log.resource.toLowerCase().includes(needle) || log.description.toLowerCase().includes(needle)
     );
-  }, [logs, search]);
+  }, [data?.results, search]);
 
   const groups = useMemo(() => groupAuditLogsByTrace(filteredLogs), [filteredLogs]);
 

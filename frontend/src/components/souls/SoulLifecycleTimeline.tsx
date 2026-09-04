@@ -92,7 +92,11 @@ export function SoulLifecycleTimeline({
   onOpenJudgmentQueue,
 }: SoulLifecycleTimelineProps) {
   const { t } = useI18n();
-  const tf = tfFactory(t);
+  // Memoised, not rebuilt per render: `tf` is a dependency of the `rows` memo
+  // below, and a fresh closure every render would make that memo recompute
+  // every render — i.e. memoise nothing. `tfFactory` is pure in `t`, so this
+  // moves exactly when `t` does (locale change, or a lazy bundle landing).
+  const tf = useMemo(() => tfFactory(t), [t]);
   const [tab, setTab] = useState<SpineTab>("all");
   const [includeSystemEvents, setIncludeSystemEvents] = useState(false);
   const [expandedSystemGroups, setExpandedSystemGroups] = useState<Record<string, boolean>>({});
@@ -131,7 +135,10 @@ export function SoulLifecycleTimeline({
 
   const openJudgment = useMemo(() => judgments.find((j) => !j.is_final), [judgments]);
 
-  const stageLabels: Record<FutureStageKey, { title: string; hint: string }> = {
+  // Same reason as `tf` above: this is read by the `rows` memo, and an object
+  // literal rebuilt every render would defeat it. It is copy keyed off `tf`
+  // and nothing else, so `[tf]` is the whole of it.
+  const stageLabels: Record<FutureStageKey, { title: string; hint: string }> = useMemo(() => ({
     JUDGING: {
       title: tf("souls.detail.timeline.stage_judging", "审判"),
       hint: tf("souls.detail.timeline.stage_judging_hint", "尚未开始 · 灵魂身故后进入审判队列"),
@@ -148,7 +155,7 @@ export function SoulLifecycleTimeline({
       title: tf("souls.detail.timeline.stage_next_life", "下一世"),
       hint: tf("souls.detail.timeline.stage_next_life_hint", "待处置与轮回完成后确定"),
     },
-  };
+  }), [tf]);
 
   // Built once and threaded into both the row builder and the expanded-detail
   // render below, so the collapsed summary and the rows underneath it cannot
@@ -216,7 +223,14 @@ export function SoulLifecycleTimeline({
     out.push(...buildCycleBandRows(soul, reincarnations, (n) => tf("souls.detail.timeline.cycle_band", "第 {{n}} 世", { n: String(n) })));
 
     return sortRows(out);
-  }, [soul, judgments, dispositions, reincarnations, events, ledgerRecords, includeSystemEvents, openJudgment, systemEventLabels]);
+    // `t`, `tf` and `stageLabels` are every string this builder produces, and
+    // they were all missing. The consequence was not hypothetical: switch
+    // language on a soul detail page and the timeline kept its old copy until
+    // some *other* dep moved. All three now change identity only when `t`
+    // does, because `tf` and `stageLabels` are memoised on it above — so this
+    // recomputes on a language switch and on nothing else it did not already
+    // recompute on.
+  }, [soul, judgments, dispositions, reincarnations, events, ledgerRecords, includeSystemEvents, openJudgment, systemEventLabels, stageLabels, t, tf]);
 
   const visibleRows = filterRows(rows, tab, includeSystemEvents);
 
