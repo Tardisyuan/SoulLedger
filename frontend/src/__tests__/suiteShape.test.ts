@@ -130,6 +130,7 @@ const COLLECTED_FILES = [
   "middlewareAuthGate.test.ts",
   "ledgerQuantityContract.test.tsx",
   "permissionFormCategoryStability.test.tsx",
+  "platformPortsSecureAndResume.test.ts",
   "presetNodeTypes.test.tsx",
   "readingQuantityContract.test.tsx",
   "reducedMotionContract.test.ts",

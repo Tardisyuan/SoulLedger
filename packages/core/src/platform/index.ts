@@ -1,15 +1,33 @@
 import type {
   KeyValueStore,
+  NotifyKind,
+  Notifier,
   PlatformAdapter,
+  SessionResumeSubscriber,
   SessionSuspendSubscriber,
   UnauthorizedHandler,
 } from "./types";
 
-export type { KeyValueStore, PlatformAdapter, SessionSuspendSubscriber, UnauthorizedHandler };
+export type {
+  KeyValueStore,
+  NotifyKind,
+  Notifier,
+  PlatformAdapter,
+  SessionResumeSubscriber,
+  SessionSuspendSubscriber,
+  UnauthorizedHandler,
+};
 
 /** The key the access token is stored under, in the **session** store. */
 export const ACCESS_TOKEN_KEY = "soulledger_access";
-/** The key the refresh token is stored under, in the **persistent** store. */
+/**
+ * The key the refresh token is stored under, in the **secure** store.
+ *
+ * It was in `persistent` alongside the tenant id until the two ports were
+ * split. See the long note in `./types.ts` for why a seven-day bearer
+ * credential and a tenant id must not share a store the moment a host exists
+ * whose "persistent" is plaintext on disk.
+ */
 export const REFRESH_TOKEN_KEY = "soulledger_refresh";
 /** The key the active tenant is stored under, in the **persistent** store. */
 export const TENANT_ID_KEY = "tenant_id";
@@ -33,8 +51,14 @@ const nullStore: KeyValueStore = {
 const nullAdapter: PlatformAdapter = {
   session: nullStore,
   persistent: nullStore,
+  secure: nullStore,
   onUnauthorized: () => {},
   onSessionSuspend: () => () => {},
+  onSessionResume: () => () => {},
+  // Drops the message. Same reasoning as `nullStore`: a host that has not
+  // installed an adapter — Next's server render, most of all — must not throw
+  // on the way to telling nobody anything.
+  notify: () => {},
   // The development default, and it stays wrong on purpose for anything
   // else: a host that has not called `configurePlatform` should fail against
   // localhost during development rather than silently reach a real API. This
@@ -90,12 +114,19 @@ export function setAccessToken(value: string): void {
   adapter.session.set(ACCESS_TOKEN_KEY, value);
 }
 
+/**
+ * The refresh token, from the **secure** store.
+ *
+ * Was `adapter.persistent` — identical on web, where both names point at the
+ * same cookie jar, and the whole point of the change on any host where they do
+ * not. See `PlatformAdapter.secure`.
+ */
 export function getRefreshToken(): string | null {
-  return adapter.persistent.get(REFRESH_TOKEN_KEY);
+  return adapter.secure.get(REFRESH_TOKEN_KEY);
 }
 
 export function setRefreshToken(value: string): void {
-  adapter.persistent.set(REFRESH_TOKEN_KEY, value);
+  adapter.secure.set(REFRESH_TOKEN_KEY, value);
 }
 
 export function getTenantId(): string {
@@ -111,6 +142,35 @@ export function getTenantId(): string {
  */
 export function onSessionSuspend(handler: () => void): () => void {
   return platform().onSessionSuspend(handler);
+}
+
+/**
+ * Subscribe to a suspended session coming back. Returns the unsubscribe.
+ *
+ * Read through `platform()` on each call, for the same reason
+ * `onSessionSuspend` above is.
+ *
+ * NO CALL SITE IN THIS PACKAGE YET, and that is worth stating rather than
+ * leaving to be discovered. The consumer this exists for is the WebSocket
+ * reconnect described in `SessionResumeSubscriber` — `WSClient.reconnect()`
+ * exists, this is its trigger, and the line that joins them lives in the host
+ * (`frontend/src/contexts/WebSocketContext.tsx`) and has not been written.
+ * Until it is, a React Native client still comes back to a dead socket; the
+ * port being here does not by itself fix that.
+ */
+export function onSessionResume(handler: () => void): () => void {
+  return platform().onSessionResume(handler);
+}
+
+/**
+ * Tell the operator something happened. See `PlatformAdapter.notify`.
+ *
+ * Read through `platform()` on each call rather than captured once, for the
+ * same reason the two subscribers above are: the adapter is installed after
+ * this module is first imported.
+ */
+export function notify(message: string, kind: NotifyKind, durationMs?: number): void {
+  platform().notify(message, kind, durationMs);
 }
 
 /**

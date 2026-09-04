@@ -7,15 +7,16 @@ import {
   type KeyValueStore,
   type PlatformAdapter,
 } from "@soulledger/core/platform";
+import { showToast } from "@/src/components/ui/Toast";
 
 /**
  * The browser's half of `@soulledger/core`'s platform port.
  *
  * This file is the ONLY place in the repository that knows the access token
  * lives in `sessionStorage` and the refresh token in a cookie. The package
- * knows only that one store dies with the session and the other survives a
- * restart; everything cookie-shaped is here, because a cookie is a thing only
- * a browser has.
+ * knows only that one store dies with the session, one survives a restart, and
+ * one survives a restart while holding a credential; everything cookie-shaped
+ * is here, because a cookie is a thing only a browser has.
  *
  * SERVER-SAFE BY CONSTRUCTION. Next renders client modules on the server too,
  * where `document` and `sessionStorage` do not exist. The five
@@ -107,6 +108,21 @@ const persistent: KeyValueStore = {
 export const webPlatform: PlatformAdapter = {
   session,
   persistent,
+  // The same object, on purpose, and this is the one host where that is right.
+  //
+  // The package splits `persistent` from `secure` because "survives a restart"
+  // and "is a bearer credential" are different properties, and a React Native
+  // adapter that conflates them puts a seven-day refresh token into AsyncStorage
+  // plaintext. A browser has no such choice to make: the refresh token has to be
+  // a cookie so `frontend/middleware.ts` can read it (see the note over
+  // `persistent` above), and a cookie is the most protected store this platform
+  // offers for a value JS must also be able to read. So both ports point here.
+  //
+  // Which means the split changes nothing about web behaviour, deliberately.
+  // What it changes is that the next adapter cannot make the same aliasing
+  // silently — it has to write this line, and writing it is where the decision
+  // gets made.
+  secure: persistent,
   // The one place `NEXT_PUBLIC_API_URL` is read. It is a Next.js build-time
   // variable, so it belongs to this host and not to `@soulledger/core`, which
   // read it directly in three modules and fell back to localhost when it was
@@ -119,9 +135,52 @@ export const webPlatform: PlatformAdapter = {
     // It is the only such event a browser has that fires early enough to send
     // a request, and it is the reason `useJudgmentQueue` no longer names it:
     // the hook states the rule, this states the browser.
+    //
+    // NOT `visibilitychange`, and this is the load-bearing choice. A tab going
+    // hidden is what React Native's `AppState → background` corresponds to, so
+    // adding it here would make the two platforms symmetrical — and would flush
+    // every held verdict the first time the operator switches tabs, inside its
+    // undo window. The port's contract says a handler must tolerate firing many
+    // times; `useJudgmentQueue`'s does not yet (see the note there), and until
+    // it does, the browser's one-shot event is the honest implementation rather
+    // than the symmetrical one.
     if (typeof window === "undefined") return () => {};
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
+  },
+  onSessionResume(handler) {
+    // A bfcache restore, and only that.
+    //
+    // The port is "a suspended session came back", and on this platform the
+    // only thing that suspends a session is the `beforeunload` above. The one
+    // way a page comes back from it with its JavaScript alive is the back/
+    // forward cache, which announces itself as `pageshow` with
+    // `persisted === true`. A plain `pageshow` — the ordinary first paint — is
+    // not a resume, because nothing was suspended, and firing on it would hand
+    // every handler a resume event on page load.
+    //
+    // React Native's implementation is `AppState` reaching `active`, which
+    // fires far more often. That asymmetry is stated in the port's own doc
+    // rather than papered over here: a handler must not assume it sees a
+    // suspend for every resume, or a resume for every suspend.
+    if (typeof window === "undefined") return () => {};
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) handler();
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  },
+  notify(message, kind, durationMs) {
+    // The browser's spelling of "tell the operator something happened": a
+    // fixed-position div appended to `document.body`, built by
+    // `src/components/ui/Toast.tsx`.
+    //
+    // `showToast` returns the toast's id and this returns nothing, which is
+    // deliberate — see `Notifier` in the package. `durationMs` is forwarded as
+    // given, including `undefined`, so `showToast`'s own 5000ms default keeps
+    // applying to callers that omit it; that is what the seven hooks did
+    // before they went through this port, and behaviour there must not change.
+    showToast(message, kind, durationMs);
   },
   onUnauthorized() {
     // The one line in the old `lib/api/client.ts` that assumed a browser with a
