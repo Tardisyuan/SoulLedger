@@ -526,6 +526,7 @@
       "template_name_placeholder": "Template Name",
       "add_node": "Add Node",
       "auto_layout": "Auto layout",
+      "relayouting": "Re-arranging…",
       "delete_selected": "Delete Selected",
       "saving": "Saving...",
       "save_template": "Save Template",
