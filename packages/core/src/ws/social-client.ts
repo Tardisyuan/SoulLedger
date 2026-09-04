@@ -14,6 +14,13 @@
  * its own copy of the reader and its own paraphrase of the warning that goes
  * with it; `../platform/index.ts` now holds one of each. */
 import { getAccessToken, getWebSocketUrl } from "../platform/index";
+/* Imported rather than re-spelled. The auth close code and the "is this worth
+ * retrying" rule are one decision, and this file used to hold its own copy of
+ * the literal `4001` — including its own copy of the bug that came with it (an
+ * optional `event.code` compared to a number, so a host that delivers no close
+ * code retried an auth rejection forever, `maxReconnectAttempts` being
+ * `Infinity` here). See the note over `shouldReconnectAfterClose`. */
+import { shouldReconnectAfterClose } from "./client";
 
 
 export type SocialWSStatus = "connecting" | "connected" | "disconnected" | "reconnecting";
@@ -210,7 +217,7 @@ export class SocialWSClient {
       this.stopHeartbeat();
       if (this.disposed) return;
 
-      if (event.code === 4001) {
+      if (!shouldReconnectAfterClose(event.code)) {
         this.setStatus("disconnected");
         return;
       }
