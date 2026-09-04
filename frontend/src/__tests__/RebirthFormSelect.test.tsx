@@ -128,3 +128,88 @@ describe("RebirthFormSelect", () => {
     }
   });
 });
+
+/**
+ * `role="radiogroup"` 承诺的键盘契约。
+ *
+ * 一个 radio group 是**一个** tab 站加方向键选择。改动前这里是六个按钮全都是
+ * tab 站,而方向键什么都不做 —— 选择是能用的,`aria-checked` 也是真的,所以
+ * 没有东西够不着;错的是**宣告的导航模型不是实现的导航模型**。和 2026-09-01
+ * 那轮修的两个 `role="menu"` 是同一类。
+ */
+describe("六道 picker:radiogroup 的键盘契约", () => {
+  const radios = () => screen.getAllByRole("radio");
+
+  it("整组只有一个 tab 站,而且是选中的那个", () => {
+    render(<RebirthFormSelect value={SIX_PATHS[2]} onChange={() => {}} />);
+
+    const stops = radios().filter((el) => el.getAttribute("tabindex") === "0");
+    expect(stops).toHaveLength(1);
+    expect(stops[0]).toHaveAttribute("aria-checked", "true");
+    // 缺席断言:其余五个必须是 -1。只断言「有一个是 0」在六个都是 0 的实现下
+    // 同样会绿 —— 那正是改动前的样子。
+    expect(radios().filter((el) => el.getAttribute("tabindex") === "-1")).toHaveLength(
+      SIX_PATHS.length - 1
+    );
+  });
+
+  it("value 不在六道里时,组仍然够得着", () => {
+    // `selectedIndex` 回落到 0。没有这一条,一个陈旧的 OTHER 值会让整组
+    // 六个 tabIndex 全是 -1 —— 键盘再也进不去。
+    render(<RebirthFormSelect value={"OTHER" as RebirthFormValue} onChange={() => {}} />);
+    expect(radios().filter((el) => el.getAttribute("tabindex") === "0")).toHaveLength(1);
+  });
+
+  it("方向键在六道之间移动,并且跨过分组边界", () => {
+    const onChange = jest.fn();
+    // 三善道的最后一个 —— 下一个方向键要落到三恶道的第一个。
+    render(<RebirthFormSelect value={THREE_GOOD_PATHS[2]} onChange={onChange} />);
+
+    fireEvent.keyDown(screen.getByRole("radio", { name: THREE_GOOD_PATHS[2] }), {
+      key: "ArrowRight",
+    });
+
+    // 分组是一个选择的视觉分组,不是三个选择。
+    expect(onChange).toHaveBeenCalledWith(THREE_EVIL_PATHS[0]);
+  });
+
+  it("首尾回绕,Home / End 直达两端", () => {
+    const onChange = jest.fn();
+    const { rerender } = render(
+      <RebirthFormSelect value={SIX_PATHS[0]} onChange={onChange} />
+    );
+
+    fireEvent.keyDown(screen.getByRole("radio", { name: SIX_PATHS[0] }), { key: "ArrowLeft" });
+    expect(onChange).toHaveBeenLastCalledWith(SIX_PATHS[SIX_PATHS.length - 1]);
+
+    rerender(<RebirthFormSelect value={SIX_PATHS[3]} onChange={onChange} />);
+    fireEvent.keyDown(screen.getByRole("radio", { name: SIX_PATHS[3] }), { key: "Home" });
+    expect(onChange).toHaveBeenLastCalledWith(SIX_PATHS[0]);
+
+    fireEvent.keyDown(screen.getByRole("radio", { name: SIX_PATHS[3] }), { key: "End" });
+    expect(onChange).toHaveBeenLastCalledWith(SIX_PATHS[SIX_PATHS.length - 1]);
+  });
+
+  it("禁用时方向键不改值", () => {
+    const onChange = jest.fn();
+    render(<RebirthFormSelect value={DEFAULT_REBIRTH_FORM} onChange={onChange} disabled />);
+
+    fireEvent.keyDown(screen.getByRole("radio", { name: DEFAULT_REBIRTH_FORM }), {
+      key: "ArrowRight",
+    });
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("组名不被读两遍", () => {
+    // 可见标题和组的 aria-label 是同一串字。没有 aria-hidden,读屏会连着读
+    // 两次同样的词。
+    const { container } = render(
+      <RebirthFormSelect value={DEFAULT_REBIRTH_FORM} onChange={() => {}} />
+    );
+    const group = screen.getByRole("radiogroup");
+    const heading = container.querySelector("p[aria-hidden='true']");
+    expect(heading).not.toBeNull();
+    expect(heading!.textContent).toBe(group.getAttribute("aria-label"));
+  });
+});

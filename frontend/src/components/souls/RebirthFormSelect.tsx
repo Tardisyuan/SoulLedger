@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+
 /**
  * 六道 picker for the rebirth action on a soul's detail page.
  *
@@ -81,13 +83,78 @@ export function RebirthFormSelect({ value, onChange, disabled }: RebirthFormSele
     },
   ];
 
+  /**
+   * The keyboard contract `role="radiogroup"` promises, which was not kept.
+   *
+   * A radio group is ONE tab stop plus arrow selection. This rendered six
+   * buttons that were all tab stops and where arrow keys did nothing —
+   * selection worked and `aria-checked` was truthful, so nothing was
+   * unreachable; what was wrong is that the navigation model announced was not
+   * the navigation model implemented. Same class as the two `role="menu"`
+   * popups the 2026-09-01 round fixed, and as `SoulHeaderActions` in this same
+   * commit.
+   *
+   * Flattened across the three groups on purpose: the groups are a visual
+   * grouping of one choice, not three choices. Arrowing off the end of 天道
+   * lands on the first of 人道 rather than stopping, because there is one
+   * value here and six candidates for it.
+   *
+   * Wrapping, and `Home`/`End`, match `useRovingPopupKeys` — this could not
+   * reuse that hook (it is written for a popup with an open/closed lifecycle
+   * and a close callback, neither of which exists here), so it matches its
+   * behaviour instead of inventing a second dialect.
+   */
+  const flat = groups.flatMap((g) => g.forms);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const selectedIndex = Math.max(0, flat.indexOf(value));
+
+  const moveTo = (index: number) => {
+    const next = flat[(index + flat.length) % flat.length];
+    onChange(next);
+    // Selection follows focus, which is the standard behaviour for a radio
+    // group and the reason this is not a listbox: there is no "browse without
+    // choosing" state to preserve here, and one arrow press meaning "look at"
+    // rather than "pick" would leave the group's value out of step with what
+    // the operator is looking at.
+    itemRefs.current[flat.indexOf(next)]?.focus();
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (disabled) return;
+    switch (event.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        event.preventDefault();
+        moveTo(index + 1);
+        break;
+      case "ArrowLeft":
+      case "ArrowUp":
+        event.preventDefault();
+        moveTo(index - 1);
+        break;
+      case "Home":
+        event.preventDefault();
+        moveTo(0);
+        break;
+      case "End":
+        event.preventDefault();
+        moveTo(flat.length - 1);
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <div
       role="radiogroup"
       aria-label={tf("reincarnation.form_label", "轮回形态")}
       className="space-y-3"
     >
-      <p className="text-01 uppercase text-[hsl(var(--color-ink-muted))]">
+      {/* `aria-hidden`: the group already carries this exact string as its
+          `aria-label`, so without this a screen reader reads the heading and
+          then the group's name — the same words twice, in a row. */}
+      <p aria-hidden="true" className="text-01 uppercase text-[hsl(var(--color-ink-muted))]">
         {tf("reincarnation.form_label", "轮回形态")}
       </p>
       {groups.map((group) => (
@@ -96,13 +163,22 @@ export function RebirthFormSelect({ value, onChange, disabled }: RebirthFormSele
           <div className="grid grid-cols-3 gap-1.5">
             {group.forms.map((form) => {
               const selected = form === value;
+              const index = flat.indexOf(form);
               return (
                 <button
                   key={form}
+                  ref={(el) => { itemRefs.current[index] = el; }}
                   type="button"
                   role="radio"
                   aria-checked={selected}
+                  // ONE tab stop for the whole group — the other half of the
+                  // contract. Six tab stops is what a group of six checkboxes
+                  // would be, and it is six presses to get past a single
+                  // choice. `selectedIndex` falls back to 0 when `value` is
+                  // not one of the six, so the group is never unreachable.
+                  tabIndex={index === selectedIndex ? 0 : -1}
                   disabled={disabled}
+                  onKeyDown={(event) => onKeyDown(event, index)}
                   onClick={() => onChange(form)}
                   className={`px-2 py-1.5 border text-03 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     selected ? GROUP_TONE[group.key].selected : UNSELECTED
