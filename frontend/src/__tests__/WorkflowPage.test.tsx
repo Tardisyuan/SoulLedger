@@ -96,6 +96,65 @@ describe("WorkflowPage template list", () => {
     expect(screen.queryByText("workflow.view_to_see_nodes")).not.toBeInTheDocument();
   });
 
+  /**
+   * The three cases below cover the preview's node rows through the page,
+   * which nothing did before `TemplatePreview` existed. Measured at the time:
+   * blanking the court cell, the node-type cell or the ordinal — in *either*
+   * of the two copies this markup then had — left all 32 cases here green, and
+   * so did reverting the preset preview's `nodeTypeFor(...)` to the raw
+   * `n.type` that shipped the 400. `node_name` on the backend copy was the one
+   * guarded field in the whole preview.
+   *
+   * `t` is mocked to echo its key, so every enum lands in the "unrecognized"
+   * state and `<DomainEnum>` puts the raw member in `title` — which is what
+   * makes "the value reaching the cell is a NodeType member, not a step name"
+   * checkable here at all.
+   */
+  it("numbers the predefined preview's node rows from one", async () => {
+    renderPage();
+
+    await screen.findByText("workflow.predefined_templates");
+    // CHINESE_ROUTINE: 秦广王 · 分流 (第一殿) … 转轮王 · 终审 (第十殿).
+    expect(screen.getByText("第一殿")).toBeInTheDocument();
+    expect(screen.getByText("第十殿")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("10")).toBeInTheDocument();
+    // Absence: an off-by-one still renders ten plausible chips.
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
+  });
+
+  it("shows each predefined node's NodeType, never the raw step name", async () => {
+    renderPage();
+
+    await screen.findByText("workflow.predefined_templates");
+    // Nine TRIAL halls and one FINAL, per PRESET_NODE_TYPE.
+    expect(screen.getAllByTitle("TRIAL")).toHaveLength(9);
+    expect(screen.getByTitle("FINAL")).toBeInTheDocument();
+    // The defect this maps around: `n.type` reaching <DomainEnum> unmapped.
+    // It is also the value that POSTs as a 400 when the preset is saved.
+    expect(screen.queryByTitle("分流")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("终审")).not.toBeInTheDocument();
+  });
+
+  it("shows the backend preview's court and node type, not just the node name", async () => {
+    mockedTemplates.mockResolvedValue({
+      data: [
+        {
+          ...backendTemplate,
+          nodes_json: [{ node_name: "First hall", court_code: "H1", node_type: "TRIAL" }],
+        },
+      ],
+    });
+    renderPage();
+
+    fireEvent.click(await screen.findByText("Custom Tribunal"));
+
+    expect(screen.getByText("H1")).toBeInTheDocument();
+    expect(screen.getByTitle("TRIAL")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
+  });
+
   it("falls back to a placeholder when a backend template has no description", async () => {
     mockedTemplates.mockResolvedValue({ data: [{ ...backendTemplate, description: "" }] });
     renderPage();

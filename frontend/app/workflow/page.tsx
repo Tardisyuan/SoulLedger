@@ -15,15 +15,18 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { Button } from "@/src/components/ui/Button";
-import { Badge } from "@/src/components/ui/Badge";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { WorkflowInstanceList } from "@/src/components/workflow/page/WorkflowInstanceList";
 import { TemplateDetailModal } from "@/src/components/workflow/page/TemplateDetailModal";
 import { DeleteTemplateModal } from "@/src/components/workflow/page/DeleteTemplateModal";
+import {
+  TemplatePreview,
+  backendPreviewModel,
+  presetPreviewModel,
+} from "@/src/components/workflow/page/TemplatePreview";
 import { QueryError } from "@/src/components/ui/PageError";
 import type {
   BackendTemplate,
-  FlowNode,
   FrontendNode,
   TemplatePreviewData,
 } from "@/src/components/workflow/page/types";
@@ -234,27 +237,17 @@ export default function WorkflowPage() {
                 {/* 预览内容 */}
                 {(editingTemplateId || selectedTemplate) && (
                   <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
-                    {/* 后端模板预览 */}
+                    {/* 后端模板预览。标记在 `TemplatePreview`，两种来源共用一份；
+                        差在字段名的部分收在 `backendPreviewModel` 这个适配器里。
+                        按钮不进组件——这里有三颗且「查看」要发一次请求，预设那份
+                        只有两颗且「查看」是纯本地构造。 */}
                     {editingTemplateId && templates.find((tpl: BackendTemplate) => String(tpl.id) === editingTemplateId) && (() => {
                       const tmpl = templates.find((tpl: BackendTemplate) => String(tpl.id) === editingTemplateId)!;
                       return (
-                        <>
-                          <div className="flex items-start justify-between mb-4">
-                            <div>
-                              <h3 className="text-06 text-[hsl(var(--color-ink))]">{tmpl.name}</h3>
-                              <div className="flex gap-2 mt-1">
-                                {/* A civilization is an identity, which is the
-                                    documented meaning of `pill` here; the case
-                                    type is a classification and stays square. */}
-                                <Badge tone="accent" shape="pill">
-                                  <DomainEnum namespace="workflow.civilizations" value={tmpl.civilization} />
-                                </Badge>
-                                <Badge>
-                                  <DomainEnum namespace="workflow.case_types" value={tmpl.case_type} />
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
+                        <TemplatePreview
+                          model={backendPreviewModel(tmpl)}
+                          actions={
+                            <>
                               <Button
                                 type="button"
                                 onClick={async () => {
@@ -294,60 +287,19 @@ export default function WorkflowPage() {
                                   {t("common.delete")}
                                 </Button>
                               </RequirePermission>
-                            </div>
-                          </div>
-                          <p className="text-03 text-[hsl(var(--color-ink-muted))] mb-4">{tmpl.description || t("workflow.no_description")}</p>
-                          <div className="text-02 text-[hsl(var(--color-ink-subtle))] mb-3">
-                            {t("workflow.nodes_count", { count: String(tmpl.node_count ?? (tmpl.nodes_json || []).length) })}
-                          </div>
-                          {tmpl.nodes_json ? (
-                            <div className="space-y-2 max-h-80 overflow-y-auto">
-                              {tmpl.nodes_json.map((node: FlowNode, idx: number) => (
-                                <div key={idx} className="flex items-center gap-3 p-2 bg-[hsl(var(--color-surface-2))]">
-                                  {/* `rounded-full` survives the corner purge:
-                                      a round mark is an identity token, which
-                                      an ordinal step number is. */}
-                                  <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] flex items-center justify-center text-02 font-medium shrink-0">
-                                    {idx + 1}
-                                  </span>
-                                  <span className="text-03 text-[hsl(var(--color-ink))]">{node.node_name}</span>
-                                  <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-                                  <span className="text-02 text-[hsl(var(--color-ink-muted))]">{node.court_code}</span>
-                                  <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-                                  <span className="text-02 text-[hsl(var(--color-ink-muted))]"><DomainEnum namespace="workflow.node_type" value={node.node_type} /></span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            // Saved backend templates arrive from WorkflowTemplateListSerializer,
-                            // which carries node_count but not the node graph itself — a per-list-row
-                            // node breakdown would mean shipping every template's full graph on one
-                            // list request. Predefined (not-yet-saved) templates still come with
-                            // nodes_json inline and keep the detail list above.
-                            <p className="text-02 text-[hsl(var(--color-ink-subtle))]">
-                              {t("workflow.view_to_see_nodes")}
-                            </p>
-                          )}
-                        </>
+                            </>
+                          }
+                        />
                       );
                     })()}
 
-                    {/* 预定义模板预览 */}
+                    {/* 预定义模板预览。同一个 `TemplatePreview`，适配器换成
+                        `presetPreviewModel`——`nodeTypeFor` 那一步就在它里面。 */}
                     {!editingTemplateId && selectedTemplate && currentTemplate && (
-                      <>
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <h3 className="text-06 text-[hsl(var(--color-ink))]">{currentTemplate.name}</h3>
-                            <div className="flex gap-2 mt-1">
-                              <Badge tone="accent" shape="pill">
-                                <DomainEnum namespace="workflow.civilizations" value={currentTemplate.civilization} />
-                              </Badge>
-                              <Badge>
-                                <DomainEnum namespace="workflow.case_types" value={currentTemplate.caseType} />
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
+                      <TemplatePreview
+                        model={presetPreviewModel(currentTemplate)}
+                        actions={
+                          <>
                             <Button
                               type="button"
                               onClick={() => {
@@ -404,33 +356,9 @@ export default function WorkflowPage() {
                                 {t("common.edit")}
                               </Button>
                             </RequirePermission>
-                          </div>
-                        </div>
-                        <p className="text-03 text-[hsl(var(--color-ink-muted))] mb-4">{currentTemplate.description}</p>
-                        <div className="text-02 text-[hsl(var(--color-ink-subtle))] mb-3">
-                          {t("workflow.nodes_count", { count: String(currentTemplate.nodes.length) })}
-                        </div>
-                        <div className="space-y-2 max-h-80 overflow-y-auto">
-                          {currentTemplate.nodes.map((node: FrontendNode, idx: number) => (
-                            <div key={idx} className="flex items-center gap-3 p-2 bg-[hsl(var(--color-surface-2))]">
-                              <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] flex items-center justify-center text-02 font-medium shrink-0">
-                                {idx + 1}
-                              </span>
-                              <span className="text-03 text-[hsl(var(--color-ink))]">{node.name}</span>
-                              <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-                              <span className="text-02 text-[hsl(var(--color-ink-muted))]">{node.court}</span>
-                              <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-                              {/* `workflow.node_type` 这个 bundle 只有 trial/
-                                  evaluation/appeal/final/execution 五个键，所以
-                                  直接传 `node.type`（「分流」…）时 <DomainEnum> 一律
-                                  判为 unrecognized，这一格 56 个预设节点全部显示
-                                 「未识别取值」。映射之后它显示的是真正的类型，也和
-                                  保存下去的值是同一个。 */}
-                              <span className="text-02 text-[hsl(var(--color-ink-muted))]"><DomainEnum namespace="workflow.node_type" value={nodeTypeFor(node.type)} /></span>
-                            </div>
-                          ))}
-                        </div>
-                      </>
+                          </>
+                        }
+                      />
                     )}
                   </div>
                 )}
