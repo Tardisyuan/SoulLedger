@@ -2,6 +2,28 @@
 
 import { useCallback, useState, useEffect, useId, useMemo, useRef } from "react";
 import { flushSync } from "react-dom";
+/**
+ * WHAT gsap COSTS HERE, MEASURED, SO THE TRADE CAN BE RE-JUDGED LATER.
+ *
+ * This editor is code-split (`LazyWorkflowEditor`), so the bill lands on this
+ * route and no other. Built with gsap installed but not imported, then with:
+ *
+ *     raw    223,658 → 318,888    +95,230  (+42.6%)
+ *     gzip    70,376 → 105,905    +35,529  (+50.1%)
+ *
+ * Half again, in gzip, for one transition. It was approved on the grounds that
+ * a re-layout without it tells the operator nothing about which node went
+ * where — information, not decoration — and that reasoning stands only while
+ * this stays the single animated thing in the file. It is the whole of the
+ * project's animation budget; the next one has to argue against this number
+ * rather than against zero.
+ *
+ * Core + Flip only. Verified by grepping the built chunk: the one
+ * `ScrollTrigger` hit is gsap-core's optional-hookup name lookup, and the
+ * `Draggable`/`Observer` hits are react-flow's own `nodesDraggable` and
+ * `ResizeObserver`. No MorphSVG, SplitText, ScrollSmoother, MotionPath,
+ * Inertia or DrawSVG rides along.
+ */
 import { gsap } from "gsap";
 import { Flip } from "gsap/Flip";
 import {
@@ -177,6 +199,37 @@ export default function WorkflowEditor({
   // editor that unmounts mid-flight does not leave gsap writing to detached
   // nodes.
   const layoutFlipRef = useRef<gsap.core.Timeline | null>(null);
+
+  /**
+   * Whether a layout travel is in flight. Drives two things and nothing else:
+   * the "re-arranging" status beside the button, and the dimming of the edges
+   * (see the ReactFlow wrapper). NOT a loading flag — `layoutNodes` is
+   * synchronous and has already finished by the time this turns true; the
+   * 450ms is travel, not waiting, and calling it "loading" would tell the
+   * operator something untrue.
+   */
+  const [relayouting, setRelayouting] = useState(false);
+
+  /**
+   * Stop a travel in flight, WITHOUT winding it to its end.
+   *
+   * THIS EXISTS BECAUSE `.kill()` USED TO LIVE IN ONLY TWO PLACES — unmount
+   * and `autoLayout` itself — while four other handlers mutate the same nodes
+   * gsap is mid-way through animating: `addNode`, `deleteSelectedNode`,
+   * `updateNodeData` and `onConnect` all `setNodes`/`setEdges` and none of
+   * them stopped the tween. Delete a node 200ms into a travel and gsap keeps
+   * writing transforms toward the old target — on a wrapper xyflow has since
+   * re-keyed or removed. Every mutation entry point calls this first now.
+   *
+   * `kill()` and not `progress(1)`: winding to the end would plant the cards
+   * at coordinates the mutation is about to invalidate anyway.
+   */
+  const stopLayoutTravel = useCallback(() => {
+    layoutFlipRef.current?.kill();
+    layoutFlipRef.current = null;
+    setRelayouting(false);
+  }, []);
+
   useEffect(() => {
     return () => {
       layoutFlipRef.current?.kill();
@@ -322,6 +375,7 @@ export default function WorkflowEditor({
 
   // Add a new node
   const addNode = useCallback(() => {
+    stopLayoutTravel();
     const newId = `node-${Date.now()}`;
     const newNode: Node = {
       id: newId,
@@ -357,7 +411,7 @@ export default function WorkflowEditor({
     // locale changes or a lazy message bundle lands (see I18nContext's `t`,
     // memoised on `[locale, loadedBundles]`), and this is a click handler, not
     // an effect — a fresh identity re-renders one button and nothing else.
-  }, [nodes, setNodes, setEdges, t]);
+  }, [nodes, setNodes, setEdges, t, stopLayoutTravel]);
 
   /**
    * Re-run the layout over everything. The ONLY thing that moves a node the
@@ -446,18 +500,24 @@ export default function WorkflowEditor({
     // A second press mid-flight: kill the running tween WITHOUT winding it to
     // its end, so `getState` below records the cards where they visually are
     // and the new travel continues from there rather than from a jump.
-    layoutFlipRef.current?.kill();
+    stopLayoutTravel();
 
     const before = Flip.getState(cards);
+    setRelayouting(true);
     flushSync(() => setNodes(next));
     layoutFlipRef.current = Flip.from(before, {
       duration: LAYOUT_TRAVEL_SECONDS,
       ease: "power2.inOut",
+      // `onComplete` only. `onInterrupt` would fire on the kill inside
+      // `stopLayoutTravel`, which already clears the flag itself — routing it
+      // through both would make the ordering of two writes matter.
+      onComplete: () => setRelayouting(false),
     });
-  }, [nodes, edges, setNodes]);
+  }, [nodes, edges, setNodes, stopLayoutTravel]);
 
   // Delete selected node
   const deleteSelectedNode = useCallback(() => {
+    stopLayoutTravel();
     if (!selectedNodeId) return;
 
     setNodes((nds) => nds.filter((n) => n.id !== selectedNodeId));
@@ -465,7 +525,7 @@ export default function WorkflowEditor({
       eds.filter((e) => e.source !== selectedNodeId && e.target !== selectedNodeId)
     );
     setSelectedNodeId(null);
-  }, [selectedNodeId, setNodes, setEdges]);
+  }, [selectedNodeId, setNodes, setEdges, stopLayoutTravel]);
 
   // Handle node double-click to edit
   const handleNodeEdit = useCallback((nodeId: string) => {
@@ -486,6 +546,7 @@ export default function WorkflowEditor({
   // Update node data
   const updateNodeData = useCallback(
     (nodeId: string, updates: NodeDataUpdates) => {
+      stopLayoutTravel();
       setNodes((nds) =>
         nds.map((n) =>
           n.id === nodeId
@@ -494,12 +555,13 @@ export default function WorkflowEditor({
         )
       );
     },
-    [setNodes]
+    [setNodes, stopLayoutTravel]
   );
 
   // Handle connection changes
   const onConnect = useCallback(
     (connection: Connection) => {
+      stopLayoutTravel();
       setEdges((eds) =>
         addEdge(
           {
@@ -510,7 +572,7 @@ export default function WorkflowEditor({
         )
       );
     },
-    [setEdges]
+    [setEdges, stopLayoutTravel]
   );
 
   // Handle node changes
@@ -647,6 +709,18 @@ export default function WorkflowEditor({
           >
             {t("workflow.editor.auto_layout")}
           </button>
+          {/* Status, not a spinner. `layoutNodes` is synchronous and finished
+              before this appears; the 450ms is travel. `role="status"` so the
+              change is announced once rather than polled, and it renders
+              nothing at all when still — an empty live region is not a layout
+              shift because the row's height comes from the buttons. */}
+          <span
+            role="status"
+            aria-live="polite"
+            className="text-02 text-[hsl(var(--color-ink-muted))]"
+          >
+            {relayouting ? t("workflow.editor.relayouting") : ""}
+          </span>
           <button
             onClick={deleteSelectedNode}
             disabled={!selectedNodeId}
@@ -665,7 +739,33 @@ export default function WorkflowEditor({
       </div>
 
       {/* Flow canvas */}
-      <div ref={canvasRef} className="flex-1 min-h-0">
+      {/**
+       * Edges dim while the cards travel, and this is the artifact recorded
+       * over `autoLayout` being paid for rather than lived with. xyflow draws
+       * edges as SVG paths recomputed from its store, which holds the FINAL
+       * coordinates from the first frame — so during the 450ms the connectors
+       * sit at their destination geometry while the cards are still on their
+       * way, reading as arrows too short to reach the card below. A path is
+       * not positioned by a transform, so Flip cannot carry them; dimming is
+       * the honest alternative to showing a wrong relationship confidently.
+       *
+       * `opacity`, not `visibility`/`display`: the edges stay in the
+       * accessibility tree and in the layout, and the transition is symmetric
+       * with the travel it accompanies. `opacity-25` rather than 0 so the
+       * topology stays faintly legible — that is the thing an operator
+       * re-arranging a branching graph is looking at. 25 and not 15 because
+       * the repo's opacity scale is 0/25/40/50/70/75/90 and 15 had exactly one
+       * user: this line, before it was corrected.
+       *
+       * A descendant variant rather than a rule in `globals.css`: the selector
+       * is xyflow's internal class and this is the only file that may know it.
+       */}
+      <div
+        ref={canvasRef}
+        className={`flex-1 min-h-0 [&_.react-flow__edge]:transition-opacity [&_.react-flow__edge]:duration-state ${
+          relayouting ? "[&_.react-flow__edge]:opacity-25" : ""
+        }`}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
