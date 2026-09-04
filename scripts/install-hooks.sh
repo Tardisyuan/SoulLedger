@@ -130,6 +130,21 @@ if [ "$TOUCHES_CORE" -gt 0 ]; then
     echo "  → core eslint"
     npm run --workspace packages/core lint --silent \
         || fail "@soulledger/core lint failed. Note this config refuses \`process.env\` and \`import.meta.env\`: Expo and Tauri define neither of the ones Next does, and the fallback fails silently."
+    # `typecheck` alone does NOT catch the widest hole in this boundary.
+    # `types: []` only disables *automatic* @types inclusion; it does not stop
+    # ambient globals arriving through an import. hooks/useStatutes.ts pulls in
+    # @tanstack/react-query -> @types/react -> @types/react/global.d.ts, which
+    # declares Document, HTMLElement, MouseEvent and ~150 more as **empty
+    # interfaces**. Measured: `export const el: HTMLElement = {}` compiles
+    # clean in this package, because `{}` satisfies an empty interface. So a
+    # DOM-shaped signature passes tsc while being unimplementable on RN.
+    # domBoundary.test.ts builds a program from this very tsconfig (not a
+    # hand-copy, which would drift) and asserts those names stay unresolvable.
+    # Without this line it would be a guard nobody runs — which is the exact
+    # defect the `packages/` gate above was added to fix.
+    echo "  → core vitest"
+    npm run --workspace packages/core test --silent \
+        || fail "@soulledger/core tests failed. If it is domBoundary.test.ts: a DOM or Node global reached the platform-independent package. That is a host capability and belongs behind a PlatformAdapter port — do not widen \`lib\` to make it compile."
 fi
 
 # `|| TOUCHES_CORE` on purpose. The frontend compiles the package's sources
