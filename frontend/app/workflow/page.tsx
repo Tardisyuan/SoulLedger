@@ -61,7 +61,23 @@ export default function WorkflowPage() {
   });
 
   // Fetch templates from backend
-  const { data: templatesData, isLoading: isTemplatesLoading } = useQuery({
+  // `isError` / `refetch` here too, for the same reason they were pulled out
+  // for `workflows` above and by the same measurement. This query had neither,
+  // and its render branch ended `: null` — so a FAILED templates fetch drew
+  // **nothing at all**: no error, no "you have no custom templates yet", just
+  // the predefined list below it where the operator's own templates should be.
+  // Silently missing is the worst of the three, because there is nothing on
+  // screen to disbelieve.
+  //
+  // The `workflows` query on this same page was fixed in an earlier round and
+  // this one was not. Two queries, one page, one of them corrected — which is
+  // exactly the per-QUERY shape the guard's per-FILE rules cannot see.
+  const {
+    data: templatesData,
+    isLoading: isTemplatesLoading,
+    isError: isTemplatesError,
+    refetch: refetchTemplates,
+  } = useQuery({
     queryKey: ["workflow-templates"],
     queryFn: async () => {
       const res = await workflowApi.templates.list();
@@ -167,9 +183,16 @@ export default function WorkflowPage() {
               {/* 左侧：模板列表 */}
               <div className="w-full space-y-4 lg:w-80 lg:shrink-0">
                 {/* 后端模板列表 */}
-                {isTemplatesLoading ? (
+                {isTemplatesError ? (
+                  <QueryError onRetry={() => void refetchTemplates()} />
+                ) : isTemplatesLoading ? (
                   <ListSkeleton count={3} />
-                ) : templates.length > 0 ? (
+                ) : templates.length === 0 ? (
+                  <EmptyState
+                    title={t("workflow.custom_templates")}
+                    reason={t("workflow.no_custom_templates")}
+                  />
+                ) : (
                   <div className="space-y-2">
                     {/* 01 是 uppercase 小标签那一档，这两行原本是 `text-xs
                         font-semibold` 拼出来的同一个东西。 */}
@@ -200,7 +223,7 @@ export default function WorkflowPage() {
                       </button>
                     ))}
                   </div>
-                ) : null}
+                )}
 
                 {/* 预定义模板列表 */}
                 <div className="space-y-2">

@@ -366,4 +366,47 @@ describe("WorkflowPage detail modal", () => {
     expect(await screen.findByText("workflow.no_node_data")).toBeInTheDocument();
     expect(screen.getAllByText("Custom Tribunal").length).toBeGreaterThan(1);
   });
+
+  /**
+   * 保存的模板列表:三态。
+   *
+   * 这一页有两个查询,只有 `workflows` 那个被修过 —— `templatesData` 既没有
+   * `isError` 也没有空态,它的渲染分支以 `: null` 结尾。所以模板列表取失败时
+   * **什么都不画**:没有报错,也没有「你还没保存过自己的模板」,只剩它下面那个
+   * 预定义列表,而操作员自己的模板本该在那儿。
+   *
+   * 静默缺失是三种里最糟的一种,因为屏幕上没有任何东西可供怀疑。
+   */
+  describe("保存的模板:失败 / 空 / 有,是三屏", () => {
+    it("取失败时报错,而不是什么都不画", async () => {
+      mockedTemplates.mockRejectedValue(new Error("500"));
+
+      const { container } = renderPage();
+
+      await waitFor(() =>
+        expect(container.querySelector("[data-query-error]")).toBeInTheDocument()
+      );
+      // 缺席断言:失败时不许说「你还没保存过」。
+      expect(screen.queryByText("workflow.no_custom_templates")).not.toBeInTheDocument();
+    });
+
+    it("真的一条都没有时说出来", async () => {
+      mockedTemplates.mockResolvedValue({ data: [] });
+
+      const { container } = renderPage();
+
+      expect(await screen.findByText("workflow.no_custom_templates")).toBeInTheDocument();
+      expect(container.querySelector("[data-query-error]")).toBeNull();
+    });
+
+    it("有模板时两条分支都不出现", async () => {
+      mockedTemplates.mockResolvedValue({ data: [backendTemplate] });
+
+      const { container } = renderPage();
+
+      await screen.findByText("workflow.custom_templates");
+      expect(screen.queryByText("workflow.no_custom_templates")).not.toBeInTheDocument();
+      expect(container.querySelector("[data-query-error]")).toBeNull();
+    });
+  });
 });

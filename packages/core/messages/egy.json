@@ -655,7 +655,8 @@
       "COMPLETED": "Wetep Seth",
       "SKIPPED": "Iri Tepy",
       "ESCALATED": "Seshem Hery"
-    }
+    },
+    "no_custom_templates": "Ma Rekhyu Sesh-set"
   },
   "dashboard": {
     "title": "Medew Aba Hemsu Seth",
