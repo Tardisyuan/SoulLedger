@@ -1,5 +1,7 @@
 "use client";
 
+import { translate } from "@/lib/i18n/activeTranslator";
+
 // ── Types ───────────────────────────────────────────
 
 export type ToastType = "success" | "error" | "info";
@@ -23,6 +25,23 @@ const COLOR = {
   info: { accent: "var(--color-status-info)", icon: "ℹ" },
 } as const;
 
+/**
+ * Which live-region role a toast carries.
+ *
+ * `role="alert"` is ASSERTIVE — it interrupts whatever a screen reader is
+ * reading. Every toast used to carry it, and 22 of the 76 `showToast` call
+ * sites pass `"success"`: a save confirmation was cutting across the sentence
+ * the operator was in the middle of.
+ *
+ * `status` for success and info, `alert` for error. An error is the one kind
+ * that can be worth interrupting for — it says something did not happen.
+ */
+const ROLE: Record<ToastType, "alert" | "status"> = {
+  success: "status",
+  info: "status",
+  error: "alert",
+};
+
 let toasts: ToastItem[] = [];
 let nextId = 0;
 
@@ -32,18 +51,6 @@ function getContainer(): HTMLElement | null {
   if (!el) {
     el = document.createElement("div");
     el.id = "toast-container";
-    el.style.cssText = [
-      "position:fixed",
-      "top:20px",
-      "left:50%",
-      "transform:translateX(-50%)",
-      "z-index:99999",
-      "display:flex",
-      "flex-direction:column",
-      "align-items:center",
-      "gap:10px",
-      "pointer-events:none",
-    ].join(";");
     document.body.appendChild(el);
   }
   return el;
@@ -53,44 +60,42 @@ function buildToastEl(item: ToastItem): HTMLElement {
   const c = COLOR[item.type] || COLOR.info;
   const el = document.createElement("div");
   el.id = `toast-${item.id}`;
-  el.setAttribute("role", "alert");
-  el.style.cssText = [
-    "display:flex",
-    "align-items:center",
-    "gap:10px",
-    "min-width:240px",
-    "max-width:420px",
-    "padding:14px 16px",
-    "border-radius:6px",
-    `border:1px solid hsl(${c.accent} / 0.4)`,
-    `border-left:3px solid hsl(${c.accent})`,
-    "background:hsl(var(--color-surface-2))",
-    "color:hsl(var(--color-ink))",
-    "animation:toastIn 0.25s cubic-bezier(0.22,1,0.36,1)",
-    "pointer-events:auto",
-    "font-family:ui-sans-serif,system-ui,-apple-system,sans-serif",
-    "font-size:14px",
-    "line-height:1.4",
-  ].join(";");
+  el.setAttribute("role", ROLE[item.type] ?? "status");
+  el.className = "toast";
+  // The ONE thing still set inline, and it is a token NAME rather than a
+  // colour — so the three status hues keep coming from `:root` and keep
+  // following the theme. Everything else moved to `app/globals.css`; see the
+  // block there for why five decisions were sitting outside the design system
+  // with nothing able to report them.
+  el.style.setProperty("--toast-accent", c.accent);
 
   // Icon span
   const iconSpan = document.createElement("span");
-  // 10%, not 20% — the same badge-fill AA floor as the className-based
-  // badges elsewhere (a 16% tint of --bad measured 4.37:1, below AA).
-  // Stays circular: this is an 18px icon indicator, not a text-bearing
-  // pill, so radius-full's dot/avatar/count-bubble carve-out applies.
-  iconSpan.style.cssText = `flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:hsl(${c.accent} / 0.1);color:hsl(${c.accent});font-size:11px;font-weight:bold;border:1px solid hsl(${c.accent} / 0.35);`;
+  iconSpan.className = "toast-icon";
+  // The glyph duplicates what the role already conveys, and a screen reader
+  // reading "✓" before the message is noise.
+  iconSpan.setAttribute("aria-hidden", "true");
   iconSpan.textContent = c.icon;
 
   // Message span — use textContent to prevent XSS
   const msgSpan = document.createElement("span");
-  msgSpan.style.cssText = "flex:1;";
+  msgSpan.className = "toast-message";
   msgSpan.textContent = item.message;
 
   // Close button
   const closeBtn = document.createElement("button");
   closeBtn.id = `toast-close-${item.id}`;
-  closeBtn.style.cssText = "flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:3px;background:transparent;border:none;cursor:pointer;color:hsl(var(--color-ink));opacity:0.5;font-size:16px;padding:0;line-height:1;";
+  closeBtn.className = "toast-close";
+  // `type`, because a toast can be raised from inside a form and a default
+  // `<button>` submits it. And an accessible name: this is a real tab stop
+  // appended to `document.body`, and it announced as "× button".
+  closeBtn.type = "button";
+  // Through the same translator the notify port uses — see
+  // `lib/i18n/activeTranslator.ts`. With no provider mounted it returns the
+  // key, which is what `t` itself does for a key it cannot find; that is
+  // reachable only in a server render (where nothing raises a toast) and in a
+  // jest suite with no `I18nProvider`.
+  closeBtn.setAttribute("aria-label", translate("common.close"));
   closeBtn.textContent = "×";
 
   el.appendChild(iconSpan);
@@ -110,9 +115,10 @@ function removeToast(id: string) {
 
   const el = document.getElementById(`toast-${id}`);
   if (el) {
-    el.style.opacity = "0";
-    el.style.transform = "translateY(-6px)";
-    el.style.transition = "all 0.2s ease-in";
+    // A class, not three inline properties — the leaving transition is a
+    // motion decision and belongs beside the arriving one. 200ms was a fourth
+    // bare duration; `.toast-leaving` uses `state` and `ease-exit`.
+    el.classList.add("toast-leaving");
     setTimeout(() => el.remove(), 200);
   }
 
@@ -146,19 +152,11 @@ export function dismissToast(id: string) {
   removeToast(id);
 }
 
-// ── Inject keyframes once ─────────────────────────────
-
-if (typeof document !== "undefined" && !document.getElementById("toast-keyframes")) {
-  const s = document.createElement("style");
-  s.id = "toast-keyframes";
-  s.textContent = `
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateY(-10px) scale(0.96); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
-    }
-  `;
-  document.head.appendChild(s);
-}
+// The `@keyframes toastIn` that used to be injected here as a `<style>` node
+// now lives in `app/globals.css` as `toast-in`, with the rest of this
+// component's CSS. A stylesheet appended at import time is another way of
+// being outside the token layer: nothing scans it, and its duration and easing
+// were a bare `0.25s` and a third curve.
 
 // ── Container component (renders nothing — toast is pure DOM) ──
 

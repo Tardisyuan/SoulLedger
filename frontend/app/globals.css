@@ -879,3 +879,140 @@ select:focus-visible {
     display: none;
   }
 }
+
+/* ── Toast ────────────────────────────────────────────────────────────────
+   Written here, in the token layer, because it was NOT — and could not be
+   reported for it.
+
+   `src/components/ui/Toast.tsx` builds its nodes with `document.createElement`
+   and styles them by assigning `element.style.cssText`. The design-system
+   eslint rules scan CLASS NAMES and string literals for class tokens; a CSS
+   property inside a `cssText` string is neither. So five decisions sat outside
+   the system with nothing able to say so:
+
+     border-radius:6px          the borderRadius table is 0 at every step
+     border-radius:3px          (the close button)
+     animation: … 0.25s cubic-bezier(0.22,1,0.36,1)
+                                a bare duration and a THIRD easing curve, in a
+                                file that defines exactly two — added by the
+                                same pass (2e14343) whose stated job was
+                                "motion is the one axis where every decision is
+                                a bare number", which did not count this file
+     font-family: ui-sans-serif,…
+                                a private copy of the font stack, so a toast
+                                would keep the old stack after --font-sans moved
+
+   The icon's `border-radius:50%` stays, and stays as `radius-full`'s carve-out
+   says: an 18px icon indicator is a dot, not a text-bearing pill.
+
+   `--toast-accent` is set per element by the builder as a TOKEN NAME, not a
+   colour — `el.style.setProperty("--toast-accent", "var(--color-status-error)")`
+   — so the three status hues still come from `:root` and still follow the
+   theme. That is the one thing the builder is still allowed to set inline, and
+   the reason it is allowed is that it is a reference rather than a value.
+
+   `src/__tests__/designGuardContract.test.ts` now has a rule for `cssText` so
+   the next file to reach for it goes red instead of quietly leaving the
+   system. */
+#toast-container {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast, 99999);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 240px;
+  max-width: 420px;
+  padding: 14px 16px;
+  /* 0, like every other step in the table. */
+  border-radius: 0;
+  border: 1px solid hsl(var(--toast-accent) / 0.4);
+  border-left: 3px solid hsl(var(--toast-accent));
+  background: hsl(var(--color-surface-1));
+  color: hsl(var(--color-ink));
+  /* The tokens, not a fourth spelling. `settle` is the tier for something
+     arriving on screen, and `enter` is the curve for arriving. */
+  animation: toast-in var(--transition-duration-settle) var(--ease-enter);
+  pointer-events: auto;
+  /* NO `font-family`. Inheriting from `body` is what makes the toast follow
+     --font-sans; the private copy is exactly how it would stop. */
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The dot carve-out — an 18px icon indicator, not a pill. */
+  border-radius: 9999px;
+  /* 10%, not 20%: the same badge-fill AA floor as the className-based badges
+     (a 16% tint of --bad measured 4.37:1, below AA). */
+  background: hsl(var(--toast-accent) / 0.1);
+  color: hsl(var(--toast-accent));
+  border: 1px solid hsl(var(--toast-accent) / 0.35);
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.toast-message {
+  flex: 1;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: hsl(var(--color-ink));
+  opacity: 0.5;
+  font-size: 16px;
+  padding: 0;
+  line-height: 1;
+  transition: opacity var(--transition-duration-state) ease-in-out;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+/* Leaving. `exit` is the curve for something getting out of the way, and the
+   6px lift matches the 4px the undo strip rises by — both are under the
+   threshold where a reader tracks the movement itself. */
+.toast-leaving {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    opacity var(--transition-duration-state) var(--ease-exit),
+    transform var(--transition-duration-state) var(--ease-exit);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

@@ -126,6 +126,21 @@ function renderConsole() {
   );
 }
 
+afterEach(() => {
+  // Toasts are module-level DOM appended straight to `document.body`, and this
+  // file never cleaned them up — a leftover from one test was still in the
+  // document during the next. It went unnoticed while every toast carried
+  // `role="alert"`: nothing here queries for that. The moment success/info
+  // toasts became `role="status"` — which is the correct tier for them — they
+  // started colliding with the undo strip's own `role="status"`, and six tests
+  // in this file went red at once.
+  //
+  // That is a leak this file always had, surfaced rather than introduced.
+  // `notifyPortCarriesTheToast.test.ts:91` has done exactly this since it was
+  // written.
+  document.getElementById("toast-container")?.remove();
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   currentUser = mockUser;
