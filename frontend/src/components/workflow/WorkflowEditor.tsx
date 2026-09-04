@@ -41,6 +41,7 @@ import {
   EdgeChange,
   BackgroundVariant,
   Panel,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -69,6 +70,8 @@ import {
   layoutNodes,
   presetTemplateToFlow,
   savedTemplateToFlow,
+  NODE_WIDTH,
+  NODE_HEIGHT,
   type TemplateNode,
 } from "@/src/components/workflow/workflowEditorGraph";
 
@@ -116,6 +119,59 @@ function prefersReducedMotion(): boolean {
     typeof window.matchMedia === "function" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
+}
+
+/**
+ * The rectangle a set of nodes occupies, in the LAYOUT's own coordinates —
+ * the same space `layoutNodes` returns and `position` is written in, with no
+ * viewport `translate`/`scale` in it.
+ *
+ * The size fallbacks match `workflowEditorGraph.ts`'s own `sizeOf`: xyflow's
+ * `measured` after a render, the assumed card otherwise. This is called with
+ * `layoutNodes`'s output, which carries `measured` through unchanged from the
+ * nodes it was given, so on the button's path the numbers are the real ones.
+ */
+function layoutBounds(nodes: Node[]): { x: number; y: number; width: number; height: number } {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const n of nodes) {
+    const w = n.measured?.width ?? NODE_WIDTH;
+    const h = n.measured?.height ?? NODE_HEIGHT;
+    minX = Math.min(minX, n.position.x);
+    minY = Math.min(minY, n.position.y);
+    maxX = Math.max(maxX, n.position.x + w);
+    maxY = Math.max(maxY, n.position.y + h);
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+/**
+ * Would `bounds` be wholly on screen, under the viewport the operator is
+ * currently looking through?
+ *
+ * xyflow's viewport is `translate(x, y) scale(zoom)`, so a layout coordinate
+ * lands at `coord * zoom + offset` in the pane's own pixels. The pane spans
+ * `[0, width] × [0, height]`.
+ *
+ * INCLUSIVE AT THE BOUNDARY, deliberately: a graph whose left edge is exactly
+ * at 0 or whose right edge is exactly at the pane width is fully visible, and
+ * fitting it would move the viewport to show something the operator can
+ * already see. The comparison is `>= 0` / `<= size` and not a tolerance,
+ * because there is no measurement noise here — both sides are numbers this
+ * module computed, not rects read back off the DOM.
+ */
+function fitsInside(
+  bounds: { x: number; y: number; width: number; height: number },
+  viewport: { x: number; y: number; zoom: number },
+  pane: { width: number; height: number }
+): boolean {
+  const left = bounds.x * viewport.zoom + viewport.x;
+  const top = bounds.y * viewport.zoom + viewport.y;
+  const right = (bounds.x + bounds.width) * viewport.zoom + viewport.x;
+  const bottom = (bounds.y + bounds.height) * viewport.zoom + viewport.y;
+  return left >= 0 && top >= 0 && right <= pane.width && bottom <= pane.height;
 }
 
 export interface WorkflowTemplateInput {
@@ -195,6 +251,20 @@ export default function WorkflowEditor({
   // once (the same reason `formId` exists), and a `document.querySelectorAll`
   // here would animate the other one's cards too.
   const canvasRef = useRef<HTMLDivElement>(null);
+  /**
+   * xyflow's own instance, the only way to read or write the viewport.
+   *
+   * Captured from `onInit` rather than `useReactFlow()`: that hook has to be
+   * called UNDER a provider, and this component is the one rendering
+   * `<ReactFlow>` — the provider `<ReactFlow>` mounts internally is its child,
+   * not its ancestor. Reaching the hook would mean splitting this component in
+   * two around a `<ReactFlowProvider>`; `onInit` hands over the same object
+   * with no re-shaping of the tree.
+   *
+   * Stays null wherever `<ReactFlow>` is stubbed (the three jest suites), and
+   * every read of it is guarded — the viewport is not a thing jsdom has.
+   */
+  const flowRef = useRef<ReactFlowInstance | null>(null);
   // The running travel, kept so a second press can interrupt it and so an
   // editor that unmounts mid-flight does not leave gsap writing to detached
   // nodes.
@@ -414,6 +484,57 @@ export default function WorkflowEditor({
   }, [nodes, setNodes, setEdges, t, stopLayoutTravel]);
 
   /**
+   * Bring the new layout back on screen — BUT ONLY IF IT WOULD NOT BE.
+   *
+   * THE DEFECT THIS CLOSES. `<ReactFlow fitView>` as a bare prop fits ONCE, on
+   * init. Before dagre landed, every node sat at x: 250 in a single column, so
+   * a re-layout could not push anything sideways and the init fit was enough
+   * for the editor's whole life. `rankdir: "TB"` spreads branches left and
+   * right, so pressing the button can now put cards outside the pane with
+   * nothing to bring them back.
+   *
+   * WHY NOT FIT EVERY TIME, which is one line shorter. The 450ms travel exists
+   * to say WHICH card went WHERE, and a zoom-and-pan on every press drowns
+   * that out — the whole picture moves, so nothing in it reads as having
+   * moved. A press that merely re-arranges within the visible area must leave
+   * the viewport alone, and `fitsInside` is the whole of that decision.
+   *
+   * `fitBounds` AND NOT `fitView`. At 12.10.2 `fitView()` is ASYNC AND
+   * DEFERRED — read out of the shipped bundle rather than assumed:
+   * `useReactFlow`'s entry is `fitView: async (options) => { … setState({
+   * fitViewQueued: true, … }); batchContext.nodeQueue.push(…) }`, and the
+   * queue handler can push the actual fit into a `requestAnimationFrame`. So
+   * it moves the viewport a commit or more after this handler returns, which
+   * lands it squarely between the capture and the tween — see the block in
+   * `autoLayout` for what that looks like on screen.
+   *
+   * `fitBounds` instead goes straight to `panZoom.setViewport` →
+   * `setTransform`, whose `getD3Transition` returns the PLAIN selection when
+   * no `duration` is given, so d3 writes the transform and xyflow's store
+   * update has run before this function returns. It also takes the rectangle
+   * we hand it, which lets the fit be computed from the layout we are ABOUT to
+   * apply rather than the one still on screen — the thing `fitView` cannot do
+   * from here at all.
+   *
+   * The promise is dropped on purpose. With no duration `getD3Transition`
+   * calls the `onEnd` resolver immediately, so there is nothing left to wait
+   * for, and awaiting would push the rest of the handler into a microtask.
+   *
+   * Returns nothing and mutates nothing else: callers decide whether the
+   * viewport write gets its own commit (`flushSync`) or shares one.
+   */
+  const fitIfOverflowing = useCallback((next: Node[]) => {
+    const flow = flowRef.current;
+    const pane = canvasRef.current;
+    // Both null under the jest stubs, which render no viewport at all.
+    if (!flow || !pane || next.length === 0) return;
+    const bounds = layoutBounds(next);
+    const { width, height } = pane.getBoundingClientRect();
+    if (fitsInside(bounds, flow.getViewport(), { width, height })) return;
+    void flow.fitBounds(bounds);
+  }, []);
+
+  /**
    * Re-run the layout over everything. The ONLY thing that moves a node the
    * operator placed.
    *
@@ -480,6 +601,20 @@ export default function WorkflowEditor({
     );
 
     if (!moved || prefersReducedMotion()) {
+      /*
+       * ONE COMMIT, so the instant path stays instant. No `flushSync` here:
+       * the viewport write and the node write are both made inside this
+       * handler, React batches them, and the operator is shown the new layout
+       * already framed — never the old layout at the new zoom for a frame,
+       * which is the "motion" this branch exists to avoid.
+       *
+       * The `!moved` case fits too, and that is not an oversight. "Nothing
+       * moved" only says the layout is unchanged; it says nothing about
+       * whether the operator has since panned it off screen, and the button is
+       * the gesture that has to bring it back. The guard above is about not
+       * animating, not about not looking.
+       */
+      fitIfOverflowing(next);
       setNodes(next);
       return;
     }
@@ -502,6 +637,45 @@ export default function WorkflowEditor({
     // and the new travel continues from there rather than from a jump.
     stopLayoutTravel();
 
+    /*
+     * THE FIT GETS ITS OWN `flushSync`, AND THAT IS THE WHOLE OF THE ORDERING.
+     *
+     * `Flip.getState` records SCREEN-space rects and the viewport carries its
+     * own `translate()/scale()`, so the obvious worry is where the fit sits
+     * relative to the capture. Five placements were run in chromium on the
+     * ten-court preset zoomed to 1.49 (a temporary `window.__fitOrder` switch,
+     * sampling `.react-flow__viewport`'s matrix and two cards' client rects
+     * once per animation frame). The answer is not the one the question
+     * expects.
+     *
+     * THREE OF THEM ARE INDISTINGUISHABLE, TO THE TENTH OF A PIXEL: this one;
+     * the fit between `flushSync(setNodes)` and `Flip.from`; and the fit after
+     * `Flip.from`. All three start card n10 travelling at y=886.7 and walk it
+     * the same way, and no card's WIDTH changes at any frame. The reason is
+     * the one the zoom paragraph above already gives: gsap stores the delta in
+     * the element's own coordinate space, which the ancestor `scale()` divides
+     * out, so it does not matter WHICH viewport capture and `Flip.from` were
+     * measured under — only that it was the SAME one for both.
+     *
+     * WHAT BREAKS IS THE VIEWPORT COMMITTING BETWEEN THEM, and that is what
+     * the `flushSync` here prevents. `fitBounds` writes xyflow's store
+     * synchronously, but the `transform` on `.react-flow__viewport` is a
+     * React-rendered style — so a bare `fitIfOverflowing(next)` on this line
+     * leaves the commit pending, and the `flushSync(setNodes)` two lines down
+     * flushes it: capture in the old viewport, `Flip.from` in the new one, and
+     * the delta gsap derives is part re-layout and part camera. Measured, that
+     * is not a subtle artifact — n10 sets off from y=1515 in a pane that spans
+     * 289–730, i.e. the cards are flung off screen and crawl back over the
+     * whole 450ms, with the edges (already at final geometry) left hanging in
+     * the middle. `flow.fitView()` in place of `fitBounds` produces the same
+     * wreck for the same reason, one commit later.
+     *
+     * So: commit the viewport, THEN capture. Of the three orderings that work,
+     * this is the one whose correctness does not depend on no one ever adding
+     * another `flushSync` between the capture and the tween.
+     */
+    flushSync(() => fitIfOverflowing(next));
+
     const before = Flip.getState(cards);
     setRelayouting(true);
     flushSync(() => setNodes(next));
@@ -513,7 +687,7 @@ export default function WorkflowEditor({
       // through both would make the ordering of two writes matter.
       onComplete: () => setRelayouting(false),
     });
-  }, [nodes, edges, setNodes, stopLayoutTravel]);
+  }, [nodes, edges, setNodes, stopLayoutTravel, fitIfOverflowing]);
 
   // Delete selected node
   const deleteSelectedNode = useCallback(() => {
@@ -774,6 +948,12 @@ export default function WorkflowEditor({
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           onNodeDoubleClick={(_, node) => handleNodeEdit(node.id)}
+          onInit={(instance) => {
+            flowRef.current = instance;
+          }}
+          /* Fits ONCE, on init — that is all this prop has ever done, and
+             before branches existed it was all that was needed. `autoLayout`
+             owns every fit after this one. */
           fitView
           className="bg-[hsl(var(--color-surface-2))]"
           defaultEdgeOptions={{
