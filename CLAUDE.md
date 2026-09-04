@@ -45,6 +45,14 @@ PATH 上是 **v18.20.8**。仓库根的 `.nvmrc` 钉了 20.19.5,`nvm use` 即可
 `SyntaxError: 'node:util' does not provide an export named 'styleText'`。
 2026-09-04 实测:v18.20.8 下这两条红,v20.19.5 与 v22.22.1 下都绿。
 
+**下面的后端命令假定 `python` / `ruff` / `pip-audit` 在 PATH 上,而这台机器上
+三个都不在**(2026-09-05 实测 `command -v` 均为空;只有 `python3`)。
+`.git/hooks/pre-push` 不受影响,它从 gitignored 的 `.prepush.env` 读
+`PYTHON_BIN` / `RUFF_BIN`,找不到就带着「Set PYTHON_BIN in .prepush.env」拒绝。
+复制粘贴下面的命令则没有这一层,要么先 activate 对应环境,要么照
+`.prepush.env` 里的值把 `python` 换成绝对路径。
+**这不是可有可无的注脚:这一整轮里每一条后端命令都得这样改写才能跑。**
+
 ```bash
 # Backend — matches CI pipeline exactly
 # ISOLATE BOTH BACKING SERVICES. `.env` points DATABASE_URL *and* REDIS_URL at
@@ -64,7 +72,24 @@ cd backend && pip-audit --strict --desc
 cd frontend && npx tsc --noEmit
 cd frontend && npm run lint
 cd frontend && npm run build
-cd frontend && npm test
+# `test:coverage`, NOT `npm test`. `npm test` is bare `jest`, and
+# `jest.config.js` sets `coverageThreshold` without `collectCoverage` — so the
+# threshold is only evaluated when `--coverage` is passed. Measured 2026-09-05:
+# `npm test` prints the word "coverage" zero times. The gate this repo lowered
+# deliberately (with the arithmetic written into jest.config.js) is invisible
+# to the command this file used to name.
+cd frontend && npm run test:coverage
+
+# packages/core — three separate gates, and `.git/hooks/pre-push` runs all
+# three on any `^packages/` change. They were missing from this list, so the
+# way to find out they exist was to be refused by the hook.
+# `test` is vitest, not jest: `domBoundary.test.ts` builds a TS program from
+# the package's own tsconfig and asserts that ~146 DOM type names leaked in by
+# `@types/react` stay unresolvable. `typecheck` alone does NOT catch that —
+# they are empty interfaces, so `const el: HTMLElement = {}` compiles.
+npm run --workspace packages/core typecheck
+npm run --workspace packages/core lint
+npm run --workspace packages/core test
 
 # E2E
 cd frontend && npx playwright test --project=chromium
@@ -81,10 +106,12 @@ cd backend && python -m pytest -q --no-cov --create-db
 `test_the_postgres_only_set_is_the_set_we_think_it_is` 钉住这个集合,
 让它不能再无声地增长。
 
-**两条路径实跑对照(2026-08-31,同一份代码):**
+**两条路径实跑对照(2026-09-05,同一份代码):**
 
-    SQLite 内存库     3435 passed /  7 skipped / exit 0
-    真 PostgreSQL     3440 passed /  2 skipped / exit 0
+    SQLite 内存库     3478 passed /  7 skipped / exit 0
+    真 PostgreSQL     3483 passed /  2 skipped / exit 0
+
+(2026-08-31 那次是 3435 / 3440。绝对值会随测试增长,**+5/−5 这个差值才是结论**。)
 
 多的 5 条正是那 4 条并发测试加 `test_two_judges_cannot_both_decide_one_node.py`;
 剩下的 2 个 skip 是 `Menu` / `MenuButton`,它们**确实没有 tenant 字段**。
@@ -96,6 +123,28 @@ cd backend && python -m pytest -q --no-cov --create-db
 
     psql -U soulledger -d postgres -Atc \
       "select datname from pg_database where datname like 'test_soulledger%'"
+
+**这台机器上没有 `psql`**(2026-09-05 实测 `command -v psql` 为空),所以上面那条
+按原样跑不了。用 Django 自己的连接参数问同一个问题:
+
+    # 用你环境里的解释器(这台机器上就是 `.prepush.env` 的 PYTHON_BIN 指的那个)。
+    # **不要 source `.prepush.env`**:它的职责就是把 DATABASE_URL 覆盖成 SQLite,
+    # 一旦 source,下面这段会去连本地 socket 而不是 115 —— 问错了数据库,
+    # 而它会安静地失败在「连不上」而不是「查不到」。2026-09-05 两种都试过。
+    cd backend && <你的 python> -c "
+    import os, django; os.environ.setdefault('DJANGO_SETTINGS_MODULE','config.settings'); django.setup()
+    from django.db import connection as c; import psycopg2
+    d=c.settings_dict
+    k=psycopg2.connect(dbname='postgres',user=d['USER'],password=d['PASSWORD'],host=d['HOST'],port=d['PORT'] or 5432)
+    q=k.cursor(); q.execute(\"select datname from pg_database where datname like 'test_soulledger%'\")
+    print(q.fetchall() or 'NONE')"
+
+2026-09-05 实跑这条:`NONE`。
+2026-09-05 复核了这条路径的两个说法:**teardown 本身没坏** —— 一次真建库的
+`--create-db` 跑完(12 秒、有迁移)之后是 `NONE`;而当时确实躺着一个 17MB / 58 张表的
+残留,**不是空库**。删它之前先确认 `pg_stat_activity` 里对它的连接数为 0。
+成因没查出来:我自己那次全量跑是正常结束的(exit 0、打了汇总行),
+所以要么残留早于它,要么有一次没被观察到的 teardown 被打断 —— **分不出是哪种**。
 
 **SQLITE HIDES A WHOLE CLASS OF DEFECT, AND THE SUITE ONLY RUNS ON SQLITE.**
 Two shipped bugs surfaced the first time this code met a real PostgreSQL
