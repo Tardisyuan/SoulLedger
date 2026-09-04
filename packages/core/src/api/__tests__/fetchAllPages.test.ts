@@ -82,6 +82,7 @@ beforeEach(() => {
     onSessionSuspend: () => () => {},
     onSessionResume: () => () => {},
     notify: () => {},
+    deliverOnExit: () => false,
     baseUrl: BASE,
   });
 });
