@@ -244,7 +244,13 @@ cd backend && python -m pytest --tb=short -q     # 仓库根 pytest.ini：--cov=
                                                  # 只覆盖数据库，权限缓存键仍会写进共享 Redis。
                                                  # 完整跑法见 CLAUDE.md 的 Build & Test
 cd backend && ruff check .
-cd frontend && npx tsc --noEmit && npm run lint && npm test
+cd frontend && npx tsc --noEmit && npm run lint && npm run test:coverage
+# `test:coverage` 而不是 `npm test`:后者是裸 jest,而 jest.config.js 的
+# coverageThreshold 只在传 --coverage 时才评估 —— 实测裸 npm test 输出里
+# "coverage" 出现 0 次。需要 node >= 20.9.0(仓库根 .nvmrc)。
+npm run --workspace packages/core typecheck   # packages/core 自己的三条门禁,
+npm run --workspace packages/core lint        # pre-push 在任何 ^packages/ 改动上全跑
+npm run --workspace packages/core test        # vitest,不是 jest
 cd frontend && npx playwright test --project=chromium
 ```
 
