@@ -33,9 +33,34 @@
  *
  * WHAT IT DOES NOT COMPARE. The reverse direction — a token declared in
  * globals.css that nothing references — is deliberately not asserted here. The
- * ramp and the civilization families are declared as complete sets on purpose
- * (`--color-surface-4` and `--color-status-disposed` currently have no caller),
- * and reddening on an unused token would only teach people to delete tokens.
+ * ramp and the civilization families are declared as complete sets on purpose,
+ * and reddening on a momentarily unused member would only teach people to
+ * delete tokens out of a ramp.
+ *
+ * THE TWO TOKENS THIS PARAGRAPH USED TO NAME AS EXAMPLES BOTH HAVE CALLERS,
+ * and one of them had callers on the day the sentence was written. It read
+ * "`--color-surface-4` and `--color-status-disposed` currently have no
+ * caller". Re-measured 2026-09-04, with comments stripped first (this file's
+ * own prose names the tokens it discusses, so a plain grep counts the sentence
+ * it is checking):
+ *
+ *   --color-surface-4        4 callers — data-grid/ActionsMenu.tsx,
+ *                            data-grid/FilterBar.tsx, ui/Button.tsx,
+ *                            workflow/NodeEditModal.tsx
+ *   --color-status-disposed  3 callers — app/ledger/page.tsx (STATE_DOT),
+ *                            app/welcome/page.tsx, src/lib/soulStateBadge.ts
+ *
+ * `app/ledger/page.tsx::STATE_DOT` predates the sentence; `soulStateBadge.ts`
+ * is newer (28c9bc9). So the claim was half wrong when written and got wronger
+ * without anything changing colour — it is prose in a comment, not an
+ * assertion, which is the whole reason it could rot in a file whose subject is
+ * exactly this failure mode.
+ *
+ * The argument itself survives its examples: on the same measurement EVERY
+ * `--color-*` / `--civ-*` token `:root` declares is referenced somewhere in
+ * the scanned tree, so today the reverse assertion would pass — and would
+ * still be the wrong assertion to add, because it goes red the moment a ramp
+ * is completed one member ahead of its first caller.
  */
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
