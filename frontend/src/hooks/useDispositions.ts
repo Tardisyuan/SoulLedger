@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dispositionApi } from "@soulledger/core/api";
-import { useToast } from "@/src/contexts/ToastContext";
+import { notify } from "@soulledger/core/platform";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { dispositionKeys } from "@soulledger/core/query_keys";
 
@@ -20,16 +20,15 @@ export function useDispositions(params?: Record<string, string>) {
 export function useExecuteDisposition() {
   const qc = useQueryClient();
   const { t } = useI18n();
-  const { showToast } = useToast();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data?: object }) =>
       dispositionApi.execute(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: dispositionKeys.all });
-      showToast(t("disposition.execute_success") || "Disposition executed", "success");
+      notify(t("disposition.execute_success") || "Disposition executed", "success");
     },
     onError: () => {
-      showToast(t("disposition.execute_error") || "Failed to execute disposition", "error");
+      notify(t("disposition.execute_error") || "Failed to execute disposition", "error");
     },
   });
 }

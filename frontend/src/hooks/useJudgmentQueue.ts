@@ -4,9 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { judgmentApi, type Judgment, type JudgmentQueueCursor } from "@soulledger/core/api";
 import { judgmentKeys } from "@soulledger/core/query_keys";
-import { onSessionSuspend } from "@soulledger/core/platform";
+import { notify, onSessionSuspend } from "@soulledger/core/platform";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { useToast } from "@/src/contexts/ToastContext";
 
 /**
  * The judgment triage queue's session state (BRIEF §4.2).
@@ -95,7 +94,6 @@ export function useJudgmentQueue(options?: { at?: string }) {
   const at = options?.at;
   const qc = useQueryClient();
   const { t } = useI18n();
-  const { showToast } = useToast();
 
   /** Deliberately deferred by the operator. Session-only; never sent as state. */
   const [deferred, setDeferred] = useState<string[]>([]);
@@ -167,13 +165,38 @@ export function useJudgmentQueue(options?: { at?: string }) {
         // silently dropping it — it is still pending, and the operator must
         // see it again.
         setHolding((prev) => prev.filter((id) => id !== verdictToSend.judgment.id));
-        showToast(t("judgment.queue.commit_error"), "error");
+        notify(t("judgment.queue.commit_error"), "error");
       }
     },
-    [qc, showToast, t]
+    [qc, t]
   );
 
-  /** Commit whatever is held, immediately. Called on unmount and on unload. */
+  /**
+   * Commit whatever is held, immediately. Called on unmount and on suspend.
+   *
+   * IDEMPOTENT, BUT NOT SAFE TO CALL WHENEVER. Two different properties, and
+   * only the first one holds here. Calling this twice sends once: the second
+   * call finds `pendingRef.current` already null and returns before `send`. So
+   * repeated suspends cannot duplicate a verdict.
+   *
+   * What it is not is *deferrable*. Every call commits, immediately, whatever
+   * is left of the undo window — that is the whole point on `beforeunload`,
+   * where the alternative is losing the verdict. It is the wrong thing on a
+   * suspend that is not terminal. `onSessionSuspend`'s contract says the event
+   * may fire many times (see `@soulledger/core/platform`'s
+   * `SessionSuspendSubscriber`), and React Native's does: every app switch.
+   * There, this effect sends the held verdict on the first switch, seconds into
+   * an eight-second window, with the undo bar still on screen — and undo then
+   * silently does nothing, because there is nothing held to take back.
+   *
+   * That is a real defect on RN and it is NOT fixed here, because fixing it is
+   * a design decision this change does not own: the hook would have to either
+   * persist the held verdict across a suspend and commit only on real teardown,
+   * or learn a "terminal vs transient" distinction the port does not currently
+   * carry. Web is unaffected — `beforeunload` fires once and terminally, and
+   * `lib/platform/web.ts` deliberately does not add `visibilitychange` for
+   * exactly this reason.
+   */
   const flush = useCallback(() => {
     clearTimer();
     const held = pendingRef.current;
@@ -224,8 +247,8 @@ export function useJudgmentQueue(options?: { at?: string }) {
     pendingRef.current = null;
     setPending(null);
     setHolding((prev) => prev.filter((id) => id !== held.judgment.id));
-    showToast(t("judgment.queue.undo_done"), "info");
-  }, [clearTimer, showToast, t]);
+    notify(t("judgment.queue.undo_done"), "info");
+  }, [clearTimer, t]);
 
   /**
    * Defer: hide for this sitting only. No request, no state change on the

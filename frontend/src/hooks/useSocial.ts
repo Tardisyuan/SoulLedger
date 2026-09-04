@@ -4,7 +4,7 @@ import axios from "axios";
 import { drfNonFieldError } from "@soulledger/core/validations/drfErrors";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { socialApi, type UserProfile } from "@soulledger/core/api";
-import { useToast } from "@/src/contexts/ToastContext";
+import { notify } from "@soulledger/core/platform";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { socialKeys } from "@soulledger/core/query_keys";
 
@@ -80,30 +80,28 @@ export function useFeed(
 export function useCreatePost() {
   const qc = useQueryClient();
   const { t } = useI18n();
-  const { showToast } = useToast();
   return useMutation({
     mutationFn: (data: { content: string; visibility?: string }) =>
       socialApi.createPost(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.posts.all });
-      showToast(t("social.post_created") || "Post created", "success");
+      notify(t("social.post_created") || "Post created", "success");
     },
     onError: () => {
-      showToast(t("social.post_error") || "Failed to create post", "error");
+      notify(t("social.post_error") || "Failed to create post", "error");
     },
   });
 }
 
 export function useDeletePost() {
   const qc = useQueryClient();
-  const { showToast } = useToast();
   return useMutation({
     mutationFn: (id: string) => socialApi.deletePost(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.posts.all });
     },
     onError: () => {
-      showToast("Failed to delete post", "error");
+      notify("Failed to delete post", "error");
     },
   });
 }
@@ -125,7 +123,6 @@ export function useComments(postId: string) {
 export function useCreateComment() {
   const qc = useQueryClient();
   const { t } = useI18n();
-  const { showToast } = useToast();
   return useMutation({
     mutationFn: (data: { post: string; content: string; parent?: string }) =>
       socialApi.createComment(data),
@@ -134,21 +131,20 @@ export function useCreateComment() {
       qc.invalidateQueries({ queryKey: socialKeys.posts.detail(vars.post) });
     },
     onError: (error) => {
-      showToast(extractErrorMessage(error, t("social.comment_error") || "Failed to add comment"), "error");
+      notify(extractErrorMessage(error, t("social.comment_error") || "Failed to add comment"), "error");
     },
   });
 }
 
 export function useDeleteComment() {
   const qc = useQueryClient();
-  const { showToast } = useToast();
   return useMutation({
     mutationFn: (id: string) => socialApi.deleteComment(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.comments.all });
     },
     onError: () => {
-      showToast("Failed to delete comment", "error");
+      notify("Failed to delete comment", "error");
     },
   });
 }
@@ -169,7 +165,6 @@ export function useReactions(params?: Record<string, string | number | undefined
 export function useToggleReaction() {
   const qc = useQueryClient();
   const { t } = useI18n();
-  const { showToast } = useToast();
   return useMutation({
     mutationFn: (data: { post?: string; comment?: string; reaction_type: string }) =>
       socialApi.addReaction(data),
@@ -187,7 +182,7 @@ export function useToggleReaction() {
       qc.invalidateQueries({ queryKey: socialKeys.posts.all });
     },
     onError: (error) => {
-      showToast(extractErrorMessage(error, t("social.reaction_error") || "Failed to react"), "error");
+      notify(extractErrorMessage(error, t("social.reaction_error") || "Failed to react"), "error");
     },
   });
 }
@@ -197,7 +192,6 @@ export function useToggleReaction() {
 export function useToggleFollow() {
   const qc = useQueryClient();
   const { t } = useI18n();
-  const { showToast } = useToast();
   return useMutation({
     mutationFn: (followingId: string) => socialApi.toggleFollow(followingId),
     onSuccess: () => {
@@ -209,7 +203,7 @@ export function useToggleFollow() {
     // from a click that never registered — so the natural response was to click
     // again, and fail again, silently.
     onError: (error) => {
-      showToast(extractErrorMessage(error, t("social.follow_error")), "error");
+      notify(extractErrorMessage(error, t("social.follow_error")), "error");
     },
   });
 }
@@ -264,16 +258,15 @@ export function useMyProfile() {
 export function useUpdateProfile() {
   const qc = useQueryClient();
   const { t } = useI18n();
-  const { showToast } = useToast();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<UserProfile> }) =>
       socialApi.updateProfile(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.profiles.all });
-      showToast(t("social.profile_updated") || "Profile updated", "success");
+      notify(t("social.profile_updated") || "Profile updated", "success");
     },
     onError: (error) => {
-      showToast(extractErrorMessage(error, t("social.profile_update_error") || "Failed to update profile"), "error");
+      notify(extractErrorMessage(error, t("social.profile_update_error") || "Failed to update profile"), "error");
     },
   });
 }

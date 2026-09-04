@@ -23,8 +23,22 @@ jest.mock("@soulledger/core/api", () => ({
   },
 }));
 
-jest.mock("@/src/contexts/ToastContext", () => ({
-  useToast: () => ({ showToast: mockShowToast }),
+// The hooks under test now raise their toasts through `@soulledger/core/platform`'s
+// `notify` port instead of `useToast()`. The assertions below are unchanged and
+// still read `mockShowToast`; this block is what keeps pointing them at it.
+//
+// A `requireActual` spread rather than a bare object, and that matters: this
+// module also exports the token readers and `onSessionSuspend`, and
+// `jest.setup.js` has already installed the real web adapter through it.
+// Replacing the whole module would take the adapter with it and break things
+// that have nothing to do with toasts.
+//
+// Rest args, not `(message, kind, durationMs)`: forwarding a third `undefined`
+// would make every `toHaveBeenCalledWith(msg, kind)` assertion below fail on an
+// argument the hook never passed.
+jest.mock("@soulledger/core/platform", () => ({
+  ...jest.requireActual("@soulledger/core/platform"),
+  notify: (...args: unknown[]) => mockShowToast(...args),
 }));
 
 jest.mock("@/src/contexts/I18nContext", () => ({
