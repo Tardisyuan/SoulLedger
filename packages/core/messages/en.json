@@ -780,6 +780,8 @@
       "exhausted_title": "Queue is clear",
       "exhausted_with_deferred_title": "Only deferred cases remain",
       "exhausted_body": "{{n}} ruled on in this sitting.",
+      "incomplete_title": "This case came back incomplete",
+      "incomplete_body": "The case arrived without its soul or ledger, so there is not enough on it to rule. Try again; the queue itself is not empty.",
       "error_title": "Could not fetch the next case",
       "error_body": "Try again; if it keeps failing, check your judgment read permission.",
       "not_recorded": "Not recorded yet",

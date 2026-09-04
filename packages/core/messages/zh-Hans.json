@@ -780,6 +780,8 @@
       "exhausted_title": "队列已清空",
       "exhausted_with_deferred_title": "只剩下延后的条目",
       "exhausted_body": "本次会话共裁决 {{n}} 条。",
+      "incomplete_title": "这一条取回来是残缺的",
+      "incomplete_body": "案子回来时缺了灵魂或功过账，不足以据此裁决。请重试；队列本身并没有空。",
       "error_title": "无法取到下一条",
       "error_body": "请重试；若持续失败，请检查审判读取权限。",
       "not_recorded": "尚未记录",

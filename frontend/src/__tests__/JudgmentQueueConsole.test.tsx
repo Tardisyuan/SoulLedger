@@ -351,4 +351,68 @@ describe("the decision bar", () => {
     expect(stickyBar(container)!.querySelectorAll("[aria-live='polite']")).toHaveLength(1);
     expect(screen.getByRole("status").textContent).toContain("第一位待判者");
   });
+
+  /**
+   * 本次坐堂的最后一案。
+   *
+   * 撤销条曾经和「有没有下一张卡片」死死绑在一起,于是它恰恰在唯一还能用到它
+   * 的时刻消失。`U` 依然能按 —— 键盘监听是无条件的 —— 但屏幕上没有任何东西
+   * 说它能按。
+   */
+  describe("最后一案:撤销条要活过卡片", () => {
+    beforeEach(() => {
+      // 队列里只有一条。裁完它,下一次 next 就返回 null。
+      mockNext.mockImplementation(async (params?: { skip?: string[] }) => {
+        const skipped = params?.skip ?? [];
+        const queue = [JUDGMENT].filter((j) => !skipped.includes(j.id));
+        return cursor(queue[0] ?? null, queue.length);
+      });
+    });
+
+    it("裁完最后一案,倒计时和撤销按钮仍在屏幕上", async () => {
+      const { container } = renderConsole();
+      await screen.findByText("第一位待判者");
+
+      fireEvent.keyDown(window, { key: "1" });
+
+      // 卡片没了 —— 裁决按钮行跟着走,因为已经没有东西可裁。
+      await waitFor(() =>
+        expect(screen.queryByText("第一位待判者")).not.toBeInTheDocument()
+      );
+      expect(screen.queryByText("judgment.queue.defer")).not.toBeInTheDocument();
+
+      // 但撤销条还在,而且还在那条 sticky 里。
+      expect(stickyBar(container)).not.toBeNull();
+      expect(screen.getByText("judgment.queue.undo")).toBeInTheDocument();
+      expect(screen.getByRole("status").textContent).toContain("第一位待判者");
+    });
+
+    it("裁决还扣着时不说「队列已清空」—— 它离没清空只差一次撤销", async () => {
+      renderConsole();
+      await screen.findByText("第一位待判者");
+
+      fireEvent.keyDown(window, { key: "1" });
+      await waitFor(() =>
+        expect(screen.queryByText("第一位待判者")).not.toBeInTheDocument()
+      );
+
+      // 缺席断言。`queue.isExhausted` 的 `pending === null` 那一项正是这条,
+      // 而它在被接上之前是零消费者。
+      expect(screen.queryByText("judgment.queue.exhausted_title")).not.toBeInTheDocument();
+    });
+
+    it("撤销之后案子回来,撤销条让位给裁决按钮", async () => {
+      renderConsole();
+      await screen.findByText("第一位待判者");
+
+      fireEvent.keyDown(window, { key: "1" });
+      await screen.findByText("judgment.queue.undo");
+      fireEvent.keyDown(window, { key: "u" });
+
+      await screen.findByText("第一位待判者");
+      expect(screen.queryByText("judgment.queue.undo")).not.toBeInTheDocument();
+      expect(screen.getByText("judgment.queue.defer")).toBeInTheDocument();
+      expect(mockConclude).not.toHaveBeenCalled();
+    });
+  });
 });
