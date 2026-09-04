@@ -133,7 +133,7 @@ describe("PageSpinner is the whole-route shape those 20 files hand-roll", () => 
     const { container } = render(<PageSpinner label="载入中" />);
     const root = container.firstElementChild!;
     // This used to assert `min-h-screen`, which pinned the defect rather than
-    // the requirement. A route's loading.tsx renders inside AppLayout.tsx:418's
+    // the requirement. A route's loading.tsx renders inside AppLayout.tsx:461's
     // `min-h-[calc(100vh-4rem)]` slot, so 100vh here is 100vh nested inside
     // 100vh−4rem — the same 64px of dead scroll 46 files were carrying and that
     // PageShell exists to delete, reintroduced through the one component all 21

@@ -134,7 +134,7 @@ export function Spinner({ size = "md", label, className, ...rest }: SpinnerProps
 export function PageSpinner({ label }: { label?: string }) {
   const { t } = useI18n();
   return (
-    // `min-h-[calc(100vh-4rem)]`, matching AppLayout.tsx:418's slot exactly —
+    // `min-h-[calc(100vh-4rem)]`, matching AppLayout.tsx:461's slot exactly —
     // NOT `min-h-screen`. A route's `loading.tsx` renders inside that slot, so
     // a full 100vh here is 100vh nested in 100vh−4rem: the same 64px of dead
     // scroll PageShell exists to delete, handed back through the component all
