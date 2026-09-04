@@ -94,14 +94,48 @@ CHANGED="$(git diff --name-only "$RANGE" 2>/dev/null)"
 
 TOUCHES_FRONTEND=$(echo "$CHANGED" | grep -cE '^frontend/' || true)
 TOUCHES_BACKEND=$(echo "$CHANGED" | grep -cE '^backend/' || true)
+# `packages/` had no gate at all, so a commit touching only @soulledger/core ran
+# nothing. That is the whole of the package's boundary: `lib: ["ES2020"]` with
+# no "dom", the `host-globals.d.ts` allowlist, and the `no-restricted-syntax`
+# rule that refuses `process.env`. CI does run them — and both workflows are
+# `workflow_dispatch` only, so in practice nothing did.
+#
+# The frontend gate did not cover it either, and this is the part worth writing
+# down: `frontend/tsconfig.json` compiles the package's *sources* under
+# `lib: ["dom","dom.iterable","esnext"]`, and its `include` is relative to
+# `frontend/`, so `host-globals.d.ts` — a global script nobody imports — is not
+# in that program at all. Measured: 39 files from packages/core/src reach the
+# frontend program, and 0 of them is the allowlist. So the one check that ran
+# automatically was compiling the platform-independent package *with the DOM
+# available*, which is the opposite of the thing being enforced.
+TOUCHES_CORE=$(echo "$CHANGED" | grep -cE '^packages/' || true)
 
-echo "pre-push: $RANGE — frontend:$TOUCHES_FRONTEND backend:$TOUCHES_BACKEND changed files"
+echo "pre-push: $RANGE — frontend:$TOUCHES_FRONTEND backend:$TOUCHES_BACKEND core:$TOUCHES_CORE changed files"
 
 fail() { echo ""; echo "pre-push: $1"; echo "pre-push: push refused. SKIP_PREPUSH=1 git push  to override deliberately."; exit 1; }
 
 need() { command -v "$1" >/dev/null 2>&1 || fail "\`$1\` not found, so this check cannot run. Refusing rather than skipping — a check that did not run is not a check that passed."; }
 
-if [ "$TOUCHES_FRONTEND" -gt 0 ]; then
+# Core first: it is the frontend's dependency, it is fast, and a boundary
+# failure should be the thing you read rather than the tsc error it causes 400
+# lines later.
+if [ "$TOUCHES_CORE" -gt 0 ]; then
+    need npm
+    cd "$ROOT" || exit 1
+    # This tsconfig is the boundary. Running it here is the only automatic
+    # execution it gets.
+    echo "  → core tsc"
+    npm run --workspace packages/core typecheck --silent \
+        || fail "@soulledger/core typecheck failed. This compiles under lib:[\"ES2020\"] with no DOM — a \`document\`/\`window\`/\`localStorage\` reference here is a host capability that belongs behind a PlatformAdapter port, not a type error to widen the lib for."
+    echo "  → core eslint"
+    npm run --workspace packages/core lint --silent \
+        || fail "@soulledger/core lint failed. Note this config refuses \`process.env\` and \`import.meta.env\`: Expo and Tauri define neither of the ones Next does, and the fallback fails silently."
+fi
+
+# `|| TOUCHES_CORE` on purpose. The frontend compiles the package's sources
+# directly rather than a built artefact, so a change under packages/ can break
+# `frontend/` type-checking while touching no file under `frontend/`.
+if [ "$TOUCHES_FRONTEND" -gt 0 ] || [ "$TOUCHES_CORE" -gt 0 ]; then
     need npx
     cd "$ROOT/frontend" || fail "frontend/ missing"
     echo "  → tsc";   npx tsc --noEmit          || fail "tsc failed"
@@ -267,7 +301,9 @@ chmod +x "$HOOKS_DIR/pre-push"
 
 echo "✅ Git hooks installed successfully"
 echo "   - pre-commit: ESLint on staged frontend files"
-echo "   - pre-push:   tsc + eslint + jest (frontend) / ruff + pytest (backend),"
+echo "   - pre-push:   typecheck + eslint (packages/core), tsc + eslint + jest"
+echo "                 (frontend, also on packages/ changes) / ruff +"
+echo "                 makemigrations --check + pytest (backend),"
 echo "                 scoped to what the push actually changes."
 echo ""
 echo "   Per-machine settings go in .prepush.env (gitignored) — PYTHON_BIN,"
