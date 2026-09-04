@@ -13,6 +13,56 @@ import { getAccessToken, getWebSocketUrl } from "../platform/index";
 
 export type WSStatus = "connecting" | "connected" | "disconnected" | "reconnecting" | "failed";
 
+/**
+ * The close code the server uses to say "your token is not good enough".
+ *
+ * `backend/apps/core/ws_auth.py` closes with 4001 for a missing, invalid or
+ * expired token, and `apps/notifications/consumers.py` does the same for a
+ * connection that fails the tenant check. It was the bare literal `4001` in two
+ * places on this side, which is the shape that let `CIVILIZATION_ICONS` drift
+ * into two tables that agreed on values and disagreed in their comments.
+ */
+export const WS_CLOSE_AUTH_REJECTED = 4001;
+
+/**
+ * Whether a close with this code should be followed by another attempt.
+ *
+ * WHY `undefined` IS A CASE AND NOT AN OVERSIGHT. Both clients used to ask
+ * `event.code === 4001` directly, while `platform/host-globals.d.ts` declares
+ * `readonly code?: number` — **optional**, because the package cannot promise
+ * that every host delivers a close code. On a host that does not,
+ * `undefined === 4001` is false, so an auth rejection fell through to
+ * `scheduleReconnect()` and was retried up to `maxReconnectAttempts` (50 for
+ * the notifications client, `Infinity` for the social one). The type admitted a
+ * case the code did not handle; nothing said which way it should go.
+ *
+ * IT GOES TO "RETRY", DELIBERATELY, and this is the argument. The two mistakes
+ * available are not symmetric:
+ *
+ *   - Retrying a rejection we could not identify costs a bounded number of
+ *     backed-off attempts (capped at 30s apiece), and `connect()` re-reads the
+ *     token through `getAccessToken()` on every attempt — so a socket dropped
+ *     while the API client was mid-refresh comes back on its own. That is a
+ *     real, ordinary sequence, not a hypothetical.
+ *   - Refusing to retry an *unidentified* close would permanently disable
+ *     reconnection on any host that omits codes — every transient network drop
+ *     would end the session's realtime layer for good, silently.
+ *
+ * So the unknown code is treated as the transient one. The cost is stated
+ * rather than hidden: on a host that both omits close codes and rejects the
+ * token, this retries instead of reporting `failed`. If such a host turns up,
+ * the fix is a close *reason* check or a host port — not flipping this line,
+ * which would trade a noisy failure for a silent one.
+ *
+ * Browsers do not exercise this: they synthesise 1005 when no close frame
+ * arrives. It is the type's admission that is being closed, not an observed
+ * platform. Pinned by `__tests__/closeWithoutCode.test.ts`.
+ */
+export function shouldReconnectAfterClose(code: number | undefined): boolean {
+  if (code === undefined) return true;
+  return code !== WS_CLOSE_AUTH_REJECTED;
+}
+
 export interface WSMessage {
   type: string;
   [key: string]: unknown;
@@ -142,7 +192,7 @@ export class WSClient {
       this.stopHeartbeat();
       if (this.shutdown) return;
 
-      if (event.code === 4001) {
+      if (!shouldReconnectAfterClose(event.code)) {
         this.setStatus("failed");
         return;
       }
