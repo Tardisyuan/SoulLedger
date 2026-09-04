@@ -768,6 +768,8 @@
       "pending_verdict": "{{verdict}} recorded for {{soul}}",
       "undo_scope_note": "A verdict can be taken back for {{seconds}} seconds — it has not been sent yet, so no disposition exists. Once sent, changing it goes through the administrator's audited correction.",
       "commit_error": "The verdict did not land; the case is back in the queue",
+      "stale_discarded": "A verdict left by an earlier session outlived its undo window; it was not sent and the case is back in the queue",
+      "skew_discarded": "The device clock moved, so a verdict left by an earlier session could not be placed in its undo window; it was not sent and the case is back in the queue",
       "restore_deferred": "Bring deferred cases back",
       "stat_decided": "{{n}} ruled",
       "stat_deferred": "{{n}} deferred",
