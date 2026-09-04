@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -124,18 +125,17 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     clientRef.current?.connect();
   }, []);
 
-  return (
-    <WebSocketContext.Provider
-      value={{
-        status,
-        isConnected: status === "connected",
-        send,
-        reconnect,
-      }}
-    >
-      {children}
-    </WebSocketContext.Provider>
+  const value = useMemo(
+    () => ({
+      status,
+      isConnected: status === "connected",
+      send,
+      reconnect,
+    }),
+    [status, send, reconnect]
   );
+
+  return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────

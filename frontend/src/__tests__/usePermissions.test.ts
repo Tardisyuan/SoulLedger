@@ -26,15 +26,16 @@ function mockUser(role: UserRole, permissions: string[] = []) {
   return { id: 1, username: "test", display_name: "Test", email: "test@test.com", role, permissions, tenant: null };
 }
 
+// `isJudge` / `isGuardian` / `isViewer` were built here too, and this file was
+// the ONLY place in the repo that named them — the provider set them and
+// nothing read them. They are gone from `TenantContextValue`; keeping them in
+// the double would have left a test asserting a shape the real context no
+// longer has, which is the failure mode where the double, not the code, is
+// what the suite is measuring.
 function mockContext(role: UserRole, permissions: string[] = []) {
-  const isAdmin = role === "ADMIN";
-  const isJudge = role === "JUDGE";
-  const isGuardian = role === "GUARDIAN";
-  const isViewer = role === "VIEWER";
   return {
     user: mockUser(role, permissions),
     tenantCode: "CN_DIYU",
-    isAdmin, isJudge, isGuardian, isViewer,
     setUser: jest.fn(), logout: jest.fn(),
   };
 }
@@ -84,7 +85,6 @@ describe("usePermissions", () => {
   it("unauthenticated user has no permissions", () => {
     mockUseTenant.mockReturnValue({
       user: null, tenantCode: null,
-      isAdmin: false, isJudge: false, isGuardian: false, isViewer: false,
       setUser: jest.fn(), logout: jest.fn(),
     });
     const { result } = renderHook(() => usePermissions());

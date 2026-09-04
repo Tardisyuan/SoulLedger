@@ -2,7 +2,7 @@
 
 import { useId, useMemo } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { useTenant } from "@/src/contexts/TenantContext";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import { Modal } from "@/src/components/ui/Modal";
 import { IconPicker } from "@/src/components/ui/IconPicker";
 import { Button } from "@/src/components/ui/Button";
@@ -52,7 +52,7 @@ export function MenuFormModal({
   isSubmitting?: boolean;
 }) {
   const { t } = useI18n();
-  const { isAdmin } = useTenant();
+  const { isAdmin } = usePermissions();
 
   // Unique prefix so field ids never collide across multiple Modal instances.
   const formId = useId();

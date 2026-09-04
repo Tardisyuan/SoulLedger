@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useState,
   useEffect,
   type ReactNode,
@@ -61,10 +62,28 @@ const USER_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 interface TenantContextValue {
   user: AuthUser | null;
   tenantCode: string | null;
-  isAdmin: boolean;
-  isJudge: boolean;
-  isGuardian: boolean;
-  isViewer: boolean;
+  /**
+   * The only role boolean left, and the only one that ever had a reader.
+   *
+   * `isJudge` / `isGuardian` / `isViewer` sat beside it from the start with
+   * **zero** consumers anywhere in `app/`, `src/`, `components/`, `lib/` or
+   * `e2e/` — measured over every git-tracked source file with comments
+   * stripped first, because the comments in this repo name the symbols they
+   * discuss and defeat a plain grep. The only mentions were in
+   * `usePermissions.test.ts`, which builds its own context object and would
+   * have kept passing if the provider had never set them.
+   *
+   * Three booleans nobody reads are not free: each one is a public promise
+   * that `role` can be asked about here, which is the invitation that put a
+   * second `role === "ADMIN"` in `src/hooks/usePermissions.ts`.
+   *
+   * `isAdmin` is gone from here too. Its one production reader,
+   * `src/components/menus/MenuFormModal.tsx:55`, was asking an authorization
+   * question, and `usePermissions` already answers it — `hasPermission`
+   * short-circuits on the same rule, so that module has to know it regardless.
+   * There is now exactly one derivation of "admin" in the app instead of two.
+   * Do not add a role boolean back here: ask `usePermissions`.
+   */
   setUser: (user: AuthUser | null) => void;
   logout: () => void;
 }
@@ -78,10 +97,6 @@ const USER_KEY = "soulledger_user";
 const TenantContext = createContext<TenantContextValue>({
   user: null,
   tenantCode: null,
-  isAdmin: false,
-  isJudge: false,
-  isGuardian: false,
-  isViewer: false,
   setUser: () => {},
   logout: () => {},
 });
@@ -204,22 +219,19 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     document.cookie = `soulledger_refresh=; Max-Age=0; path=/`;
   }, [setUser]);
 
-  return (
-    <TenantContext.Provider
-      value={{
-        user,
-        tenantCode,
-        isAdmin: user?.role === "ADMIN",
-        isJudge: user?.role === "JUDGE",
-        isGuardian: user?.role === "GUARDIAN",
-        isViewer: user?.role === "VIEWER",
-        setUser,
-        logout,
-      }}
-    >
-      {children}
-    </TenantContext.Provider>
+  const value = useMemo(
+    () => ({
+      user,
+      tenantCode,
+      setUser,
+      logout,
+    }),
+    // `tenantCode` is derived from `user` and cannot move without it; it is
+    // listed because it is read here, not because it adds a trigger.
+    [user, tenantCode, setUser, logout]
   );
+
+  return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
 }
 
 export const useTenant = () => useContext(TenantContext);
