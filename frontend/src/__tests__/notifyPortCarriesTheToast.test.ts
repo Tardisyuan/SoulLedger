@@ -77,7 +77,12 @@ function mountI18n(): void {
 }
 
 function toastTexts(): string[] {
-  return Array.from(document.querySelectorAll('[role="alert"]')).map(
+  // `.toast`,不是 `[role="alert"]`。toast 的 role 现在按类型分档 ——
+  // success / info 用 `status`,只有 error 用 assertive 的 `alert`
+  // (76 个 showToast 调用点里 22 个是 success,一条保存成功不该打断读屏)。
+  // 按 role 找会漏掉这里要测的那些,而这个套件问的是「文案有没有被翻译」,
+  // 和它是哪一档 live region 无关。
+  return Array.from(document.querySelectorAll(".toast")).map(
     (el) => el.textContent ?? ""
   );
 }

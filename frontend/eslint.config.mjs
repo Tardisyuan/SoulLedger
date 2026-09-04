@@ -273,6 +273,25 @@ function makeGuard(key, scan) {
   };
 }
 
+/**
+ * 设计系统管的 CSS 属性。
+ *
+ * 不是「所有属性」:`display:flex` / `gap` / `width` 这些是布局,写在 cssText 里
+ * 只是难读,不是绕过系统。这几样是 token 层真正拥有的东西 —— 圆角、动效、
+ * 字体、颜色。
+ */
+const GOVERNED_CSS_PROPERTY =
+  /(?:^|;|\s)(border-radius|animation|transition|font-family|font-size|color|background|background-color)\s*:/g;
+
+/**
+ * 允许用 cssText 的路径。
+ *
+ * 今天是空的,并且**故意断成空清单而不是具名清单** —— 这个仓库记过一次:
+ * 门禁要断空列表,不断具名清单,否则清单本身会变成下一处失真。加一项进来是
+ * 一个决定,要写理由。
+ */
+const CSSTEXT_ALLOW = [];
+
 const designSystem = {
   rules: {
     "type-scale": makeGuard("type", (raw, report) => {
@@ -320,6 +339,57 @@ const designSystem = {
         }
       }
     }),
+
+    /**
+     * 样式不许从 `style.cssText` 那条门溜出设计系统。
+     *
+     * 上面四条守卫扫的是**类名** —— `classTokens` 从 className 位置和字符串
+     * 字面量里取 token。而 `element.style.cssText = "border-radius:6px;…"`
+     * 里装的是 CSS **属性**,不是类名,所以它们一条都看不见。
+     *
+     * `src/components/ui/Toast.tsx` 就整个从这条门出去了,五处:两个
+     * `border-radius`(全站 borderRadius 表每一档都是 0)、一个裸 `0.25s` 加
+     * 一条**第三种**缓动曲线(globals.css 只定义两条)、一份私有的 `font-family`
+     * 拷贝(于是 `--font-sans` 变了它不会跟)。而 `2e14343` 那一轮的自述正是
+     * 「motion 是唯一一个每个决定都还是裸数字的轴」—— 它没数到这个文件。
+     *
+     * 报的是**属性**,不是整个赋值:一条 `display:flex` 没有任何问题,而
+     * `border-radius` / `animation` / `transition` / `font-family` / `color` /
+     * `background` 是设计系统管的那几样。逐个报,这样修的时候看得见是哪一处。
+     *
+     * `--` 开头的自定义属性不报:`el.style.setProperty("--toast-accent",
+     * "var(--color-status-error)")` 传的是 token 名字而不是值,那正是这条规则
+     * 想要的形状,不是它想禁的。
+     */
+    "no-styles-in-csstext": {
+      meta: { type: "problem", schema: [], docs: { description: "Stage 11 设计系统守卫: cssText" } },
+      create(context) {
+        const file = rel(context.filename);
+        if (CSSTEXT_ALLOW.some((p) => file.startsWith(p))) return {};
+        const check = (node, raw) => {
+          if (typeof raw !== "string") return;
+          for (const m of raw.matchAll(GOVERNED_CSS_PROPERTY)) {
+            context.report({
+              ...locOf(context, node, m[0], m.index),
+              message: `\`${m[1]}\` 写在 \`style.cssText\` 里,绕开了设计系统的四条类名守卫 —— 它们扫的是类名,看不见 CSS 属性。把这个组件的样式搬进 \`app/globals.css\` 的 token 层(\`.toast\` 那一段是照着做的),元素上只留 className;真要按元素变的值,用 \`style.setProperty("--x", "var(--color-…)")\` 传 token 名字而不是值`,
+            });
+          }
+        };
+        return {
+          AssignmentExpression(node) {
+            // `x.style.cssText = "…"`,含模板串。
+            const left = node.left;
+            if (left?.type !== "MemberExpression") return;
+            if (left.property?.name !== "cssText") return;
+            const right = node.right;
+            if (right?.type === "Literal") check(right, right.value);
+            else if (right?.type === "TemplateLiteral") {
+              for (const q of right.quasis) check(q, q.value.cooked ?? "");
+            }
+          },
+        };
+      },
+    },
 
     "no-hex-colour": {
       meta: { type: "problem", schema: [], docs: { description: "Stage 11 设计系统守卫: hex" } },
@@ -565,6 +635,7 @@ const eslintConfig = [
       "design-system/dead-radius": "error",
       "design-system/no-raw-palette": "error",
       "design-system/no-hex-colour": "error",
+      "design-system/no-styles-in-csstext": "error",
     },
   },
 
