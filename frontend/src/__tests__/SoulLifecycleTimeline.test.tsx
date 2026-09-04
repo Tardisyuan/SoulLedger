@@ -10,13 +10,37 @@ import type { Judgment } from "@soulledger/core/api/judgment";
 import type { LedgerRecord } from "@soulledger/core/api/ledger";
 import type { SoulEvent } from "@soulledger/core/api/events";
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => key,
-    locale: "zh-Hans",
-    hydrated: true,
-  }),
-}));
+// `t` is stubbed to echo the key — this file's fixtures are about rows and
+// filters, and an echoing `t` puts every one of the component's `tf` call sites
+// on its fallback branch, which is where 41 of the tree's 45 `tf` keys really
+// land (see `makeTranslateWithFallback` in I18nContext).
+//
+// `tf` is NOT hand-rolled here. It is built by the real
+// `makeTranslateWithFallback` over that stub, via `requireActual`: the thing
+// under test is "does the component detect `t`'s key-echo", and a second copy
+// of that detection written in this file would be a double standing in for the
+// machinery it is meant to measure. `requireActual` also keeps the module's
+// other exports (`I18nProvider`, `useI18n`'s siblings) intact, rather than a
+// factory that returns only what it stubs.
+//
+// The other half — the component against the REAL provider and the REAL
+// bundles, where a key that *is* present must beat the fallback — is
+// `soulFallbackCopyContract.test.tsx`. Neither half is sufficient alone: this
+// one cannot see a fallback wrongly winning over real copy, and only the real
+// bundle can.
+jest.mock("@/src/contexts/I18nContext", () => {
+  const actual = jest.requireActual("@/src/contexts/I18nContext");
+  const echo = (key: string) => key;
+  return {
+    ...actual,
+    useI18n: () => ({
+      t: echo,
+      tf: actual.makeTranslateWithFallback(echo),
+      locale: "zh-Hans",
+      hydrated: true,
+    }),
+  };
+});
 
 // 这里曾把 `RequirePermission` 桩成透传。那个桩不看 `permissions` 这个 prop,
 // 于是本文件覆盖到的每一道权限门都可以被整个删掉而本套件全绿。改成桩它下面

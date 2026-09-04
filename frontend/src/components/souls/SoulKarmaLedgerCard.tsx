@@ -42,19 +42,6 @@ interface SoulKarmaLedgerCardProps {
   inheritance: LedgerInheritance | null;
 }
 
-type TFunc = (key: string, params?: Record<string, string>) => string;
-
-function tfFactory(t: TFunc): (key: string, fallback: string, params?: Record<string, string>) => string {
-  return (key, fallback, params) => {
-    if (t(key) === key) {
-      return params
-        ? Object.entries(params).reduce((s, [k, v]) => s.replaceAll(`{{${k}}}`, v), fallback)
-        : fallback;
-    }
-    return t(key, params);
-  };
-}
-
 /** Year-only label for the x-axis — full formatHistoricalDate also appends
  * month/day, which is too wide for a per-record bar-chart tick. */
 function yearLabel(date: HistoricalDate | null, fallbackIso: string): string {
@@ -111,8 +98,12 @@ export function SoulKarmaLedgerCard({
   records,
   inheritance,
 }: SoulKarmaLedgerCardProps) {
-  const { t } = useI18n();
-  const tf = tfFactory(t);
+  // Every `tf` key this card passes — all seven of them — is absent from all
+  // three bundles, so the fallback branch is what renders here in every
+  // locale. It reaches that branch by comparing `t`'s answer against the key,
+  // which is why it cannot be the `t(k) || "fallback"` shape; see
+  // `makeTranslateWithFallback` in I18nContext for the whole argument.
+  const { t, tf } = useI18n();
 
   const rawMerit = records.filter((r) => r.type === "MERIT").reduce((s, r) => s + r.original_weight, 0);
   const rawDemerit = records.filter((r) => r.type === "DEMERIT").reduce((s, r) => s + r.original_weight, 0);

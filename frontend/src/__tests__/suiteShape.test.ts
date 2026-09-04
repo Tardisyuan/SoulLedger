@@ -142,6 +142,7 @@ const COLLECTED_FILES = [
   "searchSelectIsServerFiltered.test.tsx",
   "setup.test.ts",
   "socialWsClient.test.ts",
+  "soulFallbackCopyContract.test.tsx",
   "soulLifecycleEventCopy.test.tsx",
   "soulLifecycleRows.test.ts",
   "soulMutationFeedback.test.tsx",
