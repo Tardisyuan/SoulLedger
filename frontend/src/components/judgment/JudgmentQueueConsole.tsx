@@ -8,6 +8,7 @@ import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { useJudgmentQueue, UNDO_WINDOW_MS, type VerdictCode } from "@soulledger/core/hooks/useJudgmentQueue";
 import { Button } from "@/src/components/ui/Button";
+import { usePermissions } from "@/src/hooks/usePermissions";
 import {
   LedgerPanel,
   PriorCyclesPanel,
@@ -98,6 +99,25 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
     router.push("/judgment");
   }, [queue, router]);
 
+  // `judgment.execute`, and the backend says so out loud. `views.py:82` maps
+  // `conclude → judgment.execute` while `next_pending → judgment.read`, with
+  // the comment: "an operator who may look at the queue but not rule on it
+  // still gets the screen, AND THE VERDICT BUTTON IS THEN THE THING THEY
+  // CANNOT USE". The screen half was built; the button half was not.
+  //
+  // What that cost: a `judgment.read`-only operator got four live verdict
+  // buttons. Pressing one advanced the card, started the countdown, and eight
+  // seconds later produced a 403 rendered as the generic `commit_error` —
+  // "the verdict did not land; the case is back in the queue" — about a case
+  // that had left the screen eight seconds earlier. There was no "you may
+  // look but not rule" state anywhere.
+  //
+  // `RequirePermission` already does this shape on the detail page
+  // (`app/judgment/[id]/page.tsx:494`), so this is that decision applied to
+  // the console rather than a new one.
+  const { hasPermission } = usePermissions();
+  const canRule = hasPermission("judgment.execute");
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -127,12 +147,18 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
       }
       if (isTextEntry(event.target)) return;
 
-      const verdict = VERDICTS.find((v) => v.key === event.key);
+      // The four decision keys, undo, and the workflow toggle all end in a
+      // POST. Gated together rather than one at a time: `u` with no verdict to
+      // take back and `w` on a checkbox that is not on screen are the same
+      // kind of nothing. `s` (defer) and `?` stay live — deferring is
+      // session-local and writes nothing, and help is help.
+      const verdict = canRule ? VERDICTS.find((v) => v.key === event.key) : undefined;
       if (verdict) {
         event.preventDefault();
         rule(verdict.code);
         return;
       }
+      if (!canRule && ["u", "w", "n"].includes(event.key.toLowerCase())) return;
       switch (event.key.toLowerCase()) {
         case "s":
           event.preventDefault();
@@ -173,7 +199,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [rule, defer, undo, restoreDeferred, leave]);
+  }, [rule, defer, undo, restoreDeferred, leave, canRule]);
 
   // `progressText`, not `progressLabel`: "N of M" is a formatted count, not a
   // domain enum, and src/__tests__/domainDisplayContract.test.tsx reads any
@@ -435,7 +461,18 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 system would mean either a variant per verdict or a pile of
                 className overrides fighting it. A shared primitive is for the
                 shapes that repeat — these do not. */}
-            {judgment && cursor.soul && cursor.ledger && (
+            {judgment && cursor.soul && cursor.ledger && !canRule && (
+              /* Not a row of disabled buttons. A disabled control still says
+                 "this is yours, just not now", and this is not a timing
+                 problem — it is a standing fact about this operator. It also
+                 gives assistive tech nothing to read, which is the same
+                 complaint the repo has about disabled submit buttons
+                 elsewhere. A sentence says the true thing instead. */
+              <p role="note" className="text-03 text-[hsl(var(--color-ink-muted))] py-2">
+                {t("judgment.queue.read_only")}
+              </p>
+            )}
+            {judgment && cursor.soul && cursor.ledger && canRule && (
             <div className="flex flex-wrap gap-2">
               {VERDICTS.map((verdict) => (
                 <button

@@ -778,6 +778,7 @@
       "stat_deferred": "{{n}} deferred",
       "stat_remaining": "{{n}} left",
       "exhausted_title": "Queue is clear",
+      "read_only": "You may review this queue but not rule on it. Ruling needs the judgment.execute permission.",
       "exhausted_with_deferred_title": "Only deferred cases remain",
       "exhausted_body": "{{n}} ruled on in this sitting.",
       "incomplete_title": "This case came back incomplete",

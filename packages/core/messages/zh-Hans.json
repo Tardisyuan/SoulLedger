@@ -778,6 +778,7 @@
       "stat_deferred": "已延后 {{n}}",
       "stat_remaining": "剩余 {{n}}",
       "exhausted_title": "队列已清空",
+      "read_only": "你可以查阅这个队列，但不能裁决。裁决需要 judgment.execute 权限。",
       "exhausted_with_deferred_title": "只剩下延后的条目",
       "exhausted_body": "本次会话共裁决 {{n}} 条。",
       "incomplete_title": "这一条取回来是残缺的",
