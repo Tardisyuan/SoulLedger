@@ -121,6 +121,52 @@ describe("a page that can render an empty state can also render a failure", () =
   });
 });
 
+/**
+ * RULE 3 — the mirror of rule 1, and it was the missing half.
+ *
+ * Rule 1 asks: a page that can say "there is nothing here" must also be able
+ * to say "the request failed". Nothing asked the converse, and three pages sat
+ * in exactly that gap — `actors`, `organizations`, `realms` each rendered
+ * `<QueryError` and a skeleton and had **no empty state at all**
+ * (`grep -c EmptyState` was 0 on all three), so a query that SUCCEEDED with
+ * zero rows produced a heading over blank space and said nothing.
+ *
+ * `PageError.tsx:59` had already written half of this down — "organizations
+ * was worse still: no empty state either" — and that round added the error
+ * branch and left the observation unacted on. A sentence in a docstring is not
+ * a check; this is.
+ *
+ * THREE WAYS TO SAY IT, because there are three shapes of absence here and the
+ * rule is about the statement, not the component:
+ *   - `<EmptyState` / `empty={` — a list route with nothing in it;
+ *   - `<DataTable` / `<DataGrid` — the grid renders its own empty row;
+ *   - `not_found` / `notFound` — a DETAIL route, where "nothing" means the one
+ *     record does not exist. `app/workflow/[id]` is the only subject today
+ *     that qualifies this way, and it is not an exemption by path: a route
+ *     that fetches one record has no empty-list state to render, and saying
+ *     "not found" is the true sentence rather than a way around the rule.
+ */
+const NAMES_ABSENCE = /<EmptyState|empty=\{|<DataTable|<DataGrid|not_found|notFound/;
+
+describe("a page that can say the request failed can also say there is nothing here", () => {
+  const subjects = PAGES.filter((p) => /<QueryError/.test(p.source));
+
+  it("finds pages to judge", () => {
+    // 16 today. A floor: the rule must not quietly become vacuous by the
+    // subject list collapsing.
+    expect(subjects.length).toBeGreaterThanOrEqual(12);
+  });
+
+  it("the absence pattern does not simply match every page", () => {
+    const matched = PAGES.filter((p) => NAMES_ABSENCE.test(p.source)).length;
+    expect(matched).toBeLessThan(PAGES.length);
+  });
+
+  it.each(subjects.map((p) => [p.label, p] as const))("%s", (_label, page) => {
+    expect(NAMES_ABSENCE.test(page.source)).toBe(true);
+  });
+});
+
 describe("a page that renders a data grid tells it when the query failed", () => {
   // DataTable is the one that gets this right on its own: it renders a
   // distinct error row and, at data-table.tsx:144, computes

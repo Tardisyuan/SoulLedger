@@ -8,6 +8,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { CardSkeleton } from "@/components/ui/skeleton";
 import { ChevronDown, ClipboardList, Landmark, Scale } from "lucide-react";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -184,6 +185,14 @@ function OrganizationsPageContent() {
           over zero groups. And `fetchAllOrganizations` pages with `while
           (true)`, so one failed page fails the whole query. */}
       {isError && <QueryError onRetry={() => refetch()} />}
+      {/* The third state. `Object.entries({})` over zero groups renders
+          nothing, so a successful query with no rows produced a heading and
+          blank space — the case `PageError.tsx:59` already recorded about this
+          page ("organizations was worse still: no empty state either") and
+          which that round fixed only the error half of. */}
+      {!isLoading && !isError && organizations.length === 0 && (
+        <EmptyState title={t("organizations.title")} reason={t("organization.no_organizations")} />
+      )}
       <div className="space-y-10">
         {Object.entries(grouped).map(([category, orgs]) => {
           const info = { name: t(`organization.civilizations.${category}`) || category, icon: CIVILIZATION_ICONS[category] ?? CIVILIZATION_ICON_FALLBACK };
