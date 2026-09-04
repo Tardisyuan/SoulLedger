@@ -38,6 +38,13 @@ Named agents coordinate via `SendMessage`, not polling or shared state.
 
 ## Build & Test
 
+**前端命令需要 node >= 20.9.0**(两份 package.json 都声明了),而这台机器的默认
+PATH 上是 **v18.20.8**。仓库根的 `.nvmrc` 钉了 20.19.5,`nvm use` 即可。
+不切版本的话有两道门禁**根本起不来**,而且失败信息不指向版本:
+`next build` 直说需要 >=20.9.0,但 `packages/core` 的 vitest 报的是
+`SyntaxError: 'node:util' does not provide an export named 'styleText'`。
+2026-09-04 实测:v18.20.8 下这两条红,v20.19.5 与 v22.22.1 下都绿。
+
 ```bash
 # Backend — matches CI pipeline exactly
 # ISOLATE BOTH BACKING SERVICES. `.env` points DATABASE_URL *and* REDIS_URL at
