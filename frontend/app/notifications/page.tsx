@@ -6,6 +6,7 @@ import {
   Bell, FileText, Scale, AlertCircle, RefreshCw, TrendingUp, User,
   type LucideIcon
 } from "lucide-react";
+import { notificationKeys } from "@soulledger/core/query_keys";
 import { notificationsApi, type Notification, type PaginatedResponse } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -39,7 +40,15 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<FilterType>("all");
 
   const { data: notifications = [], isLoading, isError, refetch } = useQuery({
-    queryKey: ["notifications", filter],
+    // `notificationKeys.list(...)`, not a hand-written `["notifications", filter]`.
+    // The literal happened to prefix-match what eventHandlers.ts invalidates
+    // (`notificationKeys.all` === `["notifications"]`), so pushes did reach this
+    // page — by coincidence of a string, not because the two agreed on a key.
+    // Meanwhile eventInvalidationReachesCache.test.ts asserted that
+    // `notificationKeys.list()` gets invalidated, and nothing read that entry:
+    // the row was green and vacuous, the same shape the `soul detail` row had
+    // before 5593e90.
+    queryKey: notificationKeys.list(filter === "unread" ? { is_read: "false" } : undefined),
     queryFn: async () => {
       const params: Record<string, string> | undefined = filter === "unread" ? { is_read: "false" } : undefined;
       const res = await notificationsApi.list(params);
@@ -51,7 +60,7 @@ export default function NotificationsPage() {
   const markReadMutation = useMutation({
     mutationFn: (id: string) => notificationsApi.markRead(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
     },
     onError: () => showToast(t("notifications.mark_read_error") || "Failed to mark as read", "error"),
   });
@@ -59,7 +68,7 @@ export default function NotificationsPage() {
   const markAllReadMutation = useMutation({
     mutationFn: () => notificationsApi.markAllRead(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
     },
     onError: () => showToast(t("notifications.mark_all_error") || "Failed to mark all as read", "error"),
   });
