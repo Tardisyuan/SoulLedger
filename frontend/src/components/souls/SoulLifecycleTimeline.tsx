@@ -336,7 +336,7 @@ export function SoulLifecycleTimeline({
                   }
                 >
                   <div className="text-03 text-[hsl(var(--color-ink))] truncate">
-                    {row.isMilestone && <span className="text-[hsl(var(--color-accent))]">★ </span>}
+                    {row.isMilestone && <span className="text-[hsl(var(--color-accent-ink))]">★ </span>}
                     {row.title}
                   </div>
                   <div className="text-02 text-[hsl(var(--color-ink-muted))] truncate">

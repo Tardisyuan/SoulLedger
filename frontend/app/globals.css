@@ -680,8 +680,15 @@
   ::file-selector-button {
     border-color: hsl(var(--color-hairline));
   }
+  /* hover 用 accent-ink,不是 accent。实测(2026-09-04)浅色下
+     `--color-accent` 在 canvas 上是 2.13:1 —— 连非文本的 3:1 下限都不过,
+     而 hover 之前的 `--color-ink-muted` 是 4.53:1。也就是说悬停之后比悬停之前
+     **更看不清**,这条规则把每一个链接的可供性做反了。深色下两个 token
+     声明相等(:284),所以视觉变化只在浅色。
+     上方 --color-accent-ink 的说明本来就写着「任何把品牌色当文本渲染的
+     必须用这个」,而这里是全应用的 anchor 规则,是那句话最大的适用点。*/
   a {
-    @apply text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent))] transition-colors duration-state;
+    @apply text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] transition-colors duration-state;
   }
   button {
     @apply transition-colors duration-state;

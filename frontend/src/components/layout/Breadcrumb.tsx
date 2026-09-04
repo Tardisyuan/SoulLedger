@@ -117,7 +117,12 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
           <Link
             href="/dashboard"
             prefetch={true}
-            className="flex items-center text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors"
+            /* accent-INK on hover, like the crumb links below it and the
+               masthead icons beside it. The bare accent measures 2.13:1 on
+               canvas in light mode, so this home glyph would have hovered
+               DARKER-to-lighter out of legibility; see AppLayout.tsx's note in
+               the same header row. */
+            className="flex items-center text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent-ink))] transition-colors"
             title={label("breadcrumb.home", "仪表盘")}
           >
             <Home className="w-4 h-4" />
