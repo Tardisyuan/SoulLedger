@@ -163,6 +163,7 @@ const COLLECTED_FILES = [
   "useSocial.test.ts",
   "useSouls.lifecycle.test.ts",
   "useSouls.test.ts",
+  "workflowAutoLayoutMotion.test.tsx",
   "workflowEditorEdgeRouting.test.tsx",
   "workflowEditorLayout.test.ts",
   "viewportHeightContract.test.ts",

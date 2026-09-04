@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useState, useEffect, useId, useMemo, useRef } from "react";
+import { flushSync } from "react-dom";
+import { gsap } from "gsap";
+import { Flip } from "gsap/Flip";
 import {
   ReactFlow,
   Node,
@@ -50,6 +53,48 @@ import {
 // Re-exported, not relocated as far as callers are concerned: `TemplateNode`
 // has been part of this module's surface since before the split.
 export type { TemplateNode };
+
+// Guarded rather than bare: this module is imported during Next's prerender of
+// `/workflow`, and plugin registration has no meaning without a document.
+// `registerPlugin` is idempotent, so running it once per module evaluation is
+// the whole of the setup.
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(Flip);
+}
+
+/**
+ * How long a node takes to travel to its new place.
+ *
+ * Long enough to be followed by eye across the width of the canvas, short
+ * enough that pressing the button twice is not a wait. It is the only tunable
+ * in this animation; there is deliberately no stagger, no entrance and no
+ * easing on anything that did not move, because the ONE thing this transition
+ * exists to say is "that card went there".
+ */
+const LAYOUT_TRAVEL_SECONDS = 0.45;
+
+/**
+ * The operator asked their OS for no motion, so the re-layout is instant.
+ *
+ * `app/globals.css` already collapses every CSS animation and transition to
+ * 1ms under this same query, and that rule DOES NOT REACH THIS ANIMATION:
+ * gsap writes `transform` from JavaScript on a `requestAnimationFrame` loop,
+ * which no stylesheet can shorten. So the preference has to be read here, in
+ * JS, or the one animation in this app that moves a large object across the
+ * screen would be the one animation the accessibility rule misses.
+ *
+ * Read at click time rather than subscribed to: a `matchMedia` listener would
+ * need a `useEffect` and would answer the same question one press later.
+ * `window.matchMedia` is guarded because this function is also reachable from
+ * a test environment that does not implement it.
+ */
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
 
 export interface WorkflowTemplateInput {
   name: string;
@@ -122,6 +167,21 @@ export default function WorkflowEditor({
 
   // Populate form when template loads - use ref to track initialization
   const initRef = useRef(false);
+
+  // The canvas, so the auto-layout transition can find the node wrappers
+  // without reaching across the whole document — two editors can be mounted at
+  // once (the same reason `formId` exists), and a `document.querySelectorAll`
+  // here would animate the other one's cards too.
+  const canvasRef = useRef<HTMLDivElement>(null);
+  // The running travel, kept so a second press can interrupt it and so an
+  // editor that unmounts mid-flight does not leave gsap writing to detached
+  // nodes.
+  const layoutFlipRef = useRef<gsap.core.Timeline | null>(null);
+  useEffect(() => {
+    return () => {
+      layoutFlipRef.current?.kill();
+    };
+  }, []);
 
   // Reset init flag when templateId changes
   useEffect(() => {
@@ -306,13 +366,95 @@ export default function WorkflowEditor({
    * The hydration paths lay out nodes that have no stored position and leave
    * the rest alone, on purpose — a template reloads looking exactly as it was
    * left. That makes this button the single moment in the editor's life at
-   * which an already-placed node changes coordinates, which is what a
-   * follow-up transition has to narrate. `layoutNodes` is called with no
-   * pinned set, so nothing is exempt.
+   * which an already-placed node changes coordinates, which is what the
+   * transition below narrates. `layoutNodes` is called with no pinned set, so
+   * nothing is exempt.
+   *
+   * WHY THE NODES TRAVEL INSTEAD OF TELEPORTING. A re-layout of a ten-node
+   * template moves nine of them at once. Teleported, the operator is shown a
+   * new picture and has to re-find every card in it; the 450ms of travel is
+   * the only thing that says WHICH card became which. That is the whole of the
+   * justification, and it is why nothing else in this editor is animated.
+   *
+   * WHY `flushSync` AND NOT `useLayoutEffect`. Flip needs the old rects
+   * measured before the DOM moves and the tween started after it has. The
+   * obvious hook does not work here: `<ReactFlow nodes={…}>` does not position
+   * anything itself — `StoreUpdater` copies the prop into xyflow's zustand
+   * store from its OWN `useLayoutEffect`, and the wrappers that carry the
+   * `transform` re-render from that store in a LATER pass. A `useLayoutEffect`
+   * in this component runs in the same commit as that copy, i.e. one pass too
+   * early, and would measure the nodes still at their old coordinates and
+   * animate nothing. `flushSync` drives the whole cascade — our render,
+   * StoreUpdater's effect, the store-driven re-render — to a committed DOM
+   * before it returns, which is the only point at which "after" is true.
+   * Verified in chromium, not reasoned about: see
+   * `e2e/workflow-auto-layout-motion.spec.ts`.
+   *
+   * WHAT ZOOM DOES, AND WHY IT DOES NOT MATTER. `Flip.getState` records
+   * `getBoundingClientRect`, which inside xyflow's `scale()`d viewport is
+   * multiplied by the zoom (a 180×110 card reports 90×46 at zoom 0.5 — the
+   * same trap `workflowEditorGraph.ts` records for measurement). It cancels
+   * out here because capture and animation happen in ONE synchronous handler:
+   * the zoom cannot change in between, so both rects are contaminated by the
+   * same factor and the delta Flip derives is in the same space it applies it
+   * in. gsap converts that screen-space delta into the element's own
+   * coordinate space through the parent's matrix, so what lands on the wrapper
+   * is xyflow's own untransformed `translate()` — asserted at zoom ≈ 0.3 by
+   * the e2e above, which reads the final `transform` back and compares it to
+   * the coordinates the save payload carries.
+   *
+   * WHAT THIS DOES NOT ANIMATE, SEEN AND ACCEPTED RATHER THAN MISSED. Only the
+   * node wrappers travel. xyflow draws edges as SVG paths recomputed from its
+   * store, which holds the new coordinates from the first frame, so for the
+   * 450ms of travel the connectors sit at their FINAL geometry while the cards
+   * are still on their way — looked at in chromium mid-flight on the ten-court
+   * preset, they read as arrows a little too short to reach the card below.
+   * There is no Flip-shaped fix: a path is not positioned by a transform, and
+   * the alternative — re-running `setNodes` every frame so xyflow redraws the
+   * edges itself — is a re-render per frame per node and stops being a Flip
+   * animation at all. The cards are the subject of the sentence this
+   * transition exists to say, so the cards are what moves.
    */
   const autoLayout = useCallback(() => {
-    setNodes((nds) => layoutNodes(nds, edges));
-  }, [setNodes, edges]);
+    const next = layoutNodes(nodes, edges);
+    // Nothing to narrate if nothing moved — pressing the button on an
+    // already-laid-out canvas must not produce 450ms of theatre. `layoutNodes`
+    // maps over `nodes`, so index i is the same node on both sides.
+    const moved = next.some(
+      (n, i) =>
+        n.position.x !== nodes[i].position.x || n.position.y !== nodes[i].position.y
+    );
+
+    if (!moved || prefersReducedMotion()) {
+      setNodes(next);
+      return;
+    }
+
+    // The wrappers xyflow puts the position `transform` on. Scoped to this
+    // editor's own canvas, not the document: two editors can be mounted at
+    // once. There is deliberately NO `cards.length === 0` branch beside the
+    // guard above — it was written, and then removed for failing to earn its
+    // place: with it mutated out, `WorkflowEditor.test.tsx` and
+    // `workflowEditorEdgeRouting.test.tsx` (whose stubs render no wrappers at
+    // all, so the list really is empty there) came back 17 passed. gsap
+    // handles an empty target list on its own, and a branch nothing can
+    // distinguish is a branch that reads as load-bearing without being it.
+    const cards = Array.from(
+      canvasRef.current?.querySelectorAll<HTMLElement>(".react-flow__node") ?? []
+    );
+
+    // A second press mid-flight: kill the running tween WITHOUT winding it to
+    // its end, so `getState` below records the cards where they visually are
+    // and the new travel continues from there rather than from a jump.
+    layoutFlipRef.current?.kill();
+
+    const before = Flip.getState(cards);
+    flushSync(() => setNodes(next));
+    layoutFlipRef.current = Flip.from(before, {
+      duration: LAYOUT_TRAVEL_SECONDS,
+      ease: "power2.inOut",
+    });
+  }, [nodes, edges, setNodes]);
 
   // Delete selected node
   const deleteSelectedNode = useCallback(() => {
@@ -523,7 +665,7 @@ export default function WorkflowEditor({
       </div>
 
       {/* Flow canvas */}
-      <div className="flex-1 min-h-0">
+      <div ref={canvasRef} className="flex-1 min-h-0">
         <ReactFlow
           nodes={nodes}
           edges={edges}
