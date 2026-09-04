@@ -5,7 +5,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
-import { useCreateSoul } from "@/src/hooks/useSouls";
+import { useCreateSoul } from "@soulledger/core/hooks/useSouls";
 import { Button } from "@/src/components/ui/Button";
 import {
   CIVILIZATION_OPTIONS,

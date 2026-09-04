@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { judgmentApi, type Judgment, type JudgmentQueueCursor } from "@soulledger/core/api";
-import { judgmentKeys } from "@soulledger/core/query_keys";
-import { notify, onSessionSuspend } from "@soulledger/core/platform";
-import { useI18n } from "@/src/contexts/I18nContext";
+import { judgmentApi, type Judgment, type JudgmentQueueCursor } from "../api/index";
+import { judgmentKeys } from "../query_keys";
+import { notify, onSessionSuspend } from "../platform/index";
 
 /**
  * The judgment triage queue's session state (BRIEF §4.2).
@@ -93,7 +92,6 @@ const EMPTY_CURSOR: JudgmentQueueCursor = {
 export function useJudgmentQueue(options?: { at?: string }) {
   const at = options?.at;
   const qc = useQueryClient();
-  const { t } = useI18n();
 
   /** Deliberately deferred by the operator. Session-only; never sent as state. */
   const [deferred, setDeferred] = useState<string[]>([]);
@@ -165,10 +163,10 @@ export function useJudgmentQueue(options?: { at?: string }) {
         // silently dropping it — it is still pending, and the operator must
         // see it again.
         setHolding((prev) => prev.filter((id) => id !== verdictToSend.judgment.id));
-        notify(t("judgment.queue.commit_error"), "error");
+        notify("judgment.queue.commit_error", "error");
       }
     },
-    [qc, t]
+    [qc]
   );
 
   /**
@@ -247,8 +245,8 @@ export function useJudgmentQueue(options?: { at?: string }) {
     pendingRef.current = null;
     setPending(null);
     setHolding((prev) => prev.filter((id) => id !== held.judgment.id));
-    notify(t("judgment.queue.undo_done"), "info");
-  }, [clearTimer, t]);
+    notify("judgment.queue.undo_done", "info");
+  }, [clearTimer]);
 
   /**
    * Defer: hide for this sitting only. No request, no state change on the

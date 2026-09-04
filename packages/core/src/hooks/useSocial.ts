@@ -1,19 +1,31 @@
 "use client";
 
-import axios from "axios";
-import { drfNonFieldError } from "@soulledger/core/validations/drfErrors";
+import { drfNonFieldError } from "../validations/drfErrors";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { socialApi, type UserProfile } from "@soulledger/core/api";
-import { notify } from "@soulledger/core/platform";
-import { useI18n } from "@/src/contexts/I18nContext";
-import { socialKeys } from "@soulledger/core/query_keys";
+import { socialApi, type UserProfile } from "../api/index";
+import { notify, type NotifyMessage } from "../platform/index";
+import { socialKeys } from "../query_keys";
 
 /**
- * Was a private reader for DRF's `non_field_errors` shape. It now delegates to
- * `lib/validations/drfErrors`, which also reads the per-field shape nothing in
- * the app used to read — see that file for why the two are separate functions.
+ * What DRF said, or the key to use when it said nothing usable.
+ *
+ * WHY THIS SHAPE. `notify` takes a message key and the host translates it, so
+ * the fallback here is a key. The server's own sentence is not and can never be
+ * one — DRF writes `non_field_errors` per request ("Cannot react to a post from
+ * another tenant.") — so it goes through `NotifyMessage`'s `{ text }` form,
+ * which exists for exactly this. See the note over `NotifyMessage` in
+ * `@soulledger/core/platform`.
+ *
+ * `drfNonFieldError` is called with `""` and the result tested, rather than
+ * being handed the key as its fallback: passing the key would make a missing
+ * server message indistinguishable from a server message that happened to be
+ * the key, and would send a key through the `{ text }` path where nothing would
+ * translate it.
  */
-const extractErrorMessage = drfNonFieldError;
+function serverSaidOr(error: unknown, key: string): NotifyMessage {
+  const said = drfNonFieldError(error, "");
+  return said ? { text: said } : key;
+}
 
 // ── Posts ────────────────────────────────────────────────────────────
 
@@ -79,16 +91,15 @@ export function useFeed(
 
 export function useCreatePost() {
   const qc = useQueryClient();
-  const { t } = useI18n();
   return useMutation({
     mutationFn: (data: { content: string; visibility?: string }) =>
       socialApi.createPost(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.posts.all });
-      notify(t("social.post_created") || "Post created", "success");
+      notify("social.post_created", "success");
     },
     onError: () => {
-      notify(t("social.post_error") || "Failed to create post", "error");
+      notify("social.post_error", "error");
     },
   });
 }
@@ -101,7 +112,7 @@ export function useDeletePost() {
       qc.invalidateQueries({ queryKey: socialKeys.posts.all });
     },
     onError: () => {
-      notify("Failed to delete post", "error");
+      notify("social.post_delete_error", "error");
     },
   });
 }
@@ -122,7 +133,6 @@ export function useComments(postId: string) {
 
 export function useCreateComment() {
   const qc = useQueryClient();
-  const { t } = useI18n();
   return useMutation({
     mutationFn: (data: { post: string; content: string; parent?: string }) =>
       socialApi.createComment(data),
@@ -131,7 +141,7 @@ export function useCreateComment() {
       qc.invalidateQueries({ queryKey: socialKeys.posts.detail(vars.post) });
     },
     onError: (error) => {
-      notify(extractErrorMessage(error, t("social.comment_error") || "Failed to add comment"), "error");
+      notify(serverSaidOr(error, "social.comment_error"), "error");
     },
   });
 }
@@ -144,7 +154,7 @@ export function useDeleteComment() {
       qc.invalidateQueries({ queryKey: socialKeys.comments.all });
     },
     onError: () => {
-      notify("Failed to delete comment", "error");
+      notify("social.comment_delete_error", "error");
     },
   });
 }
@@ -164,7 +174,6 @@ export function useReactions(params?: Record<string, string | number | undefined
 
 export function useToggleReaction() {
   const qc = useQueryClient();
-  const { t } = useI18n();
   return useMutation({
     mutationFn: (data: { post?: string; comment?: string; reaction_type: string }) =>
       socialApi.addReaction(data),
@@ -182,7 +191,7 @@ export function useToggleReaction() {
       qc.invalidateQueries({ queryKey: socialKeys.posts.all });
     },
     onError: (error) => {
-      notify(extractErrorMessage(error, t("social.reaction_error") || "Failed to react"), "error");
+      notify(serverSaidOr(error, "social.reaction_error"), "error");
     },
   });
 }
@@ -191,7 +200,6 @@ export function useToggleReaction() {
 
 export function useToggleFollow() {
   const qc = useQueryClient();
-  const { t } = useI18n();
   return useMutation({
     mutationFn: (followingId: string) => socialApi.toggleFollow(followingId),
     onSuccess: () => {
@@ -203,7 +211,7 @@ export function useToggleFollow() {
     // from a click that never registered — so the natural response was to click
     // again, and fail again, silently.
     onError: (error) => {
-      notify(extractErrorMessage(error, t("social.follow_error")), "error");
+      notify(serverSaidOr(error, "social.follow_error"), "error");
     },
   });
 }
@@ -257,16 +265,15 @@ export function useMyProfile() {
 
 export function useUpdateProfile() {
   const qc = useQueryClient();
-  const { t } = useI18n();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<UserProfile> }) =>
       socialApi.updateProfile(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: socialKeys.profiles.all });
-      notify(t("social.profile_updated") || "Profile updated", "success");
+      notify("social.profile_updated", "success");
     },
     onError: (error) => {
-      notify(extractErrorMessage(error, t("social.profile_update_error") || "Failed to update profile"), "error");
+      notify(serverSaidOr(error, "social.profile_update_error"), "error");
     },
   });
 }

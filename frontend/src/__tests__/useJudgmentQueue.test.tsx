@@ -13,7 +13,7 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useJudgmentQueue, UNDO_WINDOW_MS } from "@/src/hooks/useJudgmentQueue";
+import { useJudgmentQueue, UNDO_WINDOW_MS } from "@soulledger/core/hooks/useJudgmentQueue";
 import { judgmentApi } from "@soulledger/core/api";
 
 const mockShowToast = jest.fn();
@@ -78,9 +78,9 @@ jest.mock("@soulledger/core/platform", () => ({
   notify: (...args: unknown[]) => mockShowToast(...args),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "en", hydrated: true }),
-}));
+// NO `jest.mock("@/src/contexts/I18nContext")`. The hook under test stopped
+// importing it when `notify` began taking a message key — the strings below are
+// keys because that is what the hook now passes, not because a stub echoed them.
 
 const mockNext = judgmentApi.next as jest.Mock;
 const mockConclude = judgmentApi.conclude as jest.Mock;

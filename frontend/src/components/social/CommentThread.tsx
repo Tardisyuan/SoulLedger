@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useComments, useCreateComment, useDeleteComment } from "@/src/hooks/useSocial";
+import { useComments, useCreateComment, useDeleteComment } from "@soulledger/core/hooks/useSocial";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { ConfirmDialog } from "@/src/components/ui/Modal";

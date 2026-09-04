@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { usePost } from "@/src/hooks/useSocial";
+import { usePost } from "@soulledger/core/hooks/useSocial";
 import { PostCard } from "@/src/components/social/PostCard";
 import { CommentThread } from "@/src/components/social/CommentThread";
 import { useI18n } from "@/src/contexts/I18nContext";

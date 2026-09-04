@@ -1,6 +1,8 @@
 import type {
   KeyValueStore,
   NotifyKind,
+  NotifyMessage,
+  NotifyParams,
   Notifier,
   PlatformAdapter,
   SessionResumeSubscriber,
@@ -11,6 +13,8 @@ import type {
 export type {
   KeyValueStore,
   NotifyKind,
+  NotifyMessage,
+  NotifyParams,
   Notifier,
   PlatformAdapter,
   SessionResumeSubscriber,
@@ -168,8 +172,12 @@ export function onSessionResume(handler: () => void): () => void {
  * Read through `platform()` on each call rather than captured once, for the
  * same reason the two subscribers above are: the adapter is installed after
  * this module is first imported.
+ *
+ * `message` is a message **key**, not a rendered string — the host resolves it
+ * against the bundles in `../../messages`. See `NotifyMessage` for the two
+ * other forms and for why the third (`{ text }`) has to exist.
  */
-export function notify(message: string, kind: NotifyKind, durationMs?: number): void {
+export function notify(message: NotifyMessage, kind: NotifyKind, durationMs?: number): void {
   platform().notify(message, kind, durationMs);
 }
 

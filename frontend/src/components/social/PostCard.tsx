@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { useDeletePost } from "@/src/hooks/useSocial";
+import { useDeletePost } from "@soulledger/core/hooks/useSocial";
 import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { ReactionBar } from "./ReactionBar";
 import type { Post } from "@soulledger/core/api";

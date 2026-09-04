@@ -69,15 +69,26 @@ export function SocialEventBusProvider({ children }: { children: ReactNode }) {
     (event: SocialEvent) => {
       // Route through event registry for cache invalidation + toast.
       //
-      // The wrapper is not decoration. `EventContext.showToast`
-      // (`lib/events/eventTypes.ts`) declares `type` optional, while the
-      // platform port requires a kind — deliberately, so a host adapter cannot
-      // be handed a notification whose loudness is unstated. Adapting the
-      // looser shape to the stricter one is this function; `"info"` is the
-      // default `showToast` itself applied, so nothing changes for a handler
-      // that omits it.
+      // The wrapper is not decoration, and it now does two jobs.
+      //
+      // `EventContext.showToast` (`lib/events/eventTypes.ts`) declares `type`
+      // optional, while the platform port requires a kind — deliberately, so a
+      // host adapter cannot be handed a notification whose loudness is
+      // unstated. `"info"` is the default `showToast` itself applied, so
+      // nothing changes for a handler that omits it.
+      //
+      // And `{ text }` rather than a bare string, which the port would read as
+      // a message key. The registry's handlers build these sentences out of
+      // payload fields — a soul's name, a workflow's node — so they are not
+      // keys and no bundle could hold them. This is the second of the two
+      // places `NotifyMessage`'s `{ text }` form exists for; the other is DRF's
+      // `non_field_errors` in `src/hooks/useSocial.ts`.
+      //
+      // NOT A LOOPHOLE FOR THE REGISTRY'S OWN COPY. `lib/events/event_registry`
+      // is still in the web tree and still translates before it gets here;
+      // moving it is not part of this change.
       const toast = (message: string, kind?: "success" | "error" | "info", duration?: number) =>
-        notify(message, kind ?? "info", duration);
+        notify({ text: message }, kind ?? "info", duration);
       dispatchEvent(event as EventPayload, { queryClient, showToast: toast });
       setOfflineQueueSize(clientRef.current?.getOfflineQueueSize() ?? 0);
     },

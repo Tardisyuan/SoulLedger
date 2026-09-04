@@ -47,7 +47,7 @@ const comments: Comment[] = [
   },
 ];
 
-jest.mock("@/src/hooks/useSocial", () => ({
+jest.mock("@soulledger/core/hooks/useSocial", () => ({
   useComments: () => ({ data: { results: comments }, isLoading: false }),
   useCreateComment: () => ({ mutate: mockCreateMutate, isPending: false }),
   useDeleteComment: () => ({ mutate: mockDeleteMutate, isPending: false }),

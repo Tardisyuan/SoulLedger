@@ -25,7 +25,7 @@ import {
   useFollowers,
   useProfile,
   useMyProfile,
-} from "@/src/hooks/useSocial";
+} from "@soulledger/core/hooks/useSocial";
 import { socialApi } from "@soulledger/core/api";
 
 const mockShowToast = jest.fn();
@@ -66,9 +66,9 @@ jest.mock("@soulledger/core/platform", () => ({
   notify: (...args: unknown[]) => mockShowToast(...args),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "en", hydrated: true }),
-}));
+// NO `jest.mock("@/src/contexts/I18nContext")`. The hook under test stopped
+// importing it when `notify` began taking a message key — the strings below are
+// keys because that is what the hook now passes, not because a stub echoed them.
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -215,7 +215,10 @@ describe("useDeletePost", () => {
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
 
-    expect(mockShowToast).toHaveBeenCalledWith("Failed to delete post", "error");
+    // Was the literal "Failed to delete post" — an English sentence hardcoded
+    // in a hook, in an app whose default locale is zh-Hans. It is a key now,
+    // and the copy exists in all three bundles.
+    expect(mockShowToast).toHaveBeenCalledWith("social.post_delete_error", "error");
   });
 });
 
@@ -263,7 +266,7 @@ describe("useDeleteComment", () => {
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
 
-    expect(mockShowToast).toHaveBeenCalledWith("Failed to delete comment", "error");
+    expect(mockShowToast).toHaveBeenCalledWith("social.comment_delete_error", "error");
   });
 });
 

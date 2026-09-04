@@ -21,7 +21,7 @@ import {
   SoulRecordEntry,
 } from "@soulledger/core/api";
 import { ledgerApi, type LedgerInheritance } from "@soulledger/core/api/ledger";
-import { useUpdateSoul, useDeleteSoul } from "@/src/hooks/useSouls";
+import { useUpdateSoul, useDeleteSoul } from "@soulledger/core/hooks/useSouls";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { SoulKarmaLedgerCard } from "@/src/components/souls/SoulKarmaLedgerCard";
 import { DEFAULT_REBIRTH_FORM, type RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";

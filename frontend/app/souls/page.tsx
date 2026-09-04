@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { useSouls } from "@/src/hooks/useSouls";
+import { useSouls } from "@soulledger/core/hooks/useSouls";
 import { CIVILIZATION_OPTIONS } from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { SoulCreateModal } from "@/src/components/ui/Modal";
