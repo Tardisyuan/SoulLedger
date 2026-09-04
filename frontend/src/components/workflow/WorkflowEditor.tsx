@@ -174,6 +174,72 @@ function fitsInside(
   return left >= 0 && top >= 0 && right <= pane.width && bottom <= pane.height;
 }
 
+/**
+ * THE NODE EDIT MODAL HAD NO KEYBOARD PATH AT ALL.
+ *
+ * `onNodeDoubleClick` was the only way in, so an operator without a mouse could
+ * not edit a single node of a template. What follows is the way in; `E` is the
+ * key, and every part of that choice is load-bearing:
+ *
+ *   - NOT Enter and NOT Space. `@xyflow/system` exports
+ *     `elementSelectionKeys = ['Enter', ' ', 'Escape']` and the node wrapper's
+ *     own `onKeyDown` (index.mjs ~2173) hands those three to `handleNodeClick`.
+ *     Claiming Enter or Space would mean either fighting that handler or
+ *     replacing it, and replacing it also costs the arrow-key node nudging it
+ *     implements in the same function.
+ *   - A single letter, because that is the scheme this app already has:
+ *     `JudgmentQueueConsole.tsx` rules a verdict on 1/2/3/4 and takes U, W, R,
+ *     N, S and H. `E` collides with none of them, and the two surfaces are
+ *     never on screen together anyway.
+ *
+ * The guards below are `JudgmentQueueConsole.tsx`'s, deliberately the same
+ * shape rather than a second convention: modifiers out first, then text entry.
+ */
+const EDIT_NODE_KEY = "e";
+
+/**
+ * `aria-keyshortcuts` announces `E` on every node, which is the half of
+ * discoverability that reaches a screen reader. The visible half is the `<kbd>`
+ * in the hint Panel below.
+ *
+ * Passed through `domAttributes` — xyflow spreads it onto the wrapper AFTER its
+ * own attributes (index.mjs 2240). That ordering is why this object carries
+ * nothing else: anything xyflow already sets there would be silently replaced
+ * rather than merged. It cannot carry `onKeyDown` in any case — the react
+ * `Node` type omits `keyof DOMAttributes` from `domAttributes`, so every DOM
+ * event handler is excluded by the type, not merely by convention.
+ *
+ * Module scope so the identity never changes; `<ReactFlow nodes>` is diffed.
+ */
+const NODE_DOM_ATTRIBUTES = { "aria-keyshortcuts": "E" } as const;
+
+/**
+ * The accessible name of one card, built out of what the card already shows.
+ *
+ * The three fields are the ones `EditableNode.tsx` renders as text, IN THAT
+ * ORDER, and the node type is the RAW member (`TRIAL`) because that is what the
+ * card displays — a translated name here would leave the accessible name
+ * saying something the visible label does not (WCAG 2.5.3). Nothing here is new
+ * copy, so no bundle key was added.
+ *
+ * `, ` and not the ` · ` this file uses elsewhere: the node names in the shipped
+ * presets ARE middot-separated ("秦广王 · 分流"), so a middot join produces
+ * "秦广王 · 分流 · TRIAL · 第一殿", in which the field boundaries are
+ * unrecoverable. A comma is also where screen readers pause.
+ *
+ * FALLS BACK TO THE ID AND NEVER TO "". An empty `aria-label` is worse than no
+ * `aria-label`: it silences the element's other naming paths instead of
+ * deferring to them, so a node whose fields are all blank would announce as
+ * nothing at all. `presetTemplateToFlow` defaults `label` to `""`, so that node
+ * is reachable, not hypothetical.
+ */
+function nodeAriaLabel(node: Node): string {
+  const parts = [node.data.label, node.data.nodeType, node.data.courtCode]
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter((value) => value.length > 0);
+  return parts.length > 0 ? parts.join(", ") : node.id;
+}
+
 export interface WorkflowTemplateInput {
   name: string;
   description: string;
@@ -717,6 +783,122 @@ export default function WorkflowEditor({
     }
   }, [nodes]);
 
+  /**
+   * `E` on the focused node opens that node's edit modal.
+   *
+   * ON THE CANVAS CONTAINER, not on the nodes and not on `window`.
+   *
+   *   - Not per node: xyflow's only route for that is `domAttributes`, whose
+   *     type omits every DOM event handler (see `NODE_DOM_ATTRIBUTES`), and
+   *     whose runtime spread happens AFTER the wrapper's own `onKeyDown` — so
+   *     an `onKeyDown` smuggled past the type would REPLACE xyflow's, taking
+   *     Enter/Space/Escape selection and arrow-key nudging with it. There is no
+   *     `onNodeKeyDown` prop at 12.10.2; the `onNode*` surface is
+   *     Click, DoubleClick, ContextMenu, the Drag trio and the Mouse trio.
+   *   - Not `window`: two editors can be mounted at once (the reason `formId`
+   *     and `canvasRef` exist), and a window listener in each would need an
+   *     `activeElement` check to work out whose node was focused. Bubbling
+   *     gives that scoping for free — the event only arrives here if focus is
+   *     inside THIS canvas.
+   *
+   * Container-scoping is also why typing `E` in the toolbar's template-name
+   * input cannot reach this: those inputs are not inside `canvasRef`. That,
+   * plus the `.react-flow__node` lookup below, is the whole of the defence —
+   * see the note at that lookup for the guard that was written for this and
+   * then removed for being unfalsifiable.
+   */
+  const onCanvasKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      // Modifiers first, exactly as JudgmentQueueConsole does it: Cmd/Ctrl+E
+      // belongs to the browser and Alt+E to the OS menu bar. Shift is NOT
+      // listed — `event.key` is then "E", which lowercases to the same key.
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.key.toLowerCase() !== EDIT_NODE_KEY) return;
+      // Already editing. Re-entering would re-seed `editData` from `nodes` and
+      // throw away whatever the operator has typed into the open form.
+      if (editModalOpen) return;
+      // NO `isTextEntry` GUARD HERE, AND THAT IS THE MEASURED DECISION.
+      // One was written, and removed for failing to earn its place: deleting
+      // it left `WorkflowEditor.test.tsx` at 26 passed and `e2e/workflow.spec`
+      // at 14 passed, with md5 confirming the deletion reached disk. The case
+      // it would defend is already carried by the `.react-flow__node` lookup
+      // below — every text control in this editor (four toolbar fields, five
+      // modal fields) sits OUTSIDE a card, so `closest` returns null first,
+      // and no card contains an input. `does NOT open when E is typed into the
+      // template-name input` goes red when that lookup is removed, which is
+      // where the toolbar case actually lives.
+      //
+      // The day a card grows an inline rename, put the guard back — `E` would
+      // otherwise be a letter the operator cannot type. It is two lines, and
+      // it will then be provable, which is the only state this repo trusts a
+      // check in. Same reasoning as the `cards.length === 0` branch removed
+      // from `autoLayout` in this file.
+
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      // `data-id` is xyflow's own attribute on the wrapper (index.mjs 2240),
+      // the same one `e2e/workflow-auto-layout-motion.spec.ts` reads cards by.
+      // `closest` rather than the element itself so a focusable descendant of a
+      // card still counts, and so that `E` pressed on the zoom Controls or an
+      // edge — both inside this container — finds no node and does nothing.
+      const nodeId = target.closest(".react-flow__node")?.getAttribute("data-id");
+      if (!nodeId) return;
+
+      event.preventDefault();
+      handleNodeEdit(nodeId);
+    },
+    [editModalOpen, handleNodeEdit]
+  );
+
+  /**
+   * Bound with `addEventListener` on the canvas element rather than as an
+   * `onKeyDown` prop on the same <div>, and the difference is not stylistic.
+   *
+   * `jsx-a11y/no-static-element-interactions` rejects the prop form — correctly:
+   * a <div> carrying a key handler is normally a control someone forgot to make
+   * focusable, and the rule's remedy is a role and a `tabIndex`. Both would be
+   * WRONG here. This element is not the control; the focusable things are the
+   * node wrappers inside it, which xyflow already gives `tabIndex: 0` and
+   * `role="group"`. Giving their container a role of its own would put a second
+   * stop in the tab order that does nothing, and silencing the rule with a
+   * disable comment would leave that argument nowhere but in a comment.
+   *
+   * Same event, same bubbling, same scope — this is a delegated listener, which
+   * is what the code always was.
+   */
+  useEffect(() => {
+    const pane = canvasRef.current;
+    if (!pane) return;
+    pane.addEventListener("keydown", onCanvasKeyDown);
+    return () => pane.removeEventListener("keydown", onCanvasKeyDown);
+  }, [onCanvasKeyDown]);
+
+  /**
+   * The nodes as xyflow renders them: ours, plus the two a11y fields the
+   * wrapper reads. Derived here rather than written into `data` by
+   * `workflowEditorGraph.ts`'s two builders, because `updateNodeData` renames a
+   * node WITHOUT going through either of them — a name baked in at build time
+   * would keep announcing the node's old name after every edit, and nothing
+   * would go red.
+   *
+   * Memoised on `[nodes]` so the array identity is as stable as the state it
+   * derives from; `<ReactFlow nodes>` is copied into xyflow's store on every
+   * identity change.
+   */
+  // Annotated `Node[]` rather than inferred: `<ReactFlow>` takes its node
+  // generic FROM THIS PROP, so the literal shape of this array (`ariaLabel:
+  // string`, not `string | undefined`) would otherwise re-type the whole
+  // instance and `flowRef`'s `ReactFlowInstance` would no longer accept it.
+  const a11yNodes = useMemo<Node[]>(
+    () =>
+      nodes.map((n) => ({
+        ...n,
+        ariaLabel: nodeAriaLabel(n),
+        domAttributes: NODE_DOM_ATTRIBUTES,
+      })),
+    [nodes]
+  );
+
   // Update node data
   const updateNodeData = useCallback(
     (nodeId: string, updates: NodeDataUpdates) => {
@@ -941,7 +1123,7 @@ export default function WorkflowEditor({
         }`}
       >
         <ReactFlow
-          nodes={nodes}
+          nodes={a11yNodes}
           edges={edges}
           onNodesChange={onNodesChangeHandler}
           onEdgesChange={onEdgesStateChange}
@@ -963,7 +1145,16 @@ export default function WorkflowEditor({
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
           <Controls className="bg-[hsl(var(--color-surface-1))]! border-[hsl(var(--color-hairline))]! !" />
           <Panel position="top-left" className="bg-[hsl(var(--color-surface-1))]/90 backdrop-blur-sm px-3 py-2 border border-[hsl(var(--color-hairline))] text-02 text-[hsl(var(--color-ink-muted))]">
-            {t("workflow.editor.hint")}
+            {/* The keyboard half of the hint, and the only place `E` is
+                visible. It reuses `workflow.editor.edit_node` — the modal's own
+                title — rather than introducing a fourth string in three
+                bundles, one of which (egy) is transliterated and would have to
+                be authored, not translated. The `<kbd>` classes are the ones
+                `JudgmentQueueConsole.tsx` already uses for its key hints. */}
+            <span>{t("workflow.editor.hint")}</span>
+            {" · "}
+            <kbd className="font-mono text-02 px-1 bg-[hsl(var(--color-surface-3))]">E</kbd>{" "}
+            {t("workflow.editor.edit_node")}
           </Panel>
         </ReactFlow>
       </div>
