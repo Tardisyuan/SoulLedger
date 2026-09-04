@@ -149,6 +149,7 @@ const COLLECTED_FILES = [
   "statusTokenLayering.test.ts",
   "suiteShape.test.ts",
   "tabClassContract.test.ts",
+  "TemplatePreview.test.tsx",
   "tenantSignalContract.test.tsx",
   "useDispositions.test.ts",
   "useJudgmentQueue.test.tsx",
