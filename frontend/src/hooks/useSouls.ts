@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { soulsApi, type SoulInput } from "@soulledger/core/api";
-import { useToast } from "@/src/contexts/ToastContext";
+import { notify } from "@soulledger/core/platform";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { soulKeys } from "@soulledger/core/query_keys";
 
@@ -53,15 +53,14 @@ export function useSoulLedger(id: string) {
 export function useCreateSoul() {
   const qc = useQueryClient();
   const { t } = useI18n();
-  const { showToast } = useToast();
   return useMutation({
     mutationFn: (data: object) => soulsApi.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: soulKeys.all });
-      showToast(t("souls.form.create_success") || "Soul created", "success");
+      notify(t("souls.form.create_success") || "Soul created", "success");
     },
     onError: () => {
-      showToast(t("souls.form.create_error") || "Failed to create soul", "error");
+      notify(t("souls.form.create_error") || "Failed to create soul", "error");
     },
   });
 }
@@ -69,7 +68,6 @@ export function useCreateSoul() {
 export function useMarkSoulDead() {
   const qc = useQueryClient();
   const { t } = useI18n();
-  const { showToast } = useToast();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data?: object }) =>
       soulsApi.die(id, data),
@@ -78,7 +76,7 @@ export function useMarkSoulDead() {
       qc.invalidateQueries({ queryKey: soulKeys.all });
     },
     onError: () => {
-      showToast(t("souls.detail.failed") || "Operation failed", "error");
+      notify(t("souls.detail.failed") || "Operation failed", "error");
     },
   });
 }
@@ -86,7 +84,6 @@ export function useMarkSoulDead() {
 export function useTransitionSoul() {
   const qc = useQueryClient();
   const { t } = useI18n();
-  const { showToast } = useToast();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: object }) =>
       soulsApi.transition(id, data),
@@ -95,7 +92,7 @@ export function useTransitionSoul() {
       qc.invalidateQueries({ queryKey: soulKeys.all });
     },
     onError: () => {
-      showToast(t("souls.detail.failed") || "Operation failed", "error");
+      notify(t("souls.detail.failed") || "Operation failed", "error");
     },
   });
 }
@@ -103,7 +100,6 @@ export function useTransitionSoul() {
 export function useAddSoulRecord() {
   const qc = useQueryClient();
   const { t } = useI18n();
-  const { showToast } = useToast();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: object }) =>
       soulsApi.addRecord(id, data),
@@ -112,31 +108,29 @@ export function useAddSoulRecord() {
       qc.invalidateQueries({ queryKey: soulKeys.ledger(vars.id) });
     },
     onError: () => {
-      showToast(t("souls.detail.failed") || "Operation failed", "error");
+      notify(t("souls.detail.failed") || "Operation failed", "error");
     },
   });
 }
 
 export function useUpdateSoul() {
   const qc = useQueryClient();
-  const { showToast } = useToast();
   const { t } = useI18n();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<SoulInput> }) =>
       soulsApi.update(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: soulKeys.all });
-      showToast(t("souls.form.update_success") || "Soul updated", "success");
+      notify(t("souls.form.update_success") || "Soul updated", "success");
     },
     onError: () => {
-      showToast(t("souls.detail.error_update"), "error");
+      notify(t("souls.detail.error_update"), "error");
     },
   });
 }
 
 export function useDeleteSoul() {
   const qc = useQueryClient();
-  const { showToast } = useToast();
   const { t } = useI18n();
   return useMutation({
     mutationFn: (id: string) => soulsApi.delete(id),
@@ -146,10 +140,10 @@ export function useDeleteSoul() {
       // nothing at all, so the safety net existed and was undiscoverable.
       // The wording names what the backend did, the way the menus delete
       // confirmation already does ("移至回收站", never "删除").
-      showToast(t("souls.detail.delete_to_recycle_bin"), "success");
+      notify(t("souls.detail.delete_to_recycle_bin"), "success");
     },
     onError: () => {
-      showToast(t("souls.detail.error_delete"), "error");
+      notify(t("souls.detail.error_delete"), "error");
     },
   });
 }

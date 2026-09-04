@@ -21,8 +21,8 @@ import React, {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { SocialWSClient, type SocialEvent, type SocialEventHandler, type SocialWSStatus } from "@soulledger/core/ws/social-client";
+import { notify } from "@soulledger/core/platform";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { useToast } from "@/src/contexts/ToastContext";
 import { dispatchEvent, type EventPayload } from "@/lib/events/event_registry";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -60,7 +60,6 @@ export function useSocialEventBus(): SocialEventBusContextValue {
 
 export function SocialEventBusProvider({ children }: { children: ReactNode }) {
   const { user } = useTenant();
-  const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<SocialWSStatus>("disconnected");
   const [offlineQueueSize, setOfflineQueueSize] = useState(0);
@@ -68,11 +67,21 @@ export function SocialEventBusProvider({ children }: { children: ReactNode }) {
 
   const handleEvent = useCallback(
     (event: SocialEvent) => {
-      // Route through event registry for cache invalidation + toast
-      dispatchEvent(event as EventPayload, { queryClient, showToast });
+      // Route through event registry for cache invalidation + toast.
+      //
+      // The wrapper is not decoration. `EventContext.showToast`
+      // (`lib/events/eventTypes.ts`) declares `type` optional, while the
+      // platform port requires a kind — deliberately, so a host adapter cannot
+      // be handed a notification whose loudness is unstated. Adapting the
+      // looser shape to the stricter one is this function; `"info"` is the
+      // default `showToast` itself applied, so nothing changes for a handler
+      // that omits it.
+      const toast = (message: string, kind?: "success" | "error" | "info", duration?: number) =>
+        notify(message, kind ?? "info", duration);
+      dispatchEvent(event as EventPayload, { queryClient, showToast: toast });
       setOfflineQueueSize(clientRef.current?.getOfflineQueueSize() ?? 0);
     },
-    [queryClient, showToast],
+    [queryClient],
   );
 
   // Connect / disconnect based on user state

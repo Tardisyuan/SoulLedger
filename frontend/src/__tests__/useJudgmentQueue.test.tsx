@@ -60,8 +60,22 @@ jest.mock("@soulledger/core/api", () => ({
   },
 }));
 
-jest.mock("@/src/contexts/ToastContext", () => ({
-  useToast: () => ({ showToast: mockShowToast }),
+// The hooks under test now raise their toasts through `@soulledger/core/platform`'s
+// `notify` port instead of `useToast()`. The assertions below are unchanged and
+// still read `mockShowToast`; this block is what keeps pointing them at it.
+//
+// A `requireActual` spread rather than a bare object, and that matters: this
+// module also exports the token readers and `onSessionSuspend`, and
+// `jest.setup.js` has already installed the real web adapter through it.
+// Replacing the whole module would take the adapter with it and break things
+// that have nothing to do with toasts.
+//
+// Rest args, not `(message, kind, durationMs)`: forwarding a third `undefined`
+// would make every `toHaveBeenCalledWith(msg, kind)` assertion below fail on an
+// argument the hook never passed.
+jest.mock("@soulledger/core/platform", () => ({
+  ...jest.requireActual("@soulledger/core/platform"),
+  notify: (...args: unknown[]) => mockShowToast(...args),
 }));
 
 jest.mock("@/src/contexts/I18nContext", () => ({
@@ -234,6 +248,37 @@ describe("useJudgmentQueue", () => {
       JUDGMENT_A.id,
       expect.objectContaining({ verdict: "PURGATORY" })
     );
+  });
+
+  it("挂起两次只送出一次 —— 端口契约说它可以反复触发", async () => {
+    // `onSessionSuspend` 的契约(见 packages/core/src/platform/types.ts)现在明写
+    // 「可能触发很多次」:web 的 `beforeunload` 只来一次,而 React Native 的
+    // `AppState → background` 每次切应用都来一次。所以 `flush()` 必须是幂等的
+    // —— 第二次调用不能再发一遍 POST,否则同一条裁决会被 conclude 两次,而
+    // conclude 会建 disposition。
+    //
+    // 这条钉的是「不重复发送」,**不是**「不提前发送」。提前发送这个缺陷仍然存在:
+    // 第一次挂起就把还在撤销窗口里的裁决送走了。那是 useJudgmentQueue 的设计问题,
+    // 这一轮没有修,flush 的注释里写明了。
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+
+    act(() => result.current.submitVerdict({ verdict: "PURGATORY" }));
+
+    // Both in ONE act, deliberately. Separate acts let React re-render between
+    // them, and the re-render reassigns `pendingRef.current` from the now-null
+    // `pending` state — so the second flush would find nothing held even if
+    // `flush` itself had stopped clearing the ref. That version of this test
+    // passes against a `flush` with its `pendingRef.current = null` deleted,
+    // i.e. it would be measuring React rather than the hook. Fired back to back
+    // with no render in between, the only thing that can stop the second send
+    // is `flush`'s own guard.
+    await act(async () => {
+      window.dispatchEvent(new Event("beforeunload"));
+      window.dispatchEvent(new Event("beforeunload"));
+    });
+
+    expect(mockConclude).toHaveBeenCalledTimes(1);
   });
 
   it("defer hides the case for the sitting and writes nothing", async () => {
