@@ -60,6 +60,59 @@ async function openPresetInEditor(page: Page) {
   await expect(page.locator(".react-flow__node")).toHaveCount(10);
 }
 
+/**
+ * Open the FOUR-node preset instead — the graph that fits.
+ *
+ * 申诉审判流程 is a plain chain of four, and the init `fitView` frames it with
+ * ~20px of slack top and bottom in the 1008×441 pane (measured 2026-09-05).
+ * The button then TIGHTENS the pitch from 160 to 142, so the result is
+ * strictly smaller than something that already fitted — which is the only
+ * shape of press that can prove the viewport is left alone.
+ */
+async function openSmallPresetInEditor(page: Page) {
+  await page.goto("/workflow");
+  await page.getByRole("button", { name: /申诉审判流程/ }).first().click();
+  await page.getByRole("button", { name: "编辑", exact: true }).click();
+  await expect(page.locator(".react-flow__node")).toHaveCount(4);
+}
+
+/** The viewport's own `transform`, verbatim — the string the browser reports. */
+async function viewportTransform(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const el = document.querySelector<HTMLElement>(".react-flow__viewport");
+    return el ? getComputedStyle(el).transform : "MISSING";
+  });
+}
+
+/** Every card's box in screen pixels, and the pane's, so overflow is checkable. */
+async function screenBoxes(page: Page) {
+  return page.evaluate(() => {
+    const pane = document.querySelector<HTMLElement>(".react-flow")!.getBoundingClientRect();
+    const cards = Array.from(
+      document.querySelectorAll<HTMLElement>(".react-flow__node")
+    ).map((el) => {
+      const r = el.getBoundingClientRect();
+      return { id: el.getAttribute("data-id") ?? "", ...r.toJSON() };
+    });
+    return { pane: pane.toJSON(), cards };
+  });
+}
+
+/** How far outside the pane the worst card sticks, in pixels. 0 = all inside. */
+function overflowOf(boxes: Awaited<ReturnType<typeof screenBoxes>>): number {
+  return Math.max(
+    0,
+    ...boxes.cards.map((c) =>
+      Math.max(
+        boxes.pane.left - c.left,
+        boxes.pane.top - c.top,
+        c.right - boxes.pane.right,
+        c.bottom - boxes.pane.bottom
+      )
+    )
+  );
+}
+
 /** Start recording one `transform` per node per animation frame. */
 async function startSampling(page: Page) {
   await page.evaluate((frames) => {
@@ -245,6 +298,111 @@ test.describe("auto layout narrates the move", () => {
   });
 });
 
+/**
+ * THE VIEWPORT, WHICH IS A DIFFERENT SUBJECT FROM EVERYTHING ABOVE.
+ *
+ * `<ReactFlow fitView>` as a bare prop fits ONCE, at init. While every node
+ * sat at x: 250 in one column that was enough for the editor's whole life; a
+ * re-layout could not push anything sideways, so nothing could leave the pane.
+ * dagre's `rankdir: "TB"` spreads branches left and right and a re-layout can
+ * now put cards outside the pane — with nothing to bring them back.
+ *
+ * The fix is conditional, and BOTH halves need holding down. "Fit whenever the
+ * button is pressed" closes the defect and would pass the first test here on
+ * its own; it is the second one — the viewport transform must come back
+ * BYTE-IDENTICAL when the result already fits — that says why the condition
+ * exists. A zoom and pan on every press drowns out the one thing the 450ms
+ * travel is for.
+ *
+ * These are e2e and not jest for the ordinary reason: jsdom has no layout, no
+ * viewport `transform`, and every rect is zeroes, so an assertion there about
+ * fitting would be an assertion about nothing.
+ */
+test.describe("auto layout brings the result back on screen, and only then", () => {
+  test("a layout that would overflow moves the viewport, and the cards land inside it", async ({
+    page,
+  }) => {
+    /*
+     * THE FOUR-NODE PRESET, NOT THE TEN-COURT ONE, AND THE REASON IS A REAL
+     * LIMIT RATHER THAN A CONVENIENCE. xyflow's default `minZoom` is 0.5, and
+     * `fitBounds` clamps to it. The ten-court graph at the tightened pitch is
+     * ~1370 layout pixels tall in a 441px pane, so fitting it needs zoom 0.32
+     * — refused. Measured on that preset the fit still helps enormously (the
+     * worst card goes from ~1000px outside the pane to 122px, centred), but
+     * "the cards end up inside" is simply not true there and asserting it
+     * would be asserting a wish. Four nodes fit at ~0.77, well inside the
+     * clamp, so the strong form of the claim is available.
+     */
+    await openSmallPresetInEditor(page);
+    await page.waitForTimeout(500);
+
+    /*
+     * Zoom in six times — the operator who leaned in to read a card and then
+     * pressed the button. 1.2 per press takes the init fit of 0.70 past
+     * `maxZoom`, so this parks at 2 and the chain is more than twice the
+     * height of the pane.
+     */
+    for (let i = 0; i < 6; i++) {
+      await page.getByRole("button", { name: "Zoom In" }).click();
+      await page.waitForTimeout(60);
+    }
+    await page.waitForTimeout(300);
+
+    // The premise: at this zoom the graph really is off screen, by a lot.
+    // Without this the test could pass on a canvas that never overflowed.
+    const overflowBefore = overflowOf(await screenBoxes(page));
+    expect(overflowBefore).toBeGreaterThan(200);
+
+    const vpBefore = await viewportTransform(page);
+    await page.getByRole("button", { name: "自动布局", exact: true }).click();
+    await page.waitForTimeout(1500);
+
+    // THE VIEWPORT MOVED. This is the defect, directly: before the fix it
+    // did not, and nothing else in the editor would have moved it either.
+    expect(await viewportTransform(page)).not.toBe(vpBefore);
+
+    /*
+     * AND THE CARDS ARE BACK. Not merely "the viewport changed" — a fit that
+     * framed the wrong rectangle would satisfy that. 1px of slack, because the
+     * fit is computed from `layoutNodes`'s integer coordinates and the assumed
+     * card box while the browser measures the rendered one; the graph here is
+     * ~700 screen pixels tall, so this is a tolerance on rounding and not on
+     * being roughly right.
+     */
+    expect(overflowOf(await screenBoxes(page))).toBeLessThanOrEqual(1);
+
+    // AND THE NODE COORDINATES ARE UNTOUCHED BY IT. A fit is a camera move;
+    // if this ever fails it means the fit moved the layout, which is wrong.
+    expect(await domPositions(page)).toEqual(await savedPositions(page, api));
+  });
+
+  test("a layout that already fits leaves the viewport byte-identical", async ({ page }) => {
+    await openSmallPresetInEditor(page);
+    await page.waitForTimeout(500);
+
+    // The premise, again asserted rather than assumed: nothing is outside the
+    // pane, so a correct implementation has no reason to touch the viewport.
+    expect(overflowOf(await screenBoxes(page))).toBe(0);
+
+    const vpBefore = await viewportTransform(page);
+    const before = await domPositions(page);
+
+    await page.getByRole("button", { name: "自动布局", exact: true }).click();
+    await page.waitForTimeout(1500);
+
+    // The press DID something — otherwise "the viewport did not move" is the
+    // trivially true statement about a button that does nothing.
+    const after = await domPositions(page);
+    expect(
+      Object.keys(after).filter((id) => before[id].y !== after[id].y).length
+    ).toBeGreaterThanOrEqual(2);
+
+    // BYTE-IDENTICAL. The string, not a rounded comparison: an unconditional
+    // fit re-frames a four-node chain to a different zoom and this fails.
+    expect(await viewportTransform(page)).toBe(vpBefore);
+  });
+});
+
 test.describe("auto layout under prefers-reduced-motion", () => {
   /**
    * `page.emulateMedia`, NOT `test.use({ reducedMotion: "reduce" })`.
@@ -334,5 +492,35 @@ test.describe("auto layout under prefers-reduced-motion", () => {
 
     // And it lands in the same place the animated path lands.
     expect(after).toEqual(await savedPositions(page, api));
+  });
+
+  /**
+   * NO MOTION IS NOT NO FIT.
+   *
+   * The instant branch returns before Flip is ever entered, so it was the easy
+   * place to leave the viewport out — and the operator who asked for no motion
+   * is exactly the one who cannot chase a card that went off screen. The fit
+   * there shares the single React commit with `setNodes`, so it arrives with
+   * the layout rather than a frame ahead of it; the "immediate equals final"
+   * assertion above is what holds that down for the cards, and this holds it
+   * down for the camera.
+   */
+  test("the instant path still brings an overflowing layout back on screen", async ({ page }) => {
+    await openSmallPresetInEditor(page);
+    await page.waitForTimeout(500);
+    for (let i = 0; i < 6; i++) {
+      await page.getByRole("button", { name: "Zoom In" }).click();
+      await page.waitForTimeout(60);
+    }
+    await page.waitForTimeout(300);
+    expect(overflowOf(await screenBoxes(page))).toBeGreaterThan(200);
+
+    const vpBefore = await viewportTransform(page);
+    await page.getByRole("button", { name: "自动布局", exact: true }).click();
+    // 120ms: the same window the case above uses for "already finished".
+    await page.waitForTimeout(120);
+
+    expect(await viewportTransform(page)).not.toBe(vpBefore);
+    expect(overflowOf(await screenBoxes(page))).toBeLessThanOrEqual(1);
   });
 });
