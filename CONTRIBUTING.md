@@ -16,7 +16,7 @@ cd frontend && npm install && npm run dev
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature`
 3. Make changes and add tests
-4. Run tests: `cd backend && pytest` / `cd frontend && npm test`
+4. Run tests: `cd backend && pytest` / `cd frontend && npm run test:coverage`
    (the backend suite needs `DATABASE_URL` **and** `REDIS_URL` pointed at throwaway
    services first — see `CLAUDE.md`, Build & Test, for the exact invocation)
 5. Commit: `git commit -m "feat: description"`
@@ -44,7 +44,13 @@ Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`
 ## Testing
 
 - Backend: `cd backend && pytest --cov=apps` (isolate `DATABASE_URL` and `REDIS_URL` — see `CLAUDE.md`)
-- Frontend unit: `cd frontend && npm test`
+- Frontend unit: `cd frontend && npm run test:coverage` — **not `npm test`**, which
+  is bare `jest`: `jest.config.js` sets `coverageThreshold` without
+  `collectCoverage`, so the threshold is only evaluated with `--coverage`
+  (measured: `npm test` prints "coverage" zero times)
+- `packages/core` (the platform-independent workspace) has three of its own,
+  and `pre-push` runs all three on any `^packages/` change:
+  `npm run --workspace packages/core typecheck | lint | test` (the last is vitest)
 - Frontend E2E: `cd frontend && npm run test:e2e`
 - TypeScript: `cd frontend && npx tsc --noEmit`
 
