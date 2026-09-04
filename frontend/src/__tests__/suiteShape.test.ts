@@ -164,6 +164,7 @@ const COLLECTED_FILES = [
   "useSouls.lifecycle.test.ts",
   "useSouls.test.ts",
   "workflowEditorEdgeRouting.test.tsx",
+  "workflowEditorLayout.test.ts",
   "viewportHeightContract.test.ts",
   "workflowTemplateLore.test.ts",
   "wsClient.reconnect.test.ts",
