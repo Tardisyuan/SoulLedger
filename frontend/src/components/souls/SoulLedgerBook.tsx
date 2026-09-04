@@ -102,7 +102,7 @@ export interface SoulLedgerBookProps {
 }
 
 export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, locale } = useI18n();
   const rows = settlementOrder(records);
 
   const meritTotal = rows
@@ -159,7 +159,7 @@ export function SoulLedgerBook({ records }: SoulLedgerBookProps) {
             {rows.map(({ record, n, runningBalance }) => {
               const isMerit = record.type === "MERIT";
               const weight = entryWeight(record);
-              const eventDate = formatHistoricalDate(record.event_date);
+              const eventDate = formatHistoricalDate(record.event_date, locale);
 
               return (
                 <tr key={record.id} className="border-b border-[hsl(var(--color-hairline))]">

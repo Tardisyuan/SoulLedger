@@ -43,9 +43,9 @@ const STATE_TONE: Record<string, EnumTone> = {
 };
 
 export function SoulIdentityPanel({ soul }: { soul: QueueSoul }) {
-  const { t } = useI18n();
-  const birth = formatHistoricalDate(soul.birth_date);
-  const death = formatHistoricalDate(soul.death_date);
+  const { t, locale } = useI18n();
+  const birth = formatHistoricalDate(soul.birth_date, locale);
+  const death = formatHistoricalDate(soul.death_date, locale);
 
   const rows: { label: string; value: string | null }[] = [
     { label: t("judgment.queue.field_birth_name"), value: soul.birth_name || null },
