@@ -45,7 +45,6 @@ jest.mock("@/src/contexts/I18nContext", () => ({
     hydrated: true,
     formatDate: (v: unknown) => String(v),
     formatDateTime: (v: unknown) => String(v),
-    formatNumber: (v: unknown) => String(v),
   }),
 }));
 
