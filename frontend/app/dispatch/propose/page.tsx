@@ -13,6 +13,7 @@ import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
 import { SelectField, TextAreaField, type SelectOption } from "@/src/components/ui/Field";
 import { SearchSelectField } from "@/src/components/ui/SearchSelectField";
+import { focusFirstInvalid } from "@/src/lib/submitErrorFocus";
 
 export default function ProposeDispatchPage() {
   const { t } = useI18n();
@@ -142,15 +143,18 @@ export default function ProposeDispatchPage() {
     reason: "reason",
   };
 
-  /** Focus the first control the operator has to fix, so the fix is one key
-   *  away rather than a scroll-and-hunt. */
-  const focusFirstInvalid = (keys: string[]) => {
-    const order = ["soul_id", "target_tenant_code", "reason"];
-    const first = order.find((k) => keys.includes(k));
-    if (!first) return;
-    const el = formRef.current?.querySelector<HTMLElement>(`[name="${first}"], #${first}`);
-    el?.focus();
-  };
+  /**
+   * Focus the first control the operator has to fix, so the fix is one key
+   * away rather than a scroll-and-hunt.
+   *
+   * Now the shared one. This used to carry
+   * `order = ["soul_id", "target_tenant_code", "reason"]` — a hand-written
+   * list that had to stay in step with the form's structure, with nothing to
+   * report it if they drifted. `src/lib/submitErrorFocus.ts` asks the document
+   * instead (`[aria-invalid="true"]`, first in DOM order), which is the same
+   * answer for this form and is also the answer for every other form that
+   * renders through `Field`.
+   */
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,7 +169,9 @@ export default function ProposeDispatchPage() {
     if (!form.reason.trim()) missing.reason = t("common.field_required");
     if (Object.keys(missing).length > 0) {
       setFieldErrors(missing);
-      focusFirstInvalid(Object.keys(missing));
+      // The attributes have to be in the document first, so this runs after
+      // the render `setFieldErrors` schedules — hence a microtask, not a call.
+      queueMicrotask(() => focusFirstInvalid(formRef.current));
       return;
     }
     setFieldErrors({});
@@ -201,7 +207,7 @@ export default function ProposeDispatchPage() {
       );
       setFieldErrors(mapped);
       if (Object.keys(mapped).length > 0) {
-        focusFirstInvalid(Object.keys(mapped));
+        queueMicrotask(() => focusFirstInvalid(formRef.current));
       } else {
         showToast(drfNonFieldError(err, t("dispatch.propose_error")), "error");
       }

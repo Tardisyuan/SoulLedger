@@ -51,10 +51,27 @@ export interface MissingValueProps {
 export function MissingValue({ kind, reason, className }: MissingValueProps) {
   const { t } = useI18n();
   const name = t(MISSING_LABEL_KEY[kind]);
+  // THE REASON GOES IN THE ACCESSIBLE NAME, not only in `title`.
+  //
+  // It used to be `title={name — reason}` beside `aria-label={name}`, so the
+  // reason — "balance does not apply to Egyptian souls", the sentence that
+  // explains WHY the cell is a dash — reached neither a screen reader nor a
+  // touch device. `title` is mouse-hover only. 26 call sites pass a `reason`,
+  // and on every one of them the explanation was the one thing an operator
+  // without a mouse could not get.
+  //
+  // `title` stays, and stays with the same string: it is still the fastest way
+  // for a sighted mouse user to check a dash, and dropping it would be trading
+  // one audience for another. The fix is that the two attributes now say the
+  // same thing instead of the accessible one saying less.
+  //
+  // mobile-chrome is one of this repo's three playwright projects
+  // (`playwright.config.ts:53`), so "touch" is not a hypothetical audience.
+  const full = reason ? `${name} — ${reason}` : name;
   return (
     <span
-      title={reason ? `${name} — ${reason}` : name}
-      aria-label={name}
+      title={full}
+      aria-label={full}
       className={`${MISSING_INK[kind]}${className ? ` ${className}` : ""}`}
       data-missing={kind}
     >

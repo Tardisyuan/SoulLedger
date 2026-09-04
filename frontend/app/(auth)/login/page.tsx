@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { TextField } from "@/src/components/ui/Field";
 import { Button } from "@/src/components/ui/Button";
+import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
 import { authApi } from "@soulledger/core/api";
 import { loginSchema } from "@soulledger/core/validations/schemas";
 import { useFormValidation } from "@soulledger/core/validations/useFormValidation";
@@ -28,6 +29,12 @@ export default function LoginPage() {
   // regimes in the app: the login form had no client-side validation at all,
   // so an empty submit was a round trip to be told what the form already knew.
   const { validate, getError, clearFieldError } = useFormValidation(loginSchema);
+
+  // 校验失败后焦点落在第一个被标为 invalid 的字段上,而不是留在提交按钮。
+  // `useFormValidation` 的错误经 `Field` 变成 `aria-invalid`,所以这里不需要
+  // 一张字段名清单 —— 问文档就行,DOM 顺序即视觉顺序。
+  const formRef = useRef<HTMLFormElement>(null);
+  useSubmitErrorFocus(!!getError("username") || !!getError("password"), formRef);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,6 +103,7 @@ export default function LoginPage() {
         </div>
 
         <form
+          ref={formRef}
           onSubmit={handleSubmit}
           className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6"
         >

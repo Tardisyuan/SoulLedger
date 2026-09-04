@@ -79,11 +79,25 @@ describe("the three missing semantics are distinguishable on screen", () => {
     expect(container.firstElementChild?.className).toContain(MISSING_INK.inapplicable);
   });
 
-  it("names each kind in the tooltip, since a middle dot explains nothing alone", () => {
+  it("names each kind AND its reason in the accessible name, not only in the tooltip", () => {
+    // 曾断言 `getByLabelText(kind 名)` —— 也就是 aria-label 里**只有**种类名,
+    // 而理由只在 `title` 里。`title` 是鼠标悬停专用:26 个传 `reason` 的调用点
+    // 上,那句解释(「余额不适用于埃及灵魂」这类)读屏和触摸都拿不到,而它正是
+    // 说明这个格子为什么是一个点的那句话。
     renderWithI18n(<MissingValue kind="inapplicable" reason="balance is a Chinese instrument" />);
-    const el = screen.getByLabelText(copy("common.value.inapplicable"));
-    expect(el.getAttribute("title")).toContain("balance is a Chinese instrument");
+    const el = screen.getByLabelText(
+      `${copy("common.value.inapplicable")} — balance is a Chinese instrument`
+    );
+    // `title` 保留,而且和可访问名称是同一串:它仍然是有鼠标的人查一个点最快的
+    // 办法,把它拿掉是用一个受众换另一个受众。
+    expect(el.getAttribute("title")).toBe(el.getAttribute("aria-label"));
     expect(el.textContent).toBe(MISSING_GLYPH.inapplicable);
+  });
+
+  it("没有 reason 时,可访问名称就是种类名 —— 不留一个悬空的破折号", () => {
+    renderWithI18n(<MissingValue kind="unrecorded" />);
+    const el = screen.getByLabelText(copy("common.value.unrecorded"));
+    expect(el.getAttribute("aria-label")).not.toContain("—");
   });
 
   it("uses no background fill, so the 0.1 badge-tint cap is not in play", () => {
