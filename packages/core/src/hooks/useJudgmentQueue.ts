@@ -668,6 +668,27 @@ export function useJudgmentQueue(options?: { at?: string }) {
     (input: { verdict: VerdictCode; notes?: string; createWorkflow?: boolean }) => {
       const judgment = cursor.judgment;
       if (!judgment) return;
+      // ONE VERDICT PER CASE, and this guard is the whole of it.
+      //
+      // The card on screen does not change until the refetch lands, so every
+      // way of pressing twice quickly lands here with the same `judgment.id`:
+      // holding `1` down (the key handler now drops auto-repeat, but a real
+      // second press is indistinguishable from one), double-clicking a verdict
+      // button, or pressing again because the next case has not arrived yet.
+      //
+      // Without this, the second call reaches `flush()` below, which commits
+      // verdict #1 **immediately** — the undo window vanishes with no undo bar
+      // and no word to the operator — and then arms #2 for the same judgment.
+      // Eight seconds later that POST comes back 400 "Judgment already
+      // concluded" and is reported as `commit_error`: "the verdict did not
+      // land; the case is back in the queue", about a verdict that landed and
+      // a case that did not come back. Two false sentences from one keypress.
+      //
+      // Returning silently is deliberate. A second press on a case already
+      // ruled on is not an error the operator needs told about — the undo bar
+      // is already on screen saying what was decided, which is the true answer
+      // to what they just asked.
+      if (pendingRef.current?.judgmentId === judgment.id) return;
       // One at a time — see the header note. The previous verdict's undo
       // window ends the moment a new decision is made.
       flush();
