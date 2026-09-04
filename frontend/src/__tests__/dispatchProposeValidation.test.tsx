@@ -176,4 +176,56 @@ describe("proposing a dispatch", () => {
       expect(screen.getByLabelText(/dispatch\.reason/)).not.toHaveAttribute("aria-invalid", "true")
     );
   });
+
+  /**
+   * 两个喂数据的查询失败时,不能说成「没有可选的」。
+   *
+   * 这两个查询原本都只解构了 `data` 和 `isLoading`。检索灵魂失败会渲染
+   * `SearchSelectField` 的 `emptyText`(「没有匹配」),租户列表失败则只剩一个
+   * 占位 `<option>`。两句都在把「请求失败」说成「没有东西可选」,而这一页的
+   * 后果是调度发不出去、且没有任何东西说明为什么。
+   *
+   * `errorIsNotAnEmptyState` 那道守卫也看不到这一页:它不渲染 `<EmptyState>`
+   * 也不渲染 `<DataTable>`,两条规则的主体清单都不含它。
+   */
+  describe("喂数据的查询失败 ≠ 没有可选项", () => {
+    it("灵魂检索失败时,字段自己报错,而不是说「没有匹配」", async () => {
+      (soulsApi.list as jest.Mock).mockRejectedValue(new Error("500"));
+      (ledgerApi.statsOverview as jest.Mock).mockResolvedValue({ data: { tenants: [] } });
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      render(
+        <QueryClientProvider client={client}>
+          <ProposeDispatchPage />
+        </QueryClientProvider>
+      );
+
+      // `Field` 把它接成 aria-invalid + role="alert" + aria-describedby,
+      // 所以这条同时验了「说了」和「读屏读得到」。
+      const soulField = await screen.findByLabelText(/dispatch\.target_soul/);
+      await waitFor(() => expect(soulField).toHaveAttribute("aria-invalid", "true"));
+      expect(screen.getByText("dispatch.soul_search_error")).toBeInTheDocument();
+      // 缺席断言:「没有匹配」一次都不许出现 —— 它才是缺陷的长相。
+      expect(screen.queryByText("dispatch.soul_search_empty")).not.toBeInTheDocument();
+    });
+
+    it("租户列表失败时,下拉里不再只剩一个占位项", async () => {
+      (soulsApi.list as jest.Mock).mockResolvedValue({ data: { results: [], count: 0 } });
+      (ledgerApi.statsOverview as jest.Mock).mockRejectedValue(new Error("500"));
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      render(
+        <QueryClientProvider client={client}>
+          <ProposeDispatchPage />
+        </QueryClientProvider>
+      );
+
+      const tenantField = await screen.findByLabelText(/dispatch\.target_tenant/);
+      await waitFor(() => expect(tenantField).toHaveAttribute("aria-invalid", "true"));
+      expect(screen.getAllByText("dispatch.tenants_error").length).toBeGreaterThan(0);
+      expect(screen.queryByText("dispatch.select_tenant")).not.toBeInTheDocument();
+    });
+  });
 });

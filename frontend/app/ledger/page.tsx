@@ -5,6 +5,7 @@ import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 import { LazyBarChart } from "@/src/components/charts/LazyDashboardCharts";
 import { DomainEnum, IdentifierChip } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
@@ -101,6 +102,20 @@ function LedgerPageContent() {
         <Section title={t("ledger.state_distribution")}>
           {error ? (
             <SectionError label={t("common.error")} />
+          ) : isLoading ? (
+            /* THREE STATES, NOT TWO. This branch did not exist: on first load
+               `ledgerStats` is undefined, so `?.map` produced nothing and the
+               section rendered an EMPTY `<ul>` — byte-identical to a ledger
+               that genuinely has no souls in any state. The per-row skeleton
+               below only ever ran for rows that already existed, so it covered
+               a background refetch and never the first load. */
+            <div className="space-y-2 py-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-5 w-full" />
+              ))}
+            </div>
+          ) : !ledgerStats?.state_distribution?.length ? (
+            <EmptyState title={t("ledger.state_distribution")} reason={t("ledger.no_state_distribution")} />
           ) : (
             <ul className="divide-y divide-[hsl(var(--color-hairline))]">
               {ledgerStats?.state_distribution?.map((item) => (
@@ -145,7 +160,13 @@ function LedgerPageContent() {
           )}
         </Section>
 
-        {ledgerStats?.souls_by_realm && ledgerStats.souls_by_realm.length > 0 && (
+        {/* Gated on `error ||` as well as on there being rows. The old
+            condition was rows-only, so the error branch inside
+            could ONLY fire on a failed background refetch — on a first-load
+            failure `ledgerStats` is undefined, the whole section is skipped,
+            and the error branch it contains is unreachable. A check that can
+            never fire is the failure mode this repo has a note about. */}
+        {(error || (ledgerStats?.souls_by_realm && ledgerStats.souls_by_realm.length > 0)) && (
           <Section title={t("ledger.souls_by_realm")}>
             {error ? (
               <SectionError label={t("common.error")} />
@@ -171,7 +192,7 @@ function LedgerPageContent() {
           </Section>
         )}
 
-        {ledgerStats?.recent_activity && ledgerStats.recent_activity.length > 0 && (
+        {(error || (ledgerStats?.recent_activity && ledgerStats.recent_activity.length > 0)) && (
           <Section title={t("ledger.recent_activity")}>
             {error ? (
               <SectionError label={t("common.error")} />

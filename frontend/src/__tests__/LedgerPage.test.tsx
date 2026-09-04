@@ -289,4 +289,53 @@ describe("LedgerPage failure handling", () => {
     await waitFor(() => expect(mockedStats).not.toHaveBeenCalled());
     expect(screen.queryByText("ledger.title")).not.toBeInTheDocument();
   });
+
+  /**
+   * 三态,不是两态。
+   *
+   * `state_distribution` 那一节原本只有 error 和「渲染列表」两条分支。首次加载
+   * 时 `ledgerStats` 是 undefined,`?.map` 什么都不产出,于是渲染出一个**空的
+   * `<ul>`** —— 和「账本里确实一个灵魂都没有」逐字节相同。行内的骨架屏只对
+   * 已经存在的行生效,所以它覆盖的是后台重取,永远不是首次加载。
+   */
+  describe("加载中 / 空 / 失败 是三屏,不是两屏", () => {
+    it("首次加载时给骨架,不给一个空列表", async () => {
+      // 永不 resolve:这就是「还在路上」。
+      mockedStats.mockReturnValue(new Promise(() => {}));
+
+      const { container } = renderPage();
+
+      await waitFor(() =>
+        expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0)
+      );
+      // 缺席断言,而且是这一整条的要害:空的 <ul> 正是缺陷的长相。
+      expect(container.querySelector("ul")).toBeNull();
+      expect(screen.queryByText("ledger.no_state_distribution")).not.toBeInTheDocument();
+    });
+
+    it("真的一条都没有时说出来,而不是留一片空白", async () => {
+      mockedStats.mockResolvedValue({
+        data: { ...fullStats, state_distribution: [] },
+      });
+
+      renderPage();
+
+      expect(await screen.findByText("ledger.no_state_distribution")).toBeInTheDocument();
+    });
+
+    it("首次加载失败时,两个原本被 length>0 门住的分区也报错", async () => {
+      // 旧条件是「有行才渲染这一节」,所以节内的 `error ? <SectionError/>`
+      // 只能在**后台重取**失败时触发:首次失败 ledgerStats 是 undefined,
+      // 整节被跳过,那条错误分支根本够不着 —— 一条永远不会触发的检查。
+      mockedStats.mockRejectedValue(new Error("500"));
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(screen.getAllByText("common.error").length).toBeGreaterThanOrEqual(4)
+      );
+      expect(screen.getByText("ledger.souls_by_realm")).toBeInTheDocument();
+      expect(screen.getByText("ledger.recent_activity")).toBeInTheDocument();
+    });
+  });
 });

@@ -71,9 +71,23 @@ const RENDERS_EMPTY = /<EmptyState|empty=\{/;
  * carrying `common.error` under `isEmpty={!isError && …}`, which distinguishes
  * the two facts correctly with a different component. The rule is about the
  * distinction, not about which component draws it.
+ *
+ * TWO SHAPES ADDED 2026-09-05, both found by this rule reporting a page that
+ * does distinguish the two facts:
+ *
+ *  - `<SectionError`, the per-section sibling of `QueryError`. It is a
+ *    dedicated error element by the same argument `QueryError` is.
+ *  - `error ? (`, the JSX ternary. The list had `if (error)` — the statement
+ *    form — and every page here branches in JSX, where a bare `if` cannot go.
+ *    So that alternative could only ever have matched a page that also had a
+ *    guard clause, and `app/ledger/page.tsx` branches on `{error ? …}` four
+ *    times without matching any of the nine alternatives. A pattern that
+ *    cannot match the way the codebase actually writes the thing is the
+ *    never-fires shape this repo has a note about, in a rule rather than in a
+ *    check.
  */
 const DISTINGUISHES_FAILURE =
-  /<QueryError|role="alert"|data-query-error|isError=|isError\s*\?|isError\s*&&|!isError|if \(isError\)|if \(error\)/;
+  /<QueryError|<SectionError|role="alert"|data-query-error|isError=|isError\s*\?|isError\s*&&|!isError|if \(isError\)|if \(error\)|error\s*\?\s*\(/;
 
 const RENDERS_GRID = /<DataTable|<DataGrid/;
 const PASSES_IS_ERROR = /isError=/;
