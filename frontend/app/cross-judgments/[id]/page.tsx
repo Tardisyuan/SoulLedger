@@ -51,7 +51,14 @@ export default function CrossJudgmentDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+    // `t` is used for the last-resort error copy above. Including it means the
+    // effect below re-runs — i.e. re-fetches — when `t` changes identity, and
+    // that is bounded rather than open-ended: I18nContext memoises `t` on
+    // `[locale, loadedBundles]`, so it moves once when a non-default locale's
+    // lazy bundle arrives and once per language switch. Measured on this page
+    // with the real I18nProvider: 1 GET at zh-Hans, 2 at en (mount + bundle),
+    // 3 at en after one switch to zh-Hans. Not a loop.
+  }, [id, t]);
 
   useEffect(() => {
     if (!user || !id) return;

@@ -53,10 +53,22 @@ export function PermissionFormModal({
       setName(initialData?.name ?? "");
       setCategory(initialData?.category ?? existingCategories[0] ?? "");
     }
-    // existingCategories intentionally excluded: it can change identity on
-    // every render of the parent (new array from useMemo's fallback []), and
-    // re-running this on that change would stomp whatever the operator is
-    // mid-typing into the category field.
+    // existingCategories intentionally excluded, and this is the deliberate
+    // kind of omission the rule allows for rather than a dep someone forgot.
+    // The caller passes `categories.map((c) => c.category)` inline
+    // (app/permissions/page.tsx), so the prop is a **new array on every render
+    // of that page** — and that page re-renders on each keystroke of its own
+    // filter box. Adding it here would re-run this effect on renders where
+    // nothing about the modal changed and reset `category` back to
+    // `existingCategories[0]` under the operator's cursor. Pinned by
+    // `src/__tests__/permissionFormCategoryStability.test.tsx`, which types a
+    // new category name, re-renders the parent, and asserts the typed value is
+    // still there.
+    //
+    // What would make this a real dependency: the caller memoising the array
+    // (or passing `categories` itself and mapping here). Then the effect could
+    // include it and would only re-run when the category set actually changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialData]);
 
   function handleSubmit(e: React.FormEvent) {

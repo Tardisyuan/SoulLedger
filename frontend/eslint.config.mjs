@@ -400,6 +400,18 @@ const eslintConfig = [
     plugins: { "react-hooks": reactHooks },
     rules: {
       "react-hooks/rules-of-hooks": "error",
+      // `error`,不是 `warn`,也不是缺席。
+      //
+      // 这条规则此前**根本没登记** —— 插件装了,只开了 `rules-of-hooks`。
+      // 它抓的不是风格问题:`src/contexts/WebSocketContext.tsx` 的三个
+      // `useCallback` 把 `currentUserId` 关进了闭包却没写进依赖数组,于是
+      // 关注/取关通知**整个会话一次都不会触发**。规则一开就同时报出那三处。
+      //
+      // 为什么是 `error` 而不是 `warn`:`npm run lint` 就是 `eslint .`,
+      // 警告不改变退出码,CI 因此看不见它们。只有 `scripts/install-hooks.sh`
+      // 的 `--max-warnings 0` 会拦 —— 也就是说 `warn` 会造成一种别扭的状态:
+      // 本地提交被挡,CI 却是绿的。全仓当前违规数为 0,所以 `error` 不欠债。
+      "react-hooks/exhaustive-deps": "error",
       // `warn`,不是 `off`。
       //
       // `off` 是两层遮蔽里的第二层(第一层是上面的 `ignores`)。开成 `error`
