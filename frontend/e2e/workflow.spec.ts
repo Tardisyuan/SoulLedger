@@ -215,6 +215,190 @@ test.describe("Workflow editor toolbar", () => {
   });
 });
 
+test.describe("Workflow editor keyboard access", () => {
+  /**
+   * THE NODE EDIT MODAL, WITHOUT A MOUSE.
+   *
+   * `onNodeDoubleClick` was the only way to open it, so a keyboard-only
+   * operator could not edit a single node of a template. `E` on a focused node
+   * is the way in now.
+   *
+   * WHY THIS FILE AND NOT JSDOM. `src/__tests__/WorkflowEditor.test.tsx` pins
+   * the DECISIONS — which key, which modifiers, what happens when the modal is
+   * already open — against a stub that renders one wrapper per node because
+   * this file's product code needs one to exist. What that stub cannot say is
+   * the thing the whole change turns on: that a node is REACHABLE. `tabIndex`
+   * there is a string the test file itself writes; jsdom has no sequential
+   * navigation to speak of, so "Tab lands on a card" is not a claim it can
+   * make. Here, `page.keyboard.press("Tab")` is chromium's own focus order over
+   * `@xyflow/react`'s own wrapper.
+   *
+   * THE FIXTURE IS 申诉审判流程, the four-node chain, for the same reason
+   * `workflow-auto-layout-motion.spec.ts` uses it: four cards fit in the pane
+   * at the init `fitView`, so nothing here depends on scrolling or on
+   * `autoPanOnNodeFocus` having moved the viewport first.
+   */
+
+  /** The four cards, in the order the preset declares them. */
+  const APPEAL_LABELS = [
+    "魏征 · 察查司, APPEAL, 察查司",
+    "原殿阎王 · 复核, TRIAL, 原审判殿",
+    "上级殿阎王, TRIAL, 上一殿",
+    "酆都大帝 · 终审, FINAL, 酆都",
+  ];
+
+  async function openAppealPresetInEditor(page: Page) {
+    await page.goto("/workflow");
+    await page.getByRole("button", { name: /申诉审判流程/ }).first().click();
+    await page.getByRole("button", { name: "编辑", exact: true }).click();
+    await expect(page.locator(".react-flow__node")).toHaveCount(4);
+  }
+
+  /** Which node the browser's own focus is on, or null. */
+  function focusedNodeId(page: Page): Promise<string | null> {
+    return page.evaluate(
+      () =>
+        document.activeElement?.closest(".react-flow__node")?.getAttribute("data-id") ?? null
+    );
+  }
+
+  /**
+   * Tab forward from wherever focus is until it lands on a card.
+   *
+   * Bounded and reported rather than looped until it works: "a node is
+   * reachable after some unbounded number of tabs" is not reachability. The
+   * count is returned so the assertion can be about a small number.
+   */
+  async function tabUntilNode(page: Page, max = 12) {
+    for (let presses = 1; presses <= max; presses += 1) {
+      await page.keyboard.press("Tab");
+      const id = await focusedNodeId(page);
+      if (id) return { presses, id };
+    }
+    return { presses: max, id: null as string | null };
+  }
+
+  test("a keyboard-only operator can Tab to a node and open its edit modal with E", async ({
+    page,
+  }) => {
+    await openAppealPresetInEditor(page);
+
+    // Start at the first toolbar control, which is where a Tab from the page
+    // chrome arrives, and walk forward. Nothing here is focused by script
+    // except this starting point.
+    await page.getByLabel("模板名称", { exact: true }).filter({ visible: true }).focus();
+
+    const landed = await tabUntilNode(page);
+    // THE ASSERTION THIS FILE EXISTS FOR. Before this change the cards were
+    // still focusable — `nodesFocusable` defaults true — but reaching one
+    // bought nothing, because no key did anything once you were there.
+    expect(landed.id).not.toBeNull();
+    expect(landed.presses).toBeLessThanOrEqual(12);
+
+    const label = await page
+      .locator(`.react-flow__node[data-id="${landed.id}"]`)
+      .getAttribute("aria-label");
+    expect(APPEAL_LABELS).toContain(label);
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.keyboard.press("e");
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    // The modal opened on THE focused node, not on some node. `aria-label`'s
+    // first field is the node name, which is what the form is seeded with.
+    await expect(dialog.getByLabel("节点名称", { exact: true })).toHaveValue(
+      label!.split(", ")[0]
+    );
+  });
+
+  test("every card carries a non-empty accessible name built from what it shows", async ({
+    page,
+  }) => {
+    await openAppealPresetInEditor(page);
+
+    const labels = await page.locator(".react-flow__node").evaluateAll((els) =>
+      els.map((el) => el.getAttribute("aria-label"))
+    );
+    expect(labels).toEqual(APPEAL_LABELS);
+    // Absence, and the reason the builder falls back to the node id: an empty
+    // `aria-label` is worse than none — it silences the element's other naming
+    // paths rather than deferring to them.
+    for (const label of labels) {
+      expect(label).toBeTruthy();
+    }
+
+    // The shortcut is announced on the element it applies to. This is the half
+    // of discoverability a screen reader gets; the `<kbd>E</kbd>` in the hint
+    // panel is the half a sighted keyboard operator gets.
+    const shortcuts = await page.locator(".react-flow__node").evaluateAll((els) =>
+      els.map((el) => el.getAttribute("aria-keyshortcuts"))
+    );
+    expect(shortcuts).toEqual(["E", "E", "E", "E"]);
+    await expect(page.getByText("E 编辑节点", { exact: false }).first()).toBeVisible();
+  });
+
+  test("E in the template-name field types a letter and opens nothing", async ({ page }) => {
+    await openAppealPresetInEditor(page);
+
+    const name = page.getByLabel("模板名称", { exact: true }).filter({ visible: true });
+    // The field is not empty — opening a preset fills it with that preset's
+    // name — so the letter is appended to what is already there rather than
+    // being the whole value.
+    const before = await name.inputValue();
+    expect(before).not.toBe("");
+    await name.click();
+    await page.keyboard.press("End");
+    await page.keyboard.press("e");
+
+    // Both halves. "No modal" alone would also pass if the key had been
+    // swallowed by `preventDefault` somewhere and the operator could no longer
+    // type the letter at all.
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(name).toHaveValue(`${before}e`);
+  });
+
+  test("E with a modifier is left to the browser", async ({ page }) => {
+    await openAppealPresetInEditor(page);
+    const landed = await (async () => {
+      await page.getByLabel("模板名称", { exact: true }).filter({ visible: true }).focus();
+      return tabUntilNode(page);
+    })();
+    expect(landed.id).not.toBeNull();
+
+    for (const combo of ["Meta+e", "Control+e", "Alt+e"]) {
+      await page.keyboard.press(combo);
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+    }
+
+    // The same key without a modifier still works — otherwise the three
+    // assertions above would be satisfied by a shortcut that never fires.
+    expect(await focusedNodeId(page)).toBe(landed.id);
+    await page.keyboard.press("e");
+    await expect(page.getByRole("dialog")).toBeVisible();
+  });
+
+  test("E with the modal already open does not re-seed the form", async ({ page }) => {
+    await openAppealPresetInEditor(page);
+    await page.getByLabel("模板名称", { exact: true }).filter({ visible: true }).focus();
+    const landed = await tabUntilNode(page);
+    expect(landed.id).not.toBeNull();
+    await page.keyboard.press("e");
+
+    const dialog = page.getByRole("dialog");
+    const nameField = dialog.getByLabel("节点名称", { exact: true });
+    await expect(nameField).toBeVisible();
+    await nameField.fill("改到一半");
+
+    // Whatever the dialog's focus trap has focused, `E` must not re-enter the
+    // handler and replace the operator's half-finished edit.
+    await page.keyboard.press("e");
+
+    await expect(dialog).toHaveCount(1);
+    await expect(nameField).toHaveValue(/^改到一半/);
+  });
+});
+
 test.describe("Workflow page health", () => {
   test("loads without an uncaught exception", async ({ page }) => {
     // pageerror fires only for uncaught exceptions, so this cannot be muted
