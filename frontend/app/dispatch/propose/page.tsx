@@ -59,7 +59,24 @@ export default function ProposeDispatchPage() {
     return () => clearTimeout(timer);
   }, [soulSearchInput]);
 
-  const { data: soulsResponse, isLoading: soulsLoading } = useQuery({
+  // `isError` on BOTH feeders below, and neither had it. This page renders
+  // neither an empty-state component nor a data grid, so neither rule in
+  // `src/__tests__/errorIsNotAnEmptyState.test.ts` ever looked at it — the
+  // failure was invisible to the guard written for exactly this shape.
+  //
+  // (Those two component names are deliberately NOT spelled with their angle
+  // brackets here. That guard matches source TEXT, so writing the tag in prose
+  // puts this file into the subject list it is describing itself as absent
+  // from — which is what the first draft of this comment did, and both rules
+  // duly failed on a page that renders neither component. Same shape as the
+  // Tailwind-scans-prose note in this repo.)
+  //
+  // What it looked like: a failed soul search rendered `SearchSelectField`'s
+  // `emptyText` ("no matches"), and a failed tenants call rendered a
+  // `SelectField` holding only its placeholder. Both said "there is nothing to
+  // pick" for "the request failed", on the page where the consequence is a
+  // dispatch that cannot be proposed and no way to tell why.
+  const { data: soulsResponse, isLoading: soulsLoading, isError: soulsError } = useQuery({
     // `soulSearch` is IN the key. Without it every query would read the first
     // search's cached page and the box would look broken rather than slow.
     queryKey: ["dispatch", "souls", soulSearch],
@@ -75,7 +92,7 @@ export default function ProposeDispatchPage() {
   const souls = soulsResponse?.data?.results ?? [];
   const soulCount = soulsResponse?.data?.count ?? souls.length;
 
-  const { data: statsData, isLoading: tenantsLoading } = useQuery({
+  const { data: statsData, isLoading: tenantsLoading, isError: tenantsError } = useQuery({
     queryKey: ["dispatch", "tenants"],
     queryFn: () => ledgerApi.statsOverview(),
     enabled: !!user,
@@ -206,7 +223,13 @@ export default function ProposeDispatchPage() {
           name="soul_id"
           label={t("dispatch.target_soul")}
           required
-          error={fieldErrors.soul_id}
+          // A field-level error, so it goes through `Field`'s existing
+          // `aria-invalid` + `aria-describedby` + `role="alert"` wiring rather
+          // than being a second, quieter way of saying something went wrong.
+          // A server-side validation error on this field still wins: that one
+          // is about what the operator typed, this one about whether the list
+          // is trustworthy at all.
+          error={fieldErrors.soul_id ?? (soulsError ? t("dispatch.soul_search_error") : undefined)}
           value={form.soul_id}
           onValueChange={(next) => {
             setFieldErrors(({ soul_id: _drop, ...rest }) => rest);
@@ -218,7 +241,10 @@ export default function ProposeDispatchPage() {
           loading={soulsLoading}
           placeholder={t("dispatch.soul_search_placeholder")}
           loadingText={t("common.loading")}
-          emptyText={t("dispatch.soul_search_empty")}
+          // The dropdown's own copy has to change too. Leaving "no matches"
+          // under an error message would be the page saying both things at
+          // once, and "no matches" is the one that reads as settled.
+          emptyText={soulsError ? t("dispatch.soul_search_error") : t("dispatch.soul_search_empty")}
           // Only when the server says it is holding more than it sent. Shown
           // unconditionally it would read as "there is more" on a list that is
           // already complete.
@@ -238,13 +264,22 @@ export default function ProposeDispatchPage() {
           label={t("dispatch.target_tenant")}
           required
           disabled={tenantsLoading}
-          error={fieldErrors.target_tenant_code}
+          error={
+            fieldErrors.target_tenant_code ??
+            (tenantsError ? t("dispatch.tenants_error") : undefined)
+          }
           value={form.target_tenant_code}
           onChange={e => {
             setFieldErrors(({ target_tenant_code: _drop, ...rest }) => rest);
             setForm({ ...form, target_tenant_code: e.target.value });
           }}
-          options={tenantsLoading ? [{ value: "", label: t("common.loading") }] : tenantOptions}
+          options={
+            tenantsLoading
+              ? [{ value: "", label: t("common.loading") }]
+              : tenantsError
+                ? [{ value: "", label: t("dispatch.tenants_error") }]
+                : tenantOptions
+          }
         />
 
         <TextAreaField

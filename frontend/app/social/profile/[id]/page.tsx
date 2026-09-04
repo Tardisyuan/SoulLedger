@@ -11,6 +11,7 @@ import { Pagination } from "@/src/components/ui/Pagination";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { QueryError } from "@/src/components/ui/PageError";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function UserProfilePage() {
@@ -20,7 +21,18 @@ export default function UserProfilePage() {
   const [page, setPage] = useState(1);
 
   const { data: profile, isLoading: profileLoading, error: profileError } = useProfile(userId);
-  const { data: postsData, isLoading: postsLoading } = usePosts({ author: userId, page });
+  // `error` as well, and it is a SECOND failure site on this page rather than
+  // a duplicate of the profile one below. The guard that exists for exactly
+  // this — `src/__tests__/errorIsNotAnEmptyState.test.ts` — passed this file
+  // the whole time, because it is per-FILE: it found the profile query's
+  // `role="alert"` and stopped. The defect was per-QUERY. A 500 on the posts
+  // request rendered `social.no_posts`, i.e. "this user has never posted".
+  const {
+    data: postsData,
+    isLoading: postsLoading,
+    error: postsError,
+    refetch: refetchPosts,
+  } = usePosts({ author: userId, page });
 
   const posts = postsData?.results ?? [];
   const totalPages = postsData ? Math.ceil(postsData.count / PAGE_SIZE) : 0;
@@ -97,6 +109,11 @@ export default function UserProfilePage() {
               <Skeleton key={i} className="h-28" />
             ))}
           </div>
+        ) : postsError ? (
+          /* Before the length check, always. "The request failed" and "there
+             is nothing here" are different facts and this page used to render
+             the second for both. */
+          <QueryError onRetry={() => void refetchPosts()} />
         ) : posts.length === 0 ? (
           <EmptyState title={t("social.posts")} reason={t("social.no_posts")} />
         ) : (
