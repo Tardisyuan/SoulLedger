@@ -58,9 +58,27 @@ declare const console: {
   debug(...args: unknown[]): void;
 };
 
-/** Build-time configuration, inlined by the bundler. Next and Expo both do
- *  this; neither ships the rest of Node's `process`. Only `env` is declared. */
-declare const process: { env: Record<string, string | undefined> };
+/* `process` IS NOT HERE, AND ITS ABSENCE IS THE DECISION.
+ *
+ * It used to be, as `{ env: Record<string, string | undefined> }`, described as
+ * "build-time configuration, inlined by the bundler". That description was
+ * true of what bundlers do and false as a claim about this package: the three
+ * modules that read `process.env.NEXT_PUBLIC_API_URL` were the whole reason
+ * `PlatformAdapter.baseUrl` exists, and once `baseUrl` became a port there was
+ * no reader left. What remained was a declaration that made the next one
+ * compile.
+ *
+ * `eslint.config.mjs` bans the *syntax*, and that is the belt. This is the
+ * braces, and it is the stronger of the two: a selector matches shapes, and
+ * `process["env"].X`, `const { env } = process`, `const p = process; p.env.X`
+ * and `globalThis.process.env.X` are four shapes that reach the same value. An
+ * undeclared name has no shapes. `no-undef` is off for TypeScript here (see
+ * that file), so tsc is the only thing that can say this at all.
+ *
+ * Held by `__tests__/nodeGlobals.test.ts`, which asks the checker whether the
+ * name resolves rather than reading this file as text. */
+
+
 
 declare function setTimeout(handler: () => void, timeout?: number): number;
 declare function clearTimeout(handle: number | undefined): void;
@@ -78,11 +96,28 @@ declare const URLSearchParams: {
   new (init?: Record<string, string> | string): URLSearchParams;
 };
 
-interface URL {
-  readonly searchParams: URLSearchParams;
-  toString(): string;
-}
-declare const URL: { new (url: string, base?: string): URL };
+/* `URL` IS NOT HERE, AND ITS ABSENCE IS THE DECISION.
+ *
+ * It used to be, declared as `{ readonly searchParams: URLSearchParams }` with
+ * a constructor, for one call site: `api/client.ts`'s `fetchAllPages` read a
+ * page's parameters off `new URL(next).searchParams`. Under this file's own
+ * header that declaration asserted that every present and future client has
+ * `URL.searchParams`. React Native's `URL` is a partial polyfill written by
+ * hand rather than the platform's own, and `searchParams` is the member it is
+ * known for omitting — where it is absent, `parsed.searchParams` is `undefined`
+ * and `.forEach` throws on the first paginated fetch, while this file said the
+ * opposite. (The version cutoff is not stated because it was not measured:
+ * there is no React Native checkout here to measure it against. The claim being
+ * withdrawn is the point, not a reproduction.)
+ *
+ * `fetchAllPages` now splits the query off the string itself and hands it to
+ * `URLSearchParams`, which is above and which React Native does ship. That was
+ * `URL`'s only use in this package, so the entry is deleted rather than
+ * narrowed: an allowlist entry with no call site is a claim nobody needs made.
+ * Re-adding it means re-making the claim — deliberately, with a reason, which
+ * is what the header asks for. */
+
+
 
 /** Only ever a type here — file downloads are handed to the caller, which is
  *  the layer that knows what a "download" means on its platform. */
