@@ -778,6 +778,7 @@
       "stat_deferred": "{{n}} sedjer",
       "stat_remaining": "{{n}} khery",
       "exhausted_title": "Set shu",
+      "read_only": "Maa set; nen sheemtet. Sekhem judgment.execute nefer.",
       "exhausted_with_deferred_title": "Sep-u sedjer wa",
       "exhausted_body": "{{n}} sheemtet em hru pen.",
       "incomplete_title": "Sep khery nen aba",

@@ -87,6 +87,18 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+// 控制台现在把裁决控件挂在 `judgment.execute` 上(后端 views.py:82 就是这么
+// 分的)。`usePermissions` 读 `useTenant().user`,所以这里给一个握着该权限的
+// 用户;下面「只读」那一组自己把它换成不握的。
+const mockUser: { role: string; permissions: string[] } | null = {
+  role: "JUDGE",
+  permissions: ["judgment.read", "judgment.execute"],
+};
+let currentUser: typeof mockUser = mockUser;
+jest.mock("@/src/contexts/TenantContext", () => ({
+  useTenant: () => ({ user: currentUser }),
+}));
+
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }));
@@ -116,6 +128,7 @@ function renderConsole() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  currentUser = mockUser;
   mockNext.mockImplementation(async (params?: { skip?: string[] }) => {
     const skipped = params?.skip ?? [];
     const queue = [JUDGMENT, NEXT_JUDGMENT].filter((j) => !skipped.includes(j.id));
@@ -412,6 +425,67 @@ describe("the decision bar", () => {
       await screen.findByText("第一位待判者");
       expect(screen.queryByText("judgment.queue.undo")).not.toBeInTheDocument();
       expect(screen.getByText("judgment.queue.defer")).toBeInTheDocument();
+      expect(mockConclude).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * 只读:能看队列,不能裁决。
+   *
+   * 后端 `views.py:82` 把 `conclude → judgment.execute`、`next_pending →
+   * judgment.read` 分开,并在注释里写明「能看不能判的人照样给他屏幕,而裁决
+   * 按钮才是他用不了的那个」。屏幕那一半建了,按钮那一半没建 —— 于是只有
+   * judgment.read 的操作员拿到四个亮着的裁决按钮,按下去卡片前进、倒计时开始,
+   * 八秒后 403 被渲染成泛用的 `commit_error`:「未提交,该条已放回队列」,
+   * 说的是一个八秒前就离开屏幕的案子。
+   */
+  describe("只读:有 judgment.read 没有 judgment.execute", () => {
+    beforeEach(() => {
+      currentUser = { role: "JUDGE", permissions: ["judgment.read"] };
+    });
+
+    it("照样给屏幕 —— 案子的内容全在", async () => {
+      renderConsole();
+      // 这一半原本就是对的,钉住它,免得「修好按钮」变成「连屏幕一起收走」。
+      expect(await screen.findByText("第一位待判者")).toBeInTheDocument();
+    });
+
+    it("四个裁决按钮一个都不在,换成一句说明", async () => {
+      renderConsole();
+      await screen.findByText("第一位待判者");
+
+      expect(screen.getByText("judgment.queue.read_only")).toBeInTheDocument();
+      // 缺席断言,而且要断言**不存在**而不是「被禁用」:禁用的控件仍然在说
+      // 「这是你的,只是现在不行」,而这不是时机问题,是这个操作员的常态。
+      for (const key of ["1", "2", "3", "4"]) {
+        expect(screen.queryByText(key)).not.toBeInTheDocument();
+      }
+    });
+
+    it("数字键按下去什么都不发生 —— 卡片不动,请求不发", async () => {
+      renderConsole();
+      await screen.findByText("第一位待判者");
+
+      await act(async () => {
+        fireEvent.keyDown(window, { key: "1" });
+        fireEvent.keyDown(window, { key: "u" });
+        fireEvent.keyDown(window, { key: "w" });
+      });
+
+      expect(screen.getByText("第一位待判者")).toBeInTheDocument();
+      expect(mockConclude).not.toHaveBeenCalled();
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+
+    it("跳过仍然可用 —— 它是会话内的,什么都不写", async () => {
+      renderConsole();
+      await screen.findByText("第一位待判者");
+
+      await act(async () => {
+        fireEvent.keyDown(window, { key: "s" });
+      });
+
+      await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
       expect(mockConclude).not.toHaveBeenCalled();
     });
   });
