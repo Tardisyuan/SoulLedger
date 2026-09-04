@@ -2,20 +2,20 @@
 
 import {
   DEFAULT_LOCALE,
-  HTML_LANG as HTML_LANG_MAP,
+  BCP47_FOR_LOCALE as HTML_LANG_MAP,
   isLocale as isLocaleGuard,
   type Locale,
   LOCALE_COOKIE as LOCALE_COOKIE_NAME,
 } from "@soulledger/core/config/locale";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import defaultMessages from "@soulledger/core/messages/zh-Hans.json";
 import { publishTranslator } from "@/lib/i18n/activeTranslator";
 
 // Locale 的类型与常量在 src/config/locale.ts —— 那个模块不带 "use client",
 // 所以服务端的 app/layout.tsx 也能 import。这里 re-export 是为了不打断既有引用。
 export type { Locale } from "@soulledger/core/config/locale";
-export { HTML_LANG, isLocale, LOCALE_COOKIE } from "@soulledger/core/config/locale";
+export { isLocale, LOCALE_COOKIE } from "@soulledger/core/config/locale";
 
 type Bundle = Record<string, unknown>;
 
@@ -189,10 +189,6 @@ function formatDateTimeWith(locale: Locale, value: DateInput, options?: Intl.Dat
   );
 }
 
-function formatNumberWith(locale: Locale, value: number, options?: Intl.NumberFormatOptions): string {
-  return new Intl.NumberFormat(toIntlLocale(locale), options).format(value);
-}
-
 interface I18nContextType {
   locale: Locale;
   setLocale: (locale: Locale) => void;
@@ -202,9 +198,28 @@ interface I18nContextType {
   formatDate: (value: DateInput, options?: Intl.DateTimeFormatOptions) => string;
   /** Locale-aware date+time formatting; defaults to medium date + medium time style. */
   formatDateTime: (value: DateInput, options?: Intl.DateTimeFormatOptions) => string;
-  /** Locale-aware number formatting. */
-  formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
 }
+
+/* THERE WAS A `formatNumber` HERE, AND NOTHING EVER CALLED IT.
+ *
+ * Measured across every git-tracked source file under `frontend/` and
+ * `packages/`, comments stripped first: `t` 129 destructuring sites,
+ * `formatDateTime` 15, `formatDate` 7, `locale` 4, `setLocale` 1, `hydrated` 1,
+ * `formatNumber` **0**. Every occurrence of the name was its own declaration,
+ * its own test (`I18nContext.formatters.test.tsx`), or a `useI18n` double in an
+ * unrelated suite. `Intl.NumberFormat` appears nowhere else in the tree either,
+ * so this was not shadowed by someone rolling their own — the app formats no
+ * numbers by locale at all.
+ *
+ * It was dead surface held up by a test that asserted it existed, which is a
+ * shape worth naming: a test can keep an API alive indefinitely without a
+ * single caller, and the suite reports that as coverage.
+ *
+ * Not a platform-boundary decision. `Intl.NumberFormat` exists in React Native's
+ * Hermes and this would have ported unchanged; it was removed for being unused,
+ * and should come back the moment something needs it — `formatDateWith` above is
+ * the pattern.
+ */
 
 const I18nContext = createContext<I18nContextType>({
   locale: DEFAULT_LOCALE,
@@ -213,7 +228,6 @@ const I18nContext = createContext<I18nContextType>({
   hydrated: false,
   formatDate: (value, options) => formatDateWith(DEFAULT_LOCALE, value, options),
   formatDateTime: (value, options) => formatDateTimeWith(DEFAULT_LOCALE, value, options),
-  formatNumber: (value, options) => formatNumberWith(DEFAULT_LOCALE, value, options),
 });
 
 export function I18nProvider({
@@ -332,16 +346,17 @@ export function I18nProvider({
     [locale]
   );
 
-  const formatNumber = useCallback(
-    (value: number, options?: Intl.NumberFormatOptions) => formatNumberWith(locale, value, options),
-    [locale]
+  // Every member here is already stable on its own — `setLocale` is
+  // `useCallback([])`, `t` moves only with `locale`/`loadedBundles`, and the two
+  // formatters move only with `locale` — so this memo is not wrapping a bag of
+  // functions that churn underneath it. It is the object literal itself that
+  // was new on every render.
+  const value = useMemo(
+    () => ({ locale, setLocale, t, hydrated, formatDate, formatDateTime }),
+    [locale, setLocale, t, hydrated, formatDate, formatDateTime]
   );
 
-  return (
-    <I18nContext.Provider value={{ locale, setLocale, t, hydrated, formatDate, formatDateTime, formatNumber }}>
-      {children}
-    </I18nContext.Provider>
-  );
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
 export const useI18n = () => useContext(I18nContext);

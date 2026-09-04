@@ -50,7 +50,7 @@ describe("each locale gets its own month name", () => {
     expect(formatHistoricalDate({ year: -44, month: 3, day: 15 }, "zh-Hans")).toBe("44 BCE · 3月15日");
   });
 
-  it("egy reuses the English names, the way HTML_LANG and INTL_LOCALE do", () => {
+  it("egy reuses the English names, the way BCP47_FOR_LOCALE and INTL_LOCALE do", () => {
     // `messages/egy.json` carries no month names — it is an English base with
     // the Egyptian terminology substituted in. Asserted rather than assumed so
     // that a real civil-calendar month list arriving one day is a deliberate
