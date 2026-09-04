@@ -89,6 +89,7 @@ const COLLECTED_FILES = [
   "TenantContext.test.tsx",
   "Toast.test.tsx",
   "UserDeleteDialog.test.tsx",
+  "WebSocketContext.currentUserId.test.tsx",
   "WebSocketContext.test.tsx",
   "WelcomePage.test.tsx",
   "WorkflowEditor.test.tsx",

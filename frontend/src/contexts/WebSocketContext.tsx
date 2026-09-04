@@ -62,7 +62,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         { queryClient, showToast, currentUserId },
       );
     },
-    [queryClient, showToast],
+    [queryClient, showToast, currentUserId],
   );
 
   const handleWorkflowEvent = useCallback(
@@ -81,14 +81,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         { queryClient, showToast, currentUserId },
       );
     },
-    [queryClient, showToast],
+    [queryClient, showToast, currentUserId],
   );
 
   const handleGenericEvent = useCallback(
     (event: Record<string, unknown>) => {
       dispatchEvent(event as EventPayload, { queryClient, showToast, currentUserId });
     },
-    [queryClient, showToast],
+    [queryClient, showToast, currentUserId],
   );
 
   // Connect / disconnect based on user state
