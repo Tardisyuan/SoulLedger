@@ -115,6 +115,7 @@ const COLLECTED_FILES = [
   "contextValueIdentity.test.tsx",
   "crossJudgmentDetailFetchBudget.test.tsx",
   "dataGridToneContract.test.ts",
+  "dialogsAreNotHandRolled.test.ts",
   "designGuardContract.test.ts",
   "domainDisplayContract.test.tsx",
   "domainDisplayRendering.test.tsx",
