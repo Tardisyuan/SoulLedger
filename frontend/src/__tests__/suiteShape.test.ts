@@ -77,6 +77,7 @@ const COLLECTED_FILES = [
   "RoleFormModal.test.tsx",
   "SettingsDrawer.test.tsx",
   "Skeleton.test.tsx",
+  "SoulDetailPage.cacheInvalidation.test.tsx",
   "SoulDetailPage.inheritance.test.tsx",
   "SoulDetailPage.rebirthForm.test.tsx",
   "SoulEditModal.test.tsx",

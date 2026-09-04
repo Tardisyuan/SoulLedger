@@ -30,16 +30,28 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 // t() returns the key unchanged (matching this codebase's real fallback
 // behavior when a key is missing) so assertions can target exact key strings
 // instead of locale copy. `t`/`formatDate` must be stable references — the
-// component's loadSoulData is a useCallback keyed on `t`, so a mock that
-// returns a fresh function on every call turns the effect that calls it
-// into an infinite render loop.
+// page's `tf` is a useCallback keyed on `t`, so a mock that returns a fresh
+// function on every call gives every render a new `tf`, which every child
+// taking it as a prop then sees as a changed input. (Until the page moved onto
+// the query cache this was worse than churn: `loadSoulData` was a useCallback
+// keyed on `t` too, and the effect that called it looped outright.)
 const mockT = (key: string) => key;
 const mockFormatDate = (v: unknown) => String(v);
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: mockT, formatDate: mockFormatDate }),
 }));
 
+// `requireActual` first, then override only the two mutations. The factory used
+// to return those two ALONE, which deleted every other export of the module —
+// including `useSoul` and `useSoulLedger`, which this page now reads its soul
+// and its ledger through. That is the same defect this file already records for
+// `@soulledger/core/api/ledger` two mocks down: a module mock that drops what it
+// is not stubbing does not fail where it is wrong, it fails wherever the missing
+// export is next reached for. Only the mutations need stubbing here — the
+// queries must be the real ones, or nothing in this file is testing the page's
+// data path any more.
 jest.mock("@soulledger/core/hooks/useSouls", () => ({
+  ...jest.requireActual("@soulledger/core/hooks/useSouls"),
   useUpdateSoul: () => ({ mutateAsync: jest.fn(), isPending: false }),
   useDeleteSoul: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));

@@ -26,14 +26,27 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 // t() returns the key unchanged, matching this codebase's real missing-key
 // fallback — so the page's `tf` helper renders its code-level fallbacks and
 // the six options show up as their raw enum values. Stable references: the
-// page's loadSoulData is a useCallback keyed on `t`.
+// page's `tf` is a useCallback keyed on `t`. (It used to matter more — the
+// page's `loadSoulData` was keyed on `t` as well, and a fresh `t` per call
+// looped the effect that called it. That effect is gone; the reason for a
+// stable `t` is not.)
 const mockT = (key: string) => key;
 const mockFormatDate = (v: unknown) => String(v);
 jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: mockT, formatDate: mockFormatDate }),
 }));
 
+// `requireActual` first, then override only the two mutations. The factory used
+// to return those two ALONE, which deleted every other export of the module —
+// including `useSoul` and `useSoulLedger`, which this page now reads its soul
+// and its ledger through. That is the same defect this file already records for
+// `@soulledger/core/api/ledger` two mocks down: a module mock that drops what it
+// is not stubbing does not fail where it is wrong, it fails wherever the missing
+// export is next reached for. Only the mutations need stubbing here — the
+// queries must be the real ones, or nothing in this file is testing the page's
+// data path any more.
 jest.mock("@soulledger/core/hooks/useSouls", () => ({
+  ...jest.requireActual("@soulledger/core/hooks/useSouls"),
   useUpdateSoul: () => ({ mutateAsync: jest.fn(), isPending: false }),
   useDeleteSoul: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));
