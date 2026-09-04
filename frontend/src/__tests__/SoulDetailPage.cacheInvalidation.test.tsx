@@ -29,6 +29,7 @@
 import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import SoulDetailPage from "@/app/souls/[id]/page";
+import { makeTranslateWithFallback } from "@/src/contexts/I18nContext";
 import { dispatchEvent, type EventPayload } from "@/lib/events/event_registry";
 
 const SOUL_ID = "soul-1";
@@ -50,8 +51,20 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 // turns the effect that calls it into a render loop that looks like a hang.
 const mockT = (key: string) => key;
 const mockFormatDate = (v: unknown) => String(v);
-const mockI18n = { t: mockT, formatDate: mockFormatDate, locale: "zh" };
+// `tf` is `t` plus a code-level fallback, and it is the REAL helper here
+// (`requireActual`, whose spread also keeps every other export of the module
+// alive) applied to the key-echoing `mockT` above — not a second copy of its
+// logic. A double that re-derives the thing under it is how a broken fallback
+// stays green. It moved off this page onto the i18n context; when it was a
+// page-local `useCallback` these mocks did not have to supply it.
+const mockI18n = {
+  t: mockT,
+  tf: makeTranslateWithFallback(mockT),
+  formatDate: mockFormatDate,
+  locale: "zh",
+};
 jest.mock("@/src/contexts/I18nContext", () => ({
+  ...jest.requireActual("@/src/contexts/I18nContext"),
   useI18n: () => mockI18n,
 }));
 

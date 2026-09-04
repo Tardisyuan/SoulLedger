@@ -19,6 +19,8 @@
  * write, so offering it here would only manufacture 400s.
  */
 
+import { useI18n } from "@/src/contexts/I18nContext";
+
 /** 三善道, best to worst. */
 export const THREE_GOOD_PATHS = ["DIVINE", "HUMAN", "ASURA"] as const;
 /** 三恶道, worst going down. */
@@ -56,13 +58,16 @@ interface RebirthFormSelectProps {
   value: RebirthFormValue;
   onChange: (form: RebirthFormValue) => void;
   disabled?: boolean;
-  /** Translator with a code-level fallback — see the `tf` helper on the soul
-   *  detail page. The six form names ship in messages/*.json under
-   *  `reincarnation.forms.*`; the two group headings do not yet. */
-  tf: (key: string, fallback: string, params?: Record<string, string>) => string;
 }
 
-export function RebirthFormSelect({ value, onChange, disabled, tf }: RebirthFormSelectProps) {
+export function RebirthFormSelect({ value, onChange, disabled }: RebirthFormSelectProps) {
+  // `tf` (translate, or show this literal) came down as a prop from the soul
+  // detail page through SoulActionsCard; it is on the i18n context now. This is
+  // the one of the four that did not already call `useI18n` — the six form
+  // names ship in messages/*.json under `reincarnation.forms.*`, but the two
+  // group headings and `reincarnation.form_label` do not, so half of what this
+  // component renders comes out of the fallbacks written below.
+  const { tf } = useI18n();
   const groups = [
     {
       key: "good" as const,

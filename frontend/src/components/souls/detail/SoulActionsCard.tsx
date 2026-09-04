@@ -5,7 +5,6 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { RebirthFormSelect, type RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
-import type { TFunc } from "./tf";
 
 /** Left column's 操作 card — the state-machine verbs available on this soul. */
 export function SoulActionsCard({
@@ -19,7 +18,6 @@ export function SoulActionsCard({
   onDie,
   onStartJudgment,
   onReincarnate,
-  tf,
 }: {
   soul: Soul | null;
   loading: boolean;
@@ -31,7 +29,6 @@ export function SoulActionsCard({
   onDie: () => void;
   onStartJudgment: () => void;
   onReincarnate: (dispositionId: string) => void;
-  tf: TFunc;
 }) {
   const { t } = useI18n();
 
@@ -89,7 +86,6 @@ export function SoulActionsCard({
                     value={rebirthForm}
                     onChange={onRebirthFormChange}
                     disabled={!!actionLoading}
-                    tf={tf}
                   />
                 </div>
               )}
