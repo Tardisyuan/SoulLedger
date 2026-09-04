@@ -33,19 +33,6 @@ import {
   type FutureStageKey,
 } from "./soulLifecycleRows";
 
-type TFunc = (key: string, params?: Record<string, string>) => string;
-
-function tfFactory(t: TFunc) {
-  return (key: string, fallback: string, params?: Record<string, string>) => {
-    if (t(key) === key) {
-      return params
-        ? Object.entries(params).reduce((s, [k, v]) => s.replaceAll(`{{${k}}}`, v), fallback)
-        : fallback;
-    }
-    return t(key, params);
-  };
-}
-
 const PIPELINE_STEPS = ["ALIVE", "JUDGING", "DISPOSED", "REINCARNATING", "ALIVE_NEXT"] as const;
 
 function currentStepPosition(state: string, hasReincarnated: boolean): number {
@@ -91,12 +78,14 @@ export function SoulLifecycleTimeline({
   ledgerRecords,
   onOpenJudgmentQueue,
 }: SoulLifecycleTimelineProps) {
-  const { t } = useI18n();
-  // Memoised, not rebuilt per render: `tf` is a dependency of the `rows` memo
-  // below, and a fresh closure every render would make that memo recompute
-  // every render — i.e. memoise nothing. `tfFactory` is pure in `t`, so this
-  // moves exactly when `t` does (locale change, or a lazy bundle landing).
-  const tf = useMemo(() => tfFactory(t), [t]);
+  // `tf` comes from the context, not from a copy of the helper declared here.
+  // It is memoised on `t` at its single definition site (I18nContext's
+  // `const tf = useMemo(() => makeTranslateWithFallback(t), [t])`), which is
+  // the property the `stageLabels` and `rows` memos below depend on: a fresh
+  // closure every render would make both recompute every render — i.e.
+  // memoise nothing. This file used to build its own; so did
+  // SoulKarmaLedgerCard, and so did the page above them before `b3a3e7c`.
+  const { t, tf } = useI18n();
   const [tab, setTab] = useState<SpineTab>("all");
   const [includeSystemEvents, setIncludeSystemEvents] = useState(false);
   const [expandedSystemGroups, setExpandedSystemGroups] = useState<Record<string, boolean>>({});
