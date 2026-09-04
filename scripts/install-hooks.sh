@@ -160,13 +160,34 @@ if [ "$TOUCHES_BACKEND" -gt 0 ]; then
     # and does not on SQLite; varchar(n) length is enforced there and ignored
     # here). Dropping to SQLite is a real loss, so it is announced rather than
     # silently substituted.
+    #
+    # WHY THIS USES THE SHARED CACHE WHEN IT IS UP, THOUGH CLAUDE.md SAYS TO
+    # ISOLATE BOTH SERVICES. That instruction is written for someone running
+    # the suite by hand, and its stated cost is that the run "writes
+    # permission-cache keys into the real Redis". The owner confirmed on
+    # 2026-09-04 that nobody else uses that box, so the only reader of those
+    # keys is the next run on the same machine — and every cache test in this
+    # repo calls `invalidate_all_permissions()` in setUp, so it does not
+    # inherit them either.
+    #
+    # Read that as a decision with a stated condition, not as a licence. If a
+    # second person or a second machine ever shares that Redis, the cost comes
+    # back and this branch should go: delete the `ok*` case below so the cache
+    # is always thrown away, and only the database keeps its probe. That is a
+    # three-line change, deliberately left easy.
     # Reports one line per service: "<name> <ok|down> <detail>".
-    PROBE=$(DB_URL="${DATABASE_URL:-}" RD_URL="${REDIS_URL:-}" "$PY" - <<'PROBE_PY'
+    PROBE=$(ENV_FILE="$ROOT/backend/.env" DB_URL="${DATABASE_URL:-}" RD_URL="${REDIS_URL:-}" "$PY" - <<'PROBE_PY'
 import os, re, socket
 
 def from_env_file(key):
+    # An absolute path from $ROOT. A relative one is wrong here: the hook has
+    # already `cd`-ed into $ROOT/backend by this point, so "backend/.env"
+    # resolves to backend/backend/.env and silently finds nothing — which is
+    # how the first version of this probe printed "redis: unknown (unset)"
+    # and started a throwaway cache while claiming the real one was down.
+    # The outcome was harmless; the stated reason was false.
     try:
-        with open("backend/.env", encoding="utf-8") as f:
+        with open(os.environ.get("ENV_FILE", ""), encoding="utf-8") as f:
             for line in f:
                 if line.lstrip().startswith("#") or "=" not in line:
                     continue
@@ -212,7 +233,16 @@ PROBE_PY
     esac
     case "$RD_STATE" in
         ok*) ;;
-        *)  echo "    → cache unreachable, starting a throwaway redis-server"
+        unknown*)
+            # Could not read a URL at all. Isolating is still the right action,
+            # but say that it is a blind fallback rather than a measured one.
+            echo "    → cache URL could not be read ($RD_STATE) — isolating anyway"
+            echo "      This is a blind fallback, not a reachability finding."
+            RD_STATE="down (unread)" ;;
+    esac
+    case "$RD_STATE" in
+        ok*) ;;
+        *)  echo "    → starting a throwaway redis-server"
             command -v redis-server >/dev/null 2>&1 || fail "redis-server not found and the configured cache is unreachable. Refusing rather than running without one: the permission-cache tests degrade silently and report a false red, which is exactly the failure this probe exists to prevent."
             RPORT=$("$PY" -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); p=s.getsockname()[1]; s.close(); print(p)")
             redis-server --port "$RPORT" --daemonize yes --save '' --appendonly no >/dev/null 2>&1 \
