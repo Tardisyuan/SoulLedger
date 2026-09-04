@@ -121,6 +121,25 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+      // SOMEBODY ELSE ALREADY ANSWERED THIS KEY.
+      //
+      // This handler is on `window`, so it sees every keystroke in the app —
+      // including ones an overlay above it has already handled. React
+      // dispatches at the root container, so a handler that calls
+      // `preventDefault()` without `stopPropagation()` still lets this one
+      // run, and both do: `useDrawerA11y.ts:137-141` and
+      // `useRovingPopupKeys.ts:56-59`.
+      //
+      // What that cost, concretely:
+      //   - narrow viewport, the AppLayout mobile drawer open over the
+      //     console: Escape closed the drawer AND ran `leave()` — flush the
+      //     held verdict, navigate away;
+      //   - the keyboard map open (`?` / `h`): Escape left the queue instead
+      //     of closing the map.
+      //
+      // `defaultPrevented` is the one question that answers all of them
+      // without this handler having to know what else exists on the page.
+      if (event.defaultPrevented) return;
       // AUTO-REPEAT IS NOT A SECOND DECISION. A held key fires `keydown` every
       // ~30ms after the initial delay, and every one of the shortcuts below is
       // a discrete command — there is no scroll or nudge here that repeating
@@ -139,6 +158,15 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
       if (event.key === "Escape") {
         if (isTextEntry(event.target)) {
           (event.target as HTMLElement).blur();
+          return;
+        }
+        // The keyboard map is the nearest thing to an overlay this console
+        // owns, and it had no Escape of its own — so Escape over an open map
+        // left the whole queue. Closing it is what Escape means when
+        // something is open on top.
+        if (showKeys) {
+          event.preventDefault();
+          setShowKeys(false);
           return;
         }
         event.preventDefault();
@@ -199,7 +227,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [rule, defer, undo, restoreDeferred, leave, canRule]);
+  }, [rule, defer, undo, restoreDeferred, leave, canRule, showKeys]);
 
   // `progressText`, not `progressLabel`: "N of M" is a formatted count, not a
   // domain enum, and src/__tests__/domainDisplayContract.test.tsx reads any
@@ -429,7 +457,10 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
       {(pending || (judgment && cursor.soul && cursor.ledger)) && (
         <div className="sticky bottom-0 border-t border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-canvas))]">
           <div className="max-w-6xl mx-auto px-6 py-3">
-            <div className="h-10 flex items-center" aria-live="polite">
+            {/* No `aria-live` here. The strip inside already carries
+                `role="status"`, which IS a live region — nesting a second one
+                around it meant two regions announcing the same node. */}
+            <div className="h-10 flex items-center">
               {pending ? (
                 <div role="status" className="flex flex-wrap items-center gap-3 animate-undo-strip">
                   <span className="text-03 text-[hsl(var(--color-ink))]">
@@ -444,7 +475,17 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                       verdict: resolveEnumDisplay(t, "judgment.verdicts", pending.verdict).label ?? "",
                     })}
                   </span>
-                  <span className="font-mono tabular-nums text-02 text-[hsl(var(--color-ink-muted))]">
+                  {/* `aria-hidden`, and it is the whole of this fix.
+                      The seconds tick every 250ms INSIDE a `role="status"`,
+                      so the live region re-fired several times a second —
+                      "sends in 7s / 6s / 5s…" talking over whatever else was
+                      being read, including the verdict announcement two lines
+                      up that the operator actually needs. The number stays on
+                      screen; it is the re-announcement that was noise. */}
+                  <span
+                    aria-hidden="true"
+                    className="font-mono tabular-nums text-02 text-[hsl(var(--color-ink-muted))]"
+                  >
                     {t("judgment.queue.undo_countdown", { seconds: String(secondsLeft) })}
                   </span>
                   <Button type="button" variant="secondary" onClick={undo}>
@@ -479,7 +520,23 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                   key={verdict.code}
                   type="button"
                   onClick={() => rule(verdict.code)}
-                  className="flex items-center gap-2 px-4 py-2 border text-03 font-semibold transition-colors border-[hsl(var(--color-hairline-strong))] hover:bg-[hsl(var(--color-surface-2))]"
+                  /* `active:translate-y-px` and the motion tokens, matching
+                     `Button`'s base — see its comment on the pressed nudge:
+                     "shared by all four variants so 'pressed' is one gesture
+                     in this UI rather than four". These four stayed
+                     hand-rolled for a good reason (each carries its own status
+                     token as an inline colour), and the cost of that was
+                     shipping the most important buttons in the product with
+                     no pressed state at all — the exact defect `Button`'s
+                     header records as "0 of 190".
+
+                     `transition-colors` on Tailwind's bare 150ms is also
+                     replaced: `duration-state` is the token for a change in
+                     place, and the transform needs to be in the property list
+                     or the nudge is un-eased. NO overshoot, per globals.css —
+                     a bounce on a verdict button would be the app being
+                     pleased with itself while someone sentences a soul. */
+                  className="flex items-center gap-2 px-4 py-2 border text-03 font-semibold transition-[color,background-color,border-color,transform] duration-state border-[hsl(var(--color-hairline-strong))] hover:bg-[hsl(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0"
                   style={{ color: `hsl(var(${verdict.token}))` }}
                 >
                   <kbd className="font-mono text-02 px-1.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]">
@@ -497,7 +554,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
               <button
                 type="button"
                 onClick={defer}
-                className="flex items-center gap-2 px-4 py-2 border border-[hsl(var(--color-hairline-strong))] text-03 font-medium text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))]"
+                className="flex items-center gap-2 px-4 py-2 border border-[hsl(var(--color-hairline-strong))] text-03 font-medium text-[hsl(var(--color-ink-muted))] transition-[color,background-color,border-color,transform] duration-state hover:bg-[hsl(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0"
               >
                 <kbd className="font-mono text-02 px-1.5 bg-[hsl(var(--color-surface-3))]">S</kbd>
                 {t("judgment.queue.defer")}

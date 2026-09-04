@@ -342,7 +342,7 @@ describe("the decision bar", () => {
     await screen.findByText("第一位待判者");
 
     const bar = stickyBar(container);
-    const slot = bar!.querySelector("[aria-live='polite']");
+    const slot = bar!.querySelector(".h-10");
     // Present and empty. Mounting it on the first verdict is what used to push
     // the case down; a reserved slot cannot.
     expect(slot).not.toBeNull();
@@ -357,11 +357,11 @@ describe("the decision bar", () => {
     fireEvent.keyDown(window, { key: "1" });
 
     await waitFor(() =>
-      expect(stickyBar(container)!.querySelector("[aria-live='polite']")!.textContent).not.toBe("")
+      expect(stickyBar(container)!.querySelector(".h-10")!.textContent).not.toBe("")
     );
     // Still exactly one slot — the strip moved into the reserved space rather
     // than inserting a new row.
-    expect(stickyBar(container)!.querySelectorAll("[aria-live='polite']")).toHaveLength(1);
+    expect(stickyBar(container)!.querySelectorAll(".h-10")).toHaveLength(1);
     expect(screen.getByRole("status").textContent).toContain("第一位待判者");
   });
 
@@ -488,5 +488,118 @@ describe("the decision bar", () => {
       await waitFor(() => expect(screen.getByText("第二位待判者")).toBeInTheDocument());
       expect(mockConclude).not.toHaveBeenCalled();
     });
+  });
+});
+
+/**
+ * 键盘作用域、播报、按压态。
+ */
+describe("控制台不抢别人已经处理过的按键", () => {
+  it("被上层处理过的 Escape 不会顺带把队列也退掉", async () => {
+    renderConsole();
+    await screen.findByText("第一位待判者");
+
+    // `defaultPrevented` 是只读的 —— 传进 init 里不会生效(第一版就是这么写
+    // 的,于是这条测的是普通 Escape,恒绿)。真的装一个前置监听器去
+    // `preventDefault()`,正是抽屉与弹层做的事:它们不调 stopPropagation,
+    // 而 React 在根容器分发,所以这个 window 监听器照样会跑到。
+    const upstream = (event: KeyboardEvent) => {
+      if (event.key === "Escape") event.preventDefault();
+    };
+    window.addEventListener("keydown", upstream, { capture: true });
+    try {
+      await act(async () => {
+        fireEvent.keyDown(window, { key: "Escape" });
+      });
+    } finally {
+      window.removeEventListener("keydown", upstream, { capture: true });
+    }
+
+    // 还在队列里。缺陷版本会 flush 掉扣住的裁决并跳走。
+    expect(screen.getByText("第一位待判者")).toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("键盘图开着时 Escape 关图,而不是离开队列", async () => {
+    renderConsole();
+    await screen.findByText("第一位待判者");
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "?" });
+    });
+    expect(screen.getByText("judgment.queue.keyboard_map")).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "Escape" });
+    });
+
+    expect(screen.queryByText("judgment.queue.keyboard_map")).not.toBeInTheDocument();
+    // 两边都断言:图关了,而且**没有**顺带离开。
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(screen.getByText("第一位待判者")).toBeInTheDocument();
+  });
+
+  it("图关掉之后,Escape 才是离开", async () => {
+    renderConsole();
+    await screen.findByText("第一位待判者");
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "Escape" });
+    });
+
+    expect(mockPush).toHaveBeenCalledWith("/judgment");
+  });
+});
+
+describe("倒计时不抢读屏的话筒", () => {
+  it("秒数是 aria-hidden,而裁决那句不是", async () => {
+    renderConsole();
+    await screen.findByText("第一位待判者");
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "1" });
+    });
+
+    const status = await screen.findByRole("status");
+    const countdown = status.querySelector("[aria-hidden='true']");
+    // 秒数每 250ms 变一次,而它在 role="status" 里面 —— 不 aria-hidden 的话
+    // 这个 live region 一秒重播好几次,盖过它上面那句真正要紧的裁决播报。
+    expect(countdown).not.toBeNull();
+    expect(countdown!.textContent).toContain("judgment.queue.undo_countdown");
+    // 而秒数仍然在屏幕上 —— 这条同时钉住「别把它删了」。
+    expect(status.textContent).toContain("judgment.queue.pending_verdict");
+  });
+
+  it("撤销条外面没有第二个 live region", async () => {
+    const { container } = renderConsole();
+    await screen.findByText("第一位待判者");
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "1" });
+    });
+
+    // `role="status"` 本身就是 live region;外面再套一个 `aria-live` 等于
+    // 两个区域在播报同一个节点。
+    const status = await screen.findByRole("status");
+    expect(status.closest("[aria-live]")).toBeNull();
+    expect(container.querySelectorAll("[aria-live='polite']").length).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("裁决按钮有按压态", () => {
+  it("四个裁决键和跳过都带 active: 位移", async () => {
+    renderConsole();
+    await screen.findByText("第一位待判者");
+
+    // `Button` 的表头把这条记成「190 个里 0 个有 active」,而这四个是全产品
+    // 最重要的按钮,它们手搓所以没进那次修复。
+    for (const key of ["1", "2", "3", "4", "S"]) {
+      const kbd = screen.getByText(key);
+      const button = kbd.closest("button");
+      expect(button).not.toBeNull();
+      expect(button!.className).toContain("active:translate-y-px");
+      // 减少动效下不许位移 —— 1px 也是未经请求的移动。
+      expect(button!.className).toContain("motion-reduce:active:translate-y-0");
+    }
   });
 });
