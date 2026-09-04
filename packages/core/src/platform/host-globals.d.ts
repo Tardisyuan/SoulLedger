@@ -9,12 +9,33 @@
  * `WebSocket` (not correct) in the same move.
  *
  * So the boundary is drawn here instead, by hand, as an allowlist. Everything
- * below exists in browsers **and** in React Native. Everything absent — and the
- * absences that matter are `document`, `window`, `localStorage`,
- * `sessionStorage`, `navigator`, `location`, `alert`, `fetch`-adjacent DOM
- * types — is a compile error in this package, which is what the boundary is
- * for. Host capabilities that are genuinely per-platform go through the ports
- * in `./types.ts`, not through a global.
+ * below exists in browsers **and** in React Native. The absences that matter
+ * are `document`, `window`, `localStorage`, `sessionStorage`, `navigator`,
+ * `location` and `alert`, and those are compile errors here, which is what the
+ * boundary is for. Host capabilities that are genuinely per-platform go through
+ * the ports in `./types.ts`, not through a global.
+ *
+ * BUT `lib` DOES NOT COVER DOM *TYPES*, AND THIS FILE USED TO CLAIM IT DID.
+ * The sentence above once read "Everything absent ... is a compile error in this
+ * package", full stop. That was false for about 145 names.
+ * `src/hooks/useStatutes.ts` imports `@tanstack/react-query`, which imports
+ * `@types/react`, which loads `@types/react/global.d.ts` — and that file exists
+ * precisely to let React compile without `lib: dom`, so it declares `Document`,
+ * `Element`, `HTMLElement`, `MouseEvent`, `KeyboardEvent`, `TouchEvent`,
+ * `FormData` and the rest as **empty interfaces**. `types: []` does not stop
+ * this: it only turns off *automatic* `@types` inclusion, not ambient globals
+ * reached through an import. So `const el: HTMLElement = {}` compiles here, and
+ * a DOM-shaped signature reads as accepted while carrying no type safety and no
+ * implementation on a phone.
+ *
+ * That leak cannot be closed from this package — React is a declared optional
+ * peer dependency, so `@types/react` being in the program is a supported
+ * configuration. What is enforced instead is that nothing in `src/` *uses* what
+ * leaked, by `src/platform/__tests__/domBoundary.test.ts`, which derives the
+ * banned list from `@types/react/global.d.ts` itself and allows only names this
+ * file also declares. Adding an entry below is therefore the one way to take a
+ * DOM name off that list — which is the same "adding to this file is the
+ * decision" rule as ever, now with something checking it.
  *
  * ADDING TO THIS FILE IS THE DECISION. A new entry is a claim that every
  * present and future client has the thing. `document` must never appear here;
@@ -70,6 +91,33 @@ interface Blob {
   readonly type: string;
 }
 declare const Blob: { new (parts?: unknown[], options?: { type?: string }): Blob };
+
+/**
+ * Multipart upload bodies. `usersApi.import` and `permApi.import` both take one
+ * and hand it straight to axios.
+ *
+ * WHY THIS IS ALLOWED AND NOT BANNED. It is on the allowlist for the same
+ * reason `WebSocket` and `Blob` are: React Native ships `FormData` as a global,
+ * documented and used by its own `fetch`, so the claim this entry makes — every
+ * present and future client has the thing — is true. It is spelled out here
+ * because it was previously resolving *by accident*: `@types/react/global.d.ts`
+ * reaches this package through `@tanstack/react-query`, and declares
+ * `interface FormData {}` — empty, like the ~145 DOM names beside it, so `{}`
+ * satisfied it and the two call sites had no type safety at all while reading
+ * as though they did. `src/platform/__tests__/domBoundary.test.ts` now fails on
+ * any name that resolves only that way; this declaration is what takes
+ * `FormData` off that list on purpose rather than by omission.
+ *
+ * `append` is the only member declared: it is the whole of what a caller does
+ * to build one of these, and it is the intersection of the web and React Native
+ * shapes (RN's `value` accepts its own file-descriptor objects, hence
+ * `unknown`). No constructor is declared, so `new FormData()` stays a compile
+ * error in this package — assembling an upload means knowing what a "file" is
+ * on the platform, which is the host's job. Core only ever receives one.
+ */
+interface FormData {
+  append(name: string, value: unknown, fileName?: string): void;
+}
 
 interface WebSocketEventMap {
   /** `string`, not `string | ArrayBuffer | Blob`. Both WebSocket clients here
