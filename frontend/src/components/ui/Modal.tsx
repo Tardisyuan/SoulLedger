@@ -313,6 +313,19 @@ interface ConfirmDialogProps {
   confirmText?: string;
   cancelText?: string;
   variant?: "danger" | "warning" | "info";
+  /**
+   * The confirm action is in flight.
+   *
+   * Added so the two hand-rolled confirmations in `app/recycle-bin` and
+   * `app/disposition` could move onto this component without losing anything:
+   * both showed a spinner on their confirm button, and a permanent hard delete
+   * that gives no sign it started is a button people press twice.
+   *
+   * It disables BOTH buttons, not only the confirm one. Cancelling a request
+   * that is already on its way does not unsend it — it only removes the dialog
+   * that would otherwise report the outcome.
+   */
+  confirmLoading?: boolean;
 }
 
 export function ConfirmDialog({
@@ -324,6 +337,7 @@ export function ConfirmDialog({
   confirmText,
   cancelText,
   variant = "danger",
+  confirmLoading = false,
 }: ConfirmDialogProps) {
   const { t } = useI18n();
 
@@ -376,13 +390,20 @@ export function ConfirmDialog({
               </AlertDialog.Description>
             </div>
             <div className="shrink-0 px-6 pb-5 flex gap-3">
-              <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onCancel}
+                disabled={confirmLoading}
+                className="flex-1"
+              >
                 {cancelText || t("common.cancel")}
               </Button>
               <Button
                 type="button"
                 variant={variantButton[variant]}
                 onClick={onConfirm}
+                loading={confirmLoading}
                 className="flex-1"
               >
                 {confirmText || t("common.confirm")}

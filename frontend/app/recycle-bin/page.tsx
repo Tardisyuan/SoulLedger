@@ -11,6 +11,7 @@ import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { DataTable } from "@/components/ui/data-table";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Button } from "@/src/components/ui/Button";
+import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { badgeVariants } from "@/src/components/ui/Badge";
 
@@ -198,39 +199,36 @@ export default function RecycleBinPage() {
           emptyMessage={t("recycle_bin.empty")}
         />
 
-        {confirmHardDelete && (
-          <div className="fixed inset-0 z-dialog flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-            <div className="w-full max-w-sm bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))]">
-              <div className="px-6 py-4">
-                <h3 className="text-05 text-[hsl(var(--color-ink))] mb-2">
-                  {t("recycle_bin.hard_delete_confirm_title")}
-                </h3>
-                <p className="text-04 text-[hsl(var(--color-ink-muted))]">
-                  {t("recycle_bin.hard_delete_confirm_message", { name: confirmHardDelete.label })}
-                </p>
-              </div>
-              <div className="px-6 pb-4 flex gap-3">
-                <Button
-                  variant="secondary"
-                  type="button"
-                  className="flex-1"
-                  onClick={() => setConfirmHardDelete(null)}
-                >
-                  {t("common.cancel")}
-                </Button>
-                <Button
-                  variant="danger"
-                  type="button"
-                  className="flex-1"
-                  onClick={() => hardDeleteMutation.mutate(confirmHardDelete)}
-                  loading={hardDeleteMutation.isPending}
-                >
-                  {t("recycle_bin.hard_delete")}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* `ConfirmDialog`, not a hand-rolled `fixed inset-0`.
+         *
+         * What this div was missing: `role="dialog"`, `aria-modal`, a focus
+         * move on open, Escape, a focus trap, and focus return to the trigger.
+         * Focus stayed on the page behind the scrim and Tab walked the list
+         * underneath — on the **permanent hard delete**, the single most
+         * irreversible action in this application.
+         *
+         * The 2026-09-01 round converted exactly this shape in
+         * `app/dispatch/[id]`, and its own comment named this file as one of
+         * the dialects it was consolidating ("recycle-bin's `z-9999`, since
+         * renamed `z-dialog`"). It was named and not converted.
+         *
+         * `ConfirmDialog` is `AlertDialog` underneath, so an outside click
+         * does not dismiss it — the right default here for the same reason
+         * that comment gives. */}
+        <ConfirmDialog
+          isOpen={confirmHardDelete !== null}
+          title={t("recycle_bin.hard_delete_confirm_title")}
+          message={
+            confirmHardDelete
+              ? t("recycle_bin.hard_delete_confirm_message", { name: confirmHardDelete.label })
+              : ""
+          }
+          confirmText={t("recycle_bin.hard_delete")}
+          variant="danger"
+          confirmLoading={hardDeleteMutation.isPending}
+          onCancel={() => setConfirmHardDelete(null)}
+          onConfirm={() => confirmHardDelete && hardDeleteMutation.mutate(confirmHardDelete)}
+        />
       </PageShell>
     </RequirePermission>
   );

@@ -11,6 +11,7 @@ import { DomainText } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
+import { ConfirmDialog } from "@/src/components/ui/Modal";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -112,34 +113,25 @@ export default function DispositionPage() {
         ))}
       </div>
 
-      {/* Execute Confirmation Modal */}
-      {showExecuteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[hsl(var(--color-surface-1))] p-6 w-full max-w-md border border-[hsl(var(--color-hairline))]">
-            <h2 className="text-06 text-[hsl(var(--color-ink))] mb-2">{t("disposition.confirm_execute")}</h2>
-            <p className="text-04 text-[hsl(var(--color-ink-muted))] mb-4">
-              {t("disposition.execute_warning")}
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowExecuteModal(null)}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                loading={executeMutation.isPending}
-                onClick={() => executeMutation.mutate(showExecuteModal)}
-              >
-                {executeMutation.isPending ? t("common.loading") : t("disposition.confirm_execute")}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* The second hand-rolled `fixed inset-0` — same missing apparatus as
+          `app/recycle-bin`: no `role="dialog"`, no `aria-modal`, no focus
+          move, no Escape, no focus trap, no focus return. Executing a
+          disposition is what sends a soul to its realm; it is not a dialog to
+          leave dismissible by a stray Tab into the page behind it.
+
+          Also note what the old markup did with `z-50` while the rest of the
+          app is on the `z-dialog` token — a scrim that can be outranked is a
+          scrim that is sometimes not there. */}
+      <ConfirmDialog
+        isOpen={showExecuteModal !== null}
+        title={t("disposition.confirm_execute")}
+        message={t("disposition.execute_warning")}
+        confirmText={t("disposition.confirm_execute")}
+        variant="danger"
+        confirmLoading={executeMutation.isPending}
+        onCancel={() => setShowExecuteModal(null)}
+        onConfirm={() => showExecuteModal && executeMutation.mutate(showExecuteModal)}
+      />
     </PageShell>
   );
 }
