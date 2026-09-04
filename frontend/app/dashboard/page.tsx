@@ -122,6 +122,16 @@ function DashboardContent() {
       <button
         key={tabItem.key}
         type="button"
+        // `aria-pressed`, not `role="tab"`. These are not a real tablist —
+        // they do not own a `tabpanel`, arrow keys do not move between them,
+        // and claiming the role without that contract is the defect this
+        // repo already has three instances of. What they ARE is a set of
+        // toggles where exactly one is on, and `aria-pressed` says that
+        // truthfully. Before this the selected one differed only by border
+        // and text COLOUR, so a screen-reader user heard two identical
+        // buttons and could not tell which view was showing.
+        // `components/ui/data-grid/FilterBar.tsx:181` already does this.
+        aria-pressed={activeTab === tabItem.key}
         onClick={() => setTab(tabItem.key)}
         className={`${TAB_BASE} ${activeTab === tabItem.key ? TAB_ON : TAB_OFF}`}
       >

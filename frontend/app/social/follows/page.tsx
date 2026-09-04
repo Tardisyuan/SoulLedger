@@ -58,6 +58,16 @@ export default function FollowsPage() {
           key={key}
           type="button"
           onClick={() => setTab(key)}
+          // `aria-pressed`, not `role="tab"`. These are not a real tablist —
+          // they do not own a `tabpanel`, arrow keys do not move between them,
+          // and claiming the role without that contract is the defect this
+          // repo already has three instances of. What they ARE is a set of
+          // toggles where exactly one is on, and `aria-pressed` says that
+          // truthfully. Before this the selected one differed only by border
+          // and text COLOUR, so a screen-reader user heard two identical
+          // buttons and could not tell which view was showing.
+          // `components/ui/data-grid/FilterBar.tsx:181` already does this.
+          aria-pressed={tab === key}
           className={`px-3 py-2 -mb-px text-03 font-medium border-b-2 transition-colors ${
             tab === key
               ? "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent-ink))]"
