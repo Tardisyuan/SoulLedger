@@ -15,7 +15,7 @@
  * `renderPage` comes from — this file deliberately does not import the page
  * itself, so the mocks cannot be bypassed by an import landing first.
  */
-import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor, fireEvent, within } from "@testing-library/react";
 
 import {
   backendTemplate,
@@ -292,6 +292,52 @@ describe("WorkflowPage detail modal", () => {
     expect(await screen.findByText("workflow.detail.nodes")).toBeInTheDocument();
     expect(mockedTemplateGet).not.toHaveBeenCalled();
     expect(screen.getAllByText("秦广王 · 分流").length).toBeGreaterThan(0);
+  });
+
+  /**
+   * The preset's 查看 button builds `nodes_json` locally — no fetch — and
+   * `node_type` is the one field in that object that is not a pass-through:
+   * `n.type` is a Chinese step name (「分流」「初审」「终审」…), and
+   * `nodeTypeFor` is what turns it into a NodeType member. Passing the step
+   * name through is the shipped 400 recorded in
+   * `@soulledger/core/config/workflow-node-types`.
+   *
+   * Measured 2026-09-04: reverting that one call to the raw `n.type` left the
+   * whole frontend run green — 126 suites / 2177 tests, exit 0. The sibling
+   * call on the 编辑 path is guarded by `presetNodeTypes.test.tsx`; this one
+   * had nothing on it. That asymmetry is what this case closes.
+   *
+   * Nothing on the value's path is stubbed. `TemplateDetailModal` and
+   * `<DomainEnum>` are the real components, and `t` echoing its key is what
+   * lands every enum in the "unrecognized" state, where `<DomainEnum>` puts
+   * the *raw* member in `title` — so the strings below are the strings
+   * production writes into the DOM. The expected members are literals: a
+   * fixture that recomputed them by calling `nodeTypeFor` itself would stay
+   * green through exactly the mutation this guards.
+   *
+   * Scoped to the dialog with `within`. The preview pane behind it renders
+   * the same nine TRIALs through a *different* call site
+   * (`presetPreviewModel`), so an unscoped count would be answered by the
+   * wrong block and this case would guard the line that was already guarded.
+   */
+  it("maps the predefined nodes onto NodeType members, never the raw step name", async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByText("workflow.view"));
+    const dialog = within(await screen.findByRole("dialog"));
+
+    // CHINESE_ROUTINE: nine halls, then 转轮王 · 终审.
+    expect(dialog.getAllByTitle("TRIAL")).toHaveLength(9);
+    expect(dialog.getByTitle("FINAL")).toBeInTheDocument();
+    // Absence: these are the values that POST as `"分流" is not a valid choice`.
+    expect(dialog.queryByTitle("分流")).not.toBeInTheDocument();
+    expect(dialog.queryByTitle("初审")).not.toBeInTheDocument();
+    expect(dialog.queryByTitle("终审")).not.toBeInTheDocument();
+    // The names and courts are untouched pass-throughs, asserted so a green
+    // above cannot have come from a modal that listed no nodes at all.
+    expect(dialog.getByText("秦广王 · 分流")).toBeInTheDocument();
+    expect(dialog.getByText("转轮王 · 终审")).toBeInTheDocument();
+    expect(dialog.getByText("第一殿")).toBeInTheDocument();
   });
 
   it("fetches the full template when viewing a backend one", async () => {
