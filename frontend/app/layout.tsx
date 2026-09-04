@@ -9,7 +9,7 @@ import "./globals.css";
 import { fontVariables } from "./fonts";
 import { ToastProvider } from "@/src/contexts/ToastContext";
 import { I18nProvider } from "@/src/contexts/I18nContext";
-import { HTML_LANG, isLocale, LOCALE_COOKIE } from "@soulledger/core/config/locale";
+import { BCP47_FOR_LOCALE, isLocale, LOCALE_COOKIE } from "@soulledger/core/config/locale";
 import { ThemeProvider } from "@/src/contexts/ThemeContext";
 import { TenantProvider } from "@/src/contexts/TenantContext";
 import { WebSocketProvider } from "@/src/contexts/WebSocketContext";
@@ -77,7 +77,7 @@ export default async function RootLayout({
     // 服务端读不到 localStorage,所以这个差异无法消除,只能声明它是预期的。
     // 实测过:不加这一行,首页在 dev overlay 里稳定报一条 "1 Issue"。
     <html
-      lang={locale ? HTML_LANG[locale] : HTML_LANG["zh-Hans"]}
+      lang={locale ? BCP47_FOR_LOCALE[locale] : BCP47_FOR_LOCALE["zh-Hans"]}
       className={fontVariables}
       suppressHydrationWarning
     >
