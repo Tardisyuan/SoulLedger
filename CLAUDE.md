@@ -8,7 +8,22 @@
 - NEVER save working files or tests to root — use `/src`, `/tests`, `/docs`, `/config`, `/scripts`
 - ALWAYS read a file before editing it
 - NEVER commit secrets, credentials, or .env files
-- Keep files under 500 lines
+- Keep files under 500 lines **of code** (comments excluded). Treat the count as a
+  prompt to ask whether the file does two things — never as a mandate to move lines.
+  *Measured 2026-09-04:* of the eight largest frontend files (490–605 lines), **none
+  has 500 lines of code**; the largest is 440 and `app/corpus/page.tsx` is 179 comment
+  lines against 319 of code. Counting comments creates pressure to delete the
+  institutional memory this repo is built on. Nothing enforces this rule — there is no
+  `max-lines` in any eslint config and no test counts lines — so it is applied by eye,
+  which is what the rest of this file exists to warn about.
+  The canonical *right answer* is already in the tree: `backend/apps/actors/mythology/
+  realms.py:16-29` records a split considered at 826 lines and **refused**, because
+  "a mechanical split turns twenty true sentences into twenty possibly-false ones,
+  silently." Compare `d80ac68`, which split sixteen files for the line count and left
+  behind a permanent `Breadcrumb` re-export shim, four stale `AppLayout.tsx:418`
+  references (fixed in `29e82df`), and a "42 tests" record that now equals no file and
+  no sum. `domainDisplayContract.test.tsx` was back over the ceiling nine days later.
+  A split needs a defect to justify it, not a number.
 - Validate input at system boundaries
 
 ## Agent Comms
