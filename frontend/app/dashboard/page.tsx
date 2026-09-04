@@ -438,7 +438,7 @@ function DashboardContent() {
                             {logs.map((log) => (
                               <div key={log.id} className="flex items-start gap-3 py-1 px-2 hover:bg-[hsl(var(--color-surface-2))] transition-colors">
                                 <div className="flex-1 min-w-0">
-                                  <span className="text-03 text-[hsl(var(--color-ink))] truncate">{log.description || log.resource}</span>
+                                  <span title={log.description || log.resource} className="text-03 text-[hsl(var(--color-ink))] truncate">{log.description || log.resource}</span>
                                   <div className="text-02 text-[hsl(var(--color-ink-muted))]">
                                     {log.user} · {formatTimestamp(log.timestamp)}
                                   </div>

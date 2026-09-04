@@ -99,7 +99,7 @@ function ActorCard({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
 
               This is the "a placeholder claims the data is missing while the
               data is present" shape, at 130 cards. */}
-          <h3 className="text-04 font-semibold text-[hsl(var(--color-ink))] truncate">{actor.name}</h3>
+          <h3 title={actor.name} className="text-04 font-semibold text-[hsl(var(--color-ink))] truncate">{actor.name}</h3>
           <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
             {actor.display_name || actor.name}
           </p>

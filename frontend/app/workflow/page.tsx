@@ -216,7 +216,7 @@ export default function WorkflowPage() {
                             : "bg-[hsl(var(--color-surface-1))] border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:border-[hsl(var(--color-accent))]/50"
                         }`}
                       >
-                        <div className="text-03 font-medium truncate">{tmpl.name}</div>
+                        <div title={tmpl.name} className="text-03 font-medium truncate">{tmpl.name}</div>
                         <div className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
                           <DomainEnum namespace="workflow.civilizations" value={tmpl.civilization} /> · <DomainEnum namespace="workflow.case_types" value={tmpl.case_type} />
                         </div>

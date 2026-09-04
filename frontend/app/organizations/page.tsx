@@ -139,12 +139,12 @@ function OrganizationsPageContent() {
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h3 className="text-03 font-medium text-[hsl(var(--color-ink))] truncate">{org.name}</h3>
+          <h3 title={org.name} className="text-03 font-medium text-[hsl(var(--color-ink))] truncate">{org.name}</h3>
           <Badge className={`shrink-0 ${CATEGORY_COLORS[org.category ?? ""] ?? ""}`}>
             {org.level === 0 ? t("organization.root") : `L${org.level}`}
           </Badge>
         </div>
-        <p className="text-02 font-mono text-[hsl(var(--color-ink-subtle))] truncate">{org.code}</p>
+        <p title={org.code} className="text-02 font-mono text-[hsl(var(--color-ink-subtle))] truncate">{org.code}</p>
       </div>
     </div>
   );
@@ -210,7 +210,7 @@ function OrganizationsPageContent() {
               >
                 <span aria-hidden="true" className="text-06">{info.icon}</span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-06 text-[hsl(var(--color-ink))] truncate">{info.name}</span>
+                  <span title={info.name} className="block text-06 text-[hsl(var(--color-ink))] truncate">{info.name}</span>
                   <span className="block text-04 text-[hsl(var(--color-ink-subtle))]">{t("organization.organizations_count", { count: String(orgs.length) })}</span>
                 </span>
                 <ChevronDown aria-hidden="true" className={`w-5 h-5 text-[hsl(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />

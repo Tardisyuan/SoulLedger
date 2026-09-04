@@ -158,6 +158,7 @@ const COLLECTED_FILES = [
   "tabClassContract.test.ts",
   "TemplatePreview.test.tsx",
   "tenantSignalContract.test.tsx",
+  "truncatedValuesAreRecoverable.test.ts",
   "useDispositions.test.ts",
   "useJudgmentQueue.test.tsx",
   "useJudgments.test.ts",
