@@ -39,11 +39,38 @@ function SidebarMenuItemInner({
 
   const indent = collapsed ? "" : depth > 0 ? "ml-4" : "";
 
+  /**
+   * The item's name, computed once and used in three places.
+   *
+   * WHY THIS EXISTS AT ALL. The visible label was rendered inside
+   * `{!collapsed && …}` and nothing took its place — so in compact/rail mode
+   * the ENTIRE primary navigation was a column of lucide `<svg>`s with no
+   * accessible name. Not "hard to read": no name. Measured before this change,
+   * `grep -c 'aria-label\|title=\|aria-current'` on this file was **0**.
+   *
+   * Collapsed mode is not a corner: `AppLayout.tsx:234` and `:248` reach it,
+   * and the settings drawer has a "compact" nav mode (`AppLayout.tsx:78`) an
+   * operator can leave on permanently.
+   *
+   * The `aria-label` is set UNCONDITIONALLY rather than only when collapsed.
+   * With a visible label present it names the same thing the label says, which
+   * costs nothing; gating it on `collapsed` would make the accessible name
+   * depend on a layout state, which is the kind of conditional correctness
+   * that survives until someone changes the condition.
+   */
+  const label = menu.path === "/" ? t("nav.welcome") : menu.name;
+
   if (hasChildren) {
     return (
       <div className={indent}>
         <button
+          type="button"
           onClick={() => setExpanded(!expanded)}
+          aria-label={label}
+          // The button controls the child list rendered below it, and said so
+          // nowhere. A collapsed/expanded disclosure that does not announce
+          // its state leaves a screen reader user pressing it to find out.
+          aria-expanded={expanded}
           className={`w-full flex items-center ${collapsed ? "justify-center px-0" : "gap-3 px-3"} h-12 transition-colors ${
             active
               ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
@@ -58,9 +85,7 @@ function SidebarMenuItemInner({
           </span>
           {!collapsed && (
             <>
-              <span className="flex-1 text-left text-03 truncate">
-                {menu.path === "/" ? t("nav.welcome") : menu.name}
-              </span>
+              <span className="flex-1 text-left text-03 truncate">{label}</span>
               {hasChildren && (
                 <ChevronRight className={`w-3.5 h-3.5 shrink-0 transition-transform duration-settle ${expanded ? "rotate-90" : ""}`} />
               )}
@@ -88,6 +113,11 @@ function SidebarMenuItemInner({
     <Link
       href={menu.path}
       prefetch={true}
+      aria-label={label}
+      // The active item was signalled by background and text colour alone.
+      // `Breadcrumb.tsx:154` already sets this for the same fact — the trail
+      // knew which page you were on and the navigation beside it did not.
+      aria-current={active ? "page" : undefined}
       className={`flex items-center ${collapsed ? "justify-center w-full px-0" : "gap-3 px-3"} h-12 transition-colors ${indent} ${
         active
           ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
@@ -100,9 +130,7 @@ function SidebarMenuItemInner({
           return <IconComponent className="w-5 h-5" />;
         })()}
       </span>
-      {!collapsed && (
-        <span className="text-03 truncate">{menu.name}</span>
-      )}
+      {!collapsed && <span className="text-03 truncate">{label}</span>}
     </Link>
   );
 }

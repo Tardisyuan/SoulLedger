@@ -140,6 +140,16 @@ export default function NotificationsPage() {
         <>
           <button
             type="button"
+            // `aria-pressed`, not `role="tab"`. These are not a real tablist —
+            // they do not own a `tabpanel`, arrow keys do not move between them,
+            // and claiming the role without that contract is the defect this
+            // repo already has three instances of. What they ARE is a set of
+            // toggles where exactly one is on, and `aria-pressed` says that
+            // truthfully. Before this the selected one differed only by border
+            // and text COLOUR, so a screen-reader user heard two identical
+            // buttons and could not tell which view was showing.
+            // `components/ui/data-grid/FilterBar.tsx:181` already does this.
+            aria-pressed={filter === "all"}
             onClick={() => setFilter("all")}
             className={`${TAB_BASE} ${filter === "all" ? TAB_ON : TAB_OFF}`}
           >
@@ -147,6 +157,7 @@ export default function NotificationsPage() {
           </button>
           <button
             type="button"
+            aria-pressed={filter === "unread"}
             onClick={() => setFilter("unread")}
             className={`${TAB_BASE} flex items-center gap-2 ${filter === "unread" ? TAB_ON : TAB_OFF}`}
           >

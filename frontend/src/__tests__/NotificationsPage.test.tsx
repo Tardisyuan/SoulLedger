@@ -237,4 +237,27 @@ describe("NotificationsPage mark-as-read", () => {
     await screen.findByText("Read");
     expect(screen.getAllByText("notifications.mark_read")).toHaveLength(1);
   });
+
+  /**
+   * 选中的那个 tab 自己说自己被选中。
+   *
+   * 之前两个筛选按钮只在 `border-b-2` 的颜色和文字颜色上不同 —— 读屏用户听到
+   * 的是两个一模一样的按钮,分不出当前在看哪一组。这里断言的是真页面,不是一个
+   * 我自己写对的合成 tab 条。
+   */
+  it("筛选 tab 用 aria-pressed 报告选中,而不是只靠颜色", async () => {
+    renderPage();
+
+    const all = await screen.findByRole("button", { name: /notifications\.all/ });
+    const unread = screen.getByRole("button", { name: /notifications\.unread/ });
+    expect(all).toHaveAttribute("aria-pressed", "true");
+    expect(unread).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(unread);
+
+    // 两边都断言:只断言「新的那个是 true」,在一个把两个都设成 true 的实现下
+    // 同样会绿。
+    await waitFor(() => expect(unread).toHaveAttribute("aria-pressed", "true"));
+    expect(all).toHaveAttribute("aria-pressed", "false");
+  });
 });

@@ -75,6 +75,7 @@ const COLLECTED_FILES = [
   "RequireButton.test.tsx",
   "RequirePermission.test.tsx",
   "RoleFormModal.test.tsx",
+  "selectionIsNotColourOnly.test.tsx",
   "SettingsDrawer.test.tsx",
   "Skeleton.test.tsx",
   "SocialProfilePage.test.tsx",

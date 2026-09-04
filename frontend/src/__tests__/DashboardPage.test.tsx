@@ -420,4 +420,13 @@ describe("DashboardPage export", () => {
     );
     expect(createObjectURL).not.toHaveBeenCalled();
   });
+
+  /** 见 `NotificationsPage.test.tsx` 里同名的那条 —— 同一个缺陷,另一条 tab 条。 */
+  it("tab 用 aria-pressed 报告选中,而不是只靠颜色", async () => {
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { pressed: true }).length).toBe(1)
+    );
+  });
 });
