@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useId } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
+import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
 import type { Permission } from "@soulledger/core/api";
 
 export function PermissionFormModal({
@@ -38,6 +39,21 @@ export function PermissionFormModal({
   // Unique prefix so field/error ids never collide across multiple
   // PermissionFormModal instances mounted at once.
   const formId = useId();
+  /**
+   * 提交被拒之后焦点去哪。
+   *
+   * 这一条是**表单级**的错误("码名已被占用"这类),不是逐字段的。原先它被挂在
+   * 每一个 `<input>` 的 `aria-invalid` 上 —— 于是一次码名冲突会同时告诉读屏
+   * 用户 name 和 category 也是坏的,而三条指向的还是同一句泛用文案。那些属性
+   * 已经撤掉:这条错误只由上面那个 `role="alert"` 说一次。
+   *
+   * 焦点因此落在那句消息上(`tabIndex={-1}`),而不是留在提交按钮上 ——
+   * `BaseModal` 的正文是可滚动的,消息可能就在焦点位置的视野之外。
+   */
+  const formRef = useRef<HTMLFormElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  useSubmitErrorFocus(!!error, formRef, errorRef);
+
   const codenameId = `${formId}-codename`;
   const nameId = `${formId}-name`;
   const categoryId = `${formId}-category`;
@@ -112,8 +128,8 @@ export function PermissionFormModal({
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <p id={errorId} role="alert" className="text-red-400 text-03">{error}</p>}
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+        {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-red-400 text-03">{error}</p>}
         <div>
           <label htmlFor={codenameId} className="block text-02 text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.codename_label")}</label>
           <input
@@ -122,8 +138,6 @@ export function PermissionFormModal({
             value={codename}
             onChange={(e) => setCodename(e.target.value)}
             placeholder={t("permissions.codename_placeholder")}
-            aria-invalid={!!error}
-            aria-describedby={error ? errorId : undefined}
             className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
         </div>
@@ -135,8 +149,6 @@ export function PermissionFormModal({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("permissions.name_placeholder")}
-            aria-invalid={!!error}
-            aria-describedby={error ? errorId : undefined}
             className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
         </div>

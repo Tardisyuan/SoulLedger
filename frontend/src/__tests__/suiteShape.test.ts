@@ -153,6 +153,7 @@ const COLLECTED_FILES = [
   "soulReadingCopyCoverage.test.tsx",
   "soulStateBadgeContract.test.ts",
   "statusTokenLayering.test.ts",
+  "submitErrorFocus.test.tsx",
   "suiteShape.test.ts",
   "tabClassContract.test.ts",
   "TemplatePreview.test.tsx",
