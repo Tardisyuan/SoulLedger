@@ -22,9 +22,9 @@
  * the id it plants in localStorage. A synchronously-present user would hide
  * the defect entirely.
  */
-import { render, act, waitFor } from "@testing-library/react";
+import { render, act, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { TenantProvider } from "@/src/contexts/TenantContext";
+import { TenantProvider, useTenant } from "@/src/contexts/TenantContext";
 import { WebSocketProvider } from "@/src/contexts/WebSocketContext";
 import { showToast } from "@/src/components/ui/Toast";
 
@@ -38,12 +38,19 @@ jest.mock("@/src/components/ui/Toast", () => ({
   ToastContainer: () => null,
 }));
 
-// `TenantProvider` refetches permissions on rehydration. Only the hydration
-// timing matters here, so the call is stubbed rather than left to the network.
+// `TenantProvider` refetches permissions on rehydration.
+//
+// THE RESPONSE CARRIES A MARKER, and that is not decoration. `TenantProvider`
+// hydrates in TWO steps — see `HydrationProbe` below — and its first step sets
+// `permissions: []`. A stub that also answered `[]` made the two steps
+// **indistinguishable from outside**, so nothing in this file could wait for
+// the second one. That is the whole of the flake fixed here.
+const HYDRATED_PERMISSION = "social.read";
+
 jest.mock("@soulledger/core/api", () => ({
   permApi: {
     myRolePermissions: jest.fn(() =>
-      Promise.resolve({ data: { permissions: [], role: "VIEWER" } }),
+      Promise.resolve({ data: { permissions: ["social.read"], role: "VIEWER" } }),
     ),
   },
 }));
@@ -118,22 +125,60 @@ function seedCachedUser(id: number) {
 let queryClient: QueryClient;
 
 /**
- * Renders the provider pair, then waits for the socket the connect effect
- * opens. That socket only exists once `user` is non-null, so its arrival IS
- * the proof that hydration has completed — the handlers under test were built
- * one render earlier, with no user.
+ * Publishes the permission list, so a test can wait for the SECOND half of
+ * hydration rather than the first.
+ */
+function HydrationProbe() {
+  const { user } = useTenant();
+  return <span data-testid="perms">{(user?.permissions ?? []).join(",")}</span>;
+}
+
+/**
+ * Renders the provider pair and waits for hydration to COMPLETE — both halves.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * WHY THE OLD WAIT WAS WRONG, AND WHAT IT COST.
+ * ─────────────────────────────────────────────────────────────────────────
+ *
+ * This used to wait for the first socket and say, in this very comment, that
+ * "its arrival IS the proof that hydration has completed". **That sentence was
+ * false.** `TenantProvider` hydrates in two steps
+ * (`src/contexts/TenantContext.tsx:161-165`):
+ *
+ *   1. synchronously in the mount effect — `setUserState({...cached, permissions: []})`
+ *   2. after `permApi.myRolePermissions()` resolves — `setUserState(prev => ({...prev, permissions, role}))`
+ *
+ * Step 2 produces a **new object identity** for `user`, and `WebSocketProvider`'s
+ * connect effect lists `user` in its dependencies — so step 2 tears the socket
+ * down and opens another one. Hydration therefore costs TWO sockets, and the
+ * first one satisfied the old wait.
+ *
+ * Whether step 2 had landed by the time this helper returned depended on
+ * whether its promise callback ran before the last `act` here closed. Under a
+ * loaded full-suite run it sometimes did not — and then the second socket was
+ * created inside `deliver()`, which is where "opens no extra socket to learn
+ * the id" saw `Expected: 1, Received: 2` on 2026-09-05. Eight consecutive
+ * clean full runs afterwards; the race window is small and load-dependent,
+ * which is exactly why the reproduction below is deterministic instead.
+ *
+ * Waiting on the permission marker is waiting on step 2's state having been
+ * applied and its effects flushed — `waitFor` wraps its polls in `act`. So the
+ * socket count is settled before any test looks at it.
  */
 async function renderAndHydrate() {
   render(
     <QueryClientProvider client={queryClient}>
       <TenantProvider>
         <WebSocketProvider>
-          <div />
+          <HydrationProbe />
         </WebSocketProvider>
       </TenantProvider>
     </QueryClientProvider>,
   );
 
+  await waitFor(() =>
+    expect(screen.getByTestId("perms")).toHaveTextContent(HYDRATED_PERMISSION),
+  );
   await waitFor(() => expect(FakeWebSocket.instances.length).toBeGreaterThan(0));
   await act(async () => {
     lastSocket().open();
@@ -217,6 +262,98 @@ describe("WebSocketProvider carries the hydrated user id into its handlers", () 
   // buy the toast at the price of tearing the socket down. `currentUserId` is
   // a primitive derived from `user`, which the connect effect already depends
   // on, so no rebuild may be added beyond the ones `user` itself causes.
+  /**
+   * `renderAndHydrate` refuses to return on a half-hydrated tree.
+   *
+   * THIS IS THE ONE THAT PINS THE FIX, and it needs its own test because
+   * nothing else can. The wait added to `renderAndHydrate` only changes the
+   * outcome when the permissions response is LATE — and in an isolated run it
+   * never is, which is exactly why the flake needed a loaded full suite to
+   * appear once in nine runs. Deleting the wait leaves every other test in
+   * this file green.
+   *
+   * So lateness is supplied rather than waited for: the response is held open,
+   * and the helper must then time out instead of proceeding. Without the wait
+   * it proceeds — which is the state the 2026-09-05 failure was taken in.
+   *
+   * Costs one `waitFor` timeout (1s). That is the price of the only assertion
+   * that can tell the fix from its absence.
+   */
+  it("hydration 没走完时,renderAndHydrate 拒绝返回", async () => {
+    const { permApi } = require("@soulledger/core/api");
+    let resolvePerms: (_v: unknown) => void = () => {};
+    (permApi.myRolePermissions as jest.Mock).mockImplementationOnce(
+      () => new Promise((r) => { resolvePerms = r; }),
+    );
+
+    await expect(renderAndHydrate()).rejects.toThrow();
+
+    // 收尾:把挂起的 promise 放掉,免得它跨测试留在事件循环里。
+    await act(async () => {
+      resolvePerms({ data: { permissions: [HYDRATED_PERMISSION], role: "VIEWER" } });
+    });
+  });
+
+  /**
+   * Hydration costs two sockets, and the second one is the permissions
+   * response — not anything a frame does later.
+   *
+   * ─────────────────────────────────────────────────────────────────────────
+   * THIS IS THE FLAKE FROM 2026-09-05, MADE DETERMINISTIC.
+   * ─────────────────────────────────────────────────────────────────────────
+   *
+   * That day "opens no extra socket to learn the id" failed once in a full
+   * run with `Expected: 1, Received: 2`, then passed eight consecutive full
+   * runs. The count was never random: `renderAndHydrate` waited for the FIRST
+   * socket, and whether the second had been created by the time it returned
+   * depended on whether the permissions promise callback ran before the last
+   * `act` closed. Under load it sometimes did not, and the second socket was
+   * then created inside `deliver()` — one after the snapshot.
+   *
+   * Holding the response open puts that window under this test's control
+   * instead of the scheduler's, so the same fact is checked without the race.
+   * Written as the honest assertion (two sockets, both from hydration) rather
+   * than the one the flaky test implied (one).
+   */
+  it("权限响应恰好换一次 socket,而且那次属于 hydration", async () => {
+    const { permApi } = require("@soulledger/core/api");
+    let resolvePerms: (_v: unknown) => void = () => {};
+    (permApi.myRolePermissions as jest.Mock).mockImplementationOnce(
+      () => new Promise((r) => { resolvePerms = r; }),
+    );
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TenantProvider>
+          <WebSocketProvider>
+            <HydrationProbe />
+          </WebSocketProvider>
+        </TenantProvider>
+      </QueryClientProvider>,
+    );
+
+    // 第一段:缓存里的用户已恢复,权限还空着,连接 effect 已经开了一个 socket。
+    await waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
+    expect(screen.getByTestId("perms")).toHaveTextContent("");
+    await act(async () => { lastSocket().open(); });
+
+    // 第二段:权限落地。`setUserState(prev => ({...prev, …}))` 换了对象身份,
+    // 而连接 effect 依赖 `user` —— 所以这一次**必然**换一个 socket。
+    await act(async () => {
+      resolvePerms({ data: { permissions: [HYDRATED_PERMISSION], role: "VIEWER" } });
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("perms")).toHaveTextContent(HYDRATED_PERMISSION),
+    );
+    expect(FakeWebSocket.instances.length).toBe(2);
+
+    // 而这就是全部。此后收帧一个都不加 —— 那正是「opens no extra socket」
+    // 想说的话,只是它此前是在一个还没结束的 hydration 上说的。
+    await act(async () => { lastSocket().open(); });
+    await deliver(follow(String(VIEWER_ID)));
+    expect(FakeWebSocket.instances.length).toBe(2);
+  });
+
   it("opens no extra socket to learn the id", async () => {
     await renderAndHydrate();
     const openedByHydration = FakeWebSocket.instances.length;
@@ -224,6 +361,15 @@ describe("WebSocketProvider carries the hydrated user id into its handlers", () 
     await deliver(follow(String(VIEWER_ID)));
 
     expect(FakeWebSocket.instances.length).toBe(openedByHydration);
-    expect(openedByHydration).toBeLessThanOrEqual(2);
+    // EXACTLY two, not "at most two". `toBeLessThanOrEqual(2)` was true with
+    // ZERO margin — hydration has always opened exactly two — so it read as a
+    // tolerance while being an equality, and it could not distinguish "the
+    // second socket is part of hydration" from "the second socket arrived
+    // late". Now the wait makes the number settled, so the number is stated:
+    // one socket per `setUserState` in `TenantProvider`'s two-step hydration.
+    // A third would mean a new rebuild; a first alone would mean the
+    // permissions step stopped changing `user`'s identity, and the test above
+    // is the one that says why that matters.
+    expect(openedByHydration).toBe(2);
   });
 });
