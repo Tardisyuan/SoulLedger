@@ -22,7 +22,7 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 }));
 
 const mockUpdateMutate = jest.fn();
-jest.mock("@/src/hooks/useSocial", () => ({
+jest.mock("@soulledger/core/hooks/useSocial", () => ({
   useUpdateProfile: () => ({ mutate: mockUpdateMutate, isPending: false }),
   useToggleFollow: () => ({ mutate: jest.fn(), isPending: false }),
   useFollowing: () => ({ data: [] }),

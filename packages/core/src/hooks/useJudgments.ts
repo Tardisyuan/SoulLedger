@@ -1,10 +1,9 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { judgmentApi } from "@soulledger/core/api";
-import { notify } from "@soulledger/core/platform";
-import { useI18n } from "@/src/contexts/I18nContext";
-import { judgmentKeys } from "@soulledger/core/query_keys";
+import { judgmentApi } from "../api/index";
+import { notify } from "../platform/index";
+import { judgmentKeys } from "../query_keys";
 
 // ── Queries ──────────────────────────────────────────────────────────
 
@@ -35,33 +34,31 @@ export function useJudgment(id: string) {
 
 export function useCreateJudgment() {
   const qc = useQueryClient();
-  const { t } = useI18n();
 
   return useMutation({
     mutationFn: (data: object) => judgmentApi.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: judgmentKeys.all });
-      notify(t("judgment.create_success") || "Judgment created", "success");
+      notify("judgment.create_success", "success");
     },
     onError: () => {
-      notify(t("judgment.create_error") || "Failed to create judgment", "error");
+      notify("judgment.create_error", "error");
     },
   });
 }
 
 export function useConcludeJudgment() {
   const qc = useQueryClient();
-  const { t } = useI18n();
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: object }) =>
       judgmentApi.conclude(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: judgmentKeys.all });
-      notify(t("judgment.conclude_success") || "Judgment concluded", "success");
+      notify("judgment.conclude_success", "success");
     },
     onError: () => {
-      notify(t("judgment.conclude_error") || "Failed to conclude judgment", "error");
+      notify("judgment.conclude_error", "error");
     },
   });
 }

@@ -10,6 +10,7 @@ import {
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import defaultMessages from "@soulledger/core/messages/zh-Hans.json";
+import { publishTranslator } from "@/lib/i18n/activeTranslator";
 
 // Locale 的类型与常量在 src/config/locale.ts —— 那个模块不带 "use client",
 // 所以服务端的 app/layout.tsx 也能 import。这里 re-export 是为了不打断既有引用。
@@ -310,6 +311,16 @@ export function I18nProvider({
     // forever. Visible as: switching language does nothing until you navigate.
     [locale, loadedBundles]
   );
+
+  // Hand `t` to the one reader that cannot use a hook: the platform adapter's
+  // `notify`, which is given a message key by code in `@soulledger/core` and
+  // has to turn it into words outside any component. See
+  // `lib/i18n/activeTranslator.ts` for why it holds this function rather than
+  // keeping a second lookup of its own.
+  useEffect(() => {
+    publishTranslator(t);
+    return () => publishTranslator(null);
+  }, [t]);
 
   const formatDate = useCallback(
     (value: DateInput, options?: Intl.DateTimeFormatOptions) => formatDateWith(locale, value, options),

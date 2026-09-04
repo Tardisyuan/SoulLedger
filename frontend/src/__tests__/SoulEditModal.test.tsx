@@ -23,7 +23,7 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 }));
 
 const mockMutate = jest.fn();
-jest.mock("@/src/hooks/useSouls", () => ({
+jest.mock("@soulledger/core/hooks/useSouls", () => ({
   useUpdateSoul: () => ({ mutate: mockMutate, isPending: false }),
 }));
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useFollowing, useFollowers } from "@/src/hooks/useSocial";
+import { useFollowing, useFollowers } from "@soulledger/core/hooks/useSocial";
 import { FollowButton } from "@/src/components/social/FollowButton";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";

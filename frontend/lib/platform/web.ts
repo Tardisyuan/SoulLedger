@@ -5,9 +5,11 @@ import {
   REFRESH_TOKEN_KEY,
   configurePlatform,
   type KeyValueStore,
+  type NotifyMessage,
   type PlatformAdapter,
 } from "@soulledger/core/platform";
 import { showToast } from "@/src/components/ui/Toast";
+import { translate } from "@/lib/i18n/activeTranslator";
 
 /**
  * The browser's half of `@soulledger/core`'s platform port.
@@ -105,6 +107,23 @@ const persistent: KeyValueStore = {
   },
 };
 
+/**
+ * A `NotifyMessage` as words.
+ *
+ * Exported for the guard tests, which assert against this rather than against a
+ * paraphrase of it — the point of the port is that this function is the only
+ * place a key becomes a sentence on the web.
+ *
+ * `{ text }` passes through untouched, and that is the whole reason it exists:
+ * DRF writes those strings per request (`non_field_errors`), so no bundle
+ * shipped with the client can hold them. See `NotifyMessage`.
+ */
+export function renderNotifyMessage(message: NotifyMessage): string {
+  if (typeof message === "string") return translate(message);
+  if ("text" in message) return message.text;
+  return translate(message.key, message.params);
+}
+
 export const webPlatform: PlatformAdapter = {
   session,
   persistent,
@@ -175,12 +194,18 @@ export const webPlatform: PlatformAdapter = {
     // fixed-position div appended to `document.body`, built by
     // `src/components/ui/Toast.tsx`.
     //
+    // The package hands over a message **key**; turning it into words is this
+    // host's job and happens here. `renderNotifyMessage` calls the very
+    // `useI18n().t` the rest of the app renders with — `lib/i18n/activeTranslator`
+    // holds the reference — rather than a second walk over the bundles, which
+    // would agree with `t` only until one of the two changed.
+    //
     // `showToast` returns the toast's id and this returns nothing, which is
     // deliberate — see `Notifier` in the package. `durationMs` is forwarded as
     // given, including `undefined`, so `showToast`'s own 5000ms default keeps
     // applying to callers that omit it; that is what the seven hooks did
     // before they went through this port, and behaviour there must not change.
-    showToast(message, kind, durationMs);
+    showToast(renderNotifyMessage(message), kind, durationMs);
   },
   onUnauthorized() {
     // The one line in the old `lib/api/client.ts` that assumed a browser with a

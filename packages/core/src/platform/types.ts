@@ -152,6 +152,70 @@ export type SessionResumeSubscriber = (handler: () => void) => () => void;
 export type NotifyKind = "success" | "error" | "info";
 
 /**
+ * Placeholder values for a message key that has them, e.g. `{name}`.
+ *
+ * NO CALL SITE IN THIS PACKAGE TODAY, and that is worth stating rather than
+ * leaving to be found. Every one of the 26 notifications this port carries is
+ * a fixed sentence. It is here anyway because the alternative is a cliff with
+ * no workaround: the hooks that call `notify` no longer hold `t`, so a message
+ * that needs to name the thing it happened to ("Soul {name} created") would be
+ * unexpressible from inside this package, and the only way out would be to put
+ * a translator back into it. `t()` has taken `params` since it was written; the
+ * port is mirroring a capability the host already has, not inventing one.
+ *
+`string` values only, and that is the host's shape rather than a preference:
+ * `useI18n().t` splices values into the bundle string with a regex replace and
+ * takes `Record<string, string>`. Allowing `number` here would type-check on
+ * this side and not on the other, and widening `t` to fix it would be a change
+ * to every `t()` in the app in service of a feature with no call site. A caller
+ * with a number writes `String(n)`, which is what every existing `t()` caller
+ * already does.
+ */
+export type NotifyParams = Record<string, string>;
+
+/**
+ * What to say. A **message key**, resolved by the host — not a rendered string.
+ *
+ * WHY A KEY AND NOT THE TEXT. Step one of this change made `notify` a port and
+ * left the seven hooks in `frontend/` calling `t(...)` before handing the
+ * result over. That kept `useI18n` — a React context in the web tree — as the
+ * hooks' last binding to the browser, and `t()` alone was worth 26 of the 26
+ * remaining `t(` calls across `frontend/src/hooks`: the entire i18n coupling of
+ * that layer was translating toast copy. Moving the resolution to the host
+ * removes it, and it puts the resolution where the locale actually lives.
+ *
+ * A React Native host resolves the same key against the same three bundles in
+ * `../../messages`, which are already part of this package. Nothing about a
+ * key is web-shaped.
+ *
+ * THE THREE FORMS, AND WHY THE THIRD EXISTS.
+ *
+ *   "souls.form.create_success"              a key
+ *   { key: "souls.x", params: { name } }     a key with placeholders
+ *   { text: "Cannot follow yourself." }      text that has no key
+ *
+ * The last one is not an escape hatch for laziness and must not become one.
+ * Four call sites in `useSocial` show the message DRF put in
+ * `non_field_errors` — "Cannot react to a post from another tenant." — which is
+ * written by the server, per request, and cannot be a key in a bundle shipped
+ * with the client. Without this form the only options were to drop the server's
+ * reason (the operator is then told "Failed to react" and not why) or to invent
+ * a copy convention that splices the two together. Both are worse than naming
+ * the case.
+ *
+ * A bare string is read as a key, so a literal English sentence passed here
+ * renders as itself — `t()` returns the key it could not find. That is a quiet
+ * trap, and it is closed by a guard rather than by the type system:
+ * `frontend/src/__tests__/notifyKeysExistInTheBundles.test.ts` reads every
+ * string literal passed to `notify` out of the source and fails if it is not a
+ * real key in all three bundles.
+ */
+export type NotifyMessage =
+  | string
+  | { key: string; params?: NotifyParams }
+  | { text: string };
+
+/**
  * Tell the operator something happened. Fire-and-forget; returns nothing.
  *
  * WHY THIS IS A PORT. Seven hooks in `frontend/src/hooks` end every mutation
@@ -173,14 +237,9 @@ export type NotifyKind = "success" | "error" | "info";
  * three kinds survive that translation and the DOM node does not, which is why
  * the port is `(message, kind)` rather than anything richer.
  *
- * WHAT THIS PORT DELIBERATELY DOES NOT SOLVE. The hooks still call `t()` to
- * turn a message key into a string before handing it over, so they still
- * cannot move into this package — `useI18n` is the other half, and moving it is
- * a separate step. This port is step one of two: it removes the *toast* reason
- * for those hooks living in `frontend/`. Step two changes this to take a
- * message key instead of a rendered string and moves the hooks in. Until then,
- * a host implementing this receives text that has already been translated by
- * the web app's i18n.
+ * THE HOST RESOLVES THE MESSAGE. See `NotifyMessage`. This was
+ * `(message: string, …)` for exactly one commit, during which the hooks called
+ * `t()` themselves; that was step one of two and the doc here said so.
  *
  * NO RETURN VALUE, unlike the `showToast` it wraps. That function returns the
  * toast's id, for `dismissToast`. Nothing in the seven hooks uses it, and a
@@ -189,7 +248,7 @@ export type NotifyKind = "success" | "error" | "info";
  * rather than promised and then not honoured.
  */
 export type Notifier = (
-  message: string,
+  message: NotifyMessage,
   kind: NotifyKind,
   durationMs?: number
 ) => void;

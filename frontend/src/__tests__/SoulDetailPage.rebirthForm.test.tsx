@@ -33,7 +33,7 @@ jest.mock("@/src/contexts/I18nContext", () => ({
   useI18n: () => ({ t: mockT, formatDate: mockFormatDate }),
 }));
 
-jest.mock("@/src/hooks/useSouls", () => ({
+jest.mock("@soulledger/core/hooks/useSouls", () => ({
   useUpdateSoul: () => ({ mutateAsync: jest.fn(), isPending: false }),
   useDeleteSoul: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));

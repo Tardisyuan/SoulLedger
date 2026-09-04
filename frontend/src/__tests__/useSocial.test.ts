@@ -9,7 +9,7 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useToggleReaction, useCreateComment, useUpdateProfile } from "@/src/hooks/useSocial";
+import { useToggleReaction, useCreateComment, useUpdateProfile } from "@soulledger/core/hooks/useSocial";
 import { socialKeys } from "@soulledger/core/query_keys";
 import { socialApi } from "@soulledger/core/api";
 
@@ -41,13 +41,9 @@ jest.mock("@soulledger/core/platform", () => ({
   notify: (...args: unknown[]) => mockShowToast(...args),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({
-    t: (key: string) => key,
-    locale: "en",
-    hydrated: true,
-  }),
-}));
+// NO `jest.mock("@/src/contexts/I18nContext")`. The hook under test stopped
+// importing it when `notify` began taking a message key — the strings below are
+// keys because that is what the hook now passes, not because a stub echoed them.
 
 /** Shape DRF renders for a plain (non-field) serializers.ValidationError. */
 function nonFieldValidationError(message: string) {
@@ -124,13 +120,15 @@ describe("useToggleReaction behavior", () => {
       result.current.mutate({ post: "post-1", reaction_type: "LIKE" });
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
+    // `{ text }`, not a bare string: the port takes a message key now, and what
+    // DRF wrote in `non_field_errors` is not one. See `NotifyMessage`.
     expect(mockShowToast).toHaveBeenCalledWith(
-      "Cannot react to a post from another tenant.",
+      { text: "Cannot react to a post from another tenant." },
       "error"
     );
   });
 
-  it("falls back to a translated generic message when the error has no usable shape", async () => {
+  it("falls back to the generic message key when the error has no usable shape", async () => {
     (socialApi.addReaction as jest.Mock).mockRejectedValueOnce(networkError());
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useToggleReaction(), { wrapper });
@@ -154,12 +152,12 @@ describe("useCreateComment behavior", () => {
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(mockShowToast).toHaveBeenCalledWith(
-      "Cannot comment on a post from another tenant.",
+      { text: "Cannot comment on a post from another tenant." },
       "error"
     );
   });
 
-  it("falls back to a translated generic message when the error has no usable shape", async () => {
+  it("falls back to the generic message key when the error has no usable shape", async () => {
     (socialApi.createComment as jest.Mock).mockRejectedValueOnce(networkError());
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useCreateComment(), { wrapper });
@@ -196,12 +194,12 @@ describe("useUpdateProfile behavior", () => {
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(mockShowToast).toHaveBeenCalledWith(
-      "Cannot edit another user's profile.",
+      { text: "Cannot edit another user's profile." },
       "error"
     );
   });
 
-  it("falls back to a translated generic message when the error has no usable shape", async () => {
+  it("falls back to the generic message key when the error has no usable shape", async () => {
     (socialApi.updateProfile as jest.Mock).mockRejectedValueOnce(networkError());
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useUpdateProfile(), { wrapper });

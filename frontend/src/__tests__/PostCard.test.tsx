@@ -22,7 +22,7 @@ jest.mock("@/src/contexts/TenantContext", () => ({
 }));
 
 const mockDeleteMutate = jest.fn();
-jest.mock("@/src/hooks/useSocial", () => ({
+jest.mock("@soulledger/core/hooks/useSocial", () => ({
   useDeletePost: () => ({ mutate: mockDeleteMutate, isPending: false }),
   useToggleReaction: () => ({ mutate: jest.fn(), isPending: false }),
   useReactions: () => ({ data: { results: [] } }),

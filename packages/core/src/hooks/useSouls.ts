@@ -1,10 +1,9 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { soulsApi, type SoulInput } from "@soulledger/core/api";
-import { notify } from "@soulledger/core/platform";
-import { useI18n } from "@/src/contexts/I18nContext";
-import { soulKeys } from "@soulledger/core/query_keys";
+import { soulsApi, type SoulInput } from "../api/index";
+import { notify } from "../platform/index";
+import { soulKeys } from "../query_keys";
 
 // ── Souls ───────────────────────────────────────────────────────────
 
@@ -52,22 +51,20 @@ export function useSoulLedger(id: string) {
 
 export function useCreateSoul() {
   const qc = useQueryClient();
-  const { t } = useI18n();
   return useMutation({
     mutationFn: (data: object) => soulsApi.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: soulKeys.all });
-      notify(t("souls.form.create_success") || "Soul created", "success");
+      notify("souls.form.create_success", "success");
     },
     onError: () => {
-      notify(t("souls.form.create_error") || "Failed to create soul", "error");
+      notify("souls.form.create_error", "error");
     },
   });
 }
 
 export function useMarkSoulDead() {
   const qc = useQueryClient();
-  const { t } = useI18n();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data?: object }) =>
       soulsApi.die(id, data),
@@ -76,14 +73,13 @@ export function useMarkSoulDead() {
       qc.invalidateQueries({ queryKey: soulKeys.all });
     },
     onError: () => {
-      notify(t("souls.detail.failed") || "Operation failed", "error");
+      notify("souls.detail.failed", "error");
     },
   });
 }
 
 export function useTransitionSoul() {
   const qc = useQueryClient();
-  const { t } = useI18n();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: object }) =>
       soulsApi.transition(id, data),
@@ -92,14 +88,13 @@ export function useTransitionSoul() {
       qc.invalidateQueries({ queryKey: soulKeys.all });
     },
     onError: () => {
-      notify(t("souls.detail.failed") || "Operation failed", "error");
+      notify("souls.detail.failed", "error");
     },
   });
 }
 
 export function useAddSoulRecord() {
   const qc = useQueryClient();
-  const { t } = useI18n();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: object }) =>
       soulsApi.addRecord(id, data),
@@ -108,30 +103,28 @@ export function useAddSoulRecord() {
       qc.invalidateQueries({ queryKey: soulKeys.ledger(vars.id) });
     },
     onError: () => {
-      notify(t("souls.detail.failed") || "Operation failed", "error");
+      notify("souls.detail.failed", "error");
     },
   });
 }
 
 export function useUpdateSoul() {
   const qc = useQueryClient();
-  const { t } = useI18n();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<SoulInput> }) =>
       soulsApi.update(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: soulKeys.all });
-      notify(t("souls.form.update_success") || "Soul updated", "success");
+      notify("souls.form.update_success", "success");
     },
     onError: () => {
-      notify(t("souls.detail.error_update"), "error");
+      notify("souls.detail.error_update", "error");
     },
   });
 }
 
 export function useDeleteSoul() {
   const qc = useQueryClient();
-  const { t } = useI18n();
   return useMutation({
     mutationFn: (id: string) => soulsApi.delete(id),
     onSuccess: () => {
@@ -140,10 +133,10 @@ export function useDeleteSoul() {
       // nothing at all, so the safety net existed and was undiscoverable.
       // The wording names what the backend did, the way the menus delete
       // confirmation already does ("移至回收站", never "删除").
-      notify(t("souls.detail.delete_to_recycle_bin"), "success");
+      notify("souls.detail.delete_to_recycle_bin", "success");
     },
     onError: () => {
-      notify(t("souls.detail.error_delete"), "error");
+      notify("souls.detail.error_delete", "error");
     },
   });
 }

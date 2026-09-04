@@ -6,7 +6,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { EnumBadge } from "@/components/ui/data-grid";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
-import { useJudgmentQueue, UNDO_WINDOW_MS, type VerdictCode } from "@/src/hooks/useJudgmentQueue";
+import { useJudgmentQueue, UNDO_WINDOW_MS, type VerdictCode } from "@soulledger/core/hooks/useJudgmentQueue";
 import { Button } from "@/src/components/ui/Button";
 import {
   LedgerPanel,

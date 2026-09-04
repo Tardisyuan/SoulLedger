@@ -1,6 +1,6 @@
 "use client";
 
-import { useToggleFollow, useFollowing } from "@/src/hooks/useSocial";
+import { useToggleFollow, useFollowing } from "@soulledger/core/hooks/useSocial";
 import { useI18n } from "@/src/contexts/I18nContext";
 
 export function FollowButton({ userId }: { userId: string }) {

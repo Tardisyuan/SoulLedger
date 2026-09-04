@@ -1,6 +1,6 @@
 "use client";
 
-import { useToggleReaction, useReactions } from "@/src/hooks/useSocial";
+import { useToggleReaction, useReactions } from "@soulledger/core/hooks/useSocial";
 import { useTenant } from "@/src/contexts/TenantContext";
 
 const REACTION_EMOJIS: Record<string, string> = {

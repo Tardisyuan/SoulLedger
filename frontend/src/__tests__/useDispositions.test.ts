@@ -4,7 +4,7 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { createElement } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useDispositions, useExecuteDisposition } from "@/src/hooks/useDispositions";
+import { useDispositions, useExecuteDisposition } from "@soulledger/core/hooks/useDispositions";
 
 jest.mock("@soulledger/core/api", () => ({
   dispositionApi: {
@@ -21,9 +21,9 @@ jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: jest.fn() }),
 }));
 
-jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "en", hydrated: true }),
-}));
+// NO `jest.mock("@/src/contexts/I18nContext")`. The hook under test stopped
+// importing it when `notify` began taking a message key — the strings below are
+// keys because that is what the hook now passes, not because a stub echoed them.
 
 function createWrapper() {
   const queryClient = new QueryClient({

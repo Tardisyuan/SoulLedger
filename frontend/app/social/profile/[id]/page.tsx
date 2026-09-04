@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { PAGE_SIZE } from "@soulledger/core/api";
-import { useProfile, usePosts } from "@/src/hooks/useSocial";
+import { useProfile, usePosts } from "@soulledger/core/hooks/useSocial";
 import { ProfileCard } from "@/src/components/social/ProfileCard";
 import { PostCard } from "@/src/components/social/PostCard";
 import { Pagination } from "@/src/components/ui/Pagination";

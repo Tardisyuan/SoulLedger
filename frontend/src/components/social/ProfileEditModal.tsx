@@ -3,7 +3,7 @@
 import { useState, useEffect, useId } from "react";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
-import { useUpdateProfile } from "@/src/hooks/useSocial";
+import { useUpdateProfile } from "@soulledger/core/hooks/useSocial";
 import type { UserProfile } from "@soulledger/core/api";
 
 interface ProfileEditModalProps {

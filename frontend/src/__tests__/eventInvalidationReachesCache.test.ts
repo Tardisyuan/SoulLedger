@@ -56,22 +56,22 @@ import {
  * red: it is the file whose query key must keep matching the handler.
  */
 const CACHED: { label: string; owner: string; key: readonly unknown[] }[] = [
-  { label: "soul detail", owner: "src/hooks/useSouls.ts", key: soulKeys.detail("s1") },
-  { label: "soul list", owner: "src/hooks/useSouls.ts", key: soulKeys.list() },
+  { label: "soul detail", owner: "packages/core/src/hooks/useSouls.ts", key: soulKeys.detail("s1") },
+  { label: "soul list", owner: "packages/core/src/hooks/useSouls.ts", key: soulKeys.list() },
   { label: "workflow detail", owner: "app/workflow/[id]/page.tsx", key: workflowKeys.detail("w1") },
   { label: "judgment detail", owner: "app/judgment/[id]/page.tsx", key: judgmentKeys.detail("j1") },
   { label: "notification list", owner: "app/notifications/page.tsx", key: notificationKeys.list() },
   { label: "unread badge", owner: "src/components/layout/AppLayout.tsx", key: notificationKeys.unreadCount },
-  { label: "post feed", owner: "src/hooks/useSocial.ts", key: socialKeys.posts.feed() },
-  { label: "post detail", owner: "src/hooks/useSocial.ts", key: socialKeys.posts.detail("p1") },
+  { label: "post feed", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.posts.feed() },
+  { label: "post detail", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.posts.detail("p1") },
   // The four that were unreachable. Keyed here EXACTLY as useSocial.ts keys
   // them — including the params object, which is where the post id actually
   // lives and which is what the old per-post keys got wrong.
-  { label: "comment thread", owner: "src/hooks/useSocial.ts", key: socialKeys.comments.list({ post: "p1" }) },
-  { label: "reaction list", owner: "src/hooks/useSocial.ts", key: [...socialKeys.reactions.all, { post: "p1" }] },
-  { label: "followers list", owner: "src/hooks/useSocial.ts", key: socialKeys.follows.followers },
-  { label: "following list", owner: "src/hooks/useSocial.ts", key: socialKeys.follows.following },
-  { label: "profile detail", owner: "src/hooks/useSocial.ts", key: socialKeys.profiles.detail("u2") },
+  { label: "comment thread", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.comments.list({ post: "p1" }) },
+  { label: "reaction list", owner: "packages/core/src/hooks/useSocial.ts", key: [...socialKeys.reactions.all, { post: "p1" }] },
+  { label: "followers list", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.follows.followers },
+  { label: "following list", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.follows.following },
+  { label: "profile detail", owner: "packages/core/src/hooks/useSocial.ts", key: socialKeys.profiles.detail("u2") },
 ];
 
 function seededClient() {
