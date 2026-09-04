@@ -41,6 +41,7 @@ import {
   type NodeEditData,
 } from "@/src/components/workflow/NodeEditModal";
 import { useToast } from "@/src/contexts/ToastContext";
+import { QueryError } from "@/src/components/ui/PageError";
 import {
   appendPosition,
   edgeArrow,
@@ -156,7 +157,32 @@ export default function WorkflowEditor({
   const [templatePriority, setTemplatePriority] = useState(0);
 
   // Load existing template if editing
-  const { data: existingTemplate } = useQuery({
+  //
+  // `isError` and `isLoading` are destructured because the SAVE PATH DEPENDS ON
+  // THEM. This query used to hand back `data` alone, and the failure then read
+  // like this: the GET 404s or 500s, the populate effect below never fires
+  // because `existingTemplate` stays undefined, and the editor renders a blank
+  // canvas with a blank name — indistinguishable from "new template". But
+  // `templateId` is still set, so `saveMutation` takes its `update` branch
+  // (:296) and 保存模板 is enabled. One click PUTs a nameless, node-less
+  // template over the real one. A failed READ turning into a destructive WRITE
+  // is the whole defect; the blank canvas is only how it looks.
+  //
+  // The pattern is already in this component's own parent —
+  // `app/workflow/page.tsx:394` guards the instances list with
+  // `isWorkflowsError ? <QueryError onRetry={…}/>`. The editor is the branch
+  // next to it that never got the same treatment.
+  //
+  // `isLoading` rather than `isPending`: with `enabled: !!templateId` a
+  // disabled query sits at `isPending: true` forever, so `isPending` would
+  // disable saving on the NEW-template path too — the one path where there is
+  // nothing to overwrite and nothing to wait for.
+  const {
+    data: existingTemplate,
+    isError: isTemplateError,
+    isLoading: isTemplateLoading,
+    refetch: refetchTemplate,
+  } = useQuery({
     queryKey: ["workflow-template", templateId],
     queryFn: async () => {
       const res = await workflowApi.templates.get(templateId!);
@@ -555,6 +581,33 @@ export default function WorkflowEditor({
     { value: 2, label: t("workflow.detail.critical") },
   ];
 
+  // A template we were asked to edit but could not read. Returning the error
+  // instead of the editor is the point: an editor whose canvas is empty
+  // BECAUSE THE READ FAILED looks exactly like an editor whose canvas is empty
+  // because the template is new, and only one of those two may be saved. This
+  // removes the save button from the screen entirely rather than disabling it,
+  // so there is no enabled-looking control that would overwrite the real
+  // template with the blank state on screen.
+  //
+  // Guarded on `templateId` so the new-template and preset paths — which have
+  // no query to fail — are untouched.
+  if (templateId && isTemplateError) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center bg-[hsl(var(--color-surface-2))]">
+        <QueryError onRetry={() => void refetchTemplate()} />
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors duration-state"
+          >
+            {t("common.cancel")}
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-[hsl(var(--color-surface-2))]">
       {/* Toolbar
@@ -654,9 +707,13 @@ export default function WorkflowEditor({
           >
             {t("workflow.editor.delete_selected")}
           </button>
+          {/* `isTemplateLoading` in the disabled condition: between mount and
+              the GET resolving, the form holds its own empty defaults, and
+              saving there would PUT those over the template still in flight.
+              The error case never reaches this button — it returns above. */}
           <button
             onClick={handleSave}
-            disabled={saveMutation.isPending}
+            disabled={saveMutation.isPending || (!!templateId && isTemplateLoading)}
             className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-03 font-medium transition-colors disabled:opacity-50"
           >
             {saveMutation.isPending ? t("workflow.editor.saving") : t("workflow.editor.save_template")}

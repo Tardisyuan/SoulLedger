@@ -417,3 +417,77 @@ describe("WorkflowEditor", () => {
     expect(added[1].y).not.toBe(560);
   });
 });
+
+/**
+ * A failed READ must not become a destructive WRITE.
+ *
+ * Before the guard in `WorkflowEditor.tsx`, the editor destructured `data`
+ * alone from the template query. A GET that 404s or 500s left
+ * `existingTemplate` undefined, so the populate effect never ran and the
+ * editor rendered a blank canvas with a blank name — byte-identical to the
+ * new-template screen. But `templateId` was still set, so 保存模板 was enabled
+ * and took `saveMutation`'s `update` branch: one click PUT a nameless,
+ * node-less template over the real one.
+ *
+ * These assert ABSENCE as much as presence — that the save control is not on
+ * screen at all — because "the error is shown" stayed true in the broken
+ * version too, if you only looked for the error.
+ */
+describe("WorkflowEditor: template load failure", () => {
+  beforeEach(() => {
+    const { workflowApi } = require("@soulledger/core/api");
+    workflowApi.templates.get.mockReset();
+    workflowApi.templates.update.mockClear();
+  });
+
+  it("shows the query error instead of an empty editor when the template cannot be read", async () => {
+    const { workflowApi } = require("@soulledger/core/api");
+    workflowApi.templates.get.mockRejectedValue(new Error("500"));
+
+    const { container } = renderWithProviders(<WorkflowEditor templateId="tpl-1" />);
+
+    await waitFor(() =>
+      expect(container.querySelector("[data-query-error]")).toBeInTheDocument()
+    );
+  });
+
+  it("does not render the save control at all while the template is unreadable", async () => {
+    const { workflowApi } = require("@soulledger/core/api");
+    workflowApi.templates.get.mockRejectedValue(new Error("500"));
+
+    const { container } = renderWithProviders(<WorkflowEditor templateId="tpl-1" />);
+    await waitFor(() =>
+      expect(container.querySelector("[data-query-error]")).toBeInTheDocument()
+    );
+
+    // The defect was reachable through this button and only this button.
+    expect(screen.queryByText("Save Template")).not.toBeInTheDocument();
+    expect(screen.queryByText("Saving...")).not.toBeInTheDocument();
+    // And the canvas that would have been saved is not on screen either, so
+    // there is no blank-editor screen to mistake for a new template.
+    expect(screen.queryByPlaceholderText("Template name...")).not.toBeInTheDocument();
+  });
+
+  it("leaves the new-template path untouched — no templateId means no query to fail", () => {
+    const { workflowApi } = require("@soulledger/core/api");
+    workflowApi.templates.get.mockRejectedValue(new Error("500"));
+
+    const { container } = renderWithProviders(<WorkflowEditor />);
+
+    expect(container.querySelector("[data-query-error]")).not.toBeInTheDocument();
+    expect(screen.getByText("Save Template")).toBeInTheDocument();
+    expect(screen.getByText("Save Template")).not.toBeDisabled();
+  });
+
+  it("disables saving while an existing template is still loading", async () => {
+    const { workflowApi } = require("@soulledger/core/api");
+    // Never resolves: the editor sits in the window between mount and the GET
+    // landing, where the form holds its own empty defaults.
+    workflowApi.templates.get.mockReturnValue(new Promise(() => {}));
+
+    renderWithProviders(<WorkflowEditor templateId="tpl-1" />);
+
+    await waitFor(() => expect(screen.getByText("Save Template")).toBeDisabled());
+    expect(workflowApi.templates.update).not.toHaveBeenCalled();
+  });
+});
