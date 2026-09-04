@@ -15,6 +15,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -140,19 +141,18 @@ export function SocialEventBusProvider({ children }: { children: ReactNode }) {
     clientRef.current?.connect();
   }, []);
 
-  return React.createElement(
-    SocialEventBusContext.Provider,
-    {
-      value: {
-        status,
-        isConnected: status === "connected",
-        subscribe,
-        onEvent,
-        send,
-        reconnect,
-        offlineQueueSize,
-      },
-    },
-    children,
+  const value = useMemo(
+    () => ({
+      status,
+      isConnected: status === "connected",
+      subscribe,
+      onEvent,
+      send,
+      reconnect,
+      offlineQueueSize,
+    }),
+    [status, subscribe, onEvent, send, reconnect, offlineQueueSize],
   );
+
+  return React.createElement(SocialEventBusContext.Provider, { value }, children);
 }

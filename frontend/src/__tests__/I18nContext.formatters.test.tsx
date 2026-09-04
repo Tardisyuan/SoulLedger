@@ -1,6 +1,6 @@
 /**
- * Tests for the formatDate / formatDateTime / formatNumber helpers exported
- * by src/contexts/I18nContext.tsx.
+ * Tests for the formatDate / formatDateTime helpers exported by
+ * src/contexts/I18nContext.tsx.
  *
  * Mocks the message JSON files the same way I18nContext.test.tsx does, since
  * the provider imports them eagerly.
@@ -136,31 +136,22 @@ describe('I18nContext — formatters', () => {
     });
   });
 
-  describe('formatNumber()', () => {
-    it('formats using the current locale', () => {
-      const { result } = renderI18n();
-      expect(result.current.formatNumber(1234.5)).toBe(new Intl.NumberFormat('zh-Hans').format(1234.5));
-    });
-
-    it('falls back to en formatting for the egy pseudo-locale', () => {
-      const { result } = renderI18n();
-      act(() => result.current.setLocale('egy'));
-      expect(result.current.formatNumber(1234.5)).toBe(new Intl.NumberFormat('en').format(1234.5));
-    });
-
-    it('passes through Intl.NumberFormatOptions', () => {
-      const { result } = renderI18n();
-      const formatted = result.current.formatNumber(0.42, { style: 'percent' });
-      expect(formatted).toBe(new Intl.NumberFormat('zh-Hans', { style: 'percent' }).format(0.42));
-    });
-  });
-
+  // A `formatNumber()` describe block stood here with three cases, plus a
+  // fourth below asserting the function existed. Nothing outside this file ever
+  // called it — the whole of it was the only thing keeping that member of the
+  // context alive. Removed with the member.
   describe('useI18n() hook', () => {
-    it('exposes formatDate, formatDateTime, and formatNumber', () => {
+    it('exposes formatDate and formatDateTime', () => {
       const { result } = renderI18n();
       expect(typeof result.current.formatDate).toBe('function');
       expect(typeof result.current.formatDateTime).toBe('function');
-      expect(typeof result.current.formatNumber).toBe('function');
+    });
+
+    // Absence, asserted. Without this the deletion above is only recorded in a
+    // comment, and re-adding an unused `formatNumber` would go unremarked.
+    it('does not expose formatNumber — nothing in the app formats numbers by locale', () => {
+      const { result } = renderI18n();
+      expect('formatNumber' in result.current).toBe(false);
     });
   });
 });

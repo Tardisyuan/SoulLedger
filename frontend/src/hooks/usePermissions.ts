@@ -8,8 +8,15 @@ import { useTenant } from "@/src/contexts/TenantContext";
 export function usePermissions() {
   const { user } = useTenant();
 
+  // One expression, read twice. It used to be written out twice — once here as
+  // the short-circuit and once in the returned object — so "what counts as an
+  // administrator" had two definitions inside a single 34-line file. They could
+  // not disagree, which is exactly why nothing would have reported it if they
+  // started to.
+  const isAdmin = user?.role === "ADMIN";
+
   const hasPermission = (permission: string): boolean => {
-    if (user?.role === "ADMIN") return true;
+    if (isAdmin) return true;
     return user?.permissions?.includes(permission) ?? false;
   };
 
@@ -28,7 +35,7 @@ export function usePermissions() {
     // Exposed so a gate that really is about the role can say so, instead of
     // passing the string "ADMIN" to a codename check and relying on the
     // short-circuit above. See RequireAdmin.
-    isAdmin: user?.role === "ADMIN",
+    isAdmin,
     permissions: user?.permissions ?? [],
   };
 }
