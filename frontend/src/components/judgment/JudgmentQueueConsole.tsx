@@ -264,7 +264,20 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           />
         ) : queue.isLoading ? (
           <ConsoleNotice title={t("judgment.queue.loading")} body="" />
-        ) : !judgment || !cursor.soul || !cursor.ledger ? (
+        ) : queue.isExhausted ? (
+          /* `queue.isExhausted`, not `!judgment || !soul || !ledger`.
+           *
+           * The hook has exported this since it was written —
+           * `query.isSuccess && cursor.judgment === null && pending === null` —
+           * and had ZERO consumers: the `pending === null` clause is exactly
+           * the guard this branch was missing, and it was sitting unused while
+           * the console re-derived a worse version of it two lines from here.
+           *
+           * The difference is the last case of a sitting: with a verdict still
+           * held, the queue is not clear, it is one undo away from not being
+           * clear. Saying "queue is clear" there — and, with the old
+           * expression, hiding the undo bar to say it — is a false statement
+           * made at the only moment the operator can still act on it. */
           <ConsoleNotice
             title={
               progress.deferred > 0
@@ -282,6 +295,21 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                   {t("judgment.queue.leave")}
                 </Button>
               )
+            }
+          />
+        ) : !judgment || !cursor.soul || !cursor.ledger ? (
+          /* A card arrived with `judgment` set but a relation missing. NOT the
+           * same fact as an empty queue, and it keeps its own notice rather
+           * than borrowing the exhausted one — which is what it used to do,
+           * telling the operator the sitting was over because one join came
+           * back null. */
+          <ConsoleNotice
+            title={t("judgment.queue.incomplete_title")}
+            body={t("judgment.queue.incomplete_body")}
+            action={
+              <Button type="button" variant="primary" onClick={() => queue.refetch()}>
+                {t("common.retry")}
+              </Button>
             }
           />
         ) : (
@@ -358,7 +386,21 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
        * operator asks for rather than always needs. The bar carries only what
        * is irreversible.
        */}
-      {judgment && cursor.soul && cursor.ledger && (
+      {/* THE BAR IS GATED ON `pending` TOO, AND THAT `||` IS THE WHOLE FIX.
+       *
+       * It used to be `judgment && soul && ledger` alone — i.e. the undo
+       * affordance was structurally coupled to there being a NEXT card. So on
+       * the last case of every sitting the operator ruled, `holding` grew, the
+       * refetch came back with `judgment: null`, and the console flipped to
+       * "queue is clear" — taking the countdown, the Undo button and the
+       * "PASSED recorded for 王氏" line with it, at the exact moment they meant
+       * something. Same on any fetch error inside the window. `U` still
+       * worked, because the key listener is unconditional, but nothing on
+       * screen said so.
+       *
+       * The verdict row below keeps the old condition: with no card there is
+       * nothing to rule on. Only the undo strip survives the card. */}
+      {(pending || (judgment && cursor.soul && cursor.ledger)) && (
         <div className="sticky bottom-0 border-t border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-canvas))]">
           <div className="max-w-6xl mx-auto px-6 py-3">
             <div className="h-10 flex items-center" aria-live="polite">
@@ -393,6 +435,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 system would mean either a variant per verdict or a pile of
                 className overrides fighting it. A shared primitive is for the
                 shapes that repeat — these do not. */}
+            {judgment && cursor.soul && cursor.ledger && (
             <div className="flex flex-wrap gap-2">
               {VERDICTS.map((verdict) => (
                 <button
@@ -423,6 +466,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 {t("judgment.queue.defer")}
               </button>
             </div>
+            )}
           </div>
         </div>
       )}

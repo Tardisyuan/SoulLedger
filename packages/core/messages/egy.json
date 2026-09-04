@@ -780,6 +780,8 @@
       "exhausted_title": "Set shu",
       "exhausted_with_deferred_title": "Sep-u sedjer wa",
       "exhausted_body": "{{n}} sheemtet em hru pen.",
+      "incomplete_title": "Sep khery nen aba",
+      "incomplete_body": "Nen ini aba, nen ini sheemtet-set. Iri an; set nen shu.",
       "error_title": "Nen ini sep khery",
       "error_body": "Iri an; ir bin, maa sekhem en maa sheemtet.",
       "not_recorded": "Nen sesh",
