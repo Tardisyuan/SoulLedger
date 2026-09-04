@@ -212,6 +212,9 @@ t("nav.greeting", { username: user.username })
 
 ### 前端
 
+0. **先确认 node ≥ 20.9.0**（仓库根有 `.nvmrc`，`nvm use`）。默认 PATH 上是
+   v18.20.8，`next build` 会直接拒绝，而 `packages/core` 的 vitest 报的是一句
+   不提版本的 `SyntaxError: … styleText`。
 1. `npm run build` — 必须 RC 0
 2. 清除 `.next` 缓存：`rm -rf .next`
 3. 重启前端服务：`fuser -k 3333/tcp && bash scripts/start-frontend.sh`
@@ -219,9 +222,29 @@ t("nav.greeting", { username: user.username })
 
 ### 后端
 
-1. `python manage.py test` — 所有测试通过
+1. `pytest`，**不是 `python manage.py test`**。Django 的 runner 只收集
+   `unittest.TestCase` 子类；实测 `backend/tests/` 里有 **774 个模块级
+   `def test_` 函数**对 **22 个 TestCase 类**，前者它一条都收不到。
+   照旧写法跑会得到一个绿色的、几乎什么都没验的结果。
+   完整命令（含必须隔离的 Redis）见 `CLAUDE.md` 的 Build & Test。
 2. 特别检查 `test_tenant_isolation.py` 全部通过
 3. 如有 model/serializer 修改，运行对应 migration
+
+### packages/core（这份文件此前完全没提它）
+
+2026-09-02 起仓库是 npm workspaces：根 + `frontend/` + `packages/core/`。
+那个包是平台无关层，有**自己的三条门禁**，`.git/hooks/pre-push` 在任何
+`^packages/` 改动上全跑：
+
+```bash
+npm run --workspace packages/core typecheck
+npm run --workspace packages/core lint
+npm run --workspace packages/core test      # vitest，不是 jest
+```
+
+`test` 抓的东西 `typecheck` 抓不到：`domBoundary.test.ts` 断言
+`@types/react` 漏进来的约 146 个 DOM 类型名保持不可解析 —— 它们是空接口，
+所以 `const el: HTMLElement = {}` 是能编译的。
 
 ### Git 提交规范
 

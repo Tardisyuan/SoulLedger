@@ -38,6 +38,9 @@
  * asserted is unambiguously the editor's decision to call it and never the
  * library's behaviour.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -106,6 +109,8 @@ jest.mock("@/src/contexts/I18nContext", () => ({
     t: (key: string) =>
       ({
         "workflow.editor.auto_layout": "Auto layout",
+        "workflow.editor.add_node": "Add Node",
+        "workflow.editor.delete_selected": "Delete Selected",
         "workflow.editor.save_template": "Save Template",
         "workflow.editor.template_name_placeholder": "Template name...",
       })[key] || key,
@@ -189,6 +194,109 @@ beforeEach(() => {
   getState.mockClear();
   from.mockClear();
   flipTimeline.kill.mockClear();
+});
+
+describe("a mutation mid-travel stops the travel", () => {
+  /**
+   * THE DEFECT THIS PINS, WHICH SHIPPED IN `e966f15`. `.kill()` lived in
+   * exactly two places — the unmount cleanup and `autoLayout` itself — while
+   * four other handlers mutate the very nodes gsap is animating: `addNode`,
+   * `deleteSelectedNode`, `updateNodeData` and `onConnect` each
+   * `setNodes`/`setEdges` and none stopped the tween. Delete a node 200ms into
+   * a travel and gsap keeps writing transforms toward the old target, on a
+   * wrapper xyflow has since re-keyed or removed.
+   *
+   * TWO TESTS, BECAUSE THE DEFECT HAS TWO HALVES. The runtime one proves the
+   * mechanism works at all; the source scan proves it was not wired into some
+   * entry points and forgotten in others — which is precisely what happened,
+   * and which no single runtime test can show. Only `addNode` is reachable
+   * through this file's stub (selection arrives via `onNodesChange`, and edges
+   * via a real drag), so a per-entry-point runtime test would mean growing the
+   * stub until it is a second react-flow. The scan is the honest instrument
+   * for "these four all call it".
+   */
+  it("adding a node kills the tween the press started", async () => {
+    renderDragged();
+    await screen.findByDisplayValue("dragged");
+
+    fireEvent.click(screen.getByText("Auto layout"));
+    // The tween has to exist to be killed; without this the assertion below
+    // could pass on a press that never animated.
+    expect(from).toHaveBeenCalledTimes(1);
+    expect(flipTimeline.kill).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText("Add Node", { exact: false }));
+    expect(flipTimeline.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not kill anything when no travel is running", async () => {
+    renderDragged();
+    await screen.findByDisplayValue("dragged");
+
+    // Absence, so the test above cannot be satisfied by a `stopLayoutTravel`
+    // that fires unconditionally on every render.
+    fireEvent.click(screen.getByText("Add Node", { exact: false }));
+    expect(from).not.toHaveBeenCalled();
+    expect(flipTimeline.kill).not.toHaveBeenCalled();
+  });
+
+  it("every handler that mutates the animated nodes stops the travel first", () => {
+    const src = readFileSync(
+      join(__dirname, "../components/workflow/WorkflowEditor.tsx"),
+      "utf8"
+    );
+
+    // The subject list is the handlers that call `setNodes` or `setEdges`.
+    // Derived from the source rather than written down, so a fifth one added
+    // later joins the population instead of quietly sitting outside it.
+    // Deliberately the SIMPLEST pattern that cannot miss one. A cleverer
+    // version of this line — matching the arrow and its parameter list too —
+    // silently skipped `getTemplateNodes`, which made the slice for the
+    // handler before it run past its own end and swallow a `setNodes` that
+    // belonged to its neighbour. The scan then reported a handler that does
+    // not mutate as one that does. An incomplete subject list does not fail
+    // loudly; it produces a confident wrong answer.
+    const handlers = [...src.matchAll(/const (\w+) = useCallback\(/g)].map((m) => m[1]);
+    expect(handlers.length).toBeGreaterThan(4);
+
+    // Balanced-paren scan from the handler's own `useCallback(`, NOT a slice
+    // to wherever the next handler happens to start. The slice version put
+    // everything BETWEEN two handlers into the first one's body — including
+    // the template-loading effect and its `setNodes` — so `stopLayoutTravel`,
+    // which mutates nothing, was reported as a mutator that forgot to call
+    // itself. The wrong answer looked exactly like a real finding.
+    const bodyOf = (name: string) => {
+      const decl = src.indexOf(`const ${name} = useCallback(`);
+      expect(decl).toBeGreaterThan(-1);
+      let i = src.indexOf("(", decl + `const ${name} = useCallback`.length);
+      let depth = 0;
+      for (let j = i; j < src.length; j += 1) {
+        if (src[j] === "(") depth += 1;
+        else if (src[j] === ")") {
+          depth -= 1;
+          if (depth === 0) return src.slice(i, j + 1);
+        }
+      }
+      throw new Error(`unbalanced useCallback for ${name}`);
+    };
+
+    const mutators = handlers.filter((h) => {
+      const body = bodyOf(h);
+      return /\bsetNodes\(|\bsetEdges\(/.test(body);
+    });
+    // `autoLayout` mutates too and calls it; the others are the four that did
+    // not. Naming the floor stops an empty derivation from passing quietly.
+    expect(mutators).toEqual(expect.arrayContaining([
+      "addNode",
+      "autoLayout",
+      "deleteSelectedNode",
+      "updateNodeData",
+      "onConnect",
+    ]));
+
+    const missing = mutators.filter((h) => !/stopLayoutTravel\(\)/.test(bodyOf(h)));
+    expect(missing).toEqual([]);
+  });
 });
 
 describe("the auto-layout transition is entered once per press", () => {

@@ -526,6 +526,7 @@
       "template_name_placeholder": "模板名称",
       "add_node": "添加节点",
       "auto_layout": "自动布局",
+      "relayouting": "正在重排…",
       "delete_selected": "删除选中",
       "saving": "保存中...",
       "save_template": "保存模板",
