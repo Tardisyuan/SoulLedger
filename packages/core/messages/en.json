@@ -525,6 +525,7 @@
       "case_type_select_label": "Case Type",
       "template_name_placeholder": "Template Name",
       "add_node": "Add Node",
+      "auto_layout": "Auto layout",
       "delete_selected": "Delete Selected",
       "saving": "Saving...",
       "save_template": "Save Template",

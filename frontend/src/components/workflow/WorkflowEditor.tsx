@@ -39,7 +39,9 @@ import {
 } from "@/src/components/workflow/NodeEditModal";
 import { useToast } from "@/src/contexts/ToastContext";
 import {
+  appendPosition,
   edgeArrow,
+  layoutNodes,
   presetTemplateToFlow,
   savedTemplateToFlow,
   type TemplateNode,
@@ -264,7 +266,7 @@ export default function WorkflowEditor({
     const newNode: Node = {
       id: newId,
       type: "editableNode",
-      position: { x: 250, y: nodes.length * 160 + 80 },
+      position: appendPosition(nodes),
       data: {
         id: newId,
         label: `${t("workflow.editor.new_node")} ${nodes.length + 1}`,
@@ -296,6 +298,21 @@ export default function WorkflowEditor({
     // memoised on `[locale, loadedBundles]`), and this is a click handler, not
     // an effect — a fresh identity re-renders one button and nothing else.
   }, [nodes, setNodes, setEdges, t]);
+
+  /**
+   * Re-run the layout over everything. The ONLY thing that moves a node the
+   * operator placed.
+   *
+   * The hydration paths lay out nodes that have no stored position and leave
+   * the rest alone, on purpose — a template reloads looking exactly as it was
+   * left. That makes this button the single moment in the editor's life at
+   * which an already-placed node changes coordinates, which is what a
+   * follow-up transition has to narrate. `layoutNodes` is called with no
+   * pinned set, so nothing is exempt.
+   */
+  const autoLayout = useCallback(() => {
+    setNodes((nds) => layoutNodes(nds, edges));
+  }, [setNodes, edges]);
 
   // Delete selected node
   const deleteSelectedNode = useCallback(() => {
@@ -389,6 +406,7 @@ export default function WorkflowEditor({
   // 组键把 `ApprovalWorkflow.priority` 的 0/1/2 显示成普通/紧急/危急，三份 bundle
   // (en / zh-Hans / egy) 都已有这四个键。这里说的是同一根尺子的同一个刻度，新造一
   // 组平行文案会让同一个 1 在模板页和流程页读起来不一样。
+
   const priorityOptions = [
     { value: 0, label: t("workflow.detail.normal") },
     { value: 1, label: t("workflow.detail.urgent") },
@@ -472,6 +490,20 @@ export default function WorkflowEditor({
             className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-03 font-medium transition-colors"
           >
             + {t("workflow.editor.add_node")}
+          </button>
+          <button
+            type="button"
+            onClick={autoLayout}
+            disabled={nodes.length === 0}
+            /* `h-8` rather than the `py-1.5` its neighbours use: 1.5 is off the
+               spacing rhythm (1/2/3/4/6/10/16) and this file's legacy quota for
+               that is already spent, so a ninth would have to be bought by
+               raising the baseline. 32px is the same height `px-3 py-1.5` on
+               text-03 produces, border included — border-box — so the row still
+               lines up. */
+            className="px-3 h-8 inline-flex items-center bg-[hsl(var(--color-surface-3))] hover:bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] text-03 font-medium border border-[hsl(var(--color-hairline))] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {t("workflow.editor.auto_layout")}
           </button>
           <button
             onClick={deleteSelectedNode}

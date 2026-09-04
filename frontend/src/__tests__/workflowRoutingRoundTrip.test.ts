@@ -90,8 +90,12 @@ describe("stored positions are honoured", () => {
       base({ id: "b", node_order: 2 }),
     ]);
     expect(nodes[0].position).toEqual({ x: 40, y: 900 });
-    // A node with no stored position still falls back, so a template written
-    // before positions existed does not collapse to the origin.
-    expect(nodes[1].position).toEqual({ x: 250, y: 160 });
+    // A node with no stored position is PLACED BY THE LAYOUT, so a template
+    // written before positions existed does not collapse to the origin. It
+    // used to read `{ x: 250, y: 160 }` — the hand-rolled column that dagre
+    // replaced. The y is unchanged, because `ranksep` was chosen to reproduce
+    // that 160px pitch exactly; only the column moved, from 250 to the
+    // layout's own left edge. See `workflowEditorLayout.test.ts`.
+    expect(nodes[1].position).toEqual({ x: 0, y: 160 });
   });
 });
