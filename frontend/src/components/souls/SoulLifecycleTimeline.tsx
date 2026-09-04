@@ -350,8 +350,8 @@ export function SoulLifecycleTimeline({
                   dotClassName={isTerminalRow ? "bg-[hsl(var(--color-status-settled))]" : TONE_DOT[row.tone]}
                   terminalVariant={isTerminalRow ? (isAnnihilated ? "flush" : "filled") : undefined}
                 >
-                  <div className="text-03 text-[hsl(var(--color-ink))] truncate">{row.title}</div>
-                  {row.metadata && <div className="text-02 text-[hsl(var(--color-ink-muted))] truncate">{row.metadata}</div>}
+                  <div title={row.title} className="text-03 text-[hsl(var(--color-ink))] truncate">{row.title}</div>
+                  {row.metadata && <div title={row.metadata} className="text-02 text-[hsl(var(--color-ink-muted))] truncate">{row.metadata}</div>}
                   {isTerminalRow && (
                     <div
                       className={`text-02 font-mono mt-0.5 ${isAnnihilated ? "text-[hsl(var(--color-ink-tertiary))]" : "text-[hsl(var(--color-ink-muted))]"}`}
@@ -395,11 +395,14 @@ export function SoulLifecycleTimeline({
                   </button>
                   {isOpen && (
                     <div className="mt-1 space-y-0.5 pl-2 border-l border-[hsl(var(--color-hairline))]">
-                      {row.items.map((item) => (
-                        <div key={item.id} className="text-02 text-[hsl(var(--color-ink-subtle))] font-mono truncate">
-                          {describeSystemEvent(item, systemEventLabels)}
+                      {row.items.map((item) => {
+                        const described = describeSystemEvent(item, systemEventLabels);
+                        return (
+                        <div key={item.id} title={described} className="text-02 text-[hsl(var(--color-ink-subtle))] font-mono truncate">
+                          {described}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </RowShell>

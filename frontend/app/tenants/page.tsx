@@ -146,7 +146,7 @@ function TenantsPageContent() {
               style={mark ? { borderLeftColor: mark } : undefined}
             >
               <div className="min-w-0">
-                <p className="text-03 font-medium text-[hsl(var(--color-ink))] truncate">{tenant.display_name}</p>
+                <p title={tenant.display_name} className="text-03 font-medium text-[hsl(var(--color-ink))] truncate">{tenant.display_name}</p>
                 <p className="text-02 font-mono text-[hsl(var(--color-ink-subtle))] mt-1 truncate">
                   {t("tenants.code") || "Code"}: {tenant.code}
                 </p>
