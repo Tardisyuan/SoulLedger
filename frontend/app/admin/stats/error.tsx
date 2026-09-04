@@ -1,6 +1,6 @@
 "use client";
 
-import { useI18n } from "@/src/contexts/I18nContext";
+import { PageError } from "@/src/components/ui/PageError";
 
 export default function Error({
   error,
@@ -9,27 +9,5 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const { t } = useI18n();
-
-  return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[hsl(var(--color-canvas))] flex items-center justify-center">
-      <div className="text-center">
-        <div className="text-6xl font-bold text-red-500 mb-4">500</div>
-        <h1 className="text-xl font-bold text-[hsl(var(--color-ink))] mb-2">{t("error.title")}</h1>
-        <p className="text-[hsl(var(--color-ink-muted))] mb-6">{t("error.description")}</p>
-        <button
-          onClick={reset}
-          className="px-4 py-2 bg-[hsl(var(--color-accent))] text-black font-medium hover:opacity-90 transition-opacity mr-3"
-        >
-          {t("error.retry")}
-        </button>
-        <a
-          href="/"
-          className="px-4 py-2 bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] font-medium hover:opacity-90 transition-opacity"
-        >
-          {t("error.home")}
-        </a>
-      </div>
-    </div>
-  );
+  return <PageError error={error} reset={reset} />;
 }
