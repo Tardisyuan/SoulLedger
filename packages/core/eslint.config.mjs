@@ -86,15 +86,35 @@ export default [
       // A host capability reaches this package through `PlatformAdapter`. The
       // API base URL is one, so it is a port (`baseUrl`), and the web build
       // supplies `NEXT_PUBLIC_API_URL` to it from `frontend/lib/platform/web.ts`.
+      // THE PRIMARY GUARD IS NOW THE TYPE, NOT THIS RULE. `process` is no
+      // longer declared in `src/platform/host-globals.d.ts`, so every spelling
+      // of it is a compile error, and `src/platform/__tests__/nodeGlobals.test.ts`
+      // holds that. This rule is kept as the second line because a lint message
+      // says *why* at the point of writing, where `Cannot find name 'process'`
+      // does not — and because someone re-adding the declaration should still
+      // meet a refusal here.
+      //
+      // The selector is the whole identifier and not `process.env`, after
+      // mutation-testing the narrower form against this config:
+      // `process.env.X`, `process["env"].X` and `import.meta.env` were caught,
+      // but `process["env"].X` only by accident of spelling, and
+      // `const { env } = process`, `const p = process; p.env.X` and
+      // `globalThis.process.env.X` were not caught at all. Chasing member
+      // expressions is chasing shapes; the name is the thing. (Only the
+      // destructuring form is a plausible accident. The rest are contortions —
+      // but a guard whose coverage depends on nobody contorting is the shape
+      // this repository keeps rediscovering.)
       "no-restricted-syntax": [
         "error",
         {
-          selector: "MemberExpression[object.name='process'][property.name='env']",
+          selector: "Identifier[name='process']",
           message:
-            "`process.env` is a host concern. @soulledger/core must not read " +
+            "`process` is a host concern. @soulledger/core must not read " +
             "build-time environment variables — Expo and Tauri do not define " +
             "the same ones, and the fallback fails silently. Add a field to " +
-            "PlatformAdapter (src/platform/types.ts) and let each host supply it.",
+            "PlatformAdapter (src/platform/types.ts) and let each host supply it. " +
+            "(The name is not declared in host-globals.d.ts either, so this is " +
+            "also a type error; this rule exists to say why.)",
         },
         {
           selector: "MetaProperty[meta.name='import'][property.name='meta']",
