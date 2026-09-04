@@ -34,6 +34,7 @@
  */
 import { execFileSync } from "node:child_process";
 import path from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 
 import { QueryClient } from "@tanstack/react-query";
 
@@ -52,8 +53,27 @@ import {
 
 /**
  * Every cache entry a push is supposed to be able to reach, keyed the way the
- * code that owns it keys it. `owner` is where to look when one of these goes
- * red: it is the file whose query key must keep matching the handler.
+ * code that owns it keys it. `owner` is the file whose query key must keep
+ * matching the handler.
+ *
+ * `owner` USED TO BE PROSE. It was described as "where to look when one of
+ * these goes red" and nothing asserted it, so it was free to rot — and it had.
+ * The `soul detail` row named `useSouls.ts` while the page that actually
+ * rendered a soul detail held its copy in `useState` and read no cache entry at
+ * all (fixed in 5593e90); the row was true of `judgment/[id]` and quietly false
+ * of the page a reader would have gone looking for.
+ *
+ * That is the `d80ac68` class exactly: a documentation-only anchor survives a
+ * file split or a rewrite, keeps its old text, and nothing turns red. Four
+ * references to `AppLayout.tsx:418` sat 43 lines off the thing they named for
+ * over a week (29e82df), inside a file whose own subject is defects that
+ * "不报错、不报类型、不影响任何断言".
+ *
+ * So the two assertions below make `owner` carry weight. Deliberately NOT a
+ * third copy of the key: nothing here restates which factory a row uses, since
+ * a restatement is one more thing that can disagree. They check the two
+ * properties a stale anchor actually violates — the path still exists, and the
+ * file it names is still in the query-key business.
  */
 const CACHED: { label: string; owner: string; key: readonly unknown[] }[] = [
   { label: "soul detail", owner: "packages/core/src/hooks/useSouls.ts", key: soulKeys.detail("s1") },
@@ -238,6 +258,44 @@ describe("no source file caches under a singular form of a factory family", () =
       throw err;
     }
   }
+
+  it.each(CACHED.map((c) => [c.label, c.owner] as const))(
+    "the owner named for %s exists on disk",
+    (_label, owner) => {
+      // Paths are written two ways: repo-root-relative for the package
+      // (`packages/core/...`) and frontend-relative for the app (`app/...`).
+      // Try both rather than normalising the table, which would mean editing
+      // thirteen rows to satisfy a test.
+      const candidates = [
+        path.join(FRONTEND_ROOT, owner),
+        path.join(FRONTEND_ROOT, "..", owner),
+      ];
+      const found = candidates.find((c) => existsSync(c));
+      expect(found ?? `neither ${candidates[0]} nor ${candidates[1]}`).toEqual(
+        expect.stringContaining(path.basename(owner))
+      );
+    }
+  );
+
+  it.each(CACHED.map((c) => [c.label, c.owner] as const))(
+    "the owner named for %s is still in the query-key business",
+    (_label, owner) => {
+      const resolved = [
+        path.join(FRONTEND_ROOT, owner),
+        path.join(FRONTEND_ROOT, "..", owner),
+      ].find((c) => existsSync(c));
+      if (!resolved) throw new Error(`owner not on disk: ${owner}`);
+      // Comments are stripped first. This repo's comment density is extreme and
+      // its comments name the very symbols they discuss — a raw read would let
+      // a file that merely *mentions* soulKeys in a tombstone note pass as its
+      // owner. (A prior count of six "production files" referencing a symbol
+      // became zero after stripping.)
+      const src = readFileSync(resolved, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/(^|[^:])\/\/.*$/gm, "$1");
+      expect(src).toMatch(/\b(soulKeys|workflowKeys|judgmentKeys|notificationKeys|socialKeys)\b/);
+    }
+  );
 
   it("the grep works, or this whole block is a no-op", () => {
     // Proves the search reaches real files and the plural spelling is in use;
