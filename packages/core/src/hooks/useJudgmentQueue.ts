@@ -2,9 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { judgmentApi, type Judgment, type JudgmentQueueCursor } from "../api/index";
+import { judgmentApi, type JudgmentQueueCursor } from "../api/index";
 import { judgmentKeys } from "../query_keys";
-import { notify, onSessionSuspend } from "../platform/index";
+import {
+  clearPendingVerdict,
+  getPendingVerdict,
+  notify,
+  onSessionResume,
+  onSessionSuspend,
+  setPendingVerdict,
+} from "../platform/index";
 
 /**
  * The judgment triage queue's session state (BRIEF §4.2).
@@ -39,29 +46,139 @@ import { notify, onSessionSuspend } from "../platform/index";
  * which of the two it is allowed to offer.
  *
  * Consequences worth stating plainly:
- *  - The verdict is not durable for up to UNDO_WINDOW_MS. A closed tab loses
- *    it. `flush()` runs on unmount and when the platform reports the session
- *    suspending (web: `beforeunload`) to shrink that window
- *    to the smallest honest size, but it cannot be zero, and the UI says the
- *    verdict is "pending" rather than showing it as done.
+ *  - The verdict is not durable for up to UNDO_WINDOW_MS. `flush()` runs on
+ *    unmount and on a **terminal** suspend (web: `beforeunload`) to shrink that
+ *    window to the smallest honest size, but it cannot be zero, and the UI says
+ *    the verdict is "pending" rather than showing it as done.
  *  - Only one verdict is ever in flight. Giving a second one flushes the
  *    first — the undo bar is never a stack, so "undo" can only ever mean the
  *    one thing on screen.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * THE HELD VERDICT IS WRITTEN TO DISK, AND IS NEVER REPLAYED.
+ * ─────────────────────────────────────────────────────────────────────────
+ *
+ * A held verdict is copied to the platform's `persistent` store the moment it
+ * is given, so that a process which dies without a terminal suspend — an OS
+ * killing a backgrounded app, a tab discarded, a crash — does not take a
+ * decision the operator made with it. That copy is the reason a *transient*
+ * suspend (React Native's `AppState → background`, which fires on every app
+ * switch) can now do nothing at all instead of committing early: the verdict is
+ * safe on disk, the undo window is still open, and the undo bar on screen still
+ * means what it says.
+ *
+ * WHAT MUST NEVER HAPPEN, and what the rules below exist for: a stale verdict
+ * committed silently on a later launch. Replaying a judicial decision after a
+ * crash or an upgrade is worse than losing it — a lost verdict leaves the case
+ * pending and hands it back to the operator, while a replayed one creates a
+ * disposition that only an ADMIN correction can unwind. So:
+ *
+ *  - **A persisted verdict is never sent on the strength of the record alone.**
+ *    On mount the record is read, and it is either *restored* — put back on
+ *    screen as a held verdict with the undo bar and whatever is genuinely left
+ *    of its window — or discarded. There is no path from storage to a POST that
+ *    does not go through the operator's undo window running out in front of
+ *    them.
+ *  - **The window is wall-clock.** `dueAt` is a `Date.now()` stamp; a monotonic
+ *    timer does not survive a suspend, let alone a launch. `dueAt - Date.now()`
+ *    is therefore what decides, and it is treated as untrustworthy in both
+ *    directions: `<= 0` means the window is gone, and `> UNDO_WINDOW_MS` means
+ *    the clock moved backwards (NTP, a manual change, a device with no RTC
+ *    booting at the epoch) and the record cannot be reasoned about at all.
+ *    Both discard.
+ *  - **A record is restored at most once.** It is removed from storage as it is
+ *    read, before anything is decided, and a restored verdict is not written
+ *    back. Two processes reading the same record — two tabs, a relaunch loop —
+ *    would otherwise both commit it.
+ *  - **Every terminating path clears it**: commit (at the moment the request is
+ *    made, not when it returns — a record that outlives an in-flight POST is a
+ *    replay waiting for the next launch), undo, and restore.
+ *
+ * The discard is reported rather than silent (`judgment.queue.commit_error`,
+ * whose words — the verdict did not land, the case is back in the queue — are
+ * exactly true here). Silence would be the failure this whole file is written
+ * against: an operator who ruled on a case, saw it leave the screen, and is
+ * never told that nothing was recorded.
  */
 
 /** How long the operator has to take a verdict back. */
 export const UNDO_WINDOW_MS = 8000;
 
-export type VerdictCode = "PASSED" | "FAILED" | "PURGATORY" | "RETRY";
+/**
+ * The four verdicts, as a value and not only as a type.
+ *
+ * A held verdict comes back off disk as `unknown` — written by a previous
+ * process, possibly by a previous version of this app — so `verdict` has to be
+ * checked at run time, and a type alias cannot do that. Derived from this array
+ * rather than declared beside it, so the two cannot disagree.
+ */
+export const VERDICT_CODES = ["PASSED", "FAILED", "PURGATORY", "RETRY"] as const;
 
+export type VerdictCode = (typeof VERDICT_CODES)[number];
+
+/**
+ * A verdict given and not yet sent — on screen, and on disk.
+ *
+ * `judgmentId` rather than the whole `Judgment`, and the change is not
+ * cosmetic: this object is serialised to the platform's persistent store, and a
+ * `Judgment` carries `confession` and `evidence_json` — the case file. Nothing
+ * ever read the object except for its id (the console renders `soulName` and
+ * `verdict`, which are here), so keeping it would have written a soul's
+ * confession to disk for eight seconds to serve a field nobody read.
+ */
 export interface PendingVerdict {
-  judgment: Judgment;
+  judgmentId: string;
   soulName: string;
   verdict: VerdictCode;
   notes: string;
   createWorkflow: boolean;
-  /** Wall-clock ms at which this will be sent, for the countdown. */
+  /**
+   * Wall-clock ms at which this will be sent, for the countdown — and, after a
+   * suspend or a relaunch, for deciding whether it may still be sent at all.
+   * `Date.now()`, deliberately: `setTimeout` measures an interval this process
+   * spends awake, which is the wrong quantity the moment the process sleeps.
+   */
   dueAt: number;
+}
+
+/**
+ * A stored record, if it is one we are willing to act on. Otherwise null.
+ *
+ * Field by field, because "we wrote it" is not a property of anything read back
+ * from a store that survives restarts: the writer may have been last month's
+ * build with a different shape, and on web `localStorage` is editable by hand.
+ * A `JSON.parse` cast would make every one of those a crash or, worse, a POST
+ * built out of `undefined`.
+ *
+ * The window is NOT checked here — this answers "is this a verdict", and the
+ * caller answers "may it still be acted on", which needs the clock and has two
+ * different answers (restore, discard) rather than one.
+ */
+export function parsePersistedVerdict(raw: string | null): PendingVerdict | null {
+  if (!raw) return null;
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof value !== "object" || value === null) return null;
+  const record = value as Record<string, unknown>;
+  const { judgmentId, soulName, verdict, notes, createWorkflow, dueAt } = record;
+  if (typeof judgmentId !== "string" || judgmentId === "") return null;
+  if (typeof soulName !== "string") return null;
+  if (typeof notes !== "string") return null;
+  if (typeof createWorkflow !== "boolean") return null;
+  if (typeof dueAt !== "number" || !Number.isFinite(dueAt)) return null;
+  if (!VERDICT_CODES.includes(verdict as VerdictCode)) return null;
+  return {
+    judgmentId,
+    soulName,
+    verdict: verdict as VerdictCode,
+    notes,
+    createWorkflow,
+    dueAt,
+  };
 }
 
 export interface QueueProgress {
@@ -145,24 +262,34 @@ export function useJudgmentQueue(options?: { at?: string }) {
   const send = useCallback(
     async (verdictToSend: PendingVerdict) => {
       try {
-        await judgmentApi.conclude(verdictToSend.judgment.id, {
+        await judgmentApi.conclude(verdictToSend.judgmentId, {
           verdict: verdictToSend.verdict,
           notes: verdictToSend.notes,
           create_workflow: verdictToSend.createWorkflow,
         });
         setDecided((prev) =>
-          prev.includes(verdictToSend.judgment.id) ? prev : [...prev, verdictToSend.judgment.id]
+          prev.includes(verdictToSend.judgmentId) ? prev : [...prev, verdictToSend.judgmentId]
         );
         // It is no longer pending server-side, so it no longer needs holding
         // back — leaving it in `skip` would keep growing a list that filters
         // nothing.
-        setHolding((prev) => prev.filter((id) => id !== verdictToSend.judgment.id));
+        setHolding((prev) => prev.filter((id) => id !== verdictToSend.judgmentId));
         qc.invalidateQueries({ queryKey: judgmentKeys.all });
       } catch {
         // The verdict did not land. Put the case back in the queue rather than
         // silently dropping it — it is still pending, and the operator must
         // see it again.
-        setHolding((prev) => prev.filter((id) => id !== verdictToSend.judgment.id));
+        //
+        // The persisted copy is NOT restored here, and that is the deliberate
+        // half of this branch. A request that threw may still have been served
+        // — a response lost on the way back looks exactly like a request that
+        // never arrived — so putting the record back would make "retry" mean
+        // "possibly conclude the same judgment twice". The case is pending or
+        // it is not; the operator is told, and the queue's next fetch is what
+        // says which. (The server refuses the second conclude with a 400
+        // "Judgment already concluded", so the duplicate is contained even if
+        // it is attempted. Containment is not a reason to attempt it.)
+        setHolding((prev) => prev.filter((id) => id !== verdictToSend.judgmentId));
         notify("judgment.queue.commit_error", "error");
       }
     },
@@ -170,30 +297,55 @@ export function useJudgmentQueue(options?: { at?: string }) {
   );
 
   /**
-   * Commit whatever is held, immediately. Called on unmount and on suspend.
+   * Hold `held` and send it in `ms`, replacing any timer already running.
    *
-   * IDEMPOTENT, BUT NOT SAFE TO CALL WHENEVER. Two different properties, and
-   * only the first one holds here. Calling this twice sends once: the second
-   * call finds `pendingRef.current` already null and returns before `send`. So
-   * repeated suspends cannot duplicate a verdict.
+   * `ms` is a parameter rather than `UNDO_WINDOW_MS` because a restored verdict
+   * gets what is *left* of its window, not a fresh one. A fresh one would be a
+   * second undo window for a decision already made — and, worse, would let a
+   * record whose window had nearly elapsed come back as good as new after every
+   * suspend.
+   */
+  const arm = useCallback(
+    (held: PendingVerdict, ms: number) => {
+      clearTimer();
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        const current = pendingRef.current;
+        if (!current || current.judgmentId !== held.judgmentId) return;
+        pendingRef.current = null;
+        setPending(null);
+        clearPendingVerdict();
+        void send(current);
+      }, ms);
+    },
+    [clearTimer, send]
+  );
+
+  /**
+   * Commit whatever is held, immediately. Unmount, leaving the console, a
+   * second verdict — and a **terminal** suspend, which is now the only kind
+   * that reaches it.
    *
-   * What it is not is *deferrable*. Every call commits, immediately, whatever
-   * is left of the undo window — that is the whole point on `beforeunload`,
-   * where the alternative is losing the verdict. It is the wrong thing on a
-   * suspend that is not terminal. `onSessionSuspend`'s contract says the event
-   * may fire many times (see `@soulledger/core/platform`'s
-   * `SessionSuspendSubscriber`), and React Native's does: every app switch.
-   * There, this effect sends the held verdict on the first switch, seconds into
-   * an eight-second window, with the undo bar still on screen — and undo then
-   * silently does nothing, because there is nothing held to take back.
+   * IDEMPOTENT, AND STILL NOT DEFERRABLE. Two different properties, and only
+   * the first one holds here. Calling this twice sends once: the second call
+   * finds `pendingRef.current` already null and returns before `send`. Repeated
+   * suspends therefore cannot duplicate a verdict, and the test that pins this
+   * fires both events inside one `act` — separate ones let a re-render clear
+   * the ref, so the assertion would be measuring React rather than this guard.
    *
-   * That is a real defect on RN and it is NOT fixed here, because fixing it is
-   * a design decision this change does not own: the hook would have to either
-   * persist the held verdict across a suspend and commit only on real teardown,
-   * or learn a "terminal vs transient" distinction the port does not currently
-   * carry. Web is unaffected — `beforeunload` fires once and terminally, and
-   * `lib/platform/web.ts` deliberately does not add `visibilitychange` for
-   * exactly this reason.
+   * What it still is not is deferrable: every call commits immediately, however
+   * much of the undo window is left. That is correct on `beforeunload`, where
+   * the alternative is losing the verdict, and it is wrong on a suspend that is
+   * not terminal — which is why `kind` exists and why the subscription below
+   * calls this only for `"terminal"`. The RN defect recorded here in `c8863fb`
+   * ("sends the held verdict on the first app switch, and undo then silently
+   * does nothing") is fixed by that line and by the persisted copy, not by any
+   * change to this function.
+   *
+   * The stored copy goes at the moment the request is *made*, not when it
+   * returns. A record that outlives an in-flight POST is a verdict the next
+   * launch could send a second time; a record dropped alongside a POST that
+   * then fails is a case left pending, which the queue hands straight back.
    */
   const flush = useCallback(() => {
     clearTimer();
@@ -201,6 +353,7 @@ export function useJudgmentQueue(options?: { at?: string }) {
     if (!held) return;
     pendingRef.current = null;
     setPending(null);
+    clearPendingVerdict();
     void send(held);
   }, [clearTimer, send]);
 
@@ -212,7 +365,7 @@ export function useJudgmentQueue(options?: { at?: string }) {
       // window ends the moment a new decision is made.
       flush();
       const next: PendingVerdict = {
-        judgment,
+        judgmentId: judgment.id,
         soulName: judgment.soul_name || judgment.soul,
         verdict: input.verdict,
         notes: input.notes ?? "",
@@ -222,16 +375,15 @@ export function useJudgmentQueue(options?: { at?: string }) {
       pendingRef.current = next;
       setPending(next);
       setHolding((prev) => (prev.includes(judgment.id) ? prev : [...prev, judgment.id]));
-      timerRef.current = setTimeout(() => {
-        timerRef.current = null;
-        const held = pendingRef.current;
-        if (!held || held.judgment.id !== next.judgment.id) return;
-        pendingRef.current = null;
-        setPending(null);
-        void send(held);
-      }, UNDO_WINDOW_MS);
+      // On disk before the timer starts, not on suspend. A process can end
+      // without any suspend event at all — an OS reclaiming a backgrounded app,
+      // a tab discarded under memory pressure, a crash — and the window between
+      // "the operator decided" and "we were told we are dying" is where a
+      // decision would be lost.
+      setPendingVerdict(JSON.stringify(next));
+      arm(next, UNDO_WINDOW_MS);
     },
-    [cursor.judgment, flush, send]
+    [cursor.judgment, flush, arm]
   );
 
   /**
@@ -244,7 +396,11 @@ export function useJudgmentQueue(options?: { at?: string }) {
     if (!held) return;
     pendingRef.current = null;
     setPending(null);
-    setHolding((prev) => prev.filter((id) => id !== held.judgment.id));
+    // A taken-back verdict must not outlive the taking-back. Left on disk it
+    // would be the one thing this design refuses: a decision the operator
+    // withdrew, sent by the next launch.
+    clearPendingVerdict();
+    setHolding((prev) => prev.filter((id) => id !== held.judgmentId));
     notify("judgment.queue.undo_done", "info");
   }, [clearTimer]);
 
@@ -261,6 +417,38 @@ export function useJudgmentQueue(options?: { at?: string }) {
   /** Put every deferred case back at the head of the queue. */
   const restoreDeferred = useCallback(() => setDeferred([]), []);
 
+  /**
+   * Re-check a held verdict against the wall clock after a suspend.
+   *
+   * React Native freezes JS timers while the app is backgrounded, so the
+   * `setTimeout` armed before the switch is late by however long the user was
+   * away, and the countdown the console renders from `dueAt` is wrong by the
+   * same amount. `Date.now()` is the only thing that kept running.
+   *
+   * A window that expired while the app was away is committed here rather than
+   * discarded, and that is not the launch case wearing a disguise: this process
+   * never stopped existing, the operator's eight seconds genuinely elapsed, and
+   * this is what the timer would have done had it not been frozen. The record
+   * being *in memory* is what makes it trustworthy — nothing was reconstructed
+   * from a store somebody else could have written.
+   *
+   * A remaining window larger than the whole window means the clock moved
+   * backwards under us. In memory that is not a replay hazard (the operator is
+   * right here, looking at the undo bar), so it is clamped rather than
+   * discarded — the opposite of what the restore path does with the same
+   * reading, for the opposite reason.
+   */
+  const resync = useCallback(() => {
+    const held = pendingRef.current;
+    if (!held) return;
+    const remaining = held.dueAt - Date.now();
+    if (remaining <= 0) {
+      flush();
+      return;
+    }
+    arm(held, Math.min(remaining, UNDO_WINDOW_MS));
+  }, [arm, flush]);
+
   // Commit on the way out. A verdict the operator gave and then navigated away
   // from is a decision they made; losing it would be worse than sending it.
   //
@@ -271,17 +459,72 @@ export function useJudgmentQueue(options?: { at?: string }) {
   // exhaustive-deps has nothing to say about it.
   const flushRef = useRef(flush);
   flushRef.current = flush;
+  const resyncRef = useRef(resync);
+  resyncRef.current = resync;
   useEffect(() => {
     // Through the platform port, not `window.addEventListener("beforeunload")`.
     // What this effect states is a rule about verdicts — commit on the way out
     // — and `beforeunload` is one platform's spelling of "on the way out". The
-    // spelling now lives in `lib/platform/web.ts`; React Native's is `AppState`
-    // reaching `background`, and it will register there.
-    const unsubscribe = onSessionSuspend(() => flushRef.current());
+    // spelling lives in `lib/platform/web.ts`; React Native's is `AppState`
+    // reaching `background`.
+    //
+    // `"terminal"` ONLY. This one condition is the whole of the RN fix. A
+    // transient suspend does nothing here on purpose: the verdict was written
+    // to disk when it was given, the undo window is still open, and the undo
+    // bar on screen still means what it says. Deleting the condition sends the
+    // verdict on the first app switch — which is precisely the shipped defect
+    // `c8863fb` documented and declined to fix.
+    const stopSuspend = onSessionSuspend((kind) => {
+      if (kind === "terminal") flushRef.current();
+    });
+    const stopResume = onSessionResume(() => resyncRef.current());
     return () => {
-      unsubscribe();
+      stopSuspend();
+      stopResume();
       flushRef.current();
     };
+  }, []);
+
+  /**
+   * Adopt or discard a verdict left behind by a process that did not come back.
+   *
+   * Runs once, on mount, and is the only path from the store into this hook.
+   * The rules it enforces are stated in the header; what is worth having here
+   * is the order, because each step depends on the one before it:
+   *
+   *  1. Read, then **remove immediately** — before parsing, before any
+   *     decision. A record is restored at most once, and the removal must not
+   *     be conditional on the branch taken, or a record we refused stays behind
+   *     to be refused again on every launch.
+   *  2. Parse defensively. Unreadable, or written by a shape this build does
+   *     not recognise, is dropped without a word: there is nothing truthful to
+   *     tell the operator about bytes we cannot read.
+   *  3. Only then consult the clock. `remaining <= 0` is the ordinary case — an
+   *     app relaunched minutes or days later — and `remaining > UNDO_WINDOW_MS`
+   *     is a clock that moved backwards. Both discard, and both say so.
+   *  4. What is left is a window that genuinely has time in it, which can only
+   *     mean this process started within eight seconds of the last one dying.
+   *     That verdict goes back on screen with the time it actually has left,
+   *     under the operator's eye and their undo key. It is not re-persisted;
+   *     see the header.
+   */
+  const armRef = useRef(arm);
+  armRef.current = arm;
+  useEffect(() => {
+    const raw = getPendingVerdict();
+    if (raw === null) return;
+    clearPendingVerdict();
+    const held = parsePersistedVerdict(raw);
+    if (held === null) return;
+    const remaining = held.dueAt - Date.now();
+    if (remaining <= 0 || remaining > UNDO_WINDOW_MS) {
+      notify("judgment.queue.commit_error", "error");
+      return;
+    }
+    pendingRef.current = held;
+    setPending(held);
+    setHolding((prev) => (prev.includes(held.judgmentId) ? prev : [...prev, held.judgmentId]));
+    armRef.current(held, remaining);
   }, []);
 
   const total = sessionTotal ?? cursor.total;

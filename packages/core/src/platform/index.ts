@@ -6,6 +6,7 @@ import type {
   Notifier,
   PlatformAdapter,
   SessionResumeSubscriber,
+  SessionSuspendKind,
   SessionSuspendSubscriber,
   UnauthorizedHandler,
 } from "./types";
@@ -18,6 +19,7 @@ export type {
   Notifier,
   PlatformAdapter,
   SessionResumeSubscriber,
+  SessionSuspendKind,
   SessionSuspendSubscriber,
   UnauthorizedHandler,
 };
@@ -35,6 +37,18 @@ export const ACCESS_TOKEN_KEY = "soulledger_access";
 export const REFRESH_TOKEN_KEY = "soulledger_refresh";
 /** The key the active tenant is stored under, in the **persistent** store. */
 export const TENANT_ID_KEY = "tenant_id";
+/**
+ * The key the judgment queue's held verdict is stored under, in the
+ * **persistent** store.
+ *
+ * `persistent` and not `secure`, and the argument is in
+ * `PlatformAdapter.persistent` rather than here so that it sits next to the
+ * store it is about. Short version: `secure`'s native shape is async and
+ * write-through-in-the-background, which is disqualifying for a record whose
+ * whole job is to be on disk when the process dies; and Keychain outlives an
+ * uninstall, which turns a lost verdict into a replayed one.
+ */
+export const PENDING_VERDICT_KEY = "soulledger_pending_verdict";
 
 /**
  * A store that holds nothing and forgets everything.
@@ -138,13 +152,44 @@ export function getTenantId(): string {
 }
 
 /**
+ * The judgment queue's held verdict, as it was written — a JSON string, or
+ * null.
+ *
+ * A string and not a parsed object, deliberately. The shape is
+ * `useJudgmentQueue`'s and belongs to it; this layer's job is only which store
+ * it lands in. Anything read back here was written by a previous process — a
+ * previous *version* of the app, after an upgrade — so it is validated field by
+ * field at the point of use rather than trusted for having come out of our own
+ * store. See `parsePersistedVerdict` in `../hooks/useJudgmentQueue.ts`.
+ */
+export function getPendingVerdict(): string | null {
+  return adapter.persistent.get(PENDING_VERDICT_KEY);
+}
+
+export function setPendingVerdict(value: string): void {
+  adapter.persistent.set(PENDING_VERDICT_KEY, value);
+}
+
+export function clearPendingVerdict(): void {
+  adapter.persistent.remove(PENDING_VERDICT_KEY);
+}
+
+/**
  * Subscribe to the client going away. Returns the unsubscribe.
+ *
+ * The handler is given the **kind** of suspend — `"terminal"` or
+ * `"transient"`. A handler that ignores it still compiles (a function of no
+ * arguments is assignable to one of one), which is the right default for the
+ * handlers that would do the same thing either way, and is the wrong default
+ * for anything that sends: read `SessionSuspendKind` in `./types` first.
  *
  * Read through `platform()` on each call rather than captured once, so a host
  * that installs its adapter after this module is first imported still gets its
  * own implementation instead of the null one.
  */
-export function onSessionSuspend(handler: () => void): () => void {
+export function onSessionSuspend(
+  handler: (kind: SessionSuspendKind) => void
+): () => void {
   return platform().onSessionSuspend(handler);
 }
 
@@ -154,13 +199,16 @@ export function onSessionSuspend(handler: () => void): () => void {
  * Read through `platform()` on each call, for the same reason
  * `onSessionSuspend` above is.
  *
- * NO CALL SITE IN THIS PACKAGE YET, and that is worth stating rather than
- * leaving to be discovered. The consumer this exists for is the WebSocket
- * reconnect described in `SessionResumeSubscriber` — `WSClient.reconnect()`
- * exists, this is its trigger, and the line that joins them lives in the host
- * (`frontend/src/contexts/WebSocketContext.tsx`) and has not been written.
- * Until it is, a React Native client still comes back to a dead socket; the
- * port being here does not by itself fix that.
+ * WHO CALLS IT. `../hooks/useJudgmentQueue.ts`, to re-check a held verdict's
+ * undo window against the wall clock: React Native freezes JS timers while the
+ * app is backgrounded, so the `setTimeout` that would have sent the verdict is
+ * late by however long the user was away, and the countdown on screen is wrong
+ * by the same amount. The WebSocket reconnect described in
+ * `SessionResumeSubscriber` is the other consumer and lives in the host
+ * (`frontend/src/contexts/WebSocketContext.tsx`).
+ *
+ * This doc said "NO CALL SITE IN THIS PACKAGE YET" for the commit that added
+ * the port, which was true then and is not now.
  */
 export function onSessionResume(handler: () => void): () => void {
   return platform().onSessionResume(handler);
