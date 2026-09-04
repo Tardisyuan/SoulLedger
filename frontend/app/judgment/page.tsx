@@ -9,6 +9,7 @@ import { DataTable, parseOrdering, type SortState } from "@/components/ui/data-t
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, MissingValue } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { Badge } from "@/src/components/ui/Badge";
 import { buttonVariants } from "@/src/components/ui/Button";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -88,11 +89,7 @@ function JudgmentQueuePageContent() {
           key={tabItem.key}
           type="button"
           onClick={() => { setTab(tabItem.key); setPage(1); }}
-          className={`px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px ${
-            tab === tabItem.key
-              ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
-              : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
-          }`}
+          className={`${TAB_BASE} ${tab === tabItem.key ? TAB_ON : TAB_OFF}`}
         >
           {tabItem.label}
         </button>
