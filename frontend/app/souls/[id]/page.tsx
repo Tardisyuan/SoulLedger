@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useToast } from "@/src/contexts/ToastContext";
@@ -9,19 +9,19 @@ import type { ToastType } from "@/src/components/ui/Toast";
 import {
   soulsApi,
   judgmentApi,
-  dispositionApi,
   reincarnationApi,
   eventsApi,
-  Soul,
   Judgment,
   Disposition,
   Reincarnation,
   SoulEvent,
-  LedgerSummary,
   SoulRecordEntry,
 } from "@soulledger/core/api";
 import { ledgerApi, type LedgerInheritance } from "@soulledger/core/api/ledger";
-import { useUpdateSoul, useDeleteSoul } from "@soulledger/core/hooks/useSouls";
+import { useSoul, useSoulLedger, useDeleteSoul } from "@soulledger/core/hooks/useSouls";
+import { useJudgments } from "@soulledger/core/hooks/useJudgments";
+import { useDispositions } from "@soulledger/core/hooks/useDispositions";
+import { dispositionKeys, judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import { SoulEditModal } from "@/src/components/souls/SoulEditModal";
 import { SoulKarmaLedgerCard } from "@/src/components/souls/SoulKarmaLedgerCard";
 import { DEFAULT_REBIRTH_FORM, type RebirthFormValue } from "@/src/components/souls/RebirthFormSelect";
@@ -40,6 +40,29 @@ import { soulStateBadgeClass } from "@/src/lib/soulStateBadge";
 
 /** 详情页头上那两个徽章的形状。颜色由调用点给,形状只有一种。 */
 const BADGE_SHAPE = "px-2 py-1 text-01";
+
+// 「还没到」的那一份,每种一个模块级常量。
+// 这不是洁癖:这些数组是 prop,`?? []` 每次渲染都造一个新数组,而下游
+// (SoulLifecycleTimeline 里六个 useMemo、DateProblemsPanel)全都按引用比。
+// 从 useState 换成派生值时,identity 的稳定性是**原来就有**的性质,不是新加的
+// 优化 —— 不写这几行就是在这次改动里悄悄弄丢它。
+const NO_RECORDS: SoulRecordEntry[] = [];
+const NO_JUDGMENTS: Judgment[] = [];
+const NO_DISPOSITIONS: Disposition[] = [];
+const NO_REINCARNATIONS: Reincarnation[] = [];
+const NO_EVENTS: SoulEvent[] = [];
+
+/**
+ * 七个请求里任何一个失败时,页面要显示的那句话。
+ *
+ * 逐字保留原来 `loadSoulData` 的 catch:先 `response.data.detail`,再
+ * `message`,`||` 而不是 `??` —— 空字符串在这里要当作「没有」而不是「有一个空
+ * 的」,那是原来的行为。
+ */
+function readErrorDetail(e: unknown): string | undefined {
+  const err = e as { response?: { data?: { detail?: string } }; message?: string };
+  return err?.response?.data?.detail || err?.message;
+}
 
 export default function SoulDetailPage() {
   const params = useParams();
@@ -62,17 +85,6 @@ export default function SoulDetailPage() {
     },
     [t]
   );
-  const [soul, setSoul] = useState<Soul | null>(null);
-  const [ledger, setLedger] = useState<LedgerSummary | null>(null);
-  // SoulRecordEntry, not SoulRecord — the latter is an alias for Soul itself,
-  // which is not what /souls/{id}/records/ returns.
-  const [records, setRecords] = useState<SoulRecordEntry[]>([]);
-  const [judgments, setJudgments] = useState<Judgment[]>([]);
-  const [dispositions, setDispositions] = useState<Disposition[]>([]);
-  const [reincarnations, setReincarnations] = useState<Reincarnation[]>([]);
-  const [events, setEvents] = useState<SoulEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -86,8 +98,106 @@ export default function SoulDetailPage() {
   const [confirmMessage, setConfirmMessage] = useState("");
   const [confirmCallback, setConfirmCallback] = useState<(() => void) | null>(null);
 
-  const updateSoulMutation = useUpdateSoul();
   const deleteSoulMutation = useDeleteSoul();
+  const queryClient = useQueryClient();
+
+  // ── 这一页的服务端状态 ────────────────────────────────────────────────
+  //
+  // 这七份读取原本是七个 `useState`,由一个手写的 `loadSoulData()` 在
+  // `useEffect` 里一次性灌满。那样写的代价不是重复,是**聋**:
+  // `useMarkSoulDead` / `useTransitionSoul` / `useAddSoulRecord` /
+  // `useUpdateSoul` 都在 onSuccess 里 invalidate `soulKeys.detail(id)` 或
+  // `soulKeys.all`,`handleSoulStateChanged`(实时推送)两个都发 —— 而
+  // 一个 `useState` 里的副本听不见任何 invalidate。页面只好自己补:
+  // `handleEditSuccess() { loadSoulData(); }`,补的是它自己发起的那一次,
+  // 别人发起的那些一次都补不到。所以一个法官开着这一页时,别处推来的状态变更
+  // 就停在他屏幕上不动 —— 而 `eventInvalidationReachesCache.test.ts` 全程是绿的,
+  // 因为它自己往 `soulKeys.detail` 上塞数据再问缓存收没收到,而不是问屏幕。
+  //
+  // 隔壁 `app/judgment/[id]/page.tsx:150-157` 早就是对的,并且在注释里写了理由。
+  // 两个详情页里有一个在缓存上、另一个在缓存旁边,现在两个都在上面。
+  //
+  // 四份走 packages/core 的 hook(键都出自 `soulKeys` / `judgmentKeys` /
+  // `dispositionKeys` 工厂);records / reincarnations / events 在包里没有对应
+  // 的 hook,所以在这里就地 `useQuery` —— 键仍然挂在 `soulKeys.all` 前缀下,
+  // 这样一次 `invalidateQueries({ queryKey: soulKeys.all })` 能同时够到它们。
+  // 复数形式是刻意的:见 eventInvalidationReachesCache.test.ts 末尾那条
+  // 「没有源文件用工厂族的单数形式做键」。
+  const soulQuery = useSoul(id);
+  const ledgerQuery = useSoulLedger(id);
+  // SoulRecordEntry, not SoulRecord — the latter is an alias for Soul itself,
+  // which is not what /souls/{id}/records/ returns. And /souls/{id}/records/
+  // answers with a bare array (the @action returns serializer.data directly),
+  // so there is no `.results` here — all four list endpoints below (judgments,
+  // dispositions, reincarnations, events) ARE paginated, and it is the other
+  // way round for them.
+  const recordsQuery = useQuery({
+    queryKey: [...soulKeys.all, "records", id],
+    queryFn: async (): Promise<SoulRecordEntry[]> => (await soulsApi.records(id)).data,
+    enabled: !!id,
+    staleTime: 30_000,
+  });
+  const judgmentsQuery = useJudgments({ soul: id });
+  const dispositionsQuery = useDispositions({ soul: id });
+  const reincarnationsQuery = useQuery({
+    queryKey: [...soulKeys.all, "reincarnations", id],
+    queryFn: async (): Promise<Reincarnation[]> =>
+      (await reincarnationApi.list({ soul: id })).data.results,
+    enabled: !!id,
+    staleTime: 30_000,
+  });
+  const eventsQuery = useQuery({
+    queryKey: [...soulKeys.all, "events", id],
+    queryFn: async (): Promise<SoulEvent[]> => (await eventsApi.list({ soul: id })).data.results,
+    enabled: !!id,
+    staleTime: 30_000,
+  });
+
+  const soul = soulQuery.data ?? null;
+  const ledger = ledgerQuery.data ?? null;
+  const records = recordsQuery.data ?? NO_RECORDS;
+  const judgments = judgmentsQuery.data?.results ?? NO_JUDGMENTS;
+  const dispositions = dispositionsQuery.data?.results ?? NO_DISPOSITIONS;
+  const reincarnations = reincarnationsQuery.data ?? NO_REINCARNATIONS;
+  const events = eventsQuery.data ?? NO_EVENTS;
+
+  // `isLoading`,不是 `isPending`:后者在 `enabled: false` 时也是 true,那会让
+  // 一个没有 id 的路由永远停在骨架屏上。语义和原来那个 `loading` 一致 ——
+  // 七份里还有没到的就是「加载中」。差别只有一处,而且是往好的方向:后台
+  // 重取(invalidate 之后那次)不再把已经画好的内容换回骨架。
+  const loading =
+    soulQuery.isLoading ||
+    ledgerQuery.isLoading ||
+    recordsQuery.isLoading ||
+    judgmentsQuery.isLoading ||
+    dispositionsQuery.isLoading ||
+    reincarnationsQuery.isLoading ||
+    eventsQuery.isLoading;
+
+  const failure =
+    soulQuery.error ??
+    ledgerQuery.error ??
+    recordsQuery.error ??
+    judgmentsQuery.error ??
+    dispositionsQuery.error ??
+    reincarnationsQuery.error ??
+    eventsQuery.error ??
+    null;
+  const error = failure ? readErrorDetail(failure) || t("souls.detail.loading") : "";
+
+  /**
+   * 「这个灵魂的服务端状态可能动了」—— 一处。
+   *
+   * 上面七份读取分属三个键族。`soulKeys.all` 前缀能够到其中五份(soul /
+   * ledger / records / reincarnations / events),另外两份要各自的族。
+   * 这不是 `loadSoulData` 换了个名字:它不取数据,它只把缓存标脏,于是**每一个
+   * 在看这些键的组件**都会重取,而不只是这一页;并且没有在看的那些不会。
+   */
+  const refreshSoulViews = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: soulKeys.all });
+    queryClient.invalidateQueries({ queryKey: judgmentKeys.all });
+    queryClient.invalidateQueries({ queryKey: dispositionKeys.all });
+  }, [queryClient]);
 
   // The three cosmologies do not share a mechanic, so this card cannot share a
   // name: CHINESE nets merit against demerit in a standing account, EGYPTIAN
@@ -119,44 +229,6 @@ export default function SoulDetailPage() {
     staleTime: 30_000,
   });
 
-  const loadSoulData = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const [soulRes, ledgerRes, recordsRes, judgmentRes, dispRes, reincRes, evtsRes] =
-        await Promise.all([
-          soulsApi.get(id),
-          soulsApi.karma(id),
-          soulsApi.records(id),
-          judgmentApi.list({ soul: id }),
-          dispositionApi.list({ soul: id }),
-          reincarnationApi.list({ soul: id }),
-          eventsApi.list({ soul: id }),
-        ]);
-      setSoul(soulRes.data);
-      setLedger(ledgerRes.data);
-      // /souls/{id}/records/ answers with a bare array (the @action returns
-      // serializer.data directly), so there was never a `.results` to read and
-      // the fallback was the only branch that ever ran. The four list
-      // endpoints below are paginated, so for those it is the other way round.
-      setRecords(recordsRes.data);
-      setJudgments(judgmentRes.data.results);
-      setDispositions(dispRes.data.results);
-      setReincarnations(reincRes.data.results);
-      setEvents(evtsRes.data.results);
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } }; message?: string };
-      setError(err?.response?.data?.detail || err?.message || t("souls.detail.loading"));
-    } finally {
-      setLoading(false);
-    }
-  }, [id, t]);
-
-  useEffect(() => {
-    if (!id) return;
-    loadSoulData();
-  }, [id, loadSoulData]);
-
   async function handleDie() {
     if (!soul) return;
     setConfirmMessage(t("souls.detail.mark_dead_confirm", { name: soul.name }));
@@ -164,7 +236,11 @@ export default function SoulDetailPage() {
       setActionLoading("die");
       try {
         await soulsApi.die(soul.id, {});
-        await loadSoulData();
+        // 直接调 API 而不是用 `useMarkSoulDead`,是有意的:那个 hook 的 onError
+        // 走 `notify` 报一句固定文案,而这里要显示后端给的 `data.error`。
+        // 它的 onSuccess 做的事就是下面这一行 —— 只是这里连判决/处置一起标脏,
+        // 因为 Soul.die() 会顺手开一份判决(apps/souls/models.py)。
+        refreshSoulViews();
       } catch (e: unknown) {
         const err = e as { response?: { data?: { error?: string } }; message?: string };
         showToast(err?.response?.data?.error || "Failed", "error");
@@ -205,17 +281,15 @@ export default function SoulDetailPage() {
         new_identity: `${soul?.name} (rebirth)`,
         rebirth_form: rebirthForm,
       });
-      await loadSoulData();
+      // 同上:`useReborn` 只 invalidate `["souls"]`,而转生会写出一条新的
+      // 处置执行记录,所以这里用三族全标脏的那一个。
+      refreshSoulViews();
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: string } }; message?: string };
       showToast(err?.response?.data?.error || err?.message || "Failed", "error");
     } finally {
       setActionLoading("");
     }
-  }
-
-  function handleEditSuccess() {
-    loadSoulData();
   }
 
   function handleDeleteConfirm() {
@@ -450,7 +524,7 @@ export default function SoulDetailPage() {
           dispositions={dispositions}
           reincarnations={reincarnations}
           events={events}
-          onChanged={loadSoulData}
+          onChanged={refreshSoulViews}
           onOpenJudgmentQueue={(judgmentId) => router.push(`/judgment/queue?at=${judgmentId}`)}
         />
       </div>
@@ -461,7 +535,17 @@ export default function SoulDetailPage() {
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           soul={soul}
-          onUpdated={handleEditSuccess}
+          // 这里原来是 `handleEditSuccess`,而它只是 `loadSoulData()`。
+          // `useUpdateSoul` 自己就 invalidate 了 `soulKeys.all`,前缀能够到这一页
+          // 的五份 souls 读取,所以那次重取是页面在重复 hook 已经做过的事。
+          // 判决/处置这里**不**标脏也是想清楚的:这张表单写的是 name /
+          // birth_date / origin_location / current_state 四个字段,不产生也不
+          // 修改任何 Judgment 或 Disposition 行。
+          // 这个 prop 现在没有页面侧的活可干了;`SoulEditModal` 的签名要求它,
+          // 而那个文件不在这次改动的范围内。它变成空的这件事由
+          // SoulDetailPage.cacheInvalidation.test.tsx 最后一条守着:那条用真的
+          // 弹窗、真的 useUpdateSoul 走一遍,断言页面自己把新名字换上来。
+          onUpdated={() => {}}
         />
       )}
 
