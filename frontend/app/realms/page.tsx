@@ -7,6 +7,7 @@ import { useI18n } from "@/src/contexts/I18nContext";
 import { CardSkeleton } from "@/components/ui/skeleton";
 import { ChevronDown, Castle, Cloud, Flame, CircleDot, Columns } from "lucide-react";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
@@ -120,6 +121,12 @@ function RealmsPageContent() {
           thing "no realms exist" renders. Measured 2026-08-29: identical page
           text between a 500 and an empty list. */}
       {isError && <QueryError onRetry={() => refetch()} />}
+      {/* The third state — see the note on the error branch above. That round
+          measured a 500 and an empty list rendering identical text and fixed
+          the 500; an empty list still rendered the heading and an empty grid. */}
+      {!isLoading && !isError && realms.length === 0 && (
+        <EmptyState title={t("realms.title")} reason={t("realms.no_realms")} />
+      )}
       <div className="space-y-10">
         {Object.entries(grouped).map(([civ, civRealms]) => {
           const config = CIVILIZATION_CONFIG[civ] || { nameKey: `realms.civilizations.${civ}`, icon: <Castle className="w-6 h-6" /> };

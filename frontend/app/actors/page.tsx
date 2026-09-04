@@ -12,6 +12,7 @@ import { ChevronDown, Scale, User } from "lucide-react";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { EmptyState } from "@/src/components/ui/EmptyState";
 import { badgeVariants } from "@/src/components/ui/Badge";
 import { QueryError } from "@/src/components/ui/PageError";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
@@ -207,6 +208,12 @@ function ActorsPageContent() {
               </div>
             ))}
           </div>
+        ) : actors.length === 0 ? (
+          /* The third state. Error and loading were both handled; a query that
+             SUCCEEDS with zero rows rendered a heading over blank space and
+             said nothing at all. "Nothing is here" is a fact about the data
+             and deserves a sentence, the same as the other two. */
+          <EmptyState title={t("actors.section.actors")} reason={t("actors.no_actors")} />
         ) : (
           <div className="space-y-10">
             {groups.map(({ civ, principals, bench }) => {

@@ -1051,7 +1051,8 @@
       "DY_07_JIAN": "Shemsu Her",
       "DY_08_HAN": "Ap Res - Khenmu",
       "DY_09_YANG": "Hotep Ahkher"
-    }
+    },
+    "no_realms": "Ma Rekhyu Set"
   },
   "organization": {
     "title": "Shemsu",
@@ -1064,7 +1065,8 @@
       "GREEK": "Duat Haunebut"
     },
     "root": "Tepy",
-    "organizations_count": "{{count}} Shemsu Wu"
+    "organizations_count": "{{count}} Shemsu Wu",
+    "no_organizations": "Ma Rekhyu Per"
   },
   "actors": {
     "title": "Netjeru",
@@ -1091,7 +1093,8 @@
       "count": "{{count}} Hemset",
       "seat": "Hemset {{index}}",
       "toggle": "Wen how Khetem Djadjat en Maat"
-    }
+    },
+    "no_actors": "Ma Rekhyu Sesheta"
   },
   "dispatch": {
     "title": "Iri Pert Abuf",

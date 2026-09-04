@@ -1051,7 +1051,8 @@
       "DY_07_JIAN": "剑树狱",
       "DY_08_HAN": "寒冰狱",
       "DY_09_YANG": "烊铜狱"
-    }
+    },
+    "no_realms": "还没有登记任何殿域。"
   },
   "organization": {
     "title": "组织架构",
@@ -1064,7 +1065,8 @@
       "GREEK": "希腊冥界"
     },
     "root": "根",
-    "organizations_count": "{{count}} 个组织"
+    "organizations_count": "{{count}} 个组织",
+    "no_organizations": "还没有登记任何机构。"
   },
   "actors": {
     "title": "角色",
@@ -1091,7 +1093,8 @@
       "count": "{{count}} 席",
       "seat": "第 {{index}} 席",
       "toggle": "展开或收起四十二判官陪审席"
-    }
+    },
+    "no_actors": "还没有登记任何执事。"
   },
   "dispatch": {
     "title": "调度管理",

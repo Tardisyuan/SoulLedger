@@ -1051,7 +1051,8 @@
       "DY_07_JIAN": "Sword Tree Hell",
       "DY_08_HAN": "Ice Prison Hell",
       "DY_09_YANG": "Molten Copper Hell"
-    }
+    },
+    "no_realms": "No realms are recorded yet."
   },
   "organization": {
     "title": "Organizations",
@@ -1064,7 +1065,8 @@
       "GREEK": "Greek Underworld"
     },
     "root": "Root",
-    "organizations_count": "{{count}} organizations"
+    "organizations_count": "{{count}} organizations",
+    "no_organizations": "No organizations are recorded yet."
   },
   "actors": {
     "title": "Actors",
@@ -1091,7 +1093,8 @@
       "count": "{{count}} seats",
       "seat": "Seat {{index}}",
       "toggle": "Show or hide the bench of forty-two"
-    }
+    },
+    "no_actors": "No actors are recorded yet."
   },
   "dispatch": {
     "title": "Dispatch Management",
