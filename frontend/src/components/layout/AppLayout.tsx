@@ -9,7 +9,6 @@ import { notificationsApi, type Notification, type PaginatedResponse } from "@so
 import { notificationKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useTenant } from "@/src/contexts/TenantContext";
-import { useTheme } from "@/src/contexts/ThemeContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { authApi } from "@soulledger/core/api";
 import { SettingsDrawer, useAccentColor } from "@/src/components/settings/SettingsDrawer";
@@ -20,6 +19,7 @@ import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
 import { Breadcrumb } from "@/src/components/layout/Breadcrumb";
 import { SidebarMenuItem } from "@/src/components/layout/SidebarMenuItem";
 import { LogoutConfirmDialog } from "@/src/components/layout/LogoutConfirmDialog";
+import { ThemeToggle } from "@/src/components/layout/ThemeToggle";
 
 const NAV_MODE_KEY = "soulledger_nav_mode";
 
@@ -30,7 +30,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const { user, tenantCode, logout } = useTenant();
-  const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const pathname = usePathname();
@@ -271,9 +270,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Top header */}
         <header className="sticky top-0 z-40 h-16 bg-[hsl(var(--color-canvas))]/80 backdrop-blur-xs border-b border-[hsl(var(--color-hairline))] flex items-center px-4 md:px-6 gap-3 md:gap-4">
           {/* Mobile hamburger */}
+          {/* `--color-accent-ink`, not `--color-accent`, and that goes for
+              every hover in this masthead. In light mode the two are
+              `32 92% 31%` and `38 92% 50%`; the bare accent measures 2.13:1 on
+              canvas, so hovering an ink-subtle glyph (4.53:1) in it makes the
+              affordance LESS visible than its resting state, under both the
+              4.5:1 text floor and the 3:1 non-text floor. The token's own note
+              in globals.css states the rule, `app/welcome/page.tsx:134-138`
+              applied it to stat icons, and `Badge.tsx:70-74` to badge text. */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))]"
+            className="md:hidden p-2 text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent-ink))]"
             aria-label={mobileMenuOpen ? t("nav.collapse_menu") : t("nav.expand_menu")}
             aria-expanded={mobileMenuOpen}
           >
@@ -328,7 +335,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                  matters. */
               <Popover.Root>
                 <Popover.Trigger
-                  className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1"
+                  className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent-ink))] transition-colors p-1"
                   aria-label={
                     notifications.length > 0
                       ? `${t("notifications.title")} (${notifications.length})`
@@ -390,24 +397,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
             <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
 
-            {/* Theme toggle */}
-            <button
-              onClick={toggleTheme}
-              title={theme === "dark" ? t("nav.theme_light") : t("nav.theme_dark")}
-              aria-label={theme === "dark" ? t("nav.theme_light") : t("nav.theme_dark")}
-              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1"
-            >
-              {theme === "dark" ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="4" />
-                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                </svg>
-              )}
-            </button>
+            {/* Theme toggle. Shared with the public landing page's masthead
+                (`app/page.tsx`), which is not wrapped by this layout —
+                `AppLayoutWrapper`'s PUBLIC_PATHS hands `/` its children
+                directly — and so draws its own header. See ThemeToggle.tsx for
+                the three ways the two copies had already diverged. */}
+            <ThemeToggle />
 
             <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
 
@@ -416,7 +411,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setSettingsOpen(true)}
               title={t("nav.settings")}
               aria-label={t("nav.settings")}
-              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent))] transition-colors p-1"
+              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent-ink))] transition-colors p-1"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3" />

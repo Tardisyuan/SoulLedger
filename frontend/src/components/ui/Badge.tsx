@@ -69,7 +69,7 @@ export const BADGE_TONE_CLASSES = {
    *
    * Note the foreground is `--color-accent-ink`, NOT `--color-accent`. They are
    * the same value in dark mode and deliberately different in light
-   * (`32 92% 34%` vs `38 92% 50%`) precisely because accent-on-surface text
+   * (`32 92% 31%` vs `38 92% 50%`) precisely because accent-on-surface text
    * fails AA in light mode at the accent's own lightness. A badge is text.
    */
   accent:

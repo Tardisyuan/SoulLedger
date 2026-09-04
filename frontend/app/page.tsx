@@ -5,7 +5,7 @@ import { CIVILIZATION_OPTIONS, getCivilizationFromTenantCode } from "@soulledger
 import { useI18n } from "@/src/contexts/I18nContext";
 import { ExternalLink } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { useTheme } from "@/src/contexts/ThemeContext";
+import { ThemeToggle } from "@/src/components/layout/ThemeToggle";
 
 /**
  * 落地页。**这一页不套 PageShell,而且它的 `min-h-screen` 是合法的。**
@@ -41,7 +41,6 @@ export default function HomePage() {
   const viewerCivilization = user?.tenant?.code
     ? getCivilizationFromTenantCode(user.tenant.code)
     : null;
-  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="min-h-screen bg-[hsl(var(--color-canvas))]">
@@ -59,24 +58,12 @@ export default function HomePage() {
 
           <Divider />
 
-          {/* Theme toggle */}
-          <button
-            type="button"
-            onClick={toggleTheme}
-            title={theme === "dark" ? t("nav.theme_light") : t("nav.theme_dark")}
-            className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent-ink))] transition-colors p-1"
-          >
-            {theme === "dark" ? (
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="4" />
-                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-              </svg>
-            )}
-          </button>
+          {/* Theme toggle. The same control AppLayout's masthead draws — this
+              page is public (`AppLayoutWrapper`'s PUBLIC_PATHS) so it never
+              passes through that layout and needs its own header. It carried a
+              second copy until the two were found to disagree three ways; the
+              reasoning is in ThemeToggle.tsx. */}
+          <ThemeToggle />
 
           <Divider />
 
