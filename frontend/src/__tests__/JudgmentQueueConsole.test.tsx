@@ -160,6 +160,26 @@ describe("JudgmentQueueConsole", () => {
     expect(screen.getByRole("status")).toHaveTextContent("judgment.queue.pending_verdict");
   });
 
+  it("自动重复不算第二次按键 —— 长按 `w` 不会把复选框来回翻", async () => {
+    // 长按时浏览器每 ~30ms 发一次 `keydown`,`repeat: true`。这里挑 `w` 而不是
+    // 数字键,因为它测的正是 hook 那道 judgmentId 守卫**够不到**的那一半:
+    // 一个纯 UI 的开关,重复一次就翻一次,翻成一个没人选过的值。
+    renderConsole();
+    await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());
+    const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "w" });                 // 真的按下
+      fireEvent.keyDown(window, { key: "w", repeat: true });   // 键还按着
+      fireEvent.keyDown(window, { key: "w", repeat: true });
+      fireEvent.keyDown(window, { key: "w", repeat: true });
+    });
+
+    // 按了一次,翻了一次。缺陷版本里翻四次,落回 false。
+    expect(checkbox.checked).toBe(true);
+  });
+
   it("offers undo while the verdict is held, and undo brings the case back", async () => {
     renderConsole();
     await waitFor(() => expect(screen.getByText("第一位待判者")).toBeInTheDocument());

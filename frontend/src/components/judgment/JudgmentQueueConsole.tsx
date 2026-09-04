@@ -101,6 +101,20 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+      // AUTO-REPEAT IS NOT A SECOND DECISION. A held key fires `keydown` every
+      // ~30ms after the initial delay, and every one of the shortcuts below is
+      // a discrete command — there is no scroll or nudge here that repeating
+      // would serve. `1` held down for half a second was a dozen calls to
+      // `rule`, and `w` held down toggled the workflow checkbox to a value
+      // nobody chose.
+      //
+      // `useJudgmentQueue.submitVerdict` also refuses a second verdict for the
+      // case it is already holding, and that guard is the one that matters —
+      // it covers a genuine double press and a double-click too, which look
+      // identical from here. This line is the cheaper half: it stops the burst
+      // at the source rather than filtering it downstream, and it is the only
+      // one of the two that helps `w`, `s` and `?`.
+      if (event.repeat) return;
 
       if (event.key === "Escape") {
         if (isTextEntry(event.target)) {

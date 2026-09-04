@@ -548,6 +548,73 @@ describe("useJudgmentQueue", () => {
  * judicial verdict, replayable by any later process that finds it. Every test
  * here is about one of the two.
  */
+/**
+ * 一案一裁。
+ *
+ * 屏幕上的卡片要等 refetch 落地才换,所以「快按两下」的每一种形态 —— 长按
+ * 自动重复、双击、因为下一张还没来所以又按一次 —— 到达 `submitVerdict` 时
+ * 拿到的都是**同一个** `judgment.id`。
+ */
+describe("同一案不会被裁两次", () => {
+  it("对同一张卡片再裁一次:不提前提交第一条,也不排第二条", async () => {
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment?.id).toBe(JUDGMENT_A.id));
+
+    // 两次都在一个 act 里,中间不让 React 重渲染 —— 这正是长按自动重复的样子。
+    // 分成两个 act 会让 cursor 前进到 B,于是测到的是「裁了两个不同的案子」,
+    // 那是另一回事,而且是对的。
+    act(() => {
+      result.current.submitVerdict({ verdict: "PASSED" });
+      result.current.submitVerdict({ verdict: "FAILED" });
+    });
+
+    // 第一条还扣着,撤销窗口一秒没少。缺陷版本里第二次调用会走到 `flush()`,
+    // 把第一条**立刻**发出去,撤销条无声消失。
+    expect(mockConclude).not.toHaveBeenCalled();
+    expect(result.current.pending).toMatchObject({
+      judgmentId: JUDGMENT_A.id,
+      verdict: "PASSED",
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(UNDO_WINDOW_MS + 100);
+    });
+
+    // 窗口走完只发一次,而且发的是**第一次**按下的那个裁决。
+    expect(mockConclude).toHaveBeenCalledTimes(1);
+    expect(mockConclude).toHaveBeenCalledWith(
+      JUDGMENT_A.id,
+      expect.objectContaining({ verdict: "PASSED" })
+    );
+    // 缺席断言:第二次按下的 FAILED 一次都不许出现。缺陷版本里它会作为第二条
+    // 排给同一个 judgmentId,八秒后收到 400「已结案」,再被报成 commit_error
+    // ——「未提交,该条已放回队列」—— 而它提交了,案子也没回来。
+    expect(mockConclude).not.toHaveBeenCalledWith(
+      JUDGMENT_A.id,
+      expect.objectContaining({ verdict: "FAILED" })
+    );
+  });
+
+  it("换了案子照常裁 —— 守卫看的是 judgmentId,不是「刚裁过」", async () => {
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment?.id).toBe(JUDGMENT_A.id));
+
+    act(() => result.current.submitVerdict({ verdict: "PASSED" }));
+    await waitFor(() => expect(result.current.cursor.judgment?.id).toBe(JUDGMENT_B.id));
+    act(() => result.current.submitVerdict({ verdict: "FAILED" }));
+
+    // 第二条裁决把第一条冲出去 —— 表头说的「撤销条永远不是栈」。
+    expect(mockConclude).toHaveBeenCalledWith(
+      JUDGMENT_A.id,
+      expect.objectContaining({ verdict: "PASSED" })
+    );
+    expect(result.current.pending).toMatchObject({
+      judgmentId: JUDGMENT_B.id,
+      verdict: "FAILED",
+    });
+  });
+});
+
 describe("扣住的裁决落盘", () => {
   it("给出裁决时就写盘 —— 不等挂起", async () => {
     const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
