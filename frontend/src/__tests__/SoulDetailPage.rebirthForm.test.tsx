@@ -10,6 +10,7 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import SoulDetailPage from "@/app/souls/[id]/page";
+import { makeTranslateWithFallback } from "@/src/contexts/I18nContext";
 
 const SOUL_ID = "soul-1";
 const DISPOSITION_ID = "disp-1";
@@ -32,8 +33,20 @@ jest.mock("@/src/contexts/ToastContext", () => ({
 // stable `t` is not.)
 const mockT = (key: string) => key;
 const mockFormatDate = (v: unknown) => String(v);
+// `tf` is `t` plus a code-level fallback, and it is the REAL helper here
+// (`requireActual`, whose spread also keeps every other export of the module
+// alive) applied to the key-echoing `mockT` above — not a second copy of its
+// logic. A double that re-derives the thing under it is how a broken fallback
+// stays green. It moved off this page onto the i18n context; when it was a
+// page-local `useCallback` these mocks did not have to supply it.
+const mockI18n = {
+  t: mockT,
+  tf: makeTranslateWithFallback(mockT),
+  formatDate: mockFormatDate,
+};
 jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: mockT, formatDate: mockFormatDate }),
+  ...jest.requireActual("@/src/contexts/I18nContext"),
+  useI18n: () => mockI18n,
 }));
 
 // `requireActual` first, then override only the two mutations. The factory used

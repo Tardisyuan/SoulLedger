@@ -28,6 +28,8 @@
  */
 import { fireEvent, render, screen } from "@testing-library/react";
 
+import { makeTranslateWithFallback } from "@/src/contexts/I18nContext";
+
 import { DateProblemsPanel } from "@/src/components/souls/DateProblemsPanel";
 import { SoulActionsCard } from "@/src/components/souls/detail/SoulActionsCard";
 import { SoulHeaderActions } from "@/src/components/souls/detail/SoulHeaderActions";
@@ -51,15 +53,30 @@ jest.mock("@/src/contexts/TenantContext", () => ({
   }),
 }));
 
+// `t` echoes the key, which is exactly what the real `t` does for a key no
+// bundle carries — so `tf` takes its fallback branch and the 「更多操作」 gate
+// below finds the literal written in SoulHeaderActions.
+//
+// `tf` is the REAL helper applied to that `t` (`requireActual`, so the spread
+// also keeps every other export of the module alive), not a second
+// implementation of it. A double that re-derives the thing under test is how a
+// broken fallback stays green. One frozen object, not a fresh one per call.
+const mockT = (key: string) => key;
+const mockI18n = {
+  t: mockT,
+  tf: makeTranslateWithFallback(mockT),
+  locale: "zh-Hans",
+  hydrated: true,
+};
 jest.mock("@/src/contexts/I18nContext", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "zh-Hans", hydrated: true }),
+  ...jest.requireActual("@/src/contexts/I18nContext"),
+  useI18n: () => mockI18n,
 }));
 
 jest.mock("@/src/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: jest.fn() }),
 }));
 
-const tf = (_key: string, fallback: string) => fallback;
 const noop = () => {};
 
 function soul(overrides: Partial<Soul> = {}): Soul {
@@ -99,7 +116,6 @@ const GATES: Gate[] = [
           onDelete={noop}
           isOverflowMenuOpen={false}
           setIsOverflowMenuOpen={noop}
-          tf={tf}
         />
       ),
     find: () => screen.queryByText("souls.detail.edit"),
@@ -114,7 +130,6 @@ const GATES: Gate[] = [
           onDelete={noop}
           isOverflowMenuOpen={false}
           setIsOverflowMenuOpen={noop}
-          tf={tf}
         />
       ),
     find: () => screen.queryByRole("button", { name: "更多操作" }),
@@ -135,7 +150,6 @@ const GATES: Gate[] = [
           onDie={noop}
           onStartJudgment={noop}
           onReincarnate={noop}
-          tf={tf}
         />
       ),
     find: () => screen.queryByText("souls.detail.mark_dead"),
@@ -156,7 +170,6 @@ const GATES: Gate[] = [
           onDie={noop}
           onStartJudgment={noop}
           onReincarnate={noop}
-          tf={tf}
         />
       ),
     find: () => screen.queryByText("souls.detail.start_judgment"),

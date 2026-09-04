@@ -256,6 +256,77 @@ describe('I18nContext', () => {
     });
   });
 
+  // ── tf() — translate, or the literal written at the call site ────────────
+  //
+  // `tf` lived on app/souls/[id]/page.tsx and was drilled into four children as
+  // a prop. It is on the context now, and these are the checks that make the
+  // move safe to trust.
+  //
+  // WHAT MAKES IT DIFFERENT FROM THE 26 DEAD `t(k) || "fallback"` CALL SITES
+  // deleted in b491f8c: those could never reach their right-hand side, because
+  // `t` answers a miss with the key — a truthy string. `tf` compares against
+  // the key, so it can see the miss. The first case below is the one that goes
+  // red if `t` ever stops echoing (returning "" or null instead), which would
+  // silently invert every `tf` call in the app.
+  describe('tf() — code-level fallback for a key no bundle has', () => {
+    it('falls back on a missing key, and the fallback is not the key', () => {
+      const { result } = renderI18n();
+      // Stated together on purpose: the second line only works BECAUSE of the
+      // first. `tf` has no way into `t`'s lookup; the echo is its whole signal.
+      expect(result.current.t('souls.detail.more_actions')).toBe('souls.detail.more_actions');
+      expect(result.current.tf('souls.detail.more_actions', '更多操作')).toBe('更多操作');
+    });
+
+    it('prefers the bundle when the key exists — the fallback is unreachable', () => {
+      const { result } = renderI18n();
+      // Absence as well as presence. A `tf` that always returned its fallback
+      // would pass the case above and would hide every translation in the app.
+      expect(result.current.tf('nav.title', 'NEVER-SHOWN')).toBe('灵魂账本');
+      expect(result.current.tf('nav.title', 'NEVER-SHOWN')).not.toBe('NEVER-SHOWN');
+    });
+
+    it('interpolates {{name}} into the fallback', () => {
+      const { result } = renderI18n();
+      expect(result.current.tf('no.such.key', 'Life {{n}}', { n: '3' })).toBe('Life 3');
+    });
+
+    it('interpolates through the bundle when the key exists', () => {
+      const { result } = renderI18n();
+      expect(result.current.tf('nav.greeting', 'Hi {{username}}', { username: '阎罗王' }))
+        .toBe('你好, 阎罗王!');
+    });
+
+    it('leaves a fallback placeholder alone when no params are given', () => {
+      const { result } = renderI18n();
+      expect(result.current.tf('no.such.key', 'Life {{n}}')).toBe('Life {{n}}');
+    });
+
+    it('follows a locale switch', async () => {
+      // THE DEPENDENCY-ARRAY CHECK. `tf` is memoised on `t`, which is memoised
+      // on `[locale, loadedBundles]`. Get that wrong — `useMemo(…, [])` — and
+      // `tf` keeps answering out of the bundle map as it was at mount, so a
+      // reader who switches language keeps seeing the old copy for every string
+      // that goes through `tf`. Nothing in contextValueIdentity.test.tsx sees
+      // that: a stale `tf` is a perfectly stable one.
+      const { result } = renderI18n();
+      expect(result.current.tf('nav.title', 'NEVER-SHOWN')).toBe('灵魂账本');
+
+      act(() => {
+        result.current.setLocale('en');
+      });
+      await waitFor(() => expect(result.current.tf('nav.title', 'NEVER-SHOWN')).toBe('Soul Ledger'));
+    });
+
+    it('falls back with no provider at all, because the default t echoes too', () => {
+      // The context default is not decoration here: `RebirthFormSelect` is
+      // rendered outside a provider by its own suite, and half its copy has no
+      // key in any bundle.
+      const { result } = renderHook(() => useI18n());
+      expect(result.current.t('anything.at.all')).toBe('anything.at.all');
+      expect(result.current.tf('anything.at.all', '轮回形态')).toBe('轮回形态');
+    });
+  });
+
   // ── useI18n hook ─────────────────────────────────────────────────────────
   describe('useI18n() hook', () => {
     it('should expose locale, setLocale, t, and hydrated', () => {
@@ -263,8 +334,10 @@ describe('I18nContext', () => {
       expect(result.current).toHaveProperty('locale');
       expect(result.current).toHaveProperty('setLocale');
       expect(result.current).toHaveProperty('t');
+      expect(result.current).toHaveProperty('tf');
       expect(result.current).toHaveProperty('hydrated');
       expect(typeof result.current.t).toBe('function');
+      expect(typeof result.current.tf).toBe('function');
       expect(typeof result.current.setLocale).toBe('function');
     });
   });

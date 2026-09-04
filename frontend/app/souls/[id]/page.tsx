@@ -68,23 +68,13 @@ export default function SoulDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { t, formatDate, locale } = useI18n();
+  // `tf` — translate with a code-level fallback for copy that has no key in
+  // messages/*.json yet. It was declared here and drilled into four children as
+  // a prop, which bought nothing: every one of them already called `useI18n()`
+  // for `t`. It now lives on the context beside `t`, where "what happens when a
+  // key is missing" is answered once for the app instead of once per page.
+  const { t, tf, formatDate, locale } = useI18n();
   const { showToast } = useToast();
-  // messages/*.json is out of scope for this change (see task boundary) — new
-  // copy ships as a code-level fallback until an i18n pass adds the real keys.
-  // t() returns the key itself (a truthy string) when a key is missing, so
-  // `t(key) || fallback` never falls through; compare against the key instead.
-  const tf = useCallback(
-    (key: string, fallback: string, params?: Record<string, string>) => {
-      if (t(key) === key) {
-        return params
-          ? Object.entries(params).reduce((s, [k, v]) => s.replaceAll(`{{${k}}}`, v), fallback)
-          : fallback;
-      }
-      return t(key, params);
-    },
-    [t]
-  );
   const [actionLoading, setActionLoading] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -436,7 +426,6 @@ export default function SoulDetailPage() {
       onDelete={handleDeleteConfirm}
       isOverflowMenuOpen={isOverflowMenuOpen}
       setIsOverflowMenuOpen={setIsOverflowMenuOpen}
-      tf={tf}
     />
   ) : null;
 
@@ -457,7 +446,6 @@ export default function SoulDetailPage() {
             loading={loading}
             birthDisplay={birthDisplay}
             deathDisplay={deathDisplay}
-            tf={tf}
           />
 
           {/* 业力总账 — Stage 3 doc's left-column ledger card: the existing
@@ -510,7 +498,6 @@ export default function SoulDetailPage() {
             onDie={handleDie}
             onStartJudgment={handleStartJudgment}
             onReincarnate={handleReincarnate}
-            tf={tf}
           />
         </div>
 

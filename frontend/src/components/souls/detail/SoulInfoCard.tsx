@@ -4,7 +4,6 @@ import type { Soul } from "@soulledger/core/api";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { DomainEnum, DomainText } from "@/src/components/ui/DomainValue";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { TFunc } from "./tf";
 
 /** Left column's 灵魂信息 card: civilization, birth, death, origin. */
 export function SoulInfoCard({
@@ -12,15 +11,15 @@ export function SoulInfoCard({
   loading,
   birthDisplay,
   deathDisplay,
-  tf,
 }: {
   soul: Soul | null;
   loading: boolean;
   birthDisplay: string | null;
   deathDisplay: string | null;
-  tf: TFunc;
 }) {
-  const { t } = useI18n();
+  // `tf` used to arrive as a prop from app/souls/[id]/page.tsx, alongside the
+  // `t` this component was already pulling off the context itself.
+  const { t, tf } = useI18n();
 
   return (
     <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">

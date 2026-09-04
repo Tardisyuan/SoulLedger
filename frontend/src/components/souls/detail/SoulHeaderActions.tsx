@@ -3,7 +3,6 @@
 import { useI18n } from "@/src/contexts/I18nContext";
 import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { Button } from "@/src/components/ui/Button";
-import type { TFunc } from "./tf";
 
 /** 编辑 + the overflow menu that keeps 删除 out of arm's reach. */
 export function SoulHeaderActions({
@@ -11,7 +10,6 @@ export function SoulHeaderActions({
   onDelete,
   isOverflowMenuOpen,
   setIsOverflowMenuOpen,
-  tf,
 }: {
   onEdit: () => void;
   onDelete: () => void;
@@ -20,9 +18,10 @@ export function SoulHeaderActions({
      its state; hoisting the state in here would have quietly closed it. */
   isOverflowMenuOpen: boolean;
   setIsOverflowMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  tf: TFunc;
 }) {
-  const { t } = useI18n();
+  // `souls.detail.more_actions` is in no bundle, so this is one of the call
+  // sites where `tf` really does render its literal rather than a translation.
+  const { t, tf } = useI18n();
 
   return (
     <div className="flex items-center gap-3">

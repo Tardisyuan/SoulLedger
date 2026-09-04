@@ -189,10 +189,62 @@ function formatDateTimeWith(locale: Locale, value: DateInput, options?: Intl.Dat
   );
 }
 
+type Translate = (key: string, params?: Record<string, string>) => string;
+
+/** `t`, plus the words to show when no bundle carries the key yet. */
+export type TranslateWithFallback = (
+  key: string,
+  fallback: string,
+  params?: Record<string, string>
+) => string;
+
+/**
+ * `tf` — translate, or show this literal if the key does not exist anywhere.
+ *
+ * WHY THIS IS NOT THE `t(key) || "fallback"` SHAPE THAT WAS JUST DELETED.
+ * `t()` returns **the key itself** on a miss (`if (value === null) return key`,
+ * below). A missing key therefore yields a truthy string, so `||` never reaches
+ * its right side — that is what made 26 call sites dead code and why
+ * `notifyKeysExistInTheBundles.test.ts` replaced them with a build-time check.
+ * Comparing the answer against the key is the only way to see the miss from
+ * outside `t`, and that is what this does.
+ *
+ * IT IS LIVE, and that is the whole reason it moved rather than being deleted
+ * alongside those 26. Measured 2026-09-04 against
+ * `packages/core/messages/zh-Hans.json` (the resident default, so a key absent
+ * there is absent for every locale): of the 45 distinct literal keys passed to
+ * `tf` across this tree, **41 are in no bundle at all** and 4 are present. So
+ * for all but four call sites the fallback branch is what renders on screen
+ * today — deleting it would not have deleted dead code, it would have put
+ * `souls.detail.timeline.stage_judging` in front of an operator.
+ *
+ * WHY THE FALLBACK ONLY UNDERSTANDS `{{name}}`. `t` accepts `{{name}}` and
+ * `{name}`; the fallbacks are written in source next to the call, all in the
+ * double-brace form. Kept narrow rather than widened on the way in, so the
+ * behaviour is byte-identical to the three copies this replaces.
+ *
+ * The reverse of the missing-key case matters too, and it is what a "does the
+ * fallback fire" test alone would not pin: when the key IS present the fallback
+ * must not be reachable, or a translated bundle would still show the literal.
+ */
+export function makeTranslateWithFallback(t: Translate): TranslateWithFallback {
+  return (key, fallback, params) => {
+    if (t(key) !== key) return t(key, params);
+    return params
+      ? Object.entries(params).reduce((s, [k, v]) => s.replaceAll(`{{${k}}}`, v), fallback)
+      : fallback;
+  };
+}
+
 interface I18nContextType {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: string, params?: Record<string, string>) => string;
+  t: Translate;
+  /** `t` with a code-level fallback — see `makeTranslateWithFallback` above.
+   *  It lives here rather than on a page because every caller needs `t` as
+   *  well, and because "what happens when a key is missing" should have one
+   *  answer per app, not one per page. */
+  tf: TranslateWithFallback;
   hydrated: boolean;
   /** Locale-aware date formatting (maps `egy` -> `en` for Intl, see INTL_LOCALE above). */
   formatDate: (value: DateInput, options?: Intl.DateTimeFormatOptions) => string;
@@ -221,10 +273,17 @@ interface I18nContextType {
  * the pattern.
  */
 
+/** The provider-less `t`: every key is a miss, so it echoes — the same answer
+ *  the real `t` gives for a key no bundle has. Named so the default `tf` below
+ *  is built from the very function it has to detect, rather than from a second
+ *  literal that merely looks the same. */
+const echoKey: Translate = (key) => key;
+
 const I18nContext = createContext<I18nContextType>({
   locale: DEFAULT_LOCALE,
   setLocale: () => {},
-  t: (key) => key,
+  t: echoKey,
+  tf: makeTranslateWithFallback(echoKey),
   hydrated: false,
   formatDate: (value, options) => formatDateWith(DEFAULT_LOCALE, value, options),
   formatDateTime: (value, options) => formatDateTimeWith(DEFAULT_LOCALE, value, options),
@@ -326,6 +385,15 @@ export function I18nProvider({
     [locale, loadedBundles]
   );
 
+  // `[t]`, not `[locale, loadedBundles]`. They are the same set — `t` is
+  // memoised on exactly those two — but spelling them again would make this a
+  // second declaration of `t`'s inputs that can drift from the first, and
+  // exhaustive-deps would flag the missing `t` anyway. A stale `tf` is not a
+  // performance bug: it answers from the bundle map as it was, so switching
+  // language would leave every fallback-bearing string in the old locale.
+  // `I18nContext.test.tsx` walks `tf` across a locale switch for that reason.
+  const tf = useMemo(() => makeTranslateWithFallback(t), [t]);
+
   // Hand `t` to the one reader that cannot use a hook: the platform adapter's
   // `notify`, which is given a message key by code in `@soulledger/core` and
   // has to turn it into words outside any component. See
@@ -352,8 +420,8 @@ export function I18nProvider({
   // functions that churn underneath it. It is the object literal itself that
   // was new on every render.
   const value = useMemo(
-    () => ({ locale, setLocale, t, hydrated, formatDate, formatDateTime }),
-    [locale, setLocale, t, hydrated, formatDate, formatDateTime]
+    () => ({ locale, setLocale, t, tf, hydrated, formatDate, formatDateTime }),
+    [locale, setLocale, t, tf, hydrated, formatDate, formatDateTime]
   );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
