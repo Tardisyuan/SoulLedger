@@ -65,6 +65,18 @@ const MONTH_NAMES_EN = [
  * holding the decision instead of a `?? MONTH_NAMES_EN` nobody can find.
  */
 const MONTH_NAMES: Record<Locale, readonly string[]> = {
+  // 数字月名(`3月`)而不是汉字月名(`三月`),而这是一个被问过并保留的决定,
+  // 不是没想过。语言包里**根本没有月份名** —— 45 个键里 41 个不在任何包里,
+  // 见 `b3a3e7c` —— 所以这里没有文案决定可依,只能从别处的惯例推。
+  //
+  // 依的是应用自己的惯例:`I18nContext` 的 formatDate 走 `Intl`,而 `Intl` 对
+  // zh-Hans 出的是 `1970年1月1日`。历史日期若写成 `三月十五日`,同一个屏幕上
+  // 就会有两种中文日期风格,而分歧的理由(一个是历史日期、一个是系统时间戳)
+  // 对读者不可见。
+  //
+  // 想改成汉字的话,`config/civilizationSigil.ts` 已经有 `toHanNumeral`,
+  // 改动是这一行加 MONTH_DAY 的 zh-Hans 分支;但那时应当连 formatDate 一起改,
+  // 否则只是把不一致挪了个位置。
   "zh-Hans": ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
   en: MONTH_NAMES_EN,
   egy: MONTH_NAMES_EN,
