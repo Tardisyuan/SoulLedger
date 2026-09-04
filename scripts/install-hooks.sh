@@ -136,8 +136,97 @@ if [ "$TOUCHES_BACKEND" -gt 0 ]; then
     # exclusion list, so it is stated per-machine and visible in the output
     # below rather than hidden in the hook.
     [ -n "${PYTEST_PREPUSH_ARGS:-}" ] && echo "    (with ${PYTEST_PREPUSH_ARGS})"
+
+    # PROBE THE SERVICES THAT WILL ACTUALLY BE USED, THEN SAY WHICH ONES RAN.
+    #
+    # The effective targets are not simply backend/.env: `.prepush.env` is
+    # sourced above and may already override either one. On the machine this
+    # was written for it exports DATABASE_URL=sqlite:///:memory: and leaves
+    # REDIS_URL alone — so the database was already isolated and only the cache
+    # still pointed at the shared box. Probing backend/.env would have reported
+    # a PostgreSQL host that this run never contacts.
+    #
+    # WHY THIS EXISTS. On 2026-09-04 the shared box answered ping and refused
+    # both ports, and pytest reported ONE failure:
+    # `test_a_warm_read_does_not_touch_the_database_per_codename`. That test
+    # warms the permission cache and asserts the second read is cheap; with
+    # Redis unreachable the cache write degrades silently, so the warm read is
+    # a cold read and the assertion cannot hold. Nothing was wrong with the
+    # commit — but the push was refused. A dead box must not read as a red suite.
+    #
+    # Each service falls back on its own. A reachable PostgreSQL is worth
+    # keeping when it is there: CLAUDE.md records two shipped bugs SQLite could
+    # not have caught (a failed statement aborts the transaction on PostgreSQL
+    # and does not on SQLite; varchar(n) length is enforced there and ignored
+    # here). Dropping to SQLite is a real loss, so it is announced rather than
+    # silently substituted.
+    # Reports one line per service: "<name> <ok|down> <detail>".
+    PROBE=$(DB_URL="${DATABASE_URL:-}" RD_URL="${REDIS_URL:-}" "$PY" - <<'PROBE_PY'
+import os, re, socket
+
+def from_env_file(key):
+    try:
+        with open("backend/.env", encoding="utf-8") as f:
+            for line in f:
+                if line.lstrip().startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                if k.strip() == key:
+                    return v.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return ""
+
+def check(name, url):
+    # sqlite / in-memory needs no socket.
+    if url.startswith("sqlite"):
+        print(f"{name} ok in-memory"); return
+    m = re.search(r"@?([\w.-]+):(\d+)", url)
+    if not m:
+        print(f"{name} unknown {url or '(unset)'}"); return
+    host, port = m.group(1), int(m.group(2))
+    s = socket.socket(); s.settimeout(3)
+    try:
+        s.connect((host, port)); print(f"{name} ok {host}:{port}")
+    except OSError:
+        print(f"{name} down {host}:{port}")
+    finally:
+        s.close()
+
+check("db", os.environ.get("DB_URL") or from_env_file("DATABASE_URL"))
+check("redis", os.environ.get("RD_URL") or from_env_file("REDIS_URL"))
+PROBE_PY
+)
+    DB_STATE=$(echo "$PROBE" | awk '$1=="db"{print $2" "$3}')
+    RD_STATE=$(echo "$PROBE" | awk '$1=="redis"{print $2" "$3}')
+    echo "    db: $DB_STATE | redis: $RD_STATE"
+
+    RPORT=""
+    case "$DB_STATE" in
+        ok*) ;;
+        *)  echo "    → database unreachable, using in-memory SQLite"
+            echo "      NOTE: SQLite ignores varchar(n) and does not abort a"
+            echo "            transaction on a failed statement. Two shipped"
+            echo "            bugs needed PostgreSQL to surface. Weaker run."
+            export DATABASE_URL="sqlite:///:memory:" ;;
+    esac
+    case "$RD_STATE" in
+        ok*) ;;
+        *)  echo "    → cache unreachable, starting a throwaway redis-server"
+            command -v redis-server >/dev/null 2>&1 || fail "redis-server not found and the configured cache is unreachable. Refusing rather than running without one: the permission-cache tests degrade silently and report a false red, which is exactly the failure this probe exists to prevent."
+            RPORT=$("$PY" -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); p=s.getsockname()[1]; s.close(); print(p)")
+            redis-server --port "$RPORT" --daemonize yes --save '' --appendonly no >/dev/null 2>&1 \
+                || fail "could not start a throwaway redis-server on port $RPORT"
+            export REDIS_URL="redis://127.0.0.1:$RPORT/0"
+            export CELERY_BROKER_URL="redis://127.0.0.1:$RPORT/1"
+            export CELERY_RESULT_BACKEND="redis://127.0.0.1:$RPORT/2" ;;
+    esac
+
     "$PY" -m pytest -q --no-header ${PYTEST_PREPUSH_ARGS:-} 2>&1 | tail -4
-    [ "${PIPESTATUS[0]}" -eq 0 ] || fail "pytest failed"
+    PYTEST_STATUS="${PIPESTATUS[0]}"
+    # Stop the throwaway before deciding, so a failure does not leak a daemon.
+    [ -n "$RPORT" ] && redis-cli -p "$RPORT" shutdown nosave >/dev/null 2>&1
+    [ "$PYTEST_STATUS" -eq 0 ] || fail "pytest failed"
     cd "$ROOT" || exit 1
 fi
 
