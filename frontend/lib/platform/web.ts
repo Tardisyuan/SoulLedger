@@ -68,12 +68,25 @@ const session: KeyValueStore = {
  * `localStorage` first and falling through to the cookie preserves that exactly
  * — the refresh token is never in `localStorage`, so it always falls through.
  *
- * `set` writes a cookie, and the attributes below are the refresh token's. That
- * is sound because the refresh token is the only key ever written through this
- * port (`tenant_id` is written by TenantContext directly, and the access token
- * is forbidden here — see the guard test). If that ever stops being true, this
- * function has to branch on the key rather than quietly give some other value a
- * seven-day lifetime.
+ * `set` BRANCHES ON THE KEY, and the note that used to be here said why it
+ * would have to: "the attributes below are the refresh token's… if that ever
+ * stops being true, this function has to branch on the key rather than quietly
+ * give some other value a seven-day lifetime." That stopped being true when
+ * `useJudgmentQueue` began persisting the verdict it is holding, so the branch
+ * is written.
+ *
+ * The refresh token keeps the cookie, for the middleware reason above and for
+ * no other. Everything else goes to `localStorage`, which is where a persistent
+ * non-credential already belonged: `tenant_id` has always been written there by
+ * `TenantContext` directly, and `get` above has always read `localStorage`
+ * first — so this makes `set` agree with the `get` it was already paired with.
+ *
+ * The alternative, leaving it as one cookie write, is worse in three ways that
+ * are all specific rather than stylistic: a held verdict (a soul's name, a
+ * verdict, the operator's note) would be sent to the Next server on every
+ * request to this origin, for no reader; it would carry `max-age=604800` — a
+ * seven-day lifetime on a record whose design lifetime is eight seconds; and
+ * cookies are capped near 4KB per origin, shared with the refresh token.
  */
 const persistent: KeyValueStore = {
   get(key) {
@@ -84,6 +97,14 @@ const persistent: KeyValueStore = {
     return readCookie(key);
   },
   set(key, value) {
+    // Not the refresh token: `localStorage`, and nothing leaves the browser.
+    // `get` reads there first, so this round-trips through the same path the
+    // tenant id already uses.
+    if (key !== REFRESH_TOKEN_KEY) {
+      if (typeof localStorage === "undefined") return;
+      localStorage.setItem(key, value);
+      return;
+    }
     if (typeof document === "undefined") return;
     // `Secure` wherever `Secure` can work — not unconditional. Secure cookies
     // are dropped on plain http, which is what `npm run dev` and the Playwright
@@ -155,17 +176,26 @@ export const webPlatform: PlatformAdapter = {
     // a request, and it is the reason `useJudgmentQueue` no longer names it:
     // the hook states the rule, this states the browser.
     //
-    // NOT `visibilitychange`, and this is the load-bearing choice. A tab going
-    // hidden is what React Native's `AppState → background` corresponds to, so
-    // adding it here would make the two platforms symmetrical — and would flush
-    // every held verdict the first time the operator switches tabs, inside its
-    // undo window. The port's contract says a handler must tolerate firing many
-    // times; `useJudgmentQueue`'s does not yet (see the note there), and until
-    // it does, the browser's one-shot event is the honest implementation rather
-    // than the symmetrical one.
+    // `"terminal"`, always, because this event is: after it the page is gone
+    // and nothing can be sent. That is the argument `useJudgmentQueue` reads to
+    // decide it may commit a verdict that is still inside its undo window, and
+    // it is why the web path here is byte-for-byte the behaviour it had before
+    // the kind existed.
+    //
+    // STILL NOT `visibilitychange`. The reason has changed and the answer has
+    // not. It used to be that the hook could not tolerate a transient suspend;
+    // it can now, and would merely re-save a record it has already saved. What
+    // is left is that a hidden tab on this platform is not a suspended session:
+    // its timers keep running, the undo window keeps elapsing correctly, and
+    // the verdict is already persisted at the moment it is given rather than at
+    // the moment of a suspend. So the event would have nothing to do here, and
+    // adding an event with no consumer is what `onSessionResume` was criticised
+    // for in `c8863fb`. A browser discarding a hidden tab outright is the one
+    // case it would cover, and the persisted record covers that already.
     if (typeof window === "undefined") return () => {};
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
+    const onBeforeUnload = () => handler("terminal");
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
   },
   onSessionResume(handler) {
     // A bfcache restore, and only that.

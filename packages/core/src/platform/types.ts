@@ -15,7 +15,9 @@
  *                same cookie, for the middleware reason above)
  *
  * That split is not incidental. The access token lives in `session`, the
- * refresh token in `secure` and the tenant id in `persistent`, and the whole of
+ * refresh token in `secure`, and the tenant id and the judgment queue's held
+ * verdict in `persistent` (see `PlatformAdapter.persistent` for why a verdict
+ * is not in `secure`), and the whole of
  * the commentary in `../api/client.ts` is about what went wrong the one time
  * the access token was written to the persistent store. Naming the stores after
  * their lifetimes is what lets that rule be stated in this package at all;
@@ -70,6 +72,36 @@ export interface KeyValueStore {
 export type UnauthorizedHandler = () => void;
 
 /**
+ * Which kind of suspend this is — the one thing a handler cannot work out for
+ * itself, and the thing that decides what it is allowed to do.
+ *
+ *   "terminal"   the client is ending. This is the last moment anything can be
+ *                sent. Web's `beforeunload` is this, and is only this.
+ *   "transient"  the client is being put in the background and expects to come
+ *                back. React Native's `AppState` reaching `background` is this:
+ *                it fires **every time the user switches apps**, several times
+ *                a minute, with the app fully alive after each.
+ *
+ * WHY THE HANDLER HAS TO BE TOLD, rather than tolerating both. The two demand
+ * opposite behaviour from the same handler, and the difference is not one the
+ * handler can infer. `useJudgmentQueue` holds a verdict for eight seconds so it
+ * can be taken back. On a terminal suspend it must send it — the alternative is
+ * losing a decision the operator made. On a transient one it must NOT: the undo
+ * window is still open, the undo bar is still on screen, and sending is the
+ * defect this argument exists to fix (recorded, unfixed, in `c8863fb`; the
+ * verdict went out seconds into an eight-second window and undo then silently
+ * did nothing).
+ *
+ * "Persist instead of sending" is not a substitute for the distinction either.
+ * Persisting is what makes a transient suspend survivable, but on a terminal
+ * suspend there is no next launch that is allowed to replay the record — a
+ * verdict restored after its window has passed must be discarded, not sent —
+ * so a client that only persisted would lose every verdict it did not send.
+ * Both halves are needed, and only the host knows which half applies.
+ */
+export type SessionSuspendKind = "terminal" | "transient";
+
+/**
  * Run `handler` when the session is going away; returns an unsubscribe.
  *
  * WHAT THIS IS ACTUALLY FOR, because "suspend" is vague on its own. The
@@ -87,29 +119,39 @@ export type UnauthorizedHandler = () => void;
  * THIS MAY FIRE MANY TIMES. Write handlers accordingly.
  * ─────────────────────────────────────────────────────────────────────────
  *
- * The web implementation is `beforeunload`, which fires once and terminally,
- * and this contract used to say only "the session is about to go away" — which
- * reads as a promise that it fires once. It is not one, and cannot be: React
- * Native's `AppState` reaching `background` fires **every time the user
- * switches apps**, several times a minute, with the app fully alive after each.
+ * Still true, and still the first thing to know. React Native's `AppState`
+ * reaching `background` fires on every app switch. Even the web's
+ * `beforeunload` is not guaranteed once: a navigation another listener cancels
+ * fires it again on the next attempt. So a handler must be **idempotent** — a
+ * second call while nothing is held is a no-op.
  *
- * The consequence is specific and it is not hypothetical. A handler written to
- * the one-shot reading ("we are dying, flush everything") flushes the held
- * verdict on the first app switch — inside its undo window, with the undo bar
- * still on screen. Nothing errors; the operator presses undo and it does
- * nothing, because there is no longer anything held to take back. The undo
- * feature stops working and reports nothing.
+ * WHAT CHANGED, AND WHY THE OLD ADVICE WAS NOT ENOUGH. This contract used to
+ * add "and it must be something you are willing to do on an app switch", which
+ * left the handler with one behaviour for two events and no way to tell them
+ * apart. `useJudgmentQueue`'s honest options were then "commit early on every
+ * app switch" (undo stops working) or "never commit" (a closed tab loses the
+ * verdict); it took the first, and the second is not better. `kind` is what
+ * lets it take neither — see `SessionSuspendKind`.
  *
- * So a handler must be **idempotent** (a second call while nothing is held is a
- * no-op) and it must be **something you are willing to do on an app switch**.
- * "Flush a verdict whose undo window has not expired" is not that. See
- * `onSessionResume` for the other half.
+ * A HOST MUST NOT REPORT A TRANSIENT SUSPEND AS TERMINAL. Getting it wrong in
+ * that direction sends a verdict that is still inside its undo window; getting
+ * it wrong in the other direction loses one. Neither errors, and neither is
+ * visible from inside this package. If a platform genuinely cannot tell — an
+ * event that is sometimes the end and sometimes not — report `"transient"` and
+ * rely on the persisted copy, because a lost verdict leaves the case pending
+ * and back in the queue, while a sent one is judicial history.
+ *
+ * See `onSessionResume` for the other half: a transient suspend that comes back
+ * has to re-check its timers against the wall clock, because the ones it left
+ * running were frozen.
  *
  * The default does nothing and returns a no-op unsubscribe. A host that
  * registers none loses held state on exit — which is the honest behaviour of a
  * platform that has no such event, not a silent failure.
  */
-export type SessionSuspendSubscriber = (handler: () => void) => () => void;
+export type SessionSuspendSubscriber = (
+  handler: (kind: SessionSuspendKind) => void
+) => () => void;
 
 /**
  * Run `handler` when a suspended session comes back; returns an unsubscribe.
@@ -256,7 +298,32 @@ export type Notifier = (
 export interface PlatformAdapter {
   /** Cleared when the session ends. Holds the access token, and nothing else. */
   session: KeyValueStore;
-  /** Survives a restart, holds nothing secret. Holds the tenant id. */
+  /**
+   * Survives a restart, holds nothing secret. Holds the tenant id, and the
+   * judgment queue's held verdict.
+   *
+   * WHY A HELD VERDICT IS HERE AND NOT IN `secure`, since it is plainly more
+   * sensitive than a tenant id — a verdict, a note and a soul's name. Three
+   * reasons, and the first is the one that decides it:
+   *
+   *  1. `secure`'s documented native shape is `expo-secure-store` / Keychain,
+   *     which is **async**, which is why SYNCHRONOUS above obliges a native
+   *     adapter to serve reads from an in-memory mirror and *write through in
+   *     the background*. A record whose entire purpose is to be on disk at the
+   *     instant the process is killed cannot live behind a background write.
+   *  2. Keychain items survive an app being uninstalled and reinstalled. A
+   *     verdict that outlives the install that made it is the replay hazard in
+   *     its worst form; `persistent` (AsyncStorage) goes with the app.
+   *  3. It is not a credential. Nothing can be authenticated with it, which is
+   *     the property `secure` was split out to protect. Widening `secure` to
+   *     "anything sensitive" would make the routing a judgement call again,
+   *     which is exactly what the split removed.
+   *
+   * Its confidentiality is bought with **lifetime** instead: it is written only
+   * while a verdict is held (eight seconds, in the ordinary case), and removed
+   * on commit, on undo, and on being read back — see the header of
+   * `../hooks/useJudgmentQueue.ts`.
+   */
   persistent: KeyValueStore;
   /**
    * Survives a restart and holds a bearer credential. Holds the refresh token.
@@ -269,8 +336,10 @@ export interface PlatformAdapter {
   secure: KeyValueStore;
   /** Called once a 401 could not be recovered from. */
   onUnauthorized: UnauthorizedHandler;
-  /** Subscribe to "the session is going away". **May fire many times** — see
-   *  `SessionSuspendSubscriber` before writing a handler. */
+  /** Subscribe to "the session is going away". **May fire many times**, and
+   *  the handler is told whether this one is `"terminal"` or `"transient"` —
+   *  see `SessionSuspendSubscriber` and `SessionSuspendKind` before writing a
+   *  handler or an adapter. */
   onSessionSuspend: SessionSuspendSubscriber;
   /** Subscribe to "a suspended session came back". See
    *  `SessionResumeSubscriber`. */
