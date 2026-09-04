@@ -24,6 +24,7 @@ import {
 } from "@soulledger/core/hooks/useJudgmentQueue";
 import { judgmentApi } from "@soulledger/core/api";
 import {
+  ACCESS_TOKEN_KEY,
   PENDING_VERDICT_KEY,
   PENDING_VERDICT_LEASE_KEY,
   configurePlatform,
@@ -74,6 +75,12 @@ jest.mock("@soulledger/core/api", () => ({
   judgmentApi: {
     next: jest.fn(),
     conclude: jest.fn().mockResolvedValue({ data: {} }),
+    // `get` is how a session finds out what became of a verdict its
+    // predecessor handed to the platform on the way out — see the
+    // terminal-delivery block in the hook. Default `concluded_at: null`, i.e.
+    // "not concluded", so a test that does not care about that path gets the
+    // ordinary window rules rather than an unexpected branch.
+    get: jest.fn().mockResolvedValue({ data: { concluded_at: null } }),
   },
 }));
 
@@ -90,6 +97,11 @@ jest.mock("@soulledger/core/api", () => ({
 // Rest args, not `(message, kind, durationMs)`: forwarding a third `undefined`
 // would make every `toHaveBeenCalledWith(msg, kind)` assertion below fail on an
 // argument the hook never passed.
+// 类型从端口本身推出来,而不是另写一遍:端口签名变了,这里停止编译,
+// 而不是让 `.mock.calls[0][0]` 悄悄退化成 `any`。
+const mockDeliverOnExit: jest.MockedFunction<PlatformAdapter["deliverOnExit"]> =
+  jest.fn((_request) => true);
+
 jest.mock("@soulledger/core/platform", () => ({
   ...jest.requireActual("@soulledger/core/platform"),
   notify: (...args: unknown[]) => mockShowToast(...args),
@@ -101,6 +113,15 @@ jest.mock("@soulledger/core/platform", () => ({
 
 const mockNext = judgmentApi.next as jest.Mock;
 const mockConclude = judgmentApi.conclude as jest.Mock;
+// 终态投递之后,下次会话拿它去问「这条到底落库了没有」。
+const mockJudgmentGet = judgmentApi.get as jest.Mock;
+let mockFetch: jest.Mock;
+/** 终态投递发出去的那一条 `fetch`,已解析成 url + headers + body。 */
+function deliveredRequest() {
+  const call = mockFetch.mock.calls[0];
+  const init = call[1] as { headers: Record<string, string>; body: string; keepalive?: boolean };
+  return { url: String(call[0]), ...init, payload: JSON.parse(init.body) };
+}
 
 function wrapper() {
   const queryClient = new QueryClient({
@@ -193,8 +214,12 @@ function probePlatform() {
   // changes there stops compiling here instead of drifting.
   const suspendHandlers = new Set<Parameters<PlatformAdapter["onSessionSuspend"]>[0]>();
   const resumeHandlers = new Set<() => void>();
+  // 探针宿主自带一份 session store,所以 beforeEach 放进 `sessionStorage` 的
+  // token 在这里读不到 —— 而没有 token 的终态投递会诚实地返回 false 且不发。
+  const probeSession = store();
+  probeSession.set(ACCESS_TOKEN_KEY, "test-access-token");
   const adapter: PlatformAdapter = {
-    session: store(),
+    session: probeSession,
     persistent,
     secure: store(),
     onUnauthorized: () => {},
@@ -207,6 +232,11 @@ function probePlatform() {
       return () => void resumeHandlers.delete(handler);
     },
     notify: () => {},
+    // A jest.fn so the terminal-delivery tests can assert both directions:
+    // what was handed to the platform, and what the hook does when the
+    // platform refuses it. Default `true` — accepted — because that is the
+    // ordinary case and the interesting one.
+    deliverOnExit: mockDeliverOnExit,
     baseUrl: "http://example.test/api/v1",
   };
   configurePlatform(adapter);
@@ -235,13 +265,28 @@ beforeEach(() => {
   // previous test would be restored into this one, which is a cross-test leak
   // that looks like a hook bug.
   localStorage.clear();
+  sessionStorage.clear();
   installWebPlatform();
+  // 终态投递要带 `Authorization: Bearer` —— 这正是它不能用 sendBeacon 的原因,
+  // 也意味着没有 token 时 `deliverOnExit` 会诚实地返回 false 而根本不发。
+  // 不放这个 token,下面每一条终态测试测到的都会是「没登录」而不是它想测的东西。
+  sessionStorage.setItem(ACCESS_TOKEN_KEY, "test-access-token");
+  // 真 web 适配器的终态投递就是这一个调用。下探针而不是替换端口:一个替换掉
+  // 端口的替身,在 useJudgmentQueue -> onSessionSuspend -> web.ts -> fetch
+  // 这条链断掉时**依然会绿**,而链路断掉正是这类改动会引入的故障。
+  mockFetch = jest.fn(() => Promise.resolve({ ok: true } as Response));
+  (globalThis as { fetch: typeof fetch }).fetch = mockFetch as unknown as typeof fetch;
   mockNext.mockImplementation(async (params?: { skip?: string[] }) => {
     const skipped = params?.skip ?? [];
     const queue = [JUDGMENT_A, JUDGMENT_B].filter((j) => !skipped.includes(j.id));
     return cursorFor(queue[0] ?? null, 2, queue.length);
   });
   mockConclude.mockResolvedValue({ data: {} });
+  // 默认「没落库」,这样不关心投递路径的测试拿到的是普通窗口规则,
+  // 而不是一条它没预料到的分支。
+  mockJudgmentGet.mockResolvedValue({ data: { concluded_at: null } });
+  // `clearAllMocks` 会连实现一起清掉,所以默认值要在这里重新装回去。
+  mockDeliverOnExit.mockReturnValue(true);
 });
 
 afterEach(() => {
@@ -382,10 +427,20 @@ describe("useJudgmentQueue", () => {
       window.dispatchEvent(new Event("beforeunload"));
     });
 
-    expect(mockConclude).toHaveBeenCalledWith(
-      JUDGMENT_A.id,
-      expect.objectContaining({ verdict: "PURGATORY" })
-    );
+    // **不是** `mockConclude`。终态路径上 axios 是错的工具:文档 unload 会中止
+    // 它自己的 XHR,所以那条 POST 是被触发它的那个事件取消掉的。这条断言的
+    // 反面比正面更重要 —— 旧版本断言的正是 `mockConclude` 被调用,而它在
+    // jsdom 里恒绿,因为 jsdom 根本没有 unload。
+    expect(mockConclude).not.toHaveBeenCalled();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const req = deliveredRequest();
+    expect(req.url).toContain(`/judgment/${JUDGMENT_A.id}/conclude/`);
+    // `keepalive` 是这条请求能活过文档卸载的全部原因 —— 少了它,它就退回成
+    // 被 unload 中止的那种请求,也就是这次修复的起点。
+    expect(req.keepalive).toBe(true);
+    // 凭据必须在头里 —— 这正是这条路径不能用 sendBeacon 的原因。
+    expect(req.headers.Authorization).toMatch(/^Bearer /);
+    expect(req.payload).toMatchObject({ verdict: "PURGATORY" });
   });
 
   it("挂起两次只送出一次 —— 端口契约说它可以反复触发", async () => {
@@ -417,7 +472,7 @@ describe("useJudgmentQueue", () => {
       window.dispatchEvent(new Event("beforeunload"));
     });
 
-    expect(mockConclude).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   it("defer hides the case for the sitting and writes nothing", async () => {
@@ -551,29 +606,58 @@ describe("扣住的裁决落盘", () => {
  * 两种相反的正确行为 —— 端口现在把是哪一种告诉它。
  */
 describe("terminal vs transient suspend", () => {
-  it("web 的 beforeunload 仍然照旧提交 —— 一个字节都没变", async () => {
+  it("web 的 beforeunload 走终态投递,而且**把记录留在盘上**", async () => {
+    // 这条曾叫「一个字节都没变」,断言 `mockConclude` 被调用、`stored()` 为
+    // null。两条都是在给缺陷背书:
+    //
+    //   - `conclude` 是 axios 是 XHR,文档 unload 会中止它。在 jsdom 里它恒绿,
+    //     因为 jsdom 没有 unload —— 一条永远不会触发的检查。
+    //   - `stored()` 为 null 正是「先清记录再发一个发不出去的请求」,判决两头
+    //     落空的那一半。
     const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
     await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
 
     act(() => result.current.submitVerdict({ verdict: "PURGATORY" }));
-    expect(mockConclude).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
 
     await act(async () => {
       window.dispatchEvent(new Event("beforeunload"));
     });
 
     // 走的是真事件、真适配器:useJudgmentQueue -> onSessionSuspend ->
-    // lib/platform/web.ts -> window。这条链断了、或者 web 报了 "transient",
-    // 这里就红。
-    expect(mockConclude).toHaveBeenCalledWith(
-      JUDGMENT_A.id,
-      expect.objectContaining({ verdict: "PURGATORY" })
-    );
-    // 提交路径也清盘 —— 否则下次加载就是一条可重放的裁决。
-    expect(stored()).toBeNull();
+    // lib/platform/web.ts -> window。链断了、或者 web 报了 "transient",这里红。
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    // 记录**留着**,并且带上了投递戳。没有这个戳,下次会话会按普通窗口规则
+    // 报 stale_discarded ——「没送出去」—— 而 keepalive 请求很可能送到了。
+    const kept = stored();
+    expect(kept).toMatchObject({ judgmentId: JUDGMENT_A.id, verdict: "PURGATORY" });
+    expect(typeof kept?.deliveredAt).toBe("number");
   });
 
-  it("beforeunload 提交之后,新的一次挂载复原不出任何东西", async () => {
+  it("宿主拒绝投递时,记录留着但**不**盖投递戳", async () => {
+    // 端口返回 false 的三种成因:没装适配器、没有 token、keepalive 配额满。
+    // 三种都意味着请求没被接受,所以下次会话该走普通窗口规则,而不是去问服务端
+    // 一件根本没发生过的事。
+    // keepalive 配额满时 `fetch` 是**同步**抛的,适配器把它翻译成 false。
+    mockFetch.mockImplementationOnce(() => {
+      throw new TypeError("keepalive quota exceeded");
+    });
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+    act(() => result.current.submitVerdict({ verdict: "FAILED" }));
+
+    await act(async () => {
+      window.dispatchEvent(new Event("beforeunload"));
+    });
+
+    const kept = stored();
+    expect(kept).toMatchObject({ judgmentId: JUDGMENT_A.id, verdict: "FAILED" });
+    expect(kept?.deliveredAt).toBeUndefined();
+  });
+
+  it("下次挂载:投递已落库 —— 说它落了,不重发", async () => {
+    // 旧测试在这里断言「复原不出任何东西」,那正是缺陷的形状:判决被丢掉,
+    // 而且一声不吭。现在记录还在,所以这条问的是**它去问了服务端没有**。
     const first = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
     await waitFor(() => expect(first.result.current.cursor.judgment).not.toBeNull());
     act(() => first.result.current.submitVerdict({ verdict: "PASSED" }));
@@ -582,16 +666,74 @@ describe("terminal vs transient suspend", () => {
     });
     first.unmount();
     mockConclude.mockClear();
+    mockShowToast.mockClear();
+    // keepalive 那条真的到了服务端。
+    mockJudgmentGet.mockResolvedValue({ data: { concluded_at: "2026-09-05T00:00:00Z" } });
 
-    // 「刷新之后」:同一个 localStorage,新的 hook。
     const second = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
     await waitFor(() => expect(second.result.current.cursor.judgment).not.toBeNull());
     await act(async () => {
       jest.advanceTimersByTime(UNDO_WINDOW_MS * 3);
     });
 
-    expect(second.result.current.pending).toBeNull();
+    expect(mockJudgmentGet).toHaveBeenCalledWith(JUDGMENT_A.id);
+    // 已经落库了,再发一次就是第二个 disposition。
     expect(mockConclude).not.toHaveBeenCalled();
+    expect(second.result.current.pending).toBeNull();
+    // 说出来。既不是 commit_error(什么都没出错),也不是沉默。
+    expect(mockShowToast).toHaveBeenCalledWith("judgment.queue.delivery_landed", "info");
+    // 缺席断言:绝不能报「没送出去」,那在这条路径上是假话。
+    expect(mockShowToast).not.toHaveBeenCalledWith("judgment.queue.stale_discarded", "error");
+  });
+
+  it("下次挂载:投递没落库,窗口已过 —— stale_discarded 这次是核实过的", async () => {
+    const first = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(first.result.current.cursor.judgment).not.toBeNull());
+    act(() => first.result.current.submitVerdict({ verdict: "PASSED" }));
+    await act(async () => {
+      window.dispatchEvent(new Event("beforeunload"));
+    });
+    first.unmount();
+    mockShowToast.mockClear();
+    mockJudgmentGet.mockResolvedValue({ data: { concluded_at: null } });
+
+    await act(async () => {
+      jest.advanceTimersByTime(UNDO_WINDOW_MS * 2);
+    });
+    const second = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(second.result.current.cursor.judgment).not.toBeNull());
+    await act(async () => {
+      jest.advanceTimersByTime(UNDO_WINDOW_MS);
+    });
+
+    expect(mockJudgmentGet).toHaveBeenCalledWith(JUDGMENT_A.id);
+    expect(mockShowToast).toHaveBeenCalledWith("judgment.queue.stale_discarded", "error");
+  });
+
+  it("下次挂载:问不到服务端 —— 丢弃并说明「不知道」,而不是重发", async () => {
+    // 这条是三个分支里唯一有争议的一个,所以它有自己的测试。问不到就是问不到,
+    // 而 hook 的表头把顺序定死了:丢掉的判决把案子退回队列,重放的判决建出一个
+    // 只有 ADMIN 更正才能撤的 disposition。所以选丢,并且告诉操作员去核对。
+    const first = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(first.result.current.cursor.judgment).not.toBeNull());
+    act(() => first.result.current.submitVerdict({ verdict: "PASSED" }));
+    await act(async () => {
+      window.dispatchEvent(new Event("beforeunload"));
+    });
+    first.unmount();
+    mockConclude.mockClear();
+    mockShowToast.mockClear();
+    mockJudgmentGet.mockRejectedValue(new Error("network"));
+
+    const second = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(second.result.current.cursor.judgment).not.toBeNull());
+    await act(async () => {
+      jest.advanceTimersByTime(UNDO_WINDOW_MS * 3);
+    });
+
+    expect(mockConclude).not.toHaveBeenCalled();
+    expect(second.result.current.pending).toBeNull();
+    expect(mockShowToast).toHaveBeenCalledWith("judgment.queue.delivery_unverified", "error");
   });
 
   it("瞬态挂起**不**提交 —— 裁决还扣着,撤销条还在,盘上还留着", async () => {
@@ -652,7 +794,12 @@ describe("terminal vs transient suspend", () => {
 
     await act(async () => probe.suspend("terminal"));
 
-    expect(mockConclude).toHaveBeenCalledWith(JUDGMENT_A.id, expect.objectContaining({ verdict: "RETRY" }));
+    // 分流看的是 `kind`,不是平台 —— 探针宿主报 terminal,走的就是终态投递,
+    // 和 web 的 beforeunload 同一条路。
+    expect(mockDeliverOnExit).toHaveBeenCalledTimes(1);
+    const req = mockDeliverOnExit.mock.calls[0][0];
+    expect(req.url).toContain(`/judgment/${JUDGMENT_A.id}/conclude/`);
+    expect(JSON.parse(req.body)).toMatchObject({ verdict: "RETRY" });
   });
 });
 

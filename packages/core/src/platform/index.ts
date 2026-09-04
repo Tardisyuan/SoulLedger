@@ -8,6 +8,7 @@ import type {
   SessionResumeSubscriber,
   SessionSuspendKind,
   SessionSuspendSubscriber,
+  TerminalDelivery,
   UnauthorizedHandler,
 } from "./types";
 
@@ -21,6 +22,7 @@ export type {
   SessionResumeSubscriber,
   SessionSuspendKind,
   SessionSuspendSubscriber,
+  TerminalDelivery,
   UnauthorizedHandler,
 };
 
@@ -101,6 +103,12 @@ const nullAdapter: PlatformAdapter = {
   // installed an adapter — Next's server render, most of all — must not throw
   // on the way to telling nobody anything.
   notify: () => {},
+  // `false`, and it has to be `false` rather than a no-op returning nothing:
+  // the caller keeps the verdict on disk when delivery was not accepted, and
+  // silently answering "accepted" here would throw away a record on the
+  // strength of a send that never happened. A server render and an
+  // un-configured host both genuinely cannot deliver.
+  deliverOnExit: () => false,
   // The development default, and it stays wrong on purpose for anything
   // else: a host that has not called `configurePlatform` should fail against
   // localhost during development rather than silently reach a real API. This
@@ -276,6 +284,35 @@ export function onSessionResume(handler: () => void): () => void {
  */
 export function notify(message: NotifyMessage, kind: NotifyKind, durationMs?: number): void {
   platform().notify(message, kind, durationMs);
+}
+
+/**
+ * POST `body` to `path` while the session is being torn down.
+ *
+ * Assembles the URL, the bearer header and the content type here — see
+ * `TerminalDelivery` for why the host is handed a finished request rather than
+ * a path — and returns whether the host **accepted** it. Never whether it
+ * arrived: nothing on this path can read a response.
+ *
+ * `path` is API-relative and leading-slashed, the same shape `api/client.ts`
+ * uses (`/judgment/${id}/conclude/`), because `baseUrl` already carries
+ * `/api/v1`.
+ *
+ * No token means no request. An unauthenticated conclude is refused by the
+ * server, so sending one would return `true` for something certain to fail —
+ * and `true` is what tells the caller it may drop its only copy.
+ */
+export function deliverOnExit(path: string, body: unknown): boolean {
+  const token = getAccessToken();
+  if (!token) return false;
+  return platform().deliverOnExit({
+    url: `${getApiBaseUrl()}${path}`,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
 }
 
 /**

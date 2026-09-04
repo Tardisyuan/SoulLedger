@@ -7,6 +7,7 @@ import { judgmentKeys } from "../query_keys";
 import {
   clearPendingVerdict,
   clearVerdictLease,
+  deliverOnExit,
   getPendingVerdict,
   getVerdictLease,
   markVerdictLease,
@@ -297,6 +298,24 @@ export interface PendingVerdict {
    * spends awake, which is the wrong quantity the moment the process sleeps.
    */
   dueAt: number;
+  /**
+   * Wall-clock ms at which a **terminal delivery was accepted** for this
+   * verdict, if one ever was. Absent on every record that has not been through
+   * a terminal suspend, which is almost all of them.
+   *
+   * WHAT IT MEANS, PRECISELY: the host handed this conclude to the platform
+   * while the session was being torn down, and nothing was ever able to read
+   * the response. So it means *may have landed* — never *did*. The whole point
+   * of the stamp is to mark this record as one whose fate cannot be decided
+   * from the record alone, so the next session asks the server instead of
+   * guessing. See `TerminalDelivery` and `flushTerminal` below.
+   *
+   * OPTIONAL, AND IT HAS TO BE. Records written by a build before this field
+   * existed are still on operators' disks; `parsePersistedVerdict` must go on
+   * accepting them, and the absence then reads as the truth — no delivery was
+   * attempted, because no code could attempt one.
+   */
+  deliveredAt?: number;
 }
 
 /**
@@ -322,13 +341,27 @@ export function parsePersistedVerdict(raw: string | null): PendingVerdict | null
   }
   if (typeof value !== "object" || value === null) return null;
   const record = value as Record<string, unknown>;
-  const { judgmentId, soulName, verdict, notes, createWorkflow, dueAt } = record;
+  const { judgmentId, soulName, verdict, notes, createWorkflow, dueAt, deliveredAt } = record;
   if (typeof judgmentId !== "string" || judgmentId === "") return null;
   if (typeof soulName !== "string") return null;
   if (typeof notes !== "string") return null;
   if (typeof createWorkflow !== "boolean") return null;
   if (typeof dueAt !== "number" || !Number.isFinite(dueAt)) return null;
   if (!VERDICT_CODES.includes(verdict as VerdictCode)) return null;
+  // `deliveredAt` is the one optional field, so it gets the one three-way
+  // check: absent is valid and means no delivery was attempted; a finite
+  // number is valid and means one was; anything else — a string, NaN, null
+  // from a hand-edited store — DROPS THE WHOLE RECORD rather than being
+  // ignored. Ignoring it would silently downgrade "may already be on the
+  // server" to "definitely is not", which is the one reading that can produce
+  // a duplicate disposition.
+  const delivered =
+    deliveredAt === undefined
+      ? undefined
+      : typeof deliveredAt === "number" && Number.isFinite(deliveredAt)
+        ? deliveredAt
+        : null;
+  if (delivered === null) return null;
   return {
     judgmentId,
     soulName,
@@ -336,6 +369,7 @@ export function parsePersistedVerdict(raw: string | null): PendingVerdict | null
     notes,
     createWorkflow,
     dueAt,
+    ...(delivered === undefined ? {} : { deliveredAt: delivered }),
   };
 }
 
@@ -556,6 +590,80 @@ export function useJudgmentQueue(options?: { at?: string }) {
     void send(held);
   }, [clearTimer, releaseHeld, send]);
 
+  /**
+   * The way out when the client itself is being torn down.
+   *
+   * ─────────────────────────────────────────────────────────────────────────
+   * WHY THIS IS NOT `flush`. `flush` LOST THE VERDICT TWICE OVER HERE.
+   * ─────────────────────────────────────────────────────────────────────────
+   *
+   * `flush` does `releaseHeld()` and then `void send(held)`, in that order, and
+   * both halves fail on this one path:
+   *
+   *  - `send` is `judgmentApi.conclude`, which is axios, which is **XHR**. A
+   *    document that unloads aborts its in-flight XHRs. So the request was
+   *    cancelled by the very event that started it.
+   *  - `releaseHeld()` had already taken the record and the lease off disk, so
+   *    the next session found nothing to adopt.
+   *
+   * The operator closed a tab inside the undo window and the verdict was gone,
+   * with no toast (the page was already going) and nothing on disk. This was
+   * strictly worse than doing nothing at all: leaving the record would have let
+   * the next launch restore it under the operator's eye, which is the mechanism
+   * the whole header is about. Nothing could see it — jsdom has no unload, and
+   * the mocked `conclude` resolved.
+   *
+   * ─────────────────────────────────────────────────────────────────────────
+   * SO: DELIVER *AND* KEEP. Both, because neither alone is enough.
+   * ─────────────────────────────────────────────────────────────────────────
+   *
+   * `deliverOnExit` uses `fetch(..., { keepalive: true })`, which survives the
+   * document — see `TerminalDelivery` for why it cannot be `sendBeacon`. But
+   * **no response is ever readable**, so "accepted by the platform" is the most
+   * that can be known, and a record dropped on the strength of that would be a
+   * verdict lost whenever the network was down at the wrong instant.
+   *
+   * So the record stays on disk, re-stamped with `deliveredAt`. The lease is
+   * NOT re-stamped and NOT cleared: this session is dying, so letting the lease
+   * go stale by itself is exactly the signal the next session's adoption check
+   * reads as "the writer is gone, take it".
+   *
+   * The stamp is what makes keeping it safe. Without it the next session would
+   * apply the ordinary window rules, find the window long gone, and report
+   * `stale_discarded` — "your verdict was not sent, the case is back in the
+   * queue" — which would be a **false sentence** whenever the keepalive
+   * request did arrive. With it, the next session asks the server.
+   *
+   * IDEMPOTENT, like `flush`: `pendingRef` is cleared first, so a second
+   * `beforeunload` (a navigation another listener cancelled, then retried)
+   * returns before delivering anything.
+   *
+   * If the host cannot deliver at all — no adapter, no `fetch`, no token — the
+   * record still stays, un-stamped. That is the honest record of what happened,
+   * and the next session's ordinary window rules are then the right ones.
+   */
+  const flushTerminal = useCallback(() => {
+    clearTimer();
+    stopLease();
+    const held = pendingRef.current;
+    if (!held) return;
+    pendingRef.current = null;
+    setPending(null);
+    const accepted = deliverOnExit(`/judgment/${held.judgmentId}/conclude/`, {
+      verdict: held.verdict,
+      notes: held.notes,
+      create_workflow: held.createWorkflow,
+    });
+    // Re-written rather than left as it was, so the next session can tell the
+    // two cases apart. This is the one write-back to a record already on disk,
+    // and it does not breach the "a restored verdict is never written back"
+    // rule in the header: that rule is about a record this session took OFF
+    // disk and put on screen. This one never left.
+    setPendingVerdict(
+      JSON.stringify(accepted ? { ...held, deliveredAt: Date.now() } : held)
+    );
+  }, [clearTimer, stopLease]);
+
   const submitVerdict = useCallback(
     (input: { verdict: VerdictCode; notes?: string; createWorkflow?: boolean }) => {
       const judgment = cursor.judgment;
@@ -673,6 +781,8 @@ export function useJudgmentQueue(options?: { at?: string }) {
   // exhaustive-deps has nothing to say about it.
   const flushRef = useRef(flush);
   flushRef.current = flush;
+  const flushTerminalRef = useRef(flushTerminal);
+  flushTerminalRef.current = flushTerminal;
   const resyncRef = useRef(resync);
   resyncRef.current = resync;
   const stopLeaseRef = useRef(stopLease);
@@ -691,7 +801,7 @@ export function useJudgmentQueue(options?: { at?: string }) {
     // verdict on the first app switch — which is precisely the shipped defect
     // `c8863fb` documented and declined to fix.
     const stopSuspend = onSessionSuspend((kind) => {
-      if (kind === "terminal") flushRef.current();
+      if (kind === "terminal") flushTerminalRef.current();
     });
     const stopResume = onSessionResume(() => resyncRef.current());
     return () => {
@@ -746,6 +856,12 @@ export function useJudgmentQueue(options?: { at?: string }) {
   useEffect(() => {
     let poll: ReturnType<typeof setInterval> | null = null;
     let settled = false;
+    // The delivery check is asynchronous, so this effect can now be torn down
+    // with a request still in flight. Nothing below may touch state after
+    // that — and, more to the point, nothing may `notify` after it: a toast
+    // about a verdict fired at a console the operator has already navigated
+    // away from is a message about a screen that no longer exists.
+    let disposed = false;
     const stop = () => {
       settled = true;
       if (poll !== null) {
@@ -785,6 +901,35 @@ export function useJudgmentQueue(options?: { at?: string }) {
       clearVerdictLease();
       const held = parsePersistedVerdict(raw);
       if (held === null) return;
+
+      // A record whose previous session got a terminal delivery *accepted*
+      // cannot be judged by the clock alone, and this is the branch that says
+      // so. The keepalive request may have arrived; nothing on that path could
+      // read the answer. Applying the ordinary rules below would report
+      // `stale_discarded` — "your verdict was not sent" — about a verdict that
+      // very possibly was, and that sentence is exactly the kind this file's
+      // header is written against.
+      //
+      // So the server is asked, once, and the answer decides. Everything about
+      // the ordinary path stays as it was for records with no stamp, which is
+      // all of them until a tab is closed inside an undo window.
+      if (held.deliveredAt !== undefined) {
+        void reconcileDelivered(held);
+        return;
+      }
+      settleRestored(held);
+    };
+
+    /**
+     * The clock rules, for a verdict that is known not to have been sent.
+     *
+     * Extracted so the delivery-check branch reaches the *same* three outcomes
+     * rather than a paraphrase of them — two copies of "is this window still
+     * open" would be two things to keep in agreement, and this repository has
+     * a note about what happens to those.
+     */
+    function settleRestored(held: PendingVerdict) {
+      if (disposed) return;
       const remaining = held.dueAt - Date.now();
       if (remaining <= 0) {
         notify("judgment.queue.stale_discarded", "error");
@@ -798,7 +943,52 @@ export function useJudgmentQueue(options?: { at?: string }) {
       setPending(held);
       setHolding((prev) => (prev.includes(held.judgmentId) ? prev : [...prev, held.judgmentId]));
       armRef.current(held, remaining);
-    };
+    }
+
+    /**
+     * Ask the server what became of a verdict we handed to the platform on the
+     * way out.
+     *
+     * `judgmentApi.get` rather than a new endpoint: `Judgment.concluded_at` is
+     * already on the detail serialiser and is exactly the fact in question —
+     * `conclude_judgment` sets it inside the same transaction that creates the
+     * disposition, so a non-null value means the whole thing ran.
+     *
+     * THREE ANSWERS, AND THE THIRD IS THE ONE WORTH ARGUING ABOUT:
+     *
+     *  - **Concluded.** It landed. Count it as decided and say so with a key of
+     *    its own. Not `commit_error` (nothing went wrong) and not silence (the
+     *    operator closed a tab mid-window and is owed the outcome).
+     *  - **Not concluded.** The delivery did not arrive. Fall through to the
+     *    ordinary rules — and note that `stale_discarded` is now a *verified*
+     *    statement on this path rather than an assumption.
+     *  - **The request itself failed.** We cannot tell. DISCARD, and say we
+     *    could not tell. Re-arming would mean a POST for a judgment that may
+     *    already be concluded, and the header's own ordering settles it: a lost
+     *    verdict leaves the case pending and hands it back, a replayed one
+     *    creates a disposition only an ADMIN correction can unwind. The
+     *    operator is told to check the case rather than being told a story
+     *    about it.
+     */
+    async function reconcileDelivered(held: PendingVerdict) {
+      let concluded: boolean;
+      try {
+        const res = await judgmentApi.get(held.judgmentId);
+        concluded = res.data.concluded_at !== null;
+      } catch {
+        if (!disposed) notify("judgment.queue.delivery_unverified", "error");
+        return;
+      }
+      if (disposed) return;
+      if (concluded) {
+        setDecided((prev) =>
+          prev.includes(held.judgmentId) ? prev : [...prev, held.judgmentId]
+        );
+        notify("judgment.queue.delivery_landed", "info");
+        return;
+      }
+      settleRestored(held);
+    }
 
     attempt();
     // Only ever created when the first look was inconclusive — a record on disk
@@ -806,6 +996,7 @@ export function useJudgmentQueue(options?: { at?: string }) {
     // timer.
     if (!settled) poll = setInterval(attempt, LEASE_POLL_MS);
     return () => {
+      disposed = true;
       if (poll !== null) clearInterval(poll);
     };
   }, []);
