@@ -655,7 +655,8 @@
       "COMPLETED": "流程完成",
       "SKIPPED": "已跳过",
       "ESCALATED": "已升级"
-    }
+    },
+    "no_custom_templates": "你还没有保存过自己的模板。"
   },
   "dashboard": {
     "title": "灵魂账本统计",

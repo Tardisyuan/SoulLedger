@@ -655,7 +655,8 @@
       "COMPLETED": "Completed",
       "SKIPPED": "Skipped",
       "ESCALATED": "Escalated"
-    }
+    },
+    "no_custom_templates": "You have not saved any templates of your own yet."
   },
   "dashboard": {
     "title": "SoulLedger Statistics",
