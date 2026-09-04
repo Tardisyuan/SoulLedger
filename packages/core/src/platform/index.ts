@@ -49,6 +49,30 @@ export const TENANT_ID_KEY = "tenant_id";
  * uninstall, which turns a lost verdict into a replayed one.
  */
 export const PENDING_VERDICT_KEY = "soulledger_pending_verdict";
+/**
+ * The key the held verdict's **liveness lease** is stored under, in the
+ * **persistent** store, beside the record it is about.
+ *
+ * WHAT IT IS FOR. `persistent` is shared by every session on the device — two
+ * browser tabs are two sessions over one `localStorage` — so a record found
+ * there answers "somebody held a verdict" and not "somebody is still holding
+ * it". Those two need telling apart in opposite directions: a session that is
+ * still running will send the verdict itself and must not be raced, while a
+ * session that died cannot send anything and its record must be adopted. See
+ * the header of `../hooks/useJudgmentQueue.ts`.
+ *
+ * A SEPARATE KEY, NOT A FIELD ON THE RECORD, and the reason is a rule the
+ * record has: a restored verdict is never written back, so it can be adopted at
+ * most once. A stamp living inside the record would have to be re-written a few
+ * times a second, which is that rule deleted. The lease is the only thing that
+ * gets rewritten; the record is written once and removed once.
+ *
+ * The value is a wall-clock `Date.now()` as a decimal string — written by
+ * whichever session currently has the record on disk, and by nothing else. It
+ * is validated where it is read, for the same reason the record is: anything in
+ * this store may have been written by a previous build or edited by hand.
+ */
+export const PENDING_VERDICT_LEASE_KEY = "soulledger_pending_verdict_lease";
 
 /**
  * A store that holds nothing and forgets everything.
@@ -172,6 +196,31 @@ export function setPendingVerdict(value: string): void {
 
 export function clearPendingVerdict(): void {
   adapter.persistent.remove(PENDING_VERDICT_KEY);
+}
+
+/**
+ * The liveness lease on the held verdict, as it was written — a decimal
+ * `Date.now()` string, or null.
+ *
+ * A string and not a number, for the reason `getPendingVerdict` is a string and
+ * not a `PendingVerdict`: what a well-formed value is, and what to do about one
+ * that is not, belongs to the module that reasons about it. Null here means
+ * "nothing claims the record", which is also what an unreadable value means to
+ * the only caller — but that decision is made there, once, next to the rest of
+ * the rules.
+ */
+export function getVerdictLease(): string | null {
+  return adapter.persistent.get(PENDING_VERDICT_LEASE_KEY);
+}
+
+/** Stamp the lease. Called by the session that has the record on disk, often. */
+export function markVerdictLease(value: string): void {
+  adapter.persistent.set(PENDING_VERDICT_LEASE_KEY, value);
+}
+
+/** Drop the lease. Called wherever the record itself is dropped. */
+export function clearVerdictLease(): void {
+  adapter.persistent.remove(PENDING_VERDICT_LEASE_KEY);
 }
 
 /**

@@ -16,11 +16,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   useJudgmentQueue,
   UNDO_WINDOW_MS,
+  LEASE_HEARTBEAT_MS,
+  LEASE_POLL_MS,
+  LEASE_STALE_MS,
+  verdictLeaseIsLive,
   type PendingVerdict,
 } from "@soulledger/core/hooks/useJudgmentQueue";
 import { judgmentApi } from "@soulledger/core/api";
 import {
   PENDING_VERDICT_KEY,
+  PENDING_VERDICT_LEASE_KEY,
   configurePlatform,
   type KeyValueStore,
   type PlatformAdapter,
@@ -133,6 +138,31 @@ function stored(): PendingVerdict | null {
   return raw === null ? null : (JSON.parse(raw) as PendingVerdict);
 }
 
+/** The liveness stamp on disk, as a number, or null if there is none. */
+function lease(): number | null {
+  const raw = localStorage.getItem(PENDING_VERDICT_LEASE_KEY);
+  return raw === null ? null : Number(raw);
+}
+
+/**
+ * A record left behind by a session that has since died, with its last
+ * heartbeat `deadFor` ms ago and `left` ms of undo window remaining.
+ *
+ * Seeds both keys and then moves the **wall clock only** — never the timer
+ * queue — because that is what a dead process looks like from the outside:
+ * time passes and nothing of theirs runs. Advancing timers instead would be a
+ * clock that only moves when this test's own hook is scheduled, which is the
+ * one thing a crashed writer never does.
+ */
+function seedDeadWriter({ deadFor, left }: { deadFor: number; left: number }) {
+  localStorage.setItem(
+    PENDING_VERDICT_KEY,
+    JSON.stringify(record({ dueAt: Date.now() + left + deadFor }))
+  );
+  localStorage.setItem(PENDING_VERDICT_LEASE_KEY, String(Date.now()));
+  jest.setSystemTime(Date.now() + deadFor);
+}
+
 /**
  * A stand-in host: real-enough stores, and suspend/resume I can fire by hand.
  *
@@ -187,6 +217,10 @@ function probePlatform() {
     held: () => {
       const raw = persistent.data.get(PENDING_VERDICT_KEY);
       return raw === undefined ? null : (JSON.parse(raw) as PendingVerdict);
+    },
+    leaseStamp: () => {
+      const raw = persistent.data.get(PENDING_VERDICT_LEASE_KEY);
+      return raw === undefined ? null : Number(raw);
     },
   };
 }
@@ -671,6 +705,30 @@ describe("resume 按墙钟重新对表", () => {
     expect(mockConclude).toHaveBeenCalledTimes(1);
   });
 
+  it("回到前台时租约当场补一次 —— 不等下一拍", async () => {
+    // 心跳和提交定时器一起被冻住,所以切回来的那一刻,盘上的租约和屏幕上的倒计时
+    // 一样陈旧。interval 自己会接着跑,但下一拍最远在 LEASE_HEARTBEAT_MS 之外,
+    // 而这个会话此刻明摆着活着 —— 那段空档里,另一个标签页读到的是一份看起来
+    // 死了的租约。
+    //
+    // RN 上没有第二个进程能读到它;web 上 bfcache 复原回到的浏览器里有别的标签页,
+    // 而那是同一个事件。
+    const probe = probePlatform();
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+    act(() => result.current.submitVerdict({ verdict: "PASSED" }));
+    const stamped = probe.leaseStamp();
+
+    await act(async () => probe.suspend("transient"));
+    // 定时器冻着,墙钟走了两秒:租约没人续。
+    jest.setSystemTime(Date.now() + 2000);
+    expect(probe.leaseStamp()).toBe(stamped);
+
+    await act(async () => probe.resume());
+
+    expect(probe.leaseStamp()).toBe(Date.now());
+  });
+
   it("手里没扣东西时,resume 什么都不做", async () => {
     const probe = probePlatform();
     const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
@@ -757,7 +815,12 @@ describe("重新启动时复原扣住的裁决", () => {
     expect(result.current.pending).toBeNull();
     expect(stored()).toBeNull();
     // 而且不是静默的:操作员裁决过、看着那条案子离开了屏幕,必须知道它没被记下。
-    expect(mockShowToast).toHaveBeenCalledWith("judgment.queue.commit_error", "error");
+    //
+    // **不是** `commit_error`。那句话说的是「裁决没送达」,隐含「送过一次」;
+    // 这条路径上一个请求都没发出去。断言写死这个键,是因为「说了话」和
+    // 「说的是这句话」是两件事,而前者绿着的时候后者可以是错的。
+    expect(mockShowToast).toHaveBeenCalledWith("judgment.queue.stale_discarded", "error");
+    expect(mockShowToast).not.toHaveBeenCalledWith("judgment.queue.commit_error", "error");
   });
 
   it("过期一整天的也一样 —— 不是「差一点」才丢", async () => {
@@ -794,7 +857,10 @@ describe("重新启动时复原扣住的裁决", () => {
     expect(mockConclude).not.toHaveBeenCalled();
     expect(result.current.pending).toBeNull();
     expect(stored()).toBeNull();
-    expect(mockShowToast).toHaveBeenCalledWith("judgment.queue.commit_error", "error");
+    // 跟上面那条**不是**同一句话。上面那条的事实是「窗口走完了」,这条的事实是
+    // 「窗口在哪儿都不知道」。共用一个键会让其中一句变成没有依据的断言。
+    expect(mockShowToast).toHaveBeenCalledWith("judgment.queue.skew_discarded", "error");
+    expect(mockShowToast).not.toHaveBeenCalledWith("judgment.queue.stale_discarded", "error");
   });
 
   it.each([
@@ -829,5 +895,233 @@ describe("重新启动时复原扣住的裁决", () => {
     expect(result.current.pending).toBeNull();
     expect(stored()).toBeNull();
     expect(mockShowToast).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * 谁还活着 —— 一个 localStorage,两个标签页。
+ *
+ * 上面那一组「重新启动时复原」全都假设:盘上的记录是**没人再管**的。在 web 上
+ * 那是半个假设。`persistent` 是每台设备一份,不是每个会话一份,所以第二个标签页
+ * 在第一个的八秒窗口里挂载,读到的是**还在被人扣着**的那条裁决。
+ *
+ * 分辨的不是「谁写的」—— 崩溃重启后的进程也不是写它的那个,按写者拒绝会把这份
+ * 持久化唯一存在的理由拒绝掉 —— 而是「写它的那个还在不在跑」。写者边扣边续租约,
+ * 读到的会话看租约。
+ *
+ * 这一组里最要紧的两条往**相反**方向失败:活着的不许被接管,死了的必须被接管。
+ * 任何只朝一个方向想的修法,都会踩红其中一条。
+ */
+describe("裁决记录的归属:活着的写者 vs 死掉的写者", () => {
+  it("第一个标签页还活着时,第二个标签页**不**接管它的裁决", async () => {
+    const first = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(first.result.current.cursor.judgment).not.toBeNull());
+    act(() => first.result.current.submitVerdict({ verdict: "PASSED" }));
+    expect(stored()).not.toBeNull();
+
+    // 两秒后开第二个标签页:同一个 localStorage,窗口还剩六秒。
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+    const second = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(second.result.current.cursor.judgment).not.toBeNull());
+
+    // 没接管:第二个标签页的操作员没裁决过任何东西,不该看见撤销条。
+    expect(second.result.current.pending).toBeNull();
+    // 也**没删**。这条断言和上面那条一样重要:接管路径的第一件事是「读完就删」,
+    // 而这条记录不是它的。删了就等于——第一个标签页两秒后再崩,盘上什么都不剩。
+    expect(stored()).not.toBeNull();
+    // 什么也没发生,所以什么也不该说。
+    expect(mockShowToast).not.toHaveBeenCalled();
+
+    // 窗口走完:只发一次,由扣着它的那个标签页发。
+    await act(async () => {
+      jest.advanceTimersByTime(UNDO_WINDOW_MS);
+    });
+    expect(mockConclude).toHaveBeenCalledTimes(1);
+    expect(second.result.current.pending).toBeNull();
+    // 第一个标签页发完就清盘,盯着的那个于是收摊 —— 静悄悄地。
+    expect(stored()).toBeNull();
+    expect(mockShowToast).not.toHaveBeenCalled();
+  });
+
+  it("写它的进程真的死了、窗口还有剩 —— 必须接管", async () => {
+    // 「只有写它的会话才能复原」在这里红:重启后的进程从来就不是写它的那个。
+    // 这条是那个修法的反例,也是这份持久化存在的全部理由。
+    seedDeadWriter({ deadFor: LEASE_STALE_MS + 500, left: 4000 });
+
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.pending).not.toBeNull());
+
+    expect(result.current.pending).toMatchObject({ judgmentId: JUDGMENT_A.id, verdict: "PASSED" });
+    // 接管不是发送。
+    expect(mockConclude).not.toHaveBeenCalled();
+    // 读一次就删,两个键一起。
+    expect(stored()).toBeNull();
+    expect(lease()).toBeNull();
+    // 剩多少是多少。
+    await act(async () => {
+      jest.advanceTimersByTime(3900);
+    });
+    expect(mockConclude).not.toHaveBeenCalled();
+    await act(async () => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(mockConclude).toHaveBeenCalledTimes(1);
+  });
+
+  it("崩溃之后立刻重启:挂载那一刻分不出死活,于是等 —— 等到确定,再接管", async () => {
+    // 这条是「等」而不是「拒绝」的理由。重启很快(重新加载一个标签页、热启动一个
+    // app),所以挂载的瞬间,上一个进程的租约往往还很新。当场判定就只有两个选择:
+    // 判它活着 → 永远不接管,崩溃恢复作废;判它死了 → 阈值必须小到会误杀活着的。
+    seedDeadWriter({ deadFor: 1000, left: 7000 });
+
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+    expect(result.current.pending).toBeNull();
+    expect(stored()).not.toBeNull();
+
+    // 时间往前走,而**没有任何东西**在续那份租约 —— 这就是死掉的样子。
+    await act(async () => {
+      jest.advanceTimersByTime(LEASE_STALE_MS + LEASE_POLL_MS);
+    });
+
+    expect(result.current.pending).toMatchObject({ judgmentId: JUDGMENT_A.id });
+    expect(stored()).toBeNull();
+    expect(lease()).toBeNull();
+    expect(mockConclude).not.toHaveBeenCalled();
+  });
+
+  it("崩溃发生在窗口的最后几秒 —— 等到确定它死了,窗口已经没了,于是丢掉并说出来", async () => {
+    // 这次改动**换来的代价**,写在这里而不是等人去发现:确认一个写者死了要花
+    // LEASE_STALE_MS + LEASE_POLL_MS,这段时间也在窗口里走。窗口末尾崩溃的那几秒
+    // 从此不可恢复 —— 案子退回队列,操作员重判,这是这份文件一贯选的那一边。
+    seedDeadWriter({ deadFor: 500, left: 2000 });
+
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+    await act(async () => {
+      jest.advanceTimersByTime(LEASE_STALE_MS + LEASE_POLL_MS);
+    });
+
+    expect(result.current.pending).toBeNull();
+    expect(mockConclude).not.toHaveBeenCalled();
+    expect(stored()).toBeNull();
+    expect(mockShowToast).toHaveBeenCalledWith("judgment.queue.stale_discarded", "error");
+  });
+
+  it("盘上有记录、没有租约(上一版写下的)—— 立刻接管,和加租约之前一模一样", async () => {
+    // 向后兼容不是善意,是行为的定义:没有租约就是「没人声称在管它」,而那正是
+    // 接管的条件。ed4355d 写下的记录不会因为这次改动被卡住。
+    localStorage.setItem(PENDING_VERDICT_KEY, JSON.stringify(record({ dueAt: Date.now() + 3000 })));
+    expect(lease()).toBeNull();
+
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.pending).not.toBeNull());
+
+    expect(stored()).toBeNull();
+    expect(mockConclude).not.toHaveBeenCalled();
+  });
+
+  it("租约读不懂时,当作没有租约 —— 接管", async () => {
+    localStorage.setItem(PENDING_VERDICT_KEY, JSON.stringify(record({ dueAt: Date.now() + 3000 })));
+    localStorage.setItem(PENDING_VERDICT_LEASE_KEY, "soon");
+
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.pending).not.toBeNull());
+    expect(stored()).toBeNull();
+  });
+
+  it("给出裁决时落下租约,并且一直在续 —— 不是写一次就不管", async () => {
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+
+    act(() => result.current.submitVerdict({ verdict: "PASSED" }));
+    const first = lease();
+    expect(first).toBe(Date.now());
+
+    await act(async () => {
+      jest.advanceTimersByTime(LEASE_HEARTBEAT_MS * 3);
+    });
+
+    // 断的是「续过」。只写一次的租约三秒后自己就「死」了,而这个会话还活着 ——
+    // 那正是隔壁标签页会拿走它裁决的那一刻。
+    expect(lease()).toBeGreaterThan(first as number);
+    expect(Date.now() - (lease() as number)).toBeLessThanOrEqual(LEASE_HEARTBEAT_MS);
+  });
+
+  it("送出之后租约不留,心跳也停", async () => {
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+
+    act(() => result.current.submitVerdict({ verdict: "PASSED" }));
+    await act(async () => {
+      jest.advanceTimersByTime(UNDO_WINDOW_MS + 10);
+    });
+    expect(lease()).toBeNull();
+
+    // 心跳停没停,只能靠「再等一会儿它还是空的」来断 —— 一个没停的 setInterval
+    // 会自己把租约写回来。
+    await act(async () => {
+      jest.advanceTimersByTime(LEASE_HEARTBEAT_MS * 3);
+    });
+    expect(lease()).toBeNull();
+  });
+
+  it("撤销之后租约不留,心跳也停", async () => {
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+
+    act(() => result.current.submitVerdict({ verdict: "PASSED" }));
+    act(() => result.current.undo());
+    expect(lease()).toBeNull();
+
+    await act(async () => {
+      jest.advanceTimersByTime(LEASE_HEARTBEAT_MS * 3);
+    });
+    expect(lease()).toBeNull();
+  });
+
+  it("卸载之后心跳不留 —— 一个活过组件的 interval 会一直往存储里写", async () => {
+    const { result, unmount } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+    act(() => result.current.submitVerdict({ verdict: "PASSED" }));
+
+    await act(async () => {
+      unmount();
+    });
+    expect(lease()).toBeNull();
+
+    await act(async () => {
+      jest.advanceTimersByTime(LEASE_HEARTBEAT_MS * 5);
+    });
+    expect(lease()).toBeNull();
+  });
+});
+
+/**
+ * 租约本身的判读,单独钉住 —— 边界在哪一边,是这次改动里唯一的自由参数。
+ */
+describe("verdictLeaseIsLive", () => {
+  const NOW = 1_757_000_000_000;
+
+  it("整整 LEASE_STALE_MS 的沉默仍然算活着 —— 平局判给「别人的」", () => {
+    // 比较是 `age > LEASE_STALE_MS`,不是 `>=`。判错成「活着」多等一轮轮询,
+    // 判错成「死了」就是另一个操作员的控制台上多一条错误提示。
+    expect(verdictLeaseIsLive(String(NOW - LEASE_STALE_MS), NOW)).toBe(true);
+    expect(verdictLeaseIsLive(String(NOW - LEASE_STALE_MS - 1), NOW)).toBe(false);
+  });
+
+  it("没有租约、空串、读不出数字,都算没人管", () => {
+    expect(verdictLeaseIsLive(null, NOW)).toBe(false);
+    expect(verdictLeaseIsLive("", NOW)).toBe(false);
+    expect(verdictLeaseIsLive("soon", NOW)).toBe(false);
+    expect(verdictLeaseIsLive("NaN", NOW)).toBe(false);
+  });
+
+  it("盖在未来的租约算活着 —— 一个读不懂的声明,安全的读法是「不是我的」", () => {
+    // 墙钟往回跳过之后会出现。它不是永久的沉默:钟被校正回来,年龄就长大,
+    // 记录随后由自己的 skew 分支报出去。
+    expect(verdictLeaseIsLive(String(NOW + 60_000), NOW)).toBe(true);
   });
 });

@@ -6,7 +6,10 @@ import { judgmentApi, type JudgmentQueueCursor } from "../api/index";
 import { judgmentKeys } from "../query_keys";
 import {
   clearPendingVerdict,
+  clearVerdictLease,
   getPendingVerdict,
+  getVerdictLease,
+  markVerdictLease,
   notify,
   onSessionResume,
   onSessionSuspend,
@@ -87,22 +90,177 @@ import {
  *    booting at the epoch) and the record cannot be reasoned about at all.
  *    Both discard.
  *  - **A record is restored at most once.** It is removed from storage as it is
- *    read, before anything is decided, and a restored verdict is not written
- *    back. Two processes reading the same record — two tabs, a relaunch loop —
- *    would otherwise both commit it.
+ *    read — before it is parsed, before anything is decided — and a restored
+ *    verdict is not written back. Two processes reading the same record — two
+ *    tabs, a relaunch loop — would otherwise both commit it.
  *  - **Every terminating path clears it**: commit (at the moment the request is
  *    made, not when it returns — a record that outlives an in-flight POST is a
  *    replay waiting for the next launch), undo, and restore.
  *
- * The discard is reported rather than silent (`judgment.queue.commit_error`,
- * whose words — the verdict did not land, the case is back in the queue — are
- * exactly true here). Silence would be the failure this whole file is written
- * against: an operator who ruled on a case, saw it leave the screen, and is
- * never told that nothing was recorded.
+ * EGY: `stale_discarded` is transliterated, `skew_discarded` is not. Measured
+ * 2026-09-04: of the 64 `judgment.queue.*` keys, egy renders 62 in the
+ * bundle's pseudo-Egyptian; the two English ones are `key_notes` and
+ * `skew_discarded`. So English here is a visible gap in this block, not the
+ * file's convention — the whole-file average (63 of 1328 identical to `en`)
+ * would have said the opposite, and that average is the wrong subject list.
+ *
+ * `stale_discarded` is built entirely from attested words — `sheemtet`
+ * verdict, `tepy` earlier, `nen hab` not sent, `sep aq er set khery` case
+ * back into the queue — every one lifted from `commit_error` and
+ * `common.prev`, so nothing was invented.
+ *
+ * `skew_discarded` stays English deliberately: the bundle has no Egyptian
+ * rendering of "clock" anywhere in its 1328 keys (the only occurrence of the
+ * word is the English sentence itself, i.e. this gap), so writing one would
+ * be inventing vocabulary rather than reusing it — the fabricated-citation
+ * failure this repo already has a note about. It is a translation debt, and
+ * naming it here is the point: it will not be found by reading egy.json,
+ * where it looks like an ordinary entry.
+ *
+ * The discard is reported rather than silent — `judgment.queue.stale_discarded`
+ * for a window that ran out, `judgment.queue.skew_discarded` for a clock that
+ * cannot be reasoned about. Neither is `commit_error`, and the difference is
+ * the point: that key says the verdict "did not land", which implies a request
+ * was made, and on these two paths none was. Silence would be the failure this
+ * whole file is written against — an operator who ruled on a case, saw it leave
+ * the screen, and is never told that nothing was recorded — but a sentence that
+ * describes a request nobody sent is the failure the rest of this repository is
+ * written against.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * THE STORE IS SHARED, SO "IS THERE A RECORD" IS NOT "MAY I HAVE IT".
+ * ─────────────────────────────────────────────────────────────────────────
+ *
+ * `persistent` is per device, not per session: two browser tabs are two
+ * sessions over one `localStorage`. So a record found on mount has two
+ * completely different meanings, and the rules above only serve one of them:
+ *
+ *   a **dead** writer cannot send anything, and its verdict must be adopted if
+ *   any of its window is left — this is the case the record exists for;
+ *
+ *   a **live** writer is still holding that verdict, still counting down, and
+ *   still showing its operator an undo bar. Adopting it means two sessions
+ *   commit the same judgment — the second is refused with a 400 "Judgment
+ *   already concluded" (`backend/apps/judgment/views.py:429`), so no second
+ *   disposition is created, but the operator is shown an error about something
+ *   that did not go wrong — and it means the *second* tab shows an undo bar for
+ *   a case its operator never ruled on, whose undo key stops nothing.
+ *
+ * The question is therefore not who wrote the record — a relaunch after a crash
+ * is a different session than the one that wrote it, and refusing there would
+ * break the only case this design exists for. It is **whether the writer is
+ * still running**, which nothing about the record itself can answer.
+ *
+ * So the writer keeps a **lease** beside the record (`PENDING_VERDICT_LEASE_KEY`)
+ * and re-stamps it every `LEASE_HEARTBEAT_MS` for as long as the record is on
+ * disk. A session that finds a record it did not write reads that stamp:
+ *
+ *  - **Stamped within `LEASE_STALE_MS`** — the writer is running. Touch
+ *    nothing: not the record, not the lease, no toast. This is the one path on
+ *    which the record is deliberately *not* removed, because it is not ours to
+ *    remove; the live writer will remove it itself on commit or undo.
+ *  - **Older than that, or missing, or unreadable** — nothing is keeping it
+ *    warm, so the writer is gone. Take the record by the rules above.
+ *  - **Neither yet** — i.e. the stamp is fresh but might merely be recent. The
+ *    session does not guess. It re-reads every `LEASE_POLL_MS` and decides when
+ *    the answer is no longer ambiguous: the lease goes stale (adopt) or the
+ *    record disappears (the writer was alive and has finished; stop).
+ *
+ * Waiting rather than refusing is what keeps the crash case working. A process
+ * that dies is not distinguishable from a slow one *at that instant*, and a
+ * relaunch is fast — a tab reload, a warm app start — so a session that decided
+ * once, on mount, would refuse its own predecessor's verdict for being too
+ * recently alive. That is the naive fix, and it breaks exactly what persistence
+ * is for.
+ *
+ * WHAT THIS COSTS, stated rather than discovered. Adoption now happens up to
+ * `LEASE_STALE_MS + LEASE_POLL_MS` after the writer's last breath, so a crash
+ * in the last ~3.5s of an eight-second window is no longer recoverable: the
+ * window runs out while the new session is still establishing that the old one
+ * is gone, and the record is discarded with `stale_discarded` instead of
+ * restored. The case goes back to the operator, which is the failure this file
+ * has always chosen over the alternative.
+ *
+ * WHAT IT DOES NOT CLOSE. Two sessions that are *both* watching the same dead
+ * writer will both adopt. `KeyValueStore` (`../platform/types.ts`) is
+ * get/set/remove with no compare-and-swap, so there is no way to claim a record
+ * that another watcher cannot also claim in the same instant; and the one
+ * primitive that would settle it directly, `BroadcastChannel`, is a browser
+ * global this package is compiled without on purpose — `tsconfig.json` drops
+ * `lib: dom` and `platform/host-globals.d.ts` is the allowlist that did not
+ * name it. So the hazard is narrowed, from "any second tab that mounts inside
+ * the window" to "two spectators of one crash", and not removed. Nor does the
+ * lease help a writer whose timers are *frozen* rather than gone — a browser
+ * freezing a tab hidden for minutes — though an eight-second window opened by a
+ * foreground click does not reach the five minutes Chrome's policy requires.
  */
 
 /** How long the operator has to take a verdict back. */
 export const UNDO_WINDOW_MS = 8000;
+
+/**
+ * How often the session holding the record re-stamps its lease.
+ *
+ * 1000ms because that is the floor anyway. The operator can give a verdict and
+ * switch tabs in the same second, and a browser clamps `setInterval` in a
+ * hidden tab to a **one-second minimum** — so a shorter interval would be
+ * rounded up in silence and buy nothing, while advertising a precision the
+ * platform does not deliver. (Chrome's harsher "intensive throttling", one
+ * timer a minute, needs five minutes of hiding; a window opened by a foreground
+ * click and closed eight seconds later cannot reach it.)
+ *
+ * At eight beats per verdict this is also the whole write cost of the lease.
+ */
+export const LEASE_HEARTBEAT_MS = 1000;
+
+/**
+ * How much silence means the writer is gone.
+ *
+ * Three beats. The beat is a 1000ms `setInterval` that a hidden tab may already
+ * be stretching to the clamp, so one skipped beat is an ordinary event and two
+ * is a busy main thread, not a corpse. Declaring a *live* writer dead is the
+ * error that produces the duplicate commit this lease exists to prevent, so the
+ * margin is spent on that side; the price is paid in `LEASE_POLL_MS`'s note.
+ *
+ * The comparison is `age > LEASE_STALE_MS`, so exactly three seconds of silence
+ * still reads as alive: the tie goes to "someone else has it", which costs one
+ * more poll, rather than to "take it", which costs a spurious error toast in
+ * another operator's console.
+ *
+ * A stamp in the *future* — a clock moved backwards — has a negative age and
+ * therefore also reads as alive, deliberately. It cannot be reasoned about, and
+ * the safe reading of an unreasonable lease is "not mine". It is not a
+ * permanent silence: the age grows as the clock is corrected, and the record's
+ * own skew check (`remaining > UNDO_WINDOW_MS`) is what finally reports it.
+ */
+export const LEASE_STALE_MS = 3000;
+
+/**
+ * How often a session that found someone else's record looks again.
+ *
+ * Only ever runs while there is a record on disk this session did not write, so
+ * for the overwhelmingly common mount — nothing on disk — no timer is created
+ * at all. 500ms bounds the detection latency at `LEASE_STALE_MS + 500`; a
+ * hidden tab's 1000ms clamp stretches that to 4000ms, which matters only for a
+ * spectator tab and never for the relaunch that is the case worth serving.
+ */
+export const LEASE_POLL_MS = 500;
+
+/**
+ * Is some other session still holding the record on disk?
+ *
+ * Absent, unreadable, or older than `LEASE_STALE_MS` all mean no. Only a stamp
+ * that parses as a finite number and is recent enough means yes — the same
+ * "validate what came off the store rather than trust it" rule
+ * `parsePersistedVerdict` is written to, for the same reason: a previous build
+ * wrote it, or a person did.
+ */
+export function verdictLeaseIsLive(raw: string | null, now: number): boolean {
+  if (raw === null || raw === "") return false;
+  const seenAt = Number(raw);
+  if (!Number.isFinite(seenAt)) return false;
+  return now - seenAt <= LEASE_STALE_MS;
+}
 
 /**
  * The four verdicts, as a value and not only as a type.
@@ -258,6 +416,47 @@ export function useJudgmentQueue(options?: { at?: string }) {
     }
   }, []);
 
+  /**
+   * The lease heartbeat, running only while THIS session has a record on disk.
+   *
+   * Which is narrower than "while a verdict is held", and the narrowing is the
+   * design rather than an omission. A session that *adopted* a record removed
+   * it as it read it and never writes it back, so there is nothing left on disk
+   * for anyone to find and nothing for a lease to protect. Only
+   * `submitVerdict`, which writes the record, starts this.
+   */
+  const leaseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopLease = useCallback(() => {
+    if (leaseTimerRef.current !== null) {
+      clearInterval(leaseTimerRef.current);
+      leaseTimerRef.current = null;
+    }
+  }, []);
+
+  const startLease = useCallback(() => {
+    stopLease();
+    markVerdictLease(String(Date.now()));
+    leaseTimerRef.current = setInterval(() => {
+      markVerdictLease(String(Date.now()));
+    }, LEASE_HEARTBEAT_MS);
+  }, [stopLease]);
+
+  /**
+   * Let go of the record: off disk, lease dropped, heartbeat stopped.
+   *
+   * One function rather than three calls at each of the four sites that end a
+   * held verdict (commit on timer, flush, undo, adopt), because a site that
+   * cleared the record and left the lease behind would leave a *stale* claim on
+   * a record that no longer exists — harmless today, and exactly the kind of
+   * pair that drifts apart. Safe when nothing is held or nothing is running.
+   */
+  const releaseHeld = useCallback(() => {
+    stopLease();
+    clearPendingVerdict();
+    clearVerdictLease();
+  }, [stopLease]);
+
   /** Send a held verdict now. Safe to call when nothing is held. */
   const send = useCallback(
     async (verdictToSend: PendingVerdict) => {
@@ -314,11 +513,11 @@ export function useJudgmentQueue(options?: { at?: string }) {
         if (!current || current.judgmentId !== held.judgmentId) return;
         pendingRef.current = null;
         setPending(null);
-        clearPendingVerdict();
+        releaseHeld();
         void send(current);
       }, ms);
     },
-    [clearTimer, send]
+    [clearTimer, releaseHeld, send]
   );
 
   /**
@@ -353,9 +552,9 @@ export function useJudgmentQueue(options?: { at?: string }) {
     if (!held) return;
     pendingRef.current = null;
     setPending(null);
-    clearPendingVerdict();
+    releaseHeld();
     void send(held);
-  }, [clearTimer, send]);
+  }, [clearTimer, releaseHeld, send]);
 
   const submitVerdict = useCallback(
     (input: { verdict: VerdictCode; notes?: string; createWorkflow?: boolean }) => {
@@ -381,9 +580,16 @@ export function useJudgmentQueue(options?: { at?: string }) {
       // "the operator decided" and "we were told we are dying" is where a
       // decision would be lost.
       setPendingVerdict(JSON.stringify(next));
+      // The record first, then the claim on it, and never the other way round.
+      // A process that dies between these two writes leaves either a record
+      // with no lease — which the next session adopts at once, correctly, since
+      // nothing is keeping it warm — or a lease with no record, which reads as
+      // "nothing to take" and loses a verdict that was never on disk. Only one
+      // of those two orders has a survivable gap.
+      startLease();
       arm(next, UNDO_WINDOW_MS);
     },
-    [cursor.judgment, flush, arm]
+    [cursor.judgment, flush, arm, startLease]
   );
 
   /**
@@ -399,10 +605,10 @@ export function useJudgmentQueue(options?: { at?: string }) {
     // A taken-back verdict must not outlive the taking-back. Left on disk it
     // would be the one thing this design refuses: a decision the operator
     // withdrew, sent by the next launch.
-    clearPendingVerdict();
+    releaseHeld();
     setHolding((prev) => prev.filter((id) => id !== held.judgmentId));
     notify("judgment.queue.undo_done", "info");
-  }, [clearTimer]);
+  }, [clearTimer, releaseHeld]);
 
   /**
    * Defer: hide for this sitting only. No request, no state change on the
@@ -446,6 +652,14 @@ export function useJudgmentQueue(options?: { at?: string }) {
       flush();
       return;
     }
+    // The heartbeat was frozen alongside the commit timer, so the lease on disk
+    // is as stale as the countdown was. Re-stamp it in the same breath as
+    // re-arming: the interval will pick up again by itself, but its next beat
+    // is up to `LEASE_HEARTBEAT_MS` away, and this session is demonstrably
+    // alive right now. (Nothing on React Native can read it — one process — but
+    // a bfcache restore on web comes back into a browser where other tabs are
+    // running, and this is the same event.)
+    if (leaseTimerRef.current !== null) markVerdictLease(String(Date.now()));
     arm(held, Math.min(remaining, UNDO_WINDOW_MS));
   }, [arm, flush]);
 
@@ -461,6 +675,8 @@ export function useJudgmentQueue(options?: { at?: string }) {
   flushRef.current = flush;
   const resyncRef = useRef(resync);
   resyncRef.current = resync;
+  const stopLeaseRef = useRef(stopLease);
+  stopLeaseRef.current = stopLease;
   useEffect(() => {
     // Through the platform port, not `window.addEventListener("beforeunload")`.
     // What this effect states is a rule about verdicts — commit on the way out
@@ -482,49 +698,116 @@ export function useJudgmentQueue(options?: { at?: string }) {
       stopSuspend();
       stopResume();
       flushRef.current();
+      // `flush` already stops the heartbeat on the path that had one running —
+      // it returns early when nothing is held, and nothing can be running then.
+      // This is the same statement made unconditionally, because an interval
+      // that outlives its component writes to storage forever and nothing goes
+      // red when it does.
+      stopLeaseRef.current();
     };
   }, []);
 
   /**
-   * Adopt or discard a verdict left behind by a process that did not come back.
+   * Adopt or discard a verdict left behind by a session that did not come back.
    *
-   * Runs once, on mount, and is the only path from the store into this hook.
-   * The rules it enforces are stated in the header; what is worth having here
-   * is the order, because each step depends on the one before it:
+   * Starts on mount and is the only path from the store into this hook. The
+   * rules are stated in the header; what is worth having here is the order,
+   * because each step depends on the one before it:
    *
-   *  1. Read, then **remove immediately** — before parsing, before any
+   *  0. **Is anything still holding it?** Asked first, before the record is
+   *     even read, because the answer "yes" means every step below is the wrong
+   *     thing to do — including the removal in step 1, which would take a live
+   *     session's verdict off disk and leave that session with no copy at all.
+   *     "Yes" is not a refusal, it is a "not yet": the check repeats every
+   *     `LEASE_POLL_MS` until the lease goes stale (the writer died — adopt) or
+   *     the record disappears (the writer finished — stop, silently, because
+   *     nothing happened to this session).
+   *  1. Read, then **remove immediately** — before parsing, before any further
    *     decision. A record is restored at most once, and the removal must not
    *     be conditional on the branch taken, or a record we refused stays behind
-   *     to be refused again on every launch.
+   *     to be refused again on every launch. The lease goes with it: it is a
+   *     claim on a record that no longer exists.
    *  2. Parse defensively. Unreadable, or written by a shape this build does
    *     not recognise, is dropped without a word: there is nothing truthful to
    *     tell the operator about bytes we cannot read.
    *  3. Only then consult the clock. `remaining <= 0` is the ordinary case — an
    *     app relaunched minutes or days later — and `remaining > UNDO_WINDOW_MS`
-   *     is a clock that moved backwards. Both discard, and both say so.
-   *  4. What is left is a window that genuinely has time in it, which can only
-   *     mean this process started within eight seconds of the last one dying.
-   *     That verdict goes back on screen with the time it actually has left,
-   *     under the operator's eye and their undo key. It is not re-persisted;
-   *     see the header.
+   *     is a clock that moved backwards. Both discard, and they say different
+   *     things, because they are different facts: one window ran out, the other
+   *     cannot be measured at all.
+   *  4. What is left is a window that genuinely has time in it, from a writer
+   *     that is demonstrably not running. That verdict goes back on screen with
+   *     the time it actually has left, under the operator's eye and their undo
+   *     key. It is not re-persisted and takes no lease of its own; see the
+   *     header, and `startLease`.
    */
   const armRef = useRef(arm);
   armRef.current = arm;
   useEffect(() => {
-    const raw = getPendingVerdict();
-    if (raw === null) return;
-    clearPendingVerdict();
-    const held = parsePersistedVerdict(raw);
-    if (held === null) return;
-    const remaining = held.dueAt - Date.now();
-    if (remaining <= 0 || remaining > UNDO_WINDOW_MS) {
-      notify("judgment.queue.commit_error", "error");
-      return;
-    }
-    pendingRef.current = held;
-    setPending(held);
-    setHolding((prev) => (prev.includes(held.judgmentId) ? prev : [...prev, held.judgmentId]));
-    armRef.current(held, remaining);
+    let poll: ReturnType<typeof setInterval> | null = null;
+    let settled = false;
+    const stop = () => {
+      settled = true;
+      if (poll !== null) {
+        clearInterval(poll);
+        poll = null;
+      }
+    };
+
+    const attempt = () => {
+      // NO PATH REACHES THIS TODAY, and it is here anyway — stated rather than
+      // left to look like coverage. If this session gave a verdict of its own
+      // while it was watching, the record on disk is now the one
+      // `submitVerdict` wrote, under a lease this session is re-stamping every
+      // second, so the liveness check below already declines it. What this
+      // guards is the day that stops being true: overwriting a verdict the
+      // operator is currently looking at, with one off the disk, is silent and
+      // unrecoverable, and two lines are cheap against it.
+      //
+      // (`submitVerdict` overwriting *another* session's record is a separate,
+      // pre-existing collision — one storage slot, two consoles — and is not
+      // addressed here.)
+      if (pendingRef.current !== null) {
+        stop();
+        return;
+      }
+      const raw = getPendingVerdict();
+      if (raw === null) {
+        // Either there never was one, or the session that held it has finished
+        // with it. Nothing to say and nothing left to watch.
+        stop();
+        return;
+      }
+      if (verdictLeaseIsLive(getVerdictLease(), Date.now())) return;
+
+      stop();
+      clearPendingVerdict();
+      clearVerdictLease();
+      const held = parsePersistedVerdict(raw);
+      if (held === null) return;
+      const remaining = held.dueAt - Date.now();
+      if (remaining <= 0) {
+        notify("judgment.queue.stale_discarded", "error");
+        return;
+      }
+      if (remaining > UNDO_WINDOW_MS) {
+        notify("judgment.queue.skew_discarded", "error");
+        return;
+      }
+      pendingRef.current = held;
+      setPending(held);
+      setHolding((prev) => (prev.includes(held.judgmentId) ? prev : [...prev, held.judgmentId]));
+      armRef.current(held, remaining);
+    };
+
+    attempt();
+    // Only ever created when the first look was inconclusive — a record on disk
+    // with a live claim on it. The ordinary mount finds nothing and starts no
+    // timer.
+    if (!settled) poll = setInterval(attempt, LEASE_POLL_MS);
+    return () => {
+      if (poll !== null) clearInterval(poll);
+    };
   }, []);
 
   const total = sessionTotal ?? cursor.total;
