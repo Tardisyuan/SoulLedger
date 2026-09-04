@@ -12,6 +12,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { DomainEnum, DomainText, MissingValue } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { QueryError } from "@/src/components/ui/PageError";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
@@ -461,22 +462,14 @@ export default function WorkflowDetailPage() {
           <button
             type="button"
             onClick={() => setActiveTab("nodes")}
-            className={`px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px ${
-              activeTab === "nodes"
-                ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
-                : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
-            }`}
+            className={`${TAB_BASE} ${activeTab === "nodes" ? TAB_ON : TAB_OFF}`}
           >
             {t("workflow.detail.nodes")} ({sortedNodes.length})
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("history")}
-            className={`px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px ${
-              activeTab === "history"
-                ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
-                : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
-            }`}
+            className={`${TAB_BASE} ${activeTab === "history" ? TAB_ON : TAB_OFF}`}
           >
             {t("workflow.detail.history")}
           </button>

@@ -147,6 +147,7 @@ const COLLECTED_FILES = [
   "soulStateBadgeContract.test.ts",
   "statusTokenLayering.test.ts",
   "suiteShape.test.ts",
+  "tabClassContract.test.ts",
   "tenantSignalContract.test.tsx",
   "useDispositions.test.ts",
   "useJudgmentQueue.test.tsx",

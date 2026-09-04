@@ -20,6 +20,7 @@ import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { resolveEnumDisplay } from "@/src/lib/domainDisplay";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { StatCard } from "@/src/components/dashboard/StatCard";
@@ -122,11 +123,7 @@ function DashboardContent() {
         key={tabItem.key}
         type="button"
         onClick={() => setTab(tabItem.key)}
-        className={`px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px ${
-          activeTab === tabItem.key
-            ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
-            : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
-        }`}
+        className={`${TAB_BASE} ${activeTab === tabItem.key ? TAB_ON : TAB_OFF}`}
       >
         {tabItem.label}
       </button>

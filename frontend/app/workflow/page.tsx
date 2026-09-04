@@ -13,6 +13,7 @@ import { RequirePermission } from "@/src/components/rbac/RequirePermission";
 import { MenuGloss } from "@/src/components/layout/MenuGloss";
 import { DomainEnum } from "@/src/components/ui/DomainValue";
 import { PageShell } from "@/src/components/ui/PageShell";
+import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 import { Button } from "@/src/components/ui/Button";
 import { Badge } from "@/src/components/ui/Badge";
 import { EmptyState } from "@/src/components/ui/EmptyState";
@@ -117,21 +118,15 @@ export default function WorkflowPage() {
       }
       /* These three ARE page-level tabs — they decide what the whole page is
          showing — so unlike the strip on /workflow/[id] they belong in the
-         shell's slot. They stay plain <button>s rather than becoming `Button`:
-         that cva writes `border` on all four sides and an `active:translate-y-px`
-         press nudge, both of which fight a strip whose entire visual language
-         is a single 2px bottom rule that has to line up with the container's
-         hairline. */
+         shell's slot. They stay plain <button>s rather than becoming `Button`;
+         that reading of the cva is written once, in `src/lib/tabClasses.ts`
+         beside the classes themselves. */
       tabs={tabs.map((tabItem) => (
         <button
           key={tabItem.key}
           type="button"
           onClick={() => setTab(tabItem.key)}
-          className={`px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px ${
-            tab === tabItem.key
-              ? "text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent))]"
-              : "text-[hsl(var(--color-ink-muted))] border-transparent hover:text-[hsl(var(--color-ink))]"
-          }`}
+          className={`${TAB_BASE} ${tab === tabItem.key ? TAB_ON : TAB_OFF}`}
         >
           {tabItem.label}
         </button>

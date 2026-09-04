@@ -15,22 +15,22 @@ import { Badge } from "@/src/components/ui/Badge";
 import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { QueryError } from "@/src/components/ui/PageError";
+import { TAB_BASE, TAB_ON, TAB_OFF } from "@/src/lib/tabClasses";
 
 type FilterType = "all" | "unread";
 
-/**
- * Tab buttons are hand-rolled rather than `<Button>`, and that is a reading of
- * the component rather than an omission: `Button` ships four variants —
- * primary / secondary / ghost / danger — and a tab is none of them. Its cva
- * base writes `border` on all four sides plus `active:translate-y-px`, so a
- * bottom-rule tab built on it would spend its className fighting the base it
- * inherited. PageShell owns where this strip sits (`tabs` slot: below the
- * header, above the filters, deliberately not sticky); the page owns only the
- * two states.
+/*
+ * The three tab constants used to be declared here, and this page was the only
+ * one of six strips that had named them at all — which is how the drift was
+ * found: it also reordered the active/inactive strings while naming them
+ * (`border-… text-…` against the five inline copies' `text-… border-…`). They
+ * now live in `src/lib/tabClasses.ts`, together with the reading of `Button`
+ * that kept these hand-rolled `<button>`s hand-rolled.
+ *
+ * What stays a fact about THIS page: PageShell owns where the strip sits
+ * (`tabs` slot: below the header, above the filters, deliberately not sticky);
+ * the page owns only which of the two states each button is in.
  */
-const TAB_BASE = "px-4 py-2 text-03 font-medium transition-colors border-b-2 -mb-px";
-const TAB_ON = "border-[hsl(var(--color-accent))] text-[hsl(var(--color-accent-ink))]";
-const TAB_OFF = "border-transparent text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]";
 
 export default function NotificationsPage() {
   const { t, formatDateTime } = useI18n();
