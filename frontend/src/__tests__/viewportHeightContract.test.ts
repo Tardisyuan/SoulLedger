@@ -3,7 +3,7 @@
  *
  * `min-h-screen` 只准出现在 AppLayout 之外的路由上。
  *
- * WHY THIS FILE EXISTS. `src/components/layout/AppLayout.tsx:418` 把页面放进一个
+ * WHY THIS FILE EXISTS. `src/components/layout/AppLayout.tsx:461` 把页面放进一个
  * `min-h-[calc(100vh-4rem)]` 的槽位里。页面再写一次 `min-h-screen`,就是 100vh
  * 嵌在 100vh−4rem 里 —— 内容再短也永远多出 64px 死滚动,而且它不报错、不报类型、
  * 不影响任何断言:只是每一条路由都多一根滚动条。

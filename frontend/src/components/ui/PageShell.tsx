@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
  *    控件只有筛选。筛选栏 `top-16` 贴在 AppLayout 那条 `h-16` 头下沿。
  *
  * 3) **没有 `min-h-screen`。** AppLayout 给的槽位是
- *    `min-h-[calc(100vh-4rem)]`（AppLayout.tsx:418），页面再写一次
+ *    `min-h-[calc(100vh-4rem)]`（AppLayout.tsx:461），页面再写一次
  *    `min-h-screen` 就永远多出 64px 死滚动 —— 现在 `app/` 下 47 个文件犯了这个。
  *    `src/__tests__/PageShell.test.tsx` 里有一条专门盯着它。
  */
