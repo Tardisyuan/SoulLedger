@@ -1,12 +1,4 @@
 {
-  "app/admin/stats/error.tsx": {
-    "palette": 1,
-    "type": 2
-  },
-  "app/error.tsx": {
-    "palette": 1,
-    "type": 2
-  },
   "app/not-found.tsx": {
     "type": 2
   },
