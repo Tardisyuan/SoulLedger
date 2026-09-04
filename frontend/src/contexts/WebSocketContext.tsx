@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { WSClient, type WSStatus, type WSMessage } from "@soulledger/core/ws/client";
+import { onSessionResume } from "@soulledger/core/platform";
 import { useTenant } from "./TenantContext";
 import { useToast } from "./ToastContext";
 import { dispatchEvent, type EventPayload } from "@/lib/events/event_registry";
@@ -115,6 +116,53 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       clientRef.current = null;
     };
   }, [user, handleNotification, handleWorkflowEvent, handleGenericEvent]);
+
+  /**
+   * A suspended session coming back re-opens the socket.
+   *
+   * `WSClient` keeps liveness with a `setInterval` heartbeat and re-opens from
+   * exactly one place — `onclose` → `scheduleReconnect()` — and both are
+   * timers. A host that freezes the JavaScript loop (React Native
+   * backgrounding the app; a browser stashing the page in the bfcache) stops
+   * both: the socket dies with nothing running to notice, and the client comes
+   * back either believing it is still connected or holding a backoff timer
+   * paused mid-count. `WSClient.reconnect()` has existed the whole time. This
+   * is the trigger it was missing, and it is the line
+   * `packages/core/src/platform/index.ts` names in the doc on `onSessionResume`
+   * as not yet written.
+   *
+   * NO STATUS GUARD, AND THAT IS THE DELIBERATE PART. `client.reconnect()` is
+   * called unconditionally because the two obvious guards are both wrong here:
+   *
+   *   - `getStatus() === "connected"` → skip. That skips exactly the case this
+   *     exists for. `setStatus` only leaves `"connected"` from inside
+   *     `onclose`; if that callback was dropped while the loop was frozen, the
+   *     status still reads `"connected"` over a socket that is gone, and the
+   *     guard would decline to fix the one failure it was written for.
+   *   - reconnect unconditionally *by tearing down first* — what this
+   *     context's own `reconnect()` below does, `disconnect()` then
+   *     `connect()`. That would drop a healthy socket every time the operator
+   *     steps back into the tab, trading a rare dead link for a guaranteed gap
+   *     in delivery.
+   *
+   * So the decision is left where the fact lives: `WSClient.connect()` returns
+   * early when `readyState` is OPEN or CONNECTING, so `reconnect()` over a
+   * healthy link is a no-op, and over a dead one — including a dead one whose
+   * `_status` still says `"connected"` — it builds a fresh socket. That early
+   * return is in a file this one does not own, so it is pinned from here by an
+   * assertion that counts sockets rather than reading a status string:
+   * `WebSocketContext.sessionResume.test.tsx`, "opens no second socket, and
+   * closes none, when the link is already healthy".
+   *
+   * Empty deps on purpose. The handler reaches the client through `clientRef`
+   * at call time instead of closing over it, so it cannot go stale the way the
+   * three `useCallback` handlers above did before `6d3d05c` — and the
+   * subscription is therefore installed once for the life of the provider
+   * rather than being torn down and rebuilt on every `user` identity change
+   * that `TenantContext`'s hydration causes. The returned unsubscribe is the
+   * cleanup: this listener sits on `window`, which outlives the tree.
+   */
+  useEffect(() => onSessionResume(() => clientRef.current?.reconnect()), []);
 
   const send = useCallback((data: WSMessage) => {
     clientRef.current?.send(data);
