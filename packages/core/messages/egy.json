@@ -320,7 +320,8 @@
       "id_copy_failed": "Ma Sesh",
       "copied": "Em Sesh ✓"
     },
-    "field_required": "This field is required"
+    "field_required": "This field is required",
+    "dismiss": "Khetem"
   },
   "pagination": {
     "info": "Per {{page}} / {{total}} ({{count}} medu)",
@@ -513,7 +514,9 @@
       "conflict_message": "{{role}} Wehem Khemen Seth Aba Netjer Ka (Weben {{expected}} → {{current}}). Sekhem Weben Em Khet Iri Sesen.",
       "conflict_toast": "{{role}} Ma Kheme Seth: Khemen Seth",
       "conflict_reload_button": "Sekhem Weben Netjer Wu",
-      "conflict_reloading": "Em Sekhem..."
+      "conflict_reloading": "Em Sekhem...",
+      "partial_save_title": "Sesh nen tem. Renenu sesh er set:",
+      "partial_save_hint": "Iri an nebet: renenu ipen sesh an em version tepy — nen. Maa an tepy."
     }
   },
   "workflow": {

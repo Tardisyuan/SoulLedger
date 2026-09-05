@@ -21,6 +21,7 @@ import {
   type GrantMap,
 } from "@/src/components/permissions/matrixDiff";
 import { ConflictBanner } from "@/src/components/permissions/ConflictBanner";
+import { PartialSaveBanner } from "@/src/components/permissions/PartialSaveBanner";
 import { MatrixLegend } from "@/src/components/permissions/MatrixLegend";
 import { MatrixToolbar } from "@/src/components/permissions/MatrixToolbar";
 import { PermissionMatrixTable } from "@/src/components/permissions/PermissionMatrixTable";
@@ -206,6 +207,8 @@ export default function PermissionsPage() {
   const {
     isSaving,
     conflict,
+    savedBeforeFailure,
+    dismissPartialSave,
     confirmOpen,
     pendingDiffs,
     typedRoleNames,
@@ -269,6 +272,13 @@ export default function PermissionsPage() {
     >
       <RequireAdmin fallback={<PermissionDenied />}>
         <div className="space-y-10">
+          {/* ── 已落库但没说出来的那几个 ──
+              放在冲突横幅**之前**:先说已经发生了什么,再说什么没成。
+              两者可以同时在场 —— 第 k 个撞 409 时,前 k-1 个正是已落库的。 */}
+          {savedBeforeFailure.length > 0 && (
+            <PartialSaveBanner saved={savedBeforeFailure} onDismiss={dismissPartialSave} />
+          )}
+
           {/* ── Conflict banner ── */}
           {conflict && (
             <ConflictBanner

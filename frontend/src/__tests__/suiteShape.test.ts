@@ -136,6 +136,7 @@ const COLLECTED_FILES = [
   "messageValuesAreNotTheirOwnKeys.test.ts",
   "middlewareAuthGate.test.ts",
   "ledgerQuantityContract.test.tsx",
+  "matrixPartialSave.test.tsx",
   "notifyKeysExistInTheBundles.test.ts",
   "notifyPortCarriesTheToast.test.ts",
   "permissionFormCategoryStability.test.tsx",
