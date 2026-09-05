@@ -394,6 +394,25 @@ describe("prefers-reduced-motion", () => {
     expect(after.B.y - after.A.y).toBe(160);
   });
 
+  it("要求了减少动效的操作员,也听得到重排的结果", async () => {
+    // `setRelayouting(true)` 在减少动效的早退**之后**,所以此前这条分支上
+    // 读屏一个字都没有:九张卡片瞬移到新位置,而 live region 是空的。
+    // 「不给动效」不等于「不给消息」。
+    setReducedMotion(true);
+    renderDragged();
+    await screen.findByDisplayValue("dragged");
+
+    fireEvent.click(screen.getByText("Auto layout"));
+
+    // 两个 live region:可见的那个只说「正在重排」,视觉隐藏的那个只说结果。
+    // 分开是因为把结果塞进可见的那个会改变工具栏宽度 —— 见组件里的注释。
+    const regions = await screen.findAllByRole("status");
+    const texts = regions.map((r) => r.textContent);
+    expect(texts).toContain("workflow.editor.relayout_done");
+    // 缺席断言:这条路径上根本没有「正在」可言,不许说。
+    expect(texts).not.toContain("workflow.editor.relayouting");
+  });
+
   it("with the preference NOT set, the same press does animate", async () => {
     // The control. Without it, a guard that had simply broken — matching every
     // query, or throwing — would satisfy the case above and look correct.

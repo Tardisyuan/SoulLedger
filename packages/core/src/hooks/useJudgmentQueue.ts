@@ -728,7 +728,23 @@ export function useJudgmentQueue(options?: { at?: string }) {
   const undo = useCallback(() => {
     clearTimer();
     const held = pendingRef.current;
-    if (!held) return;
+    if (!held) {
+      // NOT A SILENT RETURN. The operator misses the countdown by a second,
+      // presses U, and gets **nothing** — no toast, no flash — which is
+      // indistinguishable from "the key is not working". They then press it
+      // again, and again.
+      //
+      // The message says why rather than only that: once a verdict has been
+      // sent there is a disposition, and changing it goes through the
+      // ADMIN-only audited correction. That is the same sentence
+      // `undo_scope_note` already puts on screen while the window is open —
+      // this is the moment it stops being advice and becomes the answer.
+      //
+      // `info`, not `error`: the operator did nothing wrong. They asked a
+      // question and this is the answer.
+      notify("judgment.queue.undo_unavailable", "info");
+      return;
+    }
     pendingRef.current = null;
     setPending(null);
     // A taken-back verdict must not outlive the taking-back. Left on disk it

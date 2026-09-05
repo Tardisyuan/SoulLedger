@@ -81,8 +81,20 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   const secondsLeft = useCountdown(pending?.dueAt ?? null);
 
   // Notes belong to the case in front of the operator, never to the next one.
+  //
+  // AND SO DOES THE WORKFLOW CHECKBOX, which this effect used to leave alone.
+  // The comment above stated the rule and the code applied it to one of the
+  // two things the rule covers: `createWorkflow` was `useState(false)` at
+  // mount and nothing ever put it back. So an operator who ticked W for one
+  // soul then ruled on the next ten silently opened an approval workflow for
+  // every one of them — `rule()` passes it straight through on every verdict.
+  //
+  // Deciding it is a per-sitting setting instead would be defensible, but
+  // then it would have to say so on screen; a hidden sticky toggle that
+  // creates a workflow per case is the one reading nobody chose.
   useEffect(() => {
     setNotes("");
+    setCreateWorkflow(false);
   }, [judgment?.id]);
 
   const rule = useCallback(

@@ -371,6 +371,18 @@ export default function WorkflowEditor({
    * operator something untrue.
    */
   const [relayouting, setRelayouting] = useState(false);
+  /**
+   * 重排**结束**时说一句,而不是只在动画期间说「正在重排」。
+   *
+   * `relayouting` 只在带动画的那条分支上被设(`setRelayouting(true)` 在
+   * 减少动效的早退之后),所以一个要求了 `prefers-reduced-motion` 的操作员
+   * 按下自动布局时,九张卡片瞬移到新位置,而读屏**一个字都没有**。
+   *
+   * 两条分支都设这一句,内容是结果不是过程 ——「已重新排布 N 个节点」。
+   * 动画那条在 `onComplete` 里设,所以先听到「正在重排」再听到结果;
+   * 瞬时那条直接设结果。
+   */
+  const [layoutDone, setLayoutDone] = useState("");
 
   /**
    * Stop a travel in flight, WITHOUT winding it to its end.
@@ -390,6 +402,9 @@ export default function WorkflowEditor({
     layoutFlipRef.current?.kill();
     layoutFlipRef.current = null;
     setRelayouting(false);
+    // 被打断的重排没有结果可报 —— 留着上一次的句子,会让读屏在一次
+    // 「什么都没发生」之后念出一个数字。
+    setLayoutDone("");
   }, []);
 
   useEffect(() => {
@@ -708,6 +723,14 @@ export default function WorkflowEditor({
        */
       fitIfOverflowing(next);
       setNodes(next);
+      // 结果播报,这条分支此前完全沉默 —— `setRelayouting(true)` 在下面,
+      // 也就是在这个 early return 之后。一个要求了减少动效的操作员按下自动
+      // 布局,九张卡片瞬移,而读屏一个字都没有。
+      //
+      // `!moved` 也走这里,而那时说「已重新排布 N 个节点」是真话:布局确实
+      // 重新算过了,只是结果和原来一样;它同时还可能把视口拉了回来
+      // (`fitIfOverflowing`),那正是操作员按这个按钮想要的。
+      setLayoutDone(t("workflow.editor.relayout_done", { n: String(next.length) }));
       return;
     }
 
@@ -770,6 +793,7 @@ export default function WorkflowEditor({
 
     const before = Flip.getState(cards);
     setRelayouting(true);
+    setLayoutDone("");
     flushSync(() => setNodes(next));
     layoutFlipRef.current = Flip.from(before, {
       duration: LAYOUT_TRAVEL_SECONDS,
@@ -777,9 +801,12 @@ export default function WorkflowEditor({
       // `onComplete` only. `onInterrupt` would fire on the kill inside
       // `stopLayoutTravel`, which already clears the flag itself — routing it
       // through both would make the ordering of two writes matter.
-      onComplete: () => setRelayouting(false),
+      onComplete: () => {
+        setRelayouting(false);
+        setLayoutDone(t("workflow.editor.relayout_done", { n: String(next.length) }));
+      },
     });
-  }, [nodes, edges, setNodes, stopLayoutTravel, fitIfOverflowing]);
+  }, [nodes, edges, setNodes, stopLayoutTravel, fitIfOverflowing, t]);
 
   // Delete selected node
   const deleteSelectedNode = useCallback(() => {
@@ -1142,6 +1169,22 @@ export default function WorkflowEditor({
             className="text-02 text-[hsl(var(--color-ink-muted))]"
           >
             {relayouting ? t("workflow.editor.relayouting") : ""}
+          </span>
+          {/* 结果播报,**视觉隐藏**,而这一点是被实测逼出来的。
+           *
+           * 第一版把这句话塞进上面那个可见的 span 里。它在工具栏那一行,而这一行
+           * 在窄屏上本来就是横向滚动的 —— 文字一进来行就变宽,画布随之变小,于是
+           * `fitIfOverflowing` 刚按旧尺寸算好的「装得下」不再成立。
+           * mobile-chrome 上 `workflow-auto-layout-motion` 两条**内容断言**因此
+           * 变红(不是超时,是卡片真的落到了屏幕外)。
+           *
+           * 所以播报和排版分开:可见的那个 span 只说「正在重排」(它出现在动画
+           * 期间,那时视口已经定好了),这一个只说结果,而且不占任何布局。
+           *
+           * 两条分支都设 `layoutDone` —— 减少动效那条此前完全沉默,卡片瞬移而
+           * 读屏一个字都没有。 */}
+          <span role="status" aria-live="polite" className="sr-only">
+            {layoutDone}
           </span>
           <button
             onClick={deleteSelectedNode}

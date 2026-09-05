@@ -555,6 +555,56 @@ describe("useJudgmentQueue", () => {
  * 自动重复、双击、因为下一张还没来所以又按一次 —— 到达 `submitVerdict` 时
  * 拿到的都是**同一个** `judgment.id`。
  */
+/**
+ * 撤销窗口已经过去时按 U。
+ *
+ * `undo` 在 `pendingRef.current` 为空时直接 `return`,一声不吭。操作员差一秒
+ * 错过倒计时,按 U,**什么都没有** —— 和「这个键坏了」完全一样,于是他会再按,
+ * 再按。而这个仓库枚举过 64 个 `judgment.queue.*` 键,里面没有任何一条形状是
+ * 「已经发出去了 / 没有可撤销的」。
+ */
+describe("没有可撤销时,U 也要有回答", () => {
+  it("窗口过去之后按 U,说清楚为什么撤不了", async () => {
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+
+    act(() => result.current.submitVerdict({ verdict: "PASSED" }));
+    await act(async () => {
+      jest.advanceTimersByTime(UNDO_WINDOW_MS + 100);
+    });
+    mockShowToast.mockClear();
+
+    act(() => result.current.undo());
+
+    // 而且答案要说明**为什么** —— 一旦提交,改判走的是管理员带审计的更正流程,
+    // 那正是 `undo_scope_note` 在窗口还开着时就在说的那句话。
+    expect(mockShowToast).toHaveBeenCalledWith("judgment.queue.undo_unavailable", "info");
+  });
+
+  it("一次都没裁过就按 U,同样有回答", async () => {
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+    mockShowToast.mockClear();
+
+    act(() => result.current.undo());
+
+    expect(mockShowToast).toHaveBeenCalledWith("judgment.queue.undo_unavailable", "info");
+  });
+
+  it("真的有可撤销时,说的是撤销成功而不是这句", async () => {
+    const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.cursor.judgment).not.toBeNull());
+    act(() => result.current.submitVerdict({ verdict: "PASSED" }));
+    mockShowToast.mockClear();
+
+    act(() => result.current.undo());
+
+    expect(mockShowToast).toHaveBeenCalledWith("judgment.queue.undo_done", "info");
+    // 缺席断言:两句不能同时出现。
+    expect(mockShowToast).not.toHaveBeenCalledWith("judgment.queue.undo_unavailable", "info");
+  });
+});
+
 describe("同一案不会被裁两次", () => {
   it("对同一张卡片再裁一次:不提前提交第一条,也不排第二条", async () => {
     const { result } = renderHook(() => useJudgmentQueue(), { wrapper: wrapper() });
