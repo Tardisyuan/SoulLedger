@@ -477,17 +477,24 @@ const eslintConfig = [
       // `useCallback` 把 `currentUserId` 关进了闭包却没写进依赖数组,于是
       // 关注/取关通知**整个会话一次都不会触发**。规则一开就同时报出那三处。
       //
-      // 为什么是 `error` 而不是 `warn`:`npm run lint` 就是 `eslint .`,
-      // 警告不改变退出码,CI 因此看不见它们。只有 `scripts/install-hooks.sh`
-      // 的 `--max-warnings 0` 会拦 —— 也就是说 `warn` 会造成一种别扭的状态:
-      // 本地提交被挡,CI 却是绿的。全仓当前违规数为 0,所以 `error` 不欠债。
-      "react-hooks/exhaustive-deps": "error",
-      // `warn`,不是 `off`。
+      // `error` 而不是 `warn`。这条当初写下的**理由**已经不成立,而**结论**
+      // 仍然成立 —— 两句都留着,因为它们是两件事。
       //
-      // `off` 是两层遮蔽里的第二层(第一层是上面的 `ignores`)。开成 `error`
-      // 会让这一轮变成一次大规模改写;`warn` 让它们出现在输出里,而
-      // `npm run lint` 仍然按退出码判定通过 —— 下一次有人碰这些文件时它就在
-      // 眼前。`argsIgnorePattern` 放行按约定写的 `_` 前缀。
+      // 原来的理由:「`npm run lint` 就是 `eslint .`,警告不改变退出码,CI 因此
+      // 看不见它们。只有 `scripts/install-hooks.sh` 的 `--max-warnings 0` 会拦 ——
+      // 也就是说 `warn` 会造成一种别扭的状态:本地提交被挡,CI 却是绿的。」
+      //
+      // 那个不对称 2026-09-05 关掉了:`package.json` 的 `lint` 现在是
+      // `eslint . --max-warnings 0`,而 pre-push 与 CI 走的都是这个脚本,所以
+      // 三处已经同一档。
+      //
+      // `error` 仍然是对的,理由换成一句更简单的:一个 hook 的依赖数组错了不是
+      // 风格问题,是那个 effect 会拿着旧值跑。全仓当前违规数为 0。
+      "react-hooks/exhaustive-deps": "error",
+      // 这一块是**产品代码**,两条 `no-unused-vars` 在这里是 `off`。
+      //
+      // (`warn` 那一档在下面的测试文件块里。它原本记着「`npm run lint` 仍然按
+      // 退出码判定通过」—— **那半句 2026-09-05 起是假的**,理由见那一块。)
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "react/react-in-jsx-scope": "off",
@@ -508,8 +515,16 @@ const eslintConfig = [
   // 一个从不被调用的 import,在测试里比在产品代码里更值得看见:它通常意味着
   // 那条测试**打算**做的事和它实际做的事不是一回事。
   //
-  // `warn` 而不是 `error`:开成 error 会让这一轮变成一次跨 98 个文件的改写。
-  // warn 让它们出现在输出里,而 `npm run lint` 仍按退出码判定通过。
+  // `warn` 而不是 `error`,而**这两档现在在门禁上等价**:2026-09-05 起
+  // `package.json` 的 `lint` 是 `eslint . --max-warnings 0`,所以一条 warning
+  // 和一条 error 一样会让 pre-push 和 CI 退出 1。
+  //
+  // 这条留作 `warn` 只剩一个理由:输出里那个词仍然分得出「本来就该报红的
+  // 东西」和「当初为了不做一次跨 98 个文件的改写而缓下来的债」。缓期已经结束
+  // —— 违规数降到了 0,而收紧脚本正是把它钉在 0 上的那一步。
+  //
+  // 原注释里的「而 `npm run lint` 仍按退出码判定通过」已删:那句话曾经是真的,
+  // 现在不是。
   {
     files: ["src/__tests__/**/*.ts", "src/__tests__/**/*.tsx"],
     languageOptions: {

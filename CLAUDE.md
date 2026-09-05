@@ -71,6 +71,12 @@ cd backend && pip-audit --strict --desc
 # Frontend — matches CI pipeline exactly
 cd frontend && npx tsc --noEmit
 cd frontend && npm run lint
+# 2026-09-05 起 `lint` 是 `eslint . --max-warnings 0`。此前是裸 `eslint .`,
+# 于是 **warning 不改变退出码**:唯一会拦下 warning 的是 pre-commit 钩子里那条
+# `--max-warnings 0`,而它只扫暂存文件。pre-push 和 CI 走的都是这个脚本,所以
+# 本地提交被挡、CI 却是绿的。真踩过一次:一条 `no-unused-vars` warning 让
+# pre-commit 拒了提交,而在那之前刚跑的 `npm run lint` 退出码是 0。
+# `packages/core` 的 lint 脚本同时收紧。收紧当天两个 workspace 的 warning 数都是 0。
 cd frontend && npm run build
 # `test:coverage`, NOT `npm test`. `npm test` is bare `jest`, and
 # `jest.config.js` sets `coverageThreshold` without `collectCoverage` — so the
