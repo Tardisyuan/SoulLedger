@@ -618,3 +618,66 @@ describe("裁决按钮有按压态", () => {
     }
   });
 });
+
+/**
+ * 「同时开审批流」跟着案子走,不跟着坐堂走。
+ *
+ * `createWorkflow` 是 `useState(false)`,而每案重置的那个 effect 只清 `notes`
+ * —— 它上面的注释还写着「笔记属于眼前这个案子,永远不属于下一个」,而这条规则
+ * 覆盖的两样东西里,代码只对其中一样生效了。
+ *
+ * 于是勾一次 W,接下来裁的每一个案子都会静默开一个审批流:`rule()` 每次裁决都
+ * 把这个值原样传下去。
+ */
+describe("审批流复选框不跨案子", () => {
+  it("换到下一个案子时,勾选被清掉", async () => {
+    renderConsole();
+    await screen.findByText("第一位待判者");
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "w" });
+    });
+    expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(true);
+
+    // 裁一个,前进到下一个。
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "1" });
+    });
+    await screen.findByText("第二位待判者");
+
+    expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(false);
+  });
+
+  it("那一次裁决本身仍然带着勾选 —— 清的是下一个,不是这一个", async () => {
+    // 这个文件默认用真定时器(全文只有这一处碰过定时器),所以这条自己装假的
+    // 来把八秒的撤销窗口走完。第一版直接写了 `advanceTimersByTime` 而没装,
+    // 那是一句空转 —— 它红了才发现,而不是绿着骗过去。
+    jest.useFakeTimers();
+    try {
+      renderConsole();
+      await screen.findByText("第一位待判者");
+
+      // 两个 act,不是一个。浏览器里两次 keydown 是两个任务,React 会在它们
+      // 之间重渲染,于是 `rule` 的闭包看得到刚勾上的值。塞进同一个 act 里就
+      // 没有那次重渲染,`rule` 拿到的是旧的 false —— 那样测到的是 React 的
+      // 批处理,不是这段代码。
+      await act(async () => {
+        fireEvent.keyDown(window, { key: "w" });
+      });
+      await act(async () => {
+        fireEvent.keyDown(window, { key: "1" });
+      });
+      await act(async () => {
+        jest.advanceTimersByTime(9000);
+      });
+
+      // 缺席断言的反面:重置不许把当前这次裁决的意图也一起吃掉。
+      expect(mockConclude).toHaveBeenCalledWith(
+        JUDGMENT.id,
+        expect.objectContaining({ create_workflow: true })
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});

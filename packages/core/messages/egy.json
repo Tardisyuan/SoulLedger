@@ -545,7 +545,8 @@
       "new_node": "Mekher Werpet",
       "saved": "Pet Sethety Pedet Seth",
       "save_failed": "Ma Pedet Seth",
-      "title": "Khemen Pet Sethety"
+      "title": "Khemen Pet Sethety",
+      "relayout_done": "Tep Mekher {{n}} kehat"
     },
     "templates": "Pet Sethety Wu",
     "select_template": "Sesh Pet Sethety Em Khemen",
@@ -818,7 +819,8 @@
       "key_restore": "Ini sep-u sedjer neb",
       "key_help": "Sesh / imen sesh en djed-tep",
       "key_leave": "Per em set (shu sesh-per tepy)",
-      "key_notes": "Focus the notes field"
+      "key_notes": "Focus the notes field",
+      "undo_unavailable": "Nen khemu — sheemtet tepy hab. Shabu er wat en heka-sesh en neb-per."
     },
     "detail": {
       "loading": "Khemut Sheemtet Seth...",

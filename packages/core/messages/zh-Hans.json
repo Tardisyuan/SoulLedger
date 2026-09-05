@@ -545,7 +545,8 @@
       "new_node": "新节点",
       "saved": "模板已保存",
       "save_failed": "保存失败",
-      "title": "流程编辑器"
+      "title": "流程编辑器",
+      "relayout_done": "已重新排布 {{n}} 个节点"
     },
     "templates": "流程模板",
     "select_template": "选择模板进行编辑",
@@ -818,7 +819,8 @@
       "key_restore": "恢复所有已延后的条目",
       "key_help": "显示 / 隐藏键盘映射",
       "key_leave": "退出队列（在输入框内则先失焦）",
-      "key_notes": "聚焦备注"
+      "key_notes": "聚焦备注",
+      "undo_unavailable": "没有可撤销的裁决——上一条已经提交。改判须走管理员带审计的更正流程。"
     },
     "detail": {
       "loading": "加载审判中...",

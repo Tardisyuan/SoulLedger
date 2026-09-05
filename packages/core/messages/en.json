@@ -545,7 +545,8 @@
       "new_node": "New Node",
       "saved": "Template saved",
       "save_failed": "Save failed",
-      "title": "Editor"
+      "title": "Editor",
+      "relayout_done": "Re-arranged {{n}} nodes"
     },
     "templates": "Workflow Templates",
     "select_template": "Select a template to edit",
@@ -818,7 +819,8 @@
       "key_restore": "Bring every deferred case back",
       "key_help": "Show / hide this map",
       "key_leave": "Leave the queue (blurs a text field first)",
-      "key_notes": "Focus the notes field"
+      "key_notes": "Focus the notes field",
+      "undo_unavailable": "Nothing to take back — the last verdict has already been sent. Changing it goes through the administrator's audited correction."
     },
     "detail": {
       "loading": "Loading judgment...",
