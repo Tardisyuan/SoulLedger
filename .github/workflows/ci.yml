@@ -184,6 +184,15 @@ jobs:
         run: |
           cd frontend
           npx playwright install --with-deps ${{ matrix.browser }}
+      # Built, not `next dev`. `playwright.config.ts`'s `webServer` now runs
+      # `npm run start:e2e`, which serves this output — see the long note there
+      # for why: the dev server compiles routes on demand, so every
+      # `waitForLoadState("networkidle")` was really waiting on a compile, and
+      # which route lost that race changed run to run.
+      - name: Build
+        run: |
+          cd frontend
+          npm run build
       - name: Run E2E tests
         run: |
           cd frontend

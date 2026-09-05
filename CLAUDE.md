@@ -109,8 +109,21 @@ npm run --workspace packages/core typecheck
 npm run --workspace packages/core lint
 npm run --workspace packages/core test
 
-# E2E
+# E2E —— **三个 project,不是一个,而且要先 build**。
+# `playwright.config.ts:51-53` 定义 chromium / firefox / mobile-chrome,而
+# `.github/workflows/ci.yml` 的 matrix 三个都跑。这份文件此前只给了 chromium,
+# 于是「跑过 E2E」在本地和在 CI 是两件不同的事 —— 393px 下工作流工具栏的按钮
+# 压在输入框上那条真缺陷,在 main 上待了一整轮,因为没有人跑过那个 project。
+#
+# `webServer` 现在跑 `npm run start:e2e`(构建产物),不再是 `next dev`。
+# 所以**先 build,再 playwright**。理由见 playwright.config.ts 里那段注释:
+# dev server 按需编译,于是 `waitForLoadState("networkidle")` 等的是「编译完
+# 没有」;实测同一份代码连跑三次,失败 3/4/2 条且中招路由每次都换,而任何一条
+# 单独跑都过。换成构建产物之后,三个 project 各 108 passed,且快三倍。
+cd frontend && npm run build
 cd frontend && npx playwright test --project=chromium
+cd frontend && npx playwright test --project=firefox
+cd frontend && npx playwright test --project=mobile-chrome
 
 # 真 PostgreSQL 上跑一遍 —— 上面那条 SQLite 命令跑不到的东西在这里
 # 不设 DATABASE_URL,让 Django 读 .env 指向 115;pytest-django 自建 test_soulledger
