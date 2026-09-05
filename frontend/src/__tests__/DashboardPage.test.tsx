@@ -430,3 +430,54 @@ describe("DashboardPage export", () => {
     );
   });
 });
+
+/**
+ * 导出正在进行时,按钮要说出来 —— 而且不能被点第二下。
+ *
+ * `Button` 从写出来就有 `loading`(禁用 + `aria-busy`),全站 21 处在用。
+ * 这一处没接:一次导出要走完整的服务端统计再下载,而按钮在这期间看起来和空闲时
+ * **逐字节相同**,也接受点击。点三下就下三个文件。
+ *
+ * 缺的不是一个组件,是既有的 prop 没接上。
+ */
+describe("导出按钮在进行中说话,而且不接受第二下", () => {
+  it("点击之后按钮进入 busy 并被禁用", async () => {
+    // 永不 resolve:这就是「还在导出」。
+    (ledgerApi.exportStats as jest.Mock).mockReturnValue(new Promise(() => {}));
+    renderPage();
+
+    const button = await screen.findByText("dashboard.export_stats");
+    fireEvent.click(button);
+
+    const control = button.closest("button")!;
+    await waitFor(() => expect(control).toBeDisabled());
+    // `aria-busy` 是读屏那一半 —— 禁用只说「现在不能点」,不说「正在做事」。
+    expect(control).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("连点三下只发一次请求", async () => {
+    (ledgerApi.exportStats as jest.Mock).mockReturnValue(new Promise(() => {}));
+    renderPage();
+
+    const button = await screen.findByText("dashboard.export_stats");
+    fireEvent.click(button);
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await waitFor(() => expect(ledgerApi.exportStats).toHaveBeenCalledTimes(1));
+  });
+
+  it("失败之后按钮回到可用 —— 不能把自己锁死", async () => {
+    (ledgerApi.exportStats as jest.Mock).mockRejectedValue(new Error("500"));
+    renderPage();
+
+    const button = await screen.findByText("dashboard.export_stats");
+    fireEvent.click(button);
+
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith("dashboard.error_export", "error")
+    );
+    // `finally` 那一半。少了它,一次失败就让导出永远点不动了。
+    await waitFor(() => expect(button.closest("button")!).not.toBeDisabled());
+  });
+});

@@ -80,7 +80,16 @@ const FILES = ROOTS.filter((r) => {
  * 里的模板串、`cn()` 调用和展开属性 —— 那是一个大得多的东西,为了同一个答案。
  * 代价写明:跨行写开的元素这条规则看不见。
  */
-const TRUNCATING_VALUE = /truncate/;
+/**
+ * `truncate` **和** `line-clamp-N`。
+ *
+ * 第一版只扫 `truncate`,于是 `components/ui/data-grid/columns.tsx` 的 `text`
+ * 列漏掉了 —— 它用 `line-clamp-2`,夹的是**两行之后**的内容,连省略号之后那一段
+ * 都读不到,而它装的正是描述、理由、新身份这类长文本。同一个缺陷,另一个类名。
+ *
+ * 规则的主体清单选窄了,和这个仓库记过的其它几次一样。
+ */
+const TRUNCATING_VALUE = /truncate|line-clamp-\d/;
 const HAS_EXPRESSION = /\{[A-Za-z_]/;
 const HAS_TITLE = /title=/;
 
@@ -116,7 +125,7 @@ describe("the scan is looking at something", () => {
 
   it("finds truncating elements at all", () => {
     // 45 today. A floor: a rule with no subjects is a rule that cannot fail.
-    const truncating = FILES.filter((f) => /truncate/.test(readFileSync(f, "utf8")));
+    const truncating = FILES.filter((f) => TRUNCATING_VALUE.test(readFileSync(f, "utf8")));
     expect(truncating.length).toBeGreaterThanOrEqual(15);
   });
 });

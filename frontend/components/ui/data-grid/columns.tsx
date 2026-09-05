@@ -231,7 +231,18 @@ export function renderGridCell<T>(column: DataGridColumn<T>, row: T): ReactNode 
       if (value === null || value === undefined || value === '') {
         return empty(column.emptyLabel)
       }
-      return <span className="text-[hsl(var(--color-ink))] line-clamp-2">{value}</span>
+      // `title`,和站内其余截断同一个理由,只是这里的形状不同:`line-clamp-2`
+      // 夹的是**两行之后**的内容,所以格子里连省略号之后那一段都读不到。
+      // `identifier` 那一列早就带 title,`text` 这一列没有 —— 而它装的正是
+      // 描述、理由、新身份这类长文本(`JudgmentQueueContext.tsx:122,271`、
+      // `audit/page.tsx:150,172`、`permissionColumns.tsx:23` 都走它)。
+      //
+      // 全文一直在 DOM 里(`line-clamp` 是视觉属性),所以读屏和复制不受影响;
+      // 缺的一直是有鼠标的人把它读完的办法。
+      // 一行写完,不拆行 —— `truncatedValuesAreRecoverable.test.ts` 按行匹配
+      // (它自己的表头写明了这个代价),拆开之后 `{value}` 落到下一行,这一处
+      // 就从它的主体清单里消失了。实测:拆行版本下把 title 删掉,守卫依然绿。
+      return <span title={String(value)} className="text-[hsl(var(--color-ink))] line-clamp-2">{value}</span>
     }
     case 'enum':
       return <EnumBadge value={column.value(row)} />

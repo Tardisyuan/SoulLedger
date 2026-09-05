@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -73,7 +73,20 @@ function DashboardContent() {
     [router, searchParams]
   );
 
+  /**
+   * 导出正在进行 —— 此前没有任何东西记录这件事。
+   *
+   * `Button` 从写出来就有 `loading`(它会禁用按钮并挂上 `aria-busy`),全站 21
+   * 处在用。这一处没用:一次导出要走完整的服务端统计再下载,而按钮在这期间
+   * 看起来和空闲时**逐字节相同**,也接受点击 —— 点三下就下三个文件。
+   *
+   * 这不是缺一个组件,是既有的 prop 没接上。
+   */
+  const [exporting, setExporting] = useState(false);
+
   const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
     try {
       const response = await ledgerApi.exportStats();
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -85,6 +98,8 @@ function DashboardContent() {
       link.remove();
     } catch {
       showToast(t("dashboard.error_export"), "error");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -103,7 +118,7 @@ function DashboardContent() {
   // dead and the gate worked only because hasPermission short-circuits ADMIN.
   const pageActions = (
     <RequireAdmin>
-      <Button type="button" variant="primary" onClick={handleExport}>
+      <Button type="button" variant="primary" loading={exporting} onClick={handleExport}>
         {t("dashboard.export_stats")}
       </Button>
     </RequireAdmin>
