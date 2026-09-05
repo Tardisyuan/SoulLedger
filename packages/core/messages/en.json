@@ -320,7 +320,8 @@
       "id_copy_failed": "Copy failed",
       "copied": "Copied ✓"
     },
-    "field_required": "This field is required"
+    "field_required": "This field is required",
+    "dismiss": "Dismiss"
   },
   "pagination": {
     "info": "Page {{page}} / {{total}} ({{count}} records)",
@@ -513,7 +514,9 @@
       "conflict_message": "{{role}} was modified by another admin since it was loaded (version {{expected}} → {{current}}). Reload before deciding what to save.",
       "conflict_toast": "{{role}} save failed: changed since loaded",
       "conflict_reload_button": "Reload this role",
-      "conflict_reloading": "Reloading..."
+      "conflict_reloading": "Reloading...",
+      "partial_save_title": "The save stopped partway. These roles were already written to the server:",
+      "partial_save_hint": "Re-saving everything will send these again with a version they no longer have, which the server refuses as a conflict. Reload before retrying."
     }
   },
   "workflow": {

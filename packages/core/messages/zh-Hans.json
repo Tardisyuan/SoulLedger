@@ -320,7 +320,8 @@
       "id_copy_failed": "复制失败",
       "copied": "已复制 ✓"
     },
-    "field_required": "此项为必填"
+    "field_required": "此项为必填",
+    "dismiss": "知道了"
   },
   "pagination": {
     "info": "第 {{page}} / {{total}} 页 ({{count}} 条记录)",
@@ -513,7 +514,9 @@
       "conflict_message": "{{role}} 自加载后已被其他管理员修改（版本 {{expected}} → {{current}}）。请重新加载后再决定。",
       "conflict_toast": "{{role}} 保存失败：数据已被修改",
       "conflict_reload_button": "重新加载此角色",
-      "conflict_reloading": "加载中..."
+      "conflict_reloading": "加载中...",
+      "partial_save_title": "这次保存在中途停下了。下面这些角色已经写进服务器：",
+      "partial_save_hint": "整体重试会把它们按旧版本号再发一次，服务器会当成冲突拒绝。重试前请先重新加载。"
     }
   },
   "workflow": {
