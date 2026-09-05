@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, useId } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi, type User, type CreateUserInput, type UpdateUserInput } from "@soulledger/core/api";
 import { userKeys } from "@soulledger/core/query_keys";
 import { BaseModal } from "@/src/components/ui/Modal";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { showToast } from "@/src/components/ui/Toast";
+import { TextField } from "@/src/components/ui/Field";
+import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
 
 interface UserModalProps {
   isOpen: boolean;
@@ -90,20 +92,33 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
     },
   });
 
+  /**
+   * 逐字段的错误,取代三条指名了字段却只弹 toast 的校验。
+   *
+   * 原来是 `showToast(t("users.username_empty"), "error")` 然后 `return`。
+   * 那三条**知道是哪个字段**(它们的键就叫 username / email / password),却把
+   * 这个信息扔进一条会飘走的横幅里,而字段本身既没有 `aria-invalid` 也没有
+   * 可读的说明,焦点还留在提交按钮上 —— 在 `BaseModal` 可滚动的正文里,出错的
+   * 那一栏可能就在视野之外。
+   *
+   * 三个 `<input>` 一并换成 `TextField`:`Field` 已经把 `aria-invalid`、
+   * 链式 `aria-describedby` 和 `role="alert"` 接好了(`Field.tsx:164-247`),
+   * 手写一遍等于再造一个方言。
+   */
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const formRef = useRef<HTMLFormElement>(null);
+  useSubmitErrorFocus(Object.keys(fieldErrors).length > 0, formRef);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.username.trim()) {
-      showToast(t("users.username_empty"), "error");
-      return;
-    }
-    if (!formData.email.trim()) {
-      showToast(t("users.email_empty"), "error");
-      return;
-    }
-    if (!isEditing && !formData.password) {
-      showToast(t("users.password_empty"), "error");
-      return;
-    }
+    // 一次收齐,而不是逐条 return:三个都空的时候,操作员应该一次看见三条,
+    // 而不是修一条、再提交、再被告知下一条。
+    const next: Record<string, string> = {};
+    if (!formData.username.trim()) next.username = t("users.username_empty");
+    if (!formData.email.trim()) next.email = t("users.email_empty");
+    if (!isEditing && !formData.password) next.password = t("users.password_empty");
+    setFieldErrors(next);
+    if (Object.keys(next).length > 0) return;
 
     if (isEditing && user) {
       const updateData: UpdateUserInput = {
@@ -158,52 +173,56 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
       title={isEditing ? (t("users.edit_user") || "编辑用户") : (t("users.create_user") || "创建用户")}
       footer={footer}
     >
-      <form id="user-form" onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex flex-col gap-1">
-          <label htmlFor={usernameId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("users.username") || "用户名"}</label>
-          <input
-            id={usernameId}
-            type="text"
-            required
-            autoFocus
-            value={formData.username}
-            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-            disabled={isEditing || createMutation.isPending || updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
-            placeholder={t("users.username_placeholder") || "输入用户名"}
-          />
-        </div>
+      <form ref={formRef} id="user-form" onSubmit={handleSubmit} className="space-y-4">
+        <TextField
+          id={usernameId}
+          label={t("users.username") || "用户名"}
+          type="text"
+          required
+          autoFocus
+          error={fieldErrors.username}
+          value={formData.username}
+          onChange={(e) => {
+            setFieldErrors(({ username: _drop, ...rest }) => rest);
+            setFormData({ ...formData, username: e.target.value });
+          }}
+          disabled={isEditing || createMutation.isPending || updateMutation.isPending}
+          placeholder={t("users.username_placeholder") || "输入用户名"}
+        />
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor={emailId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("users.email") || "邮箱"}</label>
-          <input
-            id={emailId}
-            type="email"
-            required
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            disabled={createMutation.isPending || updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
-            placeholder={t("users.email_placeholder") || "输入邮箱"}
-          />
-        </div>
+        <TextField
+          id={emailId}
+          label={t("users.email") || "邮箱"}
+          type="email"
+          required
+          error={fieldErrors.email}
+          value={formData.email}
+          onChange={(e) => {
+            setFieldErrors(({ email: _drop, ...rest }) => rest);
+            setFormData({ ...formData, email: e.target.value });
+          }}
+          disabled={createMutation.isPending || updateMutation.isPending}
+          placeholder={t("users.email_placeholder") || "输入邮箱"}
+        />
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor={passwordId} className="text-02 text-[hsl(var(--color-ink-subtle))]">
-            {t("users.password") || "密码"}
-            {isEditing && <span className="text-[hsl(var(--color-ink-muted))]"> ({t("users.optional") || "可选"})</span>}
-          </label>
-          <input
-            id={passwordId}
-            type="password"
-            required={!isEditing}
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            disabled={createMutation.isPending || updateMutation.isPending}
-            className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))] disabled:opacity-50 transition-colors"
-            placeholder={isEditing ? (t("users.password_edit_placeholder") || "留空则不修改") : (t("users.password_placeholder") || "输入密码")}
-          />
-        </div>
+        {/* 编辑时的「(可选)」走 `description` 而不是塞进 `label` —— `Field` 把
+            description 接进 `aria-describedby` 的链条里,而拼进 label 的话它会
+            变成字段名字的一部分,读屏每次聚焦都念一遍。 */}
+        <TextField
+          id={passwordId}
+          label={t("users.password") || "密码"}
+          description={isEditing ? (t("users.optional") || "可选") : undefined}
+          type="password"
+          required={!isEditing}
+          error={fieldErrors.password}
+          value={formData.password}
+          onChange={(e) => {
+            setFieldErrors(({ password: _drop, ...rest }) => rest);
+            setFormData({ ...formData, password: e.target.value });
+          }}
+          disabled={createMutation.isPending || updateMutation.isPending}
+          placeholder={isEditing ? (t("users.password_edit_placeholder") || "留空则不修改") : (t("users.password_placeholder") || "输入密码")}
+        />
 
         <div className="flex flex-col gap-1">
           <label htmlFor={roleId} className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("users.role") || "角色"}</label>
