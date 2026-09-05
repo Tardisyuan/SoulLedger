@@ -45,13 +45,25 @@ PATH 上是 **v18.20.8**。仓库根的 `.nvmrc` 钉了 20.19.5,`nvm use` 即可
 `SyntaxError: 'node:util' does not provide an export named 'styleText'`。
 2026-09-04 实测:v18.20.8 下这两条红,v20.19.5 与 v22.22.1 下都绿。
 
-**下面的后端命令假定 `python` / `ruff` / `pip-audit` 在 PATH 上,而这台机器上
-三个都不在**(2026-09-05 实测 `command -v` 均为空;只有 `python3`)。
-`.git/hooks/pre-push` 不受影响,它从 gitignored 的 `.prepush.env` 读
+**下面的后端命令里的 `python` 几乎肯定不是你要的那个。** 2026-09-05 同一天内
+这台机器上量到两种情况,而**第二种更坏**:
+
+    早些时候   python / ruff / pip-audit 三个 command -v 全空(只有 python3)
+    之后       /opt/anaconda3/bin 上了 PATH:python 与 ruff 有了,
+               pip-audit 与 psql 仍然没有
+
+第二种坏在:`python` 存在,但它是 anaconda **base**,里面没有 Django。
+`python -m pytest` 于是退出 **4** 并报 `ModuleNotFoundError: No module named
+'django'` —— 那句话指向「缺依赖」,而真正的原因是「解释器选错了」。
+`command not found` 反而不会把人带偏。(`ruff check .` 用 base 的那个是 exit 0。)
+
+`.git/hooks/pre-push` 不受影响:它从 gitignored 的 `.prepush.env` 读
 `PYTHON_BIN` / `RUFF_BIN`,找不到就带着「Set PYTHON_BIN in .prepush.env」拒绝。
-复制粘贴下面的命令则没有这一层,要么先 activate 对应环境,要么照
-`.prepush.env` 里的值把 `python` 换成绝对路径。
+复制粘贴下面的命令没有这一层 —— 要么先 activate 装了后端依赖的那个环境,
+要么照 `.prepush.env` 里 `PYTHON_BIN` 的值把 `python` 换成绝对路径。
 **这不是可有可无的注脚:这一整轮里每一条后端命令都得这样改写才能跑。**
+而且 PATH 会在同一天里变,所以「上次能跑」不是「这次能跑」的证据 —— 先
+`python -c "import django"` 问一句,比读一条 pytest 的 collection error 快。
 
 ```bash
 # Backend — matches CI pipeline exactly

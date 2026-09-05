@@ -361,8 +361,11 @@ Tailwind 的 `theme.extend` 只能新增或覆盖，不能删除：`text-sm` 仍
 没有表达方式——只能由 lint 施加。`frontend/eslint.config.mjs` 里有五条自定义规则加上
 jsx-a11y，全部 `error` 级：
 
-`npm run lint` 是裸 `eslint .`，ESLint 在只有 warning 时退出码是 0，所以一条 warn 级规则
-在这个仓库里等于零。迁移期的出路是**基线**：`frontend/eslint.design-guard-baseline.json`
+~~`npm run lint` 是裸 `eslint .`，ESLint 在只有 warning 时退出码是 0，所以一条 warn 级规则
+在这个仓库里等于零。~~ **2026-09-05 起不再是这样**：`lint` 收紧成
+`eslint . --max-warnings 0`（`frontend` 与 `packages/core` 两个 workspace 同时改），
+所以 warn 级规则现在**确实**会让构建变红。上面那句划掉的话在它成立的那段时间里是对的，
+留着是因为基线机制正是为它而生的。迁移期的出路是**基线**：`frontend/eslint.design-guard-baseline.json`
 记下每个文件当前的违规条数，超出报红，**低于也报红**——基线过期同样是静默失效的一种。
 
 ### 两条会咬人的约定
