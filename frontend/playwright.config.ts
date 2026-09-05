@@ -57,8 +57,32 @@ export default defineConfig({
    * `/api/v1/**` is answered by Playwright route mocks (see e2e/fixtures.ts),
    * which is what keeps this suite runnable in CI without Postgres or Redis.
    */
+  /**
+   * ─────────────────────────────────────────────────────────────────────────
+   * 构建产物,不是 dev server。这一条换掉的是这套 E2E 全部的随机性来源。
+   * ─────────────────────────────────────────────────────────────────────────
+   *
+   * `npm run dev` 是**按需编译**的:一条路由第一次被访问时才编译。于是
+   * `waitForLoadState("networkidle")` 和 `expect.poll(api.calls.length > 0)`
+   * 这类等待,等的其实是「编译完没有」,而不是「应用做完没有」。
+   *
+   * 2026-09-05 实测(同一份代码,mobile-chrome 全量):失败 3 条、4 条、2 条,
+   * **中招的路由每次都换** —— ledger / dashboard / social-follows /
+   * critical-paths 轮流。而随便挑一条单独跑,或者只跑它所在的 spec,全都过。
+   * 甚至同一个 commit `fc8f6ad` 在全量里连红三次、在 `-g` 单跑里连绿四次。
+   *
+   * 更糟的是它把**真缺陷藏在噪音里**:同一批跑里有一条是真的(393px 下工作流
+   * 工具栏的按钮压在输入框上,有失败截图为证),而它和十几条编译超时混在一起,
+   * 分不出来。一道会随机变红的门禁不是门禁,它是训练人忽略红色的装置。
+   *
+   * `next start` 服务的是已经编译完的产物,不存在「第一次访问」这回事。
+   * 代价是每次跑前要 `npm run build`(约一分钟),而 CI 本来就在另一个 job 里
+   * 构建;换来的是失败等于回归。
+   *
+   * `reuseExistingServer` 保留 —— 本地连跑三个 project 时,只启一次。
+   */
   webServer: {
-    command: "npm run dev",
+    command: "npm run start:e2e",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
