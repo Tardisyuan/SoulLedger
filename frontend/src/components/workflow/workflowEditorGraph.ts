@@ -206,6 +206,31 @@ function sizeOf(node: Node): { width: number; height: number } {
  * size, so the nodes that do get placed are placed around a graph of the right
  * shape. Callers that mean "re-arrange everything" — the button — pass nothing.
  */
+/**
+ * 大图上它有多慢 —— 量过了,不是估的。
+ *
+ * 画布审计当时的结论是「先在 100–200 节点的合成模板上量,再决定要不要改」,
+ * 而没有人量过 —— 这个仓库里最大的东西是十节点预设,所以此前关于大图的每一句
+ * 话都是猜的。2026-09-05 用一条每三个节点分出一个分支的合成图量(中位数,
+ * 7 次取样,只计这个函数,不含它之后那次 `flushSync` 的同步渲染):
+ *
+ *      10 节点   12.5 ms
+ *      50 节点   25.1 ms
+ *     100 节点   37.6 ms
+ *     200 节点   78.5 ms
+ *     400 节点  157.3 ms
+ *
+ * 大致线性,约 0.4ms/节点。**dagre 不是瓶颈** —— 200 节点 78ms 是一次按钮
+ * 点击上察觉得到但可接受的开销,而这个产品里最大的模板是 10 个节点。
+ *
+ * 没量的那一半写在这里而不是省略:`WorkflowEditor` 在这之后做
+ * `flushSync(() => setNodes(next))`,强制同步渲染每一个节点,而
+ * `onlyRenderVisibleElements` 没有传(默认 false)。那一半要在真浏览器里、
+ * 用真的 200 节点模板才量得到,而这样的模板今天不存在。
+ *
+ * 所以结论是「先别改」,并且把数字留在这里 —— 下一个人要论证的是这些数字,
+ * 而不是从零开始猜。
+ */
 export function layoutNodes(
   nodes: Node[],
   edges: Edge[],
