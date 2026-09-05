@@ -1030,17 +1030,30 @@ export default function WorkflowEditor({
     <div className="flex flex-col h-full bg-[hsl(var(--color-surface-2))]">
       {/* Toolbar
        *
-       * `overflow-x-auto` + `min-w-0`,与 `ui/PageShell.tsx` 的筛选栏同一个理由:
-       * 这是一条不换行的 flex,而它装着名称输入、案件类型下拉、文明下拉、优先级
-       * 下拉和两个按钮。窄屏放不下时,撑宽的不是工具栏而是**整个文档**,所有
-       * `fixed inset-0` 的遮罩与弹窗都会跟着摊开,于是按钮「可见、可用」却点不动。
+       * ─────────────────────────────────────────────────────────────────
+       * 这一行的收缩策略修过一次,方向反了,于是缺陷换了个受害者。
+       * ─────────────────────────────────────────────────────────────────
        *
-       * 具体到这里:mobile-chrome 上「保存模板」被案件类型下拉挡住,E2E 稳定超时。
-       * `min-w-0` 是必需的 —— flex 子项默认 `min-width:auto`,不加它 `flex-1`
-       * 不会收缩,`overflow-x-auto` 也就永远没有可滚动的余量。 */}
+       * 原注释写着:「`min-w-0` 是必需的 —— flex 子项默认 `min-width:auto`,
+       * 不加它 `flex-1` 不会收缩,`overflow-x-auto` 也就永远没有可滚动的余量。」
+       *
+       * **那个因果是倒的。** `overflow-x-auto` 生效的条件是内容**超出**容器,
+       * 也就是子项**不收缩**。加上 `min-w-0` 之后这一行永远塞得下,滚动条永远
+       * 不出现,而代价是输入区被压到不可用 —— 窄屏上四个按钮直接压在名称输入框
+       * 和三个下拉框上面。2026-09-05 在 mobile-chrome(393px)的失败截图里,
+       * 「中国地府」是从「删除选中」底下透出来的。
+       *
+       * 当初要修的是「`保存模板` 被案件类型下拉挡住」—— 同一个病,只是那次
+       * 被压的是按钮。把子项改成会收缩,只是换了谁被压。
+       *
+       * 现在:输入区保留 `flex-1`(桌面上照旧撑开、把按钮推到右边),但**不再**
+       * 带 `min-w-0` —— 它的 `min-width:auto` 就是内容宽度,于是窄屏上这一行
+       * 真的超出,`overflow-x-auto` 真的滚,每个控件都保持可用的尺寸。
+       *
+       * 一个 token 的改动,和一段反过来的推理。 */}
       <div className="flex items-center gap-3 p-3 border-b border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] overflow-x-auto">
         {/* Template info inputs */}
-        <div className="flex-1 min-w-0 flex items-center gap-3">
+        <div className="flex-1 flex items-center gap-3">
           <input
             type="text"
             value={templateName}
@@ -1190,6 +1203,35 @@ export default function WorkflowEditor({
           onInit={(instance) => {
             flowRef.current = instance;
           }}
+          /* ── 边不是 tab 站 ────────────────────────────────────────────
+           *
+           * xyflow 的 `edgesFocusable` 默认 true,于是每一条边都是一个 tab 停靠点。
+           * 十节点预设因此要按 **19 次** Tab 才能穿过(10 个节点 + 9 条边),而边上
+           * 没有任何可访问名称 —— `savedTemplateToFlow` / `presetTemplateToFlow`
+           * 都不设 `ariaLabel`,读屏在那 9 站上念的是空的 "group"。
+           *
+           * 关掉而不是给边补名字,理由是**它们没有自己的动作**:节点有 `E`(编辑)
+           * 和删除,边只能被拖出来和被连带删掉。一个停下来却什么都不能做的 tab 站,
+           * 是把「可达」和「有用」当成同一件事。图的拓扑本来就由节点的
+           * `aria-label` 承载(见 `nodeAriaLabel`)。
+           *
+           * 节点保持可聚焦 —— 那是 `E` 这条键盘路径立足的地方。 */
+          edgesFocusable={false}
+          /* ── Backspace 不再直接删节点 ─────────────────────────────────
+           *
+           * `deleteKeyCode` 的 xyflow 默认值是 `'Backspace'`:选中一个节点按退格
+           * 就删掉它,**没有确认、没有撤销**,而且这个键在界面上任何地方都没有写。
+           * hint 面板写的是「双击节点编辑 · 拖拽连线 · E 编辑」,工具栏里的
+           * 「删除选中节点」才是可发现的那条路。
+           *
+           * `null` 让它成为**唯一**的路。这不减少任何能力:那个按钮本来就挂在
+           * `selectedNodeId` 上,也就是退格键要求的同一个前提。
+           *
+           * 这也和这个仓库对破坏性操作的既有立场一致 —— `recycle-bin` 的永久
+           * 硬删除刚从一个手搓弹层换成 `ConfirmDialog`,理由是「删除既少见又后果
+           * 重大,不该和日常操作分享同一份权重」。一个没写在任何地方的单键删除,
+           * 比那个还轻。 */
+          deleteKeyCode={null}
           /* Fits ONCE, on init — that is all this prop has ever done, and
              before branches existed it was all that was needed. `autoLayout`
              owns every fit after this one. */
