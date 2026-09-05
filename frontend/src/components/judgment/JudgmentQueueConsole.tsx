@@ -368,13 +368,18 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           />
         ) : (
           <>
+            {/* `min-w-0` on both columns: a flex/grid child defaults to
+                `min-width: auto`, so one long unbroken value inside a panel
+                widens its whole track rather than being contained. The
+                evidence column already sets it (`JudgmentEvidenceColumn.tsx`
+                :50,68) for exactly this; these two never did. */}
             <div className="grid gap-4 lg:grid-cols-2">
-              <div className="space-y-4">
+              <div className="min-w-0 space-y-4">
                 <SoulIdentityPanel soul={cursor.soul} />
                 <CaseFactsPanel court={judgment.court} confession={judgment.confession} />
                 <RealmOptionsPanel realms={cursor.realm_options} />
               </div>
-              <div className="space-y-4">
+              <div className="min-w-0 space-y-4">
                 <LedgerPanel ledger={cursor.ledger} />
                 <PriorCyclesPanel cycles={cursor.prior_cycles} />
               </div>
@@ -583,9 +588,30 @@ function CaseFactsPanel({ court, confession }: { court: string; confession: stri
           <span className="text-03 text-[hsl(var(--color-ink-tertiary))]">{t("judgment.queue.not_recorded")}</span>
         )}
       </div>
-      <div>
+      {/* 忏悔在自己的框里滚,而不是把它下面的东西推走。
+       *
+       * `d53ede1` 用 `sticky bottom-0` 锚住了裁决按钮,那解决的是「按钮够不着」。
+       * 它解决不了的是**按钮需要的上下文**够不着:`RealmOptionsPanel` —— 那块说
+       * 每种裁决会把灵魂送去哪的面板,§4.2 列为必需的决策上下文 —— 就排在这段
+       * 忏悔下面、同一左列里。而忏悔是调用方传进来的任意长文本,没有上限,
+       * 所以一段长忏悔能把那块面板推到任意远。
+       *
+       * `max-h-64`(256px)= 十六行 `text-03`,足够看清一段完整的陈述,而不足以
+       * 把一整列吃掉。超出的部分在这个框里滚 —— 全文仍然在 DOM 里,读屏、复制、
+       * 页内查找都够得着,和 `truncate` 是同一类保证。
+       *
+       * `overscroll-contain`:滚到底之后不把滚动传给整页。操作员正在读的是这
+       * 一段,而这个控制台的下半部分是钉住的裁决条 —— 把页面顶走一下再弹回来,
+       * 是在一个每一步都要精确的界面上制造一次意外移动。 */}
+      <div className="min-w-0">
         <div className="text-02 text-[hsl(var(--color-ink-muted))] mb-1">{t("judgment.detail.confession")}</div>
-        <p className={confession ? "text-03 text-[hsl(var(--color-ink))] whitespace-pre-line" : "text-03 text-[hsl(var(--color-ink-tertiary))]"}>
+        <p
+          className={
+            confession
+              ? "text-03 text-[hsl(var(--color-ink))] whitespace-pre-line max-h-64 overflow-y-auto overscroll-contain"
+              : "text-03 text-[hsl(var(--color-ink-tertiary))]"
+          }
+        >
           {confession || t("judgment.queue.no_confession")}
         </p>
       </div>

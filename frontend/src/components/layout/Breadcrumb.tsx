@@ -137,6 +137,17 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
                 <Link
                   href={crumb.href}
                   prefetch={true}
+                  /* `title`,和站内其余 15 处承载数据的截断同一个理由。
+                   *
+                   * 这两处是 **393px 下唯一真正会溢出的截断** —— 2026-09-05 在
+                   * mobile-chrome 上逐元素量过 `scrollWidth > clientWidth`,
+                   * 八条路由里只有面包屑的两段命中(80>55 / 63>55),那 15 处数据值
+                   * 一处都没有(移动端是单列,容器相对内容反而更宽)。
+                   *
+                   * 它们也是 `truncatedValuesAreRecoverable.test.ts` **看不见**的
+                   * 两处:那条规则按行匹配,而它自己的表头写明了代价 ——「跨行写开的
+                   * 元素这条规则看不见」。这里就是那个代价的实例。 */
+                  title={crumb.label}
                   className="truncate text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] transition-colors"
                 >
                   {crumb.label}
@@ -146,6 +157,7 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
                 </Link>
               ) : (
                 <span
+                  title={crumb.label}
                   className={`truncate ${
                     isLast
                       ? "text-[hsl(var(--color-ink))] font-medium"
