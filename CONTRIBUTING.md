@@ -34,7 +34,12 @@ cd frontend && npm install && npm run dev
 ### Frontend (TypeScript/React)
 - Use `useI18n()` for all user-facing strings — no hardcoded text
 - Use `RequirePermission` for CRUD button gating
-- Use `PageSection` + `TableSkeleton` for page layouts
+- Use `PageShell` for page layouts (33 of 37 routes do; `PageSection` is for
+  sub-blocks within a page. `TableSkeleton` has zero callers under `app/` —
+  table loading goes through `<DataTable isLoading>`)
+- Colours have exactly one spelling: `text-[hsl(var(--color-ink))]`. The bare
+  `text-ink` form silently renders the wrong value — see
+  `docs/CONVENTIONS-frontend.md` §2
 - Use TanStack Query for API calls with proper query keys
 
 ### Git Commits
@@ -51,7 +56,13 @@ Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`
 - `packages/core` (the platform-independent workspace) has three of its own,
   and `pre-push` runs all three on any `^packages/` change:
   `npm run --workspace packages/core typecheck | lint | test` (the last is vitest)
-- Frontend E2E: `cd frontend && npm run test:e2e`
+- Frontend E2E: **`npm run build` first**, then
+  `npx playwright test --project=chromium|firefox|mobile-chrome` — three
+  projects, and CI's matrix runs all three. `webServer` serves the build
+  output, not `next dev`: a dev server compiles on demand, so
+  `waitForLoadState("networkidle")` was waiting on compilation. Same code, three
+  runs, 3/4/2 failures with a different route hit each time; against the build
+  output all three projects are deterministic and ~3× faster.
 - TypeScript: `cd frontend && npx tsc --noEmit`
 
 ## Architecture
