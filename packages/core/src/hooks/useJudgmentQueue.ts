@@ -1062,6 +1062,18 @@ export function useJudgmentQueue(options?: { at?: string }) {
     isExhausted: query.isSuccess && cursor.judgment === null && pending === null,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
+    /**
+     * The card on screen belongs to a query that is no longer the current one.
+     *
+     * This is the handover window, and it is the honest signal for it —
+     * `isFetching` is not. `placeholderData` above keeps the just-ruled case
+     * rendered while the next one loads, so between the verdict and the arrival
+     * of the next case the console shows a card that is deliberately stale.
+     * `isFetching` is also true for a plain background refetch on window focus,
+     * where the card on screen is the right one and dimming it would be a lie.
+     * `isPlaceholderData` is true for exactly the first case and not the second.
+     */
+    isPlaceholderData: query.isPlaceholderData,
     isError: query.isError,
     refetch: query.refetch,
     submitVerdict,
