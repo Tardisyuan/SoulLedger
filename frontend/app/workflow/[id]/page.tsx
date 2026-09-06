@@ -489,7 +489,13 @@ export default function WorkflowDetailPage() {
                 <div
                   key={node.id}
                   className={`bg-[hsl(var(--color-surface-1))] p-4 border ${
-                    isCurrent ? "border-[hsl(var(--color-accent))]/50 shadow-lg shadow-[hsl(var(--color-accent))]/10" : "border-[hsl(var(--color-hairline))]"
+                    // The accent border is the "current node" signal on its own.
+                    // It used to also carry `shadow-lg shadow-accent/10`, a glow
+                    // on an in-flow card — `DESIGN.md:50-57` puts layering on the
+                    // 1px rule, and the five surviving `shadow-*` uses are all
+                    // overlays (drawer, popover, two menus, one dropdown), which
+                    // genuinely cannot separate from the page any other way.
+                    isCurrent ? "border-[hsl(var(--color-accent))]/50" : "border-[hsl(var(--color-hairline))]"
                   }`}
                 >
                   <div className="flex items-start gap-4">

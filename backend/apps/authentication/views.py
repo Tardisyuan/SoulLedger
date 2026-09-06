@@ -649,10 +649,18 @@ def reset_password_request(request):
     email = serializer.validated_data["email"]
 
     # Check if user exists (but always return success for security)
-    try:
-        User.objects.get(email=email)
-    except User.DoesNotExist:
-        # Security: return success even if user doesn't exist
+    #
+    # `.filter().count()`, not `.get()`. `User.email` has no unique constraint
+    # (it is `AbstractUser`'s, and only `username` is unique), so `.get()` raises
+    # `MultipleObjectsReturned` on a duplicate — an uncaught 500. Registration is
+    # `AllowAny`, so anyone could create a second account on someone else's
+    # address and take that address's password reset offline permanently.
+    #
+    # Zero and many are both answered with the same success sentence as one: this
+    # endpoint deliberately does not disclose whether an address is registered,
+    # and "your address is ambiguous" would disclose it.
+    matches = User.objects.filter(email=email).count()
+    if matches != 1:
         return Response({"detail": "验证码已发送到邮箱"})
 
     # Rate limiting: max 3 requests per 5 minutes per email
@@ -708,10 +716,21 @@ def set_new_password(request):
         return Response({"error": "验证码错误"}, status=status.HTTP_400_BAD_REQUEST)
 
     # Get user
+    #
+    # `MultipleObjectsReturned` must be caught alongside `DoesNotExist`: `email`
+    # carries no unique constraint (see reset_password_request above). Refusing
+    # is the only safe answer — with two accounts on one address there is no way
+    # to know whose password this code was meant to change, and picking `.first()`
+    # would hand one user's account to whoever else registered the address.
     try:
         user = User.objects.get(email=email)
     except User.DoesNotExist:
         return Response({"error": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
+    except User.MultipleObjectsReturned:
+        return Response(
+            {"error": "该邮箱对应多个账号,无法重置密码,请联系管理员"},
+            status=status.HTTP_409_CONFLICT,
+        )
 
     # Validate password strength
     from django.contrib.auth.password_validation import validate_password

@@ -50,8 +50,13 @@ export function PostCard({ post }: { post: Post }) {
     deletePost.mutate(post.id, { onSuccess: () => setShowDeleteConfirm(false) });
   };
 
+  // Hover was `hover:shadow-xs transition-shadow` — an elevation cue on an
+  // in-flow card, where `DESIGN.md:50-57` puts the layering on the hairline.
+  // The hairline-strong step is the same affordance in the system's own
+  // vocabulary, and is what `app/realms/page.tsx` already uses for a hoverable
+  // card.
   return (
-    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:shadow-xs transition-shadow">
+    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:border-[hsl(var(--color-hairline-strong))] transition-colors duration-state">
       <div className="flex items-center gap-3 mb-3">
         <Link
           href={`/social/profile/${post.author}`}
