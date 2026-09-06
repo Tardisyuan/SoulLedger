@@ -30,14 +30,18 @@ export default function SocialFeedPage() {
   // inactive one changes its key; it does not stop it fetching — so every
   // visit to this page hit both `/social/feed/` and `/social/posts/`, and
   // every page turn hit both again. `enabled` is what actually gates a query.
-  const { data: feedData, isLoading: feedLoading, isError: feedError, refetch: refetchFeed } =
+  const { data: feedData, isLoading: feedLoading, isPlaceholderData: feedStale, isError: feedError, refetch: refetchFeed } =
     useFeed(params, { enabled: tab === "feed" });
-  const { data: allData, isLoading: allLoading, isError: allError, refetch: refetchAll } =
+  const { data: allData, isLoading: allLoading, isPlaceholderData: allStale, isError: allError, refetch: refetchAll } =
     usePosts(params, { enabled: tab === "all" });
 
   const data = tab === "feed" ? feedData : allData;
   const posts = Array.isArray(data) ? data : (data?.results ?? []);
   const isLoading = tab === "feed" ? feedLoading : allLoading;
+  /* `usePosts` / `useFeed` both set `placeholderData`, which keeps the
+     previous page rendered and pins `isLoading` to false from then on — so the
+     skeleton branch below never runs again and a page turn moved nothing. */
+  const isStale = tab === "feed" ? feedStale : allStale;
   // Neither error was read. A failed feed produced `data === undefined`, which
   // falls through to `?? []`, which renders "no posts yet" — the same words a
   // genuinely empty feed shows. The active tab's error is the one on screen.
@@ -201,7 +205,12 @@ export default function SocialFeedPage() {
             reason={t("social.no_posts")}
           />
         ) : (
-          <div className="space-y-3">
+          <div
+            aria-busy={isStale || undefined}
+            className={`space-y-3 transition-opacity duration-settle ${
+              isStale ? "opacity-50 ease-exit" : "opacity-100 ease-enter"
+            }`}
+          >
             {posts.map((post) => (
               <PostCard key={post.id} post={post} />
             ))}

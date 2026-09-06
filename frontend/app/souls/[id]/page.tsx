@@ -231,6 +231,14 @@ export default function SoulDetailPage() {
         // 它的 onSuccess 做的事就是下面这一行 —— 只是这里连判决/处置一起标脏,
         // 因为 Soul.die() 会顺手开一份判决(apps/souls/models.py)。
         refreshSoulViews();
+        // The success path said nothing at all until now, while every failure
+        // path on this page toasts. So the only evidence that an irreversible
+        // state change had landed was the action card swapping to a different
+        // set of buttons — and that same card also swaps when a WebSocket push
+        // from another operator changes the soul underneath you
+        // (`handleSoulStateChanged`). One ambiguous signal for two different
+        // causes is not a confirmation.
+        showToast(t("souls.detail.mark_dead_success"), "success");
       } catch (e: unknown) {
         const err = e as { response?: { data?: { error?: string } }; message?: string };
         showToast(err?.response?.data?.error || "Failed", "error");
@@ -274,6 +282,9 @@ export default function SoulDetailPage() {
       // 同上:`useReborn` 只 invalidate `["souls"]`,而转生会写出一条新的
       // 处置执行记录,所以这里用三族全标脏的那一个。
       refreshSoulViews();
+      // Same as `handleDie` above: silent success, loud failure. Reincarnation
+      // additionally ticks the `generation` badge, which moved with no word.
+      showToast(t("souls.detail.reincarnate_success"), "success");
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: string } }; message?: string };
       showToast(err?.response?.data?.error || err?.message || "Failed", "error");

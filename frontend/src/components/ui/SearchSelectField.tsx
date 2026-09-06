@@ -62,7 +62,28 @@ export interface SearchSelectFieldProps {
   /** Raw query text. Owned by the caller so it can debounce before fetching. */
   searchText: string;
   onSearchTextChange: (text: string) => void;
+  /**
+   * The first fetch, when there is nothing to show yet. Replaces the list with
+   * `loadingText`.
+   */
   loading?: boolean;
+  /**
+   * A LATER fetch, while the previous answer is still on screen.
+   *
+   * Separate from `loading` because the right treatment is the opposite one.
+   * The caller of this field (`app/dispatch/propose`) sets
+   * `placeholderData: (previous) => previous` so the list does not blank
+   * between keystrokes — which also pins its `isLoading` to false forever after
+   * the first fetch, so the `loadingText` branch below became unreachable and
+   * every search after the first one had no waiting signal at all.
+   *
+   * Replacing the options again would undo the reason `placeholderData` is
+   * there. Dimming them would flicker on every keystroke of a
+   * search-as-you-type field, which is worse than saying nothing. So this adds
+   * a line ABOVE the retained options and leaves them alone: what is on screen
+   * stays readable and selectable, and the row says a newer answer is coming.
+   */
+  searching?: boolean;
   placeholder?: string;
   loadingText: string;
   emptyText: string;
@@ -85,6 +106,7 @@ export function SearchSelectField({
   searchText,
   onSearchTextChange,
   loading = false,
+  searching = false,
   placeholder,
   loadingText,
   emptyText,
@@ -190,13 +212,21 @@ export function SearchSelectField({
 
           <Combobox.Portal>
             <Combobox.Positioner sideOffset={4} className="z-dialog w-[var(--anchor-width)]">
-              <Combobox.Popup className="max-h-64 overflow-y-auto bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] py-1 transition duration-state ease-enter data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0">
+              <Combobox.Popup aria-busy={loading || searching || undefined} className="max-h-64 overflow-y-auto bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] py-1 transition duration-state ease-enter data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0">
                 {loading ? (
                   <p className="px-3 py-2 text-02 text-[hsl(var(--color-ink-subtle))]" role="status">
                     {loadingText}
                   </p>
                 ) : (
                   <>
+                    {searching ? (
+                      <p
+                        role="status"
+                        className="px-3 py-2 text-01 text-[hsl(var(--color-ink-tertiary))] border-b border-[hsl(var(--color-hairline))]"
+                      >
+                        {loadingText}
+                      </p>
+                    ) : null}
                     {/* Our own row, not `Combobox.Empty`. That part renders on
                         "the filter matched nothing", and with `filter={null}`
                         there is no filter, so it never renders at all — an

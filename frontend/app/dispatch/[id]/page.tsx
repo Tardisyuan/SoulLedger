@@ -76,34 +76,62 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
     enabled: !!user && !!id,
   });
 
+  /* THE CONFIRMATION STAYS UP UNTIL THE REQUEST COMES BACK.
+   *
+   * Each of these three used to be `onClick={() => { m.mutate(); setShowX(false); }}`
+   * — the dialog unmounted in the same synchronous callback that started the
+   * request, i.e. before `isPending` had flipped. So the `loading={m.isPending}`
+   * on each dialog's own confirm button never rendered once; it was dead the
+   * day it was written. And the buttons that brought the dialog up carry no
+   * `loading` either (only approve's, at the `dispatch.approve` trigger), so
+   * between "confirm" and the toast a cross-tenant reject or execute left no
+   * mark on the screen at all: the dialog vanished and the page sat still.
+   * An operator with nothing to look at presses the button again.
+   *
+   * Closing on error rather than holding the dialog open keeps the previous
+   * behaviour on that path, and `rejectReason` is left alone — only the
+   * dialog's own `onClose` clears it — so reopening after a failure still has
+   * the typed reason in it. */
   const approveMutation = useMutation({
     mutationFn: () => dispatchApi.approve(id),
     onSuccess: () => {
+      setShowApproveModal(false);
       showToast(t("dispatch.approved_success"), "success");
       queryClient.invalidateQueries({ queryKey: ["dispatch"] });
       router.push("/dispatch");
     },
-    onError: () => showToast(t("dispatch.approve_error"), "error"),
+    onError: () => {
+      setShowApproveModal(false);
+      showToast(t("dispatch.approve_error"), "error");
+    },
   });
 
   const rejectMutation = useMutation({
     mutationFn: () => dispatchApi.reject(id, rejectReason),
     onSuccess: () => {
+      setShowRejectModal(false);
       showToast(t("dispatch.rejected_success"), "success");
       queryClient.invalidateQueries({ queryKey: ["dispatch"] });
       router.push("/dispatch");
     },
-    onError: () => showToast(t("dispatch.reject_error"), "error"),
+    onError: () => {
+      setShowRejectModal(false);
+      showToast(t("dispatch.reject_error"), "error");
+    },
   });
 
   const executeMutation = useMutation({
     mutationFn: () => dispatchApi.execute(id),
     onSuccess: () => {
+      setShowExecuteModal(false);
       showToast(t("dispatch.executed_success"), "success");
       queryClient.invalidateQueries({ queryKey: ["dispatch"] });
       router.push("/dispatch");
     },
-    onError: () => showToast(t("dispatch.execute_error"), "error"),
+    onError: () => {
+      setShowExecuteModal(false);
+      showToast(t("dispatch.execute_error"), "error");
+    },
   });
 
   /* The back control goes in PageShell's `backLink` slot as a real <Link>.
@@ -310,7 +338,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
             <Button
               type="button"
               variant="primary"
-              onClick={() => { approveMutation.mutate(); setShowApproveModal(false); }}
+              onClick={() => approveMutation.mutate()}
               loading={approveMutation.isPending}
             >
               {t("dispatch.approve")}
@@ -339,7 +367,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
             <Button
               type="button"
               variant="danger"
-              onClick={() => { rejectMutation.mutate(); setShowRejectModal(false); }}
+              onClick={() => rejectMutation.mutate()}
               loading={rejectMutation.isPending}
             >
               {t("dispatch.confirm_reject")}
@@ -368,7 +396,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
             <Button
               type="button"
               variant="primary"
-              onClick={() => { executeMutation.mutate(); setShowExecuteModal(false); }}
+              onClick={() => executeMutation.mutate()}
               loading={executeMutation.isPending}
             >
               {t("dispatch.confirm_execute")}

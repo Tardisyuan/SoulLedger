@@ -30,6 +30,7 @@ export default function UserProfilePage() {
   const {
     data: postsData,
     isLoading: postsLoading,
+    isPlaceholderData: postsStale,
     error: postsError,
     refetch: refetchPosts,
   } = usePosts({ author: userId, page });
@@ -117,7 +118,14 @@ export default function UserProfilePage() {
         ) : posts.length === 0 ? (
           <EmptyState title={t("social.posts")} reason={t("social.no_posts")} />
         ) : (
-          <div className="space-y-3">
+          /* Same as `app/social/page.tsx`: `placeholderData` took the
+             skeleton away and left no waiting signal in its place. */
+          <div
+            aria-busy={postsStale || undefined}
+            className={`space-y-3 transition-opacity duration-settle ${
+              postsStale ? "opacity-50 ease-exit" : "opacity-100 ease-enter"
+            }`}
+          >
             {posts.map((post) => (
               <PostCard key={post.id} post={post} />
             ))}

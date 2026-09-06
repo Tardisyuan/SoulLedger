@@ -55,7 +55,7 @@ export default function CrossJudgmentsPage() {
    * with nothing on screen saying so.
    */
   const [page, setPage] = useState(1);
-  const { data: pageData, isLoading, isError, refetch } = useQuery({
+  const { data: pageData, isLoading, isError, isPlaceholderData, refetch } = useQuery({
     queryKey: ["cross-judgments", page],
     queryFn: () => crossTenantJudgmentsApi.list({ page: String(page) }).then(r => r.data),
     placeholderData: (previous) => previous,
@@ -96,7 +96,6 @@ export default function CrossJudgmentsPage() {
     >
       <PageSection
         title={t("crossJudgments.list_title")}
-        isLoading={isLoading}
       >
         {/* A failed request used to fall through to the empty state, so
             "the server is down" and "there is nothing here" read the same. */}
@@ -107,7 +106,16 @@ export default function CrossJudgmentsPage() {
         ) : judgments.length === 0 ? (
           <EmptyState title={t("crossJudgments.no_judgments")} />
         ) : (
-          <div className="space-y-4">
+          /* `placeholderData` above keeps this page's cards on screen while the
+             next page loads, which also means `isLoading` never goes true again
+             and the `ListSkeleton` branch never runs after the first load. Page
+             two therefore arrived with nothing at all happening in between. */
+          <div
+            aria-busy={isPlaceholderData || undefined}
+            className={`space-y-4 transition-opacity duration-settle ${
+              isPlaceholderData ? "opacity-50 ease-exit" : "opacity-100 ease-enter"
+            }`}
+          >
             {judgments.map((j: CrossTenantJudgmentListItem) => (
               <Link
                 key={j.id}

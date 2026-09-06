@@ -1,13 +1,17 @@
 "use client";
 
-import { PageSpinner } from "@/src/components/ui/Spinner";
+import { TablePageSkeleton } from "@/components/ui/page-skeletons";
 
 /**
- * The two hand-rolled rings this replaced were `border-amber-500/20` and
- * `border-t-amber-500` — palette literals, not the accent token, so they kept
- * spinning amber after the user picked another accent colour. See the note at
- * the top of src/components/ui/Spinner.tsx.
+ * Same shape as `app/judgment/page.tsx`: PageShell's head, the pending /
+ * concluded tab strip, then a six-column DataTable.
+ *
+ * This was `<PageSpinner />`. The two hand-rolled rings that PageSpinner
+ * itself replaced were `border-amber-500/20` and `border-t-amber-500` —
+ * palette literals rather than the accent token — and that note is kept here
+ * because the spinner is still the right answer inside a card; it was the
+ * wrong answer for a whole route, where it says nothing about what is coming.
  */
 export default function Loading() {
-  return <PageSpinner />;
+  return <TablePageSkeleton withTabs rows={8} />;
 }

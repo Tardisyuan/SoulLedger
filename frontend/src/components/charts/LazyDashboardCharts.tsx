@@ -2,7 +2,34 @@
 
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
+import { prefersReducedMotion } from "@/lib/motion";
 
+/**
+ * `isAnimationActive={animate}` on every series in this file, and `animate` is
+ * one question: does the operator want motion at all.
+ *
+ * THE ONE HOLE THE STYLESHEET COULD NOT REACH. `app/globals.css` collapses all
+ * CSS motion under `prefers-reduced-motion: reduce` with a universal selector
+ * and `!important`, so the 23 `animate-pulse`, the 8 `animate-spin` and every
+ * transition in the app already obey it. recharts does not draw with CSS: it
+ * grows bars and sweeps arcs by writing attributes on a `requestAnimationFrame`
+ * loop, which no media query can shorten. `isAnimationActive` defaults to true
+ * and was set nowhere in this repository, so these four charts were the entire
+ * remaining answer to "what still moves for an operator who asked for no
+ * motion" — and they are on the dashboard, i.e. the first screen.
+ *
+ * Read per mount rather than per render: each of these components is built
+ * inside a `dynamic(..., { ssr: false })` factory, so the const is evaluated
+ * when the chart actually appears on the client and there is no server render
+ * to disagree with.
+ *
+ * Deliberately NOT `isAnimationActive={false}` for everyone. The mount
+ * animation is legible when it is wanted; the defect was that it could not be
+ * declined. Note for anyone who does turn it off wholesale later:
+ * `e2e/charts-render.spec.ts` reasons from "recharts animates on rAF, so the
+ * `<path>` appears over several frames" — read that file before changing this
+ * to a constant, because its whole causal chain runs through this prop.
+ */
 /**
  * The chart chrome, written once.
  *
@@ -106,6 +133,7 @@ const LazyBarChart = dynamic(
         name?: string;
         showGrid?: boolean;
       }) {
+        const animate = !prefersReducedMotion();
         return (
           <ResponsiveContainer width="100%" height={height}>
             <BarChart data={data}>
@@ -145,6 +173,7 @@ const LazyBarChart = dynamic(
                 fill={fill}
                 radius={0}
                 name={name}
+                isAnimationActive={animate}
               >
                 {data.map((entry, i) => (
                   <Cell key={i} fill={entry.color ?? fill} />
@@ -188,6 +217,7 @@ const LazyDashboardPieChart = dynamic(
         height?: number;
         fallbackFill: string;
       }) {
+        const animate = !prefersReducedMotion();
         return (
           <ResponsiveContainer width="100%" height={height}>
             <PieChart>
@@ -199,6 +229,7 @@ const LazyDashboardPieChart = dynamic(
                 outerRadius={100}
                 paddingAngle={2}
                 dataKey="value"
+                isAnimationActive={animate}
                 label={({ name, percent }) =>
                   `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
                 }
@@ -269,6 +300,7 @@ const LazySoulLineChart = dynamic(
         const formatTick = (v: string) =>
           spansYears ? String(v).slice(0, 4) : String(v).slice(5, 10);
 
+        const animate = !prefersReducedMotion();
         return (
           <ResponsiveContainer width="100%" height={height}>
             <LineChart data={data}>
@@ -310,6 +342,7 @@ const LazySoulLineChart = dynamic(
               />
               <Line
                 type="monotone"
+                isAnimationActive={animate}
                 dataKey="cumulative"
                 stroke="hsl(var(--color-accent))"
                 strokeWidth={2}
@@ -375,6 +408,7 @@ const LazyLifespanBarChart = dynamic(
         height?: number;
         seriesNames: { effective: string; decayedAway: string };
       }) {
+        const animate = !prefersReducedMotion();
         return (
           <ResponsiveContainer width="100%" height={height}>
             <BarChart data={data}>
@@ -404,12 +438,12 @@ const LazyLifespanBarChart = dynamic(
                 labelStyle={{ color: "hsl(var(--color-ink-muted))" }}
               />
               <ReferenceLine y={0} stroke="hsl(var(--color-hairline))" />
-              <Bar dataKey="effective" name={seriesNames.effective} stackId="w" radius={0}>
+              <Bar dataKey="effective" name={seriesNames.effective} stackId="w" radius={0} isAnimationActive={animate}>
                 {data.map((d) => (
                   <mod.Cell key={`eff-${d.key}`} fill={d.color} fillOpacity={0.85} />
                 ))}
               </Bar>
-              <Bar dataKey="decayedAway" name={seriesNames.decayedAway} stackId="w">
+              <Bar dataKey="decayedAway" name={seriesNames.decayedAway} stackId="w" isAnimationActive={animate}>
                 {data.map((d) => (
                   <mod.Cell key={`decay-${d.key}`} fill={d.color} fillOpacity={0.25} />
                 ))}
