@@ -393,7 +393,7 @@ fixture：全局在 `tests/conftest.py:13-152`（`api_client`、`cn_tenant`/`eu_
 | 跨租户 → 404 | 根 `AGENTS.md:199`。仅 souls/ledger 有测试 |
 | Always select_related / prefetch_related | `CONVENTIONS.md:131-135`。只有 5 个逐端点查询计数测试 |
 | Critical flows must be covered | `CONVENTIONS.md:95-102`。无映射测试 |
-| 提交格式 | 四份文档。无 commit-msg 钩子 |
+| 提交格式 | 2026-09-06 起唯一权威是 `CLAUDE.md` 的 `## Git`（`CONTRIBUTING.md`/`AGENTS.md` 改成了指针）。仍**无执法**：`.git/hooks/` 没有 commit-msg |
 | 禁 force push / 重写历史 | 根 `AGENTS.md:266-267`。仓库内无机制 |
 | 禁止输出 API Key / Token | 根 `AGENTS.md:270` |
 | Validate input at system boundaries | `CLAUDE.md:27`。只有零散具体测试 |

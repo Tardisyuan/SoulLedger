@@ -43,8 +43,11 @@ cd frontend && npm install && npm run dev
 - Use TanStack Query for API calls with proper query keys
 
 ### Git Commits
-Format: `type(scope): description`
-Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`
+See **`CLAUDE.md` → `## Git`** — that section is the single authority for the format
+and the type list. This file used to carry its own copy, which had drifted to a
+different set (it was missing `style`); `AGENTS.md` carried a third, which specified
+no scope at all while two thirds of commits have one. Nothing enforces the format —
+there is no commit-msg hook — so three copies drifted silently. Now there is one.
 
 ## Testing
 
