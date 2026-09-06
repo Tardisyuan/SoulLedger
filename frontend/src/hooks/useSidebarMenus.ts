@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { menusApi, type MenuItem } from "@soulledger/core/api";
+import { menuKeys } from "@soulledger/core/query_keys";
 import { useTenant } from "@/src/contexts/TenantContext";
 
 /**
@@ -49,7 +50,7 @@ function normalizeMenus(items: SidebarMenu[]): SidebarMenu[] {
 export function useSidebarMenus() {
   const { user } = useTenant();
   return useQuery<SidebarMenu[]>({
-    queryKey: ["menus-sidebar", user?.role, !!user],
+    queryKey: menuKeys.sidebar(user?.role, !!user),
     queryFn: async () => {
       // Use all() for admin (returns unfiltered, bare array), list() for others
       // (role-filtered, DRF-paginated — unwrap .results)
