@@ -385,7 +385,29 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 widens its whole track rather than being contained. The
                 evidence column already sets it (`JudgmentEvidenceColumn.tsx`
                 :50,68) for exactly this; these two never did. */}
-            <div className="grid gap-4 lg:grid-cols-2">
+            {/* THE HANDOVER IS NOW VISIBLE, because until this the model changed
+                hands and the view said nothing.
+                After a verdict the case id goes into `holding`, which is part
+                of the query key, so the console is immediately asking a
+                different question — while `placeholderData` keeps the case
+                that was just ruled on rendered until the answer arrives. Same
+                soul name, same confession, same ledger. The only thing on
+                screen saying a decision had been made was the undo strip, and
+                that lives in its own fixed slot at the bottom of the console,
+                nowhere near the dossier the operator is reading.
+                `isPlaceholderData` and not `isFetching`: see the hook's note
+                on the difference. Dimming, not hiding — the operator can still
+                read what they just decided, which is the point of the undo
+                window. Layout does not move, so nothing reflows under the eye.
+                Under `prefers-reduced-motion` globals.css collapses the
+                transition to 1ms and the opacity change still lands; the state
+                is conveyed either way, only the tween goes. */}
+            <div
+              aria-busy={queue.isPlaceholderData || undefined}
+              className={`grid gap-4 lg:grid-cols-2 transition-opacity duration-settle ${
+                queue.isPlaceholderData ? "opacity-40 ease-exit" : "opacity-100 ease-enter"
+              }`}
+            >
               <div className="min-w-0 space-y-4">
                 <SoulIdentityPanel soul={cursor.soul} />
                 <CaseFactsPanel court={judgment.court} confession={judgment.confession} />

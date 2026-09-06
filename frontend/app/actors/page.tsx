@@ -187,7 +187,7 @@ function ActorsPageContent() {
       }
       subtitle={t("actors.subtitle")}
     >
-      <PageSection title={t("actors.section.actors")} isLoading={isLoading}>
+      <PageSection title={t("actors.section.actors")}>
         {/* A failed request used to fall through to the empty state, so
             "the server is down" and "there is nothing here" read the same. */}
         {isError ? (

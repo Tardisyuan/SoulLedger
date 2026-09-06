@@ -1,7 +1,8 @@
 "use client";
 
-import { PageSpinner } from "@/src/components/ui/Spinner";
+import { CardListPageSkeleton } from "@/components/ui/page-skeletons";
 
+/** Same shape as `app/cross-judgments/page.tsx`: head over a card stack. */
 export default function Loading() {
-  return <PageSpinner />;
+  return <CardListPageSkeleton cards={4} />;
 }

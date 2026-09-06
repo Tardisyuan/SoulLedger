@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 import { useTheme } from "@/src/contexts/ThemeContext";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { useDrawerA11y } from "@/src/components/layout/useDrawerA11y";
@@ -118,6 +118,9 @@ export function accentTakesBlackText(hex: string): boolean {
 const NAV_MODE_KEY = "soulledger_nav_mode";
 const ACCENT_COLOR_KEY = "soulledger_accent_color";
 
+/** `--transition-duration-settle`, the length of both drawer keyframes. */
+const MOUNT_LINGER_MS = 240;
+
 // Convert hex to HSL string for CSS variable
 function hexToHsl(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -162,6 +165,55 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
     onClose,
     labelledBy: titleId,
   });
+
+  /**
+   * MOUNTED A LITTLE LONGER THAN IT IS OPEN, which is the whole of the exit.
+   *
+   * This was `if (!open) return null`, so the drawer was inserted and deleted
+   * and had neither an entrance nor a departure — there is nothing for CSS to
+   * tween across a mount. Keeping it in the tree for the length of the slide
+   * gives the exit somewhere to happen.
+   *
+   * WHY NOT KEEP IT MOUNTED ALWAYS AND HIDE IT. That was the first attempt,
+   * with `visibility: hidden`, and it is wrong here for a reason particular to
+   * this repository: it would make "a closed drawer is not focusable and not
+   * announced" — a panel full of controls — a guarantee carried entirely by a
+   * Tailwind class. jsdom does not resolve classes to computed styles, so no
+   * test here could ever check it, and
+   * `src/__tests__/SettingsDrawer.test.tsx`'s "renders nothing when open is
+   * false" would have had to be weakened into an assertion about a class name.
+   * A closed drawer stays genuinely absent from the DOM; it is only late in
+   * leaving.
+   *
+   * `MOUNT_LINGER_MS` matches `--transition-duration-settle`, which is what
+   * both keyframes run at. Shorter and the drawer is cut off mid-slide.
+   */
+  const [closing, setClosing] = useState(false);
+  // DERIVED DURING RENDER, not set from an effect — and that is load-bearing.
+  //
+  // The first version of this held `present` in state and turned it on from an
+  // effect. That mounts the drawer one commit LATE, and `useDrawerA11y`'s
+  // "way in" effect runs on the commit where `open` became true: it read
+  // `drawerRef.current`, found null because the drawer was not in the tree
+  // yet, and moved focus nowhere. `drawerFocusTrap.test.tsx` caught it —
+  // "moves focus in, closes on Escape, and gives it back to the gear" — which
+  // is why that test is worth more than the animation it was guarding against.
+  const present = open || closing;
+  const wasOpen = useRef(open);
+  useEffect(() => {
+    if (open) {
+      wasOpen.current = true;
+      setClosing(false);
+      return;
+    }
+    // Only linger on a real close. Without this the drawer would linger once on
+    // mount, having never been open.
+    if (!wasOpen.current) return;
+    wasOpen.current = false;
+    setClosing(true);
+    const timer = setTimeout(() => setClosing(false), MOUNT_LINGER_MS);
+    return () => clearTimeout(timer);
+  }, [open]);
 
   // Re-applied on theme change, not only on pick: `--color-accent-ink` is
   // theme-dependent (see `accentTokens`), and an inline custom property set
@@ -213,7 +265,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
     applyAccentColor(customHex);
   };
 
-  if (!open) return null;
+  if (!present) return null;
 
   return (
     <>
@@ -224,7 +276,9 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
       <button
         type="button"
         aria-label={t("common.close")}
-        className="fixed inset-0 bg-black/50 z-drawer"
+        className={`fixed inset-0 bg-black/50 z-drawer ${
+          open ? "animate-scrim-in" : "animate-scrim-out"
+        }`}
         onClick={onClose}
       />
 
@@ -232,7 +286,9 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
       <div
         ref={drawerRef}
         {...drawerProps}
-        className="fixed right-0 top-0 h-full w-80 bg-[hsl(var(--color-surface-1))] border-l border-[hsl(var(--color-hairline))] z-drawer shadow-xl overflow-y-auto"
+        className={`fixed right-0 top-0 h-full w-80 bg-[hsl(var(--color-surface-1))] border-l border-[hsl(var(--color-hairline))] z-drawer shadow-xl overflow-y-auto ${
+          open ? "animate-drawer-in" : "animate-drawer-out"
+        }`}
       >
         <div className="p-6">
           {/* Header */}

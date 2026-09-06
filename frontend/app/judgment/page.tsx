@@ -108,6 +108,11 @@ function JudgmentQueuePageContent() {
           { key: "action", header: t("judgment.action") },
         ]}
         data={judgments}
+        /* Tab, page and sort — the three things that make this a different
+           question. A `JUDGMENT_CONCLUDED` pushed by another operator moves a
+           row between the two tabs without any of them changing, which is the
+           case this exists to show. */
+        transitionKey={`${tab}|${page}|${ordering}`}
         isLoading={judgmentLoading}
         isError={judgmentIsError}
         keyExtractor={(judgment) => String(judgment.id)}

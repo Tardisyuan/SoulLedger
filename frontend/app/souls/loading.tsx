@@ -1,13 +1,15 @@
 "use client";
 
-import { PageSpinner } from "@/src/components/ui/Spinner";
+import { TablePageSkeleton } from "@/components/ui/page-skeletons";
 
 /**
- * The two hand-rolled rings this replaced were `border-amber-500/20` and
- * `border-t-amber-500` — palette literals, not the accent token, so they kept
- * spinning amber after the user picked another accent colour. See the note at
- * the top of src/components/ui/Spinner.tsx.
+ * Same shape as `app/souls/page.tsx`: PageShell's head over a compact
+ * DataTable of ten rows (`PAGE_SIZE` on that page is 20, but ten is what fits
+ * a viewport, and a skeleton taller than the fold buys nothing).
+ *
+ * Was `<PageSpinner />`. See `components/ui/page-skeletons.tsx` for why all
+ * seven of these routes stopped using it.
  */
 export default function Loading() {
-  return <PageSpinner />;
+  return <TablePageSkeleton rows={10} />;
 }

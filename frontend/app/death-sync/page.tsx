@@ -76,7 +76,7 @@ export default function DeathSyncPage() {
       }
       subtitle={t("death_sync.subtitle") || "External death registration sync"}
     >
-      <PageSection title={t("death_sync.registrations") || "Registrations"} isLoading={isLoading}>
+      <PageSection title={t("death_sync.registrations") || "Registrations"}>
         {/* A failed request used to fall through to the empty state, so
             "the server is down" and "there is nothing here" read the same. */}
         {isError ? (
