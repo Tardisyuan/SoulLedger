@@ -65,6 +65,7 @@ import {
 } from "@/src/components/workflow/NodeEditModal";
 import { useToast } from "@/src/contexts/ToastContext";
 import { QueryError } from "@/src/components/ui/PageError";
+import { prefersReducedMotion } from "@/lib/motion";
 import {
   appendPosition,
   edgeArrow,
@@ -98,29 +99,6 @@ if (typeof window !== "undefined") {
  * exists to say is "that card went there".
  */
 const LAYOUT_TRAVEL_SECONDS = 0.45;
-
-/**
- * The operator asked their OS for no motion, so the re-layout is instant.
- *
- * `app/globals.css` already collapses every CSS animation and transition to
- * 1ms under this same query, and that rule DOES NOT REACH THIS ANIMATION:
- * gsap writes `transform` from JavaScript on a `requestAnimationFrame` loop,
- * which no stylesheet can shorten. So the preference has to be read here, in
- * JS, or the one animation in this app that moves a large object across the
- * screen would be the one animation the accessibility rule misses.
- *
- * Read at click time rather than subscribed to: a `matchMedia` listener would
- * need a `useEffect` and would answer the same question one press later.
- * `window.matchMedia` is guarded because this function is also reachable from
- * a test environment that does not implement it.
- */
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-}
 
 /**
  * The rectangle a set of nodes occupies, in the LAYOUT's own coordinates —
