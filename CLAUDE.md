@@ -244,8 +244,28 @@ bash scripts/install-hooks.sh
 
 ## Git
 
+**这里是提交格式的唯一权威。** `CONTRIBUTING.md` 与 `AGENTS.md` 都指回这一节 ——
+此前三处各写一份清单,三份互不相同,而没有 commit-msg 钩子会发现这件事。
+
 - Format: `type(scope): description`
 - Types: feat, fix, docs, style, refactor, test, ci, chore
+
+scope 可省,但**多数派是带的**。2026-09-06 实测 818 条提交:
+
+    带 scope   type(scope):   543  (66%)
+    不带 scope type:          250  (31%)
+    两者都不是                 25  ( 3%)   ← 多为 Merge,及早期的 "fix + feat:" 写法
+
+上面八个 type 覆盖 **765 / 802 = 95.4%**。落在外面的是 `merge`(21)、`i18n`(4)、
+`security`(3)、`perf`(3)、`build`(3)、`misc`/`migrate`/`infra` 各 1 ——
+**刻意不收进清单**:它们合计不到 5%,为八个类之外的长尾扩表,只会让清单再次
+和实践脱节。要用就用,别为它改这一行。
+
+复核命令(数字会随提交增长,别信这里的绝对值,信这条命令):
+
+```bash
+git log --format="%s" | grep -oE '^[a-z0-9]+' | sort | uniq -c | sort -rn
+```
 
 ## Lazy-Load Reference
 

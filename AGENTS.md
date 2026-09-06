@@ -267,18 +267,16 @@ npm run --workspace packages/core test      # vitest，不是 jest
 
 ### Git 提交规范
 
-```
-<type>: <简短描述>
+**见 `CLAUDE.md` 的 `## Git` 一节 —— 那里是唯一权威。**
 
-[type]: fix | feat | refactor | style | test | docs
-```
-
-示例：
-```
-fix: BaseModal Dialog centering + open prop
-feat: add JWT auth to all API requests
-refactor: adopt Linear design system for souls pages
-```
+> **2026-09-06:这里此前自带一份清单,而它是错的。** 它规定 `<type>: <简短描述>`
+> **不带 scope**,而实测 818 条提交里 543 条(66%)带 scope;它列的六个 type 漏掉了
+> `chore`(25 次)与 `ci`(6 次)。三个示例里还有一条
+> `refactor: adopt Linear design system for souls pages` —— 那正是本文件 §1 曾经规定、
+> 而今天整套是 eslint error 的东西。
+>
+> 不在这里重抄一份正确的清单:三份副本会漂,一份加两个指针不会。这一条和
+> `CONTRIBUTING.md` 里那条,都是指针。
 
 ### 禁止行为
 

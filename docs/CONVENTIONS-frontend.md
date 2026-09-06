@@ -517,7 +517,7 @@ cd frontend && npx playwright test --project=mobile-chrome
 | `--color-status-*` 不得内联进 JSX 三元 | `statusTokenLayering.test.ts:56-61` 自述"~60 处，一个真实缺口" |
 | 触摸端读取被截断值 | `truncatedValuesAreRecoverable.test.ts:19-21` 自述"这一层仍然没有覆盖" |
 | 500 行上限 | `CLAUDE.md:11-24`。无 `max-lines`，自述"applied by eye" |
-| Git 提交格式 | 三份文档三个说法。`.git/hooks/` 无 commit-msg |
+| Git 提交格式 | 2026-09-06 起唯一权威是 `CLAUDE.md` 的 `## Git`（另两份是指针）。仍**无执法**：`.git/hooks/` 没有 commit-msg |
 | i18n key 前缀 / 新增 key 三份同加 | `AGENTS.md:161-168,349-355`。无 key 集 parity 的独立测试 |
 | 文案不得烙进布局宽度 / n=0,1,10000 都要成立 | `BRIEF.md:287-291,313-315` |
 | `.pre-commit-config.yaml` 的 prettier / eslint-mirror | 框架未装，prettier 不在任何 devDependencies，无 `.prettierrc` |
@@ -542,17 +542,36 @@ cd frontend && npx playwright test --project=mobile-chrome
    workspaces 说明。
 4. ✅ **Dialog z 轴** —— `AGENTS.md` 曾写 `z-[10000]` vs `globals.css:213-215` dialog=80。
    **已随 §2 重写更正。**
-5. **Git 提交格式三处不同** —— `CLAUDE.md:247` 带 scope；`CONTRIBUTING.md:41` 带 scope
-   但 types 无 `style`；`AGENTS.md:249-262` **无 scope**、types 无 `chore`/`ci`。
-   **未修**：三份哪一份是权威需要你定，而不是我挑一个。
+5. ✅ **Git 提交格式三处不同** —— `CLAUDE.md` 带 scope；`CONTRIBUTING.md` 带 scope
+   但 types 无 `style`；`AGENTS.md` **无 scope**、types 无 `chore`/`ci`。
+   **2026-09-06 收敛到 `CLAUDE.md` 的 `## Git`**，另两份改为指针。判据是实测：
+   818 条提交里带 scope 543 / 不带 250，`CLAUDE.md` 的八个 type 覆盖 95.4% ——
+   三份里它最接近实践，且它是唯一每次会话自动加载的文件。落在八类之外的
+   `merge`(21)/`i18n`(4)/`security`(3)/`perf`(3)/`build`(3) 合计不到 5%，
+   **刻意不收进清单**：为长尾扩表只会让清单再次脱节。
 5b. ✅ **`showToast` 签名** —— `AGENTS.md` 曾写 `showToast({type, title, message})`，
    实为位置参数 `showToast(message, type?, duration?)`（`Toast.tsx:131-135`）。
    照文档写会把一个对象当字符串渲染。**已更正**，并补了 `notify` 端口的说明。
-6. **`tokens.md` 自称"当前态"但与 globals.css 不符** ——
-   `--color-accent-ink` light 写 34%，实为 **31%**；写「动效仍然没有，150ms 是全系统唯一
-   时间值」而实有三档时长+两条缓动+七个 `--animate-*`；写「`a` hover to accent, 150ms」
-   而实为 accent-ink / 160ms；逐条对照一个**不存在的** `tailwind.config.js`；
-   写「mark 只在 dashboard 一处绘制」而 masthead 需要它三处。
+6. ✅ **`tokens.md`** —— **`docs/design-handoff/` 四份文件里，只有这一份该改。**
+   这个包内部有一套自己的区分，别一锅端：
+
+   | 文件 | 自我声明 | 该不该动 |
+   |---|---|---|
+   | `tokens.html` | 顶部：「point-in-time snapshot, not a reference … **Do not build against this page**」 | **绝不要动。**里面的旧值是**记录**，不是错误。`tokens.md` 开头专门写了一段禁止「修正」它 |
+   | `BRIEF.md` | `Date: 2026-08-02` 的简报 | 不动。「三个文明」「886 keys」是那天的事实 |
+   | `ADDENDUM.md` | §7 标题即「这份追补停在 2026-08-23」 | 不动。边界是它自己声明的 |
+   | `tokens.md` | 「Everything below is the **current** state」 | **有对账义务**，且 2026-08-26 真的对过一次账 |
+
+   **2026-09-06 已对账**：31 行颜色表 × 两个主题 = 62 个值逐个核过，**只错 1 个**
+   （`--color-accent-ink` light 34% → 31%）。漂掉的全在表格之外：动效栏写「仍然没有」
+   而三档时长/两条缓动/八个 `--animate-*` 早已落地（并据此把动效列进「还需要提案」——
+   在让设计师做一套已完成的活）；`a` 的 hover 目标与时长两项都错（实为 `accent-ink` /
+   160ms）；`--color-civ-mark` 写「只有一处消费」而实测至少四处；全节援引已不存在的
+   `tailwind.config.js`。另补了从未登记的 `--color-focus`。
+
+   > 这一条此前把 `tokens.md` 和冻结件并列成一串「矛盾」。按那个写法读，会有人去改
+   > `tokens.html` —— 而那正是 `tokens.md` 明文禁止的。**"这份文档过时了"不是一个
+   > 单一判断**：要先问它有没有声称自己是当前态。冻结件的旧值是资产，活文件的旧值是缺陷。
 7. **BRIEF 与后续** —— 「三个文明」vs 四个；「886 keys」vs 1350；
    「Server-rendered pages」vs 37/37 client；「domainDisplayContract 42 条」已失效。
 8. ✅ **`eslint.config.mjs` 自相矛盾** —— `:17-19` 说 `npm run lint` 是裸 `eslint .`
