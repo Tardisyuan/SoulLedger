@@ -261,10 +261,61 @@ def _get_resource_name(instance):
     return instance._meta.label_lower.split('.')[-1]
 
 
+#: Marker written in place of a secret's before/after values.
+#:
+#: The field name is KEPT and only the values are replaced. "The signing secret
+#: was rotated at 03:14 by user X" is exactly what an audit log is for; the
+#: secret itself is not. Dropping the key entirely would lose the event.
+REDACTED = "[redacted]"
+
+#: Field names whose VALUES never enter an audit row.
+#:
+#: Measured 2026-09-07, before this existed: changing a password wrote BOTH the
+#: old and the new `pbkdf2_sha256$…` hash into `AuditLog.changes`, and
+#: `AuditLogSerializer` returns `changes` to anyone holding `audit.read` —
+#: which is ADMIN *and* MODERATOR. All three password paths
+#: (`views.py:196`, `:622`, `:724`) use `set_password` + `save(update_fields=)`,
+#: and `_on_post_save` does not look at `update_fields`, so every one of them
+#: was audited in full.
+#:
+#: Hashes, not plaintext — but a password hash is offline-crackable material,
+#: and `signing_secret` / `source_payload` are decrypted by their field's
+#: `from_db_value` before this function ever sees them, so those two were
+#: plaintext.
+SECRET_FIELD_NAMES = frozenset({
+    'password', 'signing_secret', 'key_hash', 'raw_key', 'api_key',
+    'secret', 'token', 'access_token', 'refresh_token', 'source_payload',
+})
+
+#: Substrings that make a field name secret regardless of the set above.
+#: A name blacklist alone only covers fields that exist today; this covers the
+#: next `webhook_secret` or `reset_token` without anyone remembering to come here.
+SECRET_NAME_HINTS = ('password', 'secret', 'token', 'api_key', 'private_key')
+
+
+def _is_secret_field(field) -> bool:
+    """Three independent tests, because any one of them alone decays.
+
+    Name and hint catch what is called a secret. The type test catches what is
+    *stored* as one: `EncryptedCharField` / `EncryptedJSONField` decrypt in
+    `from_db_value`, so by the time a diff runs, their values are plaintext no
+    matter what the column is named.
+    """
+    name = field.name.lower()
+    if name in SECRET_FIELD_NAMES:
+        return True
+    if any(hint in name for hint in SECRET_NAME_HINTS):
+        return True
+    return type(field).__name__.startswith('Encrypted')
+
+
 def _build_changes(instance, old_instance=None):
     """
     Build a changes dict from old->new field values.
     Only tracks fields on AuditUserFields (not internal fields).
+
+    Secret-valued fields record that they changed, never what they changed to —
+    see `SECRET_FIELD_NAMES` and `test_audit_never_records_a_secret.py`.
     """
     if old_instance is None:
         return None
@@ -279,8 +330,11 @@ def _build_changes(instance, old_instance=None):
         old_val = getattr(old_instance, field.name, None)
         new_val = getattr(instance, field.name, None)
         if old_val != new_val:
-            changes[field.name] = [str(old_val) if old_val is not None else None,
-                                   str(new_val) if new_val is not None else None]
+            if _is_secret_field(field):
+                changes[field.name] = [REDACTED, REDACTED]
+            else:
+                changes[field.name] = [str(old_val) if old_val is not None else None,
+                                       str(new_val) if new_val is not None else None]
     return changes if changes else None
 
 

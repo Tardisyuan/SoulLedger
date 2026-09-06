@@ -4,6 +4,7 @@ REST serializers for Judgment app.
 from rest_framework import serializers
 
 from apps.core.field_permissions import FieldPermissionMixin
+from apps.core.tenant_fields import tenant_scoped
 from apps.judgment.models import Judgment, JudgmentCitation, Statute
 from apps.ledger.serializers import LedgerSummarySerializer
 from apps.realms.serializers import RealmLocalizedSerializer
@@ -85,6 +86,9 @@ class JudgmentCitationSerializer(serializers.ModelSerializer):
     list of UUIDs is not a reason.
     """
     statute = StatuteSerializer(read_only=True)
+
+    validate_soul = tenant_scoped("soul")
+    validate_judge = tenant_scoped("judge")
 
     class Meta:
         model = JudgmentCitation

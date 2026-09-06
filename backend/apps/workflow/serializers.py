@@ -3,6 +3,7 @@ Serializers for workflow app.
 """
 from rest_framework import serializers
 
+from apps.core.tenant_fields import tenant_scoped
 from apps.workflow.models import ApprovalNode, ApprovalWorkflow, WorkflowTemplate
 from apps.workflow.node_shape import normalize_template_node
 
@@ -309,6 +310,15 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
     current_node_detail = ApprovalNodeSerializer(source="current_node", read_only=True)
     soul_name = serializers.CharField(source="soul.name", read_only=True)
     judgment_verdict = serializers.CharField(source="judgment.verdict", read_only=True, allow_null=True)
+
+    # `validate()` below locks these three, but only when `self.instance is not
+    # None` — i.e. on update. On POST there is no instance, so the branch never
+    # runs and the fields resolve against a manager that does not scope by
+    # tenant. `ApprovalNodeSerializer.validate_workflow` (same file) already
+    # closed the child's half of this; these are the parent's.
+    validate_soul = tenant_scoped("soul")
+    validate_judgment = tenant_scoped("judgment")
+    validate_original_workflow = tenant_scoped("original_workflow")
 
     class Meta:
         model = ApprovalWorkflow
