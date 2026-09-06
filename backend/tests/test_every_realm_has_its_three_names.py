@@ -78,7 +78,7 @@ def _seeded_realm_codes() -> set[str]:
         for target in node.targets:
             if not (isinstance(target, ast.Name) and target.id.endswith("_REALMS")):
                 continue
-            if not isinstance(node.value, (ast.List, ast.Tuple)):
+            if not isinstance(node.value, ast.List | ast.Tuple):
                 continue
             for row in node.value.elts:
                 first = row.elts[0]
