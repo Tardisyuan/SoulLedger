@@ -6,76 +6,74 @@
 
 ---
 
-## 1. 设计系统 — Linear Style
+## 1. 设计系统
 
-**权威来源**: `https://getdesign.md/linear.app/design-md`
+**权威是 `frontend/app/globals.css`。** 其次是 `frontend/eslint.config.mjs` 的六条
+design-system 规则。`DESIGN.md` 只解释决定，不定义数值 —— 它自己第 3 行就是这么写的。
 
-**文件**: `DESIGN.md`（项目根目录）
+完整规约见 **[`docs/CONVENTIONS-frontend.md`](docs/CONVENTIONS-frontend.md)**，那里每条
+都标了执法机制。下面只留新写代码时最容易踩的三条。
 
-### 绝对禁止
+### 1.1 颜色只有一种拼法
 
-- ❌ 任何 `shadow-*` 类（Linear 不使用阴影）
-- ❌ 任何 `bg-gradient-*` 背景渐变
-- ❌ 任何 `bg-slate-*`、`bg-zinc-*`、`bg-gray-*` 颜色
-- ❌ 任何 `text-slate-*`、`text-zinc-*` 文字颜色
-- ❌ 任何 `border-slate-*`、`border-zinc-*` 边框
-- ❌ 任何 `rounded-xl`（超过 12px 的圆角）
-- ❌ 任何 `bg-white`、`bg-black`（除非 amber 按钮上的 text-black）
-
-### 颜色 Token（必须使用）
-
-| Token | Tailwind 类 | 用途 |
-|-------|------------|------|
-| 页面背景 | `bg-canvas` | `#010102` 极深黑 |
-| 卡片背景 | `bg-surface-1` | `#0f1011` |
-| 悬浮/Modal | `bg-surface-2` | `#141516` |
-| 下拉/次级面板 | `bg-surface-3` | `#18191a` |
-| 默认边框 | `border-hairline` | `#23252a` |
-| 强边框 | `border-hairline-strong` | `#34343a` |
-| 主文字 | `text-ink` | `#f7f8f8` |
-| 次级文字 | `text-ink-muted` | `#d0d6e0` |
-| 占位符文字 | `text-ink-subtle` | `#8a8f98` |
-| 禁用文字 | `text-ink-tertiary` | `#62666d` |
-| 品牌强调色 | `text-amber-500` / `bg-amber-500` | `#f59e0b` |
-
-### 圆角规范
-
-- 卡片：`rounded-lg`（12px）
-- 按钮/输入框：`rounded-md`（8px）
-- 状态徽章：`rounded-full`（pill）
-
-### 组件样式
-
-**Primary 按钮**：
-```tsx
-bg-amber-500 hover:bg-amber-400 text-black rounded-md px-4 py-2 text-sm font-medium
+```
+text-[hsl(var(--color-ink))]              ✅ 唯一正确
+bg-[hsl(var(--color-status-error)/0.1)]   ✅ 带 alpha
+text-ink                                  ❌ 裸形
 ```
 
-**Secondary 按钮**：
-```tsx
-bg-surface-1 border border-hairline text-ink-muted hover:bg-surface-2 rounded-md px-4 py-2 text-sm font-medium
-```
+Tailwind 4 把 `@theme` 变量提进 theme 层并从中生成 `.text-ink`，而 `:root` 里同名的
+变量存的是**裸 HSL 三元组**，于是裸形生成非颜色值 —— **静默失效，不报错**。
+`globals.css:5-39` 记录了这次事故：同一页面里 10 个写 `text-[hsl(var(--color-ink-subtle))]`
+的元素正常变暗，2 个写 `text-ink-subtle` 的以全亮度渲染，而 lint / tsc / build 全绿。
+`text-ink` 本身"看起来是对的"，因为它继承了 body 的 ink —— 失败是不可见的。
 
-**输入框**：
-```tsx
-bg-surface-1 border border-hairline text-ink placeholder-ink-subtle rounded-md px-3 py-2 text-sm
-focus:border-hairline-strong focus:ring-1 focus:ring-amber-500/30
-```
+执法：`src/__tests__/cssTokenReferenceContract.test.ts`。
 
-**卡片**：
-```tsx
-bg-surface-1 border border-hairline rounded-lg p-6
-```
+### 1.2 所有圆角是 0，这是刻意的
+
+`globals.css:193-202` 里 8 个 shape radius 全为 `0`，只剩 `--radius-focus: 2px` 与
+`--radius-full`。所以 `rounded` / `rounded-sm` / `-md` / `-lg` / `-xl` / `-2xl` / `-3xl`
+**全是死类名**：不产生视觉差异，但会让读代码的人以为那里有圆角。
+执法：eslint `design-system/dead-radius`（error）。
+
+### 1.3 禁 Tailwind 原生调色板
+
+`bg-amber-500`、`text-red-500`、`bg-slate-*` 这一整族（22 色 × 11 档）绕开了主题感知的
+token，浅色模式下失效或过淡。执法：eslint `design-system/no-raw-palette`（error）。
+十六进制走 `no-hex-colour`（error，四处已登记例外）。
+
+### 1.4 另外三条
+
+- **字号只有八档** `text-01`…`text-08`（11/12/13/15/18/22/32/56px，自带行高字距字重）。
+  `text-sm` 之类与 `text-[11px]` 之类都是 error（`design-system/type-scale`）。
+- **间距只有** 1/2/3/4/6/10/16 + 0/px/auto（`design-system/spacing-rhythm`）。
+- **类名合并只用 `cn()`**（`lib/utils.ts`，它扩展了 tailwind-merge 认识八档字号）。
+
+### 1.5 迁移基线是双向的
+
+`frontend/eslint.design-guard-baseline.json` 记录每个文件当前的违规数：**超出报红，
+低于也报红**（基线过期同样是缺陷）。没有条目的文件额度是 0 —— 这就是"新文件一律 error"
+的实现。改好一个文件就把数字改小或整行删掉。
+
+> **这一节 2026-09-06 重写过。** 此前它规定的是一套 Linear 风格：`rounded-lg` 卡片、
+> `rounded-md` 按钮、`bg-amber-500` 品牌色、`text-sm` 正文，以及一张 `bg-canvas` /
+> `text-ink` / `border-hairline` 的裸类名 token 表。**那四类今天全部是 eslint error，
+> 那张表里的裸类名在产品代码里用量为 0。** `DESIGN.md:5-18` 早已写明旧规范"是一条活的、
+> 要你撤销刻意工作的指令"，但这一节仍在原地照抄它，并让人"必读 DESIGN.md"。
 
 ---
 
 ## 2. UI 组件规范
 
-### 必须使用 @headlessui/react
+### 必须使用 BaseModal（Base UI，不是 @headlessui）
 
-**所有弹窗必须使用 `@headlessui/react` 的 `Dialog` + `Transition` 组件。**
+**`@headlessui/react` 已经不在依赖里。** 2026 年迁到了 `@base-ui/react`（`package.json:21`），
+理由写在 `src/components/ui/Modal.tsx:28-47`：headlessui 处于维护模式，没有命令面板与
+data-grid 相邻的原语，而这类控制台接下来就要用到它们；Base UI 是 shadcn/ui 自己在
+2026 年 7 月切过去的那一层。
 
-基础弹窗组件已封装在 `src/components/ui/Modal.tsx`，名称为 `BaseModal`：
+**所有弹窗必须使用 `src/components/ui/Modal.tsx` 的 `BaseModal`**，不要手写遮罩：
 
 ```tsx
 import { BaseModal } from "@/src/components/ui/Modal";
@@ -91,31 +89,30 @@ import { BaseModal } from "@/src/components/ui/Modal";
 </BaseModal>
 ```
 
-**BaseModal 的 Dialog 结构**（正确用法）：
+**BaseModal 的 Dialog 结构**（五段 anatomy，见 `Modal.tsx:49-103`）：
 ```tsx
-<Dialog open={isOpen} onClose={onClose} className="fixed inset-0 z-[10000]">
-  <Transition show={isOpen} as={Fragment}>
-    <Dialog.Backdrop className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
-    <div className="fixed inset-0 overflow-y-auto">
-      <div className="flex min-h-full items-center justify-center p-4">
-        <Transition.Child as={Fragment}
-          enter="ease-out duration-200" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100"
-          leave="ease-in duration-150" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95"
-        >
-          <Dialog.Panel className="w-full max-w-md bg-surface-2 border border-hairline rounded-xl">
-            {/* 内容 */}
-          </Dialog.Panel>
-        </Transition.Child>
-      </div>
-    </div>
-  </Transition>
-</Dialog>
+<Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+  <Dialog.Portal>
+    <Dialog.Backdrop className="fixed inset-0 z-dialog bg-black/60 …" />
+    <Dialog.Viewport className="fixed inset-0 z-dialog flex items-center justify-center overflow-y-auto p-4">
+      <Dialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col …">
+        {/* header shrink-0 / body min-h-0 flex-1 overflow-y-auto / footer shrink-0 */}
+      </Dialog.Popup>
+    </Dialog.Viewport>
+  </Dialog.Portal>
+</Dialog.Root>
 ```
 
 **重要**：
-- Dialog 本身必须有 `className="fixed inset-0 z-[10000]"`（不是 `relative`）
-- 必须显式传递 `open={isOpen}` prop
-- 禁止使用原生 `createPortal` 或手写 fixed 遮罩
+- z 轴用 `z-dialog`（= 80，`globals.css:213-215`），**不是** `z-[10000]`
+- 进出场动效走 Base UI 的 `data-starting-style` / `data-ending-style`，不是 `<Transition>`
+- **`max-h` + `flex flex-col` + 可滚动的 body 三者是一套，缺一不可。** 缺的后果只在小屏
+  出现：面板没有高度上限时 `items-center` 会让它上下对称溢出，页脚连同提交按钮被挤出
+  视口，而外层是 `fixed inset-0` —— 那个按钮"可见、可用、可滚动到"，却点不动。
+  在 mobile-chrome（375×812）上稳定复现，桌面两个引擎全绿。用 `100dvh` 不用 `100vh`，
+  因为移动端地址栏吃掉的那一段恰好就是页脚的高度。
+- 禁止使用原生 `createPortal` 或手写 fixed 遮罩 ——
+  执法：`src/__tests__/dialogsAreNotHandRolled.test.ts`（注意它**只扫 `app/`**）
 
 ### 现有 UI 组件路径
 
@@ -132,13 +129,23 @@ frontend/src/components/
 
 ### Toast 规范
 
-使用 `ToastContext` 提供的方法：
+使用 `ToastContext` 提供的方法。**参数是位置参数，不是对象**
+（`src/components/ui/Toast.tsx:131-135`）：
+
 ```tsx
 const { showToast } = useToast();
-showToast({ type: "success" | "error" | "info", title: "标题", message: "内容" });
+showToast("消息内容", "success");            // (message, type?, duration = 5000)
 ```
 
-Toast 样式：无阴影，使用 `bg-surface-2 border border-hairline`。
+`packages/core` 里的 hook 不能 import 这个 —— 它们走平台端口 `notify(key, kind)`，
+**传消息键，不传句子**。执法：`src/__tests__/notifyKeysExistInTheBundles.test.ts`
+（扫所有 `notify(` 调用，键必须存在于三份 bundle）。
+
+**mutation 的 toast 由 hook 负责，页面不要重复报。**
+
+`ToastContext` 的 default 与 provider value 是同一对模块级函数引用 —— 有没有 Provider
+行为逐字节相同（`ToastContext.tsx:21-36`）。它是穿着 context 外衣的模块单例，别指望
+用 Provider 去替换它做测试。
 
 ---
 
@@ -193,10 +200,22 @@ t("nav.greeting", { username: user.username })
 ### 后端多租户
 
 - `TenantMiddleware` 从请求携带的 **JWT token** 中读取 `tenant_code` claim，自动解析对应 Tenant
-- 所有模型使用 `TenantManager`，查询自动过滤 tenant
-- `thread-local` 用 `try-finally` 保证清理
-- Soul 创建时 `perform_create` 必须设置 `tenant`
+- **`TenantManager` 不按租户过滤。** 它只加 `is_deleted=False`
+  （`apps/tenants/managers.py:35-53`）。隔离**全部**在视图层通过
+  `apps/core/tenant.py::scope_to_tenant` 完成 —— 用它那句话说，
+  "The call sites are the whole of the isolation"。
+  写新 ViewSet 时不要指望 ORM 兜底：漏掉 `scope_to_tenant` 就是漏掉隔离本身。
+  执法：`backend/tests/test_tenant_scoping_contract.py`（走真实 URLconf 静态检查）
+- 租户上下文用 **contextvar**（不是 thread-local），以支持 async 与 Celery worker；
+  在 `finally` 里 `clear_current_tenant()`
+- **fail closed**：没有租户就是 `qs.none()`，不是"返回全部"。ADMIN 是唯一全局角色
+- Soul 创建时 `perform_create` 必须设置 `tenant`（`TenantCreateMixin` 提供，**无全量守卫**）
 - 跨租户访问返回 404（不是 403）
+
+> **2026-09-06 更正**：上面第二条此前写的是"所有模型使用 `TenantManager`，查询自动过滤
+> tenant"，第三条写的是 thread-local。两条都与代码相反 —— 而同样的说法当时还在
+> `docs/ARCHITECTURE.md`、`managers.py` 与 `middleware.py` 各自的 docstring 里，
+> 四处一致地说反。这类"多处一致但都错"的断言最难发现，因为交叉引用会互相印证。
 
 ### API 安全性
 
@@ -277,12 +296,15 @@ refactor: adopt Linear design system for souls pages
 ### 前端
 
 ```
-Next.js 14 (App Router)
-Tailwind CSS 3.x
-@headlessui/react 2.x
+Next.js 16 (App Router)
+Tailwind CSS 4.x  ← 无 tailwind.config.js,配置在 app/globals.css 的 @theme 里
+@base-ui/react    ← 不是 @headlessui,后者已不在依赖里
 TanStack Query v5
 TypeScript
 ```
+
+仓库是 **npm workspaces**：根 + `frontend/` + `packages/core/`。根上那份
+`package-lock.json` 是唯一锁文件，`cd frontend && npm ci` **不再可用**。
 
 ### 后端
 
@@ -298,30 +320,38 @@ Python 3.11
 
 ```
 SoulLedger/
-├── DESIGN.md          ← 设计系统规范（必读）
+├── docs/CONVENTIONS-backend.md   ← 后端准则（每条带执法机制）
+├── docs/CONVENTIONS-frontend.md  ← 前端准则与页面一致性
+├── DESIGN.md          ← 解释设计决定,不定义数值
 ├── AGENTS.md          ← 本文件
+├── package.json       ← workspaces 根;package-lock.json 也在这里
 ├── backend/
-│   ├── apps/
+│   ├── apps/              ← 19 个 app,见 config/settings.py:64-82
 │   │   ├── souls/         ← 灵魂 CRUD
-│   │   ├── tenants/       ← 多租户
+│   │   ├── tenants/       ← 多租户(TenantManager / 中间件)
 │   │   ├── authentication/ ← 登录/JWT
-│   │   └── karma/          ← 功德计算
-│   ├── config/
-│   │   └── settings.py
-│   └── tests/
+│   │   ├── ledger/         ← 功德计算(旧名 karma,已重命名)
+│   │   └── core/           ← 不在 INSTALLED_APPS,只装 mixin/middleware/permission
+│   ├── config/settings.py
+│   └── tests/             ← 后端测试分散在两处,另一处是 apps/*/tests.py
+├── packages/core/         ← 平台无关层:API 契约 / WS 客户端 / 领域配置 / 六个数据 hook
+│   ├── src/platform/      ← 8 个宿主端口;tsconfig 不含 "dom",这是执法机制
+│   ├── messages/          ← 三份语言包 zh-Hans / en / egy
+│   └── openapi/schema.yml ← 前端类型的来源,后端有门禁盯着它逐字节一致
 ├── frontend/
-│   ├── app/               ← Next.js 页面
-│   │   ├── (auth)/login/  ← 登录页
-│   │   ├── souls/          ← 灵魂列表/详情
-│   │   └── page.tsx        ← 首页
+│   ├── app/               ← Next.js 路由,37 个 page.tsx
+│   │   └── globals.css    ← **设计 token 的权威**
 │   ├── src/
-│   │   ├── components/     ← UI 组件
-│   │   ├── contexts/       ← React Context
-│   │   ├── hooks/          ← TanStack Query hooks
-│   │   └── middleware.ts   ← 路由守卫
-│   ├── lib/api.ts         ← API 客户端
-│   └── tailwind.config.js ← Tailwind 配置
+│   │   ├── components/    ← UI 组件
+│   │   ├── contexts/      ← React Context
+│   │   ├── hooks/         ← 只剩视图层四个,数据 hook 在 packages/core
+│   │   └── __tests__/     ← 契约测试(它们才是真正的规范)
+│   ├── components/ui/     ← 第三个源根:data-table / data-grid / page-section / skeleton
+│   ├── lib/platform/web.ts ← 平台端口的 web 实现
+│   ├── middleware.ts      ← 路由守卫(在 frontend/ 根,不在 src/)
+│   └── eslint.config.mjs  ← 六条 design-system 规则
 └── scripts/
+    ├── install-hooks.sh   ← 装 pre-commit / pre-push,clone 后必跑
     ├── start-frontend.sh
     └── start-backend.sh
 ```

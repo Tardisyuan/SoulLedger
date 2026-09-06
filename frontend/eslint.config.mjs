@@ -15,11 +15,15 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 // **限制**,而限制在 Tailwind 里没有表达方式 —— 只能由 lint 施加。
 //
 // 为什么是 `error` 而不是 `warn`:
-//   `npm run lint` 是裸 `eslint .`,没有 `--max-warnings`;ci.yml:98 也只是
-//   `npm run lint`。ESLint 在只有 warning 时退出码是 0。所以一条 warn 级规则
-//   在这个仓库里等于零 —— CI 照常变绿,没有人会去读那几百行黄字。仓库里已经
-//   有一整条记录讲「验证机制会静默失效,失败模式是沉默」;把新守卫设成 warn
-//   就是主动再造一个。
+//   写下这条时,`npm run lint` 还是裸 `eslint .`,没有 `--max-warnings`,而 ESLint
+//   在只有 warning 时退出码是 0 —— 一条 warn 级规则在这个仓库里因此等于零:CI 照常
+//   变绿,没有人会去读那几百行黄字。仓库里已经有一整条记录讲「验证机制会静默失效,
+//   失败模式是沉默」;把新守卫设成 warn 就是主动再造一个。
+//
+//   2026-09-05 那个不对称关掉了(见下面 `--max-warnings 0` 那段),`package.json` 的
+//   `lint` 现在是 `eslint . --max-warnings 0`。**但结论不跟着变**:退出码不再是
+//   理由,而「几百行黄字没人读」仍然是。理由被推翻时要连结论一起重估一次,
+//   这里重估过了,结论保留。
 //
 //   迁移期的出路因此不是降级,而是**基线**:LEGACY 记下每个文件当前的违规
 //   条数,超出即报红,低于也报红(基线过期同样是静默失效的一种)。新文件没有
@@ -49,9 +53,13 @@ const rel = (f) => path.relative(ROOT, f).split(path.sep).join("/");
 // 没有条目的文件额度是 0 —— 这就是「新文件一律 error」的实现。
 // 第三波迁移完一个文件,把对应数字改小,或整行删掉。
 //
-// 数据搬到了 BASELINE_FILE(35 个文件 / 564 条),因为这份配置本身有 500 行上限,
-// 而那 167 行是**数据**,不是逻辑 —— 读配置的人要读的是规则怎么算,不是逐行的
-// 数字。论证留在这里,理由同样明确:JSON 写不了注释,而上面那段「为什么是 error
+// 数据搬到了 BASELINE_FILE,因为这份配置本身有 500 行上限,而那一大段是**数据**,
+// 不是逻辑 —— 读配置的人要读的是规则怎么算,不是逐行的数字。
+//
+// **这里不复述条目数**:它每迁一个文件就变一次,而注释不会跟着变。此前这里写着
+// 「35 个文件 / 564 条」,而实况是 28 / 94。要数就去数 JSON。
+//
+// 论证留在这里,理由同样明确:JSON 写不了注释,而上面那段「为什么是 error
 // 不是 warn」「为什么低于基线也报红」是这套机制唯一的说明书,搬进数据文件就没了。
 // 所以分界是:**为什么**在 .mjs 里,**多少**在 .json 里。
 //
@@ -297,7 +305,7 @@ const designSystem = {
     "type-scale": makeGuard("type", (raw, report) => {
       for (const { bare, chunk, at } of classTokens(raw)) {
         if (LEGACY_TYPE.test(bare)) {
-          report(chunk, at, `\`${bare}\` 不在八档字号里。用 text-01…text-08(11/12/13/15/18/22/32/56px),见 tailwind.config.js 的 fontSize`);
+          report(chunk, at, `\`${bare}\` 不在八档字号里。用 text-01…text-08(11/12/13/15/18/22/32/56px),见 app/globals.css 的 @theme`);
         } else if (ARBITRARY_TYPE.test(chunk)) {
           report(chunk, at, `\`${chunk}\` 把字号写死在任意值里,绕开了八档。用 text-01…text-08(11/12/13/15/18/22/32/56px);没有恰好对应的档位,说明这里该重新选一档,而不是新造一个字号。注意 \`text-[hsl(var(--…))]\` 是**颜色**不是字号,不受这条限制`);
         }
