@@ -113,7 +113,22 @@ class JudgmentViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSe
     ordering_fields = ["created_at", "concluded_at"]
 
     def perform_create(self, serializer):
-        judgment = serializer.save()
+        # `super()`, not a bare `serializer.save()`.
+        #
+        # This class lists TenantCreateMixin among its bases, which is why the
+        # omission read as harmless — but overriding `perform_create` without
+        # chaining took the mixin out of the call path entirely, so every
+        # Judgment was written with `tenant = NULL`. The column is `null=True`,
+        # so nothing complained; the row simply became invisible to its own
+        # tenant, because `scope_to_tenant` filters `tenant=X` and NULL matches
+        # no tenant. Measured 2026-09-07: non-ADMIN创建后 list / next / conclude
+        # 全部 404, while `soul.transition_to(JUDGING)` below had already moved
+        # the soul out of ALIVE — a case nobody in that tenant could close.
+        #
+        # `tests/test_judgment_api.py` did not catch it because both of its
+        # clients are ADMIN, and ADMIN bypasses scoping.
+        super().perform_create(serializer)
+        judgment = serializer.instance
         soul = judgment.soul
         if soul.current_state == SoulState.ALIVE:
             soul.transition_to(SoulState.JUDGING, f"Judgment {judgment.id} initiated")

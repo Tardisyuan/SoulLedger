@@ -5,6 +5,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.core.mixins import TenantCreateMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.reincarnation.models import Reincarnation
@@ -42,8 +43,10 @@ def _state_conflict(soul, target_state):
     )
 
 
+# TenantCreateMixin was absent — same defect as DispositionViewSet: POST wrote
+# `tenant = NULL`, and `ReincarnationSerializer` has no `tenant` field.
 class ReincarnationViewSet(AuditUserViewSetMixin, CodenameViewSetMixin,
-                           DataScopeViewSetMixin, viewsets.ModelViewSet):
+                           DataScopeViewSetMixin, TenantCreateMixin, viewsets.ModelViewSet):
     queryset = Reincarnation.objects.select_related("soul", "disposition", "tenant").all()
     serializer_class = ReincarnationSerializer
     # CodenamePermission is what finally enforces the codenames below; before

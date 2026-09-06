@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.archive import DeletionNotAllowedError
-from apps.core.mixins import TenantQuerySetMixin
+from apps.core.mixins import TenantCreateMixin, TenantQuerySetMixin
 from apps.core.permissions import CodenamePermission, TenantPermission
 from apps.core.viewsets import AuditUserViewSetMixin, CodenameViewSetMixin, DataScopeViewSetMixin
 from apps.disposition.models import Disposition
@@ -14,7 +14,11 @@ from apps.disposition.serializers import DispositionExecuteSerializer, Dispositi
 from apps.disposition.services import DispositionService
 
 
-class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSetMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
+# TenantCreateMixin was absent, so POST wrote `tenant = NULL` and the row was
+# invisible to its own tenant afterwards (`scope_to_tenant` filters `tenant=X`;
+# NULL matches none). The serializer has no `tenant` field and the model has no
+# `save()` override, so nothing else was going to fill it in.
+class DispositionViewSet(CodenameViewSetMixin, TenantQuerySetMixin, DataScopeViewSetMixin, TenantCreateMixin, AuditUserViewSetMixin, viewsets.ModelViewSet):
     """
     Disposition CRUD + execute action.
     Tenant-isolated via TenantPermission.
