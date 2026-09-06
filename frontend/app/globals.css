@@ -99,6 +99,51 @@
    * everything else. */
   --animate-undo-strip: undo-strip var(--transition-duration-settle) var(--ease-enter) both;
 
+  /* THE TABLE ROWS, and the one of the three that is not decoration.
+   *
+   * Eight WebSocket soul events reach this app as a bare `invalidateQueries`
+   * (`lib/events/event_registry.ts`), so a row's badge and karma figure change
+   * — or, under a filter, the row leaves and everything below it moves up —
+   * because a different operator concluded a case. The table redrew and said
+   * nothing about what it had redrawn, on a ledger someone is reading.
+   *
+   * `row-changed` is therefore a NOTICE, not a transition, and its duration
+   * says so: 2s against the 240ms every state change here spends, because it
+   * has to survive the reader's eye arriving after the change rather than
+   * before it. `src/hooks/useRowTransitions.ts` holds the same 2000 and the
+   * two have to agree — the class is removed on that timer, so a longer
+   * animation would be cut off and a shorter one would leave a dead class on
+   * the row.
+   *
+   * `row-enter` and `row-exit` are animations rather than transitions because
+   * both run on a mount: an element that is inserted already at `opacity: 0`
+   * has nothing to transition FROM, and a departing row is drawn only after it
+   * has left the data. `forwards` on the exit holds it invisible for the 240ms
+   * before the hook unmounts it.
+   *
+   * The reduced-motion block below collapses all three to 1ms. For the two
+   * fades that is the whole point. For `row-changed` it means the highlight
+   * appears and disappears without a tween — which is right: it is
+   * information, and an operator who asked for less motion did not ask to be
+   * told less. */
+  /* The settings drawer, which had neither an entrance nor an exit because it
+     was `if (!open) return null` — inserted and deleted, and neither is
+     something CSS can tween.
+     Animations rather than transitions, and the component keeps itself mounted
+     for the length of the exit rather than hiding itself with `visibility`.
+     That ordering is deliberate: hiding it would have made "a closed drawer is
+     not focusable and not announced" a guarantee held up by one CSS class,
+     which jsdom cannot see and therefore no test in this repo could check. A
+     closed drawer is still absent from the DOM; it is only late leaving. */
+  --animate-drawer-in: drawer-in var(--transition-duration-settle) var(--ease-enter) both;
+  --animate-drawer-out: drawer-out var(--transition-duration-settle) var(--ease-exit) both;
+  --animate-scrim-in: scrim-in var(--transition-duration-settle) var(--ease-enter) both;
+  --animate-scrim-out: scrim-out var(--transition-duration-settle) var(--ease-exit) both;
+
+  --animate-row-enter: row-enter var(--transition-duration-settle) var(--ease-enter) both;
+  --animate-row-exit: row-exit var(--transition-duration-settle) var(--ease-exit) forwards;
+  --animate-row-changed: row-changed 2000ms var(--ease-exit) both;
+
   --font-sans:
     var(--font-sans-latin), 'Noto Sans SC Variable', ui-sans-serif, system-ui,
     sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
@@ -642,6 +687,103 @@
     --color-civ-ink-gr: 88 46% 25%;
     /* 亮色的中性 ink。白底上 4.66:1;暗色那条是 5.37:1。 */
     --civ-ink: 215 8% 43%;
+  }
+}
+
+/* THE THEME SWAP, and it is deliberately not a permanent rule.
+ *
+ * `ThemeContext` toggles `.dark` / `.light` on `<html>`, so every colour in the
+ * application changes in one frame: the canvas, every surface, every hairline,
+ * all the ink. That is a whole-screen inversion presented as an instant cut,
+ * which is the one moment in this app where a transition is unambiguously
+ * kinder than none.
+ *
+ * WHY THE CLASS IS ADDED AND REMOVED RATHER THAN LEFT ON. A standing
+ * `* { transition: background-color ... }` would attach itself to every hover,
+ * every focus ring and every state change in the application, at a duration
+ * chosen for a full-page repaint rather than for a button. It would also keep
+ * the compositor doing work on a selector that matches every node, forever, to
+ * serve an interaction that happens a handful of times a session. So it is
+ * scoped to the ~200ms the swap takes and then taken off.
+ *
+ * `transition-property` is enumerated, not `all`: `all` would sweep up
+ * `transform` and `opacity` and put a 160ms tween on anything mid-animation at
+ * the moment the theme changed — including the workflow canvas's gsap
+ * transforms, which are written from JavaScript and would fight it.
+ *
+ * The reduced-motion block below collapses this like everything else, which
+ * returns the instant cut to anyone who asked for one. */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: var(--transition-duration-state);
+  transition-timing-function: var(--ease-enter);
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes drawer-out {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scrim-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes row-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes row-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Background only. A row that moved or resized as it was flagged would push
+   the rows under it, which is the exact harm this is here to report. */
+@keyframes row-changed {
+  from {
+    background-color: hsl(var(--color-accent) / 0.22);
+  }
+  to {
+    background-color: transparent;
   }
 }
 

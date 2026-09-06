@@ -77,7 +77,7 @@ export default function ProposeDispatchPage() {
   // `SelectField` holding only its placeholder. Both said "there is nothing to
   // pick" for "the request failed", on the page where the consequence is a
   // dispatch that cannot be proposed and no way to tell why.
-  const { data: soulsResponse, isLoading: soulsLoading, isError: soulsError } = useQuery({
+  const { data: soulsResponse, isLoading: soulsLoading, isPlaceholderData: soulsStale, isError: soulsError } = useQuery({
     // `soulSearch` is IN the key. Without it every query would read the first
     // search's cached page and the box would look broken rather than slow.
     queryKey: ["dispatch", "souls", soulSearch],
@@ -245,6 +245,7 @@ export default function ProposeDispatchPage() {
           searchText={soulSearchInput}
           onSearchTextChange={setSoulSearchInput}
           loading={soulsLoading}
+          searching={soulsStale}
           placeholder={t("dispatch.soul_search_placeholder")}
           loadingText={t("common.loading")}
           // The dropdown's own copy has to change too. Leaving "no matches"

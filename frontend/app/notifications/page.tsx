@@ -67,8 +67,20 @@ export default function NotificationsPage() {
 
   const markAllReadMutation = useMutation({
     mutationFn: () => notificationsApi.markAllRead(),
-    onSuccess: () => {
+    // The count comes from the response, not from `unreadCount` below.
+    //
+    // `unreadCount` is computed from the rows this page happens to be holding,
+    // so under the `all` filter it counts only the unread ones in the current
+    // page of results while the request marks every unread notification the
+    // user has. Reporting the client-side number would be a sentence about the
+    // screen dressed up as a sentence about what happened. The server returns
+    // `{ marked_read: N }` for exactly this.
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+      showToast(
+        t("notifications.mark_all_success", { count: String(res.data.marked_read) }),
+        "success"
+      );
     },
     onError: () => showToast(t("notifications.mark_all_error") || "Failed to mark all as read", "error"),
   });
@@ -270,7 +282,16 @@ export default function NotificationsPage() {
                     variant="ghost"
                     size="sm"
                     className="mt-2 text-[hsl(var(--color-accent-ink))]"
-                    loading={markReadMutation.isPending}
+                    /* This row's own pending state, not the mutation's.
+                       `markReadMutation` is one object shared by every row, so
+                       a bare `isPending` put a spinner on EVERY unread
+                       notification's button the moment any one of them was
+                       clicked — which reads as the page-header "mark all read"
+                       having fired, and that one is not reversible. */
+                    loading={
+                      markReadMutation.isPending &&
+                      markReadMutation.variables === String(notification.id)
+                    }
                     onClick={() => handleMarkRead(notification.id)}
                   >
                     {t("notifications.mark_read")}

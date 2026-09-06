@@ -1,6 +1,6 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { crossTenantJudgmentsApi } from "@soulledger/core/api";
 import { useTenant } from "@/src/contexts/TenantContext";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -35,35 +35,50 @@ export default function CrossJudgmentDetailPage() {
   const router = useRouter();
   const id = params.id;
 
-  const [judgment, setJudgment] = useState<import("@soulledger/core/api").CrossTenantJudgment | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  /**
+   * ON THE QUERY CACHE, like the other two detail pages.
+   *
+   * This was `useState` + `useEffect` + a hand-written `loadData`, and it was
+   * the last of the three detail routes still doing that. `app/souls/[id]`
+   * carries a long note describing the same shape as a defect, and
+   * `app/judgment/[id]` has been on `useQuery` since before either.
+   *
+   * WHAT THIS DOES NOT FIX, said plainly because the obvious reading is wrong.
+   * It is tempting to write that the page could not hear WebSocket pushes.
+   * It cannot, but nothing pushes: `lib/events/event_registry.ts`'s
+   * `BACKEND_EVENT_TYPES` has no cross-tenant judgment event in it, and
+   * nothing in the frontend invalidates `["cross-judgments"]`. So this domain
+   * has no realtime to be cut off from, and calling this a realtime fix would
+   * be a sentence nobody had checked.
+   *
+   * What it does buy: one cache entry the list route already shares, refetch
+   * on mount and focus, an error state that does not need three `useState`s to
+   * carry, and — the reason it is worth doing at all — a page that will hear
+   * an invalidation on the day this domain gets one, instead of being the one
+   * place that has to be remembered separately.
+   *
+   * The `t`-in-deps refetch this replaces was measured and documented as
+   * bounded rather than a loop (1 GET at zh-Hans, 2 at en, 3 after a switch).
+   * It is gone regardless: `t` is read at render now, not inside the fetch.
+   */
+  const {
+    data: judgment,
+    isPending: loading,
+    error: loadError,
+  } = useQuery({
+    queryKey: ["cross-judgments", "detail", id],
+    queryFn: () => crossTenantJudgmentsApi.get(id as string).then((res) => res.data),
+    // `isPending` stays true while this is false, which is what the old
+    // `useState(true)` did before the effect had a user to fetch for.
+    enabled: !!user && !!id,
+  });
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await crossTenantJudgmentsApi.get(id as string);
-      setJudgment(res.data);
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } }; message?: string };
-      setError(err?.response?.data?.detail || err?.message || t("crossJudgments.failed_to_load"));
-    } finally {
-      setLoading(false);
-    }
-    // `t` is used for the last-resort error copy above. Including it means the
-    // effect below re-runs — i.e. re-fetches — when `t` changes identity, and
-    // that is bounded rather than open-ended: I18nContext memoises `t` on
-    // `[locale, loadedBundles]`, so it moves once when a non-default locale's
-    // lazy bundle arrives and once per language switch. Measured on this page
-    // with the real I18nProvider: 1 GET at zh-Hans, 2 at en (mount + bundle),
-    // 3 at en after one switch to zh-Hans. Not a loop.
-  }, [id, t]);
-
-  useEffect(() => {
-    if (!user || !id) return;
-    loadData();
-  }, [user, id, loadData]);
+  const error = loadError
+    ? (loadError as { response?: { data?: { detail?: string } }; message?: string })?.response
+        ?.data?.detail ||
+      (loadError as { message?: string })?.message ||
+      t("crossJudgments.failed_to_load")
+    : "";
 
   /* The back control is a <Button variant="ghost">, not a bare `←`: it calls
      router.back() rather than navigating to a known route, so it is a control

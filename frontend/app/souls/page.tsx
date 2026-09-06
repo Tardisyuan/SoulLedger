@@ -81,7 +81,7 @@ export default function SoulsPage() {
 
   // TanStack Query — automatic caching, background refetch, loading/error states.
   // Params live in the queryKey, so filter/sort/page changes refetch on their own.
-  const { data, isLoading, isError, refetch } = useSouls(params);
+  const { data, isLoading, isError, isPlaceholderData, refetch } = useSouls(params);
   const souls = data?.results ?? [];
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 0;
 
@@ -266,6 +266,12 @@ export default function SoulsPage() {
           { key: "action", header: t("souls.action") },
         ]}
         data={souls}
+        /* The query's identity, so a page turn or a filter change re-baselines
+           instead of flagging all twenty rows. `params` is what the queryKey is
+           built from a few lines above, which is precisely the right answer to
+           "is this the same question as last time". */
+        transitionKey={JSON.stringify(params)}
+        isRefreshing={isPlaceholderData}
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}

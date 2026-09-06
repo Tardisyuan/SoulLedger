@@ -292,7 +292,6 @@ export default function PermissionsPage() {
           {/* ── Matrix ── */}
           <PageSection
             title={t("permissions.matrix.title")}
-            isLoading={permsQuery.isLoading || rolesQuery.isLoading}
             error={permsQuery.isError || rolesQuery.isError || rolePermsError ? t("permissions.matrix.load_error") : undefined}
           >
             <MatrixLegend
@@ -330,7 +329,6 @@ export default function PermissionsPage() {
           {/* ── All Permissions CRUD ── */}
           <PageSection
             title={t("permissions.all_permissions")}
-            isLoading={permsQuery.isLoading}
             actions={
               !permsQuery.isLoading ? (
                 <RequirePermission permissions="system.settings">
@@ -355,7 +353,6 @@ export default function PermissionsPage() {
           <RequirePermission permissions="system.settings">
             <PageSection
               title={t("permissions.roles_title")}
-              isLoading={rolesQuery.isLoading}
               actions={
                 !rolesQuery.isLoading ? (
                   <Button type="button" variant="primary" onClick={() => setIsRoleCreateOpen(true)}>

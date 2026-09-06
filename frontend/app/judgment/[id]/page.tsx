@@ -2,8 +2,7 @@
 
 import { use, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { judgmentApi, soulsApi } from "@soulledger/core/api";
 import { judgmentKeys, soulKeys } from "@soulledger/core/query_keys";
 import { useI18n } from "@/src/contexts/I18nContext";
@@ -126,9 +125,9 @@ interface PageProps {
 
 export default function JudgmentDetailPage({ params }: PageProps) {
   const { id } = use(params);
-  const router = useRouter();
   const { t, formatDate, formatDateTime } = useI18n();
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedVerdict, setSelectedVerdict] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [createWorkflow, setCreateWorkflow] = useState(false);
@@ -159,9 +158,26 @@ export default function JudgmentDetailPage({ params }: PageProps) {
   const concludeMutation = useMutation({
     mutationFn: (payload: { verdict: string; notes: string; create_workflow: boolean }) =>
       judgmentApi.conclude(id, payload),
+    /* THE PAGE STAYS. It used to `router.push("/judgment")` here.
+     *
+     * `SEAL_BAND` above is 120 lines of design for one moment — a fixed
+     * `h-[124px]` so the page cannot reflow as the verdict lands, `border-t-3`
+     * over `border-b` so the rule reads as a stamp pressed down, a colour per
+     * verdict — and navigating away on success meant no operator had ever seen
+     * it happen. The band flipped to its sealed state on a page that was
+     * already being torn down. A judgment is the one thing in this application
+     * that is supposed to leave a record you can look at; sending the judge to
+     * a list the instant they render it is the opposite of that.
+     *
+     * Invalidating the detail key is what flips `isFinal`, and every branch
+     * this page has for a concluded judgment — the sealed band, the ordered
+     * clause, the citations block, the hidden verdict form — is already
+     * written and already tested. `judgmentKeys.all` also covers the list
+     * behind the back link, which is now the only way out and should be right
+     * when it is reached. */
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: judgmentKeys.all });
       showToast(t("judgment.detail.conclude_success"), "success");
-      router.push("/judgment");
     },
     onError: (err: unknown) => {
       const e = err as { response?: { data?: { error?: string } } };
@@ -281,7 +297,7 @@ export default function JudgmentDetailPage({ params }: PageProps) {
       <div
         data-seal-band=""
         data-sealed={isFinal ? "true" : "false"}
-        className={`${SEAL_BAND} ${
+        className={`${SEAL_BAND} transition-colors duration-settle ease-enter ${
           isFinal && ordered ? VERDICT_SEAL[ordered] : "border-t-hairline-strong"
         }`}
       >

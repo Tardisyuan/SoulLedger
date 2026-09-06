@@ -107,6 +107,11 @@ export default function RecycleBinPage() {
             { key: "action", header: t("recycle_bin.col_action"), align: "right" },
           ]}
           data={entries}
+          /* Constant: this table has no filters, no sort and no pagination, so
+             every change to it is a restore or a hard delete — the two moments
+             where a row leaving the screen is the entire feedback the operator
+             gets. */
+          transitionKey="recycle-bin"
           isLoading={isLoading}
           isError={Boolean(error)}
           keyExtractor={(entry) => `${entry.entity_type}-${entry.id}`}
@@ -154,6 +159,17 @@ export default function RecycleBinPage() {
                       size="sm"
                       type="button"
                       onClick={() => entry.cascade_id && restoreMutation.mutate(entry.cascade_id)}
+                      /* The spinner goes on the row that was clicked; the
+                         disable still goes on all of them.
+                         `restoreMutation` is one object shared by every row, so
+                         `isPending` alone greyed out the entire column and said
+                         nothing about which entry was being restored — on a page
+                         whose `dependent_count` column exists precisely because
+                         one restore moves several rows. Keeping the others
+                         disabled preserves today's one-at-a-time behaviour;
+                         reading `variables` is what tells the operator which
+                         one is theirs. */
+                      loading={restoreMutation.isPending && restoreMutation.variables === entry.cascade_id}
                       disabled={!entry.cascade_id || restoreMutation.isPending}
                     >
                       {t("recycle_bin.restore")}

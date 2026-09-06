@@ -5,6 +5,7 @@ import { TableSkeleton } from './skeleton'
 import { Pagination } from '@/src/components/ui/Pagination'
 import { useI18n } from '@/src/contexts/I18nContext'
 import { cn } from '@/lib/utils'
+import { useRowTransitions } from '@/src/hooks/useRowTransitions'
 
 export type SortDirection = 'asc' | 'desc'
 
@@ -99,6 +100,41 @@ export interface DataTableProps<T> {
   totalCount?: number
   onPageChange?: (page: number) => void
 
+  /**
+   * The rows on screen belong to the previous query while the next one loads.
+   *
+   * Pass `isPlaceholderData`. Several lists here set
+   * `placeholderData: (previous) => previous` — the right call, and its comment
+   * in `packages/core/src/hooks/useSouls.ts` gives the reason: a page turn
+   * should not flash a skeleton over data about to be replaced by more of the
+   * same. But it removed the only waiting signal the table had and put nothing
+   * back. `isLoading` is false from then on, `TableSkeleton` never fires again,
+   * and `isFetching` was consumed on exactly zero of these pages. So pressing
+   * "next page" moved nothing at all until the new rows arrived, and the
+   * operator's reading of that is "the button did not take".
+   *
+   * NOT `isFetching`: that is also true for a background refetch where the rows
+   * on screen are the current ones and dimming them would be a lie.
+   */
+  isRefreshing?: boolean
+
+  /**
+   * Turns on row enter/change/exit motion, and carries the identity of the
+   * question the table is asking — page, filters, sort, joined however the
+   * caller likes.
+   *
+   * It is one prop and not two because the feature is unusable without the
+   * key. A table that diffs its rows without knowing when the *query* changed
+   * flags every row on the first load, on every page turn and on every filter
+   * change — moments when nothing happened to the operator and everything
+   * happened because of them. Leaving this undefined keeps the table exactly
+   * as it was; there is no half-on state where rows animate but lie.
+   *
+   * See `src/hooks/useRowTransitions.ts` for what each of the three states
+   * means and why the change highlight outlives the other two.
+   */
+  transitionKey?: string
+
   className?: string
 }
 
@@ -150,8 +186,19 @@ export function DataTable<T>({
   totalPages,
   totalCount,
   onPageChange,
+  transitionKey,
+  isRefreshing,
   className,
 }: DataTableProps<T>) {
+
+  /* `transitionKey === undefined` hands the hook no data, so it computes
+     nothing and returns empty sets — the opt-out is a real opt-out, not a
+     flag checked at render time after the work is done. */
+  const { entered, changed, leaving } = useRowTransitions(
+    transitionKey === undefined ? undefined : data,
+    keyExtractor,
+    transitionKey ?? ''
+  )
 
   const cellPadding = density === 'compact' ? 'px-4 py-2' : 'px-4 py-3'
   /**
@@ -325,11 +372,48 @@ export function DataTable<T>({
           )}
 
           {!isLoading && !isError && !isEmpty && (
-            <tbody>
-              {data?.map((item, index) => (
+            <tbody
+              aria-busy={isRefreshing || undefined}
+              className={cn(
+                'transition-opacity duration-settle',
+                isRefreshing ? 'opacity-50 ease-exit' : 'opacity-100 ease-enter'
+              )}
+            >
+              {data?.map((item, index) => {
+                const rowKey = keyExtractor(item, index)
+                return (
+                  <tr
+                    key={rowKey}
+                    data-row-state={
+                      entered.has(rowKey) ? 'entered' : changed.has(rowKey) ? 'changed' : undefined
+                    }
+                    className={cn(
+                      'border-b border-[hsl(var(--color-hairline))] last:border-0 hover:bg-[hsl(var(--color-surface-2))] transition-colors',
+                      entered.has(rowKey) && 'animate-row-enter',
+                      changed.has(rowKey) && 'animate-row-changed'
+                    )}
+                  >
+                    {renderRow(item, index)}
+                  </tr>
+                )
+              })}
+              {/* ROWS ON THEIR WAY OUT, and every one of them is inert.
+                  They are drawn from the previous snapshot, so the record each
+                  one describes is already gone: `aria-hidden` keeps them out
+                  of the accessibility tree, and `pointer-events-none` keeps
+                  the action buttons inside `renderRow` from being clicked
+                  during the 240ms they remain visible. A departing row that
+                  could still be acted on would be a worse defect than the
+                  abrupt disappearance this replaces.
+
+                  The index passed to `renderRow` is the position the row had,
+                  which is the only honest answer — it no longer has one. */}
+              {leaving.map(({ key, item }, index) => (
                 <tr
-                  key={keyExtractor(item, index)}
-                  className="border-b border-[hsl(var(--color-hairline))] last:border-0 hover:bg-[hsl(var(--color-surface-2))] transition-colors"
+                  key={`leaving-${key}`}
+                  aria-hidden="true"
+                  data-row-state="leaving"
+                  className="border-b border-[hsl(var(--color-hairline))] last:border-0 pointer-events-none animate-row-exit"
                 >
                   {renderRow(item, index)}
                 </tr>

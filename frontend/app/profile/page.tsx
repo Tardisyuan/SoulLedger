@@ -137,7 +137,6 @@ export default function ProfilePage() {
       {/* Basic Info Section */}
       <PageSection
         title={t("profile.basic_info")}
-        isLoading={isLoading}
         className="mb-6"
       >
         {/* Username (read-only) */}

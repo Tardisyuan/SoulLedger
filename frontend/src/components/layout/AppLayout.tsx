@@ -144,20 +144,42 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           out — Escape is, and the trap above keeps Tab from ever reaching this
           — but a scrim carrying a click handler and no role is precisely the
           shape `jsx-a11y/no-static-element-interactions` exists to catch. */}
-      {mobileMenuOpen && (
-        <button
-          type="button"
-          aria-label={t("common.close")}
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
+      {/* Mounted always, hidden by `visibility` rather than by unmounting, and
+          that is what lets it fade. The drawer beside it now takes 240ms to
+          slide out; a scrim that unmounts on the same click vanishes on frame
+          one and leaves the drawer sliding over a bare page. Either both move
+          or neither should.
 
-      {/* Sidebar */}
+          `visibility` and not just `opacity`: a `visibility: hidden` element is
+          out of the accessibility tree and out of the tab order, so the closed
+          scrim is not a focusable control sitting on top of every page — which
+          is the whole reason it was conditionally mounted to begin with. It is
+          also the one discrete property that waits out the transition before
+          flipping, so the fade-out plays in full and the element only then
+          becomes unreachable. `display: none` would transition neither. */}
+      <button
+        type="button"
+        aria-label={t("common.close")}
+        className={`fixed inset-0 bg-black/50 z-40 md:hidden transition-[opacity,visibility] duration-settle ${
+          mobileMenuOpen ? "visible opacity-100 ease-enter" : "invisible opacity-0 ease-exit"
+        }`}
+        onClick={() => setMobileMenuOpen(false)}
+      />
+
+      {/* `transition-[width,transform]`, and `transform` is the half that was
+         missing. The desktop collapse animates `width`; the mobile drawer
+         opens and closes with `translate-x-0` / `-translate-x-full` on this
+         same element. With only `width` in the property list the drawer had
+         no transition at all — it teleported, on every open and every close,
+         for as long as this markup has existed. Nothing reported it because a
+         missing transition looks exactly like a fast one.
+
+         Both properties are on `duration-settle` (240ms) and `ease-enter`,
+         which is what the rest of the app spends on a change of this size. */}
       <aside
         ref={drawerRef}
         {...drawerProps}
-        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-[hsl(var(--color-surface-1))] border-r border-[hsl(var(--color-hairline))] z-50 transition-[width] duration-settle flex flex-col
+        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-[hsl(var(--color-surface-1))] border-r border-[hsl(var(--color-hairline))] z-50 transition-[width,transform] duration-settle ease-enter flex flex-col
           ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
         {/* Logo */}

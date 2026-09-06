@@ -57,6 +57,7 @@ function DispatchPageContent() {
 
   const {
     data: proposedData, isLoading: loadingProposed,
+    isPlaceholderData: proposedStale,
     isError: proposedError, refetch: refetchProposed,
   } = useQuery({
     queryKey: ["dispatch", "proposed", proposedPage],
@@ -68,6 +69,7 @@ function DispatchPageContent() {
 
   const {
     data: historyData, isLoading: loadingHistory,
+    isPlaceholderData: historyStale,
     isError: historyError, refetch: refetchHistory,
   } = useQuery({
     queryKey: ["dispatch", "history", historyPage],
@@ -96,7 +98,7 @@ function DispatchPageContent() {
       }
     >
       {/* Pending Proposals - skeleton while loading */}
-      <PageSection title={t("dispatch.pending")} isLoading={loadingProposed} className="mb-6">
+      <PageSection title={t("dispatch.pending")} isRefreshing={proposedStale} className="mb-6">
         {loadingProposed ? (
           <ListSkeleton count={3} />
         ) : proposedError ? (
@@ -119,7 +121,7 @@ function DispatchPageContent() {
       </PageSection>
 
       {/* History - skeleton while loading */}
-      <PageSection title={t("dispatch.history")} isLoading={loadingHistory}>
+      <PageSection title={t("dispatch.history")} isRefreshing={historyStale}>
         {loadingHistory ? (
           <ListSkeleton count={5} />
         ) : historyError ? (
