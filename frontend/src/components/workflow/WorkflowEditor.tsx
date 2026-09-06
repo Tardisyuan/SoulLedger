@@ -46,6 +46,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workflowApi } from "@soulledger/core/api";
+import { workflowKeys } from "@soulledger/core/query_keys";
 import {
   CIVILIZATION_OPTIONS,
   isCivilizationOption,
@@ -305,7 +306,15 @@ export default function WorkflowEditor({
     isLoading: isTemplateLoading,
     refetch: refetchTemplate,
   } = useQuery({
-    queryKey: ["workflow-template", templateId],
+    // `workflowKeys.templates.detail(id)` → ["workflow-templates", "detail", id].
+    // This was a hand-written ["workflow-template", id] — SINGULAR — while the
+    // save below invalidates ["workflow-templates"], PLURAL. One character, and
+    // the prefix match missed: saving a template left its own detail entry stale,
+    // and since `onSave` unmounts the editor immediately, reopening the same
+    // template within `gcTime` re-read the pre-save data, filled the form from it,
+    // and set `initRef` — so the refetched copy was never written back. The user's
+    // own edit reappeared as the *old* version.
+    queryKey: workflowKeys.templates.detail(templateId ?? ""),
     queryFn: async () => {
       const res = await workflowApi.templates.get(templateId!);
       return res.data;
@@ -512,7 +521,7 @@ export default function WorkflowEditor({
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workflow-templates"] });
+      queryClient.invalidateQueries({ queryKey: workflowKeys.templates.all });
       showToast(t("workflow.editor.saved"), "success");
       onSave?.({
         name: templateName,

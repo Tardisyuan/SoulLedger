@@ -57,10 +57,28 @@ export default function NotificationsPage() {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
+  // Both mutations below invalidate `unreadCount` explicitly, and that is not a
+  // redundant line: `unreadCount` sits OUTSIDE `notificationKeys.all` on purpose
+  // (see query_keys.ts — so an ordinary list refetch does not also refetch the
+  // badge), which means `all` does not prefix-match it. These two writes are the
+  // exception the split was not designed for: they are precisely the writes that
+  // change the unread total.
+  //
+  // Nothing else would have refetched it. The badge sets `staleTime: 30_000`
+  // with no `refetchInterval`, `refetchOnWindowFocus` is off globally
+  // (QueryProvider), and the backend's `mark_read` / `mark_all_read` publish no
+  // event — so the WS path in eventHandlers.ts, the only other place that
+  // invalidates this key, never fires for them. The masthead count simply stayed
+  // wrong.
+  const invalidateNotifications = () => {
+    queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+    queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount });
+  };
+
   const markReadMutation = useMutation({
     mutationFn: (id: string) => notificationsApi.markRead(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+      invalidateNotifications();
     },
     onError: () => showToast(t("notifications.mark_read_error") || "Failed to mark as read", "error"),
   });
@@ -76,7 +94,7 @@ export default function NotificationsPage() {
     // screen dressed up as a sentence about what happened. The server returns
     // `{ marked_read: N }` for exactly this.
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+      invalidateNotifications();
       showToast(
         t("notifications.mark_all_success", { count: String(res.data.marked_read) }),
         "success"
