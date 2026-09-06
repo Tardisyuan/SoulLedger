@@ -213,6 +213,18 @@
   --z-index-progress: 60;
   --z-index-drawer: 70;
   --z-index-dialog: 80;
+  /* Toast sits above dialog, and that direction is also single: a toast usually
+     REPORTS what a dialog just did ("saved", "could not save"), so it has to be
+     readable while the dialog is still on screen; a dialog never needs to cover
+     a toast.
+
+     Added 2026-09-07. `#toast-container` below referenced `var(--z-toast, 99999)`
+     — a name in no family (the scale is `--z-index-*`) that was never declared
+     anywhere in the repo. It therefore always resolved to the fallback, and the
+     toast layer sat at 99999, four orders of magnitude off a scale whose whole
+     point is that three numbers describe every stacking decision. Nothing
+     failed, because an undeclared custom property with a fallback is valid CSS. */
+  --z-index-toast: 90;
 
   --container-prose: 720px;
   --container-page: 1200px;
@@ -1061,7 +1073,7 @@ select:focus-visible {
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: var(--z-toast, 99999);
+  z-index: var(--z-index-toast);
   display: flex;
   flex-direction: column;
   align-items: center;

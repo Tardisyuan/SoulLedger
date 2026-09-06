@@ -153,6 +153,32 @@ class RegisterSerializer(serializers.ModelSerializer):
         validate_password(value)
         return value
 
+    def validate_email(self, value):
+        """Refuse an address that already has an account.
+
+        `User.email` carries no unique constraint — it is `AbstractUser`'s field
+        and only `username` is unique — and this endpoint is `AllowAny`. So
+        anyone could register a second account on someone else's address, and
+        `reset_password_request` / `set_new_password` both looked that address up
+        with `.get()`: `MultipleObjectsReturned`, an uncaught 500. One anonymous
+        registration took a real user's password reset offline permanently.
+
+        Enforced here rather than by a migration on purpose: `unique=True` would
+        have to be applied to a column that may already hold duplicates (and
+        holds `""` for every account created without an address), so the
+        migration could fail on real data. This stops NEW duplicates; the two
+        reset views handle any that already exist.
+
+        Blank stays legal, and blank is not a duplicate: `create_user` defaults
+        `email` to `""`, so a uniqueness test that counted empty strings would
+        reject every registration after the first one that omitted an address.
+        """
+        if not value:
+            return value
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("该邮箱已被注册")
+        return value
+
     def create(self, validated_data):
         # role is always VIEWER on registration — never user-controlled
         validated_data.pop("role", None)
