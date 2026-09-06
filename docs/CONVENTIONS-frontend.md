@@ -265,6 +265,10 @@ export default function XPage() {                    // 页级权限门包在默
 
 ## 5. 三态（加载 / 空 / 错）—— 这是全站最不一致的地方
 
+> **本节的页数/处数同 §15：分类可信，数字不可信。** 2026-09-07 复核发现
+> `QueryError`、`DataTable isError`、`SectionError`、内联错误段落四项的计数全都偏低，
+> 而"四种加载写法、五种错误写法"这个结构性结论完全成立。要数用 §16 的脚本。
+
 ### 5.1 加载态四种写法并存
 
 | 写法 | 页数 | 例 |
@@ -505,19 +509,72 @@ cd frontend && npx playwright test --project=mobile-chrome
 
 ## 13. 只是文字、没有执法的规则（已 grep 求证）
 
+> **给类名和调用点计数之前，先剥注释。** 这个仓库的注释会写出真实类名（Tailwind
+> 连散文一起扫），测试目录里也有大量同形字符串。裸 `grep -c` 在这里**系统性偏高**，
+> 本节 2026-09-06 版的六个计数全部因此偏大 1.5–17 倍。复核脚本：
+>
+> ```bash
+> # 剥掉块注释、行注释与 JSX 注释，排除 __tests__ 与 *.test.*，再计数
+> node -e '…' # 见 §16
+> ```
+>
+> **本节与 §15 只保留"有几种写法""哪些文件"这类结构性事实，不再复述精确处数** ——
+> 没有任何东西断言那些数，它们每周都会漂，而漂掉之后读起来和新鲜的一模一样。
+> 同样的处理已经用在 `eslint.config.mjs` 的基线条目数和
+> `test_tenant_scoping_contract.py` 的 `permission_codename = None` 计数上。
+
 | 规则 | 出处 |
 |---|---|
 | 组件 PascalCase / hook camelCase **文件名** | `CONVENTIONS.md:39-53`。无 filename 规则、无测试 |
 | **Query key 必须走工厂** `usersKeys.list()`，禁 `["users"]` 字面量 | `CONVENTIONS.md:55-67`。【实跑】`app/` `src/` 非测试代码里 `queryKey: ["…"]` 字面量 **59** 处，零规则 |
 | **导入顺序** | **仓库内任何文档都没写**，`eslint-plugin-import` / `simple-import-sort` 未安装 |
-| 禁 `shadow-*` | `AGENTS.md:17`。`no-raw-palette` 只管 `shadow-<色名>-<档>`，`shadow-lg/xl/xs` 与任意值阴影不在任何规则里。【实跑】7 个文件 8 处在用 |
-| 禁 `bg-white` / `bg-black` | `AGENTS.md:23`。`RAW_PALETTE` 只匹配带数字档的色阶。`text-black` 45 处 / `text-white` 17 处（primary 按钮文字与遮罩是有意的） |
+| ~~禁 `shadow-*`~~ | **已废止，不是无执法的规则。** 见下方「被误列进这张表的两条」 |
+| ~~禁 `bg-white` / `bg-black`~~ | **同上。** |
 | 衬线只用于"某人说过的话" | `DESIGN.md:59-63`。无规则检查 `font-serif` 的使用位置 |
-| `--container-page/prose` 与 z 轴三档 | `globals.css:206-218`。旧值 `max-w-5xl/6xl` 12 处、`z-10…z-50` 26 处 |
+| `--container-page/prose` 与 z 轴三档 | `globals.css:206-218`。【2026-09-07 重测】旧值 `max-w-5xl/6xl` **2** 处、`z-10…z-50` **13** 处（下表说明为何此前的数是错的）。另：`globals.css:1064` 引用 `var(--z-toast, 99999)`，而 **`--z-toast` 从未声明**，全仓仅此一处出现——toast 永远在 99999，不在 60/70/80 那把尺上 |
 | `--color-status-*` 不得内联进 JSX 三元 | `statusTokenLayering.test.ts:56-61` 自述"~60 处，一个真实缺口" |
 | 触摸端读取被截断值 | `truncatedValuesAreRecoverable.test.ts:19-21` 自述"这一层仍然没有覆盖" |
 | 500 行上限 | `CLAUDE.md:11-24`。无 `max-lines`，自述"applied by eye" |
 | Git 提交格式 | 2026-09-06 起唯一权威是 `CLAUDE.md` 的 `## Git`（另两份是指针）。仍**无执法**：`.git/hooks/` 没有 commit-msg |
+
+### 被误列进这张表的两条（2026-09-07 更正）
+
+这张表上一版把「禁 `shadow-*`」和「禁 `bg-white`/`bg-black`」列为"写了但没人执法的规则"，
+出处写的是 `AGENTS.md:17` 与 `:23`。**两条都错，而且错法不同：**
+
+**出处已不存在，是我自己删的。** 那两行属于 `AGENTS.md` 旧的 Linear 风格章节，
+`06213e2` 重写 §1 时连着删掉了。于是有一段时间，全仓**只剩这张表**在陈述这两条禁令，
+而它指向的行号是空的——正是这份文档反复警告的形状，我自己造了一个。
+
+**更要紧的是：这两条不是"没人执法的规则"，是被有意废止的规则。**
+`DESIGN.md:5-12` 把「"no shadows, never"（nine `shadow-*` classes ship）」逐字列为
+**旧文档六处错误之一**，与 Inter 字体、8px/12px 圆角、14px 正文并列。也就是说阴影禁令
+早在 2026-09-02 就被判定为"一条活的、要你撤销刻意工作的指令"。`DESIGN.md:50-57` 进一步
+说明层级现状：surface 相邻步差只有 1.02–1.05:1，**1px hairline 才是分层手段，而这是
+"限制而非主张"**——分开 ramp 试过，会打破 23 个已钉住的 ink-on-surface 组合。
+
+`bg-white`/`bg-black` 同理：旧禁令自带例外「除非 amber 按钮上的 `text-black`」，
+而代码在用的正是那个例外。
+
+**实测（2026-09-07，AST 剥注释、排除测试、236 个文件）：**
+
+| | 本表旧数 | 实测 | 性质 |
+|---|---|---|---|
+| `shadow-<档>` | 8 处 | **5 处具名 + 2 处任意值 / 共 7 文件** | 5 处是弹层（抽屉、通知 Popover、溢出菜单、两个下拉），2 处是流内卡片（`app/workflow/[id]/page.tsx:492` 审批节点光晕、`PostCard.tsx:54` 悬停抬起）。7 个文件里**没有一条注释解释为什么用阴影** |
+| `text-black` | 45 | **27 / 18 文件** | 全部落在 accent（amber）填充上，`Button.tsx:16-52` 写明 9.82:1 的理由 |
+| `text-white` | 17 | **1** | `WorkflowEditor.tsx:1181` 的 `bg-green-600 text-white`，已记在 design-guard 基线里（该文件 `palette: 6`） |
+| `bg-black/<透明度>` | 11 | **6 / 3 文件** | 全是遮罩（`bg-black/60`、`/50`、`dark:bg-black/80`） |
+| `bg-white` | — | **0** | |
+| `max-w-5xl/6xl` | 12 | **2** | |
+| `z-10…z-50` | 26 | **13** | 其中 `PermissionMatrixTable` 的 5 处有注释说明是同一滚动容器内的 sticky 排序，与页面级尺度无关 |
+
+旧数全部来自**没有剥注释、也没有排除测试**的裸 grep。这个仓库里注释会写出真类名
+（Tailwind 连散文一起扫），所以裸 grep 在这里系统性偏高。**给类名计数必须先剥注释**——
+这一条现在写进本表上方的方法说明里。
+
+真正剩下的问题只有两个，都不是"禁令没人执法"：
+- **两处流内阴影**与 `DESIGN.md:50-57` 的"层级靠 hairline"不一致，且无书面理由
+- **`text-white` 那一处**是基线里的债，不是决定
 | i18n key 前缀 / 新增 key 三份同加 | `AGENTS.md:161-168,349-355`。无 key 集 parity 的独立测试 |
 | 文案不得烙进布局宽度 / n=0,1,10000 都要成立 | `BRIEF.md:287-291,313-315` |
 | `.pre-commit-config.yaml` 的 prettier / eslint-mirror | 框架未装，prettier 不在任何 devDependencies，无 `.prettierrc` |
@@ -597,6 +654,15 @@ cd frontend && npx playwright test --project=mobile-chrome
 
 ## 15. 页面之间现存的不一致（"你会看到两三种写法"清单）
 
+> **2026-09-07 复核过一遍，结论是：分类全部仍然成立，精确处数一个都不要信。**
+> 抽查的十余个计数里，只有少数与实测相符；`QueryError` 那条经 `git log -S` 确认
+> **写下的当天就是错的**，不是后来漂的。原因见 §13 开头：裸 grep 会把注释与测试
+> 一并算进去。
+>
+> 所以下表**只说有几种写法、分别在哪些页面**，不再给处数。要数就用 §16 的脚本现数
+> —— 一个没有任何东西断言的计数，写下来的那一刻就开始腐烂，而腐烂后读起来和新鲜的
+> 一模一样。
+
 除 §5 的三态外：
 
 | 事项 | 现状 |
@@ -632,6 +698,33 @@ print(flat(json.load(open('$f'))))"; done
 sed -n '88,95p' jest.config.js
 ```
 
+### 给类名与调用点计数：必须剥注释
+
+上面几条裸 `grep` 只适用于**不会出现在注释里**的东西。类名、`queryKey` 字面量、
+`t(...) || "…"` 这类会被注释和测试大量污染 —— 本文档 2026-09-06 版有六个计数因此
+偏大 1.5–17 倍。用这个：
+
+```bash
+cd frontend && node -e '
+const fs=require("fs"),path=require("path"),files=[];
+const walk=d=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);
+ if(e.isDirectory()){if(!/node_modules|__tests__/.test(p))walk(p)}
+ else if(/\.tsx?$/.test(e.name)&&!/\.test\./.test(e.name))files.push(p)}};
+["app","src","components","lib","hooks"].forEach(r=>fs.existsSync(r)&&walk(r));
+const strip=s=>s.replace(/\/\*[\s\S]*?\*\//g,m=>m.replace(/[^\n]/g," "))
+ .replace(/\{\/\*[\s\S]*?\*\/\}/g,m=>m.replace(/[^\n]/g," "))
+ .replace(/(^|[^:])\/\/[^\n]*/g,(m,p)=>p+" ".repeat(m.length-p.length));
+const re=new RegExp(process.argv[1],"g");let n=0,f=new Set();
+for(const p of files){const m=strip(fs.readFileSync(p,"utf8")).match(re); if(m){n+=m.length;f.add(p)}}
+console.log(n+" 处 / "+f.size+" 文件 / 共扫 "+files.length);
+' '\btext-black\b'
+```
+
+把最后那个参数换成你要数的正则。`(^|[^:])` 那一段是为了不把 `https://` 当行注释。
+
+---
+
 **这些数字会随代码变化。** 写在这里是为了让"某处 N 个"这类断言可被推翻 ——
 `eslint.config.mjs` 里同时躺着「35 文件/564 条」和「44 文件/287 处」两个旧数，
-而实况是 28/94，就是不复核的代价。
+而实况是 28/94，就是不复核的代价。**而本文档自己 2026-09-06 版的六个计数也全是错的**
+（见 §13 的更正表）：写下计数的人和复核计数的人是同一个，这件事没有任何机制能防。
