@@ -30,12 +30,6 @@
   "src/components/layout/TenantSignal.tsx": {
     "space": 2
   },
-  "src/components/permissions/PermissionFormModal.tsx": {
-    "palette": 1
-  },
-  "src/components/permissions/RoleFormModal.tsx": {
-    "palette": 1
-  },
   "src/components/social/CommentThread.tsx": {
     "palette": 1
   },
@@ -50,9 +44,6 @@
   },
   "src/components/souls/RebirthFormSelect.tsx": {
     "space": 3
-  },
-  "src/components/souls/SoulEditModal.tsx": {
-    "palette": 5
   },
   "src/components/souls/SoulKarmaLedgerCard.tsx": {
     "space": 5
@@ -73,14 +64,10 @@
     "space": 2
   },
   "src/components/ui/Modal.tsx": {
-    "palette": 6,
     "space": 4
   },
   "src/components/ui/Pagination.tsx": {
     "space": 2
-  },
-  "src/components/users/UserModal.tsx": {
-    "palette": 2
   },
   "src/components/workflow/WorkflowEditor.tsx": {
     "palette": 6,
