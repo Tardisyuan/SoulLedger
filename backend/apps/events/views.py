@@ -10,17 +10,36 @@ from apps.events.serializers import SoulEventSerializer
 
 
 class SoulEventViewSet(CodenameViewSetMixin, DataScopeViewSetMixin, viewsets.ReadOnlyModelViewSet):
-    """
-    Read-only audit log.
+    """A soul's own timeline. NOT the administrative audit log.
+
+    The docstring here used to read "Read-only audit log", and that one line has
+    now caused the same question to be raised twice: why can a VIEWER read this
+    when `AuditLog` requires `audit.read` (ADMIN and MODERATOR only)?
+
+    Because they are different things. `AuditLog` records who changed what, for
+    review. `SoulEvent` records what happened to a soul, and it is what
+    `SoulLifecycleTimeline` draws on the soul detail page — through
+    `packages/core/src/api/events.ts` → `frontend/src/components/souls/
+    SoulLifecycleTimeline.tsx`. VIEWER holds `soul.read`
+    (`apps/perm/models.py:388-394`), so VIEWER can open that page; gating this
+    endpoint behind a codename VIEWER does not hold would leave the page
+    rendering with an empty timeline and no explanation.
+
+    The payload is soul-domain facts (`{"soul_id": …, …}`,
+    `apps/events/event_bus.py:209`) — the same facts the page already shows —
+    not credentials or cross-tenant data. Tenant scoping still applies through
+    `DataScopeViewSetMixin`.
     """
     permission_classes = [TenantPermission]
-    # EXEMPT. No `event.*` codename exists in DEFAULT_PERMISSIONS or
-    # ROLE_PERMISSIONS. The previous "event" declaration produced `event.read`,
-    # held by nobody, so enforcement would have hidden the soul event log from
-    # every role including ADMIN's own reviewers. Needs a seeded `event.read`
-    # granted to the roles that should see the log — a decision, not a rename,
-    # so it is queued rather than invented. Tenant scoping still applies via
-    # DataScopeViewSetMixin.
+    # EXEMPT, and deliberately so — not a queued decision.
+    #
+    # The earlier note here said a seeded `event.read` was "queued rather than
+    # invented". Re-examined 2026-09-07: there is nothing to queue. A codename
+    # would have to be granted to every role that can open a soul page, which is
+    # every role including VIEWER, and a permission held by everyone is a
+    # permission that only adds a way to get it wrong. The previous "event"
+    # declaration produced `event.read` held by nobody, which would have hidden
+    # the timeline from ADMIN too.
     permission_codename = None
     queryset = SoulEvent.objects.select_related("soul", "tenant").all()
     serializer_class = SoulEventSerializer
