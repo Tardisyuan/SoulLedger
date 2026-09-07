@@ -42,6 +42,12 @@ from .serializers import (
     role_rank,
 )
 
+#: Wrong password-reset codes accepted for one address before the code itself is
+#: thrown away. Five, matching the login limiter's spirit (5 attempts / 15 min,
+#: `LoginView.post`) — the point is that a six-digit code must not be guessable
+#: at whatever rate the network allows, not to pick a clever number.
+MAX_RESET_CODE_ATTEMPTS = 5
+
 # ---------------------------------------------------------------------------
 # User Management ViewSet (Tenant Admin)
 # ---------------------------------------------------------------------------
@@ -712,8 +718,38 @@ def set_new_password(request):
     if cached_code is None:
         return Response({"error": "验证码已过期,请重新获取"}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Cap the number of GUESSES, not just the number of codes sent.
+    #
+    # `reset_password_request` above limits sending to 3 per 5 minutes per
+    # address. Nothing limited *checking*: a wrong code returned 400 and left
+    # the code live for its full 5-minute TTL, so the only ceiling on guessing
+    # was `AnonRateThrottle` (60/min) — and DRF keys that on `X-Forwarded-For`
+    # when `NUM_PROXIES` is unset, which it is, so rotating one header reset it.
+    # The code is six digits; an unmetered guesser is the whole attack.
+    #
+    # On the last allowed failure the CODE IS DELETED, not merely rejected.
+    # Counting alone would leave a live code and let the attacker wait out the
+    # counter; deleting forces a new request, which is itself rate-limited.
+    attempts_key = f"pwd_reset_tries:{email}"
+    tries = cache.get(attempts_key, 0)
+    if tries >= MAX_RESET_CODE_ATTEMPTS:
+        cache.delete(f"pwd_reset:{email}")
+        cache.delete(attempts_key)
+        return Response(
+            {"error": "验证码错误次数过多,请重新获取"},
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
     if cached_code != code:
+        # `timeout` matches the code's own TTL: the counter must outlive the
+        # code it guards, or a guesser could simply wait for the counter to
+        # expire while the code is still valid.
+        cache.set(attempts_key, tries + 1, timeout=300)
         return Response({"error": "验证码错误"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Correct code: the counter has no further job, and leaving it would let a
+    # previous run's failures shorten the next legitimate reset.
+    cache.delete(attempts_key)
 
     # Get user
     #
