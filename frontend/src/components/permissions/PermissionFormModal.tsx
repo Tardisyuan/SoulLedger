@@ -3,6 +3,8 @@
 import { useState, useEffect, useId, useRef } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
+import { Button } from "@/src/components/ui/Button";
+import { TextField } from "@/src/components/ui/Field";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
 import type { Permission } from "@soulledger/core/api";
 
@@ -109,68 +111,76 @@ export function PermissionFormModal({
       title={title}
       footer={
         <div className="flex gap-3">
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={handleClose}
             disabled={isPending}
-            className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 text-03 transition-colors"
+            className="flex-1"
           >
             {t("common.cancel")}
-          </button>
-          <button
+          </Button>
+          {/* `loading` rather than only `disabled`: this button already changed
+              its label while the request was in flight, so the state was known
+              — it just had no spinner and no `aria-busy` to carry it. `Button`
+              disables on `loading`, so the `isPending ||` that used to open the
+              `disabled` expression would now be saying it twice. */}
+          <Button
             type="button"
+            variant="primary"
             onClick={handleSubmit}
-            disabled={isPending || !codename.trim() || !name.trim() || !category.trim()}
-            className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-50 text-black text-03 font-medium transition-colors"
+            loading={isPending}
+            disabled={!codename.trim() || !name.trim() || !category.trim()}
+            className="flex-1"
           >
             {isPending ? t("permissions.submitting") : t("permissions.submit")}
-          </button>
+          </Button>
         </div>
       }
     >
       <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-        {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-red-400 text-03">{error}</p>}
+        {/* 这条**表单级**消息仍然手写,而不是走 `Field` 的 `error` —— 那是刻意的,
+            理由就在上面 `useSubmitErrorFocus` 那段:它不属于任何一个字段,交给
+            `Field` 就等于把 `aria-invalid` 重新挂回三个 input 上,正是先前撤掉的
+            那件事。换掉的只有颜色:`text-red-400` 是 Tailwind 原生调色板,浅色
+            模式下拿到的是暗色那一档;`--color-status-error` 明暗各测过一套。 */}
+        {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-[hsl(var(--color-status-error))] text-03">{error}</p>}
+        <TextField
+          id={codenameId}
+          label={t("permissions.codename_label")}
+          type="text"
+          value={codename}
+          onChange={(e) => setCodename(e.target.value)}
+          placeholder={t("permissions.codename_placeholder")}
+        />
+        <TextField
+          id={nameId}
+          label={t("permissions.name_label")}
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={t("permissions.name_placeholder")}
+        />
         <div>
-          <label htmlFor={codenameId} className="block text-02 text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.codename_label")}</label>
-          <input
-            id={codenameId}
-            type="text"
-            value={codename}
-            onChange={(e) => setCodename(e.target.value)}
-            placeholder={t("permissions.codename_placeholder")}
-            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
-          />
-        </div>
-        <div>
-          <label htmlFor={nameId} className="block text-02 text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.name_label")}</label>
-          <input
-            id={nameId}
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("permissions.name_placeholder")}
-            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
-          />
-        </div>
-        <div>
-          <label htmlFor={categoryId} className="block text-02 text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.category_label")}</label>
-          <input
+          {/* 分类提示改走 `Field` 的 `description`:它此前是一段谁也没引用的
+              `<p>`,读屏聚焦到输入框时听不到它。`Field` 把 description 接进
+              `aria-describedby`,而 `<datalist>` 是 `display:none` 的建议列表,
+              放在字段外壳旁边不影响任何布局 —— `list` 按 id 找它,不按位置。 */}
+          <TextField
             id={categoryId}
+            label={t("permissions.category_label")}
+            description={t("permissions.category_hint")}
             type="text"
             list={categoryListId}
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             placeholder={t("permissions.category_placeholder")}
-            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
           />
           <datalist id={categoryListId}>
             {existingCategories.map((c) => (
               <option key={c} value={c} />
             ))}
           </datalist>
-          <p className="mt-1 text-02 text-[hsl(var(--color-ink-subtle))]">
-            {t("permissions.category_hint")}
-          </p>
         </div>
       </form>
     </BaseModal>
