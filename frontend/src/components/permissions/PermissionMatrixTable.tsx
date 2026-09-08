@@ -31,27 +31,29 @@ function MatrixCell({
       disabled={disabled}
       onClick={onToggle}
       // 这里原先是 `focus:outline-hidden focus-visible:ring-2
-      // focus-visible:ring-[hsl(var(--color-accent))]` —— 全仓唯一一处把焦点环
+      // focus-visible:ring-[oklch(var(--color-accent))]` —— 全仓唯一一处把焦点环
       // 指向 --color-accent 的地方,而那正是 globals.css 用 40 行(:96-134)
       // 论证**不能**做的事:--color-accent 被 SettingsDrawer 的 useAccentColor
       // 以**内联样式**写在 document.documentElement 上,取值是用户在抽屉里随手
       // 挑的六位十六进制。内联样式压过样式表里的一切,所以一个挑了浅琥珀的用户
       // 会静默删掉自己**唯一**的键盘焦点指示器,而且无从察觉。第二条独立理由是
-      // 它本身就不合格:hsl(38 92% 50%) 在浅色模式白底上是 2.14:1,连非文字
+      // 它本身就不合格:--color-accent(迁移前写作 hsl(38 92% 50%),现在是
+      // oklch(0.770351 0.164635 70.6613),同一个颜色)在浅色模式白底上是
+      // 2.14:1,连非文字
       // UI 的 3:1 底线都够不到。
       //
       // 两条 `outline-hidden` 也一起删了 —— 它们是全局规则要越过的那 69 处之一。
       // 删掉之后接管的是 globals.css:459 那条
-      // `:focus-visible { outline-solid: 2px solid hsl(var(--color-focus)) !important }`,
+      // `:focus-visible { outline-solid: 2px solid oklch(var(--color-focus)) !important }`,
       // --color-focus 是字面量三元组(深 258 95% 76% / 浅 258 85% 48%),抽屉
       // 够不着它。本组件不写 outline-none,就是它参与全局焦点环的全部要求
       // (Button.tsx 的「FOCUS: deliberately not here」一节说的是同一件事)。
       className={`flex items-center justify-center w-full h-8 transition-colors ${
-        disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:bg-[hsl(var(--color-surface-3))]"
+        disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:bg-[oklch(var(--color-surface-3))]"
       }`}
     >
       {granted ? (
-        <svg viewBox="0 0 20 20" className="w-4 h-4 text-[hsl(var(--color-accent-ink))]" fill="currentColor" aria-hidden="true">
+        <svg viewBox="0 0 20 20" className="w-4 h-4 text-[oklch(var(--color-accent-ink))]" fill="currentColor" aria-hidden="true">
           <path
             fillRule="evenodd"
             d="M16.704 5.29a1 1 0 01.006 1.415l-7.4 7.5a1 1 0 01-1.42.005l-3.6-3.6a1 1 0 111.414-1.414l2.897 2.897 6.69-6.782a1 1 0 011.413-.021z"
@@ -93,11 +95,11 @@ function FragmentCategory({
           比较(sticky 挂在单元格上,不挂在 <tr> 上),所以角单元格 z-30 稳定地
           压在同行其它分类格 z-20 之上,而整行仍在表头 z-30/z-40 之下。 */}
       <tr>
-        <td className="sticky top-[44px] left-0 z-30 bg-[hsl(var(--color-surface-2))] border-b border-[hsl(var(--color-hairline))] px-3 py-1 text-02 uppercase text-[hsl(var(--color-ink-muted))] font-semibold">
+        <td className="sticky top-[44px] left-0 z-30 bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-hairline))] px-3 py-1 text-02 uppercase text-[oklch(var(--color-ink-muted))] font-semibold">
           {category}
         </td>
         {roleNames.map((role) => (
-          <td key={role} className="sticky top-[44px] z-20 bg-[hsl(var(--color-surface-2))] border-b border-[hsl(var(--color-hairline))] px-2 py-1 text-02 text-center text-[hsl(var(--color-ink-subtle))] font-mono">
+          <td key={role} className="sticky top-[44px] z-20 bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-hairline))] px-2 py-1 text-02 text-center text-[oklch(var(--color-ink-subtle))] font-mono">
             {categoryTally(perms, role)}
           </td>
         ))}
@@ -107,13 +109,13 @@ function FragmentCategory({
            不透明底色(否则横向滚过去的单元格会从它底下透出来),而一个不透明的
            格子拿不到 <tr> 的半透明底 —— 两边不同色就等于把「这一行」画成两段。
            所以整行改用同一个不透明值,冻结格靠 group-hover 跟上。 */
-        <tr key={perm.id} className="group hover:bg-[hsl(var(--color-surface-2))]">
-          <td className="sticky left-0 z-10 bg-[hsl(var(--color-canvas))] group-hover:bg-[hsl(var(--color-surface-2))] border-b border-[hsl(var(--color-hairline))]/50 px-3 py-1 transition-colors">
-            <div className="font-mono text-02 text-[hsl(var(--color-ink))]">{perm.codename}</div>
-            <div className="text-02 text-[hsl(var(--color-ink-subtle))]">{perm.name}</div>
+        <tr key={perm.id} className="group hover:bg-[oklch(var(--color-surface-2))]">
+          <td className="sticky left-0 z-10 bg-[oklch(var(--color-canvas))] group-hover:bg-[oklch(var(--color-surface-2))] border-b border-[oklch(var(--color-hairline))]/50 px-3 py-1 transition-colors">
+            <div className="font-mono text-02 text-[oklch(var(--color-ink))]">{perm.codename}</div>
+            <div className="text-02 text-[oklch(var(--color-ink-subtle))]">{perm.name}</div>
           </td>
           {roleNames.map((role) => (
-            <td key={role} className="border-b border-[hsl(var(--color-hairline))]/50 px-1 py-1 text-center">
+            <td key={role} className="border-b border-[oklch(var(--color-hairline))]/50 px-1 py-1 text-center">
               <MatrixCell
                 granted={checked?.[role]?.has(perm.id) ?? false}
                 disabled={isSaving}
@@ -169,7 +171,7 @@ export function PermissionMatrixTable({
   }
 
   if (roleNames.length === 0) {
-    return <p className="text-03 text-[hsl(var(--color-ink-muted))]">{t("permissions.matrix.no_roles")}</p>;
+    return <p className="text-03 text-[oklch(var(--color-ink-muted))]">{t("permissions.matrix.no_roles")}</p>;
   }
 
   return (
@@ -196,17 +198,17 @@ export function PermissionMatrixTable({
        表格也从 border-collapse 换成 border-separate + border-spacing-0:
        collapse 下边框归表格而不归单元格,sticky 单元格滚动时边框会
        留在原地。 */
-    <div className="overflow-auto max-h-[65vh] border border-[hsl(var(--color-hairline))]">
+    <div className="overflow-auto max-h-[65vh] border border-[oklch(var(--color-hairline))]">
       <table className="w-full border-separate border-spacing-0 text-03">
         <thead>
           <tr className="h-11">
-            <th className="sticky top-0 left-0 z-40 bg-[hsl(var(--color-surface-1))] border-b border-[hsl(var(--color-hairline))] text-left px-3 font-medium text-[hsl(var(--color-ink-muted))] min-w-[200px]">
+            <th className="sticky top-0 left-0 z-40 bg-[oklch(var(--color-surface-1))] border-b border-[oklch(var(--color-hairline))] text-left px-3 font-medium text-[oklch(var(--color-ink-muted))] min-w-[200px]">
               {t("permissions.matrix.codename_col")}
             </th>
             {roleNames.map((role) => (
-              <th key={role} className="sticky top-0 z-30 bg-[hsl(var(--color-surface-1))] border-b border-[hsl(var(--color-hairline))] px-2 font-medium text-[hsl(var(--color-ink))] min-w-[110px] text-center">
+              <th key={role} className="sticky top-0 z-30 bg-[oklch(var(--color-surface-1))] border-b border-[oklch(var(--color-hairline))] px-2 font-medium text-[oklch(var(--color-ink))] min-w-[110px] text-center">
                 <div>{roleMeta[role]?.display_name || role}</div>
-                <div className="text-02 font-normal text-[hsl(var(--color-ink-subtle))] font-mono">
+                <div className="text-02 font-normal text-[oklch(var(--color-ink-subtle))] font-mono">
                   {categoryTally(allPerms, role)}
                 </div>
               </th>

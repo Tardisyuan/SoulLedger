@@ -13,7 +13,7 @@ function StatCardInner({
   label,
   value,
   isLoading,
-  color = "text-[hsl(var(--color-ink))]",
+  color = "text-[oklch(var(--color-ink))]",
 }: {
   label: string;
   value?: number;
@@ -21,8 +21,8 @@ function StatCardInner({
   color?: string;
 }) {
   return (
-    <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-      <div className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{label}</div>
+    <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+      <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{label}</div>
       {isLoading ? (
         // 骨架屏得和它替换的东西一样高,否则数据落地时整行会往下跳一格。
         // text-08 是 56px / line-height 1,所以 h-14。

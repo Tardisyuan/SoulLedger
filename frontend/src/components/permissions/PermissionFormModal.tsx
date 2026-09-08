@@ -144,7 +144,7 @@ export function PermissionFormModal({
             `Field` 就等于把 `aria-invalid` 重新挂回三个 input 上,正是先前撤掉的
             那件事。换掉的只有颜色:`text-red-400` 是 Tailwind 原生调色板,浅色
             模式下拿到的是暗色那一档;`--color-status-error` 明暗各测过一套。 */}
-        {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-[hsl(var(--color-status-error))] text-03">{error}</p>}
+        {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-[oklch(var(--color-status-error))] text-03">{error}</p>}
         <TextField
           id={codenameId}
           label={t("permissions.codename_label")}

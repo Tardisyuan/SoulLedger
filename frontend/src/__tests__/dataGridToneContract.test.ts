@@ -22,6 +22,8 @@ import {
   LIGHT_TOKENS,
   NO_CIV_LIGHT_TOKENS,
   THEMES,
+  oklchTripleToRgb,
+  readCivAttrRules,
   resolveRampForCiv,
   type ThemeName,
 } from "./support/globalsCssTokens";
@@ -37,23 +39,12 @@ const AA_TEXT_CONTRAST = 4.5;
 
 type Rgb = [number, number, number];
 
-/** HSL (h in degrees, s/l as percentages) -> sRGB 0-255. */
-function hslToRgb(h: number, s: number, l: number): Rgb {
-  const sat = s / 100;
-  const lum = l / 100;
-  const c = (1 - Math.abs(2 * lum - 1)) * sat;
-  const hp = (((h % 360) + 360) % 360) / 60;
-  const x = c * (1 - Math.abs((hp % 2) - 1));
-  const [r1, g1, b1] =
-    hp < 1 ? [c, x, 0]
-    : hp < 2 ? [x, c, 0]
-    : hp < 3 ? [0, c, x]
-    : hp < 4 ? [0, x, c]
-    : hp < 5 ? [x, 0, c]
-    : [c, 0, x];
-  const m = lum - c / 2;
-  return [(r1 + m) * 255, (g1 + m) * 255, (b1 + m) * 255];
-}
+// The local `hslToRgb` that used to sit here is gone with the tokens it
+// parsed. It was the last copy of colour arithmetic in this file — the comment
+// under `tokenToRgb` already records that a local COPY OF THE PARSER was
+// removed for the same reason — and `oklchTripleToRgb` in ./support is now the
+// one implementation, validated against published reference values in
+// civilizationColourContract.test.ts.
 
 /** WCAG relative luminance: linearize each sRGB channel, then weight. */
 function relativeLuminance([r, g, b]: Rgb): number {
@@ -96,12 +87,12 @@ function composite(fg: Rgb, alpha: number, bg: Rgb): Rgb {
  * quietly borrow the dark value.
  */
 
-/** `"150 62% 28%"` -> rgb. Returns null for anything not a literal HSL triple (e.g. a var() indirection). */
+/** `"0.496249 0.108977 156.0004"` -> rgb. Returns null for anything not a
+ *  literal OKLCH triple (e.g. a var() indirection). */
 function tokenToRgb(value: string | undefined): Rgb | null {
   if (!value) return null;
-  const m = /^(-?[\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/.exec(value);
-  if (!m) return null;
-  return hslToRgb(Number(m[1]), Number(m[2]), Number(m[3]));
+  if (!/^[\d.]+\s+[\d.]+\s+-?[\d.]+$/.test(value.trim())) return null;
+  return oklchTripleToRgb(value) as Rgb;
 }
 
 /**
@@ -121,7 +112,7 @@ function requireRgb(label: string, value: string | undefined): Rgb {
   const rgb = tokenToRgb(value);
   if (rgb === null) {
     throw new Error(
-      `${label} did not resolve to a literal \`H S% L%\` triple — got ` +
+      `${label} did not resolve to a literal \`L C H\` triple — got ` +
         `${JSON.stringify(value ?? null)}. Either the token moved, or it is now ` +
         `an indirection that needs resolving before it can be measured. Fix the ` +
         `resolution; do not skip the measurement.`
@@ -133,9 +124,9 @@ function requireRgb(label: string, value: string | undefined): Rgb {
 /**
  * A token as the named civilization renders it, in the named theme.
  *
- * `resolveRampForCiv` binds `--civ-hue` to that tenant's `--color-civ-hue-*`
- * exactly as the `[data-civ]` rule does, which is what turns
- * `var(--civ-hue) 12% 94%` into something measurable. Literal tokens (the ink,
+ * `resolveRampForCiv` looks up that tenant's own plane token —
+ * `--color-civ-surface-3-cn` — exactly as the `:root[data-civ]` rule does,
+ * which is what turns a ramp name into something measurable. Literal tokens (the ink,
  * the canvas) pass through it unchanged, so one helper covers every token in a
  * tone's class string rather than two code paths that could disagree.
  */
@@ -159,16 +150,16 @@ interface ToneFill {
   alpha: number;
 }
 
-/** Pulls the `bg-[hsl(var(--token)/alpha)]` fill out of a tone's class string. */
+/** Pulls the `bg-[oklch(var(--token)/alpha)]` fill out of a tone's class string. */
 function parseBackground(classes: string): ToneFill | null {
-  const m = /bg-\[hsl\(var\((--[\w-]+)\)\s*(?:\/\s*([\d.]+))?\)\]/.exec(classes);
+  const m = /bg-\[oklch\(var\((--[\w-]+)\)\s*(?:\/\s*([\d.]+))?\)\]/.exec(classes);
   if (!m) return null;
   return { token: m[1], alpha: m[2] === undefined ? 1 : Number(m[2]) };
 }
 
-/** Pulls the `text-[hsl(var(--token))]` ink out of a tone's class string. */
+/** Pulls the `text-[oklch(var(--token))]` ink out of a tone's class string. */
 function parseForegroundToken(classes: string): string | null {
-  const m = /text-\[hsl\(var\((--[\w-]+)\)\s*(?:\/\s*[\d.]+)?\)\]/.exec(classes);
+  const m = /text-\[oklch\(var\((--[\w-]+)\)\s*(?:\/\s*[\d.]+)?\)\]/.exec(classes);
   return m ? m[1] : null;
 }
 
@@ -181,17 +172,37 @@ const TONES = Object.entries(ENUM_TONE_CLASSES);
  * tenant is rendering?
  *
  * Derived from the token's DECLARATION, never from the tone's name. The status
- * tints are literal HSL triples and mean the same thing on every screen; the
- * surface ramp is written `var(--civ-hue) 12% 94%` and means four different
- * colours. A tone that switches from a status tint to a surface fill tomorrow
- * moves itself into the per-tenant group without anyone editing this file —
+ * tints are literal OKLCH triples and mean the same thing on every screen; the
+ * surface ramp is written `var(--color-civ-surface-3-cn)` and means four
+ * different colours. A tone that switches from a status tint to a surface fill
+ * tomorrow moves itself into the per-tenant group without anyone editing this file —
  * which is the whole point, because `neutral` is here precisely because a name
  * check is what nobody remembered to write.
  */
 function fillIsLiteral([, classes]: [string, string]): boolean {
   const fill = parseBackground(classes);
-  return fill !== null && tokenToRgb(LIGHT_TOKENS[fill.token]) !== null;
+  return fill !== null && !RETINTED_PLANES.has(fill.token);
 }
+
+/**
+ * The tokens a `:root[data-civ]` rule redeclares — the five ramp planes.
+ *
+ * THE TEST FOR "IS THIS PER-TENANT" HAD TO MOVE, AND HERE IS WHY IT COULD NOT
+ * STAY. It read `tokenToRgb(LIGHT_TOKENS[token]) !== null`: while the ramp was
+ * `[--civ-hue] 55% 94.5%` a plane's own declaration failed to parse as a
+ * colour, and that failure WAS the signal. In OKLCH the planes are literals in
+ * `:root` / `.light` too — inert ones, overridden for every mapped tenant —
+ * so that question now answers "literal" for all five and `PER_TENANT_TONES`
+ * silently emptied, taking 40 AA measurements with it. Jest caught it only
+ * because this file asserts its own group sizes; the AA cases themselves would
+ * have reported a clean pass over nothing examined.
+ *
+ * Read from the rules instead, which is the same fact stated where it is now
+ * true: a plane is per-tenant exactly when a tenant rule repoints it.
+ */
+const RETINTED_PLANES = new Set(
+  Object.values(readCivAttrRules()).flatMap((rule) => Object.keys(rule.ramp))
+);
 
 const LITERAL_TONES = TONES.filter(fillIsLiteral);
 const PER_TENANT_TONES = TONES.filter((tone) => !fillIsLiteral(tone));
@@ -289,8 +300,9 @@ describe("data-grid enum badge token contract", () => {
       const fillRgb = requireRgb(`tone \`${tone}\` fill \`${fill.token}\` in .light`, tokens[fill.token]);
       const inkRgb = requireRgb(`tone \`${tone}\` ink \`${inkToken}\` in .light`, tokens[inkToken]);
       // THE UNTINTED BRANCH, NAMED. This read `tokens["--color-canvas"]`, which
-      // worked only while `.light` declared a literal `0 0% 100%`. Stage 13
-      // made the tenant-facing light canvas `var(--civ-hue) 86% 96.5%`, so that
+      // worked only while `.light` declared a literal white. Stage 13 made the
+      // tenant-facing light canvas per-tenant (`[--civ-hue] 100% 96.5%`
+      // then, `var(--color-civ-canvas-cn)` since the OKLCH migration), so that
       // lookup became an unresolved `var(` — `requireRgb` throws on it, which
       // is how this line was found rather than left to drift.
       //
@@ -352,10 +364,16 @@ describe("WCAG helpers", () => {
     expect(contrastRatio([18, 52, 86], [18, 52, 86])).toBeCloseTo(1, 10);
   });
 
-  it("converts HSL the way the CSS tokens are written", () => {
-    expect(hslToRgb(0, 0, 100).map(Math.round)).toEqual([255, 255, 255]);
-    expect(hslToRgb(0, 100, 50).map(Math.round)).toEqual([255, 0, 0]);
-    expect(hslToRgb(150, 62, 28).map(Math.round)).toEqual([27, 116, 71]);
+  it("converts OKLCH the way the CSS tokens are written", () => {
+    // The same three colours this checked while the tokens were HSL — white,
+    // pure red, and `--color-status-alive` in light mode — restated in the
+    // coordinates they are now written in. Values, not spellings, are what
+    // this pins: the third one is `150 62% 28%` as it used to be spelled.
+    expect(tokenToRgb("1 0 0")).toEqual([255, 255, 255]);
+    expect(tokenToRgb("0.627955 0.257683 29.2339")).toEqual([255, 0, 0]);
+    expect(tokenToRgb("0.496249 0.108977 156.0004")).toEqual([27, 116, 71]);
+    // And a var() indirection is still not a colour.
+    expect(tokenToRgb("var(--color-civ-surface-1-cn)")).toBeNull();
   });
 
   it("composites a fill at 0 and 1 alpha to the endpoints", () => {

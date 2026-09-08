@@ -52,12 +52,12 @@ import { cn } from "@/lib/utils";
  *
  * `src/components/workflow/WorkflowEditor.tsx:488` contains:
  *
- *     placeholder:[hsl(var(--color-ink-subtle))]
+ *     placeholder:[oklch(var(--color-ink-subtle))]
  *
  * That class produces **no CSS**. `placeholder:` is a variant, and what follows
- * a variant has to be a utility. `[hsl(...)]` is not one: Tailwind's
+ * a variant has to be a utility. `[oklch(...)]` is not one: Tailwind's
  * arbitrary-*property* form requires `[property:value]`, e.g.
- * `text-[hsl(...)]`, and a bare bracketed value has no property to set. So
+ * `text-[oklch(...)]`, and a bare bracketed value has no property to set. So
  * Tailwind matches nothing, emits nothing, and that input's placeholder renders
  * at the inherited text colour — full-strength ink, indistinguishable from a
  * real value. It fails silently: no build error, no type error, no visual diff
@@ -66,9 +66,9 @@ import { cn } from "@/lib/utils";
  * The correct spelling — used below, and the one every migrated call site
  * should end up with — is:
  *
- *     placeholder:text-[hsl(var(--color-ink-subtle))]
+ *     placeholder:text-[oklch(var(--color-ink-subtle))]
  *
- * (The `placeholder-[hsl(...)]` form that Modal.tsx uses is the deprecated
+ * (The `placeholder-[oklch(...)]` form that Modal.tsx uses is the deprecated
  * Tailwind v2 `placeholderColor` utility. It still emits CSS in v3, so it is
  * not the same bug — it is merely the old spelling.)
  */
@@ -82,8 +82,8 @@ import { cn } from "@/lib/utils";
  */
 export const fieldControl = cva(
   [
-    "block w-full border bg-[hsl(var(--color-surface-1))] text-[hsl(var(--color-ink))]",
-    "placeholder:text-[hsl(var(--color-ink-subtle))]",
+    "block w-full border bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))]",
+    "placeholder:text-[oklch(var(--color-ink-subtle))]",
     "transition-[border-color] duration-state",
     // Disabled on every control, not 29% of them.
     "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -97,11 +97,11 @@ export const fieldControl = cva(
       },
       invalid: {
         // `focus-visible:`, not `focus:` — see the note above.
-        false: "border-[hsl(var(--color-hairline))] focus-visible:border-[hsl(var(--color-accent))]",
+        false: "border-[oklch(var(--color-hairline))] focus-visible:border-[oklch(var(--color-accent))]",
         // An invalid field keeps its error border through focus. Letting focus
         // repaint it accent would mean the field stops looking wrong at exactly
         // the moment the user goes to fix it.
-        true: "border-[hsl(var(--color-status-error))] focus-visible:border-[hsl(var(--color-status-error))]",
+        true: "border-[oklch(var(--color-status-error))] focus-visible:border-[oklch(var(--color-status-error))]",
       },
     },
     defaultVariants: { size: "md", invalid: false },
@@ -170,13 +170,13 @@ export function Field({
     <div className={cn("flex flex-col gap-1", className)}>
       <label
         htmlFor={controlId}
-        className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]"
+        className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]"
       >
         {label}
         {required ? (
           // `aria-hidden` because `aria-required` on the control is what
           // actually carries this to assistive tech; the asterisk is for eyes.
-          <span aria-hidden="true" className="ml-1 text-[hsl(var(--color-status-error))]">
+          <span aria-hidden="true" className="ml-1 text-[oklch(var(--color-status-error))]">
             *
           </span>
         ) : null}
@@ -223,7 +223,7 @@ export function Field({
       })}
 
       {description ? (
-        <span id={descriptionId} className="text-02 text-[hsl(var(--color-ink-tertiary))]">
+        <span id={descriptionId} className="text-02 text-[oklch(var(--color-ink-tertiary))]">
           {description}
         </span>
       ) : null}
@@ -232,7 +232,7 @@ export function Field({
         // `role="alert"` and not a plain span: this text appears after a
         // submit, i.e. after focus has already moved on, so it has to announce
         // itself rather than wait to be navigated to.
-        <span id={errorId} role="alert" className="text-02 text-[hsl(var(--color-status-error))]">
+        <span id={errorId} role="alert" className="text-02 text-[oklch(var(--color-status-error))]">
           {error}
         </span>
       ) : null}

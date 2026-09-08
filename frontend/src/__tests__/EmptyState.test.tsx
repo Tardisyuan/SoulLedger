@@ -59,10 +59,10 @@ describe("EmptyState · 居左", () => {
 
   it("外层 className 是追加的，不改上面那条居左的约定", () => {
     const { container } = render(
-      <EmptyState title="尚无判决" className="border border-[hsl(var(--color-hairline))]" />
+      <EmptyState title="尚无判决" className="border border-[oklch(var(--color-hairline))]" />
     );
     const root = container.querySelector<HTMLElement>("[data-empty-state]")!;
-    expect(root.className).toContain("border-[hsl(var(--color-hairline))]");
+    expect(root.className).toContain("border-[oklch(var(--color-hairline))]");
     expect(root.className).toMatch(/\bpy-10\b/);
   });
 });
@@ -81,7 +81,7 @@ describe("EmptyState · 那条短线", () => {
   it("颜色直接取 --civ-mark，没有 fallback —— 未映射租户下的灰是刻意的", () => {
     const { container } = render(<EmptyState title="尚无判决" />);
     const mark = container.querySelector<HTMLElement>("[data-empty-state-mark]")!;
-    expect(mark.className).toContain("border-[hsl(var(--civ-mark))]");
+    expect(mark.className).toContain("border-[oklch(var(--civ-mark))]");
     // `var(--civ-mark, …)` 的第二个参数就是 fallback；出现逗号即违规。
     expect(mark.className).not.toMatch(/var\(--civ-mark\s*,/);
     // 也不许改用别的颜色 token 顶替。
@@ -99,7 +99,7 @@ describe("EmptyState · 那条短线", () => {
 });
 
 describe("EmptyState · 排版", () => {
-  it("标题 text-01，原因 text-04 + text-[hsl(var(--color-ink-subtle))]", () => {
+  it("标题 text-01，原因 text-04 + text-[oklch(var(--color-ink-subtle))]", () => {
     const { container } = render(
       <EmptyState title="尚无判决" reason="这一卷还没有任何灵魂被登记。" />
     );
@@ -107,7 +107,7 @@ describe("EmptyState · 排版", () => {
     const reason = container.querySelector<HTMLElement>("[data-empty-state-reason]")!;
     expect(title.className).toMatch(/\btext-01\b/);
     expect(reason.className).toMatch(/\btext-04\b/);
-    expect(reason.className).toContain("text-[hsl(var(--color-ink-subtle))]");
+    expect(reason.className).toContain("text-[oklch(var(--color-ink-subtle))]");
   });
 
   it("空态不产生标题层级 —— 它是卷宗里的一条注记，不是一个区块", () => {

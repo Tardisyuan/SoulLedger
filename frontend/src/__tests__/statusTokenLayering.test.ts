@@ -326,10 +326,10 @@ describe("system-feedback tokens stay off domain-enum badges and rows", () => {
     };
     expect(Object.keys(byRealm)).toEqual(realms.keys);
 
-    /** `{utility: [token, alpha]}` for every `x-[hsl(var(--t)/a)]` on the line. */
+    /** `{utility: [token, alpha]}` for every `x-[oklch(var(--t)/a)]` on the line. */
     const utilities = (line: string): Record<string, [string, string]> => {
       const out: Record<string, [string, string]> = {};
-      for (const m of line.matchAll(/(\w[\w-]*)-\[hsl\(var\((--[\w-]+)\)(?:\/([\d.]+))?\)\]/g)) {
+      for (const m of line.matchAll(/(\w[\w-]*)-\[oklch\(var\((--[\w-]+)\)(?:\/([\d.]+))?\)\]/g)) {
         out[m[1]] = [m[2], m[3] ?? "1"];
       }
       return out;

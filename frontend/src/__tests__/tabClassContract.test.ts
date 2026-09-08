@@ -110,19 +110,19 @@ describe("the six strips read it from there", () => {
 describe("the selected tab is painted in the ink token, not the fill token", () => {
   /**
    * Presence AND absence. `toContain("--color-accent-ink")` alone stays green
-   * on `text-[hsl(var(--color-accent))] border-[hsl(var(--color-accent-ink))]`
+   * on `text-[oklch(var(--color-accent))] border-[oklch(var(--color-accent-ink))]`
    * — the two tokens swapped, which is the defect wearing the right substring.
    */
   it("TAB_ON draws its text in --color-accent-ink", () => {
-    expect(TAB_ON).toContain("text-[hsl(var(--color-accent-ink))]");
-    expect(TAB_ON).not.toContain("text-[hsl(var(--color-accent))]");
+    expect(TAB_ON).toContain("text-[oklch(var(--color-accent-ink))]");
+    expect(TAB_ON).not.toContain("text-[oklch(var(--color-accent))]");
   });
 
   it("TAB_ON draws its 2px rule in --color-accent", () => {
     // The rule is a non-text mark on the container's hairline, not text; it
     // keeps the fill token, and swapping the pair has to be visible here.
-    expect(TAB_ON).toContain("border-[hsl(var(--color-accent))]");
-    expect(TAB_ON).not.toContain("border-[hsl(var(--color-accent-ink))]");
+    expect(TAB_ON).toContain("border-[oklch(var(--color-accent))]");
+    expect(TAB_ON).not.toContain("border-[oklch(var(--color-accent-ink))]");
   });
 
   it("TAB_OFF carries no accent at all", () => {
@@ -131,6 +131,10 @@ describe("the selected tab is painted in the ink token, not the fill token", () 
 
   it("TAB_BASE carries the geometry and no colour", () => {
     expect(TAB_BASE).toContain(GEOMETRY);
-    expect(TAB_BASE).not.toContain("hsl(");
+    // `hsl(` until the OKLCH migration. Left as `hsl(` it would have become a
+    // check that can never fire — the string exists nowhere in the app any
+    // more — which is the failure shape this repository writes contract tests
+    // to avoid, not to acquire.
+    expect(TAB_BASE).not.toContain("oklch(");
   });
 });

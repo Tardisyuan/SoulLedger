@@ -13,8 +13,8 @@ import { useI18n } from "@/src/contexts/I18nContext";
  * transparent ring with a single coloured top edge, spun by `animate-spin`.
  * Copy-paste is not the problem on its own — the drift is. Fifteen of those
  * twenty hardcode `border-amber-500/20` and `border-t-amber-500`; the other
- * five write `border-[hsl(var(--color-accent))]/20` and
- * `border-t-[hsl(var(--color-accent))]`. Those two spellings were NOT the same
+ * five write `border-[oklch(var(--color-accent))]/20` and
+ * `border-t-[oklch(var(--color-accent))]`. Those two spellings were NOT the same
  * colour until very recently: `tailwind.config.js` used to override the `amber`
  * scale one step brighter than Tailwind's own, so `amber-500` was #fbbf24 while
  * `--color-accent` is #f59e0b. The override is gone now and the two agree, but
@@ -90,7 +90,7 @@ export function Spinner({ size = "md", label, className, ...rest }: SpinnerProps
       <span
         aria-hidden="true"
         className={cn(
-          "absolute inset-0 rounded-full border-[hsl(var(--color-accent)/0.2)]",
+          "absolute inset-0 rounded-full border-[oklch(var(--color-accent)/0.2)]",
           ring
         )}
       />
@@ -99,7 +99,7 @@ export function Spinner({ size = "md", label, className, ...rest }: SpinnerProps
       <span
         aria-hidden="true"
         className={cn(
-          "absolute inset-0 rounded-full border-transparent border-t-[hsl(var(--color-accent))] animate-spin motion-reduce:animate-none",
+          "absolute inset-0 rounded-full border-transparent border-t-[oklch(var(--color-accent))] animate-spin motion-reduce:animate-none",
           ring
         )}
       />
@@ -145,7 +145,7 @@ export function PageSpinner({ label }: { label?: string }) {
     // viewport. For a centred spinner that is invisible, and it is the right
     // trade: being 64px short on two routes costs nothing, while being 64px
     // long on nineteen costs a scrollbar on every one of them.
-    <div className="min-h-[calc(100vh-4rem)] bg-[hsl(var(--color-canvas))] flex items-center justify-center">
+    <div className="min-h-[calc(100vh-4rem)] bg-[oklch(var(--color-canvas))] flex items-center justify-center">
       <Spinner size="lg" label={label ?? t("common.loading")} />
     </div>
   );

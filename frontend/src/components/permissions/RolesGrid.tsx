@@ -23,7 +23,7 @@ export function RolesGrid({
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
+          <div key={i} className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
             <Skeleton className="h-4 w-2/3 mb-2" />
             <Skeleton className="h-3 w-1/2" />
           </div>
@@ -35,11 +35,11 @@ export function RolesGrid({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
       {roles.map((role) => (
-        <div key={role.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-3 hover:border-[hsl(var(--color-accent))]/30 transition-colors">
+        <div key={role.id} className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-3 hover:border-[oklch(var(--color-accent))]/30 transition-colors">
           <div className="min-w-0 flex-1">
-            <h3 title={role.display_name || role.name} className="font-medium text-[hsl(var(--color-ink))] truncate text-03">{role.display_name || role.name}</h3>
-            <p title={role.name} className="text-02 text-[hsl(var(--color-ink-muted))] font-mono truncate">{role.name}</p>
-            <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">{t("permissions.matrix.role_users", { count: String(role.user_count) })}</p>
+            <h3 title={role.display_name || role.name} className="font-medium text-[oklch(var(--color-ink))] truncate text-03">{role.display_name || role.name}</h3>
+            <p title={role.name} className="text-02 text-[oklch(var(--color-ink-muted))] font-mono truncate">{role.name}</p>
+            <p className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1">{t("permissions.matrix.role_users", { count: String(role.user_count) })}</p>
           </div>
           <div className="flex gap-2 mt-2">
             <Button

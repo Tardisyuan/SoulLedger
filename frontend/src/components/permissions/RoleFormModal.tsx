@@ -110,7 +110,7 @@ export function RoleFormModal({
             把 `aria-invalid` 重新挂回每个 input 上,正是先前撤掉的那件事。
             换掉的只有颜色:`text-red-400` 是 Tailwind 原生调色板,浅色模式下拿到
             的是暗色那一档;`--color-status-error` 明暗各测过一套。 */}
-        {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-[hsl(var(--color-status-error))] text-03">{error}</p>}
+        {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-[oklch(var(--color-status-error))] text-03">{error}</p>}
         <TextField
           id={nameId}
           label={t("permissions.role_name_label")}

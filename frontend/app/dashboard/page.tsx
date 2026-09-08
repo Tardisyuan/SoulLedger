@@ -262,41 +262,41 @@ function DashboardContent() {
                 label={t("dashboard.alive")}
                 value={stats?.state_distribution?.find(s => s.state === "ALIVE")?.count ?? 0}
                 isLoading={loading}
-                color="text-[hsl(var(--color-status-success))]"
+                color="text-[oklch(var(--color-status-success))]"
               />
               <StatCard
                 label={t("dashboard.under_judgment")}
                 value={stats?.state_distribution?.find(s => s.state === "JUDGING")?.count ?? 0}
                 isLoading={loading}
-                color="text-[hsl(var(--color-accent-ink))]"
+                color="text-[oklch(var(--color-accent-ink))]"
               />
               <StatCard
                 label={t("dashboard.disposed")}
                 value={stats?.state_distribution?.find(s => s.state === "DISPOSED")?.count ?? 0}
                 isLoading={loading}
-                color="text-[hsl(var(--color-status-lost))]"
+                color="text-[oklch(var(--color-status-lost))]"
               />
             </div>
 
             {/* Charts row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* State distribution pie chart */}
-              <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-                <h2 className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mb-4">{t("dashboard.state_distribution")}</h2>
+              <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+                <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.state_distribution")}</h2>
                 {loading ? (
                   <div className="h-[240px] flex items-center justify-center">
                     <Skeleton className="h-[200px] w-[200px] rounded-full" />
                   </div>
                 ) : error ? (
-                  <div className="h-[240px] flex items-center justify-center text-[hsl(var(--color-status-error))]">{error}</div>
+                  <div className="h-[240px] flex items-center justify-center text-[oklch(var(--color-status-error))]">{error}</div>
                 ) : (
                   <LazyDashboardPieChart data={stateData} fallbackFill={CHART_SERIES.neutral} />
                 )}
               </div>
 
               {/* tenant comparison bar chart */}
-              <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-                <h2 className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mb-4">{t("dashboard.souls_by_civilization")}</h2>
+              <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+                <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.souls_by_civilization")}</h2>
                 {loading ? (
                   <div className="h-[240px] flex items-center justify-center">
                     <Skeleton className="h-full w-full" />
@@ -308,8 +308,8 @@ function DashboardContent() {
             </div>
 
             {/* Per-tenant breakdown */}
-            <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-              <h2 className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mb-4">{t("dashboard.per_civilization_breakdown")}</h2>
+            <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+              <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.per_civilization_breakdown")}</h2>
               {/* `md:grid-cols-3` alongside a hardcoded three cards was
                   self-consistent and wrong together; with four civilizations
                   the fourth card needs somewhere to go. */}
@@ -331,7 +331,7 @@ function DashboardContent() {
                   ? [0, 1, 2]
                   : (stats?.tenants ?? []).map((_, i) => i)
                 ).map((i) => (
-                  <div key={i} className="bg-[hsl(var(--color-surface-2))] p-4 border border-[hsl(var(--color-hairline))]">
+                  <div key={i} className="bg-[oklch(var(--color-surface-2))] p-4 border border-[oklch(var(--color-hairline))]">
                     {loading ? (
                       <div className="space-y-3">
                         <Skeleton className="h-4 w-24" />
@@ -358,13 +358,13 @@ function DashboardContent() {
                                 CIVILIZATION_COLORS[stats.tenants[i].tenant_code] ?? CHART_SERIES.neutral,
                             }}
                           />
-                          <span className="font-medium text-[hsl(var(--color-ink))]">{stats.tenants[i].tenant_name || stats.tenants[i].tenant_code}</span>
+                          <span className="font-medium text-[oklch(var(--color-ink))]">{stats.tenants[i].tenant_name || stats.tenants[i].tenant_code}</span>
                         </div>
-                        <div className="text-06 tabular-nums text-[hsl(var(--color-accent-ink))] mb-3">{groupDigits(stats.tenants[i].total_souls)}</div>
+                        <div className="text-06 tabular-nums text-[oklch(var(--color-accent-ink))] mb-3">{groupDigits(stats.tenants[i].total_souls)}</div>
                         <div className="space-y-1">
                           {Object.entries(stats.tenants[i].state_breakdown).map(([state, count]) => (
                             <div key={state} className="flex justify-between text-02">
-                              <span title={state} className="text-[hsl(var(--color-ink-muted))]">{stateLabel(state)}</span>
+                              <span title={state} className="text-[oklch(var(--color-ink-muted))]">{stateLabel(state)}</span>
                               <span style={{ color: STATE_COLORS[state] || CHART_SERIES.neutral }}>{count as number}</span>
                             </div>
                           ))}
@@ -379,8 +379,8 @@ function DashboardContent() {
             {/* Balance distribution and Souls by Realm */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Balance distribution */}
-              <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-                <h2 className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mb-4">{t("dashboard.balance_distribution")}</h2>
+              <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+                <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.balance_distribution")}</h2>
                 {loading ? (
                   <div className="h-[180px] flex items-center justify-center">
                     <Skeleton className="h-full w-full" />
@@ -391,8 +391,8 @@ function DashboardContent() {
               </div>
 
               {/* Souls by Realm */}
-              <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-                <h2 className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mb-4">{t("dashboard.souls_by_realm")}</h2>
+              <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+                <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.souls_by_realm")}</h2>
                 {loading ? (
                   <div className="h-[180px] flex items-center justify-center">
                     <Skeleton className="h-full w-full" />
@@ -400,7 +400,7 @@ function DashboardContent() {
                 ) : realmChartData.length > 0 ? (
                   <LazyBarChart data={realmChartData} dataKey="count" fill={CHART_SERIES.realm} height={180} name={t("dashboard.chart_souls")} />
                 ) : (
-                  <div className="h-[180px] flex items-center justify-center text-[hsl(var(--color-ink-muted))] text-03">
+                  <div className="h-[180px] flex items-center justify-center text-[oklch(var(--color-ink-muted))] text-03">
                     {t("dashboard.no_realm_data")}
                   </div>
                 )}
@@ -408,8 +408,8 @@ function DashboardContent() {
             </div>
 
             {/* Recent Activity - grouped by action type */}
-            <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-              <h2 className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mb-4">{t("dashboard.recent_activity")}</h2>
+            <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+              <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">{t("dashboard.recent_activity")}</h2>
               {loading ? (
                 <div className="space-y-3">
                   {[0, 1, 2].map((i) => (
@@ -429,14 +429,14 @@ function DashboardContent() {
                   });
 
                   const actionColors: Record<string, string> = {
-                    CREATE: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.3)]",
-                    UPDATE: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))] border-[hsl(var(--color-status-info)/0.3)]",
-                    DELETE: "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.3)]",
-                    LOGIN: "bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))] border-[hsl(var(--color-verdict-retry)/0.3)]",
-                    LOGOUT: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))] border-[hsl(var(--color-status-lost)/0.3)]",
-                    TRANSFER: "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.3)]",
-                    JUDGMENT: "bg-[hsl(var(--color-accent)/0.2)] text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent)/0.3)]",
-                    OTHER: "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] border-[hsl(var(--color-hairline))]",
+                    CREATE: "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success)/0.3)]",
+                    UPDATE: "bg-[oklch(var(--color-status-info)/0.1)] text-[oklch(var(--color-status-info))] border-[oklch(var(--color-status-info)/0.3)]",
+                    DELETE: "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error)/0.3)]",
+                    LOGIN: "bg-[oklch(var(--color-verdict-retry)/0.1)] text-[oklch(var(--color-verdict-retry))] border-[oklch(var(--color-verdict-retry)/0.3)]",
+                    LOGOUT: "bg-[oklch(var(--color-status-lost)/0.1)] text-[oklch(var(--color-status-lost))] border-[oklch(var(--color-status-lost)/0.3)]",
+                    TRANSFER: "bg-[oklch(var(--color-status-warning)/0.1)] text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning)/0.3)]",
+                    JUDGMENT: "bg-[oklch(var(--color-accent)/0.2)] text-[oklch(var(--color-accent-ink))] border-[oklch(var(--color-accent)/0.3)]",
+                    OTHER: "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-hairline))]",
                   };
 
                   return (
@@ -447,14 +447,14 @@ function DashboardContent() {
                             <span className={`text-02 px-2 py-1 border font-medium ${actionColors[action] || actionColors.OTHER}`}>
                               {action}
                             </span>
-                            <span className="text-02 text-[hsl(var(--color-ink-muted))]">{logs.length} {logs.length === 1 ? "action" : "actions"}</span>
+                            <span className="text-02 text-[oklch(var(--color-ink-muted))]">{logs.length} {logs.length === 1 ? "action" : "actions"}</span>
                           </div>
-                          <div className="space-y-1 pl-2 border-l-2 border-[hsl(var(--color-hairline))]">
+                          <div className="space-y-1 pl-2 border-l-2 border-[oklch(var(--color-hairline))]">
                             {logs.map((log) => (
-                              <div key={log.id} className="flex items-start gap-3 py-1 px-2 hover:bg-[hsl(var(--color-surface-2))] transition-colors">
+                              <div key={log.id} className="flex items-start gap-3 py-1 px-2 hover:bg-[oklch(var(--color-surface-2))] transition-colors">
                                 <div className="flex-1 min-w-0">
-                                  <span title={log.description || log.resource} className="text-03 text-[hsl(var(--color-ink))] truncate">{log.description || log.resource}</span>
-                                  <div className="text-02 text-[hsl(var(--color-ink-muted))]">
+                                  <span title={log.description || log.resource} className="text-03 text-[oklch(var(--color-ink))] truncate">{log.description || log.resource}</span>
+                                  <div className="text-02 text-[oklch(var(--color-ink-muted))]">
                                     {log.user} · {formatTimestamp(log.timestamp)}
                                   </div>
                                 </div>
@@ -475,16 +475,16 @@ function DashboardContent() {
           <RequireAdmin fallback={<PermissionDenied />}>
             {/* Ledger-only cards that don't already appear on the Overview tab */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-                <div className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("admin.avg_balance")}</div>
+              <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+                <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("admin.avg_balance")}</div>
                 {loading ? (
                   <Skeleton className="h-8 w-24 mt-2" />
                 ) : (
-                  <div data-kpi="" className="text-08 tabular-nums text-[hsl(var(--color-accent-ink))] mt-2">{avgBalance.toFixed(2)}</div>
+                  <div data-kpi="" className="text-08 tabular-nums text-[oklch(var(--color-accent-ink))] mt-2">{avgBalance.toFixed(2)}</div>
                 )}
               </div>
-              <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-                <div className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mb-2">{t("admin.state_breakdown")}</div>
+              <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+                <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-2">{t("admin.state_breakdown")}</div>
                 {loading ? (
                   <div className="space-y-1">
                     <Skeleton className="h-4 w-full" />
@@ -495,7 +495,7 @@ function DashboardContent() {
                   <div className="space-y-1">
                     {stats?.state_distribution?.map((s) => (
                       <div key={s.state} className="flex justify-between text-03">
-                        <span title={s.state} className="text-[hsl(var(--color-ink-muted))]">{stateLabel(s.state, s.label)}</span>
+                        <span title={s.state} className="text-[oklch(var(--color-ink-muted))]">{stateLabel(s.state, s.label)}</span>
                         <span className="font-medium">{s.count}</span>
                       </div>
                     ))}
@@ -505,8 +505,8 @@ function DashboardContent() {
             </div>
 
             {/* Top Souls by Balance Table */}
-            <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-              <h2 className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mb-4">
+            <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+              <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mb-4">
                 {t("admin.top_balance")}
               </h2>
               <DataTable<LedgerStatsOverview["souls_by_realm"][number]>
@@ -527,8 +527,8 @@ function DashboardContent() {
                 keyExtractor={(realm, idx) => `${realm.realm_code}-${idx}`}
                 renderRow={(realm) => (
                   <>
-                    <td className="px-4 py-3 text-[hsl(var(--color-ink))]">{realm.realm_name || realm.realm_code}</td>
-                    <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]"><DomainEnum namespace="souls.civilizations" value={realm.civilization} /></td>
+                    <td className="px-4 py-3 text-[oklch(var(--color-ink))]">{realm.realm_name || realm.realm_code}</td>
+                    <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]"><DomainEnum namespace="souls.civilizations" value={realm.civilization} /></td>
                     <td className="px-4 py-3 text-right font-medium">{realm.count}</td>
                   </>
                 )}
@@ -546,7 +546,7 @@ export default function DashboardPage() {
   // 不是 `min-h-screen`:AppLayout 给的槽位已经是 min-h-[calc(100vh-4rem)],
   // 再写一次就永远多出 64px 死滚动(PageShell 文件头第 3 条)。
   return (
-    <Suspense fallback={<div className="min-h-[60vh] bg-[hsl(var(--color-canvas))]" />}>
+    <Suspense fallback={<div className="min-h-[60vh] bg-[oklch(var(--color-canvas))]" />}>
       <DashboardContent />
     </Suspense>
   );

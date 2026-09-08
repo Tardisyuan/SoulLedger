@@ -74,16 +74,16 @@ export default function DispositionPage() {
     >
       <div className="space-y-3">
         {dispositions.map((d: Disposition) => (
-          <div key={d.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
+          <div key={d.id} className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-03 font-medium text-[hsl(var(--color-ink))]">
+                <p className="text-03 font-medium text-[oklch(var(--color-ink))]">
                   {t("disposition.soul")}:{" "}
-                  <Link href={`/souls/${d.soul}`} className="text-[hsl(var(--color-accent-ink))] hover:underline">
+                  <Link href={`/souls/${d.soul}`} className="text-[oklch(var(--color-accent-ink))] hover:underline">
                     {d.soul_name || d.soul}
                   </Link>
                 </p>
-                <p className="text-03 text-[hsl(var(--color-ink-subtle))] mt-1">
+                <p className="text-03 text-[oklch(var(--color-ink-subtle))] mt-1">
                   {t("disposition.realm")}: <DomainText value={d.realm_name || d.destination_realm} />
                 </p>
               </div>
@@ -107,7 +107,7 @@ export default function DispositionPage() {
               </div>
             </div>
             {d.notes && (
-              <p className="mt-2 text-03 text-[hsl(var(--color-ink-muted))]">{d.notes}</p>
+              <p className="mt-2 text-03 text-[oklch(var(--color-ink-muted))]">{d.notes}</p>
             )}
           </div>
         ))}

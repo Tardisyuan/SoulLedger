@@ -29,11 +29,11 @@ function EditableNodeComponent({
   selected: boolean;
 }) {
   const nodeTypeColors: Record<string, string> = {
-    TRIAL: "border-[hsl(var(--color-accent))] bg-[hsl(var(--color-surface-3))]",
-    EVALUATION: "border-[hsl(var(--color-status-info))] bg-[hsl(var(--color-surface-3))]",
-    APPEAL: "border-[hsl(var(--color-status-warning))] bg-[hsl(var(--color-surface-3))]",
-    FINAL: "border-[hsl(var(--color-status-success))] bg-[hsl(var(--color-surface-3))]",
-    EXECUTION: "border-[hsl(var(--color-status-error))] bg-[hsl(var(--color-surface-3))]",
+    TRIAL: "border-[oklch(var(--color-accent))] bg-[oklch(var(--color-surface-3))]",
+    EVALUATION: "border-[oklch(var(--color-status-info))] bg-[oklch(var(--color-surface-3))]",
+    APPEAL: "border-[oklch(var(--color-status-warning))] bg-[oklch(var(--color-surface-3))]",
+    FINAL: "border-[oklch(var(--color-status-success))] bg-[oklch(var(--color-surface-3))]",
+    EXECUTION: "border-[oklch(var(--color-status-error))] bg-[oklch(var(--color-surface-3))]",
   };
 
   const colorClass = nodeTypeColors[data.nodeType] || nodeTypeColors.TRIAL;
@@ -41,20 +41,20 @@ function EditableNodeComponent({
   return (
     <div
       className={`px-4 py-3 border-2 min-w-[180px] cursor-pointer transition-colors ${
-        selected ? "ring-2 ring-[hsl(var(--color-accent))] ring-offset-2 ring-offset-[hsl(var(--color-surface-2))]" : ""
+        selected ? "ring-2 ring-[oklch(var(--color-accent))] ring-offset-2 ring-offset-[oklch(var(--color-surface-2))]" : ""
       } ${colorClass}`}
     >
-      <Handle type="target" position={Position.Top} className="bg-[hsl(var(--color-accent))]!" />
-      <div className="text-03 font-semibold text-[hsl(var(--color-ink))]">{data.label}</div>
-      <div className="text-02 text-[hsl(var(--color-ink-muted))] mt-1">{data.nodeType}</div>
+      <Handle type="target" position={Position.Top} className="bg-[oklch(var(--color-accent))]!" />
+      <div className="text-03 font-semibold text-[oklch(var(--color-ink))]">{data.label}</div>
+      <div className="text-02 text-[oklch(var(--color-ink-muted))] mt-1">{data.nodeType}</div>
       {data.courtCode && (
-        <div className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1 flex items-center gap-1">
+        <div className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1 flex items-center gap-1">
           <Landmark aria-hidden="true" className="w-3 h-3" />
           {data.courtCode}
         </div>
       )}
       {data.approverRole && (
-        <div className="text-02 text-[hsl(var(--color-ink-subtle))] flex items-center gap-1">
+        <div className="text-02 text-[oklch(var(--color-ink-subtle))] flex items-center gap-1">
           <User aria-hidden="true" className="w-3 h-3" />
           {data.approverRole}
         </div>
@@ -76,7 +76,7 @@ function EditableNodeComponent({
         type="source"
         position={Position.Bottom}
         style={{ left: "30%" }}
-        className="bg-[hsl(var(--color-status-success))]!"
+        className="bg-[oklch(var(--color-status-success))]!"
         title="通过"
       />
       <Handle
@@ -84,7 +84,7 @@ function EditableNodeComponent({
         type="source"
         position={Position.Bottom}
         style={{ left: "70%" }}
-        className="bg-[hsl(var(--color-status-error))]!"
+        className="bg-[oklch(var(--color-status-error))]!"
         title="否决"
       />
     </div>

@@ -30,10 +30,10 @@ import {
 } from "@/src/lib/soulStateBadge";
 import { ROOT_TOKENS, readSoulStates } from "./support/globalsCssTokens";
 
-/** `{utility: [token, alpha]}` for every `x-[hsl(var(--t)/a)]` in a class string. */
+/** `{utility: [token, alpha]}` for every `x-[oklch(var(--t)/a)]` in a class string. */
 function utilities(classes: string): Record<string, [string, string]> {
   const out: Record<string, [string, string]> = {};
-  for (const m of classes.matchAll(/(\w[\w-]*)-\[hsl\(var\((--[\w-]+)\)(?:\/([\d.]+))?\)\]/g)) {
+  for (const m of classes.matchAll(/(\w[\w-]*)-\[oklch\(var\((--[\w-]+)\)(?:\/([\d.]+))?\)\]/g)) {
     out[m[1]] = [m[2], m[3] ?? "1"];
   }
   return out;

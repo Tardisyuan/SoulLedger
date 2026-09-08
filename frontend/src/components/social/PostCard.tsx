@@ -56,18 +56,18 @@ export function PostCard({ post }: { post: Post }) {
   // vocabulary, and is what `app/realms/page.tsx` already uses for a hoverable
   // card.
   return (
-    <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:border-[hsl(var(--color-hairline-strong))] transition-colors duration-state">
+    <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 hover:border-[oklch(var(--color-hairline-strong))] transition-colors duration-state">
       <div className="flex items-center gap-3 mb-3">
         <Link
           href={`/social/profile/${post.author}`}
-          className="text-04 font-medium text-[hsl(var(--color-ink))] hover:underline"
+          className="text-04 font-medium text-[oklch(var(--color-ink))] hover:underline"
         >
           {post.author_name || post.author_username}
         </Link>
         <Badge tone={VISIBILITY_TONES[post.visibility] ?? "neutral"} shape="pill">
           <DomainEnum namespace="social.visibility" value={post.visibility} />
         </Badge>
-        <span className="text-02 font-mono tabular-nums text-[hsl(var(--color-ink-muted))] ml-auto">
+        <span className="text-02 font-mono tabular-nums text-[oklch(var(--color-ink-muted))] ml-auto">
           {formatDate(post.create_time)}
         </span>
         {isAuthor && (
@@ -75,7 +75,7 @@ export function PostCard({ post }: { post: Post }) {
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
             aria-label={t("common.delete") || "Delete"}
-            className="text-02 text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-status-error))] transition-colors"
+            className="text-02 text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-status-error))] transition-colors"
           >
             {t("common.delete") || "Delete"}
           </button>
@@ -83,12 +83,12 @@ export function PostCard({ post }: { post: Post }) {
       </div>
 
       <Link href={`/social/${post.id}`} className="block">
-        <p className="text-04 text-[hsl(var(--color-ink))] whitespace-pre-wrap">
+        <p className="text-04 text-[oklch(var(--color-ink))] whitespace-pre-wrap">
           {post.content}
         </p>
       </Link>
 
-      <div className="flex items-center gap-4 mt-3 text-02 font-mono tabular-nums text-[hsl(var(--color-ink-muted))]">
+      <div className="flex items-center gap-4 mt-3 text-02 font-mono tabular-nums text-[oklch(var(--color-ink-muted))]">
         <span className="flex items-center gap-1">
           💬 {post.comment_count}
         </span>

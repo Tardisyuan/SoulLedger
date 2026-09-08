@@ -23,7 +23,7 @@ export default function PostDetailPage() {
       backLink={
         <Link
           href="/social"
-          className="text-03 text-[hsl(var(--color-accent-ink))] hover:underline"
+          className="text-03 text-[oklch(var(--color-accent-ink))] hover:underline"
         >
           ← {t("social.back")}
         </Link>
@@ -40,7 +40,7 @@ export default function PostDetailPage() {
            one — so a fetch failure would read as a post that does not
            exist. `--color-status-error` replaces the `text-red-400` that
            went dead in light mode. */
-        <p role="alert" className="text-04 text-[hsl(var(--color-status-error))]">
+        <p role="alert" className="text-04 text-[oklch(var(--color-status-error))]">
           {String(error)}
         </p>
       ) : !post ? (
@@ -50,7 +50,7 @@ export default function PostDetailPage() {
           <PostCard post={post} />
 
           <div className="mt-6">
-            <h2 className="text-06 text-[hsl(var(--color-ink))] mb-3">{t("social.comments")}</h2>
+            <h2 className="text-06 text-[oklch(var(--color-ink))] mb-3">{t("social.comments")}</h2>
             <CommentThread postId={id} />
           </div>
         </>

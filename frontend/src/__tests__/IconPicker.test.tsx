@@ -140,7 +140,7 @@ describe("IconPicker", () => {
    * `bg-amber-500` in the source, in both themes, forever.) Naming the token
    * means these fail if the tab stops following the accent.
    */
-  const ACTIVE_TAB = "bg-[hsl(var(--color-accent))]";
+  const ACTIVE_TAB = "bg-[oklch(var(--color-accent))]";
 
   it("should start with 'navigation' as the active category", () => {
     render(<IconPicker {...defaultProps} />);

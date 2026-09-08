@@ -47,7 +47,7 @@ export function ProfileEditModal({ isOpen, onClose, profile }: ProfileEditModalP
 
   /**
    * The save button's hand-copy of the primary recipe had lost the hover state
-   * outright: `bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent))]`
+   * outright: `bg-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent))]`
    * — the same value on both sides, so the button did not react to the pointer
    * at all. That is the failure mode of copying a recipe rather than calling
    * it: the copy is a plausible-looking string and nothing compares it to the

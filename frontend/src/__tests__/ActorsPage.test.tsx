@@ -38,7 +38,7 @@ import {
   TOKENS_BY_THEME,
   compositeOver,
   deltaE00Rgb,
-  hslTripleToRgb,
+  oklchTripleToRgb,
   readCivAttrRules,
   resolveRampForCiv,
   type Rgb,
@@ -367,7 +367,7 @@ describe("enum display", () => {
     // Same cap as src/__tests__/dataGridToneContract.test.ts, applied to the
     // badges this page rolls by hand instead of through the shared grid.
     const html = container.innerHTML;
-    const tints = [...html.matchAll(/bg-\[hsl\(var\(--color-[\w-]+\)\/([\d.]+)\)\]/g)];
+    const tints = [...html.matchAll(/bg-\[oklch\(var\(--color-[\w-]+\)\/([\d.]+)\)\]/g)];
     expect(tints.length).toBeGreaterThan(0);
     for (const [, alpha] of tints) {
       expect(Number(alpha)).toBeLessThanOrEqual(0.1);
@@ -409,7 +409,7 @@ describe("enum display", () => {
  * `.test.ts` would make jest run that file's cases a second time.
  *
  * WHY `--color-surface-1` IS THE BACKDROP. `PageSection` renders
- * `bg-[hsl(var(--color-surface-1))]` and the section sits directly inside it.
+ * `bg-[oklch(var(--color-surface-1))]` and the section sits directly inside it.
  * That backdrop is the HOST tenant's, not the section's: restamping `data-civ`
  * on a descendant does not move `--color-surface-*`, because a custom
  * property's `var()`s are substituted at the element that declares it and those
@@ -449,12 +449,12 @@ function sectionsByCivilization(container: HTMLElement): Map<string, HTMLElement
 function groundAlpha(section: HTMLElement): number {
   const hits = [
     ...(section.getAttribute("class") ?? "").matchAll(
-      /bg-\[hsl\(var\(--civ-mark\)\/([\d.]+)\)\]/g
+      /bg-\[oklch\(var\(--civ-mark\)\/([\d.]+)\)\]/g
     ),
   ];
   if (hits.length !== 1) {
     throw new Error(
-      `Expected exactly one \`bg-[hsl(var(--civ-mark)/α)]\` on the ` +
+      `Expected exactly one \`bg-[oklch(var(--civ-mark)/α)]\` on the ` +
         `${section.getAttribute("data-civilization")} section, found ${hits.length}: ` +
         `${section.getAttribute("class")}`
     );
@@ -478,8 +478,8 @@ function groundRgb(theme: ThemeName, hostPrefix: string, section: HTMLElement): 
   }
   const backdrop = resolveRampForCiv(theme, hostPrefix, "--color-surface-1");
   return compositeOver(
-    hslTripleToRgb(mark),
-    hslTripleToRgb(backdrop),
+    oklchTripleToRgb(mark),
+    oklchTripleToRgb(backdrop),
     groundAlpha(section)
   );
 }
@@ -521,11 +521,11 @@ describe("each civilization section gets its own ground", () => {
       const classes = section.getAttribute("class") ?? "";
       // The 3px civilization rule, same construction as app/corpus/page.tsx.
       expect(classes).toContain("border-t-3");
-      expect(classes).toContain("border-[hsl(var(--civ-mark))]");
+      expect(classes).toContain("border-[oklch(var(--civ-mark))]");
       // ABSENCE, not just presence: a `--color-surface-*` ground is the same
       // colour on all four sections and would look entirely deliberate sitting
       // next to the alias.
-      expect(classes).not.toMatch(/bg-\[hsl\(var\(--color-surface-\d\)/);
+      expect(classes).not.toMatch(/bg-\[oklch\(var\(--color-surface-\d\)/);
       expect(groundAlpha(section)).toBeGreaterThan(0);
     }
   });

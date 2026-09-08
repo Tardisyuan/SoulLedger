@@ -47,10 +47,10 @@ export function PageSection({
   actions,
 }: PageSectionProps) {
   return (
-    <div className={cn('bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4', className)}>
+    <div className={cn('bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4', className)}>
       {title && (
         <div className="flex items-center justify-between mb-4 px-1">
-          <h3 className="text-06 text-[hsl(var(--color-ink))]">{title}</h3>
+          <h3 className="text-06 text-[oklch(var(--color-ink))]">{title}</h3>
           {actions}
         </div>
       )}
@@ -60,7 +60,7 @@ export function PageSection({
         // the only text that says something went wrong. `role="alert"` because
         // a failure appearing in place of content is not something the reader
         // was looking for.
-        <div role="alert" className="text-[hsl(var(--color-status-error))] text-04 py-4 text-center">
+        <div role="alert" className="text-[oklch(var(--color-status-error))] text-04 py-4 text-center">
           {String(error)}
         </div>
       ) : (

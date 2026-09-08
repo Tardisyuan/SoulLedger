@@ -5,12 +5,12 @@
  * ── THE DEFECT THIS EXISTS FOR ────────────────────────────────────────────
  * `src/components/social/PostCard.tsx` and `ProfileCard.tsx` both opened with
  *
- *     bg-[hsl(var(--color-surface))]
+ *     bg-[oklch(var(--color-surface))]
  *
  * and globals.css has never declared `--color-surface`. It declares
  * `--color-surface-1` through `-4`; the unnumbered name is not an alias, it is
  * nothing. An undefined custom property makes `var()` resolve to the guaranteed
- * invalid value, `hsl()` fails to parse, and CSS drops THE WHOLE DECLARATION —
+ * invalid value, `oklch()` fails to parse, and CSS drops THE WHOLE DECLARATION —
  * so both cards rendered with no background at all, transparent onto
  * `--color-canvas`, for as long as the typo stood.
  *
@@ -19,7 +19,7 @@
  * class is a string), not an ESLint error, not a Tailwind warning (arbitrary
  * values are passed through verbatim), not a console warning at runtime, and
  * not a jsdom failure — jsdom does not resolve custom properties, so a
- * `toHaveClass("bg-[hsl(var(--color-surface))]")` test would have been GREEN on
+ * `toHaveClass("bg-[oklch(var(--color-surface))]")` test would have been GREEN on
  * the broken code, asserting the presence of the bug. The failure mode is
  * silent in every channel except a human looking at the pixels, which is
  * exactly the class this repository keeps writing contract tests for.
@@ -147,7 +147,15 @@ describe("the scan is looking at something", () => {
 
   it("reads the tokens the app is built out of", () => {
     const seen = [...new Set(REFERENCES.map((r) => r.token))];
-    for (const token of ["--color-ink", "--color-surface-1", "--color-hairline", "--civ-hue"]) {
+    // `--civ-hue` used to be the fourth name here and it is `--civ-mark` now:
+    // the `--civ-*` family had to be represented (the scan covers two families
+    // and one of them must not go unexercised), and after the OKLCH migration
+    // nothing references `--civ-hue` — the ramp it fed is per-tenant literals.
+    // It was still "found" for one commit, in the prose of comments describing
+    // its own removal, which is the scan working exactly as the note in
+    // globals.css warns: this file does not strip comments, so a token name
+    // written inside `var()` in a sentence is a reference like any other.
+    for (const token of ["--color-ink", "--color-surface-1", "--color-hairline", "--civ-mark"]) {
       expect(seen).toContain(token);
     }
   });
@@ -171,7 +179,7 @@ describe("the detector rejects what it is here to catch", () => {
   // meaning something after the repository is clean.
 
   it("reports an undeclared token with its line", () => {
-    const source = ['const a = "text-[hsl(var(--color-ink))]";', 'const b = "bg-[hsl(var(--color-surface))]";'].join(
+    const source = ['const a = "text-[oklch(var(--color-ink))]";', 'const b = "bg-[oklch(var(--color-surface))]";'].join(
       "\n"
     );
     const undeclared = referencesIn(source, "fake.tsx").filter((r) => !DECLARED.has(r.token));
@@ -183,7 +191,7 @@ describe("the detector rejects what it is here to catch", () => {
   });
 
   it("catches several references on one line", () => {
-    const line = 'className="bg-[hsl(var(--color-surface-9))] text-[hsl(var(--color-ink-nope))]"';
+    const line = 'className="bg-[oklch(var(--color-surface-9))] text-[oklch(var(--color-ink-nope))]"';
     expect(referencesIn(line, "fake.tsx").map((r) => r.token)).toEqual([
       "--color-surface-9",
       "--color-ink-nope",
@@ -202,7 +210,7 @@ describe("every referenced custom property is declared in globals.css", () => {
     // that the reader is told what to do about the name it just found.
     if (dangling.length > 0) {
       throw new Error(
-        `Undeclared custom properties. \`hsl(var(--undeclared))\` does not fall ` +
+        `Undeclared custom properties. \`oklch(var(--undeclared))\` does not fall ` +
           `back — the browser drops the whole declaration, so the element renders ` +
           `with no background/colour at all and nothing warns. Either declare the ` +
           `token in ${GLOBALS_CSS} or point the reference at an existing one.\n\n` +
@@ -230,7 +238,7 @@ describe("every referenced custom property is declared in globals.css", () => {
  * scans every source file it is pointed at, `__tests__` included, and it does
  * not know prose from markup — the first draft of this comment quoted the
  * offending class verbatim and the production stylesheet duly grew a real
- * `color:hsl(var(--civ-mark))` rule that no element in the app carries. A
+ * `color:oklch(var(--civ-mark))` rule that no element in the app carries. A
  * comment that emits CSS is a claim about the build that is true only because
  * the comment is there.
  *
@@ -245,7 +253,7 @@ describe("every referenced custom property is declared in globals.css", () => {
  */
 describe("the civilization mark is never used as text", () => {
   /** The mark bound to a text utility class, or to `color:` in a style object. */
-  const MARK_AS_TEXT = /text-\[[^\]]*var\(--(?:color-)?civ-mark|(?:^|[^-\w])color:\s*["'`]?hsl\(\s*var\(--(?:color-)?civ-mark/;
+  const MARK_AS_TEXT = /text-\[[^\]]*var\(--(?:color-)?civ-mark|(?:^|[^-\w])color:\s*["'`]?oklch\(\s*var\(--(?:color-)?civ-mark/;
 
   const sources = SOURCE_ROOTS.flatMap((root) => walk(path.join(FRONTEND_ROOT, root), []));
 
@@ -287,7 +295,7 @@ describe("the civilization mark is never used as text", () => {
  *
  * `text-ink`, `bg-surface-1`, `border-hairline` and 25 more spellings used to
  * work: Tailwind 3's config defined each utility's value as
- * `'hsl(var(--color-ink))'` in its own namespace, so the `hsl()` lived in the
+ * `'oklch(var(--color-ink))'` in its own namespace, so the `hsl()` lived in the
  * class and the variable held the raw triple. The v4 migration moved that into
  * `@theme`, which puts the wrapper into a variable of the SAME name — and
  * `:root` in `@layer base` re-declares that name as the triple, outranking the
@@ -352,9 +360,9 @@ describe("colour tokens are referenced one way only", () => {
     expect(BARE.test('"active:border-accent"')).toBe(true);
 
     // The bracketed form is the whole point — it must never trip.
-    expect(BARE.test('className="text-[hsl(var(--color-ink))]"')).toBe(false);
-    expect(BARE.test('className="bg-[hsl(var(--color-surface-1)/0.2)]"')).toBe(false);
-    expect(BARE.test('className="hover:text-[hsl(var(--color-accent-hover))]"')).toBe(false);
+    expect(BARE.test('className="text-[oklch(var(--color-ink))]"')).toBe(false);
+    expect(BARE.test('className="bg-[oklch(var(--color-surface-1)/0.2)]"')).toBe(false);
+    expect(BARE.test('className="hover:text-[oklch(var(--color-accent-hover))]"')).toBe(false);
     // Nor may it fire on words that merely end in a token name.
     expect(BARE.test('className="text-blackish"')).toBe(false);
     expect(BARE.test("const inkStyle = 1;")).toBe(false);
@@ -387,7 +395,7 @@ describe("colour tokens are referenced one way only", () => {
           `to \`var(--color-x)\`, which holds a raw HSL triple, which is not a ` +
           `colour — so the browser drops the declaration and the element renders ` +
           `with the inherited value. Nothing else in the build will tell you. ` +
-          `Write \`text-[hsl(var(--color-ink))]\` instead.\n\n` +
+          `Write \`text-[oklch(var(--color-ink))]\` instead.\n\n` +
           offenders.join("\n")
       );
     }
@@ -428,16 +436,16 @@ describe("skeletons are visible against what they sit on", () => {
    * strings that defeated an earlier scan in this repo.
    */
   const PULSING_SURFACE =
-    /(?:animate-pulse[^"'`\n]*bg-\[hsl\(var\(--color-surface-|bg-\[hsl\(var\(--color-surface-[^"'`\n]*animate-pulse)/;
+    /(?:animate-pulse[^"'`\n]*bg-\[oklch\(var\(--color-surface-|bg-\[oklch\(var\(--color-surface-[^"'`\n]*animate-pulse)/;
 
   it("catches the pattern it exists to catch, and spares the ones it must", () => {
-    expect(PULSING_SURFACE.test('className="h-8 animate-pulse bg-[hsl(var(--color-surface-1))]"')).toBe(true);
-    expect(PULSING_SURFACE.test('className="bg-[hsl(var(--color-surface-2))] animate-pulse"')).toBe(true);
+    expect(PULSING_SURFACE.test('className="h-8 animate-pulse bg-[oklch(var(--color-surface-1))]"')).toBe(true);
+    expect(PULSING_SURFACE.test('className="bg-[oklch(var(--color-surface-2))] animate-pulse"')).toBe(true);
     // The shape the first version missed: a bare string in a `cn([...])` array.
-    expect(PULSING_SURFACE.test("  'animate-pulse bg-[hsl(var(--color-surface-2))]',")).toBe(true);
+    expect(PULSING_SURFACE.test("  'animate-pulse bg-[oklch(var(--color-surface-2))]',")).toBe(true);
     // The fix, and unrelated surface use, must both pass.
-    expect(PULSING_SURFACE.test('className="h-8 animate-pulse bg-[hsl(var(--color-hairline))]"')).toBe(false);
-    expect(PULSING_SURFACE.test('className="bg-[hsl(var(--color-surface-1))] border"')).toBe(false);
+    expect(PULSING_SURFACE.test('className="h-8 animate-pulse bg-[oklch(var(--color-hairline))]"')).toBe(false);
+    expect(PULSING_SURFACE.test('className="bg-[oklch(var(--color-surface-1))] border"')).toBe(false);
   });
 
   it("has files to scan", () => {

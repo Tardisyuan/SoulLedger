@@ -52,7 +52,7 @@ export default function UserProfilePage() {
   const pagination = postsData
     ? {
         count: (
-          <p className="text-03 text-[hsl(var(--color-ink-muted))]">
+          <p className="text-03 text-[oklch(var(--color-ink-muted))]">
             {t("pagination.info", {
               page: String(page),
               total: String(totalPages),
@@ -81,7 +81,7 @@ export default function UserProfilePage() {
       backLink={
         <Link
           href="/social"
-          className="text-03 text-[hsl(var(--color-accent-ink))] hover:underline"
+          className="text-03 text-[oklch(var(--color-accent-ink))] hover:underline"
         >
           ← {t("social.back")}
         </Link>
@@ -95,14 +95,14 @@ export default function UserProfilePage() {
           /* An error is not an empty state — see app/social/[id]/page.tsx.
              `--color-status-error` replaces `text-red-400`, which was a raw
              palette value and went pale in light mode. */
-          <p role="alert" className="text-04 text-[hsl(var(--color-status-error))]">
+          <p role="alert" className="text-04 text-[oklch(var(--color-status-error))]">
             {String(profileError)}
           </p>
         ) : profile ? (
           <ProfileCard profile={profile} />
         ) : null}
 
-        <h2 className="text-06 text-[hsl(var(--color-ink))]">{t("social.user_posts")}</h2>
+        <h2 className="text-06 text-[oklch(var(--color-ink))]">{t("social.user_posts")}</h2>
 
         {postsLoading ? (
           <div className="space-y-3">

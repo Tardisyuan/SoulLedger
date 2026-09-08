@@ -48,8 +48,8 @@ export function ReactionBar({ postId, commentId }: ReactionBarProps) {
             disabled={toggleReaction.isPending}
             className={`text-04 px-2 py-1 transition-colors ${
               isActive
-                ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
-                : "hover:bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]"
+                ? "bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))]"
+                : "hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))]"
             }`}
             title={type}
           >

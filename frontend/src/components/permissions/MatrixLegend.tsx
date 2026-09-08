@@ -23,11 +23,11 @@ export function MatrixLegend({
   if (!nonSubsetPair && !countParadox) return null;
 
   return (
-    <div className="bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] p-4 mb-4 text-03 space-y-2">
-      <h3 className="font-semibold text-[hsl(var(--color-ink))]">{t("permissions.matrix.legend_title")}</h3>
-      <p className="text-[hsl(var(--color-ink-muted))]">{t("permissions.matrix.legend_intro")}</p>
+    <div className="bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] p-4 mb-4 text-03 space-y-2">
+      <h3 className="font-semibold text-[oklch(var(--color-ink))]">{t("permissions.matrix.legend_title")}</h3>
+      <p className="text-[oklch(var(--color-ink-muted))]">{t("permissions.matrix.legend_intro")}</p>
       {nonSubsetPair && (
-        <p className="text-[hsl(var(--color-ink-muted))]">
+        <p className="text-[oklch(var(--color-ink-muted))]">
           {t("permissions.matrix.legend_nonsubset", {
             roleA: roleMeta[nonSubsetPair.a]?.display_name || nonSubsetPair.a,
             roleB: roleMeta[nonSubsetPair.b]?.display_name || nonSubsetPair.b,
@@ -37,7 +37,7 @@ export function MatrixLegend({
         </p>
       )}
       {countParadox && (
-        <p className="text-[hsl(var(--color-ink-muted))]">
+        <p className="text-[oklch(var(--color-ink-muted))]">
           {t("permissions.matrix.legend_countparadox", {
             higher: roleMeta[countParadox.higher]?.display_name || countParadox.higher,
             higherCount: String(countParadox.higherCount),

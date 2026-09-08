@@ -135,7 +135,7 @@ export default function WelcomePage() {
   // 四个图标的颜色现在**就是它们各自计数的那个状态的 token**,而不是四个
   // 挑出来还算好看的裸调色板值。迁移前它们是 accent / amber-400 /
   // emerald-400 / blue-400 —— 后三个在浅色下过淡(整条 400 档是给深底用的),
-  // 而 `text-[hsl(var(--color-accent))]` 作为**文字**在浅色下是 2.14:1,
+  // 而 `text-[oklch(var(--color-accent))]` 作为**文字**在浅色下是 2.14:1,
   // globals.css 的 --color-accent-ink 就是为这件事存在的。
   //
   // DISPOSED 那处 `text-blue-400` 值得单说:globals.css:235 写着
@@ -147,25 +147,25 @@ export default function WelcomePage() {
       label: t("dashboard.total_souls"),
       value: stats?.total_souls ?? "-",
       icon: <Users className="w-5 h-5" />,
-      color: "text-[hsl(var(--color-accent-ink))]",
+      color: "text-[oklch(var(--color-accent-ink))]",
     },
     {
       label: t("dashboard.under_judgment"),
       value: stats?.state_distribution?.find(s => s.state === "JUDGING")?.count ?? "-",
       icon: <Scale className="w-5 h-5" />,
-      color: "text-[hsl(var(--color-status-judging))]",
+      color: "text-[oklch(var(--color-status-judging))]",
     },
     {
       label: t("dashboard.alive"),
       value: stats?.state_distribution?.find(s => s.state === "ALIVE")?.count ?? "-",
       icon: <Activity className="w-5 h-5" />,
-      color: "text-[hsl(var(--color-status-alive))]",
+      color: "text-[oklch(var(--color-status-alive))]",
     },
     {
       label: t("dashboard.disposed"),
       value: stats?.state_distribution?.find(s => s.state === "DISPOSED")?.count ?? "-",
       icon: <ScrollText className="w-5 h-5" />,
-      color: "text-[hsl(var(--color-status-disposed))]",
+      color: "text-[oklch(var(--color-status-disposed))]",
     },
   ];
 
@@ -206,12 +206,12 @@ export default function WelcomePage() {
           {quickStats.map((stat, i) => (
             <div
               key={i}
-              className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]"
+              className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]"
             >
               <div className="flex items-center justify-between mb-3">
                 <span className={stat.color}>{stat.icon}</span>
                 {stat.trend && (
-                  <span className="text-02 text-[hsl(var(--color-status-success))] flex items-center gap-1">
+                  <span className="text-02 text-[oklch(var(--color-status-success))] flex items-center gap-1">
                     <TrendingUp className="w-3 h-3" /> {stat.trend}
                   </span>
                 )}
@@ -222,10 +222,10 @@ export default function WelcomePage() {
                   一行近况,和标题平级。`tabular-nums` 让四张卡的数字对齐 ——
                   这里不做千位分隔,`stat.value` 是 `number | string` 联合,
                   非数字那一支是字面量 "-"。 */}
-              <div data-kpi="" className="text-07 tabular-nums text-[hsl(var(--color-ink))]">
+              <div data-kpi="" className="text-07 tabular-nums text-[oklch(var(--color-ink))]">
                 {loading ? "..." : stat.value}
               </div>
-              <div className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] mt-1">{stat.label}</div>
+              <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] mt-1">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -241,9 +241,9 @@ export default function WelcomePage() {
             it rendered a status. Deleted rather than stubbed: there is no
             source of truth to wire it to.
             The grid collapsed with it — one panel does not need three columns. */}
-        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
-            <h2 className="text-06 text-[hsl(var(--color-ink))] mb-4 flex items-center gap-2">
-              <Zap className="w-5 h-5 text-[hsl(var(--color-accent-ink))]" />
+        <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
+            <h2 className="text-06 text-[oklch(var(--color-ink))] mb-4 flex items-center gap-2">
+              <Zap className="w-5 h-5 text-[oklch(var(--color-accent-ink))]" />
               {t("welcome.quick_actions")}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -251,7 +251,7 @@ export default function WelcomePage() {
                 <Link
                   key={i}
                   href={action.href}
-                  className="flex flex-col items-center justify-center gap-2 p-4 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] hover:bg-[hsl(var(--color-surface-3))] transition-colors group"
+                  className="flex flex-col items-center justify-center gap-2 p-4 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-3))] transition-colors group"
                 >
                   {action.icon}
                   <span className="text-03 font-medium">{action.label}</span>
@@ -262,38 +262,38 @@ export default function WelcomePage() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
-          <h2 className="text-06 text-[hsl(var(--color-ink))] mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-[hsl(var(--color-accent-ink))]" />
+        <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
+          <h2 className="text-06 text-[oklch(var(--color-ink))] mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-[oklch(var(--color-accent-ink))]" />
             {t("welcome.recent_activity")}
           </h2>
           <div className="space-y-3">
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="flex items-start gap-4 p-3 bg-[hsl(var(--color-surface-2))] hover:bg-[hsl(var(--color-surface-3))] transition-colors"
+                className="flex items-start gap-4 p-3 bg-[oklch(var(--color-surface-2))] hover:bg-[oklch(var(--color-surface-3))] transition-colors"
               >
-                <div className="w-10 h-10 bg-[hsl(var(--color-accent)/0.1)] flex items-center justify-center shrink-0">
-                  <Activity className="w-5 h-5 text-[hsl(var(--color-accent-ink))]" />
+                <div className="w-10 h-10 bg-[oklch(var(--color-accent)/0.1)] flex items-center justify-center shrink-0">
+                  <Activity className="w-5 h-5 text-[oklch(var(--color-accent-ink))]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-02 px-2 py-1 bg-[hsl(var(--color-surface-1))] text-[hsl(var(--color-ink-muted))]">
+                    <span className="text-02 px-2 py-1 bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink-muted))]">
                       <DomainEnum namespace="audit.actions" value={activity.action} />
                     </span>
-                    <span className="text-02 text-[hsl(var(--color-ink-subtle))]">
+                    <span className="text-02 text-[oklch(var(--color-ink-subtle))]">
                       {formatTimestamp(activity.timestamp)}
                     </span>
                   </div>
-                  <div className="text-03 text-[hsl(var(--color-ink))]">{activity.description}</div>
-                  <div className="text-02 text-[hsl(var(--color-ink-muted))] mt-1">by {activity.user}</div>
+                  <div className="text-03 text-[oklch(var(--color-ink))]">{activity.description}</div>
+                  <div className="text-02 text-[oklch(var(--color-ink-muted))] mt-1">by {activity.user}</div>
                 </div>
               </div>
             ))}
           </div>
           <Link
             href="/audit"
-            className="mt-4 text-03 text-[hsl(var(--color-accent-ink))] hover:underline flex items-center gap-1"
+            className="mt-4 text-03 text-[oklch(var(--color-accent-ink))] hover:underline flex items-center gap-1"
           >
             {t("welcome.view_all_activity")}
             <ArrowRight className="w-4 h-4" />
@@ -305,31 +305,31 @@ export default function WelcomePage() {
           {/* 三块图标砖原来是 blue-500/20 + blue-400、emerald、purple。文明、
               角色、版本号三样里没有一样是状态,所以三种色相编码的是「这是第
               一块、第二块、第三块」—— 那已经由位置说了。 */}
-          <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 flex items-center gap-4">
-            <div className="w-12 h-12 bg-[hsl(var(--color-surface-2))] flex items-center justify-center">
-              <Globe className="w-6 h-6 text-[hsl(var(--color-ink-subtle))]" />
+          <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-[oklch(var(--color-surface-2))] flex items-center justify-center">
+              <Globe className="w-6 h-6 text-[oklch(var(--color-ink-subtle))]" />
             </div>
             <div>
-              <div className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("welcome.current_civilization")}</div>
-              <div className="text-05 font-semibold text-[hsl(var(--color-ink))] mt-1">{user?.tenant?.display_name || "SoulLedger"}</div>
+              <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.current_civilization")}</div>
+              <div className="text-05 font-semibold text-[oklch(var(--color-ink))] mt-1">{user?.tenant?.display_name || "SoulLedger"}</div>
             </div>
           </div>
-          <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 flex items-center gap-4">
-            <div className="w-12 h-12 bg-[hsl(var(--color-surface-2))] flex items-center justify-center">
-              <Shield className="w-6 h-6 text-[hsl(var(--color-ink-subtle))]" />
+          <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-[oklch(var(--color-surface-2))] flex items-center justify-center">
+              <Shield className="w-6 h-6 text-[oklch(var(--color-ink-subtle))]" />
             </div>
             <div>
-              <div className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("welcome.user_role")}</div>
-              <div className="text-05 font-semibold text-[hsl(var(--color-ink))] mt-1">{user?.role || "ADMIN"}</div>
+              <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.user_role")}</div>
+              <div className="text-05 font-semibold text-[oklch(var(--color-ink))] mt-1">{user?.role || "ADMIN"}</div>
             </div>
           </div>
-          <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 flex items-center gap-4">
-            <div className="w-12 h-12 bg-[hsl(var(--color-surface-2))] flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-[hsl(var(--color-ink-subtle))]" />
+          <div className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-[oklch(var(--color-surface-2))] flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-[oklch(var(--color-ink-subtle))]" />
             </div>
             <div>
-              <div className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("welcome.system_version")}</div>
-              <div className="text-05 font-semibold text-[hsl(var(--color-ink))] mt-1">v0.1</div>
+              <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{t("welcome.system_version")}</div>
+              <div className="text-05 font-semibold text-[oklch(var(--color-ink))] mt-1">v0.1</div>
             </div>
           </div>
         </div>

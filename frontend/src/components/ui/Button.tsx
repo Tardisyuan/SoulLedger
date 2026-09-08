@@ -26,7 +26,9 @@ import { Spinner } from "./Spinner";
  *
  * ── PRIMARY FOREGROUND: black, and here is the arithmetic ──────────────────
  *
- * `--color-accent` is `hsl(38 92% 50%)`, identical in both themes.
+ * `--color-accent` is `oklch(0.770351 0.164635 70.6613)` — the same colour the
+ * arithmetic below works through as `hsl(38 92% 50%)`, which is how the token
+ * was spelled when this was written and how the derivation still reads.
  *
  *   HSL → sRGB.  L=0.50, S=0.92 → C = (1−|2·0.5−1|)·0.92 = 0.92
  *                H′ = 38/60 = 0.6333 → X = C·(1−|H′ mod 2 − 1|) = 0.92·0.6333
@@ -57,13 +59,14 @@ import { Spinner } from "./Spinner";
  * value in both themes, its readable foreground is also the same value in both
  * themes, and writing it as a theme-varying token would be actively wrong.
  *
- * Hover moves the fill to `--color-accent-hover` = `hsl(43 96% 58%)`, which is
+ * Hover moves the fill to `--color-accent-hover` (`hsl(43 96% 58%)` in the same
+ * old spelling; `oklch(0.839147 0.161515 84.3763)` in the file), which is
  * lighter still (L = 0.586466 → 12.73:1 against black), so the press stays
  * legible throughout the interaction.
  *
  * ── DANGER: tinted, not filled ─────────────────────────────────────────────
  *
- * The 15 danger buttons mostly do `bg-[hsl(var(--color-status-error))]` with
+ * The 15 danger buttons mostly do `bg-[oklch(var(--color-status-error))]` with
  * `text-white`. That is theme-dependent in the bad direction:
  *
  *   dark   `--color-status-error: 0 84% 62%` → L = 0.242337 → white 3.59 : 1  ✗
@@ -85,7 +88,7 @@ import { Spinner } from "./Spinner";
  *
  * There is no `focus:ring-3` in this file and there must not be one.
  * `app/globals.css:459` declares a single `:focus-visible { outline: 2px solid
- * hsl(var(--color-focus)) !important }`, and the `!important` is load-bearing —
+ * oklch(var(--color-focus)) !important }`, and the `!important` is load-bearing —
  * it is what beats the 69 `outline-hidden` utilities scattered across the app.
  * `src/__tests__/statusTokenLayering.test.ts` pins that rule's existence, its
  * `!important`, and its token. The only thing a component has to do to
@@ -94,7 +97,7 @@ import { Spinner } from "./Spinner";
  * Note also what the ring must NOT be: `--color-focus` is not `--color-accent`,
  * because the accent is user-configurable and a focus ring the user can tune to
  * invisibility is not a focus ring. `app/permissions/page.tsx:178` is the one
- * place in the repo that writes `focus-visible:ring-[hsl(var(--color-accent))]`
+ * place in the repo that writes `focus-visible:ring-[oklch(var(--color-accent))]`
  * — the exact thing the token's own comment forbids. It is not a model.
  *
  * ── PADDING: eighteen pairs down to three ──────────────────────────────────
@@ -133,7 +136,7 @@ const button = cva(
     // exclusive and only one of them is honest. With pointer events off the
     // cursor never changes, so `disabled:cursor-not-allowed` would render
     // nothing at all — a class that produces no style is the same species of
-    // defect as the malformed `placeholder:[hsl(...)]` in
+    // defect as the malformed `placeholder:[oklch(...)]` in
     // src/components/workflow/WorkflowEditor.tsx:488. What we get instead is
     // the guarantee that matters: hover and active are genuinely dead on a
     // disabled control, rather than dead-by-cascade-order and quietly alive if
@@ -150,18 +153,18 @@ const button = cva(
          * direction, without inventing a token that does not exist.
          */
         primary: [
-          "bg-[hsl(var(--color-accent))] text-black border-[hsl(var(--color-accent))]",
-          "hover:bg-[hsl(var(--color-accent-hover))] hover:border-[hsl(var(--color-accent-hover))]",
-          "active:bg-[hsl(var(--color-accent))] active:border-[hsl(var(--color-accent))]",
+          "bg-[oklch(var(--color-accent))] text-black border-[oklch(var(--color-accent))]",
+          "hover:bg-[oklch(var(--color-accent-hover))] hover:border-[oklch(var(--color-accent-hover))]",
+          "active:bg-[oklch(var(--color-accent))] active:border-[oklch(var(--color-accent))]",
         ],
         /**
          * The default button. Surface ramp 2 → 3 → 4 across rest → hover →
          * press; ink text on a hairline border.
          */
         secondary: [
-          "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] border-[hsl(var(--color-hairline))]",
-          "hover:bg-[hsl(var(--color-surface-3))] hover:border-[hsl(var(--color-hairline-strong))]",
-          "active:bg-[hsl(var(--color-surface-4))]",
+          "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] border-[oklch(var(--color-hairline))]",
+          "hover:bg-[oklch(var(--color-surface-3))] hover:border-[oklch(var(--color-hairline-strong))]",
+          "active:bg-[oklch(var(--color-surface-4))]",
         ],
         /**
          * No chrome at rest — toolbars, table row actions, anywhere a border
@@ -170,17 +173,17 @@ const button = cva(
          * rather than absent so it does not resize when it lights up.
          */
         ghost: [
-          "bg-transparent text-[hsl(var(--color-ink-muted))] border-transparent",
-          "hover:bg-[hsl(var(--color-surface-2))] hover:text-[hsl(var(--color-ink))]",
-          "active:bg-[hsl(var(--color-surface-3))]",
+          "bg-transparent text-[oklch(var(--color-ink-muted))] border-transparent",
+          "hover:bg-[oklch(var(--color-surface-2))] hover:text-[oklch(var(--color-ink))]",
+          "active:bg-[oklch(var(--color-surface-3))]",
         ],
         /**
          * Destructive. Tinted, not filled — see the contrast note above.
          */
         danger: [
-          "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.3)]",
-          "hover:bg-[hsl(var(--color-status-error)/0.2)] hover:border-[hsl(var(--color-status-error)/0.5)]",
-          "active:bg-[hsl(var(--color-status-error)/0.3)]",
+          "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error)/0.3)]",
+          "hover:bg-[oklch(var(--color-status-error)/0.2)] hover:border-[oklch(var(--color-status-error)/0.5)]",
+          "active:bg-[oklch(var(--color-status-error)/0.3)]",
         ],
         /**
          * Caution without destruction — a state transition that is hard to
@@ -199,9 +202,9 @@ const button = cva(
          * state transition. Only `danger` and `warning` were ever used.
          */
         warning: [
-          "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.3)]",
-          "hover:bg-[hsl(var(--color-status-warning)/0.2)] hover:border-[hsl(var(--color-status-warning)/0.5)]",
-          "active:bg-[hsl(var(--color-status-warning)/0.3)]",
+          "bg-[oklch(var(--color-status-warning)/0.1)] text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning)/0.3)]",
+          "hover:bg-[oklch(var(--color-status-warning)/0.2)] hover:border-[oklch(var(--color-status-warning)/0.5)]",
+          "active:bg-[oklch(var(--color-status-warning)/0.3)]",
         ],
       },
       size: {

@@ -80,7 +80,7 @@ export default function UsersPage() {
         </>
       }
       backLink={
-        <Link href="/" className="text-03 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]">
+        <Link href="/" className="text-03 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
           ← {t("nav.home")}
         </Link>
       }
@@ -159,10 +159,10 @@ export default function UsersPage() {
         keyExtractor={(user) => String(user.id)}
         renderRow={(user) => (
           <>
-            <td className="px-4 py-3 text-[hsl(var(--color-ink))] font-medium">
+            <td className="px-4 py-3 text-[oklch(var(--color-ink))] font-medium">
               {user.username}
             </td>
-            <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
+            <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
               {user.email}
             </td>
             <td className="px-4 py-3">
@@ -179,22 +179,22 @@ export default function UsersPage() {
               <Badge
                 className={
                   user.role === "ADMIN"
-                    ? "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))]"
+                    ? "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))]"
                     : user.role === "JUDGE"
-                    ? "bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))]"
+                    ? "bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))]"
                     : user.role === "GUARDIAN"
-                    ? "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))]"
-                    : "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]"
+                    ? "bg-[oklch(var(--color-status-info)/0.1)] text-[oklch(var(--color-status-info))]"
+                    : "bg-[oklch(var(--color-status-lost)/0.1)] text-[oklch(var(--color-status-lost))]"
                 }
               >
                 <DomainEnum namespace="users.roles" value={user.role} />
               </Badge>
             </td>
-            <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
+            <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
               {user.tenant?.display_name || user.tenant?.code || "-"}
             </td>
             <td className="px-4 py-3">
-              <span className={user.is_active ? "text-[hsl(var(--color-status-success))]" : "text-[hsl(var(--color-status-error))]"}>
+              <span className={user.is_active ? "text-[oklch(var(--color-status-success))]" : "text-[oklch(var(--color-status-error))]"}>
                 {user.is_active ? t("users.active") : t("users.inactive")}
               </span>
             </td>

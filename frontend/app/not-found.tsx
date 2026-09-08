@@ -6,14 +6,14 @@ export default function NotFound() {
   const { t } = useI18n();
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[hsl(var(--color-canvas))] flex items-center justify-center">
+    <div className="min-h-[calc(100vh-4rem)] bg-[oklch(var(--color-canvas))] flex items-center justify-center">
       <div className="text-center">
-        <div className="text-8xl font-bold text-[hsl(var(--color-accent-ink))] mb-4">404</div>
-        <h1 className="text-2xl font-bold text-[hsl(var(--color-ink))] mb-2">{t("not_found.title")}</h1>
-        <p className="text-[hsl(var(--color-ink-muted))] mb-6">{t("not_found.description")}</p>
+        <div className="text-8xl font-bold text-[oklch(var(--color-accent-ink))] mb-4">404</div>
+        <h1 className="text-2xl font-bold text-[oklch(var(--color-ink))] mb-2">{t("not_found.title")}</h1>
+        <p className="text-[oklch(var(--color-ink-muted))] mb-6">{t("not_found.description")}</p>
         <a
           href="/"
-          className="px-4 py-2 bg-[hsl(var(--color-accent))] text-black font-medium hover:opacity-90 hover:text-black! transition-opacity"
+          className="px-4 py-2 bg-[oklch(var(--color-accent))] text-black font-medium hover:opacity-90 hover:text-black! transition-opacity"
         >
           {t("not_found.home")}
         </a>

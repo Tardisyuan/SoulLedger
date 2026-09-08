@@ -148,8 +148,8 @@ describe("Badge and EnumBadge cannot drift apart", () => {
     // (32 92% 34% vs 38 92% 50%), because accent-on-surface text fails AA on a
     // light canvas. A badge is text. Asserting the absence matters here: both
     // present would still look right in dark mode, which is where it gets read.
-    expect(BADGE_TONE_CLASSES.accent).toContain("text-[hsl(var(--color-accent-ink))]");
-    expect(BADGE_TONE_CLASSES.accent).not.toContain("text-[hsl(var(--color-accent))]");
+    expect(BADGE_TONE_CLASSES.accent).toContain("text-[oklch(var(--color-accent-ink))]");
+    expect(BADGE_TONE_CLASSES.accent).not.toContain("text-[oklch(var(--color-accent))]");
   });
 });
 

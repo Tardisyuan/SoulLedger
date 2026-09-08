@@ -130,7 +130,7 @@ export default function MenuButtonsPage() {
       subtitle={
         <>
           {t("menu_buttons.gates_note")}{" "}
-          <Link href="/menus" className="text-[hsl(var(--color-accent-ink))] hover:underline">
+          <Link href="/menus" className="text-[oklch(var(--color-accent-ink))] hover:underline">
             {t("menus.title")}
           </Link>
         </>
@@ -182,11 +182,11 @@ export default function MenuButtonsPage() {
         keyExtractor={(btn) => String(btn.id)}
         renderRow={(btn) => (
           <>
-            <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">{btn.name}</td>
+            <td className="px-4 py-3 font-medium text-[oklch(var(--color-ink))]">{btn.name}</td>
             {/* Codenames are identifiers, which is what the 02 step is for. */}
-            <td className="px-4 py-3 text-02 font-mono text-[hsl(var(--color-ink-muted))]">{btn.code}</td>
-            <td className="px-4 py-3 text-02 font-mono text-[hsl(var(--color-ink-muted))]">{btn.permission}</td>
-            <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">{btn.order}</td>
+            <td className="px-4 py-3 text-02 font-mono text-[oklch(var(--color-ink-muted))]">{btn.code}</td>
+            <td className="px-4 py-3 text-02 font-mono text-[oklch(var(--color-ink-muted))]">{btn.permission}</td>
+            <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">{btn.order}</td>
             <td className="px-4 py-3">
               {/* is_active IS a system state — the gate is either in force or
                   it is not — so this one legitimately takes a Badge tone
@@ -258,7 +258,7 @@ export default function MenuButtonsPage() {
             {/* Not `error`: an unknown codename is a warning, not a rejection —
                 the form still submits, and a red field would say otherwise. */}
             {permissionsLoaded && form.permission.trim() && !realCodenames.has(form.permission.trim()) && (
-              <p className="text-02 text-[hsl(var(--color-status-warning))]">
+              <p className="text-02 text-[oklch(var(--color-status-warning))]">
                 {t("menu_buttons.permission_mismatch_warning", { codename: form.permission.trim() })}
               </p>
             )}
@@ -290,7 +290,7 @@ export default function MenuButtonsPage() {
               checked={form.is_active}
               onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
             />
-            <label htmlFor={isActiveId} className="text-03 text-[hsl(var(--color-ink))]">{t("menus.active")}</label>
+            <label htmlFor={isActiveId} className="text-03 text-[oklch(var(--color-ink))]">{t("menus.active")}</label>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button
