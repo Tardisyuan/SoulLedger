@@ -479,11 +479,13 @@
      channel counts further down are kept as history; see the Stage 12 note).
      Ranges are across the four tenants:
 
-       canvas tenant separation   0.00 -> 6.42..15.98   (was six pairs at 0.00,
+       canvas tenant separation   0.00 -> 5.62..15.98   (was six pairs at 0.00,
                                   and it is now the WIDEST-separating plane in
                                   light mode, which is the right place for it:
-                                  it is 63% of the pixels)
-       canvas -> surface-1 step   3.47..5.75 -> 2.58..3.53   (-26%, still above
+                                  it is 63% of the pixels. The low end read
+                                  6.42 until Chinese was rotated to 20 deg in
+                                  light — see --color-civ-hue-cn in `.light`)
+       canvas -> surface-1 step   3.47..5.75 -> 2.40..3.53   (-26%, still above
                                   the 2.0 rung at which a flat-field difference
                                   reads at a glance, and cards also carry a
                                   --color-hairline border at 220 10% 90% =
@@ -558,14 +560,20 @@
      6.42..15.98) AND 0.4-0.8 of the card step (2.20..2.69 instead of
      2.58..3.53), because a purer ground is further from surface-1 in hue as
      well as in lightness. Two measured losses against one tidy sentence; the
-     sentence lost.
+     sentence lost. (All four figures in that comparison were measured on the
+     12-degree Chinese ramp, i.e. before the light-only rotation to 20; they
+     are kept as the pair they were measured as, not restated on a palette the
+     alternative was never measured against.)
 
      Measured separation, widest channel, between any two tenants: canvas 18,
      then 10 / 15 / 16 / 15 out of 255. The same five in CIEDE2000: canvas
      15.98, then 10.01 / 14.02 / 14.95 / 14.07 for the widest pair, and canvas
-     6.42, then 4.11 / 5.53 / 5.85 / 5.55 for the NARROWEST — so even the
-     closest two tenants clear "perceptible at a glance" on every light plane,
-     the page ground now included.
+     5.62, then 3.30 / 4.88 / 5.68 / 4.90 for the NARROWEST — so every light
+     plane still separates its closest two tenants past "perceptible at a
+     glance", the page ground included. The narrow column is the Chinese /
+     Egyptian pair throughout, and it is the price of the 20-degree rotation
+     recorded on --color-civ-hue-cn in `.light`; before it the same column read
+     6.42, then 4.11 / 5.53 / 5.85 / 5.55.
 
      NO INK TOKEN MOVED FOR THIS. Every one of the 160 ink x background pairs
      still clears AA on its own. Worst over the whole matrix is 4.527:1 (DARK
@@ -779,15 +787,20 @@
      THEMES:
 
                             dark canvas   light surface-1
-         Chinese-Egyptian        6.04           4.11
+         Chinese-Egyptian        6.04           3.30
          Egyptian-Greek          7.03           4.25
-         Chinese-European        8.65           5.96
+         Chinese-European        8.65           6.18
          European-Egyptian      11.32           7.96
-         Chinese-Greek          13.33           8.41
+         Chinese-Greek          13.33           7.56
          European-Greek         14.60          10.01
 
      against a scale on which <1 is invisible, 2-3.5 is visible at a glance
      and >5 is obvious. Over surface-1..4 the same pairs run 5.46 to 20.87.
+
+     THE THREE CHINESE ROWS IN THE LIGHT COLUMN MOVED WHEN THAT TENANT'S LIGHT
+     HUE WENT TO 20 DEG (they read 4.11 / 5.96 / 8.41 at 12 deg; dark did not
+     move, and neither did the three rows without Chinese in them). The
+     derivation is on --color-civ-hue-cn in the `.light` block.
 
      AND THE SAME METRIC UNDOES STAGE 9's RULING TOO, not only Stage 11's
      footnote about it. On the pre-Stage-11 ramp (13/12/11/11) the widest pair
@@ -805,7 +818,7 @@
      canvas. That was a deliberate choice (a white page ground) that had never
      been written down beside the sentence that reads as covering both themes.
 
-     It is now `var(--civ-hue) 100% 96.5%` and the six pairs measure 6.42 to
+     It is now `var(--civ-hue) 100% 96.5%` and the six pairs measure 5.62 to
      15.98 there — the widest spread of any light plane, which is the right
      place for it, the ground being 63% of the pixels. The measurement that
      opened this file's Stage 13 round: dark screens carried the tenant's hue
@@ -1033,8 +1046,70 @@
     --color-status-error: 0 78% 44%;
     --color-status-warning: 32 88% 32%; /* was 38%: 3.62:1 → 4.72:1 */
     --color-status-info: 215 78% 42%;
-    --color-civ-hue-cn: 12;
-    --color-civ-mark-cn: 12 58% 38%;
+    /* 20°, NOT THE 12° DARK USES, AND THIS IS THE ONLY TOKEN IN THE FILE WHOSE
+     HUE DIFFERS BETWEEN THE TWO THEMES. Written out because a silent split
+     between the themes is exactly the kind of thing this file exists to stop
+     someone "tidying up" without knowing what it cost to arrive at.
+
+     STAGE 13 TINTED THE LIGHT PAGE GROUND AND CHINESE CAME OUT PINK. At
+     L 96.5 the ground is `hsl(12 100% 96.5%)` = rgb(255, 241, 237), whose Lab
+     is a* +4.03 / b* +3.61 — a* leading b*, which is the definition of the
+     pink region, and "pale red" has a loaded name in a way that "pale blue"
+     (European) and "pale yellow" (Egyptian) do not. Reviewed on screen and
+     rejected: over 63% of the pixels it does not read as a warm neutral, it
+     reads as a colour with an opinion.
+
+     THE FIX HAD TO BE A HUE MOVE AND NOT A CHROMA MOVE, AND THAT WAS MEASURED
+     RATHER THAN PREFERRED. Chinese already carries the LOWEST chroma of the
+     four grounds (5.41 against European 7.75, Egyptian 6.84, Greek 9.60), so
+     "it is too loud" was never the true complaint. Turning it down anyway
+     costs the card step: light `--color-canvas` and `--color-surface-1` sit
+     1.5 lightness points apart and the rest of that step is carried by
+     chroma, so dropping this tenant's ground to S 45% takes canvas ->
+     surface-1 from 2.66 to 1.14 ΔE00 — under the rung at which a flat-field
+     difference is visible at all. Cards would stop floating, on the one
+     cosmology, in light mode only. At 20° the same step measures 2.40.
+
+     WHAT 20° COSTS, SAID PLAINLY: THE PAIR THAT WAS ALREADY THE CLOSEST.
+     Rotating toward Egyptian's 44° narrows every light plane between those
+     two — canvas 7.21 -> 5.62, surface-1 4.11 -> 3.30, surface-2..4
+     5.53/5.85/5.55 -> 4.88/5.68/4.90. All above `PERCEPTIBLE_AT_A_GLANCE`,
+     and the per-pair figure `civilizationColourContract` actually pins is the
+     widest plane, 9.91 dark and 5.68 light. It is still a real loss and 20°
+     is where it stops: 24° takes surface-1 to 2.47 and 28° takes the canvas
+     to 3.99, at which point the two grounds are one colour with a note.
+
+     AND THE OBVIOUS OTHER DIRECTION IS WRONG, MEASURED. Rotating AWAY from
+     Egyptian — 12° -> 0° or 356° — was tried first because it buys separation
+     (canvas 7.21 -> 10.20/10.58). It makes the defect worse: a* climbs to
+     +6.07/+6.24 while b* falls to +2.19/+1.71, i.e. it moves the ground
+     further INTO the pink region and raises its chroma to 6.47. More
+     separation, more pink. The axis that names this defect is a* against b*,
+     not distance from another tenant.
+
+     DARK IS DELIBERATELY LEFT AT 12°. The complaint is light-only — at
+     L 4% the same hue is oxblood, not pink — and dark's Chinese/Egyptian pair
+     is already the narrowest in that theme at 6.04 ΔE00, so importing this
+     rotation there would spend the pair for nothing. `--color-civ-hue-*` is
+     declared per theme (this block and `:root`), which is what makes a
+     theme-local answer expressible at all. */
+    --color-civ-hue-cn: 20;
+    /* Mark and ink follow the hue because they are pinned to it, by name:
+     `civilizationColourContract` ("the mark and hue tokens agree on the hue")
+     and `civIdentityInkContract` ("ink, mark and hue agree on the hue"), whose
+     comment gives the reason — an ink on a different hue is a fifth colour,
+     not the same identity made readable. `lib/chart-colors.ts`'s light
+     `CIVILIZATION_COLORS.CN_DIYU` mirrors the mark and moves with it.
+
+     THE INK DROPPED 35% -> 33% AND THAT IS THE AA MECHANISM WORKING, NOT A
+     SECOND DECISION. The civilization badge is `--civ-ink` over `mark/0.2`
+     over the HOST tenant's surface, and a yellower hue at the same lightness
+     is brighter, so the rotation alone slid the worst of those 16 pairs from
+     4.68:1 to 4.28:1 — under the 4.6 headroom `civIdentityInkContract` keeps
+     precisely so a hue move shows up as a red test rather than a quiet slide
+     toward 4.5. Same fix as every other entry in this block: hold hue and
+     saturation, move lightness away from the canvas. */
+    --color-civ-mark-cn: 20 58% 38%;
     --color-civ-hue-eu: 232;
     --color-civ-mark-eu: 232 45% 44%;
     --color-civ-hue-eg: 44;
@@ -1045,7 +1120,7 @@
     --color-civ-hue-gr: 88;
     --color-civ-mark-gr: 88 46% 32%;
     /* 亮色一半:同 hue/sat,朝白底反方向压暗。见 :root 的度量。 */
-    --color-civ-ink-cn: 12 58% 35%;
+    --color-civ-ink-cn: 20 58% 33%;
     --color-civ-ink-eu: 232 45% 44%;
     --color-civ-ink-eg: 44 52% 27%;
     --color-civ-ink-gr: 88 46% 25%;

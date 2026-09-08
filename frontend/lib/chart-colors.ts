@@ -266,7 +266,7 @@ const LIGHT: ChartColors = {
     SETTLED: "hsl(178 55% 29%)",
   },
   CIVILIZATION_COLORS: {
-    CN_DIYU: "hsl(12 58% 38%)",
+    CN_DIYU: "hsl(20 58% 38%)",
     EU_HEAVEN_HELL: "hsl(232 45% 44%)",
     EG_DUAT: "hsl(44 52% 34%)",
     GR_HADES: "hsl(88 46% 32%)",
