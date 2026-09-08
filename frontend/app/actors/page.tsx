@@ -1,6 +1,10 @@
 "use client";
 import { useMemo, useState } from "react";
-import { CIVILIZATION_ICONS, CIVILIZATION_ICON_FALLBACK } from "@soulledger/core/config/civilizations";
+import {
+  CIVILIZATION_ICONS,
+  CIVILIZATION_ICON_FALLBACK,
+  CIVILIZATION_SHORT_CODES,
+} from "@soulledger/core/config/civilizations";
 import { useQuery } from "@tanstack/react-query";
 import { actorsApi, Actor } from "@soulledger/core/api";
 import { cn } from "@/lib/utils";
@@ -222,7 +226,62 @@ function ActorsPageContent() {
               const total = principals.length + bench.length;
 
               return (
-                <div key={civ} data-civilization={civ}>
+                <div
+                  key={civ}
+                  /* TWO ATTRIBUTES, TWO JOBS — the same split app/corpus/page.tsx
+                     carries, and the reason this page went colourless for as
+                     long as it did.
+
+                     `data-civilization` holds the full member (`EGYPTIAN`) and
+                     is a TEST ANCHOR: `app/globals.css` has zero rules matching
+                     it, so on its own it painted nothing. `data-civ` holds the
+                     two-letter prefix the `[data-civ='cn'|'eu'|'eg'|'gr']` rules
+                     key off; restamping it here re-points `--civ-hue`,
+                     `--civ-mark` and `--civ-ink` for this subtree at the
+                     civilization the section is ABOUT rather than at the tenant
+                     who happens to be logged in. Both are kept, as on corpus.
+
+                     WHAT RESTAMPING DOES NOT DO — measured in Chromium, not
+                     assumed, because the whole design below turns on it.
+                     `--color-surface-*` is declared on `:root` as
+                     `var(--civ-hue) 47% 7%`, and a custom property's computed
+                     value has its `var()`s substituted AT THE ELEMENT THAT
+                     DECLARES IT. The subtree therefore inherits the ROOT
+                     tenant's already-substituted triple, and re-pointing
+                     `--civ-hue` down here changes nothing about it: a div with
+                     `data-civ="eg"` reading `bg-[hsl(var(--color-surface-2))]`
+                     rasterises the identical rgb(14,14,31) as one without the
+                     attribute. Only a redeclaration of the ramp on this element
+                     would move it, and that would mean a second copy of the
+                     stylesheet's saturation ladder living in a .tsx file.
+
+                     So the ground is built from `--civ-mark`, which IS read
+                     locally — the same construction `TenantSignal`'s mobile
+                     chip uses (`hsl(var(--civ-mark) / 0.13)`).
+
+                     WHY 0.16. Composited over `--color-surface-1` (this
+                     section's backdrop is `PageSection`'s), for every host
+                     tenant x both themes, the four grounds sit 3.96 to 17.90
+                     ΔE00 apart — the narrowest pair clears the 3.5
+                     "perceptible at a glance" rung `civilizationColourContract`
+                     takes from the CIEDE2000 scale. It is measured in ΔE00 and
+                     NOT in channel deltas: max-channel is nearly blind to a
+                     hue-only difference and reports the same four grounds as
+                     4-8/255, which is how two earlier reviews in this repo were
+                     misled. `ActorsPage.test.tsx` re-derives all six pairs from
+                     the stylesheet and this very class list.
+
+                     NO TEXT SITS ON THIS GROUND, which is why 0.16 is
+                     affordable at all: the header button is opaque
+                     `--color-surface-2`, every `ActorCard` and the bench toggle
+                     are opaque `--color-surface-1`. The tint shows in the frame
+                     and the grid gutters only. At 0.16 `--color-ink-subtle`
+                     would read 4.06:1 here, under AA — put a label directly on
+                     this div and that becomes a real defect. */
+                  data-civilization={civ}
+                  data-civ={CIVILIZATION_SHORT_CODES[civ]}
+                  className="border-t-3 border-[hsl(var(--civ-mark))] bg-[hsl(var(--civ-mark)/0.16)] p-4"
+                >
                   {/* Civilization Header */}
                   <button
                     onClick={() => toggleCollapse(civ)}
