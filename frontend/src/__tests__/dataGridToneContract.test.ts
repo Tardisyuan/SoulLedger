@@ -20,6 +20,7 @@
 import {
   CIV_PREFIXES,
   LIGHT_TOKENS,
+  NO_CIV_LIGHT_TOKENS,
   THEMES,
   resolveRampForCiv,
   type ThemeName,
@@ -287,7 +288,22 @@ describe("data-grid enum badge token contract", () => {
       // the canvas included — names itself and reddens the run.
       const fillRgb = requireRgb(`tone \`${tone}\` fill \`${fill.token}\` in .light`, tokens[fill.token]);
       const inkRgb = requireRgb(`tone \`${tone}\` ink \`${inkToken}\` in .light`, tokens[inkToken]);
-      const canvasRgb = requireRgb("`--color-canvas` in .light", tokens["--color-canvas"]);
+      // THE UNTINTED BRANCH, NAMED. This read `tokens["--color-canvas"]`, which
+      // worked only while `.light` declared a literal `0 0% 100%`. Stage 13
+      // made the tenant-facing light canvas `var(--civ-hue) 86% 96.5%`, so that
+      // lookup became an unresolved `var(` — `requireRgb` throws on it, which
+      // is how this line was found rather than left to drift.
+      //
+      // This case is the LITERAL one: `PER_TENANT_CASES` below already measures
+      // every tone on every tenant's own canvas through `rampRgb`. What is left
+      // for this block is the screen with no cosmology — logged out, or a
+      // tenant this deployment does not map — and that screen's ground is
+      // `.light:not([data-civ])`, still white. Reading the tenant branch here
+      // would measure a colour this case never renders.
+      const canvasRgb = requireRgb(
+        "`--color-canvas` in .light:not([data-civ])",
+        NO_CIV_LIGHT_TOKENS["--color-canvas"]
+      );
 
       const background = composite(fillRgb, fill.alpha, canvasRgb);
       const ratio = contrastRatio(inkRgb, background);
