@@ -36,6 +36,33 @@ Named agents coordinate via `SendMessage`, not polling or shared state.
 - After spawning: STOP, tell user what's running, wait for results
 - NEVER poll status — agents message back or complete automatically
 
+**子代理的 worktree 不保证在分支尖端 —— 每个 prompt 都要让它先确认。**
+2026-09-07 一轮里五个代理,**四个的 worktree 停在 `main`(`35e28a5`)**,不含
+当时分支上已有的十几个提交。三个自己发现并 reset 了,两个没有,而这两次都造成了
+实际后果:
+
+- `audit-rest` 自报「139 suites / 2530 全绿」—— 真的绿,但绿在一棵没有本轮任何
+  工作的树上。**那个绿不作数**,重跑才是 2574。
+- 同一个代理报告「`--z-toast` 被引用却从未声明」。那个缺陷**在 `c3039a6` 里
+  已经修好**,而 `c3039a6` 在 `35e28a5` 之后。它写下那条时缺陷已不存在,而那句话
+  被转告了用户、并写进了 `2aa8494` 的提交信息 —— **一条关于已修缺陷的活体报告
+  进了 git 历史。**
+- `a11y-guard` 在陈旧树上量覆盖率,据此把 `jest.config.js` 的阈值棘轮到
+  59/51/50/60。真实的树上是 60.58/52.89/51.12/61.23,**守得住是运气不是验证**:
+  若新增代码的覆盖率低些,门禁会红,而红的原因指向「覆盖率不够」,不指向
+  「阈值是在别的树上定的」。
+
+所以每个 prompt 里都要写:**动手前先 `git log --oneline -1` 确认在分支尖端,
+不在就 `git reset --hard <branch>` 或 `git merge <branch>`;所有门禁数字必须在
+更新后的树上重跑。** 主会话侧的对策是一样的一条命令:
+`git -C <worktree> merge-base --is-ancestor <tip> HEAD`。
+
+**`SendMessage` 在子代理的工具集里不存在。** 同一轮五个代理**全部**在报告开头
+说了这件事。上面那条「ALWAYS include comms instructions — who to message」因此
+是一条无法执行的指令:让它们「完成后 SendMessage 给 main」只会换来一句道歉加一份
+写在最终回复里的报告 —— 那份回复本来就会回到主会话。**要报告就直说「把报告写在
+最终回复里」。**
+
 ## Build & Test
 
 **前端命令需要 node >= 20.9.0**(两份 package.json 都声明了),而这台机器的默认
