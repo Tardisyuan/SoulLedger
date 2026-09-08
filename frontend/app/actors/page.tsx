@@ -219,7 +219,13 @@ function ActorsPageContent() {
              and deserves a sentence, the same as the other two. */
           <EmptyState title={t("actors.section.actors")} reason={t("actors.no_actors")} />
         ) : (
-          <div className="space-y-10">
+          /* 顶层区块之间的节奏跟着壳的 `density` 走,而这一页的 `<PageShell>`
+             没写 density —— 也就是默认的 `"table"`,对应 `space-y-6`。这里此前是
+             `space-y-10`(文档档的值),那是四个文明区之间凭手感撑开的 40px,
+             和壳声明的密度对不上。规矩与理由写在
+             `src/components/ui/PageShell.tsx` 的 `density` 一槽,
+             `src/__tests__/PageShell.test.tsx` 有一条扫源码的守卫盯着它。 */
+          <div className="space-y-6">
             {groups.map(({ civ, principals, bench }) => {
               const isCollapsed = collapsed[civ];
               const isBenchOpen = benchOpen[civ];
@@ -290,7 +296,11 @@ function ActorsPageContent() {
                   >
                     <span className="text-06" aria-hidden="true">{CIVILIZATION_ICONS[civ] ?? CIVILIZATION_ICON_FALLBACK}</span>
                     <div className="flex-1">
-                      <h2 className="text-06 font-semibold text-[hsl(var(--color-ink))]">
+                      {/* `font-semibold` 删掉,不是改样式:`--text-06--font-weight: 600`
+                          已经把 600 带进 `.text-06`,再写一次逐像素相同。留着的坏处是
+                          它读起来像「不写就不粗」,于是下一个人会在 `text-01` 上补一个
+                          ——而那一档同样自带 600。 */}
+                      <h2 className="text-06 text-[hsl(var(--color-ink))]">
                         <DomainEnum namespace="actors.civilizations" value={civ} />
                       </h2>
                       <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
