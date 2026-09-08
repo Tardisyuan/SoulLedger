@@ -82,9 +82,18 @@ function edgesFor(rows: TemplateNode[]): Edge[] {
  * unpainted. `eslint.config.mjs`'s HEX_ALLOW grants the exception by PATH
  * PREFIX, so moving this file elsewhere turns the exception back into an error.
  *
- * Written once rather than three times: the two hydration paths and `onConnect`
- * used to each carry their own copy, which is three places for one colour to
- * drift in.
+ * Written once rather than FOUR times: the two hydration paths, `onConnect`,
+ * and `addNode`'s auto-connect used to each carry their own copy — and it HAD
+ * drifted. `387c29c` introduced all four as byte-identical `#d97706`;
+ * `051bf9a` (a batch commit whose message says nothing about edge colour)
+ * recoloured three of them to `#f59e0b` and missed the fourth. The three it
+ * changed sit at 12-space indentation; the one it missed sits at 14, nested in
+ * a ternary array. That fourth copy then stayed two shades off for two years.
+ *
+ * This docstring used to say "three times". It was counting the same three,
+ * so the de-duplication that was written to stop the drift had already missed
+ * the instance that was drifting. `workflowEdgeArrowSingleSource.test.ts` now
+ * asserts the count instead of this sentence claiming it.
  */
 const EDGE_ARROW = {
   markerEnd: { type: MarkerType.ArrowClosed, color: "#f59e0b" },

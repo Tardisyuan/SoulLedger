@@ -34,7 +34,6 @@ import {
   Background,
   useNodesState,
   useEdgesState,
-  MarkerType,
   Connection,
   addEdge,
   NodeChange,
@@ -563,8 +562,7 @@ export default function WorkflowEditor({
               id: `e${nodes[nodes.length - 1].id}-${newId}`,
               source: nodes[nodes.length - 1].id,
               target: newId,
-              markerEnd: { type: MarkerType.ArrowClosed, color: "#d97706" },
-              style: { stroke: "#d97706", strokeWidth: 2 },
+              ...edgeArrow(),
             },
           ]
         : [];

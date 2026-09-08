@@ -119,6 +119,21 @@ const NAV_MODE_KEY = "soulledger_nav_mode";
 const ACCENT_COLOR_KEY = "soulledger_accent_color";
 
 /** `--transition-duration-settle`, the length of both drawer keyframes. */
+/**
+ * The accent nothing has chosen yet — the initial `accentColor` state, and what
+ * `useAccentColor` writes when storage holds nothing valid or is unreadable.
+ * Written three times before this, which is three places for one value to drift.
+ *
+ * It is a LITERAL on purpose and must stay one. It equals `globals.css`'s
+ * `--color-accent: 38 92% 50%` by value, but pointing it at `var(--color-accent)`
+ * would make the inline style this module writes onto `document.documentElement`
+ * its own input — see the `--color-focus` note in `globals.css` for the same trap
+ * one token over. `ACCENT_COLORS[0].value` is deliberately NOT collapsed into it
+ * either: that one is user-selectable data, and sharing the literal would assert
+ * that the default must always be a palette entry.
+ */
+const DEFAULT_ACCENT_HEX = "#f59e0b";
+
 const MOUNT_LINGER_MS = 240;
 
 // Convert hex to HSL string for CSS variable
@@ -152,7 +167,7 @@ interface SettingsDrawerProps {
 export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: SettingsDrawerProps) {
   const { t } = useI18n();
   const { theme, toggleTheme } = useTheme();
-  const [accentColor, setAccentColor] = useState("#f59e0b");
+  const [accentColor, setAccentColor] = useState(DEFAULT_ACCENT_HEX);
   const [customHex, setCustomHex] = useState("");
 
   // The drawer's name comes from the heading it already renders, not from a
@@ -425,11 +440,11 @@ export function useAccentColor() {
       if (saved && /^#[0-9a-fA-F]{6}$/.test(saved)) {
         document.documentElement.style.setProperty("--color-accent", hexToHsl(saved));
       } else {
-        document.documentElement.style.setProperty("--color-accent", hexToHsl("#f59e0b"));
+        document.documentElement.style.setProperty("--color-accent", hexToHsl(DEFAULT_ACCENT_HEX));
       }
     } catch {
       // localStorage unavailable (SSR or private browsing)
-      document.documentElement.style.setProperty("--color-accent", hexToHsl("#f59e0b"));
+      document.documentElement.style.setProperty("--color-accent", hexToHsl(DEFAULT_ACCENT_HEX));
     }
   }, []);
 }
