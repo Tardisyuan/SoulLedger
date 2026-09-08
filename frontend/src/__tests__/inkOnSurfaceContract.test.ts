@@ -6,7 +6,7 @@
  * (`--color-ink-tertiary` "4.91:1", `--color-civ-mark-gr` "7.78:1",
  * `--color-accent-ink` "4.83:1"). Every one of them is a single number, and a
  * single number is not what the stylesheet produces. `--color-surface-1..4`
- * are declared as `var(--civ-hue) 13% 7%`, and the `[data-civ]` rules point
+ * are declared as `var(--civ-hue) 47% 7%`, and the `[data-civ]` rules point
  * `--civ-hue` at a different degree per tenant, so the real answer is one
  * figure per (theme × tenant × surface × ink) — 128 of them today. The
  * comments record the best case of each family and read as if they were the

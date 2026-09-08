@@ -83,7 +83,7 @@ export interface ChartColors {
    *
    * `--color-civ-mark-*`, not `--color-civ-hue-*`: the hue tokens are bare
    * degree numbers that only make sense interpolated into the surface ramp
-   * (`hsl(var(--civ-hue) 13% 7%)`), so they cannot be mirrored as literals
+   * (`hsl(var(--civ-hue) 47% 7%)`), so they cannot be mirrored as literals
    * here.
    */
   CIVILIZATION_COLORS: Record<string, string>;
@@ -159,24 +159,28 @@ export interface ChartColors {
    * the token system, unlike the two above.
    *
    * tooltipBg IS THE ONE ENTRY WHOSE TOKEN STOPPED BEING A LITERAL. --color-
-   * surface-1 used to be a fixed `240 13% 7%`; it is now `var(--civ-hue) 13%
+   * surface-1 used to be a fixed `240 13% 7%`; it is now `var(--civ-hue) 47%
    * 7%` and changes per tenant. A tenant-variable token has no single literal
    * mirror, so this value has to answer a design question rather than a copy
    * question, and the answer here is: the tooltip does not follow the tenant.
-   * The mirror is surface-1 composed with the NEUTRAL fallback `--civ-hue: 240`
-   * that `:root` declares for logged-out screens — still derived from
-   * globals.css, still pinned, just pinned to the fallback branch. `.light`
-   * never redeclares `--civ-hue`, so the light entry is that same 240 through
-   * `.light`'s own surface ramp.
+   * The mirror is the ramp a screen with NO cosmology renders, which since
+   * Stage 11 globals.css declares outright under `:root:not([data-civ])` /
+   * `.light:not([data-civ])`. Still derived from globals.css, still pinned,
+   * just pinned to that branch — chartColourContract resolves this one key
+   * through `noCivLiteralOfIn` and every other key through `literalOfIn`.
    *
-   * Why that costs nothing: the surface ramp barely expresses hue at all. 13%
-   * saturation at 7% lightness cannot carry a hue, so Chinese (12°) and
-   * European (232°) — 220° apart — differ by about 4/255 per channel at
-   * surface-1. Independently measured in the f62fdaa review. So "deliberately
-   * not per-tenant" and "per-tenant" are the same pixels here, and the
-   * alternative — resolving `getComputedStyle(document.documentElement)` at
-   * render time — would turn a static literal table into a DOM-dependent one
-   * (no SSR, every consumer a client component) to buy that 4/255.
+   * THE VALUES BELOW DID NOT MOVE FOR STAGE 11 AND THE ARGUMENT FOR THEM DID.
+   * It used to be "this costs nothing, because at 13% saturation the ramp
+   * barely expresses hue — Chinese (12°) and European (232°), 220° apart,
+   * differ by about 4/255 at surface-1, so per-tenant and not-per-tenant are
+   * the same pixels". That sentence is now false: the tenants' surface-1
+   * values are 17/255 apart in dark and 10/255 in light. What replaced it is
+   * a decision rather than a coincidence — a tooltip is transient chrome and
+   * says nothing about which cosmology you are in — and the cost is now real
+   * and accepted, not zero. The alternative is unchanged: resolving
+   * `getComputedStyle(document.documentElement)` at render time would turn a
+   * static literal table into a DOM-dependent one (no SSR, every consumer a
+   * client component).
    *
    * It is also not re-implementing anything: every tooltip actually on screen
    * lives in src/components/charts/LazyDashboardCharts.tsx and already sets
