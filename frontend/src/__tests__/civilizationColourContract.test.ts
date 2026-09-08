@@ -581,13 +581,16 @@ const PERCEPTIBILITY_FLOOR = 8;
  * pinned is "the ramp expresses the tenant", not "the ramp shouts". Taken from
  * the metric's published scale and not from this palette: the measurements it
  * judges are 3.30 to 20.87, so a number fitted to the data would have been 3.5
- * — which it now equals, and that coincidence is worth naming rather than
- * enjoying. The low end was 4.11 until the Chinese light hue moved to 20 deg
- * (globals.css, `--color-civ-hue-cn` in `.light`); it is the Chinese/Egyptian
- * pair on light surface-1, and it is NOT what this constant judges. The pins
- * below take the WIDEST pair per plane and the WIDEST plane per pair, so the
- * tightest figure either of them sees is 5.68. If a future change puts 3.30
- * itself under a pin, the number to move is the palette, not this constant.
+ * — and the data has since moved under it, which is exactly why a fitted
+ * number would have been the wrong kind of number. The low end was 4.11, then
+ * 3.30 when the Chinese light hue moved to 20 deg, and is 2.56 now that its
+ * ground carries real chroma (globals.css, `--color-civ-hue-cn` and
+ * `--color-civ-canvas-cn` in `.light`). It is the Chinese/Egyptian pair on
+ * light surface-1 throughout, and it is NOT what this constant judges: the
+ * pins below take the WIDEST pair per plane and the WIDEST plane per pair, so
+ * the tightest figure either of them sees is 4.66. If a future change puts
+ * 2.56 itself under a pin, the number to move is the palette, not this
+ * constant.
  */
 const PERCEPTIBLE_AT_A_GLANCE = 3.5;
 
@@ -757,17 +760,19 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
    * Re-measured in CIEDE2000, the ramp separates ALL SIX PAIRS in BOTH themes:
    *
    *                     dark canvas   light surface-1
-   *     Chinese-Egyptian     6.04            3.30
+   *     Chinese-Egyptian     6.04            2.56
    *     Egyptian-Greek       7.03            4.25
-   *     Chinese-European     8.65            6.18
+   *     Chinese-European     8.65            7.02
    *     European-Egyptian   11.32            7.96
-   *     Chinese-Greek       13.33            7.56
+   *     Chinese-Greek       13.33            6.89
    *     European-Greek      14.60           10.01
    *
    * (The three Chinese rows in the light column read 4.11 / 5.96 / 8.41 before
-   * that tenant's LIGHT hue was rotated 12 -> 20 deg to take its page ground
-   * out of the pink region. Dark did not move. See `--color-civ-hue-cn` in the
-   * `.light` block of globals.css for the derivation and the cost.)
+   * that tenant's LIGHT hue was rotated 12 -> 20 deg, and 3.30 / 6.18 / 7.56
+   * between that rotation and the chroma raise that finally took its page
+   * ground out of the blush region. Dark did not move in either round. See
+   * `--color-civ-hue-cn` and `--color-civ-canvas-cn` in the `.light` block of
+   * globals.css for the derivations and the costs.)
    *
    * — against a ladder where 2-3.5 is "perceptible at a glance" and >5 is
    * obvious. Across surface-1..4 the same pairs run 5.46 to 20.87. The two
@@ -857,11 +862,12 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
     // THE ASSERTION STAGE 11 BELIEVED IT COULD NOT MAKE. Its subject is the
     // PAIR, not the surface: for each pair, the plane on which the two look
     // furthest apart has to be visibly apart. Narrowest today is 9.11 dark
-    // (Egyptian/Greek) and 5.68 light (Chinese/Egyptian, on surface-3) — the
+    // (Egyptian/Greek) and 4.66 light (Chinese/Egyptian, on surface-3) — the
     // very pairs max-channel reported at 7-8 and called too close to rely on.
     // The light figure was 6.42 (Egyptian/Greek) until the Chinese light hue
-    // moved to 20 deg; that rotation is what put a different pair at the
-    // bottom of this column. The light figure ROSE from 5.85 when
+    // moved to 20 deg, which put a different pair at the bottom of this column
+    // at 5.68; the chroma raise on that tenant's ground took the same pair to
+    // 4.66.  Both moves are recorded in the `.light` block of globals.css. The light figure ROSE from 5.85 when
     // canvas joined `RAMP_TOKENS`, which is what widening a `Math.max` does:
     // this pin can only get easier as the list grows, and that is why it is not
     // the pin that defends the page ground. The two per-plane pins above are.
@@ -948,7 +954,7 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
    *
    * NOT A SEPARATION CLAIM. It says the planes are ordered and distinct, not
    * that adjacent ones are far apart — surface-2/-3 and -3/-4 measure
-   * 0.61..0.76 and 0.61..0.80 ΔE00, under the rung at which a flat-field
+   * 0.61..0.78 and 0.61..0.80 ΔE00, under the rung at which a flat-field
    * difference is visible at all, and they measured 0.76..0.90 and 0.82..0.85
    * before Stage 13, which is under it too. That is recorded on
    * `--color-canvas` in globals.css as the cost of fitting five planes into
@@ -999,6 +1005,61 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
     for (const theme of THEMES) {
       expect([...EXPECTED_ASCENDING[theme]].sort()).toEqual([...RAMP_TOKENS].sort());
     }
+  });
+
+  /**
+   * The defect that has now been diagnosed twice and fixed twice: a light page
+   * ground that reads as pink.
+   *
+   * WHY IT NEEDS A PIN RATHER THAN A COMMENT. Stage 13 tinted the light ground
+   * and Chinese came out pink; the fix rotated it 12 -> 20 degrees and wrote
+   * the reasoning down; the ground still read as pink on review. The rotation
+   * was not wrong, it was not enough, and NOTHING went red in between — the
+   * only record that the region existed was prose, and prose does not fail.
+   *
+   * THE AXIS, AND WHY THE FIRST ATTEMPT AT IT DID NOT WORK. The 20-degree
+   * round tested `a* > b*` and treated crossing it as the fix. That test is
+   * satisfied at Lab hue 45 — still squarely peach — and it went green while
+   * the complaint stood. The honest form of the same idea is the hue ANGLE,
+   * which is the ratio that comparison of a* against b* was reaching for.
+   * Measured on named sRGB colours through this file's own `srgbToLab`:
+   *
+   *     mistyrose    (255,228,225)  Lab hue 28.9   unmistakably pink
+   *     seashell     (255,245,238)  Lab hue 64.6   off-white, pink undertone
+   *     linen        (250,240,230)  Lab hue 74.4   warm neutral
+   *     antiquewhite (250,235,215)  Lab hue 80.9   warm neutral
+   *
+   * The ground that was rejected on review sat at 55.1 — BELOW seashell. It is
+   * now 65.4..74.3 — the page ground itself landing on 74.3, which is `linen`
+   * to within a tenth — and the floor is 60: above the region no reviewer has
+   * accepted, below the region every warm neutral in that table occupies. The
+   * margin is 5.4 degrees, on surface-1, which is the least tinted plane and
+   * therefore the one nearest every boundary.
+   *
+   * WRITTEN FOR EVERY TENANT, NOT FOR CHINESE. A wedge is a fact about pale
+   * colours, not about one cosmology: any ramp whose hue lands in it will read
+   * the same way. European (283..286) and Greek (127..129) clear it by
+   * construction and Egyptian (93..96) by a wide margin, so today it binds one
+   * tenant — but a future tenant given a red identity would meet the same
+   * geometry, and would meet it here rather than on review.
+   *
+   * DARK IS EXCLUDED AND THAT IS DELIBERATE. At L 14 the same hue is oxblood,
+   * not pink; the Chinese dark ramp sits at Lab hue 30..38 and is correct
+   * there. The defect is a property of pale tints, so the pin is too.
+   */
+  const BLUSH_WEDGE_CEILING_DEG = 60;
+
+  it("no tenant's light ramp sits in the blush wedge", () => {
+    const inWedge = CIV_PREFIXES.flatMap((prefix) =>
+      RAMP_TOKENS.map((token) => {
+        const [, a, b] = srgbToLab(rampRgb("light", prefix, token));
+        return {
+          where: `light ${prefix} ${token}`,
+          labHueDeg: Number((((Math.atan2(b, a) * 180) / Math.PI + 360) % 360).toFixed(1)),
+        };
+      })
+    ).filter((row) => row.labHueDeg < BLUSH_WEDGE_CEILING_DEG);
+    expect(inWedge).toEqual([]);
   });
 
   it("neither figure is degenerate, and the marks still lead overall", () => {
