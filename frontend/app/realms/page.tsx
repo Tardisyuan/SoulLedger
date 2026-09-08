@@ -127,7 +127,7 @@ function RealmsPageContent() {
       {!isLoading && !isError && realms.length === 0 && (
         <EmptyState title={t("realms.title")} reason={t("realms.no_realms")} />
       )}
-      <div className="space-y-10">
+      <div className="space-y-6">
         {Object.entries(grouped).map(([civ, civRealms]) => {
           const config = CIVILIZATION_CONFIG[civ] || { nameKey: `realms.civilizations.${civ}`, icon: <Castle className="w-6 h-6" /> };
           const isCollapsed = collapsed[civ];

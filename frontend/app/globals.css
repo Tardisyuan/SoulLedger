@@ -210,6 +210,33 @@
      drawer 那一档,因为它可能在移动端抽屉打开时被唤起。
      dialog 现在压在 drawer 之上。理由是单向的:**从抽屉里开出来的确认框必须盖住
      抽屉**,而抽屉不会在对话框打开时被打开 —— 对话框是模态的。 */
+  /* 60–80 是**浮层**带,10–50 是**吸顶/布局**带,而在 2026-09-07 之前只有上面
+     那一半有名字 —— 下面这一半全站写裸数字,顺序碰巧是对的,但没有一处说明
+     为什么是这个顺序,也没有任何东西会在有人写 `z-45` 时反对。补齐的是**跨文件
+     协调的那几档**:这三个数字分别写在 PageShell.tsx 和 AppLayout.tsx 里,
+     它们必须一起看才成立,而此前读任何一个文件都看不到另一个。
+
+     **边界在这里,并且是有意的**:组件内部的层叠梯子**不进这张表**。
+     `PermissionMatrixTable`(z-10/20/30/40)与 `SoulHeaderActions`(z-10/20)
+     的数字只和自己的兄弟比 —— 前者的注释已经写明「它们是同一个上下文里的
+     兄弟」。给它们发全站 token 会反过来撒谎:那会宣称矩阵的表头和 AppLayout
+     的顶栏在同一把尺子上,而它们根本不在同一个层叠上下文里。
+     判据是:**这个数字要不要和另一个文件里的数字比对?** 要,就上表。
+     按这条判据还有一个**没收进来**的:`components/ui/data-grid/ActionsMenu.tsx`
+     的行操作菜单 `createPortal` 到 body、`position: fixed`、`z-50` —— 它确实
+     在全局带上,而且和 `--z-index-sidebar` 同值。没动它,是因为「行菜单该不该
+     压住侧栏」是一个此前没人问过的新问题,而这一轮没有任何实测能回答它;
+     发一个名字过去等于替它作答。留在这里,是为了这段边界说明不替自己开脱。
+
+     `--z-index-scrim` 与 `--z-index-masthead` 同为 40,不是笔误。遮罩
+     (AppLayout.tsx 的 `md:hidden` 那个 button)与顶栏故意同档,于是 DOM 顺序
+     决定谁在上 —— 遮罩在前、顶栏在后,顶栏因此不被压暗。两个名字而不是一个,
+     是因为「遮罩」和「顶栏」不是一样东西;同值记的是这个决定,不是这个巧合。 */
+  --z-index-filters: 30;
+  --z-index-scrim: 40;
+  --z-index-masthead: 40;
+  --z-index-sidebar: 50;
+
   --z-index-progress: 60;
   --z-index-drawer: 70;
   --z-index-dialog: 80;
@@ -1325,10 +1352,12 @@ select:focus-visible {
 
 #nprogress .bar {
   position: fixed;
-  /* Matches the `progress` step of the named z scale in tailwind.config.js —
-     above the sticky masthead, below dialogs and drawers. The literal is
-     unavoidable here (this is raw CSS, not a utility class); the comment is
-     what keeps the two from drifting. */
+  /* Matches the `progress` step of the named z scale in this file's `@theme`
+     block (`--z-index-progress`) — above the sticky masthead
+     (`--z-index-masthead`), below dialogs and drawers. There is no
+     `tailwind.config.js` any more, which is where this comment used to point.
+     The literal is unavoidable here (this is raw CSS, not a utility class);
+     the comment is what keeps the two from drifting. */
   z-index: 60;
   top: 0;
   left: 0;

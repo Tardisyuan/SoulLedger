@@ -193,7 +193,7 @@ function OrganizationsPageContent() {
       {!isLoading && !isError && organizations.length === 0 && (
         <EmptyState title={t("organizations.title")} reason={t("organization.no_organizations")} />
       )}
-      <div className="space-y-10">
+      <div className="space-y-6">
         {Object.entries(grouped).map(([category, orgs]) => {
           const info = { name: t(`organization.civilizations.${category}`) || category, icon: CIVILIZATION_ICONS[category] ?? CIVILIZATION_ICON_FALLBACK };
           const isCollapsed = collapsed[category];

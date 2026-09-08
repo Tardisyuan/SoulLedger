@@ -30,7 +30,7 @@ export default function Loading() {
       </header>
 
       {/* variant="full":矩阵的列数随角色数增长,这里也不设 max-width。 */}
-      <div className="px-6 py-6 space-y-10">
+      <div className="px-6 py-6 space-y-6">
         <div className="space-y-2">
           <div className="h-11 w-full bg-[hsl(var(--color-hairline))] animate-pulse" />
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (

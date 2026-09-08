@@ -141,7 +141,7 @@ describe("the two states with no room to grow", () => {
   it("gives the mobile chip the same fixed width for every tenant", () => {
     // Not cosmetic. The chip sits in the header's `flex-1` region because the
     // right-hand cluster's own comment records that when it wrapped it grew
-    // past the 64px header and — the header being `sticky z-40` — the overflow
+    // past the 64px header and — the header being `sticky z-masthead` — the overflow
     // landed on the page and swallowed clicks; the 创建灵魂 button on /souls
     // was unreachable at 393px for exactly that. A chip that sizes to its
     // content is the same change that caused it.

@@ -27,6 +27,29 @@ import { cn } from "@/lib/utils";
  *    `min-h-[calc(100vh-4rem)]`（AppLayout.tsx:461），页面再写一次
  *    `min-h-screen` 就永远多出 64px 死滚动 —— 现在 `app/` 下 47 个文件犯了这个。
  *    `src/__tests__/PageShell.test.tsx` 里有一条专门盯着它。
+ *
+ * 4) **`<h2>` 有两个角色,各钉一档,壳不渲染它们。** 壳拥有 `<h1>`(`text-07`)
+ *    与 `eyebrow`(`text-01 font-mono uppercase`);`<h2>` 归页面,而 2026-09-07
+ *    实测全站 32 个 `<h2>` 用了五种排版(11px…22px,同一个语义槽)。收敛成一档
+ *    是错的 —— 里面确实有两个角色:
+ *
+ *      区块标签   `text-01 uppercase`  卡片/图表/区段**上方**那行小字。它不是
+ *                                      标题,是标签:全大写、字距 0.1em、跟着
+ *                                      `--text-01--font-weight: 600` 走,和壳
+ *                                      自己的 `eyebrow` 是同一个排版位。
+ *      面板标题   `text-06`            一整块面板/区段的标题,和页面的 `<h1>`
+ *                                      同族、低一档。weight 由
+ *                                      `--text-06--font-weight: 600` 提供。
+ *
+ *    两条推论,都是这一轮实际改动的理由:
+ *      - `text-06` 上再写 `font-semibold` 是**空操作**(同一个 600),仓里有 5 处。
+ *        删掉,不要在 token 已经给了 weight 的档位上重复声明 —— 留着会让人以为
+ *        「不写就不粗」,于是下一个人在 `text-01` 上也补一个。
+ *      - `--text-05` **没有**伴生 weight,而它的其余用处全是正文:
+ *        `font-serif text-05` 的法条与供词、hero 副标题、PageError 的说明句、
+ *        welcome 的三个值。它是**引文档不是标题档**,所以补一个
+ *        `--text-05--font-weight` 会把那些正文一起加粗 —— 三处用 `text-05` 的
+ *        `<h2>` 改成 `text-06`,而不是给 `text-05` 补 weight。
  */
 
 export type PageShellVariant = "prose" | "page" | "full";
@@ -128,6 +151,24 @@ export interface PageShellProps {
    *
    * 实测背景(2026-09-02):全仓 935 处纵向节奏里,96% 挤在 ≤24px,
    * ≥48px 的只有 6 处、占 0.6%。宏观节奏是存在的,只是没人走得到。
+   *
+   * ── 正文槽**顶层区块之间**的节奏也归这个 prop ────────────────────────
+   * 壳给的是四周内边距;顶层区块彼此之间的间距是页面写的那一层
+   * `<div className="space-y-*">`,而 2026-09-07 实测它分成两派:
+   * `space-y-10` 五处、`space-y-6` 四处,**同一个槽位**。规矩是:
+   *
+   *     density="table"(默认)   space-y-6    24px
+   *     density="document"       space-y-10   40px
+   *
+   * 也就是说它不是第二个决定,是这一个决定的延伸 —— 扫描页收紧、阅读页放开。
+   * 按这条,`ledger`(document)保持 10;`organizations` / `realms` /
+   * `permissions`(含它的 loading.tsx,否则加载完会跳一格)收到 6。
+   *
+   * **为什么不是壳自己加 `space-y-*`。** 壳看不见 children 是什么:走 DataTable
+   * 的那些路由正文只有一个孩子,`space-y-*` 对它们是 no-op;但正文有两个以上
+   * 未包裹孩子的路由会**当场被重新排版**,而那既没有人要求,也没有测试看着。
+   * 同一个理由此前已经写过一次 —— 见上面 `pagination` 那一槽的「这条不是组件
+   * 能自己判断的」。所以规矩写在这里,值由页面写,两边指的是同一个 prop。
    */
   density?: PageShellDensity;
   /** 追加到最外层。**不要用它改列宽** —— 那是 variant 的事。 */
@@ -238,7 +279,7 @@ export function PageShell({
       {filters ? (
         <div
           data-page-shell-filters=""
-          className="sticky top-16 z-30 bg-[hsl(var(--color-canvas))] border-b border-[hsl(var(--color-hairline))]"
+          className="sticky top-16 z-filters bg-[hsl(var(--color-canvas))] border-b border-[hsl(var(--color-hairline))]"
         >
           {/* `overflow-x-auto` 不是装饰。这一行是固定高度、不换行的 flex —— 而
               筛选控件的数量由每个页面自己决定。灵魂页放了搜索框、两个数字输入、

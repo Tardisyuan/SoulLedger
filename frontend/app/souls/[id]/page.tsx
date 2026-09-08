@@ -492,7 +492,7 @@ export default function SoulDetailPage() {
             />
           ) : (
             <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-              <h2 title={soul?.civilization} className="text-03 font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
+              <h2 title={soul?.civilization} className="text-01 text-[hsl(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
               <p className="text-03 text-[hsl(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
             </div>
           )}

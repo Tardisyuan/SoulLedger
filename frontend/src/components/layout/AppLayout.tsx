@@ -160,7 +160,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <button
         type="button"
         aria-label={t("common.close")}
-        className={`fixed inset-0 bg-black/50 z-40 md:hidden transition-[opacity,visibility] duration-settle ${
+        className={`fixed inset-0 bg-black/50 z-scrim md:hidden transition-[opacity,visibility] duration-settle ${
           mobileMenuOpen ? "visible opacity-100 ease-enter" : "invisible opacity-0 ease-exit"
         }`}
         onClick={() => setMobileMenuOpen(false)}
@@ -179,7 +179,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <aside
         ref={drawerRef}
         {...drawerProps}
-        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-[hsl(var(--color-surface-1))] border-r border-[hsl(var(--color-hairline))] z-50 transition-[width,transform] duration-settle ease-enter flex flex-col
+        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-[hsl(var(--color-surface-1))] border-r border-[hsl(var(--color-hairline))] z-sidebar transition-[width,transform] duration-settle ease-enter flex flex-col
           ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
         {/* Logo */}
@@ -290,7 +290,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <main className={`transition-[margin-left] duration-settle ${collapsed ? "ml-0 md:ml-16" : "ml-0 md:ml-56"}`}>
 
         {/* Top header */}
-        <header className="sticky top-0 z-40 h-16 bg-[hsl(var(--color-canvas))]/80 backdrop-blur-xs border-b border-[hsl(var(--color-hairline))] flex items-center px-4 md:px-6 gap-3 md:gap-4">
+        <header className="sticky top-0 z-masthead h-16 bg-[hsl(var(--color-canvas))]/80 backdrop-blur-xs border-b border-[hsl(var(--color-hairline))] flex items-center px-4 md:px-6 gap-3 md:gap-4">
           {/* Mobile hamburger */}
           {/* `--color-accent-ink`, not `--color-accent`, and that goes for
               every hover in this masthead. In light mode the two are
@@ -334,7 +334,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               cluster is a flex item of an `h-16 items-center` header, so if
               flexbox squeezes it the greeting/label text wraps onto several
               lines, the cluster grows past 64px and — because the header is
-              `sticky z-40` — the overflow lands on top of the page below and
+              `sticky z-masthead` — the overflow lands on top of the page below and
               swallows clicks (the `+ 创建灵魂` button on /souls was
               unreachable at 393px for exactly this reason). Keeping it on one
               line caps its height; the `hidden sm:*` gates below keep that one

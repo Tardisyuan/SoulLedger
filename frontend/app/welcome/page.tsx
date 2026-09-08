@@ -242,7 +242,7 @@ export default function WelcomePage() {
             source of truth to wire it to.
             The grid collapsed with it — one panel does not need three columns. */}
         <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
-            <h2 className="text-05 font-semibold text-[hsl(var(--color-ink))] mb-4 flex items-center gap-2">
+            <h2 className="text-06 text-[hsl(var(--color-ink))] mb-4 flex items-center gap-2">
               <Zap className="w-5 h-5 text-[hsl(var(--color-accent-ink))]" />
               {t("welcome.quick_actions")}
             </h2>
@@ -263,7 +263,7 @@ export default function WelcomePage() {
 
         {/* Recent Activity */}
         <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
-          <h2 className="text-05 font-semibold text-[hsl(var(--color-ink))] mb-4 flex items-center gap-2">
+          <h2 className="text-06 text-[hsl(var(--color-ink))] mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-[hsl(var(--color-accent-ink))]" />
             {t("welcome.recent_activity")}
           </h2>

@@ -363,7 +363,7 @@ function CorpusCard({
       className="border-t-3 border-[hsl(var(--civ-mark))] pt-4"
     >
       <header className="flex items-baseline gap-3 mb-4">
-        <h2 className="text-05 text-[hsl(var(--color-ink))]">
+        <h2 className="text-06 text-[hsl(var(--color-ink))]">
           <DomainEnum namespace="judgment.statute_corpus" value={group.corpus} />
         </h2>
         <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">
