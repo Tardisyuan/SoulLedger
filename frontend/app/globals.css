@@ -283,8 +283,21 @@
 
      240 IS NO LONGER A USABLE FALLBACK, WHICH IS WHY IT IS NOT THE FALLBACK
      ANY MORE. At 13% saturation "neutral 240°" was neutral in fact: every
-     tenant and the logged-out screen rendered the same near-black. At the
-     saturations below it is a deep blue-violet sitting 8° from European
+     tenant and the logged-out screen rendered the same near-black.
+
+     STAGE 12: THAT SECOND SENTENCE IS FALSE, AND IT WAS FALSE BEFORE STAGE 11
+     TOUCHED ANYTHING. It rests on max-channel, which reported 0-6/255 across
+     the old dark ramp. Measured in CIEDE2000 on that same old ramp, the 240°
+     fallback sat 2.87-5.34 from Chinese, 4.26-7.27 from Egyptian and
+     5.36-9.40 from Greek — obvious differences, not "the same near-black".
+     Only European was genuinely indistinguishable from it (0.00-1.13), which
+     is the 8° coincidence the paragraph below is about. So a logged-out dark
+     screen already read as a colour no tenant had. The DECISION below is
+     unaffected and better supported than when it was made: the fallback needed
+     declaring outright either way, and Stage 11 turned a quiet leak into a
+     loud one rather than creating it.
+
+     At the saturations below 240° is a deep blue-violet sitting 8° from European
      (232°), so a logged-out screen would have rendered as, to the eye,
      the European tenant — the same defect as GREEK rendering identical to
      logged-out, in reverse. The `:root:not([data-civ])` /
@@ -406,6 +419,14 @@
      is not a thing light mode can do — 40% at 98% lightness measures 3/255,
      which is what the old 14/13/12/11% band was, restated.
 
+     (EVERY "/255" IN THIS FILE IS A max-channel FIGURE AND STAGE 12 STOPPED
+     TRUSTING THAT METRIC — see the Stage 12 note in the civilization identity
+     block below. The chroma ARGUMENT here survives intact, because c = S x
+     min(L, 1-L) is arithmetic and not a perception claim; what does not
+     survive is reading a small "/255" as "nobody can see it". These channel
+     counts are kept as the record of what was measured when, not as evidence
+     about what a reader can distinguish.)
+
      Lightness has to come down with it, and that is what the light inks
      ration. --color-ink-tertiary (220 6% 42%) is the binding pair on the
      deepest surface. Measured across all four tenant hues:
@@ -423,7 +444,10 @@
      (0.020 at surface-1, which is its ceiling, and 0.030 below it), so the
      four surfaces read as one tinted paper at four depths rather than as
      four differently-coloured cards. Measured separation, widest channel,
-     between any two tenants: 10 / 16 / 15 / 15 out of 255.
+     between any two tenants: 10 / 16 / 15 / 15 out of 255. The same four
+     surfaces in CIEDE2000: 10.01 / 14.81 / 14.03 / 14.07 for the widest pair,
+     and 4.11 / 5.46 / 5.53 / 5.55 for the NARROWEST — so even the closest two
+     tenants clear "perceptible at a glance" on every light surface.
 
      NO INK TOKEN MOVED FOR THIS. Every one of the 128 ink x surface pairs
      still clears AA on its own, which is the whole reason surface-4 stopped
@@ -569,6 +593,8 @@
      found 4/255 between Chinese (12°) and European (232°), 220° apart and
      the widest separation the palette has, and ruled that the ramp was a
      near-neutral floor with --color-civ-mark-* carrying recognition alone.
+     (That 4/255 is a max-channel figure; the same pair measures 2.87 ΔE00 on
+     that ramp. Quiet, and not nothing. See the Stage 12 note further down.)
      That ruling named its own successor: "raising the ramp's saturation to
      ~35-40% ... is a design change needing its own review".
 
@@ -580,8 +606,12 @@
 
        - SATURATION WAS THE WRONG DIAL. Chroma is S x min(L, 1-L). At light
          surface-1's 98% lightness the ceiling is 0.02 at ANY saturation —
-         S 40% there measures 3/255 between tenants, indistinguishable from
-         the 14% it replaced. The light ramp needed its lightness lowered
+         S 40% there measures 3/255 between tenants, the same as the 14% it
+         replaced. ("Indistinguishable" is what this line said, and that word
+         was max-channel talking; see the Stage 12 note below. The dial being
+         wrong does not depend on it — 3/255 at S 40% and 3/255 at S 14% are
+         the SAME measurement, which is the actual argument.) The light ramp
+         needed its lightness lowered
          (98 -> 93.5 at surface-4), and that is rationed by
          --color-ink-tertiary, not by taste.
        - 35-40% WOULD HAVE BROKEN AA IN DARK MODE. At surface-4's 11%
@@ -598,11 +628,51 @@
      128 ink x surface pairs still clears AA, in both themes, with no ink
      token moved.
 
-     src/__tests__/civilizationColourContract.test.ts pins the new ruling in
-     the same two directions as the old one: the ramp has to express the
-     tenant (a floor it must clear), and it still must not out-separate the
-     marks (identity leads, the ground follows). Flattening the ramp back
-     toward neutral is now the change that goes red.
+     STAGE 12 CHANGED NO COLOUR IN THIS FILE AND WITHDREW ONE SENTENCE OF IT.
+     Every figure above, and every "/255" anywhere in this stylesheet, is a
+     max-channel difference: the largest of the three per-channel gaps. That
+     statistic is nearly blind along the hue axis, which is the only axis this
+     palette varies. Chinese canvas is (19, 5, 2) and Egyptian canvas is
+     (19, 14, 2) — identical R, identical B — so max-channel calls them 9
+     apart, and Stage 11 wrote up that pair, and Egyptian/Greek, as beyond
+     what a reader could rely on. In CIEDE2000, ALL SIX PAIRS SEPARATE IN BOTH
+     THEMES:
+
+                            dark canvas   light surface-1
+         Chinese-Egyptian        6.04           4.11
+         Egyptian-Greek          7.03           4.25
+         Chinese-European        8.65           5.96
+         European-Egyptian      11.32           7.96
+         Chinese-Greek          13.33           8.41
+         European-Greek         14.60          10.01
+
+     against a scale on which <1 is invisible, 2-3.5 is visible at a glance
+     and >5 is obvious. Over surface-1..4 the same pairs run 5.46 to 20.87.
+
+     AND THE SAME METRIC UNDOES STAGE 9's RULING TOO, not only Stage 11's
+     footnote about it. On the pre-Stage-11 ramp (13/12/11/11) the widest pair
+     per surface measures 5.36 to 8.47 ΔE00 — visible, not "in practice the
+     same near-black". Stage 9 was entitled to reject that ramp for being too
+     quiet to carry identity; it was not entitled to say it expressed nothing.
+     Both reviews reached defensible design decisions through a measurement
+     that could not see the thing being decided.
+
+     ONE ASYMMETRY THIS BLOCK SHOULD SAY OUT LOUD. "CANVAS IS IN THE RAMP NOW"
+     is true of dark only. `.light` declares --color-canvas: 0 0% 100%, flat,
+     for every tenant — all six pairs measure exactly 0.00 there — which is
+     why the light column above starts at surface-1 and why the channel list
+     above gives dark canvas and no light canvas. That was a deliberate choice
+     (a white page ground), but it was never written down beside the sentence
+     that reads as covering both themes.
+
+     src/__tests__/civilizationColourContract.test.ts pins the ruling in three
+     directions now. The ramp must express the tenant — in channel steps
+     against Stage 9's own threshold, which is what goes red if the ramp is
+     turned back down, AND in ΔE00, which is what goes red if a surface or a
+     pair stops being expressed at all. And the marks must still lead the ramp
+     (identity leads, the ground follows), which is now a ΔE00 MARGIN rather
+     than a multiple: a ratio of two large ΔE00 figures is not a quantity the
+     formula supports. The derivations live on the constants in that file.
 
      --color-civ-hue-* is the bare hue degree the [data-civ] rules below feed
      into --civ-hue; --color-civ-mark-* is a full HSL triple. The mark is
@@ -694,7 +764,12 @@
 
    TWO ALIASES, NOT ONE. --civ-hue feeds the surface ramp, which Stage 9
    measured as a near-neutral floor: at most 6/255 of channel difference
-   between any two tenants, in either theme. --civ-mark is the identity, and
+   between any two tenants, in either theme. (Stage 11 retinted that ramp and
+   this sentence was left standing; Stage 12 also found the metric behind it
+   hue-blind — that ramp reached 5.36-8.47 ΔE00, and today's reaches 5.46-20.87.
+   The sentence is kept because the ARGUMENT below it does not depend on it:
+   two aliases are needed because the ramp and the mark are different jobs,
+   however loud either one is.) --civ-mark is the identity, and
    until Stage 10 it had exactly one consumer — a 12px dot on the dashboard —
    reached by naming --color-civ-mark-cn directly. The masthead needs it in
    three places (expanded lockup, collapsed rail, mobile chip) and none of
@@ -728,9 +803,20 @@
    verbatim for the one state that has no tenant to be.
 
    WHY THIS EXISTS AT ALL. Before Stage 11 the fallback was a *value* —
-   --civ-hue: 240 — and it worked because at 13% saturation no hue is
-   visible, so "the neutral branch" and "some tenant's branch" were the same
-   pixels. At the saturations the ramp now carries, 240° is a deep
+   --civ-hue: 240 — and it was believed to work because at 13% saturation no
+   hue was visible, so "the neutral branch" and "some tenant's branch" were
+   the same pixels.
+
+   THAT BELIEF DID NOT SURVIVE BEING MEASURED PROPERLY (Stage 12). It came
+   from max-channel, which is nearly blind to a hue-only difference. In
+   CIEDE2000, on the old dark ramp, the 240° fallback was 5.36-9.40 from
+   Greek and 4.26-7.27 from Egyptian — plainly a different colour, on every
+   logged-out screen, for as long as that fallback stood. This block was
+   written to fix a defect Stage 11 was thought to have introduced; it turns
+   out to fix one that was already shipping, in a quieter form. Nothing about
+   what it does changes.
+
+   At the saturations the ramp now carries, 240° is a deep
    blue-violet 8° from European's 232°: a logged-out screen would have read
    as the European tenant. That is the GREEK bug — a cosmology rendering as
    another screen's colour — with the two ends swapped, and the same
