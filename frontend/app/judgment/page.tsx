@@ -25,10 +25,10 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
  * fill/ink come from this map through `className`.
  */
 const VERDICT_COLORS: Record<string, string> = {
-  PASSED: "bg-[hsl(var(--color-verdict-passed)/0.1)] text-[hsl(var(--color-verdict-passed))]",
-  FAILED: "bg-[hsl(var(--color-verdict-failed)/0.1)] text-[hsl(var(--color-verdict-failed))]",
-  PURGATORY: "bg-[hsl(var(--color-verdict-purgatory)/0.1)] text-[hsl(var(--color-verdict-purgatory))]",
-  RETRY: "bg-[hsl(var(--color-verdict-retry)/0.1)] text-[hsl(var(--color-verdict-retry))]",
+  PASSED: "bg-[oklch(var(--color-verdict-passed)/0.1)] text-[oklch(var(--color-verdict-passed))]",
+  FAILED: "bg-[oklch(var(--color-verdict-failed)/0.1)] text-[oklch(var(--color-verdict-failed))]",
+  PURGATORY: "bg-[oklch(var(--color-verdict-purgatory)/0.1)] text-[oklch(var(--color-verdict-purgatory))]",
+  RETRY: "bg-[oklch(var(--color-verdict-retry)/0.1)] text-[oklch(var(--color-verdict-retry))]",
 };
 
 function JudgmentQueuePageContent() {
@@ -118,7 +118,7 @@ function JudgmentQueuePageContent() {
         keyExtractor={(judgment) => String(judgment.id)}
         renderRow={(judgment) => (
           <>
-            <td className="px-4 py-3 font-medium text-[hsl(var(--color-ink))]">
+            <td className="px-4 py-3 font-medium text-[oklch(var(--color-ink))]">
               {/* `MissingValue`,不是 UUID。`judgment.soul` 是主键;
                   `soul_name || soul` 在名字缺失时把一串 UUID 印成灵魂名 ——
                   兜底方向违反 IDENTIFIER_POLICY(标识符不做名字的兜底)。
@@ -129,10 +129,10 @@ function JudgmentQueuePageContent() {
                 <MissingValue kind="unrecorded" reason="soul_name 未随判决返回" />
               )}
             </td>
-            <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
+            <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
               <DomainEnum namespace="souls.civilizations" value={judgment.civilization} />
             </td>
-            <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
+            <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
               {judgment.court}
             </td>
             <td className="px-4 py-3">
@@ -143,19 +143,19 @@ function JudgmentQueuePageContent() {
               ) : (
                 /* JUDGING is a soul-lifecycle state, not a system verdict —
                    hence `--color-status-judging` rather than a Badge tone. */
-                <Badge className="bg-[hsl(var(--color-status-judging)/0.1)] text-[hsl(var(--color-status-judging))]">
+                <Badge className="bg-[oklch(var(--color-status-judging)/0.1)] text-[oklch(var(--color-status-judging))]">
                   {t("judgment.pending")}
                 </Badge>
               )}
             </td>
             {/* 02 档：日期是元数据，不是正文。 */}
-            <td className="px-4 py-3 text-02 text-[hsl(var(--color-ink-muted))]">
+            <td className="px-4 py-3 text-02 text-[oklch(var(--color-ink-muted))]">
               {formatDate(judgment.created_at)}
             </td>
             <td className="px-4 py-3">
               <Link
                 href={`/judgment/${judgment.id}`}
-                className="text-03 text-[hsl(var(--color-accent-ink))] hover:underline"
+                className="text-03 text-[oklch(var(--color-accent-ink))] hover:underline"
               >
                 {t("judgment.view")} →
               </Link>

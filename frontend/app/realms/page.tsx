@@ -63,15 +63,15 @@ const CIVILIZATION_CONFIG: Record<string, { nameKey: string; icon: React.ReactNo
  *
  * src/__tests__/statusTokenLayering.test.ts holds this map to the rule, and to
  * every other domain-enum-keyed badge map in the app. It reads these four
- * entries AS TEXT, one line per key, and parses the `x-[hsl(var(--t)/a)]`
+ * entries AS TEXT, one line per key, and parses the `x-[oklch(var(--t)/a)]`
  * utilities out of each — so the four lines below stay one-line literals and
  * the alphas stay 0.1 / 0.3 / 1.
  */
 const REALM_TYPE_CONFIG: Record<string, { icon: React.ReactNode; className: string }> = {
-  HELL: { icon: <Flame className="w-4 h-4" />, className: 'bg-[hsl(var(--color-verdict-failed)/0.1)] border-[hsl(var(--color-verdict-failed)/0.3)] text-[hsl(var(--color-verdict-failed))]' },
-  PURGATORY: { icon: <Cloud className="w-4 h-4" />, className: 'bg-[hsl(var(--color-verdict-purgatory)/0.1)] border-[hsl(var(--color-verdict-purgatory)/0.3)] text-[hsl(var(--color-verdict-purgatory))]' },
-  BLISS: { icon: <CircleDot className="w-4 h-4" />, className: 'bg-[hsl(var(--color-verdict-passed)/0.1)] border-[hsl(var(--color-verdict-passed)/0.3)] text-[hsl(var(--color-verdict-passed))]' },
-  NEUTRAL: { icon: <Castle className="w-4 h-4" />, className: 'bg-[hsl(var(--color-ink-tertiary)/0.1)] border-[hsl(var(--color-ink-tertiary)/0.3)] text-[hsl(var(--color-ink-muted))]' },
+  HELL: { icon: <Flame className="w-4 h-4" />, className: 'bg-[oklch(var(--color-verdict-failed)/0.1)] border-[oklch(var(--color-verdict-failed)/0.3)] text-[oklch(var(--color-verdict-failed))]' },
+  PURGATORY: { icon: <Cloud className="w-4 h-4" />, className: 'bg-[oklch(var(--color-verdict-purgatory)/0.1)] border-[oklch(var(--color-verdict-purgatory)/0.3)] text-[oklch(var(--color-verdict-purgatory))]' },
+  BLISS: { icon: <CircleDot className="w-4 h-4" />, className: 'bg-[oklch(var(--color-verdict-passed)/0.1)] border-[oklch(var(--color-verdict-passed)/0.3)] text-[oklch(var(--color-verdict-passed))]' },
+  NEUTRAL: { icon: <Castle className="w-4 h-4" />, className: 'bg-[oklch(var(--color-ink-tertiary)/0.1)] border-[oklch(var(--color-ink-tertiary)/0.3)] text-[oklch(var(--color-ink-muted))]' },
 };
 
 function RealmsPageContent() {
@@ -141,12 +141,12 @@ function RealmsPageContent() {
                 onClick={() => toggleCollapse(civ)}
                 className="w-full justify-start mb-4 text-left"
               >
-                <span aria-hidden="true" className="text-[hsl(var(--color-ink-muted))]">{config.icon}</span>
+                <span aria-hidden="true" className="text-[oklch(var(--color-ink-muted))]">{config.icon}</span>
                 <span className="flex-1 min-w-0">
-                  <span title={t(config.nameKey)} className="block text-06 text-[hsl(var(--color-ink))] truncate">{t(config.nameKey)}</span>
-                  <span className="block text-04 text-[hsl(var(--color-ink-subtle))]">{civRealms.length} {t("realms.count")}</span>
+                  <span title={t(config.nameKey)} className="block text-06 text-[oklch(var(--color-ink))] truncate">{t(config.nameKey)}</span>
+                  <span className="block text-04 text-[oklch(var(--color-ink-subtle))]">{civRealms.length} {t("realms.count")}</span>
                 </span>
-                <ChevronDown aria-hidden="true" className={`w-5 h-5 text-[hsl(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                <ChevronDown aria-hidden="true" className={`w-5 h-5 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
               </Button>
 
               {!isCollapsed && (
@@ -154,12 +154,12 @@ function RealmsPageContent() {
                   {civRealms.map((realm) => {
                     const typeConfig = REALM_TYPE_CONFIG[realm.realm_type] || REALM_TYPE_CONFIG.NEUTRAL;
                     return (
-                      <div key={realm.id} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:border-[hsl(var(--color-accent)/0.5)] hover:bg-[hsl(var(--color-surface-2))] transition-colors">
+                      <div key={realm.id} className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 hover:border-[oklch(var(--color-accent)/0.5)] hover:bg-[oklch(var(--color-surface-2))] transition-colors">
                         <div className="flex items-start gap-3">
-                          <div aria-hidden="true" className="text-[hsl(var(--color-ink-muted))]">{typeConfig.icon}</div>
+                          <div aria-hidden="true" className="text-[oklch(var(--color-ink-muted))]">{typeConfig.icon}</div>
                           <div className="flex-1 min-w-0">
-                            <h3 title={t(`realms.names.${realm.realm_code}`) || realm.name_en} className="text-04 font-semibold text-[hsl(var(--color-ink))] truncate">{t(`realms.names.${realm.realm_code}`) || realm.name_en}</h3>
-                            <p title={t(`realms.codes.${realm.realm_code}`) || realm.name_local} className="text-03 text-[hsl(var(--color-ink-tertiary))] truncate">{t(`realms.codes.${realm.realm_code}`) || realm.name_local}</p>
+                            <h3 title={t(`realms.names.${realm.realm_code}`) || realm.name_en} className="text-04 font-semibold text-[oklch(var(--color-ink))] truncate">{t(`realms.names.${realm.realm_code}`) || realm.name_en}</h3>
+                            <p title={t(`realms.codes.${realm.realm_code}`) || realm.name_local} className="text-03 text-[oklch(var(--color-ink-tertiary))] truncate">{t(`realms.codes.${realm.realm_code}`) || realm.name_local}</p>
                           </div>
                         </div>
                         <div className="mt-2 flex items-center justify-between">

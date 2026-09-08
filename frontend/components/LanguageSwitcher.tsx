@@ -14,7 +14,7 @@ export function LanguageSwitcher() {
         disabled
         aria-hidden="true"
         tabIndex={-1}
-        className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] text-sm px-3 py-1.5 border border-[hsl(var(--color-hairline))] cursor-pointer"
+        className="bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] text-sm px-3 py-1.5 border border-[oklch(var(--color-hairline))] cursor-pointer"
       >
         <option>—</option>
       </select>
@@ -26,7 +26,7 @@ export function LanguageSwitcher() {
       value={locale}
       onChange={(e) => setLocale(e.target.value as Locale)}
       aria-label={t("nav.language")}
-      className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] text-sm px-3 py-1.5 border border-[hsl(var(--color-hairline))] cursor-pointer hover:border-[hsl(var(--color-hairline))] transition-colors"
+      className="bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] text-sm px-3 py-1.5 border border-[oklch(var(--color-hairline))] cursor-pointer hover:border-[oklch(var(--color-hairline))] transition-colors"
     >
       {(Object.keys(LOCALE_LABELS) as Locale[]).map((loc) => (
         <option key={loc} value={loc}>

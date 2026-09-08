@@ -224,10 +224,10 @@ export function SoulLifecycleTimeline({
   const visibleRows = filterRows(rows, tab, includeSystemEvents);
 
   return (
-    <div className="bg-[hsl(var(--color-surface-1))] p-5 border border-[hsl(var(--color-hairline))]">
+    <div className="bg-[oklch(var(--color-surface-1))] p-5 border border-[oklch(var(--color-hairline))]">
       {/* Header + filter tabs */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-        <h2 className="text-01 text-[hsl(var(--color-ink-muted))] uppercase">
+        <h2 className="text-01 text-[oklch(var(--color-ink-muted))] uppercase">
           {tf("souls.detail.timeline.title", "灵魂账页")}
         </h2>
         <div className="flex items-center gap-1 flex-wrap">
@@ -238,8 +238,8 @@ export function SoulLifecycleTimeline({
               onClick={() => setTab(tabKey)}
               className={`px-2.5 py-1 text-03 transition-colors ${
                 tab === tabKey
-                  ? "bg-[hsl(var(--color-accent))] text-black font-medium"
-                  : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
+                  ? "bg-[oklch(var(--color-accent))] text-black font-medium"
+                  : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
               }`}
             >
               {tabKey === "all"
@@ -249,12 +249,12 @@ export function SoulLifecycleTimeline({
                   : tf("souls.detail.timeline.tab_judgment", "仅裁决")}
             </button>
           ))}
-          <label className="flex items-center gap-1.5 text-03 text-[hsl(var(--color-ink-muted))] ml-2 cursor-pointer select-none">
+          <label className="flex items-center gap-1.5 text-03 text-[oklch(var(--color-ink-muted))] ml-2 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={includeSystemEvents}
               onChange={(e) => setIncludeSystemEvents(e.target.checked)}
-              className="accent-[hsl(var(--color-accent))]"
+              className="accent-[oklch(var(--color-accent))]"
             />
             {tf("souls.detail.timeline.tab_system", "含系统事件")}
           </label>
@@ -274,10 +274,10 @@ export function SoulLifecycleTimeline({
               <div
                 className={`px-2 py-1 text-02 font-medium whitespace-nowrap text-center flex-1 ${
                   state === "now"
-                    ? "bg-[hsl(var(--color-accent))] text-black"
+                    ? "bg-[oklch(var(--color-accent))] text-black"
                     : state === "done"
-                      ? "text-[hsl(var(--color-ink-muted))]"
-                      : "text-[hsl(var(--color-ink-subtle))] border border-dashed border-[hsl(var(--color-hairline-strong))]"
+                      ? "text-[oklch(var(--color-ink-muted))]"
+                      : "text-[oklch(var(--color-ink-subtle))] border border-dashed border-[oklch(var(--color-hairline-strong))]"
                 }`}
               >
                 {label}
@@ -285,7 +285,7 @@ export function SoulLifecycleTimeline({
               {i < PIPELINE_STEPS.length - 1 && (
                 <div
                   className={`h-px flex-1 min-w-[8px] ${
-                    i < currentPos ? "bg-[hsl(var(--color-ink-muted))]" : "border-t border-dashed border-[hsl(var(--color-hairline-strong))]"
+                    i < currentPos ? "bg-[oklch(var(--color-ink-muted))]" : "border-t border-dashed border-[oklch(var(--color-hairline-strong))]"
                   }`}
                 />
               )}
@@ -297,7 +297,7 @@ export function SoulLifecycleTimeline({
       {/* Spine */}
       <div>
         {visibleRows.length === 0 ? (
-          <p className="text-[hsl(var(--color-ink-subtle))] text-04 text-center py-4">
+          <p className="text-[oklch(var(--color-ink-subtle))] text-04 text-center py-4">
             {tf("souls.detail.timeline.empty", "没有符合筛选条件的记录")}
           </p>
         ) : (
@@ -314,21 +314,21 @@ export function SoulLifecycleTimeline({
                   dotClassName={row.type === "MERIT" ? TONE_DOT.merit : TONE_DOT.demerit}
                   right={
                     <div>
-                      <div className={`text-03 font-semibold ${positive ? "text-[hsl(var(--color-karma-merit))]" : "text-[hsl(var(--color-karma-demerit))]"}`}>
+                      <div className={`text-03 font-semibold ${positive ? "text-[oklch(var(--color-karma-merit))]" : "text-[oklch(var(--color-karma-demerit))]"}`}>
                         {positive ? "+" : ""}
                         {row.effectiveSigned}
                       </div>
-                      <div className="text-02 text-[hsl(var(--color-ink-subtle))]">
+                      <div className="text-02 text-[oklch(var(--color-ink-subtle))]">
                         ×{row.decayFactor.toFixed(3)} · {row.yearsElapsed.toFixed(1)} {tf("souls.detail.timeline.years", "年")}
                       </div>
                     </div>
                   }
                 >
-                  <div className="text-03 text-[hsl(var(--color-ink))] truncate">
-                    {row.isMilestone && <span className="text-[hsl(var(--color-accent-ink))]">★ </span>}
+                  <div className="text-03 text-[oklch(var(--color-ink))] truncate">
+                    {row.isMilestone && <span className="text-[oklch(var(--color-accent-ink))]">★ </span>}
                     {row.title}
                   </div>
-                  <div className="text-02 text-[hsl(var(--color-ink-muted))] truncate">
+                  <div className="text-02 text-[oklch(var(--color-ink-muted))] truncate">
                     {row.type === "MERIT" ? t("souls.detail.merit") : t("souls.detail.demerit")} ·{" "}
                     {tf(`souls.categories.${row.category_code}`, row.category_code)} {row.category_code} ·{" "}
                     {tf("souls.detail.timeline.original", "原始 {{sign}}{{n}}", {
@@ -347,14 +347,14 @@ export function SoulLifecycleTimeline({
                   key={row.id}
                   date={row.dateLabel}
                   hideConnector={isLast}
-                  dotClassName={isTerminalRow ? "bg-[hsl(var(--color-status-settled))]" : TONE_DOT[row.tone]}
+                  dotClassName={isTerminalRow ? "bg-[oklch(var(--color-status-settled))]" : TONE_DOT[row.tone]}
                   terminalVariant={isTerminalRow ? (isAnnihilated ? "flush" : "filled") : undefined}
                 >
-                  <div title={row.title} className="text-03 text-[hsl(var(--color-ink))] truncate">{row.title}</div>
-                  {row.metadata && <div title={row.metadata} className="text-02 text-[hsl(var(--color-ink-muted))] truncate">{row.metadata}</div>}
+                  <div title={row.title} className="text-03 text-[oklch(var(--color-ink))] truncate">{row.title}</div>
+                  {row.metadata && <div title={row.metadata} className="text-02 text-[oklch(var(--color-ink-muted))] truncate">{row.metadata}</div>}
                   {isTerminalRow && (
                     <div
-                      className={`text-02 font-mono mt-0.5 ${isAnnihilated ? "text-[hsl(var(--color-ink-tertiary))]" : "text-[hsl(var(--color-ink-muted))]"}`}
+                      className={`text-02 font-mono mt-0.5 ${isAnnihilated ? "text-[oklch(var(--color-ink-tertiary))]" : "text-[oklch(var(--color-ink-muted))]"}`}
                     >
                       {isAnnihilated
                         ? tf("souls.detail.timeline.terminal_flush", "── 其人已无")
@@ -362,7 +362,7 @@ export function SoulLifecycleTimeline({
                     </div>
                   )}
                   {row.idChip && (
-                    <span className="inline-block mt-0.5 font-mono text-02 px-1 py-0.5 bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-subtle))]">
+                    <span className="inline-block mt-0.5 font-mono text-02 px-1 py-0.5 bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-subtle))]">
                       {row.idChip.slice(0, 8)}
                     </span>
                   )}
@@ -383,22 +383,22 @@ export function SoulLifecycleTimeline({
                     {/* `title` carries the raw event_type — the domainDisplay
                         convention: translated copy on screen, raw member
                         recoverable for triage, and never the other way round. */}
-                    <div className="text-02 text-[hsl(var(--color-ink-muted))]" title={row.rawEventType}>
+                    <div className="text-02 text-[oklch(var(--color-ink-muted))]" title={row.rawEventType}>
                       {row.title}
                       {row.count > 1 && ` ×${row.count}`} · {row.actor}
                       {row.count > 1 && (
-                        <span className="ml-1 text-[hsl(var(--color-ink-subtle))]">
+                        <span className="ml-1 text-[oklch(var(--color-ink-subtle))]">
                           {isOpen ? "▲" : `▼ ${tf("souls.detail.timeline.expand", "展开")}`}
                         </span>
                       )}
                     </div>
                   </button>
                   {isOpen && (
-                    <div className="mt-1 space-y-0.5 pl-2 border-l border-[hsl(var(--color-hairline))]">
+                    <div className="mt-1 space-y-0.5 pl-2 border-l border-[oklch(var(--color-hairline))]">
                       {row.items.map((item) => {
                         const described = describeSystemEvent(item, systemEventLabels);
                         return (
-                        <div key={item.id} title={described} className="text-02 text-[hsl(var(--color-ink-subtle))] font-mono truncate">
+                        <div key={item.id} title={described} className="text-02 text-[oklch(var(--color-ink-subtle))] font-mono truncate">
                           {described}
                         </div>
                         );
@@ -412,13 +412,13 @@ export function SoulLifecycleTimeline({
             if (row.kind === "action") {
               return (
                 <RowShell key={row.id} date={null} hideConnector={isLast} dotClassName={TONE_DOT.accent} highlight>
-                  <div className="text-03 font-medium text-[hsl(var(--color-ink))]">{row.title}</div>
-                  <div className="text-02 text-[hsl(var(--color-ink-muted))] mb-2">{row.hint}</div>
+                  <div className="text-03 font-medium text-[oklch(var(--color-ink))]">{row.title}</div>
+                  <div className="text-02 text-[oklch(var(--color-ink-muted))] mb-2">{row.hint}</div>
                   <RequirePermission permissions="judgment.create">
                     <button
                       type="button"
                       onClick={() => openJudgment && onOpenJudgmentQueue(openJudgment.id)}
-                      className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-03 font-medium transition-colors"
+                      className="px-3 py-1.5 bg-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent-hover))] text-black text-03 font-medium transition-colors"
                     >
                       {tf("souls.detail.timeline.open_in_queue", "在审判队列中打开")}
                     </button>
@@ -429,9 +429,9 @@ export function SoulLifecycleTimeline({
 
             if (row.kind === "future") {
               return (
-                <RowShell key={row.id} date={null} hideConnector={isLast} dashed dotClassName="bg-[hsl(var(--color-surface-3))] border border-dashed border-[hsl(var(--color-hairline-strong))]">
-                  <div className="text-03 text-[hsl(var(--color-ink-subtle))]">{row.title}</div>
-                  <div className="text-02 text-[hsl(var(--color-ink-subtle))]">{row.hint}</div>
+                <RowShell key={row.id} date={null} hideConnector={isLast} dashed dotClassName="bg-[oklch(var(--color-surface-3))] border border-dashed border-[oklch(var(--color-hairline-strong))]">
+                  <div className="text-03 text-[oklch(var(--color-ink-subtle))]">{row.title}</div>
+                  <div className="text-02 text-[oklch(var(--color-ink-subtle))]">{row.hint}</div>
                 </RowShell>
               );
             }
@@ -439,8 +439,8 @@ export function SoulLifecycleTimeline({
             // cycle-band divider
             return (
               <div key={row.id} className="my-2 pl-16">
-                <div className="flex items-center gap-2 py-1 px-2 bg-[hsl(var(--color-surface-2))] text-02 text-[hsl(var(--color-ink-muted))]">
-                  <span className="font-semibold text-[hsl(var(--color-ink))]">
+                <div className="flex items-center gap-2 py-1 px-2 bg-[oklch(var(--color-surface-2))] text-02 text-[oklch(var(--color-ink-muted))]">
+                  <span className="font-semibold text-[oklch(var(--color-ink))]">
                     {tf("souls.detail.timeline.cycle_band", "第 {{n}} 世", { n: String(row.cycleNumber) })}
                   </span>
                   <span aria-hidden="true">·</span>

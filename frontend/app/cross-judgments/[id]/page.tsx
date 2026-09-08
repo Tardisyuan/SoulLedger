@@ -93,7 +93,7 @@ export default function CrossJudgmentDetailPage() {
     return (
       <PageShell
       density="document" variant="prose" title={t("crossJudgments.title")} backLink={backLink}>
-        <p className="text-04 text-[hsl(var(--color-status-error))]">{error}</p>
+        <p className="text-04 text-[oklch(var(--color-status-error))]">{error}</p>
       </PageShell>
     );
   }
@@ -137,12 +137,12 @@ export default function CrossJudgmentDetailPage() {
       {loading ? (
         <Skeleton className="h-4 w-full mb-6" />
       ) : judgment?.description && (
-        <p className="font-serif text-05 text-[hsl(var(--color-ink))] mb-6">{judgment.description}</p>
+        <p className="font-serif text-05 text-[oklch(var(--color-ink))] mb-6">{judgment.description}</p>
       )}
 
       {/* Participants */}
       <div className="mb-6">
-        <h2 className="text-06 text-[hsl(var(--color-ink))] mb-3">{t("crossJudgments.participants")}</h2>
+        <h2 className="text-06 text-[oklch(var(--color-ink))] mb-3">{t("crossJudgments.participants")}</h2>
         {loading ? (
           <div className="space-y-2">
             <Skeleton className="h-16 w-full" />
@@ -151,16 +151,16 @@ export default function CrossJudgmentDetailPage() {
         ) : judgment?.participants && judgment.participants.length > 0 ? (
           <div className="space-y-2">
             {judgment.participants.map((p: import("@soulledger/core/api").CrossTenantJudgmentParticipant, i: number) => (
-              <div key={i} className="flex items-center gap-3 bg-[hsl(var(--color-surface-2))] px-4 py-2">
-                <User aria-hidden="true" className="w-5 h-5 text-[hsl(var(--color-ink-subtle))] shrink-0" />
+              <div key={i} className="flex items-center gap-3 bg-[oklch(var(--color-surface-2))] px-4 py-2">
+                <User aria-hidden="true" className="w-5 h-5 text-[oklch(var(--color-ink-subtle))] shrink-0" />
                 <div>
-                  <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{p.participant_actor_name || p.participant_actor}</p>
+                  <p className="text-04 font-medium text-[oklch(var(--color-ink))]">{p.participant_actor_name || p.participant_actor}</p>
                   {/* `DomainEnum`,不是裸成员。`p.role` 是
                       `ParticipantRole`(ADVISOR / CO_JUDGE / CHAIRMAN),而三份
                       bundle 里**一个 participant-role 键都没有** —— 页面上印的
                       一直是 SCREAMING_SNAKE 原样,正是 §4.6 要消除的那种。
                       键已补进 `crossJudgments.participant_roles`。 */}
-                  <p className="text-02 text-[hsl(var(--color-ink-subtle))] flex items-center gap-1">
+                  <p className="text-02 text-[oklch(var(--color-ink-subtle))] flex items-center gap-1">
                     <span>{p.participant_tenant}</span>
                     {/* 中点,不是 em dash。em dash 是 §4.6 里「缺失值」的
                         专用字形,`domainDisplayContract` 会把它当成手写的缺失
@@ -176,14 +176,14 @@ export default function CrossJudgmentDetailPage() {
             ))}
           </div>
         ) : (
-          <p className="text-04 text-[hsl(var(--color-ink-muted))]">{t("crossJudgments.no_participants")}</p>
+          <p className="text-04 text-[oklch(var(--color-ink-muted))]">{t("crossJudgments.no_participants")}</p>
         )}
       </div>
 
       {/* Conclusion (if concluded) */}
       {!loading && judgment?.status === "CONCLUDED" && (
-        <div className="bg-[hsl(var(--color-surface-2))] p-4">
-          <h2 className="text-06 text-[hsl(var(--color-ink))] mb-2">{t("crossJudgments.verdict")}</h2>
+        <div className="bg-[oklch(var(--color-surface-2))] p-4">
+          <h2 className="text-06 text-[oklch(var(--color-ink))] mb-2">{t("crossJudgments.verdict")}</h2>
           {/* `DomainEnum`, not the bare member. Twenty lines above, this same
               file spends five lines arguing that `p.role` must not reach the
               screen as SCREAMING_SNAKE — and then printed `PASS` / `FAIL`
@@ -200,8 +200,8 @@ export default function CrossJudgmentDetailPage() {
               and renders nothing-recorded as `MissingValue`; the old ternary
               silently painted both cases as ordinary ink. */}
           <p className={`text-06 font-bold ${
-            judgment.conclusion_type === "PASS" ? "text-[hsl(var(--color-status-success))]" :
-            judgment.conclusion_type === "FAIL" ? "text-[hsl(var(--color-status-error))]" : "text-[hsl(var(--color-ink))]"
+            judgment.conclusion_type === "PASS" ? "text-[oklch(var(--color-status-success))]" :
+            judgment.conclusion_type === "FAIL" ? "text-[oklch(var(--color-status-error))]" : "text-[oklch(var(--color-ink))]"
           }`}>
             <DomainEnum
               namespace="crossJudgments.conclusion_types"

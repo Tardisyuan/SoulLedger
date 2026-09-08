@@ -20,9 +20,18 @@
  * preference.
  *
  * `.light` is an OVERRIDE block, so the light table is the `:root` values with
- * `.light`'s declarations laid over them. That matters in exactly one place:
- * `--civ-hue` is declared only in `:root`, so the light surface ramp
- * interpolates the same neutral 240 — see CHART_CHROME.tooltipBg below.
+ * `.light`'s declarations laid over them. It matters wherever a token exists
+ * only in `:root` — `--civ-mark` is the live example — and it used to matter
+ * for the surface ramp too, back when `--civ-hue` was declared once and the
+ * light planes interpolated the dark block's 240. See CHART_CHROME.tooltipBg
+ * below, which is still the one entry the ramp's tenant-variability reaches.
+ *
+ * EVERY LITERAL IN THIS FILE IS AN `oklch()` STRING. It was `hsl()` until the
+ * token migration; the colours did not move — the two spellings resolve to the
+ * same sRGB, checked over the whole palette in both engines — and
+ * `civilizationColourContract` / `chartColourContract` compare these strings
+ * against globals.css character for character, so a mirror written in the old
+ * spelling now fails rather than drifting.
  *
  * WHAT THIS FILE DELIBERATELY DOES NOT DO is resolve
  * `getComputedStyle(document.documentElement)` at render time. That is the
@@ -82,9 +91,10 @@ export interface ChartColors {
    * TenantContext uses to stamp `[data-civ]`.
    *
    * `--color-civ-mark-*`, not `--color-civ-hue-*`: the hue tokens are bare
-   * degree numbers that only make sense interpolated into the surface ramp
-   * (`hsl(var(--civ-hue) 47% 7%)`), so they cannot be mirrored as literals
-   * here.
+   * degree numbers, not colours. They were interpolated into the surface ramp
+   * (`hsl([--civ-hue] 47% 7%)`) until the OKLCH migration and are read by
+   * nothing but the contract tests now — either way there is no literal in
+   * them to mirror.
    */
   CIVILIZATION_COLORS: Record<string, string>;
   /**
@@ -159,8 +169,11 @@ export interface ChartColors {
    * the token system, unlike the two above.
    *
    * tooltipBg IS THE ONE ENTRY WHOSE TOKEN STOPPED BEING A LITERAL. --color-
-   * surface-1 used to be a fixed `240 13% 7%`; it is now `var(--civ-hue) 47%
-   * 7%` and changes per tenant. A tenant-variable token has no single literal
+   * surface-1 used to be one fixed colour for everyone (`240 13% 7%`, in the
+   * HSL the file was written in then); Stage 11 made it per tenant — spelled
+   * `[--civ-hue] 47% 7%` until the OKLCH migration and
+   * `var(--color-civ-surface-1-cn)` and siblings since, the same four colours
+   * either way. A tenant-variable token has no single literal
    * mirror, so this value has to answer a design question rather than a copy
    * question, and the answer here is: the tooltip does not follow the tenant.
    * The mirror is the ramp a screen with NO cosmology renders, which since
@@ -196,7 +209,7 @@ export interface ChartColors {
    *
    * It is also not re-implementing anything: every tooltip actually on screen
    * lives in src/components/charts/LazyDashboardCharts.tsx and already sets
-   * `background: "hsl(var(--color-surface-1))"` inline, which follows the
+   * `background: "oklch(var(--color-surface-1))"` inline, which follows the
    * cascade and therefore both the tenant and the theme, for free. This table
    * is the fallback for a Recharts prop that cannot take a custom property.
    */
@@ -206,37 +219,37 @@ export interface ChartColors {
 /** The `:root` block — what `ThemeProvider` renders with `.dark` on `<html>`. */
 const DARK: ChartColors = {
   STATE_COLORS: {
-    ALIVE: "hsl(150 62% 46%)",
-    JUDGING: "hsl(20 88% 58%)",
-    DISPOSED: "hsl(285 55% 66%)",
-    REINCARNATING: "hsl(195 88% 55%)",
-    LOST: "hsl(225 10% 58%)",
-    SETTLED: "hsl(178 55% 40%)",
+    ALIVE: "oklch(0.710064 0.160036 155.6214)",
+    JUDGING: "oklch(0.698166 0.171837 44.2374)",
+    DISPOSED: "oklch(0.686063 0.153568 317.1774)",
+    REINCARNATING: "oklch(0.751947 0.137031 226.6462)",
+    LOST: "oklch(0.650423 0.024804 269.3049)",
+    SETTLED: "oklch(0.63759 0.097383 191.473)",
   },
   CIVILIZATION_COLORS: {
-    CN_DIYU: "hsl(12 55% 58%)",
-    EU_HEAVEN_HELL: "hsl(232 42% 64%)",
-    EG_DUAT: "hsl(44 45% 55%)",
-    GR_HADES: "hsl(88 40% 52%)",
+    CN_DIYU: "oklch(0.649703 0.124151 35.2992)",
+    EU_HEAVEN_HELL: "oklch(0.642606 0.10097 276.6787)",
+    EG_DUAT: "oklch(0.727725 0.100218 89.3545)",
+    GR_HADES: "oklch(0.721756 0.13753 130.0922)",
   },
   REALM_COLORS: {
-    HELL: "hsl(0 84% 62%)",
-    PURGATORY: "hsl(215 80% 62%)",
-    BLISS: "hsl(150 62% 46%)",
-    NEUTRAL: "hsl(215 6% 54%)",
+    HELL: "oklch(0.647001 0.198706 24.6009)",
+    PURGATORY: "oklch(0.656708 0.151485 257.4417)",
+    BLISS: "oklch(0.710064 0.160036 155.6214)",
+    NEUTRAL: "oklch(0.627711 0.013933 255.5433)",
   },
   CHART_SERIES: {
-    balance: "hsl(38 92% 50%)",
-    realm: "hsl(38 92% 50%)",
-    neutral: "hsl(215 6% 54%)",
+    balance: "oklch(0.770351 0.164635 70.6613)",
+    realm: "oklch(0.770351 0.164635 70.6613)",
+    neutral: "oklch(0.627711 0.013933 255.5433)",
   },
   CHART_CHROME: {
-    accent: "hsl(38 92% 50%)",
-    grid: "hsl(220 8% 18%)",
-    axis: "hsl(220 8% 18%)",
-    tick: "hsl(215 8% 57%)",
-    tooltipBg: "hsl(240 13% 7%)",
-    tooltipBorder: "hsl(220 8% 18%)",
+    accent: "oklch(0.770351 0.164635 70.6613)",
+    grid: "oklch(0.296183 0.010017 260.7091)",
+    axis: "oklch(0.296183 0.010017 260.7091)",
+    tick: "oklch(0.650852 0.016974 257.2209)",
+    tooltipBg: "oklch(0.174911 0.008207 285.5205)",
+    tooltipBorder: "oklch(0.296183 0.010017 260.7091)",
   },
 };
 
@@ -258,37 +271,37 @@ const DARK: ChartColors = {
  */
 const LIGHT: ChartColors = {
   STATE_COLORS: {
-    ALIVE: "hsl(150 62% 28%)",
-    JUDGING: "hsl(20 82% 38%)",
-    DISPOSED: "hsl(285 52% 44%)",
-    REINCARNATING: "hsl(195 85% 31%)",
-    LOST: "hsl(225 10% 42%)",
-    SETTLED: "hsl(178 55% 29%)",
+    ALIVE: "oklch(0.496252 0.108981 156.0004)",
+    JUDGING: "oklch(0.530328 0.150617 42.248)",
+    DISPOSED: "oklch(0.50637 0.187764 316.1446)",
+    REINCARNATING: "oklch(0.512783 0.096631 227.6554)",
+    LOST: "oklch(0.510868 0.026414 269.1642)",
+    SETTLED: "oklch(0.507045 0.076416 191.4559)",
   },
   CIVILIZATION_COLORS: {
-    CN_DIYU: "hsl(20 58% 38%)",
-    EU_HEAVEN_HELL: "hsl(232 45% 44%)",
-    EG_DUAT: "hsl(44 52% 34%)",
-    GR_HADES: "hsl(88 46% 32%)",
+    CN_DIYU: "oklch(0.509043 0.112189 45.2466)",
+    EU_HEAVEN_HELL: "oklch(0.451923 0.141689 273.0637)",
+    EG_DUAT: "oklch(0.541259 0.089289 88.9271)",
+    GR_HADES: "oklch(0.525615 0.111121 130.5085)",
   },
   REALM_COLORS: {
-    HELL: "hsl(0 78% 44%)",
-    PURGATORY: "hsl(215 78% 42%)",
-    BLISS: "hsl(150 62% 28%)",
-    NEUTRAL: "hsl(220 6% 42%)",
+    HELL: "oklch(0.531966 0.205532 27.9789)",
+    PURGATORY: "oklch(0.495652 0.167987 258.581)",
+    BLISS: "oklch(0.496252 0.108981 156.0004)",
+    NEUTRAL: "oklch(0.520424 0.014972 266.5999)",
   },
   CHART_SERIES: {
-    balance: "hsl(38 92% 50%)",
-    realm: "hsl(38 92% 50%)",
-    neutral: "hsl(220 6% 42%)",
+    balance: "oklch(0.770351 0.164635 70.6613)",
+    realm: "oklch(0.770351 0.164635 70.6613)",
+    neutral: "oklch(0.520424 0.014972 266.5999)",
   },
   CHART_CHROME: {
-    accent: "hsl(38 92% 50%)",
-    grid: "hsl(220 10% 90%)",
-    axis: "hsl(220 10% 90%)",
-    tick: "hsl(220 8% 42%)",
-    tooltipBg: "hsl(240 14% 98%)",
-    tooltipBorder: "hsl(220 10% 90%)",
+    accent: "oklch(0.770351 0.164635 70.6613)",
+    grid: "oklch(0.921227 0.0046 258.3254)",
+    axis: "oklch(0.921227 0.0046 258.3254)",
+    tick: "oklch(0.517183 0.019895 267.6262)",
+    tooltipBg: "oklch(0.982679 0.002642 286.3511)",
+    tooltipBorder: "oklch(0.921227 0.0046 258.3254)",
   },
 };
 

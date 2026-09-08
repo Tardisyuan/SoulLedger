@@ -51,21 +51,21 @@ import { cn } from "@/lib/utils";
 /** The app's one badge tone table. `ENUM_TONE_CLASSES` is a view onto five of these six. */
 export const BADGE_TONE_CLASSES = {
   neutral:
-    "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] border-[hsl(var(--color-hairline-tertiary))]",
+    "bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-hairline-tertiary))]",
   success:
-    "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.3)]",
+    "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success)/0.3)]",
   warning:
-    "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.3)]",
+    "bg-[oklch(var(--color-status-warning)/0.1)] text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning)/0.3)]",
   error:
-    "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.3)]",
-  info: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))] border-[hsl(var(--color-status-info)/0.3)]",
+    "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error)/0.3)]",
+  info: "bg-[oklch(var(--color-status-info)/0.1)] text-[oklch(var(--color-status-info))] border-[oklch(var(--color-status-info)/0.3)]",
   /**
    * Sixth tone, deliberately NOT projected into `ENUM_TONE_CLASSES` — the data
    * grid has no use for it, and its 20% fill is outside the 10% cap
    * src/__tests__/dataGridToneContract.test.ts enforces on the grid's tones.
    * 4 of the 66 badges do use it: the "current tenant" / "this one" marker
-   * written by hand as `bg-[hsl(var(--color-accent))]/20
-   * text-[hsl(var(--color-accent-ink))]`.
+   * written by hand as `bg-[oklch(var(--color-accent))]/20
+   * text-[oklch(var(--color-accent-ink))]`.
    *
    * Note the foreground is `--color-accent-ink`, NOT `--color-accent`. They are
    * the same value in dark mode and deliberately different in light
@@ -73,7 +73,7 @@ export const BADGE_TONE_CLASSES = {
    * fails AA in light mode at the accent's own lightness. A badge is text.
    */
   accent:
-    "bg-[hsl(var(--color-accent)/0.2)] text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent)/0.4)]",
+    "bg-[oklch(var(--color-accent)/0.2)] text-[oklch(var(--color-accent-ink))] border-[oklch(var(--color-accent)/0.4)]",
 } as const;
 
 export type BadgeTone = keyof typeof BADGE_TONE_CLASSES;

@@ -53,7 +53,7 @@ import {
 } from "@soulledger/core/config/civilizations";
 import { useI18n } from "@/src/contexts/I18nContext";
 // Both stay under src/components/workflow/ deliberately: xyflow renders
-// `markerEnd` into a standalone <marker> defs tree where `hsl(var(--…))` does
+// `markerEnd` into a standalone <marker> defs tree where `oklch(var(--…))` does
 // not resolve, so the literal hex values here are a ruled exception — and
 // eslint.config.mjs's HEX_ALLOW grants it by PATH PREFIX. A file of this
 // editor's moved anywhere else goes red on its first arrow colour.
@@ -1023,13 +1023,13 @@ export default function WorkflowEditor({
   // no query to fail — are untouched.
   if (templateId && isTemplateError) {
     return (
-      <div className="flex flex-col h-full items-center justify-center bg-[hsl(var(--color-surface-2))]">
+      <div className="flex flex-col h-full items-center justify-center bg-[oklch(var(--color-surface-2))]">
         <QueryError onRetry={() => void refetchTemplate()} />
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors duration-state"
+            className="px-4 py-2 border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-2))] transition-colors duration-state"
           >
             {t("common.cancel")}
           </button>
@@ -1039,7 +1039,7 @@ export default function WorkflowEditor({
   }
 
   return (
-    <div className="flex flex-col h-full bg-[hsl(var(--color-surface-2))]">
+    <div className="flex flex-col h-full bg-[oklch(var(--color-surface-2))]">
       {/* Toolbar
        *
        * ─────────────────────────────────────────────────────────────────
@@ -1063,7 +1063,7 @@ export default function WorkflowEditor({
        * 真的超出,`overflow-x-auto` 真的滚,每个控件都保持可用的尺寸。
        *
        * 一个 token 的改动,和一段反过来的推理。 */}
-      <div className="flex items-center gap-3 p-3 border-b border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] overflow-x-auto">
+      <div className="flex items-center gap-3 p-3 border-b border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] overflow-x-auto">
         {/* Template info inputs */}
         <div className="flex-1 flex items-center gap-3">
           <input
@@ -1072,13 +1072,13 @@ export default function WorkflowEditor({
             onChange={(e) => setTemplateName(e.target.value)}
             placeholder={t("workflow.editor.template_name_placeholder")}
             aria-label={t("workflow.editor.template_name_placeholder")}
-            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] placeholder:text-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink))] placeholder:text-[oklch(var(--color-ink-subtle))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
           />
           <select
             value={templateCiv}
             onChange={(e) => setTemplateCiv(e.target.value as typeof templateCiv)}
             aria-label={t("workflow.editor.civilization_select_label") === "workflow.editor.civilization_select_label" ? "Civilization" : t("workflow.editor.civilization_select_label")}
-            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
           >
             {/* Rendered from CIVILIZATION_OPTIONS so the dropdown cannot fall
                 behind the union the state is typed with — three hand-written
@@ -1094,7 +1094,7 @@ export default function WorkflowEditor({
             value={templateCaseType}
             onChange={(e) => setTemplateCaseType(e.target.value)}
             aria-label={t("workflow.editor.case_type_select_label") === "workflow.editor.case_type_select_label" ? "Case Type" : t("workflow.editor.case_type_select_label")}
-            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
           >
             <option value="ROUTINE">{t("workflow.case_types.ROUTINE")}</option>
             <option value="APPEAL">{t("workflow.case_types.APPEAL")}</option>
@@ -1111,7 +1111,7 @@ export default function WorkflowEditor({
             value={templatePriority}
             onChange={(e) => setTemplatePriority(Number(e.target.value))}
             aria-label={t("workflow.detail.priority")}
-            className="px-3 py-1.5 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
+            className="px-3 py-1.5 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
           >
             {priorityOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -1125,7 +1125,7 @@ export default function WorkflowEditor({
         <div className="flex items-center gap-2">
           <button
             onClick={addNode}
-            className="px-3 py-1.5 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] text-black text-03 font-medium transition-colors"
+            className="px-3 py-1.5 bg-[oklch(var(--color-accent))] hover:bg-[oklch(var(--color-accent-hover))] text-black text-03 font-medium transition-colors"
           >
             + {t("workflow.editor.add_node")}
           </button>
@@ -1139,7 +1139,7 @@ export default function WorkflowEditor({
                raising the baseline. 32px is the same height `px-3 py-1.5` on
                text-03 produces, border included — border-box — so the row still
                lines up. */
-            className="px-3 h-8 inline-flex items-center bg-[hsl(var(--color-surface-3))] hover:bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink))] text-03 font-medium border border-[hsl(var(--color-hairline))] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 h-8 inline-flex items-center bg-[oklch(var(--color-surface-3))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink))] text-03 font-medium border border-[oklch(var(--color-hairline))] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {t("workflow.editor.auto_layout")}
           </button>
@@ -1151,7 +1151,7 @@ export default function WorkflowEditor({
           <span
             role="status"
             aria-live="polite"
-            className="text-02 text-[hsl(var(--color-ink-muted))]"
+            className="text-02 text-[oklch(var(--color-ink-muted))]"
           >
             {relayouting ? t("workflow.editor.relayouting") : ""}
           </span>
@@ -1264,14 +1264,14 @@ export default function WorkflowEditor({
              before branches existed it was all that was needed. `autoLayout`
              owns every fit after this one. */
           fitView
-          className="bg-[hsl(var(--color-surface-2))]"
+          className="bg-[oklch(var(--color-surface-2))]"
           defaultEdgeOptions={{
             ...edgeArrow(),
           }}
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-          <Controls className="bg-[hsl(var(--color-surface-1))]! border-[hsl(var(--color-hairline))]! !" />
-          <Panel position="top-left" className="bg-[hsl(var(--color-surface-1))]/90 backdrop-blur-sm px-3 py-2 border border-[hsl(var(--color-hairline))] text-02 text-[hsl(var(--color-ink-muted))]">
+          <Controls className="bg-[oklch(var(--color-surface-1))]! border-[oklch(var(--color-hairline))]! !" />
+          <Panel position="top-left" className="bg-[oklch(var(--color-surface-1))]/90 backdrop-blur-sm px-3 py-2 border border-[oklch(var(--color-hairline))] text-02 text-[oklch(var(--color-ink-muted))]">
             {/* The keyboard half of the hint, and the only place `E` is
                 visible. It reuses `workflow.editor.edit_node` — the modal's own
                 title — rather than introducing a fourth string in three
@@ -1280,7 +1280,7 @@ export default function WorkflowEditor({
                 `JudgmentQueueConsole.tsx` already uses for its key hints. */}
             <span>{t("workflow.editor.hint")}</span>
             {" · "}
-            <kbd className="font-mono text-02 px-1 bg-[hsl(var(--color-surface-3))]">E</kbd>{" "}
+            <kbd className="font-mono text-02 px-1 bg-[oklch(var(--color-surface-3))]">E</kbd>{" "}
             {t("workflow.editor.edit_node")}
           </Panel>
         </ReactFlow>

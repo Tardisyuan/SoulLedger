@@ -48,19 +48,19 @@ export function ConnectionStatus() {
       <span
         aria-hidden="true"
         className={`w-2 h-2 rounded-full ${pulse ? "animate-pulse" : ""}`}
-        style={{ backgroundColor: `hsl(var(${token}))` }}
+        style={{ backgroundColor: `oklch(var(${token}))` }}
       />
       {/* `role="status"`: the link dropping is a change the operator did not
           make and needs told about, and the dot alone says nothing to a
           screen reader. */}
-      <span role="status" className="text-01 text-[hsl(var(--color-ink-subtle))] hidden sm:inline">
+      <span role="status" className="text-01 text-[oklch(var(--color-ink-subtle))] hidden sm:inline">
         {label}
       </span>
       {canRetry && (
         <button
           type="button"
           onClick={reconnect}
-          className="text-01 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] underline underline-offset-2 transition-colors"
+          className="text-01 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] underline underline-offset-2 transition-colors"
         >
           {t("connection.retry")}
         </button>

@@ -49,7 +49,7 @@ const ACCENT_COLORS = [
  * the theme flips.
  */
 function accentTokens(hex: string, theme: string): Record<string, string> {
-  const [h, sPct, lPct] = hexToHsl(hex).split(" ");
+  const [h, sPct, lPct] = hexToHslTriple(hex).split(" ");
   const hue = parseInt(h, 10);
   const sat = parseInt(sPct, 10);
   const light = parseInt(lPct, 10);
@@ -70,10 +70,13 @@ function accentTokens(hex: string, theme: string): Record<string, string> {
       ? `${hue} ${sat}% ${solveInkLightness(hue, sat)}%`
       : `${hue} ${sat}% ${light}%`;
 
+  // The three triples are derived in HSL and written in OKLCH — see
+  // `hexToOklch`. The conversion is exact through sRGB, so what lands on
+  // `documentElement` is the same colour the arithmetic above chose.
   return {
-    "--color-accent": `${hue} ${sat}% ${light}%`,
-    "--color-accent-hover": hover,
-    "--color-accent-ink": ink,
+    "--color-accent": hslTripleToOklch(`${hue} ${sat}% ${light}%`),
+    "--color-accent-hover": hslTripleToOklch(hover),
+    "--color-accent-ink": hslTripleToOklch(ink),
   };
 }
 
@@ -110,7 +113,7 @@ function solveInkLightness(hue: number, sat: number): number {
 /** Whether black label text on this fill clears AA — primary buttons use
  *  `text-black`, so an accent that fails this makes them unreadable. */
 export function accentTakesBlackText(hex: string): boolean {
-  const [h, sPct, lPct] = hexToHsl(hex).split(" ");
+  const [h, sPct, lPct] = hexToHslTriple(hex).split(" ");
   const lum = luminance(parseInt(h, 10), parseInt(sPct, 10), parseInt(lPct, 10));
   return (lum + 0.05) / 0.05 >= 4.5;
 }
@@ -136,8 +139,68 @@ const DEFAULT_ACCENT_HEX = "#f59e0b";
 
 const MOUNT_LINGER_MS = 240;
 
-// Convert hex to HSL string for CSS variable
-function hexToHsl(hex: string): string {
+/**
+ * `#f59e0b` -> `0.770351 0.164635 70.6613`, the OKLCH triple the stylesheet's
+ * tokens are written in since the HSL migration.
+ *
+ * IT GOES THROUGH HSL ON THE WAY, AND THAT IS DELIBERATE. `hexToHslTriple`
+ * rounds H, S and L to whole numbers, so `#f59e0b` (245, 158, 11) has always
+ * been written out as `38 92% 50%` = (245, 159, 10) — the inline style has
+ * never rendered quite the hex it was given. Converting the hex straight to
+ * OKLCH would fix that and move two channels by 1/255 on every accent-coloured
+ * pixel in the app, which is a colour change wearing a refactor's clothes.
+ * The lossy step is kept so the migration renders the same pixels; it is a
+ * separate decision, and the value to fix is `hexToHslTriple`, not this.
+ *
+ * The derived tokens below (hover, ink) stay in HSL for the same reason: their
+ * arithmetic — "+4 saturation, +8 lightness", "solve for the lightness that
+ * clears 5.5:1" — is measured in HSL coordinates, and re-deriving it in OKLCH
+ * would pick different colours rather than the same ones spelled differently.
+ * This function is the boundary where a finished triple becomes CSS.
+ */
+export function hexToOklch(hex: string): string {
+  return hslTripleToOklch(hexToHslTriple(hex));
+}
+
+/** `38 92% 50%` -> `0.770351 0.164635 70.6613`. sRGB is the pivot: both spaces
+ *  describe the same 8-bit colour, so the round trip is exact. */
+function hslTripleToOklch(triple: string): string {
+  const [h, sPct, lPct] = triple.split(" ");
+  const hue = parseFloat(h);
+  const sat = parseFloat(sPct) / 100;
+  const light = parseFloat(lPct) / 100;
+  const a = sat * Math.min(light, 1 - light);
+  const chan = (n: number) => {
+    const k = (n + hue / 30) % 12;
+    return light - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  };
+  const rgb = [0, 8, 4].map((n) => Math.round(255 * chan(n)));
+  const lin = rgb.map((v) => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  const [lr, lg, lb] = lin;
+  const cbrt = (v: number) => Math.cbrt(v);
+  const l_ = cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
+  const m_ = cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
+  const s_ = cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
+  const L = 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_;
+  const A = 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_;
+  const B = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_;
+  const C = Math.hypot(A, B);
+  if (C < 1e-6) return `${trim(L, 6)} 0 0`;
+  const H = ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360;
+  return `${trim(L, 6)} ${trim(C, 6)} ${trim(H, 4)}`;
+}
+
+function trim(value: number, digits: number): string {
+  const s = value.toFixed(digits).replace(/0+$/, "").replace(/\.$/, "");
+  return s === "" || s === "-" ? "0" : s;
+}
+
+// Convert hex to an `H S% L%` triple — still the coordinate system every
+// derivation below is measured in; see `hexToOklch` for why.
+function hexToHslTriple(hex: string): string {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
   const g = parseInt(hex.slice(3, 5), 16) / 255;
   const b = parseInt(hex.slice(5, 7), 16) / 255;
@@ -301,18 +364,18 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
       <div
         ref={drawerRef}
         {...drawerProps}
-        className={`fixed right-0 top-0 h-full w-80 bg-[hsl(var(--color-surface-1))] border-l border-[hsl(var(--color-hairline))] z-drawer shadow-xl overflow-y-auto ${
+        className={`fixed right-0 top-0 h-full w-80 bg-[oklch(var(--color-surface-1))] border-l border-[oklch(var(--color-hairline))] z-drawer shadow-xl overflow-y-auto ${
           open ? "animate-drawer-in" : "animate-drawer-out"
         }`}
       >
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 id={titleId} className="text-06 text-[hsl(var(--color-ink))]">{t("settings.title") || "Settings"}</h2>
+            <h2 id={titleId} className="text-06 text-[oklch(var(--color-ink))]">{t("settings.title") || "Settings"}</h2>
             <button
               onClick={onClose}
               aria-label={t("common.close")}
-              className="text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors"
+              className="text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -320,14 +383,14 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Theme Section */}
           <div className="mb-6">
-            <h3 className="text-03 font-medium text-[hsl(var(--color-ink-muted))] mb-3">{t("settings.theme") || "Theme"}</h3>
+            <h3 className="text-03 font-medium text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.theme") || "Theme"}</h3>
             <div className="flex gap-2">
               <button
                 onClick={toggleTheme}
                 className={`flex-1 py-2 px-3 text-03 transition-colors ${
                   theme === "light"
-                    ? "bg-[hsl(var(--color-accent))] text-black"
-                    : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
+                    ? "bg-[oklch(var(--color-accent))] text-black"
+                    : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
                 }`}
               >
                 <span className="flex items-center justify-center gap-2">
@@ -339,8 +402,8 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 onClick={toggleTheme}
                 className={`flex-1 py-2 px-3 text-03 transition-colors ${
                   theme === "dark"
-                    ? "bg-[hsl(var(--color-accent))] text-black"
-                    : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
+                    ? "bg-[oklch(var(--color-accent))] text-black"
+                    : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
                 }`}
               >
                 <span className="flex items-center justify-center gap-2">
@@ -353,7 +416,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Accent Color Section */}
           <div className="mb-6">
-            <h3 className="text-03 font-medium text-[hsl(var(--color-ink-muted))] mb-3">{t("settings.accent_color") || "Accent Color"}</h3>
+            <h3 className="text-03 font-medium text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.accent_color") || "Accent Color"}</h3>
             <div className="grid grid-cols-3 gap-2 mb-3">
               {ACCENT_COLORS.map((color) => (
                 <button
@@ -362,7 +425,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                   style={{ backgroundColor: color.value }}
                   className={`h-10 transition-colors ${
                     accentColor === color.value
-                      ? "ring-2 ring-offset-2 ring-offset-surface-1 ring-[hsl(var(--color-accent))] scale-105"
+                      ? "ring-2 ring-offset-2 ring-offset-surface-1 ring-[oklch(var(--color-accent))] scale-105"
                       : "hover:scale-105"
                   }`}
                   title={t(`settings.colors.${color.name.toLowerCase()}`) || color.name}
@@ -375,12 +438,12 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 value={customHex}
                 onChange={(e) => setCustomHex(e.target.value)}
                 placeholder="#ff5500"
-                className="flex-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
+                className="flex-1 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] px-3 py-2 text-03 text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
               />
               <button
                 onClick={handleCustomHex}
                 aria-describedby={customHexError ? "accent-hex-error" : undefined}
-                className="px-4 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] hover:text-[hsl(var(--color-ink))] transition-colors"
+                className="px-4 py-2 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))] hover:text-[oklch(var(--color-ink))] transition-colors"
               >
                 {t("settings.apply") || "Apply"}
               </button>
@@ -389,7 +452,7 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
               <p
                 id="accent-hex-error"
                 role="alert"
-                className="mt-2 text-02 text-[hsl(var(--color-status-error))]"
+                className="mt-2 text-02 text-[oklch(var(--color-status-error))]"
               >
                 {customHexError}
               </p>
@@ -398,14 +461,14 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
 
           {/* Navigation Mode Section */}
           <div className="mb-6">
-            <h3 className="text-03 font-medium text-[hsl(var(--color-ink-muted))] mb-3">{t("settings.nav_mode") || "Navigation Mode"}</h3>
+            <h3 className="text-03 font-medium text-[oklch(var(--color-ink-muted))] mb-3">{t("settings.nav_mode") || "Navigation Mode"}</h3>
             <div className="flex gap-2">
               <button
                 onClick={() => onNavModeChange("classic")}
                 className={`flex-1 py-2 px-3 text-03 transition-colors ${
                   navMode === "classic"
-                    ? "bg-[hsl(var(--color-accent))] text-black"
-                    : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
+                    ? "bg-[oklch(var(--color-accent))] text-black"
+                    : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
                 }`}
               >
                 {t("settings.classic") || "Classic"}
@@ -414,14 +477,14 @@ export function SettingsDrawer({ open, onClose, navMode, onNavModeChange }: Sett
                 onClick={() => onNavModeChange("compact")}
                 className={`flex-1 py-2 px-3 text-03 transition-colors ${
                   navMode === "compact"
-                    ? "bg-[hsl(var(--color-accent))] text-black"
-                    : "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))]"
+                    ? "bg-[oklch(var(--color-accent))] text-black"
+                    : "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))]"
                 }`}
               >
                 {t("settings.compact") || "Compact"}
               </button>
             </div>
-            <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-2">
+            <p className="text-02 text-[oklch(var(--color-ink-subtle))] mt-2">
               {navMode === "compact"
                 ? (t("settings.compact_desc") || "Icons only with tooltips on hover")
                 : (t("settings.classic_desc") || "Full sidebar with icons and labels")}
@@ -438,13 +501,13 @@ export function useAccentColor() {
     try {
       const saved = localStorage.getItem(ACCENT_COLOR_KEY);
       if (saved && /^#[0-9a-fA-F]{6}$/.test(saved)) {
-        document.documentElement.style.setProperty("--color-accent", hexToHsl(saved));
+        document.documentElement.style.setProperty("--color-accent", hexToOklch(saved));
       } else {
-        document.documentElement.style.setProperty("--color-accent", hexToHsl(DEFAULT_ACCENT_HEX));
+        document.documentElement.style.setProperty("--color-accent", hexToOklch(DEFAULT_ACCENT_HEX));
       }
     } catch {
       // localStorage unavailable (SSR or private browsing)
-      document.documentElement.style.setProperty("--color-accent", hexToHsl(DEFAULT_ACCENT_HEX));
+      document.documentElement.style.setProperty("--color-accent", hexToOklch(DEFAULT_ACCENT_HEX));
     }
   }, []);
 }

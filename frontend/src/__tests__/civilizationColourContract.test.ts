@@ -60,6 +60,7 @@
 import {
   CIV_PREFIXES,
   CIV_PREFIX_BY_TENANT_CODE,
+  HUE_READBACK_SLACK_DEG,
   LIGHT_TOKENS,
   ROOT_TOKENS,
   TENANT_CODES,
@@ -71,7 +72,9 @@ import {
   civPairs,
   deltaE00,
   deltaE00Rgb,
-  hslTripleToRgb,
+  hslHueOfOklch,
+  oklchTripleToRgb,
+  rgbToOklchTriple,
   maxChannelDelta,
   readCivAttrRules,
   readSoulStates,
@@ -139,7 +142,13 @@ describe("the parser is looking at something", () => {
   it("found real token blocks in globals.css", () => {
     expect(Object.keys(ROOT_TOKENS).length).toBeGreaterThan(20);
     expect(Object.keys(LIGHT_TOKENS).length).toBeGreaterThan(20);
-    expect(ROOT_TOKENS["--color-surface-1"]).toBe("var(--civ-hue) 47% 7%");
+    // The `:root` ramp is inert — every mapped tenant overrides it from
+    // `:root[data-civ]` and the unmapped screen from `:root:not([data-civ])` —
+    // but it must still be a colour, because it is what a fifth civilization
+    // would render on the day it has tokens and no rule. This used to pin the
+    // literal string `[--civ-hue] 47% 7%`, which is the same job: it proved
+    // the parser was reading declarations and not prose.
+    expect(ROOT_TOKENS["--color-surface-1"]).toMatch(/^[\d.]+\s+[\d.]+\s+-?[\d.]+$/);
   });
 
   it("found the soul lifecycle states", () => {
@@ -164,19 +173,32 @@ describe("civilization identity: globals.css is the authority", () => {
     expect(suffixesOf(LIGHT_TOKENS, "--color-civ-mark")).toEqual(CIV_PREFIXES);
   });
 
-  it("gives every civilization a [data-civ] rule wired to its own hue token", () => {
+  it("gives every civilization a :root[data-civ] rule wired to its own ramp tokens", () => {
     // The enumeration point Greek was missing from. Tokens alone paint nothing.
+    //
+    // This used to read `rules[prefix].hue === "--color-civ-hue-<p>"`, one
+    // pointer per tenant, because the five planes were `[--civ-hue] S% L%`
+    // and the hue was the only per-tenant part. OKLCH cannot factor them that
+    // way — at one HSL saturation and lightness the four tenants' OKLCH L
+    // spreads 0.057 and C spreads 0.010 — so each plane is its own literal and
+    // the rule points at five. Same invariant, wider carrier: a tenant with
+    // tokens and no rule still renders neutral, and now so does a tenant whose
+    // rule forgot one plane.
     const rules = readCivAttrRules();
     expect(Object.keys(rules).sort()).toEqual(CIV_PREFIXES);
     for (const prefix of CIV_PREFIXES) {
-      expect(rules[prefix].hue).toBe(`--color-civ-hue-${prefix}`);
+      for (const plane of RAMP_TOKENS) {
+        expect(rules[prefix].ramp[plane]).toBe(
+          `--color-civ-${plane.replace("--color-", "")}-${prefix}`
+        );
+      }
     }
   });
 
   it("gives every civilization a [data-civ] rule wired to its own mark token", () => {
     // The hue's twin, and the one Stage 10 needs. The masthead draws the mark
     // in three places — expanded lockup, collapsed rail, mobile chip — and none
-    // of them knows which tenant it is rendering; they read `hsl(var(--civ-mark))`
+    // of them knows which tenant it is rendering; they read `oklch(var(--civ-mark))`
     // and let this rule decide. A civilization with a hue alias and no mark
     // alias therefore paints an identity dot with no colour, on the one element
     // whose whole job is saying which cosmology this is.
@@ -189,7 +211,7 @@ describe("civilization identity: globals.css is the authority", () => {
   it.each(CIV_PREFIXES)("--color-civ-hue-%s is a bare hue degree, not an HSL triple", (prefix) => {
     // This is the whole reason the `--color-civ-*` table in
     // docs/design-handoff/tokens.md was deleted instead of recalibrated. The
-    // hue token is interpolated as `hsl(var(--civ-hue) 13% 7%)`; a full triple
+    // hue token is interpolated as `oklch([--civ-hue] 13% 7%)`; a full triple
     // in that slot produces an invalid colour, so a "corrected" table of
     // triples would still have been the wrong shape.
     for (const tokens of [ROOT_TOKENS, LIGHT_TOKENS]) {
@@ -197,16 +219,26 @@ describe("civilization identity: globals.css is the authority", () => {
     }
   });
 
-  it.each(CIV_PREFIXES)("--color-civ-mark-%s is a full HSL triple", (prefix) => {
+  it.each(CIV_PREFIXES)("--color-civ-mark-%s is a full OKLCH triple", (prefix) => {
     for (const tokens of [ROOT_TOKENS, LIGHT_TOKENS]) {
-      expect(tokens[`--color-civ-mark-${prefix}`]).toMatch(/^\d+(\.\d+)?\s+[\d.]+%\s+[\d.]+%$/);
+      expect(tokens[`--color-civ-mark-${prefix}`]).toMatch(/^[\d.]+\s+[\d.]+\s+-?[\d.]+$/);
     }
   });
 
   it.each(CIV_PREFIXES)("the mark and hue tokens for %s agree on the hue", (prefix) => {
+    // IT READS THE HUE THROUGH A CONVERSION NOW, AND THE INVARIANT DID NOT
+    // MOVE. While the tokens were HSL the mark's first component WAS the hue,
+    // so this was a string comparison. `--color-civ-mark-cn` is now an OKLCH
+    // triple whose H is 35.30 while the tenant's hue is 12 — those are the same
+    // colour in two coordinate systems, not a disagreement, and comparing the
+    // OKLCH H directly would need a tolerance nothing here has measured.
+    // `hslHueOfOklch` converts back to the coordinate the rule was written in,
+    // so the assertion stays exact and still fails for a mark that wanders off
+    // its tenant's hue.
     for (const tokens of [ROOT_TOKENS, LIGHT_TOKENS]) {
-      const hue = tokens[`--color-civ-hue-${prefix}`];
-      expect(tokens[`--color-civ-mark-${prefix}`].split(/\s+/)[0]).toBe(hue);
+      const hue = Number(tokens[`--color-civ-hue-${prefix}`]);
+      const read = hslHueOfOklch(tokens[`--color-civ-mark-${prefix}`]);
+      expect(Math.abs(read - hue)).toBeLessThan(HUE_READBACK_SLACK_DEG);
     }
   });
 });
@@ -293,6 +325,127 @@ const SHARMA_CIEDE2000_CASES: readonly (readonly [
   [6.7747, -0.2908, -2.4247, 5.8714, -0.0985, -2.2286, 0.6377],
   [2.0776, 0.0795, -1.135, 0.9033, -0.0636, -0.5514, 0.9082],
 ];
+
+/**
+ * `oklchTripleToRgb` is the floor under everything else in this file, and it
+ * arrived with the migration that rewrote every token from `H S% L%` to
+ * `L C H`. A conversion that is subtly wrong is worse than no conversion: it
+ * reads as authoritative, every ratio and every ΔE00 in the repository is
+ * computed through it, and nothing else would report the error.
+ *
+ * SO IT IS HELD TO PUBLISHED VALUES, THE WAY ΔE00 IS HELD TO SHARMA'S TABLE.
+ * The three sRGB primaries' OKLCH coordinates below are the ones CSS Color 4
+ * §9.3 gives (Björn Ottosson's, from the article the matrices come from):
+ * red oklch(62.7955% 0.257683 29.2339), green oklch(86.644% 0.294827
+ * 142.4953), blue oklch(45.2014% 0.313214 264.052).
+ *
+ * AND TO THE BROWSER, WHICH IS THE PART A UNIT TEST CANNOT DO. jsdom does not
+ * rasterise, so this file can only prove the arithmetic is self-consistent and
+ * matches the spec's numbers. The other half was measured out of band, in
+ * Chromium and Firefox, by painting every declared token twice — once as the
+ * `hsl()` triple it used to be and once as the `oklch()` triple it is now —
+ * and reading the pixels back: 104/104 identical, opaque, in both engines.
+ * That measurement is what licenses the round-trip pin below to stand for what
+ * a screen shows. The full-page evidence is the 32-screenshot comparison the
+ * migration was accepted on.
+ */
+describe("the OKLCH conversion every colour pin runs through", () => {
+  const PRIMARIES: [string, [number, number, number]][] = [
+    ["0.627955 0.257683 29.2339", [255, 0, 0]],
+    ["0.86644 0.294827 142.4953", [0, 255, 0]],
+    ["0.452014 0.313214 264.052", [0, 0, 255]],
+    ["1 0 0", [255, 255, 255]],
+    ["0 0 0", [0, 0, 0]],
+    ["0.599871 0 0", [128, 128, 128]],
+  ];
+
+  /**
+   * Five tokens straight out of globals.css, beside the sRGB Chromium actually
+   * paints them as — read back from a screenshot during the migration, not
+   * computed here.
+   *
+   * WHY THE PRIMARIES ARE NOT ENOUGH, MEASURED RATHER THAN ASSUMED. Every row
+   * of `PRIMARIES` is a channel at 0 or 255, or an achromatic grey. Changing
+   * the sRGB transfer exponent from 1/2.4 to 1/2.41 leaves all six of them
+   * byte-identical — the endpoints are fixed points of any gamma, and mid-grey
+   * happened to round the same way — so that mutation passed the whole block
+   * until these rows were added. They are the mid-tones with chroma, which is
+   * where a transfer-function or matrix error first shows up in a channel.
+   */
+  const MEASURED: [string, [number, number, number]][] = [
+    ["0.770351 0.164635 70.6613", [245, 159, 10]], // --color-accent, both themes
+    ["0.496252 0.108981 156.0004", [27, 116, 71]], // --color-status-alive, light
+    ["0.642606 0.10097 276.6787", [125, 135, 202]], // --color-civ-mark-eu, dark
+    ["0.520424 0.014972 266.5999", [101, 105, 114]], // --color-ink-tertiary, light
+    ["0.138985 0.030107 40.9464", [19, 5, 2]], // --color-civ-canvas-cn, dark
+  ];
+
+  it.each(PRIMARIES)("%s is the sRGB colour CSS Color 4 says it is", (triple, rgb) => {
+    expect(oklchTripleToRgb(triple)).toEqual(rgb);
+  });
+
+  it.each(MEASURED)("%s is the sRGB the browser paints it as", (triple, rgb) => {
+    expect(oklchTripleToRgb(triple)).toEqual(rgb);
+  });
+
+  it("the measured rows are tokens this stylesheet actually declares", () => {
+    // Otherwise the row above is a pin on a number nobody keeps true. Each
+    // measured triple must appear as some token's value in one of the themes,
+    // so renaming or retuning the token reddens this rather than leaving a
+    // stale reference standing beside a changed file.
+    const declared = new Set([
+      ...Object.values(TOKENS_BY_THEME.dark),
+      ...Object.values(TOKENS_BY_THEME.light),
+    ]);
+    for (const [triple] of MEASURED) expect(declared).toContain(triple);
+  });
+
+  it("round-trips every declared token through sRGB without moving a channel", () => {
+    // The property the migration rests on: the OKLCH triples in globals.css
+    // name exactly the sRGB colours the HSL triples named. Checked over the
+    // whole palette rather than a sample, and over the per-tenant ramp too,
+    // because the ramp is where the migration had to expand one declaration
+    // into twenty and is therefore where a typo would hide.
+    const declared = [
+      ...Object.values(TOKENS_BY_THEME.dark),
+      ...Object.values(TOKENS_BY_THEME.light),
+      ...THEMES.flatMap((theme) =>
+        CIV_PREFIXES.flatMap((civ) =>
+          RAMP_TOKENS.map((token) => resolveRampForCiv(theme, civ, token))
+        )
+      ),
+    ].filter((value) => /^[\d.]+\s+[\d.]+\s+-?[\d.]+$/.test(value));
+    // Not a sample: if this list emptied, the loop below would pass over
+    // nothing and say so in the summary as a green test.
+    expect(declared.length).toBeGreaterThan(80);
+    for (const triple of declared) {
+      const rgb = oklchTripleToRgb(triple);
+      expect(oklchTripleToRgb(rgbToOklchTriple(rgb))).toEqual(rgb);
+    }
+  });
+
+  it("throws on a value that is not a triple rather than measuring NaN", () => {
+    // The failure mode this file exists to prevent, one layer down: a token
+    // that stops parsing must name itself, not return `[NaN, NaN, NaN]` and
+    // make every ratio computed from it `NaN` — which compares false against
+    // every threshold and reads as a colour problem.
+    expect(() => oklchTripleToRgb("38 92% 50%")).toThrow();
+    expect(() => oklchTripleToRgb("var(--color-accent)")).toThrow();
+    expect(() => oklchTripleToRgb("")).toThrow();
+  });
+
+  it("clamps out-of-gamut coordinates instead of emitting a negative channel", () => {
+    // No token in globals.css is out of sRGB — that was checked over all 104
+    // during the migration — but OKLCH can address colours sRGB cannot, and a
+    // future token that strays must come back as a paintable colour rather
+    // than as `rgb(-12, …)`, which no downstream formula here would reject.
+    const [r, g, b] = oklchTripleToRgb("0.7 0.4 150");
+    for (const channel of [r, g, b]) {
+      expect(channel).toBeGreaterThanOrEqual(0);
+      expect(channel).toBeLessThanOrEqual(255);
+    }
+  });
+});
 
 describe("the ΔE00 the ramp pins rest on is the published formula", () => {
   it("carries the whole Sharma table, not a sample of it", () => {
@@ -494,7 +647,7 @@ const MARK_LEAD_MARGIN = 5;
  * tint its page ground, not a metric fix".
  *
  * That decision has now been taken — `.light` declares
- * `--color-canvas: var(--civ-hue) 100% 96.5%`, the derivation is on the token
+ * `--color-canvas: [--civ-hue] 100% 96.5%`, the derivation is on the token
  * in globals.css — so the subject widens with it. Dark canvas has carried the
  * tenant hue since Stage 11 and was equally unmeasured here; both join at once,
  * because the reason for excluding either was the same reason.
@@ -513,11 +666,11 @@ const MARK_LEAD_MARGIN = 5;
 const RAMP_TOKENS: string[] = [...SURFACE_TOKENS, "--color-canvas"];
 
 function rampRgb(theme: ThemeName, prefix: string, token: string): [number, number, number] {
-  return hslTripleToRgb(resolveRampForCiv(theme, prefix, token));
+  return oklchTripleToRgb(resolveRampForCiv(theme, prefix, token));
 }
 
 function markRgb(theme: ThemeName, prefix: string): [number, number, number] {
-  return hslTripleToRgb(TOKENS_BY_THEME[theme][`--color-civ-mark-${prefix}`]);
+  return oklchTripleToRgb(TOKENS_BY_THEME[theme][`--color-civ-mark-${prefix}`]);
 }
 
 /** Widest CHANNEL gap between one PAIR of tenants across the whole ramp, in one theme. */
@@ -639,7 +792,7 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
    * mode should tint its page ground, not a metric fix.
    *
    * STAGE 13 TOOK THAT DECISION AND THE SUBJECT WIDENED WITH IT. Light canvas
-   * is `var(--civ-hue) 100% 96.5%` and the pins below run over `RAMP_TOKENS` —
+   * is `[--civ-hue] 100% 96.5%` and the pins below run over `RAMP_TOKENS` —
    * surface-1..4 PLUS canvas, both themes. See the block on that constant for
    * why this is a widening and not a retune, and for the mutation that shows
    * the old shape could not see a flat page ground at all.
@@ -652,7 +805,7 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
    * =====================================================================
    *
    * NOT covered here, on purpose, unchanged from Stage 9: the ramp losing its
-   * `var(--civ-hue)` wiring altogether. `chartColourContract.test.ts` pins that
+   * `[--civ-hue]` wiring altogether. `chartColourContract.test.ts` pins that
    * by name in both themes. Nor is AA covered here — `inkOnSurfaceContract`
    * asserts its failing set as an EXACT set, so the ceiling on how much chroma
    * the ramp may carry is already enforced, once, in the file that owns it.
@@ -777,11 +930,21 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
    * is the elevation reading — cards flush with the ground, or table headers
    * indistinguishable from the page.
    *
-   * IN HSL LIGHTNESS, NOT IN LUMINANCE, and the difference is not pedantry: a
-   * warm hue at the same L renders brighter than a cool one, so ordering four
-   * tenants by relative luminance would put Greek surface-3 above Chinese
-   * surface-2 and report a scrambled ramp on a correct palette. L is the axis
-   * the ramp is actually built on.
+   * IN THE TOKEN'S OWN LIGHTNESS, NOT IN LUMINANCE, and the difference is not
+   * pedantry: a warm hue at the same L renders brighter than a cool one, so
+   * ordering four tenants by relative luminance would put Greek surface-3
+   * above Chinese surface-2 and report a scrambled ramp on a correct palette.
+   * L is the axis the ramp is actually built on.
+   *
+   * THE AXIS SURVIVED THE MIGRATION AND GOT BETTER. This read the third
+   * component of an HSL triple; it reads the first of an OKLCH one. The ramp
+   * was BUILT on HSL L, so that was the right axis then by construction — but
+   * HSL L is not perceptual, which is why every claim about how the planes
+   * READ (the ΔE00 figures above and in globals.css) had to be measured in a
+   * different space than the one the ramp was written in. OKLCH L is
+   * perceptual, so the ordering axis and the perception axis are finally the
+   * same one. The ORDER itself is unchanged, which is the point: this pin was
+   * green before the migration and is green after it, on the same pixels.
    *
    * NOT A SEPARATION CLAIM. It says the planes are ordered and distinct, not
    * that adjacent ones are far apart — surface-2/-3 and -3/-4 measure
@@ -799,16 +962,18 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
 
   function lightnessOf(theme: ThemeName, prefix: string, token: string): number {
     const triple = resolveRampForCiv(theme, prefix, token);
-    const m = /^\d+(?:\.\d+)?\s+\d+(?:\.\d+)?%\s+(\d+(?:\.\d+)?)%$/.exec(triple);
+    const m = /^(\d+(?:\.\d+)?)\s+\d+(?:\.\d+)?\s+-?\d+(?:\.\d+)?$/.exec(triple);
     if (m === null) throw new Error(`Cannot read a lightness out of ${JSON.stringify(triple)}`);
     return Number(m[1]);
   }
 
   it.each(THEMES)("%s: the five planes keep their order, for every tenant", (theme) => {
-    // Per tenant, because `--civ-hue` only substitutes a hue and could not in
-    // principle reorder anything — which is exactly the assumption worth
-    // checking rather than assuming, since a future ramp could vary lightness
-    // per cosmology and this pin would be the thing that noticed.
+    // Per tenant, and this is where it stops being a formality. While the ramp
+    // was `[--civ-hue] S% L%` a tenant could not in principle reorder
+    // anything — one hue substituted into five fixed lightnesses. The OKLCH
+    // ramp is five literals per tenant with no shared L, so nothing about the
+    // declaration keeps the planes in order any more and this pin is the only
+    // thing that does.
     for (const prefix of CIV_PREFIXES) {
       const byLightness = [...EXPECTED_ASCENDING[theme]]
         .map((token) => ({ token, l: lightnessOf(theme, prefix, token) }))

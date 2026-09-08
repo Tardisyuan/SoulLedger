@@ -24,7 +24,7 @@ import type { SoulListItem } from "@soulledger/core/api";
  * contract is a type error here rather than a state that silently falls to the
  * unknown-state fill.
  *
- * WHY THE CLASSES ARE SPELLED `text-[hsl(var(--color-ink))]` AND NEVER
+ * WHY THE CLASSES ARE SPELLED `text-[oklch(var(--color-ink))]` AND NEVER
  * `text-ink`. tailwind.config.js declares no `status`/`ink` colour, so the
  * shorthand generates no CSS at all — `src/__tests__/cssTokenReferenceContract
  * .test.ts` exists because an undefined custom property drops the whole
@@ -41,7 +41,7 @@ export type SoulState = SoulListItem["current_state"];
  * agree today.
  *
  * DISPOSED AND LOST WERE NOT ALWAYS HERE. Both held
- * `bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]` — the
+ * `bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink-muted))]` — the
  * unknown-state fill below — so 已处置 and 迷失 were indistinguishable from each
  * other and from a state the UI does not recognise, while
  * `--color-status-disposed` (285 55% 66% dark / 285 52% 44% light) and
@@ -51,12 +51,12 @@ export type SoulState = SoulListItem["current_state"];
  * floor, and lost is at the same light-mode ratio ALIVE already ships at.
  */
 export const SOUL_STATE_BADGE_CLASSES: Record<SoulState, string> = {
-  ALIVE: "bg-[hsl(var(--color-status-alive)/0.1)] text-[hsl(var(--color-status-alive))]",
-  JUDGING: "bg-[hsl(var(--color-status-judging)/0.1)] text-[hsl(var(--color-status-judging))]",
-  DISPOSED: "bg-[hsl(var(--color-status-disposed)/0.1)] text-[hsl(var(--color-status-disposed))]",
-  REINCARNATING: "bg-[hsl(var(--color-status-reincarnating)/0.1)] text-[hsl(var(--color-status-reincarnating))]",
-  LOST: "bg-[hsl(var(--color-status-lost)/0.1)] text-[hsl(var(--color-status-lost))]",
-  SETTLED: "bg-[hsl(var(--color-status-settled)/0.1)] text-[hsl(var(--color-status-settled))]",
+  ALIVE: "bg-[oklch(var(--color-status-alive)/0.1)] text-[oklch(var(--color-status-alive))]",
+  JUDGING: "bg-[oklch(var(--color-status-judging)/0.1)] text-[oklch(var(--color-status-judging))]",
+  DISPOSED: "bg-[oklch(var(--color-status-disposed)/0.1)] text-[oklch(var(--color-status-disposed))]",
+  REINCARNATING: "bg-[oklch(var(--color-status-reincarnating)/0.1)] text-[oklch(var(--color-status-reincarnating))]",
+  LOST: "bg-[oklch(var(--color-status-lost)/0.1)] text-[oklch(var(--color-status-lost))]",
+  SETTLED: "bg-[oklch(var(--color-status-settled)/0.1)] text-[oklch(var(--color-status-settled))]",
 };
 
 /**
@@ -70,7 +70,7 @@ export const SOUL_STATE_BADGE_CLASSES: Record<SoulState, string> = {
  * load wore the green of a living one beside the words 「未记录」.
  */
 export const UNKNOWN_SOUL_STATE_BADGE_CLASS =
-  "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]";
+  "bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink-muted))]";
 
 /** The badge classes for a state off the wire, which may be absent or unknown. */
 export function soulStateBadgeClass(state: string | null | undefined): string {

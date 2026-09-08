@@ -70,9 +70,9 @@ export const MISSING_GLYPH: Record<MissingKind, string> = {
  * (src/__tests__/dataGridToneContract.test.ts) is not in play here.
  */
 export const MISSING_INK: Record<MissingKind, string> = {
-  unrecorded: "text-[hsl(var(--color-ink-tertiary))]",
-  zero: "text-[hsl(var(--color-ink-muted))]",
-  inapplicable: "text-[hsl(var(--color-ink-subtle))]",
+  unrecorded: "text-[oklch(var(--color-ink-tertiary))]",
+  zero: "text-[oklch(var(--color-ink-muted))]",
+  inapplicable: "text-[oklch(var(--color-ink-subtle))]",
 };
 
 /** i18n key naming each kind, used as the `title` so the glyph is explainable. */

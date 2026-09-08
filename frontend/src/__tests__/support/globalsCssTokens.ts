@@ -116,7 +116,7 @@ export function lastDeclarationOffset(selector: string, name: string): number {
  * one that matters here — `.light` never redeclares it, so the light surface
  * ramp interpolates the same neutral `240` fallback `:root` declares, and
  * `resolveTriple(LIGHT_TOKENS, "--color-surface-1")` would throw on a dangling
- * `var(--civ-hue)` rather than answer the question.
+ * `[--civ-hue]` rather than answer the question.
  *
  * Both maps are exported and both are load-bearing: `LIGHT_TOKENS` answers "did
  * `.light` declare this itself" (a civilization missing from it inherits the
@@ -194,14 +194,15 @@ export function suffixesOf(tokens: Record<string, string>, family: string): stri
   return [...new Set(hits)].sort();
 }
 
-/** `--color-civ-mark-cn: 12 55% 58%;` -> `hsl(12 55% 58%)`, the literal form chart-colors uses. */
+/** `--color-civ-mark-cn: 0.6497 0.12415 35.299;` -> `oklch(0.6497 0.12415 35.299)`,
+ *  the literal form chart-colors uses. */
 export function asChartLiteral(triple: string): string {
-  return `hsl(${triple})`;
+  return `oklch(${triple})`;
 }
 
 /**
  * A token's value with every `var(--x)` inside it replaced by that token's own
- * declaration in the same block — `--color-surface-1: var(--civ-hue) 47% 7%`
+ * declaration in the same block — `--color-surface-1: [--civ-hue] 47% 7%`
  * resolves to `240 47% 7%`. Note what that is and is not: it is the `:root`
  * declaration with `:root`'s own `--civ-hue`, and since Stage 11 that is NOT
  * what a screen without `[data-civ]` renders — see `NO_CIV_TOKENS_BY_THEME`.
@@ -243,12 +244,17 @@ export function literalOf(name: string): string {
  * while looking, in the stylesheet, fully wired up.
  */
 export interface CivAttrRule {
-  /** The token `--civ-hue` is pointed at, or undefined if the rule omits it. */
-  hue?: string;
   /** The token `--civ-mark` is pointed at, or undefined if the rule omits it. */
   mark?: string;
   /** The token `--civ-ink` is pointed at, or undefined if the rule omits it. */
   ink?: string;
+  /**
+   * `{"--color-surface-1": "--color-civ-surface-1-cn", …}` from the tenant's
+   * `:root[data-civ='…']` rule — the five ramp planes and the per-tenant token
+   * each is pointed at. Empty if that rule is missing, which is the same
+   * silent-neutral failure the `hue` field used to catch.
+   */
+  ramp: Record<string, string>;
 }
 
 /**
@@ -270,13 +276,36 @@ export function readCivAttrRules(): Record<string, CivAttrRule> {
   // them into multi-line blocks with single quotes. The parser then found
   // nothing and the assertion compared two empty lists' worth of civilizations,
   // which is the shape this whole file exists to prevent.
-  const blockPattern = /\[data-civ=['"]([\w-]+)['"]\]\s*\{([^}]*)\}/g;
+  //
+  // TWO SELECTORS PER TENANT SINCE THE OKLCH MIGRATION, AND THE LEADING
+  // `(:root)?` IS WHAT KEEPS THEM APART. The aliases live on plain
+  // `[data-civ='cn']` because a nested restamp — app/actors/page.tsx and
+  // app/corpus/page.tsx both do one per section — has to reach `--civ-mark`.
+  // The ramp lives on `:root[data-civ='cn']` because it must NOT: while the
+  // planes were `[--civ-hue] …` a nested attribute could not move them
+  // (a custom property's var()s are substituted where it is declared), and
+  // declaring the expanded literals on the plain selector handed the subtree a
+  // retint it never had — 9.8% of the /actors screenshot.
+  //
+  // A single `\[data-civ=…\]` pattern matches both blocks, and the second one
+  // seen would have overwritten the first with an entry holding no aliases at
+  // all. Captured separately and merged.
+  const blockPattern = /(:root)?\[data-civ=['"]([\w-]+)['"]\]\s*\{([^}]*)\}/g;
   for (const block of css.matchAll(blockPattern)) {
-    const entry: CivAttrRule = {};
-    for (const decl of block[2].matchAll(/--civ-(hue|mark|ink):\s*var\((--[\w-]+)\)\s*;/g)) {
-      entry[decl[1] as "hue" | "mark" | "ink"] = decl[2];
+    const [, rootScoped, prefix, body] = block;
+    const entry: CivAttrRule = rules[prefix] ?? { ramp: {} };
+    if (rootScoped) {
+      for (const decl of body.matchAll(
+        /(--color-(?:canvas|surface-\d+)):\s*var\((--[\w-]+)\)\s*;/g
+      )) {
+        entry.ramp[decl[1]] = decl[2];
+      }
+    } else {
+      for (const decl of body.matchAll(/--civ-(mark|ink):\s*var\((--[\w-]+)\)\s*;/g)) {
+        entry[decl[1] as "mark" | "ink"] = decl[2];
+      }
     }
-    rules[block[1]] = entry;
+    rules[prefix] = entry;
   }
   if (Object.keys(rules).length === 0) {
     // Loud, not empty. An empty map makes every caller's `toEqual([])` pass.
@@ -404,57 +433,169 @@ if (SURFACE_TOKENS.length === 0) {
 }
 
 /**
- * `"12 47% 7%"` -> `[26, 13, 9]`, sRGB 0-255.
+ * `"0.17644 0.0241 37.97"` -> `[26, 13, 9]`, sRGB 0-255.
  *
  * Assertions about whether two tenants look alike have to be made in the space
- * the eye reads, not in HSL. The example that made the point when this was
- * written: `12 13% 7%` and `232 13% 7%` are 220° apart as numbers and 4/255
- * apart as pixels. Stage 11 raised the ramp's chroma and the same pair now
- * measures 17/255 — the arithmetic did not change, the design did.
+ * the eye reads. The example that made the point when this was written, back
+ * when the tokens were HSL: `12 13% 7%` and `232 13% 7%` are 220° apart as
+ * numbers and 4/255 apart as pixels. Stage 11 raised the ramp's chroma and the
+ * same pair measured 17/255 — the arithmetic did not change, the design did.
  *
  * THAT SENTENCE USED TO END "and it is still the second figure that decides
  * whether anyone can tell them apart", AND IT IS THAT ENDING THAT WAS WRONG.
- * sRGB is where the comparison has to *start* — HSL cannot answer it at all —
- * but a count of sRGB channel steps is not what decides it either. See the
- * CIEDE2000 block at the foot of this file: this function is now the input to
- * `srgbToLab`, and ΔE00 is the figure the assertions rest on. Stage 12 changed
- * no colour, only which number gets believed.
+ * sRGB is where the comparison has to *start* — a colour-space triple cannot
+ * answer it — but a count of sRGB channel steps is not what decides it either.
+ * See the CIEDE2000 block at the foot of this file: this function is the input
+ * to `srgbToLab`, and ΔE00 is the figure the assertions rest on. Stage 12
+ * changed no colour, only which number gets believed.
  *
- * Throws on anything that is not a bare `H S% L%` triple rather than coercing
+ * THE ONE IMPLEMENTATION, AND IT IS VALIDATED RATHER THAN TRUSTED. The matrices
+ * below are Björn Ottosson's, the ones CSS Color 4 §9 cites. A conversion that
+ * is subtly wrong is worse than none — it reads as authoritative and every
+ * ratio in this repository would be computed from it — so
+ * the "OKLCH conversion" block in
+ * `civilizationColourContract.test.ts` — beside the Sharma table, which is
+ * there for the identical reason — pins this function against the published
+ * OKLCH coordinates of the sRGB primaries and round-trips the whole declared
+ * palette through it.
+ *
+ * Throws on anything that is not a bare `L C H` triple rather than coercing
  * `NaN` through and comparing it.
  */
-export function hslTripleToRgb(triple: string): [number, number, number] {
-  const m = /^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/.exec(triple.trim());
+export function oklchTripleToRgb(triple: string): [number, number, number] {
+  const m = /^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/.exec(triple.trim());
   if (m === null) {
-    throw new Error(`Not a bare \`H S% L%\` triple: ${JSON.stringify(triple)}`);
+    throw new Error(`Not a bare \`L C H\` triple: ${JSON.stringify(triple)}`);
   }
-  const h = Number(m[1]);
-  const s = Number(m[2]) / 100;
-  const l = Number(m[3]) / 100;
-  const a = s * Math.min(l, 1 - l);
-  const channel = (n: number): number => {
-    const k = (n + h / 30) % 12;
-    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-  };
-  return [Math.round(255 * channel(0)), Math.round(255 * channel(8)), Math.round(255 * channel(4))];
+  const L = Number(m[1]);
+  const C = Number(m[2]);
+  const H = (Number(m[3]) * Math.PI) / 180;
+  const a = C * Math.cos(H);
+  const b = C * Math.sin(H);
+
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const mm = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+
+  const lin = [
+    4.0767416621 * l - 3.3077115913 * mm + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * mm - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * mm + 1.707614701 * s,
+  ];
+  return lin.map((v) => {
+    const srgb = v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055;
+    return Math.min(255, Math.max(0, Math.round(srgb * 255)));
+  }) as unknown as [number, number, number];
 }
 
 /**
- * A ramp token resolved as the named civilization renders it — `--civ-hue`
- * bound to that civilization's `--color-civ-hue-*` the way its `[data-civ]`
- * rule binds it, instead of to the neutral `:root` fallback.
+ * The HSL hue, in degrees, of a colour written as an OKLCH triple.
  *
- * The override is a local copy; `TOKENS_BY_THEME` is not mutated, so
- * `chartColourContract`'s pin that `--civ-hue` is still `240` in both themes
- * keeps meaning what it says.
+ * THE INVARIANT THIS SERVES IS OLDER THAN THE TOKENS' SPELLING. Each
+ * civilization's mark, ink and surface ramp are one hue at several lightnesses
+ * — `civilizationColourContract` and `civIdentityInkContract` both hold it,
+ * and `civIdentityInkContract`'s own comment gives the reason: an ink on a
+ * different hue is a fifth colour, not the same identity made readable.
+ *
+ * OKLCH CANNOT STATE IT DIRECTLY, WHICH IS WHY THIS EXISTS. Rotating an HSL
+ * hue at fixed saturation and lightness does not hold OKLCH's H fixed: Chinese
+ * dark mark and ink are `12 55% 58%` and `12 55% 66%` — the same hue by
+ * construction — and land on OKLCH hues 35.30 and 34.72. Comparing the tokens'
+ * own H would need a tolerance, and a tolerance is a threshold this migration
+ * has no measurement to justify. Converting back to the coordinate the
+ * invariant was written in keeps it exact.
+ *
+ * `--color-civ-hue-*` stays declared for the same reason. Nothing in the
+ * stylesheet interpolates it any more; it is the tenant's defining hue, and
+ * these two contracts are what read it.
+ */
+export const HUE_READBACK_SLACK_DEG = 1;
+
+/**
+ * How far `hslHueOfOklch` may sit from a tenant's declared `--color-civ-hue-*`.
+ *
+ * A TOLERANCE WHERE THERE WAS A STRING EQUALITY, AND IT IS QUANTISATION AND NOT
+ * CONVERSION. `hsl(88 46% 25%)` rasterises to (67, 93, 34); reading a hue back
+ * out of three 8-bit integers cannot return 88, it returns 87.4576. Measured
+ * over all sixteen mark/ink tokens ON THE PRE-MIGRATION HSL FILE, the drift is
+ * 0.00 to 0.5424 degrees — so this slack was always there, hidden by the fact
+ * that the old assertion read the declared string and never rasterised it.
+ * OKLCH adds nothing to it: the same sixteen tokens measure the same sixteen
+ * figures.
+ *
+ * 1 degree, not 0.5424 rounded up to something tighter: the bound is the
+ * quantisation step, which varies with the colour's chroma, and pinning it to
+ * today's worst case would make an unrelated lightness edit look like a hue
+ * defect. The palette's closest two hues are 32 degrees apart
+ * (`--color-civ-hue-cn` 12 and `-eg` 44), so a real hue error cannot hide here.
+ */
+export function hslHueOfOklch(triple: string): number {
+  const [r, g, b] = oklchTripleToRgb(triple).map((v) => v / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max === min) return 0;
+  const d = max - min;
+  const h =
+    max === r ? ((g - b) / d + (g < b ? 6 : 0)) / 6
+    : max === g ? ((b - r) / d + 2) / 6
+    : ((r - g) / d + 4) / 6;
+  return h * 360;
+}
+
+/**
+ * sRGB 0-255 back to an OKLCH triple. Only the conversion contract needs this
+ * direction — it is what lets a test start from a known sRGB colour and check
+ * that `oklchTripleToRgb` returns to it — so it lives here rather than in a
+ * second copy inside that test.
+ */
+export function rgbToOklchTriple([r, g, b]: Rgb): string {
+  const lin = ([r, g, b] as const).map((v) => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  const [lr, lg, lb] = lin;
+  const l_ = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
+  const m_ = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
+  const s_ = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
+  const L = 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_;
+  const A = 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_;
+  const B = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_;
+  const C = Math.hypot(A, B);
+  const trim = (v: number, d: number): string =>
+    v.toFixed(d).replace(/0+$/, "").replace(/\.$/, "") || "0";
+  if (C < 1e-6) return `${trim(L, 6)} 0 0`;
+  const H = ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360;
+  return `${trim(L, 6)} ${trim(C, 6)} ${trim(H, 4)}`;
+}
+
+/**
+ * A ramp token resolved as the named civilization renders it, instead of as
+ * the neutral `:root` fallback.
+ *
+ * IT USED TO SUBSTITUTE A HUE AND NOW IT LOOKS UP A TOKEN, because the
+ * stylesheet stopped being able to factor the ramp that way. While the planes
+ * were `[--civ-hue] 47% 7%`, one number per tenant described all five; in
+ * OKLCH the same HSL saturation and lightness across the four tenant hues
+ * spreads L by up to 0.057 and C by up to 0.010, so there is no shared pair to
+ * hold constant and each plane is a literal — `--color-civ-surface-1-cn` and
+ * its fifteen siblings, declared per theme exactly as `--color-civ-mark-*`
+ * already was.
+ *
+ * `TOKENS_BY_THEME` is not mutated.
  */
 export function resolveRampForCiv(theme: ThemeName, prefix: string, name: string): string {
   const tokens = TOKENS_BY_THEME[theme];
-  const hue = tokens[`--color-civ-hue-${prefix}`];
-  if (hue === undefined) {
-    throw new Error(`No \`--color-civ-hue-${prefix}\` in the ${theme} tokens of ${GLOBALS_CSS}.`);
+  const plane = /^--color-(canvas|surface-\d+)$/.exec(name);
+  // A token outside the ramp has no per-tenant form and is the same colour on
+  // every screen, so it passes through — callers hand this one helper every
+  // token in a class string rather than branching, and the ink tokens are the
+  // reason. Unchanged from when the ramp was `[--civ-hue] …`.
+  if (plane === null) return resolveTriple(tokens, name);
+  const perTenant = `--color-civ-${plane[1]}-${prefix}`;
+  if (tokens[perTenant] === undefined) {
+    throw new Error(`No \`${perTenant}\` in the ${theme} tokens of ${GLOBALS_CSS}.`);
   }
-  return resolveTriple({ ...tokens, "--civ-hue": hue }, name);
+  return resolveTriple(tokens, perTenant);
 }
 
 /**
@@ -493,7 +634,7 @@ export function civPairs(): [string, string][] {
 // ---------------------------------------------------------------------------
 // WCAG 2.x contrast.
 //
-// `hslTripleToRgb` above answers "what colour is this token". These answer
+// `oklchTripleToRgb` above answers "what colour is this token". These answer
 // "can anyone read that ink on that surface", which is a different question
 // from every comparison in this file so far: the ramp assertions ask whether
 // two tenants look ALIKE, and these ask whether two layers look DIFFERENT
@@ -510,7 +651,7 @@ export function civPairs(): [string, string][] {
 // third.
 //
 // One deliberate difference from that copy, stated because a silent one would
-// be worse: this pair is fed by `hslTripleToRgb`, which ROUNDS to whole sRGB
+// be worse: this pair is fed by `oklchTripleToRgb`, which ROUNDS to whole sRGB
 // channels, while the copy's `hslToRgb` keeps fractions. Rounding is what a
 // browser rasterises, and the gap is under 0.01 of a ratio point — but it is
 // not zero, so a figure measured here and a figure measured there may differ
@@ -530,7 +671,7 @@ export function relativeLuminance([r, g, b]: Rgb): number {
 
 /**
  * `fg` at `alpha` over `bg`, as the browser composites it — the only way to get
- * the real background of text sitting on a `bg-[hsl(var(--x)/0.2)]` fill.
+ * the real background of text sitting on a `bg-[oklch(var(--x)/0.2)]` fill.
  *
  * Naive source-over on already-gamma-encoded sRGB, which is what CSS actually
  * does for `hsl(... / a)` over an opaque backdrop. Linearising first would be
@@ -724,7 +865,7 @@ export function deltaE00(a: Lab, b: Lab): number {
 
 /**
  * How far apart two sRGB colours look, in ΔE00 — the call every contract test
- * should make. Fed by `hslTripleToRgb`, so it measures the rounded channels a
+ * should make. Fed by `oklchTripleToRgb`, so it measures the rounded channels a
  * browser actually rasterises rather than the exact HSL the stylesheet declares.
  */
 export function deltaE00Rgb(a: Rgb, b: Rgb): number {

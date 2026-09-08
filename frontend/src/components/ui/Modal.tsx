@@ -73,13 +73,13 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
        * 至少整个面板还能滚,而不是把内容藏到视口外。 */}
         <Dialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-center justify-center overflow-y-auto p-4">
           <Dialog.Popup
-            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] transition duration-settle ease-enter data-ending-style:ease-exit data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0"
+            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] transition duration-settle ease-enter data-ending-style:ease-exit data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0"
           >
             {/* Header */}
-            <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-[hsl(var(--color-hairline))]">
-              <Dialog.Title className="text-[hsl(var(--color-ink))] text-06">{title}</Dialog.Title>
+            <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-[oklch(var(--color-hairline))]">
+              <Dialog.Title className="text-[oklch(var(--color-ink))] text-06">{title}</Dialog.Title>
               <Dialog.Close
-                className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))] transition-colors text-06 leading-none"
+                className="text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] transition-colors text-06 leading-none"
                 aria-label="Close"
               >
                 ×
@@ -92,7 +92,7 @@ export function BaseModal({ isOpen, onClose, title, children, footer }: BaseModa
 
             {/* Footer */}
             {footer && (
-              <div className="shrink-0 px-6 pb-5 border-t border-[hsl(var(--color-hairline))] pt-4">
+              <div className="shrink-0 px-6 pb-5 border-t border-[oklch(var(--color-hairline))] pt-4">
                 {footer}
               </div>
             )}
@@ -381,12 +381,12 @@ export function ConfirmDialog({
         {/* 与上面的 Modal 同一套约束,理由见那里。这个对话框的内容通常很短,
          * 但 `message` 是调用方传进来的任意文本 —— 「通常很短」不是约束。 */}
         <AlertDialog.Viewport className="fixed inset-0 z-dialog flex w-screen items-center justify-center overflow-y-auto p-4">
-          <AlertDialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] transition duration-settle ease-enter data-ending-style:ease-exit data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+          <AlertDialog.Popup className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] transition duration-settle ease-enter data-ending-style:ease-exit data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-              <AlertDialog.Title className="text-06 text-[hsl(var(--color-ink))] mb-2">
+              <AlertDialog.Title className="text-06 text-[oklch(var(--color-ink))] mb-2">
                 {title}
               </AlertDialog.Title>
-              <AlertDialog.Description className="text-04 text-[hsl(var(--color-ink-muted))]">
+              <AlertDialog.Description className="text-04 text-[oklch(var(--color-ink-muted))]">
                 {message}
               </AlertDialog.Description>
             </div>

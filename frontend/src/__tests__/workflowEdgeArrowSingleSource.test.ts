@@ -4,7 +4,7 @@ import {
   FRONTEND_ROOT,
   THEMES,
   TOKENS_BY_THEME,
-  hslTripleToRgb,
+  oklchTripleToRgb,
   resolveTriple,
   type ThemeName,
 } from "./support/globalsCssTokens";
@@ -22,7 +22,7 @@ import {
  *
  * 所以这份守卫断言的是**计数**,不是那句注释。注释会腐烂,而这里会红。
  *
- * 为什么颜色是十六进制字面量而不是 `hsl(var(--…))`:xyflow 把 `markerEnd`
+ * 为什么颜色是十六进制字面量而不是 `oklch(var(--…))`:xyflow 把 `markerEnd`
  * 渲染进一棵独立的 SVG `<marker>` defs 树,那里没有自定义属性可解析,箭头会
  * 变成没上色的。`eslint.config.mjs` 的 HEX_ALLOW 按**路径前缀**授予豁免。
  *
@@ -39,7 +39,7 @@ const EDITOR = path.join(FRONTEND_ROOT, "src", "components", "workflow", "Workfl
 const ARROW_HEX = "#f59e0b";
 
 /** 注释里写出的颜色不是用法。`WorkflowEditor.tsx` 的文件头正是用散文解释
- *  「为什么 markerEnd 不能用 hsl(var(--…))」—— 不剥注释,守卫会把那段解释报成缺陷。 */
+ *  「为什么 markerEnd 不能用 oklch(var(--…))」—— 不剥注释,守卫会把那段解释报成缺陷。 */
 function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " ")).replace(/\/\/[^\n]*/g, "");
 }
@@ -84,7 +84,7 @@ describe("the workflow edge arrow has one source", () => {
   // 两个方向都有人守,但别把这两条当成源码的守卫。
   it.each(THEMES)("stays within 1/255 of --color-accent (%s theme)", (theme: ThemeName) => {
     const fromHex = hexToRgb(ARROW_HEX);
-    const fromToken = hslTripleToRgb(resolveTriple(TOKENS_BY_THEME[theme], "--color-accent"));
+    const fromToken = oklchTripleToRgb(resolveTriple(TOKENS_BY_THEME[theme], "--color-accent"));
     const gap = Math.max(...fromHex.map((v, i) => Math.abs(v - fromToken[i])));
     // 实测值,不是猜的容差:两者相差恰好 1/255,见文件头。
     expect(gap).toBeLessThanOrEqual(1);

@@ -35,20 +35,20 @@ export function PartialSaveBanner({
     <div
       role="status"
       data-partial-save=""
-      className="bg-[hsl(var(--color-status-warning))]/10 border border-[hsl(var(--color-status-warning))]/40 p-4 flex items-start justify-between gap-4"
+      className="bg-[oklch(var(--color-status-warning))]/10 border border-[oklch(var(--color-status-warning))]/40 p-4 flex items-start justify-between gap-4"
     >
       <div className="min-w-0">
-        <p className="text-03 text-[hsl(var(--color-ink))]">
+        <p className="text-03 text-[oklch(var(--color-ink))]">
           {t("permissions.matrix.partial_save_title")}
         </p>
         <ul className="mt-2 space-y-1">
           {saved.map((line) => (
-            <li key={line} className="text-02 font-mono text-[hsl(var(--color-ink-muted))]">
+            <li key={line} className="text-02 font-mono text-[oklch(var(--color-ink-muted))]">
               {line}
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-02 text-[hsl(var(--color-ink-muted))]">
+        <p className="mt-2 text-02 text-[oklch(var(--color-ink-muted))]">
           {t("permissions.matrix.partial_save_hint")}
         </p>
       </div>

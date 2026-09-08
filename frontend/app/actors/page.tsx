@@ -30,17 +30,17 @@ import { PermissionDenied } from "@/src/components/rbac/PermissionDenied";
  * single token.
  */
 const ROLE_BADGE_CLASSES: Record<string, string> = {
-  JUDGE: "bg-[hsl(var(--color-accent)/0.1)] text-[hsl(var(--color-accent-ink))] border-[hsl(var(--color-accent)/0.3)]",
-  GUARDIAN: "bg-[hsl(var(--color-status-info)/0.1)] text-[hsl(var(--color-status-info))] border-[hsl(var(--color-status-info)/0.3)]",
-  EXECUTOR: "bg-[hsl(var(--color-status-error)/0.1)] text-[hsl(var(--color-status-error))] border-[hsl(var(--color-status-error)/0.3)]",
-  CONDUIT: "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.3)]",
+  JUDGE: "bg-[oklch(var(--color-accent)/0.1)] text-[oklch(var(--color-accent-ink))] border-[oklch(var(--color-accent)/0.3)]",
+  GUARDIAN: "bg-[oklch(var(--color-status-info)/0.1)] text-[oklch(var(--color-status-info))] border-[oklch(var(--color-status-info)/0.3)]",
+  EXECUTOR: "bg-[oklch(var(--color-status-error)/0.1)] text-[oklch(var(--color-status-error))] border-[oklch(var(--color-status-error)/0.3)]",
+  CONDUIT: "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success)/0.3)]",
   // OVERSEER was missing — `ActorRole` has five members and all three message
   // bundles carry `actors.roles.OVERSEER`, so the label was right and only the
   // colour fell to the fallback. Hades is an OVERSEER.
-  OVERSEER: "bg-[hsl(var(--color-status-judging)/0.1)] text-[hsl(var(--color-status-judging))] border-[hsl(var(--color-status-judging)/0.3)]",
+  OVERSEER: "bg-[oklch(var(--color-status-judging)/0.1)] text-[oklch(var(--color-status-judging))] border-[oklch(var(--color-status-judging)/0.3)]",
 };
 const ROLE_BADGE_FALLBACK =
-  "bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))] border-[hsl(var(--color-hairline-tertiary))]";
+  "bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-hairline-tertiary))]";
 
 /**
  * Badge geometry from `Badge`, fill from the table above.
@@ -83,7 +83,7 @@ function ActorCard({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
   return (
     <div
       data-actor-card={actor.name}
-      className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:border-[hsl(var(--color-accent))]/30 transition-colors"
+      className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 hover:border-[oklch(var(--color-accent))]/30 transition-colors"
     >
       <div className="flex items-start gap-3">
         {/* `icon` is not a field on ANY actor serializer -- the model column is
@@ -91,7 +91,7 @@ function ActorCard({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
             on the test box have `icon_url` empty too, so nothing visible
             changes; the dead read is removed so the next person does not
             "fix" it by adding an `icon` field.) */}
-        <User aria-hidden="true" className="w-6 h-6 text-[hsl(var(--color-ink-subtle))] shrink-0" />
+        <User aria-hidden="true" className="w-6 h-6 text-[oklch(var(--color-ink-subtle))] shrink-0" />
         <div className="flex-1 min-w-0">
           {/* `display_name` and `display_title` are localized by the backend
               and are in this very response. `name_zh`, `title` and
@@ -103,11 +103,11 @@ function ActorCard({ actor, seatLabel }: { actor: Actor; seatLabel?: string }) {
 
               This is the "a placeholder claims the data is missing while the
               data is present" shape, at 130 cards. */}
-          <h3 title={actor.name} className="text-04 font-semibold text-[hsl(var(--color-ink))] truncate">{actor.name}</h3>
-          <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
+          <h3 title={actor.name} className="text-04 font-semibold text-[oklch(var(--color-ink))] truncate">{actor.name}</h3>
+          <p className="text-03 text-[oklch(var(--color-ink-subtle))]">
             {actor.display_name || actor.name}
           </p>
-          <p className="text-02 text-[hsl(var(--color-ink-muted))] mt-1">
+          <p className="text-02 text-[oklch(var(--color-ink-muted))] mt-1">
             <DomainText value={actor.display_title} />
           </p>
         </div>
@@ -199,7 +199,7 @@ function ActorsPageContent() {
         ) : isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-              <div key={i} className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
+              <div key={i} className="bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4">
                 <div className="flex items-start gap-3">
                   <Skeleton className="h-8 w-8" />
                   <div className="flex-1 min-w-0 space-y-2">
@@ -250,12 +250,12 @@ function ActorsPageContent() {
                      WHAT RESTAMPING DOES NOT DO — measured in Chromium, not
                      assumed, because the whole design below turns on it.
                      `--color-surface-*` is declared on `:root` as
-                     `var(--civ-hue) 47% 7%`, and a custom property's computed
+                     `[--civ-hue] 47% 7%`, and a custom property's computed
                      value has its `var()`s substituted AT THE ELEMENT THAT
                      DECLARES IT. The subtree therefore inherits the ROOT
                      tenant's already-substituted triple, and re-pointing
                      `--civ-hue` down here changes nothing about it: a div with
-                     `data-civ="eg"` reading `bg-[hsl(var(--color-surface-2))]`
+                     `data-civ="eg"` reading `bg-[oklch(var(--color-surface-2))]`
                      rasterises the identical rgb(14,14,31) as one without the
                      attribute. Only a redeclaration of the ramp on this element
                      would move it, and that would mean a second copy of the
@@ -263,7 +263,7 @@ function ActorsPageContent() {
 
                      So the ground is built from `--civ-mark`, which IS read
                      locally — the same construction `TenantSignal`'s mobile
-                     chip uses (`hsl(var(--civ-mark) / 0.13)`).
+                     chip uses (`oklch(var(--civ-mark) / 0.13)`).
 
                      WHY 0.16. Composited over `--color-surface-1` (this
                      section's backdrop is `PageSection`'s), for every host
@@ -286,13 +286,13 @@ function ActorsPageContent() {
                      this div and that becomes a real defect. */
                   data-civilization={civ}
                   data-civ={CIVILIZATION_SHORT_CODES[civ]}
-                  className="border-t-3 border-[hsl(var(--civ-mark))] bg-[hsl(var(--civ-mark)/0.16)] p-4"
+                  className="border-t-3 border-[oklch(var(--civ-mark))] bg-[oklch(var(--civ-mark)/0.16)] p-4"
                 >
                   {/* Civilization Header */}
                   <button
                     onClick={() => toggleCollapse(civ)}
                     aria-expanded={!isCollapsed}
-                    className="w-full flex items-center gap-3 mb-4 px-4 py-3 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-3))] transition-colors text-left"
+                    className="w-full flex items-center gap-3 mb-4 px-4 py-3 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-3))] transition-colors text-left"
                   >
                     <span className="text-06" aria-hidden="true">{CIVILIZATION_ICONS[civ] ?? CIVILIZATION_ICON_FALLBACK}</span>
                     <div className="flex-1">
@@ -300,14 +300,14 @@ function ActorsPageContent() {
                           已经把 600 带进 `.text-06`,再写一次逐像素相同。留着的坏处是
                           它读起来像「不写就不粗」,于是下一个人会在 `text-01` 上补一个
                           ——而那一档同样自带 600。 */}
-                      <h2 className="text-06 text-[hsl(var(--color-ink))]">
+                      <h2 className="text-06 text-[oklch(var(--color-ink))]">
                         <DomainEnum namespace="actors.civilizations" value={civ} />
                       </h2>
-                      <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
+                      <p className="text-03 text-[oklch(var(--color-ink-subtle))]">
                         {t("actors.count", { count: String(total) })}
                       </p>
                     </div>
-                    <ChevronDown className={`w-5 h-5 text-[hsl(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                    <ChevronDown className={`w-5 h-5 text-[oklch(var(--color-ink-muted))] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
                   </button>
 
                   {!isCollapsed && (
@@ -328,18 +328,18 @@ function ActorsPageContent() {
                             onClick={() => toggleBench(civ)}
                             aria-expanded={!!isBenchOpen}
                             aria-label={t("actors.assessors.toggle")}
-                            className="w-full flex items-center gap-3 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-dashed border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] transition-colors text-left"
+                            className="w-full flex items-center gap-3 px-4 py-2 bg-[oklch(var(--color-surface-1))] border border-dashed border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-2))] transition-colors text-left"
                           >
-                            <Scale aria-hidden="true" className="w-5 h-5 text-[hsl(var(--color-ink-subtle))] shrink-0" />
+                            <Scale aria-hidden="true" className="w-5 h-5 text-[oklch(var(--color-ink-subtle))] shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-04 font-semibold text-[hsl(var(--color-ink))] truncate">
+                              <h3 className="text-04 font-semibold text-[oklch(var(--color-ink))] truncate">
                                 {t("actors.assessors.title")}
                               </h3>
                             </div>
                             <span className={cn(roleBadgeClass(ROLE_BADGE_FALLBACK), "font-mono tabular-nums")}>
                               {t("actors.assessors.count", { count: String(bench.length) })}
                             </span>
-                            <ChevronDown className={`w-4 h-4 text-[hsl(var(--color-ink-muted))] transition-transform ${isBenchOpen ? "" : "-rotate-90"}`} />
+                            <ChevronDown className={`w-4 h-4 text-[oklch(var(--color-ink-muted))] transition-transform ${isBenchOpen ? "" : "-rotate-90"}`} />
                           </button>
 
                           {isBenchOpen && (

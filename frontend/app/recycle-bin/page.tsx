@@ -129,14 +129,14 @@ export default function RecycleBinPage() {
                 />
               </td>
               <td className="px-4 py-3">
-                <div className="font-medium text-[hsl(var(--color-ink))]">{entry.label}</div>
+                <div className="font-medium text-[oklch(var(--color-ink))]">{entry.label}</div>
                 {entry.delete_reason && (
-                  <div className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
+                  <div className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1">
                     {entry.delete_reason}
                   </div>
                 )}
               </td>
-              <td className="px-4 py-3 text-[hsl(var(--color-ink-muted))]">
+              <td className="px-4 py-3 text-[oklch(var(--color-ink-muted))]">
                 {entry.dependent_count > 0
                   ? t("recycle_bin.dependent_count", {
                       type: entityLabel(entry.entity_type),
@@ -145,7 +145,7 @@ export default function RecycleBinPage() {
                     })
                   : <DomainNumber value={entry.dependent_count} />}
               </td>
-              <td className="px-4 py-3 text-02 text-[hsl(var(--color-ink-subtle))]">
+              <td className="px-4 py-3 text-02 text-[oklch(var(--color-ink-subtle))]">
                 <DomainText value={entry.deleted_at ? new Date(entry.deleted_at).toLocaleString() : null} />
                 {entry.deleted_by && (
                   <div>{t("recycle_bin.deleted_by", { user: entry.deleted_by })}</div>

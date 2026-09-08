@@ -316,12 +316,12 @@ export default function SoulDetailPage() {
         variant="page"
         title={t("souls.detail.not_found")}
         backLink={
-          <a href="/souls" className="text-03 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]">
+          <a href="/souls" className="text-03 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
             ← {t("souls.detail.back_to_list")}
           </a>
         }
       >
-        <p className="text-04 text-[hsl(var(--color-status-error))]">{error || t("souls.detail.not_found")}</p>
+        <p className="text-04 text-[oklch(var(--color-status-error))]">{error || t("souls.detail.not_found")}</p>
       </PageShell>
     );
   }
@@ -358,7 +358,7 @@ export default function SoulDetailPage() {
   // 而报红 —— 而且那不是误报,真正的 `title={soul?.current_state}` 确实在它
   // 够不到的地方。提出来之后,每个窗口里唯一的 `title=` 都是 HTML 属性。
   const backLink = (
-    <a href="/souls" className="text-03 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]">
+    <a href="/souls" className="text-03 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]">
       ← {t("souls.detail.back_to_list")}
     </a>
   );
@@ -379,7 +379,7 @@ export default function SoulDetailPage() {
         {resolveEnumDisplay(t, "souls.states", soul?.current_state).label ?? t("common.value.unrecorded")}
       </span>
       {generation !== null && (
-        <span className={`${BADGE_SHAPE} bg-[hsl(var(--color-status-reincarnating)/0.1)] text-[hsl(var(--color-status-reincarnating))]`}>
+        <span className={`${BADGE_SHAPE} bg-[oklch(var(--color-status-reincarnating)/0.1)] text-[oklch(var(--color-status-reincarnating))]`}>
           {tf("souls.detail.generation", "Life {{n}}", { n: String(generation) })}
         </span>
       )}
@@ -464,7 +464,7 @@ export default function SoulDetailPage() {
               lifespan chart, and next-life inheritance preview, all moved
               out of this ad hoc box into their own component. */}
           {loading ? (
-            <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))] space-y-3">
+            <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))] space-y-3">
               <div className="flex justify-between items-center">
                 <Skeleton className="h-4 w-12" />
                 <Skeleton className="h-6 w-12" />
@@ -473,7 +473,7 @@ export default function SoulDetailPage() {
                 <Skeleton className="h-4 w-12" />
                 <Skeleton className="h-6 w-12" />
               </div>
-              <div className="border-t border-[hsl(var(--color-hairline))] pt-2 flex justify-between items-center">
+              <div className="border-t border-[oklch(var(--color-hairline))] pt-2 flex justify-between items-center">
                 <Skeleton className="h-4 w-12" />
                 <Skeleton className="h-6 w-12" />
               </div>
@@ -491,9 +491,9 @@ export default function SoulDetailPage() {
               inheritance={inheritanceQuery.data ?? null}
             />
           ) : (
-            <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-              <h2 title={soul?.civilization} className="text-01 text-[hsl(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
-              <p className="text-03 text-[hsl(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
+            <div className="bg-[oklch(var(--color-surface-1))] p-4 border border-[oklch(var(--color-hairline))]">
+              <h2 title={soul?.civilization} className="text-01 text-[oklch(var(--color-ink-muted))] uppercase mb-3">{ledgerLabel}</h2>
+              <p className="text-03 text-[oklch(var(--color-ink-muted))]">{t("souls.detail.no_ledger")}</p>
             </div>
           )}
 

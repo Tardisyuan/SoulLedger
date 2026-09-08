@@ -68,7 +68,7 @@ import {
 // the chip. `--civ-ink` is declared in both themes. The 7px dot keeps the
 // mark: it is a graphical object at 3:1, and it passes.
 //
-// The colour comes from `hsl(var(--civ-mark))`, aliased per tenant by the
+// The colour comes from `oklch(var(--civ-mark))`, aliased per tenant by the
 // `[data-civ]` rules in globals.css exactly as `--civ-hue` is. No variant
 // looks up `--color-civ-mark-cn` by name, so none of them enumerates the four
 // members, and a fifth civilization needs one stylesheet line rather than
@@ -158,7 +158,7 @@ export function TenantSignal({
       aria-hidden="true"
       data-tenant-mark={shortCode}
       className="rounded-full shrink-0"
-      style={{ width: 7, height: 7, background: "hsl(var(--civ-mark))" }}
+      style={{ width: 7, height: 7, background: "oklch(var(--civ-mark))" }}
     />
   );
 
@@ -174,7 +174,7 @@ export function TenantSignal({
         title={civilization}
       >
         {dot}
-        <span className="text-02 leading-tight text-[hsl(var(--color-ink-muted))] truncate">
+        <span className="text-02 leading-tight text-[oklch(var(--color-ink-muted))] truncate">
           {name}
         </span>
       </span>
@@ -192,7 +192,7 @@ export function TenantSignal({
         title={civilization}
         aria-label={name}
         className="font-mono text-01 leading-none uppercase"
-        style={{ color: "hsl(var(--civ-ink))" }}
+        style={{ color: "oklch(var(--civ-ink))" }}
       >
         {shortCode}
       </span>
@@ -220,14 +220,14 @@ export function TenantSignal({
       className="shrink-0 inline-flex items-center justify-center gap-1 rounded-full border px-2 py-0.5"
       style={{
         width: 52,
-        borderColor: "hsl(var(--civ-mark) / 0.4)",
-        background: "hsl(var(--civ-mark) / 0.13)",
+        borderColor: "oklch(var(--civ-mark) / 0.4)",
+        background: "oklch(var(--civ-mark) / 0.13)",
       }}
     >
       {dot}
       <span
         className="font-mono text-01 leading-none uppercase"
-        style={{ color: "hsl(var(--civ-ink))" }}
+        style={{ color: "oklch(var(--civ-ink))" }}
       >
         {shortCode}
       </span>

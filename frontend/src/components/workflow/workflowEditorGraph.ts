@@ -77,7 +77,7 @@ function edgesFor(rows: TemplateNode[]): Edge[] {
  *
  * The hex is deliberate and is the reason this module has to stay under
  * `src/components/workflow/`. `markerEnd` is handed to @xyflow/react, which
- * renders it into a standalone SVG `<marker>` defs tree — `hsl(var(--…))` has
+ * renders it into a standalone SVG `<marker>` defs tree — `oklch(var(--…))` has
  * no custom properties to resolve against in there and the arrowheads come out
  * unpainted. `eslint.config.mjs`'s HEX_ALLOW grants the exception by PATH
  * PREFIX, so moving this file elsewhere turns the exception back into an error.

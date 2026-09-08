@@ -140,8 +140,17 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
     // 这条探针是它唯一会被跑到的地方:没有它,规则改坏了没人会知道。
     [
       "design-system/no-raw-palette",
-      "任意值里写死的三元组",
+      "任意值里写死的三元组(HSL 写法)",
       '<div className="bg-[hsl(38,92%,50%,0.2)]" />',
+    ],
+    // OKLCH 迁移之后**今天有人会写的那一种**。规则的前缀表里
+    // `hsla?|rgba?|oklch|oklab|lch|lab` 是一条 alternation,任何一支坏掉都不会
+    // 影响别的支 —— 两条探针一起在,坏掉哪一支都有人报。上面那条留着不是怀旧:
+    // 全仓的 `hsl()` 字面量已经清零,所以它现在也只在这里被跑到。
+    [
+      "design-system/no-raw-palette",
+      "任意值里写死的三元组(OKLCH 写法)",
+      '<div className="bg-[oklch(0.770351_0.164635_70.6613/0.2)]" />',
     ],
     ["design-system/no-hex-colour", "写死的十六进制", '<div style={{ color: "#abcdef" }} />'],
     ["jsx-a11y/click-events-have-key-events", "只能点不能敲", "<div onClick={() => {}}>x</div>"],
@@ -149,15 +158,15 @@ describe("设计系统守卫:每条规则单独可证伪", () => {
   ];
 
   // 全部违规片段 + 一个「全部合规」片段,一次子进程跑完。
-  // `bg-[hsl(var(--…))]` 这三种形状必须留在这里,而且必须和上面那条任意值探针
+  // `bg-[oklch(var(--…))]` 这三种形状必须留在这里,而且必须和上面那条任意值探针
   // 一起读:两条合起来才钉住了判据是「方括号里有没有**字面数字**」,而不是
   // 「有没有 `[hsl(`」。少了这半边,把正则收紧成匹配所有 `-[hsl(` 会照样让上面
   // 那条探针变红、测试全绿 —— 而 app/ 下几百处正当的 token 任意值会一起爆红,
   // 到那时最省事的做法就是把整条规则删掉。带斜杠的不透明度写法要一并钉住:
   // classTokens 会在 `/` 处截断,截断后的残段不能被误判成字面颜色。
   const CLEAN =
-    'export const P = () => (<div className="p-4 gap-6 mx-auto text-04 text-01 rounded-full rounded-focus bg-[hsl(var(--color-surface-1))] text-[hsl(var(--color-ink))] border-[hsl(var(--color-hairline))] ' +
-    'bg-[hsl(var(--color-accent))] border-[hsl(var(--color-civ-mark-cn)/0.4)] shadow-[0_0_0_1px_hsl(var(--color-hairline))]" />);\n';
+    'export const P = () => (<div className="p-4 gap-6 mx-auto text-04 text-01 rounded-full rounded-focus bg-[oklch(var(--color-surface-1))] text-[oklch(var(--color-ink))] border-[oklch(var(--color-hairline))] ' +
+    'bg-[oklch(var(--color-accent))] border-[oklch(var(--color-civ-mark-cn)/0.4)] shadow-[0_0_0_1px_oklch(var(--color-hairline))]" />);\n';
   let fired: Array<Array<string | null>>;
   let clean: Msg[];
 

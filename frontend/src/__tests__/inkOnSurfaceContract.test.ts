@@ -6,7 +6,7 @@
  * (`--color-ink-tertiary` "4.91:1", `--color-civ-mark-gr` "7.78:1",
  * `--color-accent-ink` "4.83:1"). Every one of them is a single number, and a
  * single number is not what the stylesheet produces. `--color-surface-1..4`
- * are declared as `var(--civ-hue) 47% 7%`, and the `[data-civ]` rules point
+ * are declared as `[--civ-hue] 47% 7%`, and the `[data-civ]` rules point
  * `--civ-hue` at a different degree per tenant, so the real answer is one
  * figure per (theme × tenant × surface × ink) — 128 of them today. The
  * comments record the best case of each family and read as if they were the
@@ -54,7 +54,7 @@ import {
   SURFACE_TOKENS,
   THEMES,
   contrastRatio,
-  hslTripleToRgb,
+  oklchTripleToRgb,
   readCivAttrRules,
   resolveRampForCiv,
   suffixesOf,
@@ -89,8 +89,8 @@ const INK_TOKENS: string[] = [
  *
  * This is that block, and this is the widening. The trigger is that light
  * `--color-canvas` stopped being `0 0% 100%`: it is now
- * `var(--civ-hue) 100% 96.5%`, a per-tenant plane like any other, and dark
- * canvas has been `var(--civ-hue) 82% 4%` since Stage 11. A background whose
+ * `[--civ-hue] 100% 96.5%`, a per-tenant plane like any other, and dark
+ * canvas has been `[--civ-hue] 82% 4%` since Stage 11. A background whose
  * colour depends on the tenant is exactly what this matrix exists to measure,
  * and leaving the biggest one out was the same shape of gap as measuring "the
  * surface" instead of one surface per tenant.
@@ -131,8 +131,8 @@ function buildMatrix(): Combo[] {
     for (const civ of CIV_PREFIXES) {
       for (const surface of BACKGROUND_TOKENS) {
         for (const ink of INK_TOKENS) {
-          const surfaceRgb = hslTripleToRgb(resolveRampForCiv(theme, civ, surface));
-          const inkRgb = hslTripleToRgb(resolveRampForCiv(theme, civ, ink));
+          const surfaceRgb = oklchTripleToRgb(resolveRampForCiv(theme, civ, surface));
+          const inkRgb = oklchTripleToRgb(resolveRampForCiv(theme, civ, ink));
           out.push({
             key: `${theme} ${civ} ${surface} ${ink}`,
             theme,
@@ -267,15 +267,26 @@ describe("the matrix is the matrix we think it is", () => {
 
   it("gives every tenant a rule that actually retints the ramp", () => {
     // Without this the matrix is a lie of the exact shape GREEK already shipped
-    // once: `resolveRampForCiv` reads `--color-civ-hue-gr` whether or not any
-    // rule feeds it into `--civ-hue`, so a tenant with tokens and no
-    // `[data-civ]` rule would be measured on a surface no user ever sees. It
-    // fails here rather than being skipped, because a tenant that cannot be
-    // resolved is the finding, not an excused case.
+    // once: `resolveRampForCiv` reads `--color-civ-surface-1-gr` whether or not
+    // any rule feeds it into `--color-surface-1`, so a tenant with tokens and
+    // no `:root[data-civ]` rule would be measured on a surface no user ever
+    // sees. It fails here rather than being skipped, because a tenant that
+    // cannot be resolved is the finding, not an excused case.
+    //
+    // FIVE POINTERS PER TENANT WHERE THERE WAS ONE. The rule used to bind
+    // `--civ-hue` and the ramp interpolated it; OKLCH has no shared hue to
+    // bind (the four tenants' L and C differ too), so the invariant is
+    // unchanged and its carrier is now the five plane declarations. A rule
+    // that lost ONE of them would leave that plane neutral for that tenant
+    // only — which the old single-pointer check could not have expressed.
     const rules = readCivAttrRules();
     for (const prefix of CIV_PREFIXES) {
       expect(rules[prefix]).toBeDefined();
-      expect(rules[prefix].hue).toBe(`--color-civ-hue-${prefix}`);
+      for (const plane of BACKGROUND_TOKENS) {
+        expect(rules[prefix].ramp[plane]).toBe(
+          `--color-civ-${plane.replace("--color-", "")}-${prefix}`
+        );
+      }
     }
   });
 
@@ -411,7 +422,7 @@ describe("the WCAG helpers this file imports", () => {
  *
  * What that hid: the token was `32 92% 34%`, and its own comment claimed
  * 5.05:1, which is true — **against white**. Light surfaces are not white.
- * `--color-surface-1..4` are `var(--civ-hue) 14%..11% 98%..92%`, tinted per
+ * `--color-surface-1..4` are `[--civ-hue] 14%..11% 98%..92%`, tinted per
  * tenant, and on European surface-4 the same token measured **4.16:1**. The
  * comment and the failure were about different backgrounds, so neither
  * contradicted the other and nothing went red. Retuned to `32 92% 31%`:
@@ -443,8 +454,8 @@ describe("--color-accent-ink clears AA on every surface it can land on", () => {
       BACKGROUNDS.map((surface) => ({
         key: `${theme} ${civ} ${surface}`,
         ratio: contrastRatio(
-          hslTripleToRgb(resolveRampForCiv(theme, civ, ACCENT_INK)),
-          hslTripleToRgb(resolveRampForCiv(theme, civ, surface))
+          oklchTripleToRgb(resolveRampForCiv(theme, civ, ACCENT_INK)),
+          oklchTripleToRgb(resolveRampForCiv(theme, civ, surface))
         ),
       }))
     )
@@ -505,9 +516,9 @@ describe("--color-accent-ink clears AA on every surface it can land on", () => {
    * Both figures are unchanged (2.14 and 5.84) and both tokens are unchanged.
    * What changed is where the stylesheet keeps a white background. This read
    * `LIGHT_TOKENS["--color-canvas"]`, which was `0 0% 100%`; Stage 13 made the
-   * tenant-facing light canvas `var(--civ-hue) 100% 96.5%`, so that lookup
+   * tenant-facing light canvas `[--civ-hue] 100% 96.5%`, so that lookup
    * stopped being white and started being an unresolved `var(`. It did not
-   * drift — `hslTripleToRgb` throws on it, which is how this line was found.
+   * drift — `oklchTripleToRgb` throws on it, which is how this line was found.
    *
    * White is still rendered, and `.light:not([data-civ])` is where: a
    * logged-out screen, or a tenant this deployment maps to no cosmology, still
@@ -528,8 +539,8 @@ describe("--color-accent-ink clears AA on every surface it can land on", () => {
       const white = NO_CIV_LIGHT_TOKENS["--color-canvas"];
       // Guard the guard: if the untinted branch ever stops being white this
       // pin would go on "passing" against whatever replaced it.
-      expect(hslTripleToRgb(white)).toEqual([255, 255, 255]);
-      const ratio = contrastRatio(hslTripleToRgb(LIGHT_TOKENS[token]), hslTripleToRgb(white));
+      expect(oklchTripleToRgb(white)).toEqual([255, 255, 255]);
+      const ratio = contrastRatio(oklchTripleToRgb(LIGHT_TOKENS[token]), oklchTripleToRgb(white));
       expect(ratio).toBeCloseTo(claimed, 1);
     }
   );

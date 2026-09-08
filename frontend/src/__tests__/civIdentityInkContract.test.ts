@@ -25,7 +25,7 @@
  *
  * A SECOND LOCUS, FOUND BY LOOKING FOR THE SAME ROOT CAUSE ELSEWHERE.
  * `TenantSignal` draws the tenant's two-letter code at 11px in the collapsed
- * rail and the mobile chip, reading `hsl(var(--civ-mark))`. `--civ-mark` — the
+ * rail and the mobile chip, reading `oklch(var(--civ-mark))`. `--civ-mark` — the
  * per-tenant alias, unmapped-tenant fallback `215 8% 57%` — is declared once,
  * in `:root`, which is the DARK block. There is no `.light` override, so a
  * logged-out light-mode masthead drew those glyphs with a value measured
@@ -39,7 +39,7 @@
  * WHY THIS IS NOT IN `inkOnSurfaceContract.test.ts`, WHICH IS WHERE IT BELONGS.
  * That file is 499 lines and CLAUDE.md caps files at 500. It owns the ink ramp
  * and the `--color-accent-ink` block this one is modelled on, and both files
- * import the SAME `contrastRatio` / `hslTripleToRgb` / `compositeOver` out of
+ * import the SAME `contrastRatio` / `oklchTripleToRgb` / `compositeOver` out of
  * `./support/globalsCssTokens` rather than carrying copies — two readings of
  * one formula is the defect that support module exists to close.
  */
@@ -52,12 +52,17 @@ import {
   THEMES,
   compositeOver,
   contrastRatio,
-  hslTripleToRgb,
+  hslHueOfOklch,
+  HUE_READBACK_SLACK_DEG,
+  oklchTripleToRgb,
   readCivAttrRules,
   resolveRampForCiv,
   suffixesOf,
   type ThemeName,
 } from "./support/globalsCssTokens";
+
+/** A bare `L C H` triple, the shape every colour token in globals.css has. */
+const OKLCH_TRIPLE = /^[\d.]+\s+[\d.]+\s+-?[\d.]+$/;
 
 /** WCAG 2.x AA for normal-size text. Both call sites are 11–12px. */
 const AA_NORMAL_TEXT = 4.5;
@@ -76,7 +81,7 @@ const TOKENS_FOR: Record<ThemeName, Record<string, string>> = {
 };
 
 const rgbFor = (theme: ThemeName, civ: string, token: string) =>
-  hslTripleToRgb(resolveRampForCiv(theme, civ, token));
+  oklchTripleToRgb(resolveRampForCiv(theme, civ, token));
 
 // ---------------------------------------------------------------------------
 
@@ -97,9 +102,9 @@ describe("the ink tokens exist and are wired, in both themes", () => {
     }
   });
 
-  it.each(CIV_PREFIXES)("--color-civ-ink-%s is a full HSL triple", (prefix) => {
+  it.each(CIV_PREFIXES)("--color-civ-ink-%s is a full OKLCH triple", (prefix) => {
     for (const tokens of [ROOT_TOKENS, LIGHT_TOKENS]) {
-      expect(tokens[`--color-civ-ink-${prefix}`]).toMatch(/^\d+(\.\d+)?\s+[\d.]+%\s+[\d.]+%$/);
+      expect(tokens[`--color-civ-ink-${prefix}`]).toMatch(OKLCH_TRIPLE);
     }
   });
 
@@ -107,12 +112,25 @@ describe("the ink tokens exist and are wired, in both themes", () => {
     // Lightness is the only axis the ink is allowed to move. An ink on a
     // different hue is not "the same identity, made readable" — it is a fifth
     // colour, and the thing the reader is meant to recognise has changed.
+    //
+    // BOTH HALVES OF THIS WERE STRING COMPARISONS ON AN HSL TRIPLE, AND ONLY
+    // THE FIRST HALF SURVIVES AS A COMPARISON. The hue is read back through
+    // sRGB (`hslHueOfOklch`, whose docstring carries the measured slack) —
+    // the rule is unchanged and still exact to within 8-bit quantisation.
+    // The saturation half is GONE, because OKLCH has no saturation: the
+    // token's C is chroma, which — unlike HSL S — is not held constant when
+    // only lightness moves, so an equality there would fail on values that
+    // have not changed. What that half asserted is now covered from the other
+    // side: `--color-civ-mark-*` and `--color-civ-ink-*` differed only in
+    // lightness when they were written, and the badge ratios below (>= 4.6
+    // across all 32 pairings, unchanged by this migration) are what would move
+    // if either drifted.
     for (const tokens of [ROOT_TOKENS, LIGHT_TOKENS]) {
-      const hue = tokens[`--color-civ-hue-${prefix}`];
-      expect(tokens[`--color-civ-ink-${prefix}`].split(/\s+/)[0]).toBe(hue);
-      expect(tokens[`--color-civ-ink-${prefix}`].split(/\s+/)[1]).toBe(
-        tokens[`--color-civ-mark-${prefix}`].split(/\s+/)[1]
-      );
+      const hue = Number(tokens[`--color-civ-hue-${prefix}`]);
+      const ink = hslHueOfOklch(tokens[`--color-civ-ink-${prefix}`]);
+      const mark = hslHueOfOklch(tokens[`--color-civ-mark-${prefix}`]);
+      expect(Math.abs(ink - hue)).toBeLessThan(HUE_READBACK_SLACK_DEG);
+      expect(Math.abs(ink - mark)).toBeLessThan(HUE_READBACK_SLACK_DEG);
     }
   });
 
@@ -120,8 +138,8 @@ describe("the ink tokens exist and are wired, in both themes", () => {
     // The gap this token was added to close. `--civ-mark` is declared only in
     // `:root`; an alias holding a LIGHTNESS and declared in one theme is a
     // value measured for one canvas and painted on two.
-    expect(ROOT_TOKENS["--civ-ink"]).toMatch(/^\d+(\.\d+)?\s+[\d.]+%\s+[\d.]+%$/);
-    expect(LIGHT_TOKENS["--civ-ink"]).toMatch(/^\d+(\.\d+)?\s+[\d.]+%\s+[\d.]+%$/);
+    expect(ROOT_TOKENS["--civ-ink"]).toMatch(OKLCH_TRIPLE);
+    expect(LIGHT_TOKENS["--civ-ink"]).toMatch(OKLCH_TRIPLE);
     expect(LIGHT_TOKENS["--civ-ink"]).not.toBe(ROOT_TOKENS["--civ-ink"]);
   });
 });
@@ -211,16 +229,16 @@ describe("civilization ink clears AA everywhere it is painted", () => {
 
   it("the unmapped-tenant fallback clears AA on the canvas of its own theme", () => {
     for (const theme of THEMES) {
-      const ink = hslTripleToRgb(TOKENS_FOR[theme]["--civ-ink"]);
+      const ink = oklchTripleToRgb(TOKENS_FOR[theme]["--civ-ink"]);
       // The canvas an unmapped tenant renders is NOT `TOKENS_FOR[theme]`'s.
-      // Since Stage 11 the tenant-facing canvas interpolates `var(--civ-hue)`
+      // Since Stage 11 the tenant-facing canvas interpolates `[--civ-hue]`
       // and the no-cosmology screen gets its own untinted declaration from
       // `:root:not([data-civ])` — which is the whole subject of this test, so
       // reading the tenant branch here would measure a colour this case never
-      // shows. It would not even fail quietly: `hslTripleToRgb` throws on the
+      // shows. It would not even fail quietly: `oklchTripleToRgb` throws on the
       // unresolved `var(`, which is how this line was caught.
-      const canvas = hslTripleToRgb(NO_CIV_TOKENS_BY_THEME[theme]["--color-canvas"]);
-      const mark = hslTripleToRgb(ROOT_TOKENS["--civ-mark"]);
+      const canvas = oklchTripleToRgb(NO_CIV_TOKENS_BY_THEME[theme]["--color-canvas"]);
+      const mark = oklchTripleToRgb(ROOT_TOKENS["--civ-mark"]);
       expect(contrastRatio(ink, canvas)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
       // The chip fills with `--civ-mark / 0.13` over that canvas.
       expect(contrastRatio(ink, compositeOver(mark, canvas, 0.13))).toBeGreaterThanOrEqual(
