@@ -427,7 +427,14 @@ const PERCEPTIBILITY_FLOOR = 8;
  * Deliberately the WEAKEST rung that means anything, because the claim being
  * pinned is "the ramp expresses the tenant", not "the ramp shouts". Taken from
  * the metric's published scale and not from this palette: the measurements it
- * judges are 4.11 to 20.87, so a number fitted to the data would have been 4.
+ * judges are 3.30 to 20.87, so a number fitted to the data would have been 3.5
+ * — which it now equals, and that coincidence is worth naming rather than
+ * enjoying. The low end was 4.11 until the Chinese light hue moved to 20 deg
+ * (globals.css, `--color-civ-hue-cn` in `.light`); it is the Chinese/Egyptian
+ * pair on light surface-1, and it is NOT what this constant judges. The pins
+ * below take the WIDEST pair per plane and the WIDEST plane per pair, so the
+ * tightest figure either of them sees is 5.68. If a future change puts 3.30
+ * itself under a pin, the number to move is the palette, not this constant.
  */
 const PERCEPTIBLE_AT_A_GLANCE = 3.5;
 
@@ -597,12 +604,17 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
    * Re-measured in CIEDE2000, the ramp separates ALL SIX PAIRS in BOTH themes:
    *
    *                     dark canvas   light surface-1
-   *     Chinese-Egyptian     6.04            4.11
+   *     Chinese-Egyptian     6.04            3.30
    *     Egyptian-Greek       7.03            4.25
-   *     Chinese-European     8.65            5.96
+   *     Chinese-European     8.65            6.18
    *     European-Egyptian   11.32            7.96
-   *     Chinese-Greek       13.33            8.41
+   *     Chinese-Greek       13.33            7.56
    *     European-Greek      14.60           10.01
+   *
+   * (The three Chinese rows in the light column read 4.11 / 5.96 / 8.41 before
+   * that tenant's LIGHT hue was rotated 12 -> 20 deg to take its page ground
+   * out of the pink region. Dark did not move. See `--color-civ-hue-cn` in the
+   * `.light` block of globals.css for the derivation and the cost.)
    *
    * — against a ladder where 2-3.5 is "perceptible at a glance" and >5 is
    * obvious. Across surface-1..4 the same pairs run 5.46 to 20.87. The two
@@ -692,8 +704,11 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
     // THE ASSERTION STAGE 11 BELIEVED IT COULD NOT MAKE. Its subject is the
     // PAIR, not the surface: for each pair, the plane on which the two look
     // furthest apart has to be visibly apart. Narrowest today is 9.11 dark
-    // (Egyptian/Greek) and 6.42 light — the very pairs max-channel reported at
-    // 7-8 and called too close to rely on. The light figure ROSE from 5.85 when
+    // (Egyptian/Greek) and 5.68 light (Chinese/Egyptian, on surface-3) — the
+    // very pairs max-channel reported at 7-8 and called too close to rely on.
+    // The light figure was 6.42 (Egyptian/Greek) until the Chinese light hue
+    // moved to 20 deg; that rotation is what put a different pair at the
+    // bottom of this column. The light figure ROSE from 5.85 when
     // canvas joined `RAMP_TOKENS`, which is what widening a `Math.max` does:
     // this pin can only get easier as the list grows, and that is why it is not
     // the pin that defends the page ground. The two per-plane pins above are.
