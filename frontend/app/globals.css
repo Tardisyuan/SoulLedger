@@ -555,13 +555,15 @@
      channel counts further down are kept as history; see the Stage 12 note).
      Ranges are across the four tenants:
 
-       canvas tenant separation   0.00 -> 5.62..15.98   (was six pairs at 0.00,
+       canvas tenant separation   0.00 -> 3.74..15.98   (was six pairs at 0.00,
                                   and it is now the WIDEST-separating plane in
                                   light mode, which is the right place for it:
                                   it is 63% of the pixels. The low end read
-                                  6.42 until Chinese was rotated to 20 deg in
-                                  light — see --color-civ-hue-cn in `.light`)
-       canvas -> surface-1 step   3.47..5.75 -> 2.40..3.53   (-26%, still above
+                                  6.42 before Chinese was rotated to 20 deg in
+                                  light and 5.62 after it — see
+                                  --color-civ-hue-cn and --color-civ-canvas-cn
+                                  in `.light` for both moves and their cost)
+       canvas -> surface-1 step   3.47..5.75 -> 2.58..3.53   (-24%, still above
                                   the 2.0 rung at which a flat-field difference
                                   reads at a glance, and cards also carry a
                                   --color-hairline border at 220 10% 90% =
@@ -569,7 +571,7 @@
                                   any light surface — the card edge was never
                                   drawn by fill contrast alone)
        surface-2 -> -3 -> -4      0.76..0.90 / 0.82..0.85
-                                  -> 0.61..0.76 / 0.61..0.80
+                                  -> 0.61..0.78 / 0.61..0.80
 
      THAT LAST LINE IS THE HONEST COST AND IT IS SMALLER THAN IT LOOKS: those
      two steps were ALREADY under ΔE00 1.0, the rung at which a difference is
@@ -641,15 +643,29 @@
      are kept as the pair they were measured as, not restated on a palette the
      alternative was never measured against.)
 
-     Measured separation, widest channel, between any two tenants: canvas 18,
-     then 10 / 15 / 16 / 15 out of 255. The same five in CIEDE2000: canvas
+     Measured separation, widest channel, between any two tenants: canvas 24,
+     then 12 / 20 / 22 / 20 out of 255. The same five in CIEDE2000: canvas
      15.98, then 10.01 / 14.02 / 14.95 / 14.07 for the widest pair, and canvas
-     5.62, then 3.30 / 4.88 / 5.68 / 4.90 for the NARROWEST — so every light
-     plane still separates its closest two tenants past "perceptible at a
-     glance", the page ground included. The narrow column is the Chinese /
-     Egyptian pair throughout, and it is the price of the 20-degree rotation
-     recorded on --color-civ-hue-cn in `.light`; before it the same column read
-     6.42, then 4.11 / 5.53 / 5.85 / 5.55.
+     3.74, then 2.56 / 4.16 / 4.66 / 4.18 for the NARROWEST. The narrow column
+     is the Chinese / Egyptian pair throughout, and it is the price of moving
+     the Chinese ground out of the blush region — first the 20-degree rotation
+     recorded on --color-civ-hue-cn below, then the chroma raise recorded on
+     --color-civ-canvas-cn in this block. The same column read 6.42, then
+     4.11 / 5.53 / 5.85 / 5.55 before either, and 5.62, then
+     3.30 / 4.88 / 5.68 / 4.90 between them.
+
+     TWO OF THOSE FIVE ARE UNDER "PERCEPTIBLE AT A GLANCE" AND THE SENTENCE
+     HERE USED TO SAY OTHERWISE. It read "so every light plane still separates
+     its closest two tenants past 'perceptible at a glance', the page ground
+     included" — which was already false when it was written: surface-1's
+     narrowest was 3.30 against a rung of 3.5. Nothing went red, because the
+     pin in `civilizationColourContract` is on each plane's WIDEST pair and on
+     each pair's WIDEST plane; no assertion in this repo has ever held a plane's
+     NARROWEST pair above that rung, and the 3.5 rung is not the claim the
+     stylesheet is entitled to make about surface-1. The card plane is the
+     least tinted by design and the mark carries identity there. Recorded here
+     rather than quietly corrected, because the sentence read as settled for
+     two rounds.
 
      NO INK TOKEN MOVED FOR THIS. Every one of the 160 ink x background pairs
      still clears AA on its own. Worst over the whole matrix is 4.527:1 (DARK
@@ -863,20 +879,25 @@
      THEMES:
 
                             dark canvas   light surface-1
-         Chinese-Egyptian        6.04           3.30
+         Chinese-Egyptian        6.04           2.56
          Egyptian-Greek          7.03           4.25
-         Chinese-European        8.65           6.18
+         Chinese-European        8.65           7.02
          European-Egyptian      11.32           7.96
-         Chinese-Greek          13.33           7.56
+         Chinese-Greek          13.33           6.89
          European-Greek         14.60          10.01
 
      against a scale on which <1 is invisible, 2-3.5 is visible at a glance
-     and >5 is obvious. Over surface-1..4 the same pairs run 5.46 to 20.87.
+     and >5 is obvious. Over surface-1..4 the same pairs run 2.56 to 20.87 —
+     the low end being the Chinese/Egyptian card plane, which sits in the
+     "at a glance" band rather than above it and is discussed on
+     --color-civ-canvas-cn in `.light`.
 
      THE THREE CHINESE ROWS IN THE LIGHT COLUMN MOVED WHEN THAT TENANT'S LIGHT
-     HUE WENT TO 20 DEG (they read 4.11 / 5.96 / 8.41 at 12 deg; dark did not
-     move, and neither did the three rows without Chinese in them). The
-     derivation is on --color-civ-hue-cn in the `.light` block.
+     HUE WENT TO 20 DEG, AND AGAIN WHEN ITS GROUND WAS GIVEN REAL CHROMA
+     (they read 4.11 / 5.96 / 8.41 at 12 deg, then 3.30 / 6.18 / 7.56, and
+     now 2.56 / 7.02 / 6.89; dark did not move in either round, and neither
+     did the three rows without Chinese in them). The derivation is on
+     --color-civ-hue-cn and --color-civ-canvas-cn in the `.light` block.
 
      AND THE SAME METRIC UNDOES STAGE 9's RULING TOO, not only Stage 11's
      footnote about it. On the pre-Stage-11 ramp (13/12/11/11) the widest pair
@@ -894,8 +915,8 @@
      canvas. That was a deliberate choice (a white page ground) that had never
      been written down beside the sentence that reads as covering both themes.
 
-     It is now `[--civ-hue] 100% 96.5%` and the six pairs measure 5.62 to
-     15.98 there — the widest spread of any light plane, which is the right
+     The light canvas is tinted per tenant now and the six pairs measure 3.74
+     to 15.98 there — the widest spread of any light plane, which is the right
      place for it, the ground being 63% of the pixels. The measurement that
      opened this file's Stage 13 round: dark screens carried the tenant's hue
      across 99.7% of their area and light screens across 33.8%, with 62.8% of
@@ -1290,23 +1311,99 @@
     --color-civ-ink-eu: 0.451923 0.141689 273.0637;
     --color-civ-ink-eg: 0.461034 0.074993 89.3085;
     --color-civ-ink-gr: 0.442665 0.091429 130.0839;
-    --color-civ-canvas-cn: 0.971893 0.01526 48.5626;
+    /* CHINESE IS THE ONE TENANT WHOSE FIVE LIGHT PLANES ARE NOT THE HUE TOKEN
+     ABOVE DESATURATED. Every other tenant's ramp still is. The block on
+     --color-civ-hue-cn explains why the rotation to 20 deg did not settle the
+     complaint; the short form is that at these lightnesses a FAINT red is a
+     blush and only a DEFINITE warm colour is a warm neutral, so the fix had
+     to be CHROMA and the hue had to follow it out of the red. The identity
+     tokens did not move: --color-civ-mark-cn and --color-civ-ink-cn are still
+     the red the hue token names, and still pinned to it by
+     `civilizationColourContract` and `civIdentityInkContract`. The ground is
+     the paper, not the seal.
+
+     The five planes below are Lab hue 65.4..74.3 at Lab chroma 3.54..7.50,
+     against 51.3..55.2 at 2.90..5.27 before. In named-colour terms the ground
+     moved from `seashell` (255,245,238 — Lab hue 64.6, C 5.04, the canonical
+     "off-white with a pink undertone") to `linen` (250,240,230 — Lab hue 74.4,
+     C 6.25); the canvas is now (255,243,231) at hue 74.3, C 7.50. `mistyrose`
+     sits at Lab hue 28.9 for scale: the axis is real, and the ground that was
+     rejected on review sat at 55.1 — BELOW seashell on it.
+
+     THE LIGHTNESS LADDER DID NOT MOVE, AND THAT WAS TESTED RATHER THAN
+     ASSUMED. The round that produced this change was sent to unbind it: to
+     let light-mode lightness vary per tenant so Chinese could sit deeper and
+     read as terracotta instead of blush. Both halves of that plan were
+     measured and both failed.
+
+       - THERE IS ALMOST NO ROOM. --color-ink-tertiary needs a warm background
+         at OKLCH L >= 0.93292 to clear AA, and surface-4 starts at 0.949544,
+         so the whole budget is 0.0166 — 1.7 points of Lab L.
+       - AND THE ROOM IS NOT WORTH ANYTHING. Spending ALL of it moves this
+         canvas 1.33 ΔE00, from (255,243,237) to (249,237,232). The rung at
+         which a flat-field difference is visible at all is around 1.0 and
+         `PERCEPTIBLE_AT_A_GLANCE` is 3.5. A ground that reads as pink at
+         96.6 reads as pink at 94.9; it is just slightly darker pink.
+
+     So the lightness values below are the ones this ramp already had, to
+     within the sRGB rounding the higher chroma forces: the largest move is
+     the canvas at 0.15 of Lab L, and surface-2/-3/-4 move UP by 0.02..0.04.
+     Nothing here is a per-tenant lightness decision, because none was needed.
+
+     CHROMA IS THE AXIS WITH ROOM, AND THE OKLCH MIGRATION IS WHY IT CAN BE
+     REACHED. The 20-degree round ruled a chroma move out — correctly for the
+     direction it tested, which was DOWNWARD ("it is too loud"), and Chinese
+     did carry the lowest chroma of the four grounds. The corollary it did not
+     draw is that being the LOWEST-chroma ground on a red-adjacent hue is the
+     mechanism: at these lightnesses a faint red is a blush and only a
+     definite warm colour is a warm neutral. Raising it was never tried. In
+     HSL it was also barely expressible — chroma there is c = S x min(L, 1-L),
+     so "more colour" and "more lightness" are one dial. In OKLCH C is its own
+     coordinate, which is exactly the road `7db2c6e` was paving.
+
+     WHAT IT COST: the Chinese/Egyptian pair, again, and it was already the
+     one the 20-degree rotation was spending. Per plane it reads
+     canvas 3.74 / surface-1 2.56 / surface-2 4.16 / surface-3 4.66 /
+     surface-4 4.18, against 5.62 / 3.30 / 4.88 / 5.68 / 4.90. The figure
+     `civilizationColourContract` pins is the pair's WIDEST plane: 4.66, down
+     from 5.68, against a floor of 3.5.
+
+     THE CARD PLANE IS THE WORST OF THOSE AND THE TRADE THERE IS GEOMETRIC.
+     surface-1 falls from 3.30 to 2.56, and searching that plane for the value
+     that MAXIMISES Chinese/Egyptian separation subject to staying out of the
+     blush wedge returns 2.57 — so 3.30 was not available at any hue this
+     ground may now occupy. It was being bought with the pinkness. Both
+     figures are under `PERCEPTIBLE_AT_A_GLANCE` and both always were: the
+     card plane is the least tinted by design, and the mark carries the
+     distinction there, which is the argument `MARK_LEAD_MARGIN` already makes
+     (the Chinese/Egyptian lead is 15.25, up from 11.60).
+
+     WHAT IT DID NOT COST. No ink token moved, and none needed to. Every one
+     of these five is LOOSER under --color-ink-tertiary than before
+     (4.739:1 at surface-4, was 4.734:1), so `inkOnSurfaceContract`'s BELOW_AA
+     table is still empty and the row that binds the whole 160 is still the
+     one it was: 4.527:1, dark Greek surface-4. The per-plane widest pair is
+     unchanged at every plane (European/Greek throughout) and its max-channel
+     figure on surface-1 RISES from 10 to 12. The card step (canvas ->
+     surface-1) is 3.40, was 2.40. Plane order, mark lead and the badge floor
+     are untouched. */
+    --color-civ-canvas-cn: 0.970313 0.02052 67.5827;
     --color-civ-canvas-eu: 0.957251 0.020359 276.9584;
     --color-civ-canvas-eg: 0.985447 0.017905 89.3544;
     --color-civ-canvas-gr: 0.989183 0.025026 126.531;
-    --color-civ-surface-1-cn: 0.9837 0.008521 44.8935;
+    --color-civ-surface-1-cn: 0.983157 0.010038 58.2203;
     --color-civ-surface-1-eu: 0.974963 0.01201 281.0864;
     --color-civ-surface-1-eg: 0.991447 0.009763 87.4695;
     --color-civ-surface-1-gr: 0.993514 0.014115 128.6196;
-    --color-civ-surface-2-cn: 0.964573 0.012729 48.5915;
+    --color-civ-surface-2-cn: 0.964841 0.018598 62.4573;
     --color-civ-surface-2-eu: 0.951383 0.017557 279.0574;
     --color-civ-surface-2-eg: 0.97623 0.015128 90.2333;
     --color-civ-surface-2-gr: 0.978766 0.021043 127.3776;
-    --color-civ-surface-3-cn: 0.956361 0.013702 46.231;
+    --color-civ-surface-3-cn: 0.956378 0.02035 62.864;
     --color-civ-surface-3-eu: 0.942644 0.018936 279.5247;
     --color-civ-surface-3-eg: 0.96998 0.01641 91.5504;
     --color-civ-surface-3-gr: 0.971776 0.022686 128.7231;
-    --color-civ-surface-4-cn: 0.949544 0.01278 48.5885;
+    --color-civ-surface-4-cn: 0.949816 0.018672 62.4521;
     --color-civ-surface-4-eu: 0.936301 0.017629 279.0515;
     --color-civ-surface-4-eg: 0.961245 0.015184 90.2353;
     --color-civ-surface-4-gr: 0.963792 0.021123 127.3828;
