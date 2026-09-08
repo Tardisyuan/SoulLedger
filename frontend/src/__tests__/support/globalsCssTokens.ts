@@ -132,9 +132,15 @@ export const LIGHT_EFFECTIVE_TOKENS: Record<string, string> = { ...ROOT_TOKENS, 
  * Before Stage 11 there was nothing to read: the fallback was the value
  * `--civ-hue: 240` interpolated into the same declarations every tenant used,
  * and at 13% saturation "the neutral branch" and "some tenant's branch" were
- * the same pixels anyway. The tinted ramp made 240° a deep blue-violet 8° from
- * European, so globals.css now declares the untinted ramp outright under
- * `:root:not([data-civ])` / `.light:not([data-civ])`.
+ * taken to be the same pixels anyway. The tinted ramp made 240° a deep
+ * blue-violet 8° from European, so globals.css now declares the untinted ramp
+ * outright under `:root:not([data-civ])` / `.light:not([data-civ])`.
+ *
+ * "THE SAME PIXELS ANYWAY" WAS max-channel TALKING. Re-measured in ΔE00 on
+ * that old dark ramp, the 240° fallback sat 5.36-9.40 from Greek and
+ * 4.26-7.27 from Egyptian — a colour, not a neutral, and only European was
+ * genuinely close to it. This map's reason for existing is unchanged; what
+ * changes is that reading it is not merely a Stage 11 concern.
  *
  * `readTokens(":root")` and `readTokens("\\.light")` do NOT see these blocks —
  * their patterns require the selector to be followed by whitespace and `{`,
@@ -371,9 +377,17 @@ export const CIV_PREFIXES = [...new Set(Object.values(CIV_PREFIX_BY_TENANT_CODE)
 // The surface ramp, resolved per tenant.
 //
 // `resolveTriple` above answers "what does surface-1 look like on the neutral
-// 240° fallback". These answer "what does it look like for THIS civilization",
-// which is the question the Stage 9 review asked and the reason globals.css no
-// longer claims the ramp carries identity: the answers are all the same colour.
+// 240° fallback". These answer "what does it look like for THIS civilization".
+//
+// This comment used to end "the answers are all the same colour", which was
+// Stage 9's finding and was left standing through Stage 11's retint. It is
+// false twice over now: the ramp does carry the tenant, and the metric that
+// made "the same colour" sound defensible for the closer pairs was
+// `maxChannelDelta`, which cannot see hue. Measured in ΔE00 the four answers
+// are 4.11 to 20.87 apart depending on pair, surface and theme — no two of
+// them are the same colour anywhere on the ramp except light-mode canvas,
+// which `.light` declares as flat `0 0% 100%` for every tenant and which is
+// not in `SURFACE_TOKENS`.
 // ---------------------------------------------------------------------------
 
 /** Every `--color-surface-N` token, derived from the stylesheet rather than listed. */
@@ -396,9 +410,18 @@ if (SURFACE_TOKENS.length === 0) {
  * the eye reads, not in HSL. The example that made the point when this was
  * written: `12 13% 7%` and `232 13% 7%` are 220° apart as numbers and 4/255
  * apart as pixels. Stage 11 raised the ramp's chroma and the same pair now
- * measures 17/255 — the arithmetic did not change, the design did, and it is
- * still the second figure that decides whether anyone can tell them apart. Throws on anything that is not a
- * bare `H S% L%` triple rather than coercing `NaN` through and comparing it.
+ * measures 17/255 — the arithmetic did not change, the design did.
+ *
+ * THAT SENTENCE USED TO END "and it is still the second figure that decides
+ * whether anyone can tell them apart", AND IT IS THAT ENDING THAT WAS WRONG.
+ * sRGB is where the comparison has to *start* — HSL cannot answer it at all —
+ * but a count of sRGB channel steps is not what decides it either. See the
+ * CIEDE2000 block at the foot of this file: this function is now the input to
+ * `srgbToLab`, and ΔE00 is the figure the assertions rest on. Stage 12 changed
+ * no colour, only which number gets believed.
+ *
+ * Throws on anything that is not a bare `H S% L%` triple rather than coercing
+ * `NaN` through and comparing it.
  */
 export function hslTripleToRgb(triple: string): [number, number, number] {
   const m = /^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/.exec(triple.trim());
@@ -434,7 +457,22 @@ export function resolveRampForCiv(theme: ThemeName, prefix: string, name: string
   return resolveTriple({ ...tokens, "--civ-hue": hue }, name);
 }
 
-/** The widest single-channel gap between two colours, 0-255. */
+/**
+ * The widest single-channel gap between two colours, 0-255.
+ *
+ * NEARLY BLIND TO HUE, WHICH IS THE AXIS THIS PALETTE USES. Two colours can
+ * share two of three channels exactly and differ obviously to the eye:
+ * Chinese `(19, 5, 2)` and Egyptian `(19, 14, 2)` are 9 by this function and
+ * 6.04 by `deltaE00Rgb`, i.e. plainly different. Every "N/255" claim written
+ * before Stage 12 came from here, and the ones that concluded a PAIR was
+ * indistinguishable were wrong for this reason.
+ *
+ * Still exported, still used, on purpose: `PERCEPTIBILITY_FLOOR` in
+ * `civilizationColourContract.test.ts` is a channel-unit threshold set by a
+ * named review, and a threshold does not survive being restated in units its
+ * review never used. It is kept beside a ΔE00 pin, not replaced by one.
+ * For any NEW comparison, reach for `deltaE00Rgb`.
+ */
 export function maxChannelDelta(
   a: readonly [number, number, number],
   b: readonly [number, number, number]
@@ -509,4 +547,186 @@ export function contrastRatio(a: Rgb, b: Rgb): number {
   const lb = relativeLuminance(b);
   const [hi, lo] = la > lb ? [la, lb] : [lb, la];
   return (hi + 0.05) / (lo + 0.05);
+}
+
+// ---------------------------------------------------------------------------
+// CIEDE2000 — how far apart two colours LOOK.
+//
+// WHY THIS EXISTS, AND WHAT IT REPLACES. `maxChannelDelta` above is the metric
+// every "N/255" figure in this repository was measured with, and it is close to
+// blind along the hue axis, which is the axis civilization identity lives on.
+// The case that made it undeniable, both from the DARK ramp:
+//
+//     Chinese canvas  (19,  5, 2)
+//     Egyptian canvas (19, 14, 2)
+//
+// R identical, B identical, only G differs — so `maxChannelDelta` reports 9,
+// and Stage 11 read that as "these two tenants are, in practice, the same
+// ground". CIEDE2000 puts the same pair at 6.04, which is past "obvious at a
+// glance". The sentence was wrong, not the colours: the previous round shipped
+// a ramp that works and a description of it that does not.
+//
+// `maxChannelDelta` IS NOT DELETED, and that is a decision rather than an
+// oversight — see `PERCEPTIBILITY_FLOOR` in
+// `civilizationColourContract.test.ts` for why the channel-unit threshold keeps
+// its own pin.
+//
+// THE LIMIT OF THIS METRIC, STATED HERE SO NOBODY HAS TO REDISCOVER IT.
+// CIEDE2000 was fitted on small differences (roughly ΔE00 < 5) between
+// moderately light surface colours. Both ends of this ramp are outside that:
+// dark surfaces sit near L* 5, light ones near L* 97, and the marks are 20-50
+// ΔE00 apart, well past the fitted range. So the numbers here are a far better
+// guide than max-channel — the screenshots agree with them and disagree with
+// max-channel — but they are not exact above about 5, and NO ASSERTION IN THIS
+// REPOSITORY SHOULD TREAT A RATIO OF TWO LARGE ΔE00 FIGURES AS MEANINGFUL.
+// That constraint is what reshaped the mark-versus-ramp pin; the reasoning is
+// written out where that pin lives.
+//
+// NOT SHARED WITH THE WCAG PAIR ABOVE, on purpose: `relativeLuminance`
+// linearises at WCAG's 0.03928 and this linearises at the sRGB spec's 0.04045.
+// They are the same curve with two different published thresholds, and folding
+// them together would silently change one formula's answer to satisfy the
+// other's source. Two functions, two citations, one comment saying so.
+// ---------------------------------------------------------------------------
+
+/** CIE L*a*b*, D65. */
+export type Lab = readonly [number, number, number];
+
+const D65_WHITE = { x: 0.95047, y: 1.0, z: 1.08883 };
+
+/**
+ * sRGB (0-255, gamma-encoded) -> CIE L*a*b* under D65.
+ *
+ * IEC 61966-2-1 linearisation, the sRGB->XYZ matrix at D65, then the CIE L*a*b*
+ * transfer with its linear segment below (6/29)^3 — the segment matters here
+ * rather than being pedantry, because the dark ramp lives at Y ≈ 0.004, which
+ * is inside it.
+ */
+export function srgbToLab([r, g, b]: Rgb): Lab {
+  const linear = (channel: number): number => {
+    const v = channel / 255;
+    return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  };
+  const R = linear(r);
+  const G = linear(g);
+  const B = linear(b);
+  const x = (0.4124564 * R + 0.3575761 * G + 0.1804375 * B) / D65_WHITE.x;
+  const y = (0.2126729 * R + 0.7151522 * G + 0.072175 * B) / D65_WHITE.y;
+  const z = (0.0193339 * R + 0.119192 * G + 0.9503041 * B) / D65_WHITE.z;
+  const delta = 6 / 29;
+  const f = (t: number): number =>
+    t > delta ** 3 ? Math.cbrt(t) : t / (3 * delta * delta) + 4 / 29;
+  const fy = f(y);
+  return [116 * fy - 16, 500 * (f(x) - fy), 200 * (fy - f(z))];
+}
+
+const RAD = Math.PI / 180;
+
+/**
+ * CIEDE2000 colour difference, kL = kC = kH = 1.
+ *
+ * WRITTEN OUT RATHER THAN IMPORTED because `packages/core` and `frontend` carry
+ * no colour-science dependency and this module is the one parser these contract
+ * tests share; a new runtime dependency for six numbers is a worse trade than
+ * forty lines with a published test vector behind them.
+ *
+ * A WRONG CIEDE2000 IS WORSE THAN NO CIEDE2000. It reads as authoritative and
+ * fails by a few percent rather than visibly, and the two places it is most
+ * often wrong are both below:
+ *
+ *   - THE HUE-DIFFERENCE BRANCH. `dhp` is not `h2' - h1'`. When the two hue
+ *     angles straddle 0°/360° the raw difference is ~±350° for two colours a
+ *     few degrees apart, so it is folded into (-180, 180]. Getting this wrong
+ *     leaves most pairs correct and blows up exactly the near-grey and
+ *     near-red pairs — the ones nobody eyeballs.
+ *   - THE MEAN-HUE BRANCH. `hbarp` has the same wrap plus a third case for
+ *     `C1' * C2' === 0` (an achromatic colour has no hue to average), and it
+ *     feeds `T` and the RT rotation term, so an error there moves the answer
+ *     without ever producing an obviously silly number.
+ *
+ * Both are pinned by Sharma et al. (2005) "The CIEDE2000 Color-Difference
+ * Formula: Implementation Notes, Supplementary Test Data, and Mathematical
+ * Observations" — its 34-pair table exists for precisely these branches, and
+ * `civilizationColourContract.test.ts` runs the whole table. Do not edit this
+ * function without watching that test.
+ */
+export function deltaE00(a: Lab, b: Lab): number {
+  const [L1, a1, b1] = a;
+  const [L2, a2, b2] = b;
+
+  const C1 = Math.hypot(a1, b1);
+  const C2 = Math.hypot(a2, b2);
+  const cBar = (C1 + C2) / 2;
+  const cBar7 = cBar ** 7;
+  const G = 0.5 * (1 - Math.sqrt(cBar7 / (cBar7 + 25 ** 7)));
+
+  const a1p = (1 + G) * a1;
+  const a2p = (1 + G) * a2;
+  const C1p = Math.hypot(a1p, b1);
+  const C2p = Math.hypot(a2p, b2);
+
+  // atan2(0, 0) is 0 in IEEE, so the explicit achromatic case is not redundant
+  // paranoia — it is the difference between "no hue" and "hue 0°, which is red".
+  const hueAngle = (ap: number, bb: number): number => {
+    if (ap === 0 && bb === 0) return 0;
+    const h = Math.atan2(bb, ap) / RAD;
+    return h < 0 ? h + 360 : h;
+  };
+  const h1p = hueAngle(a1p, b1);
+  const h2p = hueAngle(a2p, b2);
+
+  const dLp = L2 - L1;
+  const dCp = C2p - C1p;
+
+  // THE WRAP. Fold the raw angle difference into (-180, 180]; an achromatic
+  // member contributes no hue difference at all.
+  let dhp: number;
+  if (C1p * C2p === 0) {
+    dhp = 0;
+  } else {
+    const raw = h2p - h1p;
+    if (Math.abs(raw) <= 180) dhp = raw;
+    else if (raw > 180) dhp = raw - 360;
+    else dhp = raw + 360;
+  }
+  const dHp = 2 * Math.sqrt(C1p * C2p) * Math.sin((dhp / 2) * RAD);
+
+  const lBarp = (L1 + L2) / 2;
+  const cBarp = (C1p + C2p) / 2;
+
+  // THE OTHER WRAP. The mean of 350° and 10° is 0°, not 180°.
+  let hBarp: number;
+  if (C1p * C2p === 0) hBarp = h1p + h2p;
+  else if (Math.abs(h1p - h2p) <= 180) hBarp = (h1p + h2p) / 2;
+  else if (h1p + h2p < 360) hBarp = (h1p + h2p + 360) / 2;
+  else hBarp = (h1p + h2p - 360) / 2;
+
+  const T =
+    1 -
+    0.17 * Math.cos((hBarp - 30) * RAD) +
+    0.24 * Math.cos(2 * hBarp * RAD) +
+    0.32 * Math.cos((3 * hBarp + 6) * RAD) -
+    0.2 * Math.cos((4 * hBarp - 63) * RAD);
+
+  const dTheta = 30 * Math.exp(-(((hBarp - 275) / 25) ** 2));
+  const cBarp7 = cBarp ** 7;
+  const RC = 2 * Math.sqrt(cBarp7 / (cBarp7 + 25 ** 7));
+  const SL = 1 + (0.015 * (lBarp - 50) ** 2) / Math.sqrt(20 + (lBarp - 50) ** 2);
+  const SC = 1 + 0.045 * cBarp;
+  const SH = 1 + 0.015 * cBarp * T;
+  const RT = -Math.sin(2 * dTheta * RAD) * RC;
+
+  const tL = dLp / SL;
+  const tC = dCp / SC;
+  const tH = dHp / SH;
+  return Math.sqrt(tL * tL + tC * tC + tH * tH + RT * tC * tH);
+}
+
+/**
+ * How far apart two sRGB colours look, in ΔE00 — the call every contract test
+ * should make. Fed by `hslTripleToRgb`, so it measures the rounded channels a
+ * browser actually rasterises rather than the exact HSL the stylesheet declares.
+ */
+export function deltaE00Rgb(a: Rgb, b: Rgb): number {
+  return deltaE00(srgbToLab(a), srgbToLab(b));
 }

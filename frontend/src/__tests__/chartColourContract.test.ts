@@ -348,8 +348,17 @@ describe("CHART_CHROME mirrors globals.css", () => {
     // WHAT CHANGED IN STAGE 11, AND WHY THIS ASSERTION IS NOT THE OLD ONE
     // RETUNED. The old pin read `--civ-hue === "240"` and called that the
     // neutral fallback. It was, while the ramp was near-neutral: 240° at 13%
-    // saturation is the same near-black as every tenant's. At the tinted
-    // saturations 240° is a deep blue-violet 8° from European (232°), so
+    // saturation is the same near-black as every tenant's.
+    //
+    // STAGE 12 WITHDREW THAT LAST CLAUSE. "The same near-black" came from
+    // max-channel, which reads a hue-only difference as almost nothing. In
+    // CIEDE2000, on the old dark ramp, 240° measured 5.36-9.40 from Greek and
+    // 4.26-7.27 from Egyptian — a visible colour, on every logged-out screen,
+    // the whole time. Only European (8° away) was truly indistinguishable
+    // from it. The pin below is unaffected and its motivation is stronger:
+    // 240° was never neutral, Stage 11 only made that impossible to miss.
+    //
+    // At the tinted saturations 240° is a deep blue-violet 8° from European (232°), so
     // "resolve surface-1 with --civ-hue" stopped naming a neutral colour and
     // started naming a fifth cosmology nobody declared. globals.css answers it
     // with a selector instead of a value, and this pins the selector's output.

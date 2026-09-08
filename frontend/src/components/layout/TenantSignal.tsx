@@ -17,11 +17,22 @@ import {
 //
 // STAGE 11 REOPENED THAT ANSWER AND THIS COMPONENT KEEPS ITS JOB ANYWAY. The
 // ramp now separates tenants by 16-17/255 dark and 10-16/255 light, so the
-// frame does carry the cosmology — but not for every pair (Chinese/Egyptian
-// measures 5-9/255, below what a reader can rely on) and not in words. The
-// paragraph below is the reason that matters: four hues cannot be the sole
-// channel for four categories whatever the four hues are, and the ramp being
-// louder does not change the count. This component still names the cosmology.
+// frame does carry the cosmology — but not in words.
+//
+// THE PARENTHESIS THAT USED TO SIT HERE WAS WRONG AND IS WITHDRAWN. It read
+// "but not for every pair (Chinese/Egyptian measures 5-9/255, below what a
+// reader can rely on)". Both the ≤6/255 above and that 5-9/255 are max-channel
+// counts, and max-channel is nearly blind to a hue-only difference — Chinese
+// and Egyptian canvas are (19, 5, 2) and (19, 14, 2), identical in R and B.
+// In CIEDE2000 that pair measures 6.04 dark and 4.11 light, and every one of
+// the six pairs separates in both themes. The ramp does tell all four tenants
+// apart. Nothing about this component's colours changed; the claim about them
+// did, and the argument below never rested on it:
+//
+// four hues cannot be the sole channel for four categories whatever the four
+// hues are, and the ramp being louder — or, as it turns out, having been
+// louder all along than anyone measured — does not change the count. This
+// component still names the cosmology, and that is the load-bearing reason.
 //
 // The wordmark was the remaining candidate and the argument for it is that it
 // was already

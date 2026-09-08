@@ -177,7 +177,19 @@ export interface ChartColors {
    * values are 17/255 apart in dark and 10/255 in light. What replaced it is
    * a decision rather than a coincidence — a tooltip is transient chrome and
    * says nothing about which cosmology you are in — and the cost is now real
-   * and accepted, not zero. The alternative is unchanged: resolving
+   * and accepted, not zero.
+   *
+   * STAGE 12: IT WAS NEVER ZERO. Both figures above are max-channel counts,
+   * which barely register a hue-only difference. That "4/255" pair measures
+   * 2.87 ΔE00 even on the old ramp — a visible difference, on the largest
+   * flat area a tooltip has. So the old sentence was not made false by Stage
+   * 11 retinting the ramp; it was wrong when it was written, and the retint
+   * only widened the gap (10.75 ΔE00 dark, 5.96 light) until nobody could
+   * argue with it. The DECISION is unaffected and is the right one on its own
+   * terms — this note exists because "it costs nothing" and "the cost is
+   * accepted" are different claims, and only the second was ever true.
+   *
+   * The alternative is unchanged: resolving
    * `getComputedStyle(document.documentElement)` at render time would turn a
    * static literal table into a DOM-dependent one (no SSR, every consumer a
    * client component).
