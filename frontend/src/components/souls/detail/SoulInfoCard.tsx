@@ -23,7 +23,7 @@ export function SoulInfoCard({
 
   return (
     <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-      <h2 className="text-03 font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{t("souls.detail.soul_info")}</h2>
+      <h2 className="text-01 text-[hsl(var(--color-ink-muted))] uppercase mb-3">{t("souls.detail.soul_info")}</h2>
       {loading ? (
         <div className="space-y-2 text-03">
           {[1,2,3,4,5].map(i => (

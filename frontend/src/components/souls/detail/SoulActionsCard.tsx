@@ -34,7 +34,7 @@ export function SoulActionsCard({
 
   return (
     <div className="bg-[hsl(var(--color-surface-1))] p-4 border border-[hsl(var(--color-hairline))]">
-      <h2 className="text-03 font-semibold text-[hsl(var(--color-ink-muted))] uppercase mb-3">{t("souls.detail.actions")}</h2>
+      <h2 className="text-01 text-[hsl(var(--color-ink-muted))] uppercase mb-3">{t("souls.detail.actions")}</h2>
       {loading ? (
         <div className="space-y-2">
           <Skeleton className="h-8 w-full" />

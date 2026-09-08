@@ -204,7 +204,7 @@ export function TenantSignal({
   // It goes left of the breadcrumb, inside the flex-1 region, and NOT in the
   // header's right cluster. That cluster's `shrink-0 whitespace-nowrap` carries
   // a comment recording that when it wrapped it grew past the 64px header and,
-  // the header being `sticky z-40`, the overflow landed on the page and
+  // the header being `sticky z-masthead`, the overflow landed on the page and
   // swallowed clicks — the 创建灵魂 button on /souls was unreachable at 393px
   // for exactly that. A variable-width chip there re-runs that bug.
   //

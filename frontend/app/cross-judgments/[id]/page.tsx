@@ -142,7 +142,7 @@ export default function CrossJudgmentDetailPage() {
 
       {/* Participants */}
       <div className="mb-6">
-        <h2 className="text-06 font-semibold text-[hsl(var(--color-ink))] mb-3">{t("crossJudgments.participants")}</h2>
+        <h2 className="text-06 text-[hsl(var(--color-ink))] mb-3">{t("crossJudgments.participants")}</h2>
         {loading ? (
           <div className="space-y-2">
             <Skeleton className="h-16 w-full" />
@@ -183,7 +183,7 @@ export default function CrossJudgmentDetailPage() {
       {/* Conclusion (if concluded) */}
       {!loading && judgment?.status === "CONCLUDED" && (
         <div className="bg-[hsl(var(--color-surface-2))] p-4">
-          <h2 className="text-06 font-semibold text-[hsl(var(--color-ink))] mb-2">{t("crossJudgments.verdict")}</h2>
+          <h2 className="text-06 text-[hsl(var(--color-ink))] mb-2">{t("crossJudgments.verdict")}</h2>
           {/* `DomainEnum`, not the bare member. Twenty lines above, this same
               file spends five lines arguing that `p.role` must not reach the
               screen as SCREAMING_SNAKE — and then printed `PASS` / `FAIL`

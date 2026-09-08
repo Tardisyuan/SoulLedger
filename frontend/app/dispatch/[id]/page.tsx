@@ -208,7 +208,7 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       actions={statusBadge}
     >
       {/* Info Card */}
-      <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6 mb-6">
+      <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 mb-6">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{t("dispatch.soul")}</p>
@@ -279,8 +279,8 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
 
       {/* Actions */}
       {isProposed && (
-        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6">
-          <h2 className="text-06 font-semibold text-[hsl(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
+        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
+          <h2 className="text-06 text-[hsl(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
           <div className="flex gap-3">
             <RequirePermission permissions="dispatch.approve">
               {/* Was `approveMutation.mutate()` fired straight from the click,
@@ -308,8 +308,8 @@ export default function DispatchDetailPage({ params }: { params: Promise<{ id: s
       )}
 
       {isApproved && (
-        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-6">
-          <h2 className="text-06 font-semibold text-[hsl(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
+        <div className="bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4">
+          <h2 className="text-06 text-[hsl(var(--color-ink))] mb-4">{t("dispatch.actions")}</h2>
           <RequirePermission permissions="dispatch.execute">
             <Button type="button" variant="primary" onClick={() => setShowExecuteModal(true)}>
               {t("dispatch.execute")}
