@@ -125,6 +125,27 @@ export function lastDeclarationOffset(selector: string, name: string): number {
  */
 export const LIGHT_EFFECTIVE_TOKENS: Record<string, string> = { ...ROOT_TOKENS, ...LIGHT_TOKENS };
 
+/**
+ * The ramp a screen with NO `[data-civ]` renders — logged out, or a tenant this
+ * deployment maps to no cosmology.
+ *
+ * Before Stage 11 there was nothing to read: the fallback was the value
+ * `--civ-hue: 240` interpolated into the same declarations every tenant used,
+ * and at 13% saturation "the neutral branch" and "some tenant's branch" were
+ * the same pixels anyway. The tinted ramp made 240° a deep blue-violet 8° from
+ * European, so globals.css now declares the untinted ramp outright under
+ * `:root:not([data-civ])` / `.light:not([data-civ])`.
+ *
+ * `readTokens(":root")` and `readTokens("\\.light")` do NOT see these blocks —
+ * their patterns require the selector to be followed by whitespace and `{`,
+ * and here it is followed by `:not(`. That is load-bearing in both directions:
+ * the tenant-facing maps stay free of fallback values, and this map is the only
+ * place the fallback can be measured. Read it wherever the subject is the
+ * screen with no cosmology; `TOKENS_BY_THEME` remains the answer for a tenant.
+ */
+export const NO_CIV_ROOT_TOKENS = readTokens(":root:not\\(\\[data-civ\\]\\)");
+export const NO_CIV_LIGHT_TOKENS = readTokens("\\.light:not\\(\\[data-civ\\]\\)");
+
 export type ThemeName = "dark" | "light";
 
 /** The two themes, as `ThemeContext` names them. Iterate this, never a literal pair. */
@@ -139,6 +160,25 @@ export const TOKENS_BY_THEME: Record<ThemeName, Record<string, string>> = {
   dark: ROOT_TOKENS,
   light: LIGHT_EFFECTIVE_TOKENS,
 };
+
+/**
+ * What a browser computes for a screen with no `[data-civ]`, per theme.
+ *
+ * The cascade, spelled out because the order is the whole content of it: both
+ * `:not([data-civ])` selectors are (0,2,0) and beat plain `:root` / `.light`
+ * (0,1,0) wherever they sit, so between the two of them only source order
+ * decides — and `.light:not([data-civ])` is written after
+ * `:root:not([data-civ])` in globals.css for exactly that reason.
+ */
+export const NO_CIV_TOKENS_BY_THEME: Record<ThemeName, Record<string, string>> = {
+  dark: { ...ROOT_TOKENS, ...NO_CIV_ROOT_TOKENS },
+  light: { ...ROOT_TOKENS, ...LIGHT_TOKENS, ...NO_CIV_ROOT_TOKENS, ...NO_CIV_LIGHT_TOKENS },
+};
+
+/** The literal a mirror entry has to carry for a token as the NO-cosmology screen renders it. */
+export function noCivLiteralOfIn(theme: ThemeName, name: string): string {
+  return asChartLiteral(resolveTriple(NO_CIV_TOKENS_BY_THEME[theme], name));
+}
 
 /** Suffixes of every token matching a `--prefix-<suffix>` family, sorted. */
 export function suffixesOf(tokens: Record<string, string>, family: string): string[] {
@@ -155,8 +195,10 @@ export function asChartLiteral(triple: string): string {
 
 /**
  * A token's value with every `var(--x)` inside it replaced by that token's own
- * declaration in the same block — `--color-surface-1: var(--civ-hue) 13% 7%`
- * resolves to `240 13% 7%`, the `:root` fallback branch of the surface ramp.
+ * declaration in the same block — `--color-surface-1: var(--civ-hue) 47% 7%`
+ * resolves to `240 47% 7%`. Note what that is and is not: it is the `:root`
+ * declaration with `:root`'s own `--civ-hue`, and since Stage 11 that is NOT
+ * what a screen without `[data-civ]` renders — see `NO_CIV_TOKENS_BY_THEME`.
  *
  * One substitution pass, and it throws if anything is still unresolved rather
  * than handing back a string containing `var(` that no `expect` would ever
@@ -348,12 +390,14 @@ if (SURFACE_TOKENS.length === 0) {
 }
 
 /**
- * `"12 13% 7%"` -> `[20, 16, 16]`, sRGB 0-255.
+ * `"12 47% 7%"` -> `[26, 13, 9]`, sRGB 0-255.
  *
  * Assertions about whether two tenants look alike have to be made in the space
- * the eye reads, not in HSL: `12 13% 7%` and `232 13% 7%` are 220° apart as
- * numbers and 4/255 apart as pixels, and it is the second figure that decides
- * whether anyone can tell the tenants apart. Throws on anything that is not a
+ * the eye reads, not in HSL. The example that made the point when this was
+ * written: `12 13% 7%` and `232 13% 7%` are 220° apart as numbers and 4/255
+ * apart as pixels. Stage 11 raised the ramp's chroma and the same pair now
+ * measures 17/255 — the arithmetic did not change, the design did, and it is
+ * still the second figure that decides whether anyone can tell them apart. Throws on anything that is not a
  * bare `H S% L%` triple rather than coercing `NaN` through and comparing it.
  */
 export function hslTripleToRgb(triple: string): [number, number, number] {

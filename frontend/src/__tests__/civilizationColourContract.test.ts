@@ -119,7 +119,7 @@ describe("the parser is looking at something", () => {
   it("found real token blocks in globals.css", () => {
     expect(Object.keys(ROOT_TOKENS).length).toBeGreaterThan(20);
     expect(Object.keys(LIGHT_TOKENS).length).toBeGreaterThan(20);
-    expect(ROOT_TOKENS["--color-surface-1"]).toBe("var(--civ-hue) 13% 7%");
+    expect(ROOT_TOKENS["--color-surface-1"]).toBe("var(--civ-hue) 47% 7%");
   });
 
   it("found the soul lifecycle states", () => {
@@ -194,24 +194,29 @@ describe("civilization identity: globals.css is the authority", () => {
 // ---------------------------------------------------------------------------
 
 /**
- * The most any two tenants' surfaces may differ, as pixels, before the ramp is
- * claiming to do a job it was measured as unable to do.
+ * The width, in pixels, below which a flat-field colour difference is not
+ * something a reader can be asked to rely on.
  *
- * Observed today: 6/255, at surface-2 and surface-4 in dark mode. The Stage 9
- * headline figure is surface-1's 4/255 between Chinese (12deg) and European
- * (232deg) — 220deg apart, the widest separation the palette has and a
- * deliberately chosen one. Light mode is flatter still, 2-5/255, because HSL
- * chroma collapses toward white.
+ * THIS IS STAGE 9'S NUMBER WITH ITS SIGN REVERSED, AND THAT IS THE POINT.
+ * It was `RAMP_NEUTRALITY_CEILING = 8`: "the most any two tenants' surfaces may
+ * differ before the ramp is claiming to do a job it was measured as unable to
+ * do", set at the observed worst case (6/255) plus room. Stage 11 raised the
+ * ramp's chroma deliberately, so the same 8 now marks the floor the ramp has to
+ * clear rather than the ceiling it had to stay under.
  *
- * 8 is that worst case plus room to retune lightness. It is nowhere near the
- * ~35-40% saturation that would make the ramp actually express a hue, which is
- * the point: raising the ramp to carry identity repaints every screen in the
- * app and is a design decision with its own review, not a token tweak. This
- * number turning red IS that review being demanded.
+ * Reusing the value rather than picking a fresh one is deliberate: a threshold
+ * chosen to make a new measurement pass is not a threshold. This one was chosen
+ * before the change it now judges, by the review that argued the ramp expressed
+ * nothing — so "the ramp is outside the band Stage 9 held it inside" is a claim
+ * about the design, not about this file's arithmetic.
  */
-const RAMP_NEUTRALITY_CEILING = 8;
+const PERCEPTIBILITY_FLOOR = 8;
 
-/** How far above the ramp the marks must sit for "identity lives on the mark" to be true. */
+/**
+ * How far the marks must lead the ramp for "identity leads, the ground follows"
+ * to be true. UNCHANGED IN VALUE from the Stage 9 ruling — what changed is the
+ * subject it is applied to; see the per-pair note on the pin below.
+ */
 const MARK_SEPARATION_MULTIPLE = 3;
 
 function rampRgb(theme: ThemeName, prefix: string, token: string): [number, number, number] {
@@ -222,13 +227,16 @@ function markRgb(theme: ThemeName, prefix: string): [number, number, number] {
   return hslTripleToRgb(TOKENS_BY_THEME[theme][`--color-civ-mark-${prefix}`]);
 }
 
+/** Widest gap between one PAIR of tenants across the whole ramp, in one theme. */
+function rampGapForPair(theme: ThemeName, a: string, b: string): number {
+  return Math.max(
+    ...SURFACE_TOKENS.map((token) => maxChannelDelta(rampRgb(theme, a, token), rampRgb(theme, b, token)))
+  );
+}
+
 /** Widest gap between any two tenants across the whole ramp, in one theme. */
 function widestRampGap(theme: ThemeName): number {
-  return Math.max(
-    ...SURFACE_TOKENS.flatMap((token) =>
-      civPairs().map(([a, b]) => maxChannelDelta(rampRgb(theme, a, token), rampRgb(theme, b, token)))
-    )
-  );
+  return Math.max(...civPairs().map(([a, b]) => rampGapForPair(theme, a, b)));
 }
 
 /** Narrowest gap between any two tenants' marks, in one theme. */
@@ -236,63 +244,93 @@ function narrowestMarkGap(theme: ThemeName): number {
   return Math.min(...civPairs().map(([a, b]) => maxChannelDelta(markRgb(theme, a), markRgb(theme, b))));
 }
 
-describe("the surface ramp is a near-neutral floor, and the mark is the identity", () => {
+describe("the surface ramp carries the tenant, and the mark still leads it", () => {
   /**
-   * THE RULING THIS PINS. Stage 1 §4.9 asked for civilization identity to be
-   * surface-first, and globals.css was built that way. Stage 9 measured it and
-   * it does not work: at 13% saturation and 7% lightness the ramp cannot
-   * express a hue at all, so every tenant renders on what is in practice the
-   * same near-black. The owner's decision was to accept that — the ramp is a
-   * neutral floor, `--color-civ-mark-*` carries recognition on its own — rather
-   * than raise the ramp's saturation, which repaints the entire application.
+   * THE RULING THIS PINS, AND IT IS NOT THE ONE THIS BLOCK USED TO PIN.
    *
-   * The failure mode this exists to catch is nobody reading that decision and
-   * assuming the ramp works. Two ways that shows up in a diff: someone raises
-   * the ramp's saturation so it "finally" tints per tenant (first pin), or
-   * someone flattens the marks toward each other on the theory that the ramp is
-   * already separating the tenants (second pin).
+   * Stage 1 §4.9 asked for civilization identity to be surface-first and
+   * globals.css was built that way. Stage 9 measured it, found 4-6/255 between
+   * any two tenants in either theme, and ruled the ramp a near-neutral floor
+   * with `--color-civ-mark-*` carrying recognition alone — while naming the
+   * change that would reverse it: "raising the ramp's saturation to ~35-40% ...
+   * is a design change needing its own review". Stage 11 is that review and it
+   * reversed the ruling. The ramp now separates tenants by 16-17/255 in dark
+   * and 10-16/255 in light, and every ink x surface pair still clears AA.
    *
-   * NOT covered here, on purpose: the ramp losing its `var(--civ-hue)` wiring
-   * altogether. That collapses every tenant to one literal, which these
-   * assertions would read as *maximum* neutrality and pass. It is a different
-   * decision and `chartColourContract.test.ts` already pins it by name, in both
-   * themes — duplicating it here would give two checks nobody re-derives.
+   * SO THE FIRST PIN IS NOT THE OLD PIN RETUNED. Its old form asserted the ramp
+   * sat BELOW the threshold of perception; that sentence is now false on
+   * purpose, and moving `8` up to `20` to keep it green would have been the
+   * assertion outliving its subject. It is replaced by its inverse — the ramp
+   * must reach ABOVE that same threshold — which is a different claim measured
+   * against the same, unmoved number.
+   *
+   * THE SECOND PIN KEPT ITS NUMBER AND CHANGED ITS SUBJECT, which is the part
+   * worth reading. It compared the NARROWEST mark gap against the WIDEST ramp
+   * gap — two different pairs of tenants. That was sound while every ramp pair
+   * measured the same 4-6/255, and it stopped being sound the moment the ramp
+   * varied: it was weighing Chinese/Egyptian's marks (the narrowest, 45-51)
+   * against Chinese/European's ramp (the widest, 16-17), which is not a
+   * relationship anyone could act on. Per pair the measured lead is 5.0x-7.6x,
+   * comfortably past the 3x this file has always asked for; the global form
+   * fails in light mode at 2.8x purely by mismatching the pairs.
+   *
+   * WHAT THE FIRST PIN DELIBERATELY DOES NOT SAY. The ramp does not separate
+   * EVERY pair perceptibly — Chinese/Egyptian (32deg apart) measures 9/255 dark
+   * and 5-9/255 light, Egyptian/Greek 7-8 and 5-7. Hue at 7% and 93.5%
+   * lightness has a chroma ceiling and adjacent hues run into it. That is
+   * precisely why the second pin is the load-bearing one: the ground tells some
+   * tenants apart, the mark tells all of them apart, and the ordering between
+   * the two channels is the invariant.
+   *
+   * NOT covered here, on purpose, unchanged from Stage 9: the ramp losing its
+   * `var(--civ-hue)` wiring altogether. `chartColourContract.test.ts` pins that
+   * by name in both themes. Nor is AA covered here — `inkOnSurfaceContract`
+   * asserts its failing set as an EXACT set, so the ceiling on how much chroma
+   * the ramp may carry is already enforced, once, in the file that owns it.
    */
-  it.each(THEMES)("%s: no two tenants' surfaces separate by more than the ceiling", (theme) => {
+  it.each(THEMES)("%s: every surface separates the tenants it can be asked to", (theme) => {
     // Collected rather than asserted one at a time so a red run names every
-    // offending surface and pair at once — "surface-2 cn/eu at 61" is a
-    // reviewable sentence; "expected 61 to be <= 8" is not.
-    const offenders = SURFACE_TOKENS.flatMap((token) =>
-      civPairs()
-        .map(([a, b]) => ({
-          where: `${token} ${a}/${b}`,
-          delta: maxChannelDelta(rampRgb(theme, a, token), rampRgb(theme, b, token)),
-        }))
-        .filter((row) => row.delta > RAMP_NEUTRALITY_CEILING)
-    );
-    expect(offenders).toEqual([]);
+    // surface that went flat at once — "surface-2 widest pair at 3" is a
+    // reviewable sentence; "expected 3 to be > 8" is not.
+    const flat = SURFACE_TOKENS.map((token) => ({
+      where: token,
+      widest: Math.max(
+        ...civPairs().map(([a, b]) => maxChannelDelta(rampRgb(theme, a, token), rampRgb(theme, b, token)))
+      ),
+    })).filter((row) => row.widest <= PERCEPTIBILITY_FLOOR);
+    expect(flat).toEqual([]);
   });
 
-  it.each(THEMES)("%s: the marks separate tenants by a wide multiple of what the ramp does", (theme) => {
-    const ramp = widestRampGap(theme);
-    const mark = narrowestMarkGap(theme);
-    // Derived, not a second magic number: the claim is a *relationship*. If the
-    // ramp ever out-separates the marks — either because it got louder or
-    // because they got quieter — the sentence "identity lives on the mark" has
-    // stopped being true and this file said so first.
-    expect(mark).toBeGreaterThanOrEqual(ramp * MARK_SEPARATION_MULTIPLE);
+  it.each(THEMES)("%s: for every pair, the mark leads the ramp by the multiple", (theme) => {
+    // PER PAIR, not narrowest-against-widest. Two tenants whose grounds are
+    // nearly identical are exactly the ones whose marks have to carry the
+    // distinction, and a global comparison averages that case away — it can
+    // report a healthy ratio while the one pair that needs it fails.
+    const short = civPairs()
+      .map(([a, b]) => ({
+        pair: `${a}/${b}`,
+        ramp: rampGapForPair(theme, a, b),
+        mark: maxChannelDelta(markRgb(theme, a), markRgb(theme, b)),
+      }))
+      .filter((row) => row.mark < row.ramp * MARK_SEPARATION_MULTIPLE);
+    expect(short).toEqual([]);
   });
 
-  it("the ramp is measurably flatter than the marks, and neither figure is degenerate", () => {
+  it("neither figure is degenerate, and the marks still lead overall", () => {
     // Guard the guard. If `resolveRampForCiv` silently started returning one
-    // colour for every civilization, the first pin would read 0 and pass; if
-    // `hslTripleToRgb` returned zeroes, both would. Assert the shape of the
-    // measurement, not only its verdict.
+    // colour for every civilization the first pin would read 0 — which now goes
+    // RED rather than green, the one thing the inversion improved for free. The
+    // second pin would still pass on a collapsed ramp, so the shape of the
+    // measurement is asserted here and not only its verdict.
     for (const theme of THEMES) {
       expect(widestRampGap(theme)).toBeGreaterThan(0);
-      expect(narrowestMarkGap(theme)).toBeGreaterThan(RAMP_NEUTRALITY_CEILING);
-      // Two tenants 220deg apart still land within a few points of each other:
-      // this is the measurement the ruling rests on, restated as an assertion.
+      expect(narrowestMarkGap(theme)).toBeGreaterThan(PERCEPTIBILITY_FLOOR);
+      expect(narrowestMarkGap(theme)).toBeGreaterThan(widestRampGap(theme));
+      // The measurement Stage 9's ruling rested on and Stage 11 moved: two
+      // tenants 220deg apart used to land 4/255 apart here. They no longer do,
+      // and the assertion is kept in its original form — different, not merely
+      // further apart — because a ramp that stopped varying would satisfy every
+      // gap-based check by reading as maximally flat.
       expect(rampRgb(theme, "cn", "--color-surface-1")).not.toEqual(
         rampRgb(theme, "eu", "--color-surface-1")
       );

@@ -10,11 +10,21 @@ import {
 
 // ── Which cosmology am I in ─────────────────────────────────────────────
 //
-// The gap this closes: nothing in the persistent frame said which of the four
+// The gap this closed: nothing in the persistent frame said which of the four
 // tenants a screen belonged to. Stage 9 tried to answer it with the surface
 // ramp and the measurement came back at ≤6/255 of channel difference between
-// any two tenants in either theme — a floor, not a signal. The wordmark was
-// the remaining candidate and the argument for it is that it was already
+// any two tenants in either theme — a floor, not a signal.
+//
+// STAGE 11 REOPENED THAT ANSWER AND THIS COMPONENT KEEPS ITS JOB ANYWAY. The
+// ramp now separates tenants by 16-17/255 dark and 10-16/255 light, so the
+// frame does carry the cosmology — but not for every pair (Chinese/Egyptian
+// measures 5-9/255, below what a reader can rely on) and not in words. The
+// paragraph below is the reason that matters: four hues cannot be the sole
+// channel for four categories whatever the four hues are, and the ramp being
+// louder does not change the count. This component still names the cosmology.
+//
+// The wordmark was the remaining candidate and the argument for it is that it
+// was already
 // spending the best position in the app on a constant: "SoulLedger" is
 // identical in all four tenants, so the top-left of every screen was carrying
 // zero bits.
