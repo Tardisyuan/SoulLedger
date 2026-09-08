@@ -46,6 +46,7 @@
 import {
   CIV_PREFIXES,
   LIGHT_TOKENS,
+  NO_CIV_TOKENS_BY_THEME,
   ROOT_TOKENS,
   SURFACE_TOKENS,
   THEMES,
@@ -211,7 +212,14 @@ describe("civilization ink clears AA everywhere it is painted", () => {
   it("the unmapped-tenant fallback clears AA on the canvas of its own theme", () => {
     for (const theme of THEMES) {
       const ink = hslTripleToRgb(TOKENS_FOR[theme]["--civ-ink"]);
-      const canvas = hslTripleToRgb(TOKENS_FOR[theme]["--color-canvas"]);
+      // The canvas an unmapped tenant renders is NOT `TOKENS_FOR[theme]`'s.
+      // Since Stage 11 the tenant-facing canvas interpolates `var(--civ-hue)`
+      // and the no-cosmology screen gets its own untinted declaration from
+      // `:root:not([data-civ])` — which is the whole subject of this test, so
+      // reading the tenant branch here would measure a colour this case never
+      // shows. It would not even fail quietly: `hslTripleToRgb` throws on the
+      // unresolved `var(`, which is how this line was caught.
+      const canvas = hslTripleToRgb(NO_CIV_TOKENS_BY_THEME[theme]["--color-canvas"]);
       const mark = hslTripleToRgb(ROOT_TOKENS["--civ-mark"]);
       expect(contrastRatio(ink, canvas)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
       // The chip fills with `--civ-mark / 0.13` over that canvas.

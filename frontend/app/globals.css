@@ -262,21 +262,35 @@
   /* Dark theme is default - html element gets 'dark' class from ThemeContext on mount */
 
   :root {
-    /* The per-tenant surface ramp. It is NOT where civilization identity is
-     legible — that claim was measured and withdrawn; see the block above
-     --color-civ-hue-* below for the numbers and the decision. What this ramp
-     is: a near-neutral floor that shifts by a couple of RGB points per
-     tenant. Neutral 240° (the ramp's original fixed hue) is the fallback for
-     logged-out screens and any tenant this deployment doesn't map to a
-     cosmology; TenantContext overwrites this on the root element once a
-     tenant is known, via the [data-civ] rules below. Only surface-1..4 read
-     it — canvas and every semantic/status/karma/verdict token stay put
-     regardless of tenant. */
+    /* The per-tenant surface ramp. It IS where civilization identity is
+     legible, as of the Stage 11 review — see the block above
+     --color-civ-hue-* below for the measurements and the decision that
+     replaced Stage 9's. TenantContext stamps [data-civ] on the root element
+     once a tenant is known and the rules below point --civ-hue at that
+     cosmology's degree.
+
+     240 IS NO LONGER A USABLE FALLBACK, WHICH IS WHY IT IS NOT THE FALLBACK
+     ANY MORE. At 13% saturation "neutral 240°" was neutral in fact: every
+     tenant and the logged-out screen rendered the same near-black. At the
+     saturations below it is a deep blue-violet sitting 8° from European
+     (232°), so a logged-out screen would have rendered as, to the eye,
+     the European tenant — the same defect as GREEK rendering identical to
+     logged-out, in reverse. The `:root:not([data-civ])` /
+     `.light:not([data-civ])` blocks after the [data-civ] rules restore the
+     pre-Stage-11 neutral ramp verbatim for that case; --civ-hue stays 240
+     so that the tinted declarations here still resolve to a real colour if
+     one of those blocks is ever removed, but nothing renders that branch.
+
+     CANVAS IS IN THE RAMP NOW. It was the largest area on screen and the
+     only one that stayed neutral, so tinting the surfaces alone left the
+     tint reading as a discoloured sidebar rather than as a cosmology.
+     Semantic/status/karma/verdict tokens still stay put regardless of
+     tenant — identity tints the ground, never the meaning. */
     --civ-hue: 240;
     /* The mark's fallback, and it is deliberately the ink-subtle grey rather
-     than a neutral hue at the marks' saturation. --civ-hue's 240° fallback is
-     a *ramp* value, and the ramp is a near-neutral floor, so falling back
-     there costs nothing. A mark is an identity claim: an unmapped tenant
+     than a neutral hue at the marks' saturation. The ramp's own fallback is
+     the untinted `:not([data-civ])` branch below, so falling back there
+     costs nothing. A mark is an identity claim: an unmapped tenant
      rendering a coloured disc would be asserting a cosmology this deployment
      does not have. Grey says "no civilization", which is the true statement,
      and the components that draw the mark render no identity text at all in
@@ -290,11 +304,11 @@
      3.23:1 and passes 1.4.11, which is why the mark itself is left alone and
      only the text moves. `.light` overrides this one below. */
     --civ-ink: 215 8% 57%;
-    --color-canvas: 240 15% 4%;
-    --color-surface-1: var(--civ-hue) 13% 7%;
-    --color-surface-2: var(--civ-hue) 12% 9%;
-    --color-surface-3: var(--civ-hue) 11% 10%;
-    --color-surface-4: var(--civ-hue) 11% 11%;
+    --color-canvas: var(--civ-hue) 82% 4%;
+    --color-surface-1: var(--civ-hue) 47% 7%;
+    --color-surface-2: var(--civ-hue) 37% 9%;
+    --color-surface-3: var(--civ-hue) 33% 10%;
+    --color-surface-4: var(--civ-hue) 30% 11%;
     --color-hairline: 220 8% 18%;
     --color-hairline-strong: 220 7% 22%;
     --color-hairline-tertiary: 220 6% 26%;
@@ -373,20 +387,39 @@
   /* Light theme override */
   .light {
     --color-canvas: 0 0% 100%;
-    /* Same var(--civ-hue) ramp as :root — the dark-mode surfaces already sat
-     at 10-13% saturation, in range for the retint; light mode's were flat
-     grey (0%). HSL chroma collapses toward white (c = (1-|2L-1|)*S, near
-     zero once L approaches 98%), so matching dark mode's saturation numbers
-     verbatim measured out to a ~1/255 RGB delta at surface-1 — imperceptible.
-     14/13/12/11% is the same 10-14% band the retint targets. The nudge does
-     NOT buy a visible delta, which is what this comment used to claim: the
-     four tenants' light surface-1 values span 2/255 at the widest channel,
-     less separation than dark mode's 4/255. Both are inside the band the
-     ramp is now deliberately held to — see the civilization block below. */
-    --color-surface-1: var(--civ-hue) 14% 98%;
-    --color-surface-2: var(--civ-hue) 13% 96%;
-    --color-surface-3: var(--civ-hue) 12% 94%;
-    --color-surface-4: var(--civ-hue) 11% 92%;
+    /* THE LIGHT RAMP IS WHERE THE CONSTRAINT LIVES, AND IT IS LIGHTNESS AND
+     NOT SATURATION. HSL chroma is c = S x min(L, 1-L): at L 98% the most a
+     surface can carry is 0.02 no matter the saturation, which caps the four
+     tenants at 10/255 apart AT S 100%. So "raise the saturation to 35-40%"
+     is not a thing light mode can do — 40% at 98% lightness measures 3/255,
+     which is what the old 14/13/12/11% band was, restated.
+
+     Lightness has to come down with it, and that is what the light inks
+     ration. --color-ink-tertiary (220 6% 42%) is the binding pair on the
+     deepest surface. Measured across all four tenant hues:
+
+       surface-4 at L 92%  clears AA up to  S 20%   ->  8/255 apart
+       surface-4 at L 93.5% clears AA up to S ~50%  -> 15/255 apart
+       surface-4 at L 94%  clears AA up to  S 73%   -> 22/255 apart
+
+     93.5% is taken and 94% is not, because surface-4's job is also to be
+     the deepest step of an elevation ramp that starts at canvas white; the
+     ramp now spans 100 -> 93.5 rather than 100 -> 92, and buying the last
+     7/255 of hue would have cost another 1.5 points of that.
+
+     Saturation then rides the lightness to hold ONE chroma across the ramp
+     (0.020 at surface-1, which is its ceiling, and 0.030 below it), so the
+     four surfaces read as one tinted paper at four depths rather than as
+     four differently-coloured cards. Measured separation, widest channel,
+     between any two tenants: 10 / 16 / 15 / 15 out of 255.
+
+     NO INK TOKEN MOVED FOR THIS. Every one of the 128 ink x surface pairs
+     still clears AA on its own, which is the whole reason surface-4 stopped
+     at 93.5%; inkOnSurfaceContract measures it. */
+    --color-surface-1: var(--civ-hue) 100% 98%;
+    --color-surface-2: var(--civ-hue) 86% 96.5%;
+    --color-surface-3: var(--civ-hue) 60% 95%;
+    --color-surface-4: var(--civ-hue) 46% 93.5%;
     --color-hairline: 220 10% 90%;
     --color-hairline-strong: 220 10% 85%;
     --color-hairline-tertiary: 220 8% 80%;
@@ -519,26 +552,45 @@
     --color-status-error: 0 84% 62%;
     --color-status-warning: 38 88% 60%;
     --color-status-info: 215 80% 62%;
-    /* Civilization identity. Stage 1 §4.9 asked for it to be surface-first —
-     each tenant tinting its own ramp (--civ-hue, wired to surface-1..4
-     above) at 10-14% saturation — and the Stage 9 review measured what that
-     actually produces. At 13% saturation and 7% lightness the ramp cannot
-     express a hue at all: Chinese (12°) resolves to rgb(20,16,16) and
-     European (232°) to rgb(16,16,20), 4/255 apart at the widest channel,
-     and those two are 220° apart, the widest separation in the system and a
-     deliberately chosen one. The whole ramp, both themes, spans at most
-     6/255 between any two tenants. Every tenant renders on what is, in
-     practice, the same near-black (or the same near-white).
+    /* Civilization identity. Stage 1 §4.9 asked for it to be surface-first.
+     Stage 9 measured the ramp as built — 13% saturation at 7% lightness —
+     found 4/255 between Chinese (12°) and European (232°), 220° apart and
+     the widest separation the palette has, and ruled that the ramp was a
+     near-neutral floor with --color-civ-mark-* carrying recognition alone.
+     That ruling named its own successor: "raising the ramp's saturation to
+     ~35-40% ... is a design change needing its own review".
 
-     THE DECISION, taken by the owner rather than assumed here: accept the
-     ramp as a near-neutral floor and let --color-civ-mark-* carry
-     recognition on its own. Raising the ramp's saturation to ~35-40% is the
-     other way to honour §4.9 and it repaints every screen in the app, so it
-     is a design change needing its own review, not a token tweak.
-     src/__tests__/civilizationColourContract.test.ts pins both halves: the
-     ramp stays inside the band where it expresses nothing, and the marks
-     stay far enough apart to be told apart. Raise the saturation and that
-     test goes red — on purpose.
+     STAGE 11 IS THAT REVIEW, AND IT REVERSES THE RULING. What it changes:
+     canvas and surface-1..4 now carry the tenant's hue at a chroma each
+     surface's own ink floor allows, measured rather than guessed. What it
+     found on the way, which is why the ~35-40% figure was not simply
+     applied:
+
+       - SATURATION WAS THE WRONG DIAL. Chroma is S x min(L, 1-L). At light
+         surface-1's 98% lightness the ceiling is 0.02 at ANY saturation —
+         S 40% there measures 3/255 between tenants, indistinguishable from
+         the 14% it replaced. The light ramp needed its lightness lowered
+         (98 -> 93.5 at surface-4), and that is rationed by
+         --color-ink-tertiary, not by taste.
+       - 35-40% WOULD HAVE BROKEN AA IN DARK MODE. At surface-4's 11%
+         lightness the ink floor caps saturation at 30%. 40% measures
+         4.41:1 for --color-ink-tertiary on Greek surface-4, under the
+         4.5:1 AA floor, and inkOnSurfaceContract's failing set is asserted
+         as an exact set — it would have gone red rather than drifted.
+       - THE 240° FALLBACK BECAME A CIVILIZATION. See the note on
+         --civ-hue above and the `:not([data-civ])` blocks below.
+
+     Measured result, widest channel between any two tenants (Stage 9's
+     figure in brackets): dark canvas 17 [0], surface-1..4 17/17/17/16
+     [4/6/5/6]; light surface-1..4 10/16/15/15 [2/3/4/5]. Every one of the
+     128 ink x surface pairs still clears AA, in both themes, with no ink
+     token moved.
+
+     src/__tests__/civilizationColourContract.test.ts pins the new ruling in
+     the same two directions as the old one: the ramp has to express the
+     tenant (a floor it must clear), and it still must not out-separate the
+     marks (identity leads, the ground follows). Flattening the ramp back
+     toward neutral is now the change that goes red.
 
      --color-civ-hue-* is the bare hue degree the [data-civ] rules below feed
      into --civ-hue; --color-civ-mark-* is a full HSL triple. The mark is
@@ -592,14 +644,28 @@
      cosmology *is*, only whether its name can be read. eg/gr dark and eu
      light already cleared the bar, so their ink equals their mark -- the same
      way --color-accent-ink equals --color-accent in dark mode. Every value
-     below is >= 4.6:1 across all 32 pairs; civilizationColourContract pins
-     that floor and goes red if a value drifts.
+     below is >= 4.6:1 across all 32 pairs; civIdentityInkContract pins that
+     floor and goes red if a value drifts.
+
+     THE THREE DARK VALUES EACH ROSE ONE POINT FOR STAGE 11 (cn 65->66,
+     eu 70->71, eg 55->56). The badge is measured over the *host* tenant's
+     surface, and the tinted ramp moved that background: dark surface-4 for
+     Greek went from hsl(88 11% 11%) to hsl(88 30% 11%), which is lighter to
+     the eye at the same HSL lightness. Worst pairing before the bump was
+     cn on Greek surface-4 at 4.46:1 — still AA, under the 4.6 headroom this
+     file keeps precisely so that a surface retune shows up as a red test
+     rather than as a silent slide to 4.49. It did. This is that mechanism
+     working, not a new decision about what colour a cosmology is.
+
+     eg's ink no longer equals its mark. It did when 55% cleared the bar on
+     an untinted ramp; the sentence above about eg/gr dark and eu light is
+     now true of gr and eu only.
 
      MARK IS THE GRAPHIC, INK IS THE TEXT. Dots, rules, borders, chart series
      keep the mark (non-text, 3:1). Anything with glyphs in it takes the ink. */
-    --color-civ-ink-cn: 12 55% 65%;
-    --color-civ-ink-eu: 232 42% 70%;
-    --color-civ-ink-eg: 44 45% 55%;
+    --color-civ-ink-cn: 12 55% 66%;
+    --color-civ-ink-eu: 232 42% 71%;
+    --color-civ-ink-eg: 44 45% 56%;
     --color-civ-ink-gr: 88 40% 52%;
   }
 
@@ -644,6 +710,46 @@
     --civ-hue: var(--color-civ-hue-gr);
     --civ-mark: var(--color-civ-mark-gr);
     --civ-ink: var(--color-civ-ink-gr);
+  }
+
+  /* NO COSMOLOGY: the ramp as it stood before Stage 11 tinted it, restored
+   verbatim for the one state that has no tenant to be.
+
+   WHY THIS EXISTS AT ALL. Before Stage 11 the fallback was a *value* —
+   --civ-hue: 240 — and it worked because at 13% saturation no hue is
+   visible, so "the neutral branch" and "some tenant's branch" were the same
+   pixels. At the saturations the ramp now carries, 240° is a deep
+   blue-violet 8° from European's 232°: a logged-out screen would have read
+   as the European tenant. That is the GREEK bug — a cosmology rendering as
+   another screen's colour — with the two ends swapped, and the same
+   argument the --civ-mark fallback already makes applies here: grey says
+   "no civilization", which is the true statement.
+
+   WHY A SELECTOR AND NOT A TOKEN. Saturation differs per surface (47/37/33
+   /30 dark, 100/86/60/46 light), so neutralising through one alias would
+   need five, or a calc() the contract tests' parser cannot resolve. These
+   two blocks say the same thing in five declarations each and leave the
+   tinted branch above readable as the normal case.
+
+   THE ORDER AND THE SPECIFICITY ARE BOTH LOAD-BEARING. Both selectors are
+   (0,2,0) and beat plain `:root` / `.light` (0,1,0) regardless of position —
+   which is exactly why the light block must come AFTER the dark one rather
+   than relying on `.light` following `:root` the way the untinted blocks do.
+   Equal specificity, so source order alone decides; swap these two and a
+   logged-out light screen renders the dark ramp. */
+  :root:not([data-civ]) {
+    --color-canvas: 240 15% 4%;
+    --color-surface-1: 240 13% 7%;
+    --color-surface-2: 240 12% 9%;
+    --color-surface-3: 240 11% 10%;
+    --color-surface-4: 240 11% 11%;
+  }
+  .light:not([data-civ]) {
+    --color-canvas: 0 0% 100%;
+    --color-surface-1: 240 14% 98%;
+    --color-surface-2: 240 13% 96%;
+    --color-surface-3: 240 12% 94%;
+    --color-surface-4: 240 11% 92%;
   }
 
   .light {
