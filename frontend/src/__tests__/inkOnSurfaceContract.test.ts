@@ -49,6 +49,7 @@
 import {
   CIV_PREFIXES,
   LIGHT_TOKENS,
+  NO_CIV_LIGHT_TOKENS,
   ROOT_TOKENS,
   SURFACE_TOKENS,
   THEMES,
@@ -74,6 +75,38 @@ const INK_TOKENS: string[] = [
   ...suffixesOf(ROOT_TOKENS, "--color-ink").map((suffix) => `--color-ink-${suffix}`),
 ];
 
+/**
+ * Every background an ink can be painted on — `--color-canvas` INCLUDED, as of
+ * Stage 13.
+ *
+ * IT WAS EXCLUDED, THE EXCLUSION WAS NAMED, AND IT WAS THE LARGEST HOLE THIS
+ * FILE HAD. `SURFACE_TOKENS` is derived by prefix, so it is `--color-surface-*`
+ * and the page ground is not one. The accent-ink block at the foot of this file
+ * already said so out loud — "the ink matrix above has never measured anything
+ * on the page background either. That is a real gap and it is left alone here
+ * rather than widened silently: it belongs to the ink family's own block, where
+ * adding a fifth background changes 32 pinned combinations."
+ *
+ * This is that block, and this is the widening. The trigger is that light
+ * `--color-canvas` stopped being `0 0% 100%`: it is now
+ * `var(--civ-hue) 100% 96.5%`, a per-tenant plane like any other, and dark
+ * canvas has been `var(--civ-hue) 82% 4%` since Stage 11. A background whose
+ * colour depends on the tenant is exactly what this matrix exists to measure,
+ * and leaving the biggest one out was the same shape of gap as measuring "the
+ * surface" instead of one surface per tenant.
+ *
+ * THE 32 PINNED COMBINATIONS IT CHANGES ARE 32 NEW ROWS, NOT 32 MOVED ONES.
+ * `BELOW_AA` is empty and stays empty. Measured, the worst of the 160 is
+ * 4.527:1 (dark gr surface-4 / --color-ink-tertiary) and the worst in light is
+ * 4.554:1 (light eu surface-4, same ink) — the same two pairs and the same two
+ * figures as the 128-row matrix, because surface-4 did not move in either
+ * theme. The tightest of the 32 NEW rows is 4.849:1 (light eu canvas, same
+ * ink) and the tightest dark canvas row is 5.371:1. So this is strictly more
+ * coverage at the same strictness, which is the only direction a matrix may be
+ * widened in without argument.
+ */
+const BACKGROUND_TOKENS: string[] = [...SURFACE_TOKENS, "--color-canvas"];
+
 interface Combo {
   key: string;
   theme: ThemeName;
@@ -96,7 +129,7 @@ function buildMatrix(): Combo[] {
   const out: Combo[] = [];
   for (const theme of THEMES) {
     for (const civ of CIV_PREFIXES) {
-      for (const surface of SURFACE_TOKENS) {
+      for (const surface of BACKGROUND_TOKENS) {
         for (const ink of INK_TOKENS) {
           const surfaceRgb = hslTripleToRgb(resolveRampForCiv(theme, civ, surface));
           const inkRgb = hslTripleToRgb(resolveRampForCiv(theme, civ, ink));
@@ -206,10 +239,15 @@ describe("the matrix is the matrix we think it is", () => {
     expect(CIV_PREFIXES.length).toBeGreaterThanOrEqual(4);
     expect(SURFACE_TOKENS.length).toBeGreaterThanOrEqual(4);
     expect(INK_TOKENS.length).toBeGreaterThanOrEqual(4);
+    // The page ground is a background and has to be IN the list, not merely
+    // make the list one longer: `SURFACE_TOKENS.length + 1` would stay green if
+    // a fifth surface arrived and the canvas quietly fell out again.
+    expect(BACKGROUND_TOKENS).toContain("--color-canvas");
+    expect(BACKGROUND_TOKENS.length).toBe(SURFACE_TOKENS.length + 1);
     expect(MATRIX.length).toBe(
-      THEMES.length * CIV_PREFIXES.length * SURFACE_TOKENS.length * INK_TOKENS.length
+      THEMES.length * CIV_PREFIXES.length * BACKGROUND_TOKENS.length * INK_TOKENS.length
     );
-    expect(MATRIX.length).toBeGreaterThanOrEqual(128);
+    expect(MATRIX.length).toBeGreaterThanOrEqual(160);
     expect(new Set(MATRIX.map((c) => c.key)).size).toBe(MATRIX.length);
   });
 
@@ -248,8 +286,13 @@ describe("the matrix is the matrix we think it is", () => {
     // failing set would still match the table — because these tokens fail on
     // every hue. Four identical rows repeated is the failure mode a row count
     // cannot see.
+    // Over BACKGROUND_TOKENS and not SURFACE_TOKENS, which makes this pin do a
+    // second job it could not do before Stage 13: a light `--color-canvas` back
+    // at `0 0% 100%` resolves to ONE triple for all four tenants, so the Set is
+    // size 1 and this reddens. It is the cheapest guard in the file against the
+    // page ground going flat again.
     for (const theme of THEMES) {
-      const resolved = SURFACE_TOKENS.map((surface) =>
+      const resolved = BACKGROUND_TOKENS.map((surface) =>
         CIV_PREFIXES.map((civ) => resolveRampForCiv(theme, civ, surface))
       );
       for (const perCiv of resolved) {
@@ -265,7 +308,7 @@ describe("the matrix is the matrix we think it is", () => {
     // below would faithfully report that as a failure without ever saying why.
     // Naming the cause here means the diagnosis is one line, not an
     // investigation.
-    for (const token of [...INK_TOKENS, ...SURFACE_TOKENS]) {
+    for (const token of [...INK_TOKENS, ...BACKGROUND_TOKENS]) {
       expect(LIGHT_TOKENS[token]).toBeDefined();
     }
   });
@@ -382,15 +425,18 @@ describe("--color-accent-ink clears AA on every surface it can land on", () => {
   const ACCENT_INK = "--color-accent-ink";
 
   /**
-   * `SURFACE_TOKENS` is `--color-surface-1..4` only — `--color-canvas` is not
-   * in it, so the ink matrix above has never measured anything on the page
-   * background either. That is a real gap and it is left alone here rather
-   * than widened silently: it belongs to the ink family's own block, where
-   * adding a fifth background changes 32 pinned combinations. accent-ink
-   * takes canvas because canvas is where most of its 33 call sites paint —
-   * the home page's links sit directly on it.
+   * This block used to build its own `[...SURFACE_TOKENS, "--color-canvas"]`,
+   * because the ink matrix above excluded the canvas and this one could not
+   * afford to: canvas is where most of accent-ink's 33 call sites paint — the
+   * home page's links sit directly on it. The note here recorded that gap and
+   * declined to close it from this end.
+   *
+   * Stage 13 closed it from the right end. `BACKGROUND_TOKENS` at the top of
+   * the file is now the shared list, so the two halves cannot drift into
+   * measuring different sets of backgrounds — which is the failure this file
+   * exists to prevent, one level up.
    */
-  const BACKGROUNDS = [...SURFACE_TOKENS, "--color-canvas"];
+  const BACKGROUNDS = BACKGROUND_TOKENS;
 
   const combos = THEMES.flatMap((theme) =>
     CIV_PREFIXES.flatMap((civ) =>
@@ -452,13 +498,38 @@ describe("--color-accent-ink clears AA on every surface it can land on", () => {
     ["--color-accent-ink", 5.84],
   ];
 
+  /**
+   * WHERE "LIGHT-MODE WHITE" LIVES NOW, AND WHY THIS IS NOT THE NUMBERS BEING
+   * MOVED TO KEEP A TEST GREEN.
+   *
+   * Both figures are unchanged (2.14 and 5.84) and both tokens are unchanged.
+   * What changed is where the stylesheet keeps a white background. This read
+   * `LIGHT_TOKENS["--color-canvas"]`, which was `0 0% 100%`; Stage 13 made the
+   * tenant-facing light canvas `var(--civ-hue) 100% 96.5%`, so that lookup
+   * stopped being white and started being an unresolved `var(`. It did not
+   * drift — `hslTripleToRgb` throws on it, which is how this line was found.
+   *
+   * White is still rendered, and `.light:not([data-civ])` is where: a
+   * logged-out screen, or a tenant this deployment maps to no cosmology, still
+   * gets `--color-canvas: 0 0% 100%` verbatim. So "against light-mode white"
+   * remains a claim about pixels a user can actually be shown, which is the
+   * only reason it is worth pinning at all. `NO_CIV_LIGHT_TOKENS` names that
+   * branch explicitly rather than relying on the tenant branch happening to be
+   * white, which is what made this fragile in the first place.
+   *
+   * The per-tenant question — what these two tokens measure on a TINTED light
+   * canvas — is not asked here. It is asked by the accent-ink block above,
+   * which now runs canvas through `BACKGROUND_TOKENS`: worst 4.821:1, light eu
+   * surface-4, with every canvas row at 5.133:1 or better.
+   */
   it.each(WHITE_CLAIMS)(
     "%s measures the %s:1 against white that globals.css claims for it",
     (token, claimed) => {
-      const ratio = contrastRatio(
-        hslTripleToRgb(LIGHT_TOKENS[token]),
-        hslTripleToRgb(LIGHT_TOKENS["--color-canvas"])
-      );
+      const white = NO_CIV_LIGHT_TOKENS["--color-canvas"];
+      // Guard the guard: if the untinted branch ever stops being white this
+      // pin would go on "passing" against whatever replaced it.
+      expect(hslTripleToRgb(white)).toEqual([255, 255, 255]);
+      const ratio = contrastRatio(hslTripleToRgb(LIGHT_TOKENS[token]), hslTripleToRgb(white));
       expect(ratio).toBeCloseTo(claimed, 1);
     }
   );

@@ -474,6 +474,37 @@ const PERCEPTIBLE_AT_A_GLANCE = 3.5;
  */
 const MARK_LEAD_MARGIN = 5;
 
+/**
+ * THE RAMP THE FOUR PINS BELOW JUDGE — and as of Stage 13 it is not
+ * `SURFACE_TOKENS`.
+ *
+ * `SURFACE_TOKENS` is derived by prefix and so contains `--color-surface-1..4`
+ * and nothing else. `--color-canvas` is not named `--color-surface-*`, so for
+ * as long as these pins ran over that list they measured every plane a tenant
+ * paints EXCEPT the largest one. The comment inside the describe below said so
+ * in as many words, and declined to widen the subject on the grounds that
+ * "widening the subject is a design decision about whether light mode should
+ * tint its page ground, not a metric fix".
+ *
+ * That decision has now been taken — `.light` declares
+ * `--color-canvas: var(--civ-hue) 100% 96.5%`, the derivation is on the token
+ * in globals.css — so the subject widens with it. Dark canvas has carried the
+ * tenant hue since Stage 11 and was equally unmeasured here; both join at once,
+ * because the reason for excluding either was the same reason.
+ *
+ * WHAT THIS BUYS, AND IT IS THE MUTATION THAT PROVED IT: setting light
+ * `--color-canvas` back to `0 0% 100%` now reddens two of the pins below with
+ * `--color-canvas` named and 0.00 beside it. Before the widening the same
+ * mutation left this entire file green — a flat page ground for every tenant
+ * was outside everything this file asserts.
+ *
+ * NOT A LOOSENING IN THE OTHER DIRECTION EITHER. Every threshold below is
+ * unmoved (`PERCEPTIBILITY_FLOOR` 8, `PERCEPTIBLE_AT_A_GLANCE` 3.5,
+ * `MARK_LEAD_MARGIN` 5); this list only gets longer, so each pin has strictly
+ * more chances to fail than it had.
+ */
+const RAMP_TOKENS: string[] = [...SURFACE_TOKENS, "--color-canvas"];
+
 function rampRgb(theme: ThemeName, prefix: string, token: string): [number, number, number] {
   return hslTripleToRgb(resolveRampForCiv(theme, prefix, token));
 }
@@ -485,7 +516,7 @@ function markRgb(theme: ThemeName, prefix: string): [number, number, number] {
 /** Widest CHANNEL gap between one PAIR of tenants across the whole ramp, in one theme. */
 function rampGapForPair(theme: ThemeName, a: string, b: string): number {
   return Math.max(
-    ...SURFACE_TOKENS.map((token) => maxChannelDelta(rampRgb(theme, a, token), rampRgb(theme, b, token)))
+    ...RAMP_TOKENS.map((token) => maxChannelDelta(rampRgb(theme, a, token), rampRgb(theme, b, token)))
   );
 }
 
@@ -512,7 +543,7 @@ function rampDeltaE(theme: ThemeName, a: string, b: string, token: string): numb
 
 /** The surface on which a pair looks furthest apart, in one theme. */
 function widestRampDeltaEForPair(theme: ThemeName, a: string, b: string): number {
-  return Math.max(...SURFACE_TOKENS.map((token) => rampDeltaE(theme, a, b, token)));
+  return Math.max(...RAMP_TOKENS.map((token) => rampDeltaE(theme, a, b, token)));
 }
 
 /** How far apart one pair of tenants' marks look, in one theme. */
@@ -586,14 +617,20 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
    * goes flat, and no PAIR goes unexpressed. The second of those is the
    * sentence Stage 11 believed it could not write.
    *
-   * ONE THING THE ΔE00 PINS STILL DO NOT SAY, because it is true and awkward:
-   * in light mode `--color-canvas` is flat `0 0% 100%` for every tenant, so
-   * all six pairs measure exactly 0.00 there. globals.css says "CANVAS IS IN
+   * ONE THING THE ΔE00 PINS USED NOT TO SAY, because it was true and awkward:
+   * in light mode `--color-canvas` was flat `0 0% 100%` for every tenant, so
+   * all six pairs measured exactly 0.00 there. globals.css said "CANVAS IS IN
    * THE RAMP NOW" without that qualifier, and Stage 11's own measured-result
-   * list quietly omits light canvas while giving dark canvas. It is out of
+   * list quietly omitted light canvas while giving dark canvas. It was out of
    * scope here only because `SURFACE_TOKENS` is `--color-surface-*` and canvas
-   * is not one; widening the subject is a design decision about whether light
+   * is not one; widening the subject was a design decision about whether light
    * mode should tint its page ground, not a metric fix.
+   *
+   * STAGE 13 TOOK THAT DECISION AND THE SUBJECT WIDENED WITH IT. Light canvas
+   * is `var(--civ-hue) 100% 96.5%` and the pins below run over `RAMP_TOKENS` —
+   * surface-1..4 PLUS canvas, both themes. See the block on that constant for
+   * why this is a widening and not a retune, and for the mutation that shows
+   * the old shape could not see a flat page ground at all.
    *
    * ALSO NOT SAFE TO CARRY OVER: the "5.0x-7.6x" per-pair lead above. In ΔE00
    * the same pairs measure 2.11x-4.31x — the palette did not move, the ratio
@@ -615,8 +652,9 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
     //
     // STILL IN CHANNEL STEPS. This is Stage 9's threshold judged in Stage 9's
     // units; the ΔE00 pin that follows is the one that can be believed about
-    // perception. Measured today: dark 17/17/17/16, light 10/16/15/15.
-    const flat = SURFACE_TOKENS.map((token) => ({
+    // perception. Measured today, surface-1..4 then canvas:
+    // dark 17/17/17/16 + 17, light 10/15/16/15 + 18.
+    const flat = RAMP_TOKENS.map((token) => ({
       where: token,
       widest: Math.max(
         ...civPairs().map(([a, b]) => maxChannelDelta(rampRgb(theme, a, token), rampRgb(theme, b, token)))
@@ -626,15 +664,22 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
   });
 
   it.each(THEMES)("%s: no surface goes perceptually flat between its widest pair", (theme) => {
-    // The same subject as the pin above — per surface, the pair that separates
-    // furthest — asked in ΔE00. Measured today: dark 17.79/19.66/20.87/20.02,
-    // light 10.01/14.81/14.03/14.07 against a floor of 3.5.
+    // The same subject as the pin above — per plane, the pair that separates
+    // furthest — asked in ΔE00. Measured today, surface-1..4 then canvas:
+    // dark 17.79/19.66/20.87/20.02 + 14.60,
+    // light 10.01/14.02/14.95/14.07 + 15.98, against a floor of 3.5.
     //
     // NOT A REPLACEMENT FOR THE PIN ABOVE, AND THAT IS MEASURED RATHER THAN
     // ASSUMED: on the Stage 9 ramp this reads 5.36-8.47 and stays green while
     // the channel pin goes red at 4/255. It is a floor against a surface losing
     // its tint, not against the ramp being turned back down.
-    const flat = SURFACE_TOKENS.map((token) => ({
+    //
+    // AND IT IS THE PIN THAT CATCHES A FLAT PAGE GROUND. A light canvas back at
+    // `0 0% 100%` is six pairs at exactly 0.00, which reddens here by name.
+    // The channel pin above catches it too, at 0/255 — both, because a flat
+    // white ground fails on both metrics, which is not true of the Stage 9
+    // ramp and is why neither pin was dropped.
+    const flat = RAMP_TOKENS.map((token) => ({
       where: token,
       widestDeltaE: Number(
         Math.max(...civPairs().map(([a, b]) => rampDeltaE(theme, a, b, token))).toFixed(2)
@@ -645,10 +690,13 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
 
   it.each(THEMES)("%s: every pair of tenants is expressed somewhere on the ramp", (theme) => {
     // THE ASSERTION STAGE 11 BELIEVED IT COULD NOT MAKE. Its subject is the
-    // PAIR, not the surface: for each pair, the surface on which the two look
-    // furthest apart has to be visibly apart. Narrowest today is Egyptian/Greek
-    // — 9.11 dark, 5.55 light — the very pair max-channel reported at 7-8 and
-    // called too close to rely on.
+    // PAIR, not the surface: for each pair, the plane on which the two look
+    // furthest apart has to be visibly apart. Narrowest today is 9.11 dark
+    // (Egyptian/Greek) and 6.42 light — the very pairs max-channel reported at
+    // 7-8 and called too close to rely on. The light figure ROSE from 5.85 when
+    // canvas joined `RAMP_TOKENS`, which is what widening a `Math.max` does:
+    // this pin can only get easier as the list grows, and that is why it is not
+    // the pin that defends the page ground. The two per-plane pins above are.
     //
     // Same caveat as its neighbour: on the Stage 9 ramp this also stays green
     // (3.62-8.47), so it is not the assertion that holds the ramp at Stage 11's
@@ -672,7 +720,11 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
     //
     // A MARGIN AND NOT A MULTIPLE — see `MARK_LEAD_MARGIN` for why a ratio of
     // two ΔE00 numbers is not a quantity CIEDE2000 supports. Measured leads
-    // today: dark 10.12-30.17, light 12.47-39.06, against a floor of 5.
+    // today: dark 10.12-30.17, light 11.60-38.29, against a floor of 5. The
+    // light figures TIGHTENED by ~0.9 when canvas joined `RAMP_TOKENS`: the
+    // ramp side of the subtraction is a `Math.max` over the planes, so a wider
+    // list can only shrink the mark's lead. This pin therefore did get harder,
+    // unlike the one above it.
     const short = civPairs()
       .map(([a, b]) => ({
         pair: `${a}/${b}`,
@@ -682,6 +734,91 @@ describe("the surface ramp carries the tenant, and the mark still leads it", () 
       }))
       .filter((row) => row.lead < MARK_LEAD_MARGIN);
     expect(short).toEqual([]);
+  });
+
+  /**
+   * The order of the planes, which is a Stage 13 decision and was until now
+   * written down only in a comment.
+   *
+   * Tinting the light page ground was not a matter of changing one value: at
+   * L 100% the chroma ceiling is exactly zero (c = S x min(L, 1-L)), so the
+   * canvas had to come down, and the only room below 100% belonged to
+   * surface-1..4 — whose deepest step is pinned at 93.5% by
+   * `--color-ink-tertiary`'s AA floor. The ground therefore moved BELOW the
+   * card plane, and light mode stopped being the mirror image of dark:
+   *
+   *     dark    canvas < surface-1 < surface-2 < surface-3 < surface-4
+   *     light   surface-4 < surface-3 < surface-2 < canvas < surface-1
+   *
+   * Both themes now agree on the half that matters — the ground sits below the
+   * card plane and cards rise off it — and disagree, as they already did
+   * before Stage 13, on which way the nested wells go from there.
+   *
+   * WHY THIS NEEDS A PIN OF ITS OWN. Every other assertion in this file is
+   * about how far apart two TENANTS are on one plane. None of them can see the
+   * planes colliding with each other or swapping places: canvas back above
+   * surface-1, or surface-2 back at the 96.5% the canvas now occupies, leaves
+   * the per-tenant spreads untouched and every pin above green. What it breaks
+   * is the elevation reading — cards flush with the ground, or table headers
+   * indistinguishable from the page.
+   *
+   * IN HSL LIGHTNESS, NOT IN LUMINANCE, and the difference is not pedantry: a
+   * warm hue at the same L renders brighter than a cool one, so ordering four
+   * tenants by relative luminance would put Greek surface-3 above Chinese
+   * surface-2 and report a scrambled ramp on a correct palette. L is the axis
+   * the ramp is actually built on.
+   *
+   * NOT A SEPARATION CLAIM. It says the planes are ordered and distinct, not
+   * that adjacent ones are far apart — surface-2/-3 and -3/-4 measure
+   * 0.61..0.76 and 0.61..0.80 ΔE00, under the rung at which a flat-field
+   * difference is visible at all, and they measured 0.76..0.90 and 0.82..0.85
+   * before Stage 13, which is under it too. That is recorded on
+   * `--color-canvas` in globals.css as the cost of fitting five planes into
+   * the 6.5 lightness points AA leaves; a pin asserting they were perceptible
+   * would be asserting something this ramp has never done.
+   */
+  const EXPECTED_ASCENDING: Record<ThemeName, string[]> = {
+    dark: ["--color-canvas", "--color-surface-1", "--color-surface-2", "--color-surface-3", "--color-surface-4"],
+    light: ["--color-surface-4", "--color-surface-3", "--color-surface-2", "--color-canvas", "--color-surface-1"],
+  };
+
+  function lightnessOf(theme: ThemeName, prefix: string, token: string): number {
+    const triple = resolveRampForCiv(theme, prefix, token);
+    const m = /^\d+(?:\.\d+)?\s+\d+(?:\.\d+)?%\s+(\d+(?:\.\d+)?)%$/.exec(triple);
+    if (m === null) throw new Error(`Cannot read a lightness out of ${JSON.stringify(triple)}`);
+    return Number(m[1]);
+  }
+
+  it.each(THEMES)("%s: the five planes keep their order, for every tenant", (theme) => {
+    // Per tenant, because `--civ-hue` only substitutes a hue and could not in
+    // principle reorder anything — which is exactly the assumption worth
+    // checking rather than assuming, since a future ramp could vary lightness
+    // per cosmology and this pin would be the thing that noticed.
+    for (const prefix of CIV_PREFIXES) {
+      const byLightness = [...EXPECTED_ASCENDING[theme]]
+        .map((token) => ({ token, l: lightnessOf(theme, prefix, token) }))
+        .sort((a, b) => a.l - b.l);
+      expect(byLightness.map((row) => row.token)).toEqual(EXPECTED_ASCENDING[theme]);
+      // Strictly ascending, so two planes landing on one lightness is a failure
+      // and not a tie the sort quietly resolves in the expected direction.
+      for (let i = 1; i < byLightness.length; i += 1) {
+        expect(byLightness[i].l).toBeGreaterThan(byLightness[i - 1].l);
+      }
+      // And distinct as rendered pixels, which lightness alone does not
+      // guarantee once rounding to whole sRGB channels is in play.
+      const rendered = EXPECTED_ASCENDING[theme].map((token) => rampRgb(theme, prefix, token).join(","));
+      expect(new Set(rendered).size).toBe(EXPECTED_ASCENDING[theme].length);
+    }
+  });
+
+  it("names every plane the ramp has, so the order pin cannot go stale", () => {
+    // The failure this guards is a fifth surface arriving and the pin above
+    // silently continuing to order four of them. Asserted as an exact set
+    // against the derived list rather than a length, so a RENAMED token is
+    // caught too.
+    for (const theme of THEMES) {
+      expect([...EXPECTED_ASCENDING[theme]].sort()).toEqual([...RAMP_TOKENS].sort());
+    }
   });
 
   it("neither figure is degenerate, and the marks still lead overall", () => {
