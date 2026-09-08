@@ -85,12 +85,26 @@ module.exports = {
   // coverage was observed sliding 20.59 -> 20.34 in a single afternoon — and a
   // gate that cries wolf on ordinary work is a gate someone deletes. One point
   // still catches any real regression: it is ~52 statements or ~50 branches.
+  //
+  // AND THE a11y ENGINE MOVED THEM UP, WITHOUT ANYONE WRITING AN ASSERTION
+  // ABOUT COVERAGE. `src/__tests__/a11yEngineBaseline.test.tsx` renders 29
+  // subjects — every shared primitive, four hand-rolled surfaces and three
+  // whole routes — so that axe can walk the DOM they produce. Rendering them
+  // executes them, and the four numbers moved together:
+  //
+  //   before that suite  statements 55.53 / branches 48.30 / functions 45.84 / lines 56.09
+  //   after it           statements 60.54 / branches 52.90 / functions 51.19 / lines 61.18
+  //
+  // Unlike the 51 -> 57 jump above, this one is real: nothing left the
+  // denominator, 34 new tests joined the run, and the numerator grew because
+  // code that had never been rendered now is. Ratcheted to ~1 point under, per
+  // the rule two paragraphs down.
   coverageThreshold: {
     global: {
-      branches: 46,
-      functions: 44,
-      lines: 55,
-      statements: 54,
+      branches: 51,
+      functions: 50,
+      lines: 60,
+      statements: 59,
     },
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],

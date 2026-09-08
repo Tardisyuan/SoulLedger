@@ -101,6 +101,7 @@ const COLLECTED_FILES = [
   "WorkflowPage.instances.test.tsx",
   "WorkflowPage.test.tsx",
   "workflowRoutingRoundTrip.test.ts",
+  "a11yEngineBaseline.test.tsx",
   "accessTokenNeverBecomesACookie.test.ts",
   "api.test.ts",
   "auditGrouping.test.ts",
