@@ -964,6 +964,42 @@
     --color-civ-mark-cn: 0.649703 0.124151 35.2992;
     --color-civ-hue-eu: 232;
     --color-civ-mark-eu: 0.642606 0.10097 276.6787;
+    /* EGYPTIAN 埃及杜阿特. 44deg, AND IT IS THE WORST VIOLATION OF THE RULE THE
+     GREEK BLOCK BELOW STATES: it sits 1.18deg from --color-accent-hover
+     (42.82deg). A cosmology's identity colour and a button's hover state are,
+     to within a degree of hue, the same colour. That rule was written for
+     Greek's benefit and enforced on nothing until
+     `civilizationColourContract` grew `no civilization's identity hue is a
+     semantic colour`; Egyptian is carried there as a named exemption rather
+     than fixed, and this is why.
+
+     THE FEASIBLE SET IS EMPTY, MEASURED. Two constraints pull opposite ways:
+
+       - Clearance needs eg >= 54.82deg. Everything from 26.04 to 54.82 is
+         blocked by --color-accent (38.04) and --color-accent-hover (42.82),
+         and everything below that by --color-status-judging (19.79/20.00) and
+         the three tokens at 0.00.
+       - `ActorsPage.test.tsx` holds the four civilization section grounds on
+         /actors — `--civ-mark` at alpha 0.16 over the host tenant's surface-1,
+         the one screen where all four cosmologies are visible at once — at
+         PERCEPTIBLE_AT_A_GLANCE (3.5). Egyptian/Greek measures 3.96 there
+         today and falls monotonically as Egyptian walks toward Greek's 88deg:
+         3.80 at 45, 3.58 at 47, 3.46 at 48, 2.83 at 54, 2.43 at 58. That
+         needs eg <= 48deg.
+
+     54.82 > 48. No hue satisfies both, and CHROMA CANNOT RESCUE IT EITHER —
+     the axis that worked for the Chinese light ground is exhausted here. At
+     58deg the light Egyptian mark hits the sRGB gamut edge (blue clamped to 0)
+     at C ~ 0.119 and the /actors figure plateaus at 3.21, still under 3.5,
+     with the mark rendering (119, 115, 0): olive, not gold.
+
+     THE FIX EXISTS AND IT IS A TWO-TENANT MOVE. The band from 88 to 137.66 is
+     empty, so taking GREEK up to ~105deg restores ~46deg of Egyptian/Greek
+     separation and lets Egyptian sit at 58 with 15.18deg of clearance. That
+     recolours a tenant which is NOT in violation, retires the derivation of 88
+     recorded below, and needs its own review of every pin it touches — the
+     badge floor, the blush wedge, the ink matrix and /actors again. It is
+     written down rather than done. */
     --color-civ-hue-eg: 44;
     --color-civ-mark-eg: 0.727725 0.100218 89.3545;
     /* GREEK 希腊冥界. 88deg, not the 138deg that maximises the gap to the other
@@ -974,9 +1010,21 @@
      apart, a semantic clash is read as the wrong thing. 88's nearest
      neighbour is Egyptian's 44, 44deg off — still wider than the 32deg that
      already separates Chinese (12) from Egyptian (44), so this adds no
-     tighter pair than the palette already had. Nearest status hue is
-     --color-accent at 50deg. Measured 7.78:1 against this tenant's own
-     surface-1, hsl(88 13% 7%) -- AAA. */
+     tighter pair than the palette already had.
+
+     THE NEAREST-STATUS-HUE FIGURE IN THIS PARAGRAPH WAS WRONG FROM THE DAY IT
+     WAS WRITTEN, TWICE OVER. It read "nearest status hue is --color-accent at
+     50deg". --color-accent is at 38.0deg, not 50; and it is not 88's nearest
+     semantic neighbour either — --color-accent-hover (42.8deg) is, at 45.2deg
+     away. Both errors flatter the conclusion they support, which is the reason
+     to correct them rather than leave them: Greek IS the tenant with the
+     widest semantic clearance of the four, and now says so with figures that
+     can be re-derived. `civilizationColourContract` measures all four against
+     every semantic hue since — the rule in this paragraph finally has an
+     executor, and it found Egyptian at 1.18deg and Chinese at 7.79/0.00deg.
+
+     Measured 7.78:1 against this tenant's own surface-1,
+     hsl(88 13% 7%) -- AAA. */
     --color-civ-hue-gr: 88;
     --color-civ-mark-gr: 0.721756 0.13753 130.0922;
     /* IDENTITY TEXT, as distinct from the identity mark. Same split, same
