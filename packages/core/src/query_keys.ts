@@ -57,6 +57,42 @@ export const dispositionKeys = {
   list: (params?: Record<string, string>) => [...dispositionKeys.all, "list", params] as const,
 };
 
+/**
+ * Menus are cached under TWO unrelated roots, and that is the whole reason this
+ * factory exists.
+ *
+ * `["menus", …]` is the admin CRUD list on `/menus`. The sidebar is a different
+ * request — `menusApi.all()` for ADMIN, `menusApi.list()` for everyone else,
+ * normalised into a tree — so it has always had its own entry, and the entry is
+ * role-scoped because the two endpoints return different shapes.
+ *
+ * The two roots share no prefix, so `invalidateQueries({queryKey: ["menus"]})`
+ * does not touch the sidebar. Measured 2026-09-06: all three mutations on
+ * `/menus` invalidated only `["menus"]`, and `useSidebarMenus` sets
+ * `staleTime: 5 * 60 * 1000`, so an admin who added, renamed or deleted a menu
+ * saw the old sidebar — and the old breadcrumbs, and the old `MenuGloss`
+ * titles, which read the same cache entry — for up to five minutes. `AppLayout`
+ * never unmounts, so nothing remounted to paper over it.
+ *
+ * `invalidateAll` exists so a caller cannot fix one root and forget the other,
+ * which is the same failure `notificationKeys.unreadCount` was extracted to
+ * prevent. Pinned by `menuCacheRootsAreInvalidatedTogether.test.ts`.
+ */
+export const menuKeys = {
+  all: ["menus"] as const,
+  sidebar: (role?: string, signedIn?: boolean) => ["menus-sidebar", role, signedIn] as const,
+  /**
+   * Both roots a menu write touches. Spread into separate invalidate calls —
+   * TanStack matches one key per call, so a single call cannot cover two roots.
+   *
+   * `["menu-buttons"]` is deliberately NOT here. Buttons are a separate resource
+   * with its own page and its own root; `normalizeMenus` keeps only
+   * `parent == null` rows, so buttons never enter the sidebar tree and a button
+   * write has nothing to invalidate here.
+   */
+  invalidateAll: [["menus"], ["menus-sidebar"]] as const,
+};
+
 export const notificationKeys = {
   all: ["notifications"] as const,
   list: (params?: Record<string, string>) => [...notificationKeys.all, "list", params] as const,

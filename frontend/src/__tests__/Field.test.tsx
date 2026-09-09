@@ -95,7 +95,7 @@ describe("the error state exists at all, on every control", () => {
     // AA on a light canvas). `red-500` follows neither.
     render(<TextField label="Name" error="太长了" />);
     expect(screen.getByRole("alert").className).toContain(
-      "text-[hsl(var(--color-status-error))]"
+      "text-[oklch(var(--color-status-error))]"
     );
     expect(CODE).not.toMatch(/\b(?:text|border|bg)-red-\d/);
   });
@@ -104,9 +104,9 @@ describe("the error state exists at all, on every control", () => {
     // Otherwise the field stops looking wrong at exactly the moment the user
     // goes to fix it.
     const invalid = fieldControl({ invalid: true });
-    expect(invalid).toContain("border-[hsl(var(--color-status-error))]");
-    expect(invalid).toContain("focus-visible:border-[hsl(var(--color-status-error))]");
-    expect(invalid).not.toContain("focus-visible:border-[hsl(var(--color-accent))]");
+    expect(invalid).toContain("border-[oklch(var(--color-status-error))]");
+    expect(invalid).toContain("focus-visible:border-[oklch(var(--color-status-error))]");
+    expect(invalid).not.toContain("focus-visible:border-[oklch(var(--color-accent))]");
   });
 });
 
@@ -127,7 +127,7 @@ describe("focus-visible, not focus", () => {
 
   it.each(FIELD_SIZES)("%s uses focus-visible for its focus border", (size) => {
     const classes = fieldControl({ size }).split(/\s+/);
-    expect(classes).toContain("focus-visible:border-[hsl(var(--color-accent))]");
+    expect(classes).toContain("focus-visible:border-[oklch(var(--color-accent))]");
     expect(classes.filter((c) => /^focus:/.test(c))).toEqual([]);
   });
 
@@ -144,7 +144,7 @@ describe("focus-visible, not focus", () => {
 describe("the placeholder spelling is written down correctly, once", () => {
   /**
    * `src/components/workflow/WorkflowEditor.tsx` used to contain
-   * `placeholder:[hsl(var(--color-ink-subtle))]`, which produces NO CSS:
+   * `placeholder:[oklch(var(--color-ink-subtle))]`, which produces NO CSS:
    * `placeholder:` is a variant, and Tailwind's arbitrary-property form needs
    * `[property:value]`, so a bare bracketed value has no property to set. That
    * input's placeholder rendered at full-strength inherited ink,
@@ -159,7 +159,7 @@ describe("the placeholder spelling is written down correctly, once", () => {
    */
   it("uses placeholder:text-, the form that emits a declaration", () => {
     expect(fieldControl({}).split(/\s+/)).toContain(
-      "placeholder:text-[hsl(var(--color-ink-subtle))]"
+      "placeholder:text-[oklch(var(--color-ink-subtle))]"
     );
   });
 
@@ -174,7 +174,7 @@ describe("the placeholder spelling is written down correctly, once", () => {
 
   it("reaches the rendered control, not just the class string", () => {
     render(<TextField label="Name" placeholder="孟婆" />);
-    expect(control().className).toContain("placeholder:text-[hsl(var(--color-ink-subtle))]");
+    expect(control().className).toContain("placeholder:text-[oklch(var(--color-ink-subtle))]");
   });
 
   /**
@@ -290,7 +290,7 @@ describe("padding lands on the same ladder Button uses", () => {
     // string has `text-ink` and `text-0N` in it.
     const md = fieldControl({ size: "md" }).split(/\s+/);
     expect(md).toContain("text-03");
-    expect(md).toContain("text-[hsl(var(--color-ink))]");
+    expect(md).toContain("text-[oklch(var(--color-ink))]");
   });
 
   it("styles disabled on every size, not 29% of them", () => {

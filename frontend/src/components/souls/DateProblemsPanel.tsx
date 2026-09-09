@@ -107,8 +107,8 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
   }
 
   return (
-    <div className="bg-[hsl(var(--color-surface-1))] p-5 border border-[hsl(var(--color-hairline))]">
-      <h2 className="text-01 text-[hsl(var(--color-ink-muted))] uppercase mb-3">
+    <div className="bg-[oklch(var(--color-surface-1))] p-5 border border-[oklch(var(--color-hairline))]">
+      <h2 className="text-01 text-[oklch(var(--color-ink-muted))] uppercase mb-3">
         {t("souls.detail.date_problems.title")}
       </h2>
       <div className="space-y-2">
@@ -117,7 +117,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
           const severity = group[0].severity;
           const isOpen = expandedCodes[code] ?? false;
           return (
-            <div key={code} className="border border-[hsl(var(--color-hairline))]">
+            <div key={code} className="border border-[oklch(var(--color-hairline))]">
               <button
                 type="button"
                 onClick={() => setExpandedCodes((s) => ({ ...s, [code]: !isOpen }))}
@@ -129,38 +129,38 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                     aria-hidden="true"
                     className={
                       severity === "error"
-                        ? "text-[hsl(var(--color-status-error))]"
-                        : "text-[hsl(var(--color-status-warning))]"
+                        ? "text-[oklch(var(--color-status-error))]"
+                        : "text-[oklch(var(--color-status-warning))]"
                     }
                   >
                     {severity === "error" ? "⊘" : "△"}
                   </span>
-                  <span className="text-[hsl(var(--color-ink))]">
+                  <span className="text-[oklch(var(--color-ink))]">
                     {t(`souls.detail.date_problems.codes.${code}`)}
                   </span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <span className="bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink))] text-02 px-1.5 py-0.5">
+                  <span className="bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink))] text-02 px-1.5 py-0.5">
                     {group.length}
                   </span>
-                  <span className="text-[hsl(var(--color-ink-subtle))] text-02" aria-hidden="true">
+                  <span className="text-[oklch(var(--color-ink-subtle))] text-02" aria-hidden="true">
                     {isOpen ? "▲" : "▼"}
                   </span>
                 </span>
               </button>
               {isOpen && (
-                <div className="px-3 pb-3 space-y-3 border-t border-[hsl(var(--color-hairline))] pt-2">
+                <div className="px-3 pb-3 space-y-3 border-t border-[oklch(var(--color-hairline))] pt-2">
                   {group.map((occ, idx) => (
-                    <div key={`${occ.recordId ?? "soul"}-${idx}`} className="text-03 text-[hsl(var(--color-ink-muted))] space-y-1">
+                    <div key={`${occ.recordId ?? "soul"}-${idx}`} className="text-03 text-[oklch(var(--color-ink-muted))] space-y-1">
                       {occ.recordLabel && (
-                        <div className="text-[hsl(var(--color-ink))] font-medium">{occ.recordLabel}</div>
+                        <div className="text-[oklch(var(--color-ink))] font-medium">{occ.recordLabel}</div>
                       )}
                       <p>{occ.message}</p>
                       {occ.code === "event_after_death" && occ.recordId && (
                         <div className="pt-1">
                           {occ.acknowledged ? (
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-[hsl(var(--color-ink-subtle))]">
+                              <span className="text-[oklch(var(--color-ink-subtle))]">
                                 {t("souls.detail.date_problems.acknowledged_by", {
                                   user: occ.acknowledgedBy || "",
                                   date: occ.acknowledgedAt ? formatDateTime(occ.acknowledgedAt) : "",
@@ -171,7 +171,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                                   type="button"
                                   onClick={() => runAckAction(occ.recordId!, "unacknowledge")}
                                   disabled={busyRecordId === occ.recordId}
-                                  className="px-2 py-0.5 border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] disabled:opacity-50 transition-colors"
+                                  className="px-2 py-0.5 border border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] disabled:opacity-50 transition-colors"
                                 >
                                   {t("souls.detail.date_problems.revoke")}
                                 </button>
@@ -183,7 +183,7 @@ export function DateProblemsPanel({ soulId, soulProblems, records, onChanged }: 
                                 type="button"
                                 onClick={() => runAckAction(occ.recordId!, "acknowledge")}
                                 disabled={busyRecordId === occ.recordId}
-                                className="px-2 py-0.5 border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] disabled:opacity-50 transition-colors"
+                                className="px-2 py-0.5 border border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] disabled:opacity-50 transition-colors"
                               >
                                 {t("souls.detail.date_problems.acknowledge")}
                               </button>

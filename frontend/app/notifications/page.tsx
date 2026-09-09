@@ -57,10 +57,28 @@ export default function NotificationsPage() {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
+  // Both mutations below invalidate `unreadCount` explicitly, and that is not a
+  // redundant line: `unreadCount` sits OUTSIDE `notificationKeys.all` on purpose
+  // (see query_keys.ts — so an ordinary list refetch does not also refetch the
+  // badge), which means `all` does not prefix-match it. These two writes are the
+  // exception the split was not designed for: they are precisely the writes that
+  // change the unread total.
+  //
+  // Nothing else would have refetched it. The badge sets `staleTime: 30_000`
+  // with no `refetchInterval`, `refetchOnWindowFocus` is off globally
+  // (QueryProvider), and the backend's `mark_read` / `mark_all_read` publish no
+  // event — so the WS path in eventHandlers.ts, the only other place that
+  // invalidates this key, never fires for them. The masthead count simply stayed
+  // wrong.
+  const invalidateNotifications = () => {
+    queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+    queryClient.invalidateQueries({ queryKey: notificationKeys.unreadCount });
+  };
+
   const markReadMutation = useMutation({
     mutationFn: (id: string) => notificationsApi.markRead(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+      invalidateNotifications();
     },
     onError: () => showToast(t("notifications.mark_read_error") || "Failed to mark as read", "error"),
   });
@@ -76,7 +94,7 @@ export default function NotificationsPage() {
     // screen dressed up as a sentence about what happened. The server returns
     // `{ marked_read: N }` for exactly this.
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+      invalidateNotifications();
       showToast(
         t("notifications.mark_all_success", { count: String(res.data.marked_read) }),
         "success"
@@ -122,7 +140,7 @@ export default function NotificationsPage() {
       title={
         <span className="inline-flex items-center gap-3">
           <span className="relative inline-flex shrink-0">
-            <Bell aria-hidden="true" className="w-6 h-6 text-[hsl(var(--color-accent-ink))]" />
+            <Bell aria-hidden="true" className="w-6 h-6 text-[oklch(var(--color-accent-ink))]" />
             {unreadCount > 0 && (
               <Badge
                 tone="accent"
@@ -186,7 +204,7 @@ export default function NotificationsPage() {
       skeleton={
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="p-4 border border-[hsl(var(--color-hairline))] space-y-3">
+            <div key={i} className="p-4 border border-[oklch(var(--color-hairline))] space-y-3">
               <div className="flex items-start gap-3">
                 <Skeleton className="h-8 w-8" />
                 <div className="flex-1 space-y-2">
@@ -238,8 +256,8 @@ export default function NotificationsPage() {
             key={notification.id}
             className={`p-4 border transition-colors ${
               notification.is_read
-                ? "bg-[hsl(var(--color-surface-1))] border-[hsl(var(--color-hairline))]"
-                : "bg-[hsl(var(--color-surface-1))] border-[hsl(var(--color-accent)/0.3)]"
+                ? "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-hairline))]"
+                : "bg-[oklch(var(--color-surface-1))] border-[oklch(var(--color-accent)/0.3)]"
             }`}
           >
             <div className="flex items-start gap-3">
@@ -247,8 +265,8 @@ export default function NotificationsPage() {
               {(() => {
                 const IconComponent = getNotificationIcon(notification.notification_type ?? "");
                 return (
-                  <div className="w-10 h-10 bg-[hsl(var(--color-accent)/0.1)] flex items-center justify-center shrink-0">
-                    <IconComponent aria-hidden="true" className="w-5 h-5 text-[hsl(var(--color-accent-ink))]" />
+                  <div className="w-10 h-10 bg-[oklch(var(--color-accent)/0.1)] flex items-center justify-center shrink-0">
+                    <IconComponent aria-hidden="true" className="w-5 h-5 text-[oklch(var(--color-accent-ink))]" />
                   </div>
                 );
               })()}
@@ -258,18 +276,18 @@ export default function NotificationsPage() {
                 <div className="flex items-start justify-between gap-2">
                   <h2
                     className={`text-03 font-medium ${
-                      notification.is_read ? "text-[hsl(var(--color-ink-muted))]" : "text-[hsl(var(--color-ink))]"
+                      notification.is_read ? "text-[oklch(var(--color-ink-muted))]" : "text-[oklch(var(--color-ink))]"
                     }`}
                   >
                     {notification.title}
                   </h2>
-                  <span className="text-02 font-mono text-[hsl(var(--color-ink-subtle))] shrink-0">
+                  <span className="text-02 font-mono text-[oklch(var(--color-ink-subtle))] shrink-0">
                     {formatDate(notification.created_at)}
                   </span>
                 </div>
                 <p
                   className={`mt-1 text-03 ${
-                    notification.is_read ? "text-[hsl(var(--color-ink-subtle))]" : "text-[hsl(var(--color-ink-muted))]"
+                    notification.is_read ? "text-[oklch(var(--color-ink-subtle))]" : "text-[oklch(var(--color-ink-muted))]"
                   }`}
                 >
                   {notification.message}
@@ -281,7 +299,7 @@ export default function NotificationsPage() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="mt-2 text-[hsl(var(--color-accent-ink))]"
+                    className="mt-2 text-[oklch(var(--color-accent-ink))]"
                     /* This row's own pending state, not the mutation's.
                        `markReadMutation` is one object shared by every row, so
                        a bare `isPending` put a spinner on EVERY unread
@@ -301,7 +319,7 @@ export default function NotificationsPage() {
 
               {/* Unread Indicator */}
               {!notification.is_read && (
-                <span aria-hidden="true" className="w-2 h-2 bg-[hsl(var(--color-accent))] rounded-full shrink-0 mt-2" />
+                <span aria-hidden="true" className="w-2 h-2 bg-[oklch(var(--color-accent))] rounded-full shrink-0 mt-2" />
               )}
             </div>
           </div>

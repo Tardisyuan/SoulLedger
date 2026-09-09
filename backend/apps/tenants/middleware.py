@@ -13,8 +13,15 @@ logger = logging.getLogger(__name__)
 class TenantMiddleware:
     """
     Extracts tenant_code from the JWT access token's payload and attaches
-    the resolved Tenant object to request.tenant.  Also sets the thread-local
-    tenant so TenantManager can automatically filter querysets.
+    the resolved Tenant object to request.tenant.  Also sets the tenant
+    contextvar (contextvars, not thread-local — async and Celery need it).
+
+    THE CONTEXTVAR DOES NOT MAKE QUERIES FILTER THEMSELVES. This docstring
+    said "so TenantManager can automatically filter querysets" until
+    2026-09-06; `TenantManager` filters soft deletes only. Isolation is
+    `apps.core.tenant.scope_to_tenant`, called from each view's
+    `get_queryset`. The contextvar is read by `apps/audit/signals.py` for
+    attribution and by model `save()` hooks that stamp `tenant` on create.
     """
 
     def __init__(self, get_response):

@@ -44,8 +44,8 @@ describe("the ring-3 colour is a token, and there is only one of it", () => {
   it("paints both rings from --color-accent", () => {
     const { container } = render(<Spinner />);
     const classes = classesIn(container);
-    expect(classes).toContain("border-[hsl(var(--color-accent)/0.2)]");
-    expect(classes).toContain("border-t-[hsl(var(--color-accent))]");
+    expect(classes).toContain("border-[oklch(var(--color-accent)/0.2)]");
+    expect(classes).toContain("border-t-[oklch(var(--color-accent))]");
   });
 
   it("names no palette colour at all", () => {
@@ -142,7 +142,7 @@ describe("PageSpinner is the whole-route shape those 20 files hand-roll", () => 
     // sits beside it.
     expect(root.className).toContain("min-h-[calc(100vh-4rem)]");
     expect(root.className).not.toContain("min-h-screen");
-    expect(root.className).toContain("bg-[hsl(var(--color-canvas))]");
+    expect(root.className).toContain("bg-[oklch(var(--color-canvas))]");
     expect(classesIn(container)).toEqual(expect.arrayContaining(["w-16", "h-16", "border-4"]));
     expect(screen.getByRole("status")).toBeInTheDocument();
   });

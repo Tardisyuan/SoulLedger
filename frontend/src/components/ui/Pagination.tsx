@@ -57,12 +57,12 @@ export function Pagination({ page, totalPages, count, onPageChange, showInfo = t
   };
 
   const stepButton =
-    "px-3 py-1.5 text-03 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] transition-colors";
+    "px-3 py-1.5 text-03 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-2))] disabled:opacity-50 disabled:cursor-not-allowed text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] transition-colors";
 
   return (
     <div className="flex items-center justify-between mt-4 px-2">
       {showInfo && (
-        <p className="text-02 text-[hsl(var(--color-ink-muted))]">
+        <p className="text-02 text-[oklch(var(--color-ink-muted))]">
           {t("pagination.info", {
             page: String(page),
             total: String(totalPages),
@@ -107,7 +107,7 @@ export function Pagination({ page, totalPages, count, onPageChange, showInfo = t
             }
           }}
           aria-label={t("pagination.jump")}
-          className="w-14 px-2 py-1.5 text-03 font-mono tabular-nums text-center bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))]"
+          className="w-14 px-2 py-1.5 text-03 font-mono tabular-nums text-center bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] text-[oklch(var(--color-ink))]"
         />
 
         <button

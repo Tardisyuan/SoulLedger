@@ -256,13 +256,13 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
   );
 
   return (
-    <div className="text-[hsl(var(--color-ink))]">
-      <div className="h-12 flex items-center px-6 gap-4 border-b border-[hsl(var(--color-hairline))]/50">
-        <h1 className="text-06 text-[hsl(var(--color-accent-ink))] flex-1">
+    <div className="text-[oklch(var(--color-ink))]">
+      <div className="h-12 flex items-center px-6 gap-4 border-b border-[oklch(var(--color-hairline))]/50">
+        <h1 className="text-06 text-[oklch(var(--color-accent-ink))] flex-1">
           {t("judgment.queue.title")}
         </h1>
         <p
-          className="text-02 font-mono tabular-nums text-[hsl(var(--color-ink-muted))]"
+          className="text-02 font-mono tabular-nums text-[oklch(var(--color-ink-muted))]"
           aria-live="polite"
         >
           {progressText}
@@ -271,14 +271,14 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           type="button"
           onClick={() => setShowKeys((prev) => !prev)}
           aria-expanded={showKeys}
-          className="text-03 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))] underline"
+          className="text-03 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))] underline"
         >
           {t("judgment.queue.keyboard_help")}
         </button>
         <button
           type="button"
           onClick={leave}
-          className="text-03 text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]"
+          className="text-03 text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]"
         >
           {t("judgment.queue.leave")}
         </button>
@@ -293,15 +293,15 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
           aria-valuemin={0}
           aria-valuemax={Math.max(progress.total, 1)}
           aria-label={progressText}
-          className="h-1 bg-[hsl(var(--color-surface-3))] overflow-hidden"
+          className="h-1 bg-[oklch(var(--color-surface-3))] overflow-hidden"
         >
           <div
-            className="h-full bg-[hsl(var(--color-accent))] transition-[width]"
+            className="h-full bg-[oklch(var(--color-accent))] transition-[width]"
             style={{ width: `${Math.min(100, (progress.position / Math.max(progress.total, 1)) * 100)}%` }}
           />
         </div>
 
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-02 text-[hsl(var(--color-ink-muted))]">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-02 text-[oklch(var(--color-ink-muted))]">
           <span>{t("judgment.queue.stat_decided", { n: String(progress.decided) })}</span>
           <span>{t("judgment.queue.stat_deferred", { n: String(progress.deferred) })}</span>
           <span>{t("judgment.queue.stat_remaining", { n: String(progress.remaining) })}</span>
@@ -309,7 +309,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
             <button
               type="button"
               onClick={restoreDeferred}
-              className="text-[hsl(var(--color-accent-ink))] hover:underline"
+              className="text-[oklch(var(--color-accent-ink))] hover:underline"
             >
               {t("judgment.queue.restore_deferred")}
             </button>
@@ -421,12 +421,12 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 
             <section
               aria-labelledby="queue-verdict-heading"
-              className="border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4"
+              className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] p-4"
             >
-              <h2 id="queue-verdict-heading" className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-3">
+              <h2 id="queue-verdict-heading" className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-3">
                 {t("judgment.queue.render_verdict")}
               </h2>
-              <label htmlFor="queue-notes" className="block text-02 text-[hsl(var(--color-ink-muted))] mb-1">
+              <label htmlFor="queue-notes" className="block text-02 text-[oklch(var(--color-ink-muted))] mb-1">
                 {t("judgment.queue.notes")}
               </label>
               <textarea
@@ -435,22 +435,22 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                 onChange={(event) => setNotes(event.target.value)}
                 rows={2}
                 placeholder={t("judgment.queue.notes_placeholder")}
-                className="w-full border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-2))] px-3 py-2 text-03 text-[hsl(var(--color-ink))] mb-3"
+                className="w-full border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-2))] px-3 py-2 text-03 text-[oklch(var(--color-ink))] mb-3"
               />
-              <label className="flex items-center gap-2 text-03 text-[hsl(var(--color-ink-muted))] mb-3">
+              <label className="flex items-center gap-2 text-03 text-[oklch(var(--color-ink-muted))] mb-3">
                 <input
                   type="checkbox"
                   checked={createWorkflow}
                   onChange={(event) => setCreateWorkflow(event.target.checked)}
-                  className="accent-[hsl(var(--color-accent))]"
+                  className="accent-[oklch(var(--color-accent))]"
                 />
                 {t("judgment.queue.create_workflow")}
-                <kbd className="font-mono text-02 px-1 bg-[hsl(var(--color-surface-3))]">W</kbd>
+                <kbd className="font-mono text-02 px-1 bg-[oklch(var(--color-surface-3))]">W</kbd>
               </label>
               {/* The one place the two correction paths are named side by
                   side, so an operator learns the rule at the moment it
                   applies rather than after they need it. */}
-              <p className="text-02 text-[hsl(var(--color-ink-subtle))]">
+              <p className="text-02 text-[oklch(var(--color-ink-subtle))]">
                 {t("judgment.queue.undo_scope_note", { seconds: String(Math.round(UNDO_WINDOW_MS / 1000)) })}
               </p>
             </section>
@@ -494,7 +494,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
        * The verdict row below keeps the old condition: with no card there is
        * nothing to rule on. Only the undo strip survives the card. */}
       {(pending || (judgment && cursor.soul && cursor.ledger)) && (
-        <div className="sticky bottom-0 border-t border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-canvas))]">
+        <div className="sticky bottom-0 border-t border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-canvas))]">
           <div className="max-w-6xl mx-auto px-6 py-3">
             {/* No `aria-live` here. The strip inside already carries
                 `role="status"`, which IS a live region — nesting a second one
@@ -502,7 +502,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
             <div className="h-10 flex items-center">
               {pending ? (
                 <div role="status" className="flex flex-wrap items-center gap-3 animate-undo-strip">
-                  <span className="text-03 text-[hsl(var(--color-ink))]">
+                  <span className="text-03 text-[oklch(var(--color-ink))]">
                     {/* The verdict name is interpolated INTO another
                         translation, so it has to be a string and cannot be
                         <DomainEnum>. It still must not be a bare `t()`
@@ -523,7 +523,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                       screen; it is the re-announcement that was noise. */}
                   <span
                     aria-hidden="true"
-                    className="font-mono tabular-nums text-02 text-[hsl(var(--color-ink-muted))]"
+                    className="font-mono tabular-nums text-02 text-[oklch(var(--color-ink-muted))]"
                   >
                     {t("judgment.queue.undo_countdown", { seconds: String(secondsLeft) })}
                   </span>
@@ -548,7 +548,7 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                  gives assistive tech nothing to read, which is the same
                  complaint the repo has about disabled submit buttons
                  elsewhere. A sentence says the true thing instead. */
-              <p role="note" className="text-03 text-[hsl(var(--color-ink-muted))] py-2">
+              <p role="note" className="text-03 text-[oklch(var(--color-ink-muted))] py-2">
                 {t("judgment.queue.read_only")}
               </p>
             )}
@@ -575,10 +575,10 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                      or the nudge is un-eased. NO overshoot, per globals.css —
                      a bounce on a verdict button would be the app being
                      pleased with itself while someone sentences a soul. */
-                  className="flex items-center gap-2 px-4 py-2 border text-03 font-semibold transition-[color,background-color,border-color,transform] duration-state border-[hsl(var(--color-hairline-strong))] hover:bg-[hsl(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0"
-                  style={{ color: `hsl(var(${verdict.token}))` }}
+                  className="flex items-center gap-2 px-4 py-2 border text-03 font-semibold transition-[color,background-color,border-color,transform] duration-state border-[oklch(var(--color-hairline-strong))] hover:bg-[oklch(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0"
+                  style={{ color: `oklch(var(${verdict.token}))` }}
                 >
-                  <kbd className="font-mono text-02 px-1.5 bg-[hsl(var(--color-surface-3))] text-[hsl(var(--color-ink-muted))]">
+                  <kbd className="font-mono text-02 px-1.5 bg-[oklch(var(--color-surface-3))] text-[oklch(var(--color-ink-muted))]">
                     {verdict.key}
                   </kbd>
                   {/* A JSX position, so the component rather than the string
@@ -589,13 +589,13 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
                   <DomainEnum namespace="judgment.verdicts" value={verdict.code} />
                 </button>
               ))}
-              <span aria-hidden="true" className="w-px self-stretch bg-[hsl(var(--color-hairline))]" />
+              <span aria-hidden="true" className="w-px self-stretch bg-[oklch(var(--color-hairline))]" />
               <button
                 type="button"
                 onClick={defer}
-                className="flex items-center gap-2 px-4 py-2 border border-[hsl(var(--color-hairline-strong))] text-03 font-medium text-[hsl(var(--color-ink-muted))] transition-[color,background-color,border-color,transform] duration-state hover:bg-[hsl(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0"
+                className="flex items-center gap-2 px-4 py-2 border border-[oklch(var(--color-hairline-strong))] text-03 font-medium text-[oklch(var(--color-ink-muted))] transition-[color,background-color,border-color,transform] duration-state hover:bg-[oklch(var(--color-surface-2))] active:translate-y-px motion-reduce:active:translate-y-0"
               >
-                <kbd className="font-mono text-02 px-1.5 bg-[hsl(var(--color-surface-3))]">S</kbd>
+                <kbd className="font-mono text-02 px-1.5 bg-[oklch(var(--color-surface-3))]">S</kbd>
                 {t("judgment.queue.defer")}
               </button>
             </div>
@@ -610,16 +610,16 @@ export function JudgmentQueueConsole({ at }: { at?: string }) {
 function CaseFactsPanel({ court, confession }: { court: string; confession: string }) {
   const { t } = useI18n();
   return (
-    <section aria-labelledby="queue-case-heading" className="border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] p-4">
-      <h3 id="queue-case-heading" className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-3">
+    <section aria-labelledby="queue-case-heading" className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] p-4">
+      <h3 id="queue-case-heading" className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-3">
         {t("judgment.queue.case")}
       </h3>
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-02 text-[hsl(var(--color-ink-muted))]">{t("judgment.court")}</span>
+        <span className="text-02 text-[oklch(var(--color-ink-muted))]">{t("judgment.court")}</span>
         {court ? (
           <EnumBadge value={{ tone: "info", label: court }} />
         ) : (
-          <span className="text-03 text-[hsl(var(--color-ink-tertiary))]">{t("judgment.queue.not_recorded")}</span>
+          <span className="text-03 text-[oklch(var(--color-ink-tertiary))]">{t("judgment.queue.not_recorded")}</span>
         )}
       </div>
       {/* 忏悔在自己的框里滚,而不是把它下面的东西推走。
@@ -638,12 +638,12 @@ function CaseFactsPanel({ court, confession }: { court: string; confession: stri
        * 一段,而这个控制台的下半部分是钉住的裁决条 —— 把页面顶走一下再弹回来,
        * 是在一个每一步都要精确的界面上制造一次意外移动。 */}
       <div className="min-w-0">
-        <div className="text-02 text-[hsl(var(--color-ink-muted))] mb-1">{t("judgment.detail.confession")}</div>
+        <div className="text-02 text-[oklch(var(--color-ink-muted))] mb-1">{t("judgment.detail.confession")}</div>
         <p
           className={
             confession
-              ? "text-03 text-[hsl(var(--color-ink))] whitespace-pre-line max-h-64 overflow-y-auto overscroll-contain"
-              : "text-03 text-[hsl(var(--color-ink-tertiary))]"
+              ? "text-03 text-[oklch(var(--color-ink))] whitespace-pre-line max-h-64 overflow-y-auto overscroll-contain"
+              : "text-03 text-[oklch(var(--color-ink-tertiary))]"
           }
         >
           {confession || t("judgment.queue.no_confession")}
@@ -655,9 +655,9 @@ function CaseFactsPanel({ court, confession }: { court: string; confession: stri
 
 function ConsoleNotice({ title, body, action }: { title: string; body: string; action?: React.ReactNode }) {
   return (
-    <div className="border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-1))] px-6 py-12 text-center">
-      <p className="text-04 font-medium text-[hsl(var(--color-ink))]">{title}</p>
-      {body && <p className="mt-1 text-03 text-[hsl(var(--color-ink-muted))]">{body}</p>}
+    <div className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-1))] px-6 py-12 text-center">
+      <p className="text-04 font-medium text-[oklch(var(--color-ink))]">{title}</p>
+      {body && <p className="mt-1 text-03 text-[oklch(var(--color-ink-muted))]">{body}</p>}
       {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
   );
@@ -678,15 +678,15 @@ function KeyboardMap() {
     ["Esc", t("judgment.queue.key_leave")],
   ];
   return (
-    <div className="border border-[hsl(var(--color-hairline))] bg-[hsl(var(--color-surface-2))] p-4">
-      <h2 className="text-01 uppercase text-[hsl(var(--color-ink-muted))] mb-2">
+    <div className="border border-[oklch(var(--color-hairline))] bg-[oklch(var(--color-surface-2))] p-4">
+      <h2 className="text-01 uppercase text-[oklch(var(--color-ink-muted))] mb-2">
         {t("judgment.queue.keyboard_map")}
       </h2>
       <dl className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
         {rows.map(([keys, label]) => (
           <div key={keys} className="flex items-baseline gap-3 text-03">
-            <dt className="font-mono text-02 text-[hsl(var(--color-ink))] min-w-[7ch]">{keys}</dt>
-            <dd className="text-[hsl(var(--color-ink-muted))]">{label}</dd>
+            <dt className="font-mono text-02 text-[oklch(var(--color-ink))] min-w-[7ch]">{keys}</dt>
+            <dd className="text-[oklch(var(--color-ink-muted))]">{label}</dd>
           </div>
         ))}
       </dl>

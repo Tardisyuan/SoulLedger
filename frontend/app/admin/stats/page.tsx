@@ -32,11 +32,11 @@ function AdminStatsRedirectContent() {
     <div
       role="status"
       aria-label={t("common.loading")}
-      className="min-h-[calc(100vh-4rem)] bg-[hsl(var(--color-canvas))] flex items-center justify-center"
+      className="min-h-[calc(100vh-4rem)] bg-[oklch(var(--color-canvas))] flex items-center justify-center"
     >
       <div aria-hidden="true" className="relative w-16 h-16">
-        <div className="absolute inset-0 border-4 border-[hsl(var(--color-accent))]/20 rounded-full" />
-        <div className="absolute inset-0 border-4 border-transparent border-t-[hsl(var(--color-accent))] rounded-full animate-spin" />
+        <div className="absolute inset-0 border-4 border-[oklch(var(--color-accent))]/20 rounded-full" />
+        <div className="absolute inset-0 border-4 border-transparent border-t-[oklch(var(--color-accent))] rounded-full animate-spin" />
       </div>
     </div>
   );

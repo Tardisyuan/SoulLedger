@@ -22,7 +22,7 @@ const SOURCE = readFileSync(
  * `SOURCE`, and the first run proved why: four of them went red immediately,
  * because Button.tsx *documents* the things it refuses to do — it names
  * `outline-hidden`, it names `cursor-not-allowed`, and it quotes
- * app/permissions/page.tsx's `focus-visible:ring-[hsl(var(--color-accent))]` as
+ * app/permissions/page.tsx's `focus-visible:ring-[oklch(var(--color-accent))]` as
  * the anti-example. A scanner that cannot tell a prohibition from its own
  * explanation punishes the file for explaining itself, and the way that gets
  * "fixed" under time pressure is by deleting the comment.
@@ -59,13 +59,13 @@ describe("the class merge does not eat the eight-step type scale", () => {
    * `lib/utils.ts` now registers 01–08 as font sizes.
    */
   it("keeps a font size and a text colour that are written together", () => {
-    expect(cn("bg-[hsl(var(--color-accent))] text-black border-[hsl(var(--color-accent))]", "px-2 py-1 text-02").split(/\s+/)).toEqual(
+    expect(cn("bg-[oklch(var(--color-accent))] text-black border-[oklch(var(--color-accent))]", "px-2 py-1 text-02").split(/\s+/)).toEqual(
       expect.arrayContaining(["text-black", "text-02"])
     );
     // Same string, not just separate arguments — the collision was never about
     // argument boundaries, so a fix that only worked across them would be fake.
-    expect(cn("text-01 uppercase text-[hsl(var(--color-ink-subtle))]").split(/\s+/)).toEqual(
-      expect.arrayContaining(["text-01", "text-[hsl(var(--color-ink-subtle))]"])
+    expect(cn("text-01 uppercase text-[oklch(var(--color-ink-subtle))]").split(/\s+/)).toEqual(
+      expect.arrayContaining(["text-01", "text-[oklch(var(--color-ink-subtle))]"])
     );
   });
 
@@ -167,7 +167,7 @@ describe("the primary button's foreground is the one that passes AA", () => {
   it.each(BUTTON_SIZES)("primary/%s is black on accent", (size) => {
     const classes = classesOf("primary", size);
     expect(classes).toContain("text-black");
-    expect(classes).toContain("bg-[hsl(var(--color-accent))]");
+    expect(classes).toContain("bg-[oklch(var(--color-accent))]");
   });
 
   it.each(BUTTON_SIZES)("primary/%s is never white on accent", (size) => {
@@ -185,12 +185,12 @@ describe("the primary button's foreground is the one that passes AA", () => {
   });
 
   it("does not fill danger with the error token, which fails AA in dark mode", () => {
-    // `bg-[hsl(var(--color-status-error))]` + white text measures 3.59:1 in the
+    // `bg-[oklch(var(--color-status-error))]` + white text measures 3.59:1 in the
     // dark theme (5.84:1 light). Danger is the 10% tint instead.
     for (const size of BUTTON_SIZES) {
       const classes = classesOf("danger", size);
-      expect(classes).toContain("bg-[hsl(var(--color-status-error)/0.1)]");
-      expect(classes).not.toContain("bg-[hsl(var(--color-status-error))]");
+      expect(classes).toContain("bg-[oklch(var(--color-status-error)/0.1)]");
+      expect(classes).not.toContain("bg-[oklch(var(--color-status-error))]");
       expect(classes).not.toContain("text-white");
     }
   });
@@ -199,7 +199,7 @@ describe("the primary button's foreground is the one that passes AA", () => {
 describe("focus is left to the global rule", () => {
   /**
    * `app/globals.css:459` is `:focus-visible { outline: 2px solid
-   * hsl(var(--color-focus)) !important }`, and the `!important` is what beats
+   * oklch(var(--color-focus)) !important }`, and the `!important` is what beats
    * the 69 `outline-hidden` utilities in the app. A component participates by
    * doing nothing. Writing `outline-hidden` here would opt out; writing a ring
    * would double it.
@@ -263,7 +263,7 @@ describe("behaviour", () => {
   it("defaults to secondary/md", () => {
     render(<Button>label</Button>);
     const classes = screen.getByRole("button").className.split(/\s+/);
-    expect(classes).toEqual(expect.arrayContaining(["bg-[hsl(var(--color-surface-2))]", "px-3", "py-2", "text-03"]));
+    expect(classes).toEqual(expect.arrayContaining(["bg-[oklch(var(--color-surface-2))]", "px-3", "py-2", "text-03"]));
   });
 
   it("disables and marks itself busy while loading", () => {
@@ -295,9 +295,9 @@ describe("behaviour", () => {
   });
 
   it("lets a caller's className win a conflict", () => {
-    render(<Button variant="primary" className="bg-[hsl(var(--color-surface-4))]" />);
+    render(<Button variant="primary" className="bg-[oklch(var(--color-surface-4))]" />);
     const classes = screen.getByRole("button").className.split(/\s+/);
-    expect(classes).toContain("bg-[hsl(var(--color-surface-4))]");
-    expect(classes).not.toContain("bg-[hsl(var(--color-accent))]");
+    expect(classes).toContain("bg-[oklch(var(--color-surface-4))]");
+    expect(classes).not.toContain("bg-[oklch(var(--color-accent))]");
   });
 });

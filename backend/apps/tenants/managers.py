@@ -1,13 +1,29 @@
 """
-Context-variable tenant manager for automatic tenant filtering.
+Tenant context plumbing, and a manager that filters SOFT DELETES ONLY.
+
+THE NAME LIES, AND THE DOCSTRING USED TO LIE WITH IT. This module's header read
+"Context-variable tenant manager for automatic tenant filtering" until
+2026-09-06, while `TenantManager.get_queryset` forty lines below has said the
+opposite since it stopped filtering: it adds `is_deleted=False` and nothing
+else. Tenant isolation lives entirely in the view layer, in
+`apps.core.tenant.scope_to_tenant` — see that module's header for why.
+
+The lie was load-bearing. `docs/ARCHITECTURE.md`, the root `AGENTS.md`, and
+`apps/tenants/middleware.py` all repeated it, so anyone checking the claim
+found three sources agreeing. A reader who trusts this name and writes a
+ViewSet without `scope_to_tenant` gets a queryset with no isolation at all,
+and every test that only exercises one tenant stays green.
 
 Usage:
     from apps.tenants.managers import TenantManager
     class MyModel(models.Model):
-        objects = TenantManager()
+        all_objects = models.Manager()   # unfiltered; declared first so it's _base_manager
+        objects = TenantManager()        # soft-delete filtered; NOT tenant filtered
 
 Uses contextvars.ContextVar instead of threading.local to properly
-support async contexts and Celery workers.
+support async contexts and Celery workers. The contextvar exists so that
+`apps/audit/signals.py` can attribute a write to a tenant — not so that
+queries filter themselves.
 """
 import contextvars
 

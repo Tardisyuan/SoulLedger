@@ -31,7 +31,7 @@ export function Skeleton({ className, as: Tag = 'div' }: SkeletonProps) {
          * about 14x the perceptual separation, and it touches none of the 128
          * pinned ink-on-surface combinations because the hairline family is in
          * neither ramp. */
-        'animate-pulse bg-[hsl(var(--color-hairline))]',
+        'animate-pulse bg-[oklch(var(--color-hairline))]',
         className
       )}
     />
@@ -43,7 +43,7 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
   return (
     <>
       {/* 表头 */}
-      <tr className="border-b border-[hsl(var(--color-hairline))]">
+      <tr className="border-b border-[oklch(var(--color-hairline))]">
         {Array.from({ length: cols }).map((_, i) => (
           <td key={i} className="px-4 py-3">
             <Skeleton className="h-4 w-full" />
@@ -52,7 +52,7 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
       </tr>
       {/* 行 */}
       {Array.from({ length: rows }).map((_, rowIdx) => (
-        <tr key={rowIdx} className="border-b border-[hsl(var(--color-hairline))]">
+        <tr key={rowIdx} className="border-b border-[oklch(var(--color-hairline))]">
           {Array.from({ length: cols }).map((_, colIdx) => (
             <td key={colIdx} className="px-4 py-3">
               <Skeleton className="h-4 w-full" />
@@ -89,7 +89,7 @@ export function ListSkeleton({ count = 3 }: { count?: number }) {
 // 面板骨架屏 - 比 CardSkeleton 更重的样式,用于详情页面板
 export function SkeletonCard({ className }: SkeletonProps) {
   return (
-    <div className={cn('bg-[hsl(var(--color-surface-1))] p-5 border border-[hsl(var(--color-hairline))]', className)}>
+    <div className={cn('bg-[oklch(var(--color-surface-1))] p-5 border border-[oklch(var(--color-hairline))]', className)}>
       <Skeleton className="h-4 w-24 mb-4" />
       <div className="space-y-2">
         <Skeleton className="h-3 w-full" />

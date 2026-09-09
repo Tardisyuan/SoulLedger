@@ -39,9 +39,15 @@ from django.urls import get_resolver
 # reason that says why the isolation is achieved some other way — "it's fine"
 # is not a reason, and neither is "the tests pass".
 #
-# This is NOT the `permission_codename = None` list. Those nine viewsets are
-# exempt from *codename* enforcement, an unrelated axis; most of them are
-# tenant-scoped through the helper and so do not belong here at all.
+# This is NOT the `permission_codename = None` list. Those viewsets are exempt
+# from *codename* enforcement, an unrelated axis; most of them are tenant-scoped
+# through the helper and so do not belong here at all.
+#
+# This comment said "nine" until 2026-09-06. `grep -c "permission_codename = None"`
+# over `apps/` returns 10, and a separate audit counted 8. Three numbers, none
+# of them checked against the tree — so the count is gone and the grep stays:
+# a hand-maintained tally of something nothing asserts drifts silently, and a
+# stale one reads exactly like a fresh one.
 # ---------------------------------------------------------------------------
 #: 这份契约**解析不出模型**的视图。它们不是豁免 —— 豁免是 EXEMPT,那里的条目
 #: 有模型、有租户字段、只是走别的路。这里的条目是「这个检查根本看不见你」,

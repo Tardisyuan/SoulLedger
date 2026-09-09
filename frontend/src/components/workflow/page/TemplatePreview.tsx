@@ -142,7 +142,7 @@ export function TemplatePreview({
       <div className="flex items-start justify-between mb-4">
         <div>
           {/* 06 是区块标题那一档。 */}
-          <h3 className="text-06 text-[hsl(var(--color-ink))]">{model.name}</h3>
+          <h3 className="text-06 text-[oklch(var(--color-ink))]">{model.name}</h3>
           <div className="flex gap-2 mt-1">
             {/* A civilization is an identity, which is the documented
                 meaning of `pill` here; the case type is a classification
@@ -157,26 +157,26 @@ export function TemplatePreview({
         </div>
         <div className="flex gap-2">{actions}</div>
       </div>
-      <p className="text-03 text-[hsl(var(--color-ink-muted))] mb-4">
+      <p className="text-03 text-[oklch(var(--color-ink-muted))] mb-4">
         {model.description || t("workflow.no_description")}
       </p>
-      <div className="text-02 text-[hsl(var(--color-ink-subtle))] mb-3">
+      <div className="text-02 text-[oklch(var(--color-ink-subtle))] mb-3">
         {t("workflow.nodes_count", { count: String(model.nodeCount) })}
       </div>
       {model.nodes ? (
         <div className="space-y-2 max-h-80 overflow-y-auto">
           {model.nodes.map((node, idx) => (
-            <div key={idx} className="flex items-center gap-3 p-2 bg-[hsl(var(--color-surface-2))]">
+            <div key={idx} className="flex items-center gap-3 p-2 bg-[oklch(var(--color-surface-2))]">
               {/* `rounded-full` survives the corner purge: a round mark is an
                   identity token, which an ordinal step number is. */}
-              <span className="w-6 h-6 rounded-full bg-[hsl(var(--color-accent))]/20 text-[hsl(var(--color-accent-ink))] flex items-center justify-center text-02 font-medium shrink-0">
+              <span className="w-6 h-6 rounded-full bg-[oklch(var(--color-accent))]/20 text-[oklch(var(--color-accent-ink))] flex items-center justify-center text-02 font-medium shrink-0">
                 {idx + 1}
               </span>
-              <span className="text-03 text-[hsl(var(--color-ink))]">{node.name}</span>
-              <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-              <span className="text-02 text-[hsl(var(--color-ink-muted))]">{node.court}</span>
-              <span className="text-[hsl(var(--color-ink-subtle))]">·</span>
-              <span className="text-02 text-[hsl(var(--color-ink-muted))]">
+              <span className="text-03 text-[oklch(var(--color-ink))]">{node.name}</span>
+              <span className="text-[oklch(var(--color-ink-subtle))]">·</span>
+              <span className="text-02 text-[oklch(var(--color-ink-muted))]">{node.court}</span>
+              <span className="text-[oklch(var(--color-ink-subtle))]">·</span>
+              <span className="text-02 text-[oklch(var(--color-ink-muted))]">
                 <DomainEnum namespace="workflow.node_type" value={node.nodeType} />
               </span>
             </div>
@@ -188,7 +188,7 @@ export function TemplatePreview({
         // node breakdown would mean shipping every template's full graph on one
         // list request. Predefined (not-yet-saved) templates still come with
         // nodes_json inline and keep the detail list above.
-        <p className="text-02 text-[hsl(var(--color-ink-subtle))]">{t("workflow.view_to_see_nodes")}</p>
+        <p className="text-02 text-[oklch(var(--color-ink-subtle))]">{t("workflow.view_to_see_nodes")}</p>
       )}
     </>
   );

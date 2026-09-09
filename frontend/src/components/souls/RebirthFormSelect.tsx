@@ -43,18 +43,18 @@ export const DEFAULT_REBIRTH_FORM: RebirthFormValue = "HUMAN";
 const GROUP_TONE = {
   good: {
     selected:
-      "bg-[hsl(var(--color-status-success)/0.1)] text-[hsl(var(--color-status-success))] border-[hsl(var(--color-status-success)/0.5)]",
-    label: "text-[hsl(var(--color-status-success))]",
+      "bg-[oklch(var(--color-status-success)/0.1)] text-[oklch(var(--color-status-success))] border-[oklch(var(--color-status-success)/0.5)]",
+    label: "text-[oklch(var(--color-status-success))]",
   },
   evil: {
     selected:
-      "bg-[hsl(var(--color-status-warning)/0.1)] text-[hsl(var(--color-status-warning))] border-[hsl(var(--color-status-warning)/0.5)]",
-    label: "text-[hsl(var(--color-status-warning))]",
+      "bg-[oklch(var(--color-status-warning)/0.1)] text-[oklch(var(--color-status-warning))] border-[oklch(var(--color-status-warning)/0.5)]",
+    label: "text-[oklch(var(--color-status-warning))]",
   },
 } as const;
 
 const UNSELECTED =
-  "bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))] border-[hsl(var(--color-hairline))] hover:bg-[hsl(var(--color-surface-3))] hover:text-[hsl(var(--color-ink))]";
+  "bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))] border-[oklch(var(--color-hairline))] hover:bg-[oklch(var(--color-surface-3))] hover:text-[oklch(var(--color-ink))]";
 
 interface RebirthFormSelectProps {
   value: RebirthFormValue;
@@ -154,7 +154,7 @@ export function RebirthFormSelect({ value, onChange, disabled }: RebirthFormSele
       {/* `aria-hidden`: the group already carries this exact string as its
           `aria-label`, so without this a screen reader reads the heading and
           then the group's name — the same words twice, in a row. */}
-      <p aria-hidden="true" className="text-01 uppercase text-[hsl(var(--color-ink-muted))]">
+      <p aria-hidden="true" className="text-01 uppercase text-[oklch(var(--color-ink-muted))]">
         {tf("reincarnation.form_label", "轮回形态")}
       </p>
       {groups.map((group) => (

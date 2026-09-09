@@ -122,7 +122,7 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
                canvas in light mode, so this home glyph would have hovered
                DARKER-to-lighter out of legibility; see AppLayout.tsx's note in
                the same header row. */
-            className="flex items-center text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent-ink))] transition-colors"
+            className="flex items-center text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-accent-ink))] transition-colors"
             title={label("breadcrumb.home", "仪表盘")}
           >
             <Home className="w-4 h-4" />
@@ -132,7 +132,7 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
           const isLast = i === crumbs.length - 1;
           return (
             <li key={`${crumb.label}-${i}`} className="flex items-center gap-1 min-w-0">
-              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-[hsl(var(--color-ink-subtle))]" />
+              <ChevronRight className="w-3.5 h-3.5 shrink-0 text-[oklch(var(--color-ink-subtle))]" />
               {crumb.href && !isLast ? (
                 <Link
                   href={crumb.href}
@@ -148,11 +148,11 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
                    * 两处:那条规则按行匹配,而它自己的表头写明了代价 ——「跨行写开的
                    * 元素这条规则看不见」。这里就是那个代价的实例。 */
                   title={crumb.label}
-                  className="truncate text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] transition-colors"
+                  className="truncate text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-accent-ink))] transition-colors"
                 >
                   {crumb.label}
                   {crumb.gloss && (
-                    <span className="ml-1 text-[hsl(var(--color-ink-subtle))]">{crumb.gloss}</span>
+                    <span className="ml-1 text-[oklch(var(--color-ink-subtle))]">{crumb.gloss}</span>
                   )}
                 </Link>
               ) : (
@@ -160,14 +160,14 @@ export function Breadcrumb({ menus }: { menus: SidebarMenu[] }) {
                   title={crumb.label}
                   className={`truncate ${
                     isLast
-                      ? "text-[hsl(var(--color-ink))] font-medium"
-                      : "text-[hsl(var(--color-ink-subtle))]"
+                      ? "text-[oklch(var(--color-ink))] font-medium"
+                      : "text-[oklch(var(--color-ink-subtle))]"
                   }`}
                   aria-current={isLast ? "page" : undefined}
                 >
                   {crumb.label}
                   {crumb.gloss && (
-                    <span className="ml-1 font-normal text-[hsl(var(--color-ink-subtle))]">{crumb.gloss}</span>
+                    <span className="ml-1 font-normal text-[oklch(var(--color-ink-subtle))]">{crumb.gloss}</span>
                   )}
                 </span>
               )}

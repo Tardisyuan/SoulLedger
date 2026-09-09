@@ -43,16 +43,24 @@ Core domains (directory names under `backend/apps/`):
 - realms
 - menus
 - perm — RBAC
-- permissions — cross-tenant judgment authorization (distinct from `perm`)
 - authentication — User model, JWT, roles
 - tenants
 - org — organization chart
 - social
+- death_sync
 - events
-- core — middleware, shared viewsets/mixins, WebSocket auth, health checks
+- core — shared viewsets/mixins, permissions, tenant scoping, WebSocket auth,
+  health checks. NOT in `INSTALLED_APPS`.
 
-Note the two similarly named apps: `perm` is the RBAC system; `permissions`
-holds cross-tenant judgment authorization. They are not the same thing.
+`apps/permissions` no longer exists. It held cross-tenant judgment
+authorization and was deleted on 2026-09-03 (`1b59ec4`) as the only model in
+the repo with prod=0 / test=0 / admin=0 readers; its table was dropped with
+it. This file listed it, and warned readers not to confuse it with `perm`,
+until 2026-09-06. The authoritative list is `config/settings.py:64-82`.
+
+`apps.core.middleware` also no longer exists — that module was deleted
+2026-08-28; the surviving middleware is
+`apps/core/request_local.py::RequestContextMiddleware`.
 
 ---
 
@@ -60,8 +68,13 @@ holds cross-tenant judgment authorization. They are not the same thing.
 
 Tenant Isolation
 
-- row-level tenant filtering
-- TenantManager
+- **View-layer** filtering via `apps/core/tenant.py::scope_to_tenant`, called
+  from each ViewSet's `get_queryset`. Fail closed: no tenant → `qs.none()`.
+- `TenantManager` filters **soft deletes only** — it does not filter by tenant.
+  This section said "row-level tenant filtering / TenantManager" until
+  2026-09-06, which described a mechanism that had been removed.
+- Enforced by `backend/tests/test_tenant_scoping_contract.py`, which walks the
+  real URLconf. It does not cover `@action` methods or write paths.
 
 Audit Trail
 

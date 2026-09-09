@@ -56,7 +56,7 @@ export function DeleteConfirmModal({
         </div>
       }
     >
-      <p className="text-[hsl(var(--color-ink))] text-03">{message}</p>
+      <p className="text-[oklch(var(--color-ink))] text-03">{message}</p>
     </BaseModal>
   );
 }

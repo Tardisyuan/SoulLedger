@@ -68,7 +68,7 @@ export default function CrossJudgmentsPage() {
       variant="full"
       pagination={{
         count: (
-          <p className="text-03 text-[hsl(var(--color-ink-muted))]">
+          <p className="text-03 text-[oklch(var(--color-ink-muted))]">
             {t("pagination.info", {
               page: String(page),
               total: String(Math.max(1, Math.ceil((pageData?.count ?? 0) / PAGE_SIZE))),
@@ -120,12 +120,12 @@ export default function CrossJudgmentsPage() {
               <Link
                 key={j.id}
                 href={`/cross-judgments/${j.id}`}
-                className="block bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] p-4 hover:border-[hsl(var(--color-accent))]/50 transition-colors"
+                className="block bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] p-4 hover:border-[oklch(var(--color-accent))]/50 transition-colors"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="text-04 font-semibold text-[hsl(var(--color-ink))]">{j.title}</h3>
-                    <p className="text-03 text-[hsl(var(--color-ink-subtle))]">
+                    <h3 className="text-04 font-semibold text-[oklch(var(--color-ink))]">{j.title}</h3>
+                    <p className="text-03 text-[oklch(var(--color-ink-subtle))]">
                       {t("crossJudgments.initiated_by")}: {j.initiating_tenant_code}
                     </p>
                   </div>

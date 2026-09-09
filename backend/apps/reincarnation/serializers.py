@@ -3,6 +3,7 @@ REST serializers for Reincarnation app.
 """
 from rest_framework import serializers
 
+from apps.core.tenant_fields import tenant_scoped
 from apps.reincarnation.models import SIX_PATHS, RebirthForm, Reincarnation
 
 
@@ -67,6 +68,9 @@ class RebirthRequestSerializer(serializers.Serializer):
 
 class ReincarnationSerializer(serializers.ModelSerializer):
     soul_name = serializers.CharField(source="soul.name", read_only=True)
+
+    validate_soul = tenant_scoped("soul")
+    validate_disposition = tenant_scoped("disposition")
 
     class Meta:
         model = Reincarnation

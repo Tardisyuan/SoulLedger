@@ -86,19 +86,19 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
         className={cn(
           'flex items-center gap-2 h-9 px-3 border text-03 transition-colors',
           active
-            ? 'bg-[hsl(var(--color-accent)/0.12)] border-[hsl(var(--color-accent)/0.4)] text-[hsl(var(--color-ink))]'
-            : 'bg-[hsl(var(--color-surface-2))] border-[hsl(var(--color-hairline-strong))] text-[hsl(var(--color-ink))] hover:border-[hsl(var(--color-hairline-tertiary))]'
+            ? 'bg-[oklch(var(--color-accent)/0.12)] border-[oklch(var(--color-accent)/0.4)] text-[oklch(var(--color-ink))]'
+            : 'bg-[oklch(var(--color-surface-2))] border-[oklch(var(--color-hairline-strong))] text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-hairline-tertiary))]'
         )}
       >
         <span>{activeOption ? activeOption.label : config.label}</span>
-        <span className={cn('font-mono text-02', active ? 'text-[hsl(var(--color-accent-ink))]' : 'text-[hsl(var(--color-ink-tertiary))]')}>▾</span>
+        <span className={cn('font-mono text-02', active ? 'text-[oklch(var(--color-accent-ink))]' : 'text-[oklch(var(--color-ink-tertiary))]')}>▾</span>
       </button>
       {open && (
         <div
           ref={listRef}
           role="listbox"
           aria-label={config.label}
-          className="absolute left-0 top-full mt-1 z-30 min-w-[180px] max-h-64 overflow-y-auto border border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-surface-4))] shadow-[0_16px_40px_-10px_hsl(0_0%_0%/0.6)] py-1"
+          className="absolute left-0 top-full mt-1 z-30 min-w-[180px] max-h-64 overflow-y-auto border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-surface-4))] shadow-[0_16px_40px_-10px_oklch(0_0_0/0.6)] py-1"
         >
           {config.options.map((option, index) => (
             <button
@@ -120,8 +120,8 @@ function FilterChip({ config }: { config: FilterChipConfig }) {
               className={cn(
                 'w-full text-left px-3 py-1.5 text-03 transition-colors',
                 option.value === config.value
-                  ? 'text-[hsl(var(--color-accent-ink))] bg-[hsl(var(--color-accent)/0.1)]'
-                  : 'text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] hover:text-[hsl(var(--color-ink))]'
+                  ? 'text-[oklch(var(--color-accent-ink))] bg-[oklch(var(--color-accent)/0.1)]'
+                  : 'text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))] hover:text-[oklch(var(--color-ink))]'
               )}
             >
               {option.label}
@@ -147,13 +147,13 @@ export function FilterBar({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-2.5 p-4 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline-strong))]',
+        'flex flex-wrap items-center gap-2.5 p-4 bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline-strong))]',
         className
       )}
     >
       {onSearchChange && (
-        <div className="flex items-center gap-2 h-9 px-3 border border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-surface-2))] min-w-[220px]">
-          <span aria-hidden="true" className="font-mono text-03 text-[hsl(var(--color-ink-tertiary))]">
+        <div className="flex items-center gap-2 h-9 px-3 border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-surface-2))] min-w-[220px]">
+          <span aria-hidden="true" className="font-mono text-03 text-[oklch(var(--color-ink-tertiary))]">
             ⌕
           </span>
           <input
@@ -161,7 +161,7 @@ export function FilterBar({
             value={searchValue ?? ''}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
-            className="flex-1 bg-transparent text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-tertiary))] focus:outline-hidden"
+            className="flex-1 bg-transparent text-03 text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-tertiary))] focus:outline-hidden"
           />
         </div>
       )}
@@ -170,7 +170,7 @@ export function FilterBar({
       ))}
       <div className="flex-1" />
       {isFiltered && (
-        <button type="button" onClick={onClearAll} className="text-03 text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))]">
+        <button type="button" onClick={onClearAll} className="text-03 text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))]">
           {clearAllLabel}
         </button>
       )}
@@ -182,8 +182,8 @@ export function FilterBar({
           className={cn(
             'h-9 px-3 border text-03 transition-colors',
             density.compact
-              ? 'bg-[hsl(var(--color-accent)/0.12)] border-[hsl(var(--color-accent)/0.4)] text-[hsl(var(--color-ink))]'
-              : 'bg-[hsl(var(--color-surface-2))] border-[hsl(var(--color-hairline-strong))] text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-ink))]'
+              ? 'bg-[oklch(var(--color-accent)/0.12)] border-[oklch(var(--color-accent)/0.4)] text-[oklch(var(--color-ink))]'
+              : 'bg-[oklch(var(--color-surface-2))] border-[oklch(var(--color-hairline-strong))] text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-ink))]'
           )}
         >
           {density.label}

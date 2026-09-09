@@ -81,7 +81,7 @@ function LedgerPageContent() {
         {/* 三个总计。计数,不是权重 —— 所以标签在数字之上说出它数的是什么,
             而数字本身不带 `ledger.figure_scale_weight` 那个标尺词。那个词是
             `SoulRecord.weight` 的事实,这一页没有一个权重。 */}
-        <section className="border-t-2 border-[hsl(var(--color-ink-subtle))] pt-6 grid gap-6 md:grid-cols-3">
+        <section className="border-t-2 border-[oklch(var(--color-ink-subtle))] pt-6 grid gap-6 md:grid-cols-3">
           <OverviewFigure
             label={t("ledger.total_souls")}
             value={ledgerStats?.total_souls}
@@ -117,22 +117,22 @@ function LedgerPageContent() {
           ) : !ledgerStats?.state_distribution?.length ? (
             <EmptyState title={t("ledger.state_distribution")} reason={t("ledger.no_state_distribution")} />
           ) : (
-            <ul className="divide-y divide-[hsl(var(--color-hairline))]">
+            <ul className="divide-y divide-[oklch(var(--color-hairline))]">
               {ledgerStats?.state_distribution?.map((item) => (
                 <li key={item.state} className="flex items-center justify-between gap-4 py-2">
                   <span className="flex items-center gap-2 min-w-0">
                     <span
                       aria-hidden="true"
-                      className={`w-3 h-3 rounded-full shrink-0 ${STATE_DOT[item.state] ?? "bg-[hsl(var(--color-status-error))]"}`}
+                      className={`w-3 h-3 rounded-full shrink-0 ${STATE_DOT[item.state] ?? "bg-[oklch(var(--color-status-error))]"}`}
                     />
-                    <span title={item.state} className="text-03 text-[hsl(var(--color-ink))] truncate">
+                    <span title={item.state} className="text-03 text-[oklch(var(--color-ink))] truncate">
                       {stateLabel(item.state, item.label)}
                     </span>
                   </span>
                   {isLoading ? (
                     <Skeleton className="h-4 w-12" />
                   ) : (
-                    <span className="text-03 font-mono tabular-nums text-[hsl(var(--color-ink-muted))]">{item.count}</span>
+                    <span className="text-03 font-mono tabular-nums text-[oklch(var(--color-ink-muted))]">{item.count}</span>
                   )}
                 </li>
               ))}
@@ -152,7 +152,7 @@ function LedgerPageContent() {
                 dataKey="count"
                 // The API sends `{label, count}` -- see LazyBarChart's nameKey.
                 nameKey="label"
-                fill="hsl(var(--color-accent))"
+                fill="oklch(var(--color-accent))"
                 height={192}
                 showGrid={false}
               />
@@ -171,19 +171,19 @@ function LedgerPageContent() {
             {error ? (
               <SectionError label={t("common.error")} />
             ) : (
-              <ul className="divide-y divide-[hsl(var(--color-hairline))]">
+              <ul className="divide-y divide-[oklch(var(--color-hairline))]">
                 {ledgerStats.souls_by_realm.map((item) => (
                   <li key={item.realm_code} className="flex items-center justify-between gap-4 py-2">
                     <span className="min-w-0">
-                      <span className="text-03 text-[hsl(var(--color-ink))]">{item.realm_name}</span>
-                      <span className="text-02 text-[hsl(var(--color-ink-subtle))] ml-2">
+                      <span className="text-03 text-[oklch(var(--color-ink))]">{item.realm_name}</span>
+                      <span className="text-02 text-[oklch(var(--color-ink-subtle))] ml-2">
                         (<DomainEnum namespace="souls.civilizations" value={item.civilization} />)
                       </span>
                     </span>
                     {isLoading ? (
                       <Skeleton className="h-4 w-12" />
                     ) : (
-                      <span className="text-03 font-mono tabular-nums text-[hsl(var(--color-ink-muted))]">{item.count}</span>
+                      <span className="text-03 font-mono tabular-nums text-[oklch(var(--color-ink-muted))]">{item.count}</span>
                     )}
                   </li>
                 ))}
@@ -197,17 +197,17 @@ function LedgerPageContent() {
             {error ? (
               <SectionError label={t("common.error")} />
             ) : (
-              <ul className="divide-y divide-[hsl(var(--color-hairline))]">
+              <ul className="divide-y divide-[oklch(var(--color-hairline))]">
                 {ledgerStats.recent_activity.slice(0, 10).map((activity) => (
                   <li key={activity.id} className="flex items-start gap-3 py-3">
-                    <span className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] shrink-0 pt-px">
+                    <span className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] shrink-0 pt-px">
                       <DomainEnum namespace="audit.actions" value={activity.action} />
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-03 text-[hsl(var(--color-ink))]">
+                      <span className="block text-03 text-[oklch(var(--color-ink))]">
                         {activity.description || <DomainEnum namespace="audit.actions" value={activity.action} />}
                       </span>
-                      <span className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-02 font-mono text-[hsl(var(--color-ink-subtle))]">
+                      <span className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-02 font-mono text-[oklch(var(--color-ink-subtle))]">
                         <span>{activity.user}</span>
                         <span aria-hidden="true">·</span>
                         <span>{activity.resource}</span>
@@ -239,16 +239,16 @@ function LedgerPageContent() {
 
 /** 状态点。identity 物,所以是这一页仅有的 `rounded-full`。 */
 const STATE_DOT: Record<string, string> = {
-  ALIVE: "bg-[hsl(var(--color-status-alive))]",
-  JUDGING: "bg-[hsl(var(--color-status-judging))]",
+  ALIVE: "bg-[oklch(var(--color-status-alive))]",
+  JUDGING: "bg-[oklch(var(--color-status-judging))]",
   // `--color-status-disposed`, not `--color-status-lost`. DISPOSED was
   // wearing LOST's token — and LOST had no entry at all, so 「迷失」 fell to the
   // error-red fallback below. Two of the six states were the wrong colour, and
   // one of them was wearing the other's.
-  DISPOSED: "bg-[hsl(var(--color-status-disposed))]",
-  REINCARNATING: "bg-[hsl(var(--color-status-reincarnating))]",
-  SETTLED: "bg-[hsl(var(--color-status-settled))]",
-  LOST: "bg-[hsl(var(--color-status-lost))]",
+  DISPOSED: "bg-[oklch(var(--color-status-disposed))]",
+  REINCARNATING: "bg-[oklch(var(--color-status-reincarnating))]",
+  SETTLED: "bg-[oklch(var(--color-status-settled))]",
+  LOST: "bg-[oklch(var(--color-status-lost))]",
 };
 
 /**
@@ -269,11 +269,11 @@ function OverviewFigure({
 }) {
   return (
     <div>
-      <div className="text-01 uppercase text-[hsl(var(--color-ink-subtle))]">{label}</div>
+      <div className="text-01 uppercase text-[oklch(var(--color-ink-subtle))]">{label}</div>
       {isLoading ? (
         <Skeleton className="h-10 w-20 mt-2" />
       ) : (
-        <div data-overview-figure="" className="text-07 font-mono tabular-nums text-[hsl(var(--color-ink))] mt-2">
+        <div data-overview-figure="" className="text-07 font-mono tabular-nums text-[oklch(var(--color-ink))] mt-2">
           {value ?? 0}
         </div>
       )}
@@ -285,7 +285,7 @@ function OverviewFigure({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-01 uppercase text-[hsl(var(--color-ink-subtle))] border-b-2 border-[hsl(var(--color-ink-subtle))] pb-2 mb-3">
+      <h2 className="text-01 uppercase text-[oklch(var(--color-ink-subtle))] border-b-2 border-[oklch(var(--color-ink-subtle))] pb-2 mb-3">
         {title}
       </h2>
       {children}
@@ -294,7 +294,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function SectionError({ label }: { label: string }) {
-  return <p className="text-03 text-[hsl(var(--color-status-error))]">{label}</p>;
+  return <p className="text-03 text-[oklch(var(--color-status-error))]">{label}</p>;
 }
 
 

@@ -131,7 +131,9 @@ compromise rather than a claim that they are one system.
 | [coverage-roadmap.md](coverage-roadmap.md) | 已入库 | 测试覆盖率工作计划 |
 | [claude-reference.md](claude-reference.md) | 已入库 | 本仓库的 Claude Code 参考（由 `../CLAUDE.md` 按需加载） |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 已入库 | 架构概览 |
-| [CONVENTIONS.md](CONVENTIONS.md) | 已入库 | 前后端编码规约 |
+| [CONVENTIONS-backend.md](CONVENTIONS-backend.md) | 已入库 | **后端开发准则**。每条规则标注了执法机制（ruff / 测试 / 钩子 / 「只是文字」），并列出文档间的矛盾与代码里现存的不一致 |
+| [CONVENTIONS-frontend.md](CONVENTIONS-frontend.md) | 已入库 | **前端开发准则与页面一致性**。设计 token、四文明主题、页面骨架、三态、显示契约；同样逐条标注执法机制 |
+| [CONVENTIONS.md](CONVENTIONS.md) | 已入库 | ~~前后端编码规约~~ **已被上面两份取代**（2026-09-06），停在 2026-08-14，保留作历史 |
 | [API.md](API.md) | 已入库 | API 手写索引。**权威来源是运行中的 `/api/docs/`（drf-spectacular）** |
 | [TECHNICAL_DOCS.md](TECHNICAL_DOCS.md) | 已入库 | 权限系统与项目结构说明 |
 

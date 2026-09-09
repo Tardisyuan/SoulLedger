@@ -271,7 +271,7 @@ export default function PermissionsPage() {
       subtitle={t("permissions.subtitle")}
     >
       <RequireAdmin fallback={<PermissionDenied />}>
-        <div className="space-y-10">
+        <div className="space-y-6">
           {/* ── 已落库但没说出来的那几个 ──
               放在冲突横幅**之前**:先说已经发生了什么,再说什么没成。
               两者可以同时在场 —— 第 k 个撞 409 时,前 k-1 个正是已落库的。 */}

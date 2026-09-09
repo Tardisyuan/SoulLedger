@@ -4,14 +4,25 @@ Everything below is the **current** state, extracted from `frontend/app/globals.
 and `frontend/lib/chart-colors.ts`. It is the starting point for the redesign, not a
 constraint on it.
 
-> **上次与 `globals.css` 对账:2026-08-26。** 这份文档声明自己是**当前态**,所以它有
-> 义务和代码对得上 —— 那次对账发现 31 行表格里 **21 行的值是错的**(不只是过期,
-> `surface-1..4` 是**形状**变了:改成插值 `var(--civ-hue)`),外加两个从未登记的 token
-> 和五段描述**已解决问题**的说明。全部已修正。
+> **上次与 `globals.css` 对账:2026-09-06。** 这份文档声明自己是**当前态**,所以它有
+> 义务和代码对得上。
+>
+> **这一次的结论和上一次相反,而这件事本身就是结论。** 2026-08-26 那次发现 31 行表格
+> 里 **21 行的值是错的**(不只是过期,`surface-1..4` 是**形状**变了:改成插值
+> `var(--civ-hue)`),外加两个从未登记的 token 和五段描述**已解决问题**的说明。
+> 这一次把同样的 31 行 × 两个主题 = 62 个值逐个核了一遍,**只有 1 个是错的**
+> (`--color-accent-ink` 浅色 34% → 31%)。
+>
+> 漂掉的是**表格之外**的东西:动效那一栏写着「仍然没有」,而三档时长、两条缓动、
+> 七个 `--animate-*` 早已落地;§Base element rules 把 `a` 的 hover 目标和过渡时长
+> 两项都写错;`--color-civ-mark` 的消费点写作「今天只有一处」,实际至少四处。
+> **值有人对,叙述没人对** —— 因为值看起来像数据、会被怀疑,而叙述读起来像事实。
 >
 > 同目录的 `tokens.html` **不适用这条**:那一页顶部明写自己是「point-in-time snapshot,
 > not a reference … Do not build against this page」,是**刻意冻结**的评审材料。
 > 它里面的旧值是记录不是错误,不要去「修正」它。两份文件的意图相反,别混着读。
+> `BRIEF.md` 与 `ADDENDUM.md` 同理:前者是 2026-08-02 的简报,后者在 §7 自陈边界。
+> **这份是这个包里唯一有对账义务的文件。**
 
 Format is `H S% L%` (bare HSL triplets, consumed as `hsl(var(--token))`), which lets
 opacity be applied as `hsl(var(--token) / 0.2)`.
@@ -26,19 +37,36 @@ opacity be applied as `hsl(var(--token) / 0.2)`.
 > 若照原文行事,会去设计一套已经建成的系统。原文保留在下方引用里,因为它记录了
 > 这些 scale 为什么被提出。
 
-**当前状态**(逐条对照 `frontend/tailwind.config.js` 与 `frontend/app/globals.css`):
+**当前状态**(2026-09-06 逐条对照 `frontend/app/globals.css`)。
+
+> **`frontend/tailwind.config.js` 不存在了。** Tailwind 3.4→4.3.3 之后配置搬进了
+> `globals.css` 的 `@theme` 块,本节此前逐条援引的 `theme.extend.*` 都已不是路径。
+> 下表的「在哪」一列已改为指向 `@theme` 里的变量名。
 
 | scale | 状态 | 在哪 |
 |---|---|---|
-| 字号 | **已落地** | `theme.extend.fontSize` 八档 `text-01`…`text-08`,见下节 |
-| 字体族 | **已落地** | `fontFamily` 三族,Latin 与 CJK 各自成栈 |
-| 圆角 | **已落地** | `borderRadius` 整张表塌成 `0`,只留 `full`(身份物)与 `focus`(2px) |
-| 线宽 | **已落地** | `borderWidth` 增开 `3`;四档规则线 1px 行 / 1px 块 / 2px 区 / 3px 文明与钤印 |
-| 间距 | **刻意不在 config 里** | Tailwind 默认刻度已够用;六档节奏(1/2/3/4/6/10/16 = 4/8/12/16/24/40/64px)由 `eslint.config.mjs` 的 `spacing-rhythm` 规则施加。`theme.extend` 只能新增不能删除,而节奏是一种**限制** —— 限制在 Tailwind 里没有表达方式,只能由 lint 表达 |
-| 层级(elevation) | **仍然没有** | 下方关于「四个 surface 层级几乎无法分辨」的观察依然成立 |
-| 动效 | **仍然没有** | 150ms 仍是全系统唯一的时间值,没有缓动 token |
+| 字号 | **已落地** | `@theme` 的 `--text-01`…`--text-08` 八档,各自带 `--text-0N--line-height` / `--letter-spacing`,四档另带 `--font-weight`。见下节 |
+| 字体族 | **已落地** | `--font-sans` / `--font-serif` / `--font-mono` 三族,Latin 与 CJK 各自成栈 |
+| 圆角 | **已落地** | `--radius-*` 整张表塌成 `0`,只留 `--radius-full`(身份物)与 `--radius-focus`(2px) |
+| 线宽 | **已落地** | `--border-width-3`;四档规则线 1px 行 / 1px 块 / 2px 区 / 3px 文明与钤印 |
+| 间距 | **刻意不在 `@theme` 里** | 七档节奏(1/2/3/4/6/10/16 = 4/8/12/16/24/40/64px,另放行 `0`/`px`/`auto`)由 `eslint.config.mjs:105` 的 `RHYTHM_OK` 经 `spacing-rhythm` 规则施加。理由在 Tailwind 4 下依然成立:`@theme` 能把一个值改成 0,但**类名照样解析** —— 圆角就是这么处理的(`rounded-lg` 仍是合法类,只是无效果,要靠 `dead-radius` 规则才报红)。节奏是一种**限制**,而限制在 Tailwind 里没有表达方式,只能由 lint 表达 |
+| 层级(elevation) | **仍然没有** | 2026-09-06 复核:`globals.css` 里没有任何 elevation/shadow token,仅有一处 React Flow 控件的 vendor 覆盖(`:906`)。下方「四个 surface 层级几乎无法分辨」的观察依然成立 |
+| 动效 | **已落地**(此前记作「仍然没有」) | 见下 |
 
-所以还需要提案的是**两套**,不是五套:层级与动效。
+**动效那一栏此前是错的,而且是这份文档里代价最大的一处错。** 它说「150ms 仍是全系统
+唯一的时间值,没有缓动 token」,据此把动效列进「还需要提案」。实际(`globals.css:77-145`):
+
+| 类别 | 值 |
+|---|---|
+| 时长 | `--transition-duration-press: 100ms` / `-state: 160ms` / `-settle: 240ms` |
+| 缓动 | `--ease-enter: cubic-bezier(0.16, 1, 0.3, 1)` / `--ease-exit: cubic-bezier(0.7, 0, 0.84, 0)` |
+| 具名动画 | 七个 `--animate-*`:undo-strip / drawer-in / drawer-out / scrim-in / scrim-out / row-enter / row-exit,外加 `--animate-row-changed`(2000ms,与 `useRowTransitions.ts` 对齐) |
+
+这套动效有**刻意的约束**,提案时要知道:没有 overshoot;`prefers-reduced-motion: reduce`
+下动画与过渡收敛到 **1ms 而不是 `none`**(Base UI 等库靠 `transitionend` 卸载,给 `none`
+会让弹层卸不掉),由 `src/__tests__/reducedMotionContract.test.ts` 钉住。
+
+所以还需要提案的是**一套**,不是两套,更不是五套:**层级(elevation)**。
 
 <details><summary>原文(2026-08-23,已不成立)</summary>
 
@@ -107,7 +135,14 @@ opacity be applied as `hsl(var(--token) / 0.2)`.
 | `--color-ink-tertiary` | `215 6% 54%` ⚠️ | `220 6% 42%` |
 | `--color-accent` | `38 92% 50%` | `38 92% 50%` |
 | `--color-accent-hover` | `43 96% 58%` | `43 96% 58%` |
-| `--color-accent-ink` | `38 92% 50%` | `32 92% 34%` |
+| `--color-accent-ink` | `38 92% 50%` | `32 92% 31%` |
+| `--color-focus` | `258 95% 76%` | `258 85% 48%` ← **原表漏列** |
+
+`--color-focus` 此前只在本文档末尾的焦点环 CSS 里被引用,却从未给出值。它**必须**独立于
+`--color-accent`:accent 可以被用户在运行时改写(设置抽屉里有预设),而浅色下 accent 对
+canvas 只有 2.14:1,达不到 WCAG 1.4.11 的 3:1 非文本对比度。
+`src/__tests__/focusRingContract.test.ts` 断言这条规则存在、带 `!important`、只点名 focus
+token,且在全部表面上 ≥3:1。**改配色时不要顺手把焦点环并进 accent。**
 
 ⚠️ `ink-tertiary` was `41%`, measuring **3.37:1** on `surface-1` — below the WCAG AA
 4.5:1 floor for body text. 现在是 `54%`(本文档此前写「Raised to 50%」,那个数字也过期了)。
@@ -201,12 +236,29 @@ neither is substitutable for the other.
   `[data-civ]` rules feed it into `--civ-hue`, which surface-1..4 interpolate
   (`hsl(var(--civ-hue) 13% 7%)`). A full triple cannot go in that position.
 - `--color-civ-mark-<prefix>` is a **full HSL triple**, and it is where civilization
-  identity actually lives. An earlier version of this line named "the 3px rule in a
-  mixed-civilization list, and the chart legend" as its two consumers; neither
-  exists, and searching the history of every commit that touched `--color-civ-mark`
-  finds no point at which either did. The mark is drawn at exactly **one** place
-  today — the per-civilization swatch in `frontend/app/dashboard/page.tsx`. Grep
-  `--color-civ-mark` and `CIVILIZATION_COLORS` before trusting this sentence either.
+  identity actually lives. Its consumers, re-counted 2026-09-06 — **at least four,
+  not one**:
+  - `app/organizations/page.tsx:76-79` — the four badge classes (mark at 0.2 fill and
+    0.4 border, with `--color-civ-ink-*` as the foreground)
+  - `app/tenants/page.tsx:43` — one mark per row, looked up by prefix
+  - `src/components/layout/TenantSignal.tsx` — the masthead signal
+  - `lib/chart-colors.ts` `CIVILIZATION_COLORS` (the Recharts mirror), consumed by
+    `app/dashboard/page.tsx:209,358`
+
+  Two earlier versions of this line were both wrong. The first named "the 3px rule in
+  a mixed-civilization list, and the chart legend"; neither ever existed. The second
+  — written to correct it — said the mark is drawn at exactly **one** place, the
+  dashboard swatch, and ended with "Grep `--color-civ-mark` and `CIVILIZATION_COLORS`
+  before trusting this sentence either." That instruction is the only reason this
+  entry is now right: the grep was run, and the sentence was wrong.
+  **Keep the instruction.** A count of call sites has nothing asserting it, so it
+  decays; a stale count reads exactly like a fresh one.
+
+- `--color-civ-ink-<prefix>` is a third family, and it is **not** interchangeable with
+  the mark: mark is the graphic, ink is the text. `globals.css:594-598` states this and
+  `src/__tests__/cssTokenReferenceContract.test.ts` fails if the mark is used as a text
+  colour. Ink is measured for ≥4.5:1 across 32 host-tenant × surface pairs
+  (`civIdentityInkContract`).
 
 The surface ramp is deliberately **not** the identity channel, whatever
 `BRIEF.md` §4.9 asked for. Measured: at `hsl(h 13% 7%)` the four tenants' surfaces
@@ -263,10 +315,15 @@ The only global styling currently in `@layer base`:
 
 - `body` — `bg-canvas`, `text-ink`
 - `*` — `border-color: hsl(var(--color-hairline))`
-- `a` — `text-ink-muted`, hover to accent, 150ms colour transition
-- `button` — 150ms colour transition
+- `a` — `text-ink-muted`, hover to **`--color-accent-ink`** (not `--color-accent`),
+  colour transition at **`duration-state` = 160ms** (`globals.css:832-834`)
+- `button` — colour transition at `duration-state` = 160ms (`globals.css:835-837`)
 - `input, select, textarea` — `bg-surface-1`, `border-hairline`, `text-ink`,
   `placeholder-ink-subtle`
+
+> 前两条此前写的是「hover to accent, 150ms」。**两项都错**:目标是 `accent-ink` 而不是
+> `accent`(浅色下 accent 对表面达不到正文对比度,accent-ink 是为此拆出来的),时长是
+> 160ms 而不是 150ms。
 
 Plus a global focus ring that must be preserved:
 
@@ -281,4 +338,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 ```
 
-150ms is the only timing value in the system and there is no easing token.
+> 这一行此前是「150ms is the only timing value in the system and there is no easing
+> token.」—— **已不成立。** 三档时长(100/160/240ms)、两条缓动、八个具名动画,见
+> 本文档 §What exists 的动效表。`150ms` 今天在 `globals.css` 里只剩两处,都在注释里,
+> 讲的正是这套系统当初跑在 Tailwind 默认的 150ms 上、以及为什么改成 160ms
+> (`:48`、`:58`)。它不再是任何规则使用的值。

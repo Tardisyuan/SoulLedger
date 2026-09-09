@@ -206,12 +206,26 @@ class DeathRegistrationViewSet(
             },
         }, status=status.HTTP_201_CREATED)
 
-    def _get_client_ip(self, request):
-        """Extract client IP from request."""
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            return x_forwarded_for.split(",")[0].strip()
-        return request.META.get("REMOTE_ADDR")
+    @staticmethod
+    def _get_client_ip(request):
+        """Delegates to the one validated implementation.
+
+        This was the FOURTH copy of the unchecked helper. `apps/core/client_ip.py`
+        was created to collapse three of them (`audit/signals.py`,
+        `death_sync/authentication.py`, `authentication/views.py`); its sibling in
+        this very app was converted to a delegate and this one, twenty lines from
+        two call sites, was not.
+
+        It mattered here for the same reason it mattered there:
+        `DeathRegistrationRequest.source_ip` is a `GenericIPAddressField`
+        (`models.py:184`) written through `objects.create()`, which runs no
+        `full_clean`. On PostgreSQL an unparseable header value raises
+        `invalid input syntax for type inet` at INSERT; on SQLite the column is
+        TEXT and the row stores fine — so no test on the SQLite path could see it.
+        """
+        from apps.core.client_ip import get_client_ip
+
+        return get_client_ip(request)
 
 
 class DeathRegistrationReadViewSet(viewsets.ReadOnlyModelViewSet):

@@ -137,7 +137,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--color-canvas))]">
+    <div className="min-h-screen bg-[oklch(var(--color-canvas))]">
       {/* Mobile scrim. A `<button>` rather than a `<div onClick>`: this is a
           click target, and spelling it as one is what makes it announce and
           behave like the control it already was. It is not the keyboard's way
@@ -160,7 +160,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <button
         type="button"
         aria-label={t("common.close")}
-        className={`fixed inset-0 bg-black/50 z-40 md:hidden transition-[opacity,visibility] duration-settle ${
+        className={`fixed inset-0 bg-black/50 z-scrim md:hidden transition-[opacity,visibility] duration-settle ${
           mobileMenuOpen ? "visible opacity-100 ease-enter" : "invisible opacity-0 ease-exit"
         }`}
         onClick={() => setMobileMenuOpen(false)}
@@ -179,11 +179,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <aside
         ref={drawerRef}
         {...drawerProps}
-        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-[hsl(var(--color-surface-1))] border-r border-[hsl(var(--color-hairline))] z-50 transition-[width,transform] duration-settle ease-enter flex flex-col
+        className={`fixed left-0 top-0 h-full ${sidebarWidth} bg-[oklch(var(--color-surface-1))] border-r border-[oklch(var(--color-hairline))] z-sidebar transition-[width,transform] duration-settle ease-enter flex flex-col
           ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
         {/* Logo */}
-        <nav className={`h-16 border-b border-[hsl(var(--color-hairline))] shrink-0 flex items-center ${collapsed ? "justify-center px-0" : "justify-center px-5"}`}>
+        <nav className={`h-16 border-b border-[oklch(var(--color-hairline))] shrink-0 flex items-center ${collapsed ? "justify-center px-0" : "justify-center px-5"}`}>
           <Link href="/" prefetch={true} className="flex items-center gap-2.5 overflow-hidden">
             {collapsed ? (
               /* Collapsed: Scale icon over the two-letter tenant code. The code
@@ -191,7 +191,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                  the civilization name away, and colour alone is not a signal
                  this palette can carry — see TenantSignal's header. */
               <span className="flex flex-col items-center gap-1">
-                <svg className="w-7 h-7 shrink-0 text-[hsl(var(--color-accent))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-7 h-7 shrink-0 text-[oklch(var(--color-accent))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 3v18" stroke="currentColor"/>
                   <path d="M5 8l7-5 7 5" stroke="currentColor"/>
                   <circle cx="5" cy="8" r="2" fill="currentColor" stroke="none"/>
@@ -205,7 +205,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ) : (
               /* Expanded: Scale + text */
               <>
-                <svg className="w-7 h-7 shrink-0 text-[hsl(var(--color-accent))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-7 h-7 shrink-0 text-[oklch(var(--color-accent))]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 3v18"/>
                   <path d="M5 8l7-5 7 5"/>
                   <circle cx="5" cy="8" r="2" fill="currentColor" stroke="none"/>
@@ -220,7 +220,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     what lets the name truncate instead of pushing the scale
                     icon out of a fixed 224px rail. */}
                 <span className="flex flex-col min-w-0">
-                  <span className="text-[hsl(var(--color-accent-ink))] font-bold tracking-wide truncate leading-tight">
+                  <span className="text-[oklch(var(--color-accent-ink))] font-bold tracking-wide truncate leading-tight">
                     SoulLedger
                   </span>
                   <TenantSignal tenantCode={tenantCode} variant="line" />
@@ -233,7 +233,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Menu */}
         <nav className="flex-1 overflow-y-auto py-3 px-2">
           {menus.length === 0 && !collapsed && (
-            <p className="text-02 text-[hsl(var(--color-ink-subtle))] px-2 py-4 text-center">
+            <p className="text-02 text-[oklch(var(--color-ink-subtle))] px-2 py-4 text-center">
               {t("menus.no_menus")}
             </p>
           )}
@@ -248,13 +248,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Bottom: toggle + footer */}
-        <div className="border-t border-[hsl(var(--color-hairline))] flex items-center">
+        <div className="border-t border-[oklch(var(--color-hairline))] flex items-center">
           {collapsed ? (
             /* Collapsed: centered toggle */
             <div className="w-full flex justify-center">
               <button
                 onClick={() => setCollapsed(!collapsed)}
-                className="w-8 h-8 flex items-center justify-center text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
+                className="w-8 h-8 flex items-center justify-center text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-accent-ink))] hover:bg-[oklch(var(--color-surface-2))] transition-colors"
                 title={t("nav.expand_menu")}
                 aria-label={t("nav.expand_menu")}
                 aria-expanded={false}
@@ -268,7 +268,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="w-1/4 flex justify-center">
                 <button
                   onClick={() => setCollapsed(!collapsed)}
-                  className="w-8 h-8 flex items-center justify-center text-[hsl(var(--color-ink-muted))] hover:text-[hsl(var(--color-accent-ink))] hover:bg-[hsl(var(--color-surface-2))] transition-colors"
+                  className="w-8 h-8 flex items-center justify-center text-[oklch(var(--color-ink-muted))] hover:text-[oklch(var(--color-accent-ink))] hover:bg-[oklch(var(--color-surface-2))] transition-colors"
                   title={t("nav.collapse_menu")}
                   aria-label={t("nav.collapse_menu")}
                   aria-expanded={true}
@@ -277,7 +277,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
               <div className="w-3/4 flex justify-center pr-4">
-                <div className="text-02 text-[hsl(var(--color-ink-subtle))]">
+                <div className="text-02 text-[oklch(var(--color-ink-subtle))]">
                   {t("footer.version")}
                 </div>
               </div>
@@ -290,7 +290,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <main className={`transition-[margin-left] duration-settle ${collapsed ? "ml-0 md:ml-16" : "ml-0 md:ml-56"}`}>
 
         {/* Top header */}
-        <header className="sticky top-0 z-40 h-16 bg-[hsl(var(--color-canvas))]/80 backdrop-blur-xs border-b border-[hsl(var(--color-hairline))] flex items-center px-4 md:px-6 gap-3 md:gap-4">
+        <header className="sticky top-0 z-masthead h-16 bg-[oklch(var(--color-canvas))]/80 backdrop-blur-xs border-b border-[oklch(var(--color-hairline))] flex items-center px-4 md:px-6 gap-3 md:gap-4">
           {/* Mobile hamburger */}
           {/* `--color-accent-ink`, not `--color-accent`, and that goes for
               every hover in this masthead. In light mode the two are
@@ -302,7 +302,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               applied it to stat icons, and `Badge.tsx:70-74` to badge text. */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent-ink))]"
+            className="md:hidden p-2 text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-accent-ink))]"
             aria-label={mobileMenuOpen ? t("nav.collapse_menu") : t("nav.expand_menu")}
             aria-expanded={mobileMenuOpen}
           >
@@ -334,7 +334,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               cluster is a flex item of an `h-16 items-center` header, so if
               flexbox squeezes it the greeting/label text wraps onto several
               lines, the cluster grows past 64px and — because the header is
-              `sticky z-40` — the overflow lands on top of the page below and
+              `sticky z-masthead` — the overflow lands on top of the page below and
               swallows clicks (the `+ 创建灵魂` button on /souls was
               unreachable at 393px for exactly this reason). Keeping it on one
               line caps its height; the `hidden sm:*` gates below keep that one
@@ -343,7 +343,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {/* WebSocket Connection Status */}
             <ConnectionStatus />
 
-            <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
+            <div className="w-px h-5 border-[oklch(var(--color-hairline))] hidden sm:block" />
 
             {/* Notification Bell with Popover */}
             {user && (
@@ -357,7 +357,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                  matters. */
               <Popover.Root>
                 <Popover.Trigger
-                  className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent-ink))] transition-colors p-1"
+                  className="text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-accent-ink))] transition-colors p-1"
                   aria-label={
                     notifications.length > 0
                       ? `${t("notifications.title")} (${notifications.length})`
@@ -369,31 +369,31 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                   </svg>
                   {notifications.length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[hsl(var(--color-accent))] text-black text-01 rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[oklch(var(--color-accent))] text-black text-01 rounded-full flex items-center justify-center">
                       {notifications.length > 9 ? "9+" : notifications.length}
                     </span>
                   )}
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Positioner sideOffset={8} align="end" className="z-drawer">
-                    <Popover.Popup className="w-80 origin-top-right bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] shadow-xl focus:outline-hidden transition duration-press ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+                    <Popover.Popup className="w-80 origin-top-right bg-[oklch(var(--color-surface-1))] border border-[oklch(var(--color-hairline))] shadow-xl focus:outline-hidden transition duration-press ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-[hsl(var(--color-ink))]">{t("notifications.title")}</h3>
-                        <Link href="/notifications" className="text-02 text-[hsl(var(--color-accent-ink))] hover:underline">
+                        <h3 className="font-semibold text-[oklch(var(--color-ink))]">{t("notifications.title")}</h3>
+                        <Link href="/notifications" className="text-02 text-[oklch(var(--color-accent-ink))] hover:underline">
                           {t("notifications.view_all")}
                         </Link>
                       </div>
                       {notifications.length === 0 ? (
-                        <p className="text-03 text-[hsl(var(--color-ink-subtle))] text-center py-4">
+                        <p className="text-03 text-[oklch(var(--color-ink-subtle))] text-center py-4">
                           {t("notifications.empty")}
                         </p>
                       ) : (
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                           {notifications.slice(0, 5).map((n: Notification) => (
-                            <div key={n.id} className="p-2 hover:bg-[hsl(var(--color-surface-2))] cursor-pointer">
-                              <p className="text-03 text-[hsl(var(--color-ink))]">{n.message || n.title}</p>
-                              <p className="text-02 text-[hsl(var(--color-ink-subtle))] mt-1">
+                            <div key={n.id} className="p-2 hover:bg-[oklch(var(--color-surface-2))] cursor-pointer">
+                              <p className="text-03 text-[oklch(var(--color-ink))]">{n.message || n.title}</p>
+                              <p className="text-02 text-[oklch(var(--color-ink-subtle))] mt-1">
                                 {formatDateTime(n.created_at)}
                               </p>
                             </div>
@@ -407,7 +407,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </Popover.Root>
             )}
 
-            <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
+            <div className="w-px h-5 border-[oklch(var(--color-hairline))] hidden sm:block" />
 
             {/* The locale <select> is the widest control in this row; below
                 `sm` it is dropped rather than allowed to squeeze its
@@ -417,7 +417,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <LanguageSwitcher />
             </div>
 
-            <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
+            <div className="w-px h-5 border-[oklch(var(--color-hairline))] hidden sm:block" />
 
             {/* Theme toggle. Shared with the public landing page's masthead
                 (`app/page.tsx`), which is not wrapped by this layout —
@@ -426,14 +426,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 the three ways the two copies had already diverged. */}
             <ThemeToggle />
 
-            <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
+            <div className="w-px h-5 border-[oklch(var(--color-hairline))] hidden sm:block" />
 
             {/* Settings gear */}
             <button
               onClick={() => setSettingsOpen(true)}
               title={t("nav.settings")}
               aria-label={t("nav.settings")}
-              className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-accent-ink))] transition-colors p-1"
+              className="text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-accent-ink))] transition-colors p-1"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3" />
@@ -441,7 +441,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </svg>
             </button>
 
-            <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
+            <div className="w-px h-5 border-[oklch(var(--color-hairline))] hidden sm:block" />
 
             {user ? (
               <>
@@ -451,14 +451,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     fixed for. */}
                 <Link
                   href="/profile"
-                  className="hidden sm:block max-w-40 truncate text-[hsl(var(--color-ink-muted))] text-03 hover:text-[hsl(var(--color-accent-ink))] transition-colors"
+                  className="hidden sm:block max-w-40 truncate text-[oklch(var(--color-ink-muted))] text-03 hover:text-[oklch(var(--color-accent-ink))] transition-colors"
                 >
                   {t("nav.greeting", { username: user.display_name || user.username })}
                 </Link>
-                <div className="w-px h-5 border-[hsl(var(--color-hairline))] hidden sm:block" />
+                <div className="w-px h-5 border-[oklch(var(--color-hairline))] hidden sm:block" />
                 <button
                   onClick={() => setLogoutConfirmOpen(true)}
-                  className="text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-status-error))] text-03 transition-colors"
+                  className="text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-status-error))] text-03 transition-colors"
                 >
                   {t("auth.logout")}
                 </button>
@@ -466,7 +466,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ) : (
               <Link
                 href="/login"
-                className="bg-[hsl(var(--color-accent))] text-black px-4 py-2 text-03 font-medium hover:bg-[hsl(var(--color-accent))] hover:text-black! transition-colors"
+                className="bg-[oklch(var(--color-accent))] text-black px-4 py-2 text-03 font-medium hover:bg-[oklch(var(--color-accent))] hover:text-black! transition-colors"
               >
                 {t("auth.login")}
               </Link>

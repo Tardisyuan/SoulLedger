@@ -256,7 +256,7 @@ export function DataTable<T>({
 
           后果不止一条横向滚动条:所有 `fixed inset-0` 的遮罩与弹窗按 457 铺开、
           居中在 228,一半落在可视区外,里面的按钮「可见、可用、可滚动到」却点不动。 */}
-      <div className="relative overflow-x-auto border border-[hsl(var(--color-hairline))]">
+      <div className="relative overflow-x-auto border border-[oklch(var(--color-hairline))]">
         {/* `text-03` (13px), not `text-sm` (14px). Every body cell that does not
             set its own size inherits from here, so this one class is the base
             size of thirteen pages' tables — and it was the single largest block
@@ -272,8 +272,8 @@ export function DataTable<T>({
               ))}
             </colgroup>
           )}
-          <thead className="bg-[hsl(var(--color-surface-2))] text-[hsl(var(--color-ink-muted))]">
-            <tr className="border-b border-[hsl(var(--color-hairline))]">
+          <thead className="bg-[oklch(var(--color-surface-2))] text-[oklch(var(--color-ink-muted))]">
+            <tr className="border-b border-[oklch(var(--color-hairline))]">
               {columns.map((column) => {
                 const align = ALIGN_CLASS[column.align ?? 'left']
                 const isSortable = Boolean(column.sortable && onSortChange)
@@ -296,10 +296,10 @@ export function DataTable<T>({
                         className={cn(
                           'group flex w-full items-center gap-1.5 font-medium',
                           cellPadding,
-                          'hover:text-[hsl(var(--color-ink))] transition-colors',
+                          'hover:text-[oklch(var(--color-ink))] transition-colors',
                           // Focus ring comes from the global :focus-visible rule
                           // in globals.css; a local one would double up on it.
-                          sort?.key === column.key && 'text-[hsl(var(--color-accent-ink))]',
+                          sort?.key === column.key && 'text-[oklch(var(--color-accent-ink))]',
                           column.align === 'right' && 'justify-end',
                           column.align === 'center' && 'justify-center'
                         )}
@@ -329,14 +329,14 @@ export function DataTable<T>({
             <tbody>
               <tr>
                 <td colSpan={columns.length} className="px-4 py-12 text-center">
-                  <p className="text-[hsl(var(--color-status-error))]">
+                  <p className="text-[oklch(var(--color-status-error))]">
                     {errorMessage ?? t('common.error')}
                   </p>
                   {onRetry && (
                     <button
                       type="button"
                       onClick={onRetry}
-                      className="mt-3 text-[hsl(var(--color-accent-ink))] hover:underline"
+                      className="mt-3 text-[oklch(var(--color-accent-ink))] hover:underline"
                     >
                       {t('common.retry')}
                     </button>
@@ -350,7 +350,7 @@ export function DataTable<T>({
             <tbody>
               <tr>
                 <td colSpan={columns.length} className="px-4 py-12 text-center">
-                  <p className="text-[hsl(var(--color-ink-subtle))]">
+                  <p className="text-[oklch(var(--color-ink-subtle))]">
                     {isFiltered
                       ? (filteredEmptyMessage ?? t('table.no_results'))
                       : (emptyMessage ?? t('table.empty'))}
@@ -360,7 +360,7 @@ export function DataTable<T>({
                         <button
                           type="button"
                           onClick={onClearFilters}
-                          className="mt-3 text-[hsl(var(--color-accent-ink))] hover:underline"
+                          className="mt-3 text-[oklch(var(--color-accent-ink))] hover:underline"
                         >
                           {t('filter.clear_all')}
                         </button>
@@ -388,7 +388,7 @@ export function DataTable<T>({
                       entered.has(rowKey) ? 'entered' : changed.has(rowKey) ? 'changed' : undefined
                     }
                     className={cn(
-                      'border-b border-[hsl(var(--color-hairline))] last:border-0 hover:bg-[hsl(var(--color-surface-2))] transition-colors',
+                      'border-b border-[oklch(var(--color-hairline))] last:border-0 hover:bg-[oklch(var(--color-surface-2))] transition-colors',
                       entered.has(rowKey) && 'animate-row-enter',
                       changed.has(rowKey) && 'animate-row-changed'
                     )}
@@ -413,7 +413,7 @@ export function DataTable<T>({
                   key={`leaving-${key}`}
                   aria-hidden="true"
                   data-row-state="leaving"
-                  className="border-b border-[hsl(var(--color-hairline))] last:border-0 pointer-events-none animate-row-exit"
+                  className="border-b border-[oklch(var(--color-hairline))] last:border-0 pointer-events-none animate-row-exit"
                 >
                   {renderRow(item, index)}
                 </tr>

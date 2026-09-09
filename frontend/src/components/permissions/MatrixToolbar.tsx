@@ -33,19 +33,19 @@ export function MatrixToolbar({
         onChange={(e) => onFilterTextChange(e.target.value)}
         placeholder={t("permissions.matrix.filter_placeholder")}
         aria-label={t("permissions.matrix.filter_placeholder")}
-        className="flex-1 min-w-[200px] px-3 py-1 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-03 text-[hsl(var(--color-ink))] placeholder-[hsl(var(--color-ink-subtle))] focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
+        className="flex-1 min-w-[200px] px-3 py-1 bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] text-03 text-[oklch(var(--color-ink))] placeholder-[oklch(var(--color-ink-subtle))] focus:outline-hidden focus:border-[oklch(var(--color-accent))]"
       />
-      <label className="flex items-center gap-2 text-03 text-[hsl(var(--color-ink-muted))] cursor-pointer">
+      <label className="flex items-center gap-2 text-03 text-[oklch(var(--color-ink-muted))] cursor-pointer">
         <input
           type="checkbox"
           checked={onlyDifferences}
           onChange={(e) => onOnlyDifferencesChange(e.target.checked)}
-          className="accent-[hsl(var(--color-accent))]"
+          className="accent-[oklch(var(--color-accent))]"
         />
         {t("permissions.matrix.only_differences")}
       </label>
       <div className="flex-1" />
-      <span className="text-02 text-[hsl(var(--color-ink-subtle))]">
+      <span className="text-02 text-[oklch(var(--color-ink-subtle))]">
         {pendingCount > 0
           ? t("permissions.matrix.pending_count", { count: String(pendingCount) })
           : t("permissions.matrix.no_changes")}

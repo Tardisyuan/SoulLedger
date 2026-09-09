@@ -9,11 +9,11 @@ import { MissingValue } from "@/src/components/ui/DomainValue";
  * the terminal-variant argument below is the part worth reading on its own.
  */
 export const TONE_DOT: Record<string, string> = {
-  neutral: "bg-[hsl(var(--color-ink-subtle))]",
-  merit: "bg-[hsl(var(--color-karma-merit))]",
-  demerit: "bg-[hsl(var(--color-karma-demerit))]",
-  info: "bg-[hsl(var(--color-status-info))]",
-  accent: "bg-[hsl(var(--color-accent))]",
+  neutral: "bg-[oklch(var(--color-ink-subtle))]",
+  merit: "bg-[oklch(var(--color-karma-merit))]",
+  demerit: "bg-[oklch(var(--color-karma-demerit))]",
+  info: "bg-[oklch(var(--color-status-info))]",
+  accent: "bg-[oklch(var(--color-accent))]",
 };
 
 interface RowShellProps {
@@ -37,19 +37,19 @@ interface RowShellProps {
 export function RowShell({ date, dotClassName, dashed, hideConnector, highlight, tint, terminalVariant, children, right }: RowShellProps) {
   return (
     <div
-      className={`flex items-stretch gap-3 ${tint ? "bg-[hsl(var(--color-accent)/0.06)]" : ""} ${
-        highlight ? "bg-[hsl(var(--color-accent)/0.1)] border border-[hsl(var(--color-accent)/0.4)]" : ""
+      className={`flex items-stretch gap-3 ${tint ? "bg-[oklch(var(--color-accent)/0.06)]" : ""} ${
+        highlight ? "bg-[oklch(var(--color-accent)/0.1)] border border-[oklch(var(--color-accent)/0.4)]" : ""
       }`}
     >
-      <div className="w-16 shrink-0 text-02 text-[hsl(var(--color-ink-subtle))] text-right pt-2">{date ?? <MissingValue kind="unrecorded" />}</div>
+      <div className="w-16 shrink-0 text-02 text-[oklch(var(--color-ink-subtle))] text-right pt-2">{date ?? <MissingValue kind="unrecorded" />}</div>
       <div className="flex flex-col items-center shrink-0">
         {terminalVariant === "flush" ? (
-          <span className="w-2.5 h-px mt-3 bg-[hsl(var(--color-hairline-strong))]" aria-hidden="true" />
+          <span className="w-2.5 h-px mt-3 bg-[oklch(var(--color-hairline-strong))]" aria-hidden="true" />
         ) : (
           <span
             className={
               terminalVariant === "filled"
-                ? `w-3.5 h-3.5 rounded-full mt-1.5 ring-2 ring-[hsl(var(--color-status-settled)/0.35)] ${dotClassName}`
+                ? `w-3.5 h-3.5 rounded-full mt-1.5 ring-2 ring-[oklch(var(--color-status-settled)/0.35)] ${dotClassName}`
                 : `w-2.5 h-2.5 rounded-full mt-2 ${dotClassName}`
             }
             aria-hidden="true"
@@ -57,7 +57,7 @@ export function RowShell({ date, dotClassName, dashed, hideConnector, highlight,
         )}
         {!hideConnector && (
           <span
-            className={`flex-1 w-0 mt-0.5 ${dashed ? "border-l border-dashed border-[hsl(var(--color-hairline-strong))]" : "border-l border-[hsl(var(--color-hairline))]"}`}
+            className={`flex-1 w-0 mt-0.5 ${dashed ? "border-l border-dashed border-[oklch(var(--color-hairline-strong))]" : "border-l border-[oklch(var(--color-hairline))]"}`}
           />
         )}
       </div>

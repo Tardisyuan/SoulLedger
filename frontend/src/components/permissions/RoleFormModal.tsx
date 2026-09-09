@@ -3,6 +3,8 @@
 import { useState, useEffect, useId, useRef } from "react";
 import { useI18n } from "@/src/contexts/I18nContext";
 import { BaseModal } from "@/src/components/ui/Modal";
+import { Button } from "@/src/components/ui/Button";
+import { TextField } from "@/src/components/ui/Field";
 import { useSubmitErrorFocus } from "@/src/lib/submitErrorFocus";
 import type { Role } from "@soulledger/core/api";
 
@@ -75,49 +77,56 @@ export function RoleFormModal({
       title={title}
       footer={
         <div className="flex gap-3">
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={handleClose}
             disabled={isPending}
-            className="flex-1 px-4 py-2 bg-[hsl(var(--color-surface-1))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-2))] disabled:opacity-50 text-03 transition-colors"
+            className="flex-1"
           >
             {t("common.cancel")}
-          </button>
-          <button
+          </Button>
+          {/* `loading` rather than only `disabled` — same reasoning as the twin
+              in `PermissionFormModal`: the label already changed while the
+              request was in flight, so the state was known; it just carried no
+              spinner and no `aria-busy`. `Button` disables on `loading`, hence
+              no `isPending ||` in `disabled`. */}
+          <Button
             type="button"
+            variant="primary"
             onClick={handleSubmit}
-            disabled={isPending || !name.trim() || !displayName.trim()}
-            className="flex-1 px-4 py-2 bg-[hsl(var(--color-accent))] hover:bg-[hsl(var(--color-accent-hover))] disabled:opacity-50 text-black text-03 font-medium transition-colors"
+            loading={isPending}
+            disabled={!name.trim() || !displayName.trim()}
+            className="flex-1"
           >
             {isPending ? t("permissions.submitting") : t("permissions.submit")}
-          </button>
+          </Button>
         </div>
       }
     >
       <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-        {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-red-400 text-03">{error}</p>}
-        <div>
-          <label htmlFor={nameId} className="block text-02 text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.role_name_label")}</label>
-          <input
-            id={nameId}
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("permissions.role_name_placeholder")}
-            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
-          />
-        </div>
-        <div>
-          <label htmlFor={displayNameId} className="block text-02 text-[hsl(var(--color-ink-muted))] mb-1">{t("permissions.display_name_label")}</label>
-          <input
-            id={displayNameId}
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder={t("permissions.display_name_placeholder")}
-            className="w-full px-3 py-2 bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] text-[hsl(var(--color-ink))] text-03 focus:outline-hidden focus:border-[hsl(var(--color-accent))]"
-          />
-        </div>
+        {/* 这条**表单级**消息仍然手写,不走 `Field` 的 `error` —— 理由在上面
+            `useSubmitErrorFocus` 那段:它不属于任何一个字段,交给 `Field` 就等于
+            把 `aria-invalid` 重新挂回每个 input 上,正是先前撤掉的那件事。
+            换掉的只有颜色:`text-red-400` 是 Tailwind 原生调色板,浅色模式下拿到
+            的是暗色那一档;`--color-status-error` 明暗各测过一套。 */}
+        {error && <p ref={errorRef} tabIndex={-1} id={errorId} role="alert" className="text-[oklch(var(--color-status-error))] text-03">{error}</p>}
+        <TextField
+          id={nameId}
+          label={t("permissions.role_name_label")}
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={t("permissions.role_name_placeholder")}
+        />
+        <TextField
+          id={displayNameId}
+          label={t("permissions.display_name_label")}
+          type="text"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          placeholder={t("permissions.display_name_placeholder")}
+        />
       </form>
     </BaseModal>
   );

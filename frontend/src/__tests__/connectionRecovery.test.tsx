@@ -97,7 +97,7 @@ describe("the connection indicator", () => {
     const { container } = render(<ConnectionStatus />);
 
     const dot = container.querySelector("[aria-hidden='true']");
-    expect(dot).toHaveStyle({ backgroundColor: "hsl(var(--color-status-error))" });
+    expect(dot).toHaveStyle({ backgroundColor: "oklch(var(--color-status-error))" });
     // Assert the absence too: a raw palette class here is exactly what made
     // these three dots theme-blind.
     expect(dot?.className).not.toMatch(/bg-(red|emerald|yellow|green)-\d{3}/);

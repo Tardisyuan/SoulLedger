@@ -40,23 +40,46 @@
  * mirrors at all. Both import their parser from `./support/globalsCssTokens`
  * rather than each carrying a copy: two regex readers of one stylesheet is the
  * same defect these tests exist to close.
+ *
+ * WHICH METRIC ANSWERS "DO THESE LOOK ALIKE", AND WHY THE FILE NAMES TWO.
+ * Every "N/255" figure this file used to reason with came from
+ * `maxChannelDelta`, which reports the largest of three per-channel
+ * differences and is therefore close to blind along the hue axis — the only
+ * axis the civilization palette varies. It concluded that two pairs of tenants
+ * were indistinguishable; in CIEDE2000 all six pairs are plainly separated, in
+ * both themes. That conclusion, not the palette, is what Stage 12 corrected —
+ * the tokens did not move.
+ *
+ * The channel metric is still here, in one pin, because its threshold `8` is a
+ * ruling from a named review and channel steps have no ΔE00 equivalent to move
+ * it to. Everything that makes a claim about PERCEPTION is measured in ΔE00,
+ * and the implementation is held to Sharma et al.'s 34-pair test vector below
+ * before any pin is allowed to rest on it. The full argument sits on
+ * `PERCEPTIBILITY_FLOOR` and `MARK_LEAD_MARGIN`.
  */
 import {
   CIV_PREFIXES,
   CIV_PREFIX_BY_TENANT_CODE,
+  HUE_READBACK_SLACK_DEG,
   LIGHT_TOKENS,
   ROOT_TOKENS,
   TENANT_CODES,
   THEMES,
   TOKENS_BY_THEME,
+  type Lab,
   type ThemeName,
   asChartLiteral,
   civPairs,
-  hslTripleToRgb,
+  deltaE00,
+  deltaE00Rgb,
+  hslHueOfOklch,
+  oklchTripleToRgb,
+  rgbToOklchTriple,
   maxChannelDelta,
   readCivAttrRules,
   readSoulStates,
   resolveRampForCiv,
+  srgbToLab,
   suffixesOf,
   SURFACE_TOKENS,
 } from "./support/globalsCssTokens";
@@ -119,7 +142,13 @@ describe("the parser is looking at something", () => {
   it("found real token blocks in globals.css", () => {
     expect(Object.keys(ROOT_TOKENS).length).toBeGreaterThan(20);
     expect(Object.keys(LIGHT_TOKENS).length).toBeGreaterThan(20);
-    expect(ROOT_TOKENS["--color-surface-1"]).toBe("var(--civ-hue) 13% 7%");
+    // The `:root` ramp is inert — every mapped tenant overrides it from
+    // `:root[data-civ]` and the unmapped screen from `:root:not([data-civ])` —
+    // but it must still be a colour, because it is what a fifth civilization
+    // would render on the day it has tokens and no rule. This used to pin the
+    // literal string `[--civ-hue] 47% 7%`, which is the same job: it proved
+    // the parser was reading declarations and not prose.
+    expect(ROOT_TOKENS["--color-surface-1"]).toMatch(/^[\d.]+\s+[\d.]+\s+-?[\d.]+$/);
   });
 
   it("found the soul lifecycle states", () => {
@@ -144,19 +173,32 @@ describe("civilization identity: globals.css is the authority", () => {
     expect(suffixesOf(LIGHT_TOKENS, "--color-civ-mark")).toEqual(CIV_PREFIXES);
   });
 
-  it("gives every civilization a [data-civ] rule wired to its own hue token", () => {
+  it("gives every civilization a :root[data-civ] rule wired to its own ramp tokens", () => {
     // The enumeration point Greek was missing from. Tokens alone paint nothing.
+    //
+    // This used to read `rules[prefix].hue === "--color-civ-hue-<p>"`, one
+    // pointer per tenant, because the five planes were `[--civ-hue] S% L%`
+    // and the hue was the only per-tenant part. OKLCH cannot factor them that
+    // way — at one HSL saturation and lightness the four tenants' OKLCH L
+    // spreads 0.057 and C spreads 0.010 — so each plane is its own literal and
+    // the rule points at five. Same invariant, wider carrier: a tenant with
+    // tokens and no rule still renders neutral, and now so does a tenant whose
+    // rule forgot one plane.
     const rules = readCivAttrRules();
     expect(Object.keys(rules).sort()).toEqual(CIV_PREFIXES);
     for (const prefix of CIV_PREFIXES) {
-      expect(rules[prefix].hue).toBe(`--color-civ-hue-${prefix}`);
+      for (const plane of RAMP_TOKENS) {
+        expect(rules[prefix].ramp[plane]).toBe(
+          `--color-civ-${plane.replace("--color-", "")}-${prefix}`
+        );
+      }
     }
   });
 
   it("gives every civilization a [data-civ] rule wired to its own mark token", () => {
     // The hue's twin, and the one Stage 10 needs. The masthead draws the mark
     // in three places — expanded lockup, collapsed rail, mobile chip — and none
-    // of them knows which tenant it is rendering; they read `hsl(var(--civ-mark))`
+    // of them knows which tenant it is rendering; they read `oklch(var(--civ-mark))`
     // and let this rule decide. A civilization with a hue alias and no mark
     // alias therefore paints an identity dot with no colour, on the one element
     // whose whole job is saying which cosmology this is.
@@ -169,7 +211,7 @@ describe("civilization identity: globals.css is the authority", () => {
   it.each(CIV_PREFIXES)("--color-civ-hue-%s is a bare hue degree, not an HSL triple", (prefix) => {
     // This is the whole reason the `--color-civ-*` table in
     // docs/design-handoff/tokens.md was deleted instead of recalibrated. The
-    // hue token is interpolated as `hsl(var(--civ-hue) 13% 7%)`; a full triple
+    // hue token is interpolated as `oklch([--civ-hue] 13% 7%)`; a full triple
     // in that slot produces an invalid colour, so a "corrected" table of
     // triples would still have been the wrong shape.
     for (const tokens of [ROOT_TOKENS, LIGHT_TOKENS]) {
@@ -177,16 +219,26 @@ describe("civilization identity: globals.css is the authority", () => {
     }
   });
 
-  it.each(CIV_PREFIXES)("--color-civ-mark-%s is a full HSL triple", (prefix) => {
+  it.each(CIV_PREFIXES)("--color-civ-mark-%s is a full OKLCH triple", (prefix) => {
     for (const tokens of [ROOT_TOKENS, LIGHT_TOKENS]) {
-      expect(tokens[`--color-civ-mark-${prefix}`]).toMatch(/^\d+(\.\d+)?\s+[\d.]+%\s+[\d.]+%$/);
+      expect(tokens[`--color-civ-mark-${prefix}`]).toMatch(/^[\d.]+\s+[\d.]+\s+-?[\d.]+$/);
     }
   });
 
   it.each(CIV_PREFIXES)("the mark and hue tokens for %s agree on the hue", (prefix) => {
+    // IT READS THE HUE THROUGH A CONVERSION NOW, AND THE INVARIANT DID NOT
+    // MOVE. While the tokens were HSL the mark's first component WAS the hue,
+    // so this was a string comparison. `--color-civ-mark-cn` is now an OKLCH
+    // triple whose H is 35.30 while the tenant's hue is 12 — those are the same
+    // colour in two coordinate systems, not a disagreement, and comparing the
+    // OKLCH H directly would need a tolerance nothing here has measured.
+    // `hslHueOfOklch` converts back to the coordinate the rule was written in,
+    // so the assertion stays exact and still fails for a mark that wanders off
+    // its tenant's hue.
     for (const tokens of [ROOT_TOKENS, LIGHT_TOKENS]) {
-      const hue = tokens[`--color-civ-hue-${prefix}`];
-      expect(tokens[`--color-civ-mark-${prefix}`].split(/\s+/)[0]).toBe(hue);
+      const hue = Number(tokens[`--color-civ-hue-${prefix}`]);
+      const read = hslHueOfOklch(tokens[`--color-civ-mark-${prefix}`]);
+      expect(Math.abs(read - hue)).toBeLessThan(HUE_READBACK_SLACK_DEG);
     }
   });
 });
@@ -194,105 +246,867 @@ describe("civilization identity: globals.css is the authority", () => {
 // ---------------------------------------------------------------------------
 
 /**
- * The most any two tenants' surfaces may differ, as pixels, before the ramp is
- * claiming to do a job it was measured as unable to do.
+ * Sharma, Wu & Dalal (2005), "The CIEDE2000 Color-Difference Formula:
+ * Implementation Notes, Supplementary Test Data, and Mathematical
+ * Observations", Table 1 — 34 Lab pairs and their ΔE00, published for the
+ * express purpose of catching implementation errors.
  *
- * Observed today: 6/255, at surface-2 and surface-4 in dark mode. The Stage 9
- * headline figure is surface-1's 4/255 between Chinese (12deg) and European
- * (232deg) — 220deg apart, the widest separation the palette has and a
- * deliberately chosen one. Light mode is flatter still, 2-5/255, because HSL
- * chroma collapses toward white.
+ * `[L1, a1, b1, L2, a2, b2, expected]`.
  *
- * 8 is that worst case plus room to retune lightness. It is nowhere near the
- * ~35-40% saturation that would make the ramp actually express a hue, which is
- * the point: raising the ramp to carry identity repaints every screen in the
- * app and is a design decision with its own review, not a token tweak. This
- * number turning red IS that review being demanded.
+ * WHY THE WHOLE TABLE AND NOT A SPOT CHECK. The rows are not a random sample;
+ * they are adversarial by design, and MEASURED — not assumed — the two hue
+ * wraps are caught by disjoint, small subsets of them:
+ *
+ *   - THE MEAN-HUE WRAP (`hBarp`). Replacing its three cases with a plain
+ *     `(h1' + h2') / 2` leaves 28 rows green and reddens 11, 12, 15, 16, 17,
+ *     19. Rows 9-12 hold a1 = 2.49, a2 = -2.49 and walk b2 across zero
+ *     (-0.0010 -> +0.0009, +0.0010, +0.0011, +0.0012), stepping the published
+ *     answer 7.1792 -> 7.2195; rows 13-15 do the same on the b axis
+ *     (4.8045 -> 4.7461). The broken form returns 7.179153 where 7.2195 is
+ *     published — it lands on the OTHER SIDE of a real step, which no
+ *     eyeball on a colour swatch would ever question.
+ *   - THE HUE-DIFFERENCE FOLD (`dhp`). `dhp` is not `h2' - h1'`: when the two
+ *     angles straddle 0°/360° the raw difference is ~±350° for colours a few
+ *     degrees apart, so it folds into (-180, 180]. Dropping the fold reddens
+ *     only rows 16, 17 and 19 — and two of those three miss by 0.0001 and
+ *     0.0007. A tolerance loose enough to feel "reasonable" would let a
+ *     broken implementation through.
+ *   - Rows 33-34 sit at L* 0.9-6.8, near-black, which is where this
+ *     repository's dark ramp lives — the region where the L*a*b* transfer
+ *     switches to its linear segment.
+ *
+ * So no subset of this table is safe to drop: the two wraps are caught by
+ * six rows and three rows respectively, overlapping in three. A ΔE00 wrong in
+ * only those is worse than no ΔE00 at all — right about most colours,
+ * authoritative-looking, and wrong precisely about the near-grey and near-red
+ * pairs nobody re-derives by eye. That is the whole argument for this block.
  */
-const RAMP_NEUTRALITY_CEILING = 8;
+const SHARMA_CIEDE2000_CASES: readonly (readonly [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+])[] = [
+  [50.0, 2.6772, -79.7751, 50.0, 0.0, -82.7485, 2.0425],
+  [50.0, 3.1571, -77.2803, 50.0, 0.0, -82.7485, 2.8615],
+  [50.0, 2.8361, -74.02, 50.0, 0.0, -82.7485, 3.4412],
+  [50.0, -1.3802, -84.2814, 50.0, 0.0, -82.7485, 1.0],
+  [50.0, -1.1848, -84.8006, 50.0, 0.0, -82.7485, 1.0],
+  [50.0, -0.9009, -85.5211, 50.0, 0.0, -82.7485, 1.0],
+  [50.0, 0.0, 0.0, 50.0, -1.0, 2.0, 2.3669],
+  [50.0, -1.0, 2.0, 50.0, 0.0, 0.0, 2.3669],
+  [50.0, 2.49, -0.001, 50.0, -2.49, 0.0009, 7.1792],
+  [50.0, 2.49, -0.001, 50.0, -2.49, 0.001, 7.1792],
+  [50.0, 2.49, -0.001, 50.0, -2.49, 0.0011, 7.2195],
+  [50.0, 2.49, -0.001, 50.0, -2.49, 0.0012, 7.2195],
+  [50.0, -0.001, 2.49, 50.0, 0.0009, -2.49, 4.8045],
+  [50.0, -0.001, 2.49, 50.0, 0.001, -2.49, 4.8045],
+  [50.0, -0.001, 2.49, 50.0, 0.0011, -2.49, 4.7461],
+  [50.0, 2.5, 0.0, 50.0, 0.0, -2.5, 4.3065],
+  [50.0, 2.5, 0.0, 73.0, 25.0, -18.0, 27.1492],
+  [50.0, 2.5, 0.0, 61.0, -5.0, 29.0, 22.8977],
+  [50.0, 2.5, 0.0, 56.0, -27.0, -3.0, 31.903],
+  [50.0, 2.5, 0.0, 58.0, 24.0, 15.0, 19.4535],
+  [50.0, 2.5, 0.0, 50.0, 3.1736, 0.5854, 1.0],
+  [50.0, 2.5, 0.0, 50.0, 3.2972, 0.0, 1.0],
+  [50.0, 2.5, 0.0, 50.0, 1.8634, 0.5757, 1.0],
+  [50.0, 2.5, 0.0, 50.0, 3.2592, 0.335, 1.0],
+  [60.2574, -34.0099, 36.2677, 60.4626, -34.1751, 39.4387, 1.2644],
+  [63.0109, -31.0961, -5.8663, 62.8187, -29.7946, -4.0864, 1.263],
+  [61.2901, 3.7196, -5.3901, 61.4292, 2.248, -4.962, 1.8731],
+  [35.0831, -44.1164, 3.7933, 35.0232, -40.0716, 1.5901, 1.8645],
+  [22.7233, 20.0904, -46.694, 23.0331, 14.973, -42.5619, 2.0373],
+  [36.4612, 47.858, 18.3852, 36.2715, 50.5065, 21.2231, 1.4146],
+  [90.8027, -2.0831, 1.441, 91.1528, -1.6435, 0.0447, 1.4441],
+  [90.9257, -0.5406, -0.9208, 88.6381, -0.8985, -0.7239, 1.5381],
+  [6.7747, -0.2908, -2.4247, 5.8714, -0.0985, -2.2286, 0.6377],
+  [2.0776, 0.0795, -1.135, 0.9033, -0.0636, -0.5514, 0.9082],
+];
 
-/** How far above the ramp the marks must sit for "identity lives on the mark" to be true. */
-const MARK_SEPARATION_MULTIPLE = 3;
+/**
+ * `oklchTripleToRgb` is the floor under everything else in this file, and it
+ * arrived with the migration that rewrote every token from `H S% L%` to
+ * `L C H`. A conversion that is subtly wrong is worse than no conversion: it
+ * reads as authoritative, every ratio and every ΔE00 in the repository is
+ * computed through it, and nothing else would report the error.
+ *
+ * SO IT IS HELD TO PUBLISHED VALUES, THE WAY ΔE00 IS HELD TO SHARMA'S TABLE.
+ * The three sRGB primaries' OKLCH coordinates below are the ones CSS Color 4
+ * §9.3 gives (Björn Ottosson's, from the article the matrices come from):
+ * red oklch(62.7955% 0.257683 29.2339), green oklch(86.644% 0.294827
+ * 142.4953), blue oklch(45.2014% 0.313214 264.052).
+ *
+ * AND TO THE BROWSER, WHICH IS THE PART A UNIT TEST CANNOT DO. jsdom does not
+ * rasterise, so this file can only prove the arithmetic is self-consistent and
+ * matches the spec's numbers. The other half was measured out of band, in
+ * Chromium and Firefox, by painting every declared token twice — once as the
+ * `hsl()` triple it used to be and once as the `oklch()` triple it is now —
+ * and reading the pixels back: 104/104 identical, opaque, in both engines.
+ * That measurement is what licenses the round-trip pin below to stand for what
+ * a screen shows. The full-page evidence is the 32-screenshot comparison the
+ * migration was accepted on.
+ */
+describe("the OKLCH conversion every colour pin runs through", () => {
+  const PRIMARIES: [string, [number, number, number]][] = [
+    ["0.627955 0.257683 29.2339", [255, 0, 0]],
+    ["0.86644 0.294827 142.4953", [0, 255, 0]],
+    ["0.452014 0.313214 264.052", [0, 0, 255]],
+    ["1 0 0", [255, 255, 255]],
+    ["0 0 0", [0, 0, 0]],
+    ["0.599871 0 0", [128, 128, 128]],
+  ];
+
+  /**
+   * Five tokens straight out of globals.css, beside the sRGB Chromium actually
+   * paints them as — read back from a screenshot during the migration, not
+   * computed here.
+   *
+   * WHY THE PRIMARIES ARE NOT ENOUGH, MEASURED RATHER THAN ASSUMED. Every row
+   * of `PRIMARIES` is a channel at 0 or 255, or an achromatic grey. Changing
+   * the sRGB transfer exponent from 1/2.4 to 1/2.41 leaves all six of them
+   * byte-identical — the endpoints are fixed points of any gamma, and mid-grey
+   * happened to round the same way — so that mutation passed the whole block
+   * until these rows were added. They are the mid-tones with chroma, which is
+   * where a transfer-function or matrix error first shows up in a channel.
+   */
+  const MEASURED: [string, [number, number, number]][] = [
+    ["0.770351 0.164635 70.6613", [245, 159, 10]], // --color-accent, both themes
+    ["0.496252 0.108981 156.0004", [27, 116, 71]], // --color-status-alive, light
+    ["0.642606 0.10097 276.6787", [125, 135, 202]], // --color-civ-mark-eu, dark
+    ["0.520424 0.014972 266.5999", [101, 105, 114]], // --color-ink-tertiary, light
+    ["0.138985 0.030107 40.9464", [19, 5, 2]], // --color-civ-canvas-cn, dark
+  ];
+
+  it.each(PRIMARIES)("%s is the sRGB colour CSS Color 4 says it is", (triple, rgb) => {
+    expect(oklchTripleToRgb(triple)).toEqual(rgb);
+  });
+
+  it.each(MEASURED)("%s is the sRGB the browser paints it as", (triple, rgb) => {
+    expect(oklchTripleToRgb(triple)).toEqual(rgb);
+  });
+
+  it("the measured rows are tokens this stylesheet actually declares", () => {
+    // Otherwise the row above is a pin on a number nobody keeps true. Each
+    // measured triple must appear as some token's value in one of the themes,
+    // so renaming or retuning the token reddens this rather than leaving a
+    // stale reference standing beside a changed file.
+    const declared = new Set([
+      ...Object.values(TOKENS_BY_THEME.dark),
+      ...Object.values(TOKENS_BY_THEME.light),
+    ]);
+    for (const [triple] of MEASURED) expect(declared).toContain(triple);
+  });
+
+  it("round-trips every declared token through sRGB without moving a channel", () => {
+    // The property the migration rests on: the OKLCH triples in globals.css
+    // name exactly the sRGB colours the HSL triples named. Checked over the
+    // whole palette rather than a sample, and over the per-tenant ramp too,
+    // because the ramp is where the migration had to expand one declaration
+    // into twenty and is therefore where a typo would hide.
+    const declared = [
+      ...Object.values(TOKENS_BY_THEME.dark),
+      ...Object.values(TOKENS_BY_THEME.light),
+      ...THEMES.flatMap((theme) =>
+        CIV_PREFIXES.flatMap((civ) =>
+          RAMP_TOKENS.map((token) => resolveRampForCiv(theme, civ, token))
+        )
+      ),
+    ].filter((value) => /^[\d.]+\s+[\d.]+\s+-?[\d.]+$/.test(value));
+    // Not a sample: if this list emptied, the loop below would pass over
+    // nothing and say so in the summary as a green test.
+    expect(declared.length).toBeGreaterThan(80);
+    for (const triple of declared) {
+      const rgb = oklchTripleToRgb(triple);
+      expect(oklchTripleToRgb(rgbToOklchTriple(rgb))).toEqual(rgb);
+    }
+  });
+
+  it("throws on a value that is not a triple rather than measuring NaN", () => {
+    // The failure mode this file exists to prevent, one layer down: a token
+    // that stops parsing must name itself, not return `[NaN, NaN, NaN]` and
+    // make every ratio computed from it `NaN` — which compares false against
+    // every threshold and reads as a colour problem.
+    expect(() => oklchTripleToRgb("38 92% 50%")).toThrow();
+    expect(() => oklchTripleToRgb("var(--color-accent)")).toThrow();
+    expect(() => oklchTripleToRgb("")).toThrow();
+  });
+
+  it("clamps out-of-gamut coordinates instead of emitting a negative channel", () => {
+    // No token in globals.css is out of sRGB — that was checked over all 104
+    // during the migration — but OKLCH can address colours sRGB cannot, and a
+    // future token that strays must come back as a paintable colour rather
+    // than as `rgb(-12, …)`, which no downstream formula here would reject.
+    const [r, g, b] = oklchTripleToRgb("0.7 0.4 150");
+    for (const channel of [r, g, b]) {
+      expect(channel).toBeGreaterThanOrEqual(0);
+      expect(channel).toBeLessThanOrEqual(255);
+    }
+  });
+});
+
+describe("the ΔE00 the ramp pins rest on is the published formula", () => {
+  it("carries the whole Sharma table, not a sample of it", () => {
+    // Pin the subject set, not the parse. A truncated table is a green run over
+    // a formula nobody checked, and the rows that matter most (9-15, the hue
+    // wrap) sit in the middle where a truncation would drop them silently.
+    expect(SHARMA_CIEDE2000_CASES).toHaveLength(34);
+  });
+
+  it.each(SHARMA_CIEDE2000_CASES.map((row, i) => [i + 1, row] as const))(
+    "row %i reproduces the published ΔE00",
+    (_row, [L1, a1, b1, L2, a2, b2, expected]) => {
+      // Four decimals is the precision the paper publishes. A looser tolerance
+      // would swallow exactly the failures this table exists to expose: the
+      // 7.1792/7.2195 step across the hue wrap is 0.04 wide.
+      expect(deltaE00([L1, a1, b1] as Lab, [L2, a2, b2] as Lab)).toBeCloseTo(expected, 4);
+    }
+  );
+
+  it("is symmetric, which the table only covers for one pair", () => {
+    // Rows 7 and 8 are the same colours in both orders and the paper gives them
+    // the same answer. Every other row is one-directional, and the wrap
+    // branches are the kind of code that can be right forwards and wrong
+    // backwards, so the property is asserted over the whole table rather than
+    // trusted from the one pair that states it.
+    for (const [L1, a1, b1, L2, a2, b2] of SHARMA_CIEDE2000_CASES) {
+      const forward = deltaE00([L1, a1, b1] as Lab, [L2, a2, b2] as Lab);
+      const backward = deltaE00([L2, a2, b2] as Lab, [L1, a1, b1] as Lab);
+      expect(backward).toBeCloseTo(forward, 10);
+    }
+  });
+
+  it("reads sRGB the way the CSS does — white, black and a known mid tone", () => {
+    // `deltaE00` is fed by `srgbToLab`, and a correct ΔE00 on a wrong Lab is
+    // the same defect one layer down. Reference values: sRGB white is
+    // L* 100 / a* 0 / b* 0 under D65 by construction, black is L* 0, and
+    // mid-grey 128 is L* ≈ 53.585.
+    const [wL, wA, wB] = srgbToLab([255, 255, 255]);
+    expect(wL).toBeCloseTo(100, 4);
+    expect(wA).toBeCloseTo(0, 4);
+    expect(wB).toBeCloseTo(0, 4);
+    expect(srgbToLab([0, 0, 0])[0]).toBeCloseTo(0, 10);
+    expect(srgbToLab([128, 128, 128])[0]).toBeCloseTo(53.5851, 3);
+    // AND THE CHROMA AXES ARE ACTUALLY POPULATED. Every assertion above is
+    // satisfied by a `srgbToLab` that returns `[L, 0, 0]` — the three
+    // references are all achromatic — and such an implementation would discard
+    // the hue axis this entire file is about while still looking plausible.
+    // sRGB pure red is L* 53.24, a* 80.09, b* 67.20.
+    const [rL, rA, rB] = srgbToLab([255, 0, 0]);
+    expect(rL).toBeCloseTo(53.2408, 3);
+    expect(rA).toBeCloseTo(80.0925, 3);
+    expect(rB).toBeCloseTo(67.2032, 3);
+    // And the end-to-end statement the ramp pins actually make.
+    expect(deltaE00Rgb([255, 255, 255], [0, 0, 0])).toBeCloseTo(100, 4);
+    expect(deltaE00Rgb([19, 5, 2], [19, 5, 2])).toBe(0);
+  });
+
+  it("sees a difference max-channel cannot — the pair that started Stage 12", () => {
+    // Chinese and Egyptian dark canvas. Identical R, identical B, one channel
+    // of difference: max-channel says 9, which Stage 11 read as "the same
+    // ground". This is the concrete regression, pinned by value so that a ΔE00
+    // that quietly stopped seeing hue could not pass by returning something
+    // small-but-nonzero.
+    expect(maxChannelDelta([19, 5, 2], [19, 14, 2])).toBe(9);
+    expect(deltaE00Rgb([19, 5, 2], [19, 14, 2])).toBeCloseTo(6.04, 2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+/**
+ * The width, IN sRGB CHANNEL STEPS, below which Stage 9 ruled a flat-field
+ * colour difference could not be relied on.
+ *
+ * THIS IS STAGE 9'S NUMBER WITH ITS SIGN REVERSED, AND THAT IS THE POINT.
+ * It was `RAMP_NEUTRALITY_CEILING = 8`: "the most any two tenants' surfaces may
+ * differ before the ramp is claiming to do a job it was measured as unable to
+ * do", set at the observed worst case (6/255) plus room. Stage 11 raised the
+ * ramp's chroma deliberately, so the same 8 now marks the floor the ramp has to
+ * clear rather than the ceiling it had to stay under.
+ *
+ * Reusing the value rather than picking a fresh one is deliberate: a threshold
+ * chosen to make a new measurement pass is not a threshold. This one was chosen
+ * before the change it now judges, by the review that argued the ramp expressed
+ * nothing — so "the ramp is outside the band Stage 9 held it inside" is a claim
+ * about the design, not about this file's arithmetic.
+ *
+ * ------------------------------------------------------------------------
+ * STAGE 12 KEPT THIS NUMBER AND STOPPED BELIEVING IT ON ITS OWN.
+ *
+ * `maxChannelDelta` is close to blind along the hue axis, which is the only
+ * axis this palette varies. Chinese `(19, 5, 2)` and Egyptian `(19, 14, 2)`
+ * share R and B exactly, so it reports 9 — and Stage 11 wrote that pair up as
+ * barely separable. In ΔE00 the same pair is 6.04, past "obvious at a glance".
+ * The ramp was right; the sentence about it was not.
+ *
+ * WHY 8 IS STILL HERE — TWO REASONS, AND THE SECOND WAS A SURPRISE.
+ *
+ * The expected one: it carries a provenance nothing else in this file does. It
+ * is the figure a named review chose while arguing the opposite conclusion,
+ * which is what makes the pin below a statement about the design rather than
+ * about arithmetic. Channel steps have no ΔE00 equivalent — a "migrated 8"
+ * would be a new number wearing an old number's authority, the exact failure
+ * this round exists to undo.
+ *
+ * THE ONE FOUND BY MUTATION: THE ΔE00 PINS DO NOT REPLACE THIS ONE, BECAUSE
+ * THEY DO NOT CATCH WHAT IT CATCHES. Reverting the dark ramp to Stage 9's
+ * saturations (13/12/11/11) reddens this pin at once — widest pair drops to
+ * 4/255 — and leaves BOTH ΔE00 pins green: measured on the Stage 9 ramp, the
+ * widest pair per surface is 5.36 to 8.47 ΔE00 and every pair reaches 3.62 to
+ * 8.47 somewhere on it. Both are above "perceptible at a glance".
+ *
+ * Read that the other way and it is the sharper finding of Stage 12: Stage 9's
+ * own ruling — "at 13% saturation the ramp cannot express a hue at all, every
+ * tenant renders on what is in practice the same near-black" — is contradicted
+ * by the perceptual metric too. That ramp was visible. It was quiet, and quiet
+ * is a legitimate thing to reject; "expresses nothing" was the blind metric
+ * talking, in 2 of 3 channels, both times.
+ *
+ * So this pin is what defends Stage 11's LOUDNESS and the ΔE00 pins are what
+ * defend the tenant being EXPRESSED, and neither subsumes the other. Deleting
+ * this one in the name of migrating to a better metric would have removed the
+ * only assertion that fails when the ramp is flattened back.
+ * ------------------------------------------------------------------------
+ */
+const PERCEPTIBILITY_FLOOR = 8;
+
+/**
+ * ΔE00 3.5 — "perceptible at a glance" on the standard CIEDE2000 ladder
+ * (<1 imperceptible, 1-2 on close inspection, 2-3.5 at a glance, >5 obvious).
+ *
+ * Deliberately the WEAKEST rung that means anything, because the claim being
+ * pinned is "the ramp expresses the tenant", not "the ramp shouts". Taken from
+ * the metric's published scale and not from this palette: the measurements it
+ * judges are 3.30 to 20.87, so a number fitted to the data would have been 3.5
+ * — and the data has since moved under it, which is exactly why a fitted
+ * number would have been the wrong kind of number. The low end was 4.11, then
+ * 3.30 when the Chinese light hue moved to 20 deg, and is 2.56 now that its
+ * ground carries real chroma (globals.css, `--color-civ-hue-cn` and
+ * `--color-civ-canvas-cn` in `.light`). It is the Chinese/Egyptian pair on
+ * light surface-1 throughout, and it is NOT what this constant judges: the
+ * pins below take the WIDEST pair per plane and the WIDEST plane per pair, so
+ * the tightest figure either of them sees is 4.66. If a future change puts
+ * 2.56 itself under a pin, the number to move is the palette, not this
+ * constant.
+ */
+const PERCEPTIBLE_AT_A_GLANCE = 3.5;
+
+/**
+ * How far the marks must LEAD the ramp, in ΔE00, for "identity leads, the
+ * ground follows" to still be true.
+ *
+ * THIS REPLACES `MARK_SEPARATION_MULTIPLE = 3`, AND IT IS A DIFFERENT SHAPE OF
+ * CLAIM, NOT A RETUNED ONE. Three separate reasons, in the order they bind:
+ *
+ *  1. A RATIO OF TWO ΔE00 FIGURES IS NOT A QUANTITY THE FORMULA SUPPORTS.
+ *     CIEDE2000 was fitted on small differences — roughly ΔE00 < 5 — between
+ *     moderately light surface colours. The marks are 18 to 52 ΔE00 apart,
+ *     far outside that. "51 is three times as different as 17" is a sentence
+ *     the formula never makes; "51 is much further apart than 17" is. What
+ *     ΔE00 does claim is that equal INCREMENTS are equally perceptible, so
+ *     the supported form of "leads by a margin" is a subtraction.
+ *  2. THE OLD 3x CARRIED NO RULING TO PRESERVE. Unlike `PERCEPTIBILITY_FLOOR`
+ *     above, 3 was never chosen by a review that argued something; it was
+ *     "a wide multiple". There is no provenance to strand, so the constant is
+ *     free to change units. That asymmetry between the two pins is the whole
+ *     reason one migrated and one did not.
+ *  3. TRANSPLANTING 3x WOULD SIMPLY BE FALSE TODAY. Measured per pair, mark
+ *     ÷ widest ramp in ΔE00 is 2.11-2.84 dark and 3.25-4.31 light. Nothing
+ *     about the design changed; the metric did. Keeping 3 would redden a
+ *     correct palette, and lowering it to 2 would be picking the number the
+ *     measurement handed over — which this file has already said is not a
+ *     threshold.
+ *
+ * WHY 5. It is the coarsest rung of the same published ladder
+ * `PERCEPTIBLE_AT_A_GLANCE` is taken from: the point at which a difference is
+ * obvious rather than merely visible. The pin then reads — whatever the ground
+ * is doing, the mark is at least one OBVIOUS step further apart than the
+ * ground. Measured worst case today is 10.12 (dark eg/gr), so the number was
+ * plainly not fitted to the data; had it been, it would read 10.
+ *
+ * WHAT A MARGIN GIVES UP, SAID PLAINLY. A multiple scales: a ramp that got
+ * very loud would have had to be out-shouted proportionally. A margin does
+ * not, so this pin alone would tolerate ramp 40 / mark 45. It is safe to give
+ * that up here and nowhere else because the ceiling on ramp chroma is already
+ * enforced by name in the file that owns it — `inkOnSurfaceContract` asserts
+ * its failing ink x surface set as an EXACT set, so the ramp cannot get louder
+ * without that test going red first.
+ */
+const MARK_LEAD_MARGIN = 5;
+
+/**
+ * THE RAMP THE FOUR PINS BELOW JUDGE — and as of Stage 13 it is not
+ * `SURFACE_TOKENS`.
+ *
+ * `SURFACE_TOKENS` is derived by prefix and so contains `--color-surface-1..4`
+ * and nothing else. `--color-canvas` is not named `--color-surface-*`, so for
+ * as long as these pins ran over that list they measured every plane a tenant
+ * paints EXCEPT the largest one. The comment inside the describe below said so
+ * in as many words, and declined to widen the subject on the grounds that
+ * "widening the subject is a design decision about whether light mode should
+ * tint its page ground, not a metric fix".
+ *
+ * That decision has now been taken — `.light` declares
+ * `--color-canvas: [--civ-hue] 100% 96.5%`, the derivation is on the token
+ * in globals.css — so the subject widens with it. Dark canvas has carried the
+ * tenant hue since Stage 11 and was equally unmeasured here; both join at once,
+ * because the reason for excluding either was the same reason.
+ *
+ * WHAT THIS BUYS, AND IT IS THE MUTATION THAT PROVED IT: setting light
+ * `--color-canvas` back to `0 0% 100%` now reddens two of the pins below with
+ * `--color-canvas` named and 0.00 beside it. Before the widening the same
+ * mutation left this entire file green — a flat page ground for every tenant
+ * was outside everything this file asserts.
+ *
+ * NOT A LOOSENING IN THE OTHER DIRECTION EITHER. Every threshold below is
+ * unmoved (`PERCEPTIBILITY_FLOOR` 8, `PERCEPTIBLE_AT_A_GLANCE` 3.5,
+ * `MARK_LEAD_MARGIN` 5); this list only gets longer, so each pin has strictly
+ * more chances to fail than it had.
+ */
+const RAMP_TOKENS: string[] = [...SURFACE_TOKENS, "--color-canvas"];
 
 function rampRgb(theme: ThemeName, prefix: string, token: string): [number, number, number] {
-  return hslTripleToRgb(resolveRampForCiv(theme, prefix, token));
+  return oklchTripleToRgb(resolveRampForCiv(theme, prefix, token));
 }
 
 function markRgb(theme: ThemeName, prefix: string): [number, number, number] {
-  return hslTripleToRgb(TOKENS_BY_THEME[theme][`--color-civ-mark-${prefix}`]);
+  return oklchTripleToRgb(TOKENS_BY_THEME[theme][`--color-civ-mark-${prefix}`]);
 }
 
-/** Widest gap between any two tenants across the whole ramp, in one theme. */
-function widestRampGap(theme: ThemeName): number {
+/** Widest CHANNEL gap between one PAIR of tenants across the whole ramp, in one theme. */
+function rampGapForPair(theme: ThemeName, a: string, b: string): number {
   return Math.max(
-    ...SURFACE_TOKENS.flatMap((token) =>
-      civPairs().map(([a, b]) => maxChannelDelta(rampRgb(theme, a, token), rampRgb(theme, b, token)))
-    )
+    ...RAMP_TOKENS.map((token) => maxChannelDelta(rampRgb(theme, a, token), rampRgb(theme, b, token)))
   );
 }
 
-/** Narrowest gap between any two tenants' marks, in one theme. */
+/** Widest CHANNEL gap between any two tenants across the whole ramp, in one theme. */
+function widestRampGap(theme: ThemeName): number {
+  return Math.max(...civPairs().map(([a, b]) => rampGapForPair(theme, a, b)));
+}
+
+/** Narrowest CHANNEL gap between any two tenants' marks, in one theme. */
 function narrowestMarkGap(theme: ThemeName): number {
   return Math.min(...civPairs().map(([a, b]) => maxChannelDelta(markRgb(theme, a), markRgb(theme, b))));
 }
 
-describe("the surface ramp is a near-neutral floor, and the mark is the identity", () => {
+// The same three questions asked in ΔE00. Deliberately named `…DeltaE` beside
+// the `…Gap` originals rather than replacing them in place: a reader comparing
+// a red run against the figures in these comments has to be able to tell which
+// metric produced which number, and two functions with one name is how that
+// stops being possible.
+
+/** How far apart one pair of tenants looks on one surface, in one theme. */
+function rampDeltaE(theme: ThemeName, a: string, b: string, token: string): number {
+  return deltaE00Rgb(rampRgb(theme, a, token), rampRgb(theme, b, token));
+}
+
+/** The surface on which a pair looks furthest apart, in one theme. */
+function widestRampDeltaEForPair(theme: ThemeName, a: string, b: string): number {
+  return Math.max(...RAMP_TOKENS.map((token) => rampDeltaE(theme, a, b, token)));
+}
+
+/** How far apart one pair of tenants' marks look, in one theme. */
+function markDeltaE(theme: ThemeName, a: string, b: string): number {
+  return deltaE00Rgb(markRgb(theme, a), markRgb(theme, b));
+}
+
+describe("the surface ramp carries the tenant, and the mark still leads it", () => {
   /**
-   * THE RULING THIS PINS. Stage 1 §4.9 asked for civilization identity to be
-   * surface-first, and globals.css was built that way. Stage 9 measured it and
-   * it does not work: at 13% saturation and 7% lightness the ramp cannot
-   * express a hue at all, so every tenant renders on what is in practice the
-   * same near-black. The owner's decision was to accept that — the ramp is a
-   * neutral floor, `--color-civ-mark-*` carries recognition on its own — rather
-   * than raise the ramp's saturation, which repaints the entire application.
+   * THE RULING THIS PINS, AND IT IS NOT THE ONE THIS BLOCK USED TO PIN.
    *
-   * The failure mode this exists to catch is nobody reading that decision and
-   * assuming the ramp works. Two ways that shows up in a diff: someone raises
-   * the ramp's saturation so it "finally" tints per tenant (first pin), or
-   * someone flattens the marks toward each other on the theory that the ramp is
-   * already separating the tenants (second pin).
+   * Stage 1 §4.9 asked for civilization identity to be surface-first and
+   * globals.css was built that way. Stage 9 measured it, found 4-6/255 between
+   * any two tenants in either theme, and ruled the ramp a near-neutral floor
+   * with `--color-civ-mark-*` carrying recognition alone — while naming the
+   * change that would reverse it: "raising the ramp's saturation to ~35-40% ...
+   * is a design change needing its own review". Stage 11 is that review and it
+   * reversed the ruling. The ramp now separates tenants by 16-17/255 in dark
+   * and 10-16/255 in light, and every ink x surface pair still clears AA.
    *
-   * NOT covered here, on purpose: the ramp losing its `var(--civ-hue)` wiring
-   * altogether. That collapses every tenant to one literal, which these
-   * assertions would read as *maximum* neutrality and pass. It is a different
-   * decision and `chartColourContract.test.ts` already pins it by name, in both
-   * themes — duplicating it here would give two checks nobody re-derives.
+   * SO THE FIRST PIN IS NOT THE OLD PIN RETUNED. Its old form asserted the ramp
+   * sat BELOW the threshold of perception; that sentence is now false on
+   * purpose, and moving `8` up to `20` to keep it green would have been the
+   * assertion outliving its subject. It is replaced by its inverse — the ramp
+   * must reach ABOVE that same threshold — which is a different claim measured
+   * against the same, unmoved number.
+   *
+   * THE SECOND PIN KEPT ITS NUMBER AND CHANGED ITS SUBJECT, which is the part
+   * worth reading. It compared the NARROWEST mark gap against the WIDEST ramp
+   * gap — two different pairs of tenants. That was sound while every ramp pair
+   * measured the same 4-6/255, and it stopped being sound the moment the ramp
+   * varied: it was weighing Chinese/Egyptian's marks (the narrowest, 45-51)
+   * against Chinese/European's ramp (the widest, 16-17), which is not a
+   * relationship anyone could act on. Per pair the measured lead is 5.0x-7.6x,
+   * comfortably past the 3x this file has always asked for; the global form
+   * fails in light mode at 2.8x purely by mismatching the pairs.
+   *
+   * =====================================================================
+   * STAGE 12: EVERY FIGURE IN THE FOUR PARAGRAPHS ABOVE IS A max-channel
+   * FIGURE, AND ONE OF THE CONCLUSIONS DRAWN FROM THEM IS FALSE.
+   *
+   * The paragraph that stood here said: "the ramp does not separate EVERY pair
+   * perceptibly — Chinese/Egyptian (32deg apart) measures 9/255 dark and
+   * 5-9/255 light, Egyptian/Greek 7-8 and 5-7." Those channel counts are
+   * correct. The word "perceptibly" is not a thing they can establish.
+   * `maxChannelDelta` takes the largest of three per-channel differences, so
+   * two colours differing only in ONE channel — which is what a hue shift at
+   * fixed lightness produces — are reported at a fraction of how they look.
+   * Chinese `(19, 5, 2)` and Egyptian `(19, 14, 2)` share R and B exactly.
+   *
+   * Re-measured in CIEDE2000, the ramp separates ALL SIX PAIRS in BOTH themes:
+   *
+   *                     dark canvas   light surface-1
+   *     Chinese-Egyptian     6.04            2.56
+   *     Egyptian-Greek       7.03            4.25
+   *     Chinese-European     8.65            7.02
+   *     European-Egyptian   11.32            7.96
+   *     Chinese-Greek       13.33            6.89
+   *     European-Greek      14.60           10.01
+   *
+   * (The three Chinese rows in the light column read 4.11 / 5.96 / 8.41 before
+   * that tenant's LIGHT hue was rotated 12 -> 20 deg, and 3.30 / 6.18 / 7.56
+   * between that rotation and the chroma raise that finally took its page
+   * ground out of the blush region. Dark did not move in either round. See
+   * `--color-civ-hue-cn` and `--color-civ-canvas-cn` in the `.light` block of
+   * globals.css for the derivations and the costs.)
+   *
+   * — against a ladder where 2-3.5 is "perceptible at a glance" and >5 is
+   * obvious. Across surface-1..4 the same pairs run 5.46 to 20.87. The two
+   * pairs Stage 11 wrote off are the two narrowest, and both are comfortably
+   * visible. Nothing about the palette changed at Stage 12; a metric that
+   * cannot see hue was used to judge a palette that varies only in hue.
+   *
+   * SO THE FIRST PIN IS NOW TWO PINS RATHER THAN A REPLACED ONE. The
+   * channel-unit assertion stays exactly as it was, because `8` encodes Stage
+   * 9's ruling and has nowhere to be migrated to (see `PERCEPTIBILITY_FLOOR`).
+   * Beside it, two ΔE00 assertions say what the channel one cannot: no SURFACE
+   * goes flat, and no PAIR goes unexpressed. The second of those is the
+   * sentence Stage 11 believed it could not write.
+   *
+   * ONE THING THE ΔE00 PINS USED NOT TO SAY, because it was true and awkward:
+   * in light mode `--color-canvas` was flat `0 0% 100%` for every tenant, so
+   * all six pairs measured exactly 0.00 there. globals.css said "CANVAS IS IN
+   * THE RAMP NOW" without that qualifier, and Stage 11's own measured-result
+   * list quietly omitted light canvas while giving dark canvas. It was out of
+   * scope here only because `SURFACE_TOKENS` is `--color-surface-*` and canvas
+   * is not one; widening the subject was a design decision about whether light
+   * mode should tint its page ground, not a metric fix.
+   *
+   * STAGE 13 TOOK THAT DECISION AND THE SUBJECT WIDENED WITH IT. Light canvas
+   * is `[--civ-hue] 100% 96.5%` and the pins below run over `RAMP_TOKENS` —
+   * surface-1..4 PLUS canvas, both themes. See the block on that constant for
+   * why this is a widening and not a retune, and for the mutation that shows
+   * the old shape could not see a flat page ground at all.
+   *
+   * ALSO NOT SAFE TO CARRY OVER: the "5.0x-7.6x" per-pair lead above. In ΔE00
+   * the same pairs measure 2.11x-4.31x — the palette did not move, the ratio
+   * is simply not transferable between metrics, and ratios of large ΔE00
+   * figures are not supported by the formula at all. That is why the second
+   * pin below is now a MARGIN. The derivation is on `MARK_LEAD_MARGIN`.
+   * =====================================================================
+   *
+   * NOT covered here, on purpose, unchanged from Stage 9: the ramp losing its
+   * `[--civ-hue]` wiring altogether. `chartColourContract.test.ts` pins that
+   * by name in both themes. Nor is AA covered here — `inkOnSurfaceContract`
+   * asserts its failing set as an EXACT set, so the ceiling on how much chroma
+   * the ramp may carry is already enforced, once, in the file that owns it.
    */
-  it.each(THEMES)("%s: no two tenants' surfaces separate by more than the ceiling", (theme) => {
+  it.each(THEMES)("%s: every surface separates the tenants it can be asked to", (theme) => {
     // Collected rather than asserted one at a time so a red run names every
-    // offending surface and pair at once — "surface-2 cn/eu at 61" is a
-    // reviewable sentence; "expected 61 to be <= 8" is not.
-    const offenders = SURFACE_TOKENS.flatMap((token) =>
-      civPairs()
-        .map(([a, b]) => ({
-          where: `${token} ${a}/${b}`,
-          delta: maxChannelDelta(rampRgb(theme, a, token), rampRgb(theme, b, token)),
-        }))
-        .filter((row) => row.delta > RAMP_NEUTRALITY_CEILING)
-    );
-    expect(offenders).toEqual([]);
+    // surface that went flat at once — "surface-2 widest pair at 3" is a
+    // reviewable sentence; "expected 3 to be > 8" is not.
+    //
+    // STILL IN CHANNEL STEPS. This is Stage 9's threshold judged in Stage 9's
+    // units; the ΔE00 pin that follows is the one that can be believed about
+    // perception. Measured today, surface-1..4 then canvas:
+    // dark 17/17/17/16 + 17, light 10/15/16/15 + 18.
+    const flat = RAMP_TOKENS.map((token) => ({
+      where: token,
+      widest: Math.max(
+        ...civPairs().map(([a, b]) => maxChannelDelta(rampRgb(theme, a, token), rampRgb(theme, b, token)))
+      ),
+    })).filter((row) => row.widest <= PERCEPTIBILITY_FLOOR);
+    expect(flat).toEqual([]);
   });
 
-  it.each(THEMES)("%s: the marks separate tenants by a wide multiple of what the ramp does", (theme) => {
-    const ramp = widestRampGap(theme);
-    const mark = narrowestMarkGap(theme);
-    // Derived, not a second magic number: the claim is a *relationship*. If the
-    // ramp ever out-separates the marks — either because it got louder or
-    // because they got quieter — the sentence "identity lives on the mark" has
-    // stopped being true and this file said so first.
-    expect(mark).toBeGreaterThanOrEqual(ramp * MARK_SEPARATION_MULTIPLE);
+  it.each(THEMES)("%s: no surface goes perceptually flat between its widest pair", (theme) => {
+    // The same subject as the pin above — per plane, the pair that separates
+    // furthest — asked in ΔE00. Measured today, surface-1..4 then canvas:
+    // dark 17.79/19.66/20.87/20.02 + 14.60,
+    // light 10.01/14.02/14.95/14.07 + 15.98, against a floor of 3.5.
+    //
+    // NOT A REPLACEMENT FOR THE PIN ABOVE, AND THAT IS MEASURED RATHER THAN
+    // ASSUMED: on the Stage 9 ramp this reads 5.36-8.47 and stays green while
+    // the channel pin goes red at 4/255. It is a floor against a surface losing
+    // its tint, not against the ramp being turned back down.
+    //
+    // AND IT IS THE PIN THAT CATCHES A FLAT PAGE GROUND. A light canvas back at
+    // `0 0% 100%` is six pairs at exactly 0.00, which reddens here by name.
+    // The channel pin above catches it too, at 0/255 — both, because a flat
+    // white ground fails on both metrics, which is not true of the Stage 9
+    // ramp and is why neither pin was dropped.
+    const flat = RAMP_TOKENS.map((token) => ({
+      where: token,
+      widestDeltaE: Number(
+        Math.max(...civPairs().map(([a, b]) => rampDeltaE(theme, a, b, token))).toFixed(2)
+      ),
+    })).filter((row) => row.widestDeltaE < PERCEPTIBLE_AT_A_GLANCE);
+    expect(flat).toEqual([]);
   });
 
-  it("the ramp is measurably flatter than the marks, and neither figure is degenerate", () => {
+  it.each(THEMES)("%s: every pair of tenants is expressed somewhere on the ramp", (theme) => {
+    // THE ASSERTION STAGE 11 BELIEVED IT COULD NOT MAKE. Its subject is the
+    // PAIR, not the surface: for each pair, the plane on which the two look
+    // furthest apart has to be visibly apart. Narrowest today is 9.11 dark
+    // (Egyptian/Greek) and 4.66 light (Chinese/Egyptian, on surface-3) — the
+    // very pairs max-channel reported at 7-8 and called too close to rely on.
+    // The light figure was 6.42 (Egyptian/Greek) until the Chinese light hue
+    // moved to 20 deg, which put a different pair at the bottom of this column
+    // at 5.68; the chroma raise on that tenant's ground took the same pair to
+    // 4.66.  Both moves are recorded in the `.light` block of globals.css. The light figure ROSE from 5.85 when
+    // canvas joined `RAMP_TOKENS`, which is what widening a `Math.max` does:
+    // this pin can only get easier as the list grows, and that is why it is not
+    // the pin that defends the page ground. The two per-plane pins above are.
+    //
+    // Same caveat as its neighbour: on the Stage 9 ramp this also stays green
+    // (3.62-8.47), so it is not the assertion that holds the ramp at Stage 11's
+    // volume. What it holds is the SENTENCE Stage 11 got wrong — that some pair
+    // of tenants is beyond the ramp's reach. None is.
+    const unexpressed = civPairs()
+      .map(([a, b]) => ({
+        pair: `${a}/${b}`,
+        bestDeltaE: Number(widestRampDeltaEForPair(theme, a, b).toFixed(2)),
+      }))
+      .filter((row) => row.bestDeltaE < PERCEPTIBLE_AT_A_GLANCE);
+    expect(unexpressed).toEqual([]);
+  });
+
+  it.each(THEMES)("%s: for every pair, the mark leads the ramp by the margin", (theme) => {
+    // PER PAIR, not narrowest-against-widest — the shape Stage 11 corrected,
+    // kept. Two tenants whose grounds are nearly identical are exactly the ones
+    // whose marks have to carry the distinction, and a global comparison
+    // averages that case away: it can report a healthy figure while the one
+    // pair that needs it fails.
+    //
+    // A MARGIN AND NOT A MULTIPLE — see `MARK_LEAD_MARGIN` for why a ratio of
+    // two ΔE00 numbers is not a quantity CIEDE2000 supports. Measured leads
+    // today: dark 10.12-30.17, light 11.60-38.29, against a floor of 5. The
+    // light figures TIGHTENED by ~0.9 when canvas joined `RAMP_TOKENS`: the
+    // ramp side of the subtraction is a `Math.max` over the planes, so a wider
+    // list can only shrink the mark's lead. This pin therefore did get harder,
+    // unlike the one above it.
+    const short = civPairs()
+      .map(([a, b]) => ({
+        pair: `${a}/${b}`,
+        rampDeltaE: Number(widestRampDeltaEForPair(theme, a, b).toFixed(2)),
+        markDeltaE: Number(markDeltaE(theme, a, b).toFixed(2)),
+        lead: Number((markDeltaE(theme, a, b) - widestRampDeltaEForPair(theme, a, b)).toFixed(2)),
+      }))
+      .filter((row) => row.lead < MARK_LEAD_MARGIN);
+    expect(short).toEqual([]);
+  });
+
+  /**
+   * The order of the planes, which is a Stage 13 decision and was until now
+   * written down only in a comment.
+   *
+   * Tinting the light page ground was not a matter of changing one value: at
+   * L 100% the chroma ceiling is exactly zero (c = S x min(L, 1-L)), so the
+   * canvas had to come down, and the only room below 100% belonged to
+   * surface-1..4 — whose deepest step is pinned at 93.5% by
+   * `--color-ink-tertiary`'s AA floor. The ground therefore moved BELOW the
+   * card plane, and light mode stopped being the mirror image of dark:
+   *
+   *     dark    canvas < surface-1 < surface-2 < surface-3 < surface-4
+   *     light   surface-4 < surface-3 < surface-2 < canvas < surface-1
+   *
+   * Both themes now agree on the half that matters — the ground sits below the
+   * card plane and cards rise off it — and disagree, as they already did
+   * before Stage 13, on which way the nested wells go from there.
+   *
+   * WHY THIS NEEDS A PIN OF ITS OWN. Every other assertion in this file is
+   * about how far apart two TENANTS are on one plane. None of them can see the
+   * planes colliding with each other or swapping places: canvas back above
+   * surface-1, or surface-2 back at the 96.5% the canvas now occupies, leaves
+   * the per-tenant spreads untouched and every pin above green. What it breaks
+   * is the elevation reading — cards flush with the ground, or table headers
+   * indistinguishable from the page.
+   *
+   * IN THE TOKEN'S OWN LIGHTNESS, NOT IN LUMINANCE, and the difference is not
+   * pedantry: a warm hue at the same L renders brighter than a cool one, so
+   * ordering four tenants by relative luminance would put Greek surface-3
+   * above Chinese surface-2 and report a scrambled ramp on a correct palette.
+   * L is the axis the ramp is actually built on.
+   *
+   * THE AXIS SURVIVED THE MIGRATION AND GOT BETTER. This read the third
+   * component of an HSL triple; it reads the first of an OKLCH one. The ramp
+   * was BUILT on HSL L, so that was the right axis then by construction — but
+   * HSL L is not perceptual, which is why every claim about how the planes
+   * READ (the ΔE00 figures above and in globals.css) had to be measured in a
+   * different space than the one the ramp was written in. OKLCH L is
+   * perceptual, so the ordering axis and the perception axis are finally the
+   * same one. The ORDER itself is unchanged, which is the point: this pin was
+   * green before the migration and is green after it, on the same pixels.
+   *
+   * NOT A SEPARATION CLAIM. It says the planes are ordered and distinct, not
+   * that adjacent ones are far apart — surface-2/-3 and -3/-4 measure
+   * 0.61..0.78 and 0.61..0.80 ΔE00, under the rung at which a flat-field
+   * difference is visible at all, and they measured 0.76..0.90 and 0.82..0.85
+   * before Stage 13, which is under it too. That is recorded on
+   * `--color-canvas` in globals.css as the cost of fitting five planes into
+   * the 6.5 lightness points AA leaves; a pin asserting they were perceptible
+   * would be asserting something this ramp has never done.
+   */
+  const EXPECTED_ASCENDING: Record<ThemeName, string[]> = {
+    dark: ["--color-canvas", "--color-surface-1", "--color-surface-2", "--color-surface-3", "--color-surface-4"],
+    light: ["--color-surface-4", "--color-surface-3", "--color-surface-2", "--color-canvas", "--color-surface-1"],
+  };
+
+  function lightnessOf(theme: ThemeName, prefix: string, token: string): number {
+    const triple = resolveRampForCiv(theme, prefix, token);
+    const m = /^(\d+(?:\.\d+)?)\s+\d+(?:\.\d+)?\s+-?\d+(?:\.\d+)?$/.exec(triple);
+    if (m === null) throw new Error(`Cannot read a lightness out of ${JSON.stringify(triple)}`);
+    return Number(m[1]);
+  }
+
+  it.each(THEMES)("%s: the five planes keep their order, for every tenant", (theme) => {
+    // Per tenant, and this is where it stops being a formality. While the ramp
+    // was `[--civ-hue] S% L%` a tenant could not in principle reorder
+    // anything — one hue substituted into five fixed lightnesses. The OKLCH
+    // ramp is five literals per tenant with no shared L, so nothing about the
+    // declaration keeps the planes in order any more and this pin is the only
+    // thing that does.
+    for (const prefix of CIV_PREFIXES) {
+      const byLightness = [...EXPECTED_ASCENDING[theme]]
+        .map((token) => ({ token, l: lightnessOf(theme, prefix, token) }))
+        .sort((a, b) => a.l - b.l);
+      expect(byLightness.map((row) => row.token)).toEqual(EXPECTED_ASCENDING[theme]);
+      // Strictly ascending, so two planes landing on one lightness is a failure
+      // and not a tie the sort quietly resolves in the expected direction.
+      for (let i = 1; i < byLightness.length; i += 1) {
+        expect(byLightness[i].l).toBeGreaterThan(byLightness[i - 1].l);
+      }
+      // And distinct as rendered pixels, which lightness alone does not
+      // guarantee once rounding to whole sRGB channels is in play.
+      const rendered = EXPECTED_ASCENDING[theme].map((token) => rampRgb(theme, prefix, token).join(","));
+      expect(new Set(rendered).size).toBe(EXPECTED_ASCENDING[theme].length);
+    }
+  });
+
+  it("names every plane the ramp has, so the order pin cannot go stale", () => {
+    // The failure this guards is a fifth surface arriving and the pin above
+    // silently continuing to order four of them. Asserted as an exact set
+    // against the derived list rather than a length, so a RENAMED token is
+    // caught too.
+    for (const theme of THEMES) {
+      expect([...EXPECTED_ASCENDING[theme]].sort()).toEqual([...RAMP_TOKENS].sort());
+    }
+  });
+
+  /**
+   * The defect that has now been diagnosed twice and fixed twice: a light page
+   * ground that reads as pink.
+   *
+   * WHY IT NEEDS A PIN RATHER THAN A COMMENT. Stage 13 tinted the light ground
+   * and Chinese came out pink; the fix rotated it 12 -> 20 degrees and wrote
+   * the reasoning down; the ground still read as pink on review. The rotation
+   * was not wrong, it was not enough, and NOTHING went red in between — the
+   * only record that the region existed was prose, and prose does not fail.
+   *
+   * THE AXIS, AND WHY THE FIRST ATTEMPT AT IT DID NOT WORK. The 20-degree
+   * round tested `a* > b*` and treated crossing it as the fix. That test is
+   * satisfied at Lab hue 45 — still squarely peach — and it went green while
+   * the complaint stood. The honest form of the same idea is the hue ANGLE,
+   * which is the ratio that comparison of a* against b* was reaching for.
+   * Measured on named sRGB colours through this file's own `srgbToLab`:
+   *
+   *     mistyrose    (255,228,225)  Lab hue 28.9   unmistakably pink
+   *     seashell     (255,245,238)  Lab hue 64.6   off-white, pink undertone
+   *     linen        (250,240,230)  Lab hue 74.4   warm neutral
+   *     antiquewhite (250,235,215)  Lab hue 80.9   warm neutral
+   *
+   * The ground that was rejected on review sat at 55.1 — BELOW seashell. It is
+   * now 65.4..74.3 — the page ground itself landing on 74.3, which is `linen`
+   * to within a tenth — and the floor is 60: above the region no reviewer has
+   * accepted, below the region every warm neutral in that table occupies. The
+   * margin is 5.4 degrees, on surface-1, which is the least tinted plane and
+   * therefore the one nearest every boundary.
+   *
+   * WRITTEN FOR EVERY TENANT, NOT FOR CHINESE. A wedge is a fact about pale
+   * colours, not about one cosmology: any ramp whose hue lands in it will read
+   * the same way. European (283..286) and Greek (127..129) clear it by
+   * construction and Egyptian (93..96) by a wide margin, so today it binds one
+   * tenant — but a future tenant given a red identity would meet the same
+   * geometry, and would meet it here rather than on review.
+   *
+   * DARK IS EXCLUDED AND THAT IS DELIBERATE. At L 14 the same hue is oxblood,
+   * not pink; the Chinese dark ramp sits at Lab hue 30..38 and is correct
+   * there. The defect is a property of pale tints, so the pin is too.
+   */
+  const BLUSH_WEDGE_CEILING_DEG = 60;
+
+  it("no tenant's light ramp sits in the blush wedge", () => {
+    const inWedge = CIV_PREFIXES.flatMap((prefix) =>
+      RAMP_TOKENS.map((token) => {
+        const [, a, b] = srgbToLab(rampRgb("light", prefix, token));
+        return {
+          where: `light ${prefix} ${token}`,
+          labHueDeg: Number((((Math.atan2(b, a) * 180) / Math.PI + 360) % 360).toFixed(1)),
+        };
+      })
+    ).filter((row) => row.labHueDeg < BLUSH_WEDGE_CEILING_DEG);
+    expect(inWedge).toEqual([]);
+  });
+
+  it("neither figure is degenerate, and the marks still lead overall", () => {
     // Guard the guard. If `resolveRampForCiv` silently started returning one
-    // colour for every civilization, the first pin would read 0 and pass; if
-    // `hslTripleToRgb` returned zeroes, both would. Assert the shape of the
-    // measurement, not only its verdict.
+    // colour for every civilization the first pin would read 0 — which now goes
+    // RED rather than green, the one thing the inversion improved for free. The
+    // second pin would still pass on a collapsed ramp, so the shape of the
+    // measurement is asserted here and not only its verdict.
+    //
+    // BOTH METRICS ARE CHECKED FOR DEGENERACY, and that is not belt-and-braces:
+    // they fail in different ways. `maxChannelDelta` returning 0 means the
+    // colours are byte-identical; `deltaE00Rgb` returning 0 can ALSO mean the
+    // Lab conversion collapsed — a broken `srgbToLab` that returned a constant
+    // would make every ΔE00 pin above read 0 and go red, but a broken one that
+    // returned only L* would keep the ramp pins alive on lightness alone while
+    // silently discarding the hue axis this whole file is about.
     for (const theme of THEMES) {
       expect(widestRampGap(theme)).toBeGreaterThan(0);
-      expect(narrowestMarkGap(theme)).toBeGreaterThan(RAMP_NEUTRALITY_CEILING);
-      // Two tenants 220deg apart still land within a few points of each other:
-      // this is the measurement the ruling rests on, restated as an assertion.
+      expect(narrowestMarkGap(theme)).toBeGreaterThan(PERCEPTIBILITY_FLOOR);
+      expect(narrowestMarkGap(theme)).toBeGreaterThan(widestRampGap(theme));
+      // THE ΔE00 TWIN OF THE LINE ABOVE IS DELIBERATELY ABSENT, AND IT IS
+      // ABSENT BECAUSE IT IS FALSE. "narrowest mark > widest ramp" compares two
+      // DIFFERENT pairs of tenants — the mismatch Stage 11 already called out
+      // when it moved the mark pin to per-pair — and in channel units it
+      // survives only because that metric inflates the marks (45 against 17).
+      // Written in ΔE00 it goes red on correct colours: narrowest mark is
+      // Egyptian/Greek at 19.23 dark, widest ramp is European/Greek at 20.87.
+      // Nothing is wrong with the palette; the comparison is meaningless. The
+      // per-pair `MARK_LEAD_MARGIN` pin above is the honest form of it, and it
+      // already implies the ordering for every pair that actually shares a
+      // screen. The channel-unit line is kept as the historical record of a
+      // check this file used to believe, not because it proves anything.
+      expect(
+        Math.max(...civPairs().map(([a, b]) => widestRampDeltaEForPair(theme, a, b)))
+      ).toBeGreaterThan(PERCEPTIBLE_AT_A_GLANCE);
+      // Two tenants at the SAME lightness and different hue must not measure 0:
+      // this is the one assertion that fails if `srgbToLab` loses a and b.
+      // Chinese and European surface-1 are `12 47% 7%` and `232 47% 7%` — one
+      // HSL lightness, 220° apart.
+      expect(rampDeltaE(theme, "cn", "eu", "--color-surface-1")).toBeGreaterThan(
+        PERCEPTIBLE_AT_A_GLANCE
+      );
+      // The measurement Stage 9's ruling rested on and Stage 11 moved: two
+      // tenants 220deg apart used to land 4/255 apart here. They no longer do,
+      // and the assertion is kept in its original form — different, not merely
+      // further apart — because a ramp that stopped varying would satisfy every
+      // gap-based check by reading as maximally flat.
       expect(rampRgb(theme, "cn", "--color-surface-1")).not.toEqual(
         rampRgb(theme, "eu", "--color-surface-1")
       );

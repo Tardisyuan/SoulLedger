@@ -207,14 +207,14 @@ export function SearchSelectField({
             onFocus={() => {
               if (searchText !== "" && !selected) setOpen(true);
             }}
-            className="w-full bg-[hsl(var(--color-surface-1))] border px-3 py-2 text-03 text-[hsl(var(--color-ink))] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-accent))] disabled:opacity-50 border-[hsl(var(--color-hairline))] focus-visible:border-[hsl(var(--color-accent))] aria-[invalid=true]:border-[hsl(var(--color-status-error))]"
+            className="w-full bg-[oklch(var(--color-surface-1))] border px-3 py-2 text-03 text-[oklch(var(--color-ink))] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[oklch(var(--color-accent))] disabled:opacity-50 border-[oklch(var(--color-hairline))] focus-visible:border-[oklch(var(--color-accent))] aria-[invalid=true]:border-[oklch(var(--color-status-error))]"
           />
 
           <Combobox.Portal>
             <Combobox.Positioner sideOffset={4} className="z-dialog w-[var(--anchor-width)]">
-              <Combobox.Popup aria-busy={loading || searching || undefined} className="max-h-64 overflow-y-auto bg-[hsl(var(--color-surface-2))] border border-[hsl(var(--color-hairline))] py-1 transition duration-state ease-enter data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0">
+              <Combobox.Popup aria-busy={loading || searching || undefined} className="max-h-64 overflow-y-auto bg-[oklch(var(--color-surface-2))] border border-[oklch(var(--color-hairline))] py-1 transition duration-state ease-enter data-ending-style:ease-exit data-ending-style:opacity-0 data-starting-style:opacity-0">
                 {loading ? (
-                  <p className="px-3 py-2 text-02 text-[hsl(var(--color-ink-subtle))]" role="status">
+                  <p className="px-3 py-2 text-02 text-[oklch(var(--color-ink-subtle))]" role="status">
                     {loadingText}
                   </p>
                 ) : (
@@ -222,7 +222,7 @@ export function SearchSelectField({
                     {searching ? (
                       <p
                         role="status"
-                        className="px-3 py-2 text-01 text-[hsl(var(--color-ink-tertiary))] border-b border-[hsl(var(--color-hairline))]"
+                        className="px-3 py-2 text-01 text-[oklch(var(--color-ink-tertiary))] border-b border-[oklch(var(--color-hairline))]"
                       >
                         {loadingText}
                       </p>
@@ -234,7 +234,7 @@ export function SearchSelectField({
                         the server's whole answer here, so its length IS the
                         question being asked. */}
                     {options.length === 0 ? (
-                      <p className="px-3 py-2 text-02 text-[hsl(var(--color-ink-subtle))]">
+                      <p className="px-3 py-2 text-02 text-[oklch(var(--color-ink-subtle))]">
                         {emptyText}
                       </p>
                     ) : null}
@@ -243,7 +243,7 @@ export function SearchSelectField({
                         <Combobox.Item
                           key={option.value}
                           value={option}
-                          className="px-3 py-2 text-03 text-[hsl(var(--color-ink))] cursor-pointer data-highlighted:bg-[hsl(var(--color-surface-3))] data-selected:text-[hsl(var(--color-accent-ink))]"
+                          className="px-3 py-2 text-03 text-[oklch(var(--color-ink))] cursor-pointer data-highlighted:bg-[oklch(var(--color-surface-3))] data-selected:text-[oklch(var(--color-accent-ink))]"
                         >
                           {option.label}
                         </Combobox.Item>
@@ -253,7 +253,7 @@ export function SearchSelectField({
                         did. Without it "keep typing" is advice the user has no
                         reason to take. */}
                     {moreText ? (
-                      <p className="px-3 py-2 text-01 text-[hsl(var(--color-ink-tertiary))] border-t border-[hsl(var(--color-hairline))]">
+                      <p className="px-3 py-2 text-01 text-[oklch(var(--color-ink-tertiary))] border-t border-[oklch(var(--color-hairline))]">
                         {moreText}
                       </p>
                     ) : null}

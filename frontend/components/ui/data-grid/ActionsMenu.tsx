@@ -114,14 +114,14 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
           type="button"
           onClick={primary.onSelect}
           disabled={primary.disabled}
-          className="px-2.5 py-1 text-03 text-[hsl(var(--color-ink-muted))] border border-[hsl(var(--color-hairline-strong))] hover:text-[hsl(var(--color-ink))] hover:border-[hsl(var(--color-hairline-tertiary))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="px-2.5 py-1 text-03 text-[oklch(var(--color-ink-muted))] border border-[oklch(var(--color-hairline-strong))] hover:text-[oklch(var(--color-ink))] hover:border-[oklch(var(--color-hairline-tertiary))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {primary.label}
         </button>
       )}
       {items.length > 0 && (
         <>
-          {primary && <span aria-hidden="true" className="w-px h-4 bg-[hsl(var(--color-hairline-strong))]" />}
+          {primary && <span aria-hidden="true" className="w-px h-4 bg-[oklch(var(--color-hairline-strong))]" />}
           <button
             ref={triggerRef}
             type="button"
@@ -130,7 +130,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
             aria-expanded={open}
             onClick={toggle}
             onKeyDown={onTriggerKeyDown}
-            className="px-2 py-1 font-mono text-[hsl(var(--color-ink-subtle))] hover:text-[hsl(var(--color-ink))] hover:bg-[hsl(var(--color-surface-3))] transition-colors"
+            className="px-2 py-1 font-mono text-[oklch(var(--color-ink-subtle))] hover:text-[oklch(var(--color-ink))] hover:bg-[oklch(var(--color-surface-3))] transition-colors"
           >
             ⋯
           </button>
@@ -142,7 +142,7 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
                 role="menu"
                 aria-label={menuLabel}
                 style={{ position: 'fixed', top: pos.top, right: pos.right }}
-                className="z-50 min-w-[168px] border border-[hsl(var(--color-hairline-strong))] bg-[hsl(var(--color-surface-4))] shadow-[0_16px_40px_-10px_hsl(0_0%_0%/0.6)] py-1"
+                className="z-50 min-w-[168px] border border-[oklch(var(--color-hairline-strong))] bg-[oklch(var(--color-surface-4))] shadow-[0_16px_40px_-10px_oklch(0_0_0/0.6)] py-1"
               >
                 {items.map((item, index) => (
                   <button
@@ -166,8 +166,8 @@ export function ActionsMenu({ primary, items, menuLabel }: ActionsMenuProps) {
                     className={cn(
                       'w-full text-left px-3 py-1.5 text-03 transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
                       item.tone === 'danger'
-                        ? 'text-[hsl(var(--color-status-error))] hover:bg-[hsl(var(--color-status-error)/0.1)]'
-                        : 'text-[hsl(var(--color-ink-muted))] hover:bg-[hsl(var(--color-surface-3))] hover:text-[hsl(var(--color-ink))]'
+                        ? 'text-[oklch(var(--color-status-error))] hover:bg-[oklch(var(--color-status-error)/0.1)]'
+                        : 'text-[oklch(var(--color-ink-muted))] hover:bg-[oklch(var(--color-surface-3))] hover:text-[oklch(var(--color-ink))]'
                     )}
                   >
                     {item.label}

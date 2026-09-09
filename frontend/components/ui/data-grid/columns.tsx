@@ -164,9 +164,9 @@ export const ENUM_TONE_CLASSES: Record<EnumTone, string> = {
 }
 
 const NUMERIC_TONE_CLASSES: Record<'success' | 'error' | 'neutral', string> = {
-  success: 'text-[hsl(var(--color-status-success))]',
-  error: 'text-[hsl(var(--color-status-error))]',
-  neutral: 'text-[hsl(var(--color-ink))]',
+  success: 'text-[oklch(var(--color-status-success))]',
+  error: 'text-[oklch(var(--color-status-error))]',
+  neutral: 'text-[oklch(var(--color-ink))]',
 }
 
 /**
@@ -208,7 +208,7 @@ export function renderGridCell<T>(column: DataGridColumn<T>, row: T): ReactNode 
    */
   const empty = (label?: string) =>
     label
-      ? <span className={column.missingKind === 'inapplicable' ? 'text-[hsl(var(--color-ink-subtle))]' : 'text-[hsl(var(--color-ink-tertiary))]'}>{label}</span>
+      ? <span className={column.missingKind === 'inapplicable' ? 'text-[oklch(var(--color-ink-subtle))]' : 'text-[oklch(var(--color-ink-tertiary))]'}>{label}</span>
       : <MissingValue kind={column.missingKind ?? 'unrecorded'} reason={column.missingReason} />
 
   switch (column.type) {
@@ -219,7 +219,7 @@ export function renderGridCell<T>(column: DataGridColumn<T>, row: T): ReactNode 
       }
       return (
         <span
-          className="font-mono text-[hsl(var(--color-ink-muted))] truncate block max-w-full"
+          className="font-mono text-[oklch(var(--color-ink-muted))] truncate block max-w-full"
           title={value}
         >
           {value}
@@ -242,7 +242,7 @@ export function renderGridCell<T>(column: DataGridColumn<T>, row: T): ReactNode 
       // 一行写完,不拆行 —— `truncatedValuesAreRecoverable.test.ts` 按行匹配
       // (它自己的表头写明了这个代价),拆开之后 `{value}` 落到下一行,这一处
       // 就从它的主体清单里消失了。实测:拆行版本下把 title 删掉,守卫依然绿。
-      return <span title={String(value)} className="text-[hsl(var(--color-ink))] line-clamp-2">{value}</span>
+      return <span title={String(value)} className="text-[oklch(var(--color-ink))] line-clamp-2">{value}</span>
     }
     case 'enum':
       return <EnumBadge value={column.value(row)} />
@@ -262,7 +262,7 @@ export function renderGridCell<T>(column: DataGridColumn<T>, row: T): ReactNode 
       if (value === null || value === undefined || value === '') {
         return empty(column.emptyLabel)
       }
-      return <span className="font-mono tabular-nums text-[hsl(var(--color-ink))] whitespace-nowrap">{column.format(value)}</span>
+      return <span className="font-mono tabular-nums text-[oklch(var(--color-ink))] whitespace-nowrap">{column.format(value)}</span>
     }
     case 'actions': {
       const primary = column.primary?.(row) ?? null
